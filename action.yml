@@ -1,0 +1,24 @@
+name: 'RSOLV Automated Fix Generator'
+description: 'Automatically addresses tagged issues with AI-powered fixes'
+author: 'RSOLV'
+
+inputs:
+  api_key:
+    description: 'API key for RSOLV service'
+    required: true
+  issue_tag:
+    description: 'Tag to identify issues for automation'
+    required: false
+    default: 'AUTOFIX'
+  expert_review_command:
+    description: 'Command to request expert review'
+    required: false
+    default: '/request-expert-review'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+
+branding:
+  icon: 'zap'
+  color: 'blue'

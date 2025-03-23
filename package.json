@@ -1,0 +1,30 @@
+{
+  "name": "rsolv-action",
+  "version": "0.1.0",
+  "description": "GitHub Action for automating issue fixes with AI",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "test": "bun test",
+    "lint": "eslint src/**/*.ts"
+  },
+  "keywords": [
+    "github-action",
+    "automation",
+    "ai",
+    "fix",
+    "rsolv"
+  ],
+  "author": "RSOLV",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.0",
+    "bun-types": "latest",
+    "typescript": "^5.1.6",
+    "eslint": "^8.44.0"
+  }
+}
