@@ -14,6 +14,24 @@ inputs:
     description: 'Command to request expert review'
     required: false
     default: '/request-expert-review'
+  ai_provider:
+    description: 'AI provider to use (anthropic, openai, mistral, ollama)'
+    required: false
+    default: 'anthropic'
+  anthropic_api_key:
+    description: 'API key for Anthropic Claude AI'
+    required: false
+  openai_api_key:
+    description: 'API key for OpenAI'
+    required: false
+  debug:
+    description: 'Enable debug mode'
+    required: false
+    default: 'false'
+  skip_security_check:
+    description: 'Skip security checks (not recommended)'
+    required: false
+    default: 'false'
 
 runs:
   using: 'docker'

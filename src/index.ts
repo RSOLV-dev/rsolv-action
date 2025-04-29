@@ -6,6 +6,8 @@ import { logger } from './utils/logger';
 import { checkRepositorySecurity, validateApiKey } from './utils/security';
 import { extractIssueContextFromEvent, isEligibleForAutomation, addIssueComment } from './github/issues';
 import { IssueContext, ActionStatus, ActionResult } from './types';
+import { analyzeIssue } from './ai/analyzer';
+import { generateSolution } from './ai/solution';
 
 /**
  * Main function for the RSOLV action
@@ -20,6 +22,7 @@ async function run(): Promise<ActionResult> {
     
     // Log basic information
     logger.info(`Starting RSOLV Action v0.1.0`);
+    logger.info(`Using AI provider: ${config.aiConfig.provider}`);
     logger.info(`Checking for issues with tag: ${config.issueTag}`);
     
     // Validate API key
@@ -74,10 +77,6 @@ async function run(): Promise<ActionResult> {
     // Log that we found an eligible issue
     logger.info(`Found eligible issue #${issueContext.id}: ${issueContext.title}`);
     
-    // At this point, we would analyze the issue and generate a fix
-    // This will be implemented in Day 3
-    logger.info(`Issue analysis and fix generation will be implemented in the next phase`);
-    
     // Add a comment to the issue noting that we're working on it
     const { owner, name } = issueContext.repository;
     const issueNumber = parseInt(issueContext.id, 10);
@@ -88,6 +87,67 @@ async function run(): Promise<ActionResult> {
       name,
       issueNumber,
       `🤖 RSOLV has detected this issue as eligible for automated fixing. I'll analyze it and create a pull request soon!`
+    );
+    
+    // Analyze the issue
+    logger.info(`Analyzing issue #${issueContext.id}...`);
+    const analysis = await analyzeIssue(issueContext, config.aiConfig);
+    
+    logger.info(`Issue analysis complete. Complexity: ${analysis.complexity}`);
+    logger.info(`Estimated time to fix: ${analysis.estimatedTime} minutes`);
+    
+    // Add analysis as a comment
+    await addIssueComment(
+      token,
+      owner,
+      name,
+      issueNumber,
+      `### RSOLV Analysis
+      
+**Complexity**: ${analysis.complexity}
+**Estimated time**: ${analysis.estimatedTime} minutes
+
+**Summary**: ${analysis.summary}
+
+**Files to modify**:
+${analysis.relatedFiles?.map(file => `- ${file}`).join('\n') || 'To be determined'}
+
+**Required changes**:
+${analysis.requiredChanges?.map(change => `- ${change}`).join('\n') || 'To be determined'}
+
+**Recommended approach**: ${analysis.recommendedApproach}
+
+I'm now generating a solution based on this analysis...`
+    );
+    
+    // Generate a solution
+    logger.info(`Generating solution for issue #${issueContext.id}...`);
+    const solution = await generateSolution(issueContext, analysis, config.aiConfig);
+    
+    logger.info(`Solution generated with ${solution.files.length} file changes`);
+    
+    // TODO: Implement PR creation (Day 4)
+    // For now, we'll just add another comment
+    await addIssueComment(
+      token,
+      owner,
+      name,
+      issueNumber,
+      `### RSOLV Solution Ready
+      
+I've generated a solution for this issue:
+
+**PR Title**: ${solution.title}
+
+**Description**: ${solution.description}
+
+**Files modified**:
+${solution.files.map(file => `- ${file.path}`).join('\n')}
+
+**Tests**:
+${solution.tests?.map(test => `- ${test}`).join('\n') || 'No tests specified'}
+
+PR creation will be implemented in the next version.`
     );
     
     return {
