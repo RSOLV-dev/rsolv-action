@@ -11,6 +11,7 @@
  * - Prompt Enhancement based on feedback
  */
 import { Command } from 'commander';
+import * as github from '@actions/github';
 import { Octokit } from '@octokit/rest';
 import readline from 'readline';
 import { v4 as uuidv4 } from 'uuid';
@@ -49,7 +50,12 @@ if (!fs.existsSync(DEMO_DATA_DIR)) {
   fs.mkdirSync(DEMO_DATA_DIR, { recursive: true });
 }
 
-// Initialize feedback storage
+// Initialize feedback storage paths
+const DATA_DIR = path.join(process.cwd(), 'data');
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
 const FEEDBACK_PATH = path.join(DEMO_DATA_DIR, 'feedback.json');
 
 // Function to initialize demo environment
@@ -59,8 +65,30 @@ async function initializeDemo() {
 
     // Initialize feedback storage
     await feedbackStorage.initialize();
+    
+    // Check if we need to copy sample feedback
+    const feedbackExists = await fs.promises.access(FEEDBACK_PATH).then(() => true).catch(() => false);
+    const sampleFeedbackPath = path.join(DEMO_DATA_DIR, 'sample-feedback.json');
+    const sampleExists = await fs.promises.access(sampleFeedbackPath).then(() => true).catch(() => false);
+    
+    if (!feedbackExists && sampleExists) {
+      console.log(chalk.blue('Loading sample feedback data...'));
+      try {
+        const sampleData = await fs.promises.readFile(sampleFeedbackPath, 'utf8');
+        const feedbackEvents = JSON.parse(sampleData);
+        
+        // Import each feedback event
+        for (const event of feedbackEvents) {
+          const { id, ...eventData } = event;
+          await feedbackStorage.createFeedback(eventData);
+        }
+        console.log(chalk.green(`✅ Imported ${feedbackEvents.length} sample feedback events`));
+      } catch (err) {
+        console.error(chalk.yellow('⚠️ Could not import sample feedback data:'), err);
+      }
+    }
+    
     console.log(chalk.green('✅ Feedback system initialized'));
-
     return true;
   } catch (error) {
     console.error(chalk.red('❌ Error initializing demo environment:'), error);
@@ -177,9 +205,10 @@ async function getIssueContext(): Promise<IssueContext> {
     // Initialize GitHub client
     const apiClient = new GitHubApiClient(token, owner, repo);
     
-    // Get issue details
+    // Get issue details directly with Octokit
     console.log(chalk.blue('📥 Fetching issue details...'));
-    const { data: issue } = await apiClient.getOctokit().rest.issues.get({
+    const octokit = github.getOctokit(token);
+    const { data: issue } = await octokit.rest.issues.get({
       owner,
       repo,
       issue_number: parseInt(issueNumber, 10)
