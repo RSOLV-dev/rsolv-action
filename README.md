@@ -56,9 +56,26 @@ You can also manually trigger the action for testing:
 3. Input the issue number and repository
 4. Click "Run workflow"
 
-## Expert Review
+## Expert Review & Feedback Loop
 
 For complex issues, you can request expert review by commenting `/request-expert-review` on the pull request.
+
+### Feedback System
+
+RSOLV incorporates a sophisticated feedback loop system that:
+
+1. Captures feedback from expert reviews, PR comments, and edits
+2. Analyzes sentiment and extracts useful patterns
+3. Enhances future AI prompts based on historical feedback
+4. Continuously improves solution quality over time
+
+```mermaid
+flowchart LR
+    A[Expert Review] --> B[Feedback Event]
+    B --> C[Feedback Store]
+    C --> D[Prompt Enhancer]
+    D --> E[AI Solution Generator]
+```
 
 ## Configuration Options
 
@@ -71,3 +88,20 @@ For complex issues, you can request expert review by commenting `/request-expert
 ## Support
 
 For questions or issues, please contact support@rsolv.dev or open an issue in this repository.
+
+## Continuous Integration
+
+This project is configured with automated CI pipelines through both GitHub Actions and SourceHut:
+
+- **GitHub Actions**: Primary CI system for push/PR validation and releases
+- **SourceHut**: Secondary CI system that offers lightweight, text-focused builds
+
+### CI Status
+[![Build Status (GitHub)](https://github.com/arboreal-studios/RSOLV-action/actions/workflows/ci.yml/badge.svg)](https://github.com/arboreal-studios/RSOLV-action/actions)
+[![builds.sr.ht status](https://builds.sr.ht/~arubis/rsolv-action.svg)](https://builds.sr.ht/~arubis/rsolv-action?)
+
+## License
+
+Proprietary. Copyright (c) 2024-2025 Arboreal Studios, Inc. All rights reserved.
+
+See [LICENSE.md](LICENSE.md) for details.
