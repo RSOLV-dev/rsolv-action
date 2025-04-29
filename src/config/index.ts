@@ -3,6 +3,7 @@
  */
 import * as core from '@actions/core';
 import { ActionConfig } from '../types';
+import { AIProvider } from '../ai/types';
 
 /**
  * Load configuration from environment or inputs
@@ -32,6 +33,21 @@ export function loadConfig(inputs?: Record<string, string>): ActionConfig {
     }
   };
 
+  // Get AI provider config
+  const aiProvider = getInput('ai_provider') || 'anthropic';
+  const aiConfig: any = {
+    provider: aiProvider as AIProvider,
+  };
+
+  // Get provider-specific API keys
+  if (aiProvider === 'anthropic') {
+    aiConfig.apiKey = getInput('anthropic_api_key') || getInput('api_key');
+    aiConfig.modelName = getInput('anthropic_model') || 'claude-3-sonnet-20240229';
+  } else if (aiProvider === 'openai') {
+    aiConfig.apiKey = getInput('openai_api_key') || getInput('api_key');
+    aiConfig.modelName = getInput('openai_model') || 'gpt-4';
+  }
+
   // Build config from inputs
   const config: ActionConfig = {
     apiKey: getInput('api_key', true),
@@ -39,6 +55,7 @@ export function loadConfig(inputs?: Record<string, string>): ActionConfig {
     expertReviewCommand: getInput('expert_review_command') || '/request-expert-review',
     debug: getBooleanInput('debug'),
     skipSecurityCheck: getBooleanInput('skip_security_check'),
+    aiConfig,
   };
 
   // Log config in debug mode (omitting sensitive info)
@@ -46,6 +63,8 @@ export function loadConfig(inputs?: Record<string, string>): ActionConfig {
     core.debug('Configuration loaded:');
     core.debug(`- Issue tag: ${config.issueTag}`);
     core.debug(`- Expert review command: ${config.expertReviewCommand}`);
+    core.debug(`- AI provider: ${config.aiConfig.provider}`);
+    core.debug(`- AI model: ${config.aiConfig.modelName}`);
     core.debug(`- Debug mode: ${config.debug}`);
     core.debug(`- Skip security check: ${config.skipSecurityCheck}`);
   }
@@ -66,6 +85,12 @@ export function validateInput(name: string, value: string): string | null {
     case 'issue_tag':
       if (value && !/^[a-zA-Z0-9_-]+$/.test(value)) {
         return 'Issue tag must only contain alphanumeric characters, underscores, and hyphens';
+      }
+      break;
+    case 'ai_provider':
+      const validProviders = ['anthropic', 'openrouter', 'openai', 'mistral', 'ollama'];
+      if (value && !validProviders.includes(value)) {
+        return `AI provider must be one of: ${validProviders.join(', ')}`;
       }
       break;
   }

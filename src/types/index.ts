@@ -1,6 +1,7 @@
 /**
  * Core types for RSOLV action
  */
+import { AIConfig } from '../ai/types';
 
 /**
  * Supported issue tracking sources
@@ -34,6 +35,7 @@ export interface ActionConfig {
   expertReviewCommand: string;
   debug: boolean;
   skipSecurityCheck: boolean;
+  aiConfig: AIConfig;
 }
 
 /**
