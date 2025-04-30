@@ -8,17 +8,66 @@ import path from 'path';
 import fs from 'fs';
 import { logger } from '../../utils/logger';
 import { IssueContext, IssueAnalysis } from '../../types';
-import { PullRequestSolution, AIConfig } from '../types';
+import { PullRequestSolution, AIConfig, ClaudeCodeConfig } from '../types';
 
+/**
+ * Analytics data for Claude Code usage
+ */
+interface UsageData {
+  startTime: number;
+  endTime?: number;
+  issueId: string;
+  successful: boolean;
+  contextGatheringTime?: number;
+  solutionGenerationTime?: number;
+  totalChunks?: number;
+  cost?: number;
+  errorType?: string;
+  retryCount?: number;
+}
+
+/**
+ * Claude Code adapter class
+ */
 export class ClaudeCodeAdapter {
   private executablePath: string;
   private repoPath: string;
   private config: AIConfig;
-
-  constructor(config: AIConfig, repoPath: string = process.cwd(), executablePath: string = 'claude') {
-    this.executablePath = executablePath;
-    this.repoPath = repoPath;
+  private claudeConfig: ClaudeCodeConfig;
+  private tempDir: string;
+  private usageData: UsageData[] = [];
+  
+  /**
+   * Create a new Claude Code adapter
+   */
+  constructor(config: AIConfig, repoPath: string = process.cwd()) {
     this.config = config;
+    this.repoPath = repoPath;
+    
+    // Initialize Claude Code config with defaults
+    this.claudeConfig = config.claudeCodeConfig || {};
+    this.executablePath = this.claudeConfig.executablePath || 'claude';
+    this.tempDir = this.claudeConfig.tempDir || path.join(process.cwd(), 'temp');
+    
+    // Ensure temp directory exists
+    if (!fs.existsSync(this.tempDir)) {
+      try {
+        fs.mkdirSync(this.tempDir, { recursive: true });
+      } catch (error) {
+        logger.warn(`Failed to create temp directory: ${error}`);
+        // Will fall back to system temp dir if needed
+      }
+    }
+    
+    if (this.claudeConfig.verboseLogging) {
+      logger.info('Claude Code adapter initialized with config:', JSON.stringify({
+        executablePath: this.executablePath,
+        tempDir: this.tempDir,
+        contextOptions: this.claudeConfig.contextOptions,
+        retryOptions: this.claudeConfig.retryOptions,
+        timeout: this.claudeConfig.timeout
+      }, null, 2));
+    }
   }
 
   /**
@@ -27,11 +76,17 @@ export class ClaudeCodeAdapter {
   async isAvailable(): Promise<boolean> {
     try {
       return new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => {
+          logger.warn('Claude Code availability check timed out');
+          resolve(false);
+        }, 5000);
+        
         const childProcess = spawn(this.executablePath, ['-v'], {
           shell: true
         });
         
         childProcess.on('close', (code) => {
+          clearTimeout(timeout);
           resolve(code === 0);
         });
       });
@@ -51,7 +106,16 @@ export class ClaudeCodeAdapter {
   ): Promise<PullRequestSolution> {
     let promptPath: string | null = null;
     let errorRetryCount = 0;
-    const MAX_RETRIES = 2;
+    const maxRetries = this.claudeConfig.retryOptions?.maxRetries ?? 2;
+    const baseDelay = this.claudeConfig.retryOptions?.baseDelay ?? 1000;
+    const timeout = this.claudeConfig.timeout ?? 300000; // 5 minutes default
+    
+    // Initialize usage tracking
+    const usageEntry: UsageData = {
+      startTime: Date.now(),
+      issueId: issueContext.id,
+      successful: false
+    };
     
     try {
       logger.info(`Generating solution using Claude Code for issue: ${issueContext.id}`);
@@ -60,10 +124,18 @@ export class ClaudeCodeAdapter {
       const available = await this.isAvailable();
       if (!available) {
         logger.warn('Claude Code CLI not available, falling back to standard method');
-        // Create fallback solution instead of throwing
+        usageEntry.errorType = 'cli_not_available';
+        this.trackUsage(usageEntry);
+        
+        // Provide helpful error message with installation instructions
         return this.createFallbackSolution(
           issueContext,
-          'Claude Code CLI not available. Using fallback solution.',
+          'Claude Code CLI not available. Please ensure Claude Code is installed and in your PATH.\n\n' +
+          'Installation instructions:\n' +
+          '1. Visit https://claude.ai/console/claude-code\n' +
+          '2. Follow the installation steps for your platform\n' +
+          '3. Verify installation with: claude -v\n\n' +
+          'Using fallback solution for now.',
           analysis.relatedFiles || []
         );
       }
@@ -72,36 +144,48 @@ export class ClaudeCodeAdapter {
       const prompt = this.constructPrompt(issueContext, analysis, enhancedPrompt);
       
       // Create a temporary prompt file with proper error handling
-      const tempDir = path.join(process.cwd(), 'temp');
       try {
-        if (!fs.existsSync(tempDir)) {
-          fs.mkdirSync(tempDir, { recursive: true });
+        if (!fs.existsSync(this.tempDir)) {
+          fs.mkdirSync(this.tempDir, { recursive: true });
         }
-        promptPath = path.join(tempDir, `prompt-${Date.now()}.txt`);
+        promptPath = path.join(this.tempDir, `prompt-${issueContext.id}-${Date.now()}.txt`);
         fs.writeFileSync(promptPath, prompt);
       } catch (fsError) {
         logger.error('Error creating temporary files', fsError as Error);
+        usageEntry.errorType = 'temp_file_error';
+        this.trackUsage(usageEntry);
+        
         // Create fallback solution with file access error
         return this.createFallbackSolution(
           issueContext, 
-          'Error creating temporary files for Claude Code. Using fallback solution.',
+          'Error creating temporary files for Claude Code. Please check file permissions.\n\n' +
+          'Using fallback solution.',
           analysis.relatedFiles || []
         );
       }
       
       // Execute Claude Code CLI with retry logic
-      const outputPath = path.join(tempDir, `solution-${Date.now()}.json`);
+      const outputPath = path.join(this.tempDir, `solution-${issueContext.id}-${Date.now()}.json`);
       let result: string;
       
       const executeWithRetry = async (): Promise<string> => {
         try {
-          return await this.executeClaudeCode(promptPath!, outputPath);
+          return await this.executeClaudeCode(promptPath!, outputPath, usageEntry, timeout);
         } catch (execError) {
           errorRetryCount++;
-          if (errorRetryCount < MAX_RETRIES) {
-            logger.warn(`Claude Code execution failed, retrying (${errorRetryCount}/${MAX_RETRIES})...`);
+          usageEntry.retryCount = errorRetryCount;
+          
+          if (errorRetryCount < maxRetries) {
+            logger.warn(`Claude Code execution failed, retrying (${errorRetryCount}/${maxRetries})...`);
+            
+            // Provide user feedback about retry
+            if (this.claudeConfig.verboseLogging) {
+              logger.info(`Retry reason: ${(execError as Error).message}`);
+            }
+            
             // Wait before retry with exponential backoff
-            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, errorRetryCount)));
+            const delay = baseDelay * Math.pow(2, errorRetryCount);
+            await new Promise(resolve => setTimeout(resolve, delay));
             return executeWithRetry();
           } else {
             throw execError;
@@ -110,13 +194,33 @@ export class ClaudeCodeAdapter {
       };
       
       try {
-        result = await executeWithRetry();
+        // Setup execution timeout
+        const executionPromise = executeWithRetry();
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Claude Code execution timed out after ${timeout/1000} seconds`));
+          }, timeout);
+        });
+        
+        // Race the execution against the timeout
+        result = await Promise.race([executionPromise, timeoutPromise]);
       } catch (execError) {
         logger.error('Claude Code execution failed after retries', execError as Error);
+        usageEntry.errorType = 'execution_error';
+        usageEntry.endTime = Date.now();
+        this.trackUsage(usageEntry);
+        
         // Create fallback solution with execution error
         return this.createFallbackSolution(
           issueContext,
-          'Claude Code execution failed. Using fallback solution with available context.',
+          `Claude Code execution failed: ${(execError as Error).message}\n\n` +
+          'You can try the following:\n' +
+          '1. Check your API key configuration\n' +
+          '2. Ensure your repository is not too large for context gathering\n' +
+          '3. Try adjusting the context options in your configuration\n\n' +
+          'Using fallback solution with available context.',
           analysis.relatedFiles || []
         );
       }
@@ -132,26 +236,98 @@ export class ClaudeCodeAdapter {
       
       // Parse and normalize the solution
       try {
-        return this.parseSolution(result, outputPath, issueContext);
+        const solution = this.parseSolution(result, outputPath, issueContext);
+        
+        // Mark as successful in usage tracking
+        usageEntry.successful = true;
+        usageEntry.endTime = Date.now();
+        this.trackUsage(usageEntry);
+        
+        return solution;
       } catch (parseError) {
         logger.error('Error parsing Claude Code solution', parseError as Error);
+        usageEntry.errorType = 'parsing_error';
+        usageEntry.endTime = Date.now();
+        this.trackUsage(usageEntry);
+        
         // Create fallback solution with parsing error but include raw output for debugging
         return this.createFallbackSolution(
           issueContext,
-          'Error parsing Claude Code output. Using fallback solution.',
+          'Error parsing Claude Code output. The response format may have changed.\n\n' +
+          'You can try the following:\n' +
+          '1. Update to the latest version of Claude Code\n' +
+          '2. Check if your prompt is correctly formatted\n' +
+          '3. Try adjusting the output format in your configuration\n\n' +
+          'Using fallback solution.',
           analysis.relatedFiles || [],
           result.slice(0, 500) // Include first 500 chars of raw output for debugging
         );
       }
     } catch (error) {
       logger.error('Unexpected error generating solution with Claude Code', error as Error);
+      usageEntry.errorType = 'unexpected_error';
+      usageEntry.endTime = Date.now();
+      this.trackUsage(usageEntry);
+      
       // Create generic fallback solution for unexpected errors
       return this.createFallbackSolution(
         issueContext,
-        'Unexpected error using Claude Code. Using fallback solution.',
+        'Unexpected error using Claude Code. This may be a temporary issue.\n\n' +
+        'You can try the following:\n' +
+        '1. Run the command again\n' +
+        '2. Check your network connection\n' +
+        '3. Verify Claude API status\n\n' +
+        'Using fallback solution.',
         analysis.relatedFiles || []
       );
     }
+  }
+  
+  /**
+   * Track usage data for analytics
+   */
+  private trackUsage(data: UsageData): void {
+    if (this.claudeConfig.trackUsage !== false) {
+      this.usageData.push(data);
+      
+      // Also save analytics locally for persistence
+      const analyticsPath = path.join(this.tempDir, 'claude-code-analytics.json');
+      try {
+        // Read existing analytics if available
+        let existingData: UsageData[] = [];
+        if (fs.existsSync(analyticsPath)) {
+          existingData = JSON.parse(fs.readFileSync(analyticsPath, 'utf-8'));
+        }
+        
+        // Append new data
+        existingData.push(data);
+        
+        // Keep only last 100 entries to avoid unlimited growth
+        if (existingData.length > 100) {
+          existingData = existingData.slice(-100);
+        }
+        
+        // Write back to file
+        fs.writeFileSync(analyticsPath, JSON.stringify(existingData, null, 2));
+      } catch (error) {
+        logger.warn('Error saving analytics data', error as Error);
+      }
+      
+      // Log usage summary if verbose logging is enabled
+      if (this.claudeConfig.verboseLogging) {
+        const durationSeconds = data.endTime ? (data.endTime - data.startTime) / 1000 : 0;
+        logger.info(`Usage stats for issue ${data.issueId}: ` +
+          `${data.successful ? 'Success' : 'Failed'} in ${durationSeconds.toFixed(1)}s ` +
+          `(cost: ${data.cost ? '$' + data.cost : 'unknown'})`);
+      }
+    }
+  }
+  
+  /**
+   * Get usage analytics data
+   */
+  getUsageData(): UsageData[] {
+    return this.usageData;
   }
   
   /**
@@ -194,7 +370,48 @@ export class ClaudeCodeAdapter {
       return enhancedPrompt;
     }
     
-    // Otherwise, construct a basic prompt
+    // Otherwise, construct a basic prompt with context directives
+    
+    // Add context directives based on configuration
+    const contextDirectives = [];
+    
+    if (this.claudeConfig.contextOptions) {
+      const opts = this.claudeConfig.contextOptions;
+      
+      // Add depth directive
+      if (opts.maxDepth !== undefined) {
+        contextDirectives.push(`Use a maximum exploration depth of ${opts.maxDepth} when gathering context.`);
+      }
+      
+      // Add breadth directive
+      if (opts.explorationBreadth !== undefined) {
+        contextDirectives.push(`Use a context exploration breadth of ${opts.explorationBreadth} (on a scale of 1-5).`);
+      }
+      
+      // Add include/exclude directories
+      if (opts.includeDirs && opts.includeDirs.length > 0) {
+        contextDirectives.push(`Focus on examining these directories: ${opts.includeDirs.join(', ')}`);
+      }
+      
+      if (opts.excludeDirs && opts.excludeDirs.length > 0) {
+        contextDirectives.push(`Skip examining these directories: ${opts.excludeDirs.join(', ')}`);
+      }
+      
+      // Add include/exclude file patterns
+      if (opts.includeFiles && opts.includeFiles.length > 0) {
+        contextDirectives.push(`Focus on files matching these patterns: ${opts.includeFiles.join(', ')}`);
+      }
+      
+      if (opts.excludeFiles && opts.excludeFiles.length > 0) {
+        contextDirectives.push(`Skip files matching these patterns: ${opts.excludeFiles.join(', ')}`);
+      }
+    }
+    
+    // Join directives if any exist
+    const contextSection = contextDirectives.length > 0 
+      ? `\nContext Gathering Instructions:\n${contextDirectives.join('\n')}\n`
+      : '';
+    
     return `
       You are an expert developer tasked with fixing issues in a codebase.
       
@@ -203,7 +420,7 @@ export class ClaudeCodeAdapter {
       
       Complexity: ${analysis.complexity}
       Estimated Time: ${analysis.estimatedTime} minutes
-      
+      ${contextSection}
       Related Files:
       ${analysis.relatedFiles?.join('\n') || 'To be determined by context analysis'}
       
@@ -233,7 +450,12 @@ export class ClaudeCodeAdapter {
   /**
    * Execute the Claude Code CLI with the given prompt
    */
-  private async executeClaudeCode(promptPath: string, outputPath: string): Promise<string> {
+  private async executeClaudeCode(
+    promptPath: string, 
+    outputPath: string, 
+    usageEntry: UsageData,
+    timeout: number
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
       // Read the prompt from file
       let prompt;
@@ -244,13 +466,36 @@ export class ClaudeCodeAdapter {
         return;
       }
       
-      // Use stream-json format for better user experience
-      // This provides faster initial response and progress updates
+      // Build Claude Code CLI arguments based on configuration
       const args = [
         '--print',  // Non-interactive mode
-        '--output-format', 'stream-json',  // Stream JSON for responsive output
-        '--verbose'  // Include additional progress information
       ];
+      
+      // Add output format
+      const outputFormat = this.claudeConfig.outputFormat || 'stream-json';
+      args.push('--output-format', outputFormat);
+      
+      // Add verbose flag if configured
+      if (this.claudeConfig.verboseLogging) {
+        args.push('--verbose');
+      }
+      
+      // Add context options if configured
+      if (this.claudeConfig.contextOptions) {
+        const opts = this.claudeConfig.contextOptions;
+        
+        if (opts.maxDepth !== undefined) {
+          args.push('--max-depth', opts.maxDepth.toString());
+        }
+        
+        if (opts.includeDirs && opts.includeDirs.length > 0) {
+          args.push('--include-dirs', opts.includeDirs.join(','));
+        }
+        
+        if (opts.excludeDirs && opts.excludeDirs.length > 0) {
+          args.push('--exclude-dirs', opts.excludeDirs.join(','));
+        }
+      }
       
       // The actual prompt is passed as the last argument
       args.push(prompt);
@@ -260,6 +505,10 @@ export class ClaudeCodeAdapter {
         ...process.env,
         ANTHROPIC_API_KEY: this.config.apiKey
       };
+      
+      if (this.claudeConfig.verboseLogging) {
+        logger.info('Executing Claude Code with args:', args.join(' '));
+      }
       
       const childProcess = spawn(this.executablePath, args, {
         cwd: this.repoPath,
@@ -272,8 +521,18 @@ export class ClaudeCodeAdapter {
       
       // Track progress through streaming updates
       let responseStarted = false;
+      let contextGatheringStarted = false;
+      let contextGatheringCompleted = false;
+      let contextGatheringTime: number | undefined;
       let chunkCount = 0;
       const startTime = Date.now();
+      
+      // Set timeout for the child process
+      const processTimeout = setTimeout(() => {
+        logger.error(`Claude Code execution timed out after ${timeout/1000}s`);
+        childProcess.kill();
+        reject(new Error(`Execution timed out after ${timeout/1000} seconds`));
+      }, timeout);
       
       childProcess.stdout.on('data', (data) => {
         const chunk = data.toString();
@@ -289,16 +548,23 @@ export class ClaudeCodeAdapter {
         }
         
         // Process different stages based on chunk content
-        if (chunk.includes('"type": "tool_use"')) {
+        if (chunk.includes('"type": "tool_use"') && !contextGatheringStarted) {
+          contextGatheringStarted = true;
           logger.info(`Claude is gathering context... (${elapsedSeconds.toFixed(1)}s elapsed)`);
-        } else if (chunk.includes('"type": "tool_result"')) {
+        } else if (chunk.includes('"type": "tool_result"') && !contextGatheringCompleted && contextGatheringStarted) {
+          contextGatheringCompleted = true;
+          contextGatheringTime = Date.now() - startTime;
+          usageEntry.contextGatheringTime = contextGatheringTime;
+          logger.info(`Context gathering completed in ${(contextGatheringTime/1000).toFixed(1)}s`);
           logger.info(`Claude is analyzing the issue... (${elapsedSeconds.toFixed(1)}s elapsed)`);
-        } else if (chunk.includes('"type": "text"')) {
+        } else if (chunk.includes('"type": "text"') && contextGatheringCompleted) {
           logger.info(`Claude is generating solution... (${elapsedSeconds.toFixed(1)}s elapsed)`);
         } else if (chunk.includes('"cost_usd"')) {
           const costMatch = chunk.match(/"cost_usd": ([0-9.]+)/);
           if (costMatch) {
-            logger.info(`Claude completed response (cost: $${costMatch[1]})`);
+            const cost = parseFloat(costMatch[1]);
+            usageEntry.cost = cost;
+            logger.info(`Claude completed response (cost: $${cost.toFixed(4)})`);
           }
         }
       });
@@ -309,8 +575,14 @@ export class ClaudeCodeAdapter {
       });
       
       childProcess.on('close', (code) => {
+        clearTimeout(processTimeout);
+        
         const totalTime = (Date.now() - startTime) / 1000;
         logger.info(`Claude Code process completed in ${totalTime.toFixed(1)}s (${chunkCount} chunks)`);
+        
+        // Update usage tracking
+        usageEntry.totalChunks = chunkCount;
+        usageEntry.solutionGenerationTime = Date.now() - (startTime + (usageEntry.contextGatheringTime || 0));
         
         if (code !== 0) {
           reject(new Error(`Claude Code exited with code ${code}: ${errorOutput}`));
@@ -449,5 +721,45 @@ export class ClaudeCodeAdapter {
         tests: []
       };
     }
+  }
+  
+  /**
+   * Get analytics and usage summary
+   */
+  getAnalyticsSummary(): object {
+    const total = this.usageData.length;
+    if (total === 0) {
+      return { total: 0 };
+    }
+    
+    const successful = this.usageData.filter(d => d.successful).length;
+    const successRate = (successful / total) * 100;
+    
+    const avgDuration = this.usageData
+      .filter(d => d.endTime !== undefined)
+      .map(d => (d.endTime! - d.startTime) / 1000)
+      .reduce((a, b) => a + b, 0) / total;
+    
+    const totalCost = this.usageData
+      .filter(d => d.cost !== undefined)
+      .map(d => d.cost!)
+      .reduce((a, b) => a + b, 0);
+    
+    const errorTypes = this.usageData
+      .filter(d => d.errorType)
+      .reduce((acc, d) => {
+        const type = d.errorType!;
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+    
+    return {
+      total,
+      successful,
+      successRate: successRate.toFixed(1) + '%',
+      avgDuration: avgDuration.toFixed(1) + 's',
+      totalCost: '$' + totalCost.toFixed(4),
+      errorTypes
+    };
   }
 }

@@ -58,6 +58,91 @@ export interface AIClient {
 }
 
 /**
+ * Claude Code specific configuration
+ */
+export interface ClaudeCodeConfig {
+  /**
+   * Path to Claude Code executable (defaults to 'claude')
+   */
+  executablePath?: string;
+  
+  /**
+   * Output format for Claude Code (defaults to 'stream-json')
+   */
+  outputFormat?: 'stream-json' | 'json' | 'text';
+  
+  /**
+   * Context gathering configuration options
+   */
+  contextOptions?: {
+    /**
+     * Maximum depth for context exploration (1-5, defaults to 3)
+     */
+    maxDepth?: number;
+    
+    /**
+     * Controls breadth of context exploration (1-5, defaults to 3)
+     */
+    explorationBreadth?: number;
+    
+    /**
+     * Include specific directories in context gathering
+     */
+    includeDirs?: string[];
+    
+    /**
+     * Exclude specific directories from context gathering
+     */
+    excludeDirs?: string[];
+    
+    /**
+     * Include specific file patterns in context gathering
+     */
+    includeFiles?: string[];
+    
+    /**
+     * Exclude specific file patterns from context gathering
+     */
+    excludeFiles?: string[];
+  };
+  
+  /**
+   * Retry configuration
+   */
+  retryOptions?: {
+    /**
+     * Maximum number of retries (defaults to 2)
+     */
+    maxRetries?: number;
+    
+    /**
+     * Base delay for exponential backoff in ms (defaults to 1000)
+     */
+    baseDelay?: number;
+  };
+  
+  /**
+   * Timeout in milliseconds (defaults to 300000 - 5 minutes)
+   */
+  timeout?: number;
+  
+  /**
+   * Path for temporary files (defaults to './temp')
+   */
+  tempDir?: string;
+  
+  /**
+   * Enable detailed logging (defaults to false)
+   */
+  verboseLogging?: boolean;
+  
+  /**
+   * Enable usage tracking and analytics (defaults to true)
+   */
+  trackUsage?: boolean;
+}
+
+/**
  * AI configuration
  */
 export interface AIConfig {
@@ -67,4 +152,5 @@ export interface AIConfig {
   temperature?: number;
   maxTokens?: number;
   useClaudeCode?: boolean;
+  claudeCodeConfig?: ClaudeCodeConfig;
 }
