@@ -69,6 +69,10 @@ temp/solution-*.json
 e2e-tests/test-repos/
 e2e-tests/results/
 
+# Ollama test files
+test-ollama-direct.js
+test-ollama-output*.json
+
 # TypeScript
 *.tsbuildinfo
 
