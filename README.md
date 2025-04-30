@@ -28,6 +28,10 @@ cd RSOLV-action
 bun run demo-env
 ```
 
+## AI Provider Integrations
+
+RSOLV supports multiple AI providers to fit your needs and preferences:
+
 ### Claude Code Integration
 
 RSOLV uses a hybrid approach that combines Claude Code's sophisticated context-gathering capabilities with our unique feedback-enhanced prompt system.
@@ -76,6 +80,55 @@ If Claude Code CLI is not detected, the system will automatically fall back to s
 - **Enhanced Solution Quality**: Deeper code understanding leads to more accurate fixes
 - **Feedback Integration**: Combines context gathering with historical feedback patterns
 - **Performance Optimization**: Focuses on relevant files and code patterns
+
+### Ollama Integration
+
+RSOLV supports using Ollama as an AI provider, allowing you to run models locally or on your own servers.
+
+#### Setup and Usage
+
+1. Install and set up Ollama first:
+
+```bash
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Start Ollama server
+ollama serve
+
+# Pull the recommended model
+ollama pull deepseek-r1:14b
+```
+
+2. Run with Ollama:
+
+```bash
+# Run the demo
+AI_PROVIDER=ollama bun run demo-env
+
+# Or with specific model
+OLLAMA_MODEL=deepseek-r1:14b AI_PROVIDER=ollama bun run demo-env
+```
+
+3. Using in GitHub Action:
+
+```yaml
+- name: RSOLV AI Fix
+  uses: rsolv-dev/rsolv-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    ai_provider: ollama
+    ollama_api_url: http://ollama-server:11434/api  # Optional
+```
+
+#### Benefits of Ollama
+
+- **Complete Privacy**: All processing happens locally, no data leaves your infrastructure
+- **Cost Efficiency**: Free to use with no API usage fees
+- **Model Flexibility**: Use any model supported by Ollama
+- **Self-Hosting**: Run on your own hardware with full control
+
+For detailed information, see our [Ollama Integration Guide](docs/ollama-integration.md)
 
 #### Testing and Evaluation
 
