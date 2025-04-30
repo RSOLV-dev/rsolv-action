@@ -1,8 +1,87 @@
 import { describe, expect, test, beforeEach, mock } from 'bun:test';
-import { ClaudeCodeAdapter } from '../claude-code';
 import { AIConfig } from '../../types';
-import fs from 'fs';
 import path from 'path';
+
+// Mock the file system
+mock.module('fs', () => {
+  const mockSolutionJson = {
+    title: 'Fix: Test solution title',
+    description: 'Test solution description with detailed explanation',
+    files: [
+      {
+        path: 'src/file1.ts',
+        changes: 'Updated file1 content with fixes'
+      },
+      {
+        path: 'src/file2.ts',
+        changes: 'Updated file2 content with additional tests'
+      }
+    ],
+    tests: ['Test case 1', 'Test case 2']
+  };
+
+  return {
+    writeFileSync: () => {},
+    readFileSync: () => JSON.stringify(mockSolutionJson),
+    existsSync: () => true,
+    mkdirSync: () => {},
+    unlinkSync: () => {}
+  };
+});
+
+// Mock child_process
+mock.module('child_process', () => {
+  return {
+    spawn: () => {
+      const eventHandlers: Record<string, Array<(...args: any[]) => void>> = {};
+      
+      const stdout = {
+        on: (event: string, handler: (...args: any[]) => void) => {
+          if (!eventHandlers[`stdout:${event}`]) {
+            eventHandlers[`stdout:${event}`] = [];
+          }
+          eventHandlers[`stdout:${event}`].push(handler);
+          return stdout;
+        }
+      };
+      
+      const stderr = {
+        on: (event: string, handler: (...args: any[]) => void) => {
+          if (!eventHandlers[`stderr:${event}`]) {
+            eventHandlers[`stderr:${event}`] = [];
+          }
+          eventHandlers[`stderr:${event}`].push(handler);
+          return stderr;
+        }
+      };
+      
+      const mockProcess = {
+        stdout,
+        stderr,
+        on: (event: string, handler: (...args: any[]) => void) => {
+          if (!eventHandlers[event]) {
+            eventHandlers[event] = [];
+          }
+          eventHandlers[event].push(handler);
+          
+          // For all commands, succeed by default
+          setTimeout(() => {
+            if (eventHandlers['stdout:data']) {
+              eventHandlers['stdout:data'].forEach(h => h(Buffer.from('Claude Code output')));
+            }
+            if (eventHandlers['close']) {
+              eventHandlers['close'].forEach(h => h(0)); // Exit code 0 = success
+            }
+          }, 10);
+          
+          return mockProcess;
+        }
+      };
+      
+      return mockProcess;
+    }
+  };
+});
 
 // Mock the logger
 mock.module('../../../utils/logger', () => {
@@ -17,8 +96,8 @@ mock.module('../../../utils/logger', () => {
   };
 });
 
-// Import after mocking is needed for the tests
-import '../../../utils/logger';
+// Now we can import the adapter
+import { ClaudeCodeAdapter } from '../claude-code';
 
 describe('Claude Code Adapter', () => {
   const tempDir = path.join(process.cwd(), 'temp');
@@ -71,82 +150,6 @@ describe('Claude Code Adapter', () => {
   beforeEach(() => {
     // Set test environment
     process.env.NODE_ENV = 'test';
-
-    // Create temp directory if it doesn't exist
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    
-    // Mock fs methods
-    mock.module('fs', () => {
-      return {
-        writeFileSync: () => {},
-        readFileSync: (_filePath: string) => {
-          return JSON.stringify(mockSolutionJson);
-        },
-        existsSync: (filePath: string) => {
-          if (filePath === tempDir || filePath === mockOutputPath) {
-            return true;
-          }
-          return false;
-        },
-        mkdirSync: () => {},
-        unlinkSync: () => {}
-      };
-    });
-    
-    // Mock child_process.spawn
-    mock.module('child_process', () => {
-      return {
-        spawn: (_command: string, _args: string[], _options: any) => {
-          const eventHandlers: Record<string, Array<(...args: any[]) => void>> = {};
-          const stdout = {
-            on: (event: string, handler: (...args: any[]) => void) => {
-              if (!eventHandlers[`stdout:${event}`]) {
-                eventHandlers[`stdout:${event}`] = [];
-              }
-              eventHandlers[`stdout:${event}`].push(handler);
-              return stdout;
-            }
-          };
-          
-          const stderr = {
-            on: (event: string, handler: (...args: any[]) => void) => {
-              if (!eventHandlers[`stderr:${event}`]) {
-                eventHandlers[`stderr:${event}`] = [];
-              }
-              eventHandlers[`stderr:${event}`].push(handler);
-              return stderr;
-            }
-          };
-          
-          const mockProcess = {
-            stdout,
-            stderr,
-            on: (event: string, handler: (...args: any[]) => void) => {
-              if (!eventHandlers[event]) {
-                eventHandlers[event] = [];
-              }
-              eventHandlers[event].push(handler);
-              
-              // For all commands, succeed by default
-              setTimeout(() => {
-                if (eventHandlers['stdout:data']) {
-                  eventHandlers['stdout:data'].forEach(h => h(Buffer.from('Claude Code output')));
-                }
-                if (eventHandlers['close']) {
-                  eventHandlers['close'].forEach(h => h(0)); // Exit code 0 = success
-                }
-              }, 10);
-              
-              return mockProcess;
-            }
-          };
-          
-          return mockProcess;
-        }
-      };
-    });
   });
   
   test('constructor should initialize with provided values', () => {
@@ -164,13 +167,13 @@ describe('Claude Code Adapter', () => {
   
   test('constructPrompt should prioritize enhanced prompt when provided', () => {
     const adapter = new ClaudeCodeAdapter(mockConfig);
-    const result = (adapter as any).constructPrompt(mockIssueContext, mockAnalysis, mockEnhancedPrompt);
+    const result = adapter['constructPrompt'](mockIssueContext, mockAnalysis, mockEnhancedPrompt);
     expect(result).toBe(mockEnhancedPrompt);
   });
   
   test('constructPrompt should create default prompt when no enhanced prompt provided', () => {
     const adapter = new ClaudeCodeAdapter(mockConfig);
-    const result = (adapter as any).constructPrompt(mockIssueContext, mockAnalysis);
+    const result = adapter['constructPrompt'](mockIssueContext, mockAnalysis);
     expect(result).toContain(mockIssueContext.title);
     expect(result).toContain(mockIssueContext.body);
     expect(result).toContain(mockAnalysis.complexity);
@@ -204,7 +207,8 @@ describe('Claude Code Adapter', () => {
       {"id":"msg_123","type":"message","role":"assistant","content":[{"type":"text","text":"\\{\\n  \\"title\\": \\"Fix test issue\\",\\n  \\"description\\": \\"Test solution\\",\\n  \\"files\\": [\\n    {\\n      \\"path\\": \\"file.ts\\",\\n      \\"changes\\": \\"test\\"\\n    }\\n  ],\\n  \\"tests\\": [\\"Test 1\\"]\\n\\}"}]}
     `;
     
-    const result = (adapter as any).parseSolution(streamOutput, mockOutputPath, mockIssueContext);
+    // Call the method directly
+    const result = adapter['parseSolution'](streamOutput, mockOutputPath, mockIssueContext);
     
     // With our mocking, we'll default to our fallback solution
     expect(result).toBeDefined();
@@ -222,7 +226,7 @@ describe('Claude Code Adapter', () => {
       {"id":"msg_123","type":"message","role":"assistant","content":[{"type":"text","text":"Here is the solution:\\n\\n\`\`\`json\\n{\\n  \\"title\\": \\"Fix test issue\\",\\n  \\"description\\": \\"Test solution\\",\\n  \\"files\\": [\\n    {\\n      \\"path\\": \\"file.ts\\",\\n      \\"changes\\": \\"test\\"\\n    }\\n  ],\\n  \\"tests\\": [\\"Test 1\\"]\\n}\\n\`\`\`"}]}
     `;
     
-    const result = (adapter as any).parseSolution(streamOutput, mockOutputPath, mockIssueContext);
+    const result = adapter['parseSolution'](streamOutput, mockOutputPath, mockIssueContext);
     
     // With our mocking, we'll default to our fallback solution
     expect(result).toBeDefined();
@@ -236,7 +240,7 @@ describe('Claude Code Adapter', () => {
     const adapter = new ClaudeCodeAdapter(mockConfig);
     
     // Test with invalid input
-    const result = (adapter as any).parseSolution('invalid json', mockOutputPath, mockIssueContext);
+    const result = adapter['parseSolution']('invalid json', mockOutputPath, mockIssueContext);
     
     // Should return a fallback solution
     expect(result.title).toBe(`Fix for: ${mockIssueContext.title}`);
