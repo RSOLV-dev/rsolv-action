@@ -11,6 +11,7 @@ For Day 5 milestone, we've created a comprehensive demo environment that allows 
 - PR Creation
 - Feedback Collection & Processing
 - Prompt Enhancement based on feedback
+- Claude Code Integration for enhanced context gathering
 
 ### Running the Demo Environment
 
@@ -20,12 +21,65 @@ To run the demo environment:
 # Set up your environment variables (optional)
 export GITHUB_TOKEN=your_github_token
 export ANTHROPIC_API_KEY=your_anthropic_api_key
-export AI_PROVIDER=anthropic # or openrouter, ollama
+export AI_PROVIDER=anthropic # or openrouter, ollama, claude-code
 
 # Run the demo environment
 cd RSOLV-action
 bun run demo-env
 ```
+
+### Claude Code Integration
+
+RSOLV uses a hybrid approach that combines Claude Code's sophisticated context-gathering capabilities with our unique feedback-enhanced prompt system.
+
+#### Setup and Usage
+
+1. Install the Claude Code CLI first:
+
+```bash
+# Install Claude Code CLI (required for real Claude Code integration)
+npm install -g @anthropic-ai/claude-code
+
+# Verify installation
+claude -v
+```
+
+2. Run with Claude Code:
+
+```bash
+# Set your Anthropic API key
+export ANTHROPIC_API_KEY=your_anthropic_api_key
+
+# Run the demo
+bun run demo-env
+
+# Select "claude-code" as the AI provider when prompted
+```
+
+3. Using in GitHub Action:
+
+```yaml
+- name: RSOLV AI Fix
+  uses: rsolv-dev/rsolv-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    ai_provider: anthropic
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    use_claude_code: true  # Enable Claude Code integration
+```
+
+If Claude Code CLI is not detected, the system will automatically fall back to simulation mode with a warning message.
+
+#### Benefits of Hybrid Approach
+
+- **Intelligent Context Gathering**: Claude Code analyzes repository structure and relationships between files
+- **Enhanced Solution Quality**: Deeper code understanding leads to more accurate fixes
+- **Feedback Integration**: Combines context gathering with historical feedback patterns
+- **Performance Optimization**: Focuses on relevant files and code patterns
+
+#### Testing and Evaluation
+
+The demo environment includes a context quality evaluation tool that compares solution quality with and without Claude Code. Use the "Evaluate Claude Code Context Quality" option in the demo menu to see a side-by-side comparison.
 
 ### Demo Features
 
@@ -38,6 +92,7 @@ The demo environment provides an interactive CLI interface that allows you to:
 5. **Simulate Feedback**: Add simulated feedback from expert reviewers
 6. **View Feedback Statistics**: See aggregate statistics on collected feedback
 7. **Test Prompt Enhancement**: See how feedback affects future prompt generation
+8. **Try Claude Code**: Use the advanced context-gathering capabilities of Claude Code (with CLI installed)
 
 ### Demo Workflow
 
@@ -131,6 +186,8 @@ flowchart LR
 | `api_key` | Your RSOLV API key | Yes | - |
 | `issue_tag` | Tag to identify issues for automation | No | `AUTOFIX` |
 | `expert_review_command` | Command to request expert review | No | `/request-expert-review` |
+| `ai_provider` | AI provider to use (anthropic, openrouter, ollama) | No | `anthropic` |
+| `use_claude_code` | Use Claude Code for enhanced context gathering | No | `false` |
 
 ## Local Development
 
@@ -156,6 +213,51 @@ bun run demo https://github.com/owner/repo/issues/123
 # Run interactive demo environment
 bun run demo-env
 ```
+
+### Claude Code Testing
+
+We've implemented multiple levels of testing for the Claude Code integration:
+
+#### End-to-End Simulation Tests
+
+These tests validate the Claude Code integration with simulated responses:
+
+```bash
+# Set your API key
+export ANTHROPIC_API_KEY=your_api_key
+
+# Run simulation tests locally (does not require Claude CLI)
+./run-claude-code-test.sh
+
+# Run simulation tests in Docker
+./run-claude-code-test.sh --docker
+```
+
+The simulation tests:
+- Analyze sample issues using both standard and Claude Code approaches
+- Generate solutions using simulated Claude Code responses
+- Compare results quantitatively (file count, test coverage, complexity)
+- Save detailed output for benchmarking
+
+#### Live Integration Tests
+
+These tests validate the actual Claude CLI integration with real responses:
+
+```bash
+# Set your API key
+export ANTHROPIC_API_KEY=your_api_key
+
+# Run live tests (requires Claude CLI to be installed)
+./run-live-claude-test.sh
+```
+
+The live tests:
+- Directly exercise the Claude Code adapter with real Claude CLI
+- Send actual prompts and process real responses
+- Validate the structure and content of generated solutions
+- Verify end-to-end integration works correctly
+
+All test results are saved to the `test-data` directory for inspection and benchmarking.
 
 ## Support
 

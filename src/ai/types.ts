@@ -66,4 +66,5 @@ export interface AIConfig {
   modelName?: string;
   temperature?: number;
   maxTokens?: number;
+  useClaudeCode?: boolean;
 }

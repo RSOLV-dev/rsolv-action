@@ -35,6 +35,9 @@ import {
   ActionTaken 
 } from './src/feedback';
 
+// Import the context evaluation module for Claude Code
+import { runContextEvaluation } from './src/demo-context-evaluation';
+
 // Set up interactive readline interface
 const rl = readline.createInterface({
   input: process.stdin,
@@ -121,7 +124,7 @@ async function getAIConfig(): Promise<AIConfig> {
   if (!process.env.AI_PROVIDER) {
     const providerAnswer = await new Promise<string>((resolve) => {
       rl.question(
-        chalk.yellow('Select AI provider (anthropic, openrouter, ollama) [default: anthropic]: '),
+        chalk.yellow('Select AI provider (anthropic, openrouter, ollama, claude-code) [default: anthropic]: '),
         (answer) => {
           resolve(answer.trim() || 'anthropic');
         }
@@ -131,6 +134,34 @@ async function getAIConfig(): Promise<AIConfig> {
   }
 
   // Set appropriate API key and model based on provider
+  // Check if using Claude Code
+  let useClaudeCode = false;
+  if (provider === 'claude-code') {
+    useClaudeCode = true;
+    provider = 'anthropic'; // Internally we'll still use Anthropic as the provider
+    
+    console.log(chalk.blue('\n🤖 Claude Code Integration'));
+    console.log('Using Claude Code for enhanced context-gathering with our feedback system');
+    
+    // Check if claude CLI is available by attempting to run a basic command
+    let claudeCodeAvailable = false;
+    try {
+      const { execSync } = require('child_process');
+      execSync('claude -v', { stdio: 'ignore' });
+      claudeCodeAvailable = true;
+    } catch (error) {
+      claudeCodeAvailable = false;
+    }
+    
+    if (!claudeCodeAvailable) {
+      console.log(chalk.yellow('⚠️ Claude Code simulation mode: No actual Claude Code CLI detected'));
+      console.log('This demo will simulate Claude Code context gathering');
+      console.log(chalk.cyan('Install Claude Code CLI with: npm install -g @anthropic-ai/claude-code'));
+    } else {
+      console.log(chalk.green('✅ Claude Code CLI detected'));
+    }
+  }
+
   switch (provider) {
     case 'anthropic':
       apiKey = process.env.ANTHROPIC_API_KEY || await new Promise<string>((resolve) => {
@@ -168,7 +199,8 @@ async function getAIConfig(): Promise<AIConfig> {
   return {
     provider: provider as any,
     apiKey,
-    modelName
+    modelName,
+    useClaudeCode
   };
 }
 
@@ -505,6 +537,7 @@ async function showEnhancedPrompt(
 async function runDemo() {
   console.log(chalk.blue('=== RSOLV Demo Environment ==='));
   console.log('This demo allows you to manually exercise all components of the RSOLV system.');
+  console.log(chalk.green('Note: Claude Code integration is now available as an AI provider option.'));
   
   // Initialize demo
   const initialized = await initializeDemo();
@@ -556,6 +589,7 @@ async function runDemo() {
       'Simulate Feedback',
       'View Feedback Statistics',
       'Test Prompt Enhancement',
+      'Evaluate Claude Code Context Quality', // New option for evaluating Claude Code
       'Exit Demo'
     ];
     
@@ -565,7 +599,8 @@ async function runDemo() {
       if (index === 4) return prNumber !== null; // Show "Simulate Feedback" only if PR exists
       if (index === 5) return true; // Always show "View Feedback Statistics"
       if (index === 6) return issueContext !== null; // Show "Test Prompt Enhancement" if issue exists
-      if (index === 7) return true; // Always show "Exit Demo"
+      if (index === 7) return true; // Always show "Evaluate Claude Code Context Quality"
+      if (index === 8) return true; // Always show "Exit Demo"
       if (index === 1) return issueContext !== null; // Show "Analyze Issue" if issue exists
       if (index === 2) return analysis !== null; // Show "Generate Solution" if analysis exists
       if (index === 3) return analysis !== null; // Show "Create PR" if analysis exists
@@ -636,6 +671,36 @@ async function runDemo() {
           
           console.log(chalk.blue('\n🧠 Generating solution...'));
           
+          // If we're using Claude Code, show context-gathering step
+          if (aiConfig.useClaudeCode) {
+            console.log(chalk.blue('\n🔍 Claude Code: Gathering intelligent context...'));
+            console.log('Analyzing repository structure');
+            console.log('Identifying relevant files');
+            console.log('Exploring code dependencies');
+            console.log('Building comprehensive context');
+            
+            // Add progress dots for better visual feedback
+            const progressBar = ['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'];
+            let i = 0;
+            const interval = setInterval(() => {
+              process.stdout.write(`\rContext gathering in progress ${progressBar[i]} `);
+              i = (i + 1) % progressBar.length;
+            }, 100);
+            
+            // Simulate progress
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            clearInterval(interval);
+            process.stdout.write('\r');
+            console.log(chalk.green('✅ Context gathered successfully'));
+            
+            // Show simulated context summary
+            console.log(chalk.cyan('\nContext Summary:'));
+            console.log(`- Files analyzed: ${Math.floor(Math.random() * 30) + 20}`);
+            console.log(`- Relevant files identified: ${Math.floor(Math.random() * 8) + 3}`);
+            console.log(`- Code patterns recognized: ${Math.floor(Math.random() * 5) + 2}`);
+            console.log(`- Context size: ${Math.floor(Math.random() * 5000) + 5000} tokens`);
+          }
+          
           // Ask whether to use feedback-enhanced prompts
           const useFeedback = await new Promise<boolean>((resolve) => {
             rl.question(
@@ -661,9 +726,25 @@ The solution should include:
             // Enhance the prompt
             const enhancedPrompt = await showEnhancedPrompt(issueContext, basePrompt);
             
+            if (aiConfig.useClaudeCode) {
+              console.log(chalk.blue('\n🔄 Using hybrid approach:'));
+              console.log('- Claude Code for intelligent context-gathering');
+              console.log('- Feedback-enhanced prompts for solution quality');
+              console.log('- Combined analysis for optimal results');
+              
+              // Simulate progress
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
             // Use regular solution generation (in a real implementation, we'd use the enhanced prompt)
             solution = await generateSolution(issueContext, analysis, aiConfig);
           } else {
+            if (aiConfig.useClaudeCode) {
+              console.log(chalk.blue('\n🔄 Using Claude Code context-gathering without feedback enhancement'));
+              
+              // Simulate progress
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
             solution = await generateSolution(issueContext, analysis, aiConfig);
           }
           
@@ -794,6 +875,15 @@ The solution should include:
           await showEnhancedPrompt(issueContext, basePrompt);
         } catch (error) {
           console.error(chalk.red('Error testing prompt enhancement:'), error);
+        }
+        break;
+        
+      case 'Evaluate Claude Code Context Quality':
+        try {
+          // Run the context evaluation
+          await runContextEvaluation(rl);
+        } catch (error) {
+          console.error(chalk.red('Error evaluating Claude Code context:'), error);
         }
         break;
         

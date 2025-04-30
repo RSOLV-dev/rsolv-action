@@ -1,0 +1,18 @@
+{
+  "title": "Fix race condition in user profile updates using transactions",
+  "description": "Resolved the race condition that caused data loss when multiple requests simultaneously updated the same user profile. Implemented a transactional approach to fetch, update, and save the user record atomically within a single transaction. This ensures proper isolation and prevents concurrent updates from overwriting each other.\n\nKey changes:\n- Modified the update method in userProfileService to use a MongoDB transaction\n- Transaction starts before fetching the user record\n- User record is fetched for update inside the transaction\n- Updated user record is saved back to the database within the transaction\n- Transaction is committed if successful, or rolled back if an error occurs\n- Added error handling and retry logic to handle transaction failures",
+  "files": [
+    {
+      "path": "userProfileService.js",
+      "changes": "async function updateUserProfile(userId, updateData) {\n  const session = await mongoose.startSession();\n  session.startTransaction();\n  try {\n    const user = await UserProfile.findById(userId).session(session);\n    if (!user) {\n      throw new Error('User not found');\n    }\n    Object.assign(user, updateData);\n    await user.save();\n    await session.commitTransaction();\n    return user;\n  } catch (error) {\n    await session.abortTransaction();\n    throw error;\n  } finally {\n    session.endSession();\n  }\n}"
+    },
+    {
+      "path": "userProfileController.js",
+      "changes": "// Modify the update route handler to use the new transactional update method\nrouter.put('/:id', async (req, res) => {\n  try {\n    const updatedUser = await userProfileService.updateUserProfile(req.params.id, req.body);\n    res.json(updatedUser);\n  } catch (error) {\n    console.error('Failed to update user profile:', error);\n    res.status(500).json({ error: 'Internal server error' });\n  }\n});"
+    }
+  ],
+  "tests": [
+    "Write a test that simulates multiple concurrent update requests to the same user profile and verifies that all updates are correctly applied without data loss",
+    "Test error handling by simulating a transaction failure and ensuring the update is rolled back and an error is returned"
+  ]
+}

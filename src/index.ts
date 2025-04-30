@@ -7,7 +7,7 @@ import { checkRepositorySecurity, validateApiKey } from './utils/security';
 import { extractIssueContextFromEvent, isEligibleForAutomation, addIssueComment } from './github/issues';
 import { IssueContext, ActionStatus, ActionResult } from './types';
 import { analyzeIssue } from './ai/analyzer';
-import { generateSolution } from './ai/solution';
+import { generateSolutionWithFeedback } from './ai/feedbackEnhanced';
 
 /**
  * Main function for the RSOLV action
@@ -23,6 +23,7 @@ async function run(): Promise<ActionResult> {
     // Log basic information
     logger.info(`Starting RSOLV Action v0.1.0`);
     logger.info(`Using AI provider: ${config.aiConfig.provider}`);
+    logger.info(`Using Claude Code: ${config.aiConfig.useClaudeCode ? 'Yes' : 'No'}`);
     logger.info(`Checking for issues with tag: ${config.issueTag}`);
     
     // Validate API key
@@ -120,9 +121,9 @@ ${analysis.requiredChanges?.map(change => `- ${change}`).join('\n') || 'To be de
 I'm now generating a solution based on this analysis...`
     );
     
-    // Generate a solution
+    // Generate a solution with feedback enhancement
     logger.info(`Generating solution for issue #${issueContext.id}...`);
-    const solution = await generateSolution(issueContext, analysis, config.aiConfig);
+    const solution = await generateSolutionWithFeedback(issueContext, analysis, config.aiConfig);
     
     logger.info(`Solution generated with ${solution.files.length} file changes`);
     

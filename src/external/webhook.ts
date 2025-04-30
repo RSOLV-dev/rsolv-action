@@ -104,6 +104,15 @@ export const customerRateLimits: Record<string, {
 }> = {};
 
 /**
+ * Reset customer rate limits - exported for testing purposes
+ */
+export function resetRateLimits(): void {
+  Object.keys(customerRateLimits).forEach(key => {
+    delete customerRateLimits[key];
+  });
+}
+
+/**
  * Check if a customer is rate limited
  */
 export function isRateLimited(customerApiKey: string): boolean {

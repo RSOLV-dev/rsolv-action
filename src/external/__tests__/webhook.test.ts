@@ -4,7 +4,9 @@ import {
   isEligibleForAutomation,
   isRateLimited,
   processExpertReviewRequest,
-  ExpertReviewRequest
+  ExpertReviewRequest,
+  resetRateLimits,
+  customerRateLimits
 } from '../webhook';
 import { IssueContext } from '../../types';
 
@@ -30,14 +32,8 @@ mock.module('../../utils/logger', () => ({
 
 // Setup for tests
 beforeEach(() => {
-  // Reset any in-memory data between tests
-  // This is important for the rate limiting tests
-  const rateLimits = (global as any).customerRateLimits;
-  if (rateLimits) {
-    Object.keys(rateLimits).forEach(key => {
-      delete rateLimits[key];
-    });
-  }
+  // Reset any in-memory data between tests using our exported function
+  resetRateLimits();
 });
 
 test('processWebhookPayload should validate API key', async () => {
@@ -116,19 +112,26 @@ test('isEligibleForAutomation should check automation tag and body', () => {
 });
 
 test('isRateLimited should limit based on daily and monthly usage', () => {
-  // First request is not rate limited
+  // Test that a new customer is not rate limited
   expect(isRateLimited('customer-1')).toBe(false);
   
-  // We need to access this from the module directly since it's not exposed as a global
-  // This is a hack for testing only
-  const customerRateLimits = require('../webhook').customerRateLimits;
-  customerRateLimits['customer-1'].dailyUsed = 1;
+  // Directly simulate exceeding daily limit
+  customerRateLimits['customer-1'] = {
+    dailyLimit: 1,
+    monthlyLimit: 5,
+    dailyUsed: 1, // Already used their daily limit
+    monthlyUsed: 1,
+    lastReset: new Date()
+  };
   
-  // Now it should be rate limited (default daily limit is 1)
+  // Now it should be rate limited
   expect(isRateLimited('customer-1')).toBe(true);
   
   // Different customer should not be rate limited
   expect(isRateLimited('customer-2')).toBe(false);
+  
+  // Reset for next test
+  resetRateLimits();
 });
 
 test('processExpertReviewRequest should validate API key and check rate limits', async () => {

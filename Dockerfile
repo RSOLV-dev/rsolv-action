@@ -23,7 +23,7 @@ COPY bun.lockb* ./
 # Install dependencies
 RUN bun install
 
-# Install Claude Code
+# Install Claude Code CLI
 RUN npm install -g @anthropic-ai/claude-code
 
 # Copy source code
@@ -33,7 +33,7 @@ COPY tsconfig.json ./
 # Build TypeScript code
 RUN bun run build
 
-# Create a directory for Claude Code config
+# Create a directory for Claude CLI config
 RUN mkdir -p /root/.claude
 
 # Set environment variables

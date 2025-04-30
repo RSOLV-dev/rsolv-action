@@ -10,6 +10,7 @@
     "demo": "bun run ./src/demo.ts",
     "demo-env": "bun run ./demo-environment.ts",
     "test": "bun test",
+    "test:isolated": "for dir in $(find ./src -type d -name __tests__); do echo \"Testing $dir\"; bun test $dir; done",
     "test:watch": "bun test --watch",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"

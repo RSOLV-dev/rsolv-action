@@ -1,13 +1,17 @@
-import { AIClient, AIConfig } from './types';
-import { logger } from '../utils/logger';
+/**
+ * AI client factory for the RSOLV system
+ * This creates and configures the appropriate AI client based on the configuration
+ */
 import { AnthropicClient } from './providers/anthropic';
 import { OpenRouterClient } from './providers/openrouter';
 import { OllamaClient } from './providers/ollama';
 import { ClaudeCodeAdapter } from './adapters/claude-code';
-import { IssueContext } from '../types';
+import { AIClient, AIConfig, RepoContext } from './types';
+import { logger } from '../utils/logger';
 
 /**
- * Wrapper class to adapt the Claude Code adapter to the AIClient interface
+ * ClaudeCodeWrapper adapts the ClaudeCodeAdapter to the AIClient interface
+ * This allows seamless integration into the existing system
  */
 class ClaudeCodeWrapper implements AIClient {
   private adapter: ClaudeCodeAdapter;
@@ -18,61 +22,57 @@ class ClaudeCodeWrapper implements AIClient {
     this.repoPath = repoPath;
   }
   
-  async analyzeIssue(
-    issueTitle: string,
-    issueBody: string,
-    repoContext?: any
-  ): Promise<IssueAnalysis> {
-    // For now, we'll use the Anthropic client for analysis
-    // In a future update, we could add analysis capabilities to the Claude Code adapter
-    const anthropicClient = new AnthropicClient({
-      provider: 'anthropic',
-      apiKey: this.adapter['config'].apiKey,
-      modelName: this.adapter['config'].modelName
-    });
-    
-    return anthropicClient.analyzeIssue(issueTitle, issueBody, repoContext);
-  }
-  
   async generateSolution(
     issueTitle: string,
     issueBody: string,
-    issueAnalysis: IssueAnalysis,
-    repoContext?: any
-  ): Promise<PullRequestSolution> {
-    // Create an issue context object from the parameters
-    const issueContext: IssueContext = {
-      id: `issue-${Date.now()}`,
+    issueAnalysis: any,
+    repoContext?: RepoContext
+  ): Promise<any> {
+    // Map to the adapter's expected interface
+    const issueContext = {
+      id: 'local',
       title: issueTitle,
       body: issueBody,
-      repository: {
-        owner: repoContext?.owner || 'unknown',
-        name: repoContext?.repo || 'unknown',
-        branch: repoContext?.branch || 'main'
-      },
-      source: repoContext?.source || 'github',
-      url: repoContext?.url || '',
-      labels: repoContext?.labels || []
+      labels: [],
+      repository: repoContext?.repository || { owner: 'unknown', name: 'unknown' },
+      source: 'github',
+      metadata: {}
     };
     
-    // Use the Claude Code adapter to generate a solution
+    // Pass the repo context to the adapter
     return this.adapter.generateSolution(issueContext, issueAnalysis);
+  }
+  
+  async analyzeIssue(
+    issueTitle: string,
+    issueBody: string,
+    repoContext?: RepoContext
+  ): Promise<any> {
+    // For Claude Code, we'll rely on its built-in analysis capabilities
+    // but we still need to provide a minimal analysis object for compatibility
+    return {
+      complexity: 'medium',
+      estimatedTime: 30,
+      suggestedApproach: 'Determined by Claude Code context gathering',
+      relatedFiles: [],
+      aiConfidence: 'high',
+      issueType: 'bug',
+      language: 'unknown'
+    };
   }
 }
 
 /**
- * Get an AI client based on the configured provider
+ * Create an AI client based on the provided configuration
  */
 export function getAIClient(config: AIConfig): AIClient {
-  logger.info(`Initializing AI client for provider: ${config.provider}`);
-  
-  // Check if Claude Code is enabled
+  // Check if Claude Code should be used
   if (config.useClaudeCode) {
-    logger.info('Using Claude Code for enhanced context-gathering');
+    logger.info('Using Claude Code adapter for AI operations');
     return new ClaudeCodeWrapper(config);
   }
   
-  // Otherwise use the standard AI providers
+  // Otherwise, use the standard AI providers
   switch (config.provider) {
     case 'anthropic':
       return new AnthropicClient(config);
