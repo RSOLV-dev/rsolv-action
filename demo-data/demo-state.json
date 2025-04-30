@@ -1,0 +1,49 @@
+{
+  "issueContext": {
+    "id": "3217",
+    "source": "github",
+    "title": "Confidential (private) issues on public repo",
+    "body": "Feature request: allow confidential issues on public repositories. As reference, check [GitLab's confidential issues](https://docs.gitlab.com/ce/user/project/issues/confidential_issues.html).\r\n\r\nThis is a most for organizations that handle coordinated disclosure and patching of security vulnerabilities on public open-source projects. It would allow discussions to go on between the early disclosure and the full disclosure dates. The issue could later be made public at the date of full disclosure.\r\n\r\nThis is the opposite of #639 but perhaps can be handled in the same work package as it will require similar constructs.",
+    "labels": [
+      "type/feature",
+      "issue/confirmed"
+    ],
+    "repository": {
+      "owner": "go-gitea",
+      "repo": "gitea",
+      "branch": "main"
+    },
+    "metadata": {
+      "htmlUrl": "https://github.com/go-gitea/gitea/issues/3217",
+      "user": "dllud",
+      "state": "open",
+      "createdAt": "2017-12-17T17:11:39Z",
+      "updatedAt": "2025-04-16T10:31:44Z"
+    },
+    "url": "https://github.com/go-gitea/gitea/issues/3217"
+  },
+  "analysis": {
+    "summary": "Allow confidential issues to be created on public repositories to facilitate coordinated disclosure of security vulnerabilities.",
+    "complexity": "medium",
+    "estimatedTime": 480,
+    "potentialFixes": [
+      "Add a 'confidential' flag to issues that makes them only visible to repository owners/collaborators",
+      "Create a separate issue type called 'Confidential Issue' with restricted visibility",
+      "Allow issues to be marked as confidential during a specific date range"
+    ],
+    "recommendedApproach": "Add a 'confidential' flag to issues that makes them only visible to repository owners/collaborators",
+    "relatedFiles": [
+      "models/issue.go",
+      "routers/repo/issue.go",
+      "templates/repo/issue/list.tmpl",
+      "templates/repo/issue/view.tmpl"
+    ],
+    "requiredChanges": [
+      "Add 'IsConfidential' field to Issue model",
+      "Update issue creation logic to allow setting confidential flag",
+      "Restrict visibility of confidential issues in issue listing and detail pages",
+      "Add UI to mark an issue as confidential when creating/editing"
+    ]
+  },
+  "prNumber": null
+}

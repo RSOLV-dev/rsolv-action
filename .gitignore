@@ -20,6 +20,8 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
+claude-output*.log
+claude-*-json*.log
 
 # Coverage directory
 coverage/
@@ -60,6 +62,12 @@ Thumbs.db
 .temp
 .dynamodb/
 web_modules/
+
+# Claude Code temp files
+temp/prompt-*.txt
+temp/solution-*.json
+e2e-tests/test-repos/
+e2e-tests/results/
 
 # TypeScript
 *.tsbuildinfo

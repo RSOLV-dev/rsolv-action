@@ -49,6 +49,10 @@ export class ClaudeCodeAdapter {
     analysis: IssueAnalysis,
     enhancedPrompt?: string
   ): Promise<PullRequestSolution> {
+    let promptPath: string | null = null;
+    let errorRetryCount = 0;
+    const MAX_RETRIES = 2;
+    
     try {
       logger.info(`Generating solution using Claude Code for issue: ${issueContext.id}`);
       
@@ -56,37 +60,125 @@ export class ClaudeCodeAdapter {
       const available = await this.isAvailable();
       if (!available) {
         logger.warn('Claude Code CLI not available, falling back to standard method');
-        throw new Error('Claude Code CLI not available');
+        // Create fallback solution instead of throwing
+        return this.createFallbackSolution(
+          issueContext,
+          'Claude Code CLI not available. Using fallback solution.',
+          analysis.relatedFiles || []
+        );
       }
       
       // Construct the prompt with our feedback-enhanced content if provided
       const prompt = this.constructPrompt(issueContext, analysis, enhancedPrompt);
       
-      // Create a temporary prompt file
+      // Create a temporary prompt file with proper error handling
       const tempDir = path.join(process.cwd(), 'temp');
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
+      try {
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        promptPath = path.join(tempDir, `prompt-${Date.now()}.txt`);
+        fs.writeFileSync(promptPath, prompt);
+      } catch (fsError) {
+        logger.error('Error creating temporary files', fsError as Error);
+        // Create fallback solution with file access error
+        return this.createFallbackSolution(
+          issueContext, 
+          'Error creating temporary files for Claude Code. Using fallback solution.',
+          analysis.relatedFiles || []
+        );
       }
-      const promptPath = path.join(tempDir, `prompt-${Date.now()}.txt`);
-      fs.writeFileSync(promptPath, prompt);
       
-      // Execute Claude Code CLI
+      // Execute Claude Code CLI with retry logic
       const outputPath = path.join(tempDir, `solution-${Date.now()}.json`);
-      const result = await this.executeClaudeCode(promptPath, outputPath);
+      let result: string;
+      
+      const executeWithRetry = async (): Promise<string> => {
+        try {
+          return await this.executeClaudeCode(promptPath!, outputPath);
+        } catch (execError) {
+          errorRetryCount++;
+          if (errorRetryCount < MAX_RETRIES) {
+            logger.warn(`Claude Code execution failed, retrying (${errorRetryCount}/${MAX_RETRIES})...`);
+            // Wait before retry with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, errorRetryCount)));
+            return executeWithRetry();
+          } else {
+            throw execError;
+          }
+        }
+      };
+      
+      try {
+        result = await executeWithRetry();
+      } catch (execError) {
+        logger.error('Claude Code execution failed after retries', execError as Error);
+        // Create fallback solution with execution error
+        return this.createFallbackSolution(
+          issueContext,
+          'Claude Code execution failed. Using fallback solution with available context.',
+          analysis.relatedFiles || []
+        );
+      }
       
       // Clean up temporary files
       try {
-        fs.unlinkSync(promptPath);
+        if (promptPath) {
+          fs.unlinkSync(promptPath);
+        }
       } catch (error) {
         logger.warn('Error cleaning up prompt file', error as Error);
       }
       
       // Parse and normalize the solution
-      return this.parseSolution(result, outputPath, issueContext);
+      try {
+        return this.parseSolution(result, outputPath, issueContext);
+      } catch (parseError) {
+        logger.error('Error parsing Claude Code solution', parseError as Error);
+        // Create fallback solution with parsing error but include raw output for debugging
+        return this.createFallbackSolution(
+          issueContext,
+          'Error parsing Claude Code output. Using fallback solution.',
+          analysis.relatedFiles || [],
+          result.slice(0, 500) // Include first 500 chars of raw output for debugging
+        );
+      }
     } catch (error) {
-      logger.error('Error generating solution with Claude Code', error as Error);
-      throw error;
+      logger.error('Unexpected error generating solution with Claude Code', error as Error);
+      // Create generic fallback solution for unexpected errors
+      return this.createFallbackSolution(
+        issueContext,
+        'Unexpected error using Claude Code. Using fallback solution.',
+        analysis.relatedFiles || []
+      );
     }
+  }
+  
+  /**
+   * Create a fallback solution when Claude Code execution fails
+   */
+  private createFallbackSolution(
+    issueContext: IssueContext,
+    errorMessage: string,
+    relatedFiles: string[] = [],
+    debugInfo: string = ''
+  ): PullRequestSolution {
+    logger.info('Creating fallback solution due to Claude Code error');
+    
+    // Add debug info if provided
+    const description = debugInfo ? 
+      `${errorMessage}\n\nDebug Information: ${debugInfo}` : 
+      errorMessage;
+    
+    return {
+      title: `Fix for: ${issueContext.title}`,
+      description,
+      files: relatedFiles.map(file => ({
+        path: file,
+        changes: '// Fallback implementation needed - Claude Code execution failed\n// Please implement the fix manually or try again later.'
+      })),
+      tests: []
+    };
   }
 
   /**

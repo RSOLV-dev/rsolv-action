@@ -8,6 +8,7 @@ import {
   IssueAnalysis, 
   PullRequestSolution 
 } from './types';
+import { ClaudeCodeAdapter } from './adapters/claude-code';
 
 export {
   analyzeIssue,
@@ -17,5 +18,6 @@ export {
   AIProvider,
   AIConfig,
   IssueAnalysis,
-  PullRequestSolution
+  PullRequestSolution,
+  ClaudeCodeAdapter
 };

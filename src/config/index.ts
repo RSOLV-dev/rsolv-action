@@ -1,60 +1,100 @@
-/**
- * Configuration module for RSOLV Action
- */
 import * as core from '@actions/core';
-import { ActionConfig } from '../types';
 import { AIProvider } from '../ai/types';
 
 /**
- * Load configuration from environment or inputs
+ * Get an input from GitHub Actions or environment variables
+ * 
+ * This function tries to get the input from GitHub Actions first,
+ * then falls back to environment variables
  */
-export function loadConfig(inputs?: Record<string, string>): ActionConfig {
-  // For testing, we can pass in mock inputs
-  const getInput = (name: string, required = false): string => {
-    if (inputs && inputs[name] !== undefined) {
+function getInput(name: string, required: boolean = false): string {
+  try {
+    // Try to get from GitHub Actions input
+    return core.getInput(name, { required });
+  } catch (error) {
+    // If we're not in a GitHub Actions environment or the input is not set,
+    // try to get from environment variables
+    const envName = `INPUT_${name.toUpperCase().replace(/-/g, '_')}`;
+    const envValue = process.env[envName];
+    
+    if (required && !envValue) {
+      throw new Error(`Input required and not supplied: ${name}`);
+    }
+    
+    return envValue || '';
+  }
+}
+
+/**
+ * Get a boolean input from GitHub Actions or environment variables
+ */
+function getBooleanInput(name: string): boolean {
+  const value = getInput(name);
+  return value === 'true';
+}
+
+/**
+ * Configuration for the RSOLV Action
+ */
+export interface ActionConfig {
+  apiKey: string;
+  issueTag: string;
+  expertReviewCommand: string;
+  debug: boolean;
+  skipSecurityCheck: boolean;
+  aiConfig: any;
+}
+
+/**
+ * Load the configuration from GitHub Actions inputs or environment variables
+ */
+export function loadConfig(inputs: Record<string, string> = {}): ActionConfig {
+  // For testing purposes, allow passing inputs directly
+  const getInputWrapper = (name: string, required: boolean = false): string => {
+    if (name in inputs) {
       return inputs[name];
     }
-    
-    // Use the actual core.getInput when not testing
-    return core.getInput(name, { required });
+    return getInput(name, required);
+  };
+  
+  const getBooleanInputWrapper = (name: string): boolean => {
+    if (name in inputs) {
+      return inputs[name] === 'true';
+    }
+    return getBooleanInput(name);
   };
 
-  const getBooleanInput = (name: string): boolean => {
-    if (inputs && inputs[name] !== undefined) {
-      return inputs[name].toLowerCase() === 'true';
-    }
-    
-    try {
-      // Use the actual core.getBooleanInput when not testing
-      return core.getBooleanInput(name);
-    } catch (error) {
-      // Default to false if the input is not provided or invalid
-      return false;
-    }
-  };
+  // Validate required inputs
+  const apiKey = getInputWrapper('api_key', true);
+  if (!apiKey) {
+    throw new Error('API key is required');
+  }
 
   // Get AI provider config
-  const aiProvider = getInput('ai_provider') || 'anthropic';
+  const aiProvider = getInputWrapper('ai_provider') || 'anthropic';
   const aiConfig: any = {
     provider: aiProvider as AIProvider,
   };
 
   // Get provider-specific API keys
   if (aiProvider === 'anthropic') {
-    aiConfig.apiKey = getInput('anthropic_api_key') || getInput('api_key');
-    aiConfig.modelName = getInput('anthropic_model') || 'claude-3-sonnet-20240229';
+    aiConfig.apiKey = getInputWrapper('anthropic_api_key') || getInputWrapper('api_key');
+    aiConfig.modelName = getInputWrapper('anthropic_model') || 'claude-3-sonnet-20240229';
   } else if (aiProvider === 'openai') {
-    aiConfig.apiKey = getInput('openai_api_key') || getInput('api_key');
-    aiConfig.modelName = getInput('openai_model') || 'gpt-4';
+    aiConfig.apiKey = getInputWrapper('openai_api_key') || getInputWrapper('api_key');
+    aiConfig.modelName = getInputWrapper('openai_model') || 'gpt-4';
   }
+  
+  // Check if Claude Code should be used
+  aiConfig.useClaudeCode = getBooleanInputWrapper('use_claude_code');
 
   // Build config from inputs
   const config: ActionConfig = {
-    apiKey: getInput('api_key', true),
-    issueTag: getInput('issue_tag') || 'AUTOFIX',
-    expertReviewCommand: getInput('expert_review_command') || '/request-expert-review',
-    debug: getBooleanInput('debug'),
-    skipSecurityCheck: getBooleanInput('skip_security_check'),
+    apiKey: getInputWrapper('api_key', true),
+    issueTag: getInputWrapper('issue_tag') || 'AUTOFIX',
+    expertReviewCommand: getInputWrapper('expert_review_command') || '/request-expert-review',
+    debug: getBooleanInputWrapper('debug'),
+    skipSecurityCheck: getBooleanInputWrapper('skip_security_check'),
     aiConfig,
   };
 
@@ -65,6 +105,7 @@ export function loadConfig(inputs?: Record<string, string>): ActionConfig {
     core.debug(`- Expert review command: ${config.expertReviewCommand}`);
     core.debug(`- AI provider: ${config.aiConfig.provider}`);
     core.debug(`- AI model: ${config.aiConfig.modelName}`);
+    core.debug(`- Use Claude Code: ${config.aiConfig.useClaudeCode}`);
     core.debug(`- Debug mode: ${config.debug}`);
     core.debug(`- Skip security check: ${config.skipSecurityCheck}`);
   }
@@ -73,26 +114,30 @@ export function loadConfig(inputs?: Record<string, string>): ActionConfig {
 }
 
 /**
- * Validate input values
+ * Validate an input value
+ * Returns an error message if validation fails, or null if validation passes
  */
 export function validateInput(name: string, value: string): string | null {
   switch (name) {
     case 'api_key':
-      if (!value || value.length < 10) {
+      if (value.length < 10) {
         return 'API key must be at least 10 characters long';
       }
       break;
+    
     case 'issue_tag':
-      if (value && !/^[a-zA-Z0-9_-]+$/.test(value)) {
+      if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
         return 'Issue tag must only contain alphanumeric characters, underscores, and hyphens';
       }
       break;
+    
     case 'ai_provider':
       const validProviders = ['anthropic', 'openrouter', 'openai', 'mistral', 'ollama'];
-      if (value && !validProviders.includes(value)) {
+      if (!validProviders.includes(value)) {
         return `AI provider must be one of: ${validProviders.join(', ')}`;
       }
       break;
   }
+  
   return null;
 }
