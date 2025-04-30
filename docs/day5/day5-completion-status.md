@@ -24,7 +24,7 @@ Day 5 of the RSOLV 10-day plan focused on creating a comprehensive demo environm
 - ✅ Created test script for Ollama integration (`run-ollama-test.sh`)
 - ✅ Documented Ollama setup and usage in `docs/ollama-integration.md`
 - ✅ Added Ollama section to README with setup instructions
-- ✅ Tested with multiple models including `llama3.2:3b`
+- ✅ Configured `deepseek-r1:14b` as default model for optimal code understanding
 - ✅ Implemented fallback mechanisms and error handling
 
 ### Claude Code Integration ✅
