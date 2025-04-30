@@ -33,7 +33,7 @@ export async function generateSolution(
       repoContext
     );
     
-    logger.info(`Solution generated with ${solution.files.length} file changes`);
+    logger.info(`Solution generated with ${solution.files?.length || 0} file changes`);
     
     return solution;
     

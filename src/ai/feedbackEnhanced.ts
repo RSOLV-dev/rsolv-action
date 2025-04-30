@@ -65,14 +65,28 @@ Analysis:
           
         logger.info(`Created ${hasSignificantEnhancements ? 'enhanced' : 'standard'} prompt for AI solution generation`);
         
-        // Use the enhanced prompt as the issue body
-        // This is a simple approach - ideally each provider would have its own prompt format
-        return aiClient.generateSolution(
-          issueTitle,
-          enhancedPrompt,
-          issueAnalysis,
-          repoContext
-        );
+        // Check if we're using Claude Code adapter (which has a different interface)
+        if (aiConfig.useClaudeCode) {
+          logger.info('Using Claude Code with feedback-enhanced prompt');
+          
+          // The ClaudeCodeWrapper will already have created an issueContext
+          // We'll pass the enhanced prompt directly to the wrapped adapter
+          return aiClient.generateSolution(
+            issueTitle,
+            enhancedPrompt, // Pass the enhanced prompt as the issue body
+            issueAnalysis,
+            repoContext
+          );
+        } else {
+          // Standard AI providers
+          // Use the enhanced prompt as the issue body
+          return aiClient.generateSolution(
+            issueTitle,
+            enhancedPrompt,
+            issueAnalysis,
+            repoContext
+          );
+        }
       }
     };
     
