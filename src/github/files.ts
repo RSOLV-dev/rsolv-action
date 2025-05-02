@@ -1,201 +1,246 @@
-import * as github from '@actions/github';
 import { logger } from '../utils/logger';
+import { IssueContext } from '../types/index';
+import { getGitHubClient } from './api';
 
 /**
- * Helper class for GitHub repository file operations
+ * Get repository files based on the file paths
  */
-export class GitHubFileManager {
-  private octokit: ReturnType<typeof github.getOctokit>;
-  private owner: string;
-  private repo: string;
-
-  constructor(token: string, owner: string, repo: string) {
-    this.octokit = github.getOctokit(token);
-    this.owner = owner;
-    this.repo = repo;
-  }
-
-  /**
-   * Get file content from repository
-   */
-  async getFileContent(path: string, ref?: string): Promise<{ content: string; sha: string }> {
-    try {
-      const { data } = await this.octokit.rest.repos.getContent({
-        owner: this.owner,
-        repo: this.repo,
-        path,
-        ref: ref || undefined,
-      });
-
-      // Handle directory case
-      if (Array.isArray(data) || !('content' in data)) {
-        throw new Error(`Path ${path} is a directory, not a file`);
-      }
-
-      const content = Buffer.from(data.content, 'base64').toString('utf-8');
-      return { content, sha: data.sha };
-    } catch (error) {
-      // Check if file doesn't exist - we'll treat this differently than other errors
-      if ((error as any).status === 404) {
-        logger.debug(`File ${path} not found in ${this.owner}/${this.repo}`);
-        return { content: '', sha: '' };
-      }
+export async function getRepositoryFiles(
+  issue: IssueContext,
+  filePaths: string[]
+): Promise<Record<string, string>> {
+  try {
+    logger.info(`Fetching ${filePaths.length} files from repository ${issue.repository.fullName}`);
+    
+    const fileContents: Record<string, string> = {};
+    
+    // Get GitHub client
+    const github = getGitHubClient();
+    const { owner, name: repo } = issue.repository;
+    
+    // Process files in batches to avoid rate limiting (5 files at a time)
+    const batchSize = 5;
+    for (let i = 0; i < filePaths.length; i += batchSize) {
+      const batch = filePaths.slice(i, i + batchSize);
       
-      logger.error(`Error getting file content for ${path} in ${this.owner}/${this.repo}`, error as Error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create or update a file in the repository
-   */
-  async updateFile(
-    path: string,
-    content: string,
-    message: string,
-    branch: string,
-    sha?: string
-  ): Promise<string> {
-    try {
-      const params: any = {
-        owner: this.owner,
-        repo: this.repo,
-        path,
-        message,
-        content: Buffer.from(content).toString('base64'),
-        branch,
-      };
-
-      // If sha is provided, this is an update, otherwise it's a create
-      if (sha) {
-        params.sha = sha;
-      }
-
-      const { data } = await this.octokit.rest.repos.createOrUpdateFileContents(params);
-      return data.content.sha;
-    } catch (error) {
-      logger.error(`Error updating file ${path} in ${this.owner}/${this.repo}`, error as Error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create multiple file changes in the repository
-   * This is an abstraction that handles batch file operations
-   */
-  async updateMultipleFiles(
-    files: Array<{ path: string; content: string }>,
-    commitMessage: string,
-    branch: string
-  ): Promise<void> {
-    try {
-      // Process files sequentially to avoid race conditions
-      for (const file of files) {
-        // Get the current file to check if it exists and get its SHA
-        let currentFileData;
+      // Process batch in parallel
+      await Promise.all(batch.map(async (filePath) => {
         try {
-          currentFileData = await this.getFileContent(file.path, branch);
+          // Use GitHub API to fetch file content
+          if (process.env.NODE_ENV === 'test') {
+            // Use mock content in test mode
+            fileContents[filePath] = await simulateFileContent(filePath, issue);
+            return;
+          }
+          
+          const response = await github.repos.getContent({
+            owner,
+            repo,
+            path: filePath,
+            ref: issue.repository.defaultBranch
+          });
+          
+          // Check if response is a file (not a directory)
+          if (Array.isArray(response.data)) {
+            throw new Error(`Path ${filePath} is a directory, not a file`);
+          }
+          
+          // Extract and decode content
+          const content = response.data.content;
+          if (content) {
+            // GitHub API returns base64 encoded content
+            fileContents[filePath] = Buffer.from(content, 'base64').toString('utf-8');
+            logger.debug(`Fetched content for ${filePath}`);
+          } else {
+            throw new Error(`No content returned for ${filePath}`);
+          }
         } catch (error) {
-          // If the file doesn't exist, that's fine - we're creating it
-          currentFileData = { content: '', sha: '' };
+          // If API call fails in development, fall back to mock content
+          if (process.env.NODE_ENV === 'development') {
+            logger.warn(`Failed to fetch content for ${filePath}, using mock content`, error);
+            fileContents[filePath] = await simulateFileContent(filePath, issue);
+          } else {
+            logger.warn(`Failed to fetch content for ${filePath}`, error);
+          }
         }
-
-        // Skip if the content is the same
-        if (currentFileData.content === file.content) {
-          logger.debug(`File ${file.path} content unchanged, skipping`);
-          continue;
-        }
-
-        // Update the file
-        await this.updateFile(
-          file.path,
-          file.content,
-          commitMessage,
-          branch,
-          currentFileData.sha || undefined
-        );
+      }));
+      
+      // Small delay between batches to avoid rate limiting
+      if (i + batchSize < filePaths.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
-    } catch (error) {
-      logger.error(`Error updating multiple files in ${this.owner}/${this.repo}`, error as Error);
-      throw error;
     }
-  }
-
-  /**
-   * Get reference (branch, tag, etc.)
-   */
-  async getReference(ref: string): Promise<string> {
-    try {
-      const { data } = await this.octokit.rest.git.getRef({
-        owner: this.owner,
-        repo: this.repo,
-        ref: ref.startsWith('refs/') ? ref.substring(5) : ref,
-      });
-      return data.object.sha;
-    } catch (error) {
-      logger.error(`Error getting reference ${ref} in ${this.owner}/${this.repo}`, error as Error);
-      throw error;
+    
+    return fileContents;
+  } catch (error) {
+    logger.error(`Error fetching repository files for ${issue.repository.fullName}`, error);
+    
+    // In development or test mode, fall back to simulated files
+    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+      logger.warn('Using simulated file content due to error');
+      
+      const fileContents: Record<string, string> = {};
+      for (const filePath of filePaths) {
+        fileContents[filePath] = await simulateFileContent(filePath, issue);
+      }
+      return fileContents;
     }
+    
+    throw new Error(`Failed to fetch repository files: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
 
-  /**
-   * Create a new branch
-   */
-  async createBranch(branchName: string, baseSha: string): Promise<void> {
-    try {
-      await this.octokit.rest.git.createRef({
-        owner: this.owner,
-        repo: this.repo,
-        ref: `refs/heads/${branchName}`,
-        sha: baseSha,
-      });
-      logger.debug(`Created branch ${branchName} in ${this.owner}/${this.repo}`);
-    } catch (error) {
-      logger.error(`Error creating branch ${branchName} in ${this.owner}/${this.repo}`, error as Error);
-      throw error;
+/**
+ * Simulate fetching file content for development
+ */
+async function simulateFileContent(filePath: string, issue: IssueContext): Promise<string> {
+  // Add a small delay to simulate network latency
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Mock content based on file extension
+  const ext = filePath.split('.').pop()?.toLowerCase();
+  
+  switch (ext) {
+    case 'js':
+      return `// JavaScript file in ${issue.repository.name}: ${filePath}
+const { Logger } = require('../utils/logger');
+const logger = new Logger();
+
+/**
+ * Process data function
+ * @param {Array} input - Input data to process
+ * @returns {Array} - Processed data
+ */
+function processData(input) {
+  logger.debug(\`Processing \${input.length} items\`);
+  
+  if (!Array.isArray(input)) {
+    logger.error('Input must be an array');
+    throw new Error('Input must be an array');
+  }
+  
+  return input.map(item => {
+    if (!item || typeof item !== 'object' || !('value' in item)) {
+      logger.warn('Invalid item structure, missing value property');
+      return null;
     }
-  }
+    return item.value;
+  }).filter(Boolean);
+}
 
-  /**
-   * Check if a branch exists
-   */
-  async branchExists(branchName: string): Promise<boolean> {
-    try {
-      await this.getReference(`heads/${branchName}`);
-      return true;
-    } catch (error) {
-      if ((error as any).status === 404) {
+module.exports = { processData };
+`;
+      
+    case 'ts':
+      return `// TypeScript file in ${issue.repository.name}: ${filePath}
+import { Logger } from '../utils/logger';
+const logger = new Logger();
+
+/**
+ * Data item interface
+ */
+interface DataItem {
+  id: string;
+  value: number;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Process data function
+ * @param input - Input data to process
+ * @returns Processed data array
+ */
+function processData(input: DataItem[]): number[] {
+  logger.debug(\`Processing \${input.length} items\`);
+  
+  return input
+    .filter(item => {
+      if (!item || typeof item.value !== 'number') {
+        logger.warn(\`Invalid item structure: \${JSON.stringify(item)}\`);
         return false;
       }
-      throw error;
-    }
-  }
+      return true;
+    })
+    .map(item => item.value);
+}
 
-  /**
-   * Get diff between two references
-   */
-  async getDiff(base: string, head: string): Promise<string> {
-    try {
-      const { data } = await this.octokit.rest.repos.compareCommits({
-        owner: this.owner,
-        repo: this.repo,
-        base,
-        head,
-      });
+export { DataItem, processData };
+`;
       
-      return data.files?.map(file => {
-        return {
-          path: file.filename,
-          status: file.status,
-          additions: file.additions,
-          deletions: file.deletions,
-          changes: file.changes,
-          patch: file.patch
-        };
-      }) || [];
-    } catch (error) {
-      logger.error(`Error getting diff between ${base} and ${head} in ${this.owner}/${this.repo}`, error as Error);
-      throw error;
-    }
+    case 'py':
+      return `# Python file in ${issue.repository.name}: ${filePath}
+import logging
+from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
+
+def process_data(input_data: List[Dict[str, Any]]) -> List[Optional[int]]:
+    """
+    Process input data and extract values
+    
+    Args:
+        input_data: List of dictionaries containing data items
+        
+    Returns:
+        List of extracted values
+    """
+    logger.debug(f"Processing {len(input_data)} items")
+    
+    result = []
+    for item in input_data:
+        if not isinstance(item, dict) or 'value' not in item:
+            logger.warning(f"Invalid item structure: {item}")
+            result.append(None)
+            continue
+            
+        try:
+            result.append(int(item['value']))
+        except (ValueError, TypeError):
+            logger.error(f"Could not convert value to int: {item['value']}")
+            result.append(None)
+            
+    return result
+
+if __name__ == "__main__":
+    test_data = [{'id': '1', 'value': 42}, {'id': '2', 'value': '123'}, {'id': '3'}]
+    print(process_data(test_data))
+`;
+      
+    case 'md':
+      return `# Documentation for ${filePath.split('/').pop()?.replace('.md', '')}
+
+## Overview
+
+This documentation describes the usage and implementation details of the data processing module in ${issue.repository.name}.
+
+## Installation
+
+\`\`\`bash
+npm install @${issue.repository.owner}/${issue.repository.name}
+\`\`\`
+
+## Usage
+
+\`\`\`javascript
+const { processData } = require('@${issue.repository.owner}/${issue.repository.name}');
+
+const data = [
+  { id: '1', value: 42 },
+  { id: '2', value: 17 }
+];
+
+const result = processData(data);
+console.log(result); // [42, 17]
+\`\`\`
+
+## Error Handling
+
+The function will filter out invalid items from the results and log warnings.
+`;
+      
+    default:
+      return `// Example file content for ${filePath} in ${issue.repository.name}
+// This is a placeholder for demonstration purposes
+`;
   }
 }

@@ -1,44 +1,20 @@
 FROM oven/bun:latest
 
-# Install additional dependencies
-RUN apt-get update && \
-    apt-get install -y git curl gnupg2 sudo && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 
-# Install Node.js (needed for Claude Code)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Copy package.json and install dependencies
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile --production
 
-# Set working directory
-WORKDIR /rsolv
+# Copy source files
+COPY src/ ./src/
 
-# Copy package files
-COPY package.json ./
-# Copy lock file if it exists
-COPY bun.lockb* ./
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Install dependencies
-RUN bun install
+# Set up secure environment
+RUN addgroup --system rsolv && adduser --system --group rsolv
+USER rsolv
 
-# Install Claude Code CLI
-RUN npm install -g @anthropic-ai/claude-code
-
-# Copy source code
-COPY src ./src
-COPY tsconfig.json ./
-
-# Build TypeScript code
-RUN bun run build
-
-# Create a directory for Claude CLI config
-RUN mkdir -p /root/.claude
-
-# Set environment variables
-ENV CLAUDE_CONFIG_DIR=/root/.claude
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-
-# Set entrypoint
-ENTRYPOINT ["bun", "run", "/rsolv/dist/index.js"]
+ENTRYPOINT ["/entrypoint.sh"]

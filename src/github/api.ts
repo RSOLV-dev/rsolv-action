@@ -1,106 +1,205 @@
-import * as github from '@actions/github';
+import { Octokit } from '@octokit/rest';
+import { ActionConfig } from '../types/index';
 import { logger } from '../utils/logger';
 
+let githubClient: Octokit | null = null;
+
 /**
- * Helper class for GitHub API operations
+ * Get or create a GitHub API client
  */
-export class GitHubApiClient {
-  private octokit: ReturnType<typeof github.getOctokit>;
-  private owner: string;
-  private repo: string;
-
-  constructor(token: string, owner: string, repo: string) {
-    this.octokit = github.getOctokit(token);
-    this.owner = owner;
-    this.repo = repo;
+export function getGitHubClient(config?: ActionConfig): Octokit {
+  if (githubClient) {
+    return githubClient;
   }
-
-  /**
-   * Get the authenticated user
-   */
-  async getAuthenticatedUser(): Promise<string> {
-    try {
-      const { data } = await this.octokit.rest.users.getAuthenticated();
-      return data.login;
-    } catch (error) {
-      logger.error('Error getting authenticated user', error as Error);
-      throw error;
-    }
+  
+  // Create new GitHub client
+  const token = config?.repoToken || process.env.GITHUB_TOKEN;
+  
+  if (!token) {
+    logger.error('No GitHub token found');
+    throw new Error('No GitHub token found. Please set GITHUB_TOKEN environment variable or provide repoToken in config.');
   }
+  
+  githubClient = new Octokit({
+    auth: token,
+    timeZone: 'UTC',
+  });
+  
+  logger.debug('GitHub API client created');
+  
+  return githubClient;
+}
 
-  /**
-   * Get repository details
-   */
-  async getRepository(): Promise<any> {
+/**
+ * Get repository details
+ */
+export async function getRepositoryDetails(owner: string, repo: string): Promise<any> {
+  try {
+    const client = getGitHubClient();
+    
+    const { data } = await client.repos.get({
+      owner,
+      repo,
+    });
+    
+    return {
+      id: data.id,
+      name: data.name,
+      fullName: data.full_name,
+      owner: data.owner.login,
+      defaultBranch: data.default_branch,
+      language: data.language,
+      private: data.private,
+    };
+  } catch (error) {
+    logger.error(`Error getting repository details for ${owner}/${repo}`, error);
+    throw new Error(`Failed to get repository details: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Create a comment on an issue
+ */
+export async function createIssueComment(
+  owner: string, 
+  repo: string, 
+  issueNumber: number, 
+  body: string
+): Promise<void> {
+  try {
+    const client = getGitHubClient();
+    
+    await client.issues.createComment({
+      owner,
+      repo,
+      issue_number: issueNumber,
+      body,
+    });
+    
+    logger.info(`Comment created on issue #${issueNumber}`);
+  } catch (error) {
+    logger.error(`Error creating comment on issue #${issueNumber}`, error);
+    throw new Error(`Failed to create issue comment: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Create or update a file in a repository
+ */
+export async function createOrUpdateFile(
+  owner: string,
+  repo: string,
+  path: string,
+  content: string,
+  message: string,
+  branch: string
+): Promise<void> {
+  try {
+    const client = getGitHubClient();
+    
+    // Check if file exists
+    let sha: string | undefined;
     try {
-      const { data } = await this.octokit.rest.repos.get({
-        owner: this.owner,
-        repo: this.repo,
+      const { data } = await client.repos.getContent({
+        owner,
+        repo,
+        path,
+        ref: branch,
       });
-      return data;
+      
+      if (!Array.isArray(data)) {
+        sha = data.sha;
+      }
     } catch (error) {
-      logger.error(`Error getting repository ${this.owner}/${this.repo}`, error as Error);
-      throw error;
+      // File doesn't exist, which is fine
+      logger.debug(`File ${path} doesn't exist, will create it`);
     }
+    
+    // Create or update file
+    await client.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path,
+      message,
+      content: Buffer.from(content).toString('base64'),
+      branch,
+      sha,
+    });
+    
+    logger.info(`File ${path} created or updated on branch ${branch}`);
+  } catch (error) {
+    logger.error(`Error creating or updating file ${path}`, error);
+    throw new Error(`Failed to create or update file: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
 
-  /**
-   * Create a pull request
-   */
-  async createPullRequest(
-    title: string,
-    body: string,
-    head: string,
-    base: string = 'main'
-  ): Promise<number> {
-    try {
-      const { data } = await this.octokit.rest.pulls.create({
-        owner: this.owner,
-        repo: this.repo,
-        title,
-        body,
-        head,
-        base,
-      });
-      return data.number;
-    } catch (error) {
-      logger.error(`Error creating pull request in ${this.owner}/${this.repo}`, error as Error);
-      throw error;
-    }
+/**
+ * Create a branch in a repository
+ */
+export async function createBranch(
+  owner: string,
+  repo: string,
+  branchName: string,
+  fromBranch?: string
+): Promise<void> {
+  try {
+    const client = getGitHubClient();
+    
+    // Get the SHA of the latest commit on the base branch
+    const baseBranch = fromBranch || 'main';
+    
+    const { data: refData } = await client.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${baseBranch}`,
+    });
+    
+    // Create the new branch
+    await client.git.createRef({
+      owner,
+      repo,
+      ref: `refs/heads/${branchName}`,
+      sha: refData.object.sha,
+    });
+    
+    logger.info(`Branch ${branchName} created from ${baseBranch}`);
+  } catch (error) {
+    logger.error(`Error creating branch ${branchName}`, error);
+    throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
 
-  /**
-   * Add a label to an issue
-   */
-  async addIssueLabel(issueNumber: number, labels: string[]): Promise<void> {
-    try {
-      await this.octokit.rest.issues.addLabels({
-        owner: this.owner,
-        repo: this.repo,
-        issue_number: issueNumber,
-        labels,
-      });
-    } catch (error) {
-      logger.error(`Error adding labels to issue ${this.owner}/${this.repo}#${issueNumber}`, error as Error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get all issues with a specific label
-   */
-  async getIssuesWithLabel(label: string): Promise<any[]> {
-    try {
-      const { data } = await this.octokit.rest.issues.listForRepo({
-        owner: this.owner,
-        repo: this.repo,
-        labels: label,
-        state: 'open',
-      });
-      return data;
-    } catch (error) {
-      logger.error(`Error getting issues with label ${label} in ${this.owner}/${this.repo}`, error as Error);
-      throw error;
-    }
+/**
+ * Create a pull request
+ */
+export async function createPullRequest(
+  owner: string,
+  repo: string,
+  title: string,
+  body: string,
+  head: string,
+  base: string = 'main'
+): Promise<{ number: number; html_url: string }> {
+  try {
+    const client = getGitHubClient();
+    
+    const { data } = await client.pulls.create({
+      owner,
+      repo,
+      title,
+      body,
+      head,
+      base,
+    });
+    
+    logger.info(`Pull request #${data.number} created: ${data.html_url}`);
+    
+    return {
+      number: data.number,
+      html_url: data.html_url,
+    };
+  } catch (error) {
+    logger.error(`Error creating pull request`, error);
+    throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

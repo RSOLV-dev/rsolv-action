@@ -1,140 +1,49 @@
-name: RSOLV Action CI
+name: CI
 
-# Triggers: When does this workflow run?
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE*'
-      - '.builds/**' # Ignore sourcehut config
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE*'
-      - '.builds/**' # Ignore sourcehut config
-  # Optional: Uncomment to enable scheduled runs
-  # schedule:
-  #   - cron: '0 0 * * 0' # Run weekly at midnight on Sunday
-
-# Global environment variables
-env:
-  NODE_ENV: 'test'
-  # Toggle CodeQL scan based on repo access to GitHub Advanced Security
-  RUN_CODEQL: ${{ github.repository_owner == 'arboreal-studios' }}
 
 jobs:
-  # Basic validation and testing
   test:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # Needed for proper linting of changes
-
-      # Cache dependencies for faster builds
-      - name: Cache Bun dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
+      - uses: actions/checkout@v3
+      
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-
+      
       - name: Install dependencies
         run: bun install
-
-      - name: Run linting
-        run: bun run lint
-
+      
       - name: Run tests
         run: bun test
-
-      # Optional: Add test coverage reporting
-      # - name: Generate test coverage
-      #   run: bun test --coverage
       
-      # - name: Upload coverage reports to Codecov
-      #   uses: codecov/codecov-action@v3
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Run type check
+        run: bun run typecheck
+      
+      - name: Run lint
+        run: bun run lint
 
-      - name: Build
-        run: bun run build
-        
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: dist
-          path: dist/
-          retention-days: 7
-
-  # Security scanning with CodeQL
-  # Requires GitHub Advanced Security to be enabled
-  # Commented out pending account qualification
-  # security:
-  #   runs-on: ubuntu-latest
-  #   needs: test
-  #   # Only run if the repo has access to GitHub Advanced Security
-  #   if: env.RUN_CODEQL == 'true'
-  #   
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
-  #
-  #     # Initialize CodeQL
-  #     - name: Initialize CodeQL
-  #       uses: github/codeql-action/init@v2
-  #       with:
-  #         languages: javascript, typescript
-  #         # Optional: Run additional security queries
-  #         # queries: security-and-quality
-  #         
-  #     # Auto-build specifically for JS/TS projects
-  #     - name: Perform CodeQL autobuild
-  #       uses: github/codeql-action/autobuild@v2
-  #     
-  #     # Run the analysis
-  #     - name: Analyze with CodeQL
-  #       uses: github/codeql-action/analyze@v2
-  #       with:
-  #         category: "/language:javascript"
-
-  # Release handling for tagged versions
-  publish:
+  build:
     runs-on: ubuntu-latest
-    # Only run publish on tag creation and after tests pass
-    # Security scan is commented out, so we only need test to pass
-    needs: [test]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    
+    needs: test
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Use the already built artifacts from the test job
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
+      - uses: actions/checkout@v3
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          name: dist
-          path: dist/
-
-      # Create a GitHub release
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/**
-          # Optional: Generate release notes automatically
-          generate_release_notes: true
-          # Optional: Mark as pre-release if version contains beta/alpha
-          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Build Docker image
+        run: docker build -t rsolv/action:latest .
+      
+      # In a real CI setup, we would push the Docker image to a registry here
