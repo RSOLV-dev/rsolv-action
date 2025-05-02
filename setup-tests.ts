@@ -2,6 +2,7 @@
  * Test setup file for Bun
  * This file runs before each test file to ensure clean test isolation
  */
+import { beforeEach, afterEach } from 'bun:test';
 
 // Store original Node environment
 const originalNodeEnv = process.env.NODE_ENV;

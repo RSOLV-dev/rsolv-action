@@ -1,78 +1,117 @@
-/**
- * Core types for RSOLV action
- */
-import { AIConfig } from '../ai/types';
+// Core action types
 
-/**
- * Supported issue tracking sources
- */
-export type IssueSource = 'github' | 'jira' | 'linear' | 'custom';
+export interface ActionConfig {
+  apiKey: string;
+  configPath: string;
+  issueLabel: string;
+  environmentVariables?: Record<string, string>;
+  repoToken?: string;
+  aiProvider: AiProviderConfig;
+  containerConfig: ContainerConfig;
+  securitySettings: SecuritySettings;
+}
 
-/**
- * Common issue representation across different sources
- */
+export interface ActionStatus {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Issue types
+
 export interface IssueContext {
   id: string;
-  source: IssueSource;
+  number: number;
   title: string;
   body: string;
   labels: string[];
+  assignees: string[];
   repository: {
     owner: string;
     name: string;
-    branch?: string;
+    fullName: string; // owner/name
+    defaultBranch: string;
+    language?: string;
   };
-  metadata: Record<string, any>;
-  url?: string;
+  source: 'github' | 'jira' | 'linear' | string;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, any>;
 }
 
-/**
- * Configuration for the action
- */
-export interface ActionConfig {
-  apiKey: string;
-  issueTag: string;
-  expertReviewCommand: string;
-  debug: boolean;
-  skipSecurityCheck: boolean;
-  aiConfig: AIConfig;
-}
-
-/**
- * Action result status
- */
-export enum ActionStatus {
-  SUCCESS = 'success',
-  FAILURE = 'failure',
-  SKIPPED = 'skipped',
-}
-
-/**
- * Result of the action execution
- */
-export interface ActionResult {
-  status: ActionStatus;
+export interface IssueProcessingResult {
+  issueId: string;
+  success: boolean;
   message: string;
-  issueContext?: IssueContext;
-  error?: Error;
+  pullRequestUrl?: string;
+  error?: string;
+  analysisData?: AnalysisData;
 }
 
-/**
- * Webhook payload from external services
- */
-export interface ExternalWebhookPayload {
-  source: string;
-  apiKey: string;
-  issue: {
-    id: string;
-    title: string;
-    description: string;
-    url: string;
-    labels: string[];
-  };
-  repository: {
-    owner: string;
-    name: string;
-    branch?: string;
-  };
+// AI types
+
+export interface AiProviderConfig {
+  provider: 'openai' | 'anthropic' | 'mistral' | 'ollama' | string;
+  apiKey?: string;
+  model: string;
+  baseUrl?: string;
+  maxTokens?: number;
+  temperature?: number;
+  contextLimit?: number;
+  timeout?: number;
+}
+
+export interface AnalysisData {
+  issueType: IssueType;
+  filesToModify: string[];
+  estimatedComplexity: 'simple' | 'medium' | 'complex';
+  requiredContext: string[];
+  suggestedApproach: string;
+  codeSnippets?: Record<string, string>;
+  confidenceScore?: number;
+}
+
+export type IssueType = 
+  | 'bug' 
+  | 'feature' 
+  | 'refactoring' 
+  | 'performance' 
+  | 'security' 
+  | 'documentation'
+  | 'dependency'
+  | 'test'
+  | 'other';
+
+// Container types
+
+export interface ContainerConfig {
+  enabled: boolean;
+  image?: string;
+  memoryLimit?: string;
+  cpuLimit?: string;
+  timeout?: number;
+  securityProfile?: 'default' | 'strict' | 'relaxed';
+  environmentVariables?: Record<string, string>;
+}
+
+// Security types
+
+export interface SecuritySettings {
+  disableNetworkAccess?: boolean;
+  allowedDomains?: string[];
+  scanDependencies?: boolean;
+  preventSecretLeakage?: boolean;
+  maxFileSize?: number;
+  timeoutSeconds?: number;
+  requireCodeReview?: boolean;
+}
+
+// API response types
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data?: T;
+  error?: string;
+  timestamp: string;
 }

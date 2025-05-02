@@ -1,143 +1,243 @@
-import * as core from '@actions/core';
-import { AIProvider } from '../ai/types';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'js-yaml';
+import { z } from 'zod';
+import { ActionConfig } from '../types/index';
+import { logger } from '../utils/logger';
+
+// Environment variable prefix
+const ENV_PREFIX = 'RSOLV_';
+
+// Zod schema for validating configuration
+const AiProviderConfigSchema = z.object({
+  provider: z.string(),
+  apiKey: z.string().optional(),
+  model: z.string(),
+  baseUrl: z.string().optional(),
+  maxTokens: z.number().optional(),
+  temperature: z.number().optional(),
+  contextLimit: z.number().optional(),
+  timeout: z.number().optional()
+});
+
+const ContainerConfigSchema = z.object({
+  enabled: z.boolean(),
+  image: z.string().optional(),
+  memoryLimit: z.string().optional(),
+  cpuLimit: z.string().optional(),
+  timeout: z.number().optional(),
+  securityProfile: z.enum(['default', 'strict', 'relaxed']).optional(),
+  environmentVariables: z.record(z.string(), z.string()).optional()
+});
+
+const SecuritySettingsSchema = z.object({
+  disableNetworkAccess: z.boolean().optional(),
+  allowedDomains: z.array(z.string()).optional(),
+  scanDependencies: z.boolean().optional(),
+  preventSecretLeakage: z.boolean().optional(),
+  maxFileSize: z.number().optional(),
+  timeoutSeconds: z.number().optional(),
+  requireCodeReview: z.boolean().optional()
+});
+
+const ActionConfigSchema = z.object({
+  apiKey: z.string(),
+  configPath: z.string(),
+  issueLabel: z.string(),
+  environmentVariables: z.record(z.string(), z.string()).optional(),
+  repoToken: z.string().optional(),
+  aiProvider: AiProviderConfigSchema,
+  containerConfig: ContainerConfigSchema,
+  securitySettings: SecuritySettingsSchema
+});
 
 /**
- * Get an input from GitHub Actions or environment variables
- * 
- * This function tries to get the input from GitHub Actions first,
- * then falls back to environment variables
+ * Load configuration from various sources
  */
-function getInput(name: string, required: boolean = false): string {
+export async function loadConfig(): Promise<ActionConfig> {
   try {
-    // Try to get from GitHub Actions input
-    return core.getInput(name, { required });
+    logger.info('Loading configuration');
+    
+    // Start with default configuration
+    const defaultConfig = getDefaultConfig();
+    
+    // Load configuration from file if available
+    const configPath = process.env.RSOLV_CONFIG_PATH || '.github/rsolv.yml';
+    const fileConfig = await loadConfigFromFile(configPath);
+    
+    // Load configuration from environment variables
+    const envConfig = loadConfigFromEnv();
+    
+    // Merge configurations (priority: env > file > default)
+    const mergedConfig = {
+      ...defaultConfig,
+      ...fileConfig,
+      ...envConfig
+    };
+    
+    // Validate configuration
+    const validatedConfig = validateConfig(mergedConfig);
+    
+    logger.debug('Configuration loaded successfully');
+    
+    return validatedConfig;
   } catch (error) {
-    // If we're not in a GitHub Actions environment or the input is not set,
-    // try to get from environment variables
-    const envName = `INPUT_${name.toUpperCase().replace(/-/g, '_')}`;
-    const envValue = process.env[envName];
-    
-    if (required && !envValue) {
-      throw new Error(`Input required and not supplied: ${name}`);
+    logger.error('Failed to load configuration', error);
+    throw new Error(`Configuration error: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Get default configuration
+ */
+function getDefaultConfig(): Partial<ActionConfig> {
+  return {
+    configPath: '.github/rsolv.yml',
+    issueLabel: 'rsolv:automate',
+    aiProvider: {
+      provider: 'anthropic',
+      model: 'claude-3-sonnet-20240229',
+      temperature: 0.2,
+      maxTokens: 4000,
+      contextLimit: 100000,
+      timeout: 60000
+    },
+    containerConfig: {
+      enabled: true,
+      image: 'rsolv/code-analysis:latest',
+      memoryLimit: '2g',
+      cpuLimit: '1',
+      timeout: 300,
+      securityProfile: 'default'
+    },
+    securitySettings: {
+      disableNetworkAccess: true,
+      scanDependencies: true,
+      preventSecretLeakage: true,
+      maxFileSize: 1024 * 1024, // 1 MB
+      timeoutSeconds: 300,
+      requireCodeReview: true
+    }
+  };
+}
+
+/**
+ * Load configuration from file
+ */
+async function loadConfigFromFile(configPath: string): Promise<Partial<ActionConfig>> {
+  try {
+    // Check if file exists
+    if (!fs.existsSync(configPath)) {
+      logger.info(`Configuration file not found at ${configPath}, using defaults`);
+      return {};
     }
     
-    return envValue || '';
-  }
-}
-
-/**
- * Get a boolean input from GitHub Actions or environment variables
- */
-function getBooleanInput(name: string): boolean {
-  const value = getInput(name);
-  return value === 'true';
-}
-
-/**
- * Configuration for the RSOLV Action
- */
-export interface ActionConfig {
-  apiKey: string;
-  issueTag: string;
-  expertReviewCommand: string;
-  debug: boolean;
-  skipSecurityCheck: boolean;
-  aiConfig: any;
-}
-
-/**
- * Load the configuration from GitHub Actions inputs or environment variables
- */
-export function loadConfig(inputs: Record<string, string> = {}): ActionConfig {
-  // For testing purposes, allow passing inputs directly
-  const getInputWrapper = (name: string, required: boolean = false): string => {
-    if (name in inputs) {
-      return inputs[name];
-    }
-    return getInput(name, required);
-  };
-  
-  const getBooleanInputWrapper = (name: string): boolean => {
-    if (name in inputs) {
-      return inputs[name] === 'true';
-    }
-    return getBooleanInput(name);
-  };
-
-  // Validate required inputs
-  const apiKey = getInputWrapper('api_key', true);
-  if (!apiKey) {
-    throw new Error('API key is required');
-  }
-
-  // Get AI provider config
-  const aiProvider = getInputWrapper('ai_provider') || 'anthropic';
-  const aiConfig: any = {
-    provider: aiProvider as AIProvider,
-  };
-
-  // Get provider-specific API keys
-  if (aiProvider === 'anthropic') {
-    aiConfig.apiKey = getInputWrapper('anthropic_api_key') || getInputWrapper('api_key');
-    aiConfig.modelName = getInputWrapper('anthropic_model') || 'claude-3-sonnet-20240229';
-  } else if (aiProvider === 'openai') {
-    aiConfig.apiKey = getInputWrapper('openai_api_key') || getInputWrapper('api_key');
-    aiConfig.modelName = getInputWrapper('openai_model') || 'gpt-4';
-  }
-  
-  // Check if Claude Code should be used
-  aiConfig.useClaudeCode = getBooleanInputWrapper('use_claude_code');
-
-  // Build config from inputs
-  const config: ActionConfig = {
-    apiKey: getInputWrapper('api_key', true),
-    issueTag: getInputWrapper('issue_tag') || 'AUTOFIX',
-    expertReviewCommand: getInputWrapper('expert_review_command') || '/request-expert-review',
-    debug: getBooleanInputWrapper('debug'),
-    skipSecurityCheck: getBooleanInputWrapper('skip_security_check'),
-    aiConfig,
-  };
-
-  // Log config in debug mode (omitting sensitive info)
-  if (config.debug) {
-    core.debug('Configuration loaded:');
-    core.debug(`- Issue tag: ${config.issueTag}`);
-    core.debug(`- Expert review command: ${config.expertReviewCommand}`);
-    core.debug(`- AI provider: ${config.aiConfig.provider}`);
-    core.debug(`- AI model: ${config.aiConfig.modelName}`);
-    core.debug(`- Use Claude Code: ${config.aiConfig.useClaudeCode}`);
-    core.debug(`- Debug mode: ${config.debug}`);
-    core.debug(`- Skip security check: ${config.skipSecurityCheck}`);
-  }
-
-  return config;
-}
-
-/**
- * Validate an input value
- * Returns an error message if validation fails, or null if validation passes
- */
-export function validateInput(name: string, value: string): string | null {
-  switch (name) {
-    case 'api_key':
-      if (value.length < 10) {
-        return 'API key must be at least 10 characters long';
-      }
-      break;
+    logger.info(`Loading configuration from ${configPath}`);
     
-    case 'issue_tag':
-      if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
-        return 'Issue tag must only contain alphanumeric characters, underscores, and hyphens';
-      }
-      break;
+    // Read file content
+    const fileContent = fs.readFileSync(configPath, 'utf8');
     
-    case 'ai_provider':
-      const validProviders = ['anthropic', 'openrouter', 'openai', 'mistral', 'ollama'];
-      if (!validProviders.includes(value)) {
-        return `AI provider must be one of: ${validProviders.join(', ')}`;
-      }
-      break;
+    // Parse YAML or JSON
+    const fileConfig = yaml.load(fileContent) as Partial<ActionConfig>;
+    
+    logger.debug('Configuration file loaded successfully');
+    
+    return fileConfig || {};
+  } catch (error) {
+    logger.error(`Error loading configuration from file ${configPath}`, error);
+    return {};
+  }
+}
+
+/**
+ * Load configuration from environment variables
+ */
+function loadConfigFromEnv(): Partial<ActionConfig> {
+  logger.info('Loading configuration from environment variables');
+  
+  const envConfig: Partial<ActionConfig> = {
+    apiKey: process.env.RSOLV_API_KEY,
+    configPath: process.env.RSOLV_CONFIG_PATH,
+    issueLabel: process.env.RSOLV_ISSUE_LABEL,
+    repoToken: process.env.GITHUB_TOKEN
+  };
+  
+  // Parse environment variables JSON string if available
+  if (process.env.RSOLV_ENVIRONMENT_VARIABLES) {
+    try {
+      envConfig.environmentVariables = JSON.parse(process.env.RSOLV_ENVIRONMENT_VARIABLES);
+    } catch (error) {
+      logger.error('Error parsing RSOLV_ENVIRONMENT_VARIABLES', error);
+    }
   }
   
-  return null;
+  // AI Provider configuration from environment
+  if (process.env.RSOLV_AI_PROVIDER) {
+    envConfig.aiProvider = {
+      provider: process.env.RSOLV_AI_PROVIDER,
+      apiKey: process.env.RSOLV_AI_API_KEY,
+      model: process.env.RSOLV_AI_MODEL || 'claude-3-sonnet-20240229',
+      baseUrl: process.env.RSOLV_AI_BASE_URL
+    };
+    
+    if (process.env.RSOLV_AI_TEMPERATURE) {
+      envConfig.aiProvider.temperature = parseFloat(process.env.RSOLV_AI_TEMPERATURE);
+    }
+    
+    if (process.env.RSOLV_AI_MAX_TOKENS) {
+      envConfig.aiProvider.maxTokens = parseInt(process.env.RSOLV_AI_MAX_TOKENS, 10);
+    }
+  }
+  
+  // Container configuration from environment
+  if (process.env.RSOLV_CONTAINER_ENABLED) {
+    envConfig.containerConfig = {
+      enabled: process.env.RSOLV_CONTAINER_ENABLED === 'true',
+      image: process.env.RSOLV_CONTAINER_IMAGE,
+      memoryLimit: process.env.RSOLV_CONTAINER_MEMORY_LIMIT,
+      cpuLimit: process.env.RSOLV_CONTAINER_CPU_LIMIT
+    };
+    
+    if (process.env.RSOLV_CONTAINER_TIMEOUT) {
+      envConfig.containerConfig.timeout = parseInt(process.env.RSOLV_CONTAINER_TIMEOUT, 10);
+    }
+  }
+  
+  // Remove undefined values
+  Object.keys(envConfig).forEach(key => {
+    if (envConfig[key as keyof ActionConfig] === undefined) {
+      delete envConfig[key as keyof ActionConfig];
+    }
+  });
+  
+  return envConfig;
+}
+
+/**
+ * Validate configuration against schema
+ */
+function validateConfig(config: any): ActionConfig {
+  logger.debug('Validating configuration');
+  
+  try {
+    // Check required fields
+    if (!config.apiKey) {
+      throw new Error('API key is required');
+    }
+    
+    // Validate against schema
+    const validatedConfig = ActionConfigSchema.parse(config);
+    
+    logger.debug('Configuration validation successful');
+    
+    return validatedConfig;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errorMessages = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      logger.error(`Configuration validation failed: ${errorMessages}`);
+      throw new Error(`Invalid configuration: ${errorMessages}`);
+    }
+    
+    throw error;
+  }
 }

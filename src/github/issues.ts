@@ -1,163 +1,257 @@
-import * as github from '@actions/github';
-import { IssueContext } from '../types';
+import { ActionConfig, IssueContext } from '../types/index';
 import { logger } from '../utils/logger';
+import { getGitHubClient, getRepositoryDetails } from './api';
 
 /**
- * Extract issue context from GitHub webhook event
+ * Detect issues that need automation based on labels
  */
-export function extractIssueContextFromEvent(context?: any): IssueContext | null {
+export async function detectIssues(config: ActionConfig): Promise<IssueContext[]> {
   try {
-    // Use the provided context or fallback to github.context
-    const ctx = context || github.context;
-
-    // Check if this is an issue event with a label
-    if (ctx.eventName === 'issues' && ctx.payload.action === 'labeled') {
-      const label = ctx.payload.label?.name;
-      const issue = ctx.payload.issue;
-      
-      if (!label || !issue) {
-        logger.warning('Missing label or issue in event payload');
-        return null;
-      }
-      
-      return {
-        id: issue.number.toString(),
-        source: 'github',
-        title: issue.title,
-        body: issue.body || '',
-        labels: issue.labels.map((label: any) => 
-          typeof label === 'string' ? label : label.name
-        ),
-        repository: {
-          owner: ctx.repo.owner,
-          name: ctx.repo.repo,
-        },
-        metadata: {
-          htmlUrl: issue.html_url,
-          user: issue.user.login,
-          state: issue.state,
-          createdAt: issue.created_at,
-          updatedAt: issue.updated_at,
-        },
-        url: issue.html_url,
-      };
+    logger.info('Detecting issues for automation');
+    
+    // Get context from environment variables
+    const repoFullName = process.env.GITHUB_REPOSITORY || '';
+    const [owner, repo] = repoFullName.split('/');
+    
+    if (!owner || !repo) {
+      throw new Error('Repository information not available in environment variables');
     }
     
-    // Check if this is a manually triggered workflow with issue number
-    if (ctx.eventName === 'workflow_dispatch') {
-      const issueNumber = ctx.payload.inputs?.issue_number;
-      if (!issueNumber) {
-        logger.warning('No issue number provided in workflow_dispatch event');
-        return null;
-      }
-      
-      // Note: This requires fetching the issue details using the GitHub API
-      // This will be implemented in getIssueDetails
-      return null;
-    }
+    // Get repository details
+    const repoDetails = await getRepositoryDetails(owner, repo);
     
-    logger.info(`Event ${ctx.eventName} is not supported for automatic issue detection`);
-    return null;
-  } catch (error) {
-    logger.error('Error extracting issue context from event', error as Error);
-    return null;
-  }
-}
-
-/**
- * Get issue details from GitHub API
- */
-export async function getIssueDetails(
-  token: string, 
-  owner: string, 
-  repo: string, 
-  issueNumber: number
-): Promise<IssueContext | null> {
-  try {
-    const octokit = github.getOctokit(token);
+    // Get issues with the automation label
+    const issues = await getIssuesWithLabel(owner, repo, config.issueLabel);
     
-    const { data: issue } = await octokit.rest.issues.get({
-      owner,
-      repo,
-      issue_number: issueNumber,
-    });
+    logger.info(`Found ${issues.length} issues with label ${config.issueLabel}`);
     
-    return {
-      id: issue.number.toString(),
-      source: 'github',
+    // Convert GitHub issues to our internal IssueContext format
+    const issueContexts = issues.map(issue => ({
+      id: `github-${issue.id}`,
+      number: issue.number,
       title: issue.title,
       body: issue.body || '',
       labels: issue.labels.map((label: any) => 
         typeof label === 'string' ? label : label.name
       ),
+      assignees: issue.assignees?.map((assignee: any) => assignee.login) || [],
       repository: {
         owner,
         name: repo,
+        fullName: repoFullName,
+        defaultBranch: repoDetails.defaultBranch,
+        language: repoDetails.language,
       },
+      source: 'github',
+      createdAt: issue.created_at,
+      updatedAt: issue.updated_at,
       metadata: {
         htmlUrl: issue.html_url,
-        user: issue.user.login,
         state: issue.state,
-        createdAt: issue.created_at,
-        updatedAt: issue.updated_at,
+        locked: issue.locked,
+        draft: issue.draft,
       },
-      url: issue.html_url,
-    };
+    }));
+    
+    return issueContexts;
   } catch (error) {
-    logger.error(`Error fetching issue details for ${owner}/${repo}#${issueNumber}`, error as Error);
-    return null;
+    logger.error('Error detecting issues', error);
+    throw new Error(`Failed to detect issues: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 /**
- * Check if an issue has the automation tag
+ * Get issues with a specific label from GitHub
  */
-export function hasAutomationTag(issueContext: IssueContext, automationTag: string): boolean {
-  return issueContext.labels.includes(automationTag);
-}
-
-/**
- * Add a comment to an issue
- */
-export async function addIssueComment(
-  token: string,
+async function getIssuesWithLabel(
   owner: string,
   repo: string,
-  issueNumber: number,
-  body: string
-): Promise<boolean> {
+  label: string
+): Promise<any[]> {
   try {
-    const octokit = github.getOctokit(token);
+    const client = getGitHubClient();
     
-    await octokit.rest.issues.createComment({
+    // Get open issues with the specified label
+    const { data } = await client.issues.listForRepo({
       owner,
       repo,
-      issue_number: issueNumber,
-      body,
+      labels: label,
+      state: 'open',
+      per_page: 100,
     });
     
-    return true;
+    // Filter out pull requests (GitHub API returns both issues and PRs)
+    const issues = data.filter(issue => !issue.pull_request);
+    
+    return issues;
   } catch (error) {
-    logger.error(`Error adding comment to issue ${owner}/${repo}#${issueNumber}`, error as Error);
-    return false;
+    logger.error(`Error getting issues with label ${label}`, error);
+    throw new Error(`Failed to get issues with label: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 /**
- * Check if an issue is eligible for automation
+ * For testing purposes: simulate github issues
  */
-export function isEligibleForAutomation(issueContext: IssueContext, automationTag: string): boolean {
-  // Check if it has the automation tag
-  if (!hasAutomationTag(issueContext, automationTag)) {
-    return false;
+export async function simulateGitHubIssues(count: number = 3): Promise<IssueContext[]> {
+  logger.debug(`Simulating ${count} GitHub issues for development`);
+  
+  const issues: IssueContext[] = [];
+  
+  for (let i = 1; i <= count; i++) {
+    const issueTypes = ['bug', 'feature', 'documentation', 'performance', 'refactoring'];
+    const type = issueTypes[Math.floor(Math.random() * issueTypes.length)];
+    
+    issues.push({
+      id: `github-${1000 + i}`,
+      number: i,
+      title: `[${type.toUpperCase()}] Test issue #${i} for simulation`,
+      body: createSampleIssueBody(type, i),
+      labels: ['rsolv:automate', type],
+      assignees: ['rsolv-bot'],
+      repository: {
+        owner: 'rsolv-dev',
+        name: 'demo-repo',
+        fullName: 'rsolv-dev/demo-repo',
+        defaultBranch: 'main',
+        language: 'TypeScript',
+      },
+      source: 'github',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      metadata: {
+        htmlUrl: `https://github.com/rsolv-dev/demo-repo/issues/${i}`,
+        state: 'open',
+        locked: false,
+        draft: false,
+      },
+    });
   }
   
-  // Check if the issue body is not empty
-  if (!issueContext.body || issueContext.body.trim() === '') {
-    return false;
+  return issues;
+}
+
+/**
+ * Create a sample issue body for simulation
+ */
+function createSampleIssueBody(type: string, id: number): string {
+  switch (type) {
+    case 'bug':
+      return `## Description
+There's a bug in the authentication system where users are getting logged out unexpectedly.
+
+## Steps to Reproduce
+1. Log in with valid credentials
+2. Navigate to the settings page
+3. Wait for 5 minutes without activity
+4. Try to save changes
+
+## Expected Behavior
+The user should be able to save changes without being logged out.
+
+## Actual Behavior
+The user is logged out and changes are lost.
+
+## Environment
+- Browser: Chrome 98.0
+- OS: Windows 10
+- Device: Desktop
+
+## Additional Context
+This seems to happen more frequently when the user has multiple tabs open.
+
+## Files to Check
+- \`src/auth/session.ts\`
+- \`src/utils/timeouts.ts\``;
+
+    case 'feature':
+      return `## Feature Request
+Add support for dark mode in the web application.
+
+## Why is this needed?
+Many users work late at night and a dark mode would reduce eye strain.
+
+## Proposed Solution
+Add a toggle in the user settings page that allows switching between light and dark themes.
+
+## Acceptance Criteria
+- A toggle button in the user settings page
+- Dark theme CSS for all major components
+- Theme preference should be saved in user settings
+- Theme should default to system preference when available
+
+## Technical Details
+We can use CSS variables to make the transition between themes smooth. Theme settings should be stored in localStorage and also in the user profile if they're logged in.
+
+## Files to Modify
+- \`src/styles/theme.css\`
+- \`src/components/Settings.tsx\`
+- \`src/utils/userPreferences.ts\``;
+
+    case 'documentation':
+      return `## Documentation Improvement
+The API documentation for the authentication endpoints is incomplete and missing examples.
+
+## What's Missing
+- Code examples for login and registration endpoints
+- Error response details
+- Rate limiting information
+- Authentication token format explanation
+
+## Proposed Changes
+Update the API documentation to include comprehensive examples and details for all authentication endpoints.
+
+## Files to Update
+- \`docs/api/authentication.md\`
+- \`README.md\` (to update the quick start section)`;
+
+    case 'performance':
+      return `## Performance Issue
+The data processing function in the analytics module is causing significant slowdowns when processing large datasets.
+
+## Current Performance
+With a dataset of 10,000 records, the processing takes about 15 seconds.
+
+## Expected Performance
+Should process 10,000 records in under 1 second.
+
+## Profiling Results
+The bottleneck appears to be in the data aggregation function, which is using a nested loop approach with O(n²) complexity.
+
+## Suggested Approach
+Refactor the aggregation function to use a hashmap-based approach which would reduce the complexity to O(n).
+
+## Files to Optimize
+- \`src/analytics/dataProcessor.ts\`
+- \`src/utils/aggregation.ts\``;
+
+    case 'refactoring':
+      return `## Refactoring Request
+The error handling in the API client is inconsistent and duplicated across multiple methods.
+
+## Current Issues
+- Each API method has its own error handling logic
+- Some methods miss important error cases
+- Error reporting format is inconsistent
+- Duplicate try/catch blocks throughout the codebase
+
+## Proposed Refactoring
+Create a centralized error handling utility that can be used by all API methods to ensure consistent error processing and reporting.
+
+## Files to Refactor
+- \`src/api/client.ts\`
+- \`src/utils/errors.ts\` (to be created)
+- \`src/types/api.ts\` (to add error types)`;
+
+    default:
+      return `## Issue #${id}
+This is a sample issue for testing purposes.
+
+## Details
+This is a simulated issue for development and testing of the RSOLV automation system.
+
+## Files
+- \`src/index.ts\`
+- \`src/utils/helper.ts\``;
   }
-  
-  // Additional eligibility criteria can be added here
-  
-  return true;
 }

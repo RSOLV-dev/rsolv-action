@@ -1,286 +1,233 @@
-import { ExternalWebhookPayload, IssueContext } from '../types';
+import { IssueContext, ActionConfig } from '../types/index';
 import { logger } from '../utils/logger';
-import { validateApiKey } from '../utils/security';
-import * as nodemailer from 'nodemailer';
 
 /**
- * Process an external webhook payload
+ * Handle webhook data from external issue trackers
  */
-export async function processWebhookPayload(payload: ExternalWebhookPayload): Promise<IssueContext | null> {
+export async function handleExternalWebhook(
+  payload: any,
+  source: string,
+  config: ActionConfig
+): Promise<IssueContext[]> {
   try {
-    // Validate the API key
-    const isValidApiKey = await validateApiKey(payload.apiKey);
-    if (!isValidApiKey) {
-      logger.error('Invalid API key in webhook payload');
-      return null;
+    logger.info(`Processing webhook from ${source}`);
+    
+    switch (source.toLowerCase()) {
+      case 'jira':
+        return handleJiraWebhook(payload, config);
+      case 'linear':
+        return handleLinearWebhook(payload, config);
+      default:
+        logger.warn(`Unsupported external source: ${source}`);
+        return [];
     }
+  } catch (error) {
+    logger.error(`Error handling webhook from ${source}`, error);
+    throw new Error(`Webhook processing failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
 
-    // Validate required fields
-    if (!payload.source || !payload.issue || !payload.repository) {
-      logger.error('Missing required fields in webhook payload');
-      return null;
+/**
+ * Handle webhook data from Jira
+ */
+async function handleJiraWebhook(
+  payload: any,
+  config: ActionConfig
+): Promise<IssueContext[]> {
+  try {
+    logger.info('Processing Jira webhook');
+    
+    // Validate webhook payload
+    if (!payload.issue) {
+      logger.warn('Invalid Jira webhook payload: missing issue data');
+      return [];
     }
-
-    // Convert to internal issue context format
+    
+    const issue = payload.issue;
+    const projectKey = issue.fields?.project?.key;
+    const issueKey = issue.key;
+    
+    if (!projectKey || !issueKey) {
+      logger.warn('Invalid Jira issue data: missing project key or issue key');
+      return [];
+    }
+    
+    // Check if issue has automation label
+    const labels = issue.fields?.labels || [];
+    const hasAutomationLabel = labels.some((label: string) => 
+      label.toLowerCase() === config.issueLabel.toLowerCase()
+    );
+    
+    if (!hasAutomationLabel) {
+      logger.debug(`Jira issue ${issueKey} does not have automation label, skipping`);
+      return [];
+    }
+    
+    // Convert Jira issue to our internal format
     const issueContext: IssueContext = {
-      id: payload.issue.id,
-      source: payload.source as any, // We'll validate this below
-      title: payload.issue.title,
-      body: payload.issue.description,
-      labels: payload.issue.labels || [],
+      id: `jira-${issue.id}`,
+      number: parseInt(issueKey.split('-')[1], 10),
+      title: issue.fields?.summary || '',
+      body: issue.fields?.description || '',
+      labels: labels,
+      assignees: issue.fields?.assignee ? [issue.fields.assignee.displayName] : [],
       repository: {
-        owner: payload.repository.owner,
-        name: payload.repository.name,
-        branch: payload.repository.branch,
+        owner: projectKey,
+        name: issue.fields?.project?.name || '',
+        fullName: `${projectKey}/${issue.fields?.project?.name || ''}`,
+        defaultBranch: 'main',
+        language: ''
       },
+      source: 'jira',
+      createdAt: issue.fields?.created || '',
+      updatedAt: issue.fields?.updated || '',
       metadata: {
-        source: payload.source,
-        url: payload.issue.url,
-      },
-      url: payload.issue.url,
+        status: issue.fields?.status?.name || '',
+        priority: issue.fields?.priority?.name || '',
+        issueType: issue.fields?.issuetype?.name || '',
+        jiraUrl: `${process.env.JIRA_BASE_URL || 'https://jira.atlassian.com'}/browse/${issueKey}`,
+      }
     };
-
-    // Validate source
-    const validSources = ['jira', 'linear', 'custom'];
-    if (!validSources.includes(payload.source)) {
-      logger.warning(`Unknown issue source: ${payload.source}. Treating as 'custom'`);
-      issueContext.source = 'custom';
-    }
-
-    return issueContext;
+    
+    logger.info(`Processed Jira issue ${issueKey}`);
+    return [issueContext];
   } catch (error) {
-    logger.error('Error processing webhook payload', error as Error);
+    logger.error('Error processing Jira webhook', error);
+    return [];
+  }
+}
+
+/**
+ * Handle webhook data from Linear
+ */
+async function handleLinearWebhook(
+  payload: any,
+  config: ActionConfig
+): Promise<IssueContext[]> {
+  try {
+    logger.info('Processing Linear webhook');
+    
+    // Validate webhook payload
+    if (!payload.data || !payload.data.id) {
+      logger.warn('Invalid Linear webhook payload: missing issue data');
+      return [];
+    }
+    
+    const issue = payload.data;
+    const teamKey = issue.team?.key || 'TEAM';
+    const issueKey = `${teamKey}-${issue.number}`;
+    
+    // Check if issue has automation label
+    const labels = issue.labels?.nodes?.map((label: any) => label.name) || [];
+    const hasAutomationLabel = labels.some((label: string) => 
+      label.toLowerCase() === config.issueLabel.toLowerCase()
+    );
+    
+    if (!hasAutomationLabel) {
+      logger.debug(`Linear issue ${issueKey} does not have automation label, skipping`);
+      return [];
+    }
+    
+    // Convert Linear issue to our internal format
+    const issueContext: IssueContext = {
+      id: `linear-${issue.id}`,
+      number: issue.number,
+      title: issue.title || '',
+      body: issue.description || '',
+      labels: labels,
+      assignees: issue.assignee ? [issue.assignee.name] : [],
+      repository: {
+        owner: teamKey,
+        name: issue.team?.name || '',
+        fullName: `${teamKey}/${issue.team?.name || ''}`,
+        defaultBranch: 'main',
+        language: ''
+      },
+      source: 'linear',
+      createdAt: issue.createdAt || '',
+      updatedAt: issue.updatedAt || '',
+      metadata: {
+        status: issue.state?.name || '',
+        priority: issue.priority ? linearPriorityToString(issue.priority) : '',
+        linearUrl: issue.url || '',
+      }
+    };
+    
+    logger.info(`Processed Linear issue ${issueKey}`);
+    return [issueContext];
+  } catch (error) {
+    logger.error('Error processing Linear webhook', error);
+    return [];
+  }
+}
+
+/**
+ * Convert Linear priority to string
+ */
+function linearPriorityToString(priority: number): string {
+  switch (priority) {
+    case 0:
+      return 'No priority';
+    case 1:
+      return 'Urgent';
+    case 2:
+      return 'High';
+    case 3:
+      return 'Medium';
+    case 4:
+      return 'Low';
+    default:
+      return 'Unknown';
+  }
+}
+
+/**
+ * Get repository information from external issue
+ */
+export async function getRepositoryFromExternalIssue(
+  issueContext: IssueContext,
+  config: ActionConfig
+): Promise<{ owner: string; repo: string; defaultBranch: string } | null> {
+  try {
+    logger.info(`Getting repository info for ${issueContext.source} issue ${issueContext.id}`);
+    
+    // Check if repository mapping is provided in environment variables
+    const mappingEnvVar = `RSOLV_REPOSITORY_MAPPING_${issueContext.repository.owner}`;
+    const mapping = process.env[mappingEnvVar];
+    
+    if (mapping) {
+      try {
+        const repoInfo = JSON.parse(mapping);
+        logger.info(`Found repository mapping for ${issueContext.repository.owner}: ${repoInfo.owner}/${repoInfo.repo}`);
+        return {
+          owner: repoInfo.owner,
+          repo: repoInfo.repo,
+          defaultBranch: repoInfo.defaultBranch || 'main'
+        };
+      } catch (error) {
+        logger.error(`Error parsing repository mapping for ${issueContext.repository.owner}`, error);
+      }
+    }
+    
+    // If no mapping is found, return default based on issue source
+    switch (issueContext.source) {
+      case 'jira':
+        return {
+          owner: process.env.JIRA_GITHUB_OWNER || '',
+          repo: process.env.JIRA_GITHUB_REPO || '',
+          defaultBranch: process.env.JIRA_GITHUB_BRANCH || 'main'
+        };
+      case 'linear':
+        return {
+          owner: process.env.LINEAR_GITHUB_OWNER || '',
+          repo: process.env.LINEAR_GITHUB_REPO || '',
+          defaultBranch: process.env.LINEAR_GITHUB_BRANCH || 'main'
+        };
+      default:
+        return null;
+    }
+  } catch (error) {
+    logger.error(`Error getting repository for external issue ${issueContext.id}`, error);
     return null;
-  }
-}
-
-/**
- * Check if a webhook payload is eligible for automation
- */
-export function isEligibleForAutomation(issueContext: IssueContext, automationTag: string): boolean {
-  // For external sources, we might have different criteria
-  // For now, we'll use the same criteria as GitHub issues
-  
-  // Check if it has the automation tag
-  if (!issueContext.labels.includes(automationTag)) {
-    return false;
-  }
-  
-  // Check if the issue body is not empty
-  if (!issueContext.body || issueContext.body.trim() === '') {
-    return false;
-  }
-  
-  // Additional eligibility criteria can be added here
-  
-  return true;
-}
-
-/**
- * Interface for review request data
- */
-export interface ExpertReviewRequest {
-  prNumber: number;
-  prUrl: string;
-  repository: {
-    owner: string;
-    name: string;
-  };
-  issueTitle: string;
-  requestedBy: string;
-  customerName?: string;
-}
-
-/**
- * Rate limits for expert review requests by customer
- * This would ideally be stored in a database
- */
-export const customerRateLimits: Record<string, { 
-  dailyLimit: number; 
-  monthlyLimit: number; 
-  dailyUsed: number;
-  monthlyUsed: number;
-  lastReset: Date;
-}> = {};
-
-/**
- * Reset customer rate limits - exported for testing purposes
- */
-export function resetRateLimits(): void {
-  Object.keys(customerRateLimits).forEach(key => {
-    delete customerRateLimits[key];
-  });
-}
-
-/**
- * Check if a customer is rate limited
- */
-export function isRateLimited(customerApiKey: string): boolean {
-  // If we don't have a record for this customer, they're not rate limited
-  if (!customerRateLimits[customerApiKey]) {
-    // Default limits: 1 per day, 5 per month
-    customerRateLimits[customerApiKey] = {
-      dailyLimit: 1,
-      monthlyLimit: 5,
-      dailyUsed: 0,
-      monthlyUsed: 0,
-      lastReset: new Date()
-    };
-    return false;
-  }
-
-  const customer = customerRateLimits[customerApiKey];
-  const now = new Date();
-  
-  // Check if we need to reset daily count
-  if (now.getDate() !== customer.lastReset.getDate() || 
-      now.getMonth() !== customer.lastReset.getMonth() ||
-      now.getFullYear() !== customer.lastReset.getFullYear()) {
-    customer.dailyUsed = 0;
-    customer.lastReset = now;
-  }
-  
-  // Check if we need to reset monthly count
-  if (now.getMonth() !== customer.lastReset.getMonth() ||
-      now.getFullYear() !== customer.lastReset.getFullYear()) {
-    customer.monthlyUsed = 0;
-    customer.lastReset = now;
-  }
-  
-  // Check if they've exceeded their limits
-  return customer.dailyUsed >= customer.dailyLimit || 
-         customer.monthlyUsed >= customer.monthlyLimit;
-}
-
-/**
- * Process expert review request webhook
- */
-export async function processExpertReviewRequest(request: ExpertReviewRequest, customerApiKey: string): Promise<boolean> {
-  try {
-    // Validate the API key
-    const isValidApiKey = await validateApiKey(customerApiKey);
-    if (!isValidApiKey) {
-      logger.error('Invalid API key in expert review request');
-      return false;
-    }
-    
-    // Check rate limits
-    if (isRateLimited(customerApiKey)) {
-      logger.error(`Rate limit exceeded for customer with API key ${customerApiKey}`);
-      return false;
-    }
-    
-    // Increment usage count
-    if (customerRateLimits[customerApiKey]) {
-      customerRateLimits[customerApiKey].dailyUsed += 1;
-      customerRateLimits[customerApiKey].monthlyUsed += 1;
-    }
-    
-    // Send email notification
-    const emailSent = await sendExpertReviewEmail(request);
-    
-    return emailSent;
-  } catch (error) {
-    logger.error('Error processing expert review request', error as Error);
-    return false;
-  }
-}
-
-/**
- * Send email notification for expert review
- */
-async function sendExpertReviewEmail(request: ExpertReviewRequest): Promise<boolean> {
-  try {
-    // In production, these would come from environment variables
-    // This is a placeholder implementation
-    const emailConfig = {
-      host: process.env.SMTP_HOST || 'smtp.example.com',
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER || 'user@example.com',
-        pass: process.env.SMTP_PASS || 'password'
-      },
-      from: process.env.NOTIFICATION_FROM || 'notifications@rsolv.dev',
-      to: process.env.EXPERT_EMAIL || 'expert@rsolv.dev'
-    };
-
-    // In a real implementation, we would use the actual SMTP server
-    // For now, we just log the email content
-    logger.info(`EXPERT REVIEW REQUEST EMAIL:
-From: ${emailConfig.from}
-To: ${emailConfig.to}
-Subject: Expert Review Requested: PR #${request.prNumber} in ${request.repository.owner}/${request.repository.name}
-Body:
-Hello RSOLV Expert,
-
-An expert review has been requested for a pull request:
-
-Repository: ${request.repository.owner}/${request.repository.name}
-PR Number: ${request.prNumber}
-PR URL: ${request.prUrl}
-Issue: ${request.issueTitle}
-Requested by: ${request.requestedBy}
-${request.customerName ? `Customer: ${request.customerName}` : ''}
-
-Please review the PR at your earliest convenience.
-
-Thank you,
-RSOLV Team
-    `);
-    
-    // In development or test, we'll skip actual email sending
-    if (process.env.NODE_ENV === 'production') {
-      // Create transporter
-      const transporter = nodemailer.createTransport({
-        host: emailConfig.host,
-        port: emailConfig.port,
-        secure: emailConfig.secure,
-        auth: emailConfig.auth
-      });
-      
-      // Send email
-      await transporter.sendMail({
-        from: emailConfig.from,
-        to: emailConfig.to,
-        subject: `Expert Review Requested: PR #${request.prNumber} in ${request.repository.owner}/${request.repository.name}`,
-        text: `
-Hello RSOLV Expert,
-
-An expert review has been requested for a pull request:
-
-Repository: ${request.repository.owner}/${request.repository.name}
-PR Number: ${request.prNumber}
-PR URL: ${request.prUrl}
-Issue: ${request.issueTitle}
-Requested by: ${request.requestedBy}
-${request.customerName ? `Customer: ${request.customerName}` : ''}
-
-Please review the PR at your earliest convenience.
-
-Thank you,
-RSOLV Team
-        `,
-        html: `
-<h2>Expert Review Requested</h2>
-<p>An expert review has been requested for a pull request:</p>
-<ul>
-  <li><strong>Repository:</strong> ${request.repository.owner}/${request.repository.name}</li>
-  <li><strong>PR Number:</strong> ${request.prNumber}</li>
-  <li><strong>PR URL:</strong> <a href="${request.prUrl}">${request.prUrl}</a></li>
-  <li><strong>Issue:</strong> ${request.issueTitle}</li>
-  <li><strong>Requested by:</strong> ${request.requestedBy}</li>
-  ${request.customerName ? `<li><strong>Customer:</strong> ${request.customerName}</li>` : ''}
-</ul>
-<p>Please review the PR at your earliest convenience.</p>
-<p>Thank you,<br>RSOLV Team</p>
-        `
-      });
-    }
-    
-    return true;
-  } catch (error) {
-    logger.error('Error sending expert review email', error as Error);
-    return false;
   }
 }

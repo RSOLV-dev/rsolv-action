@@ -1,190 +1,59 @@
-import * as core from '@actions/core';
-import * as github from '@actions/github';
-
-import { loadConfig } from './config';
+import { loadConfig } from './config/index';
+import { detectIssues } from './github/issues';
+import { securityCheck } from './utils/security';
 import { logger } from './utils/logger';
-import { checkRepositorySecurity, validateApiKey } from './utils/security';
-import { extractIssueContextFromEvent, isEligibleForAutomation, addIssueComment } from './github/issues';
-import { IssueContext, ActionStatus, ActionResult } from './types';
-import { analyzeIssue } from './ai/analyzer';
-import { generateSolutionWithFeedback } from './ai/feedbackEnhanced';
+import { processIssues } from './ai/processor';
+import { setupContainer } from './containers/setup';
+import { ActionStatus } from './types/index';
 
-/**
- * Main function for the RSOLV action
- */
-async function run(): Promise<ActionResult> {
+async function run(): Promise<ActionStatus> {
   try {
+    // Log startup information
+    logger.info('Starting RSOLV action');
+    
     // Load configuration
-    const config = loadConfig();
+    const config = await loadConfig();
+    logger.info('Configuration loaded successfully');
     
-    // Set logger debug mode based on config
-    logger.setDebugMode(config.debug);
+    // Verify security constraints
+    await securityCheck(config);
+    logger.info('Security check passed');
     
-    // Log basic information
-    logger.info(`Starting RSOLV Action v0.1.0`);
-    logger.info(`Using AI provider: ${config.aiConfig.provider}`);
-    logger.info(`Using Claude Code: ${config.aiConfig.useClaudeCode ? 'Yes' : 'No'}`);
-    logger.info(`Checking for issues with tag: ${config.issueTag}`);
+    // Set up containerized environment for code analysis
+    await setupContainer(config);
+    logger.info('Analysis container ready');
     
-    // Validate API key
-    const isValidApiKey = await validateApiKey(config.apiKey);
-    if (!isValidApiKey) {
-      logger.error('Invalid API key provided');
-      return {
-        status: ActionStatus.FAILURE,
-        message: 'Invalid API key provided'
-      };
+    // Detect issues for automation
+    const issues = await detectIssues(config);
+    logger.info(`Found ${issues.length} issues for automation`);
+    
+    if (issues.length === 0) {
+      logger.info('No issues to process, exiting');
+      return { success: true, message: 'No issues found for automation' };
     }
     
-    // Perform security checks
-    const token = process.env.GITHUB_TOKEN || '';
-    if (!token) {
-      logger.error('No GitHub token provided');
-      return {
-        status: ActionStatus.FAILURE,
-        message: 'No GitHub token provided'
-      };
-    }
+    // Process issues with AI
+    const results = await processIssues(issues, config);
+    logger.info(`Successfully processed ${results.filter(r => r.success).length}/${issues.length} issues`);
     
-    const isSecure = await checkRepositorySecurity(token, config.skipSecurityCheck);
-    if (!isSecure && !config.skipSecurityCheck) {
-      logger.error('Repository failed security checks');
-      return {
-        status: ActionStatus.FAILURE,
-        message: 'Repository failed security checks'
-      };
-    }
-    
-    // Extract issue context from the event
-    const issueContext = extractIssueContextFromEvent();
-    if (!issueContext) {
-      logger.info('No eligible issue found in the event');
-      return {
-        status: ActionStatus.SKIPPED,
-        message: 'No eligible issue found in the event'
-      };
-    }
-    
-    // Check if the issue is eligible for automation
-    if (!isEligibleForAutomation(issueContext, config.issueTag)) {
-      logger.info(`Issue #${issueContext.id} is not eligible for automation`);
-      return {
-        status: ActionStatus.SKIPPED,
-        message: `Issue #${issueContext.id} is not eligible for automation`,
-        issueContext
-      };
-    }
-    
-    // Log that we found an eligible issue
-    logger.info(`Found eligible issue #${issueContext.id}: ${issueContext.title}`);
-    
-    // Add a comment to the issue noting that we're working on it
-    const { owner, name } = issueContext.repository;
-    const issueNumber = parseInt(issueContext.id, 10);
-    
-    await addIssueComment(
-      token,
-      owner,
-      name,
-      issueNumber,
-      `🤖 RSOLV has detected this issue as eligible for automated fixing. I'll analyze it and create a pull request soon!`
-    );
-    
-    // Analyze the issue
-    logger.info(`Analyzing issue #${issueContext.id}...`);
-    const analysis = await analyzeIssue(issueContext, config.aiConfig);
-    
-    logger.info(`Issue analysis complete. Complexity: ${analysis.complexity}`);
-    logger.info(`Estimated time to fix: ${analysis.estimatedTime} minutes`);
-    
-    // Add analysis as a comment
-    await addIssueComment(
-      token,
-      owner,
-      name,
-      issueNumber,
-      `### RSOLV Analysis
-      
-**Complexity**: ${analysis.complexity}
-**Estimated time**: ${analysis.estimatedTime} minutes
-
-**Summary**: ${analysis.summary}
-
-**Files to modify**:
-${analysis.relatedFiles?.map(file => `- ${file}`).join('\n') || 'To be determined'}
-
-**Required changes**:
-${analysis.requiredChanges?.map(change => `- ${change}`).join('\n') || 'To be determined'}
-
-**Recommended approach**: ${analysis.recommendedApproach}
-
-I'm now generating a solution based on this analysis...`
-    );
-    
-    // Generate a solution with feedback enhancement
-    logger.info(`Generating solution for issue #${issueContext.id}...`);
-    const solution = await generateSolutionWithFeedback(issueContext, analysis, config.aiConfig);
-    
-    logger.info(`Solution generated with ${solution.files.length} file changes`);
-    
-    // TODO: Implement PR creation (Day 4)
-    // For now, we'll just add another comment
-    await addIssueComment(
-      token,
-      owner,
-      name,
-      issueNumber,
-      `### RSOLV Solution Ready
-      
-I've generated a solution for this issue:
-
-**PR Title**: ${solution.title}
-
-**Description**: ${solution.description}
-
-**Files modified**:
-${solution.files.map(file => `- ${file.path}`).join('\n')}
-
-**Tests**:
-${solution.tests?.map(test => `- ${test}`).join('\n') || 'No tests specified'}
-
-PR creation will be implemented in the next version.`
-    );
-    
-    return {
-      status: ActionStatus.SUCCESS,
-      message: `Successfully processed issue #${issueContext.id}`,
-      issueContext
+    return { 
+      success: true, 
+      message: `RSOLV action completed successfully. Processed ${results.length} issues.` 
     };
-    
   } catch (error) {
-    const err = error as Error;
-    logger.error('Error running RSOLV action', err);
-    core.setFailed(err.message);
-    
-    return {
-      status: ActionStatus.FAILURE,
-      message: `Error: ${err.message}`,
-      error: err
+    logger.error('Action failed', error);
+    return { 
+      success: false, 
+      message: `RSOLV action failed: ${error instanceof Error ? error.message : String(error)}` 
     };
   }
 }
 
-// Run the action
-run()
-  .then((result) => {
-    // Set output
-    core.setOutput('status', result.status);
-    core.setOutput('message', result.message);
-    
-    // Set exit code based on status
-    if (result.status === ActionStatus.FAILURE) {
-      core.setFailed(result.message);
-    } else {
-      logger.info(`Action completed with status: ${result.status}`);
-    }
-  })
-  .catch((error) => {
-    logger.error('Unhandled error in action', error as Error);
-    core.setFailed((error as Error).message);
-  });
+// Start the action
+run().then(status => {
+  if (status.success) {
+    process.exit(0);
+  } else {
+    process.exit(1);
+  }
+});
