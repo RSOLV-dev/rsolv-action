@@ -24,8 +24,8 @@ import { getGitHubClient } from './src/github/api.js';
 import { createPullRequest } from './src/github/pr.js';
 import { generateSolution } from './src/ai/solution.js';
 import { analyzeIssue } from './src/ai/analyzer.js';
-import { AIConfig } from './src/ai/types.js';
-import { IssueContext, IssueAnalysis } from './src/types/index.js';
+import { AIConfig, IssueAnalysis } from './src/ai/types.js';
+import { IssueContext } from './src/types/index.js';
 import { 
   feedbackStorage, 
   feedbackCollector, 
@@ -246,25 +246,27 @@ async function getIssueContext(): Promise<IssueContext> {
     // Create issue context
     return {
       id: issueNumber,
+      number: parseInt(issueNumber, 10),
       source: 'github',
       title: issue.title,
       body: issue.body || '',
       labels: issue.labels?.map((label: any) => 
         typeof label === 'string' ? label : label.name
       ) || [],
+      assignees: issue.assignees?.map((assignee: any) => assignee.login) || [],
       repository: {
         owner,
-        repo,
-        branch: 'main' // Assuming main branch
+        name: repo,
+        fullName: `${owner}/${repo}`,
+        defaultBranch: 'main' // Assuming main branch
       },
+      createdAt: issue.created_at,
+      updatedAt: issue.updated_at,
       metadata: {
         htmlUrl: issue.html_url,
-        user: issue.user.login,
-        state: issue.state,
-        createdAt: issue.created_at,
-        updatedAt: issue.updated_at
-      },
-      url: issue.html_url
+        user: issue.user?.login,
+        state: issue.state
+      }
     };
   } else {
     // Manual issue input
@@ -297,23 +299,25 @@ async function getIssueContext(): Promise<IssueContext> {
 
     return {
       id: issueId,
-      source: 'demo',
+      number: parseInt(issueId.replace('demo-', ''), 10),
+      source: 'github',
       title: issueTitle,
       body: issueBody,
       labels: ['AUTOFIX', 'demo'],
+      assignees: ['demo-user'],
       repository: {
         owner: repoOwner,
-        repo: repoName,
-        branch: 'main'
+        name: repoName,
+        fullName: `${repoOwner}/${repoName}`,
+        defaultBranch: 'main'
       },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       metadata: {
         htmlUrl: `https://github.com/${repoOwner}/${repoName}/issues/${issueId}`,
         user: 'demo-user',
-        state: 'open',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      },
-      url: `https://github.com/${repoOwner}/${repoName}/issues/${issueId}`
+        state: 'open'
+      }
     };
   }
 }
