@@ -127,7 +127,7 @@ class OpenAiClient implements AiClient {
   }
   
   // Get mock response for testing and development fallback
-  private getMockResponse(prompt: string): string {
+  private getMockResponse(_prompt: string): string {
     return `Analysis of the issue:
 
 This appears to be a bug in the authentication system where token validation is failing for valid tokens that contain special characters. The issue is likely in the token parsing logic.
@@ -228,7 +228,7 @@ class AnthropicClient implements AiClient {
   }
   
   // Get mock response for testing and development fallback
-  private getMockResponse(prompt: string): string {
+  private getMockResponse(_prompt: string): string {
     return `Based on my analysis, this is a performance issue in the data processing pipeline.
 
 The main bottleneck appears to be in the file processing function that's not properly streaming large files, leading to excessive memory usage.
@@ -270,7 +270,7 @@ class MistralClient implements AiClient {
   }
   
   // Simulate API call for development
-  private async simulateApiCall(prompt: string, options: CompletionOptions): Promise<string> {
+  private async simulateApiCall(_prompt: string, _options: CompletionOptions): Promise<string> {
     // Add a small delay to simulate network latency
     await new Promise(resolve => setTimeout(resolve, 550));
     
@@ -312,7 +312,7 @@ class OllamaClient implements AiClient {
   }
   
   // Simulate API call for development
-  private async simulateApiCall(prompt: string, options: CompletionOptions): Promise<string> {
+  private async simulateApiCall(_prompt: string, _options: CompletionOptions): Promise<string> {
     // Add a small delay to simulate inference time
     await new Promise(resolve => setTimeout(resolve, 1000));
     
