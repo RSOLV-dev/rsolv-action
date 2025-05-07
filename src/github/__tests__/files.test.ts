@@ -1,5 +1,5 @@
 import { test, expect, mock, beforeEach } from 'bun:test';
-import { GitHubFileManager } from '../files';
+import { GitHubFileManager } from '../files.js';
 
 // Mock data
 const mockOwner = 'test-owner';

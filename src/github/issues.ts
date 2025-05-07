@@ -1,6 +1,6 @@
-import { ActionConfig, IssueContext } from '../types/index';
-import { logger } from '../utils/logger';
-import { getGitHubClient, getRepositoryDetails } from './api';
+import { ActionConfig, IssueContext } from '../types/index.js';
+import { logger } from '../utils/logger.js';
+import { getGitHubClient, getRepositoryDetails } from './api.js';
 
 /**
  * Detect issues that need automation based on labels
@@ -26,15 +26,15 @@ export async function detectIssues(config: ActionConfig): Promise<IssueContext[]
     logger.info(`Found ${issues.length} issues with label ${config.issueLabel}`);
     
     // Convert GitHub issues to our internal IssueContext format
-    const issueContexts = issues.map(issue => ({
+    const issueContexts = issues.map((issue: GitHubIssue) => ({
       id: `github-${issue.id}`,
       number: issue.number,
       title: issue.title,
       body: issue.body || '',
-      labels: issue.labels.map((label: any) => 
+      labels: issue.labels.map((label) => 
         typeof label === 'string' ? label : label.name
       ),
-      assignees: issue.assignees?.map((assignee: any) => assignee.login) || [],
+      assignees: issue.assignees?.map((assignee) => assignee.login) || [],
       repository: {
         owner,
         name: repo,
@@ -61,13 +61,33 @@ export async function detectIssues(config: ActionConfig): Promise<IssueContext[]
 }
 
 /**
+ * Interface representing a GitHub issue returned from the API
+ */
+interface GitHubIssue {
+  id: number;
+  number: number;
+  title: string;
+  body: string | null;
+  labels: Array<string | { name: string; [key: string]: any }>;
+  assignees?: Array<{ login: string; [key: string]: any }>;
+  created_at: string;
+  updated_at: string;
+  html_url: string;
+  state: string;
+  locked: boolean;
+  draft?: boolean;
+  pull_request?: any;
+  [key: string]: any;
+}
+
+/**
  * Get issues with a specific label from GitHub
  */
 async function getIssuesWithLabel(
   owner: string,
   repo: string,
   label: string
-): Promise<any[]> {
+): Promise<GitHubIssue[]> {
   try {
     const client = getGitHubClient();
     
@@ -81,7 +101,7 @@ async function getIssuesWithLabel(
     });
     
     // Filter out pull requests (GitHub API returns both issues and PRs)
-    const issues = data.filter(issue => !issue.pull_request);
+    const issues = data.filter((issue: GitHubIssue) => !issue.pull_request);
     
     return issues;
   } catch (error) {
@@ -136,8 +156,8 @@ export async function simulateGitHubIssues(count: number = 3): Promise<IssueCont
  */
 function createSampleIssueBody(type: string, id: number): string {
   switch (type) {
-    case 'bug':
-      return `## Description
+  case 'bug':
+    return `## Description
 There's a bug in the authentication system where users are getting logged out unexpectedly.
 
 ## Steps to Reproduce
@@ -164,8 +184,8 @@ This seems to happen more frequently when the user has multiple tabs open.
 - \`src/auth/session.ts\`
 - \`src/utils/timeouts.ts\``;
 
-    case 'feature':
-      return `## Feature Request
+  case 'feature':
+    return `## Feature Request
 Add support for dark mode in the web application.
 
 ## Why is this needed?
@@ -188,8 +208,8 @@ We can use CSS variables to make the transition between themes smooth. Theme set
 - \`src/components/Settings.tsx\`
 - \`src/utils/userPreferences.ts\``;
 
-    case 'documentation':
-      return `## Documentation Improvement
+  case 'documentation':
+    return `## Documentation Improvement
 The API documentation for the authentication endpoints is incomplete and missing examples.
 
 ## What's Missing
@@ -205,8 +225,8 @@ Update the API documentation to include comprehensive examples and details for a
 - \`docs/api/authentication.md\`
 - \`README.md\` (to update the quick start section)`;
 
-    case 'performance':
-      return `## Performance Issue
+  case 'performance':
+    return `## Performance Issue
 The data processing function in the analytics module is causing significant slowdowns when processing large datasets.
 
 ## Current Performance
@@ -225,8 +245,8 @@ Refactor the aggregation function to use a hashmap-based approach which would re
 - \`src/analytics/dataProcessor.ts\`
 - \`src/utils/aggregation.ts\``;
 
-    case 'refactoring':
-      return `## Refactoring Request
+  case 'refactoring':
+    return `## Refactoring Request
 The error handling in the API client is inconsistent and duplicated across multiple methods.
 
 ## Current Issues
@@ -243,8 +263,8 @@ Create a centralized error handling utility that can be used by all API methods 
 - \`src/utils/errors.ts\` (to be created)
 - \`src/types/api.ts\` (to add error types)`;
 
-    default:
-      return `## Issue #${id}
+  default:
+    return `## Issue #${id}
 This is a sample issue for testing purposes.
 
 ## Details

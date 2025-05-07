@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { FeedbackStorage } from '../storage';
-import type { FeedbackEvent } from '../types';
+import { FeedbackStorage } from '../storage.js';
+import type { FeedbackEvent } from '../types.js';
 import fs from 'fs';
 import path from 'path';
 

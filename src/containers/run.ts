@@ -1,5 +1,5 @@
-import { ActionConfig, ContainerConfig } from '../types/index';
-import { logger } from '../utils/logger';
+import { ActionConfig, ContainerConfig } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';

@@ -1,5 +1,5 @@
-import { ActionConfig, ContainerConfig } from '../types/index';
-import { logger } from '../utils/logger';
+import { ActionConfig, ContainerConfig } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -126,21 +126,21 @@ async function configureContainer(
     const securityProfile = containerConfig.securityProfile || 'default';
     
     switch (securityProfile) {
-      case 'strict':
-        logger.info('Applying strict security profile to container');
-        // In production, this would apply strict security settings
-        break;
+    case 'strict':
+      logger.info('Applying strict security profile to container');
+      // In production, this would apply strict security settings
+      break;
         
-      case 'relaxed':
-        logger.info('Applying relaxed security profile to container');
-        // In production, this would apply relaxed security settings
-        break;
+    case 'relaxed':
+      logger.info('Applying relaxed security profile to container');
+      // In production, this would apply relaxed security settings
+      break;
         
-      case 'default':
-      default:
-        logger.info('Applying default security profile to container');
-        // In production, this would apply default security settings
-        break;
+    case 'default':
+    default:
+      logger.info('Applying default security profile to container');
+      // In production, this would apply default security settings
+      break;
     }
     
     // Configure network access

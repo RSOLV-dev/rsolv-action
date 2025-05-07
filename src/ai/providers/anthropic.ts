@@ -1,5 +1,5 @@
-import { AIClient, AIConfig, IssueAnalysis, PullRequestSolution } from '../types';
-import { logger } from '../../utils/logger';
+import { AIClient, AIConfig, IssueAnalysis, PullRequestSolution } from '../types.js';
+import { logger } from '../../utils/logger.js';
 import * as child_process from 'child_process';
 import * as util from 'util';
 
@@ -65,10 +65,10 @@ export class AnthropicClient implements AIClient {
           model: this.model,
           max_tokens: this.maxTokens,
           temperature: this.temperature,
-          system: "You are RSOLV, an AI-powered system for automatically fixing software issues.",
+          system: 'You are RSOLV, an AI-powered system for automatically fixing software issues.',
           messages: [
             {
-              role: "user",
+              role: 'user',
               content: prompt
             }
           ]

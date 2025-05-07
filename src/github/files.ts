@@ -1,6 +1,6 @@
-import { logger } from '../utils/logger';
-import { IssueContext } from '../types/index';
-import { getGitHubClient } from './api';
+import { logger } from '../utils/logger.js';
+import { IssueContext } from '../types/index.js';
+import { getGitHubClient } from './api.js';
 
 /**
  * Get repository files based on the file paths
@@ -101,8 +101,8 @@ async function simulateFileContent(filePath: string, issue: IssueContext): Promi
   const ext = filePath.split('.').pop()?.toLowerCase();
   
   switch (ext) {
-    case 'js':
-      return `// JavaScript file in ${issue.repository.name}: ${filePath}
+  case 'js':
+    return `// JavaScript file in ${issue.repository.name}: ${filePath}
 const { Logger } = require('../utils/logger');
 const logger = new Logger();
 
@@ -131,9 +131,9 @@ function processData(input) {
 module.exports = { processData };
 `;
       
-    case 'ts':
-      return `// TypeScript file in ${issue.repository.name}: ${filePath}
-import { Logger } from '../utils/logger';
+  case 'ts':
+    return `// TypeScript file in ${issue.repository.name}: ${filePath}
+import { Logger } from '../utils/logger.js';
 const logger = new Logger();
 
 /**
@@ -167,8 +167,8 @@ function processData(input: DataItem[]): number[] {
 export { DataItem, processData };
 `;
       
-    case 'py':
-      return `# Python file in ${issue.repository.name}: ${filePath}
+  case 'py':
+    return `# Python file in ${issue.repository.name}: ${filePath}
 import logging
 from typing import List, Dict, Any, Optional
 
@@ -206,8 +206,8 @@ if __name__ == "__main__":
     print(process_data(test_data))
 `;
       
-    case 'md':
-      return `# Documentation for ${filePath.split('/').pop()?.replace('.md', '')}
+  case 'md':
+    return `# Documentation for ${filePath.split('/').pop()?.replace('.md', '')}
 
 ## Overview
 
@@ -238,8 +238,8 @@ console.log(result); // [42, 17]
 The function will filter out invalid items from the results and log warnings.
 `;
       
-    default:
-      return `// Example file content for ${filePath} in ${issue.repository.name}
+  default:
+    return `// Example file content for ${filePath} in ${issue.repository.name}
 // This is a placeholder for demonstration purposes
 `;
   }

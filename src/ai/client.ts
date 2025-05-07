@@ -1,5 +1,5 @@
-import { AiProviderConfig } from '../types/index';
-import { logger } from '../utils/logger';
+import { AiProviderConfig } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Interface for AI client implementations
@@ -27,16 +27,16 @@ export interface CompletionOptions {
  */
 export function getAiClient(config: AiProviderConfig): AiClient {
   switch (config.provider.toLowerCase()) {
-    case 'openai':
-      return new OpenAiClient(config);
-    case 'anthropic':
-      return new AnthropicClient(config);
-    case 'mistral':
-      return new MistralClient(config);
-    case 'ollama':
-      return new OllamaClient(config);
-    default:
-      throw new Error(`Unsupported AI provider: ${config.provider}`);
+  case 'openai':
+    return new OpenAiClient(config);
+  case 'anthropic':
+    return new AnthropicClient(config);
+  case 'mistral':
+    return new MistralClient(config);
+  case 'ollama':
+    return new OllamaClient(config);
+  default:
+    throw new Error(`Unsupported AI provider: ${config.provider}`);
   }
 }
 

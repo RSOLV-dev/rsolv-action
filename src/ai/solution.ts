@@ -1,8 +1,8 @@
-import { IssueContext, ActionConfig, AnalysisData } from '../types/index';
-import { logger } from '../utils/logger';
-import { getAiClient } from './client';
-import { buildSolutionPrompt, getIssueTypePromptTemplate } from './prompts';
-import { getRepositoryFiles } from '../github/files';
+import { IssueContext, ActionConfig, AnalysisData } from '../types/index.js';
+import { logger } from '../utils/logger.js';
+import { getAiClient } from './client.js';
+import { buildSolutionPrompt, getIssueTypePromptTemplate } from './prompts.js';
+import { getRepositoryFiles } from '../github/files.js';
 
 /**
  * Result of solution generation
@@ -91,7 +91,7 @@ async function getFilesForAnalysis(
     
     // If no files are explicitly identified, try to infer from issue title/description
     if (filesToFetch.length === 0) {
-      logger.info(`No files explicitly identified, inferring from issue content`);
+      logger.info('No files explicitly identified, inferring from issue content');
       
       // Example logic to infer files - in a real implementation, this would be more sophisticated
       const combinedText = `${issue.title} ${issue.body}`;
@@ -179,19 +179,19 @@ async function simulateFileContent(filePath: string): Promise<string> {
   const ext = filePath.split('.').pop()?.toLowerCase();
   
   switch (ext) {
-    case 'js':
-      return `// Example JavaScript file content for ${filePath}\nfunction processData(input) {\n  // TODO: Implement proper validation\n  return input.map(item => item.value);\n}\n\nmodule.exports = { processData };\n`;
+  case 'js':
+    return `// Example JavaScript file content for ${filePath}\nfunction processData(input) {\n  // TODO: Implement proper validation\n  return input.map(item => item.value);\n}\n\nmodule.exports = { processData };\n`;
       
-    case 'ts':
-      return `// Example TypeScript file content for ${filePath}\ninterface DataItem {\n  id: string;\n  value: number;\n}\n\nfunction processData(input: DataItem[]): number[] {\n  // TODO: Implement proper validation\n  return input.map(item => item.value);\n}\n\nexport { DataItem, processData };\n`;
+  case 'ts':
+    return `// Example TypeScript file content for ${filePath}\ninterface DataItem {\n  id: string;\n  value: number;\n}\n\nfunction processData(input: DataItem[]): number[] {\n  // TODO: Implement proper validation\n  return input.map(item => item.value);\n}\n\nexport { DataItem, processData };\n`;
       
-    case 'py':
-      return `# Example Python file content for ${filePath}\ndef process_data(input_data):\n    # TODO: Implement proper validation\n    return [item['value'] for item in input_data]\n\nif __name__ == "__main__":\n    print(process_data([{'value': 1}, {'value': 2}]))\n`;
+  case 'py':
+    return `# Example Python file content for ${filePath}\ndef process_data(input_data):\n    # TODO: Implement proper validation\n    return [item['value'] for item in input_data]\n\nif __name__ == "__main__":\n    print(process_data([{'value': 1}, {'value': 2}]))\n`;
       
-    case 'md':
-      return `# Documentation for ${filePath.split('/').pop()?.replace('.md', '')}\n\n## Overview\n\nThis documentation describes the usage and implementation details.\n\n## Installation\n\n\`\`\`bash\nnpm install example-package\n\`\`\`\n\n## Usage\n\n\`\`\`javascript\nconst { processData } = require('example-package');\nconst result = processData([{ id: '1', value: 42 }]);\n\`\`\`\n`;
+  case 'md':
+    return `# Documentation for ${filePath.split('/').pop()?.replace('.md', '')}\n\n## Overview\n\nThis documentation describes the usage and implementation details.\n\n## Installation\n\n\`\`\`bash\nnpm install example-package\n\`\`\`\n\n## Usage\n\n\`\`\`javascript\nconst { processData } = require('example-package');\nconst result = processData([{ id: '1', value: 42 }]);\n\`\`\`\n`;
       
-    default:
-      return `// Example file content for ${filePath}\n// This is a placeholder for demonstration purposes\n`;
+  default:
+    return `// Example file content for ${filePath}\n// This is a placeholder for demonstration purposes\n`;
   }
 }

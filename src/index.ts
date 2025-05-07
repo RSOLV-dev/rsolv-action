@@ -1,10 +1,10 @@
-import { loadConfig } from './config/index';
-import { detectIssues } from './github/issues';
-import { securityCheck } from './utils/security';
-import { logger } from './utils/logger';
-import { processIssues } from './ai/processor';
-import { setupContainer } from './containers/setup';
-import { ActionStatus } from './types/index';
+import { loadConfig } from './config/index.js';
+import { detectIssues } from './github/issues.js';
+import { securityCheck } from './utils/security.js';
+import { logger } from './utils/logger.js';
+import { processIssues } from './ai/processor.js';
+import { setupContainer } from './containers/setup.js';
+import { ActionStatus } from './types/index.js';
 
 async function run(): Promise<ActionStatus> {
   try {
@@ -34,7 +34,7 @@ async function run(): Promise<ActionStatus> {
     
     // Process issues with AI
     const results = await processIssues(issues, config);
-    logger.info(`Successfully processed ${results.filter(r => r.success).length}/${issues.length} issues`);
+    logger.info(`Successfully processed ${results.filter((r: { success: boolean }) => r.success).length}/${issues.length} issues`);
     
     return { 
       success: true, 

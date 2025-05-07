@@ -1,6 +1,6 @@
-import { FeedbackStorage } from './storage';
-import { FeedbackCollector, initializeStorage } from './collector';
-import { PromptEnhancer } from './enhancer';
+import { FeedbackStorage } from './storage.js';
+import { FeedbackCollector, initializeStorage } from './collector.js';
+import { PromptEnhancer } from './enhancer.js';
 import type { 
   FeedbackEvent, 
   FeedbackQuery, 
@@ -12,7 +12,7 @@ import type {
   Reviewer,
   FeedbackContext,
   Modification
-} from './types';
+} from './types.js';
 
 // Create singleton instances
 const feedbackStorage = new FeedbackStorage();

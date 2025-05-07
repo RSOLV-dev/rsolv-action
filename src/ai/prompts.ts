@@ -1,4 +1,4 @@
-import { IssueContext, IssueType } from '../types/index';
+import { IssueContext, IssueType } from '../types/index.js';
 
 /**
  * Build a prompt for initial issue analysis
@@ -106,31 +106,31 @@ Keep the tone professional but friendly, and focus on the technical details that
  */
 export function getIssueTypePromptTemplate(issueType: IssueType): string {
   switch (issueType) {
-    case 'bug':
-      return "For this bug fix, focus on identifying the root cause first before implementing a solution. Consider edge cases and ensure your fix doesn't introduce regressions. Include tests that verify the fix works as expected.";
+  case 'bug':
+    return 'For this bug fix, focus on identifying the root cause first before implementing a solution. Consider edge cases and ensure your fix doesn\'t introduce regressions. Include tests that verify the fix works as expected.';
       
-    case 'feature':
-      return "For this feature implementation, ensure the solution is well-integrated with the existing architecture. Consider backward compatibility, error handling, and appropriate documentation. Include tests for the new functionality.";
+  case 'feature':
+    return 'For this feature implementation, ensure the solution is well-integrated with the existing architecture. Consider backward compatibility, error handling, and appropriate documentation. Include tests for the new functionality.';
       
-    case 'refactoring':
-      return "For this refactoring task, maintain identical functionality while improving the code structure. Focus on readability, maintainability, and adherence to design principles. Ensure tests pass before and after your changes.";
+  case 'refactoring':
+    return 'For this refactoring task, maintain identical functionality while improving the code structure. Focus on readability, maintainability, and adherence to design principles. Ensure tests pass before and after your changes.';
       
-    case 'performance':
-      return "For this performance improvement, focus on identifying bottlenecks and optimizing critical paths. Consider time and space complexity, and measure before/after metrics where possible. Be careful not to sacrifice code readability for marginal gains.";
+  case 'performance':
+    return 'For this performance improvement, focus on identifying bottlenecks and optimizing critical paths. Consider time and space complexity, and measure before/after metrics where possible. Be careful not to sacrifice code readability for marginal gains.';
       
-    case 'security':
-      return "For this security issue, approach with extra caution. Ensure the fix addresses the root vulnerability completely without introducing new attack vectors. Consider all possible exploit scenarios and follow security best practices.";
+  case 'security':
+    return 'For this security issue, approach with extra caution. Ensure the fix addresses the root vulnerability completely without introducing new attack vectors. Consider all possible exploit scenarios and follow security best practices.';
       
-    case 'documentation':
-      return "For this documentation task, focus on clarity, completeness, and accuracy. Ensure examples are working and up-to-date. Consider both beginner and advanced users, and follow any documentation style guidelines present in the project.";
+  case 'documentation':
+    return 'For this documentation task, focus on clarity, completeness, and accuracy. Ensure examples are working and up-to-date. Consider both beginner and advanced users, and follow any documentation style guidelines present in the project.';
       
-    case 'dependency':
-      return "For this dependency update, carefully check for breaking changes and necessary adjustments to the codebase. Update any affected tests and documentation. Consider whether the update brings security fixes that should be highlighted.";
+  case 'dependency':
+    return 'For this dependency update, carefully check for breaking changes and necessary adjustments to the codebase. Update any affected tests and documentation. Consider whether the update brings security fixes that should be highlighted.';
       
-    case 'test':
-      return "For this testing task, ensure comprehensive coverage of edge cases and typical usage patterns. Follow existing testing patterns and naming conventions. Consider both unit and integration tests as appropriate for the code being tested.";
+  case 'test':
+    return 'For this testing task, ensure comprehensive coverage of edge cases and typical usage patterns. Follow existing testing patterns and naming conventions. Consider both unit and integration tests as appropriate for the code being tested.';
       
-    default:
-      return "For this task, ensure your solution is well-integrated with the existing codebase and follows the project's coding conventions. Include appropriate error handling, documentation, and tests.";
+  default:
+    return 'For this task, ensure your solution is well-integrated with the existing codebase and follows the project\'s coding conventions. Include appropriate error handling, documentation, and tests.';
   }
 }

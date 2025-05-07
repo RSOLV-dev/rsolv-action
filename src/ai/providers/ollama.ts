@@ -1,5 +1,5 @@
-import { AIClient, AIConfig, IssueAnalysis, PullRequestSolution } from '../types';
-import { logger } from '../../utils/logger';
+import { AIClient, AIConfig, IssueAnalysis, PullRequestSolution } from '../types.js';
+import { logger } from '../../utils/logger.js';
 
 /**
  * Helper function to preprocess and clean JSON from model responses
@@ -255,21 +255,21 @@ Your response must be valid JSON only, with no other text.
             logger.info('Generating mock analysis data due to JSON parsing error');
             return {
               summary: issueTitle,
-              complexity: "medium",
+              complexity: 'medium',
               estimatedTime: 30,
               potentialFixes: [
-                "Optimize the sorting algorithm using a more efficient data structure",
-                "Parallelize the data processing using multi-threading",
-                "Implement caching for frequently processed data"
+                'Optimize the sorting algorithm using a more efficient data structure',
+                'Parallelize the data processing using multi-threading',
+                'Implement caching for frequently processed data'
               ],
-              recommendedApproach: "Optimize the sorting algorithm using a more efficient data structure",
+              recommendedApproach: 'Optimize the sorting algorithm using a more efficient data structure',
               relatedFiles: [
-                "data_processing_module.js",
-                "sorting_algorithm.js"
+                'data_processing_module.js',
+                'sorting_algorithm.js'
               ],
               requiredChanges: [
-                "Replace the current sorting function with a heap-based implementation",
-                "Add proper documentation for the new algorithm"
+                'Replace the current sorting function with a heap-based implementation',
+                'Add proper documentation for the new algorithm'
               ]
             };
           }
@@ -376,10 +376,10 @@ Your response must be valid JSON only, with no other text.
             logger.info('Generating mock solution data due to JSON parsing error');
             return {
               title: `Fix: ${issueTitle}`,
-              description: `This PR addresses the performance bottleneck in the data processing module by implementing a more efficient sorting algorithm.`,
+              description: 'This PR addresses the performance bottleneck in the data processing module by implementing a more efficient sorting algorithm.',
               files: [
                 {
-                  path: "data_processing_module.js",
+                  path: 'data_processing_module.js',
                   changes: `// Updated implementation with heap sort for better performance
 function process(data) {
   const heap = new Heap();
@@ -447,9 +447,9 @@ class Heap {
                 }
               ],
               tests: [
-                "Test with large datasets (>10MB) to verify performance improvement",
-                "Add benchmark tests comparing old and new implementations",
-                "Test with edge cases (empty arrays, single items, etc.)"
+                'Test with large datasets (>10MB) to verify performance improvement',
+                'Add benchmark tests comparing old and new implementations',
+                'Test with edge cases (empty arrays, single items, etc.)'
               ]
             };
           }

@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
-import { AIConfig } from '../../types';
+import { AIConfig } from '../../types.js';
 
 // Mock logger
 mock.module('../../../utils/logger', () => {
@@ -16,24 +16,24 @@ mock.module('../../../utils/logger', () => {
 
 // Import after mocking
 import '../../../utils/logger';
-import { OllamaClient } from '../ollama';
+import { OllamaClient } from '../ollama.js';
 
 // Mock our test data
 const mockAnalysisData = {
-  summary: "Test summary",
-  complexity: "low",
+  summary: 'Test summary',
+  complexity: 'low',
   estimatedTime: 30,
-  potentialFixes: ["Approach 1", "Approach 2"],
-  recommendedApproach: "Approach 1",
-  relatedFiles: ["file1.ts", "file2.ts"],
-  requiredChanges: ["Change X to Y", "Add Z"]
+  potentialFixes: ['Approach 1', 'Approach 2'],
+  recommendedApproach: 'Approach 1',
+  relatedFiles: ['file1.ts', 'file2.ts'],
+  requiredChanges: ['Change X to Y', 'Add Z']
 };
 
 const mockSolutionData = {
-  title: "Fix: Test Issue",
-  description: "This PR fixes the test issue",
-  files: [{ path: "file1.ts", changes: "Updated content" }],
-  tests: ["Test 1", "Test 2"]
+  title: 'Fix: Test Issue',
+  description: 'This PR fixes the test issue',
+  files: [{ path: 'file1.ts', changes: 'Updated content' }],
+  tests: ['Test 1', 'Test 2']
 };
 
 describe('OllamaClient', () => {

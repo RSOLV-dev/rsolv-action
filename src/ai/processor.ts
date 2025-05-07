@@ -1,8 +1,8 @@
-import { IssueContext, IssueProcessingResult, ActionConfig, AnalysisData } from '../types/index';
-import { logger } from '../utils/logger';
-import { analyzeIssue } from './analyzer';
-import { generateSolution } from './solution';
-import { createPullRequest } from '../github/pr';
+import { IssueContext, IssueProcessingResult, ActionConfig, AnalysisData } from '../types/index.js';
+import { logger } from '../utils/logger.js';
+import { analyzeIssue } from './analyzer.js';
+import { generateSolution } from './solution.js';
+import { createPullRequest } from '../github/pr.js';
 
 /**
  * Process multiple issues with AI analysis and solution generation

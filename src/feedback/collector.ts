@@ -1,6 +1,6 @@
-import type { FeedbackEvent, FeedbackSentiment, Modification, ActionTaken } from './types';
-import { logger } from '../utils/logger';
-import { FeedbackStorage } from './storage';
+import type { FeedbackEvent, FeedbackSentiment, Modification, ActionTaken } from './types.js';
+import { logger } from '../utils/logger.js';
+import { FeedbackStorage } from './storage.js';
 
 // Storage instance will be injected but defaults to the one created here
 let _feedbackStorage: FeedbackStorage | null = null;

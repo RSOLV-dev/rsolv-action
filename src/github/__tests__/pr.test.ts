@@ -1,7 +1,7 @@
 import { test, expect, mock, beforeEach } from 'bun:test';
-import { GitHubPRManager } from '../pr';
-import { IssueContext } from '../../types';
-import { PullRequestSolution } from '../../ai/types';
+import { GitHubPRManager } from '../pr.js';
+import { IssueContext } from '../../types.js';
+import { PullRequestSolution } from '../../ai/types.js';
 
 // Mock GitHubApiClient
 const mockCreatePullRequest = mock(() => Promise.resolve(123));

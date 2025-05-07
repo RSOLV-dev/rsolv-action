@@ -2,8 +2,8 @@
  * Tests for the AI client factory
  */
 import { test, expect, mock } from 'bun:test';
-import { getAIClient } from '../client';
-import { OllamaClient } from '../providers/ollama';
+import { getAIClient } from '../client.js';
+import { OllamaClient } from '../providers/ollama.js';
 
 // Mock the logger to avoid noisy logs
 mock.module('../../utils/logger', () => ({

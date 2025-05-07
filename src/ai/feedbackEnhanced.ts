@@ -1,8 +1,8 @@
-import { IssueContext } from '../types';
-import { IssueAnalysis, PullRequestSolution, AIConfig } from './types';
-import { getAIClient } from './client';
-import { logger } from '../utils/logger';
-import { promptEnhancer } from '../feedback';
+import { IssueContext } from '../types.js';
+import { IssueAnalysis, PullRequestSolution, AIConfig } from './types.js';
+import { getAIClient } from './client.js';
+import { logger } from '../utils/logger.js';
+import { promptEnhancer } from '../feedback.js';
 
 /**
  * Generate a solution for an issue with feedback enhancement

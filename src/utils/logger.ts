@@ -72,18 +72,18 @@ class Logger {
     const logEntry = this.formatLogEntry(level, message, metadata);
     
     switch (level) {
-      case 'debug':
-        console.debug(logEntry);
-        break;
-      case 'info':
-        console.info(logEntry);
-        break;
-      case 'warn':
-        console.warn(logEntry);
-        break;
-      case 'error':
-        console.error(logEntry);
-        break;
+    case 'debug':
+      console.debug(logEntry);
+      break;
+    case 'info':
+      console.info(logEntry);
+      break;
+    case 'warn':
+      console.warn(logEntry);
+      break;
+    case 'error':
+      console.error(logEntry);
+      break;
     }
   }
   
