@@ -7,8 +7,8 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { logger } from '../../utils/logger.js';
-import { IssueContext, IssueAnalysis } from '../../types.js';
-import { PullRequestSolution, AIConfig, ClaudeCodeConfig } from '../types.js';
+import { IssueContext } from '../../types/index.js';
+import { PullRequestSolution, AIConfig, ClaudeCodeConfig, IssueAnalysis } from '../types.js';
 
 /**
  * Analytics data for Claude Code usage
