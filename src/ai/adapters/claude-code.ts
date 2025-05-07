@@ -8,7 +8,8 @@ import path from 'path';
 import fs from 'fs';
 import { logger } from '../../utils/logger.js';
 import { IssueContext } from '../../types/index.js';
-import { PullRequestSolution, AIConfig, ClaudeCodeConfig, IssueAnalysis } from '../types.js';
+import { PullRequestSolution, AIConfig, ClaudeCodeConfig } from '../types.js';
+import { IssueAnalysis } from '../types.js';
 
 /**
  * Analytics data for Claude Code usage
