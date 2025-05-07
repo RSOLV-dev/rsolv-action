@@ -1,7 +1,7 @@
-import { IssueContext, ActionConfig, AnalysisData, IssueType } from '../types/index';
-import { logger } from '../utils/logger';
-import { getAiClient } from './client';
-import { buildAnalysisPrompt } from './prompts';
+import { IssueContext, ActionConfig, AnalysisData, IssueType } from '../types/index.js';
+import { logger } from '../utils/logger.js';
+import { getAiClient } from './client.js';
+import { buildAnalysisPrompt } from './prompts.js';
 
 /**
  * Analyze an issue with AI to determine the best approach for fixing it
@@ -33,7 +33,7 @@ export async function analyzeIssue(
     
     return analysisData;
   } catch (error) {
-    logger.error(`Error analyzing issue with AI`, error);
+    logger.error('Error analyzing issue with AI', error);
     throw new Error(`AI analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -48,7 +48,7 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
     
     // For the MVP, we'll use a simplified analysis extraction
     // In production, we would use more sophisticated extraction techniques
-    let filesToModify: string[] = [];
+    const filesToModify: string[] = [];
     let estimatedComplexity: 'simple' | 'medium' | 'complex' = 'medium';
     
     // Look for file paths in the AI response

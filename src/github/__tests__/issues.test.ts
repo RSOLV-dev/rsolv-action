@@ -1,5 +1,5 @@
 import { test, expect, mock } from 'bun:test';
-import { IssueContext } from '../../types';
+import { IssueContext } from '../../types.js';
 
 // Functions we want to test
 let extractIssueContextFromEvent: (context?: any) => IssueContext | null;
@@ -38,7 +38,7 @@ const mockIssueContext: IssueContext = {
 };
 
 // Import modules after defining mocks
-import * as issuesModule from '../issues';
+import * as issuesModule from '../issues.js';
 
 // Extract function references
 extractIssueContextFromEvent = issuesModule.extractIssueContextFromEvent;

@@ -1,6 +1,6 @@
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
-import { AnthropicClient } from '../anthropic';
-import { AIConfig } from '../../types';
+import { AnthropicClient } from '../anthropic.js';
+import { AIConfig } from '../../types.js';
 
 describe('Anthropic Client', () => {
   beforeEach(() => {

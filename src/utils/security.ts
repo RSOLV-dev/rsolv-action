@@ -1,5 +1,5 @@
-import { ActionConfig } from '../types/index';
-import { logger } from './logger';
+import { ActionConfig } from '../types/index.js';
+import { logger } from './logger.js';
 
 /**
  * Perform security checks before processing issues

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, mock, Mock } from 'bun:test';
-import { FeedbackCollector } from '../collector';
-import type { FeedbackEvent, FeedbackSentiment, FeedbackType } from '../types';
+import { FeedbackCollector } from '../collector.js';
+import type { FeedbackEvent, FeedbackSentiment, FeedbackType } from '../types.js';
 
 describe('FeedbackCollector', () => {
   let collector: FeedbackCollector;

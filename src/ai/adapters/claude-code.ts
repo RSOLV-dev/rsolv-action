@@ -6,9 +6,9 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { logger } from '../../utils/logger';
-import { IssueContext, IssueAnalysis } from '../../types';
-import { PullRequestSolution, AIConfig, ClaudeCodeConfig } from '../types';
+import { logger } from '../../utils/logger.js';
+import { IssueContext, IssueAnalysis } from '../../types.js';
+import { PullRequestSolution, AIConfig, ClaudeCodeConfig } from '../types.js';
 
 /**
  * Analytics data for Claude Code usage
@@ -610,7 +610,7 @@ export class ClaudeCodeAdapter {
       if (directJsonMatch) {
         try {
           // Process the escaped JSON string
-          let solutionText = directJsonMatch[1]
+          const solutionText = directJsonMatch[1]
             .replace(/\\\\n/g, '\n')  // Double-escaped newlines
             .replace(/\\"/g, '"')     // Escaped quotes
             .replace(/\\\\\\\\/g, '\\');  // Double-escaped backslashes
@@ -637,7 +637,7 @@ export class ClaudeCodeAdapter {
       const solutionMatch = rawOutput.match(/"text": "([^"]+(?:\\.[^"]+)*)"/);
       if (solutionMatch) {
         try {
-          let solutionText = solutionMatch[1]
+          const solutionText = solutionMatch[1]
             .replace(/\\n/g, '\n')
             .replace(/\\"/g, '"')
             .replace(/\\\\/g, '\\');
@@ -706,7 +706,7 @@ export class ClaudeCodeAdapter {
       logger.warn('Could not parse Claude Code output, using default solution');
       return {
         title: `Fix for: ${issueContext.title}`,
-        description: "Could not parse Claude Code output. Please check the logs for more information.",
+        description: 'Could not parse Claude Code output. Please check the logs for more information.',
         files: [],
         tests: []
       };
@@ -716,7 +716,7 @@ export class ClaudeCodeAdapter {
       // Return a minimal solution in case of error
       return {
         title: `Fix for: ${issueContext.title}`,
-        description: "Error occurred while parsing Claude Code solution.",
+        description: 'Error occurred while parsing Claude Code solution.',
         files: [],
         tests: []
       };

@@ -7,8 +7,8 @@ import {
   ExpertReviewRequest,
   resetRateLimits,
   customerRateLimits
-} from '../webhook';
-import { IssueContext } from '../../types';
+} from '../webhook.js';
+import { IssueContext } from '../../types.js';
 
 // Mock the security utility
 mock.module('../../utils/security', () => ({

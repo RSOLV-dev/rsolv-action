@@ -2,12 +2,7 @@
  * Tests for Claude Code integration in the AI client factory
  */
 import { test, expect } from 'bun:test';
-import { getAIClient } from '../client';
-import { AIConfig } from '../types';
-
-// Mock dependencies
-import { AnthropicClient } from '../providers/anthropic';
-import { ClaudeCodeAdapter } from '../adapters/claude-code';
+import { AIConfig } from '../types.js';
 
 // Mock console functions to reduce noise
 console.log = () => {};
@@ -16,10 +11,9 @@ console.warn = () => {};
 console.info = () => {};
 
 // Mock the client modules
-import * as aiClient from '../client';
+import * as aiClient from '../client.js';
 
-// Store the original implementation
-const originalGetAIClient = aiClient.getAIClient;
+// No need to store the original implementation as we're mocking the entire function
 
 // Replace with a mock implementation
 aiClient.getAIClient = function mockGetAIClient(config: AIConfig) {

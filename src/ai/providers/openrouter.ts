@@ -1,5 +1,5 @@
-import { AIClient, AIConfig, IssueAnalysis, PullRequestSolution } from '../types';
-import { logger } from '../../utils/logger';
+import { AIClient, AIConfig, IssueAnalysis, PullRequestSolution } from '../types.js';
+import { logger } from '../../utils/logger.js';
 
 /**
  * Client for OpenRouter, which provides access to multiple AI models

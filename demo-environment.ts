@@ -20,8 +20,8 @@ import fs from 'fs';
 import path from 'path';
 
 // Import RSOLV components
-import { GitHubApiClient } from './src/github/api';
-import { GitHubPRManager } from './src/github/pr';
+import { getGitHubClient } from './src/github/api';
+import { createPullRequest } from './src/github/pr';
 import { generateSolution } from './src/ai/solution';
 import { analyzeIssue } from './src/ai/analyzer';
 import { AIConfig } from './src/ai/types';
@@ -234,12 +234,9 @@ async function getIssueContext(): Promise<IssueContext> {
     // Get GitHub token
     const token = await getGitHubToken();
     
-    // Initialize GitHub client
-    const apiClient = new GitHubApiClient(token, owner, repo);
-    
     // Get issue details directly with Octokit
     console.log(chalk.blue('📥 Fetching issue details...'));
-    const octokit = github.getOctokit(token);
+    const octokit = getGitHubClient({ repoToken: token });
     const { data: issue } = await octokit.rest.issues.get({
       owner,
       repo,
@@ -778,19 +775,34 @@ The solution should include:
             // Get GitHub token
             const token = await getGitHubToken();
             
-            // Create PR manager
-            const prManager = new GitHubPRManager(
-              token,
-              issueContext.repository.owner,
-              issueContext.repository.repo
-            );
-            
             console.log(chalk.blue('\n🔄 Creating pull request...'));
             try {
-              const { prNumber: newPrNumber, prUrl } = await prManager.createPullRequestFromSolution(
+              // Transform solution to match the expected format
+              const changes = solution.files.reduce((acc, file) => {
+                acc[file.path] = file.changes;
+                return acc;
+              }, {});
+              
+              // Create pull request
+              const result = await createPullRequest(
                 issueContext,
-                solution
+                changes,
+                analysis,
+                { 
+                  aiProvider: {
+                    provider: aiConfig.provider,
+                    apiKey: aiConfig.apiKey,
+                    model: aiConfig.modelName
+                  }
+                }
               );
+              
+              if (!result.success) {
+                throw new Error(result.message);
+              }
+              
+              const newPrNumber = result.pullRequestNumber;
+              const prUrl = result.pullRequestUrl;
               
               prNumber = newPrNumber.toString();
               

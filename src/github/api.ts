@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
-import { ActionConfig } from '../types/index';
-import { logger } from '../utils/logger';
+import { ActionConfig } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 let githubClient: Octokit | null = null;
 
@@ -199,7 +199,7 @@ export async function createPullRequest(
       html_url: data.html_url,
     };
   } catch (error) {
-    logger.error(`Error creating pull request`, error);
+    logger.error('Error creating pull request', error);
     throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

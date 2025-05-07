@@ -3,12 +3,12 @@
  * Demo script for RSOLV action
  * This script simulates the action functionality by processing a GitHub issue and generating a PR
  */
-import { GitHubApiClient } from './github/api';
-import { GitHubPRManager } from './github/pr';
-import { generateSolution } from './ai/solution';
-import { analyzeIssue } from './ai/analyzer';
-import { AIConfig } from './ai/types';
-import { IssueContext } from './types';
+import { getGitHubClient } from './github/api.js';
+import { createPullRequest } from './github/pr.js';
+import { generateSolution } from './ai/solution.js';
+import { analyzeIssue } from './ai/analyzer.js';
+import { AIConfig } from './ai/types.js';
+import { IssueContext } from './types.js';
 
 // Ensure GitHub token is set
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -42,12 +42,12 @@ async function main() {
   console.log(`🚀 Starting RSOLV demo for issue: ${owner}/${repo}#${issueNumber}`);
   
   // Initialize GitHub client
-  const apiClient = new GitHubApiClient(GITHUB_TOKEN, owner, repo);
+  const octokit = getGitHubClient({ repoToken: GITHUB_TOKEN });
   
   try {
     // Get issue details
     console.log('📥 Fetching issue details...');
-    const { data: issue } = await apiClient.getOctokit().rest.issues.get({
+    const { data: issue } = await octokit.rest.issues.get({
       owner,
       repo,
       issue_number: parseInt(issueNumber, 10)
@@ -85,21 +85,21 @@ async function main() {
     
     // Set appropriate API key and model based on provider
     switch (provider) {
-      case 'anthropic':
-        apiKey = process.env.ANTHROPIC_API_KEY || '';
-        modelName = 'claude-3-opus-20240229';
-        break;
-      case 'openrouter':
-        apiKey = process.env.OPENROUTER_API_KEY || '';
-        modelName = 'anthropic/claude-3-opus';
-        break;
-      case 'ollama':
-        apiKey = process.env.OLLAMA_API_KEY || ''; // Can be URL:TOKEN format
-        modelName = process.env.OLLAMA_MODEL || 'llama3';
-        break;
-      default:
-        apiKey = process.env.ANTHROPIC_API_KEY || '';
-        modelName = 'claude-3-opus-20240229';
+    case 'anthropic':
+      apiKey = process.env.ANTHROPIC_API_KEY || '';
+      modelName = 'claude-3-opus-20240229';
+      break;
+    case 'openrouter':
+      apiKey = process.env.OPENROUTER_API_KEY || '';
+      modelName = 'anthropic/claude-3-opus';
+      break;
+    case 'ollama':
+      apiKey = process.env.OLLAMA_API_KEY || ''; // Can be URL:TOKEN format
+      modelName = process.env.OLLAMA_MODEL || 'llama3';
+      break;
+    default:
+      apiKey = process.env.ANTHROPIC_API_KEY || '';
+      modelName = 'claude-3-opus-20240229';
     }
     
     const aiConfig: AIConfig = {
@@ -123,17 +123,32 @@ async function main() {
     console.log(`  Title: ${solution.title}`);
     console.log(`  Files to change: ${solution.files.length}`);
     
-    // Create PR manager
-    const prManager = new GitHubPRManager(GITHUB_TOKEN, owner, repo);
-    
     // Create pull request
     console.log('🔄 Creating pull request...');
-    const { prNumber, prUrl } = await prManager.createPullRequestFromSolution(
+    const result = await createPullRequest(
       issueContext,
-      solution
+      solution.files.reduce((acc, file) => {
+        acc[file.path] = file.changes;
+        return acc;
+      }, {}),
+      analysis,
+      { 
+        aiProvider: {
+          provider: aiConfig.provider,
+          apiKey: aiConfig.apiKey,
+          model: aiConfig.modelName
+        }
+      }
     );
     
-    console.log(`✨ Demo completed successfully!`);
+    if (!result.success) {
+      throw new Error(result.message);
+    }
+    
+    const prNumber = result.pullRequestNumber;
+    const prUrl = result.pullRequestUrl;
+    
+    console.log('✨ Demo completed successfully!');
     console.log(`Pull request created: ${prUrl}`);
     
   } catch (error) {

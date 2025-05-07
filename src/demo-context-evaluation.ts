@@ -293,138 +293,138 @@ async function getApiKey(rl: readline.Interface): Promise<string> {
 function getSampleTestCases(): TestCase[] {
   return [
     {
-      id: "test-case-1",
-      title: "Fix the timestamp format in the logger",
-      description: "The timestamp format in the logger appears to be wrong. The log entries show dates like '202-04-30' instead of '2025-04-30'. This is causing problems with our log parsing tools.",
-      type: "bug",
-      complexity: "low",
+      id: 'test-case-1',
+      title: 'Fix the timestamp format in the logger',
+      description: 'The timestamp format in the logger appears to be wrong. The log entries show dates like \'202-04-30\' instead of \'2025-04-30\'. This is causing problems with our log parsing tools.',
+      type: 'bug',
+      complexity: 'low',
       expectedContextFiles: [
-        "src/logger.js"
+        'src/logger.js'
       ],
       expectedDependencies: [
-        "winston"
+        'winston'
       ],
       expectedReferencesToFind: [
-        "winston.format.timestamp",
-        "YYY-MM-DD"
+        'winston.format.timestamp',
+        'YYY-MM-DD'
       ],
       contextDepth: {
-        standard: "low",
-        claudeCode: "medium"
+        standard: 'low',
+        claudeCode: 'medium'
       },
       expectedSolutionQuality: {
-        standard: "medium",
-        claudeCode: "high"
+        standard: 'medium',
+        claudeCode: 'high'
       }
     },
     {
-      id: "test-case-2",
-      title: "Fix reference to User model in Product schema",
-      description: "Products are not correctly linked to users in the application. When retrieving products, the user information is not being populated. The issue might be in how we reference the User model in the Product schema.",
-      type: "bug",
-      complexity: "medium",
+      id: 'test-case-2',
+      title: 'Fix reference to User model in Product schema',
+      description: 'Products are not correctly linked to users in the application. When retrieving products, the user information is not being populated. The issue might be in how we reference the User model in the Product schema.',
+      type: 'bug',
+      complexity: 'medium',
       expectedContextFiles: [
-        "src/models/product.js",
-        "src/models/user.js"
+        'src/models/product.js',
+        'src/models/user.js'
       ],
       expectedDependencies: [
-        "mongoose"
+        'mongoose'
       ],
       expectedReferencesToFind: [
-        "ref: 'user'",
-        "mongoose.model('User'"
+        'ref: \'user\'',
+        'mongoose.model(\'User\''
       ],
       contextDepth: {
-        standard: "medium",
-        claudeCode: "high"
+        standard: 'medium',
+        claudeCode: 'high'
       },
       expectedSolutionQuality: {
-        standard: "medium",
-        claudeCode: "high"
+        standard: 'medium',
+        claudeCode: 'high'
       }
     },
     {
-      id: "test-case-3",
-      title: "Add pagination to product listing endpoint",
-      description: "The product listing API endpoint is becoming slow as our database grows. We need to implement pagination for the GET /api/products endpoint to improve performance.",
-      type: "enhancement",
-      complexity: "medium",
+      id: 'test-case-3',
+      title: 'Add pagination to product listing endpoint',
+      description: 'The product listing API endpoint is becoming slow as our database grows. We need to implement pagination for the GET /api/products endpoint to improve performance.',
+      type: 'enhancement',
+      complexity: 'medium',
       expectedContextFiles: [
-        "src/routes/product.js",
-        "src/models/product.js"
+        'src/routes/product.js',
+        'src/models/product.js'
       ],
       expectedDependencies: [
-        "express",
-        "mongoose"
+        'express',
+        'mongoose'
       ],
       expectedReferencesToFind: [
-        "router.get('/'",
-        "await Product.find({})"
+        'router.get(\'/\'',
+        'await Product.find({})'
       ],
       contextDepth: {
-        standard: "low",
-        claudeCode: "high"
+        standard: 'low',
+        claudeCode: 'high'
       },
       expectedSolutionQuality: {
-        standard: "low",
-        claudeCode: "high"
+        standard: 'low',
+        claudeCode: 'high'
       }
     },
     {
-      id: "test-case-4",
-      title: "Add email validation for user creation",
-      description: "We need to validate email addresses when users are created. Currently, any string is accepted as an email which can lead to invalid data in our database.",
-      type: "enhancement",
-      complexity: "medium",
+      id: 'test-case-4',
+      title: 'Add email validation for user creation',
+      description: 'We need to validate email addresses when users are created. Currently, any string is accepted as an email which can lead to invalid data in our database.',
+      type: 'enhancement',
+      complexity: 'medium',
       expectedContextFiles: [
-        "src/models/user.js",
-        "src/routes/user.js"
+        'src/models/user.js',
+        'src/routes/user.js'
       ],
       expectedDependencies: [
-        "mongoose",
-        "express"
+        'mongoose',
+        'express'
       ],
       expectedReferencesToFind: [
-        "type: String",
-        "email: {",
-        "router.post('/'",
-        "new User(req.body)"
+        'type: String',
+        'email: {',
+        'router.post(\'/\'',
+        'new User(req.body)'
       ],
       contextDepth: {
-        standard: "medium",
-        claudeCode: "high"
+        standard: 'medium',
+        claudeCode: 'high'
       },
       expectedSolutionQuality: {
-        standard: "medium",
-        claudeCode: "high"
+        standard: 'medium',
+        claudeCode: 'high'
       }
     },
     {
-      id: "test-case-5",
-      title: "Prevent duplicate user registration",
-      description: "Users are able to register with the same email address multiple times. This is causing conflicts in our system. We need to check if a user already exists before creating a new one.",
-      type: "bug",
-      complexity: "medium",
+      id: 'test-case-5',
+      title: 'Prevent duplicate user registration',
+      description: 'Users are able to register with the same email address multiple times. This is causing conflicts in our system. We need to check if a user already exists before creating a new one.',
+      type: 'bug',
+      complexity: 'medium',
       expectedContextFiles: [
-        "src/routes/user.js",
-        "src/models/user.js"
+        'src/routes/user.js',
+        'src/models/user.js'
       ],
       expectedDependencies: [
-        "express",
-        "mongoose"
+        'express',
+        'mongoose'
       ],
       expectedReferencesToFind: [
-        "router.post('/'",
-        "// Bug: We're not checking if user already exists before creation",
-        "unique: true"
+        'router.post(\'/\'',
+        '// Bug: We\'re not checking if user already exists before creation',
+        'unique: true'
       ],
       contextDepth: {
-        standard: "low",
-        claudeCode: "high"
+        standard: 'low',
+        claudeCode: 'high'
       },
       expectedSolutionQuality: {
-        standard: "low",
-        claudeCode: "high"
+        standard: 'low',
+        claudeCode: 'high'
       }
     }
   ];

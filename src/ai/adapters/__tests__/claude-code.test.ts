@@ -1,10 +1,11 @@
 import { describe, expect, test, beforeEach, mock } from 'bun:test';
-import { AIConfig } from '../../types';
+import { AIConfig } from '../../types.js';
 import path from 'path';
 
 // Mock the file system
 mock.module('fs', () => {
-  const mockSolutionJson = {
+  // We're using this variable in the readFileSync mock below
+  const reusableSolutionTemplate = {
     title: 'Fix: Test solution title',
     description: 'Test solution description with detailed explanation',
     files: [
@@ -22,7 +23,7 @@ mock.module('fs', () => {
 
   return {
     writeFileSync: () => {},
-    readFileSync: () => JSON.stringify(mockSolutionJson),
+    readFileSync: () => JSON.stringify(reusableSolutionTemplate),
     existsSync: () => true,
     mkdirSync: () => {},
     unlinkSync: () => {}
@@ -97,7 +98,7 @@ mock.module('../../../utils/logger', () => {
 });
 
 // Now we can import the adapter
-import { ClaudeCodeAdapter } from '../claude-code';
+import { ClaudeCodeAdapter } from '../claude-code.js';
 
 describe('Claude Code Adapter', () => {
   const tempDir = path.join(process.cwd(), 'temp');
@@ -131,21 +132,8 @@ describe('Claude Code Adapter', () => {
     This should be prioritized over the default prompt.
   `;
   
-  const mockSolutionJson = {
-    title: 'Fix: Test solution title',
-    description: 'Test solution description with detailed explanation',
-    files: [
-      {
-        path: 'src/file1.ts',
-        changes: 'Updated file1 content with fixes'
-      },
-      {
-        path: 'src/file2.ts',
-        changes: 'Updated file2 content with additional tests'
-      }
-    ],
-    tests: ['Test case 1', 'Test case 2']
-  };
+  // We're not using this variable in the tests, so removing it
+  // to avoid the linting error
 
   beforeEach(() => {
     // Set test environment

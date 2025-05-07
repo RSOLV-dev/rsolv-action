@@ -1,7 +1,7 @@
 import { describe, expect, test, mock } from 'bun:test';
-import { generateSolution } from '../solution';
-import { IssueContext } from '../../types';
-import { AIConfig, IssueAnalysis } from '../types';
+import { generateSolution } from '../solution.js';
+import { IssueContext } from '../../types.js';
+import { AIConfig, IssueAnalysis } from '../types.js';
 
 // Mock the AI client
 mock.module('../client', () => {

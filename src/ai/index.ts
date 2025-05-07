@@ -1,14 +1,14 @@
-import { analyzeIssue } from './analyzer';
-import { generateSolution } from './solution';
-import { generateSolutionWithFeedback } from './feedbackEnhanced';
+import { analyzeIssue } from './analyzer.js';
+import { generateSolution } from './solution.js';
+import { generateSolutionWithFeedback } from './feedbackEnhanced.js';
 import { 
   AIClient, 
   AIProvider, 
   AIConfig, 
   IssueAnalysis, 
   PullRequestSolution 
-} from './types';
-import { ClaudeCodeAdapter } from './adapters/claude-code';
+} from './types.js';
+import { ClaudeCodeAdapter } from './adapters/claude-code.js';
 
 export {
   analyzeIssue,

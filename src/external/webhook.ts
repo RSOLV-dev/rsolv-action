@@ -1,5 +1,5 @@
-import { IssueContext, ActionConfig } from '../types/index';
-import { logger } from '../utils/logger';
+import { IssueContext, ActionConfig } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Handle webhook data from external issue trackers
@@ -13,13 +13,13 @@ export async function handleExternalWebhook(
     logger.info(`Processing webhook from ${source}`);
     
     switch (source.toLowerCase()) {
-      case 'jira':
-        return handleJiraWebhook(payload, config);
-      case 'linear':
-        return handleLinearWebhook(payload, config);
-      default:
-        logger.warn(`Unsupported external source: ${source}`);
-        return [];
+    case 'jira':
+      return handleJiraWebhook(payload, config);
+    case 'linear':
+      return handleLinearWebhook(payload, config);
+    default:
+      logger.warn(`Unsupported external source: ${source}`);
+      return [];
     }
   } catch (error) {
     logger.error(`Error handling webhook from ${source}`, error);
@@ -166,18 +166,18 @@ async function handleLinearWebhook(
  */
 function linearPriorityToString(priority: number): string {
   switch (priority) {
-    case 0:
-      return 'No priority';
-    case 1:
-      return 'Urgent';
-    case 2:
-      return 'High';
-    case 3:
-      return 'Medium';
-    case 4:
-      return 'Low';
-    default:
-      return 'Unknown';
+  case 0:
+    return 'No priority';
+  case 1:
+    return 'Urgent';
+  case 2:
+    return 'High';
+  case 3:
+    return 'Medium';
+  case 4:
+    return 'Low';
+  default:
+    return 'Unknown';
   }
 }
 
@@ -211,20 +211,20 @@ export async function getRepositoryFromExternalIssue(
     
     // If no mapping is found, return default based on issue source
     switch (issueContext.source) {
-      case 'jira':
-        return {
-          owner: process.env.JIRA_GITHUB_OWNER || '',
-          repo: process.env.JIRA_GITHUB_REPO || '',
-          defaultBranch: process.env.JIRA_GITHUB_BRANCH || 'main'
-        };
-      case 'linear':
-        return {
-          owner: process.env.LINEAR_GITHUB_OWNER || '',
-          repo: process.env.LINEAR_GITHUB_REPO || '',
-          defaultBranch: process.env.LINEAR_GITHUB_BRANCH || 'main'
-        };
-      default:
-        return null;
+    case 'jira':
+      return {
+        owner: process.env.JIRA_GITHUB_OWNER || '',
+        repo: process.env.JIRA_GITHUB_REPO || '',
+        defaultBranch: process.env.JIRA_GITHUB_BRANCH || 'main'
+      };
+    case 'linear':
+      return {
+        owner: process.env.LINEAR_GITHUB_OWNER || '',
+        repo: process.env.LINEAR_GITHUB_REPO || '',
+        defaultBranch: process.env.LINEAR_GITHUB_BRANCH || 'main'
+      };
+    default:
+      return null;
     }
   } catch (error) {
     logger.error(`Error getting repository for external issue ${issueContext.id}`, error);

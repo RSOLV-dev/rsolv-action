@@ -1,6 +1,6 @@
 import { test, expect, beforeEach } from 'bun:test';
-import { loadConfig, validateInput } from '../index';
-import { ActionConfig } from '../../types';
+import { loadConfig, validateInput } from '../index.js';
+import { ActionConfig } from '../../types.js';
 
 test('loadConfig should throw error when api_key is not provided', () => {
   expect(() => loadConfig({})).toThrow('Input required and not supplied: api_key');

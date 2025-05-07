@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import type { FeedbackEvent, FeedbackQuery, FeedbackStats } from './types';
-import { logger } from '../utils/logger';
+import type { FeedbackEvent, FeedbackQuery, FeedbackStats } from './types.js';
+import { logger } from '../utils/logger.js';
 
 export class FeedbackStorage {
   private storagePath: string;
@@ -39,7 +39,7 @@ export class FeedbackStorage {
       logger.info(`Feedback storage initialized: ${this.storagePath}`);
     } catch (error) {
       logger.error('Failed to initialize feedback storage', error);
-      throw new Error(`Failed to initialize feedback storage: ${error.message}`);
+      throw new Error(`Failed to initialize feedback storage: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -55,7 +55,7 @@ export class FeedbackStorage {
       );
     } catch (error) {
       logger.error('Failed to save feedback data', error);
-      throw new Error(`Failed to save feedback data: ${error.message}`);
+      throw new Error(`Failed to save feedback data: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

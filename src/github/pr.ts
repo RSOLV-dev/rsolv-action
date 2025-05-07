@@ -1,8 +1,8 @@
-import { IssueContext, ActionConfig, AnalysisData } from '../types/index';
-import { logger } from '../utils/logger';
-import { getGitHubClient } from './api';
-import { buildPrDescriptionPrompt } from '../ai/prompts';
-import { getAiClient } from '../ai/client';
+import { IssueContext, ActionConfig, AnalysisData } from '../types/index.js';
+import { logger } from '../utils/logger.js';
+import { getGitHubClient } from './api.js';
+import { buildPrDescriptionPrompt } from '../ai/prompts.js';
+import { getAiClient } from '../ai/client.js';
 
 /**
  * Result of PR creation

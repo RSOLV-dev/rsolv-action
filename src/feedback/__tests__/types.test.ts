@@ -5,7 +5,7 @@ import type {
   FeedbackSentiment, 
   ActionTaken,
   PromptEnhancementContext
-} from '../types';
+} from '../types.js';
 
 describe('Feedback Types', () => {
   it('should allow creating a valid FeedbackEvent', () => {

@@ -2,11 +2,8 @@
  * Tests for Claude Code adapter
  */
 import { test, expect, mock } from 'bun:test';
-import { ClaudeCodeAdapter } from '../adapters/claude-code';
-import { AIConfig } from '../types';
-import { spawn } from 'child_process';
-import fs from 'fs';
-import { logger } from '../../utils/logger';
+import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
+import { AIConfig } from '../types.js';
 
 // Mock the logger to avoid console output during tests
 mock.module('../../utils/logger', () => ({
@@ -21,7 +18,7 @@ mock.module('../../utils/logger', () => ({
 // Mock the child_process.spawn function
 mock.module('child_process', () => {
   return {
-    spawn: (command: string, args: string[], options: any) => {
+    spawn: (command: string, args: string[], _options: any) => {
       const mockProcess = {
         stdout: {
           on: (event: string, callback: (data: Buffer) => void) => {
@@ -43,7 +40,7 @@ mock.module('child_process', () => {
           }
         },
         stderr: {
-          on: (event: string, callback: (data: Buffer) => void) => {
+          on: (_event: string, _callback: (data: Buffer) => void) => {
             return mockProcess.stderr;
           }
         },

@@ -1,9 +1,8 @@
 import { describe, expect, test, beforeEach, mock, jest } from 'bun:test';
-import { AIConfig } from '../types';
-import { getAIClient } from '../client';
-import { generateSolutionWithFeedback } from '../feedbackEnhanced';
-import { IssueContext } from '../../types';
-import { IssueAnalysis } from '../types';
+import { AIConfig } from '../types.js';
+import { getAIClient } from '../client.js';
+import { IssueContext } from '../../types.js';
+import { IssueAnalysis } from '../types.js';
 
 // Mock the Claude Code adapter
 mock.module('../adapters/claude-code', () => {

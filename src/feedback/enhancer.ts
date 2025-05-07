@@ -2,12 +2,12 @@ import type {
   PromptEnhancementContext, 
   FeedbackEvent, 
   FeedbackSentiment 
-} from './types';
-import type { IssueContext } from '../types';
-import { logger } from '../utils/logger';
+} from './types.js';
+import type { IssueContext } from '../types.js';
+import { logger } from '../utils/logger.js';
 
 // Import storage directly to avoid circular dependencies
-import { FeedbackStorage } from './storage';
+import { FeedbackStorage } from './storage.js';
 
 /**
  * Enhancer for AI prompts based on historical feedback

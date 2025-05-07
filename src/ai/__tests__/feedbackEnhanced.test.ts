@@ -1,7 +1,7 @@
-import { describe, it, expect, mock } from 'bun:test';
-import { generateSolutionWithFeedback } from '../feedbackEnhanced';
-import type { IssueContext } from '../../types';
-import type { IssueAnalysis, PullRequestSolution, AIConfig } from '../types';
+import { describe, it, expect } from 'bun:test';
+import { generateSolutionWithFeedback } from '../feedbackEnhanced.js';
+import type { IssueContext } from '../../types.js';
+import type { IssueAnalysis, PullRequestSolution, AIConfig } from '../types.js';
 
 // Create mock solution
 const mockSolution: PullRequestSolution = {
@@ -81,7 +81,7 @@ describe('generateSolutionWithFeedback', () => {
     // This is a simpler test that focuses on the integration concept
     // without needing to mock the actual modules
     const feedbackIntegration = {
-      extractPatterns: (feedback: any[]) => {
+      extractPatterns: (_feedback: any[]) => {
         return {
           positive: ['good pattern'],
           negative: ['bad pattern']
