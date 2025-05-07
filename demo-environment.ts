@@ -20,12 +20,12 @@ import fs from 'fs';
 import path from 'path';
 
 // Import RSOLV components
-import { getGitHubClient } from './src/github/api';
-import { createPullRequest } from './src/github/pr';
-import { generateSolution } from './src/ai/solution';
-import { analyzeIssue } from './src/ai/analyzer';
-import { AIConfig } from './src/ai/types';
-import { IssueContext, IssueAnalysis } from './src/types';
+import { getGitHubClient } from './src/github/api.js';
+import { createPullRequest } from './src/github/pr.js';
+import { generateSolution } from './src/ai/solution.js';
+import { analyzeIssue } from './src/ai/analyzer.js';
+import { AIConfig } from './src/ai/types.js';
+import { IssueContext, IssueAnalysis } from './src/types/index.js';
 import { 
   feedbackStorage, 
   feedbackCollector, 
@@ -33,10 +33,10 @@ import {
   FeedbackEvent,
   FeedbackSentiment,
   ActionTaken 
-} from './src/feedback';
+} from './src/feedback/index.js';
 
 // Import the context evaluation module for Claude Code
-import { runContextEvaluation } from './src/demo-context-evaluation';
+import { runContextEvaluation } from './src/demo-context-evaluation.js';
 
 // Set up interactive readline interface
 const rl = readline.createInterface({
@@ -471,7 +471,7 @@ async function displayFeedbackStats(): Promise<void> {
   }
   
   console.log(chalk.cyan('\nFeedback Timeline:'));
-  stats.feedbackOverTime.forEach(entry => {
+  stats.feedbackOverTime.forEach((entry: { date: string; count: number; sentiment: { positive: number; negative: number; neutral: number } }) => {
     console.log(`${entry.date}: ${entry.count} feedbacks (👍 ${entry.sentiment.positive} | 👎 ${entry.sentiment.negative} | 😐 ${entry.sentiment.neutral})`);
   });
 }
@@ -497,14 +497,14 @@ async function showEnhancedPrompt(
   // Show patterns extracted
   if (enhancementContext.patterns.positive.length > 0) {
     console.log(chalk.green('\nPositive Patterns:'));
-    enhancementContext.patterns.positive.forEach(pattern => {
+    enhancementContext.patterns.positive.forEach((pattern: string) => {
       console.log(`👍 ${pattern}`);
     });
   }
   
   if (enhancementContext.patterns.negative.length > 0) {
     console.log(chalk.red('\nNegative Patterns:'));
-    enhancementContext.patterns.negative.forEach(pattern => {
+    enhancementContext.patterns.negative.forEach((pattern: string) => {
       console.log(`👎 ${pattern}`);
     });
   }
@@ -644,7 +644,7 @@ async function runDemo() {
           
           if (analysis.relatedFiles && analysis.relatedFiles.length > 0) {
             console.log('Related Files:');
-            analysis.relatedFiles.forEach(file => {
+            analysis.relatedFiles.forEach((file: string) => {
               console.log(chalk.cyan(`- ${file}`));
             });
           }
@@ -750,13 +750,13 @@ The solution should include:
           console.log('Description:', chalk.cyan(solution.description));
           
           console.log('\nFiles to modify:');
-          solution.files.forEach((file, index) => {
+          solution.files.forEach((file: { path: string, changes: string }, index: number) => {
             console.log(chalk.cyan(`${index + 1}. ${file.path}`));
           });
           
           if (solution.tests && solution.tests.length > 0) {
             console.log('\nTests:');
-            solution.tests.forEach(test => {
+            solution.tests.forEach((test: string) => {
               console.log(chalk.cyan(`- ${test}`));
             });
           }
@@ -778,7 +778,7 @@ The solution should include:
             console.log(chalk.blue('\n🔄 Creating pull request...'));
             try {
               // Transform solution to match the expected format
-              const changes = solution.files.reduce((acc, file) => {
+              const changes = solution.files.reduce((acc: Record<string, string>, file: { path: string, changes: string }) => {
                 acc[file.path] = file.changes;
                 return acc;
               }, {});
