@@ -1,9 +1,8 @@
 import type { 
   PromptEnhancementContext, 
-  FeedbackEvent, 
-  FeedbackSentiment 
+  FeedbackEvent 
 } from './types.js';
-import type { IssueContext } from '../types.js';
+import type { IssueContext } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 
 // Import storage directly to avoid circular dependencies
@@ -242,19 +241,19 @@ export class PromptEnhancer {
     
     // Look for phrases after "I like", "Good", etc.
     const positiveRegexes = [
-      /I\s+like\s+(how|that|the)\s+(.+?)(\.|\!|\n|$)/i,
-      /Good\s+(.+?)(\.|\!|\n|$)/i,
-      /Great\s+(.+?)(\.|\!|\n|$)/i,
-      /Works\s+well\s+(.+?)(\.|\!|\n|$)/i
+      /I\s+like\s+(how|that|the)\s+(.+?)(\.|\n|$)/i,
+      /Good\s+(.+?)(\.|\n|$)/i,
+      /Great\s+(.+?)(\.|\n|$)/i,
+      /Works\s+well\s+(.+?)(\.|\n|$)/i
     ];
     
     // Look for phrases after "I don't like", "Issue with", etc.
     const negativeRegexes = [
-      /I\s+don'?t\s+like\s+(how|that|the)\s+(.+?)(\.|\!|\n|$)/i,
-      /Issue\s+with\s+(.+?)(\.|\!|\n|$)/i,
-      /Problem\s+(.+?)(\.|\!|\n|$)/i,
-      /Not\s+working\s+(.+?)(\.|\!|\n|$)/i,
-      /Could\s+be\s+better\s+(.+?)(\.|\!|\n|$)/i
+      /I\s+don'?t\s+like\s+(how|that|the)\s+(.+?)(\.|\n|$)/i,
+      /Issue\s+with\s+(.+?)(\.|\n|$)/i,
+      /Problem\s+(.+?)(\.|\n|$)/i,
+      /Not\s+working\s+(.+?)(\.|\n|$)/i,
+      /Could\s+be\s+better\s+(.+?)(\.|\n|$)/i
     ];
     
     // Extract using all regex patterns

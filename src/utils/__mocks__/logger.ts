@@ -2,23 +2,23 @@
  * Mock logger for testing
  */
 export class Logger {
-  debug(message: string): void {
+  debug(_message: string): void {
     // Do nothing in tests
   }
 
-  info(message: string): void {
+  info(_message: string): void {
     // Do nothing in tests
   }
 
-  warning(message: string): void {
+  warning(_message: string): void {
     // Do nothing in tests
   }
 
-  error(message: string, error?: Error): void {
+  error(_message: string, _error?: Error): void {
     // Do nothing in tests
   }
 
-  setDebugMode(enabled: boolean): void {
+  setDebugMode(_enabled: boolean): void {
     // Do nothing in tests
   }
 }

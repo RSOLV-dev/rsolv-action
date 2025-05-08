@@ -8,7 +8,7 @@ import { createPullRequest } from './github/pr.js';
 import { generateSolution } from './ai/solution.js';
 import { analyzeIssue } from './ai/analyzer.js';
 import { AIConfig } from './ai/types.js';
-import { IssueContext } from './types.js';
+import { IssueContext } from './types/index.js';
 
 // Ensure GitHub token is set
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -28,7 +28,7 @@ if (!issueUrl) {
 }
 
 // Parse the issue URL
-const issueUrlRegex = /github\.com\/([^\/]+)\/([^\/]+)\/issues\/(\d+)/;
+const issueUrlRegex = /github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/;
 const match = issueUrl.match(issueUrlRegex);
 if (!match) {
   console.error('❌ Error: Invalid GitHub issue URL');
@@ -64,12 +64,13 @@ async function main() {
       ) || [],
       repository: {
         owner,
-        repo,
-        branch: 'main' // Assuming main branch
+        name: repo,
+        fullName: `${owner}/${repo}`,
+        defaultBranch: 'main' // Assuming main branch
       },
       metadata: {
         htmlUrl: issue.html_url,
-        user: issue.user.login,
+        user: issue.user?.login || 'unknown',
         state: issue.state,
         createdAt: issue.created_at,
         updatedAt: issue.updated_at
@@ -145,7 +146,7 @@ async function main() {
       throw new Error(result.message);
     }
     
-    const prNumber = result.pullRequestNumber;
+    // Get the PR URL
     const prUrl = result.pullRequestUrl;
     
     console.log('✨ Demo completed successfully!');

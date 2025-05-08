@@ -1,4 +1,4 @@
-import { IssueContext, IssueProcessingResult, ActionConfig, AnalysisData } from '../types/index.js';
+import { IssueContext, IssueProcessingResult, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { analyzeIssue } from './analyzer.js';
 import { generateSolution } from './solution.js';

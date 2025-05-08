@@ -1,9 +1,5 @@
 import { AIClient, AIConfig, IssueAnalysis, PullRequestSolution } from '../types.js';
 import { logger } from '../../utils/logger.js';
-import * as child_process from 'child_process';
-import * as util from 'util';
-
-const exec = util.promisify(child_process.exec);
 
 /**
  * Client for Anthropic's Claude AI

@@ -1,8 +1,8 @@
-import { IssueContext } from '../types.js';
+import { IssueContext } from '../types/index.js';
 import { IssueAnalysis, PullRequestSolution, AIConfig } from './types.js';
-import { getAIClient } from './client.js';
+import { getAiClient } from './client.js';
 import { logger } from '../utils/logger.js';
-import { promptEnhancer } from '../feedback.js';
+import { promptEnhancer } from '../feedback/index.js';
 
 /**
  * Generate a solution for an issue with feedback enhancement
@@ -18,13 +18,13 @@ export async function generateSolutionWithFeedback(
     logger.info(`Generating feedback-enhanced solution for issue: ${issueContext.id}`);
     
     // Get the AI client
-    const aiClient = getAIClient(aiConfig);
+    const aiClient = getAiClient(aiConfig);
     
     // Extract repository context
     const repoContext = {
       owner: issueContext.repository.owner,
-      repo: issueContext.repository.name,
-      branch: issueContext.repository.branch,
+      name: issueContext.repository.name,
+      defaultBranch: issueContext.repository.defaultBranch,
       source: issueContext.source,
     };
     
@@ -109,7 +109,7 @@ Analysis:
     logger.info('Falling back to standard solution generation');
     
     // Import the standard solution generator
-    const { generateSolution } = await import('./solution');
+    const { generateSolution } = await import('./solution.js');
     
     return generateSolution(issueContext, analysis, aiConfig);
   }

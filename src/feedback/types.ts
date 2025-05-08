@@ -1,4 +1,4 @@
-import { IssueContext } from '../types.js';
+import { IssueContext } from '../types/index.js';
 
 export interface Reviewer {
   id: string;
