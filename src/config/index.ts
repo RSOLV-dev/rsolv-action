@@ -1,12 +1,8 @@
 import * as fs from 'fs';
-import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { z } from 'zod';
 import { ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
-
-// Environment variable prefix
-const ENV_PREFIX = 'RSOLV_';
 
 // Zod schema for validating configuration
 const AiProviderConfigSchema = z.object({

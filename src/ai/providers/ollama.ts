@@ -23,7 +23,7 @@ function preprocessJson(jsonStr: string): string {
   
   // Fix common model mistakes
   processed = processed.replace(/(\w+):\s*"([^"]*)",/g, '"$1": "$2",'); // Fix field:value syntax
-  processed = processed.replace(/"(\w+)":\s*([^",\s\}\]]+)([,\}\]])/g, '"$1": "$2"$3'); // Quote unquoted values
+  processed = processed.replace(/"(\w+)":\s*([^",\s{}]+)([,}])/g, '"$1": "$2"$3'); // Quote unquoted values
   
   // The deepseek model sometimes puts comments in the JSON - remove them
   processed = processed.replace(/\/\/.*$/gm, '');

@@ -5,7 +5,6 @@ import { PullRequestSolution } from '../../ai/types.js';
 
 // Mock GitHubApiClient
 const mockCreatePullRequest = mock(() => Promise.resolve(123));
-const mockCommentOnIssue = mock(() => Promise.resolve());
 
 // Mock GitHubFileManager
 const mockBranchExists = mock(() => Promise.resolve(false));

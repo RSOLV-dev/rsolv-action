@@ -1,10 +1,10 @@
-import { test, expect, mock } from 'bun:test';
+import { test, expect } from 'bun:test';
 import { IssueContext } from '../../types.js';
 
 // Functions we want to test
-let extractIssueContextFromEvent: (context?: any) => IssueContext | null;
-let hasAutomationTag: (issueContext: IssueContext, automationTag: string) => boolean;
-let isEligibleForAutomation: (issueContext: IssueContext, automationTag: string) => boolean;
+const extractIssueContextFromEvent: (context?: any) => IssueContext | null;
+const hasAutomationTag: (issueContext: IssueContext, automationTag: string) => boolean;
+const isEligibleForAutomation: (issueContext: IssueContext, automationTag: string) => boolean;
 
 // Mock GitHub context
 const createMockContext = (eventName: string, payload: any) => ({

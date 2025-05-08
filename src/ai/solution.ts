@@ -2,7 +2,6 @@ import { IssueContext, ActionConfig, AnalysisData } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { getAiClient } from './client.js';
 import { buildSolutionPrompt, getIssueTypePromptTemplate } from './prompts.js';
-import { getRepositoryFiles } from '../github/files.js';
 
 /**
  * Result of solution generation
@@ -96,7 +95,7 @@ async function getFilesForAnalysis(
       // Example logic to infer files - in a real implementation, this would be more sophisticated
       const combinedText = `${issue.title} ${issue.body}`;
       const fileExtRegex = /\.([a-zA-Z0-9]+)\b/g;
-      const fileExts = [];
+      const fileExts: string[] = [];
       let match;
       
       while ((match = fileExtRegex.exec(combinedText)) !== null) {
@@ -139,7 +138,7 @@ function parseSolutionResponse(response: string): Record<string, string> {
   try {
     // Look for file blocks in the response
     // Format expected: --- filepath --- followed by code blocks
-    const fileBlockRegex = /---\s+([\w./\-]+)\s+---\s+```[\w]*\n([\s\S]*?)```/g;
+    const fileBlockRegex = /---\s+([\w./-]+)\s+---\s+```[\w]*\n([\s\S]*?)```/g;
     let match;
     
     while ((match = fileBlockRegex.exec(response)) !== null) {
@@ -152,7 +151,7 @@ function parseSolutionResponse(response: string): Record<string, string> {
     // If the above pattern doesn't match, try alternative formats
     if (Object.keys(changes).length === 0) {
       // Alternative format: ```filepath content ```
-      const altFileBlockRegex = /```(?:file|filepath)\s+([\w./\-]+)\n([\s\S]*?)```/g;
+      const altFileBlockRegex = /```(?:file|filepath)\s+([\w./-]+)\n([\s\S]*?)```/g;
       while ((match = altFileBlockRegex.exec(response)) !== null) {
         const [, filePath, content] = match;
         if (filePath && content) {

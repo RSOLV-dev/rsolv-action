@@ -2,10 +2,7 @@ import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import { PromptEnhancer } from '../enhancer.js';
 import type { IssueContext } from '../../types.js';
 import type { 
-  FeedbackEvent,
-  FeedbackSentiment,
-  FeedbackType,
-  ActionTaken 
+  FeedbackEvent
 } from '../types.js';
 
 describe('PromptEnhancer', () => {

@@ -7,16 +7,16 @@ import { logger } from '../utils/logger.js';
 export async function handleExternalWebhook(
   payload: any,
   source: string,
-  config: ActionConfig
+  _config: ActionConfig
 ): Promise<IssueContext[]> {
   try {
     logger.info(`Processing webhook from ${source}`);
     
     switch (source.toLowerCase()) {
     case 'jira':
-      return handleJiraWebhook(payload, config);
+      return handleJiraWebhook(payload, _config);
     case 'linear':
-      return handleLinearWebhook(payload, config);
+      return handleLinearWebhook(payload, _config);
     default:
       logger.warn(`Unsupported external source: ${source}`);
       return [];
@@ -186,7 +186,7 @@ function linearPriorityToString(priority: number): string {
  */
 export async function getRepositoryFromExternalIssue(
   issueContext: IssueContext,
-  config: ActionConfig
+  _config: ActionConfig
 ): Promise<{ owner: string; repo: string; defaultBranch: string } | null> {
   try {
     logger.info(`Getting repository info for ${issueContext.source} issue ${issueContext.id}`);
