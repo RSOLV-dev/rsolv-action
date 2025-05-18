@@ -70,6 +70,49 @@ securitySettings:
   requireCodeReview: true
 ```
 
+## Enhanced Context Gathering (Claude Code)
+
+RSOLV now supports enhanced context gathering using Claude Code for deeper repository understanding:
+
+```yaml
+# Enable enhanced context in your workflow
+env:
+  RSOLV_AI_PROVIDER: 'claude-code'
+  RSOLV_ENABLE_DEEP_CONTEXT: 'true'
+  RSOLV_ENABLE_ULTRA_THINK: 'true'
+  RSOLV_CONTEXT_DEPTH: 'ultra'  # shallow, medium, deep, or ultra
+```
+
+### Features
+
+- **Deep Repository Analysis**: Comprehensive understanding of architecture, patterns, and conventions
+- **Ultra-Think Mode**: Uses `ultrathink` for more thorough analysis and better solutions
+- **Context Caching**: Improves performance by caching repository analysis
+- **Customizable Exploration**: Configure which paths and patterns to analyze
+
+### Configuration
+
+```yaml
+# Advanced configuration
+env:
+  RSOLV_CLAUDE_CODE_CONFIG: |
+    {
+      "enableDeepContext": true,
+      "enableUltraThink": true,
+      "contextDepth": "ultra",
+      "contextGatheringTimeout": 300000,
+      "analyzeArchitecture": true,
+      "analyzeTestPatterns": true,
+      "analyzeStyleGuide": true,
+      "contextOptions": {
+        "includeDirs": ["src", "lib", "tests"],
+        "excludeDirs": ["node_modules", "dist"]
+      }
+    }
+```
+
+For more details, see the [Enhanced Context Guide](docs/ENHANCED-CONTEXT-GUIDE.md).
+
 ## Environment Variables
 
 The following environment variables can be used to configure the action:
