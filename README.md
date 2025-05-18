@@ -111,7 +111,9 @@ env:
     }
 ```
 
-For more details, see the [Enhanced Context Guide](docs/ENHANCED-CONTEXT-GUIDE.md).
+For more details, see:
+- [Enhanced Context Guide](docs/ENHANCED-CONTEXT-GUIDE.md)
+- [Prompts Architecture](docs/PROMPTS-ARCHITECTURE.md)
 
 ## Environment Variables
 
