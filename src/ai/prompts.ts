@@ -59,10 +59,25 @@ I need you to generate specific code changes to resolve this issue. Here are the
   // Add instructions for the response format
   prompt += `\nPlease provide your solution in the following format:
 
-1. For each file that needs to be modified, specify the file path and the complete new content.
-2. For each file that needs to be created, specify the file path and the complete content.
-3. Provide a brief explanation of your changes and why they solve the issue.
-4. If there are multiple approaches, explain why you chose this particular solution.
+For each file that needs to be modified or created, use this exact format:
+
+--- filename.ext ---
+\`\`\`language
+[complete file content goes here]
+\`\`\`
+
+For example:
+--- src/validation.js ---
+\`\`\`javascript
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email);
+}
+\`\`\`
+
+After providing all file changes, include:
+1. A brief explanation of your changes
+2. Why this solution addresses the issue
+3. Any assumptions or limitations
 
 Please respond with valid, working code that follows best practices and matches the style of the existing codebase.`;
 

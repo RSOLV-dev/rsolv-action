@@ -188,8 +188,7 @@ class AnthropicClient implements AiClient {
         messages: [{ role: 'user', content: prompt }],
         temperature,
         max_tokens: maxTokens,
-        top_p: options.topP ?? 1,
-        anthropic_version: '2023-06-01'
+        top_p: options.topP ?? 1
       };
       
       // Make the API call

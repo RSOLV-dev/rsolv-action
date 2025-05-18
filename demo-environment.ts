@@ -38,12 +38,6 @@ import {
 // Import the context evaluation module for Claude Code
 import { runContextEvaluation } from './src/demo-context-evaluation.js';
 
-// Set up interactive readline interface
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
 // Create CLI program
 const program = new Command();
 
@@ -100,7 +94,7 @@ async function initializeDemo() {
 }
 
 // Function to get GitHub token from environment or prompt
-async function getGitHubToken(): Promise<string> {
+async function getGitHubToken(rl: readline.Interface): Promise<string> {
   const token = process.env.GITHUB_TOKEN;
   if (token) {
     return token;
@@ -114,7 +108,7 @@ async function getGitHubToken(): Promise<string> {
 }
 
 // Function to get AI config (model, API key)
-async function getAIConfig(): Promise<AIConfig> {
+async function getAIConfig(rl: readline.Interface): Promise<AIConfig> {
   // Get provider from env or prompt
   let provider = process.env.AI_PROVIDER || 'anthropic';
   let apiKey = '';
@@ -205,7 +199,7 @@ async function getAIConfig(): Promise<AIConfig> {
 }
 
 // Function to get issue details either from GitHub or manual input
-async function getIssueContext(): Promise<IssueContext> {
+async function getIssueContext(rl: readline.Interface): Promise<IssueContext> {
   const sourceType = await new Promise<string>((resolve) => {
     rl.question(
       chalk.yellow('Use [1] GitHub issue URL or [2] Manual issue input? [1/2]: '),
@@ -232,7 +226,7 @@ async function getIssueContext(): Promise<IssueContext> {
     const [, owner, repo, issueNumber] = match;
     
     // Get GitHub token
-    const token = await getGitHubToken();
+    const token = await getGitHubToken(rl);
     
     // Get issue details directly with Octokit
     console.log(chalk.blue('📥 Fetching issue details...'));
@@ -348,7 +342,7 @@ function loadDemoState(): any {
 }
 
 // Display a simple menu and get user choice
-async function showMenu(options: string[]): Promise<number> {
+async function showMenu(options: string[], rl: readline.Interface): Promise<number> {
   console.log(chalk.blue('\n📋 Available Actions:'));
   
   options.forEach((option, index) => {
@@ -364,7 +358,7 @@ async function showMenu(options: string[]): Promise<number> {
   const choiceNum = parseInt(choice, 10);
   if (isNaN(choiceNum) || choiceNum < 1 || choiceNum > options.length) {
     console.log(chalk.red('Invalid choice. Please try again.'));
-    return showMenu(options);
+    return showMenu(options, rl);
   }
   
   return choiceNum;
@@ -373,7 +367,8 @@ async function showMenu(options: string[]): Promise<number> {
 // Simulate PR feedback collection
 async function simulateFeedback(
   issueContext: IssueContext,
-  prNumber: string
+  prNumber: string,
+  rl: readline.Interface
 ): Promise<void> {
   console.log(chalk.blue('\n💬 Feedback Simulation'));
   console.log('This will simulate feedback for the generated PR to demonstrate the feedback loop system.');
@@ -390,12 +385,12 @@ async function simulateFeedback(
   
   // Get feedback type
   const feedbackTypeOptions = ['Comment', 'Review', 'Edit', 'Approve', 'Reject'];
-  const feedbackTypeIndex = await showMenu(feedbackTypeOptions);
+  const feedbackTypeIndex = await showMenu(feedbackTypeOptions, rl);
   const feedbackType = feedbackTypeOptions[feedbackTypeIndex - 1].toLowerCase() as any;
   
   // Get feedback sentiment
   const sentimentOptions = ['Positive', 'Negative', 'Neutral'];
-  const sentimentIndex = await showMenu(sentimentOptions);
+  const sentimentIndex = await showMenu(sentimentOptions, rl);
   const sentiment = sentimentOptions[sentimentIndex - 1].toLowerCase() as FeedbackSentiment;
   
   // Get feedback content
@@ -483,7 +478,8 @@ async function displayFeedbackStats(): Promise<void> {
 // Show prompt enhancement based on feedback
 async function showEnhancedPrompt(
   issueContext: IssueContext,
-  basePrompt: string
+  basePrompt: string,
+  rl: readline.Interface
 ): Promise<string> {
   console.log(chalk.blue('\n🧠 Prompt Enhancement'));
   
@@ -540,12 +536,38 @@ async function runDemo() {
   console.log('This demo allows you to manually exercise all components of the RSOLV system.');
   console.log(chalk.green('Note: Claude Code integration is now available as an AI provider option.'));
   
+  // Check if running with Bun and show warning
+  if (process.versions.bun) {
+    console.log(chalk.yellow('\n⚠️  Detected Bun runtime with known readline compatibility issues.'));
+    console.log(chalk.yellow('If you experience errors with interactive prompts, please run with Node.js:'));
+    console.log(chalk.cyan('  node demo-environment.ts start'));
+    console.log();
+  }
+  
+  // Create readline interface for this session
+  let rl: readline.Interface;
+  try {
+    rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      terminal: true
+    });
+  } catch (error) {
+    console.error(chalk.red('Error creating readline interface:'), error);
+    console.error(chalk.red('Please run with Node.js instead: node demo-environment.ts start'));
+    process.exit(1);
+  }
+  
   // Initialize demo
   const initialized = await initializeDemo();
   if (!initialized) {
     console.log(chalk.red('Demo initialization failed. Exiting.'));
+    rl.close();
     process.exit(1);
   }
+  
+  // Add a small delay to ensure readline is ready (Bun workaround)
+  await new Promise(resolve => setTimeout(resolve, 100));
   
   // Check for previous demo state
   const previousState = loadDemoState();
@@ -555,12 +577,17 @@ async function runDemo() {
   
   if (previousState) {
     const resumePrevious = await new Promise<boolean>((resolve) => {
-      rl.question(
-        chalk.yellow('Previous demo session found. Resume? [y/N]: '),
-        (answer) => {
-          resolve(answer.trim().toLowerCase() === 'y');
-        }
-      );
+      try {
+        rl.question(
+          chalk.yellow('Previous demo session found. Resume? [y/N]: '),
+          (answer) => {
+            resolve(answer.trim().toLowerCase() === 'y');
+          }
+        );
+      } catch (error) {
+        console.error(chalk.red('Error with readline. Defaulting to no.'));
+        resolve(false);
+      }
     });
     
     if (resumePrevious) {
@@ -608,18 +635,18 @@ async function runDemo() {
       return false;
     });
     
-    const choice = await showMenu(availableOptions);
+    const choice = await showMenu(availableOptions, rl);
     const selectedOption = availableOptions[choice - 1];
     
     // Handle selected action
     switch (selectedOption) {
       case 'Get Issue (GitHub or Manual)':
         try {
-          issueContext = await getIssueContext();
+          issueContext = await getIssueContext(rl);
           console.log(chalk.green('\n✅ Issue context created:'));
           console.log('ID:', chalk.cyan(issueContext.id));
           console.log('Title:', chalk.cyan(issueContext.title));
-          console.log('Repository:', chalk.cyan(`${issueContext.repository.owner}/${issueContext.repository.repo}`));
+          console.log('Repository:', chalk.cyan(`${issueContext.repository.owner}/${issueContext.repository.name}`));
           
           // Save state
           saveDemoState({ issueContext, analysis, prNumber });
@@ -636,19 +663,19 @@ async function runDemo() {
         
         try {
           // Get AI config
-          const aiConfig = await getAIConfig();
+          const aiConfig = await getAIConfig(rl);
           
           console.log(chalk.blue('\n🔍 Analyzing issue...'));
-          analysis = await analyzeIssue(issueContext, aiConfig);
+          analysis = await analyzeIssue(issueContext, { aiProvider: aiConfig } as any);
           
           console.log(chalk.green('\n✅ Issue analysis complete:'));
-          console.log('Complexity:', chalk.cyan(analysis.complexity));
-          console.log('Estimated Time:', chalk.cyan(`${analysis.estimatedTime} minutes`));
-          console.log('Suggested Approach:', chalk.cyan(analysis.approach));
+          console.log('Complexity:', chalk.cyan(analysis.estimatedComplexity));
+          console.log('Issue Type:', chalk.cyan(analysis.issueType));
+          console.log('Suggested Approach:', chalk.cyan(analysis.suggestedApproach));
           
-          if (analysis.relatedFiles && analysis.relatedFiles.length > 0) {
-            console.log('Related Files:');
-            analysis.relatedFiles.forEach((file: string) => {
+          if (analysis.filesToModify && analysis.filesToModify.length > 0) {
+            console.log('Files to Modify:');
+            analysis.filesToModify.forEach((file: string) => {
               console.log(chalk.cyan(`- ${file}`));
             });
           }
@@ -668,7 +695,7 @@ async function runDemo() {
         
         try {
           // Get AI config
-          const aiConfig = await getAIConfig();
+          const aiConfig = await getAIConfig(rl);
           
           console.log(chalk.blue('\n🧠 Generating solution...'));
           
@@ -725,7 +752,7 @@ The solution should include:
 3. Description of the approach`;
             
             // Enhance the prompt
-            const enhancedPrompt = await showEnhancedPrompt(issueContext, basePrompt);
+            const enhancedPrompt = await showEnhancedPrompt(issueContext, basePrompt, rl);
             
             if (aiConfig.useClaudeCode) {
               console.log(chalk.blue('\n🔄 Using hybrid approach:'));
@@ -738,7 +765,7 @@ The solution should include:
             }
             
             // Use regular solution generation (in a real implementation, we'd use the enhanced prompt)
-            solution = await generateSolution(issueContext, analysis, aiConfig);
+            solution = await generateSolution(issueContext, analysis, { aiProvider: aiConfig } as any);
           } else {
             if (aiConfig.useClaudeCode) {
               console.log(chalk.blue('\n🔄 Using Claude Code context-gathering without feedback enhancement'));
@@ -746,23 +773,29 @@ The solution should include:
               // Simulate progress
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
-            solution = await generateSolution(issueContext, analysis, aiConfig);
+            solution = await generateSolution(issueContext, analysis, { aiProvider: aiConfig } as any);
           }
           
-          console.log(chalk.green('\n✅ Solution generated:'));
-          console.log('Title:', chalk.cyan(solution.title));
-          console.log('Description:', chalk.cyan(solution.description));
-          
-          console.log('\nFiles to modify:');
-          solution.files.forEach((file: { path: string, changes: string }, index: number) => {
-            console.log(chalk.cyan(`${index + 1}. ${file.path}`));
-          });
-          
-          if (solution.tests && solution.tests.length > 0) {
-            console.log('\nTests:');
-            solution.tests.forEach((test: string) => {
-              console.log(chalk.cyan(`- ${test}`));
-            });
+          if (solution.success) {
+            console.log(chalk.green('\n✅ Solution generated successfully:'));
+            console.log('Message:', chalk.cyan(solution.message));
+            
+            if (solution.changes && Object.keys(solution.changes).length > 0) {
+              console.log('\nFiles to modify:');
+              Object.entries(solution.changes).forEach(([path, changes], index) => {
+                console.log(chalk.cyan(`${index + 1}. ${path}`));
+                console.log(chalk.gray('Changes preview:'));
+                console.log(changes.substring(0, 200) + (changes.length > 200 ? '...' : ''));
+              });
+            } else {
+              console.log(chalk.yellow('\n⚠️  No changes proposed'));
+            }
+          } else {
+            console.log(chalk.red('\n❌ Solution generation failed:'));
+            console.log('Message:', chalk.cyan(solution.message));
+            if (solution.error) {
+              console.log('Error:', chalk.red(solution.error));
+            }
           }
           
           // Offer to create PR with the solution
@@ -777,15 +810,12 @@ The solution should include:
           
           if (createPr) {
             // Get GitHub token
-            const token = await getGitHubToken();
+            const token = await getGitHubToken(rl);
             
             console.log(chalk.blue('\n🔄 Creating pull request...'));
             try {
-              // Transform solution to match the expected format
-              const changes = solution.files.reduce((acc: Record<string, string>, file: { path: string, changes: string }) => {
-                acc[file.path] = file.changes;
-                return acc;
-              }, {});
+              // Use the changes from the solution directly
+              const changes = solution.changes || {};
               
               // Create pull request
               const result = await createPullRequest(
@@ -857,7 +887,7 @@ The solution should include:
         }
         
         try {
-          await simulateFeedback(issueContext, prNumber);
+          await simulateFeedback(issueContext, prNumber, rl);
         } catch (error) {
           console.error(chalk.red('Error simulating feedback:'), error);
         }
@@ -888,7 +918,7 @@ The solution should include:
 2. Tests
 3. Description of the approach`;
           
-          await showEnhancedPrompt(issueContext, basePrompt);
+          await showEnhancedPrompt(issueContext, basePrompt, rl);
         } catch (error) {
           console.error(chalk.red('Error testing prompt enhancement:'), error);
         }

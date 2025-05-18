@@ -1,49 +1,37 @@
 {
   "issueContext": {
-    "id": "3217",
+    "id": "28301",
+    "number": 28301,
     "source": "github",
-    "title": "Confidential (private) issues on public repo",
-    "body": "Feature request: allow confidential issues on public repositories. As reference, check [GitLab's confidential issues](https://docs.gitlab.com/ce/user/project/issues/confidential_issues.html).\r\n\r\nThis is a most for organizations that handle coordinated disclosure and patching of security vulnerabilities on public open-source projects. It would allow discussions to go on between the early disclosure and the full disclosure dates. The issue could later be made public at the date of full disclosure.\r\n\r\nThis is the opposite of #639 but perhaps can be handled in the same work package as it will require similar constructs.",
+    "title": "Add jsx-runtime.react-server.js to file allowlist",
+    "body": "https://github.com/facebook/react/pull/28217 doesn't work without this since it's not included in the files list.\r\n\r\nSee https://github.com/dai-shi/waku/pull/467#issuecomment-1936965080.\r\n\r\nThis should fix that.",
     "labels": [
-      "type/feature",
-      "issue/confirmed"
+      "CLA Signed"
     ],
+    "assignees": [],
     "repository": {
-      "owner": "go-gitea",
-      "repo": "gitea",
-      "branch": "main"
+      "owner": "facebook",
+      "name": "react",
+      "fullName": "facebook/react",
+      "defaultBranch": "main"
     },
+    "createdAt": "2024-02-11T00:23:46Z",
+    "updatedAt": "2024-02-12T15:20:03Z",
     "metadata": {
-      "htmlUrl": "https://github.com/go-gitea/gitea/issues/3217",
-      "user": "dllud",
-      "state": "open",
-      "createdAt": "2017-12-17T17:11:39Z",
-      "updatedAt": "2025-04-16T10:31:44Z"
-    },
-    "url": "https://github.com/go-gitea/gitea/issues/3217"
+      "htmlUrl": "https://github.com/facebook/react/pull/28301",
+      "user": "gaearon",
+      "state": "closed"
+    }
   },
   "analysis": {
-    "summary": "Allow confidential issues to be created on public repositories to facilitate coordinated disclosure of security vulnerabilities.",
-    "complexity": "medium",
-    "estimatedTime": 480,
-    "potentialFixes": [
-      "Add a 'confidential' flag to issues that makes them only visible to repository owners/collaborators",
-      "Create a separate issue type called 'Confidential Issue' with restricted visibility",
-      "Allow issues to be marked as confidential during a specific date range"
+    "issueType": "bug",
+    "filesToModify": [
+      "jsx-runtime.react-server.js"
     ],
-    "recommendedApproach": "Add a 'confidential' flag to issues that makes them only visible to repository owners/collaborators",
-    "relatedFiles": [
-      "models/issue.go",
-      "routers/repo/issue.go",
-      "templates/repo/issue/list.tmpl",
-      "templates/repo/issue/view.tmpl"
-    ],
-    "requiredChanges": [
-      "Add 'IsConfidential' field to Issue model",
-      "Update issue creation logic to allow setting confidential flag",
-      "Restrict visibility of confidential issues in issue listing and detail pages",
-      "Add UI to mark an issue as confidential when creating/editing"
-    ]
+    "estimatedComplexity": "simple",
+    "requiredContext": [],
+    "suggestedApproach": "1. **Type of Issue**: This appears to be a bug or a missing file issue related to the React project's build process or file distribution.",
+    "confidenceScore": 0.7
   },
   "prNumber": null
 }
