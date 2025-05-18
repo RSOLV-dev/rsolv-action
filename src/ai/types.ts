@@ -140,6 +140,29 @@ export interface ClaudeCodeConfig {
    * Enable usage tracking and analytics (defaults to true)
    */
   trackUsage?: boolean;
+  
+  /**
+   * Enhanced context options
+   */
+  enableDeepContext?: boolean;
+  enableUltraThink?: boolean;
+  contextGatheringTimeout?: number;
+  contextDepth?: 'shallow' | 'medium' | 'deep' | 'ultra';
+  
+  /**
+   * Context analysis options
+   */
+  analyzeArchitecture?: boolean;
+  analyzeTestPatterns?: boolean;
+  analyzeStyleGuide?: boolean;
+  analyzeDependencies?: boolean;
+  
+  /**
+   * Performance options
+   */
+  maxParallelExplorations?: number;
+  cacheContextResults?: boolean;
+  contextCacheDuration?: number;
 }
 
 /**
