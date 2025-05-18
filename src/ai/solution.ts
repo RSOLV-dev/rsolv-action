@@ -51,8 +51,13 @@ export async function generateSolution(
       model: config.aiProvider.model
     });
     
+    // Debug: Log the raw response to see what we're getting
+    logger.debug('Raw AI solution response (first 500 chars):', { response: response.substring(0, 500) });
+    
     // Parse the solution response to extract file changes
     const changes = parseSolutionResponse(response);
+    
+    logger.debug(`Parsed ${Object.keys(changes).length} file changes from response`);
     
     if (Object.keys(changes).length === 0) {
       logger.warn(`No changes extracted from solution for issue #${issue.number}`);
@@ -136,9 +141,9 @@ function parseSolutionResponse(response: string): Record<string, string> {
   const changes: Record<string, string> = {};
   
   try {
-    // Look for file blocks in the response
-    // Format expected: --- filepath --- followed by code blocks
-    const fileBlockRegex = /---\s+([\w./-]+)\s+---\s+```[\w]*\n([\s\S]*?)```/g;
+    // Look for file blocks in the response - be more flexible with the format
+    // Format expected: --- filepath --- followed by ``` code ```
+    const fileBlockRegex = /---\s*([\w./-]+)\s*---\s*```[\w]*\n?([\s\S]*?)```/gm;
     let match;
     
     while ((match = fileBlockRegex.exec(response)) !== null) {
@@ -150,12 +155,42 @@ function parseSolutionResponse(response: string): Record<string, string> {
     
     // If the above pattern doesn't match, try alternative formats
     if (Object.keys(changes).length === 0) {
-      // Alternative format: ```filepath content ```
-      const altFileBlockRegex = /```(?:file|filepath)\s+([\w./-]+)\n([\s\S]*?)```/g;
+      // Alternative format: ```language filename content ```
+      const altFileBlockRegex = /```(\w+)\s+([\w./-]+)\n([\s\S]*?)```/gm;
       while ((match = altFileBlockRegex.exec(response)) !== null) {
+        const [, language, filePath, content] = match;
+        if (filePath && content) {
+          changes[filePath] = content.trim();
+        }
+      }
+    }
+    
+    // Try another format: "filename:" followed by code block
+    if (Object.keys(changes).length === 0) {
+      const fileHeaderRegex = /([\w./-]+):\s*```[\w]*\n?([\s\S]*?)```/gm;
+      while ((match = fileHeaderRegex.exec(response)) !== null) {
         const [, filePath, content] = match;
         if (filePath && content) {
           changes[filePath] = content.trim();
+        }
+      }
+    }
+    
+    // Last resort: look for any code blocks with file extensions mentioned nearby
+    if (Object.keys(changes).length === 0) {
+      // Find all code blocks
+      const codeBlockRegex = /```[\w]*\n?([\s\S]*?)```/gm;
+      const fileNameRegex = /([\w./-]+\.\w+)/;
+      
+      while ((match = codeBlockRegex.exec(response)) !== null) {
+        const codeContent = match[1];
+        // Look for a filename in the 100 characters before this code block
+        const startPos = Math.max(0, match.index - 100);
+        const contextBefore = response.substring(startPos, match.index);
+        const fileMatch = contextBefore.match(fileNameRegex);
+        
+        if (fileMatch && codeContent) {
+          changes[fileMatch[1]] = codeContent.trim();
         }
       }
     }
