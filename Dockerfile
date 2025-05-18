@@ -8,6 +8,10 @@ RUN bun install --frozen-lockfile --production
 
 # Copy source files
 COPY src/ ./src/
+COPY tsconfig.json ./
+
+# Build the TypeScript files
+RUN bun run build || echo "No build script, running TypeScript directly"
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
@@ -15,6 +19,10 @@ RUN chmod +x /entrypoint.sh
 
 # Set up secure environment
 RUN addgroup --system rsolv && adduser --system --group rsolv
+
+# Change ownership of app directory
+RUN chown -R rsolv:rsolv /app
+
 USER rsolv
 
 ENTRYPOINT ["/entrypoint.sh"]
