@@ -263,7 +263,7 @@ describe('RSOLVCredentialManager', () => {
       await expect((manager as any).refreshCredentials('anthropic')).rejects.toThrow();
       
       expect(loggerErrorSpy).toHaveBeenCalledWith(
-        'Failed to refresh credentials',
+        'Failed to refresh credentials for anthropic',
         expect.any(Error)
       );
     });

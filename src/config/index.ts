@@ -96,7 +96,8 @@ function getDefaultConfig(): Partial<ActionConfig> {
       temperature: 0.2,
       maxTokens: 4000,
       contextLimit: 100000,
-      timeout: 60000
+      timeout: 60000,
+      useVendedCredentials: true  // Default to using RSOLV vended credentials
     },
     containerConfig: {
       enabled: true,
