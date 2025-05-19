@@ -13,7 +13,7 @@ export async function analyzeIssue(
   logger.info(`Analyzing issue #${issue.number} with AI`);
   
   // Create AI client based on configuration
-  const aiClient = getAiClient(config.aiProvider);
+  const aiClient = await getAiClient(config.aiProvider);
   
   // Build analysis prompt based on issue context
   const prompt = buildAnalysisPrompt(issue);
