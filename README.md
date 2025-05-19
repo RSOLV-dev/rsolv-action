@@ -14,6 +14,7 @@ RSOLV is a GitHub Action that helps software development teams address their mai
 - 🔀 Creates pull requests with detailed descriptions
 - 🔗 Supports external issue trackers (Jira, Linear)
 - 🔐 Secure by design - no source code leaves your repository
+- 🔑 Single API key - no AI provider accounts needed
 
 ## Installation
 
@@ -48,6 +49,7 @@ RSOLV can be configured using a `.github/rsolv.yml` file in your repository:
 aiProvider:
   provider: anthropic  # anthropic, openai, mistral, or ollama
   model: claude-3-sonnet-20240229
+  useVendedCredentials: true  # Use RSOLV's credential vending service
   temperature: 0.2
   maxTokens: 4000
 
@@ -115,11 +117,33 @@ For more details, see:
 - [Enhanced Context Guide](docs/ENHANCED-CONTEXT-GUIDE.md)
 - [Prompts Architecture](docs/PROMPTS-ARCHITECTURE.md)
 
+## Credential Vending Service
+
+RSOLV simplifies AI integration by providing a credential vending service:
+
+- **Single API Key**: Just one RSOLV API key - we manage all AI provider relationships
+- **Temporary Credentials**: Secure, time-limited AI provider credentials
+- **Direct API Access**: GitHub Action makes direct API calls for optimal performance
+- **Usage Tracking**: Automatically tracks AI usage for billing
+
+How it works:
+1. GitHub Action exchanges RSOLV API key for temporary AI provider credentials
+2. Temporary credentials are used to make direct API calls
+3. Credentials automatically expire after 1 hour
+4. All usage is tracked and billed to your RSOLV account
+
+To use:
+```yaml
+aiProvider:
+  useVendedCredentials: true  # Enable credential vending
+```
+
 ## Environment Variables
 
 The following environment variables can be used to configure the action:
 
 - `RSOLV_API_KEY`: Your RSOLV API key (required)
+- `RSOLV_API_URL`: API endpoint (default: `https://api.rsolv.ai`)
 - `RSOLV_CONFIG_PATH`: Path to the configuration file (default: `.github/rsolv.yml`)
 - `RSOLV_ISSUE_LABEL`: Label to identify issues for automation (default: `rsolv:automate`)
 - `RSOLV_ENVIRONMENT_VARIABLES`: JSON string of environment variables to pass to the container
