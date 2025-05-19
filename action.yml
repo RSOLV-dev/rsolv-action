@@ -19,11 +19,17 @@ inputs:
   environment_variables:
     description: 'JSON string of environment variables to pass to the container'
     required: false
+  api_url:
+    description: 'RSOLV API URL (defaults to production)'
+    required: false
+    default: 'https://api.rsolv.ai'
 runs:
   using: 'docker'
   image: 'Dockerfile'
   env:
     RSOLV_API_KEY: ${{ inputs.api_key }}
+    RSOLV_API_URL: ${{ inputs.api_url }}
     RSOLV_CONFIG_PATH: ${{ inputs.config_path }}
     RSOLV_ISSUE_LABEL: ${{ inputs.issue_label }}
     RSOLV_ENVIRONMENT_VARIABLES: ${{ inputs.environment_variables }}
+    GITHUB_TOKEN: ${{ github.token }}
