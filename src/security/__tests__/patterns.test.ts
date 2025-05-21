@@ -25,9 +25,31 @@ describe('PatternRegistry', () => {
     it('should return all patterns', () => {
       const allPatterns = registry.getAllPatterns();
       
-      expect(allPatterns).toHaveLength(4);
+      expect(allPatterns).toHaveLength(12); // 2 patterns for SQL injection, 2 for XSS, 1 for each other OWASP category
       expect(allPatterns.map(p => p.id)).toContain('sql-injection-concat');
       expect(allPatterns.map(p => p.id)).toContain('xss-inner-html');
+      expect(allPatterns.map(p => p.id)).toContain('broken-access-control-no-auth');
+    });
+
+    it('should have patterns for all OWASP Top 10 vulnerabilities', () => {
+      const owaspVulnerabilities = [
+        VulnerabilityType.BROKEN_ACCESS_CONTROL,
+        VulnerabilityType.SENSITIVE_DATA_EXPOSURE,
+        VulnerabilityType.SQL_INJECTION,
+        VulnerabilityType.INSECURE_DESERIALIZATION,
+        VulnerabilityType.SECURITY_MISCONFIGURATION,
+        VulnerabilityType.XSS,
+        VulnerabilityType.XML_EXTERNAL_ENTITIES,
+        VulnerabilityType.BROKEN_AUTHENTICATION,
+        VulnerabilityType.VULNERABLE_COMPONENTS,
+        VulnerabilityType.INSUFFICIENT_LOGGING
+      ];
+
+      for (const vulnType of owaspVulnerabilities) {
+        const patterns = registry.getPatterns(vulnType);
+        expect(patterns.length).toBeGreaterThan(0);
+        expect(patterns[0].type).toBe(vulnType);
+      }
     });
 
     it('should filter patterns by language', () => {
@@ -35,8 +57,8 @@ describe('PatternRegistry', () => {
       const tsPatterns = registry.getPatternsByLanguage('typescript');
       const rubyPatterns = registry.getPatternsByLanguage('ruby');
       
-      expect(jsPatterns).toHaveLength(4);
-      expect(tsPatterns).toHaveLength(4);
+      expect(jsPatterns).toHaveLength(12);
+      expect(tsPatterns).toHaveLength(12);
       expect(rubyPatterns).toHaveLength(0);
     });
   });
