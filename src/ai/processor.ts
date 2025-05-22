@@ -1,6 +1,7 @@
 import { IssueContext, IssueProcessingResult, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { analyzeIssue } from './analyzer.js';
+import { SecurityAwareAnalyzer } from './security-analyzer.js';
 import { generateSolution } from './solution.js';
 import { createPullRequest } from '../github/pr.js';
 
@@ -49,9 +50,18 @@ async function processIssue(
   config: ActionConfig
 ): Promise<IssueProcessingResult> {
   try {
-    // Step 1: Analyze the issue with AI
+    // Step 1: Analyze the issue with AI (and security if enabled)
     logger.info(`Analyzing issue #${issue.number}`);
-    const analysisData = await analyzeIssue(issue, config);
+    let analysisData;
+    
+    if (config.enableSecurityAnalysis && shouldUseSecurityAnalysis(issue)) {
+      logger.info(`Using security-aware analysis for issue #${issue.number}`);
+      const securityAnalyzer = new SecurityAwareAnalyzer();
+      const codebaseFiles = extractCodebaseFiles(issue);
+      analysisData = await securityAnalyzer.analyzeWithSecurity(issue, config, codebaseFiles);
+    } else {
+      analysisData = await analyzeIssue(issue, config);
+    }
     
     // Step 2: Generate solution based on analysis
     logger.info(`Generating solution for issue #${issue.number}`);
@@ -87,4 +97,42 @@ async function processIssue(
       error: String(error)
     };
   }
+}
+
+/**
+ * Determine if security analysis should be used for this issue
+ */
+function shouldUseSecurityAnalysis(issue: IssueContext): boolean {
+  const title = issue.title.toLowerCase();
+  const body = issue.body.toLowerCase();
+  const combined = `${title} ${body}`;
+  
+  // Check labels first
+  for (const label of issue.labels) {
+    if (label.toLowerCase().includes('security')) {
+      return true;
+    }
+  }
+  
+  // Check content for security-related keywords
+  const securityKeywords = [
+    'security', 'vulnerability', 'vulnerab', 'exploit', 'attack',
+    'injection', 'xss', 'csrf', 'authentication', 'authorization',
+    'sql injection', 'cross-site', 'insecure', 'hack', 'breach'
+  ];
+  
+  return securityKeywords.some(keyword => combined.includes(keyword));
+}
+
+/**
+ * Extract codebase files from issue context
+ */
+function extractCodebaseFiles(issue: IssueContext): Map<string, string> | undefined {
+  // Try to get files from metadata first
+  if (issue.metadata && issue.metadata.files instanceof Map) {
+    return issue.metadata.files;
+  }
+  
+  // If no files in metadata, return undefined to let SecurityAwareAnalyzer handle it
+  return undefined;
 }

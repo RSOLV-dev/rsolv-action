@@ -9,6 +9,7 @@ export interface ActionConfig {
   aiProvider: AiProviderConfig;
   containerConfig: ContainerConfig;
   securitySettings: SecuritySettings;
+  enableSecurityAnalysis?: boolean;
 }
 
 export interface ActionStatus {

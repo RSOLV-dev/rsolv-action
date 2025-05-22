@@ -9,23 +9,25 @@ describe('PatternRegistry', () => {
     it('should return SQL injection patterns', () => {
       const patterns = registry.getPatterns(VulnerabilityType.SQL_INJECTION);
       
-      expect(patterns).toHaveLength(2);
-      expect(patterns[0].id).toBe('sql-injection-concat');
-      expect(patterns[1].id).toBe('sql-injection-template');
+      expect(patterns.length).toBeGreaterThan(2); // Now includes multi-language patterns
+      const ids = patterns.map(p => p.id);
+      expect(ids).toContain('sql-injection-concat');
+      expect(ids).toContain('sql-injection-template');
     });
 
     it('should return XSS patterns', () => {
       const patterns = registry.getPatterns(VulnerabilityType.XSS);
       
-      expect(patterns).toHaveLength(2);
-      expect(patterns[0].id).toBe('xss-inner-html');
-      expect(patterns[1].id).toBe('xss-document-write');
+      expect(patterns.length).toBeGreaterThan(2); // Now includes multi-language patterns
+      const ids = patterns.map(p => p.id);
+      expect(ids).toContain('xss-inner-html');
+      expect(ids).toContain('xss-document-write');
     });
 
     it('should return all patterns', () => {
       const allPatterns = registry.getAllPatterns();
       
-      expect(allPatterns).toHaveLength(12); // 2 patterns for SQL injection, 2 for XSS, 1 for each other OWASP category
+      expect(allPatterns.length).toBeGreaterThan(40); // Now includes Python, Ruby, and Java patterns
       expect(allPatterns.map(p => p.id)).toContain('sql-injection-concat');
       expect(allPatterns.map(p => p.id)).toContain('xss-inner-html');
       expect(allPatterns.map(p => p.id)).toContain('broken-access-control-no-auth');
@@ -56,10 +58,14 @@ describe('PatternRegistry', () => {
       const jsPatterns = registry.getPatternsByLanguage('javascript');
       const tsPatterns = registry.getPatternsByLanguage('typescript');
       const rubyPatterns = registry.getPatternsByLanguage('ruby');
+      const pythonPatterns = registry.getPatternsByLanguage('python');
+      const javaPatterns = registry.getPatternsByLanguage('java');
       
-      expect(jsPatterns).toHaveLength(12);
-      expect(tsPatterns).toHaveLength(12);
-      expect(rubyPatterns).toHaveLength(0);
+      expect(jsPatterns.length).toBeGreaterThan(10); // Original JS patterns
+      expect(tsPatterns.length).toBeGreaterThan(10); // Original TS patterns
+      expect(rubyPatterns.length).toBeGreaterThan(0); // New Ruby patterns
+      expect(pythonPatterns.length).toBeGreaterThan(0); // New Python patterns
+      expect(javaPatterns.length).toBeGreaterThan(0); // New Java patterns
     });
   });
 

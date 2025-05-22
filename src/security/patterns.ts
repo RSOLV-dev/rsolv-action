@@ -1,4 +1,7 @@
 import { SecurityPattern, VulnerabilityType } from './types.js';
+import { pythonSecurityPatterns } from './patterns/python.js';
+import { rubySecurityPatterns } from './patterns/ruby.js';
+import { javaSecurityPatterns } from './patterns/java.js';
 
 export class PatternRegistry {
   private patterns: Map<VulnerabilityType, SecurityPattern[]> = new Map();
@@ -298,6 +301,53 @@ export class PatternRegistry {
         }
       }
     ]);
+
+    // Add multi-language patterns
+    this.addMultiLanguagePatterns();
+  }
+
+  private addMultiLanguagePatterns(): void {
+    // Add Python patterns
+    for (const pattern of pythonSecurityPatterns) {
+      const existingPatterns = this.patterns.get(pattern.type) || [];
+      existingPatterns.push(this.convertToSecurityPattern(pattern));
+      this.patterns.set(pattern.type, existingPatterns);
+    }
+
+    // Add Ruby patterns  
+    for (const pattern of rubySecurityPatterns) {
+      const existingPatterns = this.patterns.get(pattern.type) || [];
+      existingPatterns.push(this.convertToSecurityPattern(pattern));
+      this.patterns.set(pattern.type, existingPatterns);
+    }
+
+    // Add Java patterns
+    for (const pattern of javaSecurityPatterns) {
+      const existingPatterns = this.patterns.get(pattern.type) || [];
+      existingPatterns.push(this.convertToSecurityPattern(pattern));
+      this.patterns.set(pattern.type, existingPatterns);
+    }
+  }
+
+  private convertToSecurityPattern(pattern: any): SecurityPattern {
+    return {
+      id: pattern.id,
+      type: pattern.type,
+      name: pattern.message,
+      description: pattern.message,
+      patterns: {
+        regex: [pattern.pattern]
+      },
+      severity: pattern.severity,
+      cweId: pattern.cwe,
+      owaspCategory: pattern.owasp,
+      languages: [pattern.language],
+      remediation: pattern.remediation,
+      examples: {
+        vulnerable: 'See pattern documentation',
+        secure: pattern.remediation
+      }
+    };
   }
 
   getPatterns(type: VulnerabilityType): SecurityPattern[] {

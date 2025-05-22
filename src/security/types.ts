@@ -8,7 +8,17 @@ export enum VulnerabilityType {
   SECURITY_MISCONFIGURATION = 'security_misconfiguration',
   INSECURE_DESERIALIZATION = 'insecure_deserialization',
   VULNERABLE_COMPONENTS = 'vulnerable_components',
-  INSUFFICIENT_LOGGING = 'insufficient_logging'
+  INSUFFICIENT_LOGGING = 'insufficient_logging',
+  COMMAND_INJECTION = 'command_injection',
+  PATH_TRAVERSAL = 'path_traversal',
+  WEAK_CRYPTOGRAPHY = 'weak_cryptography',
+  DEBUG_MODE = 'debug_mode',
+  MASS_ASSIGNMENT = 'mass_assignment',
+  OPEN_REDIRECT = 'open_redirect',
+  HARDCODED_SECRETS = 'hardcoded_secrets',
+  XPATH_INJECTION = 'xpath_injection',
+  LDAP_INJECTION = 'ldap_injection',
+  INSECURE_TRANSPORT = 'insecure_transport'
 }
 
 export interface Vulnerability {
