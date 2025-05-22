@@ -190,22 +190,15 @@ export class SecurityAwareAnalyzer {
   }
 
   /**
-   * Placeholder for standard analysis - in real implementation, this would call the existing analyzer
+   * Perform standard AI analysis by importing and calling the existing analyzer
    */
   private async performStandardAnalysis(
     issue: IssueContext,
     config: ActionConfig
   ): Promise<AnalysisData> {
-    // This is a simplified version - in real implementation, 
-    // we would import and call the existing analyzeIssue function
-    return {
-      issueType: this.determineIssueType(issue),
-      filesToModify: [],
-      estimatedComplexity: 'medium',
-      requiredContext: [],
-      suggestedApproach: 'Analyze and fix the reported issue',
-      confidenceScore: 0.7
-    };
+    // Import the existing analyzer dynamically to avoid circular imports
+    const { analyzeIssue } = await import('./analyzer.js');
+    return await analyzeIssue(issue, config);
   }
 
   /**
