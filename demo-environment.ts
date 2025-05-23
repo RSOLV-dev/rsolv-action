@@ -38,6 +38,9 @@ import {
 // Import the context evaluation module for Claude Code
 import { runContextEvaluation } from './src/demo-context-evaluation.js';
 
+// Import Security Demo Environment
+import { SecurityDemoEnvironment } from './src/security-demo.js';
+
 // Create CLI program
 const program = new Command();
 
@@ -610,6 +613,7 @@ async function runDemo() {
   while (running) {
     // Available actions based on current state
     const options = [
+      '🔒 Security Demo Showcase',
       'Get Issue (GitHub or Manual)',
       'Analyze Issue',
       'Generate Solution',
@@ -623,15 +627,16 @@ async function runDemo() {
     
     // Filter options based on state
     const availableOptions = options.filter((_, index) => {
-      if (index === 0) return true; // Always show "Get Issue"
-      if (index === 4) return prNumber !== null; // Show "Simulate Feedback" only if PR exists
-      if (index === 5) return true; // Always show "View Feedback Statistics"
-      if (index === 6) return issueContext !== null; // Show "Test Prompt Enhancement" if issue exists
-      if (index === 7) return true; // Always show "Evaluate Claude Code Context Quality"
-      if (index === 8) return true; // Always show "Exit Demo"
-      if (index === 1) return issueContext !== null; // Show "Analyze Issue" if issue exists
-      if (index === 2) return analysis !== null; // Show "Generate Solution" if analysis exists
-      if (index === 3) return analysis !== null; // Show "Create PR" if analysis exists
+      if (index === 0) return true; // Always show "Security Demo Showcase"
+      if (index === 1) return true; // Always show "Get Issue"
+      if (index === 5) return prNumber !== null; // Show "Simulate Feedback" only if PR exists
+      if (index === 6) return true; // Always show "View Feedback Statistics"
+      if (index === 7) return issueContext !== null; // Show "Test Prompt Enhancement" if issue exists
+      if (index === 8) return true; // Always show "Evaluate Claude Code Context Quality"
+      if (index === 9) return true; // Always show "Exit Demo"
+      if (index === 2) return issueContext !== null; // Show "Analyze Issue" if issue exists
+      if (index === 3) return analysis !== null; // Show "Generate Solution" if analysis exists
+      if (index === 4) return analysis !== null; // Show "Create PR" if analysis exists
       return false;
     });
     
@@ -640,6 +645,10 @@ async function runDemo() {
     
     // Handle selected action
     switch (selectedOption) {
+      case '🔒 Security Demo Showcase':
+        await runSecurityDemoShowcase(rl);
+        break;
+        
       case 'Get Issue (GitHub or Manual)':
         try {
           issueContext = await getIssueContext(rl);
@@ -951,6 +960,272 @@ The solution should include:
   
   // Clean up
   rl.close();
+}
+
+// Security Demo Showcase function
+async function runSecurityDemoShowcase(rl: readline.Interface): Promise<void> {
+  console.log(chalk.blue('\n🔒 RSOLV Security Demo Showcase'));
+  console.log(chalk.gray('Demonstrating security-first vulnerability detection and remediation\n'));
+  
+  const securityDemo = new SecurityDemoEnvironment();
+  
+  const securityOptions = [
+    'Show Security Vulnerability Examples',
+    'Analyze Custom Code for Security Issues',
+    'Demonstrate Three-Tier Security Explanations',
+    'Security Performance Benchmark',
+    'Educational Security Mode',
+    'Export Security Report',
+    'Back to Main Menu'
+  ];
+  
+  let securityRunning = true;
+  while (securityRunning) {
+    console.log(chalk.blue('\n🔒 Security Demo Options:'));
+    const choice = await showMenu(securityOptions, rl);
+    const selectedOption = securityOptions[choice - 1];
+    
+    switch (selectedOption) {
+      case 'Show Security Vulnerability Examples':
+        await showSecurityExamples(securityDemo, rl);
+        break;
+        
+      case 'Analyze Custom Code for Security Issues':
+        await analyzeCustomCode(securityDemo, rl);
+        break;
+        
+      case 'Demonstrate Three-Tier Security Explanations':
+        await demonstrateSecurityExplanations(securityDemo, rl);
+        break;
+        
+      case 'Security Performance Benchmark':
+        await runSecurityBenchmark(securityDemo);
+        break;
+        
+      case 'Educational Security Mode':
+        await showEducationalMode(securityDemo);
+        break;
+        
+      case 'Export Security Report':
+        await exportSecurityReport(securityDemo, rl);
+        break;
+        
+      case 'Back to Main Menu':
+        securityRunning = false;
+        break;
+    }
+    
+    if (securityRunning) {
+      await new Promise<void>((resolve) => {
+        rl.question(chalk.yellow('\nPress Enter to continue...'), () => {
+          resolve();
+        });
+      });
+    }
+  }
+}
+
+// Show security vulnerability examples
+async function showSecurityExamples(securityDemo: SecurityDemoEnvironment, rl: readline.Interface): Promise<void> {
+  console.log(chalk.blue('\n🔍 Security Vulnerability Examples'));
+  
+  const examples = await securityDemo.getDemoExamples();
+  console.log(chalk.cyan(`\nAvailable Examples (${examples.length} total):`));
+  
+  examples.forEach((example, index) => {
+    console.log(`${index + 1}. ${chalk.yellow(example.title)} (${example.category})`);
+    console.log(`   ${chalk.gray(example.description)}`);
+    console.log(`   ${chalk.cyan('Language:')} ${example.language}, ${chalk.cyan('Difficulty:')} ${example.metadata.difficulty}`);
+  });
+  
+  const choice = await new Promise<number>((resolve) => {
+    rl.question(chalk.yellow(`\nSelect example to analyze (1-${examples.length}): `), (answer) => {
+      resolve(parseInt(answer) || 1);
+    });
+  });
+  
+  const selectedExample = examples[choice - 1] || examples[0];
+  console.log(chalk.blue(`\n🔍 Analyzing: ${selectedExample.title}`));
+  
+  // Show the vulnerable code
+  console.log(chalk.red('\n📄 Vulnerable Code:'));
+  console.log(chalk.gray(selectedExample.vulnerableCode));
+  
+  // Run security detection
+  console.log(chalk.blue('\n🔍 Running Security Analysis...'));
+  const result = await securityDemo.demonstrateVulnerabilityDetection(selectedExample);
+  
+  // Display results
+  console.log(chalk.green(`\n✅ Analysis Complete - Found ${result.detectedVulnerabilities.length} vulnerabilities:`));
+  result.detectedVulnerabilities.forEach((vuln, index) => {
+    console.log(`${index + 1}. ${chalk.red(vuln.type)} (${chalk.yellow(vuln.severity)})`);
+    console.log(`   Line ${vuln.lineNumber}: ${chalk.gray(vuln.message)}`);
+  });
+  
+  // Show compliance status
+  console.log(chalk.blue('\n📋 Compliance Status:'));
+  console.log(`OWASP Coverage: ${chalk.cyan(result.complianceReport.owaspCoverage.percentage)}%`);
+  console.log(`Risk Level: ${chalk.yellow(result.complianceReport.summary.compliance.status)}`);
+  
+  // Show CVE correlations
+  console.log(chalk.blue('\n🔗 CVE Intelligence:'));
+  console.log(`Related CVEs: ${chalk.cyan(result.cveCorrelations.totalCves)}`);
+  console.log(`High Severity CVEs: ${chalk.red(result.cveCorrelations.highSeverityCves)}`);
+}
+
+// Analyze custom code
+async function analyzeCustomCode(securityDemo: SecurityDemoEnvironment, rl: readline.Interface): Promise<void> {
+  console.log(chalk.blue('\n📝 Custom Code Security Analysis'));
+  console.log(chalk.gray('Enter your code for security analysis (type "END" on a new line to finish):\n'));
+  
+  let code = '';
+  const lines: string[] = [];
+  
+  const collectCode = (): Promise<void> => {
+    return new Promise((resolve) => {
+      rl.question('> ', (line) => {
+        if (line.trim() === 'END') {
+          code = lines.join('\n');
+          resolve();
+        } else {
+          lines.push(line);
+          collectCode().then(resolve);
+        }
+      });
+    });
+  };
+  
+  await collectCode();
+  
+  if (!code.trim()) {
+    console.log(chalk.red('No code provided.'));
+    return;
+  }
+  
+  const language = await new Promise<string>((resolve) => {
+    rl.question(chalk.yellow('Programming language (javascript/typescript/python/ruby/bash): '), (answer) => {
+      resolve(answer.toLowerCase() || 'javascript');
+    });
+  });
+  
+  console.log(chalk.blue('\n🔍 Analyzing your code for security vulnerabilities...'));
+  const result = await securityDemo.analyzeCustomCode(code, language);
+  
+  console.log(chalk.green(`\n✅ Analysis Complete - Found ${result.vulnerabilities.length} security issues:`));
+  result.vulnerabilities.forEach((vuln, index) => {
+    console.log(`${index + 1}. ${chalk.red(vuln.type)} (${chalk.yellow(vuln.severity)})`);
+    console.log(`   ${chalk.gray(vuln.message)}`);
+  });
+  
+  if (result.recommendations.length > 0) {
+    console.log(chalk.blue('\n💡 Security Recommendations:'));
+    result.recommendations.forEach((rec, index) => {
+      console.log(`${index + 1}. ${chalk.cyan(rec)}`);
+    });
+  }
+}
+
+// Demonstrate three-tier explanations
+async function demonstrateSecurityExplanations(securityDemo: SecurityDemoEnvironment, rl: readline.Interface): Promise<void> {
+  console.log(chalk.blue('\n📚 Three-Tier Security Explanation System'));
+  console.log(chalk.gray('Showing how RSOLV explains security issues at different knowledge levels\n'));
+  
+  const examples = await securityDemo.getDemoExamples();
+  const exampleToUse = examples.find(ex => ex.category === 'sql_injection') || examples[0];
+  
+  console.log(chalk.yellow(`Using example: ${exampleToUse.title}`));
+  console.log(chalk.red('\nVulnerable Code:'));
+  console.log(chalk.gray(exampleToUse.vulnerableCode));
+  
+  const fixDemo = await securityDemo.demonstrateVulnerabilityFix(
+    exampleToUse.vulnerableCode, 
+    exampleToUse.expectedVulnerabilities[0]?.type || 'sql_injection'
+  );
+  
+  console.log(chalk.blue('\n🔧 Secure Fix:'));
+  console.log(chalk.green(fixDemo.secureCode));
+  
+  console.log(chalk.blue('\n📚 Three-Tier Explanations:'));
+  
+  console.log(chalk.cyan('\n1. Line-Level (Developer):'));
+  console.log(chalk.gray(fixDemo.explanation.lineLevel));
+  
+  console.log(chalk.cyan('\n2. Concept-Level (Technical Lead):'));
+  console.log(chalk.gray(fixDemo.explanation.conceptLevel));
+  
+  console.log(chalk.cyan('\n3. Business-Level (Management):'));
+  console.log(chalk.gray(fixDemo.explanation.businessLevel));
+}
+
+// Run security benchmark
+async function runSecurityBenchmark(securityDemo: SecurityDemoEnvironment): Promise<void> {
+  console.log(chalk.blue('\n⚡ Security Performance Benchmark'));
+  console.log(chalk.gray('Testing RSOLV security analysis performance...\n'));
+  
+  const benchmark = await securityDemo.runPerformanceBenchmark();
+  
+  console.log(chalk.green('📊 Benchmark Results:'));
+  console.log(`Total Analysis Time: ${chalk.cyan(benchmark.totalTime)} ms`);
+  console.log(`Vulnerabilities Processed: ${chalk.cyan(benchmark.vulnerabilitiesProcessed)}`);
+  console.log(`Average Time per Vulnerability: ${chalk.cyan(Math.round(benchmark.averageTimePerVulnerability))} ms`);
+  console.log(`Throughput: ${chalk.cyan(benchmark.throughput.toFixed(2))} vulnerabilities/second`);
+  
+  const metrics = await securityDemo.getPerformanceMetrics();
+  console.log(chalk.blue('\n📈 Additional Metrics:'));
+  console.log(`CVE Correlations: ${chalk.cyan(metrics.cveCorrelations)}`);
+  console.log(`Compliance Checks: ${chalk.cyan(metrics.complianceChecks)}`);
+  console.log(`Average Risk Score: ${chalk.cyan(metrics.averageRiskScore.toFixed(1))}`);
+}
+
+// Show educational mode
+async function showEducationalMode(securityDemo: SecurityDemoEnvironment): Promise<void> {
+  console.log(chalk.blue('\n🎓 Educational Security Mode'));
+  console.log(chalk.gray('Interactive security learning exercises\n'));
+  
+  const educationalMode = await securityDemo.enableEducationalMode();
+  
+  console.log(chalk.green('📚 Available Security Exercises:'));
+  educationalMode.interactiveExercises.forEach((exercise, index) => {
+    console.log(`${index + 1}. ${chalk.yellow(exercise.title)}`);
+    console.log(`   ${chalk.gray(exercise.description)}`);
+    console.log(`   Code: ${chalk.cyan(exercise.code)}`);
+    console.log(`   Expected: ${chalk.green(exercise.expectedAnswer)}\n`);
+  });
+  
+  console.log(chalk.blue('🔍 Educational Features:'));
+  console.log(`• Detailed Explanations: ${educationalMode.detailedExplanations ? chalk.green('✓') : chalk.red('✗')}`);
+  console.log(`• Step-by-Step Guidance: ${educationalMode.stepByStepGuidance ? chalk.green('✓') : chalk.red('✗')}`);
+  console.log(`• Interactive Exercises: ${chalk.cyan(educationalMode.interactiveExercises.length)} available`);
+}
+
+// Export security report
+async function exportSecurityReport(securityDemo: SecurityDemoEnvironment, rl: readline.Interface): Promise<void> {
+  console.log(chalk.blue('\n📄 Export Security Report'));
+  
+  const examples = await securityDemo.getDemoExamples();
+  const exampleToUse = examples.find(ex => ex.category === 'mixed') || examples[0];
+  
+  console.log(chalk.yellow(`Generating report for: ${exampleToUse.title}`));
+  
+  const formats = ['markdown', 'json'];
+  const reports = await securityDemo.exportSecurityReport(exampleToUse, formats);
+  
+  console.log(chalk.green('\n✅ Security Report Generated:'));
+  
+  if (reports.markdown) {
+    console.log(chalk.blue('\n📄 Markdown Report:'));
+    console.log(chalk.gray(reports.markdown.substring(0, 500) + '...'));
+  }
+  
+  if (reports.json) {
+    console.log(chalk.blue('\n📊 JSON Report Summary:'));
+    const jsonData = JSON.parse(reports.json);
+    console.log(`Vulnerabilities: ${chalk.cyan(jsonData.summary.totalVulnerabilities)}`);
+    console.log(`Risk Level: ${chalk.yellow(jsonData.summary.riskLevel)}`);
+    console.log(`CVE References: ${chalk.cyan(jsonData.cveIntelligence.totalCves)}`);
+  }
+  
+  console.log(chalk.green('\n💾 Reports would be saved to demo-data/ directory in production.'));
 }
 
 // Main program definition
