@@ -23,6 +23,26 @@ inputs:
     description: 'RSOLV API URL (defaults to production)'
     required: false
     default: 'https://api.rsolv.ai'
+  jira_host:
+    description: 'Jira instance hostname (e.g., your-domain.atlassian.net)'
+    required: false
+  jira_email:
+    description: 'Jira account email for API authentication'
+    required: false
+  jira_api_token:
+    description: 'Jira API token for authentication'
+    required: false
+  jira_autofix_label:
+    description: 'Label to identify Jira issues for automation'
+    required: false
+    default: 'autofix'
+  jira_rsolv_label:
+    description: 'Alternative label to identify Jira issues for automation'
+    required: false
+    default: 'rsolv'
+  jira_jql:
+    description: 'Custom JQL query to find issues (overrides label-based search)'
+    required: false
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -33,3 +53,9 @@ runs:
     RSOLV_ISSUE_LABEL: ${{ inputs.issue_label }}
     RSOLV_ENVIRONMENT_VARIABLES: ${{ inputs.environment_variables }}
     GITHUB_TOKEN: ${{ github.token }}
+    JIRA_HOST: ${{ inputs.jira_host }}
+    JIRA_EMAIL: ${{ inputs.jira_email }}
+    JIRA_API_TOKEN: ${{ inputs.jira_api_token }}
+    JIRA_AUTOFIX_LABEL: ${{ inputs.jira_autofix_label }}
+    JIRA_RSOLV_LABEL: ${{ inputs.jira_rsolv_label }}
+    JIRA_JQL: ${{ inputs.jira_jql }}
