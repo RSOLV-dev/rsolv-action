@@ -20,13 +20,30 @@ export async function detectIssues(config: ActionConfig): Promise<IssueContext[]
     // Get repository details
     const repoDetails = await getRepositoryDetails(owner, repo);
     
-    // Get issues with the automation label
-    const issues = await getIssuesWithLabel(owner, repo, config.issueLabel);
+    // Get issues with either the configured label or 'rsolv' label
+    const labels = [config.issueLabel];
+    if (!config.issueLabel.includes('rsolv')) {
+      labels.push('rsolv');
+    }
     
-    logger.info(`Found ${issues.length} issues with label ${config.issueLabel}`);
+    const allIssues: GitHubIssue[] = [];
+    const seenIds = new Set<number>();
+    
+    // Search for each label
+    for (const label of labels) {
+      const issues = await getIssuesWithLabel(owner, repo, label);
+      for (const issue of issues) {
+        if (!seenIds.has(issue.id)) {
+          seenIds.add(issue.id);
+          allIssues.push(issue);
+        }
+      }
+    }
+    
+    logger.info(`Found ${allIssues.length} issues with labels: ${labels.join(' or ')}`);
     
     // Convert GitHub issues to our internal IssueContext format
-    const issueContexts = issues.map((issue: GitHubIssue) => ({
+    const issueContexts = allIssues.map((issue: GitHubIssue) => ({
       id: `github-${issue.id}`,
       number: issue.number,
       title: issue.title,

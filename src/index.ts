@@ -1,5 +1,6 @@
 import { loadConfig } from './config/index.js';
 import { detectIssues } from './github/issues.js';
+import { detectIssuesFromAllPlatforms } from './platforms/issue-detector.js';
 import { securityCheck } from './utils/security.js';
 import { logger } from './utils/logger.js';
 import { processIssues } from './ai/processor.js';
@@ -23,9 +24,9 @@ async function run(): Promise<ActionStatus> {
     await setupContainer(config);
     logger.info('Analysis container ready');
     
-    // Detect issues for automation
-    const issues = await detectIssues(config);
-    logger.info(`Found ${issues.length} issues for automation`);
+    // Detect issues for automation from all configured platforms
+    const issues = await detectIssuesFromAllPlatforms(config);
+    logger.info(`Found ${issues.length} issues for automation across all platforms`);
     
     if (issues.length === 0) {
       logger.info('No issues to process, exiting');
