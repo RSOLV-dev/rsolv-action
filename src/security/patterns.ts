@@ -313,11 +313,11 @@ export class PatternRegistry {
       existingPatterns.push(this.convertToSecurityPattern(pattern));
       this.patterns.set(pattern.type, existingPatterns);
     }
-
-    // Add Ruby patterns  
+    
+    // Add Ruby patterns (enhanced version with full OWASP coverage)
     for (const pattern of rubySecurityPatterns) {
       const existingPatterns = this.patterns.get(pattern.type) || [];
-      existingPatterns.push(this.convertToSecurityPattern(pattern));
+      existingPatterns.push(pattern); // Already in correct format
       this.patterns.set(pattern.type, existingPatterns);
     }
 

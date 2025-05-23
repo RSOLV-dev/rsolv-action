@@ -1,198 +1,477 @@
 import { SecurityPattern, VulnerabilityType } from '../types.js';
 
 /**
- * Ruby-specific security patterns for vulnerability detection
+ * Ruby-specific security patterns with full OWASP Top 10 coverage
  */
 export const rubySecurityPatterns: SecurityPattern[] = [
-  // SQL Injection patterns
+  // A01:2021 - Broken Access Control
   {
-    id: 'ruby-sql-injection-string-interpolation',
-    type: VulnerabilityType.SQL_INJECTION,
-    pattern: /\.(find_by_sql|execute|exec_query)\s*\(\s*["'`].*#\{.*\}/g,
+    id: 'ruby-broken-access-control-missing-auth',
+    type: VulnerabilityType.BROKEN_ACCESS_CONTROL,
+    name: 'Missing Authentication in Rails Controller',
+    description: 'Detects Rails controllers without authentication filters',
+    patterns: {
+      regex: [
+        /class\s+\w+Controller\s*<\s*ApplicationController(?:(?!before_action|before_filter|authenticate).)*end/gs,
+        /def\s+(admin|delete|update|create)(?:(?!current_user|logged_in|authenticate).)*end/gs
+      ]
+    },
     severity: 'high',
-    message: 'SQL injection vulnerability: String interpolation in SQL queries',
-    remediation: 'Use parameterized queries with ? placeholders or ActiveRecord methods',
-    cwe: 'CWE-89',
-    owasp: 'A03',
-    language: 'ruby'
+    cweId: 'CWE-862',
+    owaspCategory: 'A01:2021 - Broken Access Control',
+    languages: ['ruby'],
+    remediation: 'Add before_action :authenticate_user! to protect sensitive actions',
+    examples: {
+      vulnerable: `class AdminController < ApplicationController
+  def users
+    @users = User.all
+  end
+end`,
+      secure: `class AdminController < ApplicationController
+  before_action :authenticate_user!
+  before_action :require_admin
+  
+  def users
+    @users = User.all
+  end
+end`
+    }
   },
   {
-    id: 'ruby-sql-injection-where-string',
-    type: VulnerabilityType.SQL_INJECTION,
-    pattern: /\.where\s*\(\s*["'`].*#\{.*\}/g,
-    severity: 'high',
-    message: 'SQL injection vulnerability: String interpolation in where clause',
-    remediation: 'Use parameterized where clauses: where("name = ?", name)',
-    cwe: 'CWE-89',
-    owasp: 'A03',
-    language: 'ruby'
-  },
-
-  // Command Injection patterns
-  {
-    id: 'ruby-command-injection-system',
-    type: VulnerabilityType.COMMAND_INJECTION,
-    pattern: /system\s*\(\s*["'`].*#\{.*\}/g,
-    severity: 'critical',
-    message: 'Command injection vulnerability: String interpolation in system()',
-    remediation: 'Use system() with array of arguments or validate input',
-    cwe: 'CWE-78',
-    owasp: 'A03',
-    language: 'ruby'
-  },
-  {
-    id: 'ruby-command-injection-backticks',
-    type: VulnerabilityType.COMMAND_INJECTION,
-    pattern: /`.*#\{.*\}`/g,
-    severity: 'critical',
-    message: 'Command injection vulnerability: String interpolation in backticks',
-    remediation: 'Use Open3.capture3() or system() with array arguments',
-    cwe: 'CWE-78',
-    owasp: 'A03',
-    language: 'ruby'
-  },
-  {
-    id: 'ruby-command-injection-exec',
-    type: VulnerabilityType.COMMAND_INJECTION,
-    pattern: /exec\s*\(\s*["'`].*#\{.*\}/g,
-    severity: 'critical',
-    message: 'Command injection vulnerability: String interpolation in exec()',
-    remediation: 'Use exec() with array of arguments or validate input',
-    cwe: 'CWE-78',
-    owasp: 'A03',
-    language: 'ruby'
-  },
-
-  // Deserialization vulnerabilities
-  {
-    id: 'ruby-unsafe-marshal-load',
-    type: VulnerabilityType.INSECURE_DESERIALIZATION,
-    pattern: /Marshal\.load/g,
-    severity: 'critical',
-    message: 'Insecure deserialization: Marshal.load can execute arbitrary code',
-    remediation: 'Use JSON.parse or implement custom deserialization with validation',
-    cwe: 'CWE-502',
-    owasp: 'A08',
-    language: 'ruby'
-  },
-  {
-    id: 'ruby-unsafe-yaml-load',
-    type: VulnerabilityType.INSECURE_DESERIALIZATION,
-    pattern: /YAML\.load(?!_file|_stream)/g,
-    severity: 'high',
-    message: 'Insecure deserialization: YAML.load can execute arbitrary code',
-    remediation: 'Use YAML.safe_load for untrusted input',
-    cwe: 'CWE-502',
-    owasp: 'A08',
-    language: 'ruby'
-  },
-  {
-    id: 'ruby-unsafe-eval',
-    type: VulnerabilityType.INSECURE_DESERIALIZATION,
-    pattern: /\beval\s*\(/g,
-    severity: 'critical',
-    message: 'Code injection vulnerability: eval() can execute arbitrary code',
-    remediation: 'Avoid eval() or use safe evaluation libraries',
-    cwe: 'CWE-95',
-    owasp: 'A03',
-    language: 'ruby'
-  },
-
-  // Path Traversal
-  {
-    id: 'ruby-path-traversal-file-read',
-    type: VulnerabilityType.PATH_TRAVERSAL,
-    pattern: /File\.(read|open)\s*\(\s*.*#\{.*\}/g,
-    severity: 'medium',
-    message: 'Path traversal vulnerability: Unsanitized file paths in File operations',
-    remediation: 'Validate and sanitize file paths, use File.join() safely',
-    cwe: 'CWE-22',
-    owasp: 'A01',
-    language: 'ruby'
-  },
-
-  // Rails-specific vulnerabilities
-  {
-    id: 'ruby-rails-mass-assignment',
+    id: 'ruby-mass-assignment',
     type: VulnerabilityType.MASS_ASSIGNMENT,
-    pattern: /\.(create|update|update_attributes)\s*\(\s*params\[/g,
+    name: 'Mass Assignment Vulnerability',
+    description: 'Detects unfiltered params in model operations',
+    patterns: {
+      regex: [
+        /\.(create|update|update_attributes|assign_attributes)\s*\(\s*params(?!\s*\.\s*(require|permit))/g,
+        /User\.new\s*\(\s*params\[/g
+      ]
+    },
     severity: 'high',
-    message: 'Mass assignment vulnerability: Unfiltered params in model operations',
-    remediation: 'Use strong parameters with permit() to whitelist attributes',
-    cwe: 'CWE-915',
-    owasp: 'A04',
-    language: 'ruby'
-  },
-  {
-    id: 'ruby-rails-redirect-to-params',
-    type: VulnerabilityType.OPEN_REDIRECT,
-    pattern: /redirect_to\s+params\[/g,
-    severity: 'medium',
-    message: 'Open redirect vulnerability: Unvalidated redirect_to with params',
-    remediation: 'Validate redirect URLs against whitelist of allowed domains',
-    cwe: 'CWE-601',
-    owasp: 'A01',
-    language: 'ruby'
+    cweId: 'CWE-915',
+    owaspCategory: 'A01:2021 - Broken Access Control',
+    languages: ['ruby'],
+    remediation: 'Use strong parameters: params.require(:user).permit(:name, :email)',
+    examples: {
+      vulnerable: 'User.create(params[:user])',
+      secure: 'User.create(user_params) # with private user_params method using permit()'
+    }
   },
 
-  // XSS in ERB templates
+  // A02:2021 - Cryptographic Failures
   {
-    id: 'ruby-erb-raw-output',
-    type: VulnerabilityType.XSS,
-    pattern: /<%=\s*raw\s+.*%>/g,
-    severity: 'medium',
-    message: 'XSS vulnerability: Using raw() in ERB templates',
-    remediation: 'Use html_safe only for trusted content, or sanitize with sanitize()',
-    cwe: 'CWE-79',
-    owasp: 'A03',
-    language: 'ruby'
-  },
-  {
-    id: 'ruby-erb-html-safe',
-    type: VulnerabilityType.XSS,
-    pattern: /<%=.*\.html_safe\s*%>/g,
-    severity: 'medium',
-    message: 'Potential XSS vulnerability: html_safe in ERB template',
-    remediation: 'Ensure content is properly escaped before using html_safe',
-    cwe: 'CWE-79',
-    owasp: 'A03',
-    language: 'ruby'
-  },
-
-  // Weak cryptography
-  {
-    id: 'ruby-weak-hash-md5',
+    id: 'ruby-weak-crypto-md5',
     type: VulnerabilityType.WEAK_CRYPTOGRAPHY,
-    pattern: /Digest::MD5/g,
+    name: 'Weak Cryptography - MD5',
+    description: 'MD5 is cryptographically broken and should not be used',
+    patterns: {
+      regex: [
+        /Digest::MD5/g,
+        /OpenSSL::Digest::MD5/g,
+        /\.md5\(/g
+      ]
+    },
     severity: 'medium',
-    message: 'Weak cryptography: MD5 is cryptographically broken',
-    remediation: 'Use Digest::SHA256 or Digest::SHA3 for cryptographic hashing',
-    cwe: 'CWE-327',
-    owasp: 'A02',
-    language: 'ruby'
+    cweId: 'CWE-327',
+    owaspCategory: 'A02:2021 - Cryptographic Failures',
+    languages: ['ruby'],
+    remediation: 'Use SHA-256 or SHA-3: Digest::SHA256.hexdigest(data)',
+    examples: {
+      vulnerable: 'password_hash = Digest::MD5.hexdigest(password)',
+      secure: 'password_hash = BCrypt::Password.create(password)'
+    }
   },
   {
-    id: 'ruby-weak-hash-sha1',
-    type: VulnerabilityType.WEAK_CRYPTOGRAPHY,
-    pattern: /Digest::SHA1/g,
-    severity: 'medium',
-    message: 'Weak cryptography: SHA-1 is deprecated for security purposes',
-    remediation: 'Use Digest::SHA256 or Digest::SHA3 for cryptographic hashing',
-    cwe: 'CWE-327',
-    owasp: 'A02',
-    language: 'ruby'
-  },
-
-  // Hardcoded secrets
-  {
-    id: 'ruby-hardcoded-secret-key',
+    id: 'ruby-hardcoded-secrets',
     type: VulnerabilityType.HARDCODED_SECRETS,
-    pattern: /secret_key_base\s*=\s*["'`][a-f0-9]{64,}/g,
+    name: 'Hardcoded Secrets',
+    description: 'Detects hardcoded passwords, API keys, and secrets',
+    patterns: {
+      regex: [
+        /(?:password|passwd|pwd|secret|api_key|apikey|token|private_key)\s*[:=]\s*["'][^"']{8,}/gi,
+        /secret_key_base\s*=\s*["'][a-f0-9]{32,}/gi,
+        /AWS_SECRET_ACCESS_KEY\s*=\s*["'][A-Za-z0-9/+=]{40}/g
+      ]
+    },
     severity: 'critical',
-    message: 'Hardcoded secret: Rails secret_key_base in source code',
-    remediation: 'Use environment variables or Rails credentials for secrets',
-    cwe: 'CWE-798',
-    owasp: 'A07',
-    language: 'ruby'
+    cweId: 'CWE-798',
+    owaspCategory: 'A02:2021 - Cryptographic Failures',
+    languages: ['ruby'],
+    remediation: 'Use environment variables: ENV["SECRET_KEY"] or Rails credentials',
+    examples: {
+      vulnerable: 'API_KEY = "sk_live_abcd1234efgh5678"',
+      secure: 'API_KEY = ENV.fetch("API_KEY")'
+    }
+  },
+
+  // A03:2021 - Injection
+  {
+    id: 'ruby-sql-injection-interpolation',
+    type: VulnerabilityType.SQL_INJECTION,
+    name: 'SQL Injection via String Interpolation',
+    description: 'Detects SQL injection through string interpolation',
+    patterns: {
+      regex: [
+        /\.(find_by_sql|execute|exec_query|select_all|select_one|select_rows)\s*\(\s*["'`].*?#\{[^}]+\}/g,
+        /\.where\s*\(\s*["'`].*?#\{[^}]+\}/g,
+        /\.order\s*\(\s*["'`].*?#\{[^}]+\}/g
+      ]
+    },
+    severity: 'critical',
+    cweId: 'CWE-89',
+    owaspCategory: 'A03:2021 - Injection',
+    languages: ['ruby'],
+    remediation: 'Use parameterized queries: where("name = ?", user_input)',
+    examples: {
+      vulnerable: 'User.where("name = \'#{params[:name]}\'")',
+      secure: 'User.where("name = ?", params[:name])'
+    }
+  },
+  {
+    id: 'ruby-command-injection',
+    type: VulnerabilityType.COMMAND_INJECTION,
+    name: 'Command Injection',
+    description: 'Detects OS command injection vulnerabilities',
+    patterns: {
+      regex: [
+        /(?:system|exec|spawn|%x)\s*\(\s*["'`].*?#\{[^}]+\}/g,
+        /`[^`]*#\{[^}]+\}[^`]*`/g,
+        /IO\.popen\s*\(\s*["'`].*?#\{[^}]+\}/g
+      ]
+    },
+    severity: 'critical',
+    cweId: 'CWE-78',
+    owaspCategory: 'A03:2021 - Injection',
+    languages: ['ruby'],
+    remediation: 'Use array form: system("echo", user_input) or Open3.capture3',
+    examples: {
+      vulnerable: 'system("echo #{user_input}")',
+      secure: 'system("echo", user_input)'
+    }
+  },
+  {
+    id: 'ruby-xpath-injection',
+    type: VulnerabilityType.XPATH_INJECTION,
+    name: 'XPath Injection',
+    description: 'Detects XPath injection vulnerabilities',
+    patterns: {
+      regex: [
+        /\.xpath\s*\(\s*["'`].*?#\{[^}]+\}/g,
+        /Nokogiri.*?\.xpath\s*\(\s*["'`].*?#\{[^}]+\}/g
+      ]
+    },
+    severity: 'high',
+    cweId: 'CWE-643',
+    owaspCategory: 'A03:2021 - Injection',
+    languages: ['ruby'],
+    remediation: 'Sanitize input or use parameterized XPath queries',
+    examples: {
+      vulnerable: 'doc.xpath("//user[name=\'#{name}\']")',
+      secure: 'doc.xpath("//user[name=$name]", nil, name: name)'
+    }
+  },
+  {
+    id: 'ruby-ldap-injection',
+    type: VulnerabilityType.LDAP_INJECTION,
+    name: 'LDAP Injection',
+    description: 'Detects LDAP injection vulnerabilities',
+    patterns: {
+      regex: [
+        /Net::LDAP.*?filter.*?#\{[^}]+\}/g,
+        /\bfilter\s*=.*?#\{[^}]+\}/g
+      ]
+    },
+    severity: 'high',
+    cweId: 'CWE-90',
+    owaspCategory: 'A03:2021 - Injection',
+    languages: ['ruby'],
+    remediation: 'Use Net::LDAP::Filter.escape() to sanitize input',
+    examples: {
+      vulnerable: 'filter = "(uid=#{username})"',
+      secure: 'filter = "(uid=#{Net::LDAP::Filter.escape(username)})"'
+    }
+  },
+
+  // A04:2021 - Insecure Design
+  {
+    id: 'ruby-weak-random',
+    type: VulnerabilityType.WEAK_CRYPTOGRAPHY,
+    name: 'Weak Random Number Generation',
+    description: 'Using predictable random number generation',
+    patterns: {
+      regex: [
+        /\brand\s*\(/g,
+        /Random\.rand(?!\s*\(\s*SecureRandom)/g,
+        /\bsrand\s*\(/g
+      ]
+    },
+    severity: 'medium',
+    cweId: 'CWE-330',
+    owaspCategory: 'A04:2021 - Insecure Design',
+    languages: ['ruby'],
+    remediation: 'Use SecureRandom for security-sensitive randomness',
+    examples: {
+      vulnerable: 'token = rand(1000000)',
+      secure: 'token = SecureRandom.hex(16)'
+    }
+  },
+
+  // A05:2021 - Security Misconfiguration
+  {
+    id: 'ruby-debug-mode-enabled',
+    type: VulnerabilityType.DEBUG_MODE,
+    name: 'Debug Mode Enabled',
+    description: 'Debug mode exposes sensitive information',
+    patterns: {
+      regex: [
+        /config\.consider_all_requests_local\s*=\s*true/g,
+        /\bbyebug\b/g,
+        /\bdebugger\b/g,
+        /binding\.pry/g
+      ]
+    },
+    severity: 'medium',
+    cweId: 'CWE-489',
+    owaspCategory: 'A05:2021 - Security Misconfiguration',
+    languages: ['ruby'],
+    remediation: 'Remove debug statements and disable debug mode in production',
+    examples: {
+      vulnerable: 'config.consider_all_requests_local = true',
+      secure: 'config.consider_all_requests_local = false'
+    }
+  },
+
+  // A06:2021 - Vulnerable and Outdated Components
+  {
+    id: 'ruby-eval-usage',
+    type: VulnerabilityType.VULNERABLE_COMPONENTS,
+    name: 'Use of eval()',
+    description: 'eval() can execute arbitrary code',
+    patterns: {
+      regex: [
+        /\beval\s*\(/g,
+        /instance_eval/g,
+        /class_eval/g,
+        /module_eval/g
+      ]
+    },
+    severity: 'high',
+    cweId: 'CWE-95',
+    owaspCategory: 'A06:2021 - Vulnerable and Outdated Components',
+    languages: ['ruby'],
+    remediation: 'Avoid eval() or validate/sanitize input thoroughly',
+    examples: {
+      vulnerable: 'eval(user_input)',
+      secure: 'send(method_name) if allowed_methods.include?(method_name)'
+    }
+  },
+
+  // A07:2021 - Identification and Authentication Failures
+  {
+    id: 'ruby-weak-password-storage',
+    type: VulnerabilityType.BROKEN_AUTHENTICATION,
+    name: 'Weak Password Storage',
+    description: 'Passwords stored without proper hashing',
+    patterns: {
+      regex: [
+        /password\s*=\s*Digest::(MD5|SHA1)/g,
+        /user\.password\s*=\s*params/g,
+        /password.*?\.downcase(?!.*bcrypt)/g
+      ]
+    },
+    severity: 'critical',
+    cweId: 'CWE-256',
+    owaspCategory: 'A07:2021 - Identification and Authentication Failures',
+    languages: ['ruby'],
+    remediation: 'Use BCrypt for password hashing',
+    examples: {
+      vulnerable: 'user.password = Digest::SHA1.hexdigest(params[:password])',
+      secure: 'user.password = BCrypt::Password.create(params[:password])'
+    }
+  },
+
+  // A08:2021 - Software and Data Integrity Failures
+  {
+    id: 'ruby-unsafe-deserialization-marshal',
+    type: VulnerabilityType.INSECURE_DESERIALIZATION,
+    name: 'Unsafe Deserialization with Marshal',
+    description: 'Marshal.load can execute arbitrary code',
+    patterns: {
+      regex: [
+        /Marshal\.load/g,
+        /Marshal\.restore/g
+      ]
+    },
+    severity: 'critical',
+    cweId: 'CWE-502',
+    owaspCategory: 'A08:2021 - Software and Data Integrity Failures',
+    languages: ['ruby'],
+    remediation: 'Use JSON or MessagePack for serialization',
+    examples: {
+      vulnerable: 'data = Marshal.load(user_input)',
+      secure: 'data = JSON.parse(user_input)'
+    }
+  },
+  {
+    id: 'ruby-unsafe-yaml',
+    type: VulnerabilityType.INSECURE_DESERIALIZATION,
+    name: 'Unsafe YAML Loading',
+    description: 'YAML.load can execute arbitrary code',
+    patterns: {
+      regex: [
+        /YAML\.load(?!_file|_stream)/g,
+        /Psych\.load(?!_file|_stream)/g
+      ]
+    },
+    severity: 'high',
+    cweId: 'CWE-502',
+    owaspCategory: 'A08:2021 - Software and Data Integrity Failures',
+    languages: ['ruby'],
+    remediation: 'Use YAML.safe_load for untrusted input',
+    examples: {
+      vulnerable: 'config = YAML.load(user_input)',
+      secure: 'config = YAML.safe_load(user_input)'
+    }
+  },
+
+  // A09:2021 - Security Logging and Monitoring Failures
+  {
+    id: 'ruby-insufficient-logging',
+    type: VulnerabilityType.INSUFFICIENT_LOGGING,
+    name: 'Insufficient Security Logging',
+    description: 'Missing logging for security-relevant events',
+    patterns: {
+      regex: [
+        /rescue\s*(?:Exception|StandardError)?\s*(?:=>)?\s*\w*\s*\n\s*end/g,
+        /rescue\s*\n\s*nil\s*\n\s*end/g
+      ]
+    },
+    severity: 'low',
+    cweId: 'CWE-778',
+    owaspCategory: 'A09:2021 - Security Logging and Monitoring Failures',
+    languages: ['ruby'],
+    remediation: 'Log security events and errors appropriately',
+    examples: {
+      vulnerable: `rescue => e
+  nil
+end`,
+      secure: `rescue => e
+  Rails.logger.error "Security event: #{e.message}"
+  raise
+end`
+    }
+  },
+
+  // A10:2021 - Server-Side Request Forgery (SSRF)
+  {
+    id: 'ruby-ssrf-open-uri',
+    type: VulnerabilityType.OPEN_REDIRECT,
+    name: 'SSRF via open-uri',
+    description: 'Unvalidated URLs in open() can lead to SSRF',
+    patterns: {
+      regex: [
+        /open\s*\(\s*params/g,
+        /URI\.open\s*\(\s*params/g,
+        /Net::HTTP\.get.*params/g
+      ]
+    },
+    severity: 'high',
+    cweId: 'CWE-918',
+    owaspCategory: 'A10:2021 - Server-Side Request Forgery',
+    languages: ['ruby'],
+    remediation: 'Validate URLs against allowlist before making requests',
+    examples: {
+      vulnerable: 'data = open(params[:url]).read',
+      secure: 'data = open(validate_url(params[:url])).read'
+    }
+  },
+
+  // Additional Ruby-specific patterns
+  {
+    id: 'ruby-xss-erb-raw',
+    type: VulnerabilityType.XSS,
+    name: 'XSS in ERB Templates',
+    description: 'Using raw() or html_safe without sanitization',
+    patterns: {
+      regex: [
+        /<%=\s*raw\s+/g,
+        /\.html_safe(?!.*sanitize)/g,
+        /<%==\s*\w+/g
+      ]
+    },
+    severity: 'medium',
+    cweId: 'CWE-79',
+    owaspCategory: 'A03:2021 - Injection',
+    languages: ['ruby'],
+    remediation: 'Use Rails sanitize helpers or escape output by default',
+    examples: {
+      vulnerable: '<%= raw user_content %>',
+      secure: '<%= sanitize user_content %>'
+    }
+  },
+  {
+    id: 'ruby-path-traversal',
+    type: VulnerabilityType.PATH_TRAVERSAL,
+    name: 'Path Traversal',
+    description: 'Unvalidated file paths can access unauthorized files',
+    patterns: {
+      regex: [
+        /File\.(read|open|new)\s*\([^)]*params/g,
+        /send_file\s*\([^)]*params/g,
+        /Dir\.\w+\s*\([^)]*params/g
+      ]
+    },
+    severity: 'high',
+    cweId: 'CWE-22',
+    owaspCategory: 'A01:2021 - Broken Access Control',
+    languages: ['ruby'],
+    remediation: 'Validate and sanitize file paths, use File.expand_path with checks',
+    examples: {
+      vulnerable: 'File.read("uploads/#{params[:file]}")',
+      secure: 'File.read(Rails.root.join("uploads", File.basename(params[:file])))'
+    }
+  },
+  {
+    id: 'ruby-open-redirect',
+    type: VulnerabilityType.OPEN_REDIRECT,
+    name: 'Open Redirect',
+    description: 'Unvalidated redirects can lead to phishing',
+    patterns: {
+      regex: [
+        /redirect_to\s+params/g,
+        /redirect_to\s+request\.(referrer|referer)/g
+      ]
+    },
+    severity: 'medium',
+    cweId: 'CWE-601',
+    owaspCategory: 'A01:2021 - Broken Access Control',
+    languages: ['ruby'],
+    remediation: 'Validate redirect URLs against an allowlist',
+    examples: {
+      vulnerable: 'redirect_to params[:return_to]',
+      secure: 'redirect_to safe_redirect_path(params[:return_to]) || root_path'
+    }
+  },
+  {
+    id: 'ruby-insecure-cookie',
+    type: VulnerabilityType.SECURITY_MISCONFIGURATION,
+    name: 'Insecure Cookie Configuration',
+    description: 'Cookies without secure flags',
+    patterns: {
+      regex: [
+        /cookies\[.*?\]\s*=(?!.*secure:\s*true)/g,
+        /session\[.*?\]\s*=(?!.*secure:\s*true)/g
+      ]
+    },
+    severity: 'medium',
+    cweId: 'CWE-614',
+    owaspCategory: 'A05:2021 - Security Misconfiguration',
+    languages: ['ruby'],
+    remediation: 'Set secure: true and httponly: true for cookies',
+    examples: {
+      vulnerable: 'cookies[:auth_token] = token',
+      secure: 'cookies[:auth_token] = { value: token, secure: true, httponly: true }'
+    }
   }
 ];
