@@ -12,7 +12,7 @@ RSOLV is a GitHub Action that helps software development teams address their mai
 - 🤖 Uses AI to analyze issues and generate solutions
 - 🛡️ Runs in a secure, containerized environment
 - 🔀 Creates pull requests with detailed descriptions
-- 🔗 Supports external issue trackers (Jira, Linear)
+- 🔗 Supports external issue trackers (Jira, Linear, GitLab coming soon)
 - 🔐 Secure by design - no source code leaves your repository
 - 🔑 Single API key - no AI provider accounts needed
 
@@ -147,6 +147,43 @@ The following environment variables can be used to configure the action:
 - `RSOLV_CONFIG_PATH`: Path to the configuration file (default: `.github/rsolv.yml`)
 - `RSOLV_ISSUE_LABEL`: Label to identify issues for automation (default: `rsolv:automate`)
 - `RSOLV_ENVIRONMENT_VARIABLES`: JSON string of environment variables to pass to the container
+
+## External Issue Trackers
+
+RSOLV supports multiple issue tracking platforms beyond GitHub Issues:
+
+### Jira Integration
+
+```bash
+# Set Jira credentials
+export JIRA_HOST="your-domain.atlassian.net"
+export JIRA_EMAIL="your-email@example.com"
+export JIRA_API_TOKEN="your-jira-api-token"
+
+# Optional: Custom labels (defaults shown)
+export JIRA_AUTOFIX_LABEL="autofix"
+export JIRA_RSOLV_LABEL="rsolv"
+```
+
+See [Jira Integration Guide](docs/jira-integration.md) for detailed setup.
+
+### Linear Integration
+
+```bash
+# Set Linear API key
+export LINEAR_API_KEY="lin_api_YOUR_KEY_HERE"
+
+# Optional: Team ID and custom labels
+export LINEAR_TEAM_ID="your-team-id"
+export LINEAR_AUTOFIX_LABEL="autofix"
+export LINEAR_RSOLV_LABEL="rsolv"
+```
+
+See [Linear Integration Guide](docs/linear-integration.md) for detailed setup.
+
+### GitLab Integration (Coming Soon)
+
+GitLab issue tracking integration is under development.
 
 ## Development
 

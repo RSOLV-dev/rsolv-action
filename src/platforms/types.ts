@@ -4,15 +4,16 @@
 export interface UnifiedIssue {
   id: string;
   platform: 'github' | 'jira' | 'linear' | 'gitlab';
-  key?: string; // Platform-specific key (e.g., PROJ-123 for Jira)
+  key?: string; // Platform-specific key (e.g., PROJ-123 for Jira, ENG-123 for Linear)
   title: string;
   description: string;
   labels: string[];
   status: string;
+  statusCategory?: 'todo' | 'in_progress' | 'done';
   url: string;
   createdAt: Date;
   updatedAt: Date;
-  assignee?: {
+  assignee?: string | {
     id: string;
     name: string;
     email?: string;
@@ -30,40 +31,53 @@ export interface UnifiedIssue {
   customFields?: Record<string, any>;
 }
 
+export interface IssueComment {
+  id: string;
+  body: string;
+  author: string;
+  createdAt: Date;
+}
+
+export interface IssueLink {
+  id: string;
+  url: string;
+  title: string;
+  type: string;
+}
+
 /**
  * Platform adapter interface
  */
 export interface PlatformAdapter {
   /**
-   * Authenticate with the platform
+   * Search for issues with rsolv/autofix labels
    */
-  authenticate(): Promise<void>;
-
-  /**
-   * Search for issues matching criteria
-   * @param query Platform-specific query (e.g., JQL for Jira)
-   */
-  searchIssues(query: string): Promise<UnifiedIssue[]>;
+  searchRsolvIssues(): Promise<UnifiedIssue[]>;
 
   /**
    * Get a single issue by ID
    */
-  getIssue(id: string): Promise<UnifiedIssue>;
+  getIssue(issueId: string): Promise<UnifiedIssue | null>;
 
   /**
    * Add a comment to an issue
    */
-  addComment(issueId: string, comment: string): Promise<void>;
+  createComment(issueId: string, body: string): Promise<IssueComment | null>;
+
+  /**
+   * Add a link to an issue
+   */
+  addLink(issueId: string, url: string, title?: string): Promise<IssueLink | null>;
 
   /**
    * Update issue status
    */
-  updateStatus(issueId: string, status: string): Promise<void>;
+  updateIssueStatus(issueId: string, status: string): Promise<boolean>;
 
   /**
-   * Link an external URL (like a PR) to an issue
+   * Add a label to an issue
    */
-  linkExternalResource(issueId: string, url: string, title: string): Promise<void>;
+  addLabel(issueId: string, labelName: string): Promise<boolean>;
 }
 
 /**
@@ -79,6 +93,7 @@ export interface PlatformConfig {
   };
   linear?: {
     apiKey: string;
+    teamId?: string;
     autofixLabel?: string;
     rsolvLabel?: string;
   };

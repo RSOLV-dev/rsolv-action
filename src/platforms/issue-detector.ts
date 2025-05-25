@@ -30,9 +30,15 @@ export async function detectIssuesFromAllPlatforms(config: ActionConfig): Promis
     }
   }
   
-  // Check Linear if configured (future)
+  // Check Linear if configured
   if (process.env.LINEAR_API_KEY) {
-    logger.info('Linear integration not yet implemented');
+    try {
+      const linearIssues = await detectLinearIssues(config);
+      allIssues.push(...linearIssues);
+      logger.info(`Found ${linearIssues.length} Linear issues`);
+    } catch (error) {
+      logger.error('Error detecting Linear issues', error);
+    }
   }
   
   // Check GitLab if configured (future)
@@ -58,7 +64,7 @@ async function detectJiraIssues(config: ActionConfig): Promise<IssueContext[]> {
     }
   };
   
-  const adapter = await PlatformFactory.createAndAuthenticate('jira', platformConfig) as any;
+  const adapter = PlatformFactory.create('jira', platformConfig);
   
   // Use custom JQL if provided, otherwise search for both labels
   let jiraIssues: UnifiedIssue[];
@@ -76,6 +82,28 @@ async function detectJiraIssues(config: ActionConfig): Promise<IssueContext[]> {
 }
 
 /**
+ * Detect Linear issues
+ */
+async function detectLinearIssues(config: ActionConfig): Promise<IssueContext[]> {
+  const platformConfig: PlatformConfig = {
+    linear: {
+      apiKey: process.env.LINEAR_API_KEY!,
+      teamId: process.env.LINEAR_TEAM_ID,
+      autofixLabel: process.env.LINEAR_AUTOFIX_LABEL || 'autofix',
+      rsolvLabel: process.env.LINEAR_RSOLV_LABEL || 'rsolv'
+    }
+  };
+  
+  const adapter = PlatformFactory.create('linear', platformConfig);
+  const linearIssues = await adapter.searchRsolvIssues();
+  
+  logger.info(`Found ${linearIssues.length} Linear issues with rsolv/autofix labels`);
+  
+  // Convert Linear issues to IssueContext format
+  return linearIssues.map(issue => convertToIssueContext(issue));
+}
+
+/**
  * Convert UnifiedIssue to IssueContext format
  */
 function convertToIssueContext(issue: UnifiedIssue): IssueContext {
@@ -90,7 +118,7 @@ function convertToIssueContext(issue: UnifiedIssue): IssueContext {
     title: issue.title,
     body: issue.description,
     labels: issue.labels,
-    assignees: issue.assignee ? [issue.assignee.name] : [],
+    assignees: issue.assignee ? [typeof issue.assignee === 'string' ? issue.assignee : issue.assignee.name] : [],
     repository: repoInfo || {
       owner: 'unknown',
       name: 'unknown',
