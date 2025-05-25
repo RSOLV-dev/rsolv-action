@@ -1,4 +1,5 @@
 import { JiraAdapter } from './jira/jira-adapter';
+import { LinearAdapter } from './linear/linear-adapter';
 import type { PlatformAdapter, PlatformConfig } from './types';
 
 export class PlatformFactory {
@@ -11,7 +12,10 @@ export class PlatformFactory {
         return new JiraAdapter(config.jira);
       
       case 'linear':
-        throw new Error('Linear integration not yet implemented');
+        if (!config.linear) {
+          throw new Error('Linear configuration is required');
+        }
+        return new LinearAdapter(config.linear);
       
       case 'gitlab':
         throw new Error('GitLab integration not yet implemented');
@@ -21,9 +25,4 @@ export class PlatformFactory {
     }
   }
 
-  static async createAndAuthenticate(platform: string, config: PlatformConfig): Promise<PlatformAdapter> {
-    const adapter = this.create(platform, config);
-    await adapter.authenticate();
-    return adapter;
-  }
 }
