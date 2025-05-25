@@ -33,8 +33,8 @@ config :rsolv_api, :credentials,
 
 # Email configuration (for expert reviews)
 config :rsolv_api, RSOLV.Mailer,
-  adapter: Bamboo.SendGridAdapter,
-  api_key: System.get_env("SENDGRID_API_KEY")
+  adapter: Bamboo.PostmarkAdapter,
+  api_key: System.get_env("POSTMARK_API_KEY")
 
 # Logger configuration
 config :logger, :console,
