@@ -7,6 +7,8 @@ aiProvider:
   model: "claude-3-opus-20240229"
   maxTokens: 4096
   temperature: 0.3
+  useVendedCredentials: true
+  vendingApiUrl: "https://api.rsolv.dev"
 
 # Container Configuration - Disabled for GitHub Actions
 containerConfig:
