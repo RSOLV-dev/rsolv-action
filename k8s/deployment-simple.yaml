@@ -14,24 +14,18 @@ spec:
         app: rsolv-api
     spec:
       imagePullSecrets:
-      - name: regcred
+      - name: ghcr-secret
       containers:
       - name: rsolv-api
-        image: ghcr.io/rsolv-dev/rsolv-api:simple
+        image: ghcr.io/rsolv-dev/rsolv-api:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 4000
         env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: rsolv-api-secrets
-              key: database-url
-        - name: SECRET_KEY_BASE
-          valueFrom:
-            secretKeyRef:
-              name: rsolv-api-secrets
-              key: secret-key-base
+        - name: PORT
+          value: "4000"
+        - name: NODE_ENV
+          value: "production"
         - name: ANTHROPIC_API_KEY
           valueFrom:
             secretKeyRef:
@@ -47,34 +41,30 @@ spec:
             secretKeyRef:
               name: rsolv-api-secrets
               key: openrouter-api-key
-        - name: PHX_HOST
-          value: "api.rsolv.ai"
-        - name: PORT
-          value: "4000"
-        - name: POSTMARK_API_KEY
+        - name: MASTER_API_KEY
           valueFrom:
             secretKeyRef:
               name: rsolv-api-secrets
-              key: postmark-api-key
+              key: secret-key-base  # Reuse this as master key
         livenessProbe:
           httpGet:
             path: /health
             port: 4000
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /health
             port: 4000
-          initialDelaySeconds: 10
+          initialDelaySeconds: 5
           periodSeconds: 5
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
+            memory: "128Mi"
+            cpu: "50m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "200m"
 ---
 apiVersion: v1
 kind: Service
