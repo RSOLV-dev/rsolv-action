@@ -96,15 +96,15 @@ metadata:
   name: rsolv-api-ingress
   namespace: default
   annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   tls:
   - hosts:
-    - api.rsolv.ai
-    secretName: api-rsolv-ai-tls
+    - api.rsolv.dev
+    secretName: api-rsolv-dev-tls
   rules:
-  - host: api.rsolv.ai
+  - host: api.rsolv.dev
     http:
       paths:
       - path: /

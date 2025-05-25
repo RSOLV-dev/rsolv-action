@@ -1,5 +1,5 @@
 # Use official Elixir image
-FROM elixir:1.15-alpine AS builder
+FROM elixir:1.15-alpine AS deps
 
 # Install build dependencies
 RUN apk add --no-cache build-base git
@@ -16,18 +16,28 @@ COPY mix.exs mix.lock ./
 COPY config config
 
 # Install dependencies
-RUN mix deps.get --only prod && \
-    mix deps.compile
+RUN mix deps.get --only prod
+
+# Dependencies compilation stage
+FROM deps AS deps-compiled
+RUN mix deps.compile
+
+# Builder stage
+FROM deps-compiled AS builder
 
 # Copy source code
 COPY lib lib
 COPY priv priv
 
-# Compile the application
+# Use parallel compilation
+ENV ERL_FLAGS="+JPperf true"
+ENV ELIXIR_MAKE_CACHE_DIR=/app/.make_cache
+
+# Compile the application with optimizations
 RUN MIX_ENV=prod mix compile
 
-# Build release
-RUN MIX_ENV=prod mix release
+# Build release with optimizations
+RUN MIX_ENV=prod mix release --overwrite
 
 # Final stage - minimal runtime image
 FROM alpine:3.19
