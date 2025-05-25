@@ -1,0 +1,17 @@
+{
+  "name": "rsolv-api",
+  "version": "1.0.0",
+  "description": "RSOLV API Service",
+  "main": "simple-api.js",
+  "scripts": {
+    "start": "node simple-api.js",
+    "dev": "node simple-api.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
