@@ -52,7 +52,7 @@ runs:
     RSOLV_CONFIG_PATH: ${{ inputs.config_path }}
     RSOLV_ISSUE_LABEL: ${{ inputs.issue_label }}
     RSOLV_ENVIRONMENT_VARIABLES: ${{ inputs.environment_variables }}
-    GITHUB_TOKEN: ${{ github.token }}
+    # GITHUB_TOKEN should be passed from the workflow env
     JIRA_HOST: ${{ inputs.jira_host }}
     JIRA_EMAIL: ${{ inputs.jira_email }}
     JIRA_API_TOKEN: ${{ inputs.jira_api_token }}
