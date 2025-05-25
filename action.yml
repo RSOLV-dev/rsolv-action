@@ -43,6 +43,14 @@ inputs:
   jira_jql:
     description: 'Custom JQL query to find issues (overrides label-based search)'
     required: false
+  mode:
+    description: 'Operation mode: full (default) or analyze-only'
+    required: false
+    default: 'full'
+  enable_security_analysis:
+    description: 'Enable security vulnerability analysis'
+    required: false
+    default: 'true'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -59,3 +67,14 @@ runs:
     JIRA_AUTOFIX_LABEL: ${{ inputs.jira_autofix_label }}
     JIRA_RSOLV_LABEL: ${{ inputs.jira_rsolv_label }}
     JIRA_JQL: ${{ inputs.jira_jql }}
+    RSOLV_MODE: ${{ inputs.mode }}
+    RSOLV_ENABLE_SECURITY_ANALYSIS: ${{ inputs.enable_security_analysis }}
+outputs:
+  has_issues:
+    description: 'Whether issues were found for processing'
+  security_findings:
+    description: 'Security vulnerabilities found in JSON format'
+  educational_content:
+    description: 'Educational explanation of the issues and fixes'
+  issue_analysis:
+    description: 'Full analysis of the issues in JSON format'
