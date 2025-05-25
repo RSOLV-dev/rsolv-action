@@ -17,13 +17,9 @@ RUN bun run build || echo "No build script, running TypeScript directly"
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Set up secure environment with proper permissions
-RUN addgroup --system rsolv && adduser --system --group rsolv && \
-    chown -R rsolv:rsolv /app && \
-    mkdir -p /github/workspace && \
-    chown -R rsolv:rsolv /github
-
-# Switch to non-root user
-USER rsolv
+# Set up permissions for GitHub Actions runtime
+RUN mkdir -p /github/workspace && \
+    chmod 777 /github/workspace && \
+    chmod 777 /app
 
 ENTRYPOINT ["/entrypoint.sh"]
