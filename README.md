@@ -16,6 +16,29 @@ RSOLV is a GitHub Action that helps software development teams address their mai
 - 🔐 Secure by design - no source code leaves your repository
 - 🔑 Single API key - no AI provider accounts needed
 
+## Security Features
+
+RSOLV provides comprehensive security analysis and remediation:
+
+- **80+ Security Patterns**: Detects vulnerabilities across JavaScript/TypeScript, Python, Ruby, Java, and Bash
+- **OWASP Top 10 Coverage**: Complete coverage of the most critical web application security risks
+- **Framework-Specific Patterns**: Specialized detection for React, Node.js, Express, Next.js, Electron, and React Native
+- **Real-Time Detection**: Analyzes code changes for security vulnerabilities during issue processing
+- **Compliance Documentation**: Generates SOC2, PCI-DSS, ISO27001, GDPR, and HIPAA compliance evidence
+- **Educational Explanations**: Every fix includes tiered explanations to help teams learn and prevent future issues
+
+### Supported Security Patterns
+
+- **Injection**: SQL, NoSQL, Command, LDAP, Template, and XPath injection detection
+- **XSS**: React dangerouslySetInnerHTML, innerHTML, document.write patterns
+- **Authentication**: JWT vulnerabilities, weak sessions, missing auth checks
+- **Access Control**: Missing authorization, CSRF, unvalidated redirects
+- **Cryptographic Failures**: Weak encryption, hardcoded secrets, insecure storage
+- **Misconfiguration**: CORS, security headers, debug mode exposure
+- **Vulnerable Components**: Outdated dependencies, dangerous functions
+- **SSRF**: Server-side request forgery with DNS rebinding protection
+- **And more**: Path traversal, prototype pollution, XXE, and deserialization
+
 ## Installation
 
 Add the following to your workflow file:
