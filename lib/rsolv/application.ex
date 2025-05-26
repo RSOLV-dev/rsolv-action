@@ -16,6 +16,8 @@ defmodule RSOLV.Application do
       {Phoenix.PubSub, name: RSOLV.PubSub},
       # Start Cachex
       {Cachex, name: :rsolv_cache},
+      # Start the Notifications supervisor
+      RSOLV.Notifications.Supervisor,
       # Start the Endpoint (http/https)
       RSOLVWeb.Endpoint
       # Start a worker by calling: RSOLV.Worker.start_link(arg)

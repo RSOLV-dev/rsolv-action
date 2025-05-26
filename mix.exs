@@ -43,7 +43,10 @@ defmodule RSOLV.MixProject do
       {:timex, "~> 3.7"},
       {:quantum, "~> 3.5"},
       {:cachex, "~> 3.6"},
-      {:ex_rated, "~> 2.1"}
+      {:ex_rated, "~> 2.1"},
+      {:httpoison, "~> 2.0"},
+      {:tesla, "~> 1.4"},
+      {:hackney, "~> 1.18"}
     ]
   end
 

@@ -25,6 +25,11 @@ defmodule RSOLVWeb.Router do
     post "/review/request", ReviewController, :create
     get "/review/:review_id", ReviewController, :show
     post "/review/:review_id/comment", ReviewController, :add_comment
+    
+    # Educational component endpoints
+    post "/education/fix-completed", EducationController, :fix_completed
+    get "/education/track-click/:alert_id", EducationController, :track_click
+    get "/education/metrics", EducationController, :metrics
   end
 
   # Webhook endpoint for GitHub
