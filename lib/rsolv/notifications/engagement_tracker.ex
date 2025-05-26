@@ -30,7 +30,7 @@ defmodule RSOLV.Notifications.EngagementTracker do
   @doc """
   Get engagement metrics for reporting
   """
-  def get_metrics(time_range \\\\ :week) do
+  def get_metrics(time_range \\ :week) do
     GenServer.call(__MODULE__, {:get_metrics, time_range})
   end
 

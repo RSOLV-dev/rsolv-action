@@ -1,20 +1,12 @@
 defmodule RSOLV.Notifications.AlertThrottle do
   @moduledoc """
   Manages alert throttling to prevent notification fatigue.
-  Uses Cachex for distributed throttle management.
+  Uses the existing rsolv_cache for distributed throttle management.
   """
 
-  @cache_name :alert_throttle_cache
+  # Use the existing cache instead of creating a new one
+  @cache_name :rsolv_cache
   @ttl :timer.hours(24)
-
-  def start_link(_opts) do
-    Cachex.start_link(@cache_name, [
-      expiration: [
-        default: @ttl,
-        interval: :timer.minutes(5)
-      ]
-    ])
-  end
 
   @doc """
   Checks if an alert can be sent for the given repository.

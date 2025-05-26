@@ -30,6 +30,8 @@ defmodule RSOLVWeb.Router do
     post "/education/fix-completed", EducationController, :fix_completed
     get "/education/track-click/:alert_id", EducationController, :track_click
     get "/education/metrics", EducationController, :metrics
+    get "/education/debug", EducationController, :debug
+    get "/education/test-slack", EducationController, :test_slack
   end
 
   # Webhook endpoint for GitHub

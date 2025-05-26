@@ -12,7 +12,7 @@ defmodule RSOLV.Notifications.Supervisor do
   @impl true
   def init(_init_arg) do
     children = [
-      {RSOLV.Notifications.AlertThrottle, []},
+      # AlertThrottle now uses the existing cache, no need to supervise
       {RSOLV.Notifications.EngagementTracker, []}
     ]
 

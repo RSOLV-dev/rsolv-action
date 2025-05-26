@@ -21,10 +21,13 @@ defmodule RSOLV.Notifications.SlackIntegration do
   Returns {:ok, message_id} or {:error, reason}
   """
   def send_fix_alert(%FixAlert{} = alert) do
+    Logger.info("Starting send_fix_alert for #{alert.repo_name}")
+    
     with {:ok, _} <- check_throttle(alert.repo_name),
          {:ok, message} <- format_alert_message(alert),
          {:ok, response} <- post_to_slack(message),
          {:ok, _} <- track_engagement(alert, response) do
+      Logger.info("Successfully sent Slack alert")
       {:ok, response}
     else
       {:error, :throttle_exceeded} ->
@@ -35,6 +38,10 @@ defmodule RSOLV.Notifications.SlackIntegration do
         Logger.error("Failed to send Slack alert: #{inspect(error)}")
         error
     end
+  rescue
+    e ->
+      Logger.error("Exception in send_fix_alert: #{inspect(e)}")
+      {:error, e}
   end
 
   @doc """
@@ -196,7 +203,7 @@ defmodule RSOLV.Notifications.SlackIntegration do
           {:error, "HTTP error: #{reason}"}
       end
     else
-      Logger.warn("Slack webhook URL not configured")
+      Logger.warning("Slack webhook URL not configured")
       {:error, :webhook_not_configured}
     end
   end

@@ -8,6 +8,48 @@ defmodule RSOLVWeb.EducationController do
   require Logger
 
   @doc """
+  Debug endpoint to check Slack configuration
+  
+  GET /api/education/debug
+  """
+  def debug(conn, _params) do
+    webhook_configured = System.get_env("SLACK_WEBHOOK_URL") != nil
+    webhook_length = if webhook_configured, do: String.length(System.get_env("SLACK_WEBHOOK_URL")), else: 0
+    
+    json(conn, %{
+      webhook_configured: webhook_configured,
+      webhook_length: webhook_length,
+      env_keys: System.get_env() |> Map.keys() |> Enum.filter(&String.contains?(&1, "SLACK"))
+    })
+  end
+
+  @doc """
+  Simple test endpoint for Slack
+  
+  GET /api/education/test-slack
+  """
+  def test_slack(conn, _params) do
+    webhook_url = System.get_env("SLACK_WEBHOOK_URL")
+    
+    if webhook_url do
+      body = Jason.encode!(%{text: "Test from RSOLV API endpoint"})
+      
+      case HTTPoison.post(webhook_url, body, [{"Content-Type", "application/json"}]) do
+        {:ok, %{status_code: 200}} ->
+          json(conn, %{success: true, message: "Sent to Slack!"})
+        
+        {:ok, %{status_code: code, body: response_body}} ->
+          json(conn, %{success: false, error: "Slack returned #{code}: #{response_body}"})
+        
+        {:error, error} ->
+          json(conn, %{success: false, error: "HTTP error: #{inspect(error)}"})
+      end
+    else
+      json(conn, %{success: false, error: "Webhook not configured"})
+    end
+  end
+
+  @doc """
   Receives a fix notification from RSOLV-action and triggers educational content generation.
   
   POST /api/education/fix-completed
@@ -47,8 +89,11 @@ defmodule RSOLVWeb.EducationController do
     }
     
     # Send Slack notification
+    Logger.info("Attempting to send Slack notification for #{repo_name}")
+    
     case SlackIntegration.send_fix_alert(alert) do
       {:ok, _response} ->
+        Logger.info("Successfully sent Slack notification")
         # In production, we'd also:
         # 1. Store the fix in our knowledge base
         # 2. Trigger async educational content generation
@@ -61,6 +106,7 @@ defmodule RSOLVWeb.EducationController do
         })
       
       {:error, :throttled} ->
+        Logger.info("Slack notification throttled")
         json(conn, %{
           success: true,
           message: "Fix recorded (notification throttled)",
@@ -75,7 +121,8 @@ defmodule RSOLVWeb.EducationController do
         |> put_status(:internal_server_error)
         |> json(%{
           success: false,
-          error: "Failed to send notification"
+          error: "Failed to send notification",
+          details: inspect(reason)
         })
     end
   end
