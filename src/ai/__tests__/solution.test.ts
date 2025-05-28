@@ -1,71 +1,92 @@
 import { describe, expect, test, mock } from 'bun:test';
 import { generateSolution } from '../solution.js';
-import { IssueContext } from '../../types.js';
-import { AIConfig, IssueAnalysis } from '../types.js';
+import { IssueContext, ActionConfig, AnalysisData } from '../../types/index.js';
 
 // Mock the AI client
 mock.module('../client', () => {
   return {
-    getAIClient: () => ({
-      generateSolution: async () => ({
-        title: 'Fix: Update error handling in component',
-        description: 'This PR fixes the error handling in the component',
-        files: [
-          {
-            path: 'src/component.ts',
-            changes: 'Updated component code with better error handling'
-          },
-          {
-            path: 'src/util.ts',
-            changes: 'Added validation functions'
-          }
-        ],
-        tests: ['Test error handling', 'Test validation']
-      })
+    getAiClient: () => ({
+      complete: async () => `Here's the solution:
+
+--- src/component.ts ---
+\`\`\`
+Updated component code with better error handling
+\`\`\`
+
+--- src/util.ts ---
+\`\`\`
+Added validation functions
+\`\`\`
+
+This fixes the error handling in the component.`
     })
   };
 });
+
+// Mock the GitHub files module
+mock.module('../../github/files', () => ({
+  getRepositoryFiles: async () => ({
+    'src/component.ts': '// Original component code',
+    'src/util.ts': '// Original util code'
+  })
+}));
 
 describe('Solution Generator', () => {
   test('generateSolution should return solution from AI client', async () => {
     const issueContext: IssueContext = {
       id: '123',
+      number: 123,
       source: 'github',
       title: 'Test Issue',
       body: 'This is a test issue description',
       labels: ['bug', 'AUTOFIX'],
+      assignees: [],
       repository: {
         owner: 'test-owner',
         name: 'test-repo',
-        branch: 'main'
+        fullName: 'test-owner/test-repo',
+        defaultBranch: 'main',
+        language: 'JavaScript'
       },
-      metadata: {},
-      url: 'https://github.com/test-owner/test-repo/issues/123'
+      createdAt: '2023-01-01T00:00:00Z',
+      updatedAt: '2023-01-01T00:00:00Z'
     };
     
-    const analysis: IssueAnalysis = {
-      summary: 'Test summary',
-      complexity: 'medium',
-      estimatedTime: 45,
-      potentialFixes: ['Fix 1', 'Fix 2'],
-      recommendedApproach: 'Fix 1',
-      relatedFiles: ['src/component.ts', 'src/util.ts'],
-      requiredChanges: ['Update error handling', 'Add validation']
+    const analysis: AnalysisData = {
+      issueType: 'bug',
+      filesToModify: ['src/component.ts', 'src/util.ts'],
+      estimatedComplexity: 'medium',
+      requiredContext: [],
+      suggestedApproach: 'Fix error handling',
+      canBeFixed: true,
+      confidenceScore: 0.8
     };
     
-    const aiConfig: AIConfig = {
-      provider: 'anthropic',
-      apiKey: 'test-api-key'
+    const config: ActionConfig = {
+      apiKey: 'test-api-key',
+      configPath: '.github/rsolv.yml',
+      issueLabel: 'rsolv',
+      aiProvider: {
+        provider: 'anthropic',
+        apiKey: 'test-api-key',
+        model: 'claude-3-sonnet'
+      },
+      containerConfig: {
+        enabled: false
+      },
+      securitySettings: {
+        disableNetworkAccess: true
+      }
     };
     
-    const solution = await generateSolution(issueContext, analysis, aiConfig);
+    const solution = await generateSolution(issueContext, analysis, config);
     
     expect(solution).toBeDefined();
-    expect(solution.title).toBe('Fix: Update error handling in component');
-    expect(solution.description).toContain('fixes the error handling');
-    expect(solution.files).toHaveLength(2);
-    expect(solution.files[0].path).toBe('src/component.ts');
-    expect(solution.files[1].path).toBe('src/util.ts');
-    expect(solution.tests).toContain('Test error handling');
+    expect(solution.success).toBe(true);
+    expect(solution.message).toBeDefined();
+    expect(solution.changes).toBeDefined();
+    expect(solution.changes!['src/component.ts']).toBeDefined();
+    expect(solution.changes!['src/util.ts']).toBeDefined();
+    expect(solution.changes!['src/component.ts']).toContain('Updated component code');
   });
 });

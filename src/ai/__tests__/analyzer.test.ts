@@ -1,24 +1,31 @@
 import { describe, expect, test, mock } from 'bun:test';
 import { analyzeIssue } from '../analyzer.js';
-import { IssueContext } from '../../types.js';
-import { AIConfig } from '../types.js';
+import { IssueContext, ActionConfig } from '../../types.js';
 
 // Mock the AI client
 mock.module('../client', () => {
   return {
-    getAIClient: () => ({
-      analyzeIssue: async () => ({
-        summary: 'Test summary',
-        complexity: 'medium' as const,
-        estimatedTime: 45,
-        potentialFixes: ['Fix 1', 'Fix 2'],
-        recommendedApproach: 'Fix 1',
-        relatedFiles: ['src/component.ts', 'src/util.ts'],
-        requiredChanges: ['Update error handling', 'Add validation']
-      })
+    getAiClient: () => ({
+      complete: async () => `This is a bug issue.
+
+Files to modify:
+- \`src/component.ts\`
+- \`src/util.ts\`
+
+This is a moderate issue that requires updating error handling.
+
+Suggested Approach: Fix 1 - Update the error handling in the component to properly catch exceptions.`
     })
   };
 });
+
+// Mock the security detector
+mock.module('../../security/index', () => ({
+  SecurityDetector: class {
+    analyzeText = () => ({ vulnerabilities: [] });
+    analyzeCode = () => ({ vulnerabilities: [] });
+  }
+}));
 
 describe('Issue Analyzer', () => {
   test('analyzeIssue should return analysis from AI client', async () => {
@@ -37,19 +44,42 @@ describe('Issue Analyzer', () => {
       url: 'https://github.com/test-owner/test-repo/issues/123'
     };
     
-    const aiConfig: AIConfig = {
-      provider: 'anthropic',
-      apiKey: 'test-api-key'
+    const config: ActionConfig = {
+      aiProvider: {
+        type: 'anthropic',
+        apiKey: 'test-api-key',
+        model: 'claude-3-opus-20240229',
+        temperature: 0.2,
+        maxTokens: 2000,
+        useVendedCredentials: false
+      },
+      skipTests: false,
+      enableSecurity: false,
+      enableReflection: false,
+      enableDeepAnalysis: false,
+      maxFilesToProcess: 10,
+      skipPR: false,
+      dryRun: false,
+      reviewers: [],
+      labels: [],
+      prTemplatePath: undefined,
+      baseBranch: 'main',
+      workingBranch: 'fix/test-issue',
+      token: 'test-token',
+      repo: 'test-repo',
+      owner: 'test-owner',
+      issueNumber: 123
     };
     
-    const analysis = await analyzeIssue(issueContext, aiConfig);
+    const analysis = await analyzeIssue(issueContext, config);
     
     expect(analysis).toBeDefined();
-    expect(analysis.summary).toBe('Test summary');
-    expect(analysis.complexity).toBe('medium');
-    expect(analysis.estimatedTime).toBe(45);
-    expect(analysis.potentialFixes).toContain('Fix 1');
-    expect(analysis.relatedFiles).toContain('src/component.ts');
-    expect(analysis.requiredChanges).toContain('Update error handling');
+    expect(analysis.issueType).toBe('bug');
+    expect(analysis.estimatedComplexity).toBe('medium');
+    expect(analysis.filesToModify).toContain('src/component.ts');
+    expect(analysis.filesToModify).toContain('src/util.ts');
+    expect(analysis.suggestedApproach).toBe('Fix 1 - Update the error handling in the component to properly catch exceptions.');
+    expect(analysis.confidenceScore).toBe(0.7);
+    expect(analysis.canBeFixed).toBe(true);
   });
 });
