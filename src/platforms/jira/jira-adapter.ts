@@ -1,4 +1,6 @@
-import type { PlatformAdapter, UnifiedIssue } from '../types';
+import type { UnifiedIssue, IssueComment, IssueLink } from '../types.js';
+import { BasePlatformAdapter } from '../base-adapter.js';
+import { logger } from '../../utils/logger.js';
 
 export interface JiraConfig {
   host: string;
@@ -31,166 +33,192 @@ export interface JiraIssue {
   };
 }
 
-export class JiraAdapter implements PlatformAdapter {
+export class JiraAdapter extends BasePlatformAdapter {
   private baseUrl: string;
   private authHeader: string;
-  private autofixLabel: string;
-  private rsolvLabel: string;
 
   constructor(private config: JiraConfig) {
+    super(config);
+    this.validateConfig(config, ['host', 'email', 'apiToken']);
     this.baseUrl = `https://${config.host}/rest/api/3`;
     this.authHeader = `Basic ${Buffer.from(`${config.email}:${config.apiToken}`).toString('base64')}`;
-    this.autofixLabel = config.autofixLabel || 'autofix';
-    this.rsolvLabel = config.rsolvLabel || 'rsolv';
+  }
+
+  protected getAuthHeaders(): Record<string, string> {
+    return {
+      'Authorization': this.authHeader,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    };
   }
 
   async authenticate(): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/myself`, {
-      headers: {
-        'Authorization': this.authHeader,
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to authenticate with Jira: ${response.status} ${response.statusText}`);
+    try {
+      await this.makeRequest(`${this.baseUrl}/myself`);
+      logger.info('Successfully authenticated with Jira');
+    } catch (error) {
+      throw new Error(this.formatError('Jira authentication', error));
     }
   }
 
   async searchIssues(query: string): Promise<UnifiedIssue[]> {
-    const response = await fetch(`${this.baseUrl}/search`, {
-      method: 'POST',
-      headers: {
-        'Authorization': this.authHeader,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        jql: query,
-        fields: ['summary', 'description', 'labels', 'status', 'created', 'updated', 'assignee', 'reporter']
-      })
-    });
+    try {
+      const response = await this.makeRequest(`${this.baseUrl}/search`, {
+        method: 'POST',
+        body: JSON.stringify({
+          jql: query,
+          fields: ['summary', 'description', 'labels', 'status', 'created', 'updated', 'assignee', 'reporter']
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to search Jira issues: ${response.status} ${response.statusText}`);
+      const data = await response.json();
+      return data.issues.map((issue: JiraIssue) => this.convertToUnifiedIssue(issue));
+    } catch (error) {
+      throw new Error(this.formatError('Jira issue search', error));
     }
-
-    const data = await response.json();
-    return data.issues.map((issue: JiraIssue) => this.convertToUnifiedIssue(issue));
   }
 
-  async getIssue(id: string): Promise<UnifiedIssue> {
-    const response = await fetch(`${this.baseUrl}/issue/${id}`, {
-      headers: {
-        'Authorization': this.authHeader,
-        'Accept': 'application/json'
+  async getIssue(issueId: string): Promise<UnifiedIssue | null> {
+    try {
+      const extractedId = this.extractIssueId(issueId);
+      const response = await this.makeRequest(`${this.baseUrl}/issue/${extractedId}`);
+      const issue = await response.json();
+      return this.convertToUnifiedIssue(issue);
+    } catch (error: any) {
+      if (error.message?.includes('404')) {
+        return null;
       }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get Jira issue: ${response.status} ${response.statusText}`);
-    }
-
-    const issue = await response.json();
-    return this.convertToUnifiedIssue(issue);
-  }
-
-  async addComment(issueId: string, comment: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/issue/${issueId}/comment`, {
-      method: 'POST',
-      headers: {
-        'Authorization': this.authHeader,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        body: {
-          type: 'doc',
-          version: 1,
-          content: [
-            {
-              type: 'paragraph',
-              content: [
-                {
-                  type: 'text',
-                  text: comment
-                }
-              ]
-            }
-          ]
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to add comment to Jira issue: ${response.status} ${response.statusText}`);
+      throw new Error(this.formatError('Get Jira issue', error));
     }
   }
 
-  async updateStatus(issueId: string, status: string): Promise<void> {
-    // First, get available transitions
-    const transitionsResponse = await fetch(`${this.baseUrl}/issue/${issueId}/transitions`, {
-      headers: {
-        'Authorization': this.authHeader,
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!transitionsResponse.ok) {
-      throw new Error(`Failed to get transitions: ${transitionsResponse.status} ${transitionsResponse.statusText}`);
-    }
-
-    const { transitions } = await transitionsResponse.json();
-    const transition = transitions.find((t: any) => t.name === status);
-
-    if (!transition) {
-      throw new Error(`Status '${status}' not available for issue ${issueId}`);
-    }
-
-    // Update the status
-    const response = await fetch(`${this.baseUrl}/issue/${issueId}/transitions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': this.authHeader,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        transition: { id: transition.id }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to update Jira issue status: ${response.status} ${response.statusText}`);
-    }
-  }
-
-  async linkExternalResource(issueId: string, url: string, title: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/issue/${issueId}/remotelink`, {
-      method: 'POST',
-      headers: {
-        'Authorization': this.authHeader,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        object: {
-          url,
-          title,
-          icon: {
-            url16x16: url.includes('github.com') ? 'https://github.com/favicon.ico' : undefined,
-            title: url.includes('github.com') ? 'GitHub Pull Request' : 'External Link'
+  async createComment(issueId: string, body: string): Promise<IssueComment | null> {
+    try {
+      const extractedId = this.extractIssueId(issueId);
+      const response = await this.makeRequest(`${this.baseUrl}/issue/${extractedId}/comment`, {
+        method: 'POST',
+        body: JSON.stringify({
+          body: {
+            type: 'doc',
+            version: 1,
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: body
+                  }
+                ]
+              }
+            ]
           }
-        }
-      })
-    });
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to link external resource: ${response.status} ${response.statusText}`);
+      const comment = await response.json();
+      return {
+        id: comment.id,
+        body: body,
+        author: comment.author?.displayName || 'Unknown',
+        createdAt: new Date(comment.created)
+      };
+    } catch (error) {
+      logger.error('Failed to create Jira comment', error);
+      return null;
     }
   }
 
-  private convertToUnifiedIssue(jiraIssue: JiraIssue): UnifiedIssue {
+  async updateIssueStatus(issueId: string, status: string): Promise<boolean> {
+    try {
+      const extractedId = this.extractIssueId(issueId);
+      
+      // First, get available transitions
+      const transitionsResponse = await this.makeRequest(`${this.baseUrl}/issue/${extractedId}/transitions`);
+      const { transitions } = await transitionsResponse.json();
+      const transition = transitions.find((t: any) => t.name === status);
+
+      if (!transition) {
+        logger.warn(`Status '${status}' not available for issue ${issueId}`);
+        return false;
+      }
+
+      // Update the status
+      await this.makeRequest(`${this.baseUrl}/issue/${extractedId}/transitions`, {
+        method: 'POST',
+        body: JSON.stringify({
+          transition: { id: transition.id }
+        })
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Failed to update Jira issue status', error);
+      return false;
+    }
+  }
+
+  async addLink(issueId: string, url: string, title?: string): Promise<IssueLink | null> {
+    try {
+      const extractedId = this.extractIssueId(issueId);
+      const linkTitle = title || url;
+      
+      const response = await this.makeRequest(`${this.baseUrl}/issue/${extractedId}/remotelink`, {
+        method: 'POST',
+        body: JSON.stringify({
+          object: {
+            url,
+            title: linkTitle,
+            icon: {
+              url16x16: url.includes('github.com') ? 'https://github.com/favicon.ico' : undefined,
+              title: url.includes('github.com') ? 'GitHub Pull Request' : 'External Link'
+            }
+          }
+        })
+      });
+
+      const link = await response.json();
+      return {
+        id: link.id,
+        url: url,
+        title: linkTitle,
+        type: 'external'
+      };
+    } catch (error) {
+      logger.error('Failed to add link to Jira issue', error);
+      return null;
+    }
+  }
+
+  async addLabel(issueId: string, labelName: string): Promise<boolean> {
+    try {
+      const extractedId = this.extractIssueId(issueId);
+      
+      // First get the current issue to preserve existing labels
+      const issueResponse = await this.makeRequest(`${this.baseUrl}/issue/${extractedId}?fields=labels`);
+      const issue = await issueResponse.json();
+      const currentLabels = issue.fields.labels || [];
+      
+      // Add the new label if it doesn't exist
+      if (!currentLabels.includes(labelName)) {
+        await this.makeRequest(`${this.baseUrl}/issue/${extractedId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            fields: {
+              labels: [...currentLabels, labelName]
+            }
+          })
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      logger.error('Failed to add label to Jira issue', error);
+      return false;
+    }
+  }
+
+  protected convertToUnifiedIssue(jiraIssue: JiraIssue): UnifiedIssue {
     return {
       id: jiraIssue.id,
       platform: 'jira',
