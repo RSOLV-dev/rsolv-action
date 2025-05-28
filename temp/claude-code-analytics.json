@@ -1,0 +1,58 @@
+[
+  {
+    "startTime": 1748457384638,
+    "issueId": "test-issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 14,
+    "endTime": 1748457384664
+  },
+  {
+    "startTime": 1748457738365,
+    "issueId": "test-issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 12,
+    "endTime": 1748457738379
+  },
+  {
+    "startTime": 1748457738892,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 22,
+    "endTime": 1748457738938
+  },
+  {
+    "startTime": 1748457738939,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 20,
+    "endTime": 1748457738983
+  },
+  {
+    "startTime": 1748458646224,
+    "issueId": "test-issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 12,
+    "endTime": 1748458646239
+  },
+  {
+    "startTime": 1748458646842,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 22,
+    "endTime": 1748458646889
+  },
+  {
+    "startTime": 1748458646890,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 20,
+    "endTime": 1748458646934
+  }
+]

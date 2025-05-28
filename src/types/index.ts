@@ -71,6 +71,7 @@ export interface AnalysisData {
   suggestedApproach: string;
   codeSnippets?: Record<string, string>;
   confidenceScore?: number;
+  canBeFixed?: boolean;
 }
 
 export type IssueType = 

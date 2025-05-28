@@ -141,26 +141,26 @@ async function processIssue(
       solution = await generateSolution(issue, analysisData, config);
     }
     
-    if (!solution || solution.files.length === 0) {
+    if (!solution || !solution.success || !solution.changes || Object.keys(solution.changes).length === 0) {
       return {
         issueId: issue.id,
         success: false,
-        message: 'No solution generated'
+        message: solution?.message || 'No solution generated'
       };
     }
     
     // Step 3: Create pull request
     logger.info(`Creating pull request for issue #${issue.number}`);
-    const prUrl = await createPullRequest(issue, solution, config);
+    const prResult = await createPullRequest(issue, solution.changes!, analysisData, config);
     
     const processingTime = Date.now() - startTime;
     
     return {
       issueId: issue.id,
-      success: true,
-      pullRequestUrl: prUrl,
-      message: 'Successfully processed issue and created pull request',
-      processingTime,
+      success: prResult.success,
+      pullRequestUrl: prResult.pullRequestUrl,
+      message: prResult.message,
+      analysisData,
       contextGatheringTime,
       deepContext: options.verboseLogging ? deepContext : undefined,
       enhancedSolution: options.enableEnhancedContext,

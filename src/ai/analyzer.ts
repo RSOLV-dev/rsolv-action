@@ -87,7 +87,8 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
       estimatedComplexity,
       requiredContext: [],
       suggestedApproach,
-      confidenceScore: 0.7
+      confidenceScore: 0.7,
+      canBeFixed: filesToModify.length > 0 && suggestedApproach.length > 0
     };
   } catch (error) {
     logger.error('Error parsing AI analysis response', error);
@@ -98,7 +99,8 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
       filesToModify: [],
       estimatedComplexity: 'medium',
       requiredContext: [],
-      suggestedApproach: 'Unable to determine approach from AI analysis.'
+      suggestedApproach: 'Unable to determine approach from AI analysis.',
+      canBeFixed: false
     };
   }
 }
