@@ -1,5 +1,6 @@
-import { PlatformAdapter, UnifiedIssue, IssueComment, IssueLink } from '../types';
-import { logger } from '../../utils/logger';
+import { UnifiedIssue, IssueComment, IssueLink } from '../types.js';
+import { BasePlatformAdapter } from '../base-adapter.js';
+import { logger } from '../../utils/logger.js';
 
 interface LinearIssue {
   id: string;
@@ -41,41 +42,41 @@ interface LinearConfig {
   rsolvLabel?: string;
 }
 
-export class LinearAdapter implements PlatformAdapter {
+export class LinearAdapter extends BasePlatformAdapter {
   private apiKey: string;
   private baseUrl = 'https://api.linear.app/graphql';
   private teamId?: string;
-  private autofixLabel: string;
-  private rsolvLabel: string;
 
   constructor(config: LinearConfig) {
+    super(config);
+    this.validateConfig(config, ['apiKey']);
     this.apiKey = config.apiKey;
     this.teamId = config.teamId;
-    this.autofixLabel = config.autofixLabel || 'autofix';
-    this.rsolvLabel = config.rsolvLabel || 'rsolv';
+  }
+
+  protected getAuthHeaders(): Record<string, string> {
+    return {
+      'Authorization': this.apiKey,
+      'Content-Type': 'application/json'
+    };
   }
 
   private async graphqlRequest<T>(query: string, variables?: Record<string, any>): Promise<T> {
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': this.apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query, variables }),
-    });
+    try {
+      const response = await this.makeRequest(this.baseUrl, {
+        method: 'POST',
+        body: JSON.stringify({ query, variables }),
+      });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Linear API error: ${response.status} - ${error}`);
+      const data = await response.json();
+      if (data.errors) {
+        throw new Error(`Linear GraphQL error: ${JSON.stringify(data.errors)}`);
+      }
+
+      return data.data;
+    } catch (error) {
+      throw new Error(this.formatError('Linear GraphQL request', error));
     }
-
-    const data = await response.json();
-    if (data.errors) {
-      throw new Error(`Linear GraphQL error: ${JSON.stringify(data.errors)}`);
-    }
-
-    return data.data;
   }
 
   async searchRsolvIssues(): Promise<UnifiedIssue[]> {
@@ -127,7 +128,7 @@ export class LinearAdapter implements PlatformAdapter {
         { filter }
       );
 
-      return response.issues.nodes.map(issue => this.linearIssueToUnified(issue));
+      return response.issues.nodes.map(issue => this.convertToUnifiedIssue(issue));
     } catch (error) {
       logger.error('Failed to search Linear issues:', error);
       throw error;
@@ -168,7 +169,7 @@ export class LinearAdapter implements PlatformAdapter {
         { id: issueId }
       );
 
-      return response.issue ? this.linearIssueToUnified(response.issue) : null;
+      return response.issue ? this.convertToUnifiedIssue(response.issue) : null;
     } catch (error) {
       logger.error(`Failed to get Linear issue ${issueId}:`, error);
       return null;
@@ -362,7 +363,7 @@ export class LinearAdapter implements PlatformAdapter {
     }
   }
 
-  private linearIssueToUnified(issue: LinearIssue): UnifiedIssue {
+  protected convertToUnifiedIssue(issue: LinearIssue): UnifiedIssue {
     return {
       id: issue.id,
       platform: 'linear',
