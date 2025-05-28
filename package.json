@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
-    "test": "bun test",
+    "test": "bun test --preload ./test/setup.ts",
     "test:watch": "bun test --watch",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",

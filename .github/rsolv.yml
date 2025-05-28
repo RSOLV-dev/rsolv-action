@@ -1,26 +1,5 @@
-# RSOLV Configuration
-# This configuration disables container analysis for GitHub Actions environment
 
-# AI Provider Configuration
-aiProvider:
-  provider: "anthropic"
-  model: "claude-3-opus-20240229"
-  maxTokens: 4096
-  temperature: 0.3
-  useVendedCredentials: true
-  vendingApiUrl: "https://api.rsolv.dev"
-
-# Container Configuration - Disabled for GitHub Actions
-containerConfig:
-  enabled: false  # Disable container analysis to work in GitHub Actions
-
-# Security Settings
-securitySettings:
-  scanDependencies: true
-  preventSecretLeakage: true
-  requireCodeReview: false
-  maxFileSize: 10485760  # 10MB
-  timeoutSeconds: 300
-
-# Enable security analysis
-enableSecurityAnalysis: true
+        apiKey: test-api-key
+        containerConfig:
+          enabled: "not-a-boolean"
+      
