@@ -1,12 +1,14 @@
-import { describe, expect, test, mock } from 'bun:test';
+import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import { analyzeIssue } from '../analyzer.js';
 import { IssueContext, ActionConfig } from '../../types.js';
 
-// Mock the AI client
-mock.module('../client', () => {
-  return {
-    getAiClient: () => ({
-      complete: async () => `This is a bug issue.
+describe('Issue Analyzer', () => {
+  beforeEach(() => {
+    // Mock the AI client
+    mock.module('../client', () => {
+      return {
+        getAiClient: () => ({
+          complete: async () => `This is a bug issue.
 
 Files to modify:
 - \`src/component.ts\`
@@ -15,19 +17,18 @@ Files to modify:
 This is a moderate issue that requires updating error handling.
 
 Suggested Approach: Fix 1 - Update the error handling in the component to properly catch exceptions.`
-    })
-  };
-});
+        })
+      };
+    });
 
-// Mock the security detector
-mock.module('../../security/index', () => ({
-  SecurityDetector: class {
-    analyzeText = () => ({ vulnerabilities: [] });
-    analyzeCode = () => ({ vulnerabilities: [] });
-  }
-}));
-
-describe('Issue Analyzer', () => {
+    // Mock the security detector
+    mock.module('../../security/index', () => ({
+      SecurityDetector: class {
+        analyzeText = () => ({ vulnerabilities: [] });
+        analyzeCode = () => ({ vulnerabilities: [] });
+      }
+    }));
+  });
   test('analyzeIssue should return analysis from AI client', async () => {
     const issueContext: IssueContext = {
       id: '123',

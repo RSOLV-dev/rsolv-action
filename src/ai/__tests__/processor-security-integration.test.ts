@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import { processIssues } from '../processor.js';
+import { processIssues } from '../unified-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 
 describe('Security-Aware Processor Integration', () => {
