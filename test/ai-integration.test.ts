@@ -1,7 +1,7 @@
 import { describe, expect, test, mock } from 'bun:test';
 import { analyzeIssue } from '../src/ai/analyzer';
 import { generateSolution } from '../src/ai/solution';
-import { processIssues } from '../src/ai/processor';
+import { processIssues } from '../src/ai/unified-processor';
 import { getAiClient } from '../src/ai/client';
 import { IssueContext, ActionConfig, AnalysisData } from '../src/types/index';
 

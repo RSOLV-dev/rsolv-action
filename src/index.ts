@@ -3,7 +3,7 @@ import { detectIssues } from './github/issues.js';
 import { detectIssuesFromAllPlatforms } from './platforms/issue-detector.js';
 import { securityCheck } from './utils/security.js';
 import { logger } from './utils/logger.js';
-import { processIssues } from './ai/processor.js';
+import { processIssues } from './ai/unified-processor.js';
 import { setupContainer } from './containers/setup.js';
 import { ActionStatus } from './types/index.js';
 
