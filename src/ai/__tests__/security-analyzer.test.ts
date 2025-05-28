@@ -1,19 +1,60 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, mock } from 'bun:test';
 import { SecurityAwareAnalyzer } from '../security-analyzer.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
+
+// Mock the AI client
+mock.module('../client', () => ({
+  getAiClient: () => ({
+    complete: async (prompt: string) => {
+      // Return different responses based on prompt content
+      if (prompt.includes('crash') || prompt.includes('null pointer')) {
+        return `This is a bug in the application that causes crashes.
+
+Files to modify:
+- src/app.js
+- src/utils.js
+
+This is a simple null pointer exception that needs to be fixed.
+
+Suggested Approach:
+Add proper null checks before accessing object properties.`;
+      }
+      
+      // Default to security response
+      return `This is a security vulnerability in the authentication system.
+
+Files to modify:
+- src/database.js
+- src/auth.js
+
+This is a high-severity SQL injection vulnerability that needs immediate attention.
+
+Suggested Approach:
+Use parameterized queries to prevent SQL injection attacks.`;
+    }
+  })
+}));
 
 describe('SecurityAwareAnalyzer', () => {
   const analyzer = new SecurityAwareAnalyzer();
 
   const mockIssue: IssueContext = {
+    id: 'issue-123',
     number: 123,
     title: 'Fix SQL injection vulnerability',
     body: 'The user input is not properly sanitized before database queries',
     labels: ['security', 'bug'],
-    assignee: 'test-user',
-    author: 'reporter',
+    assignees: ['test-user'],
+    repository: {
+      owner: 'test',
+      name: 'repo',
+      fullName: 'test/repo',
+      defaultBranch: 'main',
+      language: 'JavaScript'
+    },
+    source: 'github',
     createdAt: '2023-01-01T00:00:00Z',
-    url: 'https://github.com/test/repo/issues/123'
+    updatedAt: '2023-01-01T00:00:00Z'
   };
 
   const mockConfig: ActionConfig = {
@@ -22,11 +63,17 @@ describe('SecurityAwareAnalyzer', () => {
     configPath: '.github/rsolv.yml',
     issueLabel: 'rsolv',
     aiProvider: {
-      name: 'anthropic',
+      provider: 'anthropic',
       apiKey: 'fake-key',
       model: 'claude-3-sonnet',
       temperature: 0.2,
       maxTokens: 2000
+    },
+    containerConfig: {
+      enabled: false
+    },
+    securitySettings: {
+      disableNetworkAccess: true
     }
   };
 
@@ -145,9 +192,22 @@ describe('SecurityAwareAnalyzer', () => {
 
     it('should detect bug issues', async () => {
       const bugIssue: IssueContext = {
-        ...mockIssue,
+        id: 'issue-456',
+        number: 456,
         title: 'Fix crash when loading page',
-        body: 'Application crashes with null pointer exception'
+        body: 'Application crashes with null pointer exception',
+        labels: ['bug'],
+        assignees: ['test-user'],
+        repository: {
+          owner: 'test',
+          name: 'repo',
+          fullName: 'test/repo',
+          defaultBranch: 'main',
+          language: 'JavaScript'
+        },
+        source: 'github',
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
       };
 
       const result = await analyzer.analyzeWithSecurity(bugIssue, mockConfig);

@@ -17,18 +17,52 @@ mock.module('../src/ai/analyzer', () => ({
 
 mock.module('../src/ai/solution', () => ({
   generateSolution: mock(() => Promise.resolve({
-    files: [{
-      path: 'src/test.ts',
-      oldContent: 'bug',
-      newContent: 'fixed',
-      changes: []
-    }],
-    description: 'Fixed the bug'
+    success: true,
+    message: 'Solution generated successfully',
+    changes: {
+      'src/test.ts': 'fixed content'
+    }
   }))
 }));
 
 mock.module('../src/github/pr', () => ({
-  createPullRequest: mock(() => Promise.resolve('https://github.com/test/repo/pull/1'))
+  createPullRequest: mock(() => Promise.resolve({
+    success: true,
+    message: 'Pull request created successfully',
+    pullRequestUrl: 'https://github.com/test/repo/pull/1',
+    pullRequestNumber: 1
+  }))
+}));
+
+mock.module('../src/ai/security-analyzer', () => ({
+  SecurityAwareAnalyzer: class {
+    async analyzeWithSecurity() {
+      return {
+        analysis: {
+          canBeFixed: true,
+          confidence: 0.9,
+          suggestedApproach: 'Fix the bug with security considerations',
+          affectedFiles: ['src/test.ts']
+        },
+        securityAnalysis: {
+          vulnerabilities: [],
+          riskLevel: 'low'
+        }
+      };
+    }
+  }
+}));
+
+mock.module('../src/ai/adapters/claude-code-enhanced', () => ({
+  EnhancedClaudeCodeAdapter: class {
+    async gatherDeepContext() {
+      return {
+        files: [],
+        relatedIssues: [],
+        commits: []
+      };
+    }
+  }
 }));
 
 describe('Unified Processor', () => {
@@ -46,7 +80,12 @@ describe('Unified Processor', () => {
       url: 'https://github.com/test/repo/issues/123',
       repoOwner: 'test',
       repoName: 'repo',
-      files: []
+      files: [],
+      repository: {
+        fullName: 'test/repo',
+        name: 'repo',
+        owner: 'test'
+      }
     };
 
     mockConfig = {
