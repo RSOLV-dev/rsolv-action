@@ -243,7 +243,13 @@ bun test
 
 # Run tests in watch mode
 bun test --watch
+
+# Run tests in isolation (recommended for CI/CD)
+# This avoids mock pollution issues between test files
+bun run test:isolated
 ```
+
+**Note**: Due to Bun's test framework limitations, some tests may fail when run together but pass individually. Use `test:isolated` for accurate results.
 
 ## License
 
