@@ -1,15 +1,71 @@
-import { describe, it, expect, beforeEach, jest } from 'bun:test';
+import { describe, it, expect, beforeEach, jest, mock } from 'bun:test';
 import { SecurityDetector } from '../detector.js';
 import { SecurityAwareAnalyzer } from '../../ai/security-analyzer.js';
 import { ComplianceGenerator } from '../compliance.js';
 import { ThreeTierExplanationFramework } from '../explanation-framework.js';
 import { buildSecuritySolutionPrompt, buildSecurityExplanationPrompt } from '../../ai/security-prompts.js';
 
+// Mock the AI client
+mock.module('../../ai/client', () => ({
+  getAiClient: () => ({
+    complete: async (prompt: string) => {
+      return `This is a security vulnerability in the system.
+
+Files to modify:
+- src/database.js
+- src/frontend.js
+
+This contains SQL injection and XSS vulnerabilities that need immediate attention.
+
+Suggested Approach:
+Use parameterized queries and proper DOM manipulation methods.`;
+    }
+  })
+}));
+
 describe('Security Workflow End-to-End Tests', () => {
   let detector: SecurityDetector;
   let analyzer: SecurityAwareAnalyzer;
   let complianceGenerator: ComplianceGenerator;
   let explanationFramework: ThreeTierExplanationFramework;
+
+  // Shared test config
+  const testConfig = {
+    apiKey: 'test-api-key',
+    configPath: '.github/rsolv.yml',
+    issueLabel: 'rsolv',
+    aiProvider: {
+      provider: 'anthropic',
+      apiKey: 'test-api-key',
+      model: 'claude-3-sonnet'
+    },
+    containerConfig: {
+      enabled: false
+    },
+    securitySettings: {
+      disableNetworkAccess: true
+    }
+  };
+
+  // Helper to create proper issue objects
+  const createTestIssue = (id: string, number: number, title: string, body: string) => ({
+    id,
+    number,
+    title,
+    body,
+    labels: ['security'],
+    assignees: [],
+    repository: {
+      owner: 'test-owner',
+      name: 'test-repo',
+      fullName: 'test-owner/test-repo',
+      defaultBranch: 'main',
+      language: 'JavaScript'
+    },
+    source: 'github',
+    createdAt: '2023-01-01T00:00:00Z',
+    updatedAt: '2023-01-01T00:00:00Z'
+  });
 
   beforeEach(() => {
     detector = new SecurityDetector();
@@ -37,29 +93,16 @@ describe('Security Workflow End-to-End Tests', () => {
         `
       };
 
-      const issue = {
-        id: '123',
-        title: 'Security vulnerabilities found in codebase',
-        body: 'Multiple security issues detected including SQL injection and XSS',
-        number: 123,
-        labels: ['security'],
-        assignees: [],
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          fullName: 'test-owner/test-repo',
-          language: 'JavaScript'
-        }
-      };
-
-      const config = {
-        aiProvider: 'anthropic',
-        model: 'claude-3-sonnet'
-      };
+      const issue = createTestIssue(
+        '123',
+        123,
+        'Security vulnerabilities found in codebase',
+        'Multiple security issues detected including SQL injection and XSS'
+      );
 
       // Step 1: Perform security-aware analysis
       const codebaseMap = new Map(Object.entries(codebaseFiles));
-      const analysisData = await analyzer.analyzeWithSecurity(issue, config, codebaseMap);
+      const analysisData = await analyzer.analyzeWithSecurity(issue, testConfig, codebaseMap);
 
       // Verify security analysis was performed
       expect(analysisData.securityAnalysis).toBeDefined();
@@ -144,7 +187,7 @@ describe('Security Workflow End-to-End Tests', () => {
       };
 
       const codebaseMap = new Map(Object.entries(codebaseFiles));
-      const analysisData = await analyzer.analyzeWithSecurity(issue, {}, codebaseMap);
+      const analysisData = await analyzer.analyzeWithSecurity(issue, testConfig, codebaseMap);
 
       // Should detect multiple vulnerability types
       expect(analysisData.securityAnalysis?.vulnerabilities.length).toBeGreaterThanOrEqual(3);
@@ -271,7 +314,7 @@ describe('Security Workflow End-to-End Tests', () => {
         }
       };
       const codebaseMap = new Map([['app.js', testCode]]);
-      const analysisData = await analyzer.analyzeWithSecurity(issue, {}, codebaseMap);
+      const analysisData = await analyzer.analyzeWithSecurity(issue, testConfig, codebaseMap);
 
       // Generate compliance report
       const compliance = complianceGenerator.generateOwaspComplianceReport(detectedVulnerabilities);
@@ -321,7 +364,7 @@ describe('Security Workflow End-to-End Tests', () => {
       };
 
       const codebaseMap = new Map(Object.entries(vulnerableCode));
-      const analysisData = await analyzer.analyzeWithSecurity(issue, {}, codebaseMap);
+      const analysisData = await analyzer.analyzeWithSecurity(issue, testConfig, codebaseMap);
       
       const solutionPrompt = buildSecuritySolutionPrompt(
         issue,
@@ -379,7 +422,7 @@ describe('Security Workflow End-to-End Tests', () => {
         }
       };
       const codebaseMap = new Map(Object.entries(largeCodebase));
-      const analysisData = await analyzer.analyzeWithSecurity(issue, {}, codebaseMap);
+      const analysisData = await analyzer.analyzeWithSecurity(issue, testConfig, codebaseMap);
       
       const endTime = Date.now();
       const duration = endTime - startTime;
