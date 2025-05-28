@@ -4,9 +4,7 @@ import {
   isEligibleForAutomation,
   isRateLimited,
   processExpertReviewRequest,
-  ExpertReviewRequest,
-  resetRateLimits,
-  customerRateLimits
+  ExpertReviewRequest
 } from '../webhook.js';
 import { IssueContext } from '../../types.js';
 
