@@ -486,5 +486,29 @@
     "totalChunks": 1,
     "solutionGenerationTime": 12,
     "endTime": 1748481830037
+  },
+  {
+    "startTime": 1748482059567,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 21,
+    "endTime": 1748482059613
+  },
+  {
+    "startTime": 1748482059615,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 21,
+    "endTime": 1748482059658
+  },
+  {
+    "startTime": 1748482060623,
+    "issueId": "test-issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 11,
+    "endTime": 1748482060637
   }
 ]
