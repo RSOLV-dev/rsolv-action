@@ -163,7 +163,7 @@ async function processIssue(
     
     // Step 3: Create pull request
     logger.info(`Creating pull request for issue #${issue.number}`);
-    const prResult = await createPullRequest(issue, solution.changes!, analysisData, config, securityAnalysis);
+    const prResult = await createPullRequest(issue, solution.changes!, analysisData, config, securityAnalysis, solution.explanations);
     
     // const _processingTime = Date.now() - startTime;
     

@@ -2,6 +2,7 @@ import { IssueContext, ActionConfig, AnalysisData } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { getAiClient } from './client.js';
 import { buildSolutionPrompt, getIssueTypePromptTemplate } from './prompts.js';
+import { ThreeTierExplanationFramework, CompleteExplanation } from '../security/explanation-framework.js';
 
 /**
  * Result of solution generation
@@ -11,6 +12,7 @@ export interface SolutionResult {
   message: string;
   changes?: Record<string, string>;
   error?: string;
+  explanations?: CompleteExplanation;
 }
 
 /**
@@ -47,9 +49,19 @@ export async function generateSolution(
     // Build the solution prompt
     let prompt = `${buildSolutionPrompt(issue, analysisData, fileContents)}\n\n${typeSpecificGuidance}`;
     
-    // Add security context if available
+    // Add security context and generate explanations if available
+    let explanations: CompleteExplanation | undefined;
     if (securityAnalysis && securityAnalysis.vulnerabilities && securityAnalysis.vulnerabilities.length > 0) {
       logger.info(`Including ${securityAnalysis.vulnerabilities.length} security vulnerabilities in solution prompt`);
+      
+      // Generate three-tier explanations
+      const explanationFramework = new ThreeTierExplanationFramework();
+      explanations = explanationFramework.generateCompleteExplanation(
+        securityAnalysis.vulnerabilities,
+        fileContents
+      );
+      logger.info(`Generated three-tier explanations for ${explanations.lineLevelExplanations.length} vulnerabilities`);
+      
       prompt += `\n\n## Security Analysis Results
 
 The following security vulnerabilities were detected and MUST be addressed in your solution:
@@ -90,7 +102,8 @@ Please ensure your solution addresses these security issues as a priority.`;
     return {
       success: true,
       message: 'Solution generated successfully',
-      changes
+      changes,
+      explanations
     };
   } catch (error) {
     logger.error(`Error generating solution for issue #${issue.number}`, error);
