@@ -147,10 +147,10 @@ async function processIssue(
       contextGatheringTime = Date.now() - contextStart;
       
       // Generate solution with enhanced context
-      solution = await generateSolution(issue, analysisData, config, injectedDeps?.aiClient, injectedDeps?.fileGetter);
+      solution = await generateSolution(issue, analysisData, config, injectedDeps?.aiClient, injectedDeps?.fileGetter, securityAnalysis);
     } else {
       // Standard solution generation
-      solution = await generateSolution(issue, analysisData, config, injectedDeps?.aiClient, injectedDeps?.fileGetter);
+      solution = await generateSolution(issue, analysisData, config, injectedDeps?.aiClient, injectedDeps?.fileGetter, securityAnalysis);
     }
     
     if (!solution || !solution.success || !solution.changes || Object.keys(solution.changes).length === 0) {
@@ -163,7 +163,7 @@ async function processIssue(
     
     // Step 3: Create pull request
     logger.info(`Creating pull request for issue #${issue.number}`);
-    const prResult = await createPullRequest(issue, solution.changes!, analysisData, config);
+    const prResult = await createPullRequest(issue, solution.changes!, analysisData, config, securityAnalysis);
     
     // const _processingTime = Date.now() - startTime;
     
