@@ -40,6 +40,7 @@ const ActionConfigSchema = z.object({
   apiKey: z.string(),
   configPath: z.string(),
   issueLabel: z.string(),
+  enableSecurityAnalysis: z.boolean().optional(),
   environmentVariables: z.record(z.string(), z.string()).optional(),
   repoToken: z.string().optional(),
   aiProvider: AiProviderConfigSchema,
@@ -90,6 +91,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
   return {
     configPath: '.github/rsolv.yml',
     issueLabel: 'rsolv:automate',
+    enableSecurityAnalysis: true,  // Enable security analysis by default
     aiProvider: {
       provider: 'anthropic',
       model: 'claude-3-sonnet-20240229',

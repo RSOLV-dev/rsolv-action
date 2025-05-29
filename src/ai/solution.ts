@@ -21,7 +21,8 @@ export async function generateSolution(
   analysisData: AnalysisData,
   config: ActionConfig,
   injectedClient?: any,
-  _injectedFileGetter?: any
+  _injectedFileGetter?: any,
+  securityAnalysis?: any
 ): Promise<SolutionResult> {
   try {
     logger.info(`Generating solution for issue #${issue.number}`);
@@ -44,7 +45,24 @@ export async function generateSolution(
     const typeSpecificGuidance = getIssueTypePromptTemplate(analysisData.issueType);
     
     // Build the solution prompt
-    const prompt = `${buildSolutionPrompt(issue, analysisData, fileContents)}\n\n${typeSpecificGuidance}`;
+    let prompt = `${buildSolutionPrompt(issue, analysisData, fileContents)}\n\n${typeSpecificGuidance}`;
+    
+    // Add security context if available
+    if (securityAnalysis && securityAnalysis.vulnerabilities && securityAnalysis.vulnerabilities.length > 0) {
+      logger.info(`Including ${securityAnalysis.vulnerabilities.length} security vulnerabilities in solution prompt`);
+      prompt += `\n\n## Security Analysis Results
+
+The following security vulnerabilities were detected and MUST be addressed in your solution:
+
+${securityAnalysis.vulnerabilities.map((vuln: any) => 
+  `- **${vuln.severity} Severity**: ${vuln.type} in ${vuln.file}:${vuln.line}
+   Pattern: ${vuln.pattern}
+   Risk: ${vuln.risk}
+   Recommendation: ${vuln.recommendation}`
+).join('\n\n')}
+
+Please ensure your solution addresses these security issues as a priority.`;
+    }
     
     // Generate solution using AI
     const response = await aiClient.complete(prompt, {

@@ -32,8 +32,14 @@ async function run(): Promise<ActionStatus> {
       return { success: true, message: 'No issues found for automation' };
     }
     
-    // Process issues with AI
-    const results = await processIssues(issues, config);
+    // Process issues with AI (enable security analysis by default)
+    const processingOptions = {
+      enableSecurityAnalysis: config.enableSecurityAnalysis !== false, // Default to true
+      enableEnhancedContext: false, // Can be enabled later
+      verboseLogging: process.env.DEBUG === 'true'
+    };
+    
+    const results = await processIssues(issues, config, processingOptions);
     logger.info(`Successfully processed ${results.filter((r: { success: boolean }) => r.success).length}/${issues.length} issues`);
     
     return { 
