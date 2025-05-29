@@ -21,7 +21,7 @@ export async function generateSolution(
   analysisData: AnalysisData,
   config: ActionConfig,
   injectedClient?: any,
-  injectedFileGetter?: any
+  _injectedFileGetter?: any
 ): Promise<SolutionResult> {
   try {
     logger.info(`Generating solution for issue #${issue.number}`);
@@ -160,7 +160,7 @@ function parseSolutionResponse(response: string): Record<string, string> {
       // Alternative format: ```language filename content ```
       const altFileBlockRegex = /```(\w+)\s+([\w./-]+)\n([\s\S]*?)```/gm;
       while ((match = altFileBlockRegex.exec(response)) !== null) {
-        const [, language, filePath, content] = match;
+        const [, , filePath, content] = match;
         if (filePath && content) {
           changes[filePath] = content.trim();
         }

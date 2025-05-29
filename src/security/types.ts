@@ -26,7 +26,6 @@ export enum VulnerabilityType {
   NULL_POINTER_DEREFERENCE = 'null_pointer_dereference',
   CSRF = 'cross_site_request_forgery',
   DENIAL_OF_SERVICE = 'denial_of_service',
-  WEAK_CRYPTO = 'weak_cryptography',
   NOSQL_INJECTION = 'nosql_injection',
   INFORMATION_DISCLOSURE = 'information_disclosure',
   IMPROPER_INPUT_VALIDATION = 'improper_input_validation',

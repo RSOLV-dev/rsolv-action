@@ -59,7 +59,7 @@ export class SecurityAwareAnalyzer {
    */
   private async performSecurityAnalysis(
     codebaseFiles: Map<string, string>,
-    issue: IssueContext
+    _issue: IssueContext
   ): Promise<SecurityAnalysisResult> {
     logger.info('Performing security analysis on codebase files');
 
@@ -102,28 +102,28 @@ export class SecurityAwareAnalyzer {
     const extension = filePath.split('.').pop()?.toLowerCase();
     
     switch (extension) {
-      case 'js':
-      case 'jsx':
-        return 'javascript';
-      case 'ts':
-      case 'tsx':
-        return 'typescript';
-      case 'py':
-        return 'python';
-      case 'rb':
-        return 'ruby';
-      case 'php':
-        return 'php';
-      case 'java':
-        return 'java';
-      case 'cs':
-        return 'csharp';
-      case 'go':
-        return 'go';
-      case 'rs':
-        return 'rust';
-      default:
-        return null;
+    case 'js':
+    case 'jsx':
+      return 'javascript';
+    case 'ts':
+    case 'tsx':
+      return 'typescript';
+    case 'py':
+      return 'python';
+    case 'rb':
+      return 'ruby';
+    case 'php':
+      return 'php';
+    case 'java':
+      return 'java';
+    case 'cs':
+      return 'csharp';
+    case 'go':
+      return 'go';
+    case 'rs':
+      return 'rust';
+    default:
+      return null;
     }
   }
 
@@ -159,16 +159,16 @@ export class SecurityAwareAnalyzer {
 
       // Add general recommendations based on vulnerability type
       switch (vuln.type) {
-        case VulnerabilityType.SQL_INJECTION:
-          recommendations.add('Implement parameterized queries throughout the codebase');
-          recommendations.add('Add input validation and sanitization');
-          break;
-        case VulnerabilityType.XSS:
-          recommendations.add('Use secure DOM manipulation methods (textContent, not innerHTML)');
-          recommendations.add('Implement Content Security Policy (CSP)');
-          break;
-        default:
-          recommendations.add('Review security best practices for this vulnerability type');
+      case VulnerabilityType.SQL_INJECTION:
+        recommendations.add('Implement parameterized queries throughout the codebase');
+        recommendations.add('Add input validation and sanitization');
+        break;
+      case VulnerabilityType.XSS:
+        recommendations.add('Use secure DOM manipulation methods (textContent, not innerHTML)');
+        recommendations.add('Implement Content Security Policy (CSP)');
+        break;
+      default:
+        recommendations.add('Review security best practices for this vulnerability type');
       }
     }
 

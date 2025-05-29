@@ -63,14 +63,14 @@ export class SecurityDetector {
   private getConfidence(line: string, type: VulnerabilityType): number {
     // Basic confidence scoring based on pattern specificity
     switch (type) {
-      case VulnerabilityType.SQL_INJECTION:
-        if (line.includes('SELECT') || line.includes('INSERT')) return 90;
-        return 75;
-      case VulnerabilityType.XSS:
-        if (line.includes('innerHTML')) return 85;
-        return 70;
-      default:
-        return 60;
+    case VulnerabilityType.SQL_INJECTION:
+      if (line.includes('SELECT') || line.includes('INSERT')) return 90;
+      return 75;
+    case VulnerabilityType.XSS:
+      if (line.includes('innerHTML')) return 85;
+      return 70;
+    default:
+      return 60;
     }
   }
 

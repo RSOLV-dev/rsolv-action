@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, jest, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { SecurityDetector } from '../detector.js';
 import { SecurityAwareAnalyzer } from '../../ai/security-analyzer.js';
 import { ComplianceGenerator } from '../compliance.js';
@@ -8,7 +8,7 @@ import { buildSecuritySolutionPrompt, buildSecurityExplanationPrompt } from '../
 // Mock the AI client
 mock.module('../../ai/client', () => ({
   getAiClient: () => ({
-    complete: async (prompt: string) => {
+    complete: async (_prompt: string) => {
       return `This is a security vulnerability in the system.
 
 Files to modify:

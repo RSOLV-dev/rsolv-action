@@ -18,7 +18,7 @@ describe('Ruby Security Patterns', () => {
     expect(rubyPatterns[0].name).toContain('SQL Injection');
     
     // Test detection
-    const vulnerableCode = 'User.where("name = \'#{params[:name]}\'")'
+    const vulnerableCode = 'User.where("name = \'#{params[:name]}\'")';
     // Test that at least one regex matches
     const matches = rubyPatterns[0].patterns.regex!.some(regex => regex.test(vulnerableCode));
     expect(matches).toBe(true);

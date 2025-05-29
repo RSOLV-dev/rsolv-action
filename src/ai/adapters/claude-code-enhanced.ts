@@ -5,7 +5,7 @@
  */
 import { ClaudeCodeAdapter } from './claude-code.js';
 import { IssueContext } from '../../types/index.js';
-import { PullRequestSolution, AIConfig, ClaudeCodeConfig } from '../types.js';
+import { PullRequestSolution, AIConfig } from '../types.js';
 import { IssueAnalysis } from '../types.js';
 import { logger } from '../../utils/logger.js';
 import fs from 'fs';

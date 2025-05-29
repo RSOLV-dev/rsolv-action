@@ -2,7 +2,7 @@ import { IssueContext, ActionConfig, AnalysisData, IssueType } from '../types/in
 import { logger } from '../utils/logger.js';
 import { getAiClient } from './client.js';
 import { buildAnalysisPrompt } from './prompts.js';
-import { SecurityDetector, Vulnerability } from '../security/index.js';
+// import { SecurityDetector, Vulnerability } from '../security/index.js';
 
 /**
  * Analyze an issue with AI to determine the best approach for fixing it

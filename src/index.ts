@@ -1,5 +1,4 @@
 import { loadConfig } from './config/index.js';
-import { detectIssues } from './github/issues.js';
 import { detectIssuesFromAllPlatforms } from './platforms/issue-detector.js';
 import { securityCheck } from './utils/security.js';
 import { logger } from './utils/logger.js';

@@ -153,46 +153,46 @@ export class ThreeTierExplanationFramework {
   }
 
   generateMarkdownReport(complete: CompleteExplanation): string {
-    let markdown = `# Security Vulnerability Explanation\n\n`;
+    let markdown = '# Security Vulnerability Explanation\n\n';
     markdown += `**Generated:** ${new Date(complete.timestamp).toLocaleDateString()}\n\n`;
 
     // Summary
-    markdown += `## Summary\n\n`;
+    markdown += '## Summary\n\n';
     markdown += `- **Total Vulnerabilities:** ${complete.summary.totalVulnerabilities}\n`;
     markdown += `- **Estimated Fix Time:** ${complete.summary.estimatedFixTime}\n`;
     markdown += `- **Risk Score:** ${complete.businessLevelExplanation.riskScore}/100\n\n`;
 
     // Line-level analysis
-    markdown += `## Line-Level Analysis\n\n`;
+    markdown += '## Line-Level Analysis\n\n';
     for (const explanation of complete.lineLevelExplanations) {
       markdown += this.formatLineLevelMarkdown(explanation) + '\n';
     }
 
     // Concept-level analysis
-    markdown += `## Concept-Level Analysis\n\n`;
+    markdown += '## Concept-Level Analysis\n\n';
     for (const explanation of complete.conceptLevelExplanations) {
       markdown += this.formatConceptLevelMarkdown(explanation) + '\n';
     }
 
     // Business impact analysis
-    markdown += `## Business Impact Analysis\n\n`;
+    markdown += '## Business Impact Analysis\n\n';
     markdown += this.formatBusinessLevelMarkdown(complete.businessLevelExplanation);
 
     return markdown;
   }
 
-  private generateLineLevelContent(vulnerability: Vulnerability, codeSnippet: string): string {
+  private generateLineLevelContent(vulnerability: Vulnerability, _codeSnippet: string): string {
     const templates: Record<string, string> = {
-      [VulnerabilityType.SQL_INJECTION]: `This line contains a SQL injection vulnerability because it uses string concatenation to build a database query. User input is directly embedded into the SQL statement without proper sanitization, allowing attackers to manipulate the query logic.`,
-      [VulnerabilityType.XSS]: `This line contains a cross-site scripting (XSS) vulnerability because it directly assigns user-controlled content to innerHTML without sanitization. This allows attackers to inject malicious scripts that execute in other users' browsers.`,
-      [VulnerabilityType.BROKEN_ACCESS_CONTROL]: `This endpoint lacks proper access control checks, allowing unauthorized users to access restricted functionality or data.`,
-      [VulnerabilityType.SENSITIVE_DATA_EXPOSURE]: `This line exposes sensitive data in plain text, making it vulnerable to unauthorized access or accidental disclosure.`
+      [VulnerabilityType.SQL_INJECTION]: 'This line contains a SQL injection vulnerability because it uses string concatenation to build a database query. User input is directly embedded into the SQL statement without proper sanitization, allowing attackers to manipulate the query logic.',
+      [VulnerabilityType.XSS]: 'This line contains a cross-site scripting (XSS) vulnerability because it directly assigns user-controlled content to innerHTML without sanitization. This allows attackers to inject malicious scripts that execute in other users\' browsers.',
+      [VulnerabilityType.BROKEN_ACCESS_CONTROL]: 'This endpoint lacks proper access control checks, allowing unauthorized users to access restricted functionality or data.',
+      [VulnerabilityType.SENSITIVE_DATA_EXPOSURE]: 'This line exposes sensitive data in plain text, making it vulnerable to unauthorized access or accidental disclosure.'
     };
 
     return templates[vulnerability.type] || `This line contains a ${vulnerability.type} vulnerability that poses security risks.`;
   }
 
-  private generateSecureExample(vulnerabilityType: VulnerabilityType, codeSnippet: string): string {
+  private generateSecureExample(vulnerabilityType: VulnerabilityType, _codeSnippet: string): string {
     const examples: Record<string, string> = {
       [VulnerabilityType.SQL_INJECTION]: `const query = "SELECT * FROM users WHERE id = ?";
 db.query(query, [userId], callback);`,
@@ -211,9 +211,9 @@ element.innerHTML = DOMPurify.sanitize(userInput);`,
 
   private generateConceptLevelContent(vulnerabilityType: VulnerabilityType): string {
     const templates: Record<string, string> = {
-      [VulnerabilityType.SQL_INJECTION]: `SQL injection is a code injection technique that exploits vulnerabilities in an application's database layer. Attackers insert malicious SQL code into application queries, potentially gaining unauthorized access to sensitive data, modifying database contents, or executing administrative operations.`,
-      [VulnerabilityType.XSS]: `Cross-Site Scripting (XSS) allows attackers to inject client-side scripts into web pages viewed by other users. When successful, XSS attacks can access sensitive page content, session tokens, or other sensitive information, and can perform actions on behalf of the victim.`,
-      [VulnerabilityType.BROKEN_ACCESS_CONTROL]: `Broken access control occurs when applications fail to properly restrict what authenticated users are allowed to do. This can lead to unauthorized information disclosure, modification, or destruction of data, or performing business functions outside the user's limits.`
+      [VulnerabilityType.SQL_INJECTION]: 'SQL injection is a code injection technique that exploits vulnerabilities in an application\'s database layer. Attackers insert malicious SQL code into application queries, potentially gaining unauthorized access to sensitive data, modifying database contents, or executing administrative operations.',
+      [VulnerabilityType.XSS]: 'Cross-Site Scripting (XSS) allows attackers to inject client-side scripts into web pages viewed by other users. When successful, XSS attacks can access sensitive page content, session tokens, or other sensitive information, and can perform actions on behalf of the victim.',
+      [VulnerabilityType.BROKEN_ACCESS_CONTROL]: 'Broken access control occurs when applications fail to properly restrict what authenticated users are allowed to do. This can lead to unauthorized information disclosure, modification, or destruction of data, or performing business functions outside the user\'s limits.'
     };
 
     return templates[vulnerabilityType] || `${vulnerabilityType} represents a security vulnerability that requires attention.`;
@@ -274,10 +274,10 @@ element.innerHTML = DOMPurify.sanitize(userInput);`,
     let score = 0;
     for (const vuln of vulnerabilities) {
       switch (vuln.severity) {
-        case 'critical': score += 25; break;
-        case 'high': score += 20; break;
-        case 'medium': score += 15; break;
-        case 'low': score += 10; break;
+      case 'critical': score += 25; break;
+      case 'high': score += 20; break;
+      case 'medium': score += 15; break;
+      case 'low': score += 10; break;
       }
     }
     return Math.min(100, score);
@@ -345,7 +345,7 @@ element.innerHTML = DOMPurify.sanitize(userInput);`,
 
   private extractCodeSnippet(vulnerability: Vulnerability, codeContext: Record<string, string>): string {
     // Find the file containing this vulnerability and extract the relevant line
-    for (const [filePath, content] of Object.entries(codeContext)) {
+    for (const content of Object.values(codeContext)) {
       const lines = content.split('\n');
       if (vulnerability.line <= lines.length) {
         return lines[vulnerability.line - 1] || 'Code snippet not available';

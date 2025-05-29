@@ -59,20 +59,20 @@ export class PatternRegistry {
   private convertToSecurityPattern(pattern: any): SecurityPattern {
     return {
       id: pattern.id,
-      type: pattern.type,
-      name: pattern.message,
-      description: pattern.message,
+      type: pattern.type, // This should already be defined in the source pattern
+      name: pattern.message || pattern.name,
+      description: pattern.message || pattern.description,
       patterns: {
         regex: [pattern.pattern]
       },
       severity: pattern.severity,
-      cweId: pattern.cwe,
-      owaspCategory: pattern.owasp,
+      cweId: pattern.cwe || pattern.cweId,
+      owaspCategory: pattern.owasp || pattern.owaspCategory,
       languages: [pattern.language],
       remediation: pattern.remediation,
       examples: {
-        vulnerable: 'See pattern documentation',
-        secure: pattern.remediation
+        vulnerable: pattern.examples?.vulnerable || 'See pattern documentation',
+        secure: pattern.examples?.secure || pattern.remediation
       }
     };
   }
@@ -97,28 +97,28 @@ export class PatternRegistry {
 
   isSafeUsage(line: string, type: VulnerabilityType): boolean {
     switch (type) {
-      case VulnerabilityType.SQL_INJECTION:
-        return /\?\s*["'`,\];]|prepare|bind|param/i.test(line);
-      case VulnerabilityType.XSS:
-        return /textContent|innerText|\.text\(/.test(line);
-      case VulnerabilityType.BROKEN_ACCESS_CONTROL:
-        return /auth|login|verify|token|middleware/i.test(line);
-      case VulnerabilityType.SENSITIVE_DATA_EXPOSURE:
-        return /encrypt|hash|bcrypt|crypto|validate/i.test(line);
-      case VulnerabilityType.XML_EXTERNAL_ENTITIES:
-        return /disableExternalEntities|noResolve|safe/i.test(line);
-      case VulnerabilityType.SECURITY_MISCONFIGURATION:
-        return /origin:\s*["'][^*"']/i.test(line);
-      case VulnerabilityType.VULNERABLE_COMPONENTS:
-        return /JSON\.parse|safe|validate/i.test(line);
-      case VulnerabilityType.BROKEN_AUTHENTICATION:
-        return /secure:\s*true|httpOnly:\s*true/i.test(line);
-      case VulnerabilityType.INSECURE_DESERIALIZATION:
-        return /validate|sanitize|schema/i.test(line);
-      case VulnerabilityType.INSUFFICIENT_LOGGING:
-        return /log|error|warn|info|debug/i.test(line);
-      default:
-        return false;
+    case VulnerabilityType.SQL_INJECTION:
+      return /\?\s*["'`,\];]|prepare|bind|param/i.test(line);
+    case VulnerabilityType.XSS:
+      return /textContent|innerText|\.text\(/.test(line);
+    case VulnerabilityType.BROKEN_ACCESS_CONTROL:
+      return /auth|login|verify|token|middleware/i.test(line);
+    case VulnerabilityType.SENSITIVE_DATA_EXPOSURE:
+      return /encrypt|hash|bcrypt|crypto|validate/i.test(line);
+    case VulnerabilityType.XML_EXTERNAL_ENTITIES:
+      return /disableExternalEntities|noResolve|safe/i.test(line);
+    case VulnerabilityType.SECURITY_MISCONFIGURATION:
+      return /origin:\s*["'][^*"']/i.test(line);
+    case VulnerabilityType.VULNERABLE_COMPONENTS:
+      return /JSON\.parse|safe|validate/i.test(line);
+    case VulnerabilityType.BROKEN_AUTHENTICATION:
+      return /secure:\s*true|httpOnly:\s*true/i.test(line);
+    case VulnerabilityType.INSECURE_DESERIALIZATION:
+      return /validate|sanitize|schema/i.test(line);
+    case VulnerabilityType.INSUFFICIENT_LOGGING:
+      return /log|error|warn|info|debug/i.test(line);
+    default:
+      return false;
     }
   }
 }

@@ -382,18 +382,18 @@ export class LinearAdapter extends BasePlatformAdapter {
 
   private mapLinearStateType(stateType: string): 'todo' | 'in_progress' | 'done' {
     switch (stateType.toLowerCase()) {
-      case 'backlog':
-      case 'unstarted':
-        return 'todo';
-      case 'started':
-      case 'in_progress':
-        return 'in_progress';
-      case 'completed':
-      case 'done':
-      case 'canceled':
-        return 'done';
-      default:
-        return 'todo';
+    case 'backlog':
+    case 'unstarted':
+      return 'todo';
+    case 'started':
+    case 'in_progress':
+      return 'in_progress';
+    case 'completed':
+    case 'done':
+    case 'canceled':
+      return 'done';
+    default:
+      return 'todo';
     }
   }
 }

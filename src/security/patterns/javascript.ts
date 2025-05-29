@@ -347,7 +347,7 @@ export const javascriptSecurityPatterns: SecurityPattern[] = [
   // JWT Specific Patterns
   {
     id: 'jwt-weak-secret',
-    type: VulnerabilityType.WEAK_CRYPTO,
+    type: VulnerabilityType.WEAK_CRYPTOGRAPHY,
     name: 'JWT Weak Secret',
     description: 'Detects weak or hardcoded JWT secrets',
     patterns: {

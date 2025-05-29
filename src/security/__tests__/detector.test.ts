@@ -81,8 +81,8 @@ describe('SecurityDetector', () => {
 
   describe('Language Support', () => {
     it('should support JavaScript and TypeScript', () => {
-      const jsCode = `const query = "SELECT * FROM users WHERE id = " + id;`;
-      const tsCode = `const query: string = "SELECT * FROM users WHERE id = " + id;`;
+      const jsCode = 'const query = "SELECT * FROM users WHERE id = " + id;';
+      const tsCode = 'const query: string = "SELECT * FROM users WHERE id = " + id;';
       
       const jsVulns = detector.detect(jsCode, 'javascript');
       const tsVulns = detector.detect(tsCode, 'typescript');
