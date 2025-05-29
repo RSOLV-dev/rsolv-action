@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, test, expect } from 'bun:test';
 import { JiraAdapter } from '../../../src/platforms/jira/jira-adapter';
 
 describe('Jira Label Search', () => {
-  it('should generate correct JQL for both rsolv and autofix labels', () => {
+  test('should generate correct JQL for both rsolv and autofix labels', () => {
     const adapter = new JiraAdapter({
       host: 'test.atlassian.net',
       email: 'test@example.com',
@@ -21,7 +21,7 @@ describe('Jira Label Search', () => {
     expect(expectedJql).toContain('rsolv');
   });
 
-  it('should handle custom label configurations', () => {
+  test('should handle custom label configurations', () => {
     const adapter = new JiraAdapter({
       host: 'test.atlassian.net',
       email: 'test@example.com',
@@ -36,7 +36,7 @@ describe('Jira Label Search', () => {
     expect(expectedJql).toContain('custom-rsolv');
   });
 
-  it('demonstrates JQL queries for different scenarios', () => {
+  test('demonstrates JQL queries for different scenarios', () => {
     const testCases = [
       {
         description: 'Both default labels',

@@ -9,12 +9,13 @@ import { SecurityDetector, Vulnerability } from '../security/index.js';
  */
 export async function analyzeIssue(
   issue: IssueContext,
-  config: ActionConfig
+  config: ActionConfig,
+  injectedClient?: any
 ): Promise<AnalysisData> {
   logger.info(`Analyzing issue #${issue.number} with AI`);
   
-  // Create AI client based on configuration
-  const aiClient = await getAiClient(config.aiProvider);
+  // Use injected client for testing or create AI client based on configuration
+  const aiClient = injectedClient || await getAiClient(config.aiProvider);
   
   // Build analysis prompt based on issue context
   const prompt = buildAnalysisPrompt(issue);

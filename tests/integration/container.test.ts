@@ -1,7 +1,7 @@
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
-import { setupContainer } from '../src/containers/setup';
-import { runInContainer } from '../src/containers/run';
-import { ActionConfig } from '../src/types/index';
+import { setupContainer } from '../../src/containers/setup.js';
+import { runInContainer } from '../../src/containers/run.js';
+import { ActionConfig } from '../../src/types/index.js';
 
 // Set NODE_ENV to test for testing
 process.env.NODE_ENV = 'test';

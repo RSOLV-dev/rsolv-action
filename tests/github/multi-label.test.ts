@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, test, expect } from 'bun:test';
 
 describe('GitHub Multi-Label Search', () => {
-  it('should search for both configured label and rsolv label', () => {
+  test('should search for both configured label and rsolv label', () => {
     // Test various label configurations
     const testCases = [
       {
@@ -35,7 +35,7 @@ describe('GitHub Multi-Label Search', () => {
     });
   });
 
-  it('should deduplicate issues when they have multiple matching labels', () => {
+  test('should deduplicate issues when they have multiple matching labels', () => {
     // Simulate issues that might have both labels
     const mockIssues = [
       { id: 1, labels: ['autofix', 'rsolv'] },

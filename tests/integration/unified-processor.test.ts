@@ -1,12 +1,12 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
-import { processIssues } from '../src/ai/unified-processor';
-import { IssueContext, ActionConfig } from '../src/types';
-import * as analyzer from '../src/ai/analyzer';
-import * as solution from '../src/ai/solution';
-import * as pr from '../src/github/pr';
+import { processIssues } from '../../src/ai/unified-processor.js';
+import { IssueContext, ActionConfig } from '../../src/types/index.js';
+import * as analyzer from '../../src/ai/analyzer.js';
+import * as solution from '../../src/ai/solution.js';
+import * as pr from '../../src/github/pr.js';
 
 // Mock the dependencies
-mock.module('../src/ai/analyzer', () => ({
+mock.module('../../src/ai/analyzer', () => ({
   analyzeIssue: mock(() => Promise.resolve({
     canBeFixed: true,
     confidence: 0.9,
@@ -15,7 +15,7 @@ mock.module('../src/ai/analyzer', () => ({
   }))
 }));
 
-mock.module('../src/ai/solution', () => ({
+mock.module('../../src/ai/solution', () => ({
   generateSolution: mock(() => Promise.resolve({
     success: true,
     message: 'Solution generated successfully',
@@ -25,7 +25,7 @@ mock.module('../src/ai/solution', () => ({
   }))
 }));
 
-mock.module('../src/github/pr', () => ({
+mock.module('../../src/github/pr', () => ({
   createPullRequest: mock(() => Promise.resolve({
     success: true,
     message: 'Pull request created successfully',
@@ -34,7 +34,7 @@ mock.module('../src/github/pr', () => ({
   }))
 }));
 
-mock.module('../src/ai/security-analyzer', () => ({
+mock.module('../../src/ai/security-analyzer', () => ({
   SecurityAwareAnalyzer: class {
     async analyzeWithSecurity() {
       return {
@@ -53,7 +53,7 @@ mock.module('../src/ai/security-analyzer', () => ({
   }
 }));
 
-mock.module('../src/ai/adapters/claude-code-enhanced', () => ({
+mock.module('../../src/ai/adapters/claude-code-enhanced', () => ({
   EnhancedClaudeCodeAdapter: class {
     async gatherDeepContext() {
       return {

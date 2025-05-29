@@ -1,5 +1,5 @@
 import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
-import { loadConfig } from '../src/config/index';
+import { loadConfig } from '../../src/config/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

@@ -1,6 +1,90 @@
-import { test, expect, describe, beforeEach } from 'bun:test';
+import { test, expect, describe, beforeEach, mock } from 'bun:test';
 import { processIssues } from '../unified-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
+
+// Mock the AI client
+mock.module('../client', () => ({
+  getAiClient: () => ({
+    complete: mock((prompt: string) => {
+      // Return appropriate response based on the prompt content
+      if (prompt.includes('analyze')) {
+        return Promise.resolve(JSON.stringify({
+          issueType: 'security',
+          filesToModify: ['src/auth/login.js'],
+          estimatedComplexity: 'medium',
+          requiredContext: [],
+          suggestedApproach: 'Fix SQL injection vulnerability',
+          canBeFixed: true
+        }));
+      } else {
+        // For solution generation
+        return Promise.resolve(`Here's the solution:
+
+\`\`\`javascript
+// src/auth/login.js
+function authenticateUser(username, password) {
+  // Use parameterized queries to prevent SQL injection
+  const query = "SELECT * FROM users WHERE username = ? AND password = ?";
+  return db.query(query, [username, password]);
+}
+\`\`\`
+
+This fixes the SQL injection vulnerability by using parameterized queries.`);
+      }
+    }),
+    analyzeIssue: mock(() => Promise.resolve({
+      issueType: 'security',
+      filesToModify: ['src/auth/login.js'],
+      estimatedComplexity: 'medium',
+      requiredContext: [],
+      suggestedApproach: 'Fix SQL injection vulnerability',
+      canBeFixed: true
+    })),
+    generateSolution: mock(() => Promise.resolve({
+      success: true,
+      solution: {
+        title: 'Fix SQL injection vulnerability',
+        description: 'Use parameterized queries',
+        files: [{
+          path: 'src/auth/login.js',
+          content: 'fixed content',
+          changes: 'Use parameterized queries'
+        }]
+      }
+    }))
+  })
+}));
+
+// Mock the GitHub API
+mock.module('../../github/api', () => ({
+  getRepositoryDetails: () => Promise.resolve({
+    owner: 'test',
+    name: 'repo',
+    defaultBranch: 'main'
+  }),
+  getGitHubClient: () => ({})
+}));
+
+// Mock PR creation
+mock.module('../../github/pr', () => ({
+  createPullRequest: () => Promise.resolve({
+    success: true,
+    pullRequestUrl: 'https://github.com/test/repo/pull/1',
+    pullRequestNumber: 1
+  })
+}));
+
+// Mock file operations
+mock.module('../../github/files', () => ({
+  getRepositoryFiles: () => Promise.resolve({
+    'src/auth/login.js': `
+      function authenticateUser(username, password) {
+        const query = "SELECT * FROM users WHERE username = '" + username + "' AND password = '" + password + "'";
+        return db.query(query);
+      }
+    `
+  })
+}));
 
 describe('Security-Aware Processor Integration', () => {
   let mockConfig: ActionConfig;
