@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
-    "test": "bun test --preload ./test/setup.ts",
+    "test": "./run-tests-isolated.sh",
     "test:watch": "bun test --watch",
-    "test:isolated": "./scripts/run-tests-isolated.sh",
+    "test:parallel": "bun test --preload ./test/setup.ts",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "build": "bun build src/index.ts --outdir dist --minify --target node",
