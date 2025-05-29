@@ -70,7 +70,7 @@ For example:
 --- src/validation.js ---
 \`\`\`javascript
 function validateEmail(email) {
-  return /^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email);
+  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);
 }
 \`\`\`
 

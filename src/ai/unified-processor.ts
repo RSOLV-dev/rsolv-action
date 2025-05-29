@@ -4,7 +4,7 @@ import { analyzeIssue } from './analyzer.js';
 import { SecurityAwareAnalyzer } from './security-analyzer.js';
 import { generateSolution } from './solution.js';
 import { createPullRequest } from '../github/pr.js';
-import { getAiClient } from './client.js';
+// import { getAiClient } from './client.js';
 import { EnhancedClaudeCodeAdapter } from './adapters/claude-code-enhanced.js';
 import { AIConfig } from './types.js';
 
@@ -165,7 +165,7 @@ async function processIssue(
     logger.info(`Creating pull request for issue #${issue.number}`);
     const prResult = await createPullRequest(issue, solution.changes!, analysisData, config);
     
-    const processingTime = Date.now() - startTime;
+    // const _processingTime = Date.now() - startTime;
     
     return {
       issueId: issue.id,

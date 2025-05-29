@@ -102,8 +102,8 @@ Generate secure, production-ready code that follows security best practices.`;
  */
 function getSecurityFixTemplate(vulnType: VulnerabilityType): string {
   switch (vulnType) {
-    case VulnerabilityType.SQL_INJECTION:
-      return `
+  case VulnerabilityType.SQL_INJECTION:
+    return `
 SQL INJECTION FIX TEMPLATE:
 - Use parameterized queries/prepared statements ALWAYS
 - Never concatenate user input into SQL strings
@@ -114,8 +114,8 @@ SQL INJECTION FIX TEMPLATE:
   SECURE: query = "SELECT * FROM users WHERE id = ?"; db.query(query, [userId]);
 `;
 
-    case VulnerabilityType.XSS:
-      return `
+  case VulnerabilityType.XSS:
+    return `
 XSS (CROSS-SITE SCRIPTING) FIX TEMPLATE:
 - Use textContent instead of innerHTML for user data
 - Sanitize HTML content using trusted libraries (DOMPurify, etc.)
@@ -126,8 +126,8 @@ XSS (CROSS-SITE SCRIPTING) FIX TEMPLATE:
   SECURE: element.textContent = userInput; // or DOMPurify.sanitize(userInput)
 `;
 
-    case VulnerabilityType.BROKEN_AUTHENTICATION:
-      return `
+  case VulnerabilityType.BROKEN_AUTHENTICATION:
+    return `
 BROKEN AUTHENTICATION FIX TEMPLATE:
 - Implement strong password policies
 - Use secure session management
@@ -137,8 +137,8 @@ BROKEN AUTHENTICATION FIX TEMPLATE:
 - Validate session tokens properly
 `;
 
-    case VulnerabilityType.SENSITIVE_DATA_EXPOSURE:
-      return `
+  case VulnerabilityType.SENSITIVE_DATA_EXPOSURE:
+    return `
 SENSITIVE DATA EXPOSURE FIX TEMPLATE:
 - Encrypt sensitive data at rest and in transit
 - Use HTTPS for all communications
@@ -148,8 +148,8 @@ SENSITIVE DATA EXPOSURE FIX TEMPLATE:
 - Apply data classification policies
 `;
 
-    case VulnerabilityType.BROKEN_ACCESS_CONTROL:
-      return `
+  case VulnerabilityType.BROKEN_ACCESS_CONTROL:
+    return `
 BROKEN ACCESS CONTROL FIX TEMPLATE:
 - Implement role-based access control (RBAC)
 - Validate permissions on server-side
@@ -159,8 +159,8 @@ BROKEN ACCESS CONTROL FIX TEMPLATE:
 - Use secure direct object references
 `;
 
-    case VulnerabilityType.SECURITY_MISCONFIGURATION:
-      return `
+  case VulnerabilityType.SECURITY_MISCONFIGURATION:
+    return `
 SECURITY MISCONFIGURATION FIX TEMPLATE:
 - Remove default credentials and accounts
 - Disable unnecessary services and features
@@ -170,8 +170,8 @@ SECURITY MISCONFIGURATION FIX TEMPLATE:
 - Use secure configuration management
 `;
 
-    case VulnerabilityType.INSECURE_DESERIALIZATION:
-      return `
+  case VulnerabilityType.INSECURE_DESERIALIZATION:
+    return `
 INSECURE DESERIALIZATION FIX TEMPLATE:
 - Validate object types before deserialization
 - Use safe deserialization methods
@@ -181,8 +181,8 @@ INSECURE DESERIALIZATION FIX TEMPLATE:
 - Consider JSON instead of binary formats
 `;
 
-    default:
-      return `
+  default:
+    return `
 GENERAL SECURITY FIX TEMPLATE:
 - Follow OWASP guidelines for this vulnerability type
 - Implement input validation and sanitization
@@ -256,8 +256,8 @@ Files Modified: ${filesChanged}
 
 VULNERABILITY DETAILS:
 ${securityAnalysis.vulnerabilities.map(v => 
-  `- ${v.type} (${v.severity}): ${v.message}`
-).join('\n')}
+    `- ${v.type} (${v.severity}): ${v.message}`
+  ).join('\n')}
 
 Generate a pull request description that includes:
 

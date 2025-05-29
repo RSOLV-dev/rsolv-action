@@ -68,7 +68,7 @@ export class ComplianceGenerator {
   }
 
   generateMarkdownReport(report: ComplianceReport): string {
-    let markdown = `# Security Compliance Report\n\n`;
+    let markdown = '# Security Compliance Report\n\n';
     markdown += `**Generated:** ${new Date(report.timestamp).toLocaleDateString()}\n\n`;
     
     markdown += `## ${report.standard}\n\n`;
@@ -77,16 +77,16 @@ export class ComplianceGenerator {
     markdown += `**Total Vulnerabilities:** ${report.summary.totalVulnerabilities}\n\n`;
 
     // Add severity breakdown
-    markdown += `### Vulnerability Breakdown\n\n`;
+    markdown += '### Vulnerability Breakdown\n\n';
     for (const [severity, count] of Object.entries(report.summary.bySeverity)) {
       if (count > 0) {
         markdown += `- **${severity.charAt(0).toUpperCase() + severity.slice(1)}:** ${count}\n`;
       }
     }
-    markdown += `\n`;
+    markdown += '\n';
 
     // Add categories
-    markdown += `### Security Categories\n\n`;
+    markdown += '### Security Categories\n\n';
     for (const [categoryName, category] of Object.entries(report.categories)) {
       markdown += `#### ${categoryName}\n\n`;
       markdown += `**Status:** ${category.status}\n`;
@@ -94,17 +94,17 @@ export class ComplianceGenerator {
       markdown += `**Vulnerabilities:** ${category.vulnerabilities.length}\n\n`;
       
       if (category.vulnerabilities.length > 0) {
-        markdown += `**Findings:**\n`;
+        markdown += '**Findings:**\n';
         for (const vuln of category.vulnerabilities) {
           markdown += `- Line ${vuln.line}: ${vuln.message} (${vuln.severity})\n`;
         }
-        markdown += `\n`;
+        markdown += '\n';
       }
     }
 
     // Add recommendations
     if (report.recommendations.length > 0) {
-      markdown += `### Recommendations\n\n`;
+      markdown += '### Recommendations\n\n';
       for (const rec of report.recommendations) {
         markdown += `- ${rec}\n`;
       }
@@ -228,18 +228,18 @@ export class ComplianceGenerator {
     let score = 100;
     for (const vuln of vulnerabilities) {
       switch (vuln.severity) {
-        case 'critical':
-          score -= 25;
-          break;
-        case 'high':
-          score -= 15;
-          break;
-        case 'medium':
-          score -= 10;
-          break;
-        case 'low':
-          score -= 5;
-          break;
+      case 'critical':
+        score -= 25;
+        break;
+      case 'high':
+        score -= 15;
+        break;
+      case 'medium':
+        score -= 10;
+        break;
+      case 'low':
+        score -= 5;
+        break;
       }
     }
 

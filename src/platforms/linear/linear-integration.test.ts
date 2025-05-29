@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, mock } from 'bun:test';
 import { LinearAdapter } from './linear-adapter';
-import { detectIssuesFromAllPlatforms } from '../issue-detector';
-import type { ActionConfig } from '../../types';
+// import type { ActionConfig } from '../../types';
 
 describe('Linear Integration End-to-End', () => {
   describe('Programmatic Verification', () => {
@@ -13,7 +12,7 @@ describe('Linear Integration End-to-End', () => {
       });
 
       // Verify the GraphQL query structure
-      const mockFetch = vi.fn().mockResolvedValue({
+      const mockFetch = mock(() => Promise.resolve({
         ok: true,
         json: async () => ({
           data: {
@@ -33,9 +32,9 @@ describe('Linear Integration End-to-End', () => {
             }
           }
         })
-      });
+      }));
 
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
       const issues = await adapter.searchRsolvIssues();
 
       // Verify the query includes both labels
@@ -55,51 +54,51 @@ describe('Linear Integration End-to-End', () => {
       process.env.GITHUB_TOKEN = 'gh_test';
 
       // Mock fetch for Linear
-      const mockFetch = vi.fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            data: {
-              issues: {
-                nodes: [
-                  {
-                    id: 'linear_1',
-                    identifier: 'ENG-456',
-                    title: 'Linear issue',
-                    description: 'Fix in https://github.com/org/repo',
-                    labels: { nodes: [{ name: 'rsolv' }] },
-                    state: { name: 'Todo', type: 'unstarted' },
-                    createdAt: '2024-01-01T00:00:00Z',
-                    updatedAt: '2024-01-01T00:00:00Z',
-                    url: 'https://linear.app/team/issue/ENG-456'
-                  }
-                ]
-              }
+      const mockFetch = mock();
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
+        ok: true,
+        json: async () => ({
+          data: {
+            issues: {
+              nodes: [
+                {
+                  id: 'linear_1',
+                  identifier: 'ENG-456',
+                  title: 'Linear issue',
+                  description: 'Fix in https://github.com/org/repo',
+                  labels: { nodes: [{ name: 'rsolv' }] },
+                  state: { name: 'Todo', type: 'unstarted' },
+                  createdAt: '2024-01-01T00:00:00Z',
+                  updatedAt: '2024-01-01T00:00:00Z',
+                  url: 'https://linear.app/team/issue/ENG-456'
+                }
+              ]
             }
-          })
-        });
+          }
+        })
+      }));
 
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       // Mock GitHub detection
-      const mockConfig: ActionConfig = {
-        githubToken: 'gh_test',
-        repository: {
-          owner: 'test',
-          name: 'repo',
-          fullName: 'test/repo',
-          defaultBranch: 'main',
-          language: 'TypeScript'
-        },
-        issueNumber: 1,
-        workflowPath: '',
-        runId: '',
-        apiUrl: '',
-        aiProvider: {
-          type: 'anthropic',
-          model: 'claude-3-haiku-20240307'
-        }
-      };
+      // const _mockConfig: ActionConfig = {
+      //   githubToken: 'gh_test',
+      //   repository: {
+      //     owner: 'test',
+      //     name: 'repo',
+      //     fullName: 'test/repo',
+      //     defaultBranch: 'main',
+      //     language: 'TypeScript'
+      //   },
+      //   issueNumber: 1,
+      //   workflowPath: '',
+      //   runId: '',
+      //   apiUrl: '',
+      //   aiProvider: {
+      //     type: 'anthropic',
+      //     model: 'claude-3-haiku-20240307'
+      //   }
+      // };
 
       // Note: In a real test, we'd need to mock the GitHub API calls too
       // For now, we're focusing on Linear integration verification
@@ -115,7 +114,8 @@ describe('Linear Integration End-to-End', () => {
       });
 
       // First page
-      global.fetch = vi.fn().mockResolvedValueOnce({
+      const mockFetch = mock();
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({
           data: {
@@ -137,7 +137,9 @@ describe('Linear Integration End-to-End', () => {
             }
           }
         })
-      });
+      }));
+      
+      global.fetch = mockFetch as any;
 
       // Note: Current implementation doesn't handle pagination
       // This test documents that limitation
@@ -151,7 +153,7 @@ describe('Linear Integration End-to-End', () => {
         apiKey: 'test_key'
       });
 
-      global.fetch = vi.fn().mockResolvedValue({
+      const mockFetch = mock(() => Promise.resolve({
         ok: true,
         json: async () => ({
           data: {
@@ -172,8 +174,9 @@ describe('Linear Integration End-to-End', () => {
             }
           }
         })
-      });
+      }));
 
+      global.fetch = mockFetch as any;
       const issues = await adapter.searchRsolvIssues();
       expect(issues[0].description).toContain('github.com/myorg/myrepo');
     });
@@ -198,17 +201,20 @@ describe('Linear Integration End-to-End', () => {
       process.env.JIRA_API_TOKEN = 'jira_test';
 
       // Mock responses
-      global.fetch = vi.fn()
-        .mockResolvedValueOnce({
+      const mockFetch = mock();
+      mockFetch
+        .mockImplementationOnce(() => Promise.resolve({
           // Linear response
           ok: true,
           json: async () => ({ data: { issues: { nodes: [] } } })
-        })
-        .mockResolvedValueOnce({
+        }))
+        .mockImplementationOnce(() => Promise.resolve({
           // Jira response
           ok: true,
           json: async () => ({ issues: [] })
-        });
+        }));
+
+      global.fetch = mockFetch as any;
 
       // The actual implementation would run detectIssuesFromAllPlatforms
       // which checks all configured platforms
@@ -229,7 +235,7 @@ describe('Linear Integration End-to-End', () => {
         rsolvLabel: 'custom-rsolv'
       });
 
-      const mockFetch = vi.fn().mockResolvedValue({
+      const mockFetch = mock(() => Promise.resolve({
         ok: true,
         json: async () => ({
           data: {
@@ -259,9 +265,9 @@ describe('Linear Integration End-to-End', () => {
             }
           }
         })
-      });
+      }));
 
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
       const issues = await adapter.searchRsolvIssues();
 
       // Verify custom labels are used
@@ -283,12 +289,12 @@ describe('Linear Integration End-to-End', () => {
         teamId: 'team_123'
       });
 
-      const mockFetch = vi.fn().mockResolvedValue({
+      const mockFetch = mock(() => Promise.resolve({
         ok: true,
         json: async () => ({ data: { issues: { nodes: [] } } })
-      });
+      }));
 
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
       await adapter.searchRsolvIssues();
 
       const callArgs = mockFetch.mock.calls[0];

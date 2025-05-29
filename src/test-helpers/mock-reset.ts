@@ -2,7 +2,6 @@
  * Helper to reset module mocks between tests
  * This is a workaround for Bun's mock isolation issues
  */
-import { mock } from 'bun:test';
 
 export function resetAllMocks() {
   // Reset all module mocks by re-mocking with original implementations

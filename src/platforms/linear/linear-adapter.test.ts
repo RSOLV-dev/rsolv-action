@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LinearAdapter } from './linear-adapter';
-import type { UnifiedIssue } from '../types';
 
 // Mock fetch globally
 global.fetch = vi.fn();

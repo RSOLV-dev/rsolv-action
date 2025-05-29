@@ -53,7 +53,7 @@ export async function detectIssuesFromAllPlatforms(config: ActionConfig): Promis
 /**
  * Detect Jira issues
  */
-async function detectJiraIssues(config: ActionConfig): Promise<IssueContext[]> {
+async function detectJiraIssues(_config: ActionConfig): Promise<IssueContext[]> {
   const platformConfig: PlatformConfig = {
     jira: {
       host: process.env.JIRA_HOST!,
@@ -84,7 +84,7 @@ async function detectJiraIssues(config: ActionConfig): Promise<IssueContext[]> {
 /**
  * Detect Linear issues
  */
-async function detectLinearIssues(config: ActionConfig): Promise<IssueContext[]> {
+async function detectLinearIssues(_config: ActionConfig): Promise<IssueContext[]> {
   const platformConfig: PlatformConfig = {
     linear: {
       apiKey: process.env.LINEAR_API_KEY!,
@@ -144,7 +144,7 @@ function convertToIssueContext(issue: UnifiedIssue): IssueContext {
  */
 function extractRepositoryInfo(issue: UnifiedIssue): IssueContext['repository'] | null {
   // Look for GitHub URLs in the issue description
-  const githubUrlPattern = /https?:\/\/github\.com\/([^\/]+)\/([^\/\s]+)/g;
+  const githubUrlPattern = /https?:\/\/github\.com\/([^/]+)\/([^/\s]+)/g;
   const match = githubUrlPattern.exec(issue.description);
   
   if (match) {

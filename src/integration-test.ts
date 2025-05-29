@@ -7,7 +7,6 @@
 import { getAiClient } from './ai/client.js';
 import { RSOLVCredentialManager } from './credentials/manager.js';
 import { AiProviderConfig } from './types/index.js';
-import { logger } from './utils/logger.js';
 
 // Mock server to simulate RSOLV API
 import { serve } from 'bun';

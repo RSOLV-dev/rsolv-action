@@ -266,7 +266,7 @@ function processPayment(cardNumber, cvv) {
     return filteredExamples;
   }
 
-  async demonstrateVulnerabilityDetection(example: DemoExample): Promise<{
+  async demonstrateVulnerabilityDetection(_example: DemoExample): Promise<{
     detectedVulnerabilities: any[];
     analysisReport: any;
     complianceReport: any;
@@ -275,14 +275,14 @@ function processPayment(cardNumber, cvv) {
     const startTime = Date.now();
     
     // Step 1: Detect vulnerabilities
-    const detectedVulnerabilities = this.detector.detect(example.vulnerableCode, example.language);
+    const detectedVulnerabilities = this.detector.detect(_example.vulnerableCode, _example.language);
     
     // Step 2: Generate analysis report
-    const codebaseMap = new Map([[`${example.id}.${example.language}`, example.vulnerableCode]]);
+    const codebaseMap = new Map([[`${_example.id}.${_example.language}`, _example.vulnerableCode]]);
     const mockIssue = {
-      id: example.id,
-      title: example.title,
-      body: example.description,
+      id: _example.id,
+      title: _example.title,
+      body: _example.description,
       number: 1,
       labels: ['security'],
       assignees: [],
@@ -290,7 +290,7 @@ function processPayment(cardNumber, cvv) {
         owner: 'demo',
         name: 'security-demo',
         fullName: 'demo/security-demo',
-        language: example.language
+        language: _example.language
       }
     };
     
@@ -352,8 +352,8 @@ function processPayment(cardNumber, cvv) {
     };
   }
 
-  async generateSecurityReport(example: DemoExample): Promise<SecurityReportResult> {
-    const detectionResult = await this.demonstrateVulnerabilityDetection(example);
+  async generateSecurityReport(_example: DemoExample): Promise<SecurityReportResult> {
+    const detectionResult = await this.demonstrateVulnerabilityDetection(_example);
     
     const vulnerabilityBreakdown: Record<string, number> = {};
     for (const vuln of detectionResult.detectedVulnerabilities) {
@@ -374,13 +374,13 @@ function processPayment(cardNumber, cvv) {
     };
   }
 
-  async exportSecurityReport(example: DemoExample, formats: string[]): Promise<Record<string, string>> {
-    const report = await this.generateSecurityReport(example);
-    const detectionResult = await this.demonstrateVulnerabilityDetection(example);
+  async exportSecurityReport(_example: DemoExample, formats: string[]): Promise<Record<string, string>> {
+    const report = await this.generateSecurityReport(_example);
+    const detectionResult = await this.demonstrateVulnerabilityDetection(_example);
     const results: Record<string, string> = {};
 
     if (formats.includes('markdown')) {
-      results.markdown = this.generateMarkdownReport(report, example);
+      results.markdown = this.generateMarkdownReport(report, _example);
     }
 
     if (formats.includes('json')) {
@@ -571,22 +571,22 @@ Please provide a secure implementation with explanations.`;
 
   private generateSecureCode(vulnerableCode: string, vulnerabilityType: string): string {
     switch (vulnerabilityType) {
-      case 'sql_injection':
-        return vulnerableCode.replace(
-          /["'`].*?["'`]\s*\+\s*\w+/g,
-          '"SELECT * FROM users WHERE id = ?"; db.query(query, [userId])'
-        );
-      case 'xss':
-        return vulnerableCode.replace(
-          /\.innerHTML\s*=\s*[^;]+/g,
-          '.textContent = userInput; // or use DOMPurify.sanitize(userInput)'
-        );
-      default:
-        return vulnerableCode + ' // Add security measures';
+    case 'sql_injection':
+      return vulnerableCode.replace(
+        /["'`].*?["'`]\s*\+\s*\w+/g,
+        '"SELECT * FROM users WHERE id = ?"; db.query(query, [userId])'
+      );
+    case 'xss':
+      return vulnerableCode.replace(
+        /\.innerHTML\s*=\s*[^;]+/g,
+        '.textContent = userInput; // or use DOMPurify.sanitize(userInput)'
+      );
+    default:
+      return vulnerableCode + ' // Add security measures';
     }
   }
 
-  private generateMarkdownReport(report: SecurityReportResult, example: DemoExample): string {
+  private generateMarkdownReport(report: SecurityReportResult, _example: DemoExample): string {
     return `# Security Analysis Report
 
 ## Summary
@@ -596,8 +596,8 @@ Please provide a secure implementation with explanations.`;
 
 ## Vulnerability Breakdown
 ${Object.entries(report.vulnerabilityBreakdown)
-  .map(([type, count]) => `- **${type}**: ${count}`)
-  .join('\n')}
+    .map(([type, count]) => `- **${type}**: ${count}`)
+    .join('\n')}
 
 ## Recommendations
 ${report.recommendations.map(rec => `- ${rec}`).join('\n')}
