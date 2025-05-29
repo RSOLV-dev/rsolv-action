@@ -1,12 +1,12 @@
 import { describe, expect, test, mock } from 'bun:test';
-import { analyzeIssue } from '../src/ai/analyzer';
-import { generateSolution } from '../src/ai/solution';
-import { processIssues } from '../src/ai/unified-processor';
-import { getAiClient } from '../src/ai/client';
-import { IssueContext, ActionConfig, AnalysisData } from '../src/types/index';
+import { analyzeIssue } from '../../src/ai/analyzer.js';
+import { generateSolution } from '../../src/ai/solution.js';
+import { processIssues } from '../../src/ai/unified-processor.js';
+import { getAiClient } from '../../src/ai/client.js';
+import { IssueContext, ActionConfig, AnalysisData } from '../../src/types/index.js';
 
 // Mock the AI client
-mock.module('../src/ai/client', () => {
+mock.module('../../src/ai/client', () => {
   return {
     getAiClient: () => ({
       complete: async (prompt: string) => {
@@ -68,7 +68,7 @@ This solution fixes the issue by properly decoding the token before validation, 
 });
 
 // Mock the GitHub modules
-mock.module('../src/github/files', () => {
+mock.module('../../src/github/files', () => {
   return {
     getRepositoryFiles: async () => ({
       'src/auth/tokenValidator.js': '// Original token validator code',
@@ -77,7 +77,7 @@ mock.module('../src/github/files', () => {
   };
 });
 
-mock.module('../src/github/pr', () => {
+mock.module('../../src/github/pr', () => {
   return {
     createPullRequest: async () => ({
       success: true,

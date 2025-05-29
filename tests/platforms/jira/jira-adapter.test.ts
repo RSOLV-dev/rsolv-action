@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
+import { describe, test, expect, beforeEach, mock } from 'bun:test';
 import { JiraAdapter } from '../../../src/platforms/jira/jira-adapter';
 import type { PlatformConfig, UnifiedIssue } from '../../../src/platforms/types';
 
 // Mock fetch globally
-global.fetch = vi.fn() as Mock;
+const mockFetch = mock(() => Promise.resolve());
+global.fetch = mockFetch as any;
 
 describe('JiraAdapter', () => {
   let adapter: JiraAdapter;
@@ -17,46 +18,43 @@ describe('JiraAdapter', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockFetch.mockReset();
+    mockFetch.mockImplementation(() => Promise.resolve());
     adapter = new JiraAdapter(mockConfig.jira!);
   });
 
   describe('authenticate', () => {
-    it('should authenticate successfully with valid credentials', async () => {
-      const mockFetch = fetch as Mock;
-      mockFetch.mockResolvedValueOnce({
+    test('should authenticate successfully with valid credentials', async () => {
+      
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({ accountId: '123', emailAddress: 'test@example.com' })
-      } as Response);
+      } as Response));
 
       await adapter.authenticate();
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://test.atlassian.net/rest/api/3/myself',
-        {
-          headers: {
-            'Authorization': `Basic ${Buffer.from('test@example.com:test-token').toString('base64')}`,
-            'Accept': 'application/json'
-          }
-        }
-      );
+      expect(mockFetch).toHaveBeenCalled();
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe('https://test.atlassian.net/rest/api/3/myself');
+      expect(options.headers['Authorization']).toBe(`Basic ${Buffer.from('test@example.com:test-token').toString('base64')}`);
+      expect(options.headers['Accept']).toBe('application/json');
     });
 
-    it('should throw error on authentication failure', async () => {
-      const mockFetch = fetch as Mock;
-      mockFetch.mockResolvedValueOnce({
+    test('should throw error on authentication failure', async () => {
+      
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: false,
         status: 401,
         statusText: 'Unauthorized'
-      } as Response);
+      } as Response));
 
-      await expect(adapter.authenticate()).rejects.toThrow('Failed to authenticate with Jira: 401 Unauthorized');
+      await expect(adapter.authenticate()).rejects.toThrow('Jira authentication failed: HTTP 401: Unauthorized');
     });
   });
 
   describe('searchIssues', () => {
-    it('should search issues with autofix label', async () => {
-      const mockFetch = fetch as Mock;
+    test('should search issues with autofix label', async () => {
+      
       const mockJiraIssues = {
         issues: [
           {
@@ -84,10 +82,10 @@ describe('JiraAdapter', () => {
         ]
       };
 
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => mockJiraIssues
-      } as Response);
+      } as Response));
 
       const issues = await adapter.searchIssues('labels = "autofix"');
 
@@ -121,27 +119,27 @@ describe('JiraAdapter', () => {
       });
     });
 
-    it('should handle empty search results', async () => {
-      const mockFetch = fetch as Mock;
-      mockFetch.mockResolvedValueOnce({
+    test('should handle empty search results', async () => {
+      
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({ issues: [] })
-      } as Response);
+      } as Response));
 
       const issues = await adapter.searchIssues('labels = "autofix"');
       expect(issues).toHaveLength(0);
     });
   });
 
-  describe('addComment', () => {
-    it('should add comment to issue', async () => {
-      const mockFetch = fetch as Mock;
-      mockFetch.mockResolvedValueOnce({
+  describe('createComment', () => {
+    test('should add comment to issue', async () => {
+      
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({ id: '123' })
-      } as Response);
+      } as Response));
 
-      await adapter.addComment('PROJ-123', 'RSOLV has created a pull request for this issue');
+      await adapter.createComment('PROJ-123', 'RSOLV has created a pull request for this issue');
 
       expect(mockFetch).toHaveBeenCalledWith(
         'https://test.atlassian.net/rest/api/3/issue/PROJ-123/comment',
@@ -174,15 +172,15 @@ describe('JiraAdapter', () => {
     });
   });
 
-  describe('linkExternalResource', () => {
-    it('should create remote link to GitHub PR', async () => {
-      const mockFetch = fetch as Mock;
-      mockFetch.mockResolvedValueOnce({
+  describe('addLink', () => {
+    test('should create remote link to GitHub PR', async () => {
+      
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({ id: '456' })
-      } as Response);
+      } as Response));
 
-      await adapter.linkExternalResource(
+      await adapter.addLink(
         'PROJ-123',
         'https://github.com/owner/repo/pull/42',
         'Fix: Update deprecated API calls'
@@ -212,11 +210,11 @@ describe('JiraAdapter', () => {
     });
   });
 
-  describe('updateStatus', () => {
-    it('should update issue status', async () => {
+  describe('updateIssueStatus', () => {
+    test('should update issue status', async () => {
       // First, get available transitions
-      const mockFetch = fetch as Mock;
-      mockFetch.mockResolvedValueOnce({
+      
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({
           transitions: [
@@ -224,15 +222,15 @@ describe('JiraAdapter', () => {
             { id: '31', name: 'Done' }
           ]
         })
-      } as Response);
+      } as Response));
 
       // Then update status
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({})
-      } as Response);
+      } as Response));
 
-      await adapter.updateStatus('PROJ-123', 'In Progress');
+      await adapter.updateIssueStatus('PROJ-123', 'In Progress');
 
       // Verify getting transitions
       expect(mockFetch).toHaveBeenNthCalledWith(

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach } from 'bun:test';
 import { JiraAdapter } from '../../src/platforms/jira/jira-adapter';
 import type { UnifiedIssue } from '../../src/platforms/types';
 
@@ -6,7 +6,7 @@ import type { UnifiedIssue } from '../../src/platforms/types';
  * Integration test showing how Jira fits into the RSOLV workflow
  */
 describe('Jira Integration Workflow', () => {
-  it('demonstrates the complete workflow from Jira issue to PR', async () => {
+  test('demonstrates the complete workflow from Jira issue to PR', async () => {
     // Step 1: User creates a Jira issue with autofix label
     const jiraIssue: UnifiedIssue = {
       id: 'jira-10001',
@@ -81,7 +81,7 @@ Changes made:
     expect(jiraIssue.description).toContain('github.com');
   });
 
-  it('shows how repository info is extracted from Jira', () => {
+  test('shows how repository info is extracted from Jira', () => {
     const testCases = [
       {
         description: 'Repository: https://github.com/owner/repo',
@@ -109,7 +109,7 @@ Changes made:
     });
   });
 
-  it('shows the Jira configuration in action.yml', () => {
+  test('shows the Jira configuration in action.yml', () => {
     const actionYmlInputs = {
       jira_host: 'Jira instance hostname (e.g., your-domain.atlassian.net)',
       jira_email: 'Jira account email for API authentication',

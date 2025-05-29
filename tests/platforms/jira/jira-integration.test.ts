@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { JiraAdapter } from '../../../src/platforms/jira/jira-adapter';
 import type { UnifiedIssue } from '../../../src/platforms/types';
 
@@ -34,12 +34,12 @@ describe.skip('JiraAdapter Integration Tests', () => {
     await adapter.authenticate();
   });
 
-  it('should authenticate successfully', async () => {
+  test('should authenticate successfully', async () => {
     // Authentication happens in beforeAll
     expect(adapter).toBeDefined();
   });
 
-  it('should create and search for test issue', async () => {
+  test('should create and search for test issue', async () => {
     // Note: Creating issues requires additional setup
     // This test assumes you have a test issue with the rsolv-test label
     const issues = await adapter.searchIssues(`labels = "${config.autofixLabel}"`);
@@ -51,13 +51,13 @@ describe.skip('JiraAdapter Integration Tests', () => {
     }
   });
 
-  it('should add comment to issue', async () => {
+  test('should add comment to issue', async () => {
     if (!testIssueKey) {
       console.log('No test issue found, skipping comment test');
       return;
     }
 
-    await adapter.addComment(
+    await adapter.createComment(
       testIssueKey,
       `RSOLV integration test comment - ${new Date().toISOString()}`
     );
@@ -66,13 +66,13 @@ describe.skip('JiraAdapter Integration Tests', () => {
     expect(true).toBe(true);
   });
 
-  it('should link external resource', async () => {
+  test('should link external resource', async () => {
     if (!testIssueKey) {
       console.log('No test issue found, skipping link test');
       return;
     }
 
-    await adapter.linkExternalResource(
+    await adapter.addLink(
       testIssueKey,
       'https://github.com/rsolv-dev/rsolv-action/pull/999',
       'Test PR from RSOLV Integration'

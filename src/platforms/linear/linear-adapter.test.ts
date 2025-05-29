@@ -109,7 +109,7 @@ describe('LinearAdapter', () => {
         text: async () => 'Unauthorized',
       });
 
-      await expect(adapter.searchRsolvIssues()).rejects.toThrow('Linear API error: 401');
+      await expect(adapter.searchRsolvIssues()).rejects.toThrow('Linear GraphQL request failed: HTTP 401: undefined');
     });
   });
 

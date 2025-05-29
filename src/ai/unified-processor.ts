@@ -35,7 +35,13 @@ export interface UnifiedProcessingResult extends IssueProcessingResult {
 export async function processIssues(
   issues: IssueContext[],
   config: ActionConfig,
-  options: ProcessingOptions = {}
+  options: ProcessingOptions = {},
+  injectedDeps?: {
+    aiClient?: any;
+    fileGetter?: any;
+    prCreator?: any;
+    logger?: any;
+  }
 ): Promise<UnifiedProcessingResult[]> {
   logger.info(`Processing ${issues.length} issues with AI`);
   
@@ -45,7 +51,7 @@ export async function processIssues(
     try {
       logger.info(`Processing issue #${issue.number}: ${issue.title}`);
       
-      const result = await processIssue(issue, config, options);
+      const result = await processIssue(issue, config, options, injectedDeps);
       results.push(result);
       
       if (result.success) {
@@ -73,7 +79,13 @@ export async function processIssues(
 async function processIssue(
   issue: IssueContext,
   config: ActionConfig,
-  options: ProcessingOptions = {}
+  options: ProcessingOptions = {},
+  injectedDeps?: {
+    aiClient?: any;
+    fileGetter?: any;
+    prCreator?: any;
+    logger?: any;
+  }
 ): Promise<UnifiedProcessingResult> {
   const startTime = Date.now();
   
@@ -91,7 +103,7 @@ async function processIssue(
       analysisData = result.analysis;
       securityAnalysis = result.securityAnalysis;
     } else {
-      analysisData = await analyzeIssue(issue, config);
+      analysisData = await analyzeIssue(issue, config, injectedDeps?.aiClient);
     }
     
     if (!analysisData || !analysisData.canBeFixed) {
@@ -135,10 +147,10 @@ async function processIssue(
       contextGatheringTime = Date.now() - contextStart;
       
       // Generate solution with enhanced context
-      solution = await generateSolution(issue, analysisData, config, deepContext);
+      solution = await generateSolution(issue, analysisData, config, injectedDeps?.aiClient, injectedDeps?.fileGetter);
     } else {
       // Standard solution generation
-      solution = await generateSolution(issue, analysisData, config);
+      solution = await generateSolution(issue, analysisData, config, injectedDeps?.aiClient, injectedDeps?.fileGetter);
     }
     
     if (!solution || !solution.success || !solution.changes || Object.keys(solution.changes).length === 0) {

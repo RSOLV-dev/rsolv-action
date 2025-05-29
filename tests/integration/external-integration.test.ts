@@ -1,6 +1,6 @@
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
-import { handleExternalWebhook, getRepositoryFromExternalIssue } from '../src/external/webhook';
-import { ActionConfig, IssueContext } from '../src/types/index';
+import { handleExternalWebhook, getRepositoryFromExternalIssue } from '../../src/external/webhook.js';
+import { ActionConfig, IssueContext } from '../../src/types/index.js';
 
 // Mock configuration for tests
 const mockConfig: ActionConfig = {

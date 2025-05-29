@@ -19,13 +19,15 @@ export interface SolutionResult {
 export async function generateSolution(
   issue: IssueContext,
   analysisData: AnalysisData,
-  config: ActionConfig
+  config: ActionConfig,
+  injectedClient?: any,
+  injectedFileGetter?: any
 ): Promise<SolutionResult> {
   try {
     logger.info(`Generating solution for issue #${issue.number}`);
     
-    // Get AI client
-    const aiClient = getAiClient(config.aiProvider);
+    // Use injected client for testing or get AI client
+    const aiClient = injectedClient || getAiClient(config.aiProvider);
     
     // Get file contents from repository
     const fileContents = await getFilesForAnalysis(issue, analysisData);

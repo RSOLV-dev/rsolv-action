@@ -1,32 +1,50 @@
-import { describe, it, expect, beforeEach, vi, Mock, afterEach } from 'vitest';
+import { describe, test, expect, beforeEach, mock } from 'bun:test';
 import type { ActionConfig } from '../../src/types';
 
-// We'll need to manually mock these since vi.mock doesn't work in Bun
-const mockDetectIssues = vi.fn();
-const mockCreateAndAuthenticate = vi.fn();
+// Create mocks
+const mockDetectIssues = mock(() => Promise.resolve([]));
+const mockSearchIssues = mock(() => Promise.resolve([]));
+const mockSearchRsolvIssues = mock(() => Promise.resolve([]));
+const mockCreate = mock(() => ({
+  searchIssues: mockSearchIssues,
+  searchRsolvIssues: mockSearchRsolvIssues
+}));
 
-// Mock the modules before importing the code under test
-vi.doMock('../../src/github/issues', () => ({
+// Mock the modules using Bun's mock system
+mock.module('../../src/github/issues', () => ({
   detectIssues: mockDetectIssues
 }));
 
-vi.doMock('../../src/platforms/platform-factory', () => ({
+mock.module('../../src/platforms/platform-factory', () => ({
   PlatformFactory: {
-    createAndAuthenticate: mockCreateAndAuthenticate
+    create: mockCreate,
+    createAndAuthenticate: mock(() => Promise.resolve({
+      searchIssues: mockSearchIssues,
+      searchRsolvIssues: mockSearchRsolvIssues
+    }))
   }
 }));
 
-// Now import the code under test
-const { detectIssuesFromAllPlatforms } = await import('../../src/platforms/issue-detector');
+// Import after mocking
+import { detectIssuesFromAllPlatforms } from '../../src/platforms/issue-detector';
+import * as githubIssues from '../../src/github/issues';
+import { PlatformFactory } from '../../src/platforms/platform-factory';
 
-// Mock fetch for Jira API calls
-global.fetch = vi.fn() as Mock;
+// Mock fetch globally
+global.fetch = mock(() => Promise.resolve());
 
 describe('Multi-Platform Issue Detection', () => {
   let mockConfig: ActionConfig;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Reset all mock implementations
+    mockDetectIssues.mockImplementation(() => Promise.resolve([]));
+    mockSearchIssues.mockImplementation(() => Promise.resolve([]));
+    mockSearchRsolvIssues.mockImplementation(() => Promise.resolve([]));
+    mockCreate.mockImplementation(() => ({
+      searchIssues: mockSearchIssues,
+      searchRsolvIssues: mockSearchRsolvIssues
+    }));
     
     mockConfig = {
       issueLabel: 'rsolv:automate',
@@ -56,7 +74,7 @@ describe('Multi-Platform Issue Detection', () => {
     };
   });
 
-  it('should detect issues from GitHub only when no other platforms configured', async () => {
+  test('should detect issues from GitHub only when no other platforms configured', async () => {
     // Mock GitHub issues
     const mockGitHubIssues = [
       {
@@ -69,16 +87,16 @@ describe('Multi-Platform Issue Detection', () => {
       }
     ];
     
-    vi.mocked(githubIssues.detectIssues).mockResolvedValue(mockGitHubIssues as any);
+    mockDetectIssues.mockImplementation(() => Promise.resolve(mockGitHubIssues as any));
 
     const issues = await detectIssuesFromAllPlatforms(mockConfig);
 
     expect(issues).toHaveLength(1);
     expect(issues[0].source).toBe('github');
-    expect(vi.mocked(githubIssues.detectIssues)).toHaveBeenCalledWith(mockConfig);
+    expect(mockDetectIssues).toHaveBeenCalledWith(mockConfig);
   });
 
-  it('should detect issues from both GitHub and Jira when configured', async () => {
+  test('should detect issues from both GitHub and Jira when configured', async () => {
     // Set Jira environment variables
     process.env.JIRA_HOST = 'test.atlassian.net';
     process.env.JIRA_EMAIL = 'test@example.com';
@@ -93,27 +111,23 @@ describe('Multi-Platform Issue Detection', () => {
         source: 'github'
       }
     ];
-    vi.mocked(githubIssues.detectIssues).mockResolvedValue(mockGitHubIssues as any);
+    mockDetectIssues.mockImplementation(() => Promise.resolve(mockGitHubIssues as any));
 
     // Mock Jira adapter
-    const mockJiraAdapter = {
-      searchIssues: vi.fn().mockResolvedValue([
-        {
-          id: 'jira-1001',
-          platform: 'jira',
-          key: 'PROJ-123',
-          title: 'Jira Issue',
-          description: 'Repository: https://github.com/owner/repo',
-          labels: ['autofix'],
-          status: 'To Do',
-          url: 'https://test.atlassian.net/browse/PROJ-123',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ])
-    };
-
-    vi.mocked(PlatformFactory.createAndAuthenticate).mockResolvedValue(mockJiraAdapter as any);
+    mockSearchRsolvIssues.mockImplementation(() => Promise.resolve([
+      {
+        id: 'jira-1001',
+        platform: 'jira',
+        key: 'PROJ-123',
+        title: 'Jira Issue',
+        description: 'Repository: https://github.com/owner/repo',
+        labels: ['autofix'],
+        status: 'To Do',
+        url: 'https://test.atlassian.net/browse/PROJ-123',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]));
 
     const issues = await detectIssuesFromAllPlatforms(mockConfig);
 
@@ -130,34 +144,30 @@ describe('Multi-Platform Issue Detection', () => {
     delete process.env.JIRA_API_TOKEN;
   });
 
-  it('should handle errors gracefully and continue with other platforms', async () => {
+  test('should handle errors gracefully and continue with other platforms', async () => {
     // Set Jira environment variables
     process.env.JIRA_HOST = 'test.atlassian.net';
     process.env.JIRA_EMAIL = 'test@example.com';
     process.env.JIRA_API_TOKEN = 'test-token';
 
     // Mock GitHub to throw error
-    vi.mocked(githubIssues.detectIssues).mockRejectedValue(new Error('GitHub API error'));
+    mockDetectIssues.mockImplementation(() => Promise.reject(new Error('GitHub API error')));
 
     // Mock Jira to work normally
-    const mockJiraAdapter = {
-      searchIssues: vi.fn().mockResolvedValue([
-        {
-          id: 'jira-1001',
-          platform: 'jira',
-          key: 'PROJ-123',
-          title: 'Jira Issue',
-          description: 'Test issue',
-          labels: ['autofix'],
-          status: 'To Do',
-          url: 'https://test.atlassian.net/browse/PROJ-123',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ])
-    };
-
-    vi.mocked(PlatformFactory.createAndAuthenticate).mockResolvedValue(mockJiraAdapter as any);
+    mockSearchRsolvIssues.mockImplementation(() => Promise.resolve([
+      {
+        id: 'jira-1001',
+        platform: 'jira',
+        key: 'PROJ-123',
+        title: 'Jira Issue',
+        description: 'Test issue',
+        labels: ['autofix'],
+        status: 'To Do',
+        url: 'https://test.atlassian.net/browse/PROJ-123',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]));
 
     const issues = await detectIssuesFromAllPlatforms(mockConfig);
 
@@ -171,38 +181,34 @@ describe('Multi-Platform Issue Detection', () => {
     delete process.env.JIRA_API_TOKEN;
   });
 
-  it('should extract repository info from Jira issue description', async () => {
+  test('should extract repository info from Jira issue description', async () => {
     process.env.JIRA_HOST = 'test.atlassian.net';
     process.env.JIRA_EMAIL = 'test@example.com';
     process.env.JIRA_API_TOKEN = 'test-token';
 
-    vi.mocked(githubIssues.detectIssues).mockResolvedValue([]);
+    mockDetectIssues.mockImplementation(() => Promise.resolve([]));
 
-    const mockJiraAdapter = {
-      searchIssues: vi.fn().mockResolvedValue([
-        {
-          id: 'jira-1001',
-          platform: 'jira',
-          key: 'PROJ-456',
-          title: 'Fix security issue',
-          description: `
-            There's a security vulnerability in our auth system.
-            
-            Repository: https://github.com/myorg/myapp
-            File: src/auth/validator.js
-            
-            Please fix ASAP.
-          `,
-          labels: ['autofix', 'security'],
-          status: 'To Do',
-          url: 'https://test.atlassian.net/browse/PROJ-456',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ])
-    };
-
-    vi.mocked(PlatformFactory.createAndAuthenticate).mockResolvedValue(mockJiraAdapter as any);
+    mockSearchRsolvIssues.mockImplementation(() => Promise.resolve([
+      {
+        id: 'jira-1001',
+        platform: 'jira',
+        key: 'PROJ-456',
+        title: 'Fix security issue',
+        description: `
+          There's a security vulnerability in our auth system.
+          
+          Repository: https://github.com/myorg/myapp
+          File: src/auth/validator.js
+          
+          Please fix ASAP.
+        `,
+        labels: ['autofix', 'security'],
+        status: 'To Do',
+        url: 'https://test.atlassian.net/browse/PROJ-456',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]));
 
     const issues = await detectIssuesFromAllPlatforms(mockConfig);
 

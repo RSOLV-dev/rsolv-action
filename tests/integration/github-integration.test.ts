@@ -1,11 +1,11 @@
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
-import { detectIssues } from '../src/github/issues';
-import { createPullRequest } from '../src/github/pr';
-import { getRepositoryFiles } from '../src/github/files';
-import { IssueContext, ActionConfig, AnalysisData } from '../src/types/index';
+import { detectIssues } from '../../src/github/issues.js';
+import { createPullRequest } from '../../src/github/pr.js';
+import { getRepositoryFiles } from '../../src/github/files.js';
+import { IssueContext, ActionConfig, AnalysisData } from '../../src/types/index.js';
 
 // Mock the GitHub API client
-mock.module('../src/github/api', () => {
+mock.module('../../src/github/api', () => {
   return {
     getGitHubClient: () => ({
       repos: {
@@ -67,7 +67,7 @@ mock.module('../src/github/api', () => {
 });
 
 // Mock the AI client
-mock.module('../src/ai/client', () => ({
+mock.module('../../src/ai/client', () => ({
   getAiClient: () => ({
     complete: async (prompt: string) => {
       return 'This pull request fixes the authentication bug reported in issue #42.\n\n## Changes\n- Fixed token validation\n- Added proper error handling\n\n## Testing\n- Added unit tests\n- Manual testing completed';
