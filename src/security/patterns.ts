@@ -3,6 +3,7 @@ import { pythonSecurityPatterns } from './patterns/python.js';
 import { rubySecurityPatterns } from './patterns/ruby.js';
 import { javaSecurityPatterns } from './patterns/java.js';
 import { allJavaScriptPatterns } from './patterns/javascript.js';
+import { cveAndOwaspPatterns } from './patterns/cve-patterns.js';
 
 export class PatternRegistry {
   private patterns: Map<VulnerabilityType, SecurityPattern[]> = new Map();
@@ -45,6 +46,13 @@ export class PatternRegistry {
     for (const pattern of rubySecurityPatterns) {
       const existingPatterns = this.patterns.get(pattern.type) || [];
       existingPatterns.push(pattern); // Already in correct format
+      this.patterns.set(pattern.type, existingPatterns);
+    }
+    
+    // Add CVE and additional OWASP patterns
+    for (const pattern of cveAndOwaspPatterns) {
+      const existingPatterns = this.patterns.get(pattern.type) || [];
+      existingPatterns.push(pattern);
       this.patterns.set(pattern.type, existingPatterns);
     }
 
