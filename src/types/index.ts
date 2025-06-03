@@ -10,6 +10,7 @@ export interface ActionConfig {
   containerConfig: ContainerConfig;
   securitySettings: SecuritySettings;
   enableSecurityAnalysis?: boolean;
+  rsolvApiKey?: string;
 }
 
 export interface ActionStatus {
