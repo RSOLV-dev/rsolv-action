@@ -5,6 +5,11 @@ defmodule RSOLVWeb.Router do
     plug :accepts, ["json"]
     plug :put_secure_browser_headers
   end
+  
+  pipeline :webhook do
+    plug RSOLVWeb.Plugs.CaptureRawBody
+    plug :accepts, ["json"]
+  end
 
   # API v1 routes
   scope "/api/v1", RSOLVWeb do
@@ -36,6 +41,8 @@ defmodule RSOLVWeb.Router do
 
   # Webhook endpoint for GitHub
   scope "/webhook", RSOLVWeb do
+    pipe_through :webhook
+    
     post "/github", WebhookController, :github
   end
 

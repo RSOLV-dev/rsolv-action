@@ -11,7 +11,7 @@ defmodule RSOLV.Application do
       # Start the Telemetry supervisor
       RSOLVWeb.Telemetry,
       # Start the Ecto repository
-      RSOLV.Repo,
+      RsolvApi.Repo,
       # Start the PubSub system
       {Phoenix.PubSub, name: RSOLV.PubSub},
       # Start Cachex

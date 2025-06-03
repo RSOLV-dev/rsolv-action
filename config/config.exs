@@ -8,7 +8,7 @@
 import Config
 
 config :rsolv_api,
-  ecto_repos: [RSOLV.Repo]
+  ecto_repos: [RsolvApi.Repo]
 
 # Configures the endpoint
 config :rsolv_api, RSOLVWeb.Endpoint,

@@ -5,7 +5,7 @@ import Config
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
-config :rsolv_api, RSOLV.Repo,
+config :rsolv_api, RsolvApi.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
@@ -21,7 +21,7 @@ config :rsolv_api, RSOLVWeb.Endpoint,
   server: false
 
 # Print only warnings and errors during test
-config :logger, level: :warning
+config :logger, level: :debug
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
