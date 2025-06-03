@@ -12,8 +12,8 @@ import Config
 config :rsolv_api, RSOLVWeb.Endpoint,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
-# Do not print debug messages in production
-config :logger, level: :info
+# Temporarily enable debug messages to troubleshoot webhook
+config :logger, level: :debug
 
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.
