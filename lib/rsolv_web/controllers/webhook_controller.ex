@@ -4,7 +4,10 @@ defmodule RSOLVWeb.WebhookController do
   alias RsolvApi.Webhooks.EventRouter
   require Logger
 
-  @github_webhook_secret System.get_env("GITHUB_WEBHOOK_SECRET", "default_dev_secret")
+  # Get webhook secret at runtime, not compile time
+  defp get_webhook_secret do
+    System.get_env("GITHUB_WEBHOOK_SECRET", "default_dev_secret")
+  end
 
   def github(conn, params) do
     # For tests, skip signature verification if test_mode is set
@@ -63,6 +66,6 @@ defmodule RSOLVWeb.WebhookController do
   
   defp maybe_verify_signature(true = _skip, _platform, _signature, _raw_body), do: :ok
   defp maybe_verify_signature(false, platform, signature, raw_body) do
-    EventRouter.verify_signature(platform, signature, raw_body, @github_webhook_secret)
+    EventRouter.verify_signature(platform, signature, raw_body, get_webhook_secret())
   end
 end
