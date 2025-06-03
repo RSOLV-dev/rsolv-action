@@ -14,10 +14,10 @@ spec:
         app: rsolv-api
     spec:
       imagePullSecrets:
-      - name: regcred
+      - name: ghcr-secret
       containers:
       - name: rsolv-api
-        image: ghcr.io/rsolv-dev/rsolv-api:simple
+        image: ghcr.io/rsolv-dev/rsolv-api:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 4000
@@ -56,6 +56,8 @@ spec:
             secretKeyRef:
               name: rsolv-api-secrets
               key: postmark-api-key
+        - name: DATABASE_SSL
+          value: "false"
         livenessProbe:
           httpGet:
             path: /health
