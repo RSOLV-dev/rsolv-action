@@ -70,16 +70,25 @@ defmodule RsolvApi.Webhooks.Handlers.GitHubHandler do
       pr_number = pr["number"]
       issue_number = extract_issue_number(pr["body"])
       
-      # Create fix attempt record
-      %FixAttempt{}
-      |> FixAttempt.changeset(%{
-        github_org: org,
-        repo_name: repo,
-        issue_number: issue_number,
-        pr_number: pr_number,
-        status: "pending"
-      })
-      |> Repo.insert()
+      # Create fix attempt record (or find existing)
+      case find_fix_attempt(org, repo, pr_number) do
+        nil ->
+          %FixAttempt{}
+          |> FixAttempt.changeset(%{
+            github_org: org,
+            repo_name: repo,
+            issue_number: issue_number,
+            pr_number: pr_number,
+            pr_title: pr["title"],
+            pr_url: pr["html_url"],
+            status: "pending"
+          })
+          |> Repo.insert()
+          
+        _existing ->
+          # Already exists, idempotent
+          {:ok, :already_exists}
+      end
       
       {:ok, :pr_opened}
     else
@@ -102,7 +111,9 @@ defmodule RsolvApi.Webhooks.Handlers.GitHubHandler do
         fix_attempt
         |> FixAttempt.changeset(%{
           status: "merged",
-          merged_at: pr["merged_at"] || DateTime.utc_now()
+          merged_at: pr["merged_at"] || DateTime.utc_now(),
+          merged_by: pr["merged_by"] && pr["merged_by"]["login"],
+          commit_sha: pr["merge_commit_sha"]
         })
         |> Repo.update()
         
