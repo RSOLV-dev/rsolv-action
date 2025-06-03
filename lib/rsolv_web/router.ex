@@ -4,24 +4,11 @@ defmodule RSOLVWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
-    plug :read_raw_body
     plug Plug.Parsers,
       parsers: [:json],
       pass: ["application/json"],
       json_decoder: Phoenix.json_library()
     plug :put_secure_browser_headers
-  end
-  
-  # Debug plug to capture raw body
-  def read_raw_body(conn, _opts) do
-    case Plug.Conn.read_body(conn) do
-      {:ok, body, conn} ->
-        Logger.info("Raw body read: #{inspect(body)}")
-        Plug.Conn.assign(conn, :raw_body, body)
-      {:more, _partial_body, conn} ->
-        Logger.info("Partial body read")
-        conn
-    end
   end
   
   pipeline :webhook do

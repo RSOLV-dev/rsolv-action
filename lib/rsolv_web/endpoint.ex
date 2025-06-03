@@ -37,13 +37,11 @@ defmodule RSOLVWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
-  # Capture raw body before parsers for webhook signature verification
-  plug RSOLVWeb.Plugs.CaptureRawBody
-
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
-    json_decoder: Phoenix.json_library()
+    json_decoder: Phoenix.json_library(),
+    body_reader: {RSOLVWeb.Plugs.ParseableBodyReader, :read_body, []}
 
   plug Plug.MethodOverride
   plug Plug.Head
