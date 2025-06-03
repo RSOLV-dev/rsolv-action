@@ -25,7 +25,7 @@ database_config =
       database_config
   end
 
-config :rsolv_api, RSOLV.Repo, database_config
+config :rsolv_api, RsolvApi.Repo, database_config
 
 # Configure the endpoint
 config :rsolv_api, RSOLVWeb.Endpoint,
@@ -52,7 +52,7 @@ config :rsolv_api, :credentials,
   max_ttl_minutes: 240
 
 # Email configuration (for expert reviews)
-config :rsolv_api, RSOLV.Mailer,
+config :rsolv_api, RsolvApi.Mailer,
   adapter: Bamboo.PostmarkAdapter,
   api_key: System.get_env("POSTMARK_API_KEY")
 

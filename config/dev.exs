@@ -1,7 +1,7 @@
 import Config
 
 # Configure your database
-config :rsolv_api, RSOLV.Repo,
+config :rsolv_api, RsolvApi.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "postgres",
