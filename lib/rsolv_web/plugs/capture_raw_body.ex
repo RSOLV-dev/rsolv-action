@@ -18,8 +18,16 @@ defmodule RSOLVWeb.Plugs.CaptureRawBody do
         conn
         
       {:error, _reason} ->
-        # Body already read
+        # Body already read by Plug.Parsers, reconstruct from params
+        raw_body = case conn.body_params do
+          %{} = params when map_size(params) > 0 -> 
+            Jason.encode!(params)
+          _ ->
+            ""
+        end
+        
         conn
+        |> Plug.Conn.assign(:raw_body, raw_body)
     end
   end
 end

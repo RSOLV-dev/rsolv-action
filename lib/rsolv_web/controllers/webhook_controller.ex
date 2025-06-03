@@ -18,7 +18,8 @@ defmodule RSOLVWeb.WebhookController do
          {:ok, raw_body} <- get_raw_body(conn),
          _ = Logger.debug("Raw body in controller: #{inspect(raw_body)}"),
          :ok <- maybe_verify_signature(skip_signature, platform, signature, raw_body),
-         {:ok, result} <- EventRouter.route_event(platform, conn.req_headers, params) do
+         parsed_body <- parse_body(raw_body),
+         {:ok, result} <- EventRouter.route_event(platform, conn.req_headers, parsed_body) do
       
       Logger.info("Webhook processed successfully: #{inspect(result)}")
       
@@ -68,4 +69,12 @@ defmodule RSOLVWeb.WebhookController do
   defp maybe_verify_signature(false, platform, signature, raw_body) do
     EventRouter.verify_signature(platform, signature, raw_body, get_webhook_secret())
   end
+  
+  defp parse_body(raw_body) when is_binary(raw_body) do
+    case Jason.decode(raw_body) do
+      {:ok, parsed} -> parsed
+      {:error, _} -> %{}
+    end
+  end
+  defp parse_body(_), do: %{}
 end

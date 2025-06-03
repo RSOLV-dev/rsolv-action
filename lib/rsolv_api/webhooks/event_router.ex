@@ -65,6 +65,10 @@ defmodule RsolvApi.Webhooks.EventRouter do
       "issues" ->
         GitHubHandler.handle_event("issues", payload)
         
+      "ping" ->
+        # Handle ping event - just acknowledge it
+        {:ok, :pong}
+        
       nil ->
         {:error, :missing_event_type}
         

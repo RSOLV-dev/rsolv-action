@@ -7,7 +7,6 @@ defmodule RSOLVWeb.Router do
   end
   
   pipeline :webhook do
-    plug RSOLVWeb.Plugs.CaptureRawBody
     plug :accepts, ["json"]
   end
 
