@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rsolv-api
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rsolv-api
+  template:
+    metadata:
+      labels:
+        app: rsolv-api
+    spec:
+      imagePullSecrets:
+      - name: ghcr-secret
+      initContainers:
+      # This is the idiomatic way - run migrations as an init container
+      - name: migrate
+        image: ghcr.io/rsolv-dev/rsolv-api:latest
+        imagePullPolicy: Always
+        command: ["bin/rsolv_api", "eval", "RsolvApi.Release.migrate()"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: database-url
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: secret-key-base
+      containers:
+      - name: rsolv-api
+        image: ghcr.io/rsolv-dev/rsolv-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: database-url
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: secret-key-base
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: anthropic-api-key
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: openai-api-key
+        - name: OPENROUTER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: openrouter-api-key
+        - name: PHX_HOST
+          value: "api.rsolv.dev"
+        - name: PORT
+          value: "4000"
+        - name: GITHUB_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: github-webhook-secret
+        - name: SENDGRID_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: sendgrid-api-key
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4000
+          initialDelaySeconds: 30
+          periodSeconds: 10
