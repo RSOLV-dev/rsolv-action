@@ -1,11 +1,23 @@
 import Config
 
 # Configure the database
-config :rsolv_api, RSOLV.Repo,
+database_config = [
   url: System.get_env("DATABASE_URL"),
-  pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-  ssl: true,
-  ssl_opts: [verify: :verify_none]
+  pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
+]
+
+# Only add SSL config in production or when explicitly set
+database_config = 
+  if config_env() == :prod || System.get_env("DATABASE_SSL") == "true" do
+    Keyword.merge(database_config, [
+      ssl: true,
+      ssl_opts: [verify: :verify_none]
+    ])
+  else
+    database_config
+  end
+
+config :rsolv_api, RSOLV.Repo, database_config
 
 # Configure the endpoint
 config :rsolv_api, RSOLVWeb.Endpoint,

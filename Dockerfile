@@ -1,8 +1,8 @@
 # Use official Elixir image
-FROM elixir:1.15-alpine AS deps
+FROM elixir:1.15-alpine AS base
 
 # Install build dependencies
-RUN apk add --no-cache build-base git
+RUN apk add --no-cache build-base git postgresql-client
 
 # Set working directory
 WORKDIR /app
@@ -15,15 +15,30 @@ RUN mix local.hex --force && \
 COPY mix.exs mix.lock ./
 COPY config config
 
-# Install dependencies
-RUN mix deps.get --only prod
+# Development stage - includes full Elixir/mix environment
+FROM base AS development
 
-# Dependencies compilation stage
-FROM deps AS deps-compiled
+# Install all dependencies (dev, test, prod)
+RUN mix deps.get
+
+# Copy all source code
+COPY . .
+
+# Compile dependencies
 RUN mix deps.compile
 
-# Builder stage
-FROM deps-compiled AS builder
+# Default command for development
+CMD ["mix", "phx.server"]
+
+# Production dependencies stage
+FROM base AS prod-deps
+
+# Install only prod dependencies
+RUN mix deps.get --only prod
+RUN mix deps.compile
+
+# Builder stage for production
+FROM prod-deps AS builder
 
 # Copy source code
 COPY lib lib
@@ -39,8 +54,8 @@ RUN MIX_ENV=prod mix compile
 # Build release with optimizations
 RUN MIX_ENV=prod mix release --overwrite
 
-# Final stage - minimal runtime image
-FROM alpine:3.19
+# Final production stage - minimal runtime image
+FROM alpine:3.19 AS production
 
 # Install runtime dependencies
 RUN apk add --no-cache openssl ncurses-libs libstdc++ libgcc

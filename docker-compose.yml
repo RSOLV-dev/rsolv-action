@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: rsolv_api_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"  # Using 5433 to avoid conflict with rsolv-landing
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rsolv-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/rsolv_api_dev"
+      SECRET_KEY_BASE: "development-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789"
+      PHX_HOST: "localhost"
+      PORT: "4000"
+      MIX_ENV: "dev"
+      # AI Provider keys (set these in .env or export them)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-dummy-key}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-dummy-key}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-dummy-key}
+      # Email
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-dummy-key}
+      # LiveView
+      LIVE_VIEW_SALT: "development-live-view-salt"
+    ports:
+      - "4001:4000"  # Using 4001 to avoid conflict with rsolv-landing
+    command: >
+      sh -c "
+        mix deps.get &&
+        mix ecto.create &&
+        mix ecto.migrate &&
+        mix phx.server
+      "
+    volumes:
+      - .:/app
+      - deps:/app/deps
+      - _build:/app/_build
+
+volumes:
+  postgres_data:
+  deps:
+  _build:
