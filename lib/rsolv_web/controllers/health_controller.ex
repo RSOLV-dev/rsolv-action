@@ -38,7 +38,7 @@ defmodule RSOLVWeb.HealthController do
 
   defp check_database do
     try do
-      Ecto.Adapters.SQL.query!(RSOLV.Repo, "SELECT 1", [])
+      Ecto.Adapters.SQL.query!(RsolvApi.Repo, "SELECT 1", [])
       "healthy"
     rescue
       _ -> "unhealthy"
