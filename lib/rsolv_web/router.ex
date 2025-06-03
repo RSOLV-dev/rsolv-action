@@ -14,6 +14,9 @@ defmodule RSOLVWeb.Router do
   scope "/api/v1", RSOLVWeb do
     pipe_through :api
 
+    # Fix attempt tracking - for RSOLV-action to record PR creation
+    post "/fix-attempts", FixAttemptController, :create
+
     # Credential vending endpoints
     post "/credentials/exchange", CredentialController, :exchange
     post "/credentials/refresh", CredentialController, :refresh
