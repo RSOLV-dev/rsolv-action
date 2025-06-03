@@ -6,6 +6,21 @@ defmodule RSOLVWeb.FixAttemptController do
   require Logger
 
   def create(conn, params) do
+    # Debug instrumentation for production troubleshooting
+    Logger.info("=== FIX ATTEMPT DEBUG START ===")
+    Logger.info("Raw params: #{inspect(params)}")
+    Logger.info("Conn body_params: #{inspect(conn.body_params)}")
+    Logger.info("Conn params: #{inspect(conn.params)}")
+    Logger.info("Content-Type: #{inspect(get_req_header(conn, "content-type"))}")
+    Logger.info("Content-Length: #{inspect(get_req_header(conn, "content-length"))}")
+    Logger.info("Authorization: #{inspect(get_req_header(conn, "authorization"))}")
+    Logger.info("Request method: #{conn.method}")
+    Logger.info("Request path: #{conn.request_path}")
+    Logger.info("Request body: #{inspect(conn.assigns[:raw_body])}")
+    Logger.info("Has been read?: #{conn.assigns[:parsed] || false}")
+    Logger.info("Adapter: #{inspect(conn.adapter)}")
+    Logger.info("=== FIX ATTEMPT DEBUG END ===")
+    
     Logger.info("Recording fix attempt for PR #{params["pr_number"]}")
     
     # Set default status if not provided
