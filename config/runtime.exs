@@ -6,15 +6,23 @@ database_config = [
   pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
 ]
 
-# Only add SSL config in production or when explicitly set
+# Only add SSL config when explicitly enabled or in production without explicit disable
 database_config = 
-  if config_env() == :prod || System.get_env("DATABASE_SSL") == "true" do
-    Keyword.merge(database_config, [
-      ssl: true,
-      ssl_opts: [verify: :verify_none]
-    ])
-  else
-    database_config
+  cond do
+    System.get_env("DATABASE_SSL") == "false" ->
+      database_config
+    System.get_env("DATABASE_SSL") == "true" ->
+      Keyword.merge(database_config, [
+        ssl: true,
+        ssl_opts: [verify: :verify_none]
+      ])
+    config_env() == :prod ->
+      Keyword.merge(database_config, [
+        ssl: true,
+        ssl_opts: [verify: :verify_none]
+      ])
+    true ->
+      database_config
   end
 
 config :rsolv_api, RSOLV.Repo, database_config
