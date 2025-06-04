@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+// Bun has built-in fetch, no import needed
 
 interface RsolvApiClientConfig {
   baseUrl: string;
