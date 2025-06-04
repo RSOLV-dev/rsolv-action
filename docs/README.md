@@ -37,5 +37,5 @@ export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 
 # Optional
 export MAX_DAILY_ALERTS=3
-export DASHBOARD_URL="https://dashboard.rsolv.ai"
+export DASHBOARD_URL="https://dashboard.rsolv.dev"
 ```

@@ -91,10 +91,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - api.rsolv.ai
+    - api.rsolv.dev
     secretName: api-rsolv-ai-tls
   rules:
-  - host: api.rsolv.ai
+  - host: api.rsolv.dev
     http:
       paths:
       - path: /

@@ -43,7 +43,7 @@ This will:
 1. Build the Docker image
 2. Push to GitHub Container Registry
 3. Deploy to Kubernetes
-4. Set up the ingress for api.rsolv.ai
+4. Set up the ingress for api.rsolv.dev
 
 ### 4. Verify deployment
 
@@ -55,14 +55,14 @@ kubectl get pods -l app=rsolv-api
 kubectl logs -l app=rsolv-api --tail=50
 
 # Test health endpoint
-curl https://api.rsolv.ai/health
+curl https://api.rsolv.dev/health
 ```
 
 ### 5. Test credential exchange
 
 ```bash
 # Test with curl
-curl -X POST https://api.rsolv.ai/api/v1/credentials/exchange \
+curl -X POST https://api.rsolv.dev/api/v1/credentials/exchange \
   -H 'Content-Type: application/json' \
   -d '{"api_key": "rsolv_test_key", "providers": ["anthropic"]}'
 ```
@@ -91,4 +91,4 @@ kubectl rollout undo deployment/rsolv-api
 
 ## SSL Certificate
 
-SSL certificates are automatically managed by cert-manager for api.rsolv.ai domain.
+SSL certificates are automatically managed by cert-manager for api.rsolv.dev domain.

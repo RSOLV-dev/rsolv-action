@@ -48,7 +48,7 @@ spec:
               name: rsolv-api-secrets
               key: openrouter-api-key
         - name: PHX_HOST
-          value: "api.rsolv.ai"
+          value: "api.rsolv.dev"
         - name: PORT
           value: "4000"
         - name: POSTMARK_API_KEY

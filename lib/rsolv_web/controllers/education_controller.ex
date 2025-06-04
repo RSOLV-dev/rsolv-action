@@ -136,7 +136,7 @@ defmodule RSOLVWeb.EducationController do
     EngagementTracker.track_dashboard_click(alert_id, :os.system_time(:millisecond))
     
     # Redirect to the actual dashboard
-    redirect(conn, external: "https://dashboard.rsolv.ai/fixes/#{alert_id}")
+    redirect(conn, external: "https://dashboard.rsolv.dev/fixes/#{alert_id}")
   end
 
   @doc """
@@ -197,7 +197,7 @@ defmodule RSOLVWeb.EducationController do
     # Include tracking parameters
     alert_id = :crypto.strong_rand_bytes(8) |> Base.encode16()
     
-    "https://dashboard.rsolv.ai/learn?" <>
+    "https://dashboard.rsolv.dev/learn?" <>
       "repo=#{URI.encode(repo_name)}&" <>
       "type=#{URI.encode(vulnerability_type)}&" <>
       "alert_id=#{alert_id}&" <>

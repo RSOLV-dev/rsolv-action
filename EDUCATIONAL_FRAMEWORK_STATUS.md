@@ -171,7 +171,7 @@ SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 
 # Optional (defaults shown)
 MAX_DAILY_ALERTS=3
-DASHBOARD_URL="https://dashboard.rsolv.ai"
+DASHBOARD_URL="https://dashboard.rsolv.dev"
 ```
 
 ### Slack Setup
