@@ -228,9 +228,9 @@ defmodule RSOLVWeb.CredentialController do
   end
 
   defp decrypt_credential(credential) do
-    # This would normally decrypt the actual credential
-    # For now, returning the mock encrypted key
-    credential.encrypted_key
+    # Return the actual API key from the credential
+    # In production, this would decrypt the encrypted_key
+    credential.api_key || credential.encrypted_key
   end
 
   defp get_reset_date do

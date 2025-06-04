@@ -5,13 +5,16 @@ defmodule RSOLV.Credentials do
   
   require Logger
   
-  # Mock provider keys for demo
-  @provider_keys %{
-    "anthropic" => System.get_env("ANTHROPIC_API_KEY") || "sk-ant-mock-key",
-    "openai" => System.get_env("OPENAI_API_KEY") || "sk-mock-key",
-    "openrouter" => System.get_env("OPENROUTER_API_KEY") || "sk-or-mock-key",
-    "ollama" => "local"
-  }
+  # Get provider keys at runtime
+  defp get_provider_key(provider) do
+    case provider do
+      "anthropic" -> System.get_env("ANTHROPIC_API_KEY") || "sk-ant-mock-key"
+      "openai" -> System.get_env("OPENAI_API_KEY") || "sk-mock-key"
+      "openrouter" -> System.get_env("OPENROUTER_API_KEY") || "sk-or-mock-key"
+      "ollama" -> "local"
+      _ -> "mock_key_#{provider}"
+    end
+  end
   
   @doc """
   Creates a temporary credential for a provider.
@@ -29,8 +32,8 @@ defmodule RSOLV.Credentials do
       id: "cred_#{:crypto.strong_rand_bytes(8) |> Base.url_encode64(padding: false)}",
       customer_id: customer_id,
       provider: provider,
-      api_key: @provider_keys[provider] || "mock_key_#{provider}",
-      encrypted_key: @provider_keys[provider] || "mock_key_#{provider}",  # For compatibility
+      api_key: get_provider_key(provider),
+      encrypted_key: get_provider_key(provider),  # For compatibility
       expires_at: expires_at,
       usage_limit: usage_limit
     }
