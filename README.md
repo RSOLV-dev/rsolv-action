@@ -166,7 +166,7 @@ aiProvider:
 The following environment variables can be used to configure the action:
 
 - `RSOLV_API_KEY`: Your RSOLV API key (required)
-- `RSOLV_API_URL`: API endpoint (default: `https://api.rsolv.ai`)
+- `RSOLV_API_URL`: API endpoint (default: `https://api.rsolv.dev`)
 - `RSOLV_CONFIG_PATH`: Path to the configuration file (default: `.github/rsolv.yml`)
 - `RSOLV_ISSUE_LABEL`: Label to identify issues for automation (default: `rsolv:automate`)
 - `RSOLV_ENVIRONMENT_VARIABLES`: JSON string of environment variables to pass to the container

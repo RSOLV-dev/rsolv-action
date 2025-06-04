@@ -17,7 +17,7 @@ beforeEach(() => {
     ...originalEnv,
     GITHUB_JOB: 'test_job_123',
     GITHUB_RUN_ID: 'test_run_456',
-    RSOLV_API_URL: 'https://api.rsolv.ai'
+    RSOLV_API_URL: 'https://api.rsolv.dev'
   };
 });
 
@@ -54,7 +54,7 @@ describe('RSOLVCredentialManager', () => {
       await manager.initialize('rsolv_test_abc123');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.rsolv.ai/v1/credentials/exchange',
+        'https://api.rsolv.dev/v1/credentials/exchange',
         {
           method: 'POST',
           headers: {
@@ -299,7 +299,7 @@ describe('RSOLVCredentialManager', () => {
       });
 
       expect(global.fetch).toHaveBeenLastCalledWith(
-        'https://api.rsolv.ai/v1/usage/report',
+        'https://api.rsolv.dev/v1/usage/report',
         {
           method: 'POST',
           headers: {
