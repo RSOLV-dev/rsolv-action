@@ -11,7 +11,10 @@ COPY src/ ./src/
 COPY tsconfig.json ./
 
 # Build the TypeScript files
-RUN bun run build || echo "No build script, running TypeScript directly"
+RUN bun run build
+
+# Verify build output exists
+RUN ls -la dist/
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
