@@ -47,6 +47,8 @@ export async function getAiClient(config: AiProviderConfig): Promise<AiClient> {
   case 'openai':
     return new OpenAiClient(config, credentialManager);
   case 'anthropic':
+  case 'claude-code':
+    // Claude Code uses Anthropic Claude models under the hood
     return new AnthropicClient(config, credentialManager);
   case 'mistral':
     return new MistralClient(config, credentialManager);
