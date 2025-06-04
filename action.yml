@@ -22,7 +22,7 @@ inputs:
   api_url:
     description: 'RSOLV API URL (defaults to production)'
     required: false
-    default: 'https://api.rsolv.ai'
+    default: 'https://api.rsolv.dev'
   jira_host:
     description: 'Jira instance hostname (e.g., your-domain.atlassian.net)'
     required: false
