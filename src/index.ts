@@ -32,10 +32,10 @@ async function run(): Promise<ActionStatus> {
       return { success: true, message: 'No issues found for automation' };
     }
     
-    // Process issues with AI (enable security analysis by default)
+    // Process issues with AI (enable security analysis and enhanced context by default)
     const processingOptions = {
       enableSecurityAnalysis: config.enableSecurityAnalysis !== false, // Default to true
-      enableEnhancedContext: false, // Can be enabled later
+      enableEnhancedContext: true, // Enable Claude Code enhanced context gathering
       verboseLogging: process.env.DEBUG === 'true'
     };
     

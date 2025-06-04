@@ -93,8 +93,8 @@ function getDefaultConfig(): Partial<ActionConfig> {
     issueLabel: 'rsolv:automate',
     enableSecurityAnalysis: true,  // Enable security analysis by default
     aiProvider: {
-      provider: 'anthropic',
-      model: 'claude-3-sonnet-20240229',
+      provider: 'claude-code',
+      model: 'claude-sonnet-4-20250514',  // Claude Sonnet 4
       temperature: 0.2,
       maxTokens: 4000,
       contextLimit: 100000,
