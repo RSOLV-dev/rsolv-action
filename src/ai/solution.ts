@@ -3,6 +3,7 @@ import { logger } from '../utils/logger.js';
 import { getAiClient } from './client.js';
 import { buildSolutionPrompt, getIssueTypePromptTemplate } from './prompts.js';
 import { ThreeTierExplanationFramework, CompleteExplanation } from '../security/explanation-framework.js';
+import { ClaudeCodeAdapter } from './adapters/claude-code.js';
 
 /**
  * Result of solution generation
@@ -29,7 +30,22 @@ export async function generateSolution(
   try {
     logger.info(`Generating solution for issue #${issue.number}`);
     
-    // Use injected client for testing or get AI client
+    // Handle Claude Code provider specially
+    if (config.aiProvider.provider === 'claude-code' && !injectedClient) {
+      logger.info('Using Claude Code adapter for enhanced context gathering');
+      const claudeCodeAdapter = new ClaudeCodeAdapter(config.aiProvider, process.cwd());
+      
+      // Use Claude Code for solution generation with enhanced context
+      const claudeResult = await claudeCodeAdapter.generateSolution(issue, analysisData);
+      return {
+        success: claudeResult.success,
+        message: claudeResult.success ? 'Solution generated with Claude Code' : claudeResult.error || 'Claude Code generation failed',
+        changes: claudeResult.changes,
+        error: claudeResult.error
+      };
+    }
+    
+    // Use injected client for testing or get standard AI client
     const aiClient = injectedClient || getAiClient(config.aiProvider);
     
     // Get file contents from repository
