@@ -25,7 +25,7 @@ export class RSOLVCredentialManager {
   private refreshTimers: Map<string, NodeJS.Timer> = new Map();
 
   constructor() {
-    this.rsolvApiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.ai';
+    this.rsolvApiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
   }
 
   async initialize(apiKey: string): Promise<void> {
@@ -33,7 +33,7 @@ export class RSOLVCredentialManager {
     logger.info('Initializing RSOLV credential manager');
 
     try {
-      const response = await fetch(`${this.rsolvApiUrl}/v1/credentials/exchange`, {
+      const response = await fetch(`${this.rsolvApiUrl}/api/v1/credentials/exchange`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -42,6 +42,7 @@ export class RSOLVCredentialManager {
           'X-GitHub-Run': process.env.GITHUB_RUN_ID || ''
         },
         body: JSON.stringify({
+          api_key: apiKey,
           providers: ['anthropic', 'openai', 'openrouter'],
           ttl_minutes: 60
         })
@@ -92,7 +93,7 @@ export class RSOLVCredentialManager {
 
   async reportUsage(provider: string, usage: UsageReport): Promise<void> {
     try {
-      const response = await fetch(`${this.rsolvApiUrl}/v1/usage/report`, {
+      const response = await fetch(`${this.rsolvApiUrl}/api/v1/usage/report`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -159,7 +160,7 @@ export class RSOLVCredentialManager {
     logger.info(`Refreshing credentials for ${provider}`);
 
     try {
-      const response = await fetch(`${this.rsolvApiUrl}/v1/credentials/refresh`, {
+      const response = await fetch(`${this.rsolvApiUrl}/api/v1/credentials/refresh`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
