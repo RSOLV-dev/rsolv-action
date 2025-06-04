@@ -32,8 +32,15 @@ let credentialManager: RSOLVCredentialManager | null = null;
 export async function getAiClient(config: AiProviderConfig): Promise<AiClient> {
   // Initialize credential manager if using vended credentials
   if (config.useVendedCredentials && !credentialManager) {
-    credentialManager = new RSOLVCredentialManager();
-    await credentialManager.initialize(process.env.RSOLV_API_KEY || '');
+    try {
+      credentialManager = new RSOLVCredentialManager();
+      await credentialManager.initialize(process.env.RSOLV_API_KEY || '');
+    } catch (error) {
+      logger.warn('Failed to initialize credential vending, falling back to direct API keys', error);
+      // Fall back to direct API keys
+      config.useVendedCredentials = false;
+      credentialManager = null;
+    }
   }
   
   switch (config.provider.toLowerCase()) {

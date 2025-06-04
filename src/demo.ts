@@ -8,6 +8,7 @@ import { createPullRequest } from './github/pr.js';
 import { generateSolution } from './ai/solution.js';
 import { analyzeIssue } from './ai/analyzer.js';
 import { AIConfig } from './ai/types.js';
+import { ActionConfig } from './types/index.js';
 import { IssueContext } from './types/index.js';
 
 // Ensure GitHub token is set
@@ -103,15 +104,43 @@ async function main() {
       modelName = 'claude-3-opus-20240229';
     }
     
-    const aiConfig: AIConfig = {
-      provider: provider as any,
-      apiKey,
-      modelName
+    // Create proper ActionConfig
+    const config: ActionConfig = {
+      apiKey: process.env.RSOLV_API_KEY || 'demo-key',
+      configPath: '.github/rsolv.yml',
+      issueLabel: 'rsolv:automate',
+      enableSecurityAnalysis: true,
+      aiProvider: {
+        provider: provider as any,
+        apiKey,
+        model: modelName,
+        temperature: 0.2,
+        maxTokens: 4000,
+        contextLimit: 100000,
+        timeout: 60000,
+        useVendedCredentials: !!process.env.RSOLV_API_KEY
+      },
+      containerConfig: {
+        enabled: false,
+        image: 'rsolv/code-analysis:latest',
+        memoryLimit: '2g',
+        cpuLimit: '1',
+        timeout: 300,
+        securityProfile: 'default'
+      },
+      securitySettings: {
+        disableNetworkAccess: true,
+        scanDependencies: true,
+        preventSecretLeakage: true,
+        maxFileSize: 1024 * 1024,
+        timeoutSeconds: 300,
+        requireCodeReview: true
+      }
     };
     
     // Analyze the issue
     console.log('🔍 Analyzing issue...');
-    const analysis = await analyzeIssue(issueContext, aiConfig);
+    const analysis = await analyzeIssue(issueContext, config);
     console.log('✅ Issue analysis complete:');
     console.log(`  Complexity: ${analysis.complexity}`);
     console.log(`  Estimated Time: ${analysis.estimatedTime} minutes`);
@@ -119,7 +148,7 @@ async function main() {
     
     // Generate solution
     console.log('🧠 Generating solution...');
-    const solution = await generateSolution(issueContext, analysis, aiConfig);
+    const solution = await generateSolution(issueContext, analysis, config);
     console.log('✅ Solution generated:');
     console.log(`  Title: ${solution.title}`);
     console.log(`  Files to change: ${solution.files.length}`);
@@ -133,13 +162,7 @@ async function main() {
         return acc;
       }, {}),
       analysis,
-      { 
-        aiProvider: {
-          provider: aiConfig.provider,
-          apiKey: aiConfig.apiKey,
-          model: aiConfig.modelName
-        }
-      }
+      config
     );
     
     if (!result.success) {

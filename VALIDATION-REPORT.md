@@ -68,7 +68,7 @@ This report compares RSOLV's documented claims against actual implementation.
 ### 6. API Deployment
 
 **Documentation Claims:**
-- Running at https://api.rsolv.ai
+- Running at https://api.rsolv.dev
 
 **Actual Implementation:**
 - ❌ **Wrong URL** - Actually at https://api.rsolv.dev (not .ai)

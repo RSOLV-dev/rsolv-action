@@ -34,7 +34,7 @@ jobs:
           issue_label: 'rsolv:automate'
           config_path: '.github/rsolv.yml'
           # Support both local testing and production API
-          api_url: ${{ secrets.RSOLV_API_URL || 'https://api.rsolv.ai' }}
+          api_url: ${{ secrets.RSOLV_API_URL || 'https://api.rsolv.dev' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Optional: Add AI provider tokens if not using RSOLV API
