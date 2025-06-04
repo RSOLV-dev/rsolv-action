@@ -118,8 +118,8 @@ describe('RsolvApiClient', () => {
         status: 422,
         json: mock().mockResolvedValue({
           errors: {
-            repo_name: ["can't be blank"],
-            pr_number: ["can't be blank"]
+            repo_name: ['can\'t be blank'],
+            pr_number: ['can\'t be blank']
           }
         })
       };

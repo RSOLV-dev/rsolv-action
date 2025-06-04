@@ -9,7 +9,7 @@ describe('Pull Request Fix Tracking', () => {
     const prContent = readFileSync(prPath, 'utf8');
     
     // Check if RsolvApiClient is imported
-    const hasImport = prContent.includes("import { RsolvApiClient } from '../external/api-client.js'") ||
+    const hasImport = prContent.includes('import { RsolvApiClient } from \'../external/api-client.js\'') ||
                      prContent.includes('import { RsolvApiClient }') ||
                      prContent.includes('RsolvApiClient');
     

@@ -183,7 +183,7 @@ describe('PR Integration with Fix Attempt Recording', () => {
       status: 422,
       json: mock().mockResolvedValue({
         errors: {
-          repo_name: ["can't be blank"]
+          repo_name: ['can\'t be blank']
         }
       })
     };

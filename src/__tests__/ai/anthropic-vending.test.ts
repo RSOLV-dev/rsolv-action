@@ -28,10 +28,9 @@ describe('Anthropic Client with Vended Credentials', () => {
     };
     
     // This should NOT throw even without ANTHROPIC_API_KEY
-    let client;
     let error;
     try {
-      client = await getAiClient(config);
+      await getAiClient(config);
     } catch (e) {
       error = e;
     }
