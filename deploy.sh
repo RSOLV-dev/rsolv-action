@@ -21,4 +21,4 @@ echo "Deployment status:"
 kubectl get pods -l app=rsolv-api
 
 echo "API service deployed successfully!"
-echo "API endpoint: https://api.rsolv.ai"
+echo "API endpoint: https://api.rsolv.dev"

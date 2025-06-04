@@ -58,6 +58,26 @@ spec:
               key: postmark-api-key
         - name: DATABASE_SSL
           value: "false"
+        - name: INTERNAL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: internal-api-key
+        - name: DEMO_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: demo-api-key
+        - name: MASTER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: master-api-key
+        - name: DOGFOOD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-api-secrets
+              key: dogfood-api-key
         livenessProbe:
           httpGet:
             path: /health
