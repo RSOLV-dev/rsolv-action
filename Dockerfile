@@ -2,6 +2,11 @@ FROM oven/bun:latest
 
 WORKDIR /app
 
+# Install Claude Code CLI
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://claude.ai/install.sh | sh && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Copy package.json and install dependencies
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
