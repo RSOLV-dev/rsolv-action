@@ -83,11 +83,11 @@ export async function generateSolution(
 The following security vulnerabilities were detected and MUST be addressed in your solution:
 
 ${securityAnalysis.vulnerabilities.map((vuln: any) => 
-  `- **${vuln.severity} Severity**: ${vuln.type} in ${vuln.file}:${vuln.line}
+    `- **${vuln.severity} Severity**: ${vuln.type} in ${vuln.file}:${vuln.line}
    Pattern: ${vuln.pattern}
    Risk: ${vuln.risk}
    Recommendation: ${vuln.recommendation}`
-).join('\n\n')}
+  ).join('\n\n')}
 
 Please ensure your solution addresses these security issues as a priority.`;
     }
@@ -140,7 +140,7 @@ async function getFilesForAnalysis(
 ): Promise<Record<string, string>> {
   try {
     // Start with files identified by AI analysis
-    const filesToFetch = [...analysisData.filesToModify];
+    const filesToFetch = [...(analysisData.filesToModify || [])];
     
     // If no files are explicitly identified, try to infer from issue title/description
     if (filesToFetch.length === 0) {

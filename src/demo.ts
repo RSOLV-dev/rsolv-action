@@ -7,7 +7,6 @@ import { getGitHubClient } from './github/api.js';
 import { createPullRequest } from './github/pr.js';
 import { generateSolution } from './ai/solution.js';
 import { analyzeIssue } from './ai/analyzer.js';
-import { AIConfig } from './ai/types.js';
 import { ActionConfig } from './types/index.js';
 import { IssueContext } from './types/index.js';
 
