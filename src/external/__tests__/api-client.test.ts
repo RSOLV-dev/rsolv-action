@@ -1,17 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { RsolvApiClient } from '../api-client.js';
-
-// Mock global fetch
-const mockFetch = mock(() => Promise.resolve());
+import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 
 describe('RsolvApiClient', () => {
   let client: RsolvApiClient;
+  let fetchMock: ReturnType<typeof setupFetchMock>;
   let originalFetch: typeof fetch;
   
   beforeEach(() => {
     originalFetch = global.fetch;
-    global.fetch = mockFetch as any;
-    mockFetch.mockClear();
+    fetchMock = setupFetchMock();
     client = new RsolvApiClient({
       baseUrl: 'https://api.rsolv.dev',
       apiKey: 'test-key'
@@ -20,23 +18,22 @@ describe('RsolvApiClient', () => {
   
   afterEach(() => {
     global.fetch = originalFetch;
+    mock.restore();
   });
 
   describe('recordFixAttempt', () => {
     it('should successfully record a fix attempt', async () => {
-      const mockResponse = {
+      fetchMock.mockResponseOnce({
         ok: true,
         status: 201,
-        json: mock().mockResolvedValue({
+        json: {
           id: 123,
           status: 'pending',
           github_org: 'test-org',
           repo_name: 'test-repo',
           pr_number: 456
-        })
-      };
-      
-      mockFetch.mockResolvedValue(mockResponse);
+        }
+      });
       
       const fixAttempt = {
         github_org: 'test-org',
@@ -57,8 +54,8 @@ describe('RsolvApiClient', () => {
       
       const result = await client.recordFixAttempt(fixAttempt);
       
-      expect(mockFetch).toHaveBeenCalled();
-      const [url, options] = mockFetch.mock.calls[0];
+      expect(fetchMock.mock.mock.calls.length).toBe(1);
+      const [url, options] = fetchMock.mock.mock.calls[0];
       expect(url).toBe('https://api.rsolv.dev/api/v1/fix-attempts');
       expect(options.method).toBe('POST');
       expect(options.headers['Content-Type']).toBe('application/json');
@@ -78,19 +75,17 @@ describe('RsolvApiClient', () => {
     });
     
     it('should handle PR without issue reference', async () => {
-      const mockResponse = {
+      fetchMock.mockResponseOnce({
         ok: true,
         status: 201,
-        json: mock().mockResolvedValue({
+        json: {
           id: 124,
           status: 'pending',
           github_org: 'test-org',
           repo_name: 'test-repo',
           pr_number: 789
-        })
-      };
-      
-      mockFetch.mockResolvedValue(mockResponse);
+        }
+      });
       
       const fixAttempt = {
         github_org: 'test-org',
@@ -113,18 +108,16 @@ describe('RsolvApiClient', () => {
     });
     
     it('should handle API errors gracefully', async () => {
-      const mockResponse = {
+      fetchMock.mockResponseOnce({
         ok: false,
         status: 422,
-        json: mock().mockResolvedValue({
+        json: {
           errors: {
             repo_name: ['can\'t be blank'],
             pr_number: ['can\'t be blank']
           }
-        })
-      };
-      
-      mockFetch.mockResolvedValue(mockResponse);
+        }
+      });
       
       const fixAttempt = {
         github_org: 'test-org',
@@ -140,7 +133,7 @@ describe('RsolvApiClient', () => {
     });
     
     it('should handle network errors', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
+      fetchMock.mockErrorOnce(new Error('Network error'));
       
       const fixAttempt = {
         github_org: 'test-org',
@@ -157,15 +150,13 @@ describe('RsolvApiClient', () => {
     });
     
     it('should handle duplicate fix attempts', async () => {
-      const mockResponse = {
+      fetchMock.mockResponseOnce({
         ok: false,
         status: 409,
-        json: mock().mockResolvedValue({
+        json: {
           error: 'Fix attempt already exists for this PR'
-        })
-      };
-      
-      mockFetch.mockResolvedValue(mockResponse);
+        }
+      });
       
       const fixAttempt = {
         github_org: 'test-org',

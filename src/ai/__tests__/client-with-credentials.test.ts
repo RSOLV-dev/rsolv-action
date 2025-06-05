@@ -1,6 +1,7 @@
-import { describe, expect, test, beforeEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
 import { getAiClient } from '../client';
 import { AiProviderConfig } from '../../types';
+import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 
 // Mock the credential manager module
 const mockGetCredential = mock(() => 'temp_credential_xyz');
@@ -15,22 +16,40 @@ mock.module('../../credentials/manager', () => ({
   }
 }));
 
-// Mock fetch for AI API calls
-global.fetch = mock(() => Promise.resolve());
+// Store originals
+const originalFetch = global.fetch;
+const originalEnv = { ...process.env };
+
+// Setup for each test
+let fetchMock: ReturnType<typeof setupFetchMock>;
 
 beforeEach(() => {
+  // Reset environment
+  process.env = { 
+    ...originalEnv,
+    RSOLV_API_KEY: 'test-rsolv-api-key',
+    NODE_ENV: 'production' // Avoid test mode fallbacks
+  };
   // Reset mocks
   mockGetCredential.mockClear();
   mockReportUsage.mockClear();
   mockInitialize.mockClear();
-  (global.fetch as any).mockReset();
+  mock.restore();
+  // Setup fetch mock
+  fetchMock = setupFetchMock();
 });
 
-// TECHNICAL DEBT: These tests are skipped in Phase 1 (get to green).
-// The credential vending system requires deep integration testing that
-// couples to implementation details. These should be rewritten as
-// integration tests in Phase 2.
-describe.skip('AI Client with Credential Vending', () => {
+afterEach(() => {
+  // Restore environment
+  process.env = originalEnv;
+  // Restore fetch
+  global.fetch = originalFetch;
+  // Clear mocks
+  mock.restore();
+});
+
+// Test the credential vending system integration with AI clients
+describe('AI Client with Credential Vending', () => {
   test('should use vended credentials for Anthropic API calls', async () => {
     // Update mock to return Anthropic-specific credential
     mockGetCredential.mockReturnValue('temp_ant_xyz789');
@@ -45,9 +64,9 @@ describe.skip('AI Client with Credential Vending', () => {
       }
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    fetchMock.mockResponseOnce({
       ok: true,
-      json: async () => mockAIResponse
+      json: mockAIResponse
     });
 
     // Set RSOLV API key
@@ -102,9 +121,9 @@ describe.skip('AI Client with Credential Vending', () => {
       }
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    fetchMock.mockResponseOnce({
       ok: true,
-      json: async () => mockAIResponse
+      json: mockAIResponse
     });
 
     const config: AiProviderConfig = {
@@ -148,9 +167,9 @@ describe.skip('AI Client with Credential Vending', () => {
       }
     };
 
-    (global.fetch as any).mockResolvedValue({
+    fetchMock.mockResponseOnce({
       ok: true,
-      json: async () => mockAIResponse
+      json: mockAIResponse
     });
 
     const config: AiProviderConfig = {
@@ -169,7 +188,7 @@ describe.skip('AI Client with Credential Vending', () => {
     expect(mockGetCredential).toHaveBeenCalledTimes(2);
     
     // The second API call should use the refreshed credential
-    const calls = (global.fetch as any).mock.calls;
+    const calls = fetchMock.mock.mock.calls;
     expect(calls[1][1].headers['X-API-Key']).toBe('temp_ant_new123');
   });
 
@@ -180,9 +199,9 @@ describe.skip('AI Client with Credential Vending', () => {
       }]
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    fetchMock.mockResponseOnce({
       ok: true,
-      json: async () => mockAIResponse
+      json: mockAIResponse
     });
 
     const config: AiProviderConfig = {
@@ -196,14 +215,9 @@ describe.skip('AI Client with Credential Vending', () => {
     await client.complete('Test prompt');
 
     // Should use direct API key
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.anthropic.com/v1/messages',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'X-API-Key': 'direct_ant_key_123'
-        })
-      })
-    );
+    expect(fetchMock.mock.mock.calls.length).toBe(1);
+    expect(fetchMock.mock.mock.calls[0][0]).toBe('https://api.anthropic.com/v1/messages');
+    expect(fetchMock.mock.mock.calls[0][1].headers['X-API-Key']).toBe('direct_ant_key_123');
   });
 
   test('should handle vended credential errors gracefully', async () => {

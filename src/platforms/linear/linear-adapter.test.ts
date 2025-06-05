@@ -1,20 +1,26 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { LinearAdapter } from './linear-adapter';
-
-// Mock fetch globally
-global.fetch = vi.fn();
+import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 
 describe('LinearAdapter', () => {
   let adapter: LinearAdapter;
+  let fetchMock: ReturnType<typeof setupFetchMock>;
+  let originalFetch: typeof fetch;
   const mockApiKey = 'lin_api_test123';
   const mockTeamId = 'team_123';
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    originalFetch = global.fetch;
+    fetchMock = setupFetchMock();
     adapter = new LinearAdapter({
       apiKey: mockApiKey,
       teamId: mockTeamId,
     });
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    mock.restore();
   });
 
   describe('searchRsolvIssues', () => {
@@ -52,14 +58,15 @@ describe('LinearAdapter', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
         json: async () => mockIssues,
       });
 
       const issues = await adapter.searchRsolvIssues();
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock.mock.mock.calls.length).toBeGreaterThan(0);
+      expect(fetchMock.mock.mock.calls[0][0]).toHaveBeenCalledWith(
         'https://api.linear.app/graphql',
         expect.objectContaining({
           method: 'POST',
@@ -92,7 +99,7 @@ describe('LinearAdapter', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -102,7 +109,7 @@ describe('LinearAdapter', () => {
     });
 
     it('should handle API errors', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: false,
         status: 401,
         text: async () => 'Unauthorized',
@@ -131,7 +138,7 @@ describe('LinearAdapter', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
         json: async () => mockIssue,
       });
@@ -153,7 +160,7 @@ describe('LinearAdapter', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -179,7 +186,7 @@ describe('LinearAdapter', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -203,7 +210,7 @@ describe('LinearAdapter', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -247,7 +254,8 @@ describe('LinearAdapter', () => {
 
       const result = await adapter.updateIssueStatus('issue_1', 'In Progress');
       expect(result).toBe(true);
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.mock.calls.length).toBeGreaterThan(0);
+      expect(fetchMock.mock.mock.calls[0][0]).toHaveBeenCalledTimes(2);
     });
 
     it('should handle non-existent status', async () => {
@@ -259,7 +267,7 @@ describe('LinearAdapter', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
         json: async () => mockStateResponse,
       });
@@ -350,7 +358,8 @@ describe('LinearAdapter', () => {
 
       const result = await adapter.addLabel('issue_1', 'new-label');
       expect(result).toBe(true);
-      expect(global.fetch).toHaveBeenCalledTimes(3);
+      expect(fetchMock.mock.mock.calls.length).toBeGreaterThan(0);
+      expect(fetchMock.mock.mock.calls[0][0]).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -370,7 +379,7 @@ describe('LinearAdapter', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -431,7 +440,7 @@ describe('LinearAdapter', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
         json: async () => mockIssues,
       });
