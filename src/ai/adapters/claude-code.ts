@@ -37,13 +37,15 @@ export class ClaudeCodeAdapter {
   private claudeConfig: ClaudeCodeConfig;
   private tempDir: string;
   private usageData: UsageData[] = [];
+  private credentialManager?: any;
   
   /**
    * Create a new Claude Code adapter
    */
-  constructor(config: AIConfig, repoPath: string = process.cwd()) {
+  constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
     this.config = config;
     this.repoPath = repoPath;
+    this.credentialManager = credentialManager;
     
     // Initialize Claude Code config with defaults
     this.claudeConfig = config.claudeCodeConfig || {};
@@ -467,9 +469,22 @@ export class ClaudeCodeAdapter {
       args.push(prompt);
       
       // API key is handled via environment
+      // Support vended credentials
+      let apiKey = this.config.apiKey;
+      
+      // If using vended credentials, get the key from credential manager
+      if (this.config.useVendedCredentials && this.credentialManager) {
+        try {
+          apiKey = this.credentialManager.getCredential('anthropic');
+          logger.info('Using vended Anthropic credential for Claude Code');
+        } catch (error) {
+          logger.warn('Failed to get vended credential, falling back to config API key', error);
+        }
+      }
+      
       const envVars = {
         ...process.env,
-        ANTHROPIC_API_KEY: this.config.apiKey
+        ANTHROPIC_API_KEY: apiKey
       };
       
       if (this.claudeConfig.verboseLogging) {
