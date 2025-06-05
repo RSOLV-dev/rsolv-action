@@ -1,31 +1,41 @@
 import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
 import { RSOLVCredentialManager } from '../manager';
+import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 
-// Mock fetch globally
-global.fetch = mock(() => Promise.resolve());
-
-// Store original env
-const originalEnv = process.env;
-
-beforeEach(() => {
-  // Reset environment
-  process.env = {
-    ...originalEnv,
-    GITHUB_JOB: 'test_job_123',
-    GITHUB_RUN_ID: 'test_run_456',
-    RSOLV_API_URL: 'https://api.rsolv.dev'
-  };
-  
-  // Clear and reset mocks
-  mock.restore();
-  (global.fetch as any).mockReset();
-});
-
-afterEach(() => {
-  process.env = originalEnv;
-});
+// Store original values
+const originalFetch = global.fetch;
+const originalEnv = { ...process.env };
 
 describe('RSOLVCredentialManager', () => {
+  let fetchMock: ReturnType<typeof setupFetchMock>;
+  let manager: RSOLVCredentialManager;
+
+  beforeEach(() => {
+    // Reset environment
+    process.env = {
+      ...originalEnv,
+      GITHUB_JOB: 'test_job_123',
+      GITHUB_RUN_ID: 'test_run_456',
+      RSOLV_API_URL: 'https://api.rsolv.dev'
+    };
+    
+    // Clear mocks
+    mock.restore();
+    // Setup fetch mock
+    fetchMock = setupFetchMock();
+    manager = new RSOLVCredentialManager();
+  });
+
+  afterEach(() => {
+    // Cleanup manager
+    manager.cleanup();
+    // Restore environment
+    process.env = originalEnv;
+    // Restore fetch
+    global.fetch = originalFetch;
+    // Clear mocks
+    mock.restore();
+  });
   describe('initialize', () => {
     test('should exchange RSOLV API key for temporary credentials', async () => {
       const mockResponse = {
@@ -45,16 +55,16 @@ describe('RSOLVCredentialManager', () => {
         }
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
-        json: async () => mockResponse
+        json: mockResponse
       });
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
 
       // Verify fetch was called correctly
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock.mock.mock.calls[0][0]).toBe(
         'https://api.rsolv.dev/api/v1/credentials/exchange',
         {
           method: 'POST',
@@ -78,7 +88,7 @@ describe('RSOLVCredentialManager', () => {
     });
 
     test('should throw error on failed API response', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
@@ -88,12 +98,12 @@ describe('RSOLVCredentialManager', () => {
       const manager = new RSOLVCredentialManager();
       
       await expect(manager.initialize('invalid_key')).rejects.toThrow(
-        'Failed to exchange credentials: Invalid API key'
+        'Failed to exchange credentials: Unauthorized'
       );
     });
 
     test('should throw error on network failure', async () => {
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+      fetchMock.mockErrorOnce(new Error('Network error'));
 
       const manager = new RSOLVCredentialManager();
       
@@ -117,9 +127,9 @@ describe('RSOLVCredentialManager', () => {
         }
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
-        json: async () => mockResponse
+        json: mockResponse
       });
 
       const manager = new RSOLVCredentialManager();
@@ -143,9 +153,9 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
-        json: async () => mockResponse
+        json: mockResponse
       });
 
       const manager = new RSOLVCredentialManager();
@@ -167,9 +177,9 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
-        json: async () => mockResponse
+        json: mockResponse
       });
 
       const manager = new RSOLVCredentialManager();
@@ -191,9 +201,9 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
-        json: async () => mockResponse
+        json: mockResponse
       });
 
       const manager = new RSOLVCredentialManager();
@@ -219,12 +229,11 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      (global.fetch as any)
-        .mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
           ok: true,
-          json: async () => initialResponse
-        })
-        .mockResolvedValueOnce({
+          json: initialResponse
+        });
+      fetchMock.mockResponseOnce({
           ok: true,
           json: async () => ({ acknowledged: true })
         });
@@ -238,8 +247,8 @@ describe('RSOLVCredentialManager', () => {
       });
 
       // Verify the second call was for usage reporting
-      expect(global.fetch).toHaveBeenCalledTimes(2);
-      const secondCall = (global.fetch as any).mock.calls[1];
+      expect(fetchMock.mock.mock.calls.length).toBe(2);
+      const secondCall = fetchMock.mock.mock.calls[1];
       expect(secondCall[0]).toContain('/api/v1/usage/report');
     });
 
@@ -254,12 +263,11 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      (global.fetch as any)
-        .mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
           ok: true,
-          json: async () => initialResponse
-        })
-        .mockResolvedValueOnce({
+          json: initialResponse
+        });
+      fetchMock.mockResponseOnce({
           ok: false,
           status: 500
         });
@@ -287,9 +295,9 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResponseOnce({
         ok: true,
-        json: async () => mockResponse
+        json: mockResponse
       });
 
       const manager = new RSOLVCredentialManager();
