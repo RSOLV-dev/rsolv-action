@@ -170,5 +170,13 @@
     "totalChunks": 1,
     "solutionGenerationTime": 13,
     "endTime": 1749135894171
+  },
+  {
+    "startTime": 1749152280502,
+    "issueId": "test-issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 13,
+    "endTime": 1749152280523
   }
 ]
