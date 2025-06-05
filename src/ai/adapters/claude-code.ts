@@ -436,17 +436,21 @@ export class ClaudeCodeAdapter {
       
       // Build Claude Code CLI arguments based on configuration
       const args = [
-        '--print',  // Non-interactive mode
+        '--print'  // Non-interactive mode - prompt will be passed via stdin
       ];
       
-      // Add output format
-      const outputFormat = this.claudeConfig.outputFormat || 'stream-json';
-      args.push('--output-format', outputFormat);
-      
-      // Add verbose flag if configured
+      // Add verbose flag first (required for stream-json)
       if (this.claudeConfig.verboseLogging) {
         args.push('--verbose');
       }
+      
+      // Add output format (stream-json requires --verbose)
+      const outputFormat = this.claudeConfig.outputFormat || 'stream-json';
+      if (outputFormat === 'stream-json' && !this.claudeConfig.verboseLogging) {
+        // Auto-enable verbose for stream-json
+        args.push('--verbose');
+      }
+      args.push('--output-format', outputFormat);
       
       // Add context options if configured
       if (this.claudeConfig.contextOptions) {
@@ -464,9 +468,6 @@ export class ClaudeCodeAdapter {
           args.push('--exclude-dirs', opts.excludeDirs.join(','));
         }
       }
-      
-      // The actual prompt is passed as the last argument
-      args.push(prompt);
       
       // API key is handled via environment
       // Support vended credentials
@@ -493,9 +494,14 @@ export class ClaudeCodeAdapter {
       
       const childProcess = spawn(this.executablePath, args, {
         cwd: this.repoPath,
-        shell: true,
-        env: envVars
+        shell: false, // Changed from true to false
+        env: envVars,
+        stdio: ['pipe', 'pipe', 'pipe'] // Explicit stdio setup
       });
+      
+      // Write the prompt to stdin and close it
+      childProcess.stdin.write(prompt);
+      childProcess.stdin.end();
       
       let output = '';
       let errorOutput = '';
