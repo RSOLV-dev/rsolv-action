@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "build": "bun build src/index.ts --outdir dist --minify --target node",
     "publish": "gh release create v0.1.0 --title 'Initial Release' --notes 'First public release of RSOLV GitHub Action'",
-    "demo-env": "bun run demo-environment.ts"
+    "dev-debug": "bun run dev-debug-environment.ts"
   },
   "dependencies": {
     "@octokit/rest": "^21.1.1",

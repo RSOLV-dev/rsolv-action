@@ -8,6 +8,11 @@ export interface SecurityAnalysisResult {
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   recommendations: string[];
   affectedFiles: string[];
+  summary: {
+    total: number;
+    byType: Record<string, number>;
+    bySeverity: Record<string, number>;
+  };
 }
 
 /**
@@ -74,7 +79,12 @@ export class SecurityAwareAnalyzer {
       const vulnerabilities = this.securityDetector.detect(content, language);
       
       if (vulnerabilities.length > 0) {
-        allVulnerabilities.push(...vulnerabilities);
+        // Add file path to each vulnerability
+        const vulnerabilitiesWithFile = vulnerabilities.map(v => ({
+          ...v,
+          file: filePath
+        }));
+        allVulnerabilities.push(...vulnerabilitiesWithFile);
         affectedFiles.push(filePath);
         logger.info(`Found ${vulnerabilities.length} vulnerabilities in ${filePath}`);
       }
@@ -86,12 +96,28 @@ export class SecurityAwareAnalyzer {
     // Generate recommendations
     const recommendations = this.generateSecurityRecommendations(allVulnerabilities);
 
+    // Create summary
+    const summary = {
+      total: allVulnerabilities.length,
+      byType: {} as Record<string, number>,
+      bySeverity: {} as Record<string, number>
+    };
+
+    // Count by type and severity
+    allVulnerabilities.forEach(vuln => {
+      // Count by type
+      summary.byType[vuln.type] = (summary.byType[vuln.type] || 0) + 1;
+      // Count by severity
+      summary.bySeverity[vuln.severity] = (summary.bySeverity[vuln.severity] || 0) + 1;
+    });
+
     return {
       hasSecurityIssues: allVulnerabilities.length > 0,
       vulnerabilities: allVulnerabilities,
       riskLevel,
       recommendations,
-      affectedFiles
+      affectedFiles,
+      summary
     };
   }
 

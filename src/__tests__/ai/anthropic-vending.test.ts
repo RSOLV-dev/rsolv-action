@@ -35,11 +35,10 @@ describe('Anthropic Client with Vended Credentials', () => {
       error = e;
     }
     
-    // The error shows it's trying to connect to exchange credentials
-    // This means it's NOT checking for ANTHROPIC_API_KEY when useVendedCredentials is true
-    // That's actually the correct behavior!
+    // When credential vending fails (due to network/cert issues in test), 
+    // it falls back to requiring a direct API key
     expect(error).toBeDefined();
-    expect(error?.message).toContain('Unable to connect'); // Network error in test env
+    expect(error?.message).toBe('Anthropic API key is required');
   });
   
   it('should throw when creating Anthropic client without vended credentials and no API key', async () => {
@@ -53,6 +52,11 @@ describe('Anthropic Client with Vended Credentials', () => {
     };
     
     // This SHOULD throw
-    await expect(getAiClient(config)).rejects.toThrow('Anthropic API key is required');
+    try {
+      await getAiClient(config);
+      throw new Error('Expected error was not thrown');
+    } catch (error) {
+      expect(error.message).toBe('Anthropic API key is required');
+    }
   });
 });

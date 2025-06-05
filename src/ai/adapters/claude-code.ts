@@ -104,7 +104,7 @@ export class ClaudeCodeAdapter {
     issueContext: IssueContext, 
     analysis: IssueAnalysis,
     enhancedPrompt?: string
-  ): Promise<PullRequestSolution> {
+  ): Promise<{ success: boolean; message: string; changes?: Record<string, string>; error?: string }> {
     let promptPath: string | null = null;
     let errorRetryCount = 0;
     const maxRetries = this.claudeConfig.retryOptions?.maxRetries ?? 2;
@@ -129,16 +129,15 @@ export class ClaudeCodeAdapter {
         this.trackUsage(usageEntry);
         
         // Provide helpful error message with installation instructions
-        return this.createFallbackSolution(
-          issueContext,
-          'Claude Code CLI not available. Please ensure Claude Code is installed and in your PATH.\n\n' +
-          'Installation instructions:\n' +
-          '1. Visit https://claude.ai/console/claude-code\n' +
-          '2. Follow the installation steps for your platform\n' +
-          '3. Verify installation with: claude -v\n\n' +
-          'Using fallback solution for now.',
-          analysis.relatedFiles || []
-        );
+        return {
+          success: false,
+          message: 'Claude Code CLI not available',
+          error: 'Claude Code CLI not available. Please ensure Claude Code is installed and in your PATH.\n\n' +
+            'Installation instructions:\n' +
+            '1. Visit https://claude.ai/console/claude-code\n' +
+            '2. Follow the installation steps for your platform\n' +
+            '3. Verify installation with: claude -v'
+        };
       }
       
       // Construct the prompt with our feedback-enhanced content if provided
@@ -156,13 +155,12 @@ export class ClaudeCodeAdapter {
         usageEntry.errorType = 'temp_file_error';
         this.trackUsage(usageEntry);
         
-        // Create fallback solution with file access error
-        return this.createFallbackSolution(
-          issueContext, 
-          'Error creating temporary files for Claude Code. Please check file permissions.\n\n' +
-          'Using fallback solution.',
-          analysis.relatedFiles || []
-        );
+        // Return error with file access details
+        return {
+          success: false,
+          message: 'Error creating temporary files',
+          error: 'Error creating temporary files for Claude Code. Please check file permissions.'
+        };
       }
       
       // Execute Claude Code CLI with retry logic
@@ -213,17 +211,12 @@ export class ClaudeCodeAdapter {
         usageEntry.endTime = Date.now();
         this.trackUsage(usageEntry);
         
-        // Create fallback solution with execution error
-        return this.createFallbackSolution(
-          issueContext,
-          `Claude Code execution failed: ${(execError as Error).message}\n\n` +
-          'You can try the following:\n' +
-          '1. Check your API key configuration\n' +
-          '2. Ensure your repository is not too large for context gathering\n' +
-          '3. Try adjusting the context options in your configuration\n\n' +
-          'Using fallback solution with available context.',
-          analysis.relatedFiles || []
-        );
+        // Return execution error
+        return {
+          success: false,
+          message: 'Claude Code execution failed',
+          error: `Claude Code execution failed: ${(execError as Error).message}`
+        };
       }
       
       // Clean up temporary files
@@ -244,25 +237,29 @@ export class ClaudeCodeAdapter {
         usageEntry.endTime = Date.now();
         this.trackUsage(usageEntry);
         
-        return solution;
+        // Convert PullRequestSolution to expected format
+        const changes: Record<string, string> = {};
+        solution.files.forEach(file => {
+          changes[file.path] = file.changes;
+        });
+        
+        return {
+          success: true,
+          message: 'Solution generated with Claude Code',
+          changes
+        };
       } catch (parseError) {
         logger.error('Error parsing Claude Code solution', parseError as Error);
         usageEntry.errorType = 'parsing_error';
         usageEntry.endTime = Date.now();
         this.trackUsage(usageEntry);
         
-        // Create fallback solution with parsing error but include raw output for debugging
-        return this.createFallbackSolution(
-          issueContext,
-          'Error parsing Claude Code output. The response format may have changed.\n\n' +
-          'You can try the following:\n' +
-          '1. Update to the latest version of Claude Code\n' +
-          '2. Check if your prompt is correctly formatted\n' +
-          '3. Try adjusting the output format in your configuration\n\n' +
-          'Using fallback solution.',
-          analysis.relatedFiles || [],
-          result.slice(0, 500) // Include first 500 chars of raw output for debugging
-        );
+        // Return parsing error
+        return {
+          success: false,
+          message: 'Error parsing Claude Code output',
+          error: 'Error parsing Claude Code output. Raw output preview: ' + result.slice(0, 500)
+        };
       }
     } catch (error) {
       logger.error('Unexpected error generating solution with Claude Code', error as Error);
@@ -270,17 +267,12 @@ export class ClaudeCodeAdapter {
       usageEntry.endTime = Date.now();
       this.trackUsage(usageEntry);
       
-      // Create generic fallback solution for unexpected errors
-      return this.createFallbackSolution(
-        issueContext,
-        'Unexpected error using Claude Code. This may be a temporary issue.\n\n' +
-        'You can try the following:\n' +
-        '1. Run the command again\n' +
-        '2. Check your network connection\n' +
-        '3. Verify Claude API status\n\n' +
-        'Using fallback solution.',
-        analysis.relatedFiles || []
-      );
+      // Return generic error
+      return {
+        success: false,
+        message: 'Unexpected error using Claude Code',
+        error: error instanceof Error ? error.message : String(error)
+      };
     }
   }
   
@@ -331,33 +323,6 @@ export class ClaudeCodeAdapter {
     return this.usageData;
   }
   
-  /**
-   * Create a fallback solution when Claude Code execution fails
-   */
-  private createFallbackSolution(
-    issueContext: IssueContext,
-    errorMessage: string,
-    relatedFiles: string[] = [],
-    debugInfo: string = ''
-  ): PullRequestSolution {
-    logger.info('Creating fallback solution due to Claude Code error');
-    
-    // Add debug info if provided
-    const description = debugInfo ? 
-      `${errorMessage}\n\nDebug Information: ${debugInfo}` : 
-      errorMessage;
-    
-    return {
-      title: `Fix for: ${issueContext.title}`,
-      description,
-      files: relatedFiles.map(file => ({
-        path: file,
-        changes: '// Fallback implementation needed - Claude Code execution failed\n// Please implement the fix manually or try again later.'
-      })),
-      tests: []
-    };
-  }
-
   /**
    * Construct the prompt for Claude Code, incorporating feedback-enhanced content if available
    */

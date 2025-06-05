@@ -57,29 +57,38 @@ I need you to generate specific code changes to resolve this issue. Here are the
   }
 
   // Add instructions for the response format
-  prompt += `\nPlease provide your solution in the following format:
+  prompt += `\nIMPORTANT: Format your response EXACTLY as shown below for proper parsing:
 
-For each file that needs to be modified or created, use this exact format:
+For each file that needs to be modified, use one of these formats:
 
---- filename.ext ---
+Option 1 (preferred):
+filename.ext:
 \`\`\`language
-[complete file content goes here]
+[complete file content]
 \`\`\`
 
-For example:
---- src/validation.js ---
+Option 2:
+--- filename.ext ---
+\`\`\`language
+[complete file content]
+\`\`\`
+
+Example:
+src/auth/login.js:
 \`\`\`javascript
-function validateEmail(email) {
-  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);
+function authenticateUser(username, password) {
+  // secure implementation here
 }
 \`\`\`
 
-After providing all file changes, include:
-1. A brief explanation of your changes
-2. Why this solution addresses the issue
-3. Any assumptions or limitations
+CRITICAL: The parser requires EXACT formatting. Use one of the above formats or the solution will fail.
 
-Please respond with valid, working code that follows best practices and matches the style of the existing codebase.`;
+After all file changes, add:
+1. Brief explanation of changes
+2. How this fixes the issue
+3. Any assumptions made
+
+Provide complete, working code following existing patterns.`;
 
   return prompt;
 }

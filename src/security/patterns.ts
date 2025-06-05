@@ -98,9 +98,13 @@ export class PatternRegistry {
   }
 
   getPatternsByLanguage(language: string): SecurityPattern[] {
-    return this.getAllPatterns().filter(pattern => 
-      pattern.languages.includes(language)
-    );
+    return this.getAllPatterns().filter(pattern => {
+      // If no languages specified, pattern applies to all languages (e.g., CVE patterns)
+      if (!pattern.languages || pattern.languages.length === 0) {
+        return true;
+      }
+      return Array.isArray(pattern.languages) && pattern.languages.includes(language);
+    });
   }
 
   isSafeUsage(line: string, type: VulnerabilityType): boolean {

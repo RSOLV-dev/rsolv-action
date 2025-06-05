@@ -182,9 +182,9 @@ describe('Claude Code Adapter', () => {
     adapter.isAvailable = originalIsAvailable;
     
     expect(solution).toBeDefined();
-    expect(solution.title).toBeDefined();
-    expect(solution.description).toBeDefined();
-    expect(solution.files).toBeDefined();
+    expect(solution.success).toBe(true);
+    expect(solution.message).toBeDefined();
+    expect(solution.changes).toBeDefined();
   });
   
   test('parseSolution should handle direct JSON in text content', () => {

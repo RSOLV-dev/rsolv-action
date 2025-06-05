@@ -272,8 +272,9 @@ describe('Security Workflow End-to-End Tests', () => {
           element.textContent = content;
         }
         
-        // Properly authenticated endpoint
+        // Properly authenticated endpoint with logging
         app.get('/admin/users', authenticateUser, authorizeAdmin, (req, res) => {
+          logger.info('Admin user access', { userId: req.user.id });
           res.json(getUsers());
         });
         
