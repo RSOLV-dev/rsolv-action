@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "build": "bun build src/index.ts --outdir dist --minify --target node",
     "publish": "gh release create v0.1.0 --title 'Initial Release' --notes 'First public release of RSOLV GitHub Action'",
-    "dev-debug": "bun run dev-debug-environment.ts"
+    "dev-debug": "bun run dev-debug-environment.ts",
+    "test:e2e": "bun run e2e-real-vended.ts",
+    "test:e2e:all": "cd .. && ./run-all-e2e-comprehensive.sh"
   },
   "dependencies": {
     "@octokit/rest": "^21.1.1",

@@ -18,7 +18,7 @@ describe('Full Demo E2E Flow', () => {
     // Ensure required env vars
     expect(process.env.GITHUB_TOKEN).toBeDefined();
     expect(process.env.RSOLV_API_KEY).toBeDefined();
-    expect(process.env.RSOLV_API_URL).toBe('https://api.rsolv.dev');
+    expect(process.env.RSOLV_API_URL).toMatch(/https:\/\/api\.rsolv\.(dev|ai)/);
   });
 
   test('should fetch issue from GitHub', async () => {

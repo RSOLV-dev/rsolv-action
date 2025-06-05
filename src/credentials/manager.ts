@@ -33,6 +33,14 @@ export class RSOLVCredentialManager {
     logger.info('Initializing RSOLV credential manager');
 
     try {
+      const requestBody = {
+        api_key: apiKey,
+        providers: ['anthropic', 'openai', 'openrouter'],
+        ttl_minutes: 60
+      };
+      
+      logger.info(`Requesting credential exchange from ${this.rsolvApiUrl}/api/v1/credentials/exchange`);
+      
       const response = await fetch(`${this.rsolvApiUrl}/api/v1/credentials/exchange`, {
         method: 'POST',
         headers: {
@@ -41,19 +49,22 @@ export class RSOLVCredentialManager {
           'X-GitHub-Job': process.env.GITHUB_JOB || '',
           'X-GitHub-Run': process.env.GITHUB_RUN_ID || ''
         },
-        body: JSON.stringify({
-          api_key: apiKey,
-          providers: ['anthropic', 'openai', 'openrouter'],
-          ttl_minutes: 60
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         const error = await response.json();
+        logger.error(`Credential exchange failed - Status: ${response.status}, Body:`, error);
         throw new Error(`Failed to exchange credentials: ${error.error || response.statusText}`);
       }
 
       const data: CredentialExchangeResponse = await response.json();
+      
+      // Check if response has expected structure
+      if (!data || !data.credentials) {
+        logger.error('Invalid credential exchange response:', data);
+        throw new Error('Invalid response from credential exchange API');
+      }
       
       // Store credentials
       Object.entries(data.credentials).forEach(([provider, credential]) => {
