@@ -45,8 +45,8 @@ describe('AI Client Direct API Integration', () => {
     const client = await getAiClient(config);
     const response = await client.complete('Test prompt');
 
-    // Verify API was called
-    expect(global.fetch).toHaveBeenCalled();
+    // Verify API was called with correct parameters
+    expect((global.fetch as any).mock.calls.length).toBe(1);
     
     // Verify correct headers
     const fetchCall = (global.fetch as any).mock.calls[0];
@@ -81,8 +81,8 @@ describe('AI Client Direct API Integration', () => {
     const client = await getAiClient(config);
     const response = await client.complete('Test prompt');
 
-    // Verify API was called
-    expect(global.fetch).toHaveBeenCalled();
+    // Verify API was called with correct parameters
+    expect((global.fetch as any).mock.calls.length).toBe(1);
     
     // Verify correct headers
     const fetchCall = (global.fetch as any).mock.calls[0];
@@ -110,9 +110,12 @@ describe('AI Client Direct API Integration', () => {
 
     const client = await getAiClient(config);
     
-    await expect(client.complete('Test prompt')).rejects.toThrow(
-      'Anthropic API error (401): Invalid API key'
-    );
+    try {
+      await client.complete('Test prompt');
+      throw new Error('Expected error was not thrown');
+    } catch (error) {
+      expect(error.message).toContain('Anthropic API error (401): Invalid API key');
+    }
   });
 
   test('should throw error for missing API key', async () => {
@@ -122,8 +125,11 @@ describe('AI Client Direct API Integration', () => {
       useVendedCredentials: false
     };
 
-    await expect(getAiClient(config)).rejects.toThrow(
-      'Anthropic API key is required'
-    );
+    try {
+      await getAiClient(config);
+      throw new Error('Expected error was not thrown');
+    } catch (error) {
+      expect(error.message).toBe('Anthropic API key is required');
+    }
   });
 });

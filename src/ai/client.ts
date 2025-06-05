@@ -98,7 +98,8 @@ class OpenAiClient implements AiClient {
       const maxTokens = options.maxTokens ?? this.config.maxTokens ?? 2000;
       
       // If in test mode, fall back to mock response
-      if (process.env.NODE_ENV === 'test') {
+      if (process.env.NODE_ENV === 'test' && !process.env.FORCE_REAL_AI) {
+        logger.warn('Using mock response in test mode');
         return this.getMockResponse(prompt);
       }
       
@@ -164,10 +165,11 @@ class OpenAiClient implements AiClient {
       logger.error('Error calling OpenAI API', error);
       
       // In development, fall back to mock response if API call fails
-      if (process.env.NODE_ENV === 'development') {
-        logger.warn('Using mock response due to API error');
-        return this.getMockResponse(prompt);
-      }
+      // Disabled for E2E testing - we want real errors
+      // if (process.env.NODE_ENV === 'development') {
+      //   logger.warn('Using mock response due to API error');
+      //   return this.getMockResponse(prompt);
+      // }
       
       throw error;
     }
@@ -227,7 +229,8 @@ class AnthropicClient implements AiClient {
       const maxTokens = options.maxTokens ?? this.config.maxTokens ?? 2000;
       
       // If in test mode, fall back to mock response
-      if (process.env.NODE_ENV === 'test') {
+      if (process.env.NODE_ENV === 'test' && !process.env.FORCE_REAL_AI) {
+        logger.warn('Using mock response in test mode');
         return this.getMockResponse(prompt);
       }
       
@@ -292,10 +295,11 @@ class AnthropicClient implements AiClient {
       logger.error('Error calling Anthropic API', error);
       
       // In development, fall back to mock response if API call fails
-      if (process.env.NODE_ENV === 'development') {
-        logger.warn('Using mock response due to API error');
-        return this.getMockResponse(prompt);
-      }
+      // Disabled for E2E testing - we want real errors
+      // if (process.env.NODE_ENV === 'development') {
+      //   logger.warn('Using mock response due to API error');
+      //   return this.getMockResponse(prompt);
+      // }
       
       throw error;
     }

@@ -1,21 +1,25 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { RsolvApiClient } from '../api-client.js';
 
-// Mock node-fetch
-const mockFetch = mock();
-mock.module('node-fetch', () => ({
-  default: mockFetch
-}));
+// Mock global fetch
+const mockFetch = mock(() => Promise.resolve());
 
 describe('RsolvApiClient', () => {
   let client: RsolvApiClient;
+  let originalFetch: typeof fetch;
   
   beforeEach(() => {
+    originalFetch = global.fetch;
+    global.fetch = mockFetch as any;
     mockFetch.mockClear();
     client = new RsolvApiClient({
       baseUrl: 'https://api.rsolv.dev',
       apiKey: 'test-key'
     });
+  });
+  
+  afterEach(() => {
+    global.fetch = originalFetch;
   });
 
   describe('recordFixAttempt', () => {
@@ -53,17 +57,13 @@ describe('RsolvApiClient', () => {
       
       const result = await client.recordFixAttempt(fixAttempt);
       
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.rsolv.dev/api/v1/fix-attempts',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer test-key'
-          },
-          body: JSON.stringify(fixAttempt)
-        }
-      );
+      expect(mockFetch).toHaveBeenCalled();
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe('https://api.rsolv.dev/api/v1/fix-attempts');
+      expect(options.method).toBe('POST');
+      expect(options.headers['Content-Type']).toBe('application/json');
+      expect(options.headers['Authorization']).toBe('Bearer test-key');
+      expect(options.body).toBe(JSON.stringify(fixAttempt));
       
       expect(result).toEqual({
         success: true,

@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 /**
- * RSOLV Demo Environment
+ * RSOLV Developer Debug Environment
  * 
- * This script provides a comprehensive demo environment for manually exercising
+ * This script provides a comprehensive debugging environment for manually testing
  * all components of the RSOLV system, including:
  * - Issue Analysis
  * - Solution Generation

@@ -43,7 +43,7 @@ mock.module('../../src/github/api', () => {
               number: 42,
               title: 'Test Issue',
               body: 'This is a test issue',
-              labels: [labels],
+              labels: [{ name: labels }],
               assignees: [],
               created_at: '2025-03-23T00:00:00Z',
               updated_at: '2025-03-23T01:00:00Z',

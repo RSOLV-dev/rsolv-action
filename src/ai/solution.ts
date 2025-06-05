@@ -24,7 +24,7 @@ export async function generateSolution(
   analysisData: AnalysisData,
   config: ActionConfig,
   injectedClient?: any,
-  _injectedFileGetter?: any,
+  injectedFileGetter?: any,
   securityAnalysis?: any
 ): Promise<SolutionResult> {
   try {
@@ -37,19 +37,39 @@ export async function generateSolution(
       
       // Use Claude Code for solution generation with enhanced context
       const claudeResult = await claudeCodeAdapter.generateSolution(issue, analysisData);
-      return {
-        success: claudeResult.success,
-        message: claudeResult.success ? 'Solution generated with Claude Code' : claudeResult.error || 'Claude Code generation failed',
-        changes: claudeResult.changes,
-        error: claudeResult.error
-      };
+      
+      // If Claude Code succeeded, return the result
+      if (claudeResult.success) {
+        return {
+          success: true,
+          message: 'Solution generated with Claude Code',
+          changes: claudeResult.changes
+        };
+      }
+      
+      // If Claude Code failed due to CLI not being available, fall back to standard method
+      if (claudeResult.error && claudeResult.error.includes('Claude Code CLI not available')) {
+        logger.info('Claude Code not available, falling back to standard Anthropic API');
+        // Continue to standard flow below
+      } else {
+        // For other errors, return the error
+        return {
+          success: false,
+          message: claudeResult.message,
+          error: claudeResult.error
+        };
+      }
     }
     
     // Use injected client for testing or get standard AI client
-    const aiClient = injectedClient || getAiClient(config.aiProvider);
+    // If we're falling back from claude-code, use anthropic provider with latest Sonnet model
+    const providerConfig = config.aiProvider.provider === 'claude-code' ? 
+      { ...config.aiProvider, provider: 'anthropic', model: 'claude-3-5-sonnet-20241022' } : 
+      config.aiProvider;
+    const aiClient = injectedClient || await getAiClient(providerConfig);
     
     // Get file contents from repository
-    const fileContents = await getFilesForAnalysis(issue, analysisData);
+    const fileContents = await getFilesForAnalysis(issue, analysisData, injectedFileGetter);
     
     if (Object.keys(fileContents).length === 0) {
       logger.warn(`No files found for analysis in issue #${issue.number}`);
@@ -93,14 +113,18 @@ Please ensure your solution addresses these security issues as a priority.`;
     }
     
     // Generate solution using AI
+    logger.info(`Calling AI with prompt length: ${prompt.length} chars`);
+    logger.info('Prompt preview (first 500 chars):', prompt.substring(0, 500));
+    logger.info('Prompt preview (last 500 chars):', prompt.substring(prompt.length - 500));
     const response = await aiClient.complete(prompt, {
       temperature: 0.2,
       maxTokens: 4000,
-      model: config.aiProvider.model
+      model: config.aiProvider.model || 'claude-3-sonnet-20240229'
     });
     
     // Debug: Log the raw response to see what we're getting
-    logger.debug('Raw AI solution response (first 500 chars):', { response: response.substring(0, 500) });
+    logger.info(`AI response length: ${response.length} chars`);
+    logger.info('Raw AI solution response (first 1000 chars):', response.substring(0, 1000));
     
     // Parse the solution response to extract file changes
     const changes = parseSolutionResponse(response);
@@ -136,7 +160,8 @@ Please ensure your solution addresses these security issues as a priority.`;
  */
 async function getFilesForAnalysis(
   issue: IssueContext,
-  analysisData: AnalysisData
+  analysisData: AnalysisData,
+  fileGetter?: (path: string) => Promise<string>
 ): Promise<Record<string, string>> {
   try {
     // Start with files identified by AI analysis
@@ -167,9 +192,14 @@ async function getFilesForAnalysis(
     
     for (const filePath of filesToFetch) {
       try {
-        // In a real implementation, this would fetch files from the GitHub repository
-        // Here we just simulate the file content for demonstration purposes
-        fileContents[filePath] = await simulateFileContent(filePath);
+        // Use injected file getter if provided, otherwise simulate
+        if (fileGetter) {
+          fileContents[filePath] = await fileGetter(filePath);
+        } else {
+          // In a real implementation, this would fetch files from the GitHub repository
+          // Here we just simulate the file content for demonstration purposes
+          fileContents[filePath] = await simulateFileContent(filePath);
+        }
         logger.debug(`Fetched content for ${filePath}`);
       } catch (error) {
         logger.warn(`Failed to fetch content for ${filePath}`, error);

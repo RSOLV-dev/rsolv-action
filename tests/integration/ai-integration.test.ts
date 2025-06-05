@@ -11,7 +11,7 @@ mock.module('../../src/ai/client', () => {
     getAiClient: () => ({
       complete: async (prompt: string) => {
         // Return different mock responses based on the prompt
-        if (prompt.includes('analyze the following software issue')) {
+        if (prompt.includes('analyze')) {
           return `This appears to be a bug in the authentication system where token validation is failing for valid tokens that contain special characters.
 
 Files to modify:

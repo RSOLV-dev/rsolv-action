@@ -1,0 +1,174 @@
+[
+  {
+    "startTime": 1749062403857,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 21,
+    "endTime": 1749062403907
+  },
+  {
+    "startTime": 1749062403909,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 22,
+    "endTime": 1749062403953
+  },
+  {
+    "startTime": 1749086303351,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 22,
+    "endTime": 1749086303404
+  },
+  {
+    "startTime": 1749086303407,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 20,
+    "endTime": 1749086303451
+  },
+  {
+    "startTime": 1749086304705,
+    "issueId": "test-issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 11,
+    "endTime": 1749086304720
+  },
+  {
+    "startTime": 1749086317662,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 21,
+    "endTime": 1749086317708
+  },
+  {
+    "startTime": 1749086317709,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 21,
+    "endTime": 1749086317753
+  },
+  {
+    "startTime": 1749086319130,
+    "issueId": "test-issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 12,
+    "endTime": 1749086319144
+  },
+  {
+    "startTime": 1749091945443,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749094372539,
+    "issueId": "3119450136",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749094377706,
+    "issueId": "3119450136",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749095058355,
+    "issueId": "3119450136",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749095063549,
+    "issueId": "3119450136",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749095252958,
+    "issueId": "3119450136",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749095390355,
+    "issueId": "3119450136",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749095593620,
+    "issueId": "3119450136",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749095919020,
+    "issueId": "3119450136",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749097547318,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 20,
+    "endTime": 1749097547367
+  },
+  {
+    "startTime": 1749097547374,
+    "issueId": "issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 20,
+    "endTime": 1749097547416
+  },
+  {
+    "startTime": 1749097730581,
+    "issueId": "123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 22,
+    "endTime": 1749097730633
+  },
+  {
+    "startTime": 1749097730641,
+    "issueId": "123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 20,
+    "endTime": 1749097730684
+  },
+  {
+    "startTime": 1749134608814,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "cli_not_available"
+  },
+  {
+    "startTime": 1749135479632,
+    "issueId": "test-issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 12,
+    "endTime": 1749135479648
+  },
+  {
+    "startTime": 1749135894153,
+    "issueId": "test-issue-123",
+    "successful": true,
+    "totalChunks": 1,
+    "solutionGenerationTime": 13,
+    "endTime": 1749135894171
+  }
+]

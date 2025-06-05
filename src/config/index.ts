@@ -13,7 +13,8 @@ const AiProviderConfigSchema = z.object({
   maxTokens: z.number().optional(),
   temperature: z.number().optional(),
   contextLimit: z.number().optional(),
-  timeout: z.number().optional()
+  timeout: z.number().optional(),
+  useVendedCredentials: z.boolean().optional()
 });
 
 const ContainerConfigSchema = z.object({
@@ -66,10 +67,27 @@ export async function loadConfig(): Promise<ActionConfig> {
     const envConfig = loadConfigFromEnv();
     
     // Merge configurations (priority: env > file > default)
+    // Special handling for nested objects to preserve all properties
     const mergedConfig = {
       ...defaultConfig,
       ...fileConfig,
-      ...envConfig
+      ...envConfig,
+      // Ensure aiProvider properties are properly merged
+      aiProvider: {
+        ...defaultConfig.aiProvider,
+        ...fileConfig.aiProvider,
+        ...envConfig.aiProvider
+      },
+      containerConfig: {
+        ...defaultConfig.containerConfig,
+        ...fileConfig.containerConfig,
+        ...envConfig.containerConfig
+      },
+      securitySettings: {
+        ...defaultConfig.securitySettings,
+        ...fileConfig.securitySettings,
+        ...envConfig.securitySettings
+      }
     };
     
     // Validate configuration
