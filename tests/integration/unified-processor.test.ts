@@ -90,9 +90,12 @@ describe('Unified Processor', () => {
 
     mockConfig = {
       githubToken: 'test-token',
-      aiProvider: 'anthropic',
-      aiApiKey: 'test-key',
-      aiModel: 'claude-3',
+      aiProvider: {
+        provider: 'anthropic',
+        apiKey: 'test-key',
+        model: 'claude-3',
+        useVendedCredentials: false
+      },
       dryRun: true
     } as ActionConfig;
   });
@@ -118,7 +121,10 @@ describe('Unified Processor', () => {
   test('processes issues with enhanced context', async () => {
     const enhancedConfig = {
       ...mockConfig,
-      aiProvider: 'claude-code' as const
+      aiProvider: {
+        ...mockConfig.aiProvider,
+        provider: 'claude-code' as const
+      }
     };
     
     const results = await processIssues([mockIssue], enhancedConfig, {
