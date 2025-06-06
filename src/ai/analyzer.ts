@@ -45,6 +45,9 @@ export async function analyzeIssue(
  */
 function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisData {
   try {
+    // Debug: Log the actual AI response
+    logger.info(`AI analysis response for issue #${issue.number}:`, response.substring(0, 500));
+    
     // Simple heuristic for determining issue type from title/body
     const issueType = determineIssueType(issue);
     
@@ -53,13 +56,21 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
     const filesToModify: string[] = [];
     let estimatedComplexity: 'simple' | 'medium' | 'complex' = 'medium';
     
-    // Look for file paths in the AI response
-    const filePathRegex = /`([\w\-./]+\.[\w]+)`|"([\w\-./]+\.[\w]+)"|'([\w\-./]+\.[\w]+)'/g;
+    // Look for file paths in the AI response (more flexible)
+    const filePathRegex = /`([\w\-./]+\.[\w]+)`|"([\w\-./]+\.[\w]+)"|'([\w\-./]+\.[\w]+)'|([\w\-./]*\/[\w\-./]*\.(?:js|ts|py|java|rb|php|go|rs|cpp|c|h))/g;
     let match;
     while ((match = filePathRegex.exec(response)) !== null) {
-      const filePath = match[1] || match[2] || match[3];
+      const filePath = match[1] || match[2] || match[3] || match[4];
       if (filePath && !filesToModify.includes(filePath)) {
         filesToModify.push(filePath);
+      }
+    }
+    
+    // Also look for common file extensions mentioned without quotes  
+    const commonFiles = ['login.js', 'auth.js', 'login.ts', 'auth.ts', 'authentication.js', 'authentication.ts', 'security.js', 'security.ts'];
+    for (const file of commonFiles) {
+      if (response.toLowerCase().includes(file.toLowerCase()) && !filesToModify.includes(file)) {
+        filesToModify.push(file);
       }
     }
     
@@ -70,16 +81,30 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
       estimatedComplexity = 'complex';
     }
     
-    // Extract suggested approach
+    // Extract suggested approach (more flexible)
     let suggestedApproach = '';
-    if (response.includes('Suggested Approach:')) {
-      suggestedApproach = response.split('Suggested Approach:')[1]?.split('\n\n')[0]?.trim() || '';
-    } else if (response.includes('Approach:')) {
-      suggestedApproach = response.split('Approach:')[1]?.split('\n\n')[0]?.trim() || '';
-    } else {
-      // Take a portion of the response as the approach
-      suggestedApproach = response.split('\n\n')[0]?.trim() || '';
+    const approachKeywords = ['Suggested Approach:', 'Approach:', 'Solution:', 'Fix:', 'Recommendation:', 'To fix this'];
+    
+    for (const keyword of approachKeywords) {
+      if (response.includes(keyword)) {
+        suggestedApproach = response.split(keyword)[1]?.split('\n\n')[0]?.trim() || '';
+        if (suggestedApproach) break;
+      }
     }
+    
+    // If no specific approach section found, use the whole response if it's substantial
+    if (!suggestedApproach && response.length > 50) {
+      // Take first meaningful paragraph
+      const paragraphs = response.split('\n\n').filter(p => p.trim().length > 20);
+      suggestedApproach = paragraphs[0]?.trim() || '';
+    }
+    
+    // Debug: Log parsed results
+    logger.info(`Parsed analysis for issue #${issue.number}:`, {
+      filesToModify,
+      suggestedApproach: suggestedApproach.substring(0, 100),
+      canBeFixed: filesToModify.length > 0 && suggestedApproach.length > 0
+    });
     
     // Build analysis data object
     return {
@@ -89,7 +114,7 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
       requiredContext: [],
       suggestedApproach,
       confidenceScore: 0.7,
-      canBeFixed: filesToModify.length > 0 && suggestedApproach.length > 0
+      canBeFixed: (filesToModify.length > 0 || suggestedApproach.length > 50) && suggestedApproach.length > 0
     };
   } catch (error) {
     logger.error('Error parsing AI analysis response', error);
