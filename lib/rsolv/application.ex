@@ -7,7 +7,8 @@ defmodule RSOLV.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
+    # Base children that always start
+    base_children = [
       # Start the Telemetry supervisor
       RSOLVWeb.Telemetry,
       # Start the Ecto repository
@@ -23,10 +24,29 @@ defmodule RSOLV.Application do
       # Start a worker by calling: RSOLV.Worker.start_link(arg)
       # {RSOLV.Worker, arg}
     ]
+    
+    # Add cluster supervisor if clustering is configured
+    cluster_children = 
+      if RSOLV.Cluster.clustering_enabled?() do
+        [
+          {Cluster.Supervisor, [RSOLV.Cluster.topologies(), [name: RSOLV.ClusterSupervisor]]},
+          RSOLV.ClusterMonitor
+        ]
+      else
+        []
+      end
+    
+    children = cluster_children ++ base_children
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: RSOLV.Supervisor]
+    
+    # Set up cluster event handlers before starting
+    if RSOLV.Cluster.clustering_enabled?() do
+      :net_kernel.monitor_nodes(true, node_type: :all)
+    end
+    
     Supervisor.start_link(children, opts)
   end
 

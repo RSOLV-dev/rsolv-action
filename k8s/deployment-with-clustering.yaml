@@ -65,6 +65,7 @@ spec:
               optional: true
         - name: CLUSTER_SERVICE_NAME
           value: "rsolv-api-headless"
+        # Database configuration
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
@@ -75,6 +76,7 @@ spec:
             secretKeyRef:
               name: rsolv-api-secrets
               key: secret-key-base
+        # AI provider keys
         - name: ANTHROPIC_API_KEY
           valueFrom:
             secretKeyRef:

@@ -7,7 +7,8 @@ defmodule RSOLVWeb.HealthController do
       status: "ok",
       service: "rsolv-api",
       version: "0.1.0",
-      timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
+      timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
+      node: Node.self() |> to_string()
     }
 
     # Check database connectivity
@@ -28,7 +29,8 @@ defmodule RSOLVWeb.HealthController do
 
     response = Map.merge(health_status, %{
       status: overall_status,
-      services: services_status
+      services: services_status,
+      clustering: clustering_info()
     })
 
     conn
@@ -62,5 +64,18 @@ defmodule RSOLVWeb.HealthController do
     services
     |> Map.values()
     |> Enum.all?(&(&1 == "healthy" || is_map(&1)))
+  end
+  
+  defp clustering_info do
+    if Code.ensure_loaded?(RSOLV.Cluster) && function_exported?(RSOLV.Cluster, :clustering_enabled?, 0) && RSOLV.Cluster.clustering_enabled?() do
+      %{
+        enabled: true,
+        current_node: Node.self() |> to_string(),
+        connected_nodes: Node.list() |> Enum.map(&to_string/1),
+        node_count: length(Node.list()) + 1
+      }
+    else
+      %{enabled: false}
+    end
   end
 end

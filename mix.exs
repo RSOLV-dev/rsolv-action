@@ -46,7 +46,8 @@ defmodule RSOLV.MixProject do
       {:ex_rated, "~> 2.1"},
       {:httpoison, "~> 2.0"},
       {:tesla, "~> 1.4"},
-      {:hackney, "~> 1.18"}
+      {:hackney, "~> 1.18"},
+      {:libcluster, "~> 3.3"}
     ]
   end
 

@@ -1,5 +1,30 @@
 import Config
 
+# Configure clustering
+if config_env() == :prod do
+  # Generate a unique node name based on pod name (injected by Kubernetes)
+  node_basename = System.get_env("RELEASE_NODE") || "rsolv_api"
+  pod_name = System.get_env("POD_NAME") || "#{node_basename}-#{:rand.uniform(999999)}"
+  pod_namespace = System.get_env("POD_NAMESPACE") || "default"
+  
+  # Service name should match the headless service in Kubernetes
+  service_name = System.get_env("CLUSTER_SERVICE_NAME") || "rsolv-api-headless"
+  
+  config :rsolv_api, :cluster,
+    topologies: [
+      k8s_dns: [
+        strategy: Cluster.Strategy.Kubernetes.DNS,
+        config: [
+          service: service_name,
+          namespace: pod_namespace,
+          application_name: "rsolv_api",
+          polling_interval: 5_000,
+          mode: :hostname
+        ]
+      ]
+    ]
+end
+
 # Configure the database
 database_config = [
   url: System.get_env("DATABASE_URL"),
