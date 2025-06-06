@@ -7,6 +7,7 @@ import { createPullRequest } from '../github/pr.js';
 // import { getAiClient } from './client.js';
 import { EnhancedClaudeCodeAdapter } from './adapters/claude-code-enhanced.js';
 import { AIConfig } from './types.js';
+import { sanitizeErrorMessage } from '../utils/error-sanitizer.js';
 
 /**
  * Processing options for the unified processor
@@ -64,8 +65,8 @@ export async function processIssues(
       results.push({
         issueId: issue.id,
         success: false,
-        message: `Error processing issue: ${error instanceof Error ? error.message : String(error)}`,
-        error: String(error)
+        message: sanitizeErrorMessage(`Error processing issue: ${error instanceof Error ? error.message : String(error)}`),
+        error: sanitizeErrorMessage(String(error))
       });
     }
   }
@@ -184,8 +185,8 @@ async function processIssue(
     return {
       issueId: issue.id,
       success: false,
-      message: `Error processing issue: ${error instanceof Error ? error.message : String(error)}`,
-      error: String(error),
+      message: sanitizeErrorMessage(`Error processing issue: ${error instanceof Error ? error.message : String(error)}`),
+      error: sanitizeErrorMessage(String(error)),
       processingTime: Date.now() - startTime
     };
   }

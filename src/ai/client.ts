@@ -1,6 +1,7 @@
 import { AiProviderConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { RSOLVCredentialManager } from '../credentials/manager.js';
+import { sanitizeErrorMessage } from '../utils/error-sanitizer.js';
 
 /**
  * Interface for AI client implementations
@@ -85,7 +86,7 @@ class OpenAiClient implements AiClient {
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
-      throw new Error(`AI provider error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
   
@@ -142,7 +143,7 @@ class OpenAiClient implements AiClient {
       // Handle errors
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`);
+        throw new Error(sanitizeErrorMessage(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`));
       }
       
       // Parse the response
@@ -218,7 +219,7 @@ class AnthropicClient implements AiClient {
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
-      throw new Error(`AI provider error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
   
@@ -274,7 +275,7 @@ class AnthropicClient implements AiClient {
       // Handle errors
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`);
+        throw new Error(sanitizeErrorMessage(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`));
       }
       
       // Parse the response
@@ -347,7 +348,7 @@ class MistralClient implements AiClient {
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
-      throw new Error(`AI provider error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
   
@@ -391,7 +392,7 @@ class OllamaClient implements AiClient {
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
-      throw new Error(`AI provider error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
   
