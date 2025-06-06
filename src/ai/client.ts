@@ -36,9 +36,9 @@ export async function getAiClient(config: AiProviderConfig): Promise<AiClient> {
       credentialManager = new RSOLVCredentialManager();
       await credentialManager.initialize(process.env.RSOLV_API_KEY || '');
     } catch (error) {
-      logger.warn('Failed to initialize credential vending, falling back to direct API keys', error);
-      // Fall back to direct API keys
-      config.useVendedCredentials = false;
+      logger.warn('Failed to initialize credential vending', error);
+      // Don't fall back - let the error propagate when trying to use the credentials
+      // This preserves the intent to use vended credentials
       credentialManager = null;
     }
   }
@@ -71,21 +71,21 @@ class OpenAiClient implements AiClient {
     this.credentialManager = credentialManager;
     
     if (!config.useVendedCredentials && !config.apiKey) {
-      throw new Error('OpenAI API key is required');
+      throw new Error('AI provider API key is required');
     }
   }
   
   async complete(prompt: string, options: CompletionOptions = {}): Promise<string> {
     try {
-      logger.debug('Sending request to OpenAI', { prompt: prompt.substring(0, 100) + '...' });
+      logger.debug('Sending request to AI provider', { prompt: prompt.substring(0, 100) + '...' });
       
       // Make actual API call to OpenAI
       const response = await this.makeApiCall(prompt, options);
       
       return response;
     } catch (error) {
-      logger.error('OpenAI API error', error);
-      throw new Error(`OpenAI API error: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('AI provider API error', error);
+      throw new Error(`AI provider error: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -142,7 +142,7 @@ class OpenAiClient implements AiClient {
       // Handle errors
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`OpenAI API error (${response.status}): ${errorData.error?.message || response.statusText}`);
+        throw new Error(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`);
       }
       
       // Parse the response
@@ -162,7 +162,7 @@ class OpenAiClient implements AiClient {
       
       return result;
     } catch (error) {
-      logger.error('Error calling OpenAI API', error);
+      logger.error('Error calling AI provider API', error);
       
       // In development, fall back to mock response if API call fails
       // Disabled for E2E testing - we want real errors
@@ -201,22 +201,24 @@ class AnthropicClient implements AiClient {
     this.config = config;
     this.credentialManager = credentialManager;
     
+    // Only throw if we're not using vended credentials AND no API key is provided
+    // If using vended credentials, we'll check for the credential manager later when making API calls
     if (!config.useVendedCredentials && !config.apiKey) {
-      throw new Error('Anthropic API key is required');
+      throw new Error('AI provider API key is required');
     }
   }
   
   async complete(prompt: string, options: CompletionOptions = {}): Promise<string> {
     try {
-      logger.debug('Sending request to Anthropic', { prompt: prompt.substring(0, 100) + '...' });
+      logger.debug('Sending request to AI provider', { prompt: prompt.substring(0, 100) + '...' });
       
       // Make actual API call to Anthropic
       const response = await this.makeApiCall(prompt, options);
       
       return response;
     } catch (error) {
-      logger.error('Anthropic API error', error);
-      throw new Error(`Anthropic API error: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('AI provider API error', error);
+      throw new Error(`AI provider error: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -272,7 +274,7 @@ class AnthropicClient implements AiClient {
       // Handle errors
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Anthropic API error (${response.status}): ${errorData.error?.message || response.statusText}`);
+        throw new Error(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`);
       }
       
       // Parse the response
@@ -292,7 +294,7 @@ class AnthropicClient implements AiClient {
       
       return result;
     } catch (error) {
-      logger.error('Error calling Anthropic API', error);
+      logger.error('Error calling AI provider API', error);
       
       // In development, fall back to mock response if API call fails
       // Disabled for E2E testing - we want real errors
@@ -331,21 +333,21 @@ class MistralClient implements AiClient {
     this.credentialManager = credentialManager;
     
     if (!config.useVendedCredentials && !config.apiKey) {
-      throw new Error('Mistral API key is required');
+      throw new Error('AI provider API key is required');
     }
   }
   
   async complete(prompt: string, options: CompletionOptions = {}): Promise<string> {
     try {
-      logger.debug('Sending request to Mistral', { prompt: prompt.substring(0, 100) + '...' });
+      logger.debug('Sending request to AI provider', { prompt: prompt.substring(0, 100) + '...' });
       
       // Simulate API call for development purposes
       const response = await this.simulateApiCall(prompt, options);
       
       return response;
     } catch (error) {
-      logger.error('Mistral API error', error);
-      throw new Error(`Mistral API error: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('AI provider API error', error);
+      throw new Error(`AI provider error: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -381,15 +383,15 @@ class OllamaClient implements AiClient {
   
   async complete(prompt: string, options: CompletionOptions = {}): Promise<string> {
     try {
-      logger.debug('Sending request to Ollama', { prompt: prompt.substring(0, 100) + '...' });
+      logger.debug('Sending request to AI provider', { prompt: prompt.substring(0, 100) + '...' });
       
       // Simulate API call for development purposes
       const response = await this.simulateApiCall(prompt, options);
       
       return response;
     } catch (error) {
-      logger.error('Ollama API error', error);
-      throw new Error(`Ollama API error: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('AI provider API error', error);
+      throw new Error(`AI provider error: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   

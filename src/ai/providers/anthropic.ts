@@ -18,10 +18,10 @@ export class AnthropicClient implements AIClient {
     
     // Validate API key
     if (!config.apiKey || config.apiKey.length < 20) {
-      throw new Error('Invalid Anthropic API key provided');
+      throw new Error('Invalid AI provider API key provided');
     }
 
-    logger.info(`Initialized Anthropic AI client with model: ${this.model}`);
+    logger.info(`Initialized AI client with model: ${this.model}`);
   }
 
   /**
@@ -48,7 +48,7 @@ export class AnthropicClient implements AIClient {
     
     // For live tests, use the Anthropic API directly
     try {
-      logger.info('Using direct API call to Anthropic');
+      logger.info('Using direct API call to AI provider');
       
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -72,13 +72,13 @@ export class AnthropicClient implements AIClient {
       });
       
       if (!response.ok) {
-        throw new Error(`Anthropic API error: ${response.status} ${response.statusText}`);
+        throw new Error(`AI provider error: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       return data.content[0].text;
     } catch (error) {
-      logger.error('Error calling Anthropic API', error as Error);
+      logger.error('Error calling AI provider API', error as Error);
       
       // If all else fails, provide mock responses for demo purposes
       if (prompt.includes('analyze the following software issue')) {
@@ -135,7 +135,7 @@ Your response must be valid JSON only, with no other text.
 `;
 
       // Execute Claude Code
-      logger.info('Requesting issue analysis from Claude');
+      logger.info('Requesting issue analysis from AI provider');
       const response = await this.runClaudeCode(prompt);
       
       try {
@@ -149,7 +149,7 @@ Your response must be valid JSON only, with no other text.
                           response.match(/{[\s\S]*}/);
         
         if (!jsonMatch) {
-          throw new Error('Failed to extract JSON from Claude response');
+          throw new Error('Failed to extract JSON from AI provider response');
         }
         
         const jsonString = jsonMatch[1] || jsonMatch[0];
@@ -160,7 +160,7 @@ Your response must be valid JSON only, with no other text.
       }
       
     } catch (error) {
-      logger.error('Error analyzing issue with Claude', error as Error);
+      logger.error('Error analyzing issue with AI provider', error as Error);
       throw error;
     }
   }
@@ -215,7 +215,7 @@ Your response must be valid JSON only, with no other text.
 `;
 
       // Execute Claude Code
-      logger.info('Requesting solution generation from Claude');
+      logger.info('Requesting solution generation from AI provider');
       const response = await this.runClaudeCode(prompt);
       
       try {
@@ -229,7 +229,7 @@ Your response must be valid JSON only, with no other text.
                           response.match(/{[\s\S]*}/);
         
         if (!jsonMatch) {
-          throw new Error('Failed to extract JSON from Claude response');
+          throw new Error('Failed to extract JSON from AI provider response');
         }
         
         const jsonString = jsonMatch[1] || jsonMatch[0];
@@ -240,7 +240,7 @@ Your response must be valid JSON only, with no other text.
       }
       
     } catch (error) {
-      logger.error('Error generating solution with Claude', error as Error);
+      logger.error('Error generating solution with AI provider', error as Error);
       throw error;
     }
   }

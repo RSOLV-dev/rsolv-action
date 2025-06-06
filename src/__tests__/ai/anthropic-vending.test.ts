@@ -38,7 +38,7 @@ describe('Anthropic Client with Vended Credentials', () => {
     // When credential vending fails (due to network/cert issues in test), 
     // it falls back to requiring a direct API key
     expect(error).toBeDefined();
-    expect(error?.message).toBe('Anthropic API key is required');
+    expect(error?.message).toBe('AI provider API key is required');
   });
   
   it('should throw when creating Anthropic client without vended credentials and no API key', async () => {
@@ -56,7 +56,7 @@ describe('Anthropic Client with Vended Credentials', () => {
       await getAiClient(config);
       throw new Error('Expected error was not thrown');
     } catch (error) {
-      expect(error.message).toBe('Anthropic API key is required');
+      expect(error.message).toBe('AI provider API key is required');
     }
   });
 });
