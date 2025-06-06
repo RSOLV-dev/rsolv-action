@@ -39,8 +39,9 @@ async function run(): Promise<ActionStatus> {
       verboseLogging: process.env.DEBUG === 'true'
     };
     
-    // Add overall timeout to prevent hanging (2 minutes for all issues)
-    const WORKFLOW_TIMEOUT = 300000; // 5 minutes - allow time for detailed security analysis
+    // Add overall timeout to prevent hanging, but allow time for complex analysis
+    // This supports multi-LLM orchestration where Claude Code coordinates multiple AI models
+    const WORKFLOW_TIMEOUT = 1200000; // 20 minutes - allow time for complex multi-LLM orchestrated analysis
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
         reject(new Error(`Workflow timeout: Processing ${issues.length} issues took longer than ${WORKFLOW_TIMEOUT/1000} seconds`));
