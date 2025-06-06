@@ -136,7 +136,7 @@ async function processIssue(
           enableDeepContext: true,
           enableUltraThink: options.contextDepth === 'ultra',
           contextDepth: options.contextDepth || 'deep',
-          contextGatheringTimeout: options.contextGatheringTimeout || 300000,
+          contextGatheringTimeout: options.contextGatheringTimeout || 30000, // Reduced from 5 minutes to 30 seconds
           verboseLogging: options.verboseLogging || false
         }
       };

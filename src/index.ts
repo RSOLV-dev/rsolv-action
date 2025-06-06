@@ -39,7 +39,19 @@ async function run(): Promise<ActionStatus> {
       verboseLogging: process.env.DEBUG === 'true'
     };
     
-    const results = await processIssues(issues, config, processingOptions);
+    // Add overall timeout to prevent hanging (2 minutes for all issues)
+    const WORKFLOW_TIMEOUT = 120000;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Workflow timeout: Processing ${issues.length} issues took longer than ${WORKFLOW_TIMEOUT/1000} seconds`));
+      }, WORKFLOW_TIMEOUT);
+    });
+    
+    const results = await Promise.race([
+      processIssues(issues, config, processingOptions),
+      timeoutPromise
+    ]);
+    
     logger.info(`Successfully processed ${results.filter((r: { success: boolean }) => r.success).length}/${issues.length} issues`);
     
     return { 

@@ -49,7 +49,8 @@ export class RSOLVCredentialManager {
           'X-GitHub-Job': process.env.GITHUB_JOB || '',
           'X-GitHub-Run': process.env.GITHUB_RUN_ID || ''
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(15000) // 15 second timeout to prevent hanging
       });
 
       if (!response.ok) {
@@ -115,7 +116,8 @@ export class RSOLVCredentialManager {
           tokens_used: usage.tokensUsed,
           request_count: usage.requestCount,
           job_id: process.env.GITHUB_JOB
-        })
+        }),
+        signal: AbortSignal.timeout(5000) // 5 second timeout for usage reporting
       });
 
       if (!response.ok) {
@@ -180,7 +182,8 @@ export class RSOLVCredentialManager {
         body: JSON.stringify({
           api_key: this.apiKey,
           credential_id: provider // Using provider as ID for simplicity
-        })
+        }),
+        signal: AbortSignal.timeout(10000) // 10 second timeout for refresh
       });
 
       if (!response.ok) {

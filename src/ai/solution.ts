@@ -32,10 +32,20 @@ export async function generateSolution(
     
     // Handle Claude Code provider specially
     if (config.aiProvider.provider === 'claude-code' && !injectedClient) {
-      logger.info('Using Claude Code adapter for enhanced context gathering');
-      const claudeCodeAdapter = new ClaudeCodeAdapter(config.aiProvider, process.cwd());
+      logger.info('Using Claude Code for solution generation');
       
-      // Use Claude Code for solution generation with enhanced context
+      // Get credential manager if using vended credentials
+      let credentialManager;
+      if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+        const { RSOLVCredentialManager } = await import('../credentials/manager.js');
+        credentialManager = new RSOLVCredentialManager(config.rsolvApiKey, config.rsolvApiUrl);
+        await credentialManager.initialize();
+      }
+      
+      // Use Claude Code adapter
+      const claudeCodeAdapter = new ClaudeCodeAdapter(config.aiProvider, process.cwd(), credentialManager);
+      
+      // Use Claude Code for solution generation
       const claudeResult = await claudeCodeAdapter.generateSolution(issue, analysisData);
       
       // If Claude Code succeeded, return the result
@@ -47,7 +57,7 @@ export async function generateSolution(
         };
       }
       
-      // If Claude Code failed due to CLI not being available, fall back to standard method
+      // If Claude Code failed, fall back to standard method
       if (claudeResult.error && claudeResult.error.includes('Claude Code CLI not available')) {
         logger.info('Claude Code not available, falling back to standard AI provider API');
         // Continue to standard flow below
