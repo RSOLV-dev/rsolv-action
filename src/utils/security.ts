@@ -44,22 +44,26 @@ function validateApiKey(apiKey: string): boolean {
     return false;
   }
   
-  // Check API key format (should be a UUID v4)
-  const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  
   // Check if it's our development API key
   if (apiKey === 'rsolv-dev-key-123456789') {
     logger.warn('Using development API key - not secure for production');
     return true;
   }
   
-  if (!uuidV4Regex.test(apiKey)) {
+  // Check RSOLV API key formats
+  // Format 1: rsolv_live_[base64url] (production keys)
+  // Format 2: rsolv_internal_[hex] (internal/demo keys)
+  // Format 3: rsolv_test_[alphanumeric] (test keys)
+  // Format 4: UUID v4 (legacy format)
+  const rsolvKeyRegex = /^rsolv_(live|internal|test|prod)_[a-zA-Z0-9_-]+$/;
+  const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  
+  if (!rsolvKeyRegex.test(apiKey) && !uuidV4Regex.test(apiKey)) {
     logger.error('API key has invalid format');
     return false;
   }
   
-  // In a real implementation, we would verify the API key with the RSOLV API
-  // For development purposes, we'll just check the format
+  // In production, the RSOLV API will validate the key during credential exchange
   
   return true;
 }
