@@ -94,9 +94,14 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
     
     // If no specific approach section found, use the whole response if it's substantial
     if (!suggestedApproach && response.length > 50) {
-      // Take first meaningful paragraph
-      const paragraphs = response.split('\n\n').filter(p => p.trim().length > 20);
-      suggestedApproach = paragraphs[0]?.trim() || '';
+      // For longer responses, take more content or the whole response
+      if (response.length > 500) {
+        suggestedApproach = response.trim();
+      } else {
+        // Take first meaningful paragraph
+        const paragraphs = response.split('\n\n').filter(p => p.trim().length > 20);
+        suggestedApproach = paragraphs[0]?.trim() || '';
+      }
     }
     
     // Debug: Log parsed results

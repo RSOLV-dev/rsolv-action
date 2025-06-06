@@ -40,7 +40,7 @@ async function run(): Promise<ActionStatus> {
     };
     
     // Add overall timeout to prevent hanging (2 minutes for all issues)
-    const WORKFLOW_TIMEOUT = 120000;
+    const WORKFLOW_TIMEOUT = 300000; // 5 minutes - allow time for detailed security analysis
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
         reject(new Error(`Workflow timeout: Processing ${issues.length} issues took longer than ${WORKFLOW_TIMEOUT/1000} seconds`));
