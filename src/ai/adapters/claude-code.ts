@@ -111,7 +111,7 @@ export class ClaudeCodeAdapter {
     let errorRetryCount = 0;
     const maxRetries = this.claudeConfig.retryOptions?.maxRetries ?? 2;
     const baseDelay = this.claudeConfig.retryOptions?.baseDelay ?? 1000;
-    const timeout = this.claudeConfig.timeout ?? 30000; // 30 seconds default (reduced from 5 minutes to prevent hanging)
+    const timeout = this.claudeConfig.timeout ?? 120000; // 2 minutes default for complex security analysis
     
     // Initialize usage tracking
     const usageEntry: UsageData = {
