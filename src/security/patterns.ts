@@ -4,6 +4,9 @@ import { rubySecurityPatterns } from './patterns/ruby.js';
 import { javaSecurityPatterns } from './patterns/java.js';
 import { allJavaScriptPatterns } from './patterns/javascript.js';
 import { cveAndOwaspPatterns } from './patterns/cve-patterns.js';
+import { elixirSecurityPatterns } from './patterns/elixir.js';
+import { railsSecurityPatterns } from './patterns/rails.js';
+import { djangoSecurityPatterns } from './patterns/django.js';
 
 export class PatternRegistry {
   private patterns: Map<VulnerabilityType, SecurityPattern[]> = new Map();
@@ -60,6 +63,27 @@ export class PatternRegistry {
     for (const pattern of javaSecurityPatterns) {
       const existingPatterns = this.patterns.get(pattern.type) || [];
       existingPatterns.push(this.convertToSecurityPattern(pattern));
+      this.patterns.set(pattern.type, existingPatterns);
+    }
+
+    // Add Elixir patterns
+    for (const pattern of elixirSecurityPatterns) {
+      const existingPatterns = this.patterns.get(pattern.type) || [];
+      existingPatterns.push(pattern); // Already in correct format
+      this.patterns.set(pattern.type, existingPatterns);
+    }
+
+    // Add Rails patterns (Ruby framework-specific)
+    for (const pattern of railsSecurityPatterns) {
+      const existingPatterns = this.patterns.get(pattern.type) || [];
+      existingPatterns.push(pattern); // Already in correct format
+      this.patterns.set(pattern.type, existingPatterns);
+    }
+
+    // Add Django patterns (Python framework-specific)
+    for (const pattern of djangoSecurityPatterns) {
+      const existingPatterns = this.patterns.get(pattern.type) || [];
+      existingPatterns.push(pattern); // Already in correct format
       this.patterns.set(pattern.type, existingPatterns);
     }
   }
