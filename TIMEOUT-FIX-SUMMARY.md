@@ -39,11 +39,19 @@ The GitHub Action was hanging when processing multiple issues (7 issues found) d
 - Changed from 300000ms to 30000ms (30 seconds)
 - Prevents long context gathering operations
 
-## Expected Behavior After Fix
-- Maximum runtime: 2 minutes (enforced by workflow timeout)
-- Individual issues: Max 30 seconds each
-- API calls: Fail fast with timeouts
+## Expected Behavior After Fix (Updated for Multi-LLM Orchestration)
+- Maximum runtime: 20 minutes (enforced by workflow timeout)
+- Individual Claude Code operations: Max 15 minutes each (for complex multi-LLM workflows)
+- Context gathering: Max 10 minutes for deep analysis
+- API calls: Fail fast with timeouts (15s exchange, 5s usage, 10s refresh)
 - Clear error messages if timeouts occur
+
+## Rationale for Longer Timeouts
+These generous timeouts support:
+- Complex security vulnerability analysis requiring deep reasoning
+- Multi-LLM orchestration where Claude Code coordinates multiple AI models
+- Deep context gathering across large codebases
+- Comprehensive solution generation with multiple approaches
 
 ## Testing Recommendations
 1. Run with `DEBUG=true` to see detailed progress

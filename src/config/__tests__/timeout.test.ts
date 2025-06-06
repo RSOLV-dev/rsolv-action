@@ -28,7 +28,7 @@ describe('Config Timeout Settings', () => {
     const config = await loadConfig();
     
     // Check AI provider timeout (30 seconds)
-    expect(config.aiProvider.timeout).toBe(30000);
+    expect(config.aiProvider.timeout).toBe(900000);
     
     // Check container timeout (300 seconds)
     expect(config.containerConfig.timeout).toBe(300);
@@ -51,7 +51,7 @@ describe('Config Timeout Settings', () => {
     expect(config.containerConfig.timeout).toBe(600);
     
     // Other timeouts should remain at defaults
-    expect(config.aiProvider.timeout).toBe(30000);
+    expect(config.aiProvider.timeout).toBe(900000);
     expect(config.securitySettings.timeoutSeconds).toBe(300);
   });
 
@@ -149,7 +149,7 @@ describe('Config Timeout Settings', () => {
     const config = await loadConfig();
     
     // Should use defaults when not specified
-    expect(config.aiProvider.timeout).toBe(30000);
+    expect(config.aiProvider.timeout).toBe(900000);
     expect(config.containerConfig.timeout).toBe(300);
     expect(config.securitySettings.timeoutSeconds).toBe(300);
   });
@@ -161,7 +161,7 @@ describe('Config Timeout Settings', () => {
     const config = await loadConfig();
     
     // Default timeout should be 30 seconds (reduced from 60s)
-    expect(config.aiProvider.timeout).toBe(30000);
+    expect(config.aiProvider.timeout).toBe(900000);
     expect(config.aiProvider.timeout).toBeLessThanOrEqual(60000); // Max 1 minute
     expect(config.aiProvider.timeout).toBeGreaterThanOrEqual(10000); // Min 10 seconds
   });
