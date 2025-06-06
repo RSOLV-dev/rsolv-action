@@ -121,14 +121,15 @@ async function processIssue(
     let contextGatheringTime;
     let deepContext;
     
-    if (options.enableEnhancedContext && config.aiProvider === 'claude-code') {
+    if (options.enableEnhancedContext && config.aiProvider.provider === 'claude-code') {
       // Use enhanced context gathering
       const aiConfig: AIConfig = {
-        provider: config.aiProvider as any,
-        apiKey: config.aiApiKey,
-        model: config.aiModel,
-        temperature: config.aiTemperature,
-        maxTokens: config.aiMaxTokens,
+        provider: config.aiProvider.provider as any,
+        apiKey: config.aiProvider.apiKey,
+        model: config.aiProvider.model,
+        temperature: config.aiProvider.temperature,
+        maxTokens: config.aiProvider.maxTokens,
+        useVendedCredentials: config.aiProvider.useVendedCredentials,
         claudeCodeConfig: {
           ...config.claudeCodeConfig,
           enableDeepContext: true,

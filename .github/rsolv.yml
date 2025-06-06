@@ -1,5 +1,4 @@
 
-        apiKey: test-api-key
-        containerConfig:
-          enabled: "not-a-boolean"
-      
+apiKey: test-api-key
+containerConfig:
+  enabled: true

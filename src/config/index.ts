@@ -207,7 +207,7 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
   }
   
   // Container configuration from environment
-  if (process.env.RSOLV_CONTAINER_ENABLED) {
+  if (process.env.RSOLV_CONTAINER_ENABLED !== undefined) {
     envConfig.containerConfig = {
       enabled: process.env.RSOLV_CONTAINER_ENABLED === 'true',
       image: process.env.RSOLV_CONTAINER_IMAGE,

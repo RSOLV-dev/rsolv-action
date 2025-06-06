@@ -49,7 +49,7 @@ export async function generateSolution(
       
       // If Claude Code failed due to CLI not being available, fall back to standard method
       if (claudeResult.error && claudeResult.error.includes('Claude Code CLI not available')) {
-        logger.info('Claude Code not available, falling back to standard Anthropic API');
+        logger.info('Claude Code not available, falling back to standard AI provider API');
         // Continue to standard flow below
       } else {
         // For other errors, return the error

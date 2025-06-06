@@ -95,8 +95,8 @@ async function runIntegrationTest() {
     const openaiKey = credentialManager.getCredential('openai');
     
     console.log('✅ Retrieved credentials:');
-    console.log(`  - Anthropic: ${anthropicKey}`);
-    console.log(`  - OpenAI: ${openaiKey}\n`);
+    console.log(`  - AI Provider 1: ${anthropicKey}`);
+    console.log(`  - AI Provider 2: ${openaiKey}\n`);
     
     console.log('5. Testing usage reporting...');
     

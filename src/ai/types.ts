@@ -170,10 +170,12 @@ export interface ClaudeCodeConfig {
  */
 export interface AIConfig {
   provider: AIProvider;
-  apiKey: string;
+  apiKey?: string;
+  model?: string;
   modelName?: string;
   temperature?: number;
   maxTokens?: number;
+  useVendedCredentials?: boolean;
   useClaudeCode?: boolean;
   claudeCodeConfig?: ClaudeCodeConfig;
 }

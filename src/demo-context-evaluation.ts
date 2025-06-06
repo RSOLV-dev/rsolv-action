@@ -98,7 +98,7 @@ async function runFullContextEvaluation(rl: readline.Interface): Promise<void> {
   
   // Check if API key is set
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.log(chalk.red('❌ ANTHROPIC_API_KEY environment variable not set.'));
+    console.log(chalk.red('❌ AI provider API key environment variable not set.'));
     const apiKey = await getApiKey(rl);
     if (!apiKey) {
       console.log(chalk.red('Cannot proceed without API key.'));

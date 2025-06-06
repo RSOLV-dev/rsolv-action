@@ -19,10 +19,10 @@ export class OpenRouterClient implements AIClient {
     
     // Validate API key
     if (!config.apiKey || config.apiKey.length < 20) {
-      throw new Error('Invalid OpenRouter API key provided');
+      throw new Error('Invalid AI provider API key provided');
     }
 
-    logger.info(`Initialized OpenRouter AI client with model: ${this.model}`);
+    logger.info(`Initialized AI client with model: ${this.model}`);
   }
 
   /**
@@ -56,13 +56,13 @@ export class OpenRouterClient implements AIClient {
       });
 
       if (!response.ok) {
-        throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+        throw new Error(`AI provider error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
       return data.choices[0].message.content;
     } catch (error) {
-      logger.error('Error calling OpenRouter API', error as Error);
+      logger.error('Error calling AI provider API', error as Error);
       throw error;
     }
   }
@@ -111,7 +111,7 @@ Your response must be valid JSON only, with no other text.
 `;
 
       // Call OpenRouter API
-      logger.info('Requesting issue analysis from OpenRouter');
+      logger.info('Requesting issue analysis from AI provider');
       const response = await this.callAPI(prompt);
       
       try {
@@ -136,7 +136,7 @@ Your response must be valid JSON only, with no other text.
       }
       
     } catch (error) {
-      logger.error('Error analyzing issue with OpenRouter', error as Error);
+      logger.error('Error analyzing issue with AI provider', error as Error);
       throw error;
     }
   }
@@ -191,7 +191,7 @@ Your response must be valid JSON only, with no other text.
 `;
 
       // Call OpenRouter API
-      logger.info('Requesting solution generation from OpenRouter');
+      logger.info('Requesting solution generation from AI provider');
       const response = await this.callAPI(prompt);
       
       try {
@@ -216,7 +216,7 @@ Your response must be valid JSON only, with no other text.
       }
       
     } catch (error) {
-      logger.error('Error generating solution with OpenRouter', error as Error);
+      logger.error('Error generating solution with AI provider', error as Error);
       throw error;
     }
   }

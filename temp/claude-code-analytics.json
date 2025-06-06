@@ -178,5 +178,23 @@
     "totalChunks": 1,
     "solutionGenerationTime": 13,
     "endTime": 1749152280523
+  },
+  {
+    "startTime": 1749162822766,
+    "issueId": "cc-test-123",
+    "successful": false,
+    "retryCount": 1,
+    "errorType": "execution_error",
+    "endTime": 1749163123656
+  },
+  {
+    "startTime": 1749163854440,
+    "issueId": "final-test",
+    "successful": false,
+    "totalChunks": 0,
+    "solutionGenerationTime": 2677,
+    "retryCount": 2,
+    "errorType": "execution_error",
+    "endTime": 1749163862125
   }
 ]
