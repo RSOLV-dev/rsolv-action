@@ -65,6 +65,8 @@ spec:
               optional: true
         - name: CLUSTER_SERVICE_NAME
           value: "rsolv-api-headless"
+        - name: ENABLE_CLUSTERING
+          value: "true"
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
