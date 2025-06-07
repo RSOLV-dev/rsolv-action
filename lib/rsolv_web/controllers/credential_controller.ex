@@ -87,6 +87,11 @@ defmodule RSOLVWeb.CredentialController do
         |> put_status(:forbidden)
         |> json(%{error: "Access denied"})
       
+      {:error, :not_eligible_for_refresh} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "Credential not eligible for refresh"})
+      
       error ->
         Logger.error("Credential refresh error: #{inspect(error)}")
         conn
@@ -274,11 +279,13 @@ defmodule RSOLVWeb.CredentialController do
     Credentials.revoke_credential(old_credential)
     
     # Generate new credential with same provider
-    generate_provider_credential(
+    new_credential = generate_provider_credential(
       %{id: old_credential.customer_id, monthly_limit: 100, current_usage: 0},
       old_credential.provider,
       60  # 1 hour TTL for refreshed credentials
     )
+    
+    {:ok, new_credential}
   end
 
   defp validate_usage_data(params) do

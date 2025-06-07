@@ -62,19 +62,28 @@ defmodule RSOLV.Credentials do
   Updates metadata for a credential.
   """
   def update_metadata(credential, metadata) do
-    Logger.info("Updating credential metadata: #{inspect(metadata)}")
+    Logger.info("Updating credential #{credential.id} metadata: #{inspect(metadata)}")
     updated_credential = Map.merge(credential, metadata)
     
     # Update the credential in storage
     credentials = :persistent_term.get(@credentials_table, [])
-    updated_credentials = Enum.map(credentials, fn cred ->
+    Logger.info("Found #{length(credentials)} stored credentials, looking for #{credential.id}")
+    
+    {updated_credentials, found} = Enum.map_reduce(credentials, false, fn cred, acc ->
       if cred.id == credential.id do
-        updated_credential
+        Logger.info("Found and updating credential #{credential.id}")
+        {updated_credential, true}
       else
-        cred
+        {cred, acc}
       end
     end)
-    :persistent_term.put(@credentials_table, updated_credentials)
+    
+    if found do
+      :persistent_term.put(@credentials_table, updated_credentials)
+      Logger.info("Successfully updated credential #{credential.id} in storage")
+    else
+      Logger.warn("Credential #{credential.id} not found in storage!")
+    end
     
     {:ok, updated_credential}
   end
@@ -106,13 +115,13 @@ defmodule RSOLV.Credentials do
   Gets a stored credential by ID only.
   """
   def get_credential(credential_id) do
-    # Mock implementation
-    %{
-      id: credential_id,
-      customer_id: "test_customer",
-      api_key: "vended_#{credential_id}",
-      expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
-    }
+    # Look for credential in storage
+    credentials = :persistent_term.get(@credentials_table, [])
+    
+    case Enum.find(credentials, fn cred -> cred.id == credential_id end) do
+      nil -> nil  # Return nil if not found (will trigger 404)
+      credential -> credential
+    end
   end
   
   @doc """
@@ -148,12 +157,17 @@ defmodule RSOLV.Credentials do
   def get_latest_credential(customer_id) do
     # Get the most recent credential for this customer
     credentials = :persistent_term.get(@credentials_table, [])
+    Logger.info("get_latest_credential: Found #{length(credentials)} total credentials")
+    
     customer_credentials = Enum.filter(credentials, fn cred -> 
       cred.customer_id == customer_id 
     end)
     
+    Logger.info("get_latest_credential: Found #{length(customer_credentials)} credentials for customer #{customer_id}")
+    
     case customer_credentials do
       [] -> 
+        Logger.info("get_latest_credential: No credentials found, returning mock")
         # Return mock if no credentials found
         %{
           id: "latest_cred_#{customer_id}",
@@ -163,7 +177,9 @@ defmodule RSOLV.Credentials do
           github_run_id: nil,
           created_at: DateTime.utc_now()
         }
-      [latest | _] -> latest  # Return the first (most recent) credential
+      [latest | _] -> 
+        Logger.info("get_latest_credential: Returning credential #{latest.id}, github_job_id: #{Map.get(latest, :github_job_id, "nil")}")
+        latest  # Return the first (most recent) credential
     end
   end
   

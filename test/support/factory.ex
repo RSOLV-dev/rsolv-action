@@ -11,12 +11,12 @@ defmodule RSOLV.Factory do
   
   def customer_factory do
     %{
-      id: sequence(:id, &"test_customer_#{&1}"),
+      id: "test_customer_1",  # Use consistent ID that matches authentication
       name: "Test Customer",
-      email: sequence(:email, &"customer#{&1}@example.com"),
-      api_key: sequence(:api_key, &"rsolv_test_#{&1}"),
+      email: "test@example.com",
+      api_key: "rsolv_test_abc123",  # Use consistent API key
       monthly_limit: 100,
-      current_usage: 0,
+      current_usage: 15,
       active: true,
       trial: true,
       subscription_tier: "standard",

@@ -1,5 +1,5 @@
 defmodule RSOLVWeb.CredentialControllerTest do
-  use RSOLVWeb.ConnCase
+  use RSOLVWeb.ConnCase, async: false
 
   import RSOLV.Factory
 
@@ -154,7 +154,7 @@ defmodule RSOLVWeb.CredentialControllerTest do
 
       assert json_response(conn, 200)
       
-      # Verify metadata was stored
+      # Verify metadata was stored - use the same customer that made the request
       credential = Credentials.get_latest_credential(customer.id)
       assert credential.github_job_id == "job_123"
       assert credential.github_run_id == "run_456"
@@ -163,11 +163,11 @@ defmodule RSOLVWeb.CredentialControllerTest do
 
   describe "POST /api/v1/credentials/refresh" do
     setup %{customer: customer} do
-      # Create an existing credential
+      # Create an existing credential that expires soon (within 5 minutes)
       {:ok, credential} = Credentials.create_temporary_credential(%{
         customer_id: customer.id,
         provider: "anthropic",
-        expires_at: DateTime.add(DateTime.utc_now(), 300), # 5 minutes
+        expires_at: DateTime.add(DateTime.utc_now(), 250), # 4 minutes 10 seconds - eligible for refresh
         usage_limit: 100
       })
 
@@ -209,15 +209,15 @@ defmodule RSOLVWeb.CredentialControllerTest do
     end
 
     test "returns 403 for credential owned by another customer", %{conn: conn} do
-      other_customer = build(:customer)
+      other_customer = build(:customer, %{id: "other_customer_id", api_key: "other_api_key"})
       {:ok, credential} = Credentials.create_temporary_credential(%{
         customer_id: other_customer.id,
         provider: "anthropic",
-        expires_at: DateTime.add(DateTime.utc_now(), 300)
+        expires_at: DateTime.add(DateTime.utc_now(), 250)  # Eligible for refresh like main test
       })
 
       conn = post(conn, ~p"/api/v1/credentials/refresh", %{
-        "api_key" => "rsolv_test_abc123",
+        "api_key" => "rsolv_test_abc123",  # Using main customer's API key to try to access other customer's credential
         "credential_id" => credential.id
       })
 
