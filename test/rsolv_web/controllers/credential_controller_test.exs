@@ -7,8 +7,10 @@ defmodule RSOLVWeb.CredentialControllerTest do
   alias RSOLV.Credentials
 
   setup %{conn: conn} do
-    # Reset rate limiter between tests
+    # Reset all test storage between tests
     RSOLV.RateLimiter.reset()
+    RSOLV.Accounts.reset_test_customers()
+    RSOLV.Credentials.reset_credentials()
     
     # Create a test customer with valid subscription
     customer = build(:customer, %{

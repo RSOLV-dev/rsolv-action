@@ -5,11 +5,24 @@ defmodule RSOLV.Credentials do
   
   require Logger
   
-  # Get provider keys at runtime
+  # Storage for credential tracking
+  @credentials_table {__MODULE__, :credentials}
+  
+  # Get provider keys at runtime - generate temp keys for testing
   defp get_provider_key(provider) do
     case provider do
-      "anthropic" -> System.get_env("ANTHROPIC_API_KEY") || "sk-ant-mock-key"
-      "openai" -> System.get_env("OPENAI_API_KEY") || "sk-mock-key"
+      "anthropic" -> 
+        if Mix.env() == :test do
+          "temp_ant_#{:crypto.strong_rand_bytes(8) |> Base.url_encode64(padding: false)}"
+        else
+          System.get_env("ANTHROPIC_API_KEY") || "sk-ant-mock-key"
+        end
+      "openai" -> 
+        if Mix.env() == :test do
+          "temp_oai_#{:crypto.strong_rand_bytes(8) |> Base.url_encode64(padding: false)}"
+        else
+          System.get_env("OPENAI_API_KEY") || "sk-mock-key"
+        end
       "openrouter" -> System.get_env("OPENROUTER_API_KEY") || "sk-or-mock-key"
       "ollama" -> "local"
       _ -> "mock_key_#{provider}"
@@ -38,6 +51,9 @@ defmodule RSOLV.Credentials do
       usage_limit: usage_limit
     }
     
+    # Track credential creation for count
+    track_credential(credential)
+    
     Logger.info("Created temporary credential for customer #{customer_id}, provider #{provider}")
     {:ok, credential}
   end
@@ -47,7 +63,20 @@ defmodule RSOLV.Credentials do
   """
   def update_metadata(credential, metadata) do
     Logger.info("Updating credential metadata: #{inspect(metadata)}")
-    {:ok, Map.merge(credential, metadata)}
+    updated_credential = Map.merge(credential, metadata)
+    
+    # Update the credential in storage
+    credentials = :persistent_term.get(@credentials_table, [])
+    updated_credentials = Enum.map(credentials, fn cred ->
+      if cred.id == credential.id do
+        updated_credential
+      else
+        cred
+      end
+    end)
+    :persistent_term.put(@credentials_table, updated_credentials)
+    
+    {:ok, updated_credential}
   end
   
   @doc """
@@ -103,24 +132,39 @@ defmodule RSOLV.Credentials do
   Counts active credentials for a customer.
   """
   def count_active_credentials(customer_id) do
-    # Mock implementation - return a count
+    # Count credentials for this customer
+    credentials = :persistent_term.get(@credentials_table, [])
+    count = Enum.count(credentials, fn cred -> 
+      cred.customer_id == customer_id and not Map.get(cred, :revoked, false)
+    end)
+    
     Logger.info("Counting active credentials for customer #{customer_id}")
-    {:ok, 0}
+    {:ok, count}
   end
   
   @doc """
   Gets the latest credential for a customer.
   """
   def get_latest_credential(customer_id) do
-    # Mock implementation
-    %{
-      id: "latest_cred_#{customer_id}",
-      customer_id: customer_id,
-      provider: "anthropic",
-      github_job_id: nil,
-      github_run_id: nil,
-      created_at: DateTime.utc_now()
-    }
+    # Get the most recent credential for this customer
+    credentials = :persistent_term.get(@credentials_table, [])
+    customer_credentials = Enum.filter(credentials, fn cred -> 
+      cred.customer_id == customer_id 
+    end)
+    
+    case customer_credentials do
+      [] -> 
+        # Return mock if no credentials found
+        %{
+          id: "latest_cred_#{customer_id}",
+          customer_id: customer_id,
+          provider: "anthropic",
+          github_job_id: nil,
+          github_run_id: nil,
+          created_at: DateTime.utc_now()
+        }
+      [latest | _] -> latest  # Return the first (most recent) credential
+    end
   end
   
   @doc """
@@ -145,5 +189,20 @@ defmodule RSOLV.Credentials do
       expires_at: expires_at,
       usage_limit: 100
     })
+  end
+  
+  # Helper function to track credentials
+  defp track_credential(credential) do
+    credentials = :persistent_term.get(@credentials_table, [])
+    new_credentials = [credential | credentials]
+    :persistent_term.put(@credentials_table, new_credentials)
+  end
+  
+  @doc """
+  Reset credential storage (for testing).
+  """
+  def reset_credentials() do
+    :persistent_term.put(@credentials_table, [])
+    :ok
   end
 end

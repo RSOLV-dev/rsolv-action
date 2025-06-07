@@ -3,15 +3,22 @@ defmodule RSOLV.Accounts do
   The Accounts context for managing customers and API keys.
   """
   
+  # Storage for test customer updates
+  @table_key {__MODULE__, :test_customers}
+  
   @doc """
   Gets a customer by their API key.
   
   Returns nil if no customer found.
   """
   def get_customer_by_api_key(api_key) when is_binary(api_key) do
-    # Check environment variables for valid API keys
-    # This prevents hardcoding keys in source control
-    cond do
+    # First check for test customer updates
+    test_customers = :persistent_term.get(@table_key, %{})
+    case Map.get(test_customers, api_key) do
+      nil -> 
+        # Check environment variables for valid API keys
+        # This prevents hardcoding keys in source control
+        cond do
       # Internal API key from environment
       api_key == System.get_env("INTERNAL_API_KEY") ->
         %{
@@ -78,9 +85,13 @@ defmodule RSOLV.Accounts do
           created_at: DateTime.utc_now()
         }
       
-      # In production, this would query the database for customer-specific keys
-      true ->
-        nil
+          # In production, this would query the database for customer-specific keys
+          true ->
+            nil
+        end
+      
+      updated_customer ->
+        updated_customer
     end
   end
   
@@ -92,6 +103,12 @@ defmodule RSOLV.Accounts do
   def update_customer(customer, attrs) do
     # Mock implementation - in production this would update the database
     updated_customer = Map.merge(customer, attrs)
+    
+    # Store the updated customer for subsequent lookups
+    customers = :persistent_term.get(@table_key, %{})
+    new_customers = Map.put(customers, customer.api_key, updated_customer)
+    :persistent_term.put(@table_key, new_customers)
+    
     {:ok, updated_customer}
   end
   
@@ -99,18 +116,28 @@ defmodule RSOLV.Accounts do
   Gets a customer by ID.
   """
   def get_customer!(customer_id) do
-    # Mock implementation - return a test customer
-    %{
-      id: customer_id,
-      name: "Test Customer",
-      email: "test@example.com",
-      api_key: "rsolv_test_abc123",
-      monthly_limit: 100,
-      current_usage: 15,
-      active: true,
-      trial: true,
-      created_at: DateTime.utc_now()
-    }
+    # First check if we have an updated version stored
+    test_customers = :persistent_term.get(@table_key, %{})
+    updated_customer = Enum.find_value(test_customers, fn {_api_key, customer} ->
+      if customer.id == customer_id, do: customer, else: nil
+    end)
+    
+    case updated_customer do
+      nil ->
+        # Return default mock customer
+        %{
+          id: customer_id,
+          name: "Test Customer",
+          email: "test@example.com",
+          api_key: "rsolv_test_abc123",
+          monthly_limit: 100,
+          current_usage: 15,
+          active: true,
+          trial: true,
+          created_at: DateTime.utc_now()
+        }
+      customer -> customer
+    end
   end
   
   @doc """
@@ -134,5 +161,13 @@ defmodule RSOLV.Accounts do
       total_requests: 3,
       current_month_usage: 2
     }
+  end
+  
+  @doc """
+  Reset test customer storage (for testing).
+  """
+  def reset_test_customers() do
+    :persistent_term.put(@table_key, %{})
+    :ok
   end
 end

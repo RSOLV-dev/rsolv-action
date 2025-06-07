@@ -323,6 +323,9 @@ defmodule RSOLVWeb.CredentialController do
     fixes_used = div(usage_data.tokens_used, 2000)
     new_usage = customer.current_usage + fixes_used
     
-    Accounts.update_customer(customer, %{current_usage: new_usage})
+    case Accounts.update_customer(customer, %{current_usage: new_usage}) do
+      {:ok, _} -> :ok
+      error -> error
+    end
   end
 end
