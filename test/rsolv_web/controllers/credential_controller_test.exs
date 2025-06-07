@@ -7,8 +7,11 @@ defmodule RSOLVWeb.CredentialControllerTest do
   alias RSOLV.Credentials
 
   setup %{conn: conn} do
+    # Reset rate limiter between tests
+    RSOLV.RateLimiter.reset()
+    
     # Create a test customer with valid subscription
-    customer = insert(:customer, %{
+    customer = build(:customer, %{
       api_key: "rsolv_test_abc123",
       subscription_tier: "standard",
       monthly_limit: 100,
@@ -204,7 +207,7 @@ defmodule RSOLVWeb.CredentialControllerTest do
     end
 
     test "returns 403 for credential owned by another customer", %{conn: conn} do
-      other_customer = insert(:customer)
+      other_customer = build(:customer)
       {:ok, credential} = Credentials.create_temporary_credential(%{
         customer_id: other_customer.id,
         provider: "anthropic",

@@ -74,6 +74,19 @@ defmodule RSOLV.Credentials do
   end
   
   @doc """
+  Gets a stored credential by ID only.
+  """
+  def get_credential(credential_id) do
+    # Mock implementation
+    %{
+      id: credential_id,
+      customer_id: "test_customer",
+      api_key: "vended_#{credential_id}",
+      expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+    }
+  end
+  
+  @doc """
   Refreshes a credential before expiry.
   """
   def refresh_credential(credential_id, customer_id) do
@@ -84,5 +97,53 @@ defmodule RSOLV.Credentials do
       api_key: "refreshed_vended_#{credential_id}",
       expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
     }}
+  end
+  
+  @doc """
+  Counts active credentials for a customer.
+  """
+  def count_active_credentials(customer_id) do
+    # Mock implementation - return a count
+    Logger.info("Counting active credentials for customer #{customer_id}")
+    {:ok, 0}
+  end
+  
+  @doc """
+  Gets the latest credential for a customer.
+  """
+  def get_latest_credential(customer_id) do
+    # Mock implementation
+    %{
+      id: "latest_cred_#{customer_id}",
+      customer_id: customer_id,
+      provider: "anthropic",
+      github_job_id: nil,
+      github_run_id: nil,
+      created_at: DateTime.utc_now()
+    }
+  end
+  
+  @doc """
+  Revokes a credential.
+  """
+  def revoke_credential(credential) do
+    # Mock implementation
+    Logger.info("Revoking credential #{credential.id}")
+    {:ok, Map.put(credential, :revoked, true)}
+  end
+  
+  # Pattern match for create_temporary_credential with simpler parameters
+  def create_temporary_credential(%{
+    customer_id: customer_id,
+    provider: provider,
+    expires_at: expires_at
+  } = params) when not is_map_key(params, :encrypted_key) do
+    create_temporary_credential(%{
+      customer_id: customer_id,
+      provider: provider,
+      encrypted_key: get_provider_key(provider),
+      expires_at: expires_at,
+      usage_limit: 100
+    })
   end
 end

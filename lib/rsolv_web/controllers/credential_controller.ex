@@ -306,13 +306,16 @@ defmodule RSOLVWeb.CredentialController do
   defp validate_requests(_), do: {:error, :missing_requests}
 
   defp record_usage(customer, usage_data) do
-    Accounts.record_usage(%{
+    case Accounts.record_usage(%{
       customer_id: customer.id,
       provider: usage_data.provider,
       tokens_used: usage_data.tokens_used,
       request_count: usage_data.request_count,
       job_id: usage_data.job_id
-    })
+    }) do
+      {:ok, _} -> :ok
+      error -> error
+    end
   end
 
   defp update_customer_usage(customer, usage_data) do

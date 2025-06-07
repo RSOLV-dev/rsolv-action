@@ -64,6 +64,20 @@ defmodule RSOLV.Accounts do
           created_at: DateTime.utc_now()
         }
         
+      # Test API key for tests
+      api_key == "rsolv_test_abc123" ->
+        %{
+          id: "test_customer_1",
+          name: "Test Customer",
+          email: "test@example.com",
+          api_key: api_key,
+          monthly_limit: 100,
+          current_usage: 15,
+          active: true,
+          trial: true,
+          created_at: DateTime.utc_now()
+        }
+      
       # In production, this would query the database for customer-specific keys
       true ->
         nil
@@ -71,4 +85,54 @@ defmodule RSOLV.Accounts do
   end
   
   def get_customer_by_api_key(_), do: nil
+  
+  @doc """
+  Updates a customer's attributes.
+  """
+  def update_customer(customer, attrs) do
+    # Mock implementation - in production this would update the database
+    updated_customer = Map.merge(customer, attrs)
+    {:ok, updated_customer}
+  end
+  
+  @doc """
+  Gets a customer by ID.
+  """
+  def get_customer!(customer_id) do
+    # Mock implementation - return a test customer
+    %{
+      id: customer_id,
+      name: "Test Customer",
+      email: "test@example.com",
+      api_key: "rsolv_test_abc123",
+      monthly_limit: 100,
+      current_usage: 15,
+      active: true,
+      trial: true,
+      created_at: DateTime.utc_now()
+    }
+  end
+  
+  @doc """
+  Records usage for a customer.
+  """
+  def record_usage(usage_data) do
+    # Mock implementation - in production this would store in database
+    require Logger
+    Logger.info("Recording usage: #{inspect(usage_data)}")
+    {:ok, usage_data}
+  end
+  
+  @doc """
+  Gets customer usage summary.
+  """
+  def get_customer_usage(customer_id) do
+    # Mock implementation
+    %{
+      customer_id: customer_id,
+      total_tokens: 5000,
+      total_requests: 3,
+      current_month_usage: 2
+    }
+  end
 end

@@ -23,11 +23,18 @@ defmodule RSOLVWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import RSOLVWeb.ConnCase
+      import RSOLV.Factory
 
       alias RSOLVWeb.Router.Helpers, as: Routes
 
       # The default endpoint for testing
       @endpoint RSOLVWeb.Endpoint
+      
+      # Import Phoenix verified routes for ~p sigil
+      use Phoenix.VerifiedRoutes,
+        endpoint: RSOLVWeb.Endpoint,
+        router: RSOLVWeb.Router,
+        statics: ~w(assets)
     end
   end
 
