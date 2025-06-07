@@ -1,13 +1,11 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, mock, spyOn } from 'bun:test';
 import { JiraAdapter } from '../../../src/platforms/jira/jira-adapter';
 import type { PlatformConfig, UnifiedIssue } from '../../../src/platforms/types';
 
-// Mock fetch globally
-const mockFetch = mock(() => Promise.resolve());
-global.fetch = mockFetch as any;
-
 describe('JiraAdapter', () => {
   let adapter: JiraAdapter;
+  let fetchSpy: any;
+  
   const mockConfig: PlatformConfig = {
     jira: {
       host: 'test.atlassian.net',
@@ -18,23 +16,23 @@ describe('JiraAdapter', () => {
   };
 
   beforeEach(() => {
-    mockFetch.mockReset();
-    mockFetch.mockImplementation(() => Promise.resolve());
+    // Use spyOn instead of replacing global.fetch
+    fetchSpy = spyOn(global, 'fetch');
     adapter = new JiraAdapter(mockConfig.jira!);
   });
 
   describe('authenticate', () => {
     test('should authenticate successfully with valid credentials', async () => {
       
-      mockFetch.mockImplementationOnce(() => Promise.resolve({
+      fetchSpy.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({ accountId: '123', emailAddress: 'test@example.com' })
       } as Response));
 
       await adapter.authenticate();
 
-      expect(mockFetch).toHaveBeenCalled();
-      const [url, options] = mockFetch.mock.calls[0];
+      expect(fetchSpy).toHaveBeenCalled();
+      const [url, options] = fetchSpy.mock.calls[0];
       expect(url).toBe('https://test.atlassian.net/rest/api/3/myself');
       expect(options.headers['Authorization']).toBe(`Basic ${Buffer.from('test@example.com:test-token').toString('base64')}`);
       expect(options.headers['Accept']).toBe('application/json');
@@ -42,7 +40,7 @@ describe('JiraAdapter', () => {
 
     test('should throw error on authentication failure', async () => {
       
-      mockFetch.mockImplementationOnce(() => Promise.resolve({
+      fetchSpy.mockImplementationOnce(() => Promise.resolve({
         ok: false,
         status: 401,
         statusText: 'Unauthorized'
@@ -82,14 +80,14 @@ describe('JiraAdapter', () => {
         ]
       };
 
-      mockFetch.mockImplementationOnce(() => Promise.resolve({
+      fetchSpy.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => mockJiraIssues
       } as Response));
 
       const issues = await adapter.searchIssues('labels = "autofix"');
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(fetchSpy).toHaveBeenCalledWith(
         'https://test.atlassian.net/rest/api/3/search',
         {
           method: 'POST',
@@ -121,7 +119,7 @@ describe('JiraAdapter', () => {
 
     test('should handle empty search results', async () => {
       
-      mockFetch.mockImplementationOnce(() => Promise.resolve({
+      fetchSpy.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({ issues: [] })
       } as Response));
@@ -134,14 +132,14 @@ describe('JiraAdapter', () => {
   describe('createComment', () => {
     test('should add comment to issue', async () => {
       
-      mockFetch.mockImplementationOnce(() => Promise.resolve({
+      fetchSpy.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({ id: '123' })
       } as Response));
 
       await adapter.createComment('PROJ-123', 'RSOLV has created a pull request for this issue');
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(fetchSpy).toHaveBeenCalledWith(
         'https://test.atlassian.net/rest/api/3/issue/PROJ-123/comment',
         {
           method: 'POST',
@@ -175,7 +173,7 @@ describe('JiraAdapter', () => {
   describe('addLink', () => {
     test('should create remote link to GitHub PR', async () => {
       
-      mockFetch.mockImplementationOnce(() => Promise.resolve({
+      fetchSpy.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({ id: '456' })
       } as Response));
@@ -186,7 +184,7 @@ describe('JiraAdapter', () => {
         'Fix: Update deprecated API calls'
       );
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(fetchSpy).toHaveBeenCalledWith(
         'https://test.atlassian.net/rest/api/3/issue/PROJ-123/remotelink',
         {
           method: 'POST',
@@ -214,7 +212,7 @@ describe('JiraAdapter', () => {
     test('should update issue status', async () => {
       // First, get available transitions
       
-      mockFetch.mockImplementationOnce(() => Promise.resolve({
+      fetchSpy.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({
           transitions: [
@@ -225,7 +223,7 @@ describe('JiraAdapter', () => {
       } as Response));
 
       // Then update status
-      mockFetch.mockImplementationOnce(() => Promise.resolve({
+      fetchSpy.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({})
       } as Response));
@@ -233,7 +231,7 @@ describe('JiraAdapter', () => {
       await adapter.updateIssueStatus('PROJ-123', 'In Progress');
 
       // Verify getting transitions
-      expect(mockFetch).toHaveBeenNthCalledWith(
+      expect(fetchSpy).toHaveBeenNthCalledWith(
         1,
         'https://test.atlassian.net/rest/api/3/issue/PROJ-123/transitions',
         expect.objectContaining({
@@ -244,7 +242,7 @@ describe('JiraAdapter', () => {
       );
 
       // Verify updating status
-      expect(mockFetch).toHaveBeenNthCalledWith(
+      expect(fetchSpy).toHaveBeenNthCalledWith(
         2,
         'https://test.atlassian.net/rest/api/3/issue/PROJ-123/transitions',
         expect.objectContaining({

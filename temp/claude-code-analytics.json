@@ -196,5 +196,13 @@
     "retryCount": 2,
     "errorType": "execution_error",
     "endTime": 1749163862125
+  },
+  {
+    "startTime": 1749247756057,
+    "issueId": "test-issue-123",
+    "successful": false,
+    "retryCount": 2,
+    "errorType": "execution_error",
+    "endTime": 1749247758061
   }
 ]

@@ -1,0 +1,461 @@
+bun test v1.2.15 (df017990)
+
+src/__tests__/security-demo.test.ts:
+
+src/__tests__/workflow-timeout.test.ts:
+(pass) Workflow Timeout Behavior > should timeout workflow after 2 minutes [103.34ms]
+(pass) Workflow Timeout Behavior > should complete successfully before timeout [2.29ms]
+(pass) Workflow Timeout Behavior > should handle no issues gracefully without timeout [0.18ms]
+(pass) Workflow Timeout Behavior > should include timeout information in error message [100.50ms]
+(pass) Workflow Timeout Behavior > should use configured processing options [2.94ms]
+
+tests/platforms/issue-detector.test.ts:
+[2025-06-07T21:49:59.427Z][INFO] Found 1 GitHub issues
+[2025-06-07T21:49:59.429Z][INFO] Total issues found across all platforms: 1
+(pass) Multi-Platform Issue Detection > should detect issues from GitHub only when no other platforms configured [3.40ms]
+[2025-06-07T21:49:59.430Z][INFO] Found 1 GitHub issues
+[2025-06-07T21:49:59.430Z][INFO] Found 1 Jira issues with rsolv/autofix labels
+[2025-06-07T21:49:59.431Z][INFO] Found 1 Jira issues
+[2025-06-07T21:49:59.431Z][INFO] Total issues found across all platforms: 2
+(pass) Multi-Platform Issue Detection > should detect issues from both GitHub and Jira when configured [1.00ms]
+[2025-06-07T21:49:59.433Z][ERROR] Error detecting GitHub issues
+{
+  "error": {
+    "message": "GitHub API error",
+    "stack": "Error: GitHub API error\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/platforms/issue-detector.test.ts:154:66)\n    at unknown\n    at detectIssuesFromAllPlatforms (/Users/dylan/dev/rsolv/RSOLV-action/src/platforms/issue-detector.ts:15:32)\n    at detectIssuesFromAllPlatforms (/Users/dylan/dev/rsolv/RSOLV-action/src/platforms/issue-detector.ts:10:52)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/platforms/issue-detector.test.ts:172:26)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/platforms/issue-detector.test.ts:147:77)"
+  }
+}
+[2025-06-07T21:49:59.434Z][INFO] Found 1 Jira issues with rsolv/autofix labels
+[2025-06-07T21:49:59.434Z][INFO] Found 1 Jira issues
+[2025-06-07T21:49:59.434Z][INFO] Total issues found across all platforms: 1
+(pass) Multi-Platform Issue Detection > should handle errors gracefully and continue with other platforms [3.43ms]
+[2025-06-07T21:49:59.435Z][INFO] Found 0 GitHub issues
+[2025-06-07T21:49:59.435Z][INFO] Found 1 Jira issues with rsolv/autofix labels
+[2025-06-07T21:49:59.435Z][INFO] Found 1 Jira issues
+[2025-06-07T21:49:59.435Z][INFO] Total issues found across all platforms: 1
+(pass) Multi-Platform Issue Detection > should extract repository info from Jira issue description [0.75ms]
+
+tests/security/cve-patterns.test.ts:
+(pass) CVE and OWASP Security Patterns > should detect Log4Shell vulnerability (CVE-2021-44228) [1.67ms]
+(pass) CVE and OWASP Security Patterns > should detect Spring4Shell vulnerability (CVE-2022-22965) [0.01ms]
+(pass) CVE and OWASP Security Patterns > should detect weak JWT secrets [0.75ms]
+(pass) CVE and OWASP Security Patterns > should detect missing security event logging [0.15ms]
+(pass) CVE and OWASP Security Patterns > should not detect secure versions [0.06ms]
+(pass) CVE and OWASP Security Patterns > should have correct metadata for all patterns [0.56ms]
+
+tests/security/security-analyzer-integration.test.ts:
+[2025-06-07T21:49:59.468Z][INFO] Analyzing issue #8 with security-aware analysis
+[2025-06-07T21:49:59.472Z][INFO] Analyzing issue #8 with AI
+[2025-06-07T21:49:59.473Z][WARN] Using mock response in test mode
+[2025-06-07T21:49:59.474Z][INFO] AI analysis response for issue #8:
+"Based on my analysis, this is a performance issue in the data processing pipeline.\n\nThe main bottleneck appears to be in the file processing function that's not properly streaming large files, leading to excessive memory usage.\n\nFiles that need modification:\n- `src/services/fileProcessor.js`\n- `src/utils/streamHandler.js`\n\nThis is a medium complexity issue that will require implementing proper stream processing instead of loading the entire file into memory. The fix should significantly reduce m"
+[2025-06-07T21:49:59.474Z][INFO] Parsed analysis for issue #8:
+{
+  "filesToModify": [
+    "src/services/fileProcessor.js",
+    "src/utils/streamHandler.js"
+  ],
+  "suggestedApproach": "Based on my analysis, this is a performance issue in the data processing pipeline.\n\nThe main bottlen",
+  "canBeFixed": true
+}
+[2025-06-07T21:49:59.474Z][INFO] Performing security analysis on codebase files
+[2025-06-07T21:49:59.476Z][INFO] Found 4 vulnerabilities in src/auth/login.js
+(pass) SecurityAwareAnalyzer Integration > should return analysis with security vulnerabilities [10.11ms]
+[2025-06-07T21:49:59.478Z][INFO] Analyzing issue #8 with security-aware analysis
+[2025-06-07T21:49:59.481Z][INFO] Analyzing issue #8 with AI
+[2025-06-07T21:49:59.481Z][WARN] Using mock response in test mode
+[2025-06-07T21:49:59.481Z][INFO] AI analysis response for issue #8:
+"Based on my analysis, this is a performance issue in the data processing pipeline.\n\nThe main bottleneck appears to be in the file processing function that's not properly streaming large files, leading to excessive memory usage.\n\nFiles that need modification:\n- `src/services/fileProcessor.js`\n- `src/utils/streamHandler.js`\n\nThis is a medium complexity issue that will require implementing proper stream processing instead of loading the entire file into memory. The fix should significantly reduce m"
+[2025-06-07T21:49:59.481Z][INFO] Parsed analysis for issue #8:
+{
+  "filesToModify": [
+    "src/services/fileProcessor.js",
+    "src/utils/streamHandler.js"
+  ],
+  "suggestedApproach": "Based on my analysis, this is a performance issue in the data processing pipeline.\n\nThe main bottlen",
+  "canBeFixed": true
+}
+[2025-06-07T21:49:59.481Z][INFO] Performing security analysis on codebase files
+(pass) SecurityAwareAnalyzer Integration > should handle case with no security issues [3.47ms]
+[2025-06-07T21:49:59.482Z][INFO] Analyzing issue #8 with security-aware analysis
+[2025-06-07T21:49:59.485Z][INFO] Analyzing issue #8 with AI
+[2025-06-07T21:49:59.485Z][WARN] Using mock response in test mode
+[2025-06-07T21:49:59.485Z][INFO] AI analysis response for issue #8:
+"Based on my analysis, this is a performance issue in the data processing pipeline.\n\nThe main bottleneck appears to be in the file processing function that's not properly streaming large files, leading to excessive memory usage.\n\nFiles that need modification:\n- `src/services/fileProcessor.js`\n- `src/utils/streamHandler.js`\n\nThis is a medium complexity issue that will require implementing proper stream processing instead of loading the entire file into memory. The fix should significantly reduce m"
+[2025-06-07T21:49:59.485Z][INFO] Parsed analysis for issue #8:
+{
+  "filesToModify": [
+    "src/services/fileProcessor.js",
+    "src/utils/streamHandler.js"
+  ],
+  "suggestedApproach": "Based on my analysis, this is a performance issue in the data processing pipeline.\n\nThe main bottlen",
+  "canBeFixed": true
+}
+(pass) SecurityAwareAnalyzer Integration > should work without codebase files [3.37ms]
+
+tests/integration/vended-credentials.test.ts:
+✅ Vended credentials integration tests created
+[2025-06-07T21:49:59.498Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:49:59.498Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:49:59.499Z][INFO] Analyzing issue #123
+[2025-06-07T21:49:59.499Z][INFO] Generating solution for issue #123
+[2025-06-07T21:49:59.499Z][INFO] Creating pull request for issue #123
+[2025-06-07T21:49:59.499Z][INFO] Successfully processed issue #123. PR: https://github.com/test/repo/pull/1
+(pass) Vended Credentials Integration > Configuration Property Access > should access aiProvider properties correctly [1.42ms]
+[2025-06-07T21:49:59.499Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:49:59.499Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:49:59.499Z][INFO] Analyzing issue #123
+[2025-06-07T21:49:59.500Z][ERROR] Error processing issue #123
+{
+  "error": {
+    "message": "Invalid configuration: aiProvider must be an object",
+    "stack": "Error: Invalid configuration: aiProvider must be an object\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/vended-credentials.test.ts:42:17)\n    at unknown\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:107:28)\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:81:3)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:55:28)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:37:3)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/vended-credentials.test.ts:169:29)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/vended-credentials.test.ts:159:62)"
+  }
+}
+[2025-06-07T21:49:59.501Z][WARN] Failed to process issue #123: Error processing issue: Invalid configuration: aiProvider must be an object
+(pass) Vended Credentials Integration > Configuration Property Access > should handle legacy config structure gracefully [1.94ms]
+[2025-06-07T21:49:59.501Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:49:59.501Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:49:59.501Z][INFO] Analyzing issue #123
+[2025-06-07T21:49:59.501Z][INFO] Generating solution for issue #123
+[2025-06-07T21:49:59.501Z][INFO] Creating pull request for issue #123
+[2025-06-07T21:49:59.501Z][INFO] Successfully processed issue #123. PR: https://github.com/test/repo/pull/1
+(pass) Vended Credentials Integration > Provider Comparison > should correctly compare provider names for claude-code [0.33ms]
+[2025-06-07T21:49:59.502Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:49:59.502Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:49:59.502Z][INFO] Analyzing issue #123
+[2025-06-07T21:49:59.502Z][INFO] Generating solution for issue #123
+[2025-06-07T21:49:59.502Z][INFO] Creating pull request for issue #123
+[2025-06-07T21:49:59.502Z][INFO] Successfully processed issue #123. PR: https://github.com/test/repo/pull/1
+(pass) Vended Credentials Integration > Provider Comparison > should not enable enhanced context for non-claude-code providers [0.22ms]
+[2025-06-07T21:49:59.502Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:49:59.502Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:49:59.502Z][INFO] Analyzing issue #123
+[2025-06-07T21:49:59.502Z][INFO] Generating solution for issue #123
+[2025-06-07T21:49:59.502Z][INFO] Creating pull request for issue #123
+[2025-06-07T21:49:59.502Z][INFO] Successfully processed issue #123. PR: https://github.com/test/repo/pull/1
+(pass) Vended Credentials Integration > Vended Credential Usage > should use vended credentials when useVendedCredentials is true [0.17ms]
+[2025-06-07T21:49:59.502Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:49:59.502Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:49:59.502Z][INFO] Analyzing issue #123
+[2025-06-07T21:49:59.502Z][ERROR] Error processing issue #123
+{
+  "error": {
+    "message": "Failed to retrieve API key",
+    "stack": "Error: Failed to retrieve API key\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/vended-credentials.test.ts:52:17)\n    at unknown\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:107:28)\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:81:3)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:55:28)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:37:3)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/vended-credentials.test.ts:262:29)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/vended-credentials.test.ts:247:78)"
+  }
+}
+[2025-06-07T21:49:59.502Z][WARN] Failed to process issue #123: Error processing issue: Failed to retrieve API key
+(pass) Vended Credentials Integration > Vended Credential Usage > should fail gracefully when vended credentials are not available [0.31ms]
+[2025-06-07T21:49:59.502Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:49:59.502Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:49:59.502Z][INFO] Analyzing issue #123
+[2025-06-07T21:49:59.503Z][INFO] Generating solution for issue #123
+[2025-06-07T21:49:59.503Z][INFO] Creating pull request for issue #123
+[2025-06-07T21:49:59.503Z][INFO] Successfully processed issue #123. PR: https://github.com/test/repo/pull/1
+(pass) Vended Credentials Integration > Vended Credential Usage > should use direct API key when useVendedCredentials is false [0.16ms]
+[2025-06-07T21:49:59.503Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:49:59.503Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:49:59.503Z][INFO] Analyzing issue #123
+[2025-06-07T21:49:59.503Z][ERROR] Error processing issue #123
+{
+  "error": {
+    "message": "AI provider API key is required",
+    "stack": "Error: AI provider API key is required\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/vended-credentials.test.ts:47:17)\n    at unknown\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:107:28)\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:81:3)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:55:28)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:37:3)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/vended-credentials.test.ts:302:29)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/vended-credentials.test.ts:289:64)"
+  }
+}
+[2025-06-07T21:49:59.503Z][WARN] Failed to process issue #123: Error processing issue: AI provider API key is required
+(pass) Vended Credentials Integration > Error Message Sanitization > should not expose provider names in error messages [0.25ms]
+(pass) Vended Credentials Integration > AI Client Creation > should create AI client with vended credentials [0.29ms]
+(pass) Vended Credentials Integration > AI Client Creation > should handle multiple providers with vended credentials [0.16ms]
+(pass) Vended Credentials Integration > AI Client Creation > should throw generic error for unsupported providers [0.03ms]
+
+tests/integration/container.test.ts:
+[2025-06-07T21:49:59.511Z][INFO] Setting up analysis container
+[2025-06-07T21:49:59.684Z][INFO] Pulling container image: rsolv/code-analysis:latest
+[2025-06-07T21:49:59.684Z][INFO] Test environment detected, skipping Docker pull for rsolv/code-analysis:latest
+[2025-06-07T21:49:59.684Z][INFO] Configuring container with security settings
+[2025-06-07T21:49:59.684Z][INFO] Applying default security profile to container
+[2025-06-07T21:49:59.684Z][INFO] Disabling network access for container
+[2025-06-07T21:49:59.684Z][INFO] Setting container memory limit: 2g
+[2025-06-07T21:49:59.684Z][INFO] Setting container CPU limit: 1
+[2025-06-07T21:49:59.684Z][INFO] Container configuration completed
+[2025-06-07T21:49:59.684Z][INFO] Container setup completed successfully
+(pass) Container Integration > setupContainer should set up a container environment [173.33ms]
+[2025-06-07T21:49:59.685Z][INFO] Container analysis is disabled, skipping container setup
+(pass) Container Integration > setupContainer should skip setup if containers are disabled [0.14ms]
+[2025-06-07T21:49:59.685Z][INFO] Setting up analysis container
+[2025-06-07T21:49:59.685Z][ERROR] Container setup failed
+{
+  "error": {
+    "message": "Container image is required when container analysis is enabled",
+    "stack": "Error: Container image is required when container analysis is enabled\n    at validateContainerConfig (/Users/dylan/dev/rsolv/RSOLV-action/src/containers/setup.ts:44:15)\n    at setupContainer (/Users/dylan/dev/rsolv/RSOLV-action/src/containers/setup.ts:21:5)\n    at setupContainer (/Users/dylan/dev/rsolv/RSOLV-action/src/containers/setup.ts:11:38)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/container.test.ts:104:18)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/container.test.ts:94:66)"
+  }
+}
+(pass) Container Integration > setupContainer should validate container configuration [0.31ms]
+[2025-06-07T21:49:59.686Z][INFO] Running command in container: echo "Hello, world!"
+[2025-06-07T21:49:59.686Z][INFO] Test environment detected, simulating container execution for: echo "Hello, world!"
+(pass) Container Integration > runInContainer should execute a command in a container [0.34ms]
+[2025-06-07T21:49:59.686Z][INFO] Running command in container: invalid-command
+(pass) Container Integration > runInContainer should handle container execution failure [1537.86ms]
+
+tests/integration/error-sanitization.test.ts:
+✅ Error sanitization tests created
+[2025-06-07T21:50:01.233Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:50:01.233Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:50:01.233Z][INFO] Analyzing issue #123
+[2025-06-07T21:50:01.233Z][ERROR] Error processing issue #123
+{
+  "error": {
+    "message": "Failed to connect to Anthropic API",
+    "stack": "Error: Failed to connect to Anthropic API\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:17:15)\n    at unknown\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:107:28)\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:81:3)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:55:28)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:37:3)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:57:27)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:56:53)"
+  }
+}
+[2025-06-07T21:50:01.233Z][WARN] Failed to process issue #123: Error processing issue: Failed to connect to AI provider API
+(pass) Error Message Sanitization > should sanitize Anthropic-specific errors [0.64ms]
+[2025-06-07T21:50:01.234Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:50:01.234Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:50:01.234Z][INFO] Analyzing issue #123
+[2025-06-07T21:50:01.234Z][ERROR] Error processing issue #123
+{
+  "error": {
+    "message": "Failed to connect to Anthropic API",
+    "stack": "Error: Failed to connect to Anthropic API\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:17:15)\n    at unknown\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:107:28)\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:81:3)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:55:28)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:37:3)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:79:27)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:70:50)"
+  }
+}
+[2025-06-07T21:50:01.234Z][WARN] Failed to process issue #123: Error processing issue: Failed to connect to AI provider API
+(pass) Error Message Sanitization > should sanitize OpenAI-specific errors [0.29ms]
+(pass) Error Message Sanitization > should handle API key errors generically [0.22ms]
+(pass) Error Message Sanitization > should handle unsupported provider errors without exposing internal details [0.05ms]
+[2025-06-07T21:50:01.235Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:50:01.235Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:50:01.235Z][INFO] Analyzing issue #123
+[2025-06-07T21:50:01.235Z][ERROR] Error processing issue #123
+{
+  "error": {
+    "message": "Failed to connect to Anthropic API",
+    "stack": "Error: Failed to connect to Anthropic API\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:17:15)\n    at unknown\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:107:28)\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:81:3)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:55:28)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:37:3)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:133:27)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:124:42)"
+  }
+}
+[2025-06-07T21:50:01.235Z][WARN] Failed to process issue #123: Error processing issue: Failed to connect to AI provider API
+(pass) Error Message Sanitization > should sanitize network errors [0.30ms]
+[2025-06-07T21:50:01.235Z][INFO] Processing 1 issues with AI
+[2025-06-07T21:50:01.235Z][INFO] Processing issue #123: Test issue
+[2025-06-07T21:50:01.235Z][INFO] Analyzing issue #123
+[2025-06-07T21:50:01.235Z][ERROR] Error processing issue #123
+{
+  "error": {
+    "message": "Failed to connect to Anthropic API",
+    "stack": "Error: Failed to connect to Anthropic API\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:17:15)\n    at unknown\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:107:28)\n    at processIssue (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:81:3)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:55:28)\n    at processIssues (/Users/dylan/dev/rsolv/RSOLV-action/src/ai/unified-processor.ts:37:3)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:147:27)\n    at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/integration/error-sanitization.test.ts:146:89)"
+  }
+}
+[2025-06-07T21:50:01.235Z][WARN] Failed to process issue #123: Error processing issue: Failed to connect to AI provider API
+(pass) Error Message Sanitization > should provide helpful error messages without exposing implementation details [0.30ms]
+
+tests/integration/jira-workflow.test.ts:
+
+=== Step 1: Issue Detection ===
+Found Jira issue: PROJ-123 - Fix deprecated API usage in auth module
+Labels: autofix, technical-debt, security
+Repository extracted: https://github.com/myorg/myapp
+
+=== Step 2: AI Analysis ===
+AI analyzing the issue description...
+Identified: Deprecated crypto.createCipher usage
+Solution: Update to crypto.createCipheriv with proper IV
+
+=== Step 3: Pull Request Creation ===
+Created PR: https://github.com/myorg/myapp/pull/456
+PR Title: Fix deprecated crypto API usage (PROJ-123)
+
+=== Step 4: Jira Update ===
+Adding comment to Jira issue...
+Linking PR to Jira issue...
+Updating issue status to "In Progress"...
+
+=== Data Flow Summary ===
+1. Jira Issue (PROJ-123) → 
+2. UnifiedIssue format → 
+3. IssueContext for AI processing → 
+4. AI generates solution → 
+5. GitHub PR created → 
+6. Jira updated with PR link
+(pass) Jira Integration Workflow > demonstrates the complete workflow from Jira issue to PR [0.67ms]
+(pass) Jira Integration Workflow > shows how repository info is extracted from Jira [0.15ms]
+
+=== GitHub Action Configuration ===
+Inputs in action.yml:
+  jira_host: Jira instance hostname (e.g., your-domain.atlassian.net)
+  jira_email: Jira account email for API authentication
+  jira_api_token: Jira API token for authentication
+  jira_autofix_label: Label to identify Jira issues for automation (default: autofix)
+  jira_jql: Custom JQL query to find issues (optional)
+
+Environment variables passed to container:
+  JIRA_HOST: From jira_host input
+  JIRA_EMAIL: From jira_email input
+  JIRA_API_TOKEN: From jira_api_token input
+  JIRA_AUTOFIX_LABEL: From jira_autofix_label input
+  JIRA_JQL: From jira_jql input
+(pass) Jira Integration Workflow > shows the Jira configuration in action.yml [0.22ms]
+
+tests/integration/external-integration.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+1 | (function (entry, fetcher)
+              ^
+SyntaxError: Export named 'logger' not found in module '/Users/dylan/dev/rsolv/RSOLV-action/src/utils/logger.ts'.
+      at loadAndEvaluateModule (1:11)
+-------------------------------
+
+
+tests/integration/unified-processor.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+1 | (function (entry, fetcher)
+              ^
+SyntaxError: Export named 'logger' not found in module '/Users/dylan/dev/rsolv/RSOLV-action/src/utils/logger.ts'.
+      at loadAndEvaluateModule (1:11)
+-------------------------------
+
+
+tests/integration/github-integration.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+1 | (function (entry, fetcher)
+              ^
+SyntaxError: Export named 'logger' not found in module '/Users/dylan/dev/rsolv/RSOLV-action/src/utils/logger.ts'.
+      at loadAndEvaluateModule (1:11)
+-------------------------------
+
+
+tests/integration/ai-integration.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+1 | (function (entry, fetcher)
+              ^
+SyntaxError: Export named 'logger' not found in module '/Users/dylan/dev/rsolv/RSOLV-action/src/utils/logger.ts'.
+      at loadAndEvaluateModule (1:11)
+-------------------------------
+
+
+tests/integration/config.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+1 | (function (entry, fetcher)
+              ^
+SyntaxError: Export named 'logger' not found in module '/Users/dylan/dev/rsolv/RSOLV-action/src/utils/logger.ts'.
+      at loadAndEvaluateModule (1:11)
+-------------------------------
+
+
+tests/github/multi-label.test.ts:
+Should not duplicate when config already has rsolv:
+  Config: rsolv:automate → Search: rsolv:automate
+Should add rsolv when not in config:
+  Config: autofix → Search: autofix, rsolv
+Should add rsolv to custom labels:
+  Config: custom-label → Search: custom-label, rsolv
+(pass) GitHub Multi-Label Search > should search for both configured label and rsolv label [0.69ms]
+(pass) GitHub Multi-Label Search > should deduplicate issues when they have multiple matching labels [0.27ms]
+
+tests/ai/solution-generation.test.ts:
+131 |     );
+132 | 
+133 |     expect(solution.success).toBe(true);
+134 |     expect(solution.changes).toBeDefined();
+135 |     expect(Object.keys(solution.changes!).length).toBeGreaterThan(0);
+136 |     expect(solution.changes!['src/auth/login.js']).toBeDefined();
+                                                         ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at <anonymous> (/Users/dylan/dev/rsolv/RSOLV-action/tests/ai/solution-generation.test.ts:136:52)
+(fail) Solution Generation with Fallback > should fall back to standard API when Claude Code is not available [1.18ms]
+Solution result: {
+  success: true,
+  message: "Solution generated with vended credentials",
+  hasChanges: true,
+  changeCount: 1,
+}
+(pass) Solution Generation with Fallback > should handle real API call with fallback [1.32ms]
+
+tests/e2e/full-demo-flow.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+1 | (function (entry, fetcher)
+              ^
+SyntaxError: Export named 'logger' not found in module '/Users/dylan/dev/rsolv/RSOLV-action/src/utils/logger.ts'.
+      at loadAndEvaluateModule (1:11)
+-------------------------------
+
+
+src/platforms/linear/linear-integration.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+1 | (function (entry, fetcher)
+              ^
+SyntaxError: Export named 'logger' not found in module '/Users/dylan/dev/rsolv/RSOLV-action/src/utils/logger.ts'.
+      at loadAndEvaluateModule (1:11)
+-------------------------------
+
+
+src/platforms/linear/linear-adapter.test.ts:
+
+src/config/__tests__/timeout.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+1 | (function (entry, fetcher)
+              ^
+SyntaxError: Export named 'logger' not found in module '/Users/dylan/dev/rsolv/RSOLV-action/src/utils/logger.ts'.
+      at loadAndEvaluateModule (1:11)
+-------------------------------
+
+
+src/security/__tests__/detector.test.ts:
+(pass) SecurityDetector > SQL Injection Detection > should detect SQL injection in concatenated queries [0.62ms]
+(pass) SecurityDetector > SQL Injection Detection > should detect SQL injection in template literals [0.15ms]
+(pass) SecurityDetector > SQL Injection Detection > should not flag parameterized queries [0.12ms]
+(pass) SecurityDetector > XSS Detection > should detect XSS in innerHTML assignments [0.08ms]
+(pass) SecurityDetector > XSS Detection > should detect XSS in document.write [0.12ms]
+(pass) SecurityDetector > XSS Detection > should not flag sanitized content [0.07ms]
+(pass) SecurityDetector > Language Support > should support JavaScript and TypeScript [0.14ms]
+
+src/security/__tests__/cve-correlator.test.ts:
+(pass) CveCorrelator > CVE Database Correlation > should correlate vulnerabilities with known CVE entries [11.96ms]
+(pass) CveCorrelator > CVE Database Correlation > should map CVE severity scores to our risk levels [0.26ms]
+(pass) CveCorrelator > CVE Database Correlation > should handle multiple vulnerability types [10.53ms]
+(pass) CveCorrelator > CWE to CVE Mapping > should find CVEs related to CWE-89 (SQL Injection) [0.36ms]
+(pass) CveCorrelator > CWE to CVE Mapping > should find CVEs related to CWE-79 (XSS) [0.03ms]
+(pass) CveCorrelator > CWE to CVE Mapping > should handle unknown CWE IDs gracefully [10.31ms]
+(pass) CveCorrelator > Risk Assessment Enhancement > should enhance vulnerability risk assessment with CVE data [1.22ms]
+(pass) CveCorrelator > Risk Assessment Enhancement > should calculate appropriate enhanced risk levels [0.16ms]
+(pass) CveCorrelator > CVE Database Management > should have access to CVE database with recent entries [0.09ms]
+(pass) CveCorrelator > CVE Database Management > should provide CVE search capabilities [0.04ms]
+(pass) CveCorrelator > Integration with Security Analysis > should generate CVE-enhanced security reports [0.50ms]
+(pass) CveCorrelator > Integration with Security Analysis > should provide actionable CVE-based recommendations [0.16ms]
+(pass) CveCorrelator > Performance and Caching > should cache CVE lookups for better performance [10.44ms]
+(pass) CveCorrelator > Performance and Caching > should handle large vulnerability sets efficiently [0.71ms]
+
+src/security/__tests__/explanation-framework.test.ts:
+(pass) ThreeTierExplanationFramework > Line-Level Explanations > should generate line-level explanation for SQL injection [0.21ms]
+(pass) ThreeTierExplanationFramework > Line-Level Explanations > should generate line-level explanation for XSS [0.05ms]
+(pass) ThreeTierExplanationFramework > Concept-Level Explanations > should generate concept-level explanation for security concepts [0.19ms]
+(pass) ThreeTierExplanationFramework > Concept-Level Explanations > should include prevention methods and attack scenarios [0.06ms]
+(pass) ThreeTierExplanationFramework > Business-Level Explanations > should generate business-level explanation with impact analysis [0.52ms]
+(pass) ThreeTierExplanationFramework > Business-Level Explanations > should calculate appropriate risk scores based on severity [0.03ms]
+(pass) ThreeTierExplanationFramework > Complete Three-Tier Explanation > should generate complete explanation with all three tiers [0.36ms]
+(pass) ThreeTierExplanationFramework > Complete Three-Tier Explanation > should organize explanations by vulnerability type [0.13ms]
+(pass) ThreeTierExplanationFramework > Output Formatting > should format explanation as markdown [0.02ms]
+(pass) ThreeTierExplanationFramework > Output Formatting > should generate comprehensive markdown report [21.89ms]
+
+src/security/__tests__/ruby-security-integration.test.ts:
