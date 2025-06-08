@@ -1,0 +1,849 @@
+[
+  {
+    "id": "typescript-non-null-assertion",
+    "name": "TypeScript Non-Null Assertion",
+    "description": "Detects unsafe non-null assertions that may cause runtime errors",
+    "type": "null_pointer_dereference",
+    "severity": "medium",
+    "cweId": "CWE-476",
+    "owaspCategory": "A04:2021 - Insecure Design",
+    "remediation": "Use proper null checks instead of non-null assertions",
+    "confidence": "medium",
+    "regex_patterns": [
+      "\\w+!\\.(?!length|toString|valueOf)"
+    ],
+    "language": "typescript",
+    "tags": [
+      "typescript",
+      "severity-medium",
+      "owasp-A04"
+    ]
+  },
+  {
+    "id": "graphql-introspection",
+    "name": "GraphQL Introspection Enabled",
+    "description": "Detects GraphQL introspection enabled in production",
+    "type": "information_disclosure",
+    "severity": "medium",
+    "cweId": "CWE-200",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Disable GraphQL introspection in production environments",
+    "confidence": "medium",
+    "regex_patterns": [
+      "introspection:\\s*true",
+      "GraphQLSchema.*introspection:\\s*true"
+    ],
+    "language": "javascript",
+    "tags": [
+      "javascript",
+      "severity-medium",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "electron-node-integration",
+    "name": "Electron Node Integration Enabled",
+    "description": "Detects unsafe Electron configurations with Node integration",
+    "type": "security_misconfiguration",
+    "severity": "critical",
+    "cweId": "CWE-829",
+    "owaspCategory": "A05:2021 - Security Misconfiguration",
+    "remediation": "Disable Node integration and enable context isolation",
+    "confidence": "medium",
+    "regex_patterns": [
+      "nodeIntegration:\\s*true",
+      "contextIsolation:\\s*false",
+      "webSecurity:\\s*false"
+    ],
+    "language": "javascript",
+    "tags": [
+      "javascript",
+      "severity-critical",
+      "owasp-A05"
+    ]
+  },
+  {
+    "id": "ldap-injection",
+    "name": "LDAP Injection",
+    "description": "Detects LDAP injection vulnerabilities",
+    "type": "ldap_injection",
+    "severity": "high",
+    "cweId": "CWE-90",
+    "owaspCategory": "A03:2021 - Injection",
+    "remediation": "Use parameterized LDAP queries and escape special characters",
+    "confidence": "medium",
+    "regex_patterns": [
+      "ldap.*search.*filter.*\\+.*req\\."
+    ],
+    "language": "javascript",
+    "tags": [
+      "javascript",
+      "severity-high",
+      "owasp-A03"
+    ]
+  },
+  {
+    "id": "ruby-broken-access-control-missing-auth",
+    "name": "Missing Authentication in Rails Controller",
+    "description": "Detects Rails controllers without authentication filters",
+    "type": "broken_access_control",
+    "severity": "high",
+    "cweId": "CWE-862",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Add before_action :authenticate_user! to protect sensitive actions",
+    "confidence": "medium",
+    "regex_patterns": [
+      "class\\s+\\w+Controller\\s*<\\s*ApplicationController(?:(?!before_action|before_filter|authenticate).)*end",
+      "def\\s+(admin|delete|update|create)(?:(?!current_user|logged_in|authenticate).)*end"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-high",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "ruby-mass-assignment",
+    "name": "Mass Assignment Vulnerability",
+    "description": "Detects unfiltered params in model operations",
+    "type": "mass_assignment",
+    "severity": "high",
+    "cweId": "CWE-915",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Use strong parameters: params.require(:user).permit(:name, :email)",
+    "confidence": "medium",
+    "regex_patterns": [
+      "\\.(create|update|update_attributes|assign_attributes)\\s*\\(\\s*params(?!\\s*\\.\\s*(require|permit))",
+      "User\\.new\\s*\\(\\s*params\\["
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-high",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "ruby-weak-crypto-md5",
+    "name": "Weak Cryptography - MD5",
+    "description": "MD5 is cryptographically broken and should not be used",
+    "type": "weak_cryptography",
+    "severity": "medium",
+    "cweId": "CWE-327",
+    "owaspCategory": "A02:2021 - Cryptographic Failures",
+    "remediation": "Use SHA-256 or SHA-3: Digest::SHA256.hexdigest(data)",
+    "confidence": "medium",
+    "regex_patterns": [
+      "Digest::MD5",
+      "OpenSSL::Digest::MD5",
+      "\\.md5\\("
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-medium",
+      "owasp-A02"
+    ]
+  },
+  {
+    "id": "ruby-weak-random",
+    "name": "Weak Random Number Generation",
+    "description": "Using predictable random number generation",
+    "type": "weak_cryptography",
+    "severity": "medium",
+    "cweId": "CWE-330",
+    "owaspCategory": "A04:2021 - Insecure Design",
+    "remediation": "Use SecureRandom for security-sensitive randomness",
+    "confidence": "medium",
+    "regex_patterns": [
+      "\\brand\\s*\\(",
+      "Random\\.rand(?!\\s*\\(\\s*SecureRandom)",
+      "\\bsrand\\s*\\("
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-medium",
+      "owasp-A04"
+    ]
+  },
+  {
+    "id": "ruby-debug-mode-enabled",
+    "name": "Debug Mode Enabled",
+    "description": "Debug mode exposes sensitive information",
+    "type": "debug_mode",
+    "severity": "medium",
+    "cweId": "CWE-489",
+    "owaspCategory": "A05:2021 - Security Misconfiguration",
+    "remediation": "Remove debug statements and disable debug mode in production",
+    "confidence": "medium",
+    "regex_patterns": [
+      "config\\.consider_all_requests_local\\s*=\\s*true",
+      "\\bbyebug\\b",
+      "\\bdebugger\\b",
+      "binding\\.pry"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-medium",
+      "owasp-A05"
+    ]
+  },
+  {
+    "id": "ruby-eval-usage",
+    "name": "Use of eval()",
+    "description": "eval() can execute arbitrary code",
+    "type": "vulnerable_components",
+    "severity": "high",
+    "cweId": "CWE-95",
+    "owaspCategory": "A06:2021 - Vulnerable and Outdated Components",
+    "remediation": "Avoid eval() or validate/sanitize input thoroughly",
+    "confidence": "medium",
+    "regex_patterns": [
+      "\\beval\\s*\\(",
+      "instance_eval",
+      "class_eval",
+      "module_eval"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-high",
+      "owasp-A06"
+    ]
+  },
+  {
+    "id": "ruby-weak-password-storage",
+    "name": "Weak Password Storage",
+    "description": "Passwords stored without proper hashing",
+    "type": "broken_authentication",
+    "severity": "critical",
+    "cweId": "CWE-256",
+    "owaspCategory": "A07:2021 - Identification and Authentication Failures",
+    "remediation": "Use BCrypt for password hashing",
+    "confidence": "medium",
+    "regex_patterns": [
+      "password\\s*=\\s*Digest::(MD5|SHA1)",
+      "user\\.password\\s*=\\s*params",
+      "password.*?\\.downcase(?!.*bcrypt)"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-critical",
+      "owasp-A07"
+    ]
+  },
+  {
+    "id": "ruby-unsafe-deserialization-marshal",
+    "name": "Unsafe Deserialization with Marshal",
+    "description": "Marshal.load can execute arbitrary code",
+    "type": "insecure_deserialization",
+    "severity": "critical",
+    "cweId": "CWE-502",
+    "owaspCategory": "A08:2021 - Software and Data Integrity Failures",
+    "remediation": "Use JSON or MessagePack for serialization",
+    "confidence": "medium",
+    "regex_patterns": [
+      "Marshal\\.load",
+      "Marshal\\.restore"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-critical",
+      "owasp-A08"
+    ]
+  },
+  {
+    "id": "ruby-unsafe-yaml",
+    "name": "Unsafe YAML Loading",
+    "description": "YAML.load can execute arbitrary code",
+    "type": "insecure_deserialization",
+    "severity": "high",
+    "cweId": "CWE-502",
+    "owaspCategory": "A08:2021 - Software and Data Integrity Failures",
+    "remediation": "Use YAML.safe_load for untrusted input",
+    "confidence": "medium",
+    "regex_patterns": [
+      "YAML\\.load(?!_file|_stream)",
+      "Psych\\.load(?!_file|_stream)"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-high",
+      "owasp-A08"
+    ]
+  },
+  {
+    "id": "ruby-insufficient-logging",
+    "name": "Insufficient Security Logging",
+    "description": "Missing logging for security-relevant events",
+    "type": "insufficient_logging",
+    "severity": "low",
+    "cweId": "CWE-778",
+    "owaspCategory": "A09:2021 - Security Logging and Monitoring Failures",
+    "remediation": "Log security events and errors appropriately",
+    "confidence": "medium",
+    "regex_patterns": [
+      "rescue\\s*(?:Exception|StandardError)?\\s*(?:=>)?\\s*\\w*\\s*\\n\\s*end",
+      "rescue\\s*\\n\\s*nil\\s*\\n\\s*end"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-low",
+      "owasp-A09"
+    ]
+  },
+  {
+    "id": "ruby-ssrf-open-uri",
+    "name": "SSRF via open-uri",
+    "description": "Unvalidated URLs in open() can lead to SSRF",
+    "type": "open_redirect",
+    "severity": "high",
+    "cweId": "CWE-918",
+    "owaspCategory": "A10:2021 - Server-Side Request Forgery",
+    "remediation": "Validate URLs against allowlist before making requests",
+    "confidence": "medium",
+    "regex_patterns": [
+      "open\\s*\\(\\s*params",
+      "URI\\.open\\s*\\(\\s*params",
+      "Net::HTTP\\.get.*params"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-high",
+      "owasp-A10"
+    ]
+  },
+  {
+    "id": "ruby-xss-erb-raw",
+    "name": "XSS in ERB Templates",
+    "description": "Using raw() or html_safe without sanitization",
+    "type": "xss",
+    "severity": "medium",
+    "cweId": "CWE-79",
+    "owaspCategory": "A03:2021 - Injection",
+    "remediation": "Use Rails sanitize helpers or escape output by default",
+    "confidence": "medium",
+    "regex_patterns": [
+      "<%=\\s*raw\\s+",
+      "\\.html_safe(?!.*sanitize)",
+      "<%==\\s*\\w+"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-medium",
+      "owasp-A03"
+    ]
+  },
+  {
+    "id": "ruby-open-redirect",
+    "name": "Open Redirect",
+    "description": "Unvalidated redirects can lead to phishing",
+    "type": "open_redirect",
+    "severity": "medium",
+    "cweId": "CWE-601",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Validate redirect URLs against an allowlist",
+    "confidence": "medium",
+    "regex_patterns": [
+      "redirect_to\\s+params",
+      "redirect_to\\s+request\\.(referrer|referer)"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-medium",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "elixir-weak-crypto-hash",
+    "name": "Weak Password Hashing in Elixir",
+    "description": "Detects use of weak hashing algorithms for passwords",
+    "type": "broken_authentication",
+    "severity": "high",
+    "cweId": "CWE-916",
+    "owaspCategory": "A07:2021 - Identification and Authentication Failures",
+    "remediation": "Use Bcrypt, Argon2, or Pbkdf2 with appropriate cost factors in Elixir. For Bcrypt, use at least 12 rounds with the bcrypt_elixir library",
+    "confidence": "medium",
+    "regex_patterns": [
+      ":crypto\\.hash\\s*\\(\\s*:(?:md5|sha|sha1|sha256)\\s*,",
+      "Base\\.encode\\d+\\s*\\(\\s*:crypto\\.hash\\s*\\(\\s*:(?:md5|sha|sha1|sha256)\\s*,"
+    ],
+    "language": "elixir",
+    "tags": [
+      "elixir",
+      "severity-high",
+      "owasp-A07"
+    ]
+  },
+  {
+    "id": "elixir-unsafe-atom-creation",
+    "name": "Unsafe Atom Creation",
+    "description": "Detects dynamic atom creation from user input which can lead to memory exhaustion",
+    "type": "insecure_deserialization",
+    "severity": "medium",
+    "cweId": "CWE-502",
+    "owaspCategory": "A08:2021 - Software and Data Integrity Failures",
+    "remediation": "Use Elixir\\",
+    "confidence": "medium",
+    "regex_patterns": [
+      "String\\.to_atom\\s*\\("
+    ],
+    "language": "elixir",
+    "tags": [
+      "elixir",
+      "severity-medium",
+      "owasp-A08"
+    ]
+  },
+  {
+    "id": "elixir-code-evaluation",
+    "name": "Unsafe Code Evaluation",
+    "description": "Detects dynamic code evaluation vulnerabilities",
+    "type": "insecure_deserialization",
+    "severity": "critical",
+    "cweId": "CWE-94",
+    "owaspCategory": "A08:2021 - Software and Data Integrity Failures",
+    "remediation": "Avoid dynamic code evaluation in Elixir. If necessary, strictly validate and sandbox the execution using proper Elixir patterns",
+    "confidence": "medium",
+    "regex_patterns": [
+      "Code\\.eval_string\\s*\\(",
+      "Code\\.eval_quoted\\s*\\("
+    ],
+    "language": "elixir",
+    "tags": [
+      "elixir",
+      "severity-critical",
+      "owasp-A08"
+    ]
+  },
+  {
+    "id": "elixir-weak-random",
+    "name": "Weak Random Number Generation",
+    "description": "Detects use of weak random number generators for security purposes",
+    "type": "weak_cryptography",
+    "severity": "medium",
+    "cweId": "CWE-338",
+    "owaspCategory": "A02:2021 - Cryptographic Failures",
+    "remediation": "Use Elixir\\",
+    "confidence": "medium",
+    "regex_patterns": [
+      ":rand\\.uniform\\s*\\(",
+      "Enum\\.random\\s*\\(",
+      ":random\\.uniform\\s*\\("
+    ],
+    "language": "elixir",
+    "tags": [
+      "elixir",
+      "severity-medium",
+      "owasp-A02"
+    ]
+  },
+  {
+    "id": "elixir-xml-external-entities",
+    "name": "XML External Entity Injection",
+    "description": "Detects potential XXE vulnerabilities in XML parsing",
+    "type": "xml_external_entities",
+    "severity": "high",
+    "cweId": "CWE-611",
+    "owaspCategory": "A05:2021 - Security Misconfiguration",
+    "remediation": "Disable external entity processing in Elixir XML parsers. Use SweetXml or other safe Elixir XML parsing libraries with XXE protection enabled by default",
+    "confidence": "medium",
+    "regex_patterns": [
+      ":xmerl_scan\\.string\\s*\\("
+    ],
+    "language": "elixir",
+    "tags": [
+      "elixir",
+      "severity-high",
+      "owasp-A05"
+    ]
+  },
+  {
+    "id": "elixir-vulnerable-components",
+    "name": "Use of Vulnerable Dependencies",
+    "description": "Detects potentially vulnerable Elixir/Erlang functions",
+    "type": "vulnerable_components",
+    "severity": "medium",
+    "cweId": "CWE-1104",
+    "owaspCategory": "A06:2021 - Vulnerable and Outdated Components",
+    "remediation": "Use modern Elixir alternatives: System.monotonic_time instead of :erlang.now, :rand instead of :random, and always use safe option with binary_to_term",
+    "confidence": "medium",
+    "regex_patterns": [
+      ":erlang\\.now\\s*\\(\\)",
+      ":random\\."
+    ],
+    "language": "elixir",
+    "tags": [
+      "elixir",
+      "severity-medium",
+      "owasp-A06"
+    ]
+  },
+  {
+    "id": "rails-strong-parameters",
+    "name": "Missing Strong Parameters",
+    "description": "Rails controllers using params without permit() allowing mass assignment",
+    "type": "mass_assignment",
+    "severity": "high",
+    "cweId": "CWE-915",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Use strong parameters with permit(): params.require(:model).permit(:field1, :field2). Never use permit! in production.",
+    "confidence": "medium",
+    "regex_patterns": [
+      "\\.(create|update|update_attributes|assign_attributes)\\s*\\(\\s*params(?!\\s*\\.\\s*(require|permit))",
+      "User\\.new\\s*\\(\\s*params\\[",
+      "\\.permit!\\s*\\)",
+      "\\.(create!|update!)\\s*\\(\\s*params\\[",
+      "\\.insert_all\\s*\\(\\s*params\\[",
+      "\\.upsert_all\\s*\\(\\s*params\\["
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-high",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "rails-erb-injection",
+    "name": "ERB Template Injection",
+    "description": "Server-side template injection through ERB evaluation with user input",
+    "type": "template_injection",
+    "severity": "critical",
+    "cweId": "CWE-94",
+    "owaspCategory": "A03:2021 - Injection",
+    "remediation": "Never render user input as Rails ERB templates. Use static Rails templates with safe data binding and Rails helpers.",
+    "confidence": "medium",
+    "regex_patterns": [
+      "ERB\\.new\\s*\\(\\s*params\\[",
+      "ERB\\.new\\s*\\(\\s*user_template\\)"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-critical",
+      "owasp-A03"
+    ]
+  },
+  {
+    "id": "rails-unsafe-route-constraints",
+    "name": "Unsafe Route Constraints",
+    "description": "Route constraints that can be bypassed or allow code execution",
+    "type": "broken_access_control",
+    "severity": "high",
+    "cweId": "CWE-285",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Use specific, restrictive regex patterns for Rails route constraints. Avoid dynamic constraints with user input in Rails routes.",
+    "confidence": "medium",
+    "regex_patterns": [
+      "constraints:\\s*\\{\\s*\\w+:\\s*\\",
+      "constraints:\\s*\\{\\s*\\w+:\\s*\\",
+      "constraints:\\s*lambda.*?eval\\s*\\(",
+      "constraints\\s+lambda.*?\\{\\s*\\|\\s*req\\s*\\|\\s*true\\s*\\}",
+      "constraints\\s+subdomain:\\s*\\"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-high",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "rails-insecure-session-config",
+    "name": "Insecure Session Configuration",
+    "description": "Rails session configuration without proper security flags",
+    "type": "security_misconfiguration",
+    "severity": "medium",
+    "cweId": "CWE-614",
+    "owaspCategory": "A05:2021 - Security Misconfiguration",
+    "remediation": "Configure Rails sessions with secure: true, httponly: true, and same_site: :strict for HTTPS environments. Review Rails session store configuration.",
+    "confidence": "medium",
+    "regex_patterns": [
+      "config\\.session_store.*?secure:\\s*false",
+      "config\\.session_store.*?httponly:\\s*false",
+      "config\\.session_store.*?same_site:\\s*:none",
+      "config\\.session_store\\s*:cookie_store,\\s*key:",
+      "Rails\\.application\\.config\\.session_store\\s*:cookie_store"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-medium",
+      "owasp-A05"
+    ]
+  },
+  {
+    "id": "rails-dangerous-production-config",
+    "name": "Dangerous Production Configuration",
+    "description": "Development settings enabled in production environment",
+    "type": "debug_mode",
+    "severity": "medium",
+    "cweId": "CWE-489",
+    "owaspCategory": "A05:2021 - Security Misconfiguration",
+    "remediation": "Ensure Rails production environment has consider_all_requests_local=false, debug gems removed, and proper Rails caching enabled",
+    "confidence": "medium",
+    "regex_patterns": [
+      "config\\.consider_all_requests_local\\s*=\\s*true",
+      "config\\.action_controller\\.perform_caching\\s*=\\s*false",
+      "config\\.log_level\\s*=\\s*:debug",
+      "config\\.eager_load\\s*=\\s*false",
+      "config\\.cache_classes\\s*=\\s*false"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-medium",
+      "owasp-A05"
+    ]
+  },
+  {
+    "id": "rails-actionmailer-injection",
+    "name": "ActionMailer Injection",
+    "description": "Email header injection through ActionMailer with unvalidated input",
+    "type": "template_injection",
+    "severity": "high",
+    "cweId": "CWE-117",
+    "owaspCategory": "A03:2021 - Injection",
+    "remediation": "Validate and sanitize email headers. Use address validation for email fields.",
+    "confidence": "medium",
+    "regex_patterns": [
+      "mail\\s*\\(\\s*to:\\s*params\\["
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-high",
+      "owasp-A03"
+    ]
+  },
+  {
+    "id": "rails-cve-2021-22880",
+    "name": "CVE-2021-22880 - Open Redirect",
+    "description": "Host header injection leading to open redirect vulnerability",
+    "type": "open_redirect",
+    "severity": "medium",
+    "cweId": "CWE-601",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Validate host headers against an allowlist before using in Rails redirects",
+    "confidence": "medium",
+    "regex_patterns": [
+      "redirect_to\\s+request\\.protocol\\s*\\+\\s*request\\.host"
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-medium",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "rails-cve-2020-8264",
+    "name": "CVE-2020-8264 - Security Constraint Bypass",
+    "description": "Bypass of security constraints through skip callback conditions",
+    "type": "broken_access_control",
+    "severity": "high",
+    "cweId": "CWE-285",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Never use user input in Rails skip callback conditions. Use safe, predefined conditions in Rails controllers.",
+    "confidence": "medium",
+    "regex_patterns": [
+      "skip_before_action.*?if:\\s*->\\s*\\{.*?params\\[",
+      "skip_around_action.*?if:\\s*params\\[",
+      "skip_after_action.*?if:\\s*->\\s*\\{.*?eval\\s*\\("
+    ],
+    "language": "ruby",
+    "tags": [
+      "ruby",
+      "severity-high",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "django-template-xss",
+    "name": "Django Template XSS",
+    "description": "Cross-site scripting through unsafe Django template filters",
+    "type": "xss",
+    "severity": "medium",
+    "cweId": "CWE-79",
+    "owaspCategory": "A03:2021 - Injection",
+    "remediation": "Use Django template automatic escaping or Django escape filter. Only use |safe with trusted, sanitized content in Django templates.",
+    "confidence": "medium",
+    "regex_patterns": [
+      "\\{\\{\\s*\\w*\\w*content\\w*\\s*\\|\\s*safe\\s*\\}\\}",
+      "\\{\\{\\s*.*?\\.body\\s*\\|\\s*safe\\s*\\}\\}",
+      "mark_safe\\s*\\(\\s*user_\\w+"
+    ],
+    "language": "python",
+    "tags": [
+      "python",
+      "severity-medium",
+      "owasp-A03"
+    ]
+  },
+  {
+    "id": "django-debug-settings",
+    "name": "Dangerous Django Debug Settings",
+    "description": "Debug mode and development settings enabled in production",
+    "type": "debug_mode",
+    "severity": "high",
+    "cweId": "CWE-489",
+    "owaspCategory": "A05:2021 - Security Misconfiguration",
+    "remediation": "Set Django DEBUG=False, configure Django ALLOWED_HOSTS, remove debug apps from Django INSTALLED_APPS, and use Django environment-specific settings",
+    "confidence": "medium",
+    "regex_patterns": [
+      "DEBUG\\s*=\\s*True"
+    ],
+    "language": "python",
+    "tags": [
+      "python",
+      "severity-high",
+      "owasp-A05"
+    ]
+  },
+  {
+    "id": "django-insecure-session",
+    "name": "Insecure Django Session Configuration",
+    "description": "Django session and cookie settings without proper security flags",
+    "type": "security_misconfiguration",
+    "severity": "medium",
+    "cweId": "CWE-614",
+    "owaspCategory": "A05:2021 - Security Misconfiguration",
+    "remediation": "Set Django session secure=True, httponly=True, and samesite=",
+    "confidence": "medium",
+    "regex_patterns": [
+      "SESSION_COOKIE_SECURE\\s*=\\s*False",
+      "SESSION_COOKIE_HTTPONLY\\s*=\\s*False",
+      "SESSION_COOKIE_SAMESITE\\s*=\\s*None",
+      "CSRF_COOKIE_SECURE\\s*=\\s*False",
+      "CSRF_COOKIE_HTTPONLY\\s*=\\s*False",
+      "SESSION_EXPIRE_AT_BROWSER_CLOSE\\s*=\\s*False",
+      "SESSION_COOKIE_AGE\\s*=\\s*31536000",
+      "SESSION_SAVE_EVERY_REQUEST\\s*=\\s*False"
+    ],
+    "language": "python",
+    "tags": [
+      "python",
+      "severity-medium",
+      "owasp-A05"
+    ]
+  },
+  {
+    "id": "django-broken-auth",
+    "name": "Django Broken Authentication",
+    "description": "Weak authentication patterns and missing validation",
+    "type": "broken_authentication",
+    "severity": "high",
+    "cweId": "CWE-287",
+    "owaspCategory": "A07:2021 - Identification and Authentication Failures",
+    "remediation": "Use Django built-in authentication system, require Django login decorators, implement Django password validators, avoid hardcoded credentials",
+    "confidence": "medium",
+    "regex_patterns": [
+      "def\\s+\\w*admin\\w*.*?\\(.*?request.*?\\):(?!.*@login_required)(?!.*request\\.user\\.is_authenticated)"
+    ],
+    "language": "python",
+    "tags": [
+      "python",
+      "severity-high",
+      "owasp-A07"
+    ]
+  },
+  {
+    "id": "django-csrf-bypass",
+    "name": "Django CSRF Protection Bypass",
+    "description": "Cross-Site Request Forgery protection bypassed or disabled",
+    "type": "cross_site_request_forgery",
+    "severity": "high",
+    "cweId": "CWE-352",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Remove Django @csrf_exempt from sensitive views, include Django {% csrf_token %} in forms, send CSRF token in AJAX requests using Django CSRF middleware",
+    "confidence": "medium",
+    "regex_patterns": [
+      "@csrf_exempt\\s+def\\s+transfer_money",
+      "@csrf_exempt\\s+def\\s+delete_account",
+      "@csrf_exempt\\s+def\\s+change_password"
+    ],
+    "language": "python",
+    "tags": [
+      "python",
+      "severity-high",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "django-clickjacking",
+    "name": "Django Clickjacking Vulnerability",
+    "description": "Missing or disabled X-Frame-Options protection",
+    "type": "security_misconfiguration",
+    "severity": "medium",
+    "cweId": "CWE-1021",
+    "owaspCategory": "A05:2021 - Security Misconfiguration",
+    "remediation": "Use Django X_FRAME_OPTIONS = ",
+    "confidence": "medium",
+    "regex_patterns": [
+      "@xframe_options_exempt"
+    ],
+    "language": "python",
+    "tags": [
+      "python",
+      "severity-medium",
+      "owasp-A05"
+    ]
+  },
+  {
+    "id": "django-mass-assignment",
+    "name": "Django Mass Assignment",
+    "description": "Mass assignment vulnerabilities in Django model operations",
+    "type": "mass_assignment",
+    "severity": "high",
+    "cweId": "CWE-915",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Use ModelForm with explicit fields, validate input, implement field whitelisting",
+    "confidence": "medium",
+    "regex_patterns": [
+      "User\\.objects\\.create\\s*\\(\\s*\\*\\*\\s*request\\.POST\\s*\\)",
+      "User\\s*\\(\\s*\\*\\*\\s*request\\.POST\\.dict\\(\\)\\s*\\)\\.save\\(\\)",
+      "User\\.objects\\.bulk_create\\s*\\(\\s*\\[\\s*User\\s*\\(\\s*\\*\\*\\s*data\\s*\\)",
+      "User\\.objects\\.filter\\s*\\(.*?\\)\\.update\\s*\\(\\s*\\*\\*\\s*request\\.POST\\s*\\)",
+      "user\\.__dict__\\.update\\s*\\(\\s*request\\.POST\\s*\\)",
+      "form\\s*=\\s*ModelForm\\s*\\(\\s*request\\.POST.*?instance\\s*=\\s*user\\s*\\)",
+      "class\\s+\\w+Form\\s*\\(\\s*ModelForm\\s*\\):.*?class\\s+Meta:.*?model\\s*=\\s*\\w+(?!.*fields)"
+    ],
+    "language": "python",
+    "tags": [
+      "python",
+      "severity-high",
+      "owasp-A01"
+    ]
+  },
+  {
+    "id": "django-cve-2021-33571",
+    "name": "CVE-2021-33571 - URL Validation Bypass",
+    "description": "URL validation bypass allowing open redirects",
+    "type": "open_redirect",
+    "severity": "medium",
+    "cweId": "CWE-601",
+    "owaspCategory": "A01:2021 - Broken Access Control",
+    "remediation": "Validate redirect URLs against allowlist, sanitize URL schemes, use Django is_safe_url() for redirects",
+    "confidence": "medium",
+    "regex_patterns": [
+      "URLValidator\\(\\)\\s*\\(\\s*user_\\w+"
+    ],
+    "language": "python",
+    "tags": [
+      "python",
+      "severity-medium",
+      "owasp-A01"
+    ]
+  }
+]
