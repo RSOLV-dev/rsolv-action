@@ -44,6 +44,13 @@ defmodule RSOLVWeb.Router do
     get "/education/metrics", EducationController, :metrics
     get "/education/debug", EducationController, :debug
     get "/education/test-slack", EducationController, :test_slack
+    
+    # Security Pattern API endpoints - RFC-008 Implementation
+    get "/patterns/public/:language", PatternController, :public
+    get "/patterns/protected/:language", PatternController, :protected
+    get "/patterns/ai/:language", PatternController, :ai
+    get "/patterns/enterprise/:language", PatternController, :enterprise
+    get "/patterns/:language", PatternController, :by_language
   end
 
   # Webhook endpoint for GitHub
