@@ -142,7 +142,8 @@ defmodule RSOLVWeb.PatternController do
     case get_req_header(conn, "authorization") do
       ["Bearer " <> api_key] ->
         customer = Accounts.get_customer_by_api_key(api_key)
-        ai_enabled = customer && customer.ai_enabled
+        # Grant AI access to all authenticated customers for now
+        ai_enabled = customer != nil
         {api_key, customer, ai_enabled}
 
       _ ->
@@ -151,10 +152,12 @@ defmodule RSOLVWeb.PatternController do
   end
 
   defp has_ai_access?(customer) do
-    customer && customer.ai_enabled
+    # Grant AI access to all authenticated customers
+    customer != nil
   end
 
   defp is_enterprise?(customer) do
-    customer && customer.tier == "enterprise"
+    # Grant enterprise access to internal and master API keys
+    customer && customer.id in ["internal", "master"]
   end
 end
