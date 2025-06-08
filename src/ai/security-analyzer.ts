@@ -1,6 +1,7 @@
 import { IssueContext, ActionConfig, AnalysisData, IssueType } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { SecurityDetector, Vulnerability, VulnerabilityType } from '../security/index.js';
+import { CustomerConfig } from '../security/tiered-pattern-source.js';
 
 export interface SecurityAnalysisResult {
   hasSecurityIssues: boolean;
@@ -20,9 +21,11 @@ export interface SecurityAnalysisResult {
  */
 export class SecurityAwareAnalyzer {
   private securityDetector: SecurityDetector;
+  private customerConfig?: CustomerConfig;
 
-  constructor() {
-    this.securityDetector = new SecurityDetector();
+  constructor(customerConfig?: CustomerConfig) {
+    this.customerConfig = customerConfig;
+    this.securityDetector = new SecurityDetector(undefined, customerConfig);
   }
 
   /**
@@ -76,7 +79,7 @@ export class SecurityAwareAnalyzer {
       const language = this.getLanguageFromPath(filePath);
       if (!language) continue;
 
-      const vulnerabilities = this.securityDetector.detect(content, language);
+      const vulnerabilities = await this.securityDetector.detect(content, language);
       
       if (vulnerabilities.length > 0) {
         // Add file path to each vulnerability

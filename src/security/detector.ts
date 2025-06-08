@@ -1,56 +1,67 @@
 import { Vulnerability, VulnerabilityType, SecurityScanResult } from './types.js';
-import { PatternRegistry } from './patterns.js';
+import { TieredPatternSource, SecurityPattern, CustomerConfig, defaultPatternSource } from './tiered-pattern-source.js';
+import { logger } from '../utils/logger.js';
 
 export class SecurityDetector {
-  private registry: PatternRegistry;
+  private patternSource: TieredPatternSource;
+  private customerConfig?: CustomerConfig;
 
-  constructor() {
-    this.registry = new PatternRegistry();
+  constructor(patternSource?: TieredPatternSource, customerConfig?: CustomerConfig) {
+    this.patternSource = patternSource || defaultPatternSource;
+    this.customerConfig = customerConfig;
   }
 
-  detect(code: string, language: string): Vulnerability[] {
+  async detect(code: string, language: string): Promise<Vulnerability[]> {
     const vulnerabilities: Vulnerability[] = [];
     const lines = code.split('\n');
     const seen = new Set<string>(); // Track line + type combinations
 
-    const patterns = this.registry.getPatternsByLanguage(language);
+    try {
+      const patterns = await this.patternSource.getPatternsByLanguage(language, this.customerConfig);
 
-    for (const pattern of patterns) {
-      if (pattern.patterns.regex) {
-        for (const regex of pattern.patterns.regex) {
-          let match;
-          regex.lastIndex = 0; // Reset regex state
-          
-          while ((match = regex.exec(code)) !== null) {
-            const lineNumber = this.getLineNumber(code, match.index);
-            const line = lines[lineNumber - 1]?.trim() || '';
-            
-            // Skip if this looks like a safe usage
-            if (this.registry.isSafeUsage(line, pattern.type)) {
-              continue;
+      for (const pattern of patterns) {
+        if (pattern.patterns.regex) {
+          for (const regexStr of pattern.patterns.regex) {
+            try {
+              const regex = new RegExp(regexStr, 'gi');
+              let match;
+              
+              while ((match = regex.exec(code)) !== null) {
+                const lineNumber = this.getLineNumber(code, match.index);
+                const line = lines[lineNumber - 1]?.trim() || '';
+                
+                // Skip if this looks like a safe usage
+                if (this.isSafeUsage(line, pattern.safeUsage)) {
+                  continue;
+                }
+
+                // Deduplicate by line + type
+                const key = `${lineNumber}:${pattern.type}`;
+                if (seen.has(key)) {
+                  continue;
+                }
+                seen.add(key);
+
+                vulnerabilities.push({
+                  type: pattern.type as VulnerabilityType,
+                  severity: pattern.severity,
+                  line: lineNumber,
+                  message: `${pattern.name}: ${pattern.description}`,
+                  description: pattern.description,
+                  confidence: this.getConfidenceScore(line, pattern.type, pattern.confidence),
+                  cweId: pattern.cweId || '',
+                  owaspCategory: pattern.owaspCategory || '',
+                  remediation: pattern.remediation
+                });
+              }
+            } catch (regexError) {
+              logger.warn(`Invalid regex pattern: ${regexStr}, skipping`);
             }
-
-            // Deduplicate by line + type
-            const key = `${lineNumber}:${pattern.type}`;
-            if (seen.has(key)) {
-              continue;
-            }
-            seen.add(key);
-
-            vulnerabilities.push({
-              type: pattern.type,
-              severity: pattern.severity,
-              line: lineNumber,
-              message: `${pattern.name}: ${pattern.description}`,
-              description: pattern.description,
-              confidence: this.getConfidence(line, pattern.type),
-              cweId: pattern.cweId,
-              owaspCategory: pattern.owaspCategory,
-              remediation: pattern.remediation
-            });
           }
         }
       }
+    } catch (error) {
+      logger.error(`Pattern detection failed: ${error}`);
     }
 
     return vulnerabilities;
@@ -60,18 +71,38 @@ export class SecurityDetector {
     return code.substring(0, index).split('\n').length;
   }
 
-  private getConfidence(line: string, type: VulnerabilityType): number {
-    // Basic confidence scoring based on pattern specificity
-    switch (type) {
-    case VulnerabilityType.SQL_INJECTION:
-      if (line.includes('SELECT') || line.includes('INSERT')) return 90;
-      return 75;
-    case VulnerabilityType.XSS:
-      if (line.includes('innerHTML')) return 85;
-      return 70;
-    default:
-      return 60;
+  private getConfidenceScore(line: string, type: string, patternConfidence: string): number {
+    // Convert pattern confidence to numeric score
+    let baseScore = 60;
+    switch (patternConfidence) {
+      case 'high': baseScore = 85; break;
+      case 'medium': baseScore = 70; break;
+      case 'low': baseScore = 50; break;
     }
+
+    // Adjust based on line content specificity
+    if (type.includes('sql') && (line.includes('SELECT') || line.includes('INSERT'))) {
+      baseScore += 10;
+    }
+    if (type.includes('xss') && line.includes('innerHTML')) {
+      baseScore += 10;
+    }
+
+    return Math.min(baseScore, 95);
+  }
+
+  private isSafeUsage(line: string, safeUsagePatterns: string[]): boolean {
+    for (const safePattern of safeUsagePatterns) {
+      try {
+        const regex = new RegExp(safePattern, 'i');
+        if (regex.test(line)) {
+          return true;
+        }
+      } catch (error) {
+        logger.warn(`Invalid safe usage pattern: ${safePattern}`);
+      }
+    }
+    return false;
   }
 
   createSummary(vulnerabilities: Vulnerability[]): SecurityScanResult {
