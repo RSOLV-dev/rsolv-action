@@ -175,7 +175,7 @@ ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;max
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Java.xpath_injection()
-      iex> vulnerable = "XPath xpath = XPathFactory.newInstance().newXPath(); xpath.evaluate(\"//user[name='\" + username + \"']\", doc);"
+      iex> vulnerable = ~S|XPath xpath = XPathFactory.newInstance().newXPath(); xpath.evaluate("//user[name='" + username + "']", doc);|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
@@ -259,7 +259,7 @@ Runtime.getRuntime().exec(cmd);|
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Java.command_injection_processbuilder()
-      iex> vulnerable = "ProcessBuilder pb = new ProcessBuilder(); pb.command(\"sh -c \" + userCommand);"
+      iex> vulnerable = ~S|ProcessBuilder pb = new ProcessBuilder(); pb.command("sh -c " + userCommand);|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """

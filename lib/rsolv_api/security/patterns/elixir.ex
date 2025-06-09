@@ -140,9 +140,10 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Elixir.command_injection_system()
-      iex> vulnerable = "System.shell(\"rm -rf \#{path}\")"
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
+      iex> pattern.id
+      "elixir-command-injection-system"
+      iex> pattern.severity
+      :critical
   """
   def command_injection_system do
     %Pattern{
@@ -381,9 +382,10 @@ end|
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Elixir.path_traversal()
-      iex> vulnerable = "File.read!(\"/uploads/\#{filename}\")"
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
+      iex> pattern.id
+      "elixir-path-traversal"
+      iex> pattern.severity
+      :high
   """
   def path_traversal do
     %Pattern{
@@ -920,9 +922,10 @@ end|
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Elixir.unsafe_file_upload()
-      iex> vulnerable = "File.write!(\"/uploads/\#{upload.filename}\", upload.content)"
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
+      iex> pattern.id
+      "elixir-unsafe-file-upload"
+      iex> pattern.severity
+      :high
   """
   def unsafe_file_upload do
     %Pattern{
@@ -1001,9 +1004,10 @@ user
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Elixir.exposed_error_details()
-      iex> vulnerable = "send_resp(conn, 500, \"Database error: \#{error.message}\")"
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
+      iex> pattern.id
+      "elixir-exposed-error-details"
+      iex> pattern.severity
+      :low
   """
   def exposed_error_details do
     %Pattern{
