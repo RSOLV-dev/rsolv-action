@@ -191,7 +191,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
       severity: :high,
       languages: ["elixir"],
       frameworks: ["phoenix"],
-      regex: ~r/<%=\s*raw\s+[^%>]+%>/,
+      regex: ~r/<%=\s*raw\s+/,
       default_tier: :public,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",

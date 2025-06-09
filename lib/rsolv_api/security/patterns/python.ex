@@ -468,7 +468,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       type: :information_disclosure,
       severity: :medium,
       languages: ["python"],
-      regex: ~r/DEBUG\s*=\s*True/,
+      regex: ~r/(?:DEBUG\s*=\s*True(?!\s*else)|\.config\s*\[\s*['"]DEBUG['"]\s*\]\s*=\s*True)/,
       default_tier: :public,
       cwe_id: "CWE-489",
       owasp_category: "A05:2021",

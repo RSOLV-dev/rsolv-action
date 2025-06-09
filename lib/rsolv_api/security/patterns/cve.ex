@@ -182,7 +182,12 @@ defmodule RsolvApi.Security.Patterns.Cve do
       type: :logging,
       severity: :medium,
       languages: [], # Applies to all languages
-      regex: ~r/(?:def|function)\s+(?:login|authenticate|authorize|(?:process_)?payment|transfer|delete)\b[\s\S]{0,200}(?:return|end|\})(?![\s\S]{0,200}\b(?:log|audit|track|record|logger)\b)/i,
+      regex: [
+        # Function/method without logging in body
+        ~r/(?:def|function)\s+(?:login|authenticate|authorize|(?:process_)?payment|transfer|delete)\b[^{]*\{(?:(?!log|audit|track|record|logger)[^}])*\}/i,
+        # Python def without logging
+        ~r/def\s+(?:login|authenticate|authorize|(?:process_)?payment|transfer|delete)\b[^:]*:(?:(?!log|audit|track|record|logger)[\s\S])*?return/i
+      ],
       default_tier: :public,
       cwe_id: "CWE-778",
       owasp_category: "A09:2021",
