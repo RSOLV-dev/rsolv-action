@@ -34,7 +34,7 @@ spec:
       - name: ghcr-secret
       containers:
       - name: rsolv-api
-        image: ghcr.io/rsolv-dev/rsolv-api:latest
+        image: ghcr.io/rsolv-dev/rsolv-api:proper-clustering-20250609-142614
         imagePullPolicy: Always
         ports:
         - containerPort: 4000

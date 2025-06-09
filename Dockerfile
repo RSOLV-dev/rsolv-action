@@ -43,6 +43,7 @@ FROM prod-deps AS builder
 # Copy source code
 COPY lib lib
 COPY priv priv
+COPY rel rel
 
 # Use parallel compilation
 ENV ERL_FLAGS="+JPperf true"

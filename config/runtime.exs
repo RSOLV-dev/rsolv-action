@@ -19,7 +19,7 @@ if config_env() == :prod do
           namespace: pod_namespace,
           application_name: "rsolv_api",
           polling_interval: 5_000,
-          mode: :hostname
+          mode: :ip
         ]
       ]
     ]
