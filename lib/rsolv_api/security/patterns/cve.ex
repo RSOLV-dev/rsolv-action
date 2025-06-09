@@ -100,7 +100,7 @@ defmodule RsolvApi.Security.Patterns.Cve do
       severity: :critical,
       languages: ["java", "kotlin", "xml", "gradle", "maven"],
       frameworks: ["spring"],
-      regex: ~r/(spring-webmvc|spring-boot-starter-web)[\s\S]*?(5\.[0-2]\.\d{1,2}|5\.3\.([0-9]|1[0-7]))/i,
+      regex: ~r/(spring-webmvc|spring-boot-starter-web)[\s\S]*?(?:5\.[0-2]\.\d{1,2}|5\.3\.(?:[0-9]|1[0-7])(?:\D|$))/i,
       default_tier: :public,
       cwe_id: "CWE-94",
       owasp_category: "A06:2021",
@@ -182,7 +182,7 @@ defmodule RsolvApi.Security.Patterns.Cve do
       type: :logging,
       severity: :medium,
       languages: [], # Applies to all languages
-      regex: ~r/(login|authenticate|authorize|payment|transfer|delete)[\s\S]{0,200}(?!.*\b(log|audit|track|record)\b)/i,
+      regex: ~r/(?:def|function)\s+(?:login|authenticate|authorize|(?:process_)?payment|transfer|delete)\b[\s\S]{0,200}(?:return|end|\})(?![\s\S]{0,200}\b(?:log|audit|track|record|logger)\b)/i,
       default_tier: :public,
       cwe_id: "CWE-778",
       owasp_category: "A09:2021",
