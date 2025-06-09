@@ -2,6 +2,7 @@ defmodule RSOLVWeb.Router do
   use RSOLVWeb, :router
   require Logger
 
+  # Pipelines
   pipeline :api do
     plug :accepts, ["json"]
     plug Plug.Parsers,
@@ -15,53 +16,69 @@ defmodule RSOLVWeb.Router do
     plug :accepts, ["json"]
   end
 
-  # API v1 routes
-  scope "/api/v1", RSOLVWeb do
-    pipe_through :api
+  # Health check (outside versioned API)
+  get "/health", RSOLVWeb.HealthController, :check
 
-    # Fix attempt tracking - for RSOLV-action to record PR creation
-    post "/fix-attempts", FixAttemptController, :create
-
-    # Credential vending endpoints
-    post "/credentials/exchange", CredentialController, :exchange
-    post "/credentials/refresh", CredentialController, :refresh
-    
-    # Usage tracking
-    post "/usage/report", CredentialController, :report_usage
-    
-    # Existing endpoints
-    post "/auth", AuthController, :authenticate
-    get "/usage/:customer_id", UsageController, :show
-    
-    # Expert review endpoints
-    post "/review/request", ReviewController, :create
-    get "/review/:review_id", ReviewController, :show
-    post "/review/:review_id/comment", ReviewController, :add_comment
-    
-    # Educational component endpoints
-    post "/education/fix-completed", EducationController, :fix_completed
-    get "/education/track-click/:alert_id", EducationController, :track_click
-    get "/education/metrics", EducationController, :metrics
-    get "/education/debug", EducationController, :debug
-    get "/education/test-slack", EducationController, :test_slack
-    
-    # Security Pattern API endpoints - RFC-008 Implementation
-    get "/patterns/public/:language", PatternController, :public
-    get "/patterns/protected/:language", PatternController, :protected
-    get "/patterns/ai/:language", PatternController, :ai
-    get "/patterns/enterprise/:language", PatternController, :enterprise
-    get "/patterns/:language", PatternController, :by_language
-  end
-
-  # Webhook endpoint for GitHub
+  # Webhook endpoints (separate from API versioning)
   scope "/webhook", RSOLVWeb do
     pipe_through :webhook
     
     post "/github", WebhookController, :github
   end
 
-  # Health check
-  scope "/", RSOLVWeb do
-    get "/health", HealthController, :check
+  # API v1
+  scope "/api/v1", RSOLVWeb, as: :api_v1 do
+    pipe_through :api
+
+    # Core business resources
+    resources "/fix-attempts", FixAttemptController, only: [:create]
+
+    # Credential management
+    scope "/credentials" do
+      post "/exchange", CredentialController, :exchange
+      post "/refresh", CredentialController, :refresh
+    end
+
+    # Usage tracking
+    post "/usage/report", CredentialController, :report_usage
+
+    # Security patterns - organized by access tier
+    scope "/patterns" do
+      # Public patterns (no authentication required)
+      get "/public", PatternController, :all_public
+      get "/public/:language", PatternController, :public
+      
+      # Protected patterns (require authentication in controller)
+      get "/protected", PatternController, :all_protected
+      get "/protected/:language", PatternController, :protected
+      
+      # AI patterns (require authentication + AI access in controller)
+      get "/ai", PatternController, :all_ai
+      get "/ai/:language", PatternController, :ai
+      
+      # Enterprise patterns (require authentication + enterprise access in controller)
+      get "/enterprise", PatternController, :all_enterprise
+      get "/enterprise/:language", PatternController, :enterprise
+      
+      # General patterns (access level determined by authentication in controller)
+      get "/", PatternController, :all
+      get "/:language", PatternController, :by_language
+    end
+
+    # Educational features
+    scope "/education" do
+      post "/fix-completed", EducationController, :fix_completed
+      get "/track-click/:alert_id", EducationController, :track_click
+      get "/metrics", EducationController, :metrics
+      get "/debug", EducationController, :debug
+      get "/test-slack", EducationController, :test_slack
+    end
+
+    # Admin features  
+    scope "/admin" do
+      resources "/feature-flags", FeatureFlagController, 
+        only: [:index, :show], 
+        param: "flag_name"
+    end
   end
 end
