@@ -2,14 +2,18 @@
 
 ## 📚 Documentation Structure
 
-### `/slack`
+### 🔒 Security Pattern API
+- **[API-PATTERNS.md](API-PATTERNS.md)** - Complete Pattern API documentation with examples
+- **[openapi-patterns.yaml](openapi-patterns.yaml)** - OpenAPI 3.0 specification for machine consumption
+
+### 📡 Integrations
 - **[SLACK_INTEGRATION_SETUP.md](slack/SLACK_INTEGRATION_SETUP.md)** - Comprehensive Slack integration guide
 - **[SLACK_WEBHOOK_SETUP_QUICK.md](slack/SLACK_WEBHOOK_SETUP_QUICK.md)** - Quick setup reference
 
-### Educational Framework
+### 📚 Educational Framework
 - **[EDUCATIONAL_FRAMEWORK_STATUS.md](../EDUCATIONAL_FRAMEWORK_STATUS.md)** - Implementation status and roadmap
 
-### Deployment
+### 🚀 Deployment
 - **[DEPLOYMENT.md](../DEPLOYMENT.md)** - Production deployment guide
 - **[QUICK-DEPLOY.md](../QUICK-DEPLOY.md)** - Quick deployment reference
 

@@ -1,0 +1,506 @@
+openapi: 3.0.3
+info:
+  title: RSOLV Pattern API
+  description: |
+    The RSOLV Pattern API provides access to a comprehensive library of security vulnerability detection patterns.
+    
+    Patterns are organized into tiers:
+    - **Public**: No authentication required (25-30 patterns)
+    - **Protected**: API key required (200+ patterns)  
+    - **AI**: API key + feature flag required (30+ patterns)
+    - **Enterprise**: Enterprise authentication (custom patterns)
+    
+    Supports 8+ programming languages with 448+ total patterns covering OWASP Top 10 and major CVEs.
+  version: '2.0'
+  contact:
+    name: RSOLV API Support
+    email: api-support@rsolv.dev
+    url: https://docs.rsolv.dev
+  license:
+    name: Proprietary
+    url: https://rsolv.dev/terms
+
+servers:
+  - url: https://api.rsolv.dev/api/v1
+    description: Production server
+  - url: https://api-staging.rsolv.dev/api/v1
+    description: Staging server
+
+security:
+  - ApiKeyAuth: []
+  - {}  # For public endpoints
+
+paths:
+  /patterns/public/{language}:
+    get:
+      summary: Get public security patterns
+      description: Retrieve public security patterns for a specific programming language. No authentication required.
+      tags:
+        - Public Patterns
+      security: []  # No authentication required
+      parameters:
+        - name: language
+          in: path
+          required: true
+          description: Programming language
+          schema:
+            type: string
+            enum: [javascript, typescript, python, ruby, java, php, elixir, django, rails]
+            example: javascript
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatternResponse'
+              example:
+                patterns:
+                  - id: js-basic-sql-injection
+                    name: Basic SQL Injection
+                    description: Detects string concatenation in SQL queries
+                    type: sql_injection
+                    severity: high
+                    languages: [javascript, typescript]
+                    regex: "[\\\\'\\\"\\`].*?(SELECT|INSERT|UPDATE|DELETE).*?[\\\\'\\\"\\`]\\\\s*\\\\+"
+                    cwe_id: CWE-89
+                    owasp_category: A03:2021
+                    recommendation: Use parameterized queries or prepared statements
+                total: 3
+                tier: public
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /patterns/protected/{language}:
+    get:
+      summary: Get protected security patterns
+      description: Retrieve protected security patterns for a specific programming language. API key required.
+      tags:
+        - Protected Patterns
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: language
+          in: path
+          required: true
+          description: Programming language
+          schema:
+            type: string
+            enum: [javascript, typescript, python, ruby, java, php, elixir, django, rails]
+            example: python
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatternResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /patterns/ai/{language}:
+    get:
+      summary: Get AI-enhanced security patterns
+      description: Retrieve AI-enhanced security patterns for advanced vulnerability detection. API key and AI feature flag required.
+      tags:
+        - AI Patterns
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: language
+          in: path
+          required: true
+          description: Programming language
+          schema:
+            type: string
+            enum: [javascript, typescript, python, ruby, java, php, elixir]
+            example: javascript
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatternResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /patterns/cve:
+    get:
+      summary: Get CVE-based patterns
+      description: Retrieve CVE-based security patterns that apply across multiple languages.
+      tags:
+        - CVE Patterns
+      security:
+        - ApiKeyAuth: []
+        - {}  # Some CVE patterns available publicly
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatternResponse'
+              example:
+                patterns:
+                  - id: log4shell-detection
+                    name: "Log4Shell Vulnerability (CVE-2021-44228)"
+                    description: Detects Log4j JNDI lookup injection
+                    type: remote_code_execution
+                    severity: critical
+                    languages: [java, kotlin, scala]
+                    regex: "\\\\$\\\\{jndi:(ldap|rmi|dns)://"
+                    cve_id: CVE-2021-44228
+                    cvss_score: 10.0
+                total: 42
+                tier: protected
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /patterns/type/{vulnerability_type}:
+    get:
+      summary: Get patterns by vulnerability type
+      description: Retrieve security patterns by vulnerability type across all languages.
+      tags:
+        - Pattern Types
+      security:
+        - ApiKeyAuth: []
+        - {}  # Some patterns available publicly
+      parameters:
+        - name: vulnerability_type
+          in: path
+          required: true
+          description: Type of security vulnerability
+          schema:
+            type: string
+            enum: 
+              - sql_injection
+              - xss
+              - command_injection
+              - path_traversal
+              - hardcoded_secret
+              - insecure_crypto
+              - csrf
+              - xxe
+              - ssrf
+              - deserialization
+            example: sql_injection
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatternResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /patterns/health:
+    get:
+      summary: API health check
+      description: Check API health and get pattern statistics.
+      tags:
+        - Health
+      security: []  # No authentication required
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                patterns:
+                  total: 448
+                  by_tier:
+                    public: 27
+                    protected: 389
+                    ai: 32
+                  by_language:
+                    javascript: 123
+                    python: 89
+                    ruby: 72
+                    java: 64
+                cache_status: warm
+                last_updated: "2025-06-10T22:30:00Z"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+      description: |
+        Use your RSOLV API key as a Bearer token:
+        `Authorization: Bearer sk-your-api-key`
+
+  schemas:
+    Pattern:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - type
+        - severity
+        - languages
+        - regex
+        - recommendation
+      properties:
+        id:
+          type: string
+          description: Unique pattern identifier
+          example: js-sql-injection-basic
+        name:
+          type: string
+          description: Human-readable pattern name
+          example: Basic SQL Injection
+        description:
+          type: string
+          description: Detailed description of the vulnerability
+          example: Detects string concatenation in SQL queries
+        type:
+          type: string
+          description: Type of vulnerability
+          enum:
+            - sql_injection
+            - xss
+            - command_injection
+            - path_traversal
+            - hardcoded_secret
+            - insecure_crypto
+            - csrf
+            - xxe
+            - ssrf
+            - deserialization
+            - logging
+            - remote_code_execution
+          example: sql_injection
+        severity:
+          type: string
+          description: Severity level
+          enum: [critical, high, medium, low]
+          example: high
+        languages:
+          type: array
+          items:
+            type: string
+          description: Applicable programming languages
+          example: [javascript, typescript]
+        frameworks:
+          type: array
+          items:
+            type: string
+          description: Specific frameworks (optional)
+          example: [express, react]
+        regex:
+          type: string
+          description: Regular expression for detection
+          example: "[\\\\'\\\"\\`].*?(SELECT|INSERT|UPDATE|DELETE).*?[\\\\'\\\"\\`]\\\\s*\\\\+"
+        default_tier:
+          type: string
+          description: Access tier for this pattern
+          enum: [public, protected, ai, enterprise]
+          example: protected
+        cwe_id:
+          type: string
+          description: CWE identifier
+          pattern: '^CWE-\d+$'
+          example: CWE-89
+        cve_id:
+          type: string
+          description: CVE identifier (if applicable)
+          pattern: '^CVE-\d{4}-\d{4,}$'
+          example: CVE-2021-44228
+        owasp_category:
+          type: string
+          description: OWASP Top 10 category
+          example: A03:2021
+        cvss_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 10.0
+          description: CVSS score (if applicable)
+          example: 8.5
+        recommendation:
+          type: string
+          description: Remediation recommendation
+          example: Use parameterized queries or prepared statements
+        test_cases:
+          type: object
+          properties:
+            vulnerable:
+              type: array
+              items:
+                type: string
+              description: Example vulnerable code snippets
+            safe:
+              type: array
+              items:
+                type: string
+              description: Example safe code snippets
+          example:
+            vulnerable:
+              - "const query = \"SELECT * FROM users WHERE id = \" + userId;"
+            safe:
+              - "const query = \"SELECT * FROM users WHERE id = ?\"; db.execute(query, [userId]);"
+
+    PatternResponse:
+      type: object
+      required:
+        - patterns
+        - total
+        - tier
+      properties:
+        patterns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pattern'
+          description: Array of security patterns
+        total:
+          type: integer
+          description: Total number of patterns returned
+          example: 89
+        tier:
+          type: string
+          description: Access tier for these patterns
+          enum: [public, protected, ai, enterprise]
+          example: protected
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - patterns
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: healthy
+        patterns:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 448
+            by_tier:
+              type: object
+              properties:
+                public:
+                  type: integer
+                  example: 27
+                protected:
+                  type: integer
+                  example: 389
+                ai:
+                  type: integer
+                  example: 32
+            by_language:
+              type: object
+              additionalProperties:
+                type: integer
+              example:
+                javascript: 123
+                python: 89
+                ruby: 72
+                java: 64
+        cache_status:
+          type: string
+          enum: [warm, cold, warming]
+          example: warm
+        last_updated:
+          type: string
+          format: date-time
+          description: Last time patterns were updated
+          example: "2025-06-10T22:30:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: unauthorized
+        message:
+          type: string
+          description: Human-readable error message
+          example: Valid API key required
+        retry_after:
+          type: integer
+          description: Seconds to wait before retrying (for rate limits)
+          example: 3600
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: unauthorized
+            message: Valid API key required
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: forbidden
+            message: Insufficient permissions for AI patterns
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: not_found
+            message: Language 'cobol' not supported
+
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: rate_limited
+            message: Rate limit exceeded
+            retry_after: 3600
+
+tags:
+  - name: Public Patterns
+    description: Publicly accessible security patterns (no authentication)
+  - name: Protected Patterns
+    description: Protected security patterns (API key required)
+  - name: AI Patterns
+    description: AI-enhanced patterns (API key + feature flag required)
+  - name: CVE Patterns
+    description: CVE-based vulnerability patterns
+  - name: Pattern Types
+    description: Patterns organized by vulnerability type
+  - name: Health
+    description: API health and statistics

@@ -6,10 +6,11 @@ Backend API service for the RSOLV automated issue fixing platform.
 
 This API service handles:
 
-- Authentication and authorization
-- Usage tracking and metrics
-- Expert review request management
-- Customer dashboard data
+- **Security Pattern Serving**: 448+ vulnerability detection patterns across 8 languages
+- **Authentication and authorization**: API key management and credential vending
+- **Usage tracking and metrics**: Billing and usage analytics
+- **Expert review request management**: Human-in-the-loop workflows
+- **Customer dashboard data**: Analytics and reporting
 
 ## Architecture
 
@@ -37,14 +38,38 @@ mix ecto.setup
 mix phx.server
 ```
 
+## API Documentation
+
+### 📋 Pattern API
+Comprehensive security pattern serving with tiered access:
+- **[Pattern API Documentation](docs/API-PATTERNS.md)** - Complete API reference
+- **[OpenAPI Specification](docs/openapi-patterns.yaml)** - Machine-readable API spec
+
+### 🔑 Quick Access
+```bash
+# Public patterns (no auth)
+curl https://api.rsolv.dev/api/v1/patterns/public/javascript
+
+# Protected patterns (API key required)
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  https://api.rsolv.dev/api/v1/patterns/protected/python
+```
+
 ## API Endpoints
 
-### Authentication
+### Security Patterns
+- `GET /api/v1/patterns/public/:language` - Public security patterns
+- `GET /api/v1/patterns/protected/:language` - Protected patterns (auth required)
+- `GET /api/v1/patterns/ai/:language` - AI-enhanced patterns (feature flag required)
+- `GET /api/v1/patterns/cve` - CVE-based patterns
+- `GET /api/v1/patterns/type/:vulnerability_type` - Patterns by vulnerability type
+- `GET /api/v1/patterns/health` - API health and statistics
 
-- `POST /api/auth` - Authenticate and retrieve a token
+### Authentication & Billing
+- `POST /api/v1/credentials/exchange` - Exchange API key for temporary credentials
+- `POST /api/v1/fix-attempts` - Record billable fix attempts
 
 ### Usage
-
 - `POST /api/usage` - Report usage metrics
 - `GET /api/usage/:customer_id` - Get usage statistics
 
