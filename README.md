@@ -20,9 +20,10 @@ RSOLV is a GitHub Action that helps software development teams address their mai
 
 RSOLV provides comprehensive security analysis and remediation:
 
-- **80+ Security Patterns**: Detects vulnerabilities across JavaScript/TypeScript, Python, Ruby, Java, and Bash
+- **448+ Security Patterns**: Enterprise-grade vulnerability detection across 8 languages
+- **Dynamic Pattern Updates**: Patterns served via API for real-time security updates
 - **OWASP Top 10 Coverage**: Complete coverage of the most critical web application security risks
-- **Framework-Specific Patterns**: Specialized detection for React, Node.js, Express, Next.js, Electron, and React Native
+- **Framework-Specific Patterns**: Specialized detection for Rails, Django, Phoenix, React, Express, and more
 - **Real-Time Detection**: Analyzes code changes for security vulnerabilities during issue processing
 - **Compliance Documentation**: Generates SOC2, PCI-DSS, ISO27001, GDPR, and HIPAA compliance evidence
 - **Educational Explanations**: Every fix includes tiered explanations to help teams learn and prevent future issues
@@ -57,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run RSOLV
-        uses: rsolv-dev/action@v1
+        uses: RSOLV-dev/rsolv-action@v2
         with:
           api_key: ${{ secrets.RSOLV_API_KEY }}
           issue_label: 'rsolv:automate'  # Optional: custom label
