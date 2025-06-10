@@ -60,6 +60,13 @@ export interface SecurityScanResult {
   };
 }
 
+export enum RiskLevel {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  CRITICAL = 'critical'
+}
+
 export interface SecurityPattern {
   id: string;
   type: VulnerabilityType;

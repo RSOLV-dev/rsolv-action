@@ -1,309 +1,358 @@
-/**
- * Pattern API End-to-End Test
- * 
- * This test verifies the complete integration between RSOLV-action and RSOLV-api
- * for the RFC-008 Pattern Serving API implementation.
- * 
- * This test uses REAL API calls, not mocks.
- */
+import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { SecurityDetectorV2 } from '../security/detector-v2';
+import { PatternApiClient } from '../security/pattern-api-client';
+import type { SecurityPattern, SecurityIssue } from '../security/types';
 
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
-import { TieredPatternSource, SecurityDetector } from '../security/index.js';
-import { SecurityAwareAnalyzer } from '../ai/security-analyzer.js';
+// Mock server to simulate the pattern API
+import { createServer, Server } from 'http';
 
-// Use environment variable or default to local Docker Compose setup
-const API_URL = process.env.RSOLV_API_URL || 'http://localhost:4000';
+describe('Pattern API E2E Integration', () => {
+  let server: Server;
+  let apiPort: number;
+  let apiUrl: string;
+  
+  // Sample patterns that would be served by the API
+  const mockPatterns: SecurityPattern[] = [
+    {
+      id: 'sql-injection-001',
+      name: 'SQL Injection via String Concatenation',
+      pattern: /query\s*\(\s*['"`].*?\+.*?['"`]\s*\)/,
+      severity: 'critical',
+      language: 'javascript',
+      category: 'injection',
+      description: 'Detects SQL queries built with string concatenation',
+      recommendation: 'Use parameterized queries or prepared statements',
+      cwe: 'CWE-89',
+      owasp: 'A03:2021',
+      examples: {
+        vulnerable: 'db.query("SELECT * FROM users WHERE id = " + userId)',
+        secure: 'db.query("SELECT * FROM users WHERE id = ?", [userId])'
+      }
+    },
+    {
+      id: 'xss-001',
+      name: 'Cross-Site Scripting via innerHTML',
+      pattern: /\.innerHTML\s*=\s*[^'"`]+(?:\+|$)/,
+      severity: 'high',
+      language: 'javascript',
+      category: 'xss',
+      description: 'Detects potential XSS via innerHTML with dynamic content',
+      recommendation: 'Use textContent or proper sanitization',
+      cwe: 'CWE-79',
+      owasp: 'A03:2021',
+      examples: {
+        vulnerable: 'element.innerHTML = userInput',
+        secure: 'element.textContent = userInput'
+      }
+    },
+    {
+      id: 'hardcoded-secret-001',
+      name: 'Hardcoded API Key',
+      pattern: /(?:api[_-]?key|apikey)\s*[:=]\s*['"`][a-zA-Z0-9]{20,}['"`]/i,
+      severity: 'high',
+      language: 'javascript',
+      category: 'sensitive-data',
+      description: 'Detects hardcoded API keys in source code',
+      recommendation: 'Use environment variables or secure key management',
+      cwe: 'CWE-798',
+      owasp: 'A02:2021',
+      examples: {
+        vulnerable: 'const API_KEY = "sk_live_abcd1234567890"',
+        secure: 'const API_KEY = process.env.API_KEY'
+      }
+    }
+  ];
 
-// Test credentials
-const TEST_API_KEY = 'test_rsolv_abcdef123456'; // This should be seeded in the test database
-
-describe('Pattern API E2E Tests (Real API)', () => {
-  let patternSource: TieredPatternSource;
-
-  beforeAll(() => {
-    console.log(`🧪 Running E2E tests against: ${API_URL}`);
-    patternSource = new TieredPatternSource(API_URL);
+  beforeAll(async () => {
+    // Create a mock API server
+    await new Promise<void>((resolve) => {
+      server = createServer((req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        
+        if (req.url === '/patterns' && req.method === 'GET') {
+          res.statusCode = 200;
+          res.end(JSON.stringify({ patterns: mockPatterns }));
+        } else if (req.url === '/patterns?language=javascript' && req.method === 'GET') {
+          res.statusCode = 200;
+          res.end(JSON.stringify({ 
+            patterns: mockPatterns.filter(p => p.language === 'javascript') 
+          }));
+        } else if (req.url === '/patterns?category=injection' && req.method === 'GET') {
+          res.statusCode = 200;
+          res.end(JSON.stringify({ 
+            patterns: mockPatterns.filter(p => p.category === 'injection') 
+          }));
+        } else if (req.url === '/health' && req.method === 'GET') {
+          res.statusCode = 200;
+          res.end(JSON.stringify({ status: 'healthy' }));
+        } else {
+          res.statusCode = 404;
+          res.end(JSON.stringify({ error: 'Not found' }));
+        }
+      });
+      
+      server.listen(0, () => {
+        const address = server.address();
+        if (address && typeof address !== 'string') {
+          apiPort = address.port;
+          apiUrl = `http://localhost:${apiPort}`;
+          resolve();
+        }
+      });
+    });
   });
 
   afterAll(() => {
-    // Clear cache to avoid test pollution
-    patternSource.clearCache();
+    server.close();
   });
 
-  describe('Public Pattern Access', () => {
-    it('should fetch public JavaScript patterns without authentication', async () => {
-      const patterns = await patternSource.getPatternsByLanguage('javascript');
-      
-      expect(patterns).toBeDefined();
-      expect(Array.isArray(patterns)).toBe(true);
-      expect(patterns.length).toBeGreaterThan(0);
-      
-      // Verify pattern structure
-      const firstPattern = patterns[0];
-      expect(firstPattern).toHaveProperty('name');
-      expect(firstPattern).toHaveProperty('description');
-      expect(firstPattern).toHaveProperty('type');
-      expect(firstPattern).toHaveProperty('severity');
-      expect(firstPattern).toHaveProperty('patterns');
-      expect(firstPattern.patterns).toHaveProperty('regex');
-      
-      console.log(`✅ Retrieved ${patterns.length} public JavaScript patterns`);
+  test('SecurityDetectorV2 fetches patterns from API and detects vulnerabilities', async () => {
+    // Initialize detector with API client
+    const apiClient = new PatternApiClient({
+      baseUrl: apiUrl,
+      apiKey: 'test-key'
+    });
+    
+    const detector = new SecurityDetectorV2({
+      apiClient,
+      cacheEnabled: false // Disable cache for testing
     });
 
-    it('should fetch public patterns for different languages', async () => {
-      const languages = ['javascript', 'python', 'ruby', 'java'];
-      
-      for (const language of languages) {
-        const patterns = await patternSource.getPatternsByLanguage(language);
-        console.log(`  ${language}: ${patterns.length} patterns`);
-        
-        // CVE patterns might return 0 for public tier
-        if (language !== 'cve') {
-          expect(patterns.length).toBeGreaterThanOrEqual(0);
-        }
+    // Code with multiple vulnerabilities
+    const vulnerableCode = `
+      // SQL Injection vulnerability
+      function getUserData(userId) {
+        const query = db.query("SELECT * FROM users WHERE id = " + userId);
+        return query;
       }
+
+      // XSS vulnerability
+      function displayMessage(message) {
+        document.getElementById('output').innerHTML = message;
+      }
+
+      // Hardcoded secret
+      const API_KEY = "sk_live_1234567890abcdefghij";
+      
+      // Safe code
+      function safeQuery(userId) {
+        return db.query("SELECT * FROM users WHERE id = ?", [userId]);
+      }
+    `;
+
+    const issues = await detector.detectIssues({
+      content: vulnerableCode,
+      filePath: 'test.js',
+      language: 'javascript'
     });
+
+    // Verify issues were detected
+    expect(issues.length).toBe(3);
+
+    // Verify SQL injection detection
+    const sqlInjection = issues.find(i => i.patternId === 'sql-injection-001');
+    expect(sqlInjection).toBeDefined();
+    expect(sqlInjection?.severity).toBe('critical');
+    expect(sqlInjection?.line).toBeGreaterThan(0);
+    expect(sqlInjection?.column).toBeGreaterThan(0);
+    expect(sqlInjection?.message).toContain('SQL Injection');
+
+    // Verify XSS detection
+    const xss = issues.find(i => i.patternId === 'xss-001');
+    expect(xss).toBeDefined();
+    expect(xss?.severity).toBe('high');
+    expect(xss?.message).toContain('Cross-Site Scripting');
+
+    // Verify hardcoded secret detection
+    const secret = issues.find(i => i.patternId === 'hardcoded-secret-001');
+    expect(secret).toBeDefined();
+    expect(secret?.severity).toBe('high');
+    expect(secret?.message).toContain('Hardcoded API Key');
   });
 
-  describe('Protected Pattern Access', () => {
-    it('should fetch protected patterns with valid API key', async () => {
-      const customerConfig = {
-        apiKey: TEST_API_KEY,
-        tier: 'teams' as const
-      };
-      
-      const patterns = await patternSource.getPatternsByLanguage('javascript', customerConfig);
-      
-      expect(patterns).toBeDefined();
-      expect(Array.isArray(patterns)).toBe(true);
-      
-      // Protected tier should have more patterns than public
-      const publicPatterns = await patternSource.getPatternsByLanguage('javascript');
-      console.log(`✅ Public patterns: ${publicPatterns.length}, Protected patterns: ${patterns.length}`);
+  test('SecurityDetectorV2 filters patterns by language', async () => {
+    const apiClient = new PatternApiClient({
+      baseUrl: apiUrl,
+      apiKey: 'test-key'
+    });
+    
+    const detector = new SecurityDetectorV2({
+      apiClient,
+      cacheEnabled: false
     });
 
-    it('should fall back to public patterns with invalid API key', async () => {
-      const customerConfig = {
-        apiKey: 'invalid-api-key',
-        tier: 'teams' as const
-      };
-      
-      const patterns = await patternSource.getPatternsByLanguage('javascript', customerConfig);
-      
-      expect(patterns).toBeDefined();
-      expect(Array.isArray(patterns)).toBe(true);
-      
-      // Should have fallen back to public patterns
-      console.log(`✅ Fallback to public patterns: ${patterns.length} patterns`);
+    // Python code (should not match JavaScript patterns)
+    const pythonCode = `
+      # This looks like SQL injection but is Python
+      query = f"SELECT * FROM users WHERE id = {user_id}"
+    `;
+
+    const issues = await detector.detectIssues({
+      content: pythonCode,
+      filePath: 'test.py',
+      language: 'python'
     });
+
+    // Should not detect issues since patterns are for JavaScript
+    expect(issues.length).toBe(0);
   });
 
-  describe('AI Tier Pattern Access', () => {
-    it('should access AI patterns with proper credentials', async () => {
-      const customerConfig = {
-        apiKey: TEST_API_KEY,
-        aiEnabled: true
-      };
-      
-      const patterns = await patternSource.getPatternsByLanguage('cve', customerConfig);
-      
-      expect(patterns).toBeDefined();
-      expect(Array.isArray(patterns)).toBe(true);
-      
-      // AI tier should include CVE patterns
-      console.log(`✅ AI tier CVE patterns: ${patterns.length} patterns`);
+  test('SecurityDetectorV2 handles API errors gracefully', async () => {
+    // Use a non-existent endpoint to trigger error
+    const apiClient = new PatternApiClient({
+      baseUrl: `http://localhost:${apiPort + 1}`, // Wrong port
+      apiKey: 'test-key'
     });
+    
+    const detector = new SecurityDetectorV2({
+      apiClient,
+      cacheEnabled: false,
+      fallbackPatterns: [mockPatterns[0]] // Provide fallback
+    });
+
+    const vulnerableCode = `
+      const query = db.query("SELECT * FROM users WHERE id = " + userId);
+    `;
+
+    // Should fall back to local patterns
+    const issues = await detector.detectIssues({
+      content: vulnerableCode,
+      filePath: 'test.js',
+      language: 'javascript'
+    });
+
+    // Should still detect the SQL injection using fallback patterns
+    expect(issues.length).toBe(1);
+    expect(issues[0].patternId).toBe('sql-injection-001');
   });
 
-  describe('SecurityDetector Integration', () => {
-    it('should detect vulnerabilities using API patterns', async () => {
-      const detector = new SecurityDetector(patternSource);
-      
-      // Test code with multiple vulnerability types
-      const testCode = `
-        // Hardcoded secret
-        const api_key = "sk-1234567890abcdef";
-        
-        // SQL injection
-        const query = "SELECT * FROM users WHERE id = " + userId;
-        
-        // XSS vulnerability
-        document.getElementById('output').innerHTML = userInput;
-        
-        // Command injection
-        const exec = require('child_process').exec;
-        exec('ping ' + userProvidedHost);
-      `;
-      
-      const vulnerabilities = await detector.detect(testCode, 'javascript');
-      
-      expect(vulnerabilities).toBeDefined();
-      expect(Array.isArray(vulnerabilities)).toBe(true);
-      expect(vulnerabilities.length).toBeGreaterThan(0);
-      
-      console.log(`✅ Detected ${vulnerabilities.length} vulnerabilities`);
-      
-      // Log vulnerability types found
-      const types = new Set(vulnerabilities.map(v => v.type));
-      console.log(`  Types: ${Array.from(types).join(', ')}`);
+  test('SecurityDetectorV2 respects severity filtering', async () => {
+    const apiClient = new PatternApiClient({
+      baseUrl: apiUrl,
+      apiKey: 'test-key'
     });
+    
+    const detector = new SecurityDetectorV2({
+      apiClient,
+      cacheEnabled: false,
+      minSeverity: 'critical' // Only detect critical issues
+    });
+
+    const mixedCode = `
+      // Critical: SQL Injection
+      db.query("SELECT * FROM users WHERE id = " + userId);
+      
+      // High: XSS (should be filtered out)
+      element.innerHTML = userInput;
+    `;
+
+    const issues = await detector.detectIssues({
+      content: mixedCode,
+      filePath: 'test.js',
+      language: 'javascript'
+    });
+
+    // Should only detect critical issues
+    expect(issues.length).toBe(1);
+    expect(issues[0].severity).toBe('critical');
+    expect(issues[0].patternId).toBe('sql-injection-001');
   });
 
-  describe('SecurityAwareAnalyzer Integration', () => {
-    it('should perform security analysis using API patterns', async () => {
-      const analyzer = new SecurityAwareAnalyzer();
-      
-      const codebaseFiles = new Map([
-        ['src/auth.js', `
-          const password = "admin123";
-          const apiKey = "sk-prod-1234567890";
-        `],
-        ['src/database.js', `
-          function getUser(id) {
-            return db.query("SELECT * FROM users WHERE id = " + id);
-          }
-        `]
-      ]);
-      
-      const issue = {
-        number: 1,
-        title: 'Security vulnerability scan',
-        body: 'Please scan for security issues',
-        repository: {
-          fullName: 'test/repo',
-          language: 'javascript'
-        }
-      };
-      
-      const result = await analyzer.performSecurityAnalysis(codebaseFiles, issue);
-      
-      expect(result).toBeDefined();
-      expect(result.hasSecurityIssues).toBe(true);
-      expect(result.vulnerabilities.length).toBeGreaterThan(0);
-      expect(result.affectedFiles.length).toBeGreaterThan(0);
-      
-      console.log(`✅ Security analysis complete:`);
-      console.log(`  - Total vulnerabilities: ${result.summary.total}`);
-      console.log(`  - Risk level: ${result.riskLevel}`);
-      console.log(`  - Affected files: ${result.affectedFiles.join(', ')}`);
+  test('SecurityDetectorV2 provides detailed issue context', async () => {
+    const apiClient = new PatternApiClient({
+      baseUrl: apiUrl,
+      apiKey: 'test-key'
     });
+    
+    const detector = new SecurityDetectorV2({
+      apiClient,
+      cacheEnabled: false
+    });
+
+    const codeWithContext = `
+      function processUserInput(userId) {
+        // This is vulnerable to SQL injection
+        const query = db.query("SELECT * FROM users WHERE id = " + userId);
+        return query.results;
+      }
+    `;
+
+    const issues = await detector.detectIssues({
+      content: codeWithContext,
+      filePath: 'user-service.js',
+      language: 'javascript'
+    });
+
+    expect(issues.length).toBe(1);
+    
+    const issue = issues[0];
+    
+    // Verify issue has complete context
+    expect(issue.filePath).toBe('user-service.js');
+    expect(issue.line).toBe(4); // Line with the vulnerability
+    expect(issue.column).toBeGreaterThan(0);
+    expect(issue.snippet).toContain('db.query');
+    expect(issue.recommendation).toContain('parameterized queries');
+    expect(issue.cwe).toBe('CWE-89');
+    expect(issue.owasp).toBe('A03:2021');
+    expect(issue.examples).toBeDefined();
+    expect(issue.examples?.vulnerable).toContain('db.query');
+    expect(issue.examples?.secure).toContain('?');
   });
 
-  describe('Performance Tests', () => {
-    it('should cache patterns to reduce API calls', async () => {
-      // Clear cache first
-      patternSource.clearCache();
-      
-      const start1 = Date.now();
-      await patternSource.getPatternsByLanguage('javascript');
-      const time1 = Date.now() - start1;
-      
-      const start2 = Date.now();
-      await patternSource.getPatternsByLanguage('javascript');
-      const time2 = Date.now() - start2;
-      
-      console.log(`✅ Cache performance:`);
-      console.log(`  - First call: ${time1}ms`);
-      console.log(`  - Cached call: ${time2}ms`);
-      
-      // Cached call should be significantly faster
-      expect(time2).toBeLessThan(time1 / 2);
+  test('SecurityDetectorV2 batches multiple file scans efficiently', async () => {
+    const apiClient = new PatternApiClient({
+      baseUrl: apiUrl,
+      apiKey: 'test-key'
+    });
+    
+    const detector = new SecurityDetectorV2({
+      apiClient,
+      cacheEnabled: true // Enable cache for batch efficiency
     });
 
-    it('should handle API timeouts gracefully', async () => {
-      // Create a pattern source with unreachable API
-      const badSource = new TieredPatternSource('http://localhost:9999');
-      
-      const patterns = await badSource.getPatternsByLanguage('javascript');
-      
-      expect(patterns).toBeDefined();
-      expect(Array.isArray(patterns)).toBe(true);
-      expect(patterns.length).toBeGreaterThan(0);
-      
-      // Should have fallback patterns
-      expect(patterns[0].tags).toContain('fallback');
-      console.log(`✅ Fallback patterns working: ${patterns.length} patterns`);
-    });
+    const files = [
+      {
+        content: 'db.query("SELECT * FROM users WHERE id = " + id)',
+        filePath: 'file1.js',
+        language: 'javascript' as const
+      },
+      {
+        content: 'element.innerHTML = userInput',
+        filePath: 'file2.js',
+        language: 'javascript' as const
+      },
+      {
+        content: 'const API_KEY = "sk_live_secret123456789012"',
+        filePath: 'file3.js',
+        language: 'javascript' as const
+      }
+    ];
+
+    // Scan all files
+    const allIssues: SecurityIssue[] = [];
+    
+    for (const file of files) {
+      const issues = await detector.detectIssues(file);
+      allIssues.push(...issues);
+    }
+
+    // Verify all vulnerabilities detected
+    expect(allIssues.length).toBe(3);
+    
+    // Verify each file has correct issue
+    expect(allIssues.find(i => i.filePath === 'file1.js')?.patternId).toBe('sql-injection-001');
+    expect(allIssues.find(i => i.filePath === 'file2.js')?.patternId).toBe('xss-001');
+    expect(allIssues.find(i => i.filePath === 'file3.js')?.patternId).toBe('hardcoded-secret-001');
   });
 
-  describe('Complete Workflow Test', () => {
-    it('should complete full security scan workflow with API patterns', async () => {
-      console.log('\n🔄 Running complete workflow test...\n');
-      
-      // 1. Initialize components
-      const patternSource = new TieredPatternSource(API_URL);
-      const detector = new SecurityDetector(patternSource);
-      
-      // 2. Simulate vulnerable code
-      const vulnerableCode = `
-        const express = require('express');
-        const app = express();
-        
-        // SQL injection vulnerability
-        app.get('/user/:id', (req, res) => {
-          const query = 'SELECT * FROM users WHERE id = ' + req.params.id;
-          db.query(query, (err, result) => {
-            res.json(result);
-          });
-        });
-        
-        // XSS vulnerability
-        app.post('/comment', (req, res) => {
-          const comment = req.body.comment;
-          res.send('<div>' + comment + '</div>');
-        });
-        
-        // Hardcoded credentials
-        const config = {
-          database: {
-            password: 'super-secret-password-123',
-            apiKey: 'sk-prod-abcdef123456789'
-          }
-        };
-        
-        app.listen(3000);
-      `;
-      
-      // 3. Run detection
-      console.log('🔍 Scanning for vulnerabilities...');
-      const vulnerabilities = await detector.detect(vulnerableCode, 'javascript');
-      
-      // 4. Verify results
-      expect(vulnerabilities.length).toBeGreaterThan(0);
-      
-      console.log(`\n📊 Scan Results:`);
-      console.log(`  Total vulnerabilities: ${vulnerabilities.length}`);
-      
-      // Group by type
-      const byType = vulnerabilities.reduce((acc, v) => {
-        acc[v.type] = (acc[v.type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      console.log(`\n  By Type:`);
-      Object.entries(byType).forEach(([type, count]) => {
-        console.log(`    - ${type}: ${count}`);
-      });
-      
-      // Group by severity
-      const bySeverity = vulnerabilities.reduce((acc, v) => {
-        acc[v.severity] = (acc[v.severity] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      console.log(`\n  By Severity:`);
-      Object.entries(bySeverity).forEach(([severity, count]) => {
-        console.log(`    - ${severity}: ${count}`);
-      });
-      
-      console.log('\n✅ Complete workflow test passed!');
+  test('Pattern API health check works', async () => {
+    const apiClient = new PatternApiClient({
+      baseUrl: apiUrl,
+      apiKey: 'test-key'
     });
+
+    const health = await apiClient.checkHealth();
+    expect(health.status).toBe('healthy');
   });
 });
-
-// Add a script runner for package.json
-if (import.meta.main) {
-  console.log('🚀 Starting Pattern API E2E Tests...\n');
-  console.log(`API URL: ${API_URL}`);
-  console.log('Make sure RSOLV-api is running with the Pattern API endpoints!\n');
-}

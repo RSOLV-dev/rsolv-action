@@ -1,6 +1,8 @@
 import { IssueContext, ActionConfig, AnalysisData, IssueType } from '../types/index.js';
 import { logger } from '../utils/logger.js';
-import { SecurityDetector, Vulnerability, VulnerabilityType } from '../security/index.js';
+import { Vulnerability, VulnerabilityType } from '../security/index.js';
+import { SecurityDetectorV2 } from '../security/detector-v2.js';
+import { createPatternSource } from '../security/pattern-source.js';
 
 export interface SecurityAnalysisResult {
   hasSecurityIssues: boolean;
@@ -17,12 +19,15 @@ export interface SecurityAnalysisResult {
 
 /**
  * Enhanced analyzer that combines AI analysis with security vulnerability detection
+ * Now uses dynamic pattern loading via RFC-008 architecture
  */
 export class SecurityAwareAnalyzer {
-  private securityDetector: SecurityDetector;
+  private securityDetector: SecurityDetectorV2;
 
   constructor() {
-    this.securityDetector = new SecurityDetector();
+    // Create detector with pattern source based on environment
+    const patternSource = createPatternSource();
+    this.securityDetector = new SecurityDetectorV2(patternSource);
   }
 
   /**
@@ -76,7 +81,7 @@ export class SecurityAwareAnalyzer {
       const language = this.getLanguageFromPath(filePath);
       if (!language) continue;
 
-      const vulnerabilities = this.securityDetector.detect(content, language);
+      const vulnerabilities = await this.securityDetector.detect(content, language);
       
       if (vulnerabilities.length > 0) {
         // Add file path to each vulnerability
