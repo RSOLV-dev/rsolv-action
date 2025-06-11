@@ -40,6 +40,7 @@ defmodule RsolvApi.Security.ASTPattern do
   defp enhance_by_type(%{type: :sql_injection} = pattern) do
     pattern
     |> Map.put(:ast_rules, %{
+      node_type: "CallExpression",
       # Must be inside a database call
       parent_node: %{
         type: "CallExpression",
@@ -394,6 +395,279 @@ defmodule RsolvApi.Security.ASTPattern do
         "no_validation" => 0.3,
         "old_php_patterns" => 0.3,
         "modern_php_version" => -0.8  # Almost certainly FP on modern PHP
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+  # JavaScript Command Injection (exec/execSync)
+  defp enhance_by_type(%{id: "js-command-injection-exec"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "CallExpression",
+      callee_names: ["exec", "execSync"],
+      # Must have string concatenation or template literals with variables
+      argument_analysis: %{
+        has_string_concatenation: true,
+        has_template_literal_with_variables: true,
+        not_using_array_arguments: true
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/node_modules/, ~r/scripts/],
+      exclude_if_static_command: true,  # Skip if no dynamic content
+      require_user_input_source: true   # Must trace back to user input
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.4,
+      adjustments: %{
+        "has_user_input" => 0.3,
+        "uses_string_concatenation" => 0.2,
+        "no_input_validation" => 0.2,
+        "is_static_command" => -0.9,
+        "uses_array_args" => -0.7  # Safe pattern
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+  # JavaScript Command Injection (spawn with shell)
+  defp enhance_by_type(%{id: "js-command-injection-spawn"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "CallExpression",
+      callee_names: ["spawn", "spawnSync"],
+      # Must have shell:true option AND user input in command
+      option_analysis: %{
+        has_shell_true: true,
+        command_has_user_input: true
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/node_modules/, ~r/scripts/],
+      safe_if_no_shell: true,           # spawn without shell is safer
+      safe_if_array_command: true       # spawn(['cmd', 'arg1', 'arg2']) is safer
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.3,
+      adjustments: %{
+        "has_shell_true" => 0.4,
+        "command_has_user_input" => 0.3,
+        "no_shell_option" => -0.8,
+        "uses_array_command" => -0.5
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+  # Python Command Injection (os.system)
+  defp enhance_by_type(%{id: "python-command-injection-os-system"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "CallExpression",
+      module_function: "os.system",
+      # Must have string concatenation or f-strings with variables
+      argument_analysis: %{
+        has_string_concatenation: true,
+        has_fstring_with_variables: true,
+        not_using_shlex_quote: true
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/tests/, ~r/__pycache__/, ~r/venv/, ~r/\.env/],
+      safe_if_uses_shlex: true,         # shlex.quote() makes it safer
+      require_user_input_trace: true
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.5,
+      adjustments: %{
+        "has_user_input" => 0.3,
+        "uses_string_concat" => 0.2,
+        "uses_fstring" => 0.2,
+        "uses_shlex_quote" => -0.8,
+        "is_static_command" => -0.9
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+  # Python Command Injection (subprocess with shell=True)
+  defp enhance_by_type(%{id: "python-command-injection-subprocess-shell"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "CallExpression",
+      module_function: ["subprocess.run", "subprocess.call", "subprocess.check_call", "subprocess.Popen"],
+      # Must have shell=True AND string command (not array)
+      keyword_analysis: %{
+        has_shell_true: true,
+        command_is_string: true,
+        command_has_user_input: true
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/tests/, ~r/__pycache__/, ~r/venv/],
+      safe_if_array_command: true,      # subprocess.run(['cmd', 'arg']) is safe
+      safe_if_no_shell: true            # shell=False is safer
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.4,
+      adjustments: %{
+        "has_shell_true" => 0.3,
+        "command_is_string" => 0.2,
+        "has_user_input" => 0.3,
+        "uses_array_command" => -0.8,
+        "shell_false" => -0.7
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+  # Java Command Injection (Runtime.exec)
+  defp enhance_by_type(%{id: "java-command-injection-runtime-exec"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "MethodCallExpression",
+      method_chain: ["Runtime", "getRuntime", "exec"],
+      # Must have string concatenation in argument
+      argument_analysis: %{
+        has_string_concatenation: true,
+        not_using_array_overload: true,
+        contains_user_input: true
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/src\/test/, ~r/target/],
+      safe_if_array_args: true,         # exec(String[]) is safer than exec(String)
+      require_user_input_source: true
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.5,
+      adjustments: %{
+        "uses_string_concat" => 0.3,
+        "has_user_input" => 0.3,
+        "uses_array_overload" => -0.8,
+        "is_static_command" => -0.9
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+  # Java Command Injection (ProcessBuilder)
+  defp enhance_by_type(%{id: "java-command-injection-processbuilder"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "MethodCallExpression",
+      class_name: "ProcessBuilder",
+      method_name: "command",
+      # Check for string concatenation in command setup
+      argument_analysis: %{
+        has_string_concatenation: true,
+        not_using_string_array: true
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/src\/test/, ~r/target/],
+      safe_if_string_array: true,       # command(String...) is safer
+      exclude_if_static_only: true
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.4,
+      adjustments: %{
+        "uses_string_concat" => 0.3,
+        "has_user_input" => 0.3,
+        "uses_string_array" => -0.7,
+        "is_static_command" => -0.8
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+  # Ruby Command Injection (system/backticks)
+  defp enhance_by_type(%{id: "ruby-command-injection"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "CallExpression",
+      method_names: ["system", "`"],
+      # Must have string interpolation with variables
+      argument_analysis: %{
+        has_string_interpolation: true,
+        interpolates_user_input: true,
+        not_using_array_form: true
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/spec/, ~r/vendor/],
+      safe_if_array_args: true,         # system('cmd', 'arg1', 'arg2') is safer
+      require_user_input_trace: true
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.5,
+      adjustments: %{
+        "has_string_interpolation" => 0.3,
+        "interpolates_user_input" => 0.3,
+        "uses_array_form" => -0.8,
+        "is_static_command" => -0.9
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+  # PHP Command Injection (system/exec/shell_exec/passthru)
+  defp enhance_by_type(%{id: "php-command-injection"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "FunctionCall",
+      function_names: ["system", "exec", "shell_exec", "passthru"],
+      # Must have superglobal variables or user input
+      argument_analysis: %{
+        contains_superglobals: ["$_GET", "$_POST", "$_REQUEST", "$_COOKIE"],
+        has_string_concatenation: true,
+        not_using_escapeshellarg: true
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/vendor/, ~r/wp-admin/],
+      safe_if_uses_escapeshellarg: true,
+      safe_if_uses_escapeshellcmd: true,
+      require_superglobal_usage: true
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.6,  # Higher base since PHP superglobals are clearly user input
+      adjustments: %{
+        "uses_superglobals" => 0.3,
+        "has_string_concat" => 0.2,
+        "uses_escapeshellarg" => -0.8,
+        "uses_escapeshellcmd" => -0.6
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+  # Elixir Command Injection (System.shell/:os.cmd)
+  defp enhance_by_type(%{id: "elixir-command-injection-system"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "FunctionCall",
+      module_functions: ["System.shell", ":os.cmd"],
+      # Must have string interpolation with variables
+      argument_analysis: %{
+        has_string_interpolation: true,
+        interpolation_contains_variables: true,
+        not_using_safe_shell_split: true
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/mix\/tasks/, ~r/priv\/scripts/],
+      safe_if_uses_shell_split: true,   # Using proper argument parsing
+      exclude_if_static_only: true
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.4,
+      adjustments: %{
+        "has_string_interpolation" => 0.3,
+        "interpolates_user_input" => 0.3,
+        "uses_shell_split" => -0.7,
+        "is_static_command" => -0.9
       }
     })
     |> Map.put(:min_confidence, 0.8)

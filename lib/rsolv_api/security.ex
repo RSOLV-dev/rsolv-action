@@ -2,9 +2,11 @@ defmodule RsolvApi.Security do
   @moduledoc """
   The Security context for managing security patterns and tiers.
   Now uses compile-time pattern modules instead of database queries.
+  Supports both standard and enhanced patterns for AST-based scanning.
   """
 
   alias RsolvApi.Security.Pattern
+  alias RsolvApi.Security.EnhancedPattern
   alias RsolvApi.FeatureFlags
   
   # Pattern modules
@@ -15,6 +17,11 @@ defmodule RsolvApi.Security do
     "elixir" => RsolvApi.Security.Patterns.Elixir,
     "php" => RsolvApi.Security.Patterns.Php,
     "ruby" => RsolvApi.Security.Patterns.Ruby
+  }
+  
+  # Enhanced pattern modules (with AST support)
+  @enhanced_pattern_modules %{
+    "javascript" => RsolvApi.Security.Patterns.JavascriptEnhanced
   }
   
   # Framework-specific modules
@@ -200,6 +207,46 @@ defmodule RsolvApi.Security do
     end)
   end
   
+  @doc """
+  Convert patterns to enhanced API response format with AST rules.
+  Supports both standard Pattern and EnhancedPattern structs.
+  """
+  def format_patterns_for_enhanced_api(patterns, include_enhanced \\ true) do
+    Enum.map(patterns, fn pattern ->
+      case pattern do
+        %EnhancedPattern{} when include_enhanced ->
+          EnhancedPattern.to_enhanced_api_format(pattern)
+          
+        %EnhancedPattern{} ->
+          # Convert to standard format if enhanced not requested
+          pattern |> EnhancedPattern.to_pattern() |> format_single_pattern()
+          
+        %Pattern{} ->
+          format_single_pattern(pattern)
+      end
+    end)
+  end
+  
+  defp format_single_pattern(pattern) do
+    %{
+      id: pattern.id,
+      name: pattern.name,
+      description: pattern.description,
+      type: pattern.type,
+      severity: pattern.severity,
+      cweId: pattern.cwe_id,
+      owaspCategory: pattern.owasp_category,
+      recommendation: pattern.recommendation,
+      frameworks: pattern.frameworks || [],
+      languages: pattern.languages,
+      patterns: %{
+        regex: format_regex(pattern.regex)
+      },
+      testCases: pattern.test_cases,
+      supports_ast: false
+    }
+  end
+  
   # Helper functions for compile-time patterns
   
   defp get_patterns_for_language(language) do
@@ -209,6 +256,25 @@ defmodule RsolvApi.Security do
     language_patterns = case Map.get(@pattern_modules, language_lower) do
       nil -> []
       module -> apply(module, :all, [])
+    end
+    
+    # Get enhanced patterns if enabled
+    enhanced_patterns = if FeatureFlags.enabled?("patterns.use_enhanced_patterns") do
+      case Map.get(@enhanced_pattern_modules, language_lower) do
+        nil -> []
+        module -> 
+          # Enhanced modules can return EnhancedPattern structs
+          enhanced = apply(module, :all, [])
+          # Convert to Pattern structs for backward compatibility
+          Enum.map(enhanced, fn pattern ->
+            case pattern do
+              %EnhancedPattern{} -> EnhancedPattern.to_pattern(pattern)
+              %Pattern{} -> pattern
+            end
+          end)
+      end
+    else
+      []
     end
     
     # Get framework-specific patterns if enabled
@@ -228,26 +294,70 @@ defmodule RsolvApi.Security do
       []
     end
     
-    language_patterns ++ framework_patterns ++ cve_patterns
+    # Combine all patterns, with enhanced patterns taking precedence
+    all_patterns = enhanced_patterns ++ language_patterns ++ framework_patterns ++ cve_patterns
+    
+    # Remove duplicates by ID (enhanced patterns override standard ones)
+    all_patterns
+    |> Enum.uniq_by(& &1.id)
   end
   
-  defp get_pattern_tier(%Pattern{} = pattern) do
+  @doc """
+  Get enhanced patterns for a language including AST rules.
+  Returns both EnhancedPattern and Pattern structs.
+  """
+  def get_enhanced_patterns_for_language(language) do
+    language_lower = String.downcase(language)
+    
+    # Get enhanced patterns
+    enhanced_patterns = case Map.get(@enhanced_pattern_modules, language_lower) do
+      nil -> []
+      module -> apply(module, :all, [])
+    end
+    
+    # Get standard patterns
+    standard_patterns = case Map.get(@pattern_modules, language_lower) do
+      nil -> []
+      module -> apply(module, :all, [])
+    end
+    
+    # Combine, with enhanced taking precedence
+    enhanced_ids = enhanced_patterns |> Enum.map(& &1.id) |> MapSet.new()
+    
+    filtered_standard = standard_patterns
+    |> Enum.reject(fn pattern -> MapSet.member?(enhanced_ids, pattern.id) end)
+    
+    enhanced_patterns ++ filtered_standard
+  end
+  
+  defp get_pattern_tier(pattern) do
+    # Handle both Pattern and EnhancedPattern structs
+    tier = case pattern do
+      %EnhancedPattern{} -> pattern.default_tier
+      %Pattern{} -> pattern.default_tier
+      _ -> nil
+    end
+    
     # Use the default_tier or determine based on pattern characteristics
-    tier = pattern.default_tier || determine_tier_from_pattern(pattern)
+    tier = tier || determine_tier_from_pattern(pattern)
     # Convert atom to string for API compatibility
     to_string(tier)
   end
   
-  defp determine_tier_from_pattern(%Pattern{} = pattern) do
+  defp determine_tier_from_pattern(pattern) do
+    # Works with both Pattern and EnhancedPattern
+    severity = pattern.severity
+    name = pattern.name
+    
     cond do
       # Critical/high severity patterns are protected
-      pattern.severity in [:critical, :high] -> :protected
+      severity in [:critical, :high] -> :protected
       
       # AI/ML related patterns
-      String.contains?(pattern.name, ["AI", "ML", "LLM"]) -> :ai
+      String.contains?(name, ["AI", "ML", "LLM"]) -> :ai
       
       # Basic patterns can be public
-      pattern.severity == :low -> :public
+      severity == :low -> :public
       
       # Default to protected
       true -> :protected

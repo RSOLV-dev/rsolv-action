@@ -187,7 +187,7 @@ ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;max
       type: :xpath_injection,
       severity: :high,
       languages: ["java"],
-      regex: ~r/xpath\.evaluate\s*\(\s*["'][^"']*["']\s*\+/i,
+      regex: ~r/xpath\.evaluate\s*\([^)]*["'][^"']*["']\s*\+[^)]*\)/im,
       default_tier: :protected,
       cwe_id: "CWE-643",
       owasp_category: "A03:2021",

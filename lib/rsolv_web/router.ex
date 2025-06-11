@@ -60,9 +60,16 @@ defmodule RSOLVWeb.Router do
       get "/enterprise", PatternController, :all_enterprise
       get "/enterprise/:language", PatternController, :enterprise
       
+      # Enhanced patterns with AST rules (requires authentication)
+      get "/enhanced", PatternController, :all_enhanced
+      get "/enhanced/:language", PatternController, :enhanced
+      
       # General patterns (access level determined by authentication in controller)
-      get "/", PatternController, :all
+      get "/", PatternController, :index
       get "/:language", PatternController, :by_language
+      
+      # Pattern metadata endpoint
+      get "/:id/metadata", PatternController, :metadata
     end
 
     # Educational features

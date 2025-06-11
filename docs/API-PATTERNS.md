@@ -12,22 +12,24 @@ The RSOLV Pattern API provides access to a comprehensive library of security vul
 
 | Tier | Access Level | Pattern Count | Use Case |
 |------|-------------|---------------|----------|
-| **Public** | No authentication | 25-30 | Basic patterns, demos, open source |
-| **Protected** | API key required | 200+ | Production security scanning |
-| **AI** | API key + feature flag | 30+ | AI-powered vulnerability detection |
-| **Enterprise** | Enterprise auth | Custom | Customer-specific patterns |
+| **Public** | No authentication | ~25 | Basic patterns, demos, open source |
+| **Protected** | API key required | ~120 | Production security scanning |
+| **AI** | API key + feature flag | ~20 | AI-powered vulnerability detection |
+| **Enterprise** | Enterprise auth | ~5 | Customer-specific patterns |
 
 ## Supported Languages
 
-- **JavaScript/TypeScript** (123 patterns)
-- **Python** (89 patterns)
-- **Ruby** (72 patterns)
-- **Java** (64 patterns)
-- **CVE Patterns** (42 patterns)
-- **Elixir/Phoenix** (22 patterns)
+- **Elixir/Phoenix** (28 patterns)
+- **JavaScript/TypeScript** (27 patterns)
+- **PHP** (25 patterns)
+- **Ruby** (20 patterns)
+- **Django/Python** (19 patterns)
 - **Rails** (18 patterns)
-- **Django** (18 patterns)
-- **PHP** (451 patterns)
+- **Java** (17 patterns)
+- **Python** (12 patterns)
+- **CVE Patterns** (4 patterns)
+
+**Total**: 170 patterns across 9 categories
 
 ## Authentication
 

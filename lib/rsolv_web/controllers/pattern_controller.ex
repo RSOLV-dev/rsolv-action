@@ -5,6 +5,9 @@ defmodule RSOLVWeb.PatternController do
   alias RsolvApi.Security.{ASTPattern, Pattern}
   alias RSOLV.Accounts
   alias RsolvApi.FeatureFlags
+  
+  # Require refactored pattern modules so they're available at runtime
+  require RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat
 
   action_fallback RSOLVWeb.FallbackController
   
@@ -219,6 +222,9 @@ defmodule RSOLVWeb.PatternController do
       ArgumentError -> :standard
     end
     
+    # Check if metadata should be included
+    include_metadata = params["include_metadata"] == "true"
+    
     # Determine accessible tiers based on authentication
     {api_key, customer, ai_enabled} = get_auth_context(conn)
     accessible_tiers = Security.get_accessible_tiers(api_key, customer, ai_enabled)
@@ -230,7 +236,9 @@ defmodule RSOLVWeb.PatternController do
     patterns = ASTPattern.get_patterns(language, tier, format)
     
     # Format each pattern based on the requested format
-    formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
+    formatted_patterns = patterns
+    |> Enum.map(&format_pattern(&1, format))
+    |> maybe_add_metadata(include_metadata)
     
     json(conn, %{
       patterns: formatted_patterns,
@@ -392,7 +400,93 @@ defmodule RSOLVWeb.PatternController do
     end
   end
 
+  @doc """
+  Get detailed vulnerability metadata for a specific pattern.
+  """
+  def metadata(conn, %{"id" => pattern_id}) do
+    # Try to find the pattern by ID across all pattern modules
+    result = with {:ok, pattern_module} <- find_pattern_module(pattern_id),
+                  true <- function_exported?(pattern_module, :vulnerability_metadata, 0) do
+      metadata = pattern_module.vulnerability_metadata()
+      
+      # Convert atom keys to strings for JSON serialization
+      formatted_metadata = format_metadata_for_api(metadata, pattern_id)
+      
+      json(conn, formatted_metadata)
+    else
+      {:error, :not_found} ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Pattern not found"})
+        
+      false ->
+        # Pattern exists but doesn't have metadata yet
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Metadata not available for this pattern"})
+    end
+  end
+
   # Private functions
+  
+  defp find_pattern_module(pattern_id) do
+    # For now, we only have one refactored pattern: js-sql-injection-concat
+    # Once all patterns are migrated, we can improve this function
+    
+    case pattern_id do
+      "js-sql-injection-concat" ->
+        # Try to load our refactored pattern module
+        module = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat
+        if function_exported?(module, :pattern, 0) && function_exported?(module, :vulnerability_metadata, 0) do
+          {:ok, module}
+        else
+          {:error, :not_found}
+        end
+        
+      _ ->
+        # For all other patterns, they haven't been migrated yet
+        {:error, :not_found}
+    end
+  end
+  
+  defp format_metadata_for_api(metadata, pattern_id) do
+    %{
+      pattern_id: pattern_id,
+      description: metadata.description,
+      references: Enum.map(metadata.references, &stringify_keys/1),
+      attack_vectors: metadata.attack_vectors,
+      real_world_impact: Map.get(metadata, :real_world_impact, []),
+      cve_examples: metadata |> Map.get(:cve_examples, []) |> Enum.map(&stringify_keys/1),
+      known_exploits: Map.get(metadata, :known_exploits, []),
+      detection_notes: Map.get(metadata, :detection_notes, "")
+    }
+  end
+  
+  defp stringify_keys(map) when is_map(map) do
+    Map.new(map, fn {k, v} -> {to_string(k), v} end)
+  end
+  
+  defp maybe_add_metadata(patterns, false), do: patterns
+  defp maybe_add_metadata(patterns, true) do
+    Enum.map(patterns, fn pattern ->
+      # Try to find the pattern module and add metadata if available
+      # Handle both atom and string keys for pattern ID
+      pattern_id = pattern[:id] || pattern["id"]
+      
+      case find_pattern_module(pattern_id) do
+        {:ok, module} ->
+          if function_exported?(module, :vulnerability_metadata, 0) do
+            metadata = module.vulnerability_metadata()
+            Map.put(pattern, :vulnerability_metadata, format_metadata_for_api(metadata, pattern_id))
+          else
+            pattern
+          end
+          
+        {:error, :not_found} ->
+          pattern
+      end
+    end)
+  end
 
   defp authenticate_request(conn) do
     case get_req_header(conn, "authorization") do
