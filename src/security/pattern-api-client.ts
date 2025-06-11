@@ -15,18 +15,32 @@ export interface PatternData {
   type: string;
   description: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  patterns: {
-    regex: string[];
-  };
+  patterns: string[];  // Array of regex patterns
   languages: string[];
   frameworks?: string[];
   recommendation: string;
-  cweId: string;
-  owaspCategory: string;
-  testCases: {
+  cwe_id: string;      // API returns snake_case
+  owasp_category: string;  // API returns snake_case
+  test_cases: {        // API returns snake_case
     vulnerable: string[];
     safe: string[];
   };
+  // AST Enhancement fields
+  ast_rules?: {
+    node_type?: string;
+    [key: string]: any;
+  };
+  context_rules?: {
+    exclude_paths?: string[];
+    safe_if_wrapped?: string[];
+    [key: string]: any;
+  };
+  confidence_rules?: {
+    base?: number;
+    adjustments?: Record<string, number>;
+    [key: string]: any;
+  };
+  min_confidence?: number;
 }
 
 export interface PatternAPIConfig {
@@ -87,7 +101,8 @@ export class PatternAPIClient {
         headers['Authorization'] = `Bearer ${this.apiKey}`;
       }
 
-      const response = await fetch(`${this.apiUrl}/${language}`, { headers });
+      // Request enhanced patterns with AST rules
+      const response = await fetch(`${this.apiUrl}/${language}?format=enhanced`, { headers });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch patterns: ${response.status} ${response.statusText}`);
@@ -182,7 +197,7 @@ export class PatternAPIClient {
    */
   private convertToSecurityPattern(apiPattern: PatternData): SecurityPattern {
     // Compile regex patterns from strings
-    const regexPatterns = apiPattern.patterns.regex.map(r => {
+    const regexPatterns = apiPattern.patterns.map(r => {
       try {
         // Handle both simple patterns and patterns with flags
         const match = r.match(/^\/(.*)\/([gimsuvy]*)$/);
@@ -196,6 +211,14 @@ export class PatternAPIClient {
       }
     }).filter(Boolean) as RegExp[];
 
+    // Convert context rules exclude_paths to RegExp objects
+    const contextRules = apiPattern.context_rules ? {
+      ...apiPattern.context_rules,
+      excludePaths: apiPattern.context_rules.exclude_paths?.map(path => 
+        typeof path === 'string' ? new RegExp(path) : path
+      ) || []
+    } : undefined;
+
     return {
       id: apiPattern.id,
       name: apiPattern.name,
@@ -207,10 +230,15 @@ export class PatternAPIClient {
       },
       languages: apiPattern.languages,
       frameworks: apiPattern.frameworks || [],
-      cweId: apiPattern.cweId,
-      owaspCategory: apiPattern.owaspCategory,
+      cweId: apiPattern.cwe_id,
+      owaspCategory: apiPattern.owasp_category,
       remediation: apiPattern.recommendation,
-      testCases: apiPattern.testCases
+      testCases: apiPattern.test_cases,
+      // AST Enhancement fields
+      astRules: apiPattern.ast_rules,
+      contextRules,
+      confidenceRules: apiPattern.confidence_rules,
+      minConfidence: apiPattern.min_confidence
     };
   }
 
