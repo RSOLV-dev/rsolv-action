@@ -8,6 +8,7 @@ defmodule RSOLVWeb.PatternController do
   
   # Require refactored pattern modules so they're available at runtime
   require RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat
+  require RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation
 
   action_fallback RSOLVWeb.FallbackController
   
@@ -430,27 +431,29 @@ defmodule RSOLVWeb.PatternController do
   # Private functions
   
   defp find_pattern_module(pattern_id) do
-    # For now, we only have one refactored pattern: js-sql-injection-concat
+    # Map of migrated patterns to their modules
     # Once all patterns are migrated, we can improve this function
     
-    case pattern_id do
-      "js-sql-injection-concat" ->
-        # Try to load our refactored pattern module
-        module = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat
+    pattern_modules = %{
+      "js-sql-injection-concat" => RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat,
+      "js-sql-injection-interpolation" => RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation
+    }
+    
+    case Map.get(pattern_modules, pattern_id) do
+      nil ->
+        {:error, :not_found}
+        
+      module ->
         if function_exported?(module, :pattern, 0) && function_exported?(module, :vulnerability_metadata, 0) do
           {:ok, module}
         else
           {:error, :not_found}
         end
-        
-      _ ->
-        # For all other patterns, they haven't been migrated yet
-        {:error, :not_found}
     end
   end
   
   defp format_metadata_for_api(metadata, pattern_id) do
-    %{
+    base_metadata = %{
       pattern_id: pattern_id,
       description: metadata.description,
       references: Enum.map(metadata.references, &stringify_keys/1),
@@ -460,10 +463,20 @@ defmodule RSOLVWeb.PatternController do
       known_exploits: Map.get(metadata, :known_exploits, []),
       detection_notes: Map.get(metadata, :detection_notes, "")
     }
+    
+    # Add additional_context if present
+    case Map.get(metadata, :additional_context) do
+      nil -> base_metadata
+      context -> Map.put(base_metadata, :additional_context, stringify_keys(context))
+    end
   end
   
   defp stringify_keys(map) when is_map(map) do
-    Map.new(map, fn {k, v} -> {to_string(k), v} end)
+    Map.new(map, fn 
+      {k, v} when is_list(v) -> {to_string(k), v}
+      {k, v} when is_map(v) -> {to_string(k), stringify_keys(v)}
+      {k, v} -> {to_string(k), v}
+    end)
   end
   
   defp maybe_add_metadata(patterns, false), do: patterns
