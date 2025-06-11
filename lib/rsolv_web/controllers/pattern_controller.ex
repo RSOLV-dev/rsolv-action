@@ -54,7 +54,7 @@ defmodule RSOLVWeb.PatternController do
       severity: to_string(pattern.severity),
       languages: pattern.languages,
       frameworks: pattern.frameworks || [],
-      regex: regex_to_string(pattern.regex),
+      patterns: ensure_list(regex_to_string(pattern.regex)),
       cwe_id: pattern.cwe_id,
       owasp_category: pattern.owasp_category,
       recommendation: pattern.recommendation,
@@ -441,4 +441,7 @@ defmodule RSOLVWeb.PatternController do
       true -> :public
     end
   end
+  
+  defp ensure_list(value) when is_list(value), do: value
+  defp ensure_list(value), do: [value]
 end
