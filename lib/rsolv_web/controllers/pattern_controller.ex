@@ -9,6 +9,7 @@ defmodule RSOLVWeb.PatternController do
   # Require refactored pattern modules so they're available at runtime
   require RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat
   require RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation
+  require RsolvApi.Security.Patterns.Javascript.XssInnerhtml
 
   action_fallback RSOLVWeb.FallbackController
   
@@ -436,7 +437,8 @@ defmodule RSOLVWeb.PatternController do
     
     pattern_modules = %{
       "js-sql-injection-concat" => RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat,
-      "js-sql-injection-interpolation" => RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation
+      "js-sql-injection-interpolation" => RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation,
+      "js-xss-innerhtml" => RsolvApi.Security.Patterns.Javascript.XssInnerhtml
     }
     
     case Map.get(pattern_modules, pattern_id) do
