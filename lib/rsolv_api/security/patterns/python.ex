@@ -15,7 +15,8 @@ defmodule RsolvApi.Security.Patterns.Python do
     UnsafeEval,
     SqlInjectionFormat,
     SqlInjectionFstring,
-    SqlInjectionConcat
+    SqlInjectionConcat,
+    CommandInjectionOsSystem
   }
   
   @doc """
@@ -129,31 +130,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def command_injection_os_system do
-    %Pattern{
-      id: "python-command-injection-os-system",
-      name: "Command Injection via os.system",
-      description: "Unsanitized input in os.system() can lead to command injection",
-      type: :command_injection,
-      severity: :critical,
-      languages: ["python"],
-      regex: ~r/os\.system\s*\(\s*.*\+|os\.system\s*\(\s*f["'`].*\{/,
-      default_tier: :protected,
-      cwe_id: "CWE-78",
-      owasp_category: "A03:2021",
-      recommendation: "Use subprocess.run() with shell=False and validate inputs",
-      test_cases: %{
-        vulnerable: [
-          ~S|os.system("ls " + user_input)|,
-          ~S|os.system(f"ping {host}")|,
-          ~S|os.system("cat /tmp/" + filename)|
-        ],
-        safe: [
-          ~S|subprocess.run(["ls", user_input], shell=False)|,
-          ~S|subprocess.run(["ping", host], shell=False)|,
-          ~S|with open(os.path.join("/tmp", filename), 'r') as f: content = f.read()|
-        ]
-      }
-    }
+    CommandInjectionOsSystem.pattern()
   end
   
   @doc """

@@ -13,6 +13,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Python.SqlInjectionFormat
   doctest RsolvApi.Security.Patterns.Python.SqlInjectionFstring
   doctest RsolvApi.Security.Patterns.Python.SqlInjectionConcat
+  doctest RsolvApi.Security.Patterns.Python.CommandInjectionOsSystem
   
   # Test Java patterns
   doctest RsolvApi.Security.Patterns.Java
