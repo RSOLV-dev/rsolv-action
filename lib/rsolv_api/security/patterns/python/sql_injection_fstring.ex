@@ -69,11 +69,14 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFstring do
       type: :sql_injection,
       severity: :high,
       languages: ["python"],
-      regex: ~r/f["'`].*\{[^}]+\}.*["'`].*execute|execute.*f["'`].*\{[^}]+\}.*["'`]/,
+      regex: ~r/
+        f["'`].*\{[^}]+\}.*["'`].*execute|  # f-string before execute
+        execute.*f["'`].*\{[^}]+\}.*["'`]    # execute before f-string
+      /x,
       default_tier: :protected,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries instead of f-strings: cursor.execute(query, params)",
+      recommendation: "Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",
       test_cases: %{
         vulnerable: [
           ~S|cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")|,

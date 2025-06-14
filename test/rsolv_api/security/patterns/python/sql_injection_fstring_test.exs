@@ -20,9 +20,11 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFstringTest do
   end
 
   describe "vulnerability detection" do
-    test "detects f-string formatting in execute calls" do
-      pattern = SqlInjectionFstring.pattern()
-      
+    setup do
+      {:ok, pattern: SqlInjectionFstring.pattern()}
+    end
+
+    test "detects f-string formatting in execute calls", %{pattern: pattern} do
       vulnerable_code = [
         ~S|cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")|,
         ~S|db.execute(f"DELETE FROM posts WHERE id = {post_id}")|,
@@ -36,9 +38,7 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFstringTest do
       end
     end
 
-    test "detects f-string formatting with format string variables" do
-      pattern = SqlInjectionFstring.pattern()
-      
+    test "detects f-string formatting with format string variables", %{pattern: pattern} do
       vulnerable_code = [
         ~S|query = f"SELECT * FROM users WHERE id = {user_id}"; cursor.execute(query)|,
         ~S|sql = f"DELETE FROM posts WHERE author = '{author}'"; db.execute(sql)|,
@@ -50,9 +50,7 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFstringTest do
       end
     end
 
-    test "ignores safe parameterized queries" do
-      pattern = SqlInjectionFstring.pattern()
-      
+    test "ignores safe parameterized queries", %{pattern: pattern} do
       safe_code = [
         ~S|cursor.execute("SELECT * FROM users WHERE name = %s", (name,))|,
         ~S|db.execute("DELETE FROM posts WHERE id = ?", [post_id])|,
@@ -66,9 +64,7 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFstringTest do
       end
     end
 
-    test "ignores non-SQL f-string usage" do
-      pattern = SqlInjectionFstring.pattern()
-      
+    test "ignores non-SQL f-string usage", %{pattern: pattern} do
       safe_code = [
         ~S|print(f"User {username} logged in")|,
         ~S|logger.info(f"Processing {count} items")|,
