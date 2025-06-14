@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 34 out of 157 patterns migrated (21.7%)
+**Current Progress**: 35 out of 157 patterns migrated (22.3%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -42,21 +42,22 @@ JavaScript Patterns (30):
 - `js-xss-react-dangerously` ✓✓ (XSS via React dangerouslySetInnerHTML) - AST included in pattern file
 - `js-xss-dom-manipulation` ✓✓ (XSS via DOM Manipulation Methods) - AST included in pattern file
 
-Python Patterns (4):
+Python Patterns (5):
 - `python-unsafe-pickle` ✓✓ (Insecure Deserialization via pickle) - AST included in pattern file
 - `python-unsafe-eval` ✓✓ (Code Injection via eval()) - AST included in pattern file
 - `python-sql-injection-format` ✓✓ (SQL Injection via % Formatting) - AST included in pattern file
 - `python-sql-injection-fstring` ✓✓ (SQL Injection via F-String Formatting) - AST included in pattern file
+- `python-sql-injection-concat` ✓✓ (SQL Injection via String Concatenation) - AST included in pattern file
 
 **AST Enhancement Status**: 
-- 34/34 patterns have AST rules (100%)
-- 34/34 AST enhancements included in pattern files (100%)
+- 35/35 patterns have AST rules (100%)
+- 35/35 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
 **Current Task**: Continue with remaining Python patterns
-**Next Up**: Migrate the next Python pattern (10 remaining out of 12 total)
+**Next Up**: Migrate the next Python pattern (7 remaining out of 12 total)
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:
 
@@ -520,9 +521,9 @@ When pattern migration is complete:
 
 ---
 
-**Last Updated**: June 14, 2025 - 34 patterns migrated (21.7%), 34 patterns AST-enhanced (100%), 34 AST enhancements included in pattern files
-**Next Action**: Continue pattern migration with remaining Python patterns (sql_injection_concat next)
-**Achievement**: ✅ Successfully migrated 4 Python patterns (unsafe_pickle, unsafe_eval, sql_injection_format, sql_injection_fstring) with full TDD methodology
+**Last Updated**: June 14, 2025 - 35 patterns migrated (22.3%), 35 patterns AST-enhanced (100%), 35 AST enhancements included in pattern files
+**Next Action**: Continue pattern migration with remaining Python patterns (command_injection_os_system next)
+**Achievement**: ✅ Successfully migrated 5 Python patterns (unsafe_pickle, unsafe_eval, sql_injection_format, sql_injection_fstring, sql_injection_concat) with full TDD methodology
 
 ## Session Handoff Summary (January 14, 2025)
 
@@ -541,10 +542,10 @@ When pattern migration is complete:
 3. **TDD Methodology**: Followed red-green-refactor with 23 passing tests for Python patterns
 
 ### Current State
-- **34 patterns migrated** (21.7% of 157 total)
+- **35 patterns migrated** (22.3% of 157 total)
   - JavaScript: 30 patterns (COMPLETE)
-  - Python: 4 patterns (8 remaining) - added sql_injection_fstring
-- **34 patterns have AST enhancements** (all included in pattern files)
+  - Python: 5 patterns (7 remaining) - added sql_injection_concat
+- **35 patterns have AST enhancements** (all included in pattern files)
 - **0 patterns need AST enhancements**: All migrated patterns now have AST rules!
 - **Pattern files location**: `/Users/dylan/dev/rsolv/RSOLV-api/lib/rsolv_api/security/patterns/`
 - **Test files location**: `/Users/dylan/dev/rsolv/RSOLV-api/test/rsolv_api/security/patterns/`
@@ -562,15 +563,14 @@ When pattern migration is complete:
 4. Migrate remaining Python patterns (8 total) - id: 117
 
 ### Next Patterns to Migrate (Python)
-The remaining 8 Python patterns to migrate are:
-1. `python-sql-injection-concat` - SQL injection via string concatenation
-2. `python-command-injection-os-system` - Command injection via os.system()
-3. `python-command-injection-subprocess-shell` - Command injection via subprocess with shell=True
-4. `python-path-traversal-open` - Path traversal via open()
-5. `python-weak-hash-md5` - Weak cryptography using MD5
-6. `python-weak-hash-sha1` - Weak cryptography using SHA1
-7. `python-debug-true` - Debug mode enabled (Django)
-8. `python-unsafe-yaml-load` - Insecure deserialization via yaml.load()
+The remaining 7 Python patterns to migrate are:
+1. `python-command-injection-os-system` - Command injection via os.system()
+2. `python-command-injection-subprocess-shell` - Command injection via subprocess with shell=True
+3. `python-path-traversal-open` - Path traversal via open()
+4. `python-weak-hash-md5` - Weak cryptography using MD5
+5. `python-weak-hash-sha1` - Weak cryptography using SHA1
+6. `python-debug-true` - Debug mode enabled (Django)
+7. `python-unsafe-yaml-load` - Insecure deserialization via yaml.load()
 
 ### Git Status
 - Working tree is clean

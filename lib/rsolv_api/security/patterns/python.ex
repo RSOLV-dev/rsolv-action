@@ -14,7 +14,8 @@ defmodule RsolvApi.Security.Patterns.Python do
     UnsafePickle,
     UnsafeEval,
     SqlInjectionFormat,
-    SqlInjectionFstring
+    SqlInjectionFstring,
+    SqlInjectionConcat
   }
   
   @doc """
@@ -112,31 +113,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def sql_injection_concat do
-    %Pattern{
-      id: "python-sql-injection-concat",
-      name: "SQL Injection via String Concatenation",
-      description: "String concatenation in SQL queries can lead to SQL injection",
-      type: :sql_injection,
-      severity: :high,
-      languages: ["python"],
-      regex: ~r/(?:execute\s*\(\s*["'`].*["'`]\s*\+|["'`].*(?:SELECT|DELETE|UPDATE|INSERT).*["'`]\s*\+.*execute)/i,
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries with execute() method parameters",
-      test_cases: %{
-        vulnerable: [
-          ~S|cursor.execute("SELECT * FROM users WHERE id = " + user_id)|,
-          ~S|db.execute("DELETE FROM posts WHERE author = '" + username + "'")|,
-          ~S|query = "SELECT * FROM accounts WHERE id = " + str(account_id); cursor.execute(query)|
-        ],
-        safe: [
-          ~S|cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))|,
-          ~S|db.execute("DELETE FROM posts WHERE author = %s", [username])|,
-          ~S|cursor.execute("SELECT * FROM accounts WHERE id = %s", (account_id,))|
-        ]
-      }
-    }
+    SqlInjectionConcat.pattern()
   end
   
   @doc """
