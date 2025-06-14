@@ -13,6 +13,7 @@ defmodule RsolvApi.Security.Patterns.Php do
   alias RsolvApi.Security.Patterns.Php.SqlInjectionConcat
   alias RsolvApi.Security.Patterns.Php.SqlInjectionInterpolation
   alias RsolvApi.Security.Patterns.Php.CommandInjection
+  alias RsolvApi.Security.Patterns.Php.XssEcho
   
   @doc """
   Returns all PHP security patterns.
@@ -107,35 +108,12 @@ defmodule RsolvApi.Security.Patterns.Php do
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Php.xss_echo()
-      iex> vulnerable = ~S|echo $_GET['name'];|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
+      iex> pattern.id
+      "php-xss-echo"
+      iex> pattern.severity
+      :high
   """
-  def xss_echo do
-    %Pattern{
-      id: "php-xss-echo",
-      name: "XSS via echo",
-      description: "Direct output of user input without escaping",
-      type: :xss,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/echo\s+(?!htmlspecialchars).*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :public,
-      cwe_id: "CWE-79",
-      owasp_category: "A03:2021",
-      recommendation: "Use htmlspecialchars() with ENT_QUOTES flag",
-      test_cases: %{
-        vulnerable: [
-          ~S|echo $_GET['name'];|,
-          ~S|echo "Welcome " . $_POST['username'];|
-        ],
-        safe: [
-          ~S|echo htmlspecialchars($_GET['name'], ENT_QUOTES, 'UTF-8');|,
-          ~S|echo "Welcome " . htmlspecialchars($_POST['username'], ENT_QUOTES);|
-        ]
-      }
-    }
-  end
+  defdelegate xss_echo(), to: XssEcho, as: :pattern
   
   @doc """
   XSS via print pattern.

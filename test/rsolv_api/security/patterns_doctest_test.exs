@@ -32,6 +32,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Php.SqlInjectionConcat
   doctest RsolvApi.Security.Patterns.Php.SqlInjectionInterpolation
   doctest RsolvApi.Security.Patterns.Php.CommandInjection
+  doctest RsolvApi.Security.Patterns.Php.XssEcho
   
   # Test CVE patterns
   doctest RsolvApi.Security.Patterns.Cve
