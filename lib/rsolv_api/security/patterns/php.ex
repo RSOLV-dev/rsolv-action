@@ -9,6 +9,9 @@ defmodule RsolvApi.Security.Patterns.Php do
   
   alias RsolvApi.Security.Pattern
   
+  # Import individual pattern modules
+  alias RsolvApi.Security.Patterns.Php.SqlInjectionConcat
+  
   @doc """
   Returns all PHP security patterns.
   
@@ -63,33 +66,7 @@ defmodule RsolvApi.Security.Patterns.Php do
       iex> pattern.severity
       :critical
   """
-  def sql_injection_concat do
-    %Pattern{
-      id: "php-sql-injection-concat",
-      name: "SQL Injection via String Concatenation",
-      description: "Direct concatenation of user input in SQL queries",
-      type: :sql_injection,
-      severity: :critical,
-      languages: ["php"],
-      regex: ~r/["'](?:SELECT|DELETE|UPDATE|INSERT).*["']\s*\.\s*\$_(GET|POST|REQUEST|COOKIE)/i,
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use prepared statements with parameterized queries",
-      test_cases: %{
-        vulnerable: [
-          ~S|$query = "SELECT * FROM users WHERE id = " . $_GET['id'];|,
-          ~S|$sql = 'DELETE FROM posts WHERE author = ' . $_POST['author'];|
-        ],
-        safe: [
-          ~S|$stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-$stmt->execute([$_GET['id']]);|,
-          ~S|$stmt = $mysqli->prepare("DELETE FROM posts WHERE author = ?");
-$stmt->bind_param("s", $_POST['author']);|
-        ]
-      }
-    }
-  end
+  defdelegate sql_injection_concat(), to: SqlInjectionConcat, as: :pattern
   
   @doc """
   SQL Injection via Variable Interpolation pattern.

@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 37 out of 157 patterns migrated (23.6%)
+**Current Progress**: 43 out of 157 patterns migrated (27.4%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -42,7 +42,7 @@ JavaScript Patterns (30):
 - `js-xss-react-dangerously` ✓✓ (XSS via React dangerouslySetInnerHTML) - AST included in pattern file
 - `js-xss-dom-manipulation` ✓✓ (XSS via DOM Manipulation Methods) - AST included in pattern file
 
-Python Patterns (7):
+Python Patterns (12):
 - `python-unsafe-pickle` ✓✓ (Insecure Deserialization via pickle) - AST included in pattern file
 - `python-unsafe-eval` ✓✓ (Code Injection via eval()) - AST included in pattern file
 - `python-sql-injection-format` ✓✓ (SQL Injection via % Formatting) - AST included in pattern file
@@ -50,16 +50,24 @@ Python Patterns (7):
 - `python-sql-injection-concat` ✓✓ (SQL Injection via String Concatenation) - AST included in pattern file
 - `python-command-injection-os-system` ✓✓ (Command Injection via os.system) - AST included in pattern file
 - `python-command-injection-subprocess-shell` ✓✓ (Command Injection via subprocess with shell=True) - AST included in pattern file
+- `python-path-traversal-open` ✓✓ (Path Traversal via open()) - AST included in pattern file
+- `python-weak-hash-md5` ✓✓ (Weak Cryptographic Hash - MD5) - AST included in pattern file
+- `python-weak-hash-sha1` ✓✓ (Weak Cryptographic Hash - SHA1) - AST included in pattern file
+- `python-debug-true` ✓✓ (Debug Mode Enabled) - AST included in pattern file
+- `python-unsafe-yaml-load` ✓✓ (Unsafe YAML Deserialization) - AST included in pattern file
+
+PHP Patterns (1):
+- `php-sql-injection-concat` ✓✓ (SQL Injection via String Concatenation) - AST included in pattern file
 
 **AST Enhancement Status**: 
-- 37/37 patterns have AST rules (100%)
-- 37/37 AST enhancements included in pattern files (100%)
+- 43/43 patterns have AST rules (100%)
+- 43/43 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-**Current Task**: Continue with remaining Python patterns
-**Next Up**: Migrate the next Python pattern (5 remaining out of 12 total)
+**Current Task**: Continue with PHP patterns
+**Next Up**: Migrate the next PHP pattern (24 remaining out of 25 total)
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:
 
@@ -523,9 +531,10 @@ When pattern migration is complete:
 
 ---
 
-**Last Updated**: June 14, 2025 - 42 patterns migrated (26.8%), 42 patterns AST-enhanced (100%), 42 AST enhancements included in pattern files
-**Next Action**: Begin PHP pattern migration
+**Last Updated**: June 14, 2025 - 43 patterns migrated (27.4%), 43 patterns AST-enhanced (100%), 43 AST enhancements included in pattern files
+**Next Action**: Continue PHP pattern migration (1/25 completed)
 **Achievement**: ✅ Successfully migrated ALL 12 Python patterns with full TDD methodology
+**Current Work**: 🚀 PHP pattern migration in progress
 
 ## Session Handoff Summary (January 14, 2025)
 
