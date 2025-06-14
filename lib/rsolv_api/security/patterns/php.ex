@@ -12,6 +12,7 @@ defmodule RsolvApi.Security.Patterns.Php do
   # Import individual pattern modules
   alias RsolvApi.Security.Patterns.Php.SqlInjectionConcat
   alias RsolvApi.Security.Patterns.Php.SqlInjectionInterpolation
+  alias RsolvApi.Security.Patterns.Php.CommandInjection
   
   @doc """
   Returns all PHP security patterns.
@@ -86,43 +87,17 @@ defmodule RsolvApi.Security.Patterns.Php do
   @doc """
   Command Injection pattern.
   
-  Detects user input passed to system commands.
+  Detects user input passed to system commands allowing remote code execution.
   
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Php.command_injection()
-      iex> vulnerable = ~S|system("ping " . $_GET['host']);|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
+      iex> pattern.id
+      "php-command-injection"
+      iex> pattern.severity
+      :critical
   """
-  def command_injection do
-    %Pattern{
-      id: "php-command-injection",
-      name: "Command Injection",
-      description: "User input passed to system commands",
-      type: :command_injection,
-      severity: :critical,
-      languages: ["php"],
-      regex: ~r/(?:system|exec|shell_exec|passthru)\s*\(\s*.*\$_(GET|POST|REQUEST|COOKIE)|`[^`]*\$_(GET|POST|REQUEST|COOKIE)[^`]*`/,
-      default_tier: :protected,
-      cwe_id: "CWE-78",
-      owasp_category: "A03:2021",
-      recommendation: "Use escapeshellarg() or avoid system commands with user input",
-      test_cases: %{
-        vulnerable: [
-          ~S|system("ping " . $_GET['host']);|,
-          ~S|exec("convert " . $_POST['file'] . " output.pdf");|,
-          ~S|$output = `ls $_GET[dir]`;|
-        ],
-        safe: [
-          ~S|$host = escapeshellarg($_GET['host']);
-system("ping " . $host);|,
-          ~S|// Better: avoid system commands entirely
-$files = scandir($directory);|
-        ]
-      }
-    }
-  end
+  defdelegate command_injection(), to: CommandInjection, as: :pattern
   
   @doc """
   XSS via echo pattern.
