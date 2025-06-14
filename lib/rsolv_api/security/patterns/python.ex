@@ -13,7 +13,8 @@ defmodule RsolvApi.Security.Patterns.Python do
   alias RsolvApi.Security.Patterns.Python.{
     UnsafePickle,
     UnsafeEval,
-    SqlInjectionFormat
+    SqlInjectionFormat,
+    SqlInjectionFstring
   }
   
   @doc """
@@ -79,36 +80,23 @@ defmodule RsolvApi.Security.Patterns.Python do
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Python.sql_injection_fstring()
+      iex> pattern.id
+      "python-sql-injection-fstring"
+      iex> pattern.severity
+      :high
+      
+  ## Detection Examples
+  
+      iex> pattern = RsolvApi.Security.Patterns.Python.sql_injection_fstring()
       iex> vulnerable = ~S|cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
+      iex> safe = ~S|cursor.execute("SELECT * FROM users WHERE name = %s", (name,))|
+      iex> Regex.match?(pattern.regex, safe)
+      false
   """
   def sql_injection_fstring do
-    %Pattern{
-      id: "python-sql-injection-fstring",
-      name: "SQL Injection via F-String Formatting",
-      description: "Using f-strings in SQL queries can lead to SQL injection",
-      type: :sql_injection,
-      severity: :high,
-      languages: ["python"],
-      regex: ~r/execute\s*\(\s*f["'`].*\{.*\}.*["'`]/,
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries instead of f-string formatting",
-      test_cases: %{
-        vulnerable: [
-          ~S|cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")|,
-          ~S|db.execute(f"DELETE FROM posts WHERE id = {post_id}")|,
-          ~S|conn.execute(f"UPDATE users SET email = '{email}' WHERE id = {user_id}")|
-        ],
-        safe: [
-          ~S|cursor.execute("SELECT * FROM users WHERE name = %s", (name,))|,
-          ~S|db.execute("DELETE FROM posts WHERE id = ?", [post_id])|,
-          ~S|conn.execute("UPDATE users SET email = ? WHERE id = ?", (email, user_id))|
-        ]
-      }
-    }
+    SqlInjectionFstring.pattern()
   end
   
   @doc """

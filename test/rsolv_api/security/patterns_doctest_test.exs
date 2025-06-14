@@ -11,6 +11,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Python.UnsafePickle
   doctest RsolvApi.Security.Patterns.Python.UnsafeEval
   doctest RsolvApi.Security.Patterns.Python.SqlInjectionFormat
+  doctest RsolvApi.Security.Patterns.Python.SqlInjectionFstring
   
   # Test Java patterns
   doctest RsolvApi.Security.Patterns.Java

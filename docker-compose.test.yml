@@ -37,7 +37,7 @@ services:
         mix deps.get &&
         mix ecto.create &&
         mix ecto.migrate &&
-        mix test test/rsolv_api/security/patterns/python/sql_injection_format_test.exs
+        mix test test/rsolv_api/security/patterns/python_test.exs
       "
 
 volumes:
