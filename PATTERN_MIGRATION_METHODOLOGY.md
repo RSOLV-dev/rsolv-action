@@ -103,15 +103,28 @@ We follow strict TDD for every pattern migration:
    - Research and document comprehensive metadata
    - **Implement `ast_enhancement/0` function with doctests**
 
-3. **Refactor Phase**: Improve and integrate
-   - Refactor tests for better readability and maintainability
-   - Improve regex patterns to reduce false positives while maintaining coverage
-   - **Refine AST rules in ast_enhancement/0 based on test results**
+3. **Refactor Phase**: Improve implementation and tests
+   
+   **Implementation Refactoring**:
+   - Refine the implementation for better readability and clarity
+   - Optimize regex patterns if there are performance concerns (rare)
+   - Improve code structure and organization
+   - Ensure doctests are illustrative and comprehensive
+   - Review vulnerability metadata for completeness and accuracy
+   - Refine AST enhancement rules based on test results
+   
+   **Test Refactoring**:
+   - Improve test structure and remove redundancies
+   - Ensure test names clearly describe what they're testing
+   - Group related tests logically
+   - Add edge cases discovered during implementation
+   - Make tests more maintainable and readable
+   
+   **Integration**:
    - Update parent language module to delegate to new pattern
-   - Add pattern to metadata lookup in pattern controller
-   - Run integration tests
-   - Verify API endpoints work correctly
-   - **Test enhanced_pattern() reduces false positives using ast_enhancement()**
+   - Add pattern to doctests test file
+   - Run all tests to ensure nothing broke
+   - Verify pattern appears correctly in API responses
 
 ### 2. Vulnerability Research Requirements
 
