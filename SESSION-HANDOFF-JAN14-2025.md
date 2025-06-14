@@ -78,3 +78,42 @@ Please continue with the next Python pattern migration following the TDD red-gre
 - Learned to use word boundaries (\b) for better pattern matching
 - Comments with vulnerable patterns should match regex but be filtered by AST
 - Python module now delegates to individual pattern modules for migrated patterns
+
+## Complete Todo List Export
+
+**Note**: The TodoRead/TodoWrite tools are session-specific. In a new session, you'll need to recreate this list if you want to use those tools.
+
+### Completed (7 items)
+- ✅ Test false positive rate on known-safe code (id: 1)
+- ✅ Expand testing to other OWASP apps (WebGoat, RailsGoat) (id: 2)
+- ✅ Create end-to-end tests with docker-compose for RSOLV-api and RSOLV-action integration (id: 4)
+- ✅ Migrate XSS DOM Manipulation pattern (id: 114)
+- ✅ Migrate Python Unsafe Pickle pattern (id: 115)
+- ✅ Migrate Python Unsafe Eval pattern (id: 116)
+- ✅ Update Python module to delegate to new patterns (id: 118)
+
+### In Progress (3 items)
+- 🔄 Migrate all existing patterns to new file structure (32/157 completed) (id: 24)
+- 🔄 Continue with remaining patterns (32 completed - Unsafe Eval done) (id: 62)
+- 🔄 Continue pattern migration after AST refactoring (id: 96)
+
+### Pending - High Priority (7 items)
+- 🔴 Deploy AST enhancements to production API (id: 13)
+- 🔴 Verify AST enhancements work end-to-end in production (id: 14)
+- 🔴 Research XSS vulnerabilities and enhance remaining XSS patterns (id: 18)
+- 🔴 Research Authentication/Authorization vulnerabilities (~15 patterns) (id: 19)
+- 🔴 Verify all 32 migrated patterns are deployed to production (id: 80)
+- 🔴 Migrate remaining Python patterns (14 total) (id: 117)
+
+### Pending - Medium Priority (5 items)
+- 🟡 Test against real repos with disclosed vulnerabilities (id: 3)
+- 🟡 RFC: Pattern benchmarking using deliberately vulnerable repos (DVNA, vulnerable-apps) (id: 5)
+- 🟡 Research strategies for building patterns from CVE/MITRE databases (id: 6)
+- 🟡 Research other vulnerability data sources (OWASP, Snyk DB, GitHub Advisory DB, etc.) (id: 7)
+- 🟡 Design automated vulnerability pattern import system using Elixir/OTP patterns and Oban (id: 8)
+- 🟡 Research Mass Assignment vulnerabilities (~5 patterns) (id: 22)
+- 🟡 Create or append ADR documenting self-contained pattern architecture (id: 98)
+
+### Pending - Low Priority (2 items)
+- 🟢 Update ADR-003 to reference new pattern architecture (id: 9)
+- 🟢 Clean up SQLite MCP context and temporary docs when migration complete (id: 32)

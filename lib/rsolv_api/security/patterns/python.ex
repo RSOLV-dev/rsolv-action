@@ -12,7 +12,8 @@ defmodule RsolvApi.Security.Patterns.Python do
   # Import new pattern modules
   alias RsolvApi.Security.Patterns.Python.{
     UnsafePickle,
-    UnsafeEval
+    UnsafeEval,
+    SqlInjectionFormat
   }
   
   @doc """
@@ -67,31 +68,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       false
   """
   def sql_injection_format do
-    %Pattern{
-      id: "python-sql-injection-format",
-      name: "SQL Injection via String Formatting",
-      description: "Using % string formatting in SQL queries can lead to SQL injection",
-      type: :sql_injection,
-      severity: :high,
-      languages: ["python"],
-      regex: ~r/execute\s*\(\s*["'`].*%[sdf].*["'`]\s*%/,
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries with execute() method parameters: cursor.execute(query, (param,))",
-      test_cases: %{
-        vulnerable: [
-          ~S|cursor.execute("SELECT * FROM users WHERE id = %s" % user_id)|,
-          ~S|db.execute("DELETE FROM posts WHERE author = '%s'" % username)|,
-          ~S|conn.execute("UPDATE accounts SET balance = %s WHERE id = %s" % (amount, account_id))|
-        ],
-        safe: [
-          ~S|cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))|,
-          ~S|db.execute("DELETE FROM posts WHERE author = %s", [username])|,
-          ~S|conn.execute("UPDATE accounts SET balance = %s WHERE id = %s", (amount, account_id))|
-        ]
-      }
-    }
+    SqlInjectionFormat.pattern()
   end
   
   @doc """

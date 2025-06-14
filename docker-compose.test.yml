@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: rsolv_api_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"  # Different port for test database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgres://postgres:postgres@postgres-test:5432/rsolv_api_test"
+      SECRET_KEY_BASE: "test-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789"
+      MIX_ENV: "test"
+    volumes:
+      - .:/app
+      - test_deps:/app/deps
+      - test_build:/app/_build
+    working_dir: /app
+    command: >
+      sh -c "
+        mix deps.get &&
+        mix ecto.create &&
+        mix ecto.migrate &&
+        mix test test/rsolv_api/security/patterns/python/sql_injection_format_test.exs
+      "
+
+volumes:
+  test_deps:
+  test_build:
