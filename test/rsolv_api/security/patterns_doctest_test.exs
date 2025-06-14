@@ -15,6 +15,11 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Python.SqlInjectionConcat
   doctest RsolvApi.Security.Patterns.Python.CommandInjectionOsSystem
   doctest RsolvApi.Security.Patterns.Python.CommandInjectionSubprocessShell
+  doctest RsolvApi.Security.Patterns.Python.PathTraversalOpen
+  doctest RsolvApi.Security.Patterns.Python.WeakHashMd5
+  doctest RsolvApi.Security.Patterns.Python.WeakHashSha1
+  doctest RsolvApi.Security.Patterns.Python.DebugTrue
+  doctest RsolvApi.Security.Patterns.Python.UnsafeYamlLoad
   
   # Test Java patterns
   doctest RsolvApi.Security.Patterns.Java

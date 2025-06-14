@@ -17,7 +17,12 @@ defmodule RsolvApi.Security.Patterns.Python do
     SqlInjectionFstring,
     SqlInjectionConcat,
     CommandInjectionOsSystem,
-    CommandInjectionSubprocessShell
+    CommandInjectionSubprocessShell,
+    PathTraversalOpen,
+    WeakHashMd5,
+    WeakHashSha1,
+    DebugTrue,
+    UnsafeYamlLoad
   }
   
   @doc """
@@ -195,31 +200,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def path_traversal_open do
-    %Pattern{
-      id: "python-path-traversal-open",
-      name: "Path Traversal via open()",
-      description: "Unsanitized file paths in open() can lead to directory traversal",
-      type: :path_traversal,
-      severity: :medium,
-      languages: ["python"],
-      regex: ~r/(?:open\s*\(\s*[^)]*\+|open\s*\(\s*f["'`].*\{|=.*\+.*;\s*open\s*\()/,
-      default_tier: :protected,
-      cwe_id: "CWE-22",
-      owasp_category: "A01:2021",
-      recommendation: "Validate and sanitize file paths, use os.path.join() safely",
-      test_cases: %{
-        vulnerable: [
-          ~S|open("/uploads/" + filename)|,
-          ~S|with open(f"/tmp/{user_file}") as f:|,
-          ~S|file_path = base_dir + "/" + user_input; open(file_path)|
-        ],
-        safe: [
-          ~S|safe_name = os.path.basename(filename); open(os.path.join("/uploads", safe_name))|,
-          ~S|if os.path.commonpath([base_dir, requested_path]) == base_dir: open(requested_path)|,
-          ~S|from pathlib import Path; safe_path = Path(base_dir) / Path(filename).name|
-        ]
-      }
-    }
+    PathTraversalOpen.pattern()
   end
   
   @doc """
@@ -235,31 +216,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def weak_hash_md5 do
-    %Pattern{
-      id: "python-weak-hash-md5",
-      name: "Weak Cryptography - MD5",
-      description: "MD5 is cryptographically broken and should not be used",
-      type: :weak_crypto,
-      severity: :medium,
-      languages: ["python"],
-      regex: ~r/hashlib\.md5\s*\(/,
-      default_tier: :public,
-      cwe_id: "CWE-327",
-      owasp_category: "A02:2021",
-      recommendation: "Use SHA-256 or SHA-3 for cryptographic hashing",
-      test_cases: %{
-        vulnerable: [
-          ~S|hashlib.md5(password.encode())|,
-          ~S|hash_value = hashlib.md5(data).hexdigest()|,
-          ~S|import hashlib; h = hashlib.md5()|
-        ],
-        safe: [
-          ~S|hashlib.sha256(password.encode())|,
-          ~S|from passlib.hash import bcrypt; bcrypt.hash(password)|,
-          ~S|import hashlib; h = hashlib.sha3_256()|
-        ]
-      }
-    }
+    WeakHashMd5.pattern()
   end
   
   @doc """
@@ -275,31 +232,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def weak_hash_sha1 do
-    %Pattern{
-      id: "python-weak-hash-sha1",
-      name: "Weak Cryptography - SHA1",
-      description: "SHA-1 is deprecated for security purposes",
-      type: :weak_crypto,
-      severity: :medium,
-      languages: ["python"],
-      regex: ~r/hashlib\.sha1\s*\(/,
-      default_tier: :public,
-      cwe_id: "CWE-327",
-      owasp_category: "A02:2021",
-      recommendation: "Use SHA-256 or SHA-3 for cryptographic hashing",
-      test_cases: %{
-        vulnerable: [
-          ~S|hashlib.sha1(data)|,
-          ~S|signature = hashlib.sha1(message.encode()).hexdigest()|,
-          ~S|h = hashlib.sha1(); h.update(content)|
-        ],
-        safe: [
-          ~S|hashlib.sha256(data)|,
-          ~S|signature = hashlib.sha3_256(message.encode()).hexdigest()|,
-          ~S|h = hashlib.sha512(); h.update(content)|
-        ]
-      }
-    }
+    WeakHashSha1.pattern()
   end
   
   @doc """
@@ -315,31 +248,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def debug_true do
-    %Pattern{
-      id: "python-debug-true",
-      name: "Debug Mode Enabled",
-      description: "Debug mode enabled in production exposes sensitive information",
-      type: :information_disclosure,
-      severity: :medium,
-      languages: ["python"],
-      regex: ~r/(?:DEBUG\s*=\s*True(?!\s*else)|\.config\s*\[\s*['"]DEBUG['"]\s*\]\s*=\s*True)/,
-      default_tier: :public,
-      cwe_id: "CWE-489",
-      owasp_category: "A05:2021",
-      recommendation: "Set DEBUG = False in production environments",
-      test_cases: %{
-        vulnerable: [
-          ~S|DEBUG = True|,
-          ~S|settings.DEBUG = True|,
-          ~S|app.config['DEBUG'] = True|
-        ],
-        safe: [
-          ~S|DEBUG = False|,
-          ~S|DEBUG = os.environ.get('DEBUG', 'False') == 'True'|,
-          ~S|if environment == 'development': DEBUG = True else: DEBUG = False|
-        ]
-      }
-    }
+    DebugTrue.pattern()
   end
   
   @doc """
@@ -355,30 +264,6 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def unsafe_yaml_load do
-    %Pattern{
-      id: "python-unsafe-yaml-load",
-      name: "Insecure Deserialization via yaml.load",
-      description: "yaml.load() without SafeLoader can execute arbitrary code",
-      type: :deserialization,
-      severity: :critical,
-      languages: ["python"],
-      regex: ~r/yaml\.load\s*\([^)]*(?!Loader\s*=\s*yaml\.SafeLoader)/,
-      default_tier: :protected,
-      cwe_id: "CWE-502",
-      owasp_category: "A08:2021",
-      recommendation: "Use yaml.safe_load() or yaml.load() with SafeLoader",
-      test_cases: %{
-        vulnerable: [
-          ~S|data = yaml.load(user_input)|,
-          ~S|config = yaml.load(open('config.yml'))|,
-          ~S|result = yaml.load(request.data)|
-        ],
-        safe: [
-          ~S|data = yaml.safe_load(user_input)|,
-          ~S|config = yaml.load(open('config.yml'), Loader=yaml.SafeLoader)|,
-          ~S|result = yaml.safe_load(request.data)|
-        ]
-      }
-    }
+    UnsafeYamlLoad.pattern()
   end
 end
