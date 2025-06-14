@@ -140,7 +140,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat do
       type: :sql_injection,
       severity: :critical,
       languages: ["javascript", "typescript"],
-      regex: ~r/(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN).*?\+[^+]*(?:req\.|request\.|params|query|body)/i,
+      regex: ~r/(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN).*?["']\s*\+\s*\w+/i,
       default_tier: :protected,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
@@ -157,6 +157,79 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat do
           ~S|const stmt = db.prepare("SELECT * FROM users WHERE name = ?")|
         ]
       }
+    }
+  end
+  
+  @doc """
+  Returns AST enhancement rules to reduce false positives.
+  
+  This enhancement helps distinguish between actual SQL injection vulnerabilities and:
+  - Parameterized queries using placeholders (?, $1, :param)
+  - ORM query builders (Knex, Sequelize, etc.)
+  - SQL strings used only for logging
+  - Test code that builds queries for assertions
+  
+  ## Examples
+  
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
+      iex> enhancement.ast_rules.node_type
+      "BinaryExpression"
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
+      iex> enhancement.ast_rules.operator
+      "+"
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
+      iex> enhancement.min_confidence
+      0.8
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
+      iex> "uses_parameterized_query" in Map.keys(enhancement.confidence_rules.adjustments)
+      true
+  """
+  @impl true
+  def ast_enhancement do
+    %{
+      ast_rules: %{
+        node_type: "BinaryExpression",
+        operator: "+",
+        # Must be building a SQL query
+        context_analysis: %{
+          contains_sql_keywords: true,
+          has_user_input_in_concatenation: true,
+          within_db_call: true
+        },
+        # Parent must be a database query call
+        ancestor_requirements: %{
+          has_db_method_call: ~r/\.(query|execute|exec|run|all|get)/,
+          max_depth: 3  # How far up to look for DB call
+        }
+      },
+      context_rules: %{
+        exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/fixtures/, ~r/mocks/],
+        exclude_if_parameterized: true,      # Using ? or $1 placeholders
+        exclude_if_uses_orm_builder: true,   # Query builders are safer
+        exclude_if_logging_only: true,       # Just logging SQL, not executing
+        safe_if_input_validated: true        # Has input sanitization
+      },
+      confidence_rules: %{
+        base: 0.3,
+        adjustments: %{
+          "direct_req_param_concat" => 0.5,   # req.params.id directly concatenated
+          "within_db_query_call" => 0.3,      # Inside db.query() call
+          "has_sql_keywords" => 0.2,          # Contains SELECT/INSERT/etc
+          "uses_parameterized_query" => -0.9, # Has ?, $1, :param placeholders
+          "uses_orm_query_builder" => -0.8,   # Using Knex, Sequelize builders
+          "is_console_log" => -1.0,           # Just logging, not querying
+          "has_input_validation" => -0.7,     # Input is sanitized/escaped
+          "in_test_file" => -0.9              # Test code
+        }
+      },
+      min_confidence: 0.8
     }
   end
 end

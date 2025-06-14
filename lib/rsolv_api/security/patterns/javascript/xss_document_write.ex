@@ -194,6 +194,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDocumentWrite do
       iex> pattern.severity
       :high
   """
+  @impl true
   def pattern do
     %Pattern{
       id: "js-xss-document-write",
@@ -244,5 +245,75 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDocumentWrite do
       # Default
       true -> false
     end
+  end
+  
+  @doc """
+  Returns AST enhancement rules to reduce false positives.
+  
+  This enhancement helps distinguish between actual XSS vulnerabilities and:
+  - document.write with escaped/encoded content
+  - Static content only (no user input)
+  - Build tools and polyfills that legitimately use document.write
+  - Development environment scripts
+  
+  ## Examples
+  
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
+      iex> enhancement.ast_rules.node_type
+      "CallExpression"
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
+      iex> enhancement.ast_rules.callee.property
+      "write"
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
+      iex> enhancement.min_confidence
+      0.8
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
+      iex> "static_content_only" in Map.keys(enhancement.confidence_rules.adjustments)
+      true
+  """
+  @impl true
+  def ast_enhancement do
+    %{
+      ast_rules: %{
+        node_type: "CallExpression",
+        callee: %{
+          object: "document",
+          property: "write",
+          alternate_properties: ["writeln"]
+        },
+        # Arguments must contain user input
+        argument_analysis: %{
+          has_user_input: true,
+          not_escaped: true
+        }
+      },
+      context_rules: %{
+        exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/legacy/, ~r/vendor/],
+        exclude_if_sanitized: true,
+        exclude_if_static_only: true,
+        exclude_if_dev_environment: true,    # document.write often in dev tools
+        deprecated_warning: true             # document.write is deprecated anyway
+      },
+      confidence_rules: %{
+        base: 0.5,
+        adjustments: %{
+          "user_input_in_write" => 0.4,
+          "url_params_in_write" => 0.3,
+          "uses_escape_function" => -0.8,
+          "uses_encode_function" => -0.7,
+          "static_content_only" => -1.0,
+          "in_build_script" => -0.9,         # Build tools use document.write
+          "in_polyfill" => -0.8              # Polyfills often use it
+        }
+      },
+      min_confidence: 0.8
+    }
   end
 end

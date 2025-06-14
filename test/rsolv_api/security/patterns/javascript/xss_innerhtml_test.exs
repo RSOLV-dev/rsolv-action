@@ -4,6 +4,8 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtmlTest do
   alias RsolvApi.Security.Patterns.Javascript.XssInnerhtml
   alias RsolvApi.Security.Pattern
   
+  doctest XssInnerhtml
+  
   describe "pattern/0" do
     test "returns a valid pattern struct" do
       pattern = XssInnerhtml.pattern()
@@ -121,6 +123,63 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtmlTest do
       refute XssInnerhtml.applies_to_file?("style.css")
       refute XssInnerhtml.applies_to_file?("data.json")
       refute XssInnerhtml.applies_to_file?("README.md")
+    end
+  end
+
+  describe "ast_enhancement/0" do
+    test "returns comprehensive AST enhancement rules" do
+      enhancement = XssInnerhtml.ast_enhancement()
+      
+      assert is_map(enhancement)
+      assert Map.keys(enhancement) == [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+    end
+    
+    test "AST rules target assignment expressions with innerHTML" do
+      enhancement = XssInnerhtml.ast_enhancement()
+      
+      assert enhancement.ast_rules.node_type == "AssignmentExpression"
+      assert enhancement.ast_rules.left_side.property == "innerHTML"
+      assert enhancement.ast_rules.left_side.object_type == "MemberExpression"
+      assert enhancement.ast_rules.right_side_analysis.contains_user_input == true
+      assert enhancement.ast_rules.right_side_analysis.not_sanitized == true
+    end
+    
+    test "context rules exclude test files and sanitized content" do
+      enhancement = XssInnerhtml.ast_enhancement()
+      
+      assert Enum.any?(enhancement.context_rules.exclude_paths, &(&1 == ~r/test/))
+      assert enhancement.context_rules.exclude_if_sanitized == true
+      assert enhancement.context_rules.exclude_if_static_content == true
+      assert enhancement.context_rules.exclude_if_escaped == true
+      assert enhancement.context_rules.safe_if_uses_text_content == true
+    end
+    
+    test "confidence rules heavily penalize sanitization libraries" do
+      enhancement = XssInnerhtml.ast_enhancement()
+      
+      assert enhancement.confidence_rules.base == 0.4
+      assert enhancement.confidence_rules.adjustments["uses_dom_purify"] == -0.9
+      assert enhancement.confidence_rules.adjustments["uses_sanitize_function"] == -0.8
+      assert enhancement.confidence_rules.adjustments["static_html_only"] == -1.0
+      assert enhancement.confidence_rules.adjustments["direct_user_input_to_innerhtml"] == 0.5
+      assert enhancement.min_confidence == 0.8
+    end
+  end
+
+  describe "enhanced_pattern/0" do
+    test "returns pattern with AST enhancement from ast_enhancement/0" do
+      enhanced = XssInnerhtml.enhanced_pattern()
+      enhancement = XssInnerhtml.ast_enhancement()
+      
+      # Verify it has all the AST enhancement fields
+      assert enhanced.ast_rules == enhancement.ast_rules
+      assert enhanced.context_rules == enhancement.context_rules
+      assert enhanced.confidence_rules == enhancement.confidence_rules
+      assert enhanced.min_confidence == enhancement.min_confidence
+      
+      # And still has all the pattern fields
+      assert enhanced.id == "js-xss-innerhtml"
+      assert enhanced.severity == :high
     end
   end
 end

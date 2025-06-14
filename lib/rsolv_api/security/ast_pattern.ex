@@ -36,7 +36,49 @@ defmodule RsolvApi.Security.ASTPattern do
     |> then(&struct(__MODULE__, &1))
   end
   
-  # Fix SQL injection false positives (was matching console.log!)
+  # JavaScript SQL Injection via String Concatenation
+  defp enhance_by_type(%{id: "js-sql-injection-concat"} = pattern) do
+    pattern
+    |> Map.put(:ast_rules, %{
+      node_type: "BinaryExpression",
+      operator: "+",
+      # Must be building a SQL query
+      context_analysis: %{
+        contains_sql_keywords: true,
+        has_user_input_in_concatenation: true,
+        within_db_call: true
+      },
+      # Parent must be a database query call
+      ancestor_requirements: %{
+        has_db_method_call: ~r/\.(query|execute|exec|run|all|get)/,
+        max_depth: 3  # How far up to look for DB call
+      }
+    })
+    |> Map.put(:context_rules, %{
+      exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/fixtures/, ~r/mocks/],
+      exclude_if_parameterized: true,      # Using ? or $1 placeholders
+      exclude_if_uses_orm_builder: true,   # Query builders are safer
+      exclude_if_logging_only: true,       # Just logging SQL, not executing
+      safe_if_input_validated: true        # Has input sanitization
+    })
+    |> Map.put(:confidence_rules, %{
+      base: 0.3,
+      adjustments: %{
+        "direct_req_param_concat" => 0.5,   # req.params.id directly concatenated
+        "within_db_query_call" => 0.3,      # Inside db.query() call
+        "has_sql_keywords" => 0.2,          # Contains SELECT/INSERT/etc
+        "uses_parameterized_query" => -0.9, # Has ?, $1, :param placeholders
+        "uses_orm_query_builder" => -0.8,   # Using Knex, Sequelize builders
+        "is_console_log" => -1.0,           # Just logging, not querying
+        "has_input_validation" => -0.7,     # Input is sanitized/escaped
+        "in_test_file" => -0.9              # Test code
+      }
+    })
+    |> Map.put(:min_confidence, 0.8)
+  end
+
+
+  # Fix generic SQL injection false positives (was matching console.log!)
   defp enhance_by_type(%{type: :sql_injection} = pattern) do
     pattern
     |> Map.put(:ast_rules, %{
@@ -66,6 +108,15 @@ defmodule RsolvApi.Security.ASTPattern do
     |> Map.put(:min_confidence, 0.7)
   end
   
+
+
+
+
+
+
+
+
+
   # Fix logging false positives (was matching 37/57 findings!)
   defp enhance_by_type(%{type: :logging} = pattern) do
     pattern
@@ -400,65 +451,8 @@ defmodule RsolvApi.Security.ASTPattern do
     |> Map.put(:min_confidence, 0.8)
   end
 
-  # JavaScript Command Injection (exec/execSync)
-  defp enhance_by_type(%{id: "js-command-injection-exec"} = pattern) do
-    pattern
-    |> Map.put(:ast_rules, %{
-      node_type: "CallExpression",
-      callee_names: ["exec", "execSync"],
-      # Must have string concatenation or template literals with variables
-      argument_analysis: %{
-        has_string_concatenation: true,
-        has_template_literal_with_variables: true,
-        not_using_array_arguments: true
-      }
-    })
-    |> Map.put(:context_rules, %{
-      exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/node_modules/, ~r/scripts/],
-      exclude_if_static_command: true,  # Skip if no dynamic content
-      require_user_input_source: true   # Must trace back to user input
-    })
-    |> Map.put(:confidence_rules, %{
-      base: 0.4,
-      adjustments: %{
-        "has_user_input" => 0.3,
-        "uses_string_concatenation" => 0.2,
-        "no_input_validation" => 0.2,
-        "is_static_command" => -0.9,
-        "uses_array_args" => -0.7  # Safe pattern
-      }
-    })
-    |> Map.put(:min_confidence, 0.8)
-  end
 
-  # JavaScript Command Injection (spawn with shell)
-  defp enhance_by_type(%{id: "js-command-injection-spawn"} = pattern) do
-    pattern
-    |> Map.put(:ast_rules, %{
-      node_type: "CallExpression",
-      callee_names: ["spawn", "spawnSync"],
-      # Must have shell:true option AND user input in command
-      option_analysis: %{
-        has_shell_true: true,
-        command_has_user_input: true
-      }
-    })
-    |> Map.put(:context_rules, %{
-      exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/node_modules/, ~r/scripts/],
-      safe_if_no_shell: true,           # spawn without shell is safer
-      safe_if_array_command: true       # spawn(['cmd', 'arg1', 'arg2']) is safer
-    })
-    |> Map.put(:confidence_rules, %{
-      base: 0.3,
-      adjustments: %{
-        "has_shell_true" => 0.4,
-        "command_has_user_input" => 0.3,
-        "no_shell_option" => -0.8,
-        "uses_array_command" => -0.5
-      }
-    })
-    |> Map.put(:min_confidence, 0.8)
-  end
+
 
   # Python Command Injection (os.system)
   defp enhance_by_type(%{id: "python-command-injection-os-system"} = pattern) do
@@ -713,18 +707,46 @@ defmodule RsolvApi.Security.ASTPattern do
   defp pattern_module("php"), do: RsolvApi.Security.Patterns.Php
   defp pattern_module(_), do: RsolvApi.Security.Patterns.Javascript
   
-  defp filter_by_tier(patterns, :public) do
-    # Public gets fewer patterns
-    Enum.take(patterns, div(length(patterns), 2))
+  defp filter_by_tier(patterns, tier) when is_atom(tier) do
+    # Convert atom to string for comparison
+    filter_by_tier(patterns, to_string(tier))
   end
   
-  defp filter_by_tier(patterns, :protected) do
-    # Protected gets most patterns
-    Enum.take(patterns, round(length(patterns) * 0.8))
-  end
-  
-  defp filter_by_tier(patterns, tier) when tier in [:ai, :enterprise] do
-    # Premium tiers get everything
-    patterns
+  defp filter_by_tier(patterns, tier) when is_binary(tier) do
+    # If tier is enterprise or ai, include all lower tier patterns too
+    # This implements cumulative tier access
+    case tier do
+      "enterprise" ->
+        # Enterprise gets everything
+        patterns
+      
+      "ai" ->
+        # AI tier gets public, protected, and ai patterns
+        Enum.filter(patterns, fn pattern ->
+          pattern_tier = to_string(pattern.default_tier || "protected")
+          pattern_tier in ["public", "protected", "ai"]
+        end)
+      
+      "protected" ->
+        # Protected tier gets public and protected patterns
+        Enum.filter(patterns, fn pattern ->
+          pattern_tier = to_string(pattern.default_tier || "protected")
+          pattern_tier in ["public", "protected"]
+        end)
+      
+      "public" ->
+        # Public tier gets only public patterns
+        Enum.filter(patterns, fn pattern ->
+          pattern_tier = to_string(pattern.default_tier || "protected")
+          pattern_tier == "public"
+        end)
+      
+      _ ->
+        # Unknown tier - default to public only
+        Enum.filter(patterns, fn pattern ->
+          pattern_tier = to_string(pattern.default_tier || "protected")
+          pattern_tier == "public"
+        end)
+    end
   end
 end

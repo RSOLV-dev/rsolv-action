@@ -4,6 +4,8 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolationTest do
   alias RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation
   alias RsolvApi.Security.Pattern
   
+  doctest SqlInjectionInterpolation
+  
   describe "pattern/0" do
     test "returns a valid pattern struct" do
       pattern = SqlInjectionInterpolation.pattern()
@@ -89,6 +91,67 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolationTest do
       refute SqlInjectionInterpolation.applies_to_file?("app.py")
       refute SqlInjectionInterpolation.applies_to_file?("index.rb")
       refute SqlInjectionInterpolation.applies_to_file?("config.json")
+    end
+  end
+
+  describe "ast_enhancement/0" do
+    test "returns comprehensive AST enhancement rules" do
+      enhancement = SqlInjectionInterpolation.ast_enhancement()
+      
+      assert is_map(enhancement)
+      assert Map.keys(enhancement) == [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+    end
+    
+    test "AST rules target template literals" do
+      enhancement = SqlInjectionInterpolation.ast_enhancement()
+      
+      assert enhancement.ast_rules.node_type == "TemplateLiteral"
+      assert enhancement.ast_rules.has_expressions == true
+      assert enhancement.ast_rules.expression_analysis.contains_user_input == true
+      assert enhancement.ast_rules.expression_analysis.contains_sql_keywords == true
+    end
+    
+    test "AST rules check for database context" do
+      enhancement = SqlInjectionInterpolation.ast_enhancement()
+      
+      assert enhancement.ast_rules.parent_analysis.is_db_query_argument == true
+      assert enhancement.ast_rules.parent_analysis.method_name_matches == ~r/\.(query|execute|exec|run)/
+    end
+    
+    test "context rules exclude test files and safe patterns" do
+      enhancement = SqlInjectionInterpolation.ast_enhancement()
+      
+      assert Enum.any?(enhancement.context_rules.exclude_paths, &(&1 == ~r/test/))
+      assert enhancement.context_rules.exclude_if_parameterized == true
+      assert enhancement.context_rules.exclude_if_tagged_template == true
+      assert enhancement.context_rules.exclude_if_uses_escaping == true
+    end
+    
+    test "confidence rules handle safe patterns appropriately" do
+      enhancement = SqlInjectionInterpolation.ast_enhancement()
+      
+      assert enhancement.confidence_rules.base == 0.3
+      assert enhancement.confidence_rules.adjustments["uses_tagged_template"] == -0.8
+      assert enhancement.confidence_rules.adjustments["is_logging_only"] == -1.0
+      assert enhancement.confidence_rules.adjustments["template_with_user_input"] == 0.4
+      assert enhancement.min_confidence == 0.8
+    end
+  end
+
+  describe "enhanced_pattern/0" do
+    test "returns pattern with AST enhancement from ast_enhancement/0" do
+      enhanced = SqlInjectionInterpolation.enhanced_pattern()
+      enhancement = SqlInjectionInterpolation.ast_enhancement()
+      
+      # Verify it has all the AST enhancement fields
+      assert enhanced.ast_rules == enhancement.ast_rules
+      assert enhanced.context_rules == enhancement.context_rules
+      assert enhanced.confidence_rules == enhancement.confidence_rules
+      assert enhanced.min_confidence == enhancement.min_confidence
+      
+      # And still has all the pattern fields
+      assert enhanced.id == "js-sql-injection-interpolation"
+      assert enhanced.severity == :critical
     end
   end
 end

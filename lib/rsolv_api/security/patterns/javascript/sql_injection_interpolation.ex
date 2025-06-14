@@ -158,6 +158,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation do
       iex> pattern.severity
       :critical
   """
+  @impl true
   def pattern do
     %Pattern{
       id: "js-sql-injection-interpolation",
@@ -186,6 +187,77 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation do
           ~S|const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId])|
         ]
       }
+    }
+  end
+  
+  @doc """
+  Returns AST enhancement rules to reduce false positives.
+  
+  This enhancement helps distinguish between actual SQL injection vulnerabilities and:
+  - Tagged template literals (sql`...`) which often use safe query builders
+  - Parameterized queries using template tag functions
+  - Template literals used only for logging SQL queries
+  - Test code that builds queries for assertions
+  
+  ## Examples
+  
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
+      iex> enhancement.ast_rules.node_type
+      "TemplateLiteral"
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
+      iex> enhancement.ast_rules.has_expressions
+      true
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
+      iex> enhancement.min_confidence
+      0.8
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
+      iex> "uses_tagged_template" in Map.keys(enhancement.confidence_rules.adjustments)
+      true
+  """
+  @impl true
+  def ast_enhancement do
+    %{
+      ast_rules: %{
+        node_type: "TemplateLiteral",
+        # Must have dynamic expressions
+        has_expressions: true,
+        # Expressions must include user input
+        expression_analysis: %{
+          contains_user_input: true,
+          contains_sql_keywords: true
+        },
+        # Must be in database context
+        parent_analysis: %{
+          is_db_query_argument: true,
+          method_name_matches: ~r/\.(query|execute|exec|run)/
+        }
+      },
+      context_rules: %{
+        exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/],
+        exclude_if_parameterized: true,
+        exclude_if_tagged_template: true,    # sql`SELECT...` tagged templates are often safe
+        exclude_if_uses_escaping: true       # Uses escape functions
+      },
+      confidence_rules: %{
+        base: 0.3,
+        adjustments: %{
+          "template_with_user_input" => 0.4,
+          "in_db_query_call" => 0.3,
+          "contains_sql_keywords" => 0.2,
+          "uses_tagged_template" => -0.8,    # sql`...` is often a safe library
+          "has_escape_function" => -0.7,
+          "uses_query_builder" => -0.8,
+          "is_logging_only" => -1.0
+        }
+      },
+      min_confidence: 0.8
     }
   end
 end

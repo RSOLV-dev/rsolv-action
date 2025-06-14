@@ -22,11 +22,40 @@ defmodule RsolvApi.Security.Patterns.PatternBase do
       end
       
       @doc """
-      Returns the pattern with AST enhancements.
+      Returns AST enhancement rules for this pattern.
+      Override this to provide pattern-specific AST rules.
+      
+      Should return a map with:
+      - :ast_rules - AST node matching rules
+      - :context_rules - Path exclusions, framework checks
+      - :confidence_rules - Dynamic confidence scoring
+      - :min_confidence - Minimum confidence threshold
+      
+      Return nil if no AST enhancement is needed.
+      """
+      def ast_enhancement do
+        nil
+      end
+      
+      @doc """
+      Returns the pattern with AST enhancements applied.
+      Uses pattern-specific AST rules if defined, otherwise
+      falls back to centralized AST enhancement.
       """
       def enhanced_pattern do
-        pattern()
-        |> ASTPattern.enhance()
+        base_pattern = pattern()
+        
+        case ast_enhancement() do
+          nil ->
+            # Fall back to centralized enhancement
+            ASTPattern.enhance(base_pattern)
+          
+          enhancement when is_map(enhancement) ->
+            # Apply pattern-specific enhancement
+            base_pattern
+            |> Map.merge(enhancement)
+            |> then(&struct(ASTPattern, Map.from_struct(&1)))
+        end
       end
       
       @doc """
@@ -90,7 +119,7 @@ defmodule RsolvApi.Security.Patterns.PatternBase do
         end
       end
       
-      defoverridable [pattern: 0, applies_to_file?: 2]
+      defoverridable [pattern: 0, ast_enhancement: 0, applies_to_file?: 2]
     end
   end
 end

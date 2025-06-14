@@ -78,6 +78,8 @@ defmodule RSOLV.Accounts do
           name: "Test Customer",
           email: "test@example.com",
           api_key: api_key,
+          tier: "enterprise",  # Grant enterprise access for testing
+          flags: ["ai_access", "enterprise_access"],  # Additional flags for testing
           monthly_limit: 100,
           current_usage: 15,
           active: true,

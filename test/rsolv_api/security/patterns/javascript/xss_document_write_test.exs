@@ -4,6 +4,8 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDocumentWriteTest do
   alias RsolvApi.Security.Patterns.Javascript.XssDocumentWrite
   alias RsolvApi.Security.Pattern
   
+  doctest XssDocumentWrite
+  
   describe "pattern/0" do
     test "returns a valid pattern struct" do
       pattern = XssDocumentWrite.pattern()
@@ -124,6 +126,65 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDocumentWriteTest do
       refute XssDocumentWrite.applies_to_file?("data.json")
       refute XssDocumentWrite.applies_to_file?("README.md")
       refute XssDocumentWrite.applies_to_file?("image.png")
+    end
+  end
+
+  describe "ast_enhancement/0" do
+    test "returns comprehensive AST enhancement rules" do
+      enhancement = XssDocumentWrite.ast_enhancement()
+      
+      assert is_map(enhancement)
+      assert Map.keys(enhancement) == [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+    end
+    
+    test "AST rules target document.write call expressions" do
+      enhancement = XssDocumentWrite.ast_enhancement()
+      
+      assert enhancement.ast_rules.node_type == "CallExpression"
+      assert enhancement.ast_rules.callee.object == "document"
+      assert enhancement.ast_rules.callee.property == "write"
+      assert enhancement.ast_rules.callee.alternate_properties == ["writeln"]
+      assert enhancement.ast_rules.argument_analysis.has_user_input == true
+      assert enhancement.ast_rules.argument_analysis.not_escaped == true
+    end
+    
+    test "context rules exclude test files and legacy code" do
+      enhancement = XssDocumentWrite.ast_enhancement()
+      
+      assert Enum.any?(enhancement.context_rules.exclude_paths, &(&1 == ~r/test/))
+      assert Enum.any?(enhancement.context_rules.exclude_paths, &(&1 == ~r/legacy/))
+      assert enhancement.context_rules.exclude_if_sanitized == true
+      assert enhancement.context_rules.exclude_if_static_only == true
+      assert enhancement.context_rules.exclude_if_dev_environment == true
+      assert enhancement.context_rules.deprecated_warning == true
+    end
+    
+    test "confidence rules heavily penalize static content and build scripts" do
+      enhancement = XssDocumentWrite.ast_enhancement()
+      
+      assert enhancement.confidence_rules.base == 0.5
+      assert enhancement.confidence_rules.adjustments["static_content_only"] == -1.0
+      assert enhancement.confidence_rules.adjustments["in_build_script"] == -0.9
+      assert enhancement.confidence_rules.adjustments["in_polyfill"] == -0.8
+      assert enhancement.confidence_rules.adjustments["user_input_in_write"] == 0.4
+      assert enhancement.min_confidence == 0.8
+    end
+  end
+
+  describe "enhanced_pattern/0" do
+    test "returns pattern with AST enhancement from ast_enhancement/0" do
+      enhanced = XssDocumentWrite.enhanced_pattern()
+      enhancement = XssDocumentWrite.ast_enhancement()
+      
+      # Verify it has all the AST enhancement fields
+      assert enhanced.ast_rules == enhancement.ast_rules
+      assert enhanced.context_rules == enhancement.context_rules
+      assert enhanced.confidence_rules == enhancement.confidence_rules
+      assert enhanced.min_confidence == enhancement.min_confidence
+      
+      # And still has all the pattern fields
+      assert enhanced.id == "js-xss-document-write"
+      assert enhanced.severity == :high
     end
   end
 end

@@ -192,6 +192,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtml do
       iex> pattern.severity
       :high
   """
+  @impl true
   def pattern do
     %Pattern{
       id: "js-xss-innerhtml",
@@ -243,5 +244,75 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtml do
       # Default
       true -> false
     end
+  end
+  
+  @doc """
+  Returns AST enhancement rules to reduce false positives.
+  
+  This enhancement helps distinguish between actual XSS vulnerabilities and:
+  - innerHTML assignments with sanitized content (DOMPurify, etc.)
+  - Static HTML content without user input
+  - Escaped HTML content
+  - Framework-managed content (React, Vue, etc.)
+  
+  ## Examples
+  
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
+      iex> enhancement.ast_rules.node_type
+      "AssignmentExpression"
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
+      iex> enhancement.ast_rules.left_side.property
+      "innerHTML"
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
+      iex> enhancement.min_confidence
+      0.8
+      
+      iex> enhancement = RsolvApi.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
+      iex> "uses_dom_purify" in Map.keys(enhancement.confidence_rules.adjustments)
+      true
+  """
+  @impl true
+  def ast_enhancement do
+    %{
+      ast_rules: %{
+        node_type: "AssignmentExpression",
+        # Must be assigning to innerHTML property
+        left_side: %{
+          property: "innerHTML",
+          object_type: "MemberExpression"
+        },
+        # Right side must have user input
+        right_side_analysis: %{
+          contains_user_input: true,
+          not_sanitized: true
+        }
+      },
+      context_rules: %{
+        exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/fixtures/],
+        exclude_if_sanitized: true,          # DOMPurify, sanitize-html, etc.
+        exclude_if_static_content: true,     # No dynamic content
+        exclude_if_escaped: true,            # Uses escape functions
+        safe_if_uses_text_content: true      # textContent is safe
+      },
+      confidence_rules: %{
+        base: 0.4,
+        adjustments: %{
+          "direct_user_input_to_innerhtml" => 0.5,
+          "concatenated_user_input" => 0.3,
+          "uses_dom_purify" => -0.9,
+          "uses_sanitize_function" => -0.8,
+          "uses_escape_html" => -0.7,
+          "static_html_only" => -1.0,
+          "in_framework_template" => -0.6    # React/Vue handle this
+        }
+      },
+      min_confidence: 0.8
+    }
   end
 end

@@ -87,5 +87,13 @@ defmodule RSOLVWeb.Router do
         only: [:index, :show], 
         param: "flag_name"
     end
+    
+    # Test endpoints (development only)
+    if Mix.env() != :prod do
+      scope "/test" do
+        get "/patterns/:language", TestPatternController, :all_tiers
+        get "/patterns/:language/:tier", TestPatternController, :by_tier
+      end
+    end
   end
 end

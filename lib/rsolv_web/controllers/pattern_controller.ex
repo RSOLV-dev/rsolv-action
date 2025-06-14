@@ -11,6 +11,29 @@ defmodule RSOLVWeb.PatternController do
   require RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation
   require RsolvApi.Security.Patterns.Javascript.XssInnerhtml
   require RsolvApi.Security.Patterns.Javascript.XssDocumentWrite
+  require RsolvApi.Security.Patterns.Javascript.CommandInjectionExec
+  require RsolvApi.Security.Patterns.Javascript.CommandInjectionSpawn
+  require RsolvApi.Security.Patterns.Javascript.PathTraversalJoin
+  require RsolvApi.Security.Patterns.Javascript.PathTraversalConcat
+  require RsolvApi.Security.Patterns.Javascript.WeakCryptoMd5
+  require RsolvApi.Security.Patterns.Javascript.WeakCryptoSha1
+  require RsolvApi.Security.Patterns.Javascript.HardcodedSecretPassword
+  require RsolvApi.Security.Patterns.Javascript.HardcodedSecretApiKey
+  require RsolvApi.Security.Patterns.Javascript.EvalUserInput
+  require RsolvApi.Security.Patterns.Javascript.UnsafeRegex
+  require RsolvApi.Security.Patterns.Javascript.PrototypePollution
+  require RsolvApi.Security.Patterns.Javascript.InsecureDeserialization
+  require RsolvApi.Security.Patterns.Javascript.OpenRedirect
+  require RsolvApi.Security.Patterns.Javascript.XxeExternalEntities
+  require RsolvApi.Security.Patterns.Javascript.NosqlInjection
+  require RsolvApi.Security.Patterns.Javascript.LdapInjection
+  require RsolvApi.Security.Patterns.Javascript.XpathInjection
+  require RsolvApi.Security.Patterns.Javascript.Ssrf
+  require RsolvApi.Security.Patterns.Javascript.MissingCsrfProtection
+  require RsolvApi.Security.Patterns.Javascript.JwtNoneAlgorithm
+  require RsolvApi.Security.Patterns.Javascript.DebugConsoleLog
+  require RsolvApi.Security.Patterns.Javascript.InsecureRandom
+  require RsolvApi.Security.Patterns.Javascript.TimingAttackComparison
 
   action_fallback RSOLVWeb.FallbackController
   
@@ -365,7 +388,7 @@ defmodule RSOLVWeb.PatternController do
   Enhanced patterns with AST rules for a specific language
   """
   def enhanced(conn, %{"language" => language}) do
-    with {:ok, customer} <- authenticate_request(conn) do
+    with {:ok, _customer} <- authenticate_request(conn) do
       patterns = Security.get_enhanced_patterns_for_language(language)
       formatted_patterns = Security.format_patterns_for_enhanced_api(patterns)
       
@@ -384,7 +407,7 @@ defmodule RSOLVWeb.PatternController do
   All enhanced patterns with AST rules (cross-language)
   """
   def all_enhanced(conn, _params) do
-    with {:ok, customer} <- authenticate_request(conn) do
+    with {:ok, _customer} <- authenticate_request(conn) do
       languages = ["javascript", "python", "java", "ruby", "php", "elixir"]
       
       all_patterns = Enum.flat_map(languages, fn lang ->
@@ -408,25 +431,27 @@ defmodule RSOLVWeb.PatternController do
   """
   def metadata(conn, %{"id" => pattern_id}) do
     # Try to find the pattern by ID across all pattern modules
-    result = with {:ok, pattern_module} <- find_pattern_module(pattern_id),
-                  true <- function_exported?(pattern_module, :vulnerability_metadata, 0) do
-      metadata = pattern_module.vulnerability_metadata()
-      
-      # Convert atom keys to strings for JSON serialization
-      formatted_metadata = format_metadata_for_api(metadata, pattern_id)
-      
-      json(conn, formatted_metadata)
-    else
+    case find_pattern_module(pattern_id) do
+      {:ok, pattern_module} ->
+        try do
+          metadata = pattern_module.vulnerability_metadata()
+          
+          # Convert atom keys to strings for JSON serialization
+          formatted_metadata = format_metadata_for_api(metadata, pattern_id)
+          
+          json(conn, formatted_metadata)
+        rescue
+          UndefinedFunctionError ->
+            # Pattern exists but doesn't have metadata yet
+            conn
+            |> put_status(:not_found)
+            |> json(%{error: "Metadata not available for this pattern"})
+        end
+        
       {:error, :not_found} ->
         conn
         |> put_status(:not_found)
         |> json(%{error: "Pattern not found"})
-        
-      false ->
-        # Pattern exists but doesn't have metadata yet
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Metadata not available for this pattern"})
     end
   end
 
@@ -440,7 +465,30 @@ defmodule RSOLVWeb.PatternController do
       "js-sql-injection-concat" => RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat,
       "js-sql-injection-interpolation" => RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation,
       "js-xss-innerhtml" => RsolvApi.Security.Patterns.Javascript.XssInnerhtml,
-      "js-xss-document-write" => RsolvApi.Security.Patterns.Javascript.XssDocumentWrite
+      "js-xss-document-write" => RsolvApi.Security.Patterns.Javascript.XssDocumentWrite,
+      "js-command-injection-exec" => RsolvApi.Security.Patterns.Javascript.CommandInjectionExec,
+      "js-command-injection-spawn" => RsolvApi.Security.Patterns.Javascript.CommandInjectionSpawn,
+      "js-path-traversal-join" => RsolvApi.Security.Patterns.Javascript.PathTraversalJoin,
+      "js-path-traversal-concat" => RsolvApi.Security.Patterns.Javascript.PathTraversalConcat,
+      "js-weak-crypto-md5" => RsolvApi.Security.Patterns.Javascript.WeakCryptoMd5,
+      "js-weak-crypto-sha1" => RsolvApi.Security.Patterns.Javascript.WeakCryptoSha1,
+      "js-hardcoded-secret-password" => RsolvApi.Security.Patterns.Javascript.HardcodedSecretPassword,
+      "js-hardcoded-secret-api-key" => RsolvApi.Security.Patterns.Javascript.HardcodedSecretApiKey,
+      "js-eval-user-input" => RsolvApi.Security.Patterns.Javascript.EvalUserInput,
+      "js-unsafe-regex" => RsolvApi.Security.Patterns.Javascript.UnsafeRegex,
+      "js-prototype-pollution" => RsolvApi.Security.Patterns.Javascript.PrototypePollution,
+      "js-insecure-deserialization" => RsolvApi.Security.Patterns.Javascript.InsecureDeserialization,
+      "js-open-redirect" => RsolvApi.Security.Patterns.Javascript.OpenRedirect,
+      "js-xxe-external-entities" => RsolvApi.Security.Patterns.Javascript.XxeExternalEntities,
+      "js-nosql-injection" => RsolvApi.Security.Patterns.Javascript.NosqlInjection,
+      "js-ldap-injection" => RsolvApi.Security.Patterns.Javascript.LdapInjection,
+      "js-xpath-injection" => RsolvApi.Security.Patterns.Javascript.XpathInjection,
+      "js-ssrf" => RsolvApi.Security.Patterns.Javascript.Ssrf,
+      "js-missing-csrf" => RsolvApi.Security.Patterns.Javascript.MissingCsrfProtection,
+      "js-jwt-none-algorithm" => RsolvApi.Security.Patterns.Javascript.JwtNoneAlgorithm,
+      "js-debug-console-log" => RsolvApi.Security.Patterns.Javascript.DebugConsoleLog,
+      "js-insecure-random" => RsolvApi.Security.Patterns.Javascript.InsecureRandom,
+      "js-timing-attack" => RsolvApi.Security.Patterns.Javascript.TimingAttackComparison
     }
     
     case Map.get(pattern_modules, pattern_id) do
@@ -448,13 +496,7 @@ defmodule RSOLVWeb.PatternController do
         {:error, :not_found}
         
       module ->
-        # Temporarily skip function_exported? check for vulnerability_metadata
-        # since the use macro seems to be causing issues with visibility
-        if function_exported?(module, :pattern, 0) do
-          {:ok, module}
-        else
-          {:error, :not_found}
-        end
+        {:ok, module}
     end
   end
   
@@ -467,7 +509,8 @@ defmodule RSOLVWeb.PatternController do
       real_world_impact: Map.get(metadata, :real_world_impact, []),
       cve_examples: metadata |> Map.get(:cve_examples, []) |> Enum.map(&stringify_keys/1),
       known_exploits: Map.get(metadata, :known_exploits, []),
-      detection_notes: Map.get(metadata, :detection_notes, "")
+      detection_notes: Map.get(metadata, :detection_notes, ""),
+      safe_alternatives: Map.get(metadata, :safe_alternatives, [])
     }
     
     # Add additional_context if present
@@ -494,11 +537,12 @@ defmodule RSOLVWeb.PatternController do
       
       case find_pattern_module(pattern_id) do
         {:ok, module} ->
-          if function_exported?(module, :vulnerability_metadata, 0) do
+          try do
             metadata = module.vulnerability_metadata()
             Map.put(pattern, :vulnerability_metadata, format_metadata_for_api(metadata, pattern_id))
-          else
-            pattern
+          rescue
+            UndefinedFunctionError ->
+              pattern
           end
           
         {:error, :not_found} ->
@@ -548,9 +592,9 @@ defmodule RSOLVWeb.PatternController do
 
   defp determine_highest_tier(accessible_tiers) do
     cond do
-      :enterprise in accessible_tiers -> :enterprise
-      :ai in accessible_tiers -> :ai
-      :protected in accessible_tiers -> :protected
+      "enterprise" in accessible_tiers -> :enterprise
+      "ai" in accessible_tiers -> :ai
+      "protected" in accessible_tiers -> :protected
       true -> :public
     end
   end

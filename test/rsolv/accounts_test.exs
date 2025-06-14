@@ -38,5 +38,19 @@ defmodule RSOLV.AccountsTest do
       assert Accounts.get_customer_by_api_key("") == nil
       assert Accounts.get_customer_by_api_key(nil) == nil
     end
+    
+    test "test customer has enterprise tier and flags" do
+      customer = Accounts.get_customer_by_api_key("rsolv_test_abc123")
+      
+      assert customer != nil
+      assert customer.id == "test_customer_1"
+      assert customer.name == "Test Customer"
+      assert customer.email == "test@example.com"
+      assert customer.tier == "enterprise"
+      assert customer.flags == ["ai_access", "enterprise_access"]
+      assert customer.monthly_limit == 100
+      assert customer.active == true
+      assert customer.trial == true
+    end
   end
 end
