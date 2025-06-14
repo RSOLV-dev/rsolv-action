@@ -11,6 +11,7 @@ defmodule RsolvApi.Security.Patterns.Php do
   
   # Import individual pattern modules
   alias RsolvApi.Security.Patterns.Php.SqlInjectionConcat
+  alias RsolvApi.Security.Patterns.Php.SqlInjectionInterpolation
   
   @doc """
   Returns all PHP security patterns.
@@ -80,31 +81,7 @@ defmodule RsolvApi.Security.Patterns.Php do
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def sql_injection_interpolation do
-    %Pattern{
-      id: "php-sql-injection-interpolation",
-      name: "SQL Injection via Variable Interpolation",
-      description: "User input interpolated directly into SQL strings",
-      type: :sql_injection,
-      severity: :critical,
-      languages: ["php"],
-      regex: ~r/["'](?:SELECT|UPDATE|DELETE|INSERT).*\$_(GET|POST|REQUEST|COOKIE)\[/i,
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use PDO or mysqli with prepared statements",
-      test_cases: %{
-        vulnerable: [
-          ~S|$query = "SELECT * FROM users WHERE name = '$_GET[name]'";|,
-          ~S|mysqli_query($conn, "UPDATE users SET email = '$_POST[email]' WHERE id = $id");|
-        ],
-        safe: [
-          ~S|$stmt = $pdo->prepare("SELECT * FROM users WHERE name = :name");
-$stmt->execute(['name' => $_GET['name']]);|
-        ]
-      }
-    }
-  end
+  defdelegate sql_injection_interpolation(), to: SqlInjectionInterpolation, as: :pattern
   
   @doc """
   Command Injection pattern.
