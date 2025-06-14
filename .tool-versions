@@ -1,0 +1,8 @@
+# Tool versions for RSOLV-api project
+# This file is used by asdf to manage tool versions
+# Install asdf: https://asdf-vm.com/guide/getting-started.html
+
+elixir 1.17.2-otp-26
+erlang 26.1
+nodejs 20.11.0
+bun 1.2.15
