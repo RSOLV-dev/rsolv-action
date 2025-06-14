@@ -94,8 +94,9 @@ defmodule RsolvApi.Security.Patterns.Python.UnsafePickle do
       type: :deserialization,
       severity: :critical,
       languages: ["python"],
-      # Match pickle.loads, pickle.load, cPickle usage
-      regex: ~r/(?:pickle|cPickle)\.(?:loads?|Unpickler)\s*\(/,
+      # Match pickle.loads, pickle.load, cPickle usage, and direct imports
+      # Use word boundary or whitespace to avoid matching json.loads
+      regex: ~r/(?:(?:pickle|cPickle)\.|(?:^|\s))(?:loads?|Unpickler)\s*\(/,
       default_tier: :public,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",

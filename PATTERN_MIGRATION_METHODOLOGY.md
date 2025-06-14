@@ -6,9 +6,11 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 27 out of 157 patterns migrated (17.2%)
+**Current Progress**: 32 out of 157 patterns migrated (20.4%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
+
+JavaScript Patterns (30):
 - `js-sql-injection-concat` ✓✓ (SQL Injection via String Concatenation) - AST migrated to pattern file
 - `js-sql-injection-interpolation` ✓✓ (SQL Injection via String Interpolation) - AST migrated to pattern file
 - `js-xss-innerhtml` ✓✓ (Cross-Site Scripting via innerHTML) - AST migrated to pattern file
@@ -36,10 +38,17 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 - `js-debug-console-log` ✓✓ (Sensitive Data in Console Logs) - AST included in pattern file
 - `js-insecure-random` ✓✓ (Insecure Random Number Generation) - AST included in pattern file
 - `js-timing-attack` ✓✓ (Timing Attack via String Comparison) - AST included in pattern file
+- `js-xss-jquery-html` ✓✓ (XSS via jQuery html() Method) - AST included in pattern file
+- `js-xss-react-dangerously` ✓✓ (XSS via React dangerouslySetInnerHTML) - AST included in pattern file
+- `js-xss-dom-manipulation` ✓✓ (XSS via DOM Manipulation Methods) - AST included in pattern file
+
+Python Patterns (2):
+- `python-unsafe-pickle` ✓✓ (Insecure Deserialization via pickle) - AST included in pattern file
+- `python-unsafe-eval` ✓✓ (Code Injection via eval()) - AST included in pattern file
 
 **AST Enhancement Status**: 
-- 27/27 patterns have AST rules (100%)
-- 27/27 AST enhancements included in pattern files (100%)
+- 32/32 patterns have AST rules (100%)
+- 32/32 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files

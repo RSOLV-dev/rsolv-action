@@ -8,6 +8,8 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   
   # Test Python patterns
   doctest RsolvApi.Security.Patterns.Python
+  doctest RsolvApi.Security.Patterns.Python.UnsafePickle
+  doctest RsolvApi.Security.Patterns.Python.UnsafeEval
   
   # Test Java patterns
   doctest RsolvApi.Security.Patterns.Java

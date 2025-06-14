@@ -9,6 +9,12 @@ defmodule RsolvApi.Security.Patterns.Python do
   
   alias RsolvApi.Security.Pattern
   
+  # Import new pattern modules
+  alias RsolvApi.Security.Patterns.Python.{
+    UnsafePickle,
+    UnsafeEval
+  }
+  
   @doc """
   Returns all Python security patterns.
   
@@ -261,31 +267,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def unsafe_pickle do
-    %Pattern{
-      id: "python-unsafe-pickle",
-      name: "Insecure Deserialization via pickle",
-      description: "pickle.loads() can execute arbitrary code during deserialization",
-      type: :deserialization,
-      severity: :critical,
-      languages: ["python"],
-      regex: ~r/pickle\.(loads?|load)\s*\(/,
-      default_tier: :public,
-      cwe_id: "CWE-502",
-      owasp_category: "A08:2021",
-      recommendation: "Use json.loads() or implement custom deserialization with validation",
-      test_cases: %{
-        vulnerable: [
-          ~S|data = pickle.loads(user_data)|,
-          ~S|with open('data.pkl', 'rb') as f: obj = pickle.load(f)|,
-          ~S|result = pickle.loads(base64.b64decode(encoded_data))|
-        ],
-        safe: [
-          ~S|data = json.loads(user_data)|,
-          ~S|with open('data.json', 'r') as f: obj = json.load(f)|,
-          ~S|# Use a safe serialization format like JSON or MessagePack|
-        ]
-      }
-    }
+    UnsafePickle.pattern()
   end
   
   @doc """
@@ -301,31 +283,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def unsafe_eval do
-    %Pattern{
-      id: "python-unsafe-eval",
-      name: "Code Injection via eval()",
-      description: "eval() can execute arbitrary Python code",
-      type: :rce,
-      severity: :critical,
-      languages: ["python"],
-      regex: ~r/\beval\s*\(/,
-      default_tier: :public,
-      cwe_id: "CWE-95",
-      owasp_category: "A03:2021",
-      recommendation: "Use ast.literal_eval() for safe evaluation of literals",
-      test_cases: %{
-        vulnerable: [
-          ~S|result = eval(user_input)|,
-          ~S|value = eval(request.args.get('expression'))|,
-          ~S|computed = eval(f"2 + {user_number}")|
-        ],
-        safe: [
-          ~S|result = ast.literal_eval(user_input)|,
-          ~S|value = int(request.args.get('number', 0))|,
-          ~S|computed = 2 + int(user_number)|
-        ]
-      }
-    }
+    UnsafeEval.pattern()
   end
   
   @doc """
