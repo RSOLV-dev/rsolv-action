@@ -14,6 +14,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Python.SqlInjectionFstring
   doctest RsolvApi.Security.Patterns.Python.SqlInjectionConcat
   doctest RsolvApi.Security.Patterns.Python.CommandInjectionOsSystem
+  doctest RsolvApi.Security.Patterns.Python.CommandInjectionSubprocessShell
   
   # Test Java patterns
   doctest RsolvApi.Security.Patterns.Java

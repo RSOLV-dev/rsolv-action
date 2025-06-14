@@ -16,7 +16,8 @@ defmodule RsolvApi.Security.Patterns.Python do
     SqlInjectionFormat,
     SqlInjectionFstring,
     SqlInjectionConcat,
-    CommandInjectionOsSystem
+    CommandInjectionOsSystem,
+    CommandInjectionSubprocessShell
   }
   
   @doc """
@@ -146,31 +147,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       true
   """
   def command_injection_subprocess_shell do
-    %Pattern{
-      id: "python-command-injection-subprocess-shell",
-      name: "Command Injection via subprocess with shell=True",
-      description: "Using subprocess with shell=True can lead to command injection",
-      type: :command_injection,
-      severity: :high,
-      languages: ["python"],
-      regex: ~r/subprocess\.(run|call|check_call|Popen)\s*\([^)]*shell\s*=\s*True/,
-      default_tier: :protected,
-      cwe_id: "CWE-78",
-      owasp_category: "A03:2021",
-      recommendation: "Use shell=False and pass command as list of arguments",
-      test_cases: %{
-        vulnerable: [
-          ~S|subprocess.run(cmd, shell=True)|,
-          ~S|subprocess.call("echo " + user_input, shell=True)|,
-          ~S|subprocess.Popen(f"grep {pattern} file.txt", shell=True)|
-        ],
-        safe: [
-          ~S|subprocess.run(["echo", user_input], shell=False)|,
-          ~S|subprocess.call(["grep", pattern, "file.txt"])|,
-          ~S|subprocess.Popen(["ls", "-la", directory])|
-        ]
-      }
-    }
+    CommandInjectionSubprocessShell.pattern()
   end
   
   @doc """

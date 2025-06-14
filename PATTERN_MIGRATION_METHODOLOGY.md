@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 36 out of 157 patterns migrated (22.9%)
+**Current Progress**: 37 out of 157 patterns migrated (23.6%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -42,23 +42,24 @@ JavaScript Patterns (30):
 - `js-xss-react-dangerously` ✓✓ (XSS via React dangerouslySetInnerHTML) - AST included in pattern file
 - `js-xss-dom-manipulation` ✓✓ (XSS via DOM Manipulation Methods) - AST included in pattern file
 
-Python Patterns (6):
+Python Patterns (7):
 - `python-unsafe-pickle` ✓✓ (Insecure Deserialization via pickle) - AST included in pattern file
 - `python-unsafe-eval` ✓✓ (Code Injection via eval()) - AST included in pattern file
 - `python-sql-injection-format` ✓✓ (SQL Injection via % Formatting) - AST included in pattern file
 - `python-sql-injection-fstring` ✓✓ (SQL Injection via F-String Formatting) - AST included in pattern file
 - `python-sql-injection-concat` ✓✓ (SQL Injection via String Concatenation) - AST included in pattern file
 - `python-command-injection-os-system` ✓✓ (Command Injection via os.system) - AST included in pattern file
+- `python-command-injection-subprocess-shell` ✓✓ (Command Injection via subprocess with shell=True) - AST included in pattern file
 
 **AST Enhancement Status**: 
-- 36/36 patterns have AST rules (100%)
-- 36/36 AST enhancements included in pattern files (100%)
+- 37/37 patterns have AST rules (100%)
+- 37/37 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
 **Current Task**: Continue with remaining Python patterns
-**Next Up**: Migrate the next Python pattern (6 remaining out of 12 total)
+**Next Up**: Migrate the next Python pattern (5 remaining out of 12 total)
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:
 
@@ -522,9 +523,9 @@ When pattern migration is complete:
 
 ---
 
-**Last Updated**: June 14, 2025 - 36 patterns migrated (22.9%), 36 patterns AST-enhanced (100%), 36 AST enhancements included in pattern files
-**Next Action**: Continue pattern migration with remaining Python patterns (command_injection_subprocess_shell next)
-**Achievement**: ✅ Successfully migrated 6 Python patterns (unsafe_pickle, unsafe_eval, sql_injection_format, sql_injection_fstring, sql_injection_concat, command_injection_os_system) with full TDD methodology
+**Last Updated**: June 14, 2025 - 37 patterns migrated (23.6%), 37 patterns AST-enhanced (100%), 37 AST enhancements included in pattern files
+**Next Action**: Continue pattern migration with remaining Python patterns (path_traversal_open next)
+**Achievement**: ✅ Successfully migrated 7 Python patterns (unsafe_pickle, unsafe_eval, sql_injection_format, sql_injection_fstring, sql_injection_concat, command_injection_os_system, command_injection_subprocess_shell) with full TDD methodology
 
 ## Session Handoff Summary (January 14, 2025)
 
@@ -564,13 +565,12 @@ When pattern migration is complete:
 4. Migrate remaining Python patterns (8 total) - id: 117
 
 ### Next Patterns to Migrate (Python)
-The remaining 6 Python patterns to migrate are:
-1. `python-command-injection-subprocess-shell` - Command injection via subprocess with shell=True
-2. `python-path-traversal-open` - Path traversal via open()
-3. `python-weak-hash-md5` - Weak cryptography using MD5
-4. `python-weak-hash-sha1` - Weak cryptography using SHA1
-5. `python-debug-true` - Debug mode enabled (Django)
-6. `python-unsafe-yaml-load` - Insecure deserialization via yaml.load()
+The remaining 5 Python patterns to migrate are:
+1. `python-path-traversal-open` - Path traversal via open()
+2. `python-weak-hash-md5` - Weak cryptography using MD5
+3. `python-weak-hash-sha1` - Weak cryptography using SHA1
+4. `python-debug-true` - Debug mode enabled (Django)
+5. `python-unsafe-yaml-load` - Insecure deserialization via yaml.load()
 
 ### Git Status
 - Working tree is clean
