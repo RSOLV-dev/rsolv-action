@@ -126,6 +126,17 @@ We follow strict TDD for every pattern migration:
    - Run all tests to ensure nothing broke
    - Verify pattern appears correctly in API responses
 
+4. **Progress Tracking**: Update all tracking mechanisms
+   - Update PATTERN_MIGRATION_METHODOLOGY.md with completed pattern
+   - Update todo list via TodoWrite
+   - Track progress in SQLite MCP table `pattern_migration_progress` (if available, proceed if not):
+     ```sql
+     INSERT OR REPLACE INTO pattern_migration_progress 
+     (pattern_id, pattern_name, language, migration_status, has_ast_enhancement, migrated_date, notes)
+     VALUES ('pattern-id', 'Pattern Name', 'language', 'completed', 1, DATE('now'), 'AST included in pattern file')
+     ```
+   - Commit with descriptive message including progress (e.g., "34/157 patterns completed")
+
 ### 2. Vulnerability Research Requirements
 
 For each pattern, we conduct comprehensive vulnerability research including:
@@ -493,6 +504,10 @@ This document serves as our running context for the migration process. Key point
 - **Update this document** as we complete each pattern migration
 - **Track progress** in the TODO list via TodoWrite/TodoRead tools
 - **Document issues** and resolutions as they arise
+- **Track in SQLite MCP** using the `pattern_migration_progress` table:
+  - Table tracks: pattern_id, pattern_name, language, migration_status, has_ast_enhancement, migrated_date, notes
+  - Status values: 'pending', 'in_progress', 'completed'
+  - Query progress: `SELECT COUNT(*) as completed FROM pattern_migration_progress WHERE migration_status = 'completed'`
 - **Clean up SQLite MCP context** when migration is complete
 
 ## Cleanup Plan
