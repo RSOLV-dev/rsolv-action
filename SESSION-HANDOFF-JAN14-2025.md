@@ -8,10 +8,10 @@ To resume pattern migration work in a new session, tell Claude:
 Please continue the Python security pattern migration work from where we left off. We are migrating patterns from inline definitions to individual pattern modules following TDD methodology.
 
 Current status:
-- 32/157 patterns migrated (20.4%)
+- 33/157 patterns migrated (21.0%)
 - JavaScript: 30/30 complete
-- Python: 2/12 complete (unsafe_pickle, unsafe_eval)
-- Next pattern: python-sql-injection-format
+- Python: 3/12 complete (unsafe_pickle, unsafe_eval, sql_injection_format)
+- Next pattern: python-sql-injection-fstring
 
 Key files:
 - Methodology: /Users/dylan/dev/rsolv/RSOLV-api/PATTERN_MIGRATION_METHODOLOGY.md

@@ -511,10 +511,10 @@ When pattern migration is complete:
 3. **TDD Methodology**: Followed red-green-refactor with 23 passing tests for Python patterns
 
 ### Current State
-- **32 patterns migrated** (20.4% of 157 total)
+- **33 patterns migrated** (21.0% of 157 total)
   - JavaScript: 30 patterns (COMPLETE)
-  - Python: 2 patterns (10 remaining)
-- **32 patterns have AST enhancements** (all included in pattern files)
+  - Python: 3 patterns (9 remaining) - added sql_injection_format
+- **33 patterns have AST enhancements** (all included in pattern files)
 - **0 patterns need AST enhancements**: All migrated patterns now have AST rules!
 - **Pattern files location**: `/Users/dylan/dev/rsolv/RSOLV-api/lib/rsolv_api/security/patterns/`
 - **Test files location**: `/Users/dylan/dev/rsolv/RSOLV-api/test/rsolv_api/security/patterns/`
