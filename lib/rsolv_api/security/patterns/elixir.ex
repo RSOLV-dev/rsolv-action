@@ -24,6 +24,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.DebugModeEnabled
   alias RsolvApi.Security.Patterns.Elixir.UnsafeProcessSpawn
   alias RsolvApi.Security.Patterns.Elixir.AtomExhaustion
+  alias RsolvApi.Security.Patterns.Elixir.EtsPublicTable
   
   @doc """
   Returns all Elixir security patterns.
@@ -117,43 +118,9 @@ defmodule RsolvApi.Security.Patterns.Elixir do
 
   # Delegate to the AtomExhaustion module
   defdelegate atom_exhaustion(), to: AtomExhaustion, as: :pattern
-  
-  @doc """
-  ETS Public Table pattern.
-  
-  Detects potentially unsafe public ETS tables.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.ets_public_table()
-      iex> vulnerable = ~S|:ets.new(:sessions, [:public, :named_table])|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def ets_public_table do
-    %Pattern{
-      id: "elixir-ets-public-table",
-      name: "Public ETS Table Security Risk",
-      description: "Public ETS tables can be accessed by any process",
-      type: :authentication,
-      severity: :medium,
-      languages: ["elixir"],
-      regex: ~r/:ets\.new\s*\([^,]+,\s*\[[^\]]*:public/,
-      default_tier: :protected,
-      cwe_id: "CWE-732",
-      owasp_category: "A01:2021",
-      recommendation: "Use :protected or :private for sensitive data in ETS tables",
-      test_cases: %{
-        vulnerable: [
-          ~S|:ets.new(:sessions, [:public, :named_table])|
-        ],
-        safe: [
-          ~S|:ets.new(:sessions, [:protected, :named_table])|,
-          ~S|:ets.new(:cache, [:private])|
-        ]
-      }
-    }
-  end
+
+  # Delegate to the EtsPublicTable module
+  defdelegate ets_public_table(), to: EtsPublicTable, as: :pattern
   
   @doc """
   Missing Authentication Pipeline pattern.

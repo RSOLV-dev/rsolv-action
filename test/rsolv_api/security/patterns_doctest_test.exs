@@ -52,6 +52,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Elixir.DebugModeEnabled
   doctest RsolvApi.Security.Patterns.Elixir.UnsafeProcessSpawn
   doctest RsolvApi.Security.Patterns.Elixir.AtomExhaustion
+  doctest RsolvApi.Security.Patterns.Elixir.EtsPublicTable
   
   # Test PHP patterns
   doctest RsolvApi.Security.Patterns.Php
