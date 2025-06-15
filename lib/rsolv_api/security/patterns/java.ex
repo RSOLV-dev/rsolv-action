@@ -21,6 +21,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.WeakCipherDes
   alias RsolvApi.Security.Patterns.Java.XxeDocumentbuilder
   alias RsolvApi.Security.Patterns.Java.XxeSaxparser
+  alias RsolvApi.Security.Patterns.Java.LdapInjection
   
   @doc """
   Returns all Java security patterns.
@@ -94,49 +95,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the XxeSaxparser module
   defdelegate xxe_saxparser(), to: XxeSaxparser, as: :pattern
   
-  @doc """
-  LDAP Injection pattern.
-  
-  Detects LDAP injection vulnerabilities.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.ldap_injection()
-      iex> vulnerable = ~S|ctx.search("cn=" + username + ",ou=users", filter, controls);|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def ldap_injection do
-    %Pattern{
-      id: "java-ldap-injection",
-      name: "LDAP Injection",
-      description: "String concatenation in LDAP search",
-      type: :ldap_injection,
-      severity: :high,
-      languages: ["java"],
-      regex: ~r/\.search\s*\(\s*.*\+.*,/,
-      default_tier: :protected,
-      cwe_id: "CWE-90",
-      owasp_category: "A03:2021",
-      recommendation: "Use parameterized LDAP queries and validate input",
-      test_cases: %{
-        vulnerable: [
-          ~S|ctx.search("cn=" + username + ",ou=users", filter, controls);|,
-          ~S|ctx.search("ou=users", "(uid=" + uid + ")", controls);|
-        ],
-        safe: [
-          ~S|// Escape special LDAP characters
-String escapedUsername = LdapEncoder.filterEncode(username);
-ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
-          ~S|// Use SearchControls with proper filtering
-SearchControls searchControls = new SearchControls();
-searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-String filter = "(&(objectClass=user)(uid={0}))";
-ctx.search("ou=users", filter, new Object[]{uid}, searchControls);|
-        ]
-      }
-    }
-  end
+  # Delegate to the LdapInjection module
+  defdelegate ldap_injection(), to: LdapInjection, as: :pattern
   
   @doc """
   Hardcoded Password pattern.

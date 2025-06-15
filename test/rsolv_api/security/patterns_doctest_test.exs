@@ -29,6 +29,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Java.WeakCipherDes
   doctest RsolvApi.Security.Patterns.Java.XxeDocumentbuilder
   doctest RsolvApi.Security.Patterns.Java.XxeSaxparser
+  doctest RsolvApi.Security.Patterns.Java.LdapInjection
   
   # Test Elixir patterns
   doctest RsolvApi.Security.Patterns.Elixir
