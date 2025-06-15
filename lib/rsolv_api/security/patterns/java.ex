@@ -14,6 +14,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.XpathInjection
   alias RsolvApi.Security.Patterns.Java.CommandInjectionRuntimeExec
   alias RsolvApi.Security.Patterns.Java.CommandInjectionProcessbuilder
+  alias RsolvApi.Security.Patterns.Java.PathTraversalFile
   
   @doc """
   Returns all Java security patterns.
@@ -66,47 +67,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the CommandInjectionProcessbuilder module
   defdelegate command_injection_processbuilder(), to: CommandInjectionProcessbuilder, as: :pattern
   
-  @doc """
-  Path Traversal via File constructor pattern.
-  
-  Detects path traversal vulnerabilities in File operations.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.path_traversal_file()
-      iex> vulnerable = ~S|File file = new File(uploadDir + "/" + filename);|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def path_traversal_file do
-    %Pattern{
-      id: "java-path-traversal-file",
-      name: "Path Traversal via File",
-      description: "Unsanitized file paths in File constructor",
-      type: :path_traversal,
-      severity: :medium,
-      languages: ["java"],
-      regex: ~r/new\s+File\s*\(\s*.*\+/,
-      default_tier: :protected,
-      cwe_id: "CWE-22",
-      owasp_category: "A01:2021",
-      recommendation: "Validate and sanitize file paths, use Paths.get() with validation",
-      test_cases: %{
-        vulnerable: [
-          ~S|File file = new File(uploadDir + "/" + filename);|,
-          ~S|new File(baseDir + File.separator + userPath);|
-        ],
-        safe: [
-          ~S|Path path = Paths.get(uploadDir, filename).normalize();
-if (path.startsWith(uploadDir)) {
-    File file = path.toFile();
-}|,
-          ~S|String safeFilename = Paths.get(filename).getFileName().toString();
-File file = new File(uploadDir, safeFilename);|
-        ]
-      }
-    }
-  end
+  # Delegate to the PathTraversalFile module
+  defdelegate path_traversal_file(), to: PathTraversalFile, as: :pattern
   
   @doc """
   Path Traversal via FileInputStream pattern.
