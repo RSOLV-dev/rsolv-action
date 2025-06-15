@@ -24,6 +24,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.LdapInjection
   alias RsolvApi.Security.Patterns.Java.HardcodedPassword
   alias RsolvApi.Security.Patterns.Java.WeakRandom
+  alias RsolvApi.Security.Patterns.Java.TrustAllCerts
   
   @doc """
   Returns all Java security patterns.
@@ -106,52 +107,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the WeakRandom module
   defdelegate weak_random(), to: WeakRandom, as: :pattern
   
+  # Delegate to the TrustAllCerts module
+  defdelegate trust_all_certs(), to: TrustAllCerts, as: :pattern
   
-  @doc """
-  Trust All Certificates pattern.
   
-  Detects TrustManager that accepts all certificates.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.trust_all_certs()
-      iex> vulnerable = "new X509TrustManager() { public void checkClientTrusted(X509Certificate[] chain, String authType) {} }"
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def trust_all_certs do
-    %Pattern{
-      id: "java-trust-all-certs",
-      name: "Trust All Certificates",
-      description: "TrustManager that accepts all certificates",
-      type: :authentication,
-      severity: :critical,
-      languages: ["java"],
-      regex: ~r/TrustManager.*\{\s*public\s+void\s+checkClientTrusted.*\{\s*\}/,
-      default_tier: :protected,
-      cwe_id: "CWE-295",
-      owasp_category: "A07:2021",
-      recommendation: "Implement proper certificate validation",
-      test_cases: %{
-        vulnerable: [
-          ~S|TrustManager[] trustAllCerts = new TrustManager[] {
-    new X509TrustManager() {
-        public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-        public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-    }
-};|
-        ],
-        safe: [
-          ~S|// Use default TrustManager
-SSLContext sslContext = SSLContext.getInstance("TLS");
-sslContext.init(null, null, new SecureRandom());|,
-          ~S|// Or implement proper certificate validation
-TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-tmf.init((KeyStore) null);
-TrustManager[] trustManagers = tmf.getTrustManagers();|
-        ]
-      }
-    }
-  end
 end
