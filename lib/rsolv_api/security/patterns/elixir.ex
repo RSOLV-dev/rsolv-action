@@ -17,6 +17,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.CodeInjectionEval
   alias RsolvApi.Security.Patterns.Elixir.DeserializationErlang
   alias RsolvApi.Security.Patterns.Elixir.PathTraversal
+  alias RsolvApi.Security.Patterns.Elixir.SsrfHttpoison
   
   @doc """
   Returns all Elixir security patterns.
@@ -89,44 +90,9 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   # Delegate to the PathTraversal module
   defdelegate path_traversal(), to: PathTraversal, as: :pattern
   
-  @doc """
-  SSRF via HTTPoison pattern.
+  # Delegate to the SsrfHttpoison module
+  defdelegate ssrf_httpoison(), to: SsrfHttpoison, as: :pattern
   
-  Detects Server-Side Request Forgery vulnerabilities.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.ssrf_httpoison()
-      iex> vulnerable = ~S|HTTPoison.get!(user_provided_url)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def ssrf_httpoison do
-    %Pattern{
-      id: "elixir-ssrf-httpoison",
-      name: "SSRF via HTTPoison",
-      description: "Unvalidated URLs in HTTP requests can lead to SSRF",
-      type: :ssrf,
-      severity: :high,
-      languages: ["elixir"],
-      regex: ~r/HTTPoison\.(get!?|post!?|put!?|delete!?|request!?)\s*\(\s*[^"']/,
-      default_tier: :protected,
-      cwe_id: "CWE-918",
-      owasp_category: "A10:2021",
-      recommendation: "Validate URLs against an allowlist before making HTTP requests",
-      test_cases: %{
-        vulnerable: [
-          ~S|HTTPoison.get!(user_provided_url)|,
-          ~S|HTTPoison.post!(params["webhook_url"], body)|
-        ],
-        safe: [
-          ~S|if URI.parse(url).host in @allowed_hosts do
-  HTTPoison.get!(url)
-end|
-        ]
-      }
-    }
-  end
   
   @doc """
   Weak Cryptography - MD5 pattern.

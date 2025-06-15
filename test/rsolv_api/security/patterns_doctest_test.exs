@@ -45,6 +45,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Elixir.CodeInjectionEval
   doctest RsolvApi.Security.Patterns.Elixir.DeserializationErlang
   doctest RsolvApi.Security.Patterns.Elixir.PathTraversal
+  doctest RsolvApi.Security.Patterns.Elixir.SsrfHttpoison
   
   # Test PHP patterns
   doctest RsolvApi.Security.Patterns.Php
