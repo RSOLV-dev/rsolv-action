@@ -20,6 +20,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.SsrfHttpoison
   alias RsolvApi.Security.Patterns.Elixir.WeakCryptoMd5
   alias RsolvApi.Security.Patterns.Elixir.WeakCryptoSha1
+  alias RsolvApi.Security.Patterns.Elixir.MissingCsrfProtection
   
   @doc """
   Returns all Elixir security patterns.
@@ -101,43 +102,10 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   
   # Delegate to the WeakCryptoSha1 module
   defdelegate weak_crypto_sha1(), to: WeakCryptoSha1, as: :pattern
+
+  # Delegate to the MissingCsrfProtection module
+  defdelegate missing_csrf_protection(), to: MissingCsrfProtection, as: :pattern
   
-  @doc """
-  Missing CSRF Protection pattern.
-  
-  Detects missing CSRF protection in Phoenix forms.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.missing_csrf_protection()
-      iex> vulnerable = ~S|form_for(@changeset, Routes.user_path(@conn, :create), [csrf_token: false], fn f ->|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def missing_csrf_protection do
-    %Pattern{
-      id: "elixir-missing-csrf-protection",
-      name: "Missing CSRF Protection",
-      description: "Forms without CSRF tokens are vulnerable to cross-site request forgery",
-      type: :csrf,
-      severity: :medium,
-      languages: ["elixir"],
-      frameworks: ["phoenix"],
-      regex: ~r/form_for.*csrf_token:\s*false/,
-      default_tier: :public,
-      cwe_id: "CWE-352",
-      owasp_category: "A01:2021",
-      recommendation: "Enable CSRF protection in all forms. Phoenix includes it by default",
-      test_cases: %{
-        vulnerable: [
-          ~S|form_for(@changeset, Routes.user_path(@conn, :create), [csrf_token: false], fn f ->|
-        ],
-        safe: [
-          ~S|form_for(@changeset, Routes.user_path(@conn, :create), fn f ->|
-        ]
-      }
-    }
-  end
   
   @doc """
   Debug Mode Enabled pattern.
