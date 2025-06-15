@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 121 out of 157 patterns migrated (77.1%)
+**Current Progress**: 122 out of 157 patterns migrated (77.7%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -131,13 +131,13 @@ Java Patterns (17/17 completed ✅):
 **Critical Issue**: hardcoded_secrets has duplicate implementation - delegated version AND inline version (lines 151-183). Remove duplicate.
 
 **AST Enhancement Status**: 
-- 121/121 patterns have AST rules (100%)
-- 121/121 AST enhancements included in pattern files (100%)
+- 122/122 patterns have AST rules (100%)
+- 122/122 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-Elixir Patterns (17/28 completed):
+Elixir Patterns (18/28 completed):
 - `elixir-sql-injection-interpolation` ✓✓ (Ecto SQL Injection via String Interpolation) - AST included in pattern file
 - `elixir-sql-injection-fragment` ✓✓ (Unsafe Ecto Fragment Usage) - AST included in pattern file
 - `elixir-command-injection-system` ✓✓ (OS Command Injection via System.shell/:os.cmd/Port.open) - AST included in pattern file
@@ -155,9 +155,10 @@ Elixir Patterns (17/28 completed):
 - `elixir-unsafe-process-spawn` ✓✓ (Unsafe Process Spawning without Supervision) - AST included in pattern file
 - `elixir-atom-exhaustion` ✓✓ (Atom Table Exhaustion Risk) - AST included in pattern file
 - `elixir-ets-public-table` ✓✓ (Public ETS Table Security Risk) - AST included in pattern file
+- `elixir-missing-auth-pipeline` ✓✓ (Missing Authentication Pipeline in Phoenix Controllers) - AST included in pattern file
 
-**Current Task**: Elixir patterns IN PROGRESS (17/28) - ets_public_table COMPLETE ✅ 
-**Next Up**: Continue Elixir pattern migration (11 remaining)
+**Current Task**: Elixir patterns IN PROGRESS (18/28) - missing_auth_pipeline COMPLETE ✅ 
+**Next Up**: Continue Elixir pattern migration (10 remaining)
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:
 

@@ -25,6 +25,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.UnsafeProcessSpawn
   alias RsolvApi.Security.Patterns.Elixir.AtomExhaustion
   alias RsolvApi.Security.Patterns.Elixir.EtsPublicTable
+  alias RsolvApi.Security.Patterns.Elixir.MissingAuthPipeline
   
   @doc """
   Returns all Elixir security patterns.
@@ -121,51 +122,9 @@ defmodule RsolvApi.Security.Patterns.Elixir do
 
   # Delegate to the EtsPublicTable module
   defdelegate ets_public_table(), to: EtsPublicTable, as: :pattern
-  
-  @doc """
-  Missing Authentication Pipeline pattern.
-  
-  Detects Phoenix controllers without authentication.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.missing_auth_pipeline()
-      iex> vulnerable = "defmodule MyAppWeb.AdminController do\\n  use MyAppWeb, :controller\\n  def index(conn, _params) do"
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def missing_auth_pipeline do
-    %Pattern{
-      id: "elixir-missing-auth-pipeline",
-      name: "Missing Authentication Pipeline",
-      description: "Controllers without authentication pipelines are vulnerable",
-      type: :authentication,
-      severity: :high,
-      languages: ["elixir"],
-      frameworks: ["phoenix"],
-      regex: ~r/defmodule\s+\w+Web\.(?:Admin|User|Account)Controller\s+do(?:(?!plug\s+:authenticate).)*?def\s+/s,
-      default_tier: :protected,
-      cwe_id: "CWE-306",
-      owasp_category: "A01:2021",
-      recommendation: "Add authentication plugs to protect sensitive controllers",
-      test_cases: %{
-        vulnerable: [
-          ~S|defmodule MyAppWeb.AdminController do
-  use MyAppWeb, :controller
-  
-  def index(conn, _params) do|
-        ],
-        safe: [
-          ~S|defmodule MyAppWeb.AdminController do
-  use MyAppWeb, :controller
-  
-  plug :authenticate_admin
-  
-  def index(conn, _params) do|
-        ]
-      }
-    }
-  end
+
+  # Delegate to the MissingAuthPipeline module
+  defdelegate missing_auth_pipeline(), to: MissingAuthPipeline, as: :pattern
   
   @doc """
   Unsafe Redirect pattern.
