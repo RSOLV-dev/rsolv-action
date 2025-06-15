@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 71 out of 157 patterns migrated (45.2%)
+**Current Progress**: 85 out of 157 patterns migrated (54.1%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -78,18 +78,40 @@ PHP Patterns (18):
 - `php-error-display` ✓✓ (Error Display) - AST included in pattern file
 - `php-file-upload-no-validation` ✓✓ (File Upload without Validation) - AST included in pattern file
 
-Ruby Patterns (2):
+Ruby Patterns (18/20 completed):
 - `ruby-broken-access-control-missing-auth` ✓✓ (Missing Authentication in Rails Controller) - AST included in pattern file
-- `ruby-mass-assignment` ✓✓ (Mass Assignment Vulnerability) - AST included in pattern file
+- `ruby-mass-assignment` ✓✓ (Mass Assignment Vulnerability) - AST included in pattern file  
+- `ruby-weak-crypto-md5` ✓✓ (Weak Cryptography - MD5 Usage) - AST included in pattern file
+- `ruby-hardcoded-secrets` ✓✓ (Hardcoded Secrets) - AST included in pattern file
+- `ruby-sql-injection-interpolation` ✓✓ (SQL Injection via String Interpolation) - AST included in pattern file
+- `ruby-command-injection` ✓✓ (Command Injection) - AST included in pattern file
+- `ruby-xpath-injection` ✓✓ (XPath Injection) - AST included in pattern file
+- `ruby-ldap-injection` ✓✓ (LDAP Injection) - AST included in pattern file
+- `ruby-weak-random` ✓✓ (Weak Random Number Generation) - AST included in pattern file
+- `ruby-debug-mode` ✓✓ (Debug Mode Enabled) - AST included in pattern file
+- `ruby-eval-usage` ✓✓ (Dangerous Eval Usage) - AST included in pattern file
+- `ruby-weak-password-storage` ✓✓ (Weak Password Storage) - AST included in pattern file
+- `ruby-unsafe-deserialization-marshal` ✓✓ (Unsafe Deserialization - Marshal) - AST included in pattern file
+- `ruby-unsafe-yaml` ✓✓ (Unsafe YAML Loading) - AST included in pattern file
+- `ruby-insufficient-logging` ✓✓ (Insufficient Security Logging) - AST included in pattern file
+- `ruby-ssrf-open-uri` ✓✓ (SSRF via open-uri) - AST included in pattern file
+- `ruby-xss-erb-raw` ✓✓ (XSS in ERB Templates) - AST included in pattern file
+- `ruby-path-traversal` ✓✓ (Path Traversal) - AST included in pattern file
+
+**Remaining Ruby Patterns (2 to migrate)**:
+1. open_redirect - Open Redirect
+2. insecure_cookie - Insecure Cookie Settings
+
+**Critical Issue**: hardcoded_secrets has duplicate implementation - delegated version AND inline version (lines 151-183). Remove duplicate.
 
 **AST Enhancement Status**: 
-- 71/71 patterns have AST rules (100%)
-- 71/71 AST enhancements included in pattern files (100%)
+- 85/85 patterns have AST rules (100%)
+- 85/85 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-**Current Task**: Continue with Ruby patterns (2/20 completed)
+**Current Task**: Continue with Ruby patterns (16/20 completed)
 **Next Up**: Continue migrating Ruby patterns following methodology
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:

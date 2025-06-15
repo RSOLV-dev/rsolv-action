@@ -46,4 +46,14 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Ruby.CommandInjection
   doctest RsolvApi.Security.Patterns.Ruby.XpathInjection
   doctest RsolvApi.Security.Patterns.Ruby.LdapInjection
+  doctest RsolvApi.Security.Patterns.Ruby.WeakRandom
+  doctest RsolvApi.Security.Patterns.Ruby.DebugModeEnabled
+  doctest RsolvApi.Security.Patterns.Ruby.EvalUsage
+  doctest RsolvApi.Security.Patterns.Ruby.WeakPasswordStorage
+  doctest RsolvApi.Security.Patterns.Ruby.UnsafeDeserializationMarshal
+  doctest RsolvApi.Security.Patterns.Ruby.UnsafeYaml
+  doctest RsolvApi.Security.Patterns.Ruby.InsufficientLogging
+  doctest RsolvApi.Security.Patterns.Ruby.SsrfOpenUri
+  doctest RsolvApi.Security.Patterns.Ruby.XssErbRaw
+  doctest RsolvApi.Security.Patterns.Ruby.PathTraversal
 end

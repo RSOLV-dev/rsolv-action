@@ -15,6 +15,16 @@ defmodule RsolvApi.Security.Patterns.Ruby do
   alias RsolvApi.Security.Patterns.Ruby.CommandInjection
   alias RsolvApi.Security.Patterns.Ruby.XpathInjection
   alias RsolvApi.Security.Patterns.Ruby.LdapInjection
+  alias RsolvApi.Security.Patterns.Ruby.WeakRandom
+  alias RsolvApi.Security.Patterns.Ruby.DebugModeEnabled
+  alias RsolvApi.Security.Patterns.Ruby.EvalUsage
+  alias RsolvApi.Security.Patterns.Ruby.WeakPasswordStorage
+  alias RsolvApi.Security.Patterns.Ruby.UnsafeDeserializationMarshal
+  alias RsolvApi.Security.Patterns.Ruby.UnsafeYaml
+  alias RsolvApi.Security.Patterns.Ruby.InsufficientLogging
+  alias RsolvApi.Security.Patterns.Ruby.SsrfOpenUri
+  alias RsolvApi.Security.Patterns.Ruby.XssErbRaw
+  alias RsolvApi.Security.Patterns.Ruby.PathTraversal
   
   @doc """
   Returns all Ruby security patterns.
@@ -137,50 +147,6 @@ hash = Digest::MD5.hexdigest(data)|
     }
   end
   
-  @doc """
-  Hardcoded Secrets pattern.
-  
-  Detects hardcoded API keys, passwords, and secrets.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Ruby.hardcoded_secrets()
-      iex> pattern.severity
-      :critical
-  """
-  def hardcoded_secrets do
-    %Pattern{
-      id: "ruby-hardcoded-secrets",
-      name: "Hardcoded Secrets",
-      description: "Detects hardcoded API keys, passwords, and secrets",
-      type: :sensitive_data_exposure,
-      severity: :critical,
-      languages: ["ruby"],
-      regex: [
-        ~r/password\s*=\s*['"]\w+['"]/i,
-        ~r/api_key\s*=\s*['"]\w+['"]/i,
-        ~r/secret(?:_key)?\s*=\s*['"]\w+['"]/i,
-        ~r/AWS_ACCESS_KEY_ID\s*=\s*['"]\w+['"]/,
-        ~r/private_key\s*=\s*['"]\w+['"]/i
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-798",
-      owasp_category: "A07:2021",
-      recommendation: "Use environment variables or secure key management systems",
-      test_cases: %{
-        vulnerable: [
-          ~S|password = "super_secret123"|,
-          ~S|API_KEY = "sk_test_123456"|,
-          ~S|config.secret_key = "hardcoded_secret"|
-        ],
-        safe: [
-          ~S|password = ENV['DATABASE_PASSWORD']|,
-          ~S|api_key = Rails.application.credentials.api_key|,
-          ~S|secret = KeyVault.fetch('app_secret')|
-        ]
-      }
-    }
-  end
   
   @doc """
   SQL Injection via String Interpolation pattern.
@@ -245,38 +211,7 @@ hash = Digest::MD5.hexdigest(data)|
       iex> pattern.severity
       :medium
   """
-  def weak_random do
-    %Pattern{
-      id: "ruby-weak-random",
-      name: "Weak Random Number Generation",
-      description: "Detects use of predictable random number generators",
-      type: :cryptographic_failure,
-      severity: :medium,
-      languages: ["ruby"],
-      regex: [
-        ~r/Random\.rand/,
-        ~r/rand\s*\(/,
-        ~r/srand\s*\(/,
-        ~r/Kernel\.rand/
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-330",
-      owasp_category: "A02:2021",
-      recommendation: "Use SecureRandom for cryptographic purposes",
-      test_cases: %{
-        vulnerable: [
-          ~S|token = rand(100000)|,
-          ~S|session_id = Random.rand(10**8)|,
-          ~S|password_reset = (0...8).map { rand(65..90).chr }.join|
-        ],
-        safe: [
-          ~S|token = SecureRandom.hex(16)|,
-          ~S|session_id = SecureRandom.uuid|,
-          ~S|password_reset = SecureRandom.urlsafe_base64|
-        ]
-      }
-    }
-  end
+  defdelegate weak_random(), to: WeakRandom, as: :pattern
   
   @doc """
   Debug Mode Enabled pattern.
@@ -289,40 +224,7 @@ hash = Digest::MD5.hexdigest(data)|
       iex> pattern.type
       :information_disclosure
   """
-  def debug_mode_enabled do
-    %Pattern{
-      id: "ruby-debug-mode",
-      name: "Debug Mode Enabled",
-      description: "Detects debugging code that might leak information",
-      type: :information_disclosure,
-      severity: :medium,
-      languages: ["ruby"],
-      regex: [
-        ~r/require\s+['"]pry['"]/,
-        ~r/binding\.pry/,
-        ~r/byebug/,
-        ~r/debugger/,
-        ~r/save_and_open_page/,
-        ~r/Rails\.logger\.debug.*?password/i
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-489",
-      owasp_category: "A05:2021",
-      recommendation: "Remove debugging code before deploying to production",
-      test_cases: %{
-        vulnerable: [
-          ~S|require 'pry'
-binding.pry|,
-          ~S|byebug|,
-          ~S|Rails.logger.debug "User password: #{password}"|
-        ],
-        safe: [
-          ~S|Rails.logger.info "User logged in: #{user.email}"|,
-          ~S|# Removed: binding.pry|
-        ]
-      }
-    }
-  end
+  defdelegate debug_mode_enabled(), to: DebugModeEnabled, as: :pattern
   
   @doc """
   Dangerous Eval Usage pattern.
@@ -335,41 +237,9 @@ binding.pry|,
       iex> pattern.severity
       :critical
   """
-  def eval_usage do
-    %Pattern{
-      id: "ruby-eval-usage",
-      name: "Dangerous Eval Usage",
-      description: "Detects eval usage which can lead to code injection",
-      type: :code_injection,
-      severity: :critical,
-      languages: ["ruby"],
-      regex: [
-        ~r/eval\s*\(/,
-        ~r/instance_eval/,
-        ~r/class_eval/,
-        ~r/module_eval/,
-        ~r/send\s*\(\s*params/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-94",
-      owasp_category: "A03:2021",
-      recommendation: "Avoid eval. Use safer alternatives like JSON parsing or whitelisted method calls",
-      test_cases: %{
-        vulnerable: [
-          ~S|eval(params[:code])|,
-          ~S|instance_eval(user_input)|,
-          ~S|obj.send(params[:method])|
-        ],
-        safe: [
-          ~S|JSON.parse(params[:data])|,
-          ~S|allowed_methods = [:name, :email]
-if allowed_methods.include?(params[:method].to_sym)
-  obj.send(params[:method])
-end|
-        ]
-      }
-    }
-  end
+  defdelegate eval_usage(), to: EvalUsage, as: :pattern
+  
+  
   
   @doc """
   Weak Password Storage pattern.
@@ -382,35 +252,7 @@ end|
       iex> pattern.type
       :cryptographic_failure
   """
-  def weak_password_storage do
-    %Pattern{
-      id: "ruby-weak-password-storage",
-      name: "Weak Password Storage",
-      description: "Detects insecure password storage methods",
-      type: :cryptographic_failure,
-      severity: :critical,
-      languages: ["ruby"],
-      regex: [
-        ~r/password\s*=\s*Digest::(MD5|SHA1)/,
-        ~r/\.password\s*=\s*[^B]/,
-        ~r/encrypted_password\s*=\s*Digest/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-256",
-      owasp_category: "A02:2021",
-      recommendation: "Use bcrypt or argon2 for password hashing",
-      test_cases: %{
-        vulnerable: [
-          ~S|user.password = Digest::MD5.hexdigest(params[:password])|,
-          ~S|user.password = Digest::SHA1.hexdigest(params[:password] + salt)|
-        ],
-        safe: [
-          ~S|user.password = BCrypt::Password.create(params[:password])|,
-          ~S|has_secure_password # Rails built-in|
-        ]
-      }
-    }
-  end
+  defdelegate weak_password_storage(), to: WeakPasswordStorage, as: :pattern
   
   @doc """
   Unsafe Deserialization - Marshal pattern.
@@ -423,40 +265,12 @@ end|
       iex> pattern.severity
       :critical
   """
-  def unsafe_deserialization_marshal do
-    %Pattern{
-      id: "ruby-unsafe-deserialization-marshal",
-      name: "Unsafe Deserialization - Marshal",
-      description: "Detects unsafe use of Marshal.load with user input",
-      type: :deserialization,
-      severity: :critical,
-      languages: ["ruby"],
-      regex: [
-        ~r/Marshal\.load\s*\(\s*params/,
-        ~r/Marshal\.load\s*\(\s*request/,
-        ~r/Marshal\.load\s*\(\s*Base64\.decode64\s*\(\s*params/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-502",
-      owasp_category: "A08:2021",
-      recommendation: "Use JSON or other safe serialization formats instead of Marshal",
-      test_cases: %{
-        vulnerable: [
-          ~S|data = Marshal.load(params[:data])|,
-          ~S|obj = Marshal.load(Base64.decode64(cookies[:session]))|
-        ],
-        safe: [
-          ~S|data = JSON.parse(params[:data])|,
-          ~S|# Use Rails session handling instead of manual Marshal|
-        ]
-      }
-    }
-  end
+  defdelegate unsafe_deserialization_marshal(), to: UnsafeDeserializationMarshal, as: :pattern
   
   @doc """
   Unsafe YAML Loading pattern.
   
-  Detects unsafe YAML.load usage.
+  Detects unsafe YAML deserialization vulnerabilities.
   
   ## Examples
   
@@ -464,80 +278,20 @@ end|
       iex> pattern.type
       :deserialization
   """
-  def unsafe_yaml do
-    %Pattern{
-      id: "ruby-unsafe-yaml",
-      name: "Unsafe YAML Loading",
-      description: "Detects unsafe YAML.load usage which can execute arbitrary code",
-      type: :deserialization,
-      severity: :critical,
-      languages: ["ruby"],
-      regex: [
-        ~r/YAML\.load\s*\(\s*params/,
-        ~r/YAML\.load\s*\(\s*request/,
-        ~r/YAML\.load\s*\(\s*File\.read.*?user/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-502",
-      owasp_category: "A08:2021",
-      recommendation: "Use YAML.safe_load or Psych.safe_load instead",
-      test_cases: %{
-        vulnerable: [
-          ~S|config = YAML.load(params[:config])|,
-          ~S|data = YAML.load(user_input)|
-        ],
-        safe: [
-          ~S|config = YAML.safe_load(user_input)|,
-          ~S|data = YAML.load_file("config.yml")|,
-          ~S|Psych.safe_load(params[:yaml], permitted_classes: [Symbol, Date])|
-        ]
-      }
-    }
-  end
+  defdelegate unsafe_yaml(), to: UnsafeYaml, as: :pattern
   
   @doc """
   Insufficient Security Logging pattern.
   
-  Missing logging for security-relevant events.
+  Detects missing security event logging that could prevent incident detection.
   
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Ruby.insufficient_logging()
       iex> pattern.severity
-      :low
+      :medium
   """
-  def insufficient_logging do
-    %Pattern{
-      id: "ruby-insufficient-logging",
-      name: "Insufficient Security Logging",
-      description: "Missing logging for security-relevant events",
-      type: :information_disclosure,
-      severity: :low,
-      languages: ["ruby"],
-      regex: ~r/rescue\s*(?:Exception|StandardError)?\s*(?:=>)?\s*\w*\s*\n\s*end|rescue\s*\n\s*nil\s*\n\s*end/,
-      default_tier: :public,
-      cwe_id: "CWE-778",
-      owasp_category: "A09:2021",
-      recommendation: "Log security events and errors appropriately",
-      test_cases: %{
-        vulnerable: [
-          ~S|begin
-  authenticate_user
-rescue => e
-  nil
-end|
-        ],
-        safe: [
-          ~S|begin
-  authenticate_user
-rescue => e
-  Rails.logger.error "Authentication failed: #{e.message}"
-  raise
-end|
-        ]
-      }
-    }
-  end
+  defdelegate insufficient_logging(), to: InsufficientLogging, as: :pattern
   
   @doc """
   SSRF via open-uri pattern.
@@ -550,39 +304,7 @@ end|
       iex> pattern.type
       :ssrf
   """
-  def ssrf_open_uri do
-    %Pattern{
-      id: "ruby-ssrf-open-uri",
-      name: "SSRF via open-uri",
-      description: "Detects Server-Side Request Forgery vulnerabilities",
-      type: :ssrf,
-      severity: :high,
-      languages: ["ruby"],
-      regex: [
-        ~r/open\s*\(\s*params/,
-        ~r/open\s*\(\s*URI/,
-        ~r/Net::HTTP\.get\s*\(\s*URI\s*\(\s*params/,
-        ~r/RestClient\.get\s*\(\s*params/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-918",
-      owasp_category: "A10:2021",
-      recommendation: "Validate and whitelist URLs, implement request timeouts",
-      test_cases: %{
-        vulnerable: [
-          ~S|data = open(params[:url]).read|,
-          ~S|response = Net::HTTP.get(URI(params[:endpoint]))|
-        ],
-        safe: [
-          ~S|allowed_hosts = ['api.example.com']
-uri = URI(params[:url])
-if allowed_hosts.include?(uri.host)
-  data = open(uri).read
-end|
-        ]
-      }
-    }
-  end
+  defdelegate ssrf_open_uri(), to: SsrfOpenUri, as: :pattern
   
   @doc """
   XSS in ERB Templates pattern.
@@ -595,37 +317,7 @@ end|
       iex> pattern.type
       :xss
   """
-  def xss_erb_raw do
-    %Pattern{
-      id: "ruby-xss-erb-raw",
-      name: "XSS in ERB Templates",
-      description: "Detects cross-site scripting vulnerabilities in ERB templates",
-      type: :xss,
-      severity: :high,
-      languages: ["ruby"],
-      regex: [
-        ~r/<%=\s*raw\s+/,
-        ~r/\.html_safe/,
-        ~r/<%==\s*params/
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-79",
-      owasp_category: "A03:2021",
-      recommendation: "Use Rails' built-in HTML escaping, avoid raw and html_safe on user input",
-      test_cases: %{
-        vulnerable: [
-          ~S|<%= raw params[:content] %>|,
-          ~S|<%= params[:name].html_safe %>|,
-          ~S|<%== user_input %>|
-        ],
-        safe: [
-          ~S|<%= params[:content] %>|,
-          ~S|<%= sanitize(params[:content]) %>|,
-          ~S|<%= h(user_input) %>|
-        ]
-      }
-    }
-  end
+  defdelegate xss_erb_raw(), to: XssErbRaw, as: :pattern
   
   @doc """
   Path Traversal pattern.
@@ -638,39 +330,7 @@ end|
       iex> pattern.severity
       :high
   """
-  def path_traversal do
-    %Pattern{
-      id: "ruby-path-traversal",
-      name: "Path Traversal",
-      description: "Detects file access with user-controlled paths",
-      type: :path_traversal,
-      severity: :high,
-      languages: ["ruby"],
-      regex: [
-        ~r/File\.read\s*\(\s*params/,
-        ~r/File\.open\s*\(\s*["'].*?#\{.*?params/,
-        ~r/send_file\s+params/,
-        ~r/\.read\s*\(\s*File\.join\s*\(.*?params/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-22",
-      owasp_category: "A01:2021",
-      recommendation: "Validate file paths, use basename, and restrict to safe directories",
-      test_cases: %{
-        vulnerable: [
-          ~S|File.read(params[:file])|,
-          ~S|send_file "uploads/#{params[:filename]}"|
-        ],
-        safe: [
-          ~S|filename = File.basename(params[:file])
-filepath = File.join(SAFE_DIR, filename)
-if filepath.start_with?(SAFE_DIR)
-  File.read(filepath)
-end|
-        ]
-      }
-    }
-  end
+  defdelegate path_traversal(), to: PathTraversal, as: :pattern
   
   @doc """
   Open Redirect pattern.
