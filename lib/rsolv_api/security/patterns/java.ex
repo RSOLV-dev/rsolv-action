@@ -12,6 +12,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.SqlInjectionStringFormat
   alias RsolvApi.Security.Patterns.Java.UnsafeDeserialization
   alias RsolvApi.Security.Patterns.Java.XpathInjection
+  alias RsolvApi.Security.Patterns.Java.CommandInjectionRuntimeExec
   
   @doc """
   Returns all Java security patterns.
@@ -58,45 +59,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the XpathInjection module
   defdelegate xpath_injection(), to: XpathInjection, as: :pattern
   
-  @doc """
-  Command Injection via Runtime.exec pattern.
-  
-  Detects command injection through Runtime.exec().
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.command_injection_runtime_exec()
-      iex> vulnerable = ~S|Runtime.getRuntime().exec("ping " + hostname);|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def command_injection_runtime_exec do
-    %Pattern{
-      id: "java-command-injection-runtime-exec",
-      name: "Command Injection via Runtime.exec",
-      description: "String concatenation in Runtime.exec() can lead to command injection",
-      type: :command_injection,
-      severity: :critical,
-      languages: ["java"],
-      regex: ~r/Runtime\.getRuntime\(\)\.exec\s*\(\s*.*\+/,
-      default_tier: :protected,
-      cwe_id: "CWE-78",
-      owasp_category: "A03:2021",
-      recommendation: "Use ProcessBuilder with array of arguments and validate input",
-      test_cases: %{
-        vulnerable: [
-          ~S|Runtime.getRuntime().exec("ping " + hostname);|,
-          ~S|Runtime.getRuntime().exec("cmd /c dir " + directory);|
-        ],
-        safe: [
-          ~S|ProcessBuilder pb = new ProcessBuilder("ping", hostname);
-Process p = pb.start();|,
-          ~S|String[] cmd = {"ping", hostname};
-Runtime.getRuntime().exec(cmd);|
-        ]
-      }
-    }
-  end
+  # Delegate to the CommandInjectionRuntimeExec module
+  defdelegate command_injection_runtime_exec(), to: CommandInjectionRuntimeExec, as: :pattern
   
   @doc """
   Command Injection via ProcessBuilder pattern.
