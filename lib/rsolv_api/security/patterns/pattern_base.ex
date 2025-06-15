@@ -44,17 +44,16 @@ defmodule RsolvApi.Security.Patterns.PatternBase do
       """
       def enhanced_pattern do
         base_pattern = pattern()
+        enhancement = ast_enhancement()
         
-        case ast_enhancement() do
-          nil ->
-            # Fall back to centralized enhancement
-            ASTPattern.enhance(base_pattern)
-          
-          enhancement when is_map(enhancement) ->
-            # Apply pattern-specific enhancement
-            base_pattern
-            |> Map.merge(enhancement)
-            |> then(&struct(ASTPattern, Map.from_struct(&1)))
+        if is_nil(enhancement) do
+          # Fall back to centralized enhancement
+          ASTPattern.enhance(base_pattern)
+        else
+          # Apply pattern-specific enhancement
+          base_pattern
+          |> Map.merge(enhancement)
+          |> then(&struct(ASTPattern, Map.from_struct(&1)))
         end
       end
       
@@ -101,20 +100,22 @@ defmodule RsolvApi.Security.Patterns.PatternBase do
       end
       
       defp contains_embedded_language?(content) do
-        case pattern().type do
-          :sql_injection ->
+        pattern_type = pattern().type
+        
+        cond do
+          pattern_type == :sql_injection ->
             # SQL can be embedded in any language
             content =~ ~r/\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN)\b/i
             
-          :xss ->
+          pattern_type == :xss ->
             # HTML/JS can be embedded in backend languages
             content =~ ~r/<[^>]+>|innerHTML|document\.write/
             
-          :command_injection ->
+          pattern_type == :command_injection ->
             # Shell commands can be called from any language
             content =~ ~r/system|exec|shell|spawn|popen/i
             
-          _ ->
+          true ->
             false
         end
       end

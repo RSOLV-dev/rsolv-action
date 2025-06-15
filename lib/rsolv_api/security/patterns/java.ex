@@ -13,6 +13,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.UnsafeDeserialization
   alias RsolvApi.Security.Patterns.Java.XpathInjection
   alias RsolvApi.Security.Patterns.Java.CommandInjectionRuntimeExec
+  alias RsolvApi.Security.Patterns.Java.CommandInjectionProcessbuilder
   
   @doc """
   Returns all Java security patterns.
@@ -62,45 +63,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the CommandInjectionRuntimeExec module
   defdelegate command_injection_runtime_exec(), to: CommandInjectionRuntimeExec, as: :pattern
   
-  @doc """
-  Command Injection via ProcessBuilder pattern.
-  
-  Detects command injection through ProcessBuilder.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.command_injection_processbuilder()
-      iex> vulnerable = ~S|ProcessBuilder pb = new ProcessBuilder(); pb.command("sh -c " + userCommand);|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def command_injection_processbuilder do
-    %Pattern{
-      id: "java-command-injection-processbuilder",
-      name: "Command Injection via ProcessBuilder",
-      description: "String concatenation in ProcessBuilder.command() can lead to command injection",
-      type: :command_injection,
-      severity: :high,
-      languages: ["java"],
-      regex: ~r/ProcessBuilder.*\.command\s*\(\s*.*\+/,
-      default_tier: :protected,
-      cwe_id: "CWE-78",
-      owasp_category: "A03:2021",
-      recommendation: "Use ProcessBuilder with separate arguments and validate input",
-      test_cases: %{
-        vulnerable: [
-          ~S|ProcessBuilder pb = new ProcessBuilder();
-pb.command("sh -c " + userCommand);|,
-          ~S|new ProcessBuilder().command("cmd /c " + command);|
-        ],
-        safe: [
-          ~S|ProcessBuilder pb = new ProcessBuilder("echo", message);|,
-          ~S|List<String> command = Arrays.asList("grep", pattern, "file.txt");
-ProcessBuilder pb = new ProcessBuilder(command);|
-        ]
-      }
-    }
-  end
+  # Delegate to the CommandInjectionProcessbuilder module
+  defdelegate command_injection_processbuilder(), to: CommandInjectionProcessbuilder, as: :pattern
   
   @doc """
   Path Traversal via File constructor pattern.

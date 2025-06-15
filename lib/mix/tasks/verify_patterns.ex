@@ -249,7 +249,7 @@ defmodule Mix.Tasks.VerifyPatterns do
     # Test that patterns can be retrieved and applied
     try do
       # Get a sample pattern
-      pattern = RsolvApi.Security.Patterns.Javascript.sql_injection_concatenation()
+      pattern = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.pattern()
       
       # Test it against vulnerable code
       vulnerable_code = ~s|const query = "SELECT * FROM users WHERE id = " + userId;|
@@ -289,16 +289,16 @@ defmodule Mix.Tasks.VerifyPatterns do
 
   defp get_sample_patterns do
     [
-      {"js-sql-injection", RsolvApi.Security.Patterns.Javascript.sql_injection_concatenation()},
+      {"js-sql-injection", RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.pattern()},
       {"js-xss", RsolvApi.Security.Patterns.Javascript.xss_innerhtml()},
       {"python-command-injection", RsolvApi.Security.Patterns.Python.command_injection()},
       {"ruby-path-traversal", RsolvApi.Security.Patterns.Ruby.path_traversal()},
-      {"java-sql-injection", RsolvApi.Security.Patterns.Java.sql_injection_concatenation()},
-      {"php-sql-injection", RsolvApi.Security.Patterns.Php.sql_injection_concatenation()},
-      {"elixir-sql-injection", RsolvApi.Security.Patterns.Elixir.sql_injection_ecto_fragment()},
-      {"rails-mass-assignment", RsolvApi.Security.Patterns.Rails.mass_assignment()},
-      {"django-sql-injection", RsolvApi.Security.Patterns.Django.sql_injection_raw()},
-      {"cve-log4shell", RsolvApi.Security.Patterns.Cve.log4shell_jndi_injection()}
+      {"java-sql-injection", RsolvApi.Security.Patterns.Java.SqlInjectionStatement.pattern()},
+      {"php-sql-injection", RsolvApi.Security.Patterns.Php.SqlInjectionConcat.pattern()},
+      {"elixir-sql-injection", RsolvApi.Security.Patterns.Elixir.SqlInjectionEctoFragment.pattern()},
+      {"rails-mass-assignment", RsolvApi.Security.Patterns.Rails.MassAssignment.pattern()},
+      {"django-sql-injection", RsolvApi.Security.Patterns.Django.SqlInjectionRaw.pattern()},
+      {"cve-log4shell", RsolvApi.Security.Patterns.Cve.log4shell_detection()}
     ]
   rescue
     error ->
