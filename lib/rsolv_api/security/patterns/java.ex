@@ -20,6 +20,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.WeakHashSha1
   alias RsolvApi.Security.Patterns.Java.WeakCipherDes
   alias RsolvApi.Security.Patterns.Java.XxeDocumentbuilder
+  alias RsolvApi.Security.Patterns.Java.XxeSaxparser
   
   @doc """
   Returns all Java security patterns.
@@ -90,47 +91,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the XxeDocumentbuilder module
   defdelegate xxe_documentbuilder(), to: XxeDocumentbuilder, as: :pattern
   
-  
-  @doc """
-  XXE via SAXParser pattern.
-  
-  Detects XXE vulnerabilities in SAXParser.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.xxe_saxparser()
-      iex> vulnerable = "SAXParserFactory spf = SAXParserFactory.newInstance(); SAXParser parser = spf.newSAXParser();"
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def xxe_saxparser do
-    %Pattern{
-      id: "java-xxe-saxparser",
-      name: "XXE via SAXParser",
-      description: "SAXParser without secure processing",
-      type: :xxe,
-      severity: :high,
-      languages: ["java"],
-      regex: ~r/SAXParserFactory.*\.newSAXParser\(\)(?![\s\S]*setFeature.*XMLConstants\.FEATURE_SECURE_PROCESSING)/,
-      default_tier: :protected,
-      cwe_id: "CWE-611",
-      owasp_category: "A05:2021",
-      recommendation: "Enable secure processing and disable external entity processing",
-      test_cases: %{
-        vulnerable: [
-          ~S|SAXParserFactory spf = SAXParserFactory.newInstance();
-SAXParser parser = spf.newSAXParser();|
-        ],
-        safe: [
-          ~S|SAXParserFactory spf = SAXParserFactory.newInstance();
-spf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-spf.setFeature("http://xml.org/sax/features/external-general-entities", false);
-spf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-SAXParser parser = spf.newSAXParser();|
-        ]
-      }
-    }
-  end
+  # Delegate to the XxeSaxparser module
+  defdelegate xxe_saxparser(), to: XxeSaxparser, as: :pattern
   
   @doc """
   LDAP Injection pattern.
