@@ -14,6 +14,27 @@ defmodule RsolvApi.Security.Patterns.Php do
   alias RsolvApi.Security.Patterns.Php.SqlInjectionInterpolation
   alias RsolvApi.Security.Patterns.Php.CommandInjection
   alias RsolvApi.Security.Patterns.Php.XssEcho
+  alias RsolvApi.Security.Patterns.Php.XssPrint
+  alias RsolvApi.Security.Patterns.Php.FileInclusion
+  alias RsolvApi.Security.Patterns.Php.FileUploadNoValidation
+  alias RsolvApi.Security.Patterns.Php.WeakPasswordHash
+  alias RsolvApi.Security.Patterns.Php.HardcodedCredentials
+  alias RsolvApi.Security.Patterns.Php.InsecureRandom
+  alias RsolvApi.Security.Patterns.Php.UnsafeDeserialization
+  alias RsolvApi.Security.Patterns.Php.XxeVulnerability
+  alias RsolvApi.Security.Patterns.Php.PathTraversal
+  alias RsolvApi.Security.Patterns.Php.SsrfVulnerability
+  alias RsolvApi.Security.Patterns.Php.SessionFixation
+  alias RsolvApi.Security.Patterns.Php.WeakCrypto
+  alias RsolvApi.Security.Patterns.Php.LdapInjection
+  alias RsolvApi.Security.Patterns.Php.XpathInjection
+  alias RsolvApi.Security.Patterns.Php.EvalUsage
+  alias RsolvApi.Security.Patterns.Php.ExtractUsage
+  alias RsolvApi.Security.Patterns.Php.RegisterGlobals
+  alias RsolvApi.Security.Patterns.Php.OpenRedirect
+  alias RsolvApi.Security.Patterns.Php.MissingCsrfToken
+  alias RsolvApi.Security.Patterns.Php.DebugModeEnabled
+  alias RsolvApi.Security.Patterns.Php.ErrorDisplay
   
   @doc """
   Returns all PHP security patterns.
@@ -127,30 +148,7 @@ defmodule RsolvApi.Security.Patterns.Php do
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def xss_print do
-    %Pattern{
-      id: "php-xss-print",
-      name: "XSS via print",
-      description: "Direct printing of user input without escaping",
-      type: :xss,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/print\s+.*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :public,
-      cwe_id: "CWE-79",
-      owasp_category: "A03:2021",
-      recommendation: "Use htmlspecialchars() before printing user input",
-      test_cases: %{
-        vulnerable: [
-          ~S|print $_POST['comment'];|,
-          ~S|print "Hello " . $_GET['user'];|
-        ],
-        safe: [
-          ~S|print htmlspecialchars($_POST['comment'], ENT_QUOTES);|
-        ]
-      }
-    }
-  end
+  defdelegate xss_print(), to: XssPrint, as: :pattern
   
   @doc """
   File Inclusion pattern.
@@ -164,34 +162,7 @@ defmodule RsolvApi.Security.Patterns.Php do
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def file_inclusion do
-    %Pattern{
-      id: "php-file-inclusion",
-      name: "File Inclusion Vulnerability",
-      description: "Dynamic file inclusion with user input",
-      type: :file_inclusion,
-      severity: :critical,
-      languages: ["php"],
-      regex: ~r/(include|require|include_once|require_once)\s*\(?\s*.*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :protected,
-      cwe_id: "CWE-98",
-      owasp_category: "A03:2021",
-      recommendation: "Use a whitelist of allowed files or avoid dynamic inclusion",
-      test_cases: %{
-        vulnerable: [
-          ~S|include $_GET['page'] . '.php';|,
-          ~S|require_once($_POST['module']);|
-        ],
-        safe: [
-          ~S|$allowed = ['home', 'about', 'contact'];
-$page = $_GET['page'];
-if (in_array($page, $allowed)) {
-    include $page . '.php';
-}|
-        ]
-      }
-    }
-  end
+  defdelegate file_inclusion(), to: FileInclusion, as: :pattern
   
   @doc """
   File Upload without Validation pattern.
@@ -205,34 +176,7 @@ if (in_array($page, $allowed)) {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def file_upload_no_validation do
-    %Pattern{
-      id: "php-file-upload-no-validation",
-      name: "File Upload without Validation",
-      description: "File uploads without type/content validation",
-      type: :file_upload,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/move_uploaded_file\s*\(\s*\$_FILES.*\['name'\]/,
-      default_tier: :protected,
-      cwe_id: "CWE-434",
-      owasp_category: "A01:2021",
-      recommendation: "Validate file type, size, and content. Use a safe upload directory",
-      test_cases: %{
-        vulnerable: [
-          ~S|move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . $_FILES['file']['name']);|
-        ],
-        safe: [
-          ~S|$allowed = ['jpg', 'jpeg', 'png', 'gif'];
-$ext = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
-if (in_array($ext, $allowed)) {
-    $newname = uniqid() . '.' . $ext;
-    move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . $newname);
-}|
-        ]
-      }
-    }
-  end
+  defdelegate file_upload_no_validation(), to: FileUploadNoValidation, as: :pattern
   
   @doc """
   Weak Password Hash pattern.
@@ -246,31 +190,7 @@ if (in_array($ext, $allowed)) {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def weak_password_hash do
-    %Pattern{
-      id: "php-weak-password-hash",
-      name: "Weak Password Hashing",
-      description: "Using weak hashing algorithms for passwords",
-      type: :weak_crypto,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/(md5|sha1)\s*\(\s*.*password/,
-      default_tier: :public,
-      cwe_id: "CWE-916",
-      owasp_category: "A02:2021",
-      recommendation: "Use password_hash() with PASSWORD_DEFAULT or PASSWORD_ARGON2ID",
-      test_cases: %{
-        vulnerable: [
-          ~S|$hash = md5($password);|,
-          ~S|$stored = sha1($_POST['password'] . $salt);|
-        ],
-        safe: [
-          ~S|$hash = password_hash($password, PASSWORD_DEFAULT);|,
-          ~S|$hash = password_hash($password, PASSWORD_ARGON2ID);|
-        ]
-      }
-    }
-  end
+  defdelegate weak_password_hash(), to: WeakPasswordHash, as: :pattern
   
   @doc """
   Hardcoded Credentials pattern.
@@ -284,31 +204,7 @@ if (in_array($ext, $allowed)) {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def hardcoded_credentials do
-    %Pattern{
-      id: "php-hardcoded-credentials",
-      name: "Hardcoded Credentials",
-      description: "Passwords or API keys hardcoded in source",
-      type: :hardcoded_secret,
-      severity: :critical,
-      languages: ["php"],
-      regex: ~r/\$(password|api_key|secret|token)\s*=\s*["'][^"']{8,}/,
-      default_tier: :public,
-      cwe_id: "CWE-798",
-      owasp_category: "A07:2021",
-      recommendation: "Use environment variables or secure configuration files",
-      test_cases: %{
-        vulnerable: [
-          ~S|$password = "admin123";|,
-          ~S|$api_key = "sk_live_abcd1234efgh5678";|
-        ],
-        safe: [
-          ~S|$password = getenv('DB_PASSWORD');|,
-          ~S|$api_key = $_ENV['API_KEY'];|
-        ]
-      }
-    }
-  end
+  defdelegate hardcoded_credentials(), to: HardcodedCredentials, as: :pattern
   
   @doc """
   Insecure Random pattern.
@@ -322,31 +218,7 @@ if (in_array($ext, $allowed)) {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def insecure_random do
-    %Pattern{
-      id: "php-insecure-random",
-      name: "Insecure Random Number Generation",
-      description: "Using predictable random functions for security",
-      type: :insecure_random,
-      severity: :medium,
-      languages: ["php"],
-      regex: ~r/(rand|mt_rand|srand|mt_srand)\s*\(/,
-      default_tier: :public,
-      cwe_id: "CWE-338",
-      owasp_category: "A02:2021",
-      recommendation: "Use random_bytes() or random_int() for cryptographic randomness",
-      test_cases: %{
-        vulnerable: [
-          ~S|$token = rand(1000, 9999);|,
-          ~S|$session_id = mt_rand();|
-        ],
-        safe: [
-          ~S|$token = bin2hex(random_bytes(16));|,
-          ~S|$code = random_int(100000, 999999);|
-        ]
-      }
-    }
-  end
+  defdelegate insecure_random(), to: InsecureRandom, as: :pattern
   
   @doc """
   Unsafe Deserialization pattern.
@@ -360,32 +232,7 @@ if (in_array($ext, $allowed)) {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def unsafe_deserialization do
-    %Pattern{
-      id: "php-unsafe-deserialization",
-      name: "Unsafe Deserialization",
-      description: "Using unserialize on user input can lead to RCE",
-      type: :deserialization,
-      severity: :critical,
-      languages: ["php"],
-      regex: ~r/unserialize\s*\(\s*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :protected,
-      cwe_id: "CWE-502",
-      owasp_category: "A08:2021",
-      recommendation: "Use JSON instead of serialize/unserialize for user data",
-      test_cases: %{
-        vulnerable: [
-          ~S|$data = unserialize($_COOKIE['data']);|,
-          ~S|$obj = unserialize($_POST['object']);|
-        ],
-        safe: [
-          ~S|$data = json_decode($_COOKIE['data'], true);|,
-          ~S|// Or use allowed_classes option
-$obj = unserialize($data, ['allowed_classes' => ['MyClass']]);|
-        ]
-      }
-    }
-  end
+  defdelegate unsafe_deserialization(), to: UnsafeDeserialization, as: :pattern
   
   @doc """
   XXE Vulnerability pattern.
@@ -399,31 +246,7 @@ $obj = unserialize($data, ['allowed_classes' => ['MyClass']]);|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def xxe_vulnerability do
-    %Pattern{
-      id: "php-xxe-vulnerability",
-      name: "XML External Entity (XXE) Vulnerability",
-      description: "Processing XML without disabling external entities",
-      type: :xxe,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/(simplexml_load_string|DOMDocument.*loadXML)\s*\(\s*\$_(GET|POST|REQUEST)/,
-      default_tier: :protected,
-      cwe_id: "CWE-611",
-      owasp_category: "A05:2021",
-      recommendation: "Disable external entity loading with libxml_disable_entity_loader(true)",
-      test_cases: %{
-        vulnerable: [
-          ~S|$xml = simplexml_load_string($_POST['xml']);|,
-          ~S|$doc->loadXML($_POST['data']);|
-        ],
-        safe: [
-          ~S|libxml_disable_entity_loader(true);
-$xml = simplexml_load_string($_POST['xml'], 'SimpleXMLElement', LIBXML_NOCDATA);|
-        ]
-      }
-    }
-  end
+  defdelegate xxe_vulnerability(), to: XxeVulnerability, as: :pattern
   
   @doc """
   Path Traversal pattern.
@@ -437,34 +260,7 @@ $xml = simplexml_load_string($_POST['xml'], 'SimpleXMLElement', LIBXML_NOCDATA);
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def path_traversal do
-    %Pattern{
-      id: "php-path-traversal",
-      name: "Path Traversal",
-      description: "File path manipulation vulnerability",
-      type: :path_traversal,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/(file_get_contents|fopen|include|require)\s*\([^)]*\$_(GET|POST|REQUEST)/,
-      default_tier: :protected,
-      cwe_id: "CWE-22",
-      owasp_category: "A01:2021",
-      recommendation: "Validate and sanitize file paths, use basename() or realpath()",
-      test_cases: %{
-        vulnerable: [
-          ~S|include('./pages/' . $_GET['page']);|,
-          ~S|$content = file_get_contents('uploads/' . $_GET['file']);|
-        ],
-        safe: [
-          ~S|$page = basename($_GET['page']);
-$allowed = ['home.php', 'about.php'];
-if (in_array($page, $allowed)) {
-    include('./pages/' . $page);
-}|
-        ]
-      }
-    }
-  end
+  defdelegate path_traversal(), to: PathTraversal, as: :pattern
   
   @doc """
   SSRF Vulnerability pattern.
@@ -478,35 +274,7 @@ if (in_array($page, $allowed)) {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def ssrf_vulnerability do
-    %Pattern{
-      id: "php-ssrf-vulnerability",
-      name: "Server-Side Request Forgery (SSRF)",
-      description: "Unvalidated URLs in server-side requests",
-      type: :ssrf,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/(file_get_contents|curl_exec|fopen)\s*\(\s*\$_(GET|POST|REQUEST)/,
-      default_tier: :protected,
-      cwe_id: "CWE-918",
-      owasp_category: "A10:2021",
-      recommendation: "Validate URLs against an allowlist before making requests",
-      test_cases: %{
-        vulnerable: [
-          ~S|$content = file_get_contents($_POST['url']);|,
-          ~S|curl_setopt($ch, CURLOPT_URL, $_GET['api']);|
-        ],
-        safe: [
-          ~S|$allowed_hosts = ['api.example.com', 'cdn.example.com'];
-$url = $_POST['url'];
-$host = parse_url($url, PHP_URL_HOST);
-if (in_array($host, $allowed_hosts)) {
-    $content = file_get_contents($url);
-}|
-        ]
-      }
-    }
-  end
+  defdelegate ssrf_vulnerability(), to: SsrfVulnerability, as: :pattern
   
   @doc """
   Session Fixation pattern.
@@ -520,31 +288,7 @@ if (in_array($host, $allowed_hosts)) {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def session_fixation do
-    %Pattern{
-      id: "php-session-fixation",
-      name: "Session Fixation",
-      description: "Accepting session ID from user input",
-      type: :session_management,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/session_id\s*\(\s*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :protected,
-      cwe_id: "CWE-384",
-      owasp_category: "A07:2021",
-      recommendation: "Regenerate session ID after login with session_regenerate_id(true)",
-      test_cases: %{
-        vulnerable: [
-          ~S|session_id($_GET['sid']);|,
-          ~S|session_id($_COOKIE['PHPSESSID']);|
-        ],
-        safe: [
-          ~S|// After successful login
-session_regenerate_id(true);|
-        ]
-      }
-    }
-  end
+  defdelegate session_fixation(), to: SessionFixation, as: :pattern
   
   @doc """
   Weak Cryptography pattern.
@@ -558,29 +302,7 @@ session_regenerate_id(true);|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def weak_crypto do
-    %Pattern{
-      id: "php-weak-crypto",
-      name: "Weak Cryptography",
-      description: "Using deprecated or weak encryption",
-      type: :weak_crypto,
-      severity: :medium,
-      languages: ["php"],
-      regex: ~r/(mcrypt_|MCRYPT_DES|MCRYPT_3DES|ECB)/,
-      default_tier: :public,
-      cwe_id: "CWE-327",
-      owasp_category: "A02:2021",
-      recommendation: "Use openssl functions with AES-256-GCM",
-      test_cases: %{
-        vulnerable: [
-          ~S|$encrypted = mcrypt_encrypt(MCRYPT_DES, $key, $data, MCRYPT_MODE_ECB);|
-        ],
-        safe: [
-          ~S|$encrypted = openssl_encrypt($data, 'aes-256-gcm', $key, 0, $iv, $tag);|
-        ]
-      }
-    }
-  end
+  defdelegate weak_crypto(), to: WeakCrypto, as: :pattern
   
   @doc """
   LDAP Injection pattern.
@@ -594,30 +316,7 @@ session_regenerate_id(true);|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def ldap_injection do
-    %Pattern{
-      id: "php-ldap-injection",
-      name: "LDAP Injection",
-      description: "User input in LDAP queries without escaping",
-      type: :ldap_injection,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/ldap_search\s*\([^,]+,[^,]+,\s*["'][^"']*\$_(GET|POST|REQUEST)/,
-      default_tier: :protected,
-      cwe_id: "CWE-90",
-      owasp_category: "A03:2021",
-      recommendation: "Use ldap_escape() to sanitize user input",
-      test_cases: %{
-        vulnerable: [
-          ~S|ldap_search($ds, $dn, "(uid=$_GET[username])");|
-        ],
-        safe: [
-          ~S|$username = ldap_escape($_GET['username'], '', LDAP_ESCAPE_FILTER);
-ldap_search($ds, $dn, "(uid=$username)");|
-        ]
-      }
-    }
-  end
+  defdelegate ldap_injection(), to: LdapInjection, as: :pattern
   
   @doc """
   XPath Injection pattern.
@@ -631,30 +330,7 @@ ldap_search($ds, $dn, "(uid=$username)");|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def xpath_injection do
-    %Pattern{
-      id: "php-xpath-injection",
-      name: "XPath Injection",
-      description: "User input in XPath queries",
-      type: :xpath_injection,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/->query\s*\([^)]*\$_(GET|POST|REQUEST)/,
-      default_tier: :protected,
-      cwe_id: "CWE-643",
-      owasp_category: "A03:2021",
-      recommendation: "Validate and escape user input in XPath queries",
-      test_cases: %{
-        vulnerable: [
-          ~S|$xpath->query("//user[name='$_GET[name]']");|
-        ],
-        safe: [
-          ~S|$name = preg_replace('/[^a-zA-Z0-9]/', '', $_GET['name']);
-$xpath->query("//user[name='$name']");|
-        ]
-      }
-    }
-  end
+  defdelegate xpath_injection(), to: XpathInjection, as: :pattern
   
   @doc """
   Eval Usage pattern.
@@ -668,34 +344,7 @@ $xpath->query("//user[name='$name']");|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def eval_usage do
-    %Pattern{
-      id: "php-eval-usage",
-      name: "Code Injection via eval()",
-      description: "Using eval() with user input",
-      type: :rce,
-      severity: :critical,
-      languages: ["php"],
-      regex: ~r/eval\s*\(\s*.*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :protected,
-      cwe_id: "CWE-95",
-      owasp_category: "A03:2021",
-      recommendation: "Never use eval() with user input. Find alternative solutions",
-      test_cases: %{
-        vulnerable: [
-          ~S|eval($_POST['code']);|,
-          ~S|eval("return " . $_GET['expression'] . ";");|
-        ],
-        safe: [
-          ~S|// Parse specific operations instead
-switch($_POST['operation']) {
-    case 'add': $result = $a + $b; break;
-    case 'subtract': $result = $a - $b; break;
-}|
-        ]
-      }
-    }
-  end
+  defdelegate eval_usage(), to: EvalUsage, as: :pattern
   
   @doc """
   Extract Usage pattern.
@@ -709,33 +358,7 @@ switch($_POST['operation']) {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def extract_usage do
-    %Pattern{
-      id: "php-extract-usage",
-      name: "Variable Overwrite via extract()",
-      description: "Using extract() on user input can overwrite variables",
-      type: :input_validation,
-      severity: :high,
-      languages: ["php"],
-      regex: ~r/extract\s*\(\s*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :protected,
-      cwe_id: "CWE-621",
-      owasp_category: "A03:2021",
-      recommendation: "Avoid extract() on user input or use EXTR_SKIP flag",
-      test_cases: %{
-        vulnerable: [
-          ~S|extract($_POST);|,
-          ~S|extract($_GET);|
-        ],
-        safe: [
-          ~S|// Better: access directly
-$name = $_POST['name'] ?? '';|,
-          ~S|// Or use EXTR_SKIP to not overwrite
-extract($_POST, EXTR_SKIP);|
-        ]
-      }
-    }
-  end
+  defdelegate extract_usage(), to: ExtractUsage, as: :pattern
   
   @doc """
   Register Globals pattern.
@@ -749,31 +372,7 @@ extract($_POST, EXTR_SKIP);|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def register_globals do
-    %Pattern{
-      id: "php-register-globals",
-      name: "Register Globals Dependency",
-      description: "Code that might rely on register_globals",
-      type: :input_validation,
-      severity: :medium,
-      languages: ["php"],
-      regex: ~r/if\s*\(\s*\$(?!_)(authenticated|admin|user_id|logged_in)\s*\)/,
-      default_tier: :public,
-      cwe_id: "CWE-473",
-      owasp_category: "A04:2021",
-      recommendation: "Initialize all variables and don't rely on register_globals",
-      test_cases: %{
-        vulnerable: [
-          ~S|if ($authenticated) { // $authenticated might come from $_GET|,
-          ~S|if ($is_admin) { show_admin_panel(); }|
-        ],
-        safe: [
-          ~S|$authenticated = isset($_SESSION['authenticated']) ? $_SESSION['authenticated'] : false;
-if ($authenticated) {|
-        ]
-      }
-    }
-  end
+  defdelegate register_globals(), to: RegisterGlobals, as: :pattern
   
   @doc """
   Open Redirect pattern.
@@ -787,34 +386,7 @@ if ($authenticated) {|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def open_redirect do
-    %Pattern{
-      id: "php-open-redirect",
-      name: "Open Redirect",
-      description: "Unvalidated redirect URLs",
-      type: :open_redirect,
-      severity: :medium,
-      languages: ["php"],
-      regex: ~r/header\s*\(\s*["']Location:\s*["']?\s*\.\s*\$_(GET|POST|REQUEST)/,
-      default_tier: :public,
-      cwe_id: "CWE-601",
-      owasp_category: "A01:2021",
-      recommendation: "Validate redirect URLs against an allowlist",
-      test_cases: %{
-        vulnerable: [
-          ~S|header("Location: " . $_GET['url']);|,
-          ~S|header('Location: ' . $_POST['redirect']);|
-        ],
-        safe: [
-          ~S|$allowed_urls = ['/home', '/dashboard', '/profile'];
-$redirect = $_GET['url'];
-if (in_array($redirect, $allowed_urls)) {
-    header("Location: " . $redirect);
-}|
-        ]
-      }
-    }
-  end
+  defdelegate open_redirect(), to: OpenRedirect, as: :pattern
   
   @doc """
   Missing CSRF Token pattern.
@@ -828,38 +400,7 @@ if (in_array($redirect, $allowed_urls)) {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def missing_csrf_token do
-    %Pattern{
-      id: "php-missing-csrf-token",
-      name: "Missing CSRF Protection",
-      description: "POST request handling without CSRF token validation",
-      type: :csrf,
-      severity: :medium,
-      languages: ["php"],
-      regex: ~r/if\s*\(\s*\$_SERVER\['REQUEST_METHOD'\]\s*===?\s*['"]POST['"]\s*\)\s*\{(?!.*csrf)/s,
-      default_tier: :public,
-      cwe_id: "CWE-352",
-      owasp_category: "A01:2021",
-      recommendation: "Implement CSRF token validation for state-changing operations",
-      test_cases: %{
-        vulnerable: [
-          ~S|if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    updateProfile($_POST['email']);
-}|
-        ],
-        safe: [
-          ~S"""
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        die('CSRF token validation failed');
-    }
-    updateProfile($_POST['email']);
-}
-"""
-        ]
-      }
-    }
-  end
+  defdelegate missing_csrf_token(), to: MissingCsrfToken, as: :pattern
   
   @doc """
   Debug Mode Enabled pattern.
@@ -873,31 +414,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def debug_mode_enabled do
-    %Pattern{
-      id: "php-debug-mode-enabled",
-      name: "Debug Mode Enabled",
-      description: "Debug settings that expose sensitive information",
-      type: :information_disclosure,
-      severity: :medium,
-      languages: ["php"],
-      regex: ~r/ini_set\s*\(\s*['"]display_errors['"]\s*,\s*(1|true|on)/,
-      default_tier: :public,
-      cwe_id: "CWE-489",
-      owasp_category: "A05:2021",
-      recommendation: "Disable debug mode and error display in production",
-      test_cases: %{
-        vulnerable: [
-          ~S|ini_set('display_errors', 1);|,
-          ~S|error_reporting(E_ALL);|
-        ],
-        safe: [
-          ~S|ini_set('display_errors', 0);
-ini_set('log_errors', 1);|
-        ]
-      }
-    }
-  end
+  defdelegate debug_mode_enabled(), to: DebugModeEnabled, as: :pattern
   
   @doc """
   Error Display pattern.
@@ -911,29 +428,5 @@ ini_set('log_errors', 1);|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """
-  def error_display do
-    %Pattern{
-      id: "php-error-display",
-      name: "Detailed Error Display",
-      description: "Showing detailed error messages to users",
-      type: :information_disclosure,
-      severity: :low,
-      languages: ["php"],
-      regex: ~r/(die|exit)\s*\(\s*["'][^"']*error[^"']*["']\s*\.\s*\w+_(error|errno)/,
-      default_tier: :public,
-      cwe_id: "CWE-209",
-      owasp_category: "A05:2021",
-      recommendation: "Log errors internally and show generic messages to users",
-      test_cases: %{
-        vulnerable: [
-          ~S|die("Database error: " . mysqli_error($conn));|,
-          ~S|exit("Query failed: " . pg_last_error());|
-        ],
-        safe: [
-          ~S|error_log("Database error: " . mysqli_error($conn));
-die("An error occurred. Please try again later.");|
-        ]
-      }
-    }
-  end
+  defdelegate error_display(), to: ErrorDisplay, as: :pattern
 end

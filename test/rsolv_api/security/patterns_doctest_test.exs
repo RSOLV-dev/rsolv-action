@@ -37,5 +37,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   # Test CVE patterns
   doctest RsolvApi.Security.Patterns.Cve
   
-  # Ruby module is excluded due to compilation issues
+  # Test Ruby patterns
+  doctest RsolvApi.Security.Patterns.Ruby
+  doctest RsolvApi.Security.Patterns.Ruby.MissingAuthentication
 end

@@ -8,6 +8,7 @@ defmodule RsolvApi.Security.Patterns.Ruby do
   """
   
   alias RsolvApi.Security.Pattern
+  alias RsolvApi.Security.Patterns.Ruby.MissingAuthentication
   
   @doc """
   Returns all Ruby security patterns.
@@ -58,40 +59,7 @@ defmodule RsolvApi.Security.Patterns.Ruby do
       iex> pattern.severity
       :high
   """
-  def missing_authentication do
-    %Pattern{
-      id: "ruby-broken-access-control-missing-auth",
-      name: "Missing Authentication in Rails Controller",
-      description: "Detects Rails controllers without authentication filters",
-      type: :authentication,
-      severity: :high,
-      languages: ["ruby"],
-      regex: ~r/class\s+\w+Controller\s*<\s*ApplicationController(?:(?!before_action|before_filter|authenticate).)*end/s,
-      default_tier: :protected,
-      cwe_id: "CWE-862",
-      owasp_category: "A01:2021",
-      recommendation: "Add before_action :authenticate_user! to protect sensitive actions",
-      test_cases: %{
-        vulnerable: [
-          ~S|class AdminController < ApplicationController
-  def users
-    @users = User.all
-  end
-end|
-        ],
-        safe: [
-          ~S|class AdminController < ApplicationController
-  before_action :authenticate_user!
-  before_action :require_admin
-  
-  def users
-    @users = User.all
-  end
-end|
-        ]
-      }
-    }
-  end
+  defdelegate missing_authentication(), to: MissingAuthentication, as: :pattern
   
   @doc """
   Mass Assignment Vulnerability pattern.

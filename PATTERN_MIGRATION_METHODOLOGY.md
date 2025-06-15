@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 45 out of 157 patterns migrated (28.7%)
+**Current Progress**: 70 out of 157 patterns migrated (44.6%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -56,20 +56,40 @@ Python Patterns (12):
 - `python-debug-true` ✓✓ (Debug Mode Enabled) - AST included in pattern file
 - `python-unsafe-yaml-load` ✓✓ (Unsafe YAML Deserialization) - AST included in pattern file
 
-PHP Patterns (3):
+PHP Patterns (18):
 - `php-sql-injection-concat` ✓✓ (SQL Injection via String Concatenation) - AST included in pattern file
 - `php-sql-injection-interpolation` ✓✓ (SQL Injection via Variable Interpolation) - AST included in pattern file
 - `php-command-injection` ✓✓ (Command Injection) - AST included in pattern file
+- `php-xss-echo` ✓✓ (XSS via echo) - AST included in pattern file
+- `php-unsafe-deserialization` ✓✓ (Unsafe Deserialization) - AST included in pattern file
+- `php-xxe-vulnerability` ✓✓ (XML External Entity Vulnerability) - AST included in pattern file
+- `php-path-traversal` ✓✓ (Path Traversal) - AST included in pattern file
+- `php-ssrf-vulnerability` ✓✓ (Server-Side Request Forgery) - AST included in pattern file
+- `php-session-fixation` ✓✓ (Session Fixation) - AST included in pattern file
+- `php-weak-crypto` ✓✓ (Weak Cryptography) - AST included in pattern file
+- `php-ldap-injection` ✓✓ (LDAP Injection) - AST included in pattern file
+- `php-xpath-injection` ✓✓ (XPath Injection) - AST included in pattern file
+- `php-eval-usage` ✓✓ (Code Injection via eval()) - AST included in pattern file
+- `php-extract-usage` ✓✓ (Variable Overwrite via extract()) - AST included in pattern file
+- `php-register-globals` ✓✓ (Register Globals Dependency) - AST included in pattern file
+- `php-open-redirect` ✓✓ (Open Redirect) - AST included in pattern file
+- `php-missing-csrf-token` ✓✓ (Missing CSRF Token) - AST included in pattern file
+- `php-debug-mode-enabled` ✓✓ (Debug Mode Enabled) - AST included in pattern file
+- `php-error-display` ✓✓ (Error Display) - AST included in pattern file
+- `php-file-upload-no-validation` ✓✓ (File Upload without Validation) - AST included in pattern file
+
+Ruby Patterns (1):
+- `ruby-broken-access-control-missing-auth` ✓✓ (Missing Authentication in Rails Controller) - AST included in pattern file
 
 **AST Enhancement Status**: 
-- 45/45 patterns have AST rules (100%)
-- 45/45 AST enhancements included in pattern files (100%)
+- 70/70 patterns have AST rules (100%)
+- 70/70 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-**Current Task**: Continue with PHP patterns
-**Next Up**: Migrate the next PHP pattern (22 remaining out of 25 total)
+**Current Task**: Continue with Ruby patterns (1/20 completed)
+**Next Up**: Continue migrating Ruby patterns following methodology
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:
 
@@ -93,11 +113,35 @@ See `/PATTERN-ARCHITECTURE-EVALUATION.md` for detailed findings.
 
 ## Migration Approach
 
-### 1. Test-Driven Development (TDD) Methodology
+### 1. Pre-Migration Research Phase (NEW)
 
-We follow strict TDD for every pattern migration:
+**IMPORTANT**: Before writing any tests or code, conduct comprehensive vulnerability research using Kagi MCP:
 
-1. **Red Phase**: Write failing tests first
+1. **CVE Research using Kagi MCP**:
+   ```
+   Search for: "[vulnerability type] [language] CVE examples"
+   Search for: "[vulnerability] Rails security incidents" 
+   Search for: "OWASP [vulnerability] [language] real world"
+   ```
+   - Find at least 4 real CVE examples with CVSS scores
+   - Document actual breaches or incidents
+   - Identify common vulnerable code patterns
+
+2. **Attack Vector Research**:
+   - Research exploitation techniques
+   - Find proof-of-concept payloads
+   - Document bypass techniques
+
+3. **Best Practices Research**:
+   - Search for secure coding guidelines
+   - Find framework-specific security recommendations
+   - Research modern mitigation techniques
+
+### 2. Test-Driven Development (TDD) Methodology
+
+After completing research, we follow strict TDD for every pattern migration:
+
+1. **Red Phase**: Write failing tests first (informed by research)
    - Pattern structure tests
    - Metadata validation tests  
    - Vulnerability detection tests
@@ -150,9 +194,9 @@ We follow strict TDD for every pattern migration:
      ```
    - Commit with descriptive message including progress (e.g., "34/157 patterns completed")
 
-### 2. Vulnerability Research Requirements
+### 3. Vulnerability Research Requirements
 
-For each pattern, we conduct comprehensive vulnerability research including:
+For each pattern, the pre-migration research phase should produce:
 
 - **CVE Examples**: Real-world vulnerabilities with CVE IDs, severity scores, and descriptions
 - **Attack Vectors**: Specific exploitation techniques and payloads
@@ -160,9 +204,9 @@ For each pattern, we conduct comprehensive vulnerability research including:
 - **Authoritative References**: Links to CWE, OWASP, NIST, and security research
 - **Safe Alternatives**: Concrete, actionable remediation guidance
 
-### 3. Metadata Schema
+### 4. Metadata Schema
 
-Each pattern includes structured vulnerability metadata:
+Each pattern includes structured vulnerability metadata (populated from research phase):
 
 ```elixir
 def vulnerability_metadata do
@@ -533,8 +577,8 @@ When pattern migration is complete:
 
 ---
 
-**Last Updated**: June 14, 2025 - 45 patterns migrated (28.7%), 45 patterns AST-enhanced (100%), 45 AST enhancements included in pattern files
-**Next Action**: Continue PHP pattern migration (3/25 completed)
+**Last Updated**: June 14, 2025 - 52 patterns migrated (33.1%), 52 patterns AST-enhanced (100%), 52 AST enhancements included in pattern files
+**Next Action**: Continue PHP pattern migration (9/25 completed)
 **Achievement**: ✅ Successfully migrated ALL 12 Python patterns with full TDD methodology
 **Current Work**: 🚀 PHP pattern migration in progress
 
