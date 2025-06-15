@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 87 out of 157 patterns migrated (55.4%)
+**Current Progress**: 89 out of 157 patterns migrated (56.7%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -102,16 +102,20 @@ Ruby Patterns (20/20 completed ✅):
 
 **Ruby Pattern Migration Complete!** 🎉
 
+Java Patterns (2/17 completed):
+- `java-sql-injection-statement` ✓✓ (SQL Injection via Statement) - AST included in pattern file
+- `java-sql-injection-string-format` ✓✓ (SQL Injection via String.format) - AST included in pattern file
+
 **Critical Issue**: hardcoded_secrets has duplicate implementation - delegated version AND inline version (lines 151-183). Remove duplicate.
 
 **AST Enhancement Status**: 
-- 87/87 patterns have AST rules (100%)
-- 87/87 AST enhancements included in pattern files (100%)
+- 89/89 patterns have AST rules (100%)
+- 89/89 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-**Current Task**: Ruby patterns COMPLETE ✅ (20/20) - Next: Java patterns
+**Current Task**: Java patterns IN PROGRESS (2/17) - Working on unsafe_deserialization
 **Next Up**: Continue migrating Java patterns following methodology
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:

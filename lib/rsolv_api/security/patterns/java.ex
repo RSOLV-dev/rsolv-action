@@ -8,6 +8,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   """
   
   alias RsolvApi.Security.Pattern
+  alias RsolvApi.Security.Patterns.Java.SqlInjectionStatement
+  alias RsolvApi.Security.Patterns.Java.SqlInjectionStringFormat
   
   @doc """
   Returns all Java security patterns.
@@ -42,88 +44,11 @@ defmodule RsolvApi.Security.Patterns.Java do
     ]
   end
   
-  @doc """
-  SQL Injection via Statement pattern.
+  # Delegate to the SqlInjectionStatement module
+  defdelegate sql_injection_statement(), to: SqlInjectionStatement, as: :pattern
   
-  Detects SQL injection through Statement with string concatenation.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.sql_injection_statement()
-      iex> pattern.id
-      "java-sql-injection-statement"
-      iex> pattern.severity
-      :high
-  """
-  def sql_injection_statement do
-    %Pattern{
-      id: "java-sql-injection-statement",
-      name: "SQL Injection via Statement",
-      description: "String concatenation in executeQuery() leads to SQL injection",
-      type: :sql_injection,
-      severity: :high,
-      languages: ["java"],
-      regex: ~r/\.executeQuery\s*\(\s*["'].*["']\s*\+|executeQuery\s*\(\s*["'].*\+/,
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use PreparedStatement with parameterized queries",
-      test_cases: %{
-        vulnerable: [
-          ~S|Statement stmt = conn.createStatement();
-ResultSet rs = stmt.executeQuery("SELECT * FROM users WHERE id = " + userId);|,
-          ~S|stmt.executeQuery("SELECT * FROM products WHERE name = '" + productName + "'");|
-        ],
-        safe: [
-          ~S|PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users WHERE id = ?");
-pstmt.setInt(1, userId);
-ResultSet rs = pstmt.executeQuery();|,
-          ~S|PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM products WHERE name = ?");
-pstmt.setString(1, productName);|
-        ]
-      }
-    }
-  end
-  
-  @doc """
-  SQL Injection via String.format pattern.
-  
-  Detects SQL injection through String.format() in queries.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.sql_injection_string_format()
-      iex> vulnerable = ~S|executeQuery(String.format("SELECT * FROM users WHERE id = %s", userId))|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def sql_injection_string_format do
-    %Pattern{
-      id: "java-sql-injection-string-format",
-      name: "SQL Injection via String.format",
-      description: "String.format() in SQL queries can lead to injection",
-      type: :sql_injection,
-      severity: :high,
-      languages: ["java"],
-      regex: ~r/executeQuery\s*\(\s*String\.format\s*\(/,
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use PreparedStatement with setString(), setInt(), etc.",
-      test_cases: %{
-        vulnerable: [
-          ~S|executeQuery(String.format("SELECT * FROM users WHERE id = %s", userId))|,
-          ~S|stmt.executeQuery(String.format("DELETE FROM posts WHERE author = '%s'", author))|
-        ],
-        safe: [
-          ~S|PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users WHERE id = ?");
-pstmt.setString(1, userId);|,
-          ~S|pstmt.setString(1, author);
-pstmt.executeUpdate();|
-        ]
-      }
-    }
-  end
+  # Delegate to the SqlInjectionStringFormat module
+  defdelegate sql_injection_string_format(), to: SqlInjectionStringFormat, as: :pattern
   
   @doc """
   Unsafe Deserialization pattern.
