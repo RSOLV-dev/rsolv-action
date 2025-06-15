@@ -27,6 +27,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.EtsPublicTable
   alias RsolvApi.Security.Patterns.Elixir.MissingAuthPipeline
   alias RsolvApi.Security.Patterns.Elixir.UnsafeRedirect
+  alias RsolvApi.Security.Patterns.Elixir.HardcodedSecrets
   
   @doc """
   Returns all Elixir security patterns.
@@ -129,45 +130,9 @@ defmodule RsolvApi.Security.Patterns.Elixir do
 
   # Delegate to the UnsafeRedirect module
   defdelegate unsafe_redirect(), to: UnsafeRedirect, as: :pattern
-  
-  
-  @doc """
-  Hardcoded Secrets pattern.
-  
-  Detects hardcoded secrets in source code.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.hardcoded_secrets()
-      iex> vulnerable = ~S|@api_key "sk_live_abcd1234efgh5678"|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def hardcoded_secrets do
-    %Pattern{
-      id: "elixir-hardcoded-secrets",
-      name: "Hardcoded Secrets",
-      description: "Secrets should not be hardcoded in source code",
-      type: :hardcoded_secret,
-      severity: :critical,
-      languages: ["elixir"],
-      regex: ~r/@(api_key|secret|password|token)\s+"[^"]{16,}"/,
-      default_tier: :public,
-      cwe_id: "CWE-798",
-      owasp_category: "A02:2021",
-      recommendation: "Use environment variables or runtime configuration",
-      test_cases: %{
-        vulnerable: [
-          ~S|@api_key "sk_live_abcd1234efgh5678"|,
-          ~S|@secret_key_base "a1b2c3d4e5f6g7h8i9j0"|
-        ],
-        safe: [
-          ~S|@api_key System.get_env("API_KEY")|,
-          ~S|secret_key_base: System.fetch_env!("SECRET_KEY_BASE")|
-        ]
-      }
-    }
-  end
+
+  # Delegate to the HardcodedSecrets module
+  defdelegate hardcoded_secrets(), to: HardcodedSecrets, as: :pattern
   
   @doc """
   Unsafe JSON Decode pattern.
