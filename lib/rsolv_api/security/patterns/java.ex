@@ -17,6 +17,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.PathTraversalFile
   alias RsolvApi.Security.Patterns.Java.PathTraversalFileinputstream
   alias RsolvApi.Security.Patterns.Java.WeakHashMd5
+  alias RsolvApi.Security.Patterns.Java.WeakHashSha1
   
   @doc """
   Returns all Java security patterns.
@@ -78,45 +79,9 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the WeakHashMd5 module
   defdelegate weak_hash_md5(), to: WeakHashMd5, as: :pattern
   
+  # Delegate to the WeakHashSha1 module
+  defdelegate weak_hash_sha1(), to: WeakHashSha1, as: :pattern
   
-  
-  @doc """
-  Weak Cryptography - SHA1 pattern.
-  
-  Detects usage of SHA1 for security purposes.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.weak_hash_sha1()
-      iex> vulnerable = ~S|MessageDigest md = MessageDigest.getInstance("SHA-1");|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def weak_hash_sha1 do
-    %Pattern{
-      id: "java-weak-hash-sha1",
-      name: "Weak Cryptography - SHA1",
-      description: "SHA-1 is deprecated for security purposes",
-      type: :weak_crypto,
-      severity: :medium,
-      languages: ["java"],
-      regex: ~r/MessageDigest\.getInstance\s*\(\s*["']SHA-1["']\s*\)/,
-      default_tier: :public,
-      cwe_id: "CWE-327",
-      owasp_category: "A02:2021",
-      recommendation: "Use SHA-256 or SHA-3 for cryptographic hashing",
-      test_cases: %{
-        vulnerable: [
-          ~S|MessageDigest md = MessageDigest.getInstance("SHA-1");|,
-          ~S|MessageDigest.getInstance("SHA-1").digest(data);|
-        ],
-        safe: [
-          ~S|MessageDigest md = MessageDigest.getInstance("SHA-256");|,
-          ~S|MessageDigest md = MessageDigest.getInstance("SHA3-256");|
-        ]
-      }
-    }
-  end
   
   @doc """
   Weak Cipher - DES pattern.
