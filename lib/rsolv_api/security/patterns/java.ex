@@ -18,6 +18,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.PathTraversalFileinputstream
   alias RsolvApi.Security.Patterns.Java.WeakHashMd5
   alias RsolvApi.Security.Patterns.Java.WeakHashSha1
+  alias RsolvApi.Security.Patterns.Java.WeakCipherDes
   
   @doc """
   Returns all Java security patterns.
@@ -82,44 +83,9 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the WeakHashSha1 module
   defdelegate weak_hash_sha1(), to: WeakHashSha1, as: :pattern
   
+  # Delegate to the WeakCipherDes module
+  defdelegate weak_cipher_des(), to: WeakCipherDes, as: :pattern
   
-  @doc """
-  Weak Cipher - DES pattern.
-  
-  Detects usage of DES encryption.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.weak_cipher_des()
-      iex> vulnerable = ~S|Cipher cipher = Cipher.getInstance("DES");|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def weak_cipher_des do
-    %Pattern{
-      id: "java-weak-cipher-des",
-      name: "Weak Cryptography - DES",
-      description: "DES encryption is insecure",
-      type: :weak_crypto,
-      severity: :high,
-      languages: ["java"],
-      regex: ~r/Cipher\.getInstance\s*\(\s*["']DES/,
-      default_tier: :public,
-      cwe_id: "CWE-327",
-      owasp_category: "A02:2021",
-      recommendation: "Use AES with appropriate key sizes (AES-256)",
-      test_cases: %{
-        vulnerable: [
-          ~S|Cipher cipher = Cipher.getInstance("DES");|,
-          ~S|Cipher cipher = Cipher.getInstance("DESede");|
-        ],
-        safe: [
-          ~S|Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");|,
-          ~S|Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");|
-        ]
-      }
-    }
-  end
   
   @doc """
   XXE via DocumentBuilder pattern.
