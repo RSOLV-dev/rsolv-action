@@ -18,6 +18,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.DeserializationErlang
   alias RsolvApi.Security.Patterns.Elixir.PathTraversal
   alias RsolvApi.Security.Patterns.Elixir.SsrfHttpoison
+  alias RsolvApi.Security.Patterns.Elixir.WeakCryptoMd5
   
   @doc """
   Returns all Elixir security patterns.
@@ -94,43 +95,8 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   defdelegate ssrf_httpoison(), to: SsrfHttpoison, as: :pattern
   
   
-  @doc """
-  Weak Cryptography - MD5 pattern.
-  
-  Detects usage of MD5 for cryptographic purposes.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.weak_crypto_md5()
-      iex> vulnerable = ~S|:crypto.hash(:md5, password)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def weak_crypto_md5 do
-    %Pattern{
-      id: "elixir-weak-crypto-md5",
-      name: "Weak Cryptography - MD5",
-      description: "MD5 is cryptographically broken",
-      type: :weak_crypto,
-      severity: :medium,
-      languages: ["elixir"],
-      regex: ~r/:crypto\.hash\s*\(\s*:md5/,
-      default_tier: :public,
-      cwe_id: "CWE-327",
-      owasp_category: "A02:2021",
-      recommendation: "Use :crypto.hash(:sha256, data) or Argon2/Bcrypt for passwords",
-      test_cases: %{
-        vulnerable: [
-          ~S|:crypto.hash(:md5, password)|,
-          ~S|Base.encode16(:crypto.hash(:md5, data))|
-        ],
-        safe: [
-          ~S|:crypto.hash(:sha256, data)|,
-          ~S|Argon2.hash_pwd_salt(password)|
-        ]
-      }
-    }
-  end
+  # Delegate to the WeakCryptoMd5 module
+  defdelegate weak_crypto_md5(), to: WeakCryptoMd5, as: :pattern
   
   @doc """
   Weak Cryptography - SHA1 pattern.
