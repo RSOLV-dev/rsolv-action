@@ -22,6 +22,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.XxeDocumentbuilder
   alias RsolvApi.Security.Patterns.Java.XxeSaxparser
   alias RsolvApi.Security.Patterns.Java.LdapInjection
+  alias RsolvApi.Security.Patterns.Java.HardcodedPassword
   
   @doc """
   Returns all Java security patterns.
@@ -98,46 +99,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the LdapInjection module
   defdelegate ldap_injection(), to: LdapInjection, as: :pattern
   
-  @doc """
-  Hardcoded Password pattern.
-  
-  Detects hardcoded credentials in source code.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.hardcoded_password()
-      iex> vulnerable = ~S|String password = "admin123";|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def hardcoded_password do
-    %Pattern{
-      id: "java-hardcoded-password",
-      name: "Hardcoded Credentials",
-      description: "Password in source code",
-      type: :hardcoded_secret,
-      severity: :high,
-      languages: ["java"],
-      regex: ~r/(?:password|pwd|passwd)\s*=\s*["'][^"']{6,}["']/i,
-      default_tier: :public,
-      cwe_id: "CWE-798",
-      owasp_category: "A07:2021",
-      recommendation: "Use environment variables or secure configuration management",
-      test_cases: %{
-        vulnerable: [
-          ~S|String password = "admin123";|,
-          ~S|private static final String PASSWORD = "secretpass";|,
-          ~S|conn = DriverManager.getConnection(url, "user", "passwd123");|
-        ],
-        safe: [
-          ~S|String password = System.getenv("DB_PASSWORD");|,
-          ~S|String password = config.getString("database.password");|,
-          ~S|// Use a secure credential management system
-String password = credentialManager.getPassword("database");|
-        ]
-      }
-    }
-  end
+  # Delegate to the HardcodedPassword module
+  defdelegate hardcoded_password(), to: HardcodedPassword, as: :pattern
   
   @doc """
   Weak Random Number Generation pattern.
