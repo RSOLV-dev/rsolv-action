@@ -42,6 +42,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Elixir.XssRawHtml
   doctest RsolvApi.Security.Patterns.Elixir.InsecureRandom
   doctest RsolvApi.Security.Patterns.Elixir.UnsafeAtomCreation
+  doctest RsolvApi.Security.Patterns.Elixir.CodeInjectionEval
   
   # Test PHP patterns
   doctest RsolvApi.Security.Patterns.Php

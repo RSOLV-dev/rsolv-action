@@ -14,6 +14,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.XssRawHtml
   alias RsolvApi.Security.Patterns.Elixir.InsecureRandom
   alias RsolvApi.Security.Patterns.Elixir.UnsafeAtomCreation
+  alias RsolvApi.Security.Patterns.Elixir.CodeInjectionEval
   
   @doc """
   Returns all Elixir security patterns.
@@ -77,47 +78,8 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   # Delegate to the UnsafeAtomCreation module
   defdelegate unsafe_atom_creation(), to: UnsafeAtomCreation, as: :pattern
   
-  @doc """
-  Code Injection via eval pattern.
-  
-  Detects code evaluation of user input.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.code_injection_eval()
-      iex> vulnerable = ~S|Code.eval_string(user_input)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def code_injection_eval do
-    %Pattern{
-      id: "elixir-code-injection-eval",
-      name: "Code Injection via eval",
-      description: "Evaluating user input as code can lead to remote code execution",
-      type: :rce,
-      severity: :critical,
-      languages: ["elixir"],
-      regex: ~r/Code\.(eval_string|eval_file|eval_quoted)\s*\(/,
-      default_tier: :protected,
-      cwe_id: "CWE-94",
-      owasp_category: "A03:2021",
-      recommendation: "Never evaluate user input as code. Use safe alternatives like pattern matching",
-      test_cases: %{
-        vulnerable: [
-          ~S|Code.eval_string(user_input)|,
-          ~S|{result, _} = Code.eval_string(params["code"])|
-        ],
-        safe: [
-          ~S|# Parse specific commands instead
-case command do
-  "start" -> start_process()
-  "stop" -> stop_process()
-  _ -> {:error, :unknown_command}
-end|
-        ]
-      }
-    }
-  end
+  # Delegate to the CodeInjectionEval module
+  defdelegate code_injection_eval(), to: CodeInjectionEval, as: :pattern
   
   @doc """
   Unsafe Deserialization pattern.
