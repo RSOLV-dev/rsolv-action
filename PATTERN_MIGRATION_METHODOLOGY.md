@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 70 out of 157 patterns migrated (44.6%)
+**Current Progress**: 71 out of 157 patterns migrated (45.2%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -78,17 +78,18 @@ PHP Patterns (18):
 - `php-error-display` ✓✓ (Error Display) - AST included in pattern file
 - `php-file-upload-no-validation` ✓✓ (File Upload without Validation) - AST included in pattern file
 
-Ruby Patterns (1):
+Ruby Patterns (2):
 - `ruby-broken-access-control-missing-auth` ✓✓ (Missing Authentication in Rails Controller) - AST included in pattern file
+- `ruby-mass-assignment` ✓✓ (Mass Assignment Vulnerability) - AST included in pattern file
 
 **AST Enhancement Status**: 
-- 70/70 patterns have AST rules (100%)
-- 70/70 AST enhancements included in pattern files (100%)
+- 71/71 patterns have AST rules (100%)
+- 71/71 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-**Current Task**: Continue with Ruby patterns (1/20 completed)
+**Current Task**: Continue with Ruby patterns (2/20 completed)
 **Next Up**: Continue migrating Ruby patterns following methodology
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:

@@ -9,6 +9,7 @@ defmodule RsolvApi.Security.Patterns.Ruby do
   
   alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Ruby.MissingAuthentication
+  alias RsolvApi.Security.Patterns.Ruby.MassAssignment
   
   @doc """
   Returns all Ruby security patterns.
@@ -72,37 +73,7 @@ defmodule RsolvApi.Security.Patterns.Ruby do
       iex> pattern.type
       :mass_assignment
   """
-  def mass_assignment do
-    %Pattern{
-      id: "ruby-mass-assignment",
-      name: "Mass Assignment Vulnerability",
-      description: "Detects unfiltered params in model operations",
-      type: :mass_assignment,
-      severity: :high,
-      languages: ["ruby"],
-      regex: [
-        ~r/\.(create|update|update_attributes|assign_attributes)\s*\(\s*params\[/,
-        ~r/\.(create!|update!)\s*\(\s*params\[/,
-        ~r/\.new\s*\(\s*params\[/,
-        ~r/\.(insert|upsert)\s*\(\s*params\[/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-915",
-      owasp_category: "A01:2021",
-      recommendation: "Use strong parameters in Rails: params.require(:model).permit(:field1, :field2)",
-      test_cases: %{
-        vulnerable: [
-          "User.create(params[:user])",
-          "user.update_attributes(params[:user])"
-        ],
-        safe: [
-          "User.create(user_params)",
-          "user.update(user_params)",
-          "params.require(:user).permit(:name, :email)"
-        ]
-      }
-    }
-  end
+  defdelegate mass_assignment(), to: MassAssignment, as: :pattern
   
   @doc """
   Weak Cryptography - MD5 Usage pattern.

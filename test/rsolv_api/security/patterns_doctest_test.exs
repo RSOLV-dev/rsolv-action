@@ -40,4 +40,5 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   # Test Ruby patterns
   doctest RsolvApi.Security.Patterns.Ruby
   doctest RsolvApi.Security.Patterns.Ruby.MissingAuthentication
+  doctest RsolvApi.Security.Patterns.Ruby.MassAssignment
 end
