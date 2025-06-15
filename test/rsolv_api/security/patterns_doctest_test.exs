@@ -23,6 +23,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   
   # Test Java patterns
   doctest RsolvApi.Security.Patterns.Java
+  doctest RsolvApi.Security.Patterns.Java.PathTraversalFileinputstream
   
   # Test Elixir patterns
   doctest RsolvApi.Security.Patterns.Elixir

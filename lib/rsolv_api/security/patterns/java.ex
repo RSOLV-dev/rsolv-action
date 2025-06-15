@@ -15,6 +15,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.CommandInjectionRuntimeExec
   alias RsolvApi.Security.Patterns.Java.CommandInjectionProcessbuilder
   alias RsolvApi.Security.Patterns.Java.PathTraversalFile
+  alias RsolvApi.Security.Patterns.Java.PathTraversalFileinputstream
   
   @doc """
   Returns all Java security patterns.
@@ -70,49 +71,9 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the PathTraversalFile module
   defdelegate path_traversal_file(), to: PathTraversalFile, as: :pattern
   
-  @doc """
-  Path Traversal via FileInputStream pattern.
+  # Delegate to the PathTraversalFileinputstream module
+  defdelegate path_traversal_fileinputstream(), to: PathTraversalFileinputstream, as: :pattern
   
-  Detects path traversal in FileInputStream operations.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.path_traversal_fileinputstream()
-      iex> vulnerable = ~S|FileInputStream fis = new FileInputStream(baseDir + filename);|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def path_traversal_fileinputstream do
-    %Pattern{
-      id: "java-path-traversal-fileinputstream",
-      name: "Path Traversal via FileInputStream",
-      description: "Unsanitized file paths in FileInputStream",
-      type: :path_traversal,
-      severity: :medium,
-      languages: ["java"],
-      regex: ~r/new\s+FileInputStream\s*\(\s*.*\+/,
-      default_tier: :protected,
-      cwe_id: "CWE-22",
-      owasp_category: "A01:2021",
-      recommendation: "Validate file paths and use Files.newInputStream() with proper validation",
-      test_cases: %{
-        vulnerable: [
-          ~S|FileInputStream fis = new FileInputStream(baseDir + filename);|,
-          ~S|new FileInputStream("/uploads/" + userFile);|
-        ],
-        safe: [
-          ~S|Path path = Paths.get(baseDir, filename).normalize();
-if (path.startsWith(baseDir)) {
-    InputStream is = Files.newInputStream(path);
-}|,
-          ~S|// Validate filename contains no path separators
-if (!filename.contains("..") && !filename.contains("/")) {
-    FileInputStream fis = new FileInputStream(new File(baseDir, filename));
-}|
-        ]
-      }
-    }
-  end
   
   @doc """
   Weak Cryptography - MD5 pattern.
