@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 102 out of 157 patterns migrated (65.0%)
+**Current Progress**: 103 out of 157 patterns migrated (65.6%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -108,7 +108,7 @@ Ruby Patterns (20/20 completed ✅):
 - Action: Incorporate pattern coverage for any newly revealed vulnerabilities
 - Timing: Best fit for post-migration effort to avoid scope creep during current TDD migration
 
-Java Patterns (15/17 completed):
+Java Patterns (16/17 completed):
 - `java-sql-injection-statement` ✓✓ (SQL Injection via Statement) - AST included in pattern file
 - `java-sql-injection-string-format` ✓✓ (SQL Injection via String.format) - AST included in pattern file
 - `java-unsafe-deserialization` ✓✓ (Unsafe Deserialization via ObjectInputStream) - AST included in pattern file
@@ -124,17 +124,18 @@ Java Patterns (15/17 completed):
 - `java-xxe-saxparser` ✓✓ (XXE via SAXParser) - AST included in pattern file
 - `java-ldap-injection` ✓✓ (LDAP Injection) - AST included in pattern file
 - `java-hardcoded-password` ✓✓ (Hardcoded Credentials) - AST included in pattern file
+- `java-weak-random` ✓✓ (Weak Random Number Generation) - AST included in pattern file
 
 **Critical Issue**: hardcoded_secrets has duplicate implementation - delegated version AND inline version (lines 151-183). Remove duplicate.
 
 **AST Enhancement Status**: 
-- 102/102 patterns have AST rules (100%)
-- 102/102 AST enhancements included in pattern files (100%)
+- 103/103 patterns have AST rules (100%)
+- 103/103 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-**Current Task**: Java patterns IN PROGRESS (15/17) - Next up: weak_random
+**Current Task**: Java patterns IN PROGRESS (16/17) - Next up: trust_all_certs
 **Next Up**: Continue migrating Java patterns following methodology
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:

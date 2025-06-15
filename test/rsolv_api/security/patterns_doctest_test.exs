@@ -31,6 +31,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Java.XxeSaxparser
   doctest RsolvApi.Security.Patterns.Java.LdapInjection
   doctest RsolvApi.Security.Patterns.Java.HardcodedPassword
+  doctest RsolvApi.Security.Patterns.Java.WeakRandom
   
   # Test Elixir patterns
   doctest RsolvApi.Security.Patterns.Elixir

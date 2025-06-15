@@ -23,6 +23,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.XxeSaxparser
   alias RsolvApi.Security.Patterns.Java.LdapInjection
   alias RsolvApi.Security.Patterns.Java.HardcodedPassword
+  alias RsolvApi.Security.Patterns.Java.WeakRandom
   
   @doc """
   Returns all Java security patterns.
@@ -102,46 +103,9 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the HardcodedPassword module
   defdelegate hardcoded_password(), to: HardcodedPassword, as: :pattern
   
-  @doc """
-  Weak Random Number Generation pattern.
+  # Delegate to the WeakRandom module
+  defdelegate weak_random(), to: WeakRandom, as: :pattern
   
-  Detects usage of java.util.Random for security purposes.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.weak_random()
-      iex> vulnerable = ~S|Random rand = new Random();|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def weak_random do
-    %Pattern{
-      id: "java-weak-random",
-      name: "Weak Random Number Generation",
-      description: "java.util.Random is not cryptographically secure",
-      type: :insecure_random,
-      severity: :medium,
-      languages: ["java"],
-      regex: ~r/new\s+Random\s*\(\)|Math\.random\s*\(\)/,
-      default_tier: :public,
-      cwe_id: "CWE-338",
-      owasp_category: "A02:2021",
-      recommendation: "Use SecureRandom for security-sensitive random values",
-      test_cases: %{
-        vulnerable: [
-          ~S|Random rand = new Random();
-int token = rand.nextInt(1000000);|,
-          ~S|double randomValue = Math.random();|
-        ],
-        safe: [
-          ~S|SecureRandom secureRandom = new SecureRandom();
-byte[] token = new byte[16];
-secureRandom.nextBytes(token);|,
-          ~S|SecureRandom random = SecureRandom.getInstanceStrong();|
-        ]
-      }
-    }
-  end
   
   @doc """
   Trust All Certificates pattern.
