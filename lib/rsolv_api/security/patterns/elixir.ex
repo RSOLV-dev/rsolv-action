@@ -23,6 +23,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.MissingCsrfProtection
   alias RsolvApi.Security.Patterns.Elixir.DebugModeEnabled
   alias RsolvApi.Security.Patterns.Elixir.UnsafeProcessSpawn
+  alias RsolvApi.Security.Patterns.Elixir.AtomExhaustion
   
   @doc """
   Returns all Elixir security patterns.
@@ -113,43 +114,9 @@ defmodule RsolvApi.Security.Patterns.Elixir do
 
   # Delegate to the UnsafeProcessSpawn module
   defdelegate unsafe_process_spawn(), to: UnsafeProcessSpawn, as: :pattern
-  
-  @doc """
-  Atom Exhaustion pattern.
-  
-  Detects potential atom table exhaustion vulnerabilities.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.atom_exhaustion()
-      iex> vulnerable = ~S|Jason.decode!(user_input, keys: :atoms)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def atom_exhaustion do
-    %Pattern{
-      id: "elixir-atom-exhaustion",
-      name: "Atom Table Exhaustion Risk",
-      description: "Converting user input to atoms can exhaust the atom table",
-      type: :resource_exhaustion,
-      severity: :high,
-      languages: ["elixir"],
-      regex: ~r/Jason\.decode!?\s*\([^,]+,\s*keys:\s*:atoms/,
-      default_tier: :protected,
-      cwe_id: "CWE-400",
-      owasp_category: "A05:2021",
-      recommendation: "Use Jason.decode!(data) without atom keys or use :atoms! for known keys only",
-      test_cases: %{
-        vulnerable: [
-          ~S|Jason.decode!(user_input, keys: :atoms)|
-        ],
-        safe: [
-          ~S|Jason.decode!(user_input)|,
-          ~S|Jason.decode!(user_input, keys: :atoms!)|
-        ]
-      }
-    }
-  end
+
+  # Delegate to the AtomExhaustion module
+  defdelegate atom_exhaustion(), to: AtomExhaustion, as: :pattern
   
   @doc """
   ETS Public Table pattern.
