@@ -13,6 +13,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.CommandInjectionSystem
   alias RsolvApi.Security.Patterns.Elixir.XssRawHtml
   alias RsolvApi.Security.Patterns.Elixir.InsecureRandom
+  alias RsolvApi.Security.Patterns.Elixir.UnsafeAtomCreation
   
   @doc """
   Returns all Elixir security patterns.
@@ -73,50 +74,8 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   # Delegate to the InsecureRandom module
   defdelegate insecure_random(), to: InsecureRandom, as: :pattern
   
-  
-  
-  
-  @doc """
-  Unsafe Atom Creation pattern.
-  
-  Detects dynamic atom creation from user input which can exhaust atom table.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.unsafe_atom_creation()
-      iex> vulnerable = ~S|String.to_atom(user_input)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def unsafe_atom_creation do
-    %Pattern{
-      id: "elixir-unsafe-atom-creation",
-      name: "Unsafe Atom Creation from User Input",
-      description: "Dynamic atom creation can exhaust the atom table",
-      type: :resource_exhaustion,
-      severity: :high,
-      languages: ["elixir"],
-      regex: ~r/String\.to_atom\s*\(/,
-      default_tier: :protected,
-      cwe_id: "CWE-400",
-      owasp_category: "A05:2021",
-      recommendation: "Use String.to_existing_atom/1 or avoid converting user input to atoms",
-      test_cases: %{
-        vulnerable: [
-          ~S|String.to_atom(user_input)|,
-          ~S|:"#{user_provided_string}"|
-        ],
-        safe: [
-          ~S|String.to_existing_atom(user_input)|,
-          ~S|case user_input do
-  "create" -> :create
-  "update" -> :update
-  _ -> :unknown
-end|
-        ]
-      }
-    }
-  end
+  # Delegate to the UnsafeAtomCreation module
+  defdelegate unsafe_atom_creation(), to: UnsafeAtomCreation, as: :pattern
   
   @doc """
   Code Injection via eval pattern.
