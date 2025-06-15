@@ -26,6 +26,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.AtomExhaustion
   alias RsolvApi.Security.Patterns.Elixir.EtsPublicTable
   alias RsolvApi.Security.Patterns.Elixir.MissingAuthPipeline
+  alias RsolvApi.Security.Patterns.Elixir.UnsafeRedirect
   
   @doc """
   Returns all Elixir security patterns.
@@ -125,46 +126,10 @@ defmodule RsolvApi.Security.Patterns.Elixir do
 
   # Delegate to the MissingAuthPipeline module
   defdelegate missing_auth_pipeline(), to: MissingAuthPipeline, as: :pattern
+
+  # Delegate to the UnsafeRedirect module
+  defdelegate unsafe_redirect(), to: UnsafeRedirect, as: :pattern
   
-  @doc """
-  Unsafe Redirect pattern.
-  
-  Detects open redirect vulnerabilities.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.unsafe_redirect()
-      iex> vulnerable = ~S|redirect(conn, external: params["return_to"])|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def unsafe_redirect do
-    %Pattern{
-      id: "elixir-unsafe-redirect",
-      name: "Open Redirect Vulnerability",
-      description: "Unvalidated redirects can lead to phishing attacks",
-      type: :open_redirect,
-      severity: :medium,
-      languages: ["elixir"],
-      regex: ~r/redirect\s*\(\s*conn\s*,\s*external:\s*params/,
-      default_tier: :public,
-      cwe_id: "CWE-601",
-      owasp_category: "A01:2021",
-      recommendation: "Validate redirect URLs against an allowlist",
-      test_cases: %{
-        vulnerable: [
-          ~S|redirect(conn, external: params["return_to"])|
-        ],
-        safe: [
-          ~S|if URI.parse(url).host in @allowed_hosts do
-  redirect(conn, external: url)
-else
-  redirect(conn, to: Routes.home_path(conn, :index))
-end|
-        ]
-      }
-    }
-  end
   
   @doc """
   Hardcoded Secrets pattern.
