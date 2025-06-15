@@ -47,6 +47,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Elixir.PathTraversal
   doctest RsolvApi.Security.Patterns.Elixir.SsrfHttpoison
   doctest RsolvApi.Security.Patterns.Elixir.WeakCryptoMd5
+  doctest RsolvApi.Security.Patterns.Elixir.WeakCryptoSha1
   
   # Test PHP patterns
   doctest RsolvApi.Security.Patterns.Php

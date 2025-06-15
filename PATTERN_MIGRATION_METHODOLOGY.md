@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 115 out of 157 patterns migrated (73.2%)
+**Current Progress**: 116 out of 157 patterns migrated (73.9%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -131,13 +131,13 @@ Java Patterns (17/17 completed ✅):
 **Critical Issue**: hardcoded_secrets has duplicate implementation - delegated version AND inline version (lines 151-183). Remove duplicate.
 
 **AST Enhancement Status**: 
-- 115/115 patterns have AST rules (100%)
-- 115/115 AST enhancements included in pattern files (100%)
+- 116/116 patterns have AST rules (100%)
+- 116/116 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-Elixir Patterns (11/28 completed):
+Elixir Patterns (12/28 completed):
 - `elixir-sql-injection-interpolation` ✓✓ (Ecto SQL Injection via String Interpolation) - AST included in pattern file
 - `elixir-sql-injection-fragment` ✓✓ (Unsafe Ecto Fragment Usage) - AST included in pattern file
 - `elixir-command-injection-system` ✓✓ (OS Command Injection via System.shell/:os.cmd/Port.open) - AST included in pattern file
@@ -149,9 +149,10 @@ Elixir Patterns (11/28 completed):
 - `elixir-path-traversal` ✓✓ (Path Traversal Vulnerability) - AST included in pattern file
 - `elixir-ssrf-httpoison` ✓✓ (SSRF via HTTPoison) - AST included in pattern file
 - `elixir-weak-crypto-md5` ✓✓ (Weak Cryptography - MD5) - AST included in pattern file
+- `elixir-weak-crypto-sha1` ✓✓ (Weak Cryptography - SHA1) - AST included in pattern file
 
-**Current Task**: Elixir patterns IN PROGRESS (11/28) - weak_crypto_md5 COMPLETE ✅ 
-**Next Up**: Continue Elixir pattern migration (17 remaining)
+**Current Task**: Elixir patterns IN PROGRESS (12/28) - weak_crypto_sha1 COMPLETE ✅ 
+**Next Up**: Continue Elixir pattern migration (16 remaining)
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:
 
@@ -639,10 +640,10 @@ When pattern migration is complete:
 
 ---
 
-**Last Updated**: January 16, 2025 - 115 patterns migrated (73.2%), 115 patterns AST-enhanced (100%), 115 AST enhancements included in pattern files
-**Next Action**: Continue Elixir pattern migration (11/28 completed)
+**Last Updated**: June 15, 2025 - 116 patterns migrated (73.9%), 116 patterns AST-enhanced (100%), 116 AST enhancements included in pattern files
+**Next Action**: Continue Elixir pattern migration (12/28 completed)
 **Achievement**: ✅ Successfully migrated ALL Java patterns (17/17), Ruby patterns (20/20), Python patterns (12/12)
-**Current Work**: 🚀 Elixir pattern migration in progress (weak_crypto_md5 COMPLETE)
+**Current Work**: 🚀 Elixir pattern migration in progress (weak_crypto_sha1 COMPLETE)
 
 ## Session Handoff Summary (January 14, 2025)
 

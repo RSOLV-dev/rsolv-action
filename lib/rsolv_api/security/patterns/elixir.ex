@@ -19,6 +19,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.PathTraversal
   alias RsolvApi.Security.Patterns.Elixir.SsrfHttpoison
   alias RsolvApi.Security.Patterns.Elixir.WeakCryptoMd5
+  alias RsolvApi.Security.Patterns.Elixir.WeakCryptoSha1
   
   @doc """
   Returns all Elixir security patterns.
@@ -98,43 +99,8 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   # Delegate to the WeakCryptoMd5 module
   defdelegate weak_crypto_md5(), to: WeakCryptoMd5, as: :pattern
   
-  @doc """
-  Weak Cryptography - SHA1 pattern.
-  
-  Detects usage of SHA1 for security purposes.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.weak_crypto_sha1()
-      iex> vulnerable = ~S|:crypto.hash(:sha, data)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def weak_crypto_sha1 do
-    %Pattern{
-      id: "elixir-weak-crypto-sha1",
-      name: "Weak Cryptography - SHA1",
-      description: "SHA-1 is deprecated for security purposes",
-      type: :weak_crypto,
-      severity: :medium,
-      languages: ["elixir"],
-      regex: ~r/:crypto\.hash\s*\(\s*:sha[,\s\)]/,
-      default_tier: :public,
-      cwe_id: "CWE-327",
-      owasp_category: "A02:2021",
-      recommendation: "Use :crypto.hash(:sha256, data) or stronger algorithms",
-      test_cases: %{
-        vulnerable: [
-          ~S|:crypto.hash(:sha, data)|,
-          ~S|:crypto.hmac(:sha, key, message)|
-        ],
-        safe: [
-          ~S|:crypto.hash(:sha256, data)|,
-          ~S|:crypto.hmac(:sha256, key, message)|
-        ]
-      }
-    }
-  end
+  # Delegate to the WeakCryptoSha1 module
+  defdelegate weak_crypto_sha1(), to: WeakCryptoSha1, as: :pattern
   
   @doc """
   Missing CSRF Protection pattern.
