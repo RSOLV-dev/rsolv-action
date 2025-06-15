@@ -21,6 +21,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.WeakCryptoMd5
   alias RsolvApi.Security.Patterns.Elixir.WeakCryptoSha1
   alias RsolvApi.Security.Patterns.Elixir.MissingCsrfProtection
+  alias RsolvApi.Security.Patterns.Elixir.DebugModeEnabled
   
   @doc """
   Returns all Elixir security patterns.
@@ -105,45 +106,10 @@ defmodule RsolvApi.Security.Patterns.Elixir do
 
   # Delegate to the MissingCsrfProtection module
   defdelegate missing_csrf_protection(), to: MissingCsrfProtection, as: :pattern
+
+  # Delegate to the DebugModeEnabled module
+  defdelegate debug_mode_enabled(), to: DebugModeEnabled, as: :pattern
   
-  
-  @doc """
-  Debug Mode Enabled pattern.
-  
-  Detects debug mode or sensitive information exposure.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.debug_mode_enabled()
-      iex> vulnerable = ~S|config :my_app, debug: true|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def debug_mode_enabled do
-    %Pattern{
-      id: "elixir-debug-mode-enabled",
-      name: "Debug Mode Enabled",
-      description: "Debug mode can expose sensitive information",
-      type: :information_disclosure,
-      severity: :medium,
-      languages: ["elixir"],
-      regex: ~r/config\s+.*debug:\s*true|IO\.inspect\s*\(/,
-      default_tier: :public,
-      cwe_id: "CWE-489",
-      owasp_category: "A05:2021",
-      recommendation: "Disable debug mode in production. Remove IO.inspect calls",
-      test_cases: %{
-        vulnerable: [
-          ~S|config :my_app, debug: true|,
-          ~S|IO.inspect(sensitive_data, label: "DEBUG")|
-        ],
-        safe: [
-          ~S|config :my_app, debug: false|,
-          ~S|Logger.debug("Debug info: #{inspect(data)}")|
-        ]
-      }
-    }
-  end
   
   @doc """
   Unsafe Process Spawn pattern.
