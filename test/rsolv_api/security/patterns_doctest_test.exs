@@ -41,4 +41,9 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Ruby
   doctest RsolvApi.Security.Patterns.Ruby.MissingAuthentication
   doctest RsolvApi.Security.Patterns.Ruby.MassAssignment
+  doctest RsolvApi.Security.Patterns.Ruby.HardcodedSecrets
+  doctest RsolvApi.Security.Patterns.Ruby.SqlInjectionInterpolation
+  doctest RsolvApi.Security.Patterns.Ruby.CommandInjection
+  doctest RsolvApi.Security.Patterns.Ruby.XpathInjection
+  doctest RsolvApi.Security.Patterns.Ruby.LdapInjection
 end

@@ -10,6 +10,11 @@ defmodule RsolvApi.Security.Patterns.Ruby do
   alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Ruby.MissingAuthentication
   alias RsolvApi.Security.Patterns.Ruby.MassAssignment
+  alias RsolvApi.Security.Patterns.Ruby.HardcodedSecrets
+  alias RsolvApi.Security.Patterns.Ruby.SqlInjectionInterpolation
+  alias RsolvApi.Security.Patterns.Ruby.CommandInjection
+  alias RsolvApi.Security.Patterns.Ruby.XpathInjection
+  alias RsolvApi.Security.Patterns.Ruby.LdapInjection
   
   @doc """
   Returns all Ruby security patterns.
@@ -74,6 +79,19 @@ defmodule RsolvApi.Security.Patterns.Ruby do
       :mass_assignment
   """
   defdelegate mass_assignment(), to: MassAssignment, as: :pattern
+  
+  @doc """
+  Hardcoded Secrets pattern.
+  
+  Detects hardcoded API keys, passwords, and secrets.
+  
+  ## Examples
+  
+      iex> pattern = RsolvApi.Security.Patterns.Ruby.hardcoded_secrets()
+      iex> pattern.severity
+      :critical
+  """
+  defdelegate hardcoded_secrets(), to: HardcodedSecrets, as: :pattern
   
   @doc """
   Weak Cryptography - MD5 Usage pattern.
@@ -175,37 +193,7 @@ hash = Digest::MD5.hexdigest(data)|
       iex> pattern.type
       :sql_injection
   """
-  def sql_injection_interpolation do
-    %Pattern{
-      id: "ruby-sql-injection-interpolation",
-      name: "SQL Injection via String Interpolation",
-      description: "Detects SQL queries built with string interpolation",
-      type: :sql_injection,
-      severity: :critical,
-      languages: ["ruby"],
-      regex: [
-        ~r/ActiveRecord::Base\.connection\.execute\s*\(\s*["'].*?#\{/,
-        ~r/\.execute\s*\(\s*["'](?:SELECT|INSERT|UPDATE|DELETE).*?#\{/i,
-        ~r/\.find_by_sql\s*\(\s*["'].*?#\{/,
-        ~r/\.where\s*\(\s*["'].*?#\{/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries or ActiveRecord query interface",
-      test_cases: %{
-        vulnerable: [
-          ~S|User.where("name = '#{params[:name]}'")|,
-          ~S|ActiveRecord::Base.connection.execute("SELECT * FROM users WHERE id = #{id}")|
-        ],
-        safe: [
-          ~S|User.where(name: params[:name])|,
-          ~S|User.where("name = ?", params[:name])|,
-          ~S|User.find_by(name: params[:name])|
-        ]
-      }
-    }
-  end
+  defdelegate sql_injection_interpolation(), to: SqlInjectionInterpolation, as: :pattern
   
   @doc """
   Command Injection pattern.
@@ -218,40 +206,7 @@ hash = Digest::MD5.hexdigest(data)|
       iex> pattern.severity
       :critical
   """
-  def command_injection do
-    %Pattern{
-      id: "ruby-command-injection",
-      name: "Command Injection",
-      description: "Detects shell command execution with user input",
-      type: :command_injection,
-      severity: :critical,
-      languages: ["ruby"],
-      regex: [
-        ~r/system\s*\(\s*["'].*?#\{/,
-        ~r/`.*?#\{.*?`/,
-        ~r/exec\s*\(\s*["'].*?#\{/,
-        ~r/%x[{\[].*?#\{/,
-        ~r/IO\.popen\s*\(\s*["'].*?#\{/,
-        ~r/Open3\.\w+\s*\(\s*["'].*?#\{/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-78",
-      owasp_category: "A03:2021",
-      recommendation: "Use array form of system calls or shellescape user input",
-      test_cases: %{
-        vulnerable: [
-          ~S|system("ls #{params[:dir]}")|,
-          ~S|`cat #{filename}`|,
-          ~S|exec("rm -rf #{path}")|
-        ],
-        safe: [
-          ~S|system("ls", params[:dir])|,
-          ~S|system("cat", Shellwords.escape(filename))|,
-          ~S|Open3.capture2("ls", "-la", dir)|
-        ]
-      }
-    }
-  end
+  defdelegate command_injection(), to: CommandInjection, as: :pattern
   
   @doc """
   XPath Injection pattern.
@@ -264,35 +219,7 @@ hash = Digest::MD5.hexdigest(data)|
       iex> pattern.type
       :xpath_injection
   """
-  def xpath_injection do
-    %Pattern{
-      id: "ruby-xpath-injection",
-      name: "XPath Injection",
-      description: "Detects XPath queries with user input",
-      type: :xpath_injection,
-      severity: :high,
-      languages: ["ruby"],
-      regex: [
-        ~r/\.xpath\s*\(\s*["'].*?#\{/,
-        ~r/Nokogiri.*?\.xpath\s*\(\s*["'].*?#\{/,
-        ~r/REXML.*?\.elements\s*\[\s*["'].*?#\{/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-643",
-      owasp_category: "A03:2021",
-      recommendation: "Sanitize user input or use parameterized XPath queries",
-      test_cases: %{
-        vulnerable: [
-          ~S|doc.xpath("//user[name='#{params[:name]}']")|,
-          ~S|xml.elements["//product[@id='#{id}']"]|
-        ],
-        safe: [
-          ~S|doc.xpath("//user[name=$name]", nil, name: params[:name])|,
-          ~S|doc.at_xpath("//user[@id=?]", params[:id])|
-        ]
-      }
-    }
-  end
+  defdelegate xpath_injection(), to: XpathInjection, as: :pattern
   
   @doc """
   LDAP Injection pattern.
@@ -305,35 +232,7 @@ hash = Digest::MD5.hexdigest(data)|
       iex> pattern.cwe_id
       "CWE-90"
   """
-  def ldap_injection do
-    %Pattern{
-      id: "ruby-ldap-injection",
-      name: "LDAP Injection",
-      description: "Detects LDAP queries with unsanitized user input",
-      type: :ldap_injection,
-      severity: :high,
-      languages: ["ruby"],
-      regex: [
-        ~r/Net::LDAP.*?filter.*?#\{/,
-        ~r/\.search\s*\(.*?:filter\s*=>\s*["'].*?#\{/,
-        ~r/ldap_search\s*\(\s*["'].*?#\{/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-90",
-      owasp_category: "A03:2021",
-      recommendation: "Escape special LDAP characters in user input",
-      test_cases: %{
-        vulnerable: [
-          ~S|ldap.search(filter: "(uid=#{username})")|,
-          ~S|filter = Net::LDAP::Filter.construct("(cn=#{name})")|
-        ],
-        safe: [
-          ~S|filter = Net::LDAP::Filter.eq("uid", username)|,
-          ~S|escaped = Net::LDAP::Filter.escape(user_input)|
-        ]
-      }
-    }
-  end
+  defdelegate ldap_injection(), to: LdapInjection, as: :pattern
   
   @doc """
   Weak Random Number Generation pattern.
