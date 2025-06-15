@@ -11,6 +11,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.SqlInjectionStatement
   alias RsolvApi.Security.Patterns.Java.SqlInjectionStringFormat
   alias RsolvApi.Security.Patterns.Java.UnsafeDeserialization
+  alias RsolvApi.Security.Patterns.Java.XpathInjection
   
   @doc """
   Returns all Java security patterns.
@@ -54,49 +55,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the UnsafeDeserialization module
   defdelegate unsafe_deserialization(), to: UnsafeDeserialization, as: :pattern
   
-  @doc """
-  XPath Injection pattern.
-  
-  Detects XPath injection vulnerabilities.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.xpath_injection()
-      iex> vulnerable = ~S|XPath xpath = XPathFactory.newInstance().newXPath(); xpath.evaluate("//user[name='" + username + "']", doc);|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def xpath_injection do
-    %Pattern{
-      id: "java-xpath-injection",
-      name: "XPath Injection",
-      description: "String concatenation in XPath expressions",
-      type: :xpath_injection,
-      severity: :high,
-      languages: ["java"],
-      regex: ~r/xpath\.evaluate\s*\([^)]*["'][^"']*["']\s*\+[^)]*\)/im,
-      default_tier: :protected,
-      cwe_id: "CWE-643",
-      owasp_category: "A03:2021",
-      recommendation: "Use parameterized XPath expressions or validate input",
-      test_cases: %{
-        vulnerable: [
-          ~S|XPath xpath = XPathFactory.newInstance().newXPath();
-xpath.evaluate("//user[name='" + username + "']", doc);|,
-          ~S|xpath.compile("//product[@id='" + productId + "']");|
-        ],
-        safe: [
-          ~S|// Use XPath variables
-XPath xpath = XPathFactory.newInstance().newXPath();
-xpath.setXPathVariableResolver(resolver);
-xpath.evaluate("//user[name=$username]", doc);|,
-          ~S|// Validate input
-String safeUsername = validateUsername(username);
-xpath.evaluate("//user[name='" + safeUsername + "']", doc);|
-        ]
-      }
-    }
-  end
+  # Delegate to the XpathInjection module
+  defdelegate xpath_injection(), to: XpathInjection, as: :pattern
   
   @doc """
   Command Injection via Runtime.exec pattern.
