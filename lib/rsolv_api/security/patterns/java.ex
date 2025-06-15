@@ -10,6 +10,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Java.SqlInjectionStatement
   alias RsolvApi.Security.Patterns.Java.SqlInjectionStringFormat
+  alias RsolvApi.Security.Patterns.Java.UnsafeDeserialization
   
   @doc """
   Returns all Java security patterns.
@@ -50,47 +51,8 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the SqlInjectionStringFormat module
   defdelegate sql_injection_string_format(), to: SqlInjectionStringFormat, as: :pattern
   
-  @doc """
-  Unsafe Deserialization pattern.
-  
-  Detects ObjectInputStream.readObject() which can execute arbitrary code.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.unsafe_deserialization()
-      iex> vulnerable = "ObjectInputStream ois = new ObjectInputStream(input); Object obj = ois.readObject();"
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def unsafe_deserialization do
-    %Pattern{
-      id: "java-unsafe-deserialization",
-      name: "Insecure Deserialization",
-      description: "ObjectInputStream.readObject() can execute arbitrary code",
-      type: :deserialization,
-      severity: :critical,
-      languages: ["java"],
-      regex: ~r/ObjectInputStream[\s\S]*?\.readObject\s*\(\)/,
-      default_tier: :protected,
-      cwe_id: "CWE-502",
-      owasp_category: "A08:2021",
-      recommendation: "Implement custom readObject() with validation or use safe serialization libraries",
-      test_cases: %{
-        vulnerable: [
-          ~S|ObjectInputStream ois = new ObjectInputStream(input);
-Object obj = ois.readObject();|,
-          ~S|return new ObjectInputStream(fileInputStream).readObject();|
-        ],
-        safe: [
-          ~S|// Use JSON serialization instead
-ObjectMapper mapper = new ObjectMapper();
-User user = mapper.readValue(jsonString, User.class);|,
-          ~S|// Implement ObjectInputFilter for validation
-ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;maxarray=100");|
-        ]
-      }
-    }
-  end
+  # Delegate to the UnsafeDeserialization module
+  defdelegate unsafe_deserialization(), to: UnsafeDeserialization, as: :pattern
   
   @doc """
   XPath Injection pattern.
