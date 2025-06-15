@@ -43,6 +43,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Elixir.InsecureRandom
   doctest RsolvApi.Security.Patterns.Elixir.UnsafeAtomCreation
   doctest RsolvApi.Security.Patterns.Elixir.CodeInjectionEval
+  doctest RsolvApi.Security.Patterns.Elixir.DeserializationErlang
   
   # Test PHP patterns
   doctest RsolvApi.Security.Patterns.Php

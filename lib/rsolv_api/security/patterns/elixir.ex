@@ -15,6 +15,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.InsecureRandom
   alias RsolvApi.Security.Patterns.Elixir.UnsafeAtomCreation
   alias RsolvApi.Security.Patterns.Elixir.CodeInjectionEval
+  alias RsolvApi.Security.Patterns.Elixir.DeserializationErlang
   
   @doc """
   Returns all Elixir security patterns.
@@ -81,43 +82,8 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   # Delegate to the CodeInjectionEval module
   defdelegate code_injection_eval(), to: CodeInjectionEval, as: :pattern
   
-  @doc """
-  Unsafe Deserialization pattern.
-  
-  Detects unsafe Erlang term deserialization.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.deserialization_erlang()
-      iex> vulnerable = ~S|:erlang.binary_to_term(user_data)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def deserialization_erlang do
-    %Pattern{
-      id: "elixir-deserialization-erlang",
-      name: "Unsafe Erlang Term Deserialization",
-      description: "binary_to_term can execute arbitrary code",
-      type: :deserialization,
-      severity: :critical,
-      languages: ["elixir"],
-      regex: ~r/:erlang\.binary_to_term\s*\(/,
-      default_tier: :protected,
-      cwe_id: "CWE-502",
-      owasp_category: "A08:2021",
-      recommendation: "Use :erlang.binary_to_term(data, [:safe]) or JSON for serialization",
-      test_cases: %{
-        vulnerable: [
-          ~S|:erlang.binary_to_term(user_data)|,
-          ~S|data = :erlang.binary_to_term(Base.decode64!(encoded))|
-        ],
-        safe: [
-          ~S|:erlang.binary_to_term(user_data, [:safe])|,
-          ~S|Jason.decode!(user_data)|
-        ]
-      }
-    }
-  end
+  # Delegate to the DeserializationErlang module
+  defdelegate deserialization_erlang(), to: DeserializationErlang, as: :pattern
   
   @doc """
   Path Traversal pattern.
