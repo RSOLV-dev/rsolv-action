@@ -19,6 +19,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.WeakHashMd5
   alias RsolvApi.Security.Patterns.Java.WeakHashSha1
   alias RsolvApi.Security.Patterns.Java.WeakCipherDes
+  alias RsolvApi.Security.Patterns.Java.XxeDocumentbuilder
   
   @doc """
   Returns all Java security patterns.
@@ -86,48 +87,9 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the WeakCipherDes module
   defdelegate weak_cipher_des(), to: WeakCipherDes, as: :pattern
   
+  # Delegate to the XxeDocumentbuilder module
+  defdelegate xxe_documentbuilder(), to: XxeDocumentbuilder, as: :pattern
   
-  @doc """
-  XXE via DocumentBuilder pattern.
-  
-  Detects XXE vulnerabilities in DocumentBuilder.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.xxe_documentbuilder()
-      iex> vulnerable = "DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance(); DocumentBuilder db = dbf.newDocumentBuilder();"
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def xxe_documentbuilder do
-    %Pattern{
-      id: "java-xxe-documentbuilder",
-      name: "XXE via DocumentBuilder",
-      description: "DocumentBuilder without secure processing",
-      type: :xxe,
-      severity: :high,
-      languages: ["java"],
-      regex: ~r/DocumentBuilderFactory.*\.newDocumentBuilder\(\)(?![\s\S]*setFeature.*XMLConstants\.FEATURE_SECURE_PROCESSING)/,
-      default_tier: :protected,
-      cwe_id: "CWE-611",
-      owasp_category: "A05:2021",
-      recommendation: "Enable secure processing and disable external entity processing",
-      test_cases: %{
-        vulnerable: [
-          ~S|DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-DocumentBuilder db = dbf.newDocumentBuilder();|
-        ],
-        safe: [
-          ~S|DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
-dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-DocumentBuilder db = dbf.newDocumentBuilder();|
-        ]
-      }
-    }
-  end
   
   @doc """
   XXE via SAXParser pattern.
