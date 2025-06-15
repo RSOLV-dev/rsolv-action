@@ -56,4 +56,6 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Ruby.SsrfOpenUri
   doctest RsolvApi.Security.Patterns.Ruby.XssErbRaw
   doctest RsolvApi.Security.Patterns.Ruby.PathTraversal
+  doctest RsolvApi.Security.Patterns.Ruby.OpenRedirect
+  doctest RsolvApi.Security.Patterns.Ruby.InsecureCookie
 end

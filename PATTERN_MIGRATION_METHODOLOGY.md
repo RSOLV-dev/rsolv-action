@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 85 out of 157 patterns migrated (54.1%)
+**Current Progress**: 87 out of 157 patterns migrated (55.4%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -78,7 +78,7 @@ PHP Patterns (18):
 - `php-error-display` ✓✓ (Error Display) - AST included in pattern file
 - `php-file-upload-no-validation` ✓✓ (File Upload without Validation) - AST included in pattern file
 
-Ruby Patterns (18/20 completed):
+Ruby Patterns (20/20 completed ✅):
 - `ruby-broken-access-control-missing-auth` ✓✓ (Missing Authentication in Rails Controller) - AST included in pattern file
 - `ruby-mass-assignment` ✓✓ (Mass Assignment Vulnerability) - AST included in pattern file  
 - `ruby-weak-crypto-md5` ✓✓ (Weak Cryptography - MD5 Usage) - AST included in pattern file
@@ -97,22 +97,22 @@ Ruby Patterns (18/20 completed):
 - `ruby-ssrf-open-uri` ✓✓ (SSRF via open-uri) - AST included in pattern file
 - `ruby-xss-erb-raw` ✓✓ (XSS in ERB Templates) - AST included in pattern file
 - `ruby-path-traversal` ✓✓ (Path Traversal) - AST included in pattern file
+- `ruby-open-redirect` ✓✓ (Open Redirect) - AST included in pattern file
+- `ruby-insecure-cookie` ✓✓ (Insecure Cookie Settings) - AST included in pattern file
 
-**Remaining Ruby Patterns (2 to migrate)**:
-1. open_redirect - Open Redirect
-2. insecure_cookie - Insecure Cookie Settings
+**Ruby Pattern Migration Complete!** 🎉
 
 **Critical Issue**: hardcoded_secrets has duplicate implementation - delegated version AND inline version (lines 151-183). Remove duplicate.
 
 **AST Enhancement Status**: 
-- 85/85 patterns have AST rules (100%)
-- 85/85 AST enhancements included in pattern files (100%)
+- 87/87 patterns have AST rules (100%)
+- 87/87 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-**Current Task**: Continue with Ruby patterns (16/20 completed)
-**Next Up**: Continue migrating Ruby patterns following methodology
+**Current Task**: Ruby patterns COMPLETE ✅ (20/20) - Next: Java patterns
+**Next Up**: Continue migrating Java patterns following methodology
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:
 

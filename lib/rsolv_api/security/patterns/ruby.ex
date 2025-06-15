@@ -25,6 +25,8 @@ defmodule RsolvApi.Security.Patterns.Ruby do
   alias RsolvApi.Security.Patterns.Ruby.SsrfOpenUri
   alias RsolvApi.Security.Patterns.Ruby.XssErbRaw
   alias RsolvApi.Security.Patterns.Ruby.PathTraversal
+  alias RsolvApi.Security.Patterns.Ruby.OpenRedirect
+  alias RsolvApi.Security.Patterns.Ruby.InsecureCookie
   
   @doc """
   Returns all Ruby security patterns.
@@ -343,40 +345,7 @@ hash = Digest::MD5.hexdigest(data)|
       iex> pattern.type
       :open_redirect
   """
-  def open_redirect do
-    %Pattern{
-      id: "ruby-open-redirect",
-      name: "Open Redirect",
-      description: "Detects unvalidated redirect destinations",
-      type: :open_redirect,
-      severity: :medium,
-      languages: ["ruby"],
-      regex: [
-        ~r/redirect_to\s+params/,
-        ~r/redirect_to\s+request\.referer/,
-        ~r/redirect_to\s+:back/
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-601",
-      owasp_category: "A01:2021",
-      recommendation: "Validate redirect URLs against a whitelist",
-      test_cases: %{
-        vulnerable: [
-          ~S|redirect_to params[:return_url]|,
-          ~S|redirect_to request.referer|
-        ],
-        safe: [
-          ~S|redirect_to root_path|,
-          ~S|safe_urls = [root_path, dashboard_path]
-if safe_urls.include?(params[:return_url])
-  redirect_to params[:return_url]
-else
-  redirect_to root_path
-end|
-        ]
-      }
-    }
-  end
+  defdelegate open_redirect(), to: OpenRedirect, as: :pattern
   
   @doc """
   Insecure Cookie Settings pattern.
@@ -389,37 +358,5 @@ end|
       iex> pattern.severity
       :medium
   """
-  def insecure_cookie do
-    %Pattern{
-      id: "ruby-insecure-cookie",
-      name: "Insecure Cookie Settings",
-      description: "Detects cookies without proper security flags",
-      type: :session_management,
-      severity: :medium,
-      languages: ["ruby"],
-      regex: [
-        ~r/cookies\[.+?\]\s*=\s*(?!.*:secure)/,
-        ~r/cookies\[.+?\]\s*=\s*\{[^}]*:httponly\s*=>\s*false/,
-        ~r/cookies\.permanent\[/
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-614",
-      owasp_category: "A05:2021",
-      recommendation: "Set secure: true and httponly: true for sensitive cookies",
-      test_cases: %{
-        vulnerable: [
-          ~S|cookies[:auth_token] = token|,
-          ~S|cookies[:session] = { value: session_id, httponly: false }|
-        ],
-        safe: [
-          ~S|cookies[:auth_token] = {
-  value: token,
-  secure: true,
-  httponly: true,
-  same_site: :strict
-}|
-        ]
-      }
-    }
-  end
+  defdelegate insecure_cookie(), to: InsecureCookie, as: :pattern
 end
