@@ -22,6 +22,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.WeakCryptoSha1
   alias RsolvApi.Security.Patterns.Elixir.MissingCsrfProtection
   alias RsolvApi.Security.Patterns.Elixir.DebugModeEnabled
+  alias RsolvApi.Security.Patterns.Elixir.UnsafeProcessSpawn
   
   @doc """
   Returns all Elixir security patterns.
@@ -109,44 +110,9 @@ defmodule RsolvApi.Security.Patterns.Elixir do
 
   # Delegate to the DebugModeEnabled module
   defdelegate debug_mode_enabled(), to: DebugModeEnabled, as: :pattern
-  
-  
-  @doc """
-  Unsafe Process Spawn pattern.
-  
-  Detects unsafe process spawning that might not be linked.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.unsafe_process_spawn()
-      iex> vulnerable = ~S|spawn(fn -> execute_user_code(input) end)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def unsafe_process_spawn do
-    %Pattern{
-      id: "elixir-unsafe-process-spawn",
-      name: "Unsafe Process Spawning",
-      description: "Unlinked processes can crash without supervision",
-      type: :resource_exhaustion,
-      severity: :medium,
-      languages: ["elixir"],
-      regex: ~r/spawn\s*\(\s*fn/,
-      default_tier: :protected,
-      cwe_id: "CWE-400",
-      owasp_category: "A05:2021",
-      recommendation: "Use Task.start_link/1 or spawn_link/1 for supervised processes",
-      test_cases: %{
-        vulnerable: [
-          ~S|spawn(fn -> execute_user_code(input) end)|
-        ],
-        safe: [
-          ~S|Task.start_link(fn -> execute_user_code(input) end)|,
-          ~S|spawn_link(fn -> execute_user_code(input) end)|
-        ]
-      }
-    }
-  end
+
+  # Delegate to the UnsafeProcessSpawn module
+  defdelegate unsafe_process_spawn(), to: UnsafeProcessSpawn, as: :pattern
   
   @doc """
   Atom Exhaustion pattern.

@@ -50,6 +50,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Elixir.WeakCryptoSha1
   doctest RsolvApi.Security.Patterns.Elixir.MissingCsrfProtection
   doctest RsolvApi.Security.Patterns.Elixir.DebugModeEnabled
+  doctest RsolvApi.Security.Patterns.Elixir.UnsafeProcessSpawn
   
   # Test PHP patterns
   doctest RsolvApi.Security.Patterns.Php
