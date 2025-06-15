@@ -56,6 +56,7 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   doctest RsolvApi.Security.Patterns.Elixir.MissingAuthPipeline
   doctest RsolvApi.Security.Patterns.Elixir.UnsafeRedirect
   doctest RsolvApi.Security.Patterns.Elixir.HardcodedSecrets
+  doctest RsolvApi.Security.Patterns.Elixir.UnsafeJsonDecode
   
   # Test PHP patterns
   doctest RsolvApi.Security.Patterns.Php

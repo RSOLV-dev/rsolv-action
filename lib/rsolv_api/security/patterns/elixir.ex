@@ -28,6 +28,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.MissingAuthPipeline
   alias RsolvApi.Security.Patterns.Elixir.UnsafeRedirect
   alias RsolvApi.Security.Patterns.Elixir.HardcodedSecrets
+  alias RsolvApi.Security.Patterns.Elixir.UnsafeJsonDecode
   
   @doc """
   Returns all Elixir security patterns.
@@ -133,45 +134,10 @@ defmodule RsolvApi.Security.Patterns.Elixir do
 
   # Delegate to the HardcodedSecrets module
   defdelegate hardcoded_secrets(), to: HardcodedSecrets, as: :pattern
+
+  # Delegate to the UnsafeJsonDecode module
+  defdelegate unsafe_json_decode(), to: UnsafeJsonDecode, as: :pattern
   
-  @doc """
-  Unsafe JSON Decode pattern.
-  
-  Detects unsafe JSON decoding that might raise.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.unsafe_json_decode()
-      iex> vulnerable = ~S|Jason.decode!(user_input)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def unsafe_json_decode do
-    %Pattern{
-      id: "elixir-unsafe-json-decode",
-      name: "Unsafe JSON Decoding",
-      description: "decode! can crash the process on invalid input",
-      type: :dos,
-      severity: :low,
-      languages: ["elixir"],
-      regex: ~r/Jason\.decode!\s*\(\s*[^")]/,
-      default_tier: :public,
-      cwe_id: "CWE-20",
-      owasp_category: "A05:2021",
-      recommendation: "Use Jason.decode/1 and handle the error case",
-      test_cases: %{
-        vulnerable: [
-          ~S|Jason.decode!(user_input)|
-        ],
-        safe: [
-          ~S|case Jason.decode(user_input) do
-  {:ok, data} -> process(data)
-  {:error, _} -> {:error, "Invalid JSON"}
-end|
-        ]
-      }
-    }
-  end
   
   @doc """
   Cookie Security pattern.
