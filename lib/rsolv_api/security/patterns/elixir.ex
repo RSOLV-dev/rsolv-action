@@ -8,6 +8,10 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   """
   
   alias RsolvApi.Security.Pattern
+  alias RsolvApi.Security.Patterns.Elixir.SqlInjectionInterpolation
+  alias RsolvApi.Security.Patterns.Elixir.SqlInjectionFragment
+  alias RsolvApi.Security.Patterns.Elixir.CommandInjectionSystem
+  alias RsolvApi.Security.Patterns.Elixir.XssRawHtml
   
   @doc """
   Returns all Elixir security patterns.
@@ -53,162 +57,19 @@ defmodule RsolvApi.Security.Patterns.Elixir do
     ]
   end
   
-  @doc """
-  SQL Injection via String Interpolation pattern.
+  # Delegate to the SqlInjectionInterpolation module
+  defdelegate sql_injection_interpolation(), to: SqlInjectionInterpolation, as: :pattern
   
-  Detects SQL injection through string interpolation in Ecto queries.
+  # Delegate to the SqlInjectionFragment module
+  defdelegate sql_injection_fragment(), to: SqlInjectionFragment, as: :pattern
   
-  ## Examples
+  # Delegate to the CommandInjectionSystem module  
+  defdelegate command_injection_system(), to: CommandInjectionSystem, as: :pattern
   
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.sql_injection_interpolation()
-      iex> pattern.id
-      "elixir-sql-injection-interpolation"
-      iex> pattern.severity
-      :critical
-  """
-  def sql_injection_interpolation do
-    %Pattern{
-      id: "elixir-sql-injection-interpolation",
-      name: "Ecto SQL Injection via String Interpolation",
-      description: "Detects SQL injection through string interpolation in Ecto queries",
-      type: :sql_injection,
-      severity: :critical,
-      languages: ["elixir"],
-      frameworks: ["ecto"],
-      regex: ~r/(?:Repo|Ecto\.Adapters\.SQL)\.query!?\s*\(\s*.*["'].*?#\{[^}]+\}.*?["']/,
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries with Ecto. Use ^variable syntax or pass parameters separately",
-      test_cases: %{
-        vulnerable: [
-          ~S|Repo.query!("SELECT * FROM users WHERE name = '#{name}'")|,
-          ~S|Ecto.Adapters.SQL.query!(Repo, "DELETE FROM posts WHERE id = #{id}")|
-        ],
-        safe: [
-          ~S|Repo.query!("SELECT * FROM users WHERE name = $1", [name])|,
-          ~S|from(u in User, where: u.name == ^name)|
-        ]
-      }
-    }
-  end
+  # Delegate to the XssRawHtml module
+  defdelegate xss_raw_html(), to: XssRawHtml, as: :pattern
   
-  @doc """
-  Unsafe Ecto Fragment Usage pattern.
   
-  Detects potentially unsafe use of Ecto fragments with user input.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.sql_injection_fragment()
-      iex> vulnerable = ~S|from(u in User, where: fragment("? = ANY(?)", ^field, ^values))|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def sql_injection_fragment do
-    %Pattern{
-      id: "elixir-sql-injection-fragment",
-      name: "Unsafe Ecto Fragment Usage",
-      description: "Detects potentially unsafe use of Ecto fragments with user input",
-      type: :sql_injection,
-      severity: :high,
-      languages: ["elixir"],
-      frameworks: ["ecto"],
-      regex: ~r/fragment\s*\(\s*["'][^"']*(?:\?\s*=\s*ANY\s*\(\s*\?\s*\)|@>.*?\?)["']\s*,\s*\^/,
-      default_tier: :protected,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use Ecto query DSL instead of fragments when possible",
-      test_cases: %{
-        vulnerable: [
-          ~S|from(u in User, where: fragment("? = ANY(?)", ^field, ^values))|,
-          ~S|from(p in Post, where: fragment("tags @> ?", ^tags))|
-        ],
-        safe: [
-          ~S|from(u in User, where: field(u, ^field) in ^values)|,
-          ~S|from(u in User, where: u.id in ^ids)|
-        ]
-      }
-    }
-  end
-  
-  @doc """
-  OS Command Injection pattern.
-  
-  Detects command injection vulnerabilities in system calls.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.command_injection_system()
-      iex> pattern.id
-      "elixir-command-injection-system"
-      iex> pattern.severity
-      :critical
-  """
-  def command_injection_system do
-    %Pattern{
-      id: "elixir-command-injection-system",
-      name: "OS Command Injection in Elixir",
-      description: "Detects command injection vulnerabilities in system calls",
-      type: :command_injection,
-      severity: :critical,
-      languages: ["elixir"],
-      regex: ~r/(?:System\.shell\s*\(\s*["'][^"']*#\{[^}]+\}[^"']*["']|:os\.cmd\s*\(\s*'[^']*#\{[^}]+\}[^']*')/,
-      default_tier: :protected,
-      cwe_id: "CWE-78",
-      owasp_category: "A03:2021",
-      recommendation: "Use System.cmd with a list of arguments instead of string interpolation",
-      test_cases: %{
-        vulnerable: [
-          ~S|System.shell("rm -rf #{path}")|,
-          ~S|:os.cmd('ls #{directory}')|
-        ],
-        safe: [
-          ~S|System.cmd("rm", ["-rf", path])|,
-          ~S|System.cmd("ls", [directory])|
-        ]
-      }
-    }
-  end
-  
-  @doc """
-  XSS via Phoenix Raw HTML Output pattern.
-  
-  Detects XSS vulnerabilities from raw HTML output in Phoenix templates.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.xss_raw_html()
-      iex> vulnerable = ~S|<%= raw user_content %>|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def xss_raw_html do
-    %Pattern{
-      id: "elixir-xss-raw-html",
-      name: "XSS via Phoenix Raw HTML Output",
-      description: "Detects XSS vulnerabilities from raw HTML output in Phoenix templates",
-      type: :xss,
-      severity: :high,
-      languages: ["elixir"],
-      frameworks: ["phoenix"],
-      regex: ~r/<%=\s*raw\s+/,
-      default_tier: :public,
-      cwe_id: "CWE-79",
-      owasp_category: "A03:2021",
-      recommendation: "Use Phoenix HTML escaping by default. Only use raw() when necessary and ensure content is sanitized",
-      test_cases: %{
-        vulnerable: [
-          ~S|<%= raw user_content %>|,
-          ~S|<%= Phoenix.HTML.raw(comment) %>|
-        ],
-        safe: [
-          ~S|<%= user_content %>|,
-          ~S|<%= sanitize(user_content) %>|
-        ]
-      }
-    }
-  end
   
   @doc """
   Insecure Random Number Generation pattern.

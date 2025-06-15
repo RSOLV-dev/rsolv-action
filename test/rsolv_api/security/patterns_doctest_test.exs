@@ -36,6 +36,10 @@ defmodule RsolvApi.Security.PatternsDoctestTest do
   
   # Test Elixir patterns
   doctest RsolvApi.Security.Patterns.Elixir
+  doctest RsolvApi.Security.Patterns.Elixir.SqlInjectionInterpolation
+  doctest RsolvApi.Security.Patterns.Elixir.SqlInjectionFragment
+  doctest RsolvApi.Security.Patterns.Elixir.CommandInjectionSystem
+  doctest RsolvApi.Security.Patterns.Elixir.XssRawHtml
   
   # Test PHP patterns
   doctest RsolvApi.Security.Patterns.Php

@@ -50,10 +50,8 @@ defmodule RsolvApi.Security.Patterns.PatternBase do
           # Fall back to centralized enhancement
           ASTPattern.enhance(base_pattern)
         else
-          # Apply pattern-specific enhancement
-          base_pattern
-          |> Map.merge(enhancement)
-          |> then(&struct(ASTPattern, Map.from_struct(&1)))
+          # Apply pattern-specific enhancement by adding ast_enhancement key
+          Map.put(base_pattern, :ast_enhancement, enhancement)
         end
       end
       
