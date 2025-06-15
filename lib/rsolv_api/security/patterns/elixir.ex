@@ -12,6 +12,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.SqlInjectionFragment
   alias RsolvApi.Security.Patterns.Elixir.CommandInjectionSystem
   alias RsolvApi.Security.Patterns.Elixir.XssRawHtml
+  alias RsolvApi.Security.Patterns.Elixir.InsecureRandom
   
   @doc """
   Returns all Elixir security patterns.
@@ -69,49 +70,11 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   # Delegate to the XssRawHtml module
   defdelegate xss_raw_html(), to: XssRawHtml, as: :pattern
   
+  # Delegate to the InsecureRandom module
+  defdelegate insecure_random(), to: InsecureRandom, as: :pattern
   
   
-  @doc """
-  Insecure Random Number Generation pattern.
   
-  Detects weak random number generation for security purposes.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.insecure_random()
-      iex> vulnerable = ~S|token = :rand.uniform(1000000)|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def insecure_random do
-    %Pattern{
-      id: "elixir-insecure-random",
-      name: "Insecure Random Number Generation",
-      description: "Using :rand for security-sensitive random values",
-      type: :insecure_random,
-      severity: :medium,
-      languages: ["elixir"],
-      regex: ~r/:rand\.(uniform|normal|seed)(?!\s*\(\s*:crypto\.strong_rand_bytes)/,
-      default_tier: :public,
-      cwe_id: "CWE-338",
-      owasp_category: "A02:2021",
-      recommendation: "Use :crypto.strong_rand_bytes/1 for security-sensitive randomness",
-      test_cases: %{
-        vulnerable: [
-          ~S|token = :rand.uniform(1000000)|,
-          ~S|nonce = Enum.random(1..999999)|
-        ],
-        safe: [
-          ~S"""
-token = :crypto.strong_rand_bytes(16) |> Base.encode64()
-""",
-          ~S"""
-nonce = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
-"""
-        ]
-      }
-    }
-  end
   
   @doc """
   Unsafe Atom Creation pattern.
