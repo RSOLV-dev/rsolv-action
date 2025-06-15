@@ -16,6 +16,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   alias RsolvApi.Security.Patterns.Elixir.UnsafeAtomCreation
   alias RsolvApi.Security.Patterns.Elixir.CodeInjectionEval
   alias RsolvApi.Security.Patterns.Elixir.DeserializationErlang
+  alias RsolvApi.Security.Patterns.Elixir.PathTraversal
   
   @doc """
   Returns all Elixir security patterns.
@@ -85,46 +86,8 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   # Delegate to the DeserializationErlang module
   defdelegate deserialization_erlang(), to: DeserializationErlang, as: :pattern
   
-  @doc """
-  Path Traversal pattern.
-  
-  Detects file path manipulation vulnerabilities.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Elixir.path_traversal()
-      iex> pattern.id
-      "elixir-path-traversal"
-      iex> pattern.severity
-      :high
-  """
-  def path_traversal do
-    %Pattern{
-      id: "elixir-path-traversal",
-      name: "Path Traversal Vulnerability",
-      description: "Unsanitized file paths can lead to unauthorized file access",
-      type: :path_traversal,
-      severity: :high,
-      languages: ["elixir"],
-      regex: ~r/File\.(read!?|write!?|exists\?|rm!?|mkdir_p!?)\s*\(\s*["'][^"']*#\{[^}]+\}/,
-      default_tier: :protected,
-      cwe_id: "CWE-22",
-      owasp_category: "A01:2021",
-      recommendation: "Validate and sanitize file paths. Use Path.expand/2 with a safe base directory",
-      test_cases: %{
-        vulnerable: [
-          ~S|File.read!("/uploads/#{filename}")|,
-          ~S|File.write!("#{base_path}/#{user_file}", content)|
-        ],
-        safe: [
-          ~S|safe_path = Path.expand(filename, "/uploads")
-if String.starts_with?(safe_path, "/uploads/") do
-  File.read!(safe_path)
-end|
-        ]
-      }
-    }
-  end
+  # Delegate to the PathTraversal module
+  defdelegate path_traversal(), to: PathTraversal, as: :pattern
   
   @doc """
   SSRF via HTTPoison pattern.
