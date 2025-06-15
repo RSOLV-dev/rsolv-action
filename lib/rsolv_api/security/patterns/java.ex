@@ -16,6 +16,7 @@ defmodule RsolvApi.Security.Patterns.Java do
   alias RsolvApi.Security.Patterns.Java.CommandInjectionProcessbuilder
   alias RsolvApi.Security.Patterns.Java.PathTraversalFile
   alias RsolvApi.Security.Patterns.Java.PathTraversalFileinputstream
+  alias RsolvApi.Security.Patterns.Java.WeakHashMd5
   
   @doc """
   Returns all Java security patterns.
@@ -74,46 +75,10 @@ defmodule RsolvApi.Security.Patterns.Java do
   # Delegate to the PathTraversalFileinputstream module
   defdelegate path_traversal_fileinputstream(), to: PathTraversalFileinputstream, as: :pattern
   
+  # Delegate to the WeakHashMd5 module
+  defdelegate weak_hash_md5(), to: WeakHashMd5, as: :pattern
   
-  @doc """
-  Weak Cryptography - MD5 pattern.
   
-  Detects usage of MD5 for cryptographic purposes.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Java.weak_hash_md5()
-      iex> vulnerable = ~S|MessageDigest md = MessageDigest.getInstance("MD5");|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
-  """
-  def weak_hash_md5 do
-    %Pattern{
-      id: "java-weak-hash-md5",
-      name: "Weak Cryptography - MD5",
-      description: "MD5 is cryptographically broken",
-      type: :weak_crypto,
-      severity: :medium,
-      languages: ["java"],
-      regex: ~r/MessageDigest\.getInstance\s*\(\s*["']MD5["']\s*\)/,
-      default_tier: :public,
-      cwe_id: "CWE-327",
-      owasp_category: "A02:2021",
-      recommendation: "Use SHA-256 or SHA-3 for cryptographic hashing",
-      test_cases: %{
-        vulnerable: [
-          ~S|MessageDigest md = MessageDigest.getInstance("MD5");|,
-          ~S|MessageDigest.getInstance("MD5").digest(password.getBytes());|
-        ],
-        safe: [
-          ~S|MessageDigest md = MessageDigest.getInstance("SHA-256");|,
-          ~S|// For passwords, use proper password hashing
-BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-String hashedPassword = encoder.encode(password);|
-        ]
-      }
-    }
-  end
   
   @doc """
   Weak Cryptography - SHA1 pattern.

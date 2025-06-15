@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 95 out of 157 patterns migrated (60.5%)
+**Current Progress**: 96 out of 157 patterns migrated (61.1%)
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
 
@@ -102,7 +102,7 @@ Ruby Patterns (20/20 completed ✅):
 
 **Ruby Pattern Migration Complete!** 🎉
 
-Java Patterns (8/17 completed):
+Java Patterns (9/17 completed):
 - `java-sql-injection-statement` ✓✓ (SQL Injection via Statement) - AST included in pattern file
 - `java-sql-injection-string-format` ✓✓ (SQL Injection via String.format) - AST included in pattern file
 - `java-unsafe-deserialization` ✓✓ (Unsafe Deserialization via ObjectInputStream) - AST included in pattern file
@@ -111,17 +111,18 @@ Java Patterns (8/17 completed):
 - `java-command-injection-processbuilder` ✓✓ (Command Injection via ProcessBuilder) - AST included in pattern file
 - `java-path-traversal-file` ✓✓ (Path Traversal via File) - AST included in pattern file
 - `java-path-traversal-fileinputstream` ✓✓ (Path Traversal via FileInputStream) - AST included in pattern file
+- `java-weak-hash-md5` ✓✓ (Weak Cryptography - MD5) - AST included in pattern file
 
 **Critical Issue**: hardcoded_secrets has duplicate implementation - delegated version AND inline version (lines 151-183). Remove duplicate.
 
 **AST Enhancement Status**: 
-- 95/95 patterns have AST rules (100%)
-- 95/95 AST enhancements included in pattern files (100%)
+- 96/96 patterns have AST rules (100%)
+- 96/96 AST enhancements included in pattern files (100%)
 - 0 AST enhancements in central file
 
 **AST Migration Progress**: ✅ COMPLETE - All AST enhancements successfully migrated from central ast_pattern.ex to individual pattern files
 
-**Current Task**: Java patterns IN PROGRESS (8/17) - Next up: weak_hash_md5
+**Current Task**: Java patterns IN PROGRESS (9/17) - Next up: weak_hash_sha1
 **Next Up**: Continue migrating Java patterns following methodology
 
 **CHECKPOINT COMPLETED**: After completing the XXE pattern (19th pattern), we evaluated the architecture:
