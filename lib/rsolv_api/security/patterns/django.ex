@@ -9,6 +9,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   
   alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Django.OrmInjection
+  alias RsolvApi.Security.Patterns.Django.NosqlInjection
   
   @doc """
   Returns all Django security patterns.
@@ -24,7 +25,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   def all do
     [
       OrmInjection.pattern(),
-      django_nosql_injection(),
+      NosqlInjection.pattern(),
       django_template_xss(),
       django_template_injection(),
       django_debug_settings(),
@@ -45,53 +46,6 @@ defmodule RsolvApi.Security.Patterns.Django do
     ]
   end
   
-  
-  @doc """
-  Django NoSQL Injection pattern.
-  
-  Detects NoSQL injection through MongoDB, Elasticsearch, or Redis with user input.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_nosql_injection()
-      iex> pattern.type
-      :nosql_injection
-  """
-  def django_nosql_injection do
-    %Pattern{
-      id: "django-nosql-injection",
-      name: "Django NoSQL Injection",
-      description: "NoSQL injection through MongoDB, Elasticsearch, or Redis with user input",
-      type: :nosql_injection,
-      severity: :high,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/\.raw\s*\(\s*\{\s*["\']?\$where["\']?:\s*.*?user_\w+/,
-        ~r/\.filter\s*\(\s*\*\*json\.loads\s*\(\s*request/,
-        ~r/\.aggregate\s*\(\s*json\.loads\s*\(\s*request/,
-        ~r/\.find\s*\(\s*json\.loads\s*\(\s*request/,
-        ~r/elasticsearch.*search\s*\(\s*body\s*=\s*json\.loads/,
-        ~r/redis.*eval\s*\(\s*request\./
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-943",
-      owasp_category: "A03:2021",
-      recommendation: "Validate and sanitize user input before using in NoSQL queries. Use parameterized queries where possible.",
-      test_cases: %{
-        vulnerable: [
-          ~s|collection.find(json.loads(request.body))|,
-          ~s|Model.objects.raw({"$where": user_input})|,
-          ~s|es.search(body=json.loads(request.GET['query']))|
-        ],
-        safe: [
-          ~s|collection.find({"name": request.GET.get('name')})|,
-          ~s|Model.objects.filter(name=request.GET.get('name'))|,
-          ~s|es.search(body={"query": {"match": {"field": value}}})|
-        ]
-      }
-    }
-  end
   
   @doc """
   Django Template XSS pattern.
