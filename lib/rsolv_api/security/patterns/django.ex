@@ -17,6 +17,8 @@ defmodule RsolvApi.Security.Patterns.Django do
   alias RsolvApi.Security.Patterns.Django.MissingSecurityMiddleware
   alias RsolvApi.Security.Patterns.Django.BrokenAuth
   alias RsolvApi.Security.Patterns.Django.AuthorizationBypass
+  alias RsolvApi.Security.Patterns.Django.CsrfBypass
+  alias RsolvApi.Security.Patterns.Django.Clickjacking
   
   @doc """
   Returns all Django security patterns.
@@ -40,8 +42,8 @@ defmodule RsolvApi.Security.Patterns.Django do
       MissingSecurityMiddleware.pattern(),
       BrokenAuth.pattern(),
       AuthorizationBypass.pattern(),
-      django_csrf_bypass(),
-      django_clickjacking(),
+      CsrfBypass.pattern(),
+      Clickjacking.pattern(),
       django_model_injection(),
       django_mass_assignment(),
       django_unsafe_url_patterns(),
@@ -66,92 +68,9 @@ defmodule RsolvApi.Security.Patterns.Django do
   
   # Migrated to Django.AuthorizationBypass module
   
-  @doc """
-  Django CSRF Bypass pattern.
+  # Migrated to Django.CsrfBypass module
   
-  Detects CSRF protection bypasses.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_csrf_bypass()
-      iex> pattern.type
-      :csrf
-  """
-  def django_csrf_bypass do
-    %Pattern{
-      id: "django-csrf-bypass", 
-      name: "Django CSRF Bypass",
-      description: "CSRF protection disabled or bypassed",
-      type: :csrf,
-      severity: :high,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/@csrf_exempt/,
-        ~r/CSRF_COOKIE_SECURE\s*=\s*False/,
-        ~r/{% csrf_token %}/  # Missing in forms
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-352",
-      owasp_category: "A01:2021",
-      recommendation: "Enable CSRF protection. Only use @csrf_exempt when absolutely necessary with additional security measures.",
-      test_cases: %{
-        vulnerable: [
-          ~s|@csrf_exempt
-def payment_view(request):|,
-          ~s|<form method="post"><!-- Missing {% csrf_token %} -->|
-        ],
-        safe: [
-          ~s|def payment_view(request):
-    # CSRF protected by default|,
-          ~s|<form method="post">{% csrf_token %}|
-        ]
-      }
-    }
-  end
-  
-  @doc """
-  Django Clickjacking pattern.
-  
-  Detects missing clickjacking protection.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_clickjacking()
-      iex> pattern.type
-      :clickjacking
-  """
-  def django_clickjacking do
-    %Pattern{
-      id: "django-clickjacking",
-      name: "Django Clickjacking Vulnerability", 
-      description: "Missing X-Frame-Options header protection",
-      type: :clickjacking,
-      severity: :medium,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/X_FRAME_OPTIONS\s*=\s*['"]ALLOWALL['"]/,
-        ~r/@xframe_options_exempt/,
-        ~r/@xframe_options_sameorigin/
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-1021",
-      owasp_category: "A05:2021",
-      recommendation: "Set X_FRAME_OPTIONS = 'DENY' in settings",
-      test_cases: %{
-        vulnerable: [
-          ~s|X_FRAME_OPTIONS = 'ALLOWALL'|,
-          ~s|@xframe_options_exempt
-def sensitive_view(request):|
-        ],
-        safe: [
-          ~s|X_FRAME_OPTIONS = 'DENY'|,
-          ~s|X_FRAME_OPTIONS = 'SAMEORIGIN'|
-        ]
-      }
-    }
-  end
+  # Migrated to Django.Clickjacking module
   
   @doc """
   Django Model Injection pattern.
