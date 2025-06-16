@@ -10,6 +10,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Django.OrmInjection
   alias RsolvApi.Security.Patterns.Django.NosqlInjection
+  alias RsolvApi.Security.Patterns.Django.TemplateXss
   
   @doc """
   Returns all Django security patterns.
@@ -26,7 +27,7 @@ defmodule RsolvApi.Security.Patterns.Django do
     [
       OrmInjection.pattern(),
       NosqlInjection.pattern(),
-      django_template_xss(),
+      TemplateXss.pattern(),
       django_template_injection(),
       django_debug_settings(),
       django_insecure_session(),
@@ -47,52 +48,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   end
   
   
-  @doc """
-  Django Template XSS pattern.
-  
-  Detects XSS vulnerabilities in Django templates.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_template_xss()
-      iex> pattern.type
-      :xss
-  """
-  def django_template_xss do
-    %Pattern{
-      id: "django-template-xss",
-      name: "Django Template XSS",
-      description: "XSS vulnerabilities through unsafe Django template filters",
-      type: :xss,
-      severity: :high,
-      languages: ["python", "html"],
-      frameworks: ["django"],
-      regex: [
-        ~r/\{\{\s*.*?\|safe\s*\}\}/,
-        ~r/\{\%\s*autoescape\s+off\s*\%\}/,
-        ~r/mark_safe\s*\(\s*request\./,
-        ~r/mark_safe\s*\(\s*user_/,
-        ~r/\|safeseq\s*\}\}/,
-        ~r/format_html\s*\(\s*user_input/
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-79",
-      owasp_category: "A03:2021",
-      recommendation: "Avoid using |safe filter on user input. Use Django's built-in escaping. If HTML is needed, sanitize with bleach library.",
-      test_cases: %{
-        vulnerable: [
-          "{{ user_comment|safe }}",
-          "{% autoescape off %}{{ user_data }}{% endautoescape %}",
-          "return mark_safe(request.GET.get('html'))"
-        ],
-        safe: [
-          "{{ user_comment }}",
-          "{{ user_comment|escape }}",
-          "{{ bleach.clean(user_comment)|safe }}"
-        ]
-      }
-    }
-  end
+  # Migrated to Django.TemplateXss module
   
   @doc """
   Django Template Injection pattern.
