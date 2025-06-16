@@ -6,7 +6,7 @@ This document describes our Test-Driven Development (TDD) approach to migrating 
 
 ## Migration Status
 
-**Current Progress**: 152 out of 169 patterns migrated (89.9%)
+**Current Progress**: 155 out of 169 patterns migrated (91.7%)
 **Updated**: June 15, 2025
 
 **Completed Patterns** (✓ = has AST enhancement, ✗ = needs AST enhancement):
@@ -156,13 +156,13 @@ Java Patterns (17/17 completed ✅):
 
 ### 🚧 **Framework Patterns In Progress**:
 - **Rails**: 18/18 patterns migrated ✅ (100%)
-- **Django**: 2/19 patterns migrated (10.5%)
-  - Remaining: 17 patterns
+- **Django**: 6/19 patterns migrated (31.6%)
+  - Remaining: 13 patterns
 
 ### 📊 **Overall Progress**:
 - **Total Patterns**: 169
-- **Migrated**: 152 (89.9%)
-- **Remaining**: 17 (Django only)
+- **Migrated**: 156 (92.3%)
+- **Remaining**: 13 (Django only)
 
 ### 🎯 **Planned Additions**:
 - **Laravel (PHP framework)**: Research and implement Laravel-specific vulnerability patterns
@@ -217,10 +217,14 @@ Rails Patterns (18/18 COMPLETE ✅):
 - `rails-callback-security-bypass` ✓✓ (Rails Callback Security Bypass) - AST included in pattern file
 - `rails-cve-2019-5418` ✓✓ (CVE-2019-5418 - File Content Disclosure) - AST included in pattern file
 
-Django Patterns (2/19 migrated - 10.5% complete):
+Django Patterns (6/19 migrated - 31.6% complete):
 - `django-orm-injection` ✓✓ (Django ORM SQL Injection) - AST included in pattern file
 - `django-nosql-injection` ✓✓ (Django NoSQL Injection) - AST included in pattern file
-- All other 17 patterns still inline in django.ex module
+- `django-template-xss` ✓✓ (Django Template XSS) - AST included in pattern file
+- `django-template-injection` ✓✓ (Django Template Injection) - AST included in pattern file
+- `django-debug-settings` ✓✓ (Django Debug Settings) - AST included in pattern file
+- `django-insecure-session` ✓✓ (Django Insecure Session Configuration) - AST included in pattern file
+- All other 13 patterns still inline in django.ex module
 
 **Current Task**: Complete Rails patterns (2 remaining), then Django patterns
 **Next Up**: Django patterns migration
@@ -474,14 +478,14 @@ See pattern files for examples of AST enhancement implementation.
 
 ### 🚧 **Framework Patterns In Progress**:
 - **Rails**: 18/18 patterns migrated ✅ (100%)
-- **Django**: 2/19 patterns migrated (10.5%)
-  - Remaining: 17 patterns
+- **Django**: 6/19 patterns migrated (31.6%)
+  - Remaining: 13 patterns
 
 ### 📊 **Overall Progress**:
 - **Total Patterns**: 169 (increased from original 157 due to patterns added during migration)
-- **Migrated**: 151 (89.3%)
-- **Remaining**: 18 (Django only)
-- **AST Enhancements**: 151/151 migrated patterns have AST rules (100%)
+- **Migrated**: 156 (92.3%)
+- **Remaining**: 13 (Django only)
+- **AST Enhancements**: 156/156 migrated patterns have AST rules (100%)
 
 ### 🎯 **Planned Additions**:
 - **Laravel (PHP framework)**: Research and implement Laravel-specific vulnerability patterns including:

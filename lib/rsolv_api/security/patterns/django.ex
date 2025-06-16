@@ -11,6 +11,9 @@ defmodule RsolvApi.Security.Patterns.Django do
   alias RsolvApi.Security.Patterns.Django.OrmInjection
   alias RsolvApi.Security.Patterns.Django.NosqlInjection
   alias RsolvApi.Security.Patterns.Django.TemplateXss
+  alias RsolvApi.Security.Patterns.Django.TemplateInjection
+  alias RsolvApi.Security.Patterns.Django.DebugSettings
+  alias RsolvApi.Security.Patterns.Django.InsecureSession
   
   @doc """
   Returns all Django security patterns.
@@ -28,9 +31,9 @@ defmodule RsolvApi.Security.Patterns.Django do
       OrmInjection.pattern(),
       NosqlInjection.pattern(),
       TemplateXss.pattern(),
-      django_template_injection(),
-      django_debug_settings(),
-      django_insecure_session(),
+      TemplateInjection.pattern(),
+      DebugSettings.pattern(),
+      InsecureSession.pattern(),
       django_missing_security_middleware(),
       django_broken_auth(),
       django_authorization_bypass(),
@@ -48,142 +51,11 @@ defmodule RsolvApi.Security.Patterns.Django do
   end
   
   
-  # Migrated to Django.TemplateXss module
+  # Migrated to Django.TemplateInjection module
   
-  @doc """
-  Django Template Injection pattern.
+  # Migrated to Django.DebugSettings module
   
-  Detects server-side template injection vulnerabilities.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_template_injection()
-      iex> pattern.severity
-      :critical
-  """
-  def django_template_injection do
-    %Pattern{
-      id: "django-template-injection",
-      name: "Django Template Injection",
-      description: "Server-side template injection allowing code execution",
-      type: :template_injection,
-      severity: :critical,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/render_to_string\s*\(\s*request\./,
-        ~r/Template\s*\(\s*request\./,
-        ~r/render\s*\(\s*request,\s*request\./,
-        ~r/template\.render\s*\(\s*.*?request\./,
-        ~r/get_template\s*\(\s*user_/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-94",
-      owasp_category: "A03:2021",
-      recommendation: "Never render user input as template code. Use static template names only.",
-      test_cases: %{
-        vulnerable: [
-          ~s|render_to_string(request.GET.get('template'))|,
-          ~s|Template(request.POST.get('template_code')).render()|,
-          ~s|get_template(user_template_name)|
-        ],
-        safe: [
-          ~s|render_to_string('static_template.html', {'data': user_data})|,
-          ~s|get_template('users/profile.html')|,
-          ~s|render(request, 'fixed_template.html', context)|
-        ]
-      }
-    }
-  end
-  
-  @doc """
-  Django Debug Settings pattern.
-  
-  Detects production deployments with debug mode enabled.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_debug_settings()
-      iex> pattern.type
-      :information_disclosure
-  """
-  def django_debug_settings do
-    %Pattern{
-      id: "django-debug-settings",
-      name: "Django Debug Mode in Production",
-      description: "Debug mode exposes sensitive information in production",
-      type: :information_disclosure,
-      severity: :high,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/DEBUG\s*=\s*True/,
-        ~r/DEBUG_PROPAGATE_EXCEPTIONS\s*=\s*True/,
-        ~r/TEMPLATE_DEBUG\s*=\s*True/
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-489",
-      owasp_category: "A05:2021",
-      recommendation: "Set DEBUG = False in production settings. Use environment-specific settings files.",
-      test_cases: %{
-        vulnerable: [
-          ~s|DEBUG = True|,
-          ~s|TEMPLATE_DEBUG = True|,
-          ~s|DEBUG_PROPAGATE_EXCEPTIONS = True|
-        ],
-        safe: [
-          ~s|DEBUG = False|,
-          ~s|DEBUG = os.environ.get('DEBUG', 'False') == 'True'|,
-          ~s|DEBUG = config('DEBUG', default=False, cast=bool)|
-        ]
-      }
-    }
-  end
-  
-  @doc """
-  Django Insecure Session pattern.
-  
-  Detects insecure session configuration.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_insecure_session()
-      iex> pattern.type
-      :session_management
-  """
-  def django_insecure_session do
-    %Pattern{
-      id: "django-insecure-session",
-      name: "Django Insecure Session Configuration",
-      description: "Session cookies without secure flags",
-      type: :session_management,
-      severity: :medium,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/SESSION_COOKIE_SECURE\s*=\s*False/,
-        ~r/SESSION_COOKIE_HTTPONLY\s*=\s*False/,
-        ~r/CSRF_COOKIE_SECURE\s*=\s*False/,
-        ~r/SESSION_COOKIE_SAMESITE\s*=\s*None/
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-614",
-      owasp_category: "A05:2021",
-      recommendation: "Enable secure session cookies: SESSION_COOKIE_SECURE = True, SESSION_COOKIE_HTTPONLY = True",
-      test_cases: %{
-        vulnerable: [
-          ~s|SESSION_COOKIE_SECURE = False|,
-          ~s|SESSION_COOKIE_HTTPONLY = False|,
-          ~s|CSRF_COOKIE_SECURE = False|
-        ],
-        safe: [
-          ~s|SESSION_COOKIE_SECURE = True|,
-          ~s|SESSION_COOKIE_HTTPONLY = True|,
-          ~s|SESSION_COOKIE_SAMESITE = 'Strict'|
-        ]
-      }
-    }
-  end
+  # Migrated to Django.InsecureSession module
   
   @doc """
   Django Missing Security Middleware pattern.
