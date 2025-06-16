@@ -16,6 +16,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   alias RsolvApi.Security.Patterns.Django.InsecureSession
   alias RsolvApi.Security.Patterns.Django.MissingSecurityMiddleware
   alias RsolvApi.Security.Patterns.Django.BrokenAuth
+  alias RsolvApi.Security.Patterns.Django.AuthorizationBypass
   
   @doc """
   Returns all Django security patterns.
@@ -38,7 +39,7 @@ defmodule RsolvApi.Security.Patterns.Django do
       InsecureSession.pattern(),
       MissingSecurityMiddleware.pattern(),
       BrokenAuth.pattern(),
-      django_authorization_bypass(),
+      AuthorizationBypass.pattern(),
       django_csrf_bypass(),
       django_clickjacking(),
       django_model_injection(),
@@ -63,51 +64,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   
   # Migrated to Django.BrokenAuth module
   
-  @doc """
-  Django Authorization Bypass pattern.
-  
-  Detects missing or weak authorization checks.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_authorization_bypass()
-      iex> pattern.type
-      :authorization
-  """
-  def django_authorization_bypass do
-    %Pattern{
-      id: "django-authorization-bypass",
-      name: "Django Authorization Bypass",
-      description: "Missing or insufficient permission checks",
-      type: :authorization,
-      severity: :high,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/def\s+\w+\s*\(\s*request.*?\)(?!.*permission_required)(?!.*has_perm)/,
-        ~r/get_object_or_404\s*\(\s*\w+,\s*pk\s*=\s*\w+\)(?!.*user\s*=)/,
-        ~r/\.filter\s*\(\s*\)\.(?:delete|update)\s*\(/,
-        ~r/\.objects\.all\s*\(\s*\)(?!.*filter.*user)/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-862",
-      owasp_category: "A01:2021",
-      recommendation: "Implement proper permission checks using @permission_required or check user.has_perm()",
-      test_cases: %{
-        vulnerable: [
-          ~s|document = get_object_or_404(Document, pk=doc_id)|,
-          ~s|Document.objects.filter().delete()|,
-          ~s|all_records = Record.objects.all()|
-        ],
-        safe: [
-          ~s|document = get_object_or_404(Document, pk=doc_id, user=request.user)|,
-          ~s|@permission_required('app.delete_document')
-def delete_view(request):|,
-          ~s|user_records = Record.objects.filter(user=request.user)|
-        ]
-      }
-    }
-  end
+  # Migrated to Django.AuthorizationBypass module
   
   @doc """
   Django CSRF Bypass pattern.
