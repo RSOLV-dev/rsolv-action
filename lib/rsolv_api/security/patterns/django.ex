@@ -15,6 +15,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   alias RsolvApi.Security.Patterns.Django.DebugSettings
   alias RsolvApi.Security.Patterns.Django.InsecureSession
   alias RsolvApi.Security.Patterns.Django.MissingSecurityMiddleware
+  alias RsolvApi.Security.Patterns.Django.BrokenAuth
   
   @doc """
   Returns all Django security patterns.
@@ -36,7 +37,7 @@ defmodule RsolvApi.Security.Patterns.Django do
       DebugSettings.pattern(),
       InsecureSession.pattern(),
       MissingSecurityMiddleware.pattern(),
-      django_broken_auth(),
+      BrokenAuth.pattern(),
       django_authorization_bypass(),
       django_csrf_bypass(),
       django_clickjacking(),
@@ -60,53 +61,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   
   # Migrated to Django.MissingSecurityMiddleware module
   
-  @doc """
-  Django Broken Authentication pattern.
-  
-  Detects weak authentication implementations.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_broken_auth()
-      iex> pattern.type
-      :authentication
-  """
-  def django_broken_auth do
-    %Pattern{
-      id: "django-broken-auth",
-      name: "Django Broken Authentication",
-      description: "Weak or missing authentication checks",
-      type: :authentication,
-      severity: :high,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/def\s+\w+\s*\(\s*request.*?\)(?!.*@login_required)(?!.*LoginRequiredMixin)/,
-        ~r/authenticate\s*\(\s*username\s*=\s*request\./,
-        ~r/User\.objects\.create_user\s*\(\s*request\./,
-        ~r/check_password\s*\(\s*request\./
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-287",
-      owasp_category: "A07:2021",
-      recommendation: "Use @login_required decorator or LoginRequiredMixin for views requiring authentication",
-      test_cases: %{
-        vulnerable: [
-          ~s|def admin_view(request):
-    # No authentication check
-    return render(request, 'admin.html')|,
-          ~s|user = authenticate(username=request.GET['user'])|
-        ],
-        safe: [
-          ~s|@login_required
-def admin_view(request):
-    return render(request, 'admin.html')|,
-          ~s|class AdminView(LoginRequiredMixin, View):
-    pass|
-        ]
-      }
-    }
-  end
+  # Migrated to Django.BrokenAuth module
   
   @doc """
   Django Authorization Bypass pattern.

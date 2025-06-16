@@ -17,7 +17,6 @@ defmodule RSOLVWeb.HealthController do
     # Check external services
     services_status = %{
       database: db_status,
-      redis: check_redis(),
       ai_providers: check_ai_providers()
     }
 
@@ -47,10 +46,6 @@ defmodule RSOLVWeb.HealthController do
     end
   end
 
-  defp check_redis do
-    # Placeholder for Redis/cache health check
-    "healthy"
-  end
 
   defp check_ai_providers do
     %{
