@@ -14,6 +14,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   alias RsolvApi.Security.Patterns.Django.TemplateInjection
   alias RsolvApi.Security.Patterns.Django.DebugSettings
   alias RsolvApi.Security.Patterns.Django.InsecureSession
+  alias RsolvApi.Security.Patterns.Django.MissingSecurityMiddleware
   
   @doc """
   Returns all Django security patterns.
@@ -34,7 +35,7 @@ defmodule RsolvApi.Security.Patterns.Django do
       TemplateInjection.pattern(),
       DebugSettings.pattern(),
       InsecureSession.pattern(),
-      django_missing_security_middleware(),
+      MissingSecurityMiddleware.pattern(),
       django_broken_auth(),
       django_authorization_bypass(),
       django_csrf_bypass(),
@@ -57,49 +58,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   
   # Migrated to Django.InsecureSession module
   
-  @doc """
-  Django Missing Security Middleware pattern.
-  
-  Detects missing security middleware in Django settings.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_missing_security_middleware()
-      iex> pattern.type
-      :misconfiguration
-  """
-  def django_missing_security_middleware do
-    %Pattern{
-      id: "django-missing-security-middleware",
-      name: "Django Missing Security Middleware",
-      description: "Missing important security middleware",
-      type: :misconfiguration,
-      severity: :medium,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/MIDDLEWARE\s*=\s*\[(?!.*SecurityMiddleware)/,
-        ~r/MIDDLEWARE\s*=\s*\[(?!.*CsrfViewMiddleware)/,
-        ~r/MIDDLEWARE\s*=\s*\[(?!.*XFrameOptionsMiddleware)/
-      ],
-      default_tier: :public,
-      cwe_id: "CWE-16",
-      owasp_category: "A05:2021",
-      recommendation: "Add django.middleware.security.SecurityMiddleware to MIDDLEWARE setting",
-      test_cases: %{
-        vulnerable: [
-          ~s|MIDDLEWARE = ['django.middleware.common.CommonMiddleware']|
-        ],
-        safe: [
-          ~s|MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]|
-        ]
-      }
-    }
-  end
+  # Migrated to Django.MissingSecurityMiddleware module
   
   @doc """
   Django Broken Authentication pattern.
