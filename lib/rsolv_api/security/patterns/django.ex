@@ -8,6 +8,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   """
   
   alias RsolvApi.Security.Pattern
+  alias RsolvApi.Security.Patterns.Django.OrmInjection
   
   @doc """
   Returns all Django security patterns.
@@ -22,7 +23,7 @@ defmodule RsolvApi.Security.Patterns.Django do
   """
   def all do
     [
-      django_orm_injection(),
+      OrmInjection.pattern(),
       django_nosql_injection(),
       django_template_xss(),
       django_template_injection(),
@@ -44,59 +45,6 @@ defmodule RsolvApi.Security.Patterns.Django do
     ]
   end
   
-  @doc """
-  Django ORM SQL Injection pattern.
-  
-  Detects SQL injection through Django ORM using string formatting.
-  
-  ## Examples
-  
-      iex> pattern = RsolvApi.Security.Patterns.Django.django_orm_injection()
-      iex> pattern.id
-      "django-orm-injection"
-      iex> pattern.severity
-      :critical
-  """
-  def django_orm_injection do
-    %Pattern{
-      id: "django-orm-injection",
-      name: "Django ORM SQL Injection",
-      description: "SQL injection through Django ORM using string formatting",
-      type: :sql_injection,
-      severity: :critical,
-      languages: ["python"],
-      frameworks: ["django"],
-      regex: [
-        ~r/\.filter\s*\(\s*["'].*?%s["'].*?%/,
-        ~r/\.extra\s*\(\s*where\s*=\s*\[["'].*?%s["'].*?%/,
-        ~r/\.raw\s*\(\s*["'].*?%s["'].*?%/,
-        ~r/\.filter\s*\(\s*f["'].*?\{.*?\}["']/,
-        ~r/\.extra\s*\(\s*where\s*=\s*\[f["'].*?\{.*?\}["']/,
-        ~r/\.raw\s*\(\s*f["'].*?\{.*?\}["']/,
-        ~r/\.filter\s*\(\s*["'].*?\.format\s*\(/,
-        ~r/\.extra\s*\(\s*.*?\.format\s*\(/,
-        ~r/\.raw\s*\(\s*["'].*?\.format\s*\(/,
-        ~r/cursor\.execute\s*\(\s*["'].*?%s["'].*?%/,
-        ~r/cursor\.execute\s*\(\s*f["'].*?\{.*?\}["']/
-      ],
-      default_tier: :critical,
-      cwe_id: "CWE-89",
-      owasp_category: "A03:2021",
-      recommendation: "Use Django parameterized queries: Model.objects.raw(\"SELECT * FROM table WHERE id = %s\", [user_id]) or Django ORM methods: filter(name=username)",
-      test_cases: %{
-        vulnerable: [
-          ~s|User.objects.filter("name = '%s'" % username)|,
-          ~s|User.objects.raw("SELECT * FROM users WHERE name = '%s'" % name)|,
-          ~s|cursor.execute("DELETE FROM table WHERE id = %s" % user_id)|
-        ],
-        safe: [
-          ~s|User.objects.filter(name=username)|,
-          ~s|User.objects.raw("SELECT * FROM users WHERE name = %s", [username])|,
-          ~s|cursor.execute("DELETE FROM table WHERE id = %s", [user_id])|
-        ]
-      }
-    }
-  end
   
   @doc """
   Django NoSQL Injection pattern.
