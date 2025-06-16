@@ -25,6 +25,7 @@ defmodule RsolvApi.Security.Patterns.Rails do
   alias RsolvApi.Security.Patterns.Rails.Cve202222577
   alias RsolvApi.Security.Patterns.Rails.Cve202122881
   alias RsolvApi.Security.Patterns.Rails.CallbackSecurityBypass
+  alias RsolvApi.Security.Patterns.Rails.Cve20195418
   
   @doc """
   Returns all Rails security patterns.
@@ -58,43 +59,8 @@ defmodule RsolvApi.Security.Patterns.Rails do
       Cve202222577.pattern(),
       Cve202122881.pattern(),
       CallbackSecurityBypass.pattern(),
-      cve_2019_5418()
+      Cve20195418.pattern()
     ]
   end
   
-  
-  @doc """
-  CVE-2019-5418 - File Content Disclosure pattern.
-  
-  Detects path traversal vulnerability in render file allowing arbitrary file disclosure.
-  """
-  def cve_2019_5418 do
-    %Pattern{
-      id: "rails-cve-2019-5418",
-      name: "CVE-2019-5418 - File Content Disclosure",
-      description: "Path traversal vulnerability in render file allowing arbitrary file disclosure",
-      type: :path_traversal,
-      severity: :critical,
-      languages: ["ruby"],
-      frameworks: ["rails"],
-      regex: [
-        ~r/render\s+file:\s*params\[/,
-        ~r/render\s+file:\s*["'`]#\{Rails\.root\}.*?#\{[^}]*params/,
-        ~r/render\s+template:\s*params\[.*?path/,
-        ~r/render\s+partial:\s*["'`]\.\.\/.*?#\{[^}]*params/
-      ],
-      default_tier: :protected,
-      cwe_id: "CWE-22",
-      owasp_category: "A01:2021",
-      recommendation: "Never use user input directly in Rails render file/template. Use predefined Rails templates or validate against allowlist.",
-      test_cases: %{
-        vulnerable: [
-          "render file: params[:template]"
-        ],
-        safe: [
-          "allowed = [\"user\", \"admin\"]\nrender template: allowed.include?(params[:type]) ? params[:type] : \"default\""
-        ]
-      }
-    }
-  end
 end
