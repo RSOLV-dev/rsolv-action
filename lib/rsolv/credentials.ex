@@ -92,7 +92,7 @@ defmodule RSOLV.Credentials do
   Stores a credential with TTL.
   """
   def store_credential(customer_id, provider, credential, ttl_minutes) do
-    # In production, this would store in Redis or database
+    # In production, this would store in DETS for distributed persistence
     # For now, we'll just return success
     Logger.info("Storing credential for customer #{customer_id}, provider #{provider}, TTL #{ttl_minutes}m")
     {:ok, credential}
