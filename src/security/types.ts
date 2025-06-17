@@ -85,6 +85,22 @@ export interface SecurityPattern {
     vulnerable: string;
     secure: string;
   };
+  // AST Enhancement fields
+  astRules?: {
+    nodeType?: string;
+    [key: string]: any;
+  };
+  contextRules?: {
+    excludePaths?: RegExp[];
+    safeIfWrapped?: string[];
+    [key: string]: any;
+  };
+  confidenceRules?: {
+    base?: number;
+    adjustments?: Record<string, number>;
+    [key: string]: any;
+  };
+  minConfidence?: number;
 }
 
 export interface ComplianceDocumentationTemplate {

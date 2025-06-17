@@ -67,15 +67,13 @@ describe('PatternAPIClient', () => {
             type: 'sql_injection',
             description: 'SQL injection vulnerability',
             severity: 'critical',
-            patterns: {
-              regex: ['SELECT.*\\+', 'INSERT.*\\+']
-            },
+            patterns: ['SELECT.*\\+', 'INSERT.*\\+'],
             languages: ['javascript'],
             frameworks: [],
             recommendation: 'Use parameterized queries',
-            cweId: 'CWE-89',
-            owaspCategory: 'A03:2021',
-            testCases: {
+            cwe_id: 'CWE-89',
+            owasp_category: 'A03:2021',
+            test_cases: {
               vulnerable: ['query = "SELECT * FROM users WHERE id = " + userId'],
               safe: ['query = "SELECT * FROM users WHERE id = ?"']
             }
@@ -96,7 +94,7 @@ describe('PatternAPIClient', () => {
       
       // Get the actual call arguments
       const [url, options] = (fetch as any).mock.calls[0];
-      expect(url).toBe('https://api.rsolv.dev/api/v1/patterns/javascript');
+      expect(url).toBe('https://api.rsolv.dev/api/v1/patterns/javascript?format=enhanced');
       expect(options.headers['Content-Type']).toBe('application/json');
       expect(options.headers['Authorization']).toBe('Bearer test-key');
 
@@ -133,12 +131,12 @@ describe('PatternAPIClient', () => {
             type: 'rce',
             description: 'Eval can execute arbitrary code',
             severity: 'critical',
-            patterns: { regex: ['eval\\('] },
+            patterns: ['eval\\('],
             languages: ['python'],
             recommendation: 'Avoid eval',
-            cweId: 'CWE-94',
-            owaspCategory: 'A03:2021',
-            testCases: { vulnerable: [], safe: [] }
+            cwe_id: 'CWE-94',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
           }
         ]
       };
@@ -178,7 +176,7 @@ describe('PatternAPIClient', () => {
       expect(fetch).toHaveBeenCalledTimes(1);
       
       const [url, options] = (fetch as any).mock.calls[0];
-      expect(url).toBe('https://api.rsolv.dev/api/v1/patterns/javascript');
+      expect(url).toBe('https://api.rsolv.dev/api/v1/patterns/javascript?format=enhanced');
       expect(options.headers['Content-Type']).toBe('application/json');
       expect(options.headers['Authorization']).toBeUndefined();
     });
@@ -272,14 +270,12 @@ describe('PatternAPIClient', () => {
             type: 'xss',
             description: 'Pattern with invalid regex',
             severity: 'high',
-            patterns: {
-              regex: ['[invalid(regex', 'valid.*pattern']
-            },
+            patterns: ['[invalid(regex', 'valid.*pattern'],
             languages: ['javascript'],
             recommendation: 'Fix the regex',
-            cweId: 'CWE-79',
-            owaspCategory: 'A03:2021',
-            testCases: { vulnerable: [], safe: [] }
+            cwe_id: 'CWE-79',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
           }
         ]
       };
@@ -318,12 +314,12 @@ describe('PatternAPIClient', () => {
               type: apiType,
               description: 'Test',
               severity: 'high',
-              patterns: { regex: ['test'] },
+              patterns: ['test'],
               languages: ['javascript'],
               recommendation: 'Test',
-              cweId: 'CWE-1',
-              owaspCategory: 'A01:2021',
-              testCases: { vulnerable: [], safe: [] }
+              cwe_id: 'CWE-1',
+              owasp_category: 'A01:2021',
+              test_cases: { vulnerable: [], safe: [] }
             }
           ]
         };

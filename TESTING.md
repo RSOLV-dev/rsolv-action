@@ -4,7 +4,7 @@
 
 ### 1. Local Testing with `act`
 
-[nektos/act](https://github.com/nektos/act) runs GitHub Actions locally in Docker.
+[nektos/act](https://github.com/nektos/act) runs GitHub Actions locally in Docker, providing a complete simulation of the GitHub Actions environment.
 
 ```bash
 # Install act
@@ -15,21 +15,12 @@ brew install act
 
 # Test with specific issue
 ./test-local.sh 123
+
+# Test with custom event payload
+act issues -e test-payloads/issue-opened.json -s RSOLV_API_KEY="$RSOLV_STAGING_API_KEY"
 ```
 
-### 2. Local Testing with `local-action`
-
-[github/local-action](https://github.com/github/local-action) tests the action.yml directly.
-
-```bash
-# Install local-action
-npm install -g @github/local-action
-
-# Run direct action test
-./test-action-locally.sh
-```
-
-### 3. Staging Workflow Testing
+### 2. Staging Workflow Testing
 
 Test against real staging environment on GitHub:
 
@@ -40,7 +31,7 @@ gh workflow run staging-test.yml \
   -f issue_number="123"
 ```
 
-### 4. Production Deployment Process
+### 3. Production Deployment Process
 
 ```bash
 # 1. Test locally with act

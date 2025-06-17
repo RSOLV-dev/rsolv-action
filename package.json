@@ -16,7 +16,9 @@
     "dev-debug": "bun run dev-debug-environment.ts",
     "test:e2e": "bun run e2e-real-vended.ts",
     "test:e2e:all": "cd .. && ./run-all-e2e-comprehensive.sh",
-    "test:e2e:pattern-api": "bun test src/__tests__/pattern-api-e2e.test.ts"
+    "test:e2e:pattern-api": "bun test src/__tests__/pattern-api-e2e.test.ts",
+    "test:e2e:integration": "bun test tests/e2e/pattern-api-integration.test.ts",
+    "test:e2e:docker": "cd .. && ./run-e2e-docker.sh"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.11",

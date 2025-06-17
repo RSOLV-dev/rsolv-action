@@ -110,12 +110,12 @@ describe('ApiPatternSource', () => {
             ...p,
             type: p.type === VulnerabilityType.XSS ? 'xss' : 'sql_injection',
             severity: 'high',
-            patterns: { regex: ['test.*pattern'] },
+            patterns: ['test.*pattern'],
             description: 'Test pattern',
             recommendation: 'Fix it',
-            cweId: 'CWE-79',
-            owaspCategory: 'A03:2021',
-            testCases: { vulnerable: [], safe: [] }
+            cwe_id: 'CWE-79',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
           }))
         })
       }));
@@ -160,12 +160,12 @@ describe('ApiPatternSource', () => {
       await source.getAllPatterns();
       
       // Should be called for each supported language
-      expect(calls).toContain('javascript');
-      expect(calls).toContain('python');
-      expect(calls).toContain('ruby');
-      expect(calls).toContain('java');
-      expect(calls).toContain('php');
-      expect(calls).toContain('elixir');
+      expect(calls).toContain('javascript?format=enhanced');
+      expect(calls).toContain('python?format=enhanced');
+      expect(calls).toContain('ruby?format=enhanced');
+      expect(calls).toContain('java?format=enhanced');
+      expect(calls).toContain('php?format=enhanced');
+      expect(calls).toContain('elixir?format=enhanced');
     });
 
     it('should continue fetching even if some languages fail', async () => {
@@ -179,13 +179,13 @@ describe('ApiPatternSource', () => {
                 id: 'js-1',
                 type: 'xss',
                 severity: 'high',
-                patterns: { regex: ['test'] },
+                patterns: ['test'],
                 languages: ['javascript'],
                 description: 'Test',
                 recommendation: 'Fix',
-                cweId: 'CWE-79',
-                owaspCategory: 'A03:2021',
-                testCases: { vulnerable: [], safe: [] }
+                cwe_id: 'CWE-79',
+                owasp_category: 'A03:2021',
+                test_cases: { vulnerable: [], safe: [] }
               }]
             })
           });
@@ -201,13 +201,13 @@ describe('ApiPatternSource', () => {
                 id: 'ruby-1',
                 type: 'sql_injection',
                 severity: 'high',
-                patterns: { regex: ['test'] },
+                patterns: ['test'],
                 languages: ['ruby'],
                 description: 'Test',
                 recommendation: 'Fix',
-                cweId: 'CWE-89',
-                owaspCategory: 'A03:2021',
-                testCases: { vulnerable: [], safe: [] }
+                cwe_id: 'CWE-89',
+                owasp_category: 'A03:2021',
+                test_cases: { vulnerable: [], safe: [] }
               }]
             })
           });
@@ -244,13 +244,13 @@ describe('HybridPatternSource', () => {
       id: 'api-1',
       type: 'xss',
       severity: 'high',
-      patterns: { regex: ['test'] },
+      patterns: ['test'],
       languages: ['javascript'],
       description: 'Test',
       recommendation: 'Fix',
-      cweId: 'CWE-79',
-      owaspCategory: 'A03:2021',
-      testCases: { vulnerable: [], safe: [] }
+      cwe_id: 'CWE-79',
+      owasp_category: 'A03:2021',
+      test_cases: { vulnerable: [], safe: [] }
     }];
     
     // Mock successful API
