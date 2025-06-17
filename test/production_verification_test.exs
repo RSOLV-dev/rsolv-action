@@ -6,8 +6,19 @@ defmodule RSOLV.ProductionVerificationTest do
   import Ecto.Query
   
   alias RsolvApi.Repo
+  alias RsolvApi.Billing.Customer
+  alias RsolvApi.Billing.FixAttempt
   
   @moduletag :integration
+  
+  # Skip production verification tests in test environment
+  # These are meant to run against production/staging databases
+  setup do
+    case Repo.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'customers'") do
+      {:ok, _} -> :ok
+      {:error, _} -> {:skip, "Production tables not available in test environment"}
+    end
+  end
   
   describe "Database Schema Verification" do
     test "fix_attempts table exists with all required columns" do
@@ -81,13 +92,14 @@ defmodule RSOLV.ProductionVerificationTest do
   
   describe "Trial Limit Enforcement" do
     test "default trial limit is 10 fixes" do
-      # Create a test customer
-      {:ok, customer} = Repo.insert(%{
+      # Create a test customer using changeset
+      changeset = Customer.changeset(%Customer{}, %{
         name: "Test Org",
         email: "test@example.com",
-        api_key: "test_#{:crypto.strong_rand_bytes(16) |> Base.encode16()}",
-        active: true
+        api_key: "test_#{:crypto.strong_rand_bytes(16) |> Base.encode16()}"
       })
+      
+      {:ok, customer} = Repo.insert(changeset)
       
       # Verify default values
       assert customer.trial_fixes_limit == 10
@@ -99,19 +111,20 @@ defmodule RSOLV.ProductionVerificationTest do
   
   describe "Fix Attempt Tracking" do
     setup do
-      # Create test customer
-      {:ok, customer} = Repo.insert(%{
+      # Create test customer using changeset
+      changeset = Customer.changeset(%Customer{}, %{
         name: "Test Customer",
         email: "test@example.com", 
-        api_key: "test_key_#{System.unique_integer([:positive])}",
-        active: true
+        api_key: "test_key_#{System.unique_integer([:positive])}"
       })
+      
+      {:ok, customer} = Repo.insert(changeset)
       
       {:ok, customer: customer}
     end
     
     test "can create and track fix attempt", %{customer: customer} do
-      fix_attempt = %{
+      changeset = FixAttempt.changeset(%FixAttempt{}, %{
         github_org: "test-org",
         repo_name: "test-repo",
         issue_number: 123,
@@ -122,9 +135,9 @@ defmodule RSOLV.ProductionVerificationTest do
         pr_title: "Fix security vulnerability",
         issue_title: "SQL injection in login",
         api_key_used: customer.api_key
-      }
+      })
       
-      {:ok, attempt} = Repo.insert(fix_attempt)
+      {:ok, attempt} = Repo.insert(changeset)
       
       assert attempt.status == "pending"
       assert attempt.billing_status == "not_billed"
@@ -132,7 +145,7 @@ defmodule RSOLV.ProductionVerificationTest do
     end
     
     test "unique constraint on org/repo/pr combination" do
-      fix_attempt = %{
+      attrs = %{
         github_org: "unique-org",
         repo_name: "unique-repo",
         issue_number: 1,
@@ -140,11 +153,13 @@ defmodule RSOLV.ProductionVerificationTest do
         status: "pending"
       }
       
-      {:ok, _} = Repo.insert(fix_attempt)
+      changeset1 = FixAttempt.changeset(%FixAttempt{}, attrs)
+      {:ok, _} = Repo.insert(changeset1)
       
       # Try to insert duplicate
+      changeset2 = FixAttempt.changeset(%FixAttempt{}, attrs)
       assert_raise Ecto.ConstraintError, fn ->
-        Repo.insert!(fix_attempt)
+        Repo.insert!(changeset2)
       end
     end
   end

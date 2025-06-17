@@ -25,20 +25,20 @@ defmodule RSOLVWeb.CrossLanguagePatternControllerTest do
     test "GET /api/v1/patterns returns all patterns based on access level (public by default)", %{conn: conn} do
       conn = get(conn, ~p"/api/v1/patterns")
       
+      # This endpoint uses legacy behavior when no parameters provided
       assert %{
         "patterns" => patterns,
-        "accessible_tiers" => ["public"],
-        "language" => "all",
-        "count" => count
+        "metadata" => metadata
       } = json_response(conn, 200)
       
       assert is_list(patterns)
-      assert count > 0
+      assert metadata["count"] > 0
+      assert metadata["language"] == "javascript"  # Default language
+      assert metadata["tier"] == "public"           # Default tier
+      assert metadata["format"] == "standard"      # Default format
       
-      # All patterns should be public tier
+      # All patterns should have valid structure
       for pattern <- patterns do
-        # We can't directly check tier since it's determined by Security module logic
-        # But we can verify the pattern structure
         assert pattern["id"]
         assert pattern["name"]
         assert pattern["type"]

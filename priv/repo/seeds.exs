@@ -2,16 +2,14 @@
 #
 #     mix run priv/repo/seeds.exs
 
-alias RSOLV.Repo
-alias RSOLV.Accounts.Customer
+alias RsolvApi.Repo
+alias RsolvApi.Billing.Customer
 
 # Create test customer for dogfooding
 dogfood_customer = %Customer{
   name: "RSOLV Internal",
   email: "team@rsolv.dev",
   api_key: "rsolv_dogfood_key",
-  monthly_limit: 1000,
-  current_usage: 0,
   active: true,
   metadata: %{
     "type" => "internal",
@@ -26,8 +24,6 @@ demo_customer = %Customer{
   name: "Demo Customer",
   email: "demo@example.com",
   api_key: "rsolv_demo_key_123",
-  monthly_limit: 10,
-  current_usage: 0,
   active: true,
   metadata: %{
     "type" => "demo"
