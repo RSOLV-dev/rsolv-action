@@ -18,7 +18,7 @@ defmodule RsolvApi.Security.Patterns.DjangoTest do
   
   test "patterns have python language" do
     patterns = Django.all()
-    assert Enum.all?(patterns, fn p -> p.languages == ["python"] end)
+    assert Enum.all?(patterns, fn p -> "python" in p.languages end)
   end
   
   test "patterns have required fields" do

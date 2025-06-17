@@ -504,7 +504,7 @@ if (in_array($redirect, $allowed_urls)) {
   ## Examples
 
       iex> enhancement = RsolvApi.Security.Patterns.Php.OpenRedirect.ast_enhancement()
-      iex> Map.keys(enhancement)
+      iex> Map.keys(enhancement) |> Enum.sort()
       [:min_confidence, :rules]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.OpenRedirect.ast_enhancement()

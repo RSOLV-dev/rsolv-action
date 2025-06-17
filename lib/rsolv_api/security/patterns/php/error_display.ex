@@ -541,7 +541,7 @@ defmodule RsolvApi.Security.Patterns.Php.ErrorDisplay do
   ## Examples
 
       iex> enhancement = RsolvApi.Security.Patterns.Php.ErrorDisplay.ast_enhancement()
-      iex> Map.keys(enhancement)
+      iex> Map.keys(enhancement) |> Enum.sort()
       [:min_confidence, :rules]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.ErrorDisplay.ast_enhancement()

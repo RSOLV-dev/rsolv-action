@@ -139,7 +139,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.PathTraversalConcatTest do
       enhancement = PathTraversalConcat.ast_enhancement()
       
       assert is_map(enhancement)
-      assert Map.keys(enhancement) == [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      assert Enum.sort(Map.keys(enhancement)) == Enum.sort([:ast_rules, :context_rules, :confidence_rules, :min_confidence])
     end
     
     test "AST rules target string concatenation for paths" do

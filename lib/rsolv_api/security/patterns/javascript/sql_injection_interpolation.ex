@@ -117,6 +117,14 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation do
         }
       ],
       
+      safe_alternatives: [
+        "Use parameterized queries: db.query('SELECT * FROM users WHERE id = ?', [userId])",
+        "Use query builders: knex('users').where('id', userId)",
+        "Use prepared statements with placeholder values",
+        "Use SQL template tag libraries that automatically escape values",
+        "Always validate and sanitize user input before database operations"
+      ],
+      
       detection_notes: """
       This pattern detects template literals (backtick strings) containing SQL keywords
       with ${} interpolation. Key indicators:

@@ -58,6 +58,9 @@ defmodule RsolvApi.Webhooks.EventRouter do
   # Private functions
   
   defp route_github_event(event_type, payload) do
+    require Logger
+    Logger.info("Routing GitHub event: #{inspect(event_type)}")
+    
     case event_type do
       "pull_request" ->
         GitHubHandler.handle_event("pull_request", payload)

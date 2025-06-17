@@ -7,10 +7,10 @@ defmodule RSOLVWeb.PatternControllerTest do
   setup do
     # Use the test API key that's built into Accounts module
     regular_customer = %{
-      id: "test_customer_1",
-      name: "Test Customer",
-      email: "test@example.com",
-      api_key: "rsolv_test_abc123",
+      id: "test_customer_regular",
+      name: "Test Regular Customer",
+      email: "regular@example.com",
+      api_key: "rsolv_test_regular_def456",
       monthly_limit: 100,
       current_usage: 15,
       active: true,
@@ -18,24 +18,21 @@ defmodule RSOLVWeb.PatternControllerTest do
       created_at: DateTime.utc_now()
     }
     
-    # Create an internal customer using update_customer to store it
-    internal_customer = %{
-      id: "internal",
-      email: "internal@rsolv.dev",
-      name: "Internal Test",
-      api_key: "test-internal-key",
+    # Create an enterprise customer for testing enterprise endpoints
+    enterprise_customer = %{
+      id: "test_enterprise_customer",
+      email: "enterprise@example.com",
+      name: "Test Enterprise Customer",
+      api_key: "rsolv_test_enterprise_xyz789",
       monthly_limit: 1000,
-      current_usage: 0,
+      current_usage: 5,
       active: true,
       trial: false,
       created_at: DateTime.utc_now()
     }
     
-    # Store the internal customer
-    {:ok, _} = Accounts.update_customer(internal_customer, %{})
-    
     %{
-      internal_customer: internal_customer,
+      enterprise_customer: enterprise_customer,
       regular_customer: regular_customer
     }
   end
@@ -155,7 +152,7 @@ defmodule RSOLVWeb.PatternControllerTest do
       }
     end
     
-    test "returns enterprise patterns for internal users", %{conn: conn, internal_customer: customer} do
+    test "returns enterprise patterns for enterprise users", %{conn: conn, enterprise_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
       |> get(~p"/api/v1/patterns/enterprise/javascript")
@@ -200,7 +197,7 @@ defmodule RSOLVWeb.PatternControllerTest do
       assert is_list(patterns)
     end
     
-    test "returns all tiers for internal users", %{conn: conn, internal_customer: customer} do
+    test "returns all tiers for enterprise users", %{conn: conn, enterprise_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
       |> get(~p"/api/v1/patterns/javascript")

@@ -42,7 +42,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-cve-2019-5418",
@@ -98,7 +97,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -217,7 +215,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
            def show
              render file: params[:template]  # VULNERABLE!
            end
-         end
          
          # SAFE - Use predefined templates
          class ReportsController < ApplicationController
@@ -287,7 +284,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
              unless params[:template] =~ /\\A[a-zA-Z0-9_]+\\z/
                render plain: "Invalid template name", status: 400
              end
-           end
          end
          ```
       """,
@@ -327,7 +323,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
           @user = User.find(params[:id])
           # Rails automatically renders app/views/users/show.html.erb
         end
-      end
       
       # 2. Explicit Action Rendering
       class ReportsController < ApplicationController
@@ -335,7 +330,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
           @data = generate_summary_data
           render :summary  # Renders app/views/reports/summary.html.erb
         end
-      end
       
       # 3. Conditional Rendering with Whitelist Approach
       class DocumentsController < ApplicationController
@@ -349,7 +343,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
           template = TEMPLATES[params[:doc]] || 'documents/not_found'
           render template: template
         end
-      end
       
       # 4. Secure File Downloads
       class DownloadsController < ApplicationController
@@ -371,7 +364,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
             head :not_found
           end
         end
-      end
       
       # 5. API Responses (No File Rendering)
       class ApiController < ApplicationController
@@ -379,12 +371,10 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
           result = process_request(params[:query])
           render json: result  # Safe - no file system access
         end
-      end
       """
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -490,36 +480,5 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files that might contain render calls
-    is_ruby_file = String.ends_with?(file_path, ".rb") || 
-                   String.ends_with?(file_path, ".erb") ||
-                   String.ends_with?(file_path, ".haml")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Files that commonly contain render calls
-    is_rendering_file = String.contains?(file_path, "controller") ||
-                       String.contains?(file_path, "/views/") ||
-                       String.contains?(file_path, "/helpers/") ||
-                       String.contains?(file_path, "application_controller")
-    
-    # Not a test file
-    not_test = !String.contains?(file_path, "test/") && 
-               !String.contains?(file_path, "spec/") &&
-               !String.contains?(file_path, "_test.rb") &&
-               !String.contains?(file_path, "_spec.rb")
-    
-    # If no frameworks specified but it looks like Rails, include it
-    inferred_rails = frameworks_list == [] && (
-      String.contains?(file_path, "app/controllers/") ||
-      String.contains?(file_path, "app/views/") ||
-      String.contains?(file_path, "app/helpers/")
-    )
-    
-    is_ruby_file && (is_rails || inferred_rails) && is_rendering_file && not_test
-  end
 end
+

@@ -58,7 +58,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraints do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-unsafe-route-constraints",
@@ -155,7 +154,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraints do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -319,7 +317,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraints do
            params.require(:user).permit(:name, :email).tap do |p|
              p[:slug] = p[:slug]&.downcase&.gsub(/[^a-z0-9-]/, '')
            end
-         end
          ```
       """,
       
@@ -373,7 +370,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraints do
         def self.valid_subdomain?(subdomain)
           ALLOWED_SUBDOMAINS.include?(subdomain.to_s)
         end
-      end
       
       # Usage
       constraints: lambda { |req| 
@@ -429,7 +425,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraints do
             req.headers['X-API-Key'].present?
           }
         end
-      end
       
       # Usage
       constraints SecureConstraints.secure_id_constraint do
@@ -453,7 +448,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraints do
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -548,29 +542,5 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraints do
       }
     }
   end
-  
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects, especially route definitions
-    is_ruby_file = String.ends_with?(file_path, ".rb")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to route files and controllers primarily
-    # Route constraints are mainly in config/routes.rb but can be in controllers
-    _is_rails_file = String.contains?(file_path, "config/routes") ||
-                     String.contains?(file_path, "app/controllers/") ||
-                     String.contains?(file_path, "config/application") ||
-                     String.contains?(file_path, "lib/")
-    
-    # If no frameworks specified but it looks like Rails, include it
-    inferred_rails = frameworks_list == [] && (
-      String.contains?(file_path, "config/routes") ||
-      String.contains?(file_path, "app/")
-    )
-    
-    is_ruby_file && (is_rails || inferred_rails)
-  end
 end
+

@@ -231,8 +231,8 @@ defmodule RsolvApi.Security.Patterns.Elixir.WeakCryptoMd5 do
   ## Examples
   
       iex> enhancement = RsolvApi.Security.Patterns.Elixir.WeakCryptoMd5.ast_enhancement()
-      iex> Map.keys(enhancement)
-      [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Elixir.WeakCryptoMd5.ast_enhancement()
       iex> enhancement.min_confidence

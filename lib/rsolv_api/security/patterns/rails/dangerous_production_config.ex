@@ -56,7 +56,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-dangerous-production-config",
@@ -134,7 +133,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -295,7 +293,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
                                else :info
                                end
            end
-         end
          ```
       
       4. **Configuration Validation**:
@@ -315,7 +312,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
              if Rails.application.config.log_level == :debug
                Rails.logger.warn "WARNING: Debug logging enabled in production!"
              end
-           end
          end
          ```
       
@@ -335,7 +331,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
              # Show generic error page to users
              render template: "errors/500", status: 500, layout: 'error'
            end
-         end
          ```
       """,
       
@@ -423,7 +418,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
             raise "Production configuration errors: \#{dangerous_settings.join(', ')}"
           end
         end
-      end
       
       # 3. Custom Error Handler
       class ProductionErrorHandler
@@ -439,7 +433,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
             body: { error: 'Internal server error' }.to_json
           }
         end
-      end
       
       # 4. Configuration Monitoring
       class ConfigurationMonitor
@@ -459,7 +452,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
           if checks[:consider_all_requests_local] || !checks[:perform_caching]
             Rails.logger.error "SECURITY WARNING: Dangerous production configuration detected!"
           end
-        end
       end
       
       # 5. Automated Configuration Test
@@ -473,7 +465,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
               refute_equal :debug, config.log_level, "debug logging should be disabled"
               assert config.force_ssl, "SSL should be forced"
             end
-          end
         end
         
         private
@@ -485,12 +476,10 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
         ensure
           ENV.replace(old_env)
         end
-      end
       """
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
@@ -608,29 +597,5 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects, especially configuration files
-    is_ruby_file = String.ends_with?(file_path, ".rb") || String.ends_with?(file_path, "Gemfile")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to configuration files and Gemfiles primarily
-    # Production configurations are mainly in config/ files and Gemfile
-    is_config_file = String.contains?(file_path, "config/") ||
-                     String.contains?(file_path, "Gemfile") ||
-                     String.contains?(file_path, "application.rb") ||
-                     String.contains?(file_path, "environments/")
-    
-    # If no frameworks specified but it looks like Rails config, include it
-    inferred_rails = frameworks_list == [] && (
-      String.contains?(file_path, "config/application") ||
-      String.contains?(file_path, "config/environments/") ||
-      String.contains?(file_path, "Gemfile")
-    )
-    
-    is_ruby_file && (is_rails || inferred_rails) && is_config_file
-  end
 end
+

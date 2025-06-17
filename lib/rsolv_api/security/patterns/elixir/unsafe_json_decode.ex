@@ -108,23 +108,17 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeJsonDecode do
       languages: ["elixir"],
       frameworks: ["phoenix"],
       regex: [
-        # Jason.decode! with potential user input (not static strings, module attributes, Application, or File calls)
-        ~r/Jason\.decode!\s*\(\s*(?![\"']|@|Application\.|File\.)[^)]+\)/,
+        # decode! with common user input patterns (params, conn, request, etc)
+        ~r/(?:Jason|Poison|JSON)\.decode!\s*\(\s*(?:params|conn\.|request|socket\.|args|query|body|external_|user_|untrusted_)[^)]+\)/,
         
-        # Poison.decode! with potential user input  
-        ~r/Poison\.decode!\s*\(\s*(?![\"']|@|Application\.|File\.)[^)]+\)/,
-        
-        # JSON.decode! from other libraries
-        ~r/JSON\.decode!\s*\(\s*(?![\"']|@|Application\.|File\.)[^)]+\)/,
+        # decode! with array/map access (potential user input)
+        ~r/(?:Jason|Poison|JSON)\.decode!\s*\(\s*\w+\[[^\]]+\]\s*\)/,
         
         # decode! functions in pipelines with user input indicators
         ~r/(?:user_|params|conn\.|request|input|external|untrusted)[^|]*\|\>\s*\w*\.decode!\s*\(\)/,
         
-        # Assignment patterns with decode!
-        ~r/=\s*(?:Jason|Poison|JSON)\.decode!\s*\(\s*(?![\"']|@|Application\.|File\.)[^)]+\)/,
-        
-        # Function calls with decode! and user input patterns
-        ~r/(?:Jason|Poison|JSON)\.decode!\s*\(\s*[^)]*(?:user_|params|conn\.|request|input|data|payload|body)[^)]*\)/
+        # decode! with specific variable names suggesting user input
+        ~r/(?:Jason|Poison|JSON)\.decode!\s*\(\s*(?:user_input|external_json|request_body|payload|raw_data|raw_json|json_string|data|input)\s*\)/
       ],
       default_tier: :public,
       cwe_id: "CWE-20",

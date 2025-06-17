@@ -68,10 +68,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssReactDangerouslyTest do
         ~S|React.createElement('div', {dangerouslySetInnerHTML: {__html: escapeHtml(input)}})|
       ]
       
-      # These don't have user input patterns so won't match the regex
+      # These have constants/literals so won't match the regex
       safe_code_no_user_input = [
+        ~S|<div dangerouslySetInnerHTML={{__html: "<p>Static text</p>"}} />|,
+        ~S|<div dangerouslySetInnerHTML={{__html: `<p>Template literal</p>`}} />|
+      ]
+      
+      # SAFE_TEMPLATE is excluded by prefix check
+      safe_constants = [
         ~S|dangerouslySetInnerHTML={{__html: SAFE_TEMPLATE}}|,
-        ~S|<div dangerouslySetInnerHTML={{__html: "<p>Static text</p>"}} />|
+        ~S|dangerouslySetInnerHTML={{__html: STATIC_HTML}}|
       ]
       
       for code <- safe_code_no_user_input do
@@ -79,12 +85,18 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssReactDangerouslyTest do
           "Should NOT match safe code without user input: #{code}"
       end
       
-      # For sanitized content, AST enhancement would filter these out
-      # The regex matches but AST analysis would reduce confidence below threshold
+      # Safe constants are excluded by the SAFE_/STATIC_ prefix check
+      for code <- safe_constants do
+        refute Regex.match?(pattern.regex, code),
+          "Should NOT match safe constants: #{code}"
+      end
+      
+      # For sanitized content, the regex now excludes common sanitization functions
+      # This provides defense in depth - both regex and AST enhancement filter these
       for code <- safe_code_with_user_input do
-        # These will match the regex but AST enhancement handles filtering
-        assert Regex.match?(pattern.regex, code),
-          "Regex matches but AST enhancement would filter: #{code}"
+        # The regex now excludes DOMPurify.sanitize, sanitizeHtml, etc.
+        refute Regex.match?(pattern.regex, code),
+          "Regex excludes common sanitization functions: #{code}"
       end
     end
     

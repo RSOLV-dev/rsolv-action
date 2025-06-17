@@ -53,7 +53,7 @@ defmodule RsolvApi.Security.Patterns.Java.CommandInjectionRuntimeExec do
         # exec with variable containing concatenation context
         ~r/Runtime\.getRuntime\(\)\.exec\s*\(\s*\w+\s*\)/,
         # exec with shell invocation arrays
-        ~r/\.exec\s*\(\s*new\s+String\[\]\s*\{\s*["'](?:sh|bash|cmd)["']\s*,\s*["']-c["']\s*,[^}]*\+[^}]*\}\s*\)/,
+        ~r/\.exec\s*\(\s*new\s+String\[\]\s*\{\s*["'](?:\/bin\/)?(?:sh|bash|cmd)["']\s*,\s*["']-c["']\s*,[^}]*\}\s*\)/,
         # StringBuilder/StringBuffer command building
         ~r/(?:StringBuilder|StringBuffer)\s+\w+\s*=\s*new\s+(?:StringBuilder|StringBuffer)\s*\(\s*["'][^"']*(?:ping|ls|cat|echo|cmd|sh|bash)[^"']*["']\s*\)/,
         # Pipeline and redirection patterns
@@ -240,8 +240,8 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
   ## Examples
   
       iex> enhancement = RsolvApi.Security.Patterns.Java.CommandInjectionRuntimeExec.ast_enhancement()
-      iex> Map.keys(enhancement)
-      [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Java.CommandInjectionRuntimeExec.ast_enhancement()
       iex> enhancement.min_confidence

@@ -264,7 +264,8 @@ defmodule RsolvApi.Security do
         nil -> []
         module -> 
           # Enhanced modules can return EnhancedPattern structs
-          enhanced = apply(module, :all, [])
+          # Enhanced modules may require tier argument, use :enterprise to get all patterns
+          enhanced = apply(module, :all, [:enterprise])
           # Convert to Pattern structs for backward compatibility
           Enum.map(enhanced, fn pattern ->
             case pattern do
@@ -312,7 +313,9 @@ defmodule RsolvApi.Security do
     # Get enhanced patterns
     enhanced_patterns = case Map.get(@enhanced_pattern_modules, language_lower) do
       nil -> []
-      module -> apply(module, :all, [])
+      module -> 
+        # Enhanced modules may require tier argument, use :enterprise to get all patterns
+        apply(module, :all, [:enterprise])
     end
     
     # Get standard patterns

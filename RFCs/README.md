@@ -18,6 +18,7 @@ This directory contains RFCs for proposed changes, features, and architectural d
 | [RFC-013](./RFC-013-AI-VULNERABILITY-DETECTION.md) | AI Vulnerability Detection | Draft | 2025-01-10 | AI Team |
 | [RFC-017](./RFC-017-AI-GENERATED-CODE-SECURITY.md) | AI Generated Code Security | Approved | 2025-01-14 | Strategy Team |
 | [RFC-019](./RFC-019-ADDITIONAL-RAILS-PATTERNS.md) | Additional Rails Security Patterns | Draft | 2025-01-16 | Security Team |
+| [RFC-020](./RFC-020-CAKEPHP-FRAMEWORK-COVERAGE.md) | CakePHP Framework Vulnerability Coverage | Draft | 2025-06-16 | Security Team |
 
 ## RFC Template
 

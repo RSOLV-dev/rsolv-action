@@ -61,8 +61,8 @@ defmodule RsolvApi.Security.Patterns.JavascriptModuleTest do
       assert "js-xss-document-write" in pattern_ids
       assert "js-command-injection-exec" in pattern_ids
       
-      # Check total count is still 27
-      assert length(patterns) == 27
+      # Check total count is 30
+      assert length(patterns) == 30
     end
   end
 end

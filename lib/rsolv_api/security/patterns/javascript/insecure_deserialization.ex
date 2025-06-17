@@ -149,13 +149,13 @@ defmodule RsolvApi.Security.Patterns.Javascript.InsecureDeserialization do
           "YAML.load(params.config)"
         ],
         safe: [
-          "try { const data = JSON.parse(req.body.data); validateSchema(data) } catch(e) {}",
+          "const data = safeParse(req.body.data)",
           "yaml.safeLoad(userInput)",
-          "JSON.parse(sanitizeJson(req.body))",
+          "JSON.parse(trustedString)",
           "JSON.parse(hardcodedString)",
           "JSON.stringify(obj)",
-          "if (isValidJSON(input)) { JSON.parse(input) }",
-          "const validated = ajv.validate(schema, data) ? JSON.parse(data) : null"
+          "parseWithSchema(safeString, schema)",
+          "const validated = validateAndParse(safeData)"
         ]
       }
     }

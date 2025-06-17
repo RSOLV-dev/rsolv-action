@@ -58,7 +58,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-insecure-cors",
@@ -131,7 +130,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -239,7 +237,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
              methods %w[GET POST PUT DELETE OPTIONS]                   # Explicit methods
              expose %w[X-Total-Count]       # Explicitly expose headers if needed
            end
-         end
          ```
       
       2. **Environment-Specific Configuration**:
@@ -261,7 +258,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
                methods %w[GET POST PUT DELETE]
              end
            end
-         end
          ```
       
       3. **Multiple Resource Configuration**:
@@ -283,7 +279,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
                methods: %w[GET POST PUT DELETE],
                credentials: true
            end
-         end
          ```
       
       4. **Dynamic Origin Validation (Advanced)**:
@@ -305,7 +300,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
              headers %w[Content-Type Authorization]
              methods %w[GET POST PUT DELETE]
            end
-         end
          ```
       
       5. **CORS Security Headers**:
@@ -339,7 +333,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
              ]
              allowed_origins.include?(origin)
            end
-         end
          ```
       """,
       
@@ -395,7 +388,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
               methods allowed_methods
             end
           end
-        end
         
         private
         
@@ -419,7 +411,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
         def self.allowed_methods
           %w[GET POST PUT PATCH DELETE OPTIONS]
         end
-      end
       
       # In config/initializers/cors.rb
       CorsConfiguration.configure
@@ -453,7 +444,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
           headers %w[Content-Type Authorization]
           methods %w[GET POST PUT DELETE]
         end
-      end
       
       # 4. API-Specific CORS Configuration
       Rails.application.config.middleware.insert_before 0, Rack::Cors do
@@ -493,7 +483,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
           }
             raise "SECURITY ERROR: Wildcard origins with credentials detected!"
           end
-        end
         
         private
         
@@ -512,7 +501,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
@@ -616,31 +604,5 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
       }
     }
   end
-  
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects, especially CORS configuration files
-    is_ruby_file = String.ends_with?(file_path, ".rb")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to CORS-related files primarily
-    # CORS configurations are mainly in initializers, controllers, and config files
-    is_cors_file = String.contains?(file_path, "cors") ||
-                   String.contains?(file_path, "config/") ||
-                   String.contains?(file_path, "initializers/") ||
-                   String.contains?(file_path, "controllers/") ||
-                   String.contains?(file_path, "application.rb")
-    
-    # If no frameworks specified but it looks like Rails, include it
-    inferred_rails = frameworks_list == [] && (
-      String.contains?(file_path, "config/") ||
-      String.contains?(file_path, "app/controllers/") ||
-      String.contains?(file_path, "initializers/")
-    )
-    
-    is_ruby_file && (is_rails || inferred_rails) && is_cors_file
-  end
 end
+

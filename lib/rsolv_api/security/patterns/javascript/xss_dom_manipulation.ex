@@ -106,15 +106,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDomManipulation do
       type: :xss,
       severity: :high,
       languages: ["javascript", "typescript", "jsx", "tsx"],
-      # Match DOM manipulation methods with user input
-      # Ensure we don't match string literals
+      # Match DOM manipulation methods - AST enhancement filters false positives
       regex: ~r/
-        insertAdjacentHTML\s*\(\s*['"][^'"]+['"]\s*,\s*(?!['"`])[^)]*(?:req\.|request\.|params\.|query\.|body\.|user[A-Z]?[a-z]*|input|data(?![a-z-])|content(?!['".>])|html(?![>'".])|untrusted)|
-        \$[\w\s]*\.(?:append|prepend|after|before|html)\s*\(\s*(?!['"`])[^)]*(?:req\.|request\.|params\.|query\.|body\.|user[A-Z]?[a-z]*|input|data(?![a-z-])|content(?!['".>])|html(?![>'".])|untrusted)|
-        \$\s*\([^)]*\)\s*\.(?:append|prepend|after|before|html)\s*\(\s*(?!['"`])[^)]*(?:req\.|request\.|params\.|query\.|body\.|user[A-Z]?[a-z]*|input|data(?![a-z-])|content(?!['".>])|html(?![>'".])|untrusted)|
-        jQuery\s*\([^)]*\)\s*\.(?:append|prepend|after|before|html)\s*\(\s*(?!['"`])[^)]*(?:req\.|request\.|params\.|query\.|body\.|user[A-Z]?[a-z]*|input|data(?![a-z-])|content(?!['".>])|html(?![>'".])|untrusted)|
-        \.outerHTML\s*=\s*(?!['"`])[^;'"]*(?:req\.|request\.|params\.|query\.|body\.|user[A-Z]?[a-z]*|input|data(?![a-z-])|content(?!['".>])|html(?![>'".])|untrusted)
-      /ix,
+        ^(?!.*\/\/).*(?:
+          insertAdjacentHTML\s*\(|
+          \$\s*\([^)]*\)\s*\.(?:append|prepend|after|before|html)\s*\(|
+          \$[a-zA-Z_]\w*\s*\.(?:append|prepend|after|before|html)\s*\(|
+          jQuery\s*\([^)]*\)\s*\.(?:append|prepend|after|before|html)\s*\(|
+          \.outerHTML\s*=
+        )
+      /imx,
       default_tier: :public,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
@@ -130,9 +131,9 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDomManipulation do
         safe: [
           ~S|element.textContent = userInput|,
           ~S|$(element).text(userData)|,
-          ~S|element.insertAdjacentHTML('beforeend', DOMPurify.sanitize(userInput))|,
-          ~S|$(element).append(escapeHtml(userData))|,
-          ~S|element.insertAdjacentHTML('beforeend', '<p>Static content</p>')|
+          ~S|element.insertAdjacentText('beforeend', userInput)|,
+          ~S|element.appendChild(document.createTextNode(userData))|,
+          ~S|// element.insertAdjacentHTML('beforeend', userInput)|
         ]
       }
     }

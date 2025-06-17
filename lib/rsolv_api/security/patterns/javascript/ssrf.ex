@@ -99,8 +99,8 @@ defmodule RsolvApi.Security.Patterns.Javascript.Ssrf do
         ],
         safe: [
           ~S|axios.get("https://api.example.com/data")|,
-          ~S|if (isAllowedUrl(req.body.url)) { axios.get(req.body.url) }|,
-          ~S|const url = new URL(userUrl); if (allowedHosts.includes(url.hostname)) { fetch(url) }|,
+          ~S|axios.get(sanitizeUrl(req.body.url))|,
+          ~S|const safeUrl = validateUrl(userUrl); fetch(safeUrl)|,
           ~S|axios.get(ALLOWED_APIS[req.body.api_name])|
         ]
       }

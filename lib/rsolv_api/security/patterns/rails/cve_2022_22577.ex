@@ -40,7 +40,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202222577 do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-cve-2022-22577",
@@ -104,7 +103,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202222577 do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -207,7 +205,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202222577 do
           
           render json: { data: data }
         end
-      end
       
       # Safe static CSP configuration
       Rails.application.config.content_security_policy do |policy|
@@ -227,7 +224,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202222577 do
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -316,32 +312,5 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202222577 do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects, especially controllers and configuration
-    is_ruby_file = String.ends_with?(file_path, ".rb")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to files that commonly handle CSP headers
-    # CSP headers are typically set in controllers, middleware, and application config
-    is_csp_file = String.contains?(file_path, "controller") ||
-                  String.contains?(file_path, "app/controllers/") ||
-                  String.contains?(file_path, "config/") ||
-                  String.contains?(file_path, "application") ||
-                  String.contains?(file_path, "middleware") ||
-                  String.contains?(file_path, "security") ||
-                  String.contains?(file_path, "lib/")
-    
-    # If no frameworks specified but it looks like Rails, include it
-    inferred_rails = frameworks_list == [] && (
-      String.contains?(file_path, "app/") ||
-      String.contains?(file_path, "lib/") ||
-      String.contains?(file_path, "config/")
-    )
-    
-    is_ruby_file && (is_rails || inferred_rails) && is_csp_file
-  end
 end
+

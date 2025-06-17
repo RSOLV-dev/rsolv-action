@@ -35,11 +35,11 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
       assert is_list(patterns)
       assert length(patterns) > 0
       
-      # Check that patterns have AST enhancement fields
+      # Check that patterns have AST enhancement fields (in camelCase)
       first_pattern = List.first(patterns)
-      assert Map.has_key?(first_pattern, "ast_rules")
-      assert Map.has_key?(first_pattern, "context_rules")
-      assert Map.has_key?(first_pattern, "min_confidence")
+      assert Map.has_key?(first_pattern, "astRules")
+      assert Map.has_key?(first_pattern, "contextRules")
+      assert Map.has_key?(first_pattern, "minConfidence")
     end
     
     test "defaults to javascript and public tier", %{conn: conn} do

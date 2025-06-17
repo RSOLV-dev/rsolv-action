@@ -519,7 +519,7 @@ defmodule RsolvApi.Security.Patterns.Php.DebugModeEnabled do
   ## Examples
 
       iex> enhancement = RsolvApi.Security.Patterns.Php.DebugModeEnabled.ast_enhancement()
-      iex> Map.keys(enhancement)
+      iex> Map.keys(enhancement) |> Enum.sort()
       [:min_confidence, :rules]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.DebugModeEnabled.ast_enhancement()

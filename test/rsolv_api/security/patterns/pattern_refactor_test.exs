@@ -31,8 +31,8 @@ defmodule RsolvApi.Security.Patterns.PatternRefactorTest do
       enhanced_pattern = module.enhanced_pattern()
       
       assert enhanced_pattern.ast_rules != nil
-      assert enhanced_pattern.ast_rules.node_type == "CallExpression"
-      assert enhanced_pattern.ast_rules.parent_node != nil
+      assert enhanced_pattern.ast_rules.node_type == "BinaryExpression"
+      assert enhanced_pattern.ast_rules.operator != nil
       assert enhanced_pattern.context_rules != nil
       assert enhanced_pattern.confidence_rules != nil
     end
@@ -93,7 +93,7 @@ defmodule RsolvApi.Security.Patterns.PatternRefactorTest do
       enhanced = RsolvApi.Security.ASTPattern.enhance(pattern)
       
       assert enhanced.ast_rules != nil
-      assert enhanced.min_confidence == 0.7
+      assert enhanced.min_confidence == 0.8
     end
   end
 

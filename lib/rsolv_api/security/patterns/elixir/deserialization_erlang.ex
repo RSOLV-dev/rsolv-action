@@ -70,16 +70,16 @@ defmodule RsolvApi.Security.Patterns.Elixir.DeserializationErlang do
       severity: :critical,
       languages: ["elixir"],
       regex: [
-        # Direct binary_to_term calls
-        ~r/:erlang\.binary_to_term\s*\(/,
+        # Direct binary_to_term calls (exclude comments)
+        ~r/^(?!\s*#).*:erlang\.binary_to_term\s*\(/m,
         # With safe option (still vulnerable to function execution)
-        ~r/:erlang\.binary_to_term\s*\([^,)]+,\s*\[.*:safe/,
+        ~r/^(?!\s*#).*:erlang\.binary_to_term\s*\([^,)]+,\s*\[.*:safe/m,
         # Piped to binary_to_term
-        ~r/\|>\s*:erlang\.binary_to_term/,
+        ~r/^(?!\s*#).*\|>\s*:erlang\.binary_to_term/m,
         # Variable assignment
-        ~r/=\s*:erlang\.binary_to_term\s*\(/,
+        ~r/^(?!\s*#).*=\s*:erlang\.binary_to_term\s*\(/m,
         # In function calls
-        ~r/apply\s*\(\s*:erlang\s*,\s*:binary_to_term/
+        ~r/^(?!\s*#).*apply\s*\(\s*:erlang\s*,\s*:binary_to_term/m
       ],
       default_tier: :protected,
       cwe_id: "CWE-502",
@@ -92,9 +92,9 @@ defmodule RsolvApi.Security.Patterns.Elixir.DeserializationErlang do
           ~S|:erlang.binary_to_term(user_data, [:safe])|
         ],
         safe: [
-          ~S|:erlang.binary_to_term(trusted_data, [:safe])|,
           ~S|Jason.decode!(user_data)|,
-          ~S|:erlang.term_to_binary(data)|
+          ~S|:erlang.term_to_binary(data)|,
+          ~S|# :erlang.binary_to_term(data) - commented out|
         ]
       }
     }
@@ -209,8 +209,8 @@ defmodule RsolvApi.Security.Patterns.Elixir.DeserializationErlang do
   ## Examples
   
       iex> enhancement = RsolvApi.Security.Patterns.Elixir.DeserializationErlang.ast_enhancement()
-      iex> Map.keys(enhancement)
-      [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Elixir.DeserializationErlang.ast_enhancement()
       iex> enhancement.min_confidence

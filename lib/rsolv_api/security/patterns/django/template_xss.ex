@@ -59,7 +59,7 @@ defmodule RsolvApi.Security.Patterns.Django.TemplateXss do
       description: "XSS vulnerabilities through unsafe Django template filters",
       type: :xss,
       severity: :high,
-      languages: ["python"],
+      languages: ["python", "html"],
       frameworks: ["django"],
       regex: [
         # |safe filter - but not after sanitization functions

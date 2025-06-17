@@ -20,7 +20,19 @@ defmodule RsolvApi.Security.Pattern do
     :file_upload | :rce | :open_redirect | :ldap_injection |
     :xpath_injection | :insecure_random | :timing_attack |
     :mass_assignment | :resource_exhaustion | :dos | :session_management |
-    :input_validation | :logging | :cve
+    :input_validation | :logging | :cve | :debug_mode | :broken_access_control |
+    :security_misconfiguration
+  
+  @type target_scope :: :any | :models | :controllers | :views | :configs | 
+                        :routes | :middleware | :helpers | :tests
+  
+  @type file_targeting :: %{
+    scope: target_scope(),
+    include_paths: [String.t()] | nil,
+    exclude_paths: [String.t()] | nil,
+    include_extensions: [String.t()] | nil,
+    exclude_extensions: [String.t()] | nil
+  } | nil
   
   @type t :: %__MODULE__{
     id: String.t(),
@@ -38,7 +50,8 @@ defmodule RsolvApi.Security.Pattern do
     test_cases: %{
       vulnerable: [String.t()],
       safe: [String.t()]
-    }
+    },
+    file_targeting: file_targeting()
   }
   
   @enforce_keys [
@@ -60,7 +73,8 @@ defmodule RsolvApi.Security.Pattern do
     :cwe_id,
     :owasp_category,
     :recommendation,
-    :test_cases
+    :test_cases,
+    :file_targeting
   ]
   
   @doc """

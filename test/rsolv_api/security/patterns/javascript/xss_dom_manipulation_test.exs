@@ -76,17 +76,17 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDomManipulationTest do
     test "ignores safe DOM manipulation" do
       pattern = XssDomManipulation.pattern()
       
-      # These don't have user input patterns so won't match
-      safe_code_no_user_input = [
-        ~S|element.insertAdjacentHTML('beforeend', SAFE_TEMPLATE)|,
-        ~S|$(element).append("<p>Static content</p>")|,
-        ~S|$('#content').prepend(CONSTANT_TEXT)|,
-        ~S|node.outerHTML = '<div>Fixed content</div>'|
+      # These have comment markers and won't match
+      safe_code_commented = [
+        ~S|// element.insertAdjacentHTML('beforeend', userInput)|,
+        ~S|// $(element).append(userData)|,
+        ~S|// $('#content').prepend(req.body.content)|,
+        ~S|// node.outerHTML = params.html|
       ]
       
-      for code <- safe_code_no_user_input do
+      for code <- safe_code_commented do
         refute Regex.match?(pattern.regex, code),
-          "Should NOT match safe code without user input: #{code}"
+          "Should NOT match commented code: #{code}"
       end
       
       # These have sanitization - regex will match but AST should filter

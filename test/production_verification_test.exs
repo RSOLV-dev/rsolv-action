@@ -2,10 +2,12 @@ defmodule RSOLV.ProductionVerificationTest do
   @moduledoc """
   Comprehensive test suite to verify production API functionality
   """
-  use ExUnit.Case
+  use RsolvApi.DataCase
   import Ecto.Query
   
-  alias RSOLV.Repo
+  alias RsolvApi.Repo
+  
+  @moduletag :integration
   
   describe "Database Schema Verification" do
     test "fix_attempts table exists with all required columns" do

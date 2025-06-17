@@ -39,7 +39,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.WeakCryptoMd5 do
       regex: [
         ~r/Digest::MD5/,
         ~r/OpenSSL::Digest(?:\.new\(['"]MD5['"]\)|::MD5)/,
-        ~r/\.md5\s*\(/
+        ~r/\.md5(\s*\(|$|\s|\.)/
       ],
       default_tier: :public,
       cwe_id: "CWE-328",

@@ -289,8 +289,8 @@ defmodule RsolvApi.Security.Patterns.Javascript.MissingCsrfProtection do
   ## Examples
   
       iex> enhancement = RsolvApi.Security.Patterns.Javascript.MissingCsrfProtection.ast_enhancement()
-      iex> Map.keys(enhancement)
-      [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      iex> Enum.sort(Map.keys(enhancement))
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Javascript.MissingCsrfProtection.ast_enhancement()
       iex> enhancement.ast_rules.node_type

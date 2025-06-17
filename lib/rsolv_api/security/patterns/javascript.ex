@@ -2,7 +2,7 @@ defmodule RsolvApi.Security.Patterns.Javascript do
   @moduledoc """
   JavaScript security patterns for detecting vulnerabilities.
   
-  This module contains 29 security patterns specifically designed for JavaScript
+  This module contains 30 security patterns specifically designed for JavaScript
   and TypeScript code. Each pattern includes detection rules, test cases, and
   educational documentation.
   """
@@ -50,7 +50,7 @@ defmodule RsolvApi.Security.Patterns.Javascript do
   
       iex> patterns = RsolvApi.Security.Patterns.Javascript.all()
       iex> length(patterns)
-      29
+      30
       iex> Enum.all?(patterns, &match?(%Pattern{}, &1))
       true
   """
@@ -458,7 +458,7 @@ defmodule RsolvApi.Security.Patterns.Javascript do
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Javascript.nosql_injection()
-      iex> vulnerable = ~S|db.find({username: req.body.username})|
+      iex> vulnerable = ~S|db.users.find({username: req.body.username})|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """

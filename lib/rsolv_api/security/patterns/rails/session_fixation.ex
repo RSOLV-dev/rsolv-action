@@ -23,7 +23,6 @@ defmodule RsolvApi.Security.Patterns.Rails.SessionFixation do
       session[:user_id] = user.id  # Session ID unchanged!
       redirect_to dashboard_path
     end
-  end
   ```
   
   ### Safe Example
@@ -42,7 +41,6 @@ defmodule RsolvApi.Security.Patterns.Rails.SessionFixation do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-session-fixation",
@@ -90,7 +88,6 @@ defmodule RsolvApi.Security.Patterns.Rails.SessionFixation do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -185,12 +182,10 @@ defmodule RsolvApi.Security.Patterns.Rails.SessionFixation do
           session[:authenticated] = true
           redirect_to root_path
         end
-      end
       """
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
@@ -264,31 +259,5 @@ defmodule RsolvApi.Security.Patterns.Rails.SessionFixation do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects, especially authentication-related files
-    is_ruby_file = String.ends_with?(file_path, ".rb")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to authentication-related files primarily
-    # Session fixation mainly occurs in controllers, authentication libs, and session handlers
-    is_auth_file = String.contains?(file_path, "controller") ||
-                   String.contains?(file_path, "app/controllers/") ||
-                   String.contains?(file_path, "session") ||
-                   String.contains?(file_path, "auth") ||
-                   String.contains?(file_path, "login") ||
-                   String.contains?(file_path, "lib/")
-    
-    # If no frameworks specified but it looks like Rails, include it
-    inferred_rails = frameworks_list == [] && (
-      String.contains?(file_path, "app/") ||
-      String.contains?(file_path, "lib/") ||
-      String.contains?(file_path, "config/")
-    )
-    
-    is_ruby_file && (is_rails || inferred_rails) && is_auth_file
-  end
 end
+

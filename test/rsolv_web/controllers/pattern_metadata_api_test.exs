@@ -46,8 +46,9 @@ defmodule RSOLVWeb.PatternMetadataApiTest do
     end
     
     test "returns 404 for patterns without metadata", %{conn: conn} do
-      # These patterns exist but haven't been migrated yet
-      conn = get(conn, "/api/v1/patterns/js-weak-crypto-md5/metadata")
+      # Since all patterns have metadata now, test with a truly non-existent pattern module
+      # that would return "Pattern not found" error
+      conn = get(conn, "/api/v1/patterns/nonexistent-pattern/metadata")
       
       assert json = json_response(conn, 404)
       assert json["error"] == "Pattern not found"

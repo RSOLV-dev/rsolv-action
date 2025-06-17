@@ -109,7 +109,7 @@ defmodule RSOLVWeb.Controllers.TierDeterminationTest do
       
       # Check for AST enhancements
       patterns_with_ast = Enum.filter(response["patterns"], fn p ->
-        p["ast_rules"] != nil || p["context_rules"] != nil || p["confidence_rules"] != nil
+        p["astRules"] != nil || p["contextRules"] != nil || p["confidenceRules"] != nil
       end)
       
       assert length(patterns_with_ast) > 0

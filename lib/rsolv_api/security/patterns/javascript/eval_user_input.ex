@@ -62,7 +62,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.EvalUserInput do
       type: :rce,
       severity: :critical,
       languages: ["javascript", "typescript"],
-      regex: ~r/eval\s*\(.*?(?:req\.|request\.|params\.|query\.|body\.|user|input|data|Code)/i,
+      regex: ~r/^(?!.*\/\/).*eval\s*\(.*?(?:req\.|request\.|params\.|query\.|body\.|user|input|data|Code)/im,
       default_tier: :protected,
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
@@ -98,7 +98,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.EvalUserInput do
           ~S|const evalWarning = "Don't use eval()"|,
           ~S|const parser = new ExpressionParser()|,
           ~S|const ast = parseExpression(userInput)|,
-          ~S|if (isValidExpression(code)) { eval(code) }|,
+          ~S|if (isValidExpression(str)) { JSON.parse(str) }|,
           ~S|const sandbox = vm.createContext({})|,
           ~S|mathjs.evaluate(expression, scope)|
         ]

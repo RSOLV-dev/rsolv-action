@@ -43,7 +43,6 @@ defmodule RsolvApi.Security.Patterns.Rails.CallbackSecurityBypass do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-callback-security-bypass",
@@ -87,7 +86,6 @@ defmodule RsolvApi.Security.Patterns.Rails.CallbackSecurityBypass do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -195,7 +193,6 @@ defmodule RsolvApi.Security.Patterns.Rails.CallbackSecurityBypass do
            def public_endpoint?
              %w[index show about].include?(action_name)
            end
-         end
          ```
       
       2. **Use Static Conditions Only**:
@@ -247,7 +244,6 @@ defmodule RsolvApi.Security.Patterns.Rails.CallbackSecurityBypass do
              return unless requires_authentication?
              # Authentication logic
            end
-         end
          
          class PublicPagesController < ApplicationController
            # Override the method, not the callback
@@ -315,7 +311,6 @@ defmodule RsolvApi.Security.Patterns.Rails.CallbackSecurityBypass do
           @post = Post.find(params[:id])
           @post.public?
         end
-      end
       
       # 3. Action-Based Skips
       class ProductsController < ApplicationController
@@ -353,7 +348,6 @@ defmodule RsolvApi.Security.Patterns.Rails.CallbackSecurityBypass do
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -449,29 +443,5 @@ defmodule RsolvApi.Security.Patterns.Rails.CallbackSecurityBypass do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails controllers and concerns
-    is_ruby_file = String.ends_with?(file_path, ".rb")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Controller or concern file
-    is_controller_file = String.contains?(file_path, "controller") ||
-                        String.contains?(file_path, "/concerns/")
-    
-    # Not a test file
-    not_test = !String.contains?(file_path, "test/") && 
-               !String.contains?(file_path, "spec/")
-    
-    # If no frameworks specified but it looks like a Rails controller, include it
-    inferred_rails = frameworks_list == [] && (
-      String.contains?(file_path, "app/controllers/") ||
-      String.contains?(file_path, "app/controllers/concerns/")
-    )
-    
-    is_ruby_file && (is_rails || inferred_rails) && is_controller_file && not_test
-  end
 end
+

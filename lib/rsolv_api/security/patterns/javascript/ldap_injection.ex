@@ -70,14 +70,14 @@ defmodule RsolvApi.Security.Patterns.Javascript.LdapInjection do
           # String concatenation pattern, but NOT with escape function
           ["'][^"']*["']\s*\+\s*(?!ldapEscape|ldapjs\.escape|escapeLDAP|sanitizeLdap)(?:req\.|request\.|params\.|query\.|body\.|user|input|data|\w+)
           |
-          # Template literal with interpolation for LDAP methods - properly escaped
-          `[^`]*\\\$\{[^}]+\}`
+          # Template literal with interpolation for LDAP methods, but NOT with escaped variables
+          `[^`]*\$\{(?!escaped|ldapEscape|ldapjs\.escape|escapeLDAP|sanitizeLdap)[^}]+\}[^`]*`
           |
           # Direct user input in filter object
           \{[^}]*filter\s*:\s*(?:
             ["'`][^"'`]*["'`]\s*\+\s*(?:req\.|request\.|params\.|query\.|body\.|user|input|data)
             |
-            `[^`]*\\\$\{(?:req\.|request\.|params\.|query\.|body\.|user|input|data)
+            `[^`]*\$\{(?!escaped|ldapEscape|ldapjs\.escape|escapeLDAP|sanitizeLdap)(?:req\.|request\.|params\.|query\.|body\.|user|input|data)[^`]*`
           )
         )
         |
@@ -90,7 +90,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.LdapInjection do
         (?:
           ["'][^"']*["']\s*\+\s*(?:req\.|request\.|params\.|query\.|body\.|user|input|data|\w+)
           |
-          `[^`]*\\\$\{[^}]+\}`
+          `[^`]*\$\{(?!escaped|ldapEscape|ldapjs\.escape|escapeLDAP|sanitizeLdap)[^}]+\}[^`]*`
         )
         |
         # LDAP modify with user input

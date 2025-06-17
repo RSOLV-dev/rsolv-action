@@ -50,7 +50,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-unsafe-globbing",
@@ -126,7 +125,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -265,7 +263,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
                render status: :not_found
              end
            end
-         end
          ```
       
       3. **Use Whitelist-Based Routing**:
@@ -287,7 +284,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
              else
                render status: :not_found
              end
-           end
          end
          
          # Routes
@@ -393,7 +389,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
           else
             render_not_found
           end
-        end
         
         private
         
@@ -419,7 +414,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
         def self.find_by_public_id(public_id)
           find_by(public_id: public_id)
         end
-      end
       
       # Controller
       class DocumentsController < ApplicationController
@@ -429,7 +423,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
           
           redirect_to rails_blob_path(document.file, disposition: "inline")
         end
-      end
       
       # Routes  
       get "files/:id", to: "documents#show",
@@ -445,7 +438,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
           unless Rails.env.development?
             render status: :forbidden, plain: 'File serving disabled'
           end
-        end
       end
       
       # 5. Use CDN or external file storage
@@ -467,7 +459,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -562,28 +553,5 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects, especially route definitions
-    is_ruby_file = String.ends_with?(file_path, ".rb")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to route files and controllers primarily
-    # Glob routes are mainly in config/routes.rb but can be in controllers
-    _is_rails_file = String.contains?(file_path, "config/routes") ||
-                     String.contains?(file_path, "app/controllers/") ||
-                     String.contains?(file_path, "config/application") ||
-                     String.contains?(file_path, "lib/")
-    
-    # If no frameworks specified but it looks like Rails, include it
-    inferred_rails = frameworks_list == [] && (
-      String.contains?(file_path, "config/routes") ||
-      String.contains?(file_path, "app/")
-    )
-    
-    is_ruby_file && (is_rails || inferred_rails)
-  end
 end
+

@@ -71,20 +71,20 @@ defmodule RsolvApi.Security.Patterns.Elixir.SsrfHttpoison do
       severity: :high,
       languages: ["elixir"],
       regex: [
-        # HTTPoison with variable URLs (not string literals)
-        ~r/HTTPoison\.(get!?|post!?|put!?|delete!?|request!?|patch!?|head!?|options!?)\s*\(\s*[^"']/,
-        # Piped variable to HTTPoison
-        ~r/\|>\s*HTTPoison\.(get!?|post!?|put!?|delete!?|request!?)/,
-        # HTTPoison with params/user input
-        ~r/HTTPoison\.\w+!?\s*\(\s*(params|conn|socket|args|user|input|url|endpoint|webhook|callback)/,
-        # Tesla HTTP client with variables
-        ~r/Tesla\.(get!?|post!?|put!?|delete!?)\s*\(\s*[^,]+,\s*[^"']/,
-        # Req HTTP client with user input
-        ~r/Req\.(get!?|post!?|put!?|delete!?)\s*\(\s*url:\s*(params|user|input|url)/,
-        # :hackney with variables
-        ~r/:hackney\.(request|get|post|put|delete)\s*\(\s*[^,]+,\s*[^"']/,
-        # Finch with user input
-        ~r/Finch\.build\s*\(\s*:\w+,\s*[^"']/
+        # HTTPoison with variable URLs (not string literals) - exclude comments
+        ~r/^(?!.*#).*HTTPoison\.(get!?|post!?|put!?|delete!?|request!?|patch!?|head!?|options!?)\s*\(\s*[^"']/m,
+        # Piped variable to HTTPoison - exclude comments
+        ~r/^(?!.*#).*\|>\s*HTTPoison\.(get!?|post!?|put!?|delete!?|request!?)/m,
+        # HTTPoison with params/user input - exclude comments
+        ~r/^(?!.*#).*HTTPoison\.\w+!?\s*\(\s*(params|conn|socket|args|user|input|url|endpoint|webhook|callback)/m,
+        # Tesla HTTP client with variables - exclude comments
+        ~r/^(?!.*#).*Tesla\.(get!?|post!?|put!?|delete!?)\s*\(\s*[^,]+,\s*[^"']/m,
+        # Req HTTP client with user input - exclude comments
+        ~r/^(?!.*#).*Req\.(get!?|post!?|put!?|delete!?)\s*\(\s*url:\s*(params|user|input|url)/m,
+        # :hackney with variables - exclude comments
+        ~r/^(?!.*#).*:hackney\.(request|get|post|put|delete)\s*\(\s*[^,]+,\s*[^"']/m,
+        # Finch with user input - exclude comments
+        ~r/^(?!.*#).*Finch\.build\s*\(\s*:\w+,\s*[^"']/m
       ],
       default_tier: :protected,
       cwe_id: "CWE-918",
@@ -101,10 +101,8 @@ defmodule RsolvApi.Security.Patterns.Elixir.SsrfHttpoison do
         ],
         safe: [
           ~S|HTTPoison.get!("https://api.example.com/data")|,
-          ~S|if URI.parse(url).host in @allowed_hosts do
-  HTTPoison.get!(url)
-end|,
-          ~S|HTTPoison.get!("http://localhost:4000/api/internal")|
+          ~S|HTTPoison.get!("#{@base_url}/api/v1/data")|,
+          ~S|# HTTPoison.get!(user_url) - disabled for security|
         ]
       }
     }
@@ -242,8 +240,8 @@ end|,
   ## Examples
   
       iex> enhancement = RsolvApi.Security.Patterns.Elixir.SsrfHttpoison.ast_enhancement()
-      iex> Map.keys(enhancement)
-      [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Elixir.SsrfHttpoison.ast_enhancement()
       iex> enhancement.min_confidence

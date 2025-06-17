@@ -71,19 +71,51 @@ defmodule RSOLV.Accounts do
           created_at: DateTime.utc_now()
         }
         
-      # Test API key for tests
+      # Test API key for main test customer (has enterprise/AI access)
       api_key == "rsolv_test_abc123" ->
         %{
           id: "test_customer_1",
           name: "Test Customer",
           email: "test@example.com",
           api_key: api_key,
-          tier: "enterprise",  # Grant enterprise access for testing
-          flags: ["ai_access", "enterprise_access"],  # Additional flags for testing
+          tier: "enterprise",
+          flags: ["ai_access", "enterprise_access"],
           monthly_limit: 100,
           current_usage: 15,
           active: true,
           trial: true,
+          created_at: DateTime.utc_now()
+        }
+      
+      # Test API key for regular customers (no enterprise/AI access)
+      api_key == "rsolv_test_regular_def456" ->
+        %{
+          id: "test_customer_regular",
+          name: "Test Regular Customer",
+          email: "regular@example.com",
+          api_key: api_key,
+          tier: "standard",
+          flags: [],
+          monthly_limit: 100,
+          current_usage: 15,
+          active: true,
+          trial: true,
+          created_at: DateTime.utc_now()
+        }
+      
+      # Test API key for enterprise customers
+      api_key == "rsolv_test_enterprise_xyz789" ->
+        %{
+          id: "test_enterprise_customer",
+          name: "Test Enterprise Customer",
+          email: "enterprise@example.com",
+          api_key: api_key,
+          tier: "enterprise",
+          flags: ["ai_access", "enterprise_access"],
+          monthly_limit: 1000,
+          current_usage: 5,
+          active: true,
+          trial: false,
           created_at: DateTime.utc_now()
         }
       

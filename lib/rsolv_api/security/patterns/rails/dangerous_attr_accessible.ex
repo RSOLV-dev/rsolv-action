@@ -48,7 +48,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousAttrAccessible do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-dangerous-attr-accessible",
@@ -89,7 +88,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousAttrAccessible do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -221,7 +219,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousAttrAccessible do
           else
             params.require(:user).permit(:name, :email, :bio)
           end
-        end
       end
       
       # Form objects for complex scenarios
@@ -235,12 +232,10 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousAttrAccessible do
         def save
           User.create!(name: name, email: email)
         end
-      end
       """
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -321,22 +316,5 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousAttrAccessible do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby model files in Rails projects
-    is_ruby_file = String.ends_with?(file_path, ".rb")
-    
-    # Check if it's a model file
-    is_model = String.contains?(file_path, "model") ||
-               String.contains?(file_path, "app/models/")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # If no frameworks specified but it's in app/models, assume Rails
-    inferred_rails = frameworks_list == [] && String.contains?(file_path, "app/models/")
-    
-    is_ruby_file && (is_model && (is_rails || inferred_rails))
-  end
 end
+

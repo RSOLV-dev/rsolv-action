@@ -80,16 +80,19 @@ defmodule RsolvApi.Security.Patterns.Java.LdapInjection do
       severity: :high,
       languages: ["java"],
       regex: [
-        # LDAP search methods with string concatenation - exclude commented lines
-        ~r/^(?!.*\/\/).*\.search\s*\(.*\+.*,/m,
-        # LDAP filter construction with concatenation - exclude commented lines  
-        ~r/^(?!.*\/\/).*(?:filter|Filter|query|Query|searchFilter|searchString|ldapFilter)\s*=\s*.*\+/m,
-        # LDAP bind operations with concatenation - exclude commented lines
-        ~r/^(?!.*\/\/).*\.bind\s*\(.*\+.*,/m,
-        # Distinguished Name construction with concatenation - exclude commented lines
-        ~r/^(?!.*\/\/).*(?:dn|DN|userDN|baseDN)\s*=\s*.*\+/m,
-        # Other LDAP operations with concatenation - exclude commented lines
-        ~r/^(?!.*\/\/).*\.(?:lookup|createSubcontext|destroySubcontext|modifyAttributes|rename|list|listBindings)\s*\(.*\+/m
+        # Direct string concatenation in LDAP methods without encoding - matches patterns like:
+        # ctx.search("cn=" + username + ",ou=users", ...) but not if 'escaped' or 'encoded' is in variable name
+        ~r/^(?!.*\/\/).*\.(?:search|bind|lookup|createSubcontext|destroySubcontext|modifyAttributes|rename|list|listBindings)\s*\([^)]*\+\s*(?!escaped|encoded|sanitized)[\w\[\]\.]+(?<!escaped|encoded|sanitized)\s*\+/m,
+        # LDAP filter construction with direct user input concatenation - more generic pattern
+        ~r/^(?!.*\/\/).*(?:filter|Filter|query|Query|searchString)\s*=\s*["\(]*(?:&|\|)?\([^)]*[a-zA-Z]+\s*=\s*["]*\s*\+\s*(?!escaped|encoded|sanitized)[\w\[\]\.]+/m,
+        # DN construction with direct concatenation - support various LDAP attributes
+        ~r/^(?!.*\/\/).*(?:dn|DN|userDN|baseDN|principalDN|authDN)\s*=\s*["]*(?:cn|uid|mail|sAMAccountName|ou)=["]*\s*\+\s*(?!escaped|encoded|sanitized)[\w\[\]\.]+/m,
+        # Simple filter pattern matching
+        ~r/^(?!.*\/\/).*["\(]\w+\s*=\s*["]*\s*\+\s*(?!escaped|encoded|sanitized)[\w\[\]\.]+\s*\+\s*["\)]/m,
+        # Pattern for memberOf and similar attributes
+        ~r/^(?!.*\/\/).*["\(](?:memberOf|member)\s*=\s*[^"]*\+\s*(?!escaped|encoded|sanitized)[\w\[\]\.]+/m,
+        # Search method with filter as second parameter containing concatenation
+        ~r/^(?!.*\/\/).*\.search\s*\([^,]+,\s*["]*[^"]*\+\s*(?!escaped|encoded|sanitized)[\w\[\]\.]+/m
       ],
       default_tier: :protected,
       cwe_id: "CWE-90",
@@ -302,8 +305,8 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
   ## Examples
   
       iex> enhancement = RsolvApi.Security.Patterns.Java.LdapInjection.ast_enhancement()
-      iex> Map.keys(enhancement)
-      [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Java.LdapInjection.ast_enhancement()
       iex> enhancement.min_confidence

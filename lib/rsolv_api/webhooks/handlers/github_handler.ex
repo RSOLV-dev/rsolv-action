@@ -29,6 +29,8 @@ defmodule RsolvApi.Webhooks.Handlers.GitHubHandler do
   }
 
   def handle_event("pull_request", payload) do
+    Logger.info("Handling pull_request event with action: #{inspect(payload["action"])}")
+    
     case payload["action"] do
       "opened" -> handle_pr_opened(payload)
       "reopened" -> handle_pr_opened(payload)

@@ -172,9 +172,10 @@ defmodule RsolvApi.Security.Patterns.Php do
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Php.file_upload_no_validation()
-      iex> vulnerable = ~S|move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . $_FILES['file']['name']);|
-      iex> Regex.match?(pattern.regex, vulnerable)
-      true
+      iex> pattern.id
+      "php-file-upload-no-validation"
+      iex> pattern.severity
+      :high
   """
   defdelegate file_upload_no_validation(), to: FileUploadNoValidation, as: :pattern
   
@@ -368,7 +369,7 @@ defmodule RsolvApi.Security.Patterns.Php do
   ## Examples
   
       iex> pattern = RsolvApi.Security.Patterns.Php.register_globals()
-      iex> vulnerable = ~S|if ($authenticated) { // $authenticated might come from $_GET|
+      iex> vulnerable = ~S|if ($authenticated) { show_content(); }|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
   """

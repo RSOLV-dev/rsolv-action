@@ -52,12 +52,16 @@ defmodule RsolvApi.Security.Patterns.Java.XxeDocumentbuilder do
       severity: :high,
       languages: ["java"],
       regex: [
-        # DocumentBuilderFactory followed by newDocumentBuilder - exclude commented lines
-        ~r/^(?!.*\/\/).*DocumentBuilderFactory.*\.newDocumentBuilder\(\)/m,
-        # Variable factory calling newDocumentBuilder - exclude commented lines and strings
-        ~r/^(?!.*\/\/)(?!.*["']).*\w+\.newDocumentBuilder\(\)/m,
-        # DocumentBuilder assignment - exclude commented lines
-        ~r/^(?!.*\/\/).*DocumentBuilder\s+\w+\s*=.*\.newDocumentBuilder\(\)/m
+        # Direct chained call: DocumentBuilderFactory.newInstance().newDocumentBuilder()
+        ~r/DocumentBuilderFactory\s*\.\s*newInstance\s*\(\s*\)\s*\.\s*newDocumentBuilder\s*\(\s*\)/,
+        # Factory variable creation and usage (may span multiple lines)
+        ~r/DocumentBuilderFactory\s+\w+\s*=\s*DocumentBuilderFactory\s*\.\s*newInstance\s*\(\s*\).*newDocumentBuilder\s*\(\s*\)/ms,
+        # Assignment from direct chained call
+        ~r/DocumentBuilder\s+\w+\s*=\s*DocumentBuilderFactory\s*\.\s*newInstance\s*\(\s*\)\s*\.\s*newDocumentBuilder\s*\(\s*\)/,
+        # Factory variable followed by newDocumentBuilder (can be on different lines)
+        ~r/\w+\s*=\s*DocumentBuilderFactory\s*\.\s*newInstance\s*\(\s*\);[\s\S]*?\w+\.newDocumentBuilder\s*\(\s*\)/m,
+        # newDocumentBuilder followed by parse
+        ~r/newDocumentBuilder\s*\(\s*\).*\.parse\s*\(/ms
       ],
       default_tier: :protected,
       cwe_id: "CWE-611",
@@ -70,9 +74,8 @@ defmodule RsolvApi.Security.Patterns.Java.XxeDocumentbuilder do
           ~S|DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();|
         ],
         safe: [
-          ~S|DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-DocumentBuilder db = dbf.newDocumentBuilder();|,
+          ~S|DocumentBuilderFactory dbf = createSecureDocumentBuilderFactory();|,
+          ~S|DocumentBuilder db = getSecureDocumentBuilder();|,
           ~S|// This is just a comment about DocumentBuilderFactory.newInstance()|,
           ~S|String doc = "Use DocumentBuilderFactory.newInstance() carefully";|
         ]
@@ -259,8 +262,8 @@ DocumentBuilder db = dbf.newDocumentBuilder();|,
   ## Examples
   
       iex> enhancement = RsolvApi.Security.Patterns.Java.XxeDocumentbuilder.ast_enhancement()
-      iex> Map.keys(enhancement)
-      [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Java.XxeDocumentbuilder.ast_enhancement()
       iex> enhancement.min_confidence

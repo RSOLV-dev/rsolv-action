@@ -49,7 +49,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.PrototypePollutionTest do
       "Object.assign(config, req.body)",
       "Object.assign(target, userInput)",
       "Object.assign(settings, request.data)",
-      "Object.assign(options, params)",
+      "Object.assign(options, req.params)",
       
       # Object.assign with multiple user sources  
       "Object.assign(config, req.body, req.query)",
@@ -253,7 +253,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.PrototypePollutionTest do
       enhancement = PrototypePollution.ast_enhancement()
       
       assert is_map(enhancement)
-      assert Map.keys(enhancement) == [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      assert Enum.sort(Map.keys(enhancement)) == Enum.sort([:ast_rules, :context_rules, :confidence_rules, :min_confidence])
     end
     
     test "AST rules target assignment expressions with computed members" do

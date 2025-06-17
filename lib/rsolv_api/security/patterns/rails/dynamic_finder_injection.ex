@@ -45,7 +45,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DynamicFinderInjection do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-dynamic-finder-injection",
@@ -90,7 +89,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DynamicFinderInjection do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -187,7 +185,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DynamicFinderInjection do
              return nil unless method
              User.public_send(method, *args)
            end
-         end
          ```
       
       3. **Use Case Statements for Method Dispatch**:
@@ -203,7 +200,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DynamicFinderInjection do
            else
              raise ArgumentError, "Invalid field: \#{field}"
            end
-         end
          ```
       
       4. **Avoid send() with User Input**:
@@ -235,7 +231,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DynamicFinderInjection do
              return User.none unless valid?
              User.where(search_field => search_value)
            end
-         end
          
          # In controller
          query = UserQuery.new(search_params)
@@ -341,12 +336,10 @@ defmodule RsolvApi.Security.Patterns.Rails.DynamicFinderInjection do
           return User.none unless valid?
           User.where(field => value)
         end
-      end
       """
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -425,24 +418,5 @@ defmodule RsolvApi.Security.Patterns.Rails.DynamicFinderInjection do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects
-    is_ruby_file = String.ends_with?(file_path, ".rb")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to any Ruby file in a Rails project
-    # Metaprogramming can be used anywhere
-    is_rails_file = String.contains?(file_path, "app/") ||
-                    String.contains?(file_path, "lib/") ||
-                    String.contains?(file_path, "config/")
-    
-    # If no frameworks specified but it looks like Rails, include it
-    inferred_rails = frameworks_list == [] && is_rails_file
-    
-    is_ruby_file && (is_rails || inferred_rails)
-  end
 end
+

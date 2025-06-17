@@ -30,11 +30,11 @@ defmodule RsolvApi.Security.Patterns.Php.XssPrint do
     %Pattern{
       id: "php-xss-print",
       name: "XSS via print",
-      description: "Direct printing of user input without escaping",
+      description: "Cross-site scripting (XSS) through direct printing of user input without escaping",
       type: :xss,
       severity: :high,
       languages: ["php"],
-      regex: ~r/print\s+(?!htmlspecialchars)(?!.*htmlspecialchars\s*\().*\$_(GET|POST|REQUEST|COOKIE)/,
+      regex: ~r/print\s*\(?(?!htmlspecialchars)(?!.*htmlspecialchars\s*\().*\$_(GET|POST|REQUEST|COOKIE)/,
       default_tier: :public,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
@@ -42,7 +42,8 @@ defmodule RsolvApi.Security.Patterns.Php.XssPrint do
       test_cases: %{
         vulnerable: [
           ~S|print $_POST['comment'];|,
-          ~S|print "Hello " . $_GET['user'];|
+          ~S|print "Hello " . $_GET['user'];|,
+          ~S|print($_GET['message']);|
         ],
         safe: [
           ~S|print htmlspecialchars($_POST['comment'], ENT_QUOTES);|
@@ -58,6 +59,9 @@ defmodule RsolvApi.Security.Patterns.Php.XssPrint do
       Cross-Site Scripting (XSS) via the print statement is functionally identical to
       XSS via echo. The print statement outputs data directly to the browser without
       any encoding, creating a direct path for malicious script injection.
+      
+      This vulnerability represents a classic cross-site scripting attack vector
+      where user input is reflected in the page without proper sanitization.
       
       Key differences between print and echo:
       - print always returns 1, echo has no return value
@@ -303,7 +307,7 @@ defmodule RsolvApi.Security.Patterns.Php.XssPrint do
     """
     Cross-Site Scripting (XSS) through the print statement is a common vulnerability
     in PHP applications. Like echo, print outputs data directly to the browser,
-    making it a vector for XSS attacks when used with unescaped user input.
+    making it a vector for cross-site scripting attacks when used with unescaped user input.
     
     ## Print vs Echo
     

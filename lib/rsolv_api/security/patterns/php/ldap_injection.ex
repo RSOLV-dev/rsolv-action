@@ -47,7 +47,7 @@ defmodule RsolvApi.Security.Patterns.Php.LdapInjection do
       type: :ldap_injection,
       severity: :high,
       languages: ["php"],
-      regex: ~r/(?:ldap_search|ldap_list|ldap_read)\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)/,
+      regex: ~r/(?:ldap_search|ldap_list|ldap_read)\s*\(.*\$_(?:GET|POST|REQUEST|COOKIE)\[/,
       default_tier: :protected,
       cwe_id: "CWE-90",
       owasp_category: "A03:2021",
@@ -523,7 +523,7 @@ defmodule RsolvApi.Security.Patterns.Php.LdapInjection do
   ## Examples
 
       iex> enhancement = RsolvApi.Security.Patterns.Php.LdapInjection.ast_enhancement()
-      iex> Map.keys(enhancement)
+      iex> Map.keys(enhancement) |> Enum.sort()
       [:min_confidence, :rules]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.LdapInjection.ast_enhancement()

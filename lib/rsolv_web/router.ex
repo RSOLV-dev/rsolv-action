@@ -14,6 +14,11 @@ defmodule RSOLVWeb.Router do
   
   pipeline :webhook do
     plug :accepts, ["json"]
+    plug RSOLVWeb.Plugs.CaptureRawBody
+    plug Plug.Parsers,
+      parsers: [:json],
+      pass: ["application/json"],
+      json_decoder: Phoenix.json_library()
   end
 
   # Health check (outside versioned API)
@@ -65,7 +70,7 @@ defmodule RSOLVWeb.Router do
       get "/enhanced/:language", PatternController, :enhanced
       
       # General patterns (access level determined by authentication in controller)
-      get "/", PatternController, :index
+      get "/", PatternController, :all
       get "/:language", PatternController, :by_language
       
       # Pattern metadata endpoint
@@ -94,6 +99,23 @@ defmodule RSOLVWeb.Router do
         get "/patterns/:language", TestPatternController, :all_tiers
         get "/patterns/:language/:tier", TestPatternController, :by_tier
       end
+    end
+  end
+
+  # API v2 - Enhanced format by default
+  scope "/api/v2", RSOLVWeb, as: :api_v2 do
+    pipe_through :api
+
+    # Security patterns with enhanced format by default
+    scope "/patterns" do
+      # V2 routes automatically use enhanced format
+      get "/protected/:language", PatternController, :v2_protected
+      get "/ai/:language", PatternController, :v2_ai
+      get "/enterprise/:language", PatternController, :v2_enterprise
+      get "/public/:language", PatternController, :v2_public
+      
+      # Combined endpoint for all accessible tiers
+      get "/:language", PatternController, :v2_by_language
     end
   end
 end

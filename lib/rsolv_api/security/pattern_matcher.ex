@@ -19,7 +19,14 @@ defmodule RsolvApi.Security.PatternMatcher do
   def matches?(pattern_module, code) when is_binary(code) do
     pattern = pattern_module.pattern()
     
-    Enum.any?(pattern.patterns, fn regex ->
+    # Handle both single regex and list of regexes
+    regexes = case pattern.regex do
+      nil -> []
+      regex when is_struct(regex, Regex) -> [regex]
+      regexes when is_list(regexes) -> regexes
+    end
+    
+    Enum.any?(regexes, fn regex ->
       Regex.match?(regex, code)
     end)
   end

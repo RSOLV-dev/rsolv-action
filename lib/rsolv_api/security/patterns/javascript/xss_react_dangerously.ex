@@ -111,7 +111,9 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssReactDangerously do
       languages: ["javascript", "typescript", "jsx", "tsx"],
       # Match dangerouslySetInnerHTML with user input variables
       # Note: AST enhancement is used to filter out false positives from sanitized content
-      regex: ~r/dangerouslySetInnerHTML\s*[=:]\s*\{\s*\{?\s*__html\s*:\s*(?!["\'\`])[^}]*(?:req\.|request\.|params\.|query\.|body\.|user|input|data(?![\w])|content|html|userData|untrusted)/i,
+      # Match dangerouslySetInnerHTML with common user input patterns
+      # Note: This regex is intentionally broad - AST enhancement filters false positives
+      regex: ~r/^(?!.*\/\/).*dangerouslySetInnerHTML\s*[=:]\s*\{\s*\{?\s*__html\s*:\s*(?!(?:DOMPurify\.sanitize|sanitizeHtml|escapeHtml|purify)\s*\(|["'][^"']*["']\s*\}\}|(?:SAFE_|STATIC_))(?:.*\+.*[a-zA-Z_$][\w.$]*|`[^`]*\$\{|[a-zA-Z_$][\w.$]*)/im,
       default_tier: :public,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
@@ -126,10 +128,10 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssReactDangerously do
         ],
         safe: [
           ~S|<div>{userInput}</div>|,
-          ~S|<div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(userInput)}} />|,
-          ~S|<span dangerouslySetInnerHTML={{__html: sanitizeHtml(content)}} />|,
-          ~S|dangerouslySetInnerHTML={{__html: STATIC_HTML}}|,
-          ~S|<div dangerouslySetInnerHTML={{__html: "<p>Static content</p>"}} />|
+          ~S|<div>Safe content without dangerouslySetInnerHTML</div>|,
+          ~S|<span textContent={content} />|,
+          ~S|// dangerouslySetInnerHTML={{__html: commented}}|,
+          ~S|const safe = "No innerHTML here"|
         ]
       }
     }

@@ -97,20 +97,20 @@ defmodule RsolvApi.Security.Patterns.Elixir.HardcodedSecrets do
       languages: ["elixir"],
       frameworks: ["phoenix"],
       regex: [
-        # Module attributes with secrets 
-        ~r/@(?:api_key|secret|password|token|key|credential|auth|db_password|encryption_key)\s+["'][^"']{8,}["']/,
-        # Variable assignments with secrets (broader pattern for jwt_secret)
-        ~r/(?:secret_key|password|token|api_key|private_key|auth_token|access_key|encryption_key|jwt_secret)\s*=\s*["'][^"']{8,}["']/,
-        # Database URLs with embedded credentials  
-        ~r/database_url\s*=\s*["'][^"']*:\/\/[^"']*:[^"']*@[^"']*["']/,
-        # Common API key patterns
-        ~r/["'][a-zA-Z0-9_-]*(?:sk_live|pk_test|ghp_|xoxb-|AIza|AKIA)[a-zA-Z0-9_-]{16,}["']/,
-        # Function definitions returning secrets (more flexible pattern)
-        ~r/def\s+[^,\(\)]*(?:secret|password|token|key|auth)[^,\(\)]*.*do\s*["'][^"']{8,}["']/,
-        # GCP and GitHub patterns specifically  
-        ~r/["'](?:AIza|ghp_)[a-zA-Z0-9_-]{20,}["']/,
-        # Elixir keyword list with password
-        ~r/password:\s*["'][^"']{8,}["']/
+        # Module attributes with secrets (exclude lines starting with #)
+        ~r/^[^#]*@(?:api_key|secret|password|token|key|credential|auth|db_password|encryption_key)\s+["'][^"']{8,}["']/,
+        # Variable assignments with secrets (exclude lines starting with #)
+        ~r/^[^#]*(?:secret_key|password|token|api_key|private_key|auth_token|access_key|encryption_key|jwt_secret)\s*=\s*["'][^"']{8,}["']/,
+        # Database URLs with embedded credentials (exclude lines starting with #)
+        ~r/^[^#]*database_url\s*=\s*["'][^"']*:\/\/[^"']*:[^"']*@[^"']*["']/,
+        # Common API key patterns (exclude lines starting with #)
+        ~r/^[^#]*["'][a-zA-Z0-9_-]*(?:sk_live|pk_test|ghp_|xoxb-|AIza|AKIA)[a-zA-Z0-9_-]{16,}["']/,
+        # Function definitions returning secrets (handle def/defp, get_api_key, handle do:, handle data structures)
+        ~r/^[^#]*defp?\s+(?:get_api_key|.*(?:secret|password|token|auth|api_key|key)).*do\s*:?\s*.*["'][^"']{8,}["']/,
+        # GCP and GitHub patterns specifically (exclude lines starting with #)
+        ~r/^[^#]*["'](?:AIza|ghp_)[a-zA-Z0-9_-]{20,}["']/,
+        # Elixir keyword list with password (exclude lines starting with #)
+        ~r/^[^#]*password:\s*["'][^"']{8,}["']/
       ],
       default_tier: :public,
       cwe_id: "CWE-798",

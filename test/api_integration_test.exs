@@ -58,7 +58,7 @@ defmodule RSOLV.APIIntegrationTest do
       # This test runs in the test environment but verifies schema
       query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
       
-      assert {:ok, %{rows: [[count]]}} = Repo.query(query)
+      assert {:ok, %{rows: [[count]]}} = RsolvApi.Repo.query(query)
       assert count > 0
     end
     
@@ -70,7 +70,7 @@ defmodule RSOLV.APIIntegrationTest do
       LIMIT 5
       """
       
-      {:ok, result} = Repo.query(query)
+      {:ok, result} = RsolvApi.Repo.query(query)
       versions = Enum.map(result.rows, fn [v] -> v end)
       
       # Verify our new migrations are present

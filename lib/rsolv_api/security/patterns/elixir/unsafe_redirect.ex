@@ -115,18 +115,26 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeRedirect do
       languages: ["elixir"],
       frameworks: ["phoenix"],
       regex: [
-        # Parameter-based redirects with user input
-        ~r/redirect\s*\(\s*conn\s*,\s*external:\s*params\s*\[/,
-        ~r/redirect\s*\(\s*conn\s*,\s*external:\s*conn\s*\.\s*(?:params|query_params|body_params)/,
+        # Parameter-based redirects with user input (bracket notation) - exclude comments
+        ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*params\[/m,
+        # Parameter-based redirects with user input (dot notation) - exclude comments
+        ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*params\./m,
+        # Conn params redirects - exclude comments
+        ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*conn\s*\.\s*(?:params|query_params|body_params)/m,
         
-        # Variable-based redirects from user input
-        ~r/redirect\s*\(\s*conn\s*,\s*external:\s*\w*(?:user_|redirect_|return_|next_|callback_|url|path)\w*/,
+        # Variable-based redirects from user input - exclude comments and single 'url' variable
+        ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*(?:user_|redirect_|return_|next_|callback_)\w+/m,
+        # Variable-based redirects with compound names - exclude comments
+        ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*\w+_(?:url|path)\w*/m,
         
-        # Request header based redirects
-        ~r/redirect\s*\(\s*conn\s*,\s*external:\s*get_req_header/,
+        # Request header based redirects - exclude comments
+        ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*get_req_header/m,
         
-        # String interpolation patterns (be careful about false positives)
-        ~r/redirect\s*\(\s*conn\s*,\s*external:\s*[^,)]*#\{[^}]*(?:params|user_|input)\w*/
+        # String interpolation patterns - exclude comments
+        ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*[^,)]*#\{[^}]+\}/m,
+        
+        # String concatenation patterns - exclude comments
+        ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*[^,)]*<>\s*(?:params|path|url|user_|redirect_)/m
       ],
       default_tier: :public,
       cwe_id: "CWE-601",
@@ -136,6 +144,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeRedirect do
         vulnerable: [
           ~S|redirect(conn, external: params["return_to"])|,
           ~S|redirect(conn, external: user_url)|,
+          ~S|redirect(conn, external: redirect_url)|,
           ~S|redirect(conn, external: "https://api.example.com/" <> params[:path])|,
           ~S|redirect(conn, external: get_req_header(conn, "referer"))|
         ],
@@ -260,7 +269,10 @@ end|
           "allowlist"
         ],
         check_user_input: true,
-        check_validation_presence: true
+        check_validation_presence: true,
+        exclude_comments: true,
+        exclude_string_literals: true,
+        exclude_if_within_conditional: true
       },
       confidence_rules: %{
         base: 0.7,

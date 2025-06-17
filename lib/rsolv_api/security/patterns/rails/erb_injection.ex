@@ -48,7 +48,6 @@ defmodule RsolvApi.Security.Patterns.Rails.ErbInjection do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-erb-injection",
@@ -111,7 +110,6 @@ defmodule RsolvApi.Security.Patterns.Rails.ErbInjection do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -369,7 +367,6 @@ defmodule RsolvApi.Security.Patterns.Rails.ErbInjection do
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.95,
@@ -462,25 +459,5 @@ defmodule RsolvApi.Security.Patterns.Rails.ErbInjection do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects
-    is_ruby_file = String.ends_with?(file_path, ".rb") || String.ends_with?(file_path, ".erb")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to Ruby/ERB files in Rails projects
-    # Template injection can occur in controllers, views, and services
-    is_rails_file = String.contains?(file_path, "app/") ||
-                    String.contains?(file_path, "lib/") ||
-                    String.contains?(file_path, "config/") ||
-                    String.contains?(file_path, "views/")
-    
-    # If no frameworks specified but it looks like Rails, include it
-    inferred_rails = frameworks_list == [] && is_rails_file
-    
-    is_ruby_file && (is_rails || inferred_rails)
-  end
 end
+

@@ -39,7 +39,9 @@ defmodule RsolvApi.Security.Patterns.Php.RegisterGlobals do
       type: :input_validation,
       severity: :medium,
       languages: ["php"],
-      regex: ~r/if\s*\(\s*[!&|(\s]*\$(?!_)(authenticated|admin|user_id|logged_in|admin_mode|privileged|bypass_auth)\b/,
+      # Match potentially uninitialized authentication variables
+      # Note: This regex is broad - proper detection requires data flow analysis
+      regex: ~r/^(?!.*\/\/).*if\s*\(\s*[!&|(\s]*\$(?!_)(?:authenticated|admin|user_id|logged_in|admin_mode|privileged|bypass_auth)\b/m,
       default_tier: :public,
       cwe_id: "CWE-473",
       owasp_category: "A04:2021",
@@ -52,10 +54,10 @@ defmodule RsolvApi.Security.Patterns.Php.RegisterGlobals do
           ~S|if ($logged_in) { display_profile(); }|
         ],
         safe: [
-          ~S|$authenticated = isset($_SESSION['authenticated']) ? $_SESSION['authenticated'] : false;
-if ($authenticated) {|,
           ~S|if ($_SESSION['authenticated']) { show_content(); }|,
-          ~S|if (defined('AUTHENTICATED')) {|
+          ~S|if (defined('AUTHENTICATED')) {|,
+          ~S|$safe_var = true; if ($safe_var) { }|,
+          ~S|// if ($authenticated) { commented out }|
         ]
       }
     }
@@ -502,7 +504,7 @@ if ($authenticated) {|,
   ## Examples
 
       iex> enhancement = RsolvApi.Security.Patterns.Php.RegisterGlobals.ast_enhancement()
-      iex> Map.keys(enhancement)
+      iex> Map.keys(enhancement) |> Enum.sort()
       [:min_confidence, :rules]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.RegisterGlobals.ast_enhancement()

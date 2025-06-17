@@ -108,6 +108,14 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat do
         }
       ],
       
+      safe_alternatives: [
+        "Use parameterized queries: db.query('SELECT * FROM users WHERE id = ?', [userId])",
+        "Use prepared statements: db.prepare('SELECT * FROM users WHERE id = ?')",
+        "Use ORM query builders: User.findById(userId)",
+        "Use safe template literals with parameter binding",
+        "Validate and sanitize input before query construction"
+      ],
+      
       detection_notes: """
       This pattern specifically detects string concatenation patterns in JavaScript
       that build SQL queries. It looks for:

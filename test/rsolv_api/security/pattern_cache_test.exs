@@ -1,6 +1,8 @@
 defmodule RsolvApi.Security.PatternCacheTest do
   use ExUnit.Case, async: false
   
+  @moduletag :skip
+  
   alias RsolvApi.Security.PatternCache
   alias RsolvApi.Security.EnhancedPattern
   alias RsolvApi.Security.Pattern

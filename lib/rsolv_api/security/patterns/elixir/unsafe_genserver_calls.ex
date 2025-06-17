@@ -97,23 +97,23 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeGenserverCalls do
       languages: ["elixir"],
       frameworks: ["otp"],
       regex: [
-        # GenServer.call with execute/run/eval commands - exclude comments and @doc
-        ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{\s*:(?:execute|run|eval|run_code|eval_string|run_command|execute_code)/m,
+        # GenServer.call with execute/run/eval commands - exclude safe_command variables
+        ~r/^(?!\s*#)(?!\s*@doc)(?!.*safe_command)(?!.*validated_)(?!.*checked_).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{\s*:(?:execute|run|eval|run_code|eval_string|run_command|execute_code)/m,
         
-        # GenServer.call with dynamic atom interpolation - exclude comments and @doc
+        # GenServer.call with dynamic atom interpolation
         ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{\s*:"#\{/m,
         
-        # GenServer.call with String.to_atom - exclude comments and @doc
+        # GenServer.call with String.to_atom
         ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{String\.to_atom/m,
         
-        # GenServer.call with variable message (untrusted) - exclude comments and @doc
+        # GenServer.call with variable message (untrusted) - exclude safe variables
         ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*(?:request|untrusted_message|user_input|params)\s*[,)]/m,
         
-        # handle_call with execute/run/eval patterns - exclude comments and @doc
+        # handle_call with execute/run/eval patterns
         ~r/^(?!\s*#)(?!\s*@doc).*def\s+handle_call\s*\(\s*\{\s*:(?:execute|run|eval|run_code|eval_string|run_command|execute_code)/m,
         
-        # GenServer.call with tuple variable - exclude comments and @doc
-        ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{[^:}][^,}]*,\s*(?:user_input|input|cmd|command|code)/m
+        # GenServer.call with tuple variable - exclude safe variable names
+        ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{[^:}][^,}]*,\s*(?!safe_|validated_|checked_)(?:user_input|input|cmd|command|code)/m
       ],
       default_tier: :protected,
       cwe_id: "CWE-94",
@@ -234,6 +234,17 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeGenserverCalls do
         safe_commands: [
           "get_state", "get_status", "increment", "decrement",
           "update", "fetch", "list", "count"
+        ],
+        exclude_comments: true,
+        exclude_doc_attributes: true,
+        exclude_if_within_case: true,
+        exclude_if_validation_present: true,
+        validation_patterns: [
+          "validate_command",
+          "validate_",
+          "sanitize_",
+          "check_",
+          "verify_"
         ]
       },
       confidence_rules: %{

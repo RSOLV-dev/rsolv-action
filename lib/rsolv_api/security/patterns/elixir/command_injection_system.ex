@@ -147,7 +147,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.CommandInjectionSystem do
       """,
       safe_alternatives: [
         "Use System.cmd/3 with argument list: System.cmd(\"ls\", [directory])",
-        "Validate input against allowlists before using in commands",
+        "Implement input validation against allowlists before using in commands",
         "Use Port.open with :spawn_executable and explicit args",
         "Sanitize and validate all user input before using in system commands",
         "Consider using Elixir libraries for file operations instead of shell commands"
@@ -190,11 +190,18 @@ defmodule RsolvApi.Security.Patterns.Elixir.CommandInjectionSystem do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/],
-        check_command_context: true
+        check_command_context: true,
+        safe_command_patterns: ["System.cmd", "Port.open", ":spawn_executable"],
+        unsafe_command_indicators: ["System.shell", ":os.cmd", "dynamic_command"]
       },
       confidence_rules: %{
         base: 0.6,
-        adjustments: %{}
+        adjustments: %{
+          "has_input_validation" => -0.4,
+          "dynamic_command_construction" => 0.3,
+          "in_test_code" => -0.5,
+          "known_safe_function" => -0.6
+        }
       },
       min_confidence: 0.8
     }

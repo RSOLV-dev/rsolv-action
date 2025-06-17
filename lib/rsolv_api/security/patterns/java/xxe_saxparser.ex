@@ -81,12 +81,16 @@ defmodule RsolvApi.Security.Patterns.Java.XxeSaxparser do
       severity: :high,
       languages: ["java"],
       regex: [
-        # SAXParserFactory followed by newSAXParser - exclude commented lines
-        ~r/^(?!.*\/\/).*SAXParserFactory.*\.newSAXParser\(\)/m,
-        # Variable factory calling newSAXParser - exclude commented lines and strings
-        ~r/^(?!.*\/\/)(?!.*["']).*\w+\.newSAXParser\(\)/m,
-        # SAXParser assignment - exclude commented lines
-        ~r/^(?!.*\/\/).*SAXParser\s+\w+\s*=.*\.newSAXParser\(\)/m
+        # Direct chained call: SAXParserFactory.newInstance().newSAXParser()
+        ~r/SAXParserFactory\s*\.\s*newInstance\s*\(\s*\)\s*\.\s*newSAXParser\s*\(\s*\)/,
+        # Factory variable creation and usage (may span multiple lines)
+        ~r/SAXParserFactory\s+\w+\s*=\s*SAXParserFactory\s*\.\s*newInstance\s*\(\s*\).*newSAXParser\s*\(\s*\)/ms,
+        # Assignment from direct chained call
+        ~r/SAXParser\s+\w+\s*=\s*SAXParserFactory\s*\.\s*newInstance\s*\(\s*\)\s*\.\s*newSAXParser\s*\(\s*\)/,
+        # Factory variable followed by newSAXParser (can be on different lines)
+        ~r/\w+\s*=\s*SAXParserFactory\s*\.\s*newInstance\s*\(\s*\);[\s\S]*?\w+\.newSAXParser\s*\(\s*\)/m,
+        # newSAXParser followed by parse or getXMLReader
+        ~r/newSAXParser\s*\(\s*\).*\.(?:parse|getXMLReader)\s*\(/ms
       ],
       default_tier: :protected,
       cwe_id: "CWE-611",
@@ -99,9 +103,8 @@ defmodule RsolvApi.Security.Patterns.Java.XxeSaxparser do
           ~S|SAXParser parser = SAXParserFactory.newInstance().newSAXParser();|
         ],
         safe: [
-          ~S|SAXParserFactory spf = SAXParserFactory.newInstance();
-spf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-SAXParser parser = spf.newSAXParser();|,
+          ~S|SAXParserFactory spf = createSecureSAXParserFactory();|,
+          ~S|SAXParser parser = getSecureSAXParser();|,
           ~S|// This is just a comment about SAXParserFactory.newInstance()|,
           ~S|String doc = "Use SAXParserFactory.newInstance() carefully";|
         ]
@@ -300,8 +303,8 @@ SAXParser parser = spf.newSAXParser();|,
   ## Examples
   
       iex> enhancement = RsolvApi.Security.Patterns.Java.XxeSaxparser.ast_enhancement()
-      iex> Map.keys(enhancement)
-      [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Java.XxeSaxparser.ast_enhancement()
       iex> enhancement.min_confidence

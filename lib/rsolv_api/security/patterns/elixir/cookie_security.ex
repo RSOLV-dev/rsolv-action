@@ -101,8 +101,11 @@ defmodule RsolvApi.Security.Patterns.Elixir.CookieSecurity do
         # Pipeline syntax for put_resp_cookie without options - exclude comments
         ~r/^(?!\s*#).*\|>\s*put_resp_cookie\s*\(\s*"(?:session|auth|csrf|login|token|user)[^"]*"\s*,\s*[^,)]+\s*\)\s*$/m,
         
-        # put_resp_cookie with 4+ params that has incomplete security (doesn't have all 3 flags)
-        ~r/^(?!\s*#).*put_resp_cookie\s*\(\s*[^,]+\s*,\s*"(?:session|auth|csrf|login|token|user|data)[^"]*"\s*,\s*[^,)]+\s*,[^)]*\)(?=.*\))(?!.*secure:\s*true.*http_only:\s*true.*same_site:\s*"(?:Strict|Lax|None)")/ms
+        # Pipeline syntax with 4+ params for sensitive cookies missing any required flag
+        ~r/\|>\s*put_resp_cookie\s*\(\s*"(?:session|auth|csrf|login|token|user|data)[^"]*"\s*,\s*[^,)]+\s*,(?!(?=.*secure:\s*true)(?=.*http_only:\s*true)(?=.*same_site:\s*"(?:Strict|Lax|None)"))[^)]*\)/ms,
+        
+        # put_resp_cookie with 4+ params for sensitive cookies missing any required flag  
+        ~r/put_resp_cookie\s*\(\s*[^,]+\s*,\s*"(?:session|auth|csrf|login|token|user|data)[^"]*"\s*,\s*[^,)]+\s*,(?!(?=.*secure:\s*true)(?=.*http_only:\s*true)(?=.*same_site:\s*"(?:Strict|Lax|None)"))[^)]*\)/ms
       ],
       default_tier: :public,
       cwe_id: "CWE-614",

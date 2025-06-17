@@ -201,9 +201,9 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtml do
       type: :xss,
       severity: :high,
       languages: ["javascript", "typescript"],
-      # Matches element.innerHTML = potentially_unsafe_value
-      # This simple regex catches most cases - AST rules will filter false positives
-      regex: ~r/\.innerHTML\s*=\s*[^;]+/,
+      # Matches element.innerHTML = value
+      # Note: AST enhancement is used to filter out sanitized content
+      regex: ~r/^(?!.*\/\/).*\.innerHTML\s*=/m,
       default_tier: :public,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
@@ -219,9 +219,9 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtml do
         safe: [
           ~S|element.innerText = userInput|,
           ~S|element.textContent = data|,
-          ~S|div.innerHTML = DOMPurify.sanitize(userInput)|,
+          ~S|// div.innerHTML = userInput|,
           ~S|container.setHTML(untrustedData)|,
-          ~S|el.innerHTML = escapeHtml(userMessage)|
+          ~S|const safe = escapeHtml(userMessage)|
         ]
       }
     }

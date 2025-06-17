@@ -9,7 +9,7 @@ defmodule RSOLVWeb.WebhookController do
     System.get_env("GITHUB_WEBHOOK_SECRET", "default_dev_secret")
   end
 
-  def github(conn, params) do
+  def github(conn, _params) do
     # For tests, skip signature verification if test_mode is set
     skip_signature = conn.assigns[:test_mode] || false
     
@@ -18,7 +18,7 @@ defmodule RSOLVWeb.WebhookController do
          {:ok, raw_body} <- get_raw_body(conn),
          _ = Logger.debug("Raw body in controller: #{inspect(raw_body)}"),
          :ok <- maybe_verify_signature(skip_signature, platform, signature, raw_body),
-         parsed_body <- parse_body(raw_body),
+         parsed_body <- get_parsed_body(conn, raw_body),
          {:ok, result} <- EventRouter.route_event(platform, conn.req_headers, parsed_body) do
       
       Logger.info("Webhook processed successfully: #{inspect(result)}")
@@ -68,6 +68,16 @@ defmodule RSOLVWeb.WebhookController do
   defp maybe_verify_signature(true = _skip, _platform, _signature, _raw_body), do: :ok
   defp maybe_verify_signature(false, platform, signature, raw_body) do
     EventRouter.verify_signature(platform, signature, raw_body, get_webhook_secret())
+  end
+  
+  defp get_parsed_body(conn, raw_body) do
+    # In test mode, prioritize conn.params if raw_body is empty or is a test placeholder
+    if conn.assigns[:test_mode] && (raw_body == "" || raw_body == nil || raw_body == "--plug_conn_test--") do
+      # Use the parameters that Phoenix already parsed
+      conn.params
+    else
+      parse_body(raw_body)
+    end
   end
   
   defp parse_body(raw_body) when is_binary(raw_body) do

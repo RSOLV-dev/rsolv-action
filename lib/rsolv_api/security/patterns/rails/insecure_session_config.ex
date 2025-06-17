@@ -50,7 +50,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionConfig do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-insecure-session-config",
@@ -115,7 +114,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionConfig do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -293,7 +291,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionConfig do
                # end
              end
            end
-         end
          ```
       
       4. **Session Secret Management**:
@@ -419,7 +416,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionConfig do
               httponly: true,
               same_site: :lax
           end
-        end
       end
       
       # In config/application.rb
@@ -437,7 +433,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionConfig do
             raise "Production session should not use same_site: :none!" if options[:same_site] == :none
           end
         end
-      end
       
       # In config/environments/production.rb
       config.after_initialize do
@@ -447,7 +442,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionConfig do
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.6,
@@ -551,29 +545,5 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionConfig do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects, especially configuration files
-    is_ruby_file = String.ends_with?(file_path, ".rb")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to configuration files primarily
-    # Session configurations are mainly in config/ files
-    is_config_file = String.contains?(file_path, "config/") ||
-                     String.contains?(file_path, "application.rb") ||
-                     String.contains?(file_path, "environments/") ||
-                     String.contains?(file_path, "initializers/")
-    
-    # If no frameworks specified but it looks like Rails config, include it
-    inferred_rails = frameworks_list == [] && (
-      String.contains?(file_path, "config/application") ||
-      String.contains?(file_path, "config/environments/") ||
-      String.contains?(file_path, "config/initializers/")
-    )
-    
-    is_ruby_file && (is_rails || inferred_rails) && is_config_file
-  end
 end
+

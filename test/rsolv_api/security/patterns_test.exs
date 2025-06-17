@@ -50,7 +50,7 @@ defmodule RsolvApi.Security.PatternsTest do
     test "module exports all/0 returning all patterns" do
       assert function_exported?(RsolvApi.Security.Patterns.Javascript, :all, 0)
       patterns = RsolvApi.Security.Patterns.Javascript.all()
-      assert length(patterns) == 27
+      assert length(patterns) == 30
     end
     
     test "sql_injection_concat pattern structure is valid" do
@@ -79,7 +79,7 @@ defmodule RsolvApi.Security.PatternsTest do
   end
   
   describe "Pattern count verification" do
-    test "total working pattern count is 113" do
+    test "total working pattern count is 116" do
       # Only count working modules
       working_languages = ~w(javascript python java elixir php cve)a
       total = Enum.reduce(working_languages, 0, fn language, acc ->
@@ -88,13 +88,13 @@ defmodule RsolvApi.Security.PatternsTest do
         acc + length(patterns)
       end)
       
-      assert total == 113, "Expected 113 patterns but got #{total}"
+      assert total == 116, "Expected 116 patterns but got #{total}"
     end
     
     test "pattern counts by language" do
       # Only test working modules
       expected_counts = %{
-        javascript: 27,
+        javascript: 30,
         python: 12,
         java: 17,
         elixir: 28,

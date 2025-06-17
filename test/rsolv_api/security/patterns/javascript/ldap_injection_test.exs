@@ -89,9 +89,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.LdapInjectionTest do
       assert Regex.match?(pattern.regex, vulnerable_code)
     end
 
-    @tag :skip
     test "detects template literal LDAP injection" do
-      # TODO: Fix regex to properly match template literals with ${} interpolation
       pattern = LdapInjection.pattern()
       
       vulnerable_codes = [
@@ -160,7 +158,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.LdapInjectionTest do
       enhancement = LdapInjection.ast_enhancement()
       
       assert is_map(enhancement)
-      assert Map.keys(enhancement) == [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      assert Enum.sort(Map.keys(enhancement)) == Enum.sort([:ast_rules, :context_rules, :confidence_rules, :min_confidence])
     end
     
     test "AST rules target LDAP client method calls" do

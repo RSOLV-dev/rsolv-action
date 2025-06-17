@@ -126,7 +126,9 @@ defmodule RsolvApi.Security.EnhancedPattern do
       confidence_rules: pattern.confidence_rules,
       enhanced_recommendation: pattern.enhanced_recommendation,
       metadata: pattern.metadata,
-      supports_ast: pattern.ast_rules != nil
+      supports_ast: pattern.ast_rules != nil,
+      # Add regex field for backward compatibility
+      regex: base_format[:regex_patterns]
     })
   end
   

@@ -92,7 +92,7 @@ defmodule RsolvApi.Security.Patterns.Python.UnsafeEval do
           "result = ast.literal_eval(user_input)",
           "value = int(request.args.get('number', 0))",
           "computed = 2 + int(user_number)",
-          "# eval() is dangerous - use ast.literal_eval instead"
+          "# This function is dangerous - use ast.literal_eval instead"
         ]
       }
     }

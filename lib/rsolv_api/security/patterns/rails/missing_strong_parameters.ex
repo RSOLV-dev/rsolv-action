@@ -42,7 +42,6 @@ defmodule RsolvApi.Security.Patterns.Rails.MissingStrongParameters do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-missing-strong-parameters",
@@ -85,7 +84,6 @@ defmodule RsolvApi.Security.Patterns.Rails.MissingStrongParameters do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -219,7 +217,6 @@ defmodule RsolvApi.Security.Patterns.Rails.MissingStrongParameters do
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -311,24 +308,6 @@ defmodule RsolvApi.Security.Patterns.Rails.MissingStrongParameters do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby files in Rails projects
-    is_ruby_file = String.ends_with?(file_path, ".rb") ||
-                   String.ends_with?(file_path, ".erb") ||
-                   String.ends_with?(file_path, ".haml")
-    
-    # Check if it's a controller file
-    is_controller = String.contains?(file_path, "controller") ||
-                    String.contains?(file_path, "app/controllers/")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # If no frameworks specified but it's a controller in app/controllers, assume Rails
-    inferred_rails = frameworks_list == [] && String.contains?(file_path, "app/controllers/")
-    
-    is_ruby_file && (is_controller && (is_rails || inferred_rails))
-  end
+  # Base PatternBase implementation now handles Rails controller targeting
 end
+

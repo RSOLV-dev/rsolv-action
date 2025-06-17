@@ -1,7 +1,7 @@
 defmodule RSOLVWeb.CredentialVendingTest do
   use RSOLVWeb.ConnCase
 
-  @internal_key "rsolv_internal_a08e4f8ffb58ba44b2cb4d3b30f28e99"
+  @internal_key "rsolv_test_abc123"  # Use existing test API key
   @invalid_key "invalid_key_12345"
 
   describe "credential vending with environment-based keys" do

@@ -84,21 +84,61 @@ defmodule RSOLVWeb.PatternController do
       languages: pattern.languages,
       frameworks: pattern.frameworks || [],
       patterns: ensure_list(regex_to_string(pattern.regex)),
-      cwe_id: pattern.cwe_id,
-      owasp_category: pattern.owasp_category,
+      cweId: pattern.cwe_id,
+      owaspCategory: pattern.owasp_category,
       recommendation: pattern.recommendation,
-      test_cases: pattern.test_cases,
+      testCases: pattern.test_cases,
       # AST enhancement fields
-      ast_rules: format_ast_rules(pattern.ast_rules),
-      context_rules: format_context_rules(pattern.context_rules),
-      confidence_rules: pattern.confidence_rules,
-      min_confidence: pattern.min_confidence
+      supportsAst: true,
+      astRules: format_ast_rules(pattern.ast_rules),
+      contextRules: format_context_rules(pattern.context_rules),
+      confidenceRules: pattern.confidence_rules,
+      minConfidence: pattern.min_confidence
     }
   end
   
   defp format_pattern(%ASTPattern{} = pattern, :standard) do
     # For AST patterns in standard format, convert to standard format
     Pattern.to_api_format(pattern)
+  end
+  
+  defp format_pattern(%Pattern{} = pattern, :enhanced) do
+    # For regular patterns with enhanced format, check if we can find the module
+    pattern_module = case find_pattern_module(pattern.id) do
+      {:ok, module} -> module
+      _ -> nil
+    end
+    
+    if pattern_module && function_exported?(pattern_module, :ast_enhancement, 0) do
+      # Pattern supports AST enhancement
+      ast_enhancement = apply(pattern_module, :ast_enhancement, [])
+      
+      # Convert to enhanced format with AST fields
+      %{
+        id: pattern.id,
+        name: pattern.name,
+        description: pattern.description,
+        type: to_string(pattern.type),
+        severity: to_string(pattern.severity),
+        languages: pattern.languages,
+        frameworks: pattern.frameworks || [],
+        patterns: ensure_list(regex_to_string(pattern.regex)),
+        cweId: pattern.cwe_id,
+        owaspCategory: pattern.owasp_category,
+        recommendation: pattern.recommendation,
+        testCases: pattern.test_cases,
+        # AST enhancement fields - properly formatted
+        supportsAst: true,
+        astRules: format_ast_rules(ast_enhancement[:ast_rules]),
+        contextRules: format_context_rules(ast_enhancement[:context_rules]),
+        confidenceRules: ast_enhancement[:confidence_rules],
+        minConfidence: ast_enhancement[:min_confidence]
+      }
+    else
+      # Pattern doesn't support AST enhancement, return standard format with supportsAst: false
+      pattern_map = Pattern.to_api_format(pattern)
+      Map.put(pattern_map, :supportsAst, false)
+    end
   end
   
   defp format_pattern(pattern, :standard) do
@@ -132,19 +172,32 @@ defmodule RSOLVWeb.PatternController do
     end)
   end
   
-  defp format_ast_rules(nil), do: nil
-  defp format_ast_rules(rules) when is_map(rules) do
-    Map.new(rules, fn
-      {:parent_node, parent} when is_map(parent) ->
-        {:parent_node, Map.new(parent, fn
-          {:callee_matches, regex} -> {:callee_matches, regex_to_string(regex)}
-          {k, v} -> {k, v}
-        end)}
-      {:name_matches, regex} -> {:name_matches, regex_to_string(regex)}
-      {:body_excludes, regex} -> {:body_excludes, regex_to_string(regex)}
-      {k, v} -> {k, v}
-    end)
+  defp format_ast_rules(nil), do: []
+  defp format_ast_rules(rules) when is_list(rules) do
+    # If rules is a list, return it as-is
+    rules
   end
+  defp format_ast_rules(rules) when is_map(rules) do
+    # Convert map to list format for API compatibility
+    # The API expects ast_rules as a list, not a map
+    # Also handle the deep regex conversion properly
+    formatted_rules = rules
+    |> Enum.map(fn {k, v} -> {k, deep_convert_regex_to_string(v)} end)
+    |> Map.new()
+    
+    [formatted_rules]
+  end
+  
+  defp deep_convert_regex_to_string(%Regex{} = regex), do: regex_to_string(regex)
+  defp deep_convert_regex_to_string(value) when is_map(value) do
+    value
+    |> Enum.map(fn {k, v} -> {k, deep_convert_regex_to_string(v)} end)
+    |> Map.new()
+  end
+  defp deep_convert_regex_to_string(value) when is_list(value) do
+    Enum.map(value, &deep_convert_regex_to_string/1)
+  end
+  defp deep_convert_regex_to_string(value), do: value
 
   @doc """
   GET /api/v1/patterns/public/:language
@@ -170,17 +223,29 @@ defmodule RSOLVWeb.PatternController do
   GET /api/v1/patterns/protected/:language
   Protected patterns - API key required
   """
-  def protected(conn, %{"language" => language}) do
+  def protected(conn, params = %{"language" => language}) do
     with {:ok, _customer} <- authenticate_request(conn) do
+      format = String.to_existing_atom(params["format"] || "standard")
       patterns = Security.list_patterns_by_language_and_tier(language, "protected")
-      formatted_patterns = Security.format_patterns_for_api(patterns)
       
-      json(conn, %{
+      # Use format_patterns to handle enhanced format
+      formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
+      
+      response = %{
         patterns: formatted_patterns,
         tier: "protected",
         language: language,
         count: length(formatted_patterns)
-      })
+      }
+      
+      # Add format field for enhanced format
+      response = if format == :enhanced do
+        Map.put(response, :format, "enhanced")
+      else
+        response
+      end
+      
+      json(conn, response)
     end
   end
 
@@ -271,7 +336,7 @@ defmodule RSOLVWeb.PatternController do
       accessible_tiers: accessible_tiers,
       language: language,
       count: length(formatted_patterns),
-      format: format
+      format: to_string(format)
     })
   end
 
@@ -367,20 +432,55 @@ defmodule RSOLVWeb.PatternController do
   GET /api/v1/patterns
   All patterns based on customer's access level (cross-language)
   """
-  def all(conn, _params) do
-    # Determine accessible tiers based on authentication
-    {api_key, customer, ai_enabled} = get_auth_context(conn)
-    accessible_tiers = Security.get_accessible_tiers(api_key, customer, ai_enabled)
+  def all(conn, params) do
+    # Check if this should use legacy behavior:
+    # 1. When explicit query parameters are provided (language, tier, format)
+    # 2. When no parameters at all (default to javascript/public for backward compatibility)
+    use_legacy = params["language"] || params["tier"] || params["format"] || map_size(params) == 0
     
-    patterns = Security.list_all_patterns(accessible_tiers)
-    formatted_patterns = Security.format_patterns_for_api(patterns)
-    
-    json(conn, %{
-      patterns: formatted_patterns,
-      accessible_tiers: accessible_tiers,
-      language: "all",
-      count: length(formatted_patterns)
-    })
+    if use_legacy do
+      # Legacy behavior: use index logic with query parameters
+      language = params["language"] || "javascript"
+      tier = String.to_existing_atom(params["tier"] || "public")
+      format = String.to_existing_atom(params["format"] || "standard")
+      
+      patterns = ASTPattern.get_patterns(language, tier, format)
+      
+      # Convert patterns to API format
+      formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
+      
+      # Add metadata for monitoring
+      metadata = %{
+        language: language,
+        tier: to_string(tier),
+        format: to_string(format),
+        count: length(patterns),
+        enhanced: format == :enhanced
+      }
+      
+      conn
+      |> put_resp_header("x-pattern-version", "2.0")
+      |> json(%{
+        patterns: formatted_patterns,
+        metadata: metadata
+      })
+    else
+      # New behavior: cross-language patterns based on authentication
+      {api_key, customer, ai_enabled} = get_auth_context(conn)
+      accessible_tiers = Security.get_accessible_tiers(api_key, customer, ai_enabled)
+      
+      patterns = Security.list_all_patterns(accessible_tiers)
+      formatted_patterns = Security.format_patterns_for_api(patterns)
+      
+      conn
+      |> put_resp_header("x-pattern-version", "2.0")
+      |> json(%{
+        patterns: formatted_patterns,
+        accessible_tiers: accessible_tiers,
+        language: "all",
+        count: length(formatted_patterns)
+      })
+    end
   end
   
   @doc """
@@ -457,48 +557,6 @@ defmodule RSOLVWeb.PatternController do
 
   # Private functions
   
-  defp find_pattern_module(pattern_id) do
-    # Map of migrated patterns to their modules
-    # Once all patterns are migrated, we can improve this function
-    
-    pattern_modules = %{
-      "js-sql-injection-concat" => RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat,
-      "js-sql-injection-interpolation" => RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation,
-      "js-xss-innerhtml" => RsolvApi.Security.Patterns.Javascript.XssInnerhtml,
-      "js-xss-document-write" => RsolvApi.Security.Patterns.Javascript.XssDocumentWrite,
-      "js-command-injection-exec" => RsolvApi.Security.Patterns.Javascript.CommandInjectionExec,
-      "js-command-injection-spawn" => RsolvApi.Security.Patterns.Javascript.CommandInjectionSpawn,
-      "js-path-traversal-join" => RsolvApi.Security.Patterns.Javascript.PathTraversalJoin,
-      "js-path-traversal-concat" => RsolvApi.Security.Patterns.Javascript.PathTraversalConcat,
-      "js-weak-crypto-md5" => RsolvApi.Security.Patterns.Javascript.WeakCryptoMd5,
-      "js-weak-crypto-sha1" => RsolvApi.Security.Patterns.Javascript.WeakCryptoSha1,
-      "js-hardcoded-secret-password" => RsolvApi.Security.Patterns.Javascript.HardcodedSecretPassword,
-      "js-hardcoded-secret-api-key" => RsolvApi.Security.Patterns.Javascript.HardcodedSecretApiKey,
-      "js-eval-user-input" => RsolvApi.Security.Patterns.Javascript.EvalUserInput,
-      "js-unsafe-regex" => RsolvApi.Security.Patterns.Javascript.UnsafeRegex,
-      "js-prototype-pollution" => RsolvApi.Security.Patterns.Javascript.PrototypePollution,
-      "js-insecure-deserialization" => RsolvApi.Security.Patterns.Javascript.InsecureDeserialization,
-      "js-open-redirect" => RsolvApi.Security.Patterns.Javascript.OpenRedirect,
-      "js-xxe-external-entities" => RsolvApi.Security.Patterns.Javascript.XxeExternalEntities,
-      "js-nosql-injection" => RsolvApi.Security.Patterns.Javascript.NosqlInjection,
-      "js-ldap-injection" => RsolvApi.Security.Patterns.Javascript.LdapInjection,
-      "js-xpath-injection" => RsolvApi.Security.Patterns.Javascript.XpathInjection,
-      "js-ssrf" => RsolvApi.Security.Patterns.Javascript.Ssrf,
-      "js-missing-csrf" => RsolvApi.Security.Patterns.Javascript.MissingCsrfProtection,
-      "js-jwt-none-algorithm" => RsolvApi.Security.Patterns.Javascript.JwtNoneAlgorithm,
-      "js-debug-console-log" => RsolvApi.Security.Patterns.Javascript.DebugConsoleLog,
-      "js-insecure-random" => RsolvApi.Security.Patterns.Javascript.InsecureRandom,
-      "js-timing-attack" => RsolvApi.Security.Patterns.Javascript.TimingAttackComparison
-    }
-    
-    case Map.get(pattern_modules, pattern_id) do
-      nil ->
-        {:error, :not_found}
-        
-      module ->
-        {:ok, module}
-    end
-  end
   
   defp format_metadata_for_api(metadata, pattern_id) do
     base_metadata = %{
@@ -580,6 +638,58 @@ defmodule RSOLVWeb.PatternController do
     end
   end
 
+  # V2 API endpoints - Enhanced format by default
+  
+  @doc """
+  GET /api/v2/patterns/public/:language
+  V2 endpoint for public patterns with enhanced format
+  """
+  def v2_public(conn, %{"language" => language}) do
+    # Force enhanced format for v2
+    params = %{"language" => language, "format" => "enhanced"}
+    public(conn, params)
+  end
+
+  @doc """
+  GET /api/v2/patterns/protected/:language 
+  V2 endpoint for protected patterns with enhanced format
+  """
+  def v2_protected(conn, %{"language" => language}) do
+    # Force enhanced format for v2
+    params = Map.put(conn.params, "format", "enhanced")
+    protected(conn, params)
+  end
+
+  @doc """
+  GET /api/v2/patterns/ai/:language
+  V2 endpoint for AI patterns with enhanced format
+  """
+  def v2_ai(conn, %{"language" => language}) do
+    # Force enhanced format for v2
+    params = %{"language" => language, "format" => "enhanced"}
+    ai(conn, params)
+  end
+
+  @doc """
+  GET /api/v2/patterns/enterprise/:language
+  V2 endpoint for enterprise patterns with enhanced format
+  """
+  def v2_enterprise(conn, %{"language" => language}) do
+    # Force enhanced format for v2
+    params = %{"language" => language, "format" => "enhanced"}
+    enterprise(conn, params)
+  end
+
+  @doc """
+  GET /api/v2/patterns/:language
+  V2 endpoint for all accessible patterns by language with enhanced format
+  """
+  def v2_by_language(conn, %{"language" => language}) do
+    # Force enhanced format for v2
+    params = Map.put(conn.params, "format", "enhanced")
+    by_language(conn, params)
+  end
+
   defp has_ai_access?(customer) do
     # Use feature flags to determine AI access
     FeatureFlags.tier_access_allowed?("ai", customer)
@@ -601,4 +711,90 @@ defmodule RSOLVWeb.PatternController do
   
   defp ensure_list(value) when is_list(value), do: value
   defp ensure_list(value), do: [value]
+  
+  defp find_pattern_module(pattern_id) do
+    # Try dynamic module resolution first
+    module = case pattern_id do
+      "js-" <> rest -> 
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Javascript, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "python-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Python, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "elixir-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Elixir, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "ruby-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Ruby, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "java-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Java, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "php-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Php, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      _ ->
+        nil
+    end
+    
+    if module do
+      {:ok, module}
+    else
+      {:error, :not_found}
+    end
+  end
 end

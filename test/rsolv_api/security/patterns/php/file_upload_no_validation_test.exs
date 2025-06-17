@@ -38,7 +38,7 @@ defmodule RsolvApi.Security.Patterns.Php.FileUploadNoValidationTest do
       ]
       
       for code <- vulnerable_code do
-        assert Regex.match?(pattern.regex, code),
+        assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Should match: #{code}"
       end
     end
@@ -50,7 +50,7 @@ defmodule RsolvApi.Security.Patterns.Php.FileUploadNoValidationTest do
       ]
       
       for code <- vulnerable_code do
-        assert Regex.match?(pattern.regex, code),
+        assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Should match: #{code}"
       end
     end
@@ -62,7 +62,7 @@ defmodule RsolvApi.Security.Patterns.Php.FileUploadNoValidationTest do
       ]
       
       for code <- vulnerable_code do
-        assert Regex.match?(pattern.regex, code),
+        assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Should match: #{code}"
       end
     end
@@ -75,7 +75,7 @@ defmodule RsolvApi.Security.Patterns.Php.FileUploadNoValidationTest do
       ]
       
       for code <- safe_code do
-        refute Regex.match?(pattern.regex, code),
+        refute Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Should not match: #{code}"
       end
     end
@@ -88,7 +88,7 @@ defmodule RsolvApi.Security.Patterns.Php.FileUploadNoValidationTest do
       ]
       
       for code <- vulnerable_code do
-        assert Regex.match?(pattern.regex, code),
+        assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Should match: #{code}"
       end
     end
@@ -100,7 +100,7 @@ defmodule RsolvApi.Security.Patterns.Php.FileUploadNoValidationTest do
       test_cases = FileUploadNoValidation.test_cases()
       
       for test_case <- test_cases.positive do
-        assert Regex.match?(pattern.regex, test_case.code),
+        assert Enum.any?(pattern.regex, &Regex.match?(&1, test_case.code)),
                "Failed to match positive case: #{test_case.description}"
       end
     end

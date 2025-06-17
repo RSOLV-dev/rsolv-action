@@ -34,14 +34,23 @@ defmodule RsolvApi.Security.Patterns.Php.FileUploadNoValidation do
       type: :file_upload,
       severity: :high,
       languages: ["php"],
-      regex: ~r/move_uploaded_file\s*\(\s*\$_FILES.*\[["']name["']\]/,
+      regex: [
+        # Direct usage of $_FILES['name'] in move_uploaded_file
+        ~r/move_uploaded_file\s*\(\s*\$_FILES[^,]+,\s*[^,]*\$_FILES\[[^\]]+\]\s*\[["']name["']\]/,
+        # Variable assignment followed by move_uploaded_file
+        ~r/\$\w+\s*=\s*\$_FILES\[[^\]]+\]\s*\[["']name["']\].*move_uploaded_file/ms,
+        # Path concatenation with $_FILES['name']
+        ~r/move_uploaded_file\s*\([^,]+,\s*[^)]*\.\s*\$_FILES\[[^\]]+\]\s*\[["']name["']\]/
+      ],
       default_tier: :protected,
       cwe_id: "CWE-434",
       owasp_category: "A01:2021",
       recommendation: "Validate file type, size, and content. Use a safe upload directory",
       test_cases: %{
         vulnerable: [
-          ~S|move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . $_FILES['file']['name']);|
+          ~S|move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . $_FILES['file']['name']);|,
+          ~S|$name = $_FILES['doc']['name']; move_uploaded_file($_FILES['doc']['tmp_name'], "docs/$name");|,
+          ~S|move_uploaded_file($_FILES['upload']['tmp_name'], $uploadDir . $_FILES['upload']['name']);|
         ],
         safe: [
           ~S|$allowed = ['jpg', 'jpeg', 'png', 'gif'];
@@ -49,7 +58,8 @@ $ext = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
 if (in_array($ext, $allowed)) {
     $newname = uniqid() . '.' . $ext;
     move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . $newname);
-}|
+}|,
+          ~S|move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . uniqid() . '.jpg');|
         ]
       }
     }
@@ -65,7 +75,7 @@ if (in_array($ext, $allowed)) {
       complete server compromise.
       
       Common attack scenarios:
-      - Web shell upload: PHP files containing backdoor code
+      - web shell upload: PHP files containing backdoor code
       - Path traversal: Overwriting system files
       - XSS via SVG/HTML: Malicious client-side scripts
       - DoS attacks: Large files exhausting disk space
@@ -475,7 +485,7 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
     
     ## Attack Techniques
     
-    ### Basic Web Shell Upload
+    ### Basic web shell Upload
     ```php
     // shell.php
     <?php system($_GET['cmd']); ?>

@@ -169,12 +169,14 @@ defmodule RSOLVWeb.WebhookIntegrationTest do
     raw_body = Jason.encode!(payload)
     signature = compute_signature(raw_body)
     
+    # Send raw JSON string instead of map to avoid Phoenix body parsing issues
     conn
     |> put_req_header("x-github-event", "pull_request")
     |> put_req_header("x-hub-signature-256", signature)
     |> put_req_header("content-type", "application/json")
     |> assign(:test_mode, true)
-    |> post("/webhook/github", payload)
+    |> assign(:raw_body, raw_body)  # Manually set raw_body for tests
+    |> post("/webhook/github", raw_body)  # Send raw JSON string, not map
   end
   
   defp compute_signature(payload) do

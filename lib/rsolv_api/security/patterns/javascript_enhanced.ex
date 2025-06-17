@@ -39,7 +39,11 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
   defp filter_by_tier(patterns, :public) do
     # Public tier gets only high-confidence patterns
     patterns
-    |> Enum.filter(& &1.min_confidence >= 0.8)
+    |> Enum.filter(fn pattern -> 
+      # Check if pattern has ai_review with min_confidence
+      confidence = get_in(pattern, [:ai_review, :min_confidence]) || 1.0
+      confidence >= 0.8
+    end)
     |> Enum.take(2)
   end
   
@@ -57,21 +61,39 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
     %{
       id: "js-sql-injection-enhanced",
       name: "SQL Injection (Enhanced)",
-      type: "sql_injection",
-      severity: "critical",
+      type: :sql_injection,
+      severity: :critical,
       description: "SQL injection with context-aware detection and low false positives",
+      languages: ["javascript", "typescript"],
+      frameworks: [],
+      default_tier: :protected,
+      cwe_id: "CWE-89",
+      owasp_category: "A03:2021",
+      test_cases: %{
+        vulnerable: [
+          "db.query(`SELECT * FROM users WHERE id = ${req.params.id}`)",
+          "connection.execute('SELECT * FROM users WHERE name = ' + userName)",
+          "db.query('DELETE FROM posts WHERE id = ' + postId)"
+        ],
+        safe: [
+          "db.query('SELECT * FROM users WHERE id = ?', [req.params.id])",
+          "db.query('SELECT * FROM users WHERE id = $1', [userId])",
+          "const stmt = db.prepare('SELECT * FROM users WHERE name = ?')"
+        ]
+      },
       
       # Traditional regex for pre-filtering
       regex: ~r/\.(query|execute|exec|run)\s*\(/i,
       
       # AST configuration
-      ast_rules: %{
-        node_type: "CallExpression",
-        callee: %{
-          type: "MemberExpression",
-          property_names: ["query", "execute", "exec", "run", "prepare"]
-        },
-        arguments: [
+      ast_rules: [%{
+        node_type: :call_expression,
+        properties: %{
+          callee: %{
+            type: "MemberExpression",
+            property_names: ["query", "execute", "exec", "run", "prepare"]
+          },
+          arguments: [
           %{
             position: 0,
             checks: [
@@ -88,7 +110,8 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
             ]
           }
         ]
-      },
+        }
+      }],
       
       # Context requirements
       context_rules: %{
@@ -104,8 +127,8 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
         ]
       },
       
-      # Confidence scoring
-      confidence_scoring: %{
+      # Confidence rules
+      confidence_rules: %{
         base_score: 0.7,
         modifiers: [
           %{condition: "has_parameterized_query", adjustment: -0.8},
@@ -138,6 +161,23 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
         references: [
           "https://owasp.org/www-community/attacks/SQL_Injection",
           "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+        ]
+      },
+      
+      # Enhanced recommendation with additional details
+      enhanced_recommendation: %{
+        quick_fix: "Replace string concatenation with parameterized queries",
+        detailed_steps: [
+          "Identify all SQL query construction using string concatenation",
+          "Replace with parameterized queries using ? or $1 placeholders",
+          "Use query builders or ORMs that handle escaping automatically",
+          "Implement input validation and sanitization",
+          "Test with SQL injection attack vectors to verify fixes"
+        ],
+        references: [
+          "https://owasp.org/www-community/attacks/SQL_Injection",
+          "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+          "https://bobby-tables.com/"
         ]
       },
       
@@ -175,9 +215,26 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
     %{
       id: "js-nosql-injection-enhanced",
       name: "NoSQL Injection (Enhanced)",
-      type: "nosql_injection",
-      severity: "high",
+      type: :nosql_injection,
+      severity: :high,
       description: "MongoDB injection with framework awareness",
+      languages: ["javascript", "typescript"],
+      frameworks: ["mongodb", "mongoose"],
+      default_tier: :protected,
+      cwe_id: "CWE-943",
+      owasp_category: "A03:2021",
+      test_cases: %{
+        vulnerable: [
+          "User.find(req.body.query)",
+          "collection.find({$where: userInput})",
+          "db.collection.find(JSON.parse(req.params.filter))"
+        ],
+        safe: [
+          "User.find({email: req.body.email})",
+          "collection.find(sanitize(query))",
+          "db.collection.find({_id: ObjectId(req.params.id)})"
+        ]
+      },
       
       regex: ~r/\.(find|findOne|update|delete|aggregate)\s*\(/,
       
@@ -249,8 +306,25 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
     %{
       id: "js-missing-logging-enhanced",
       name: "Missing Security Logging (Enhanced)",
-      type: "logging",
-      severity: "medium",
+      type: :logging,
+      severity: :medium,
+      languages: ["javascript", "typescript"],
+      frameworks: ["express", "koa", "fastify"],
+      default_tier: :protected,
+      cwe_id: "CWE-778",
+      owasp_category: "A09:2021",
+      test_cases: %{
+        vulnerable: [
+          "if (req.user.role !== 'admin') { return res.status(403).send('Forbidden'); }",
+          "app.post('/admin', (req, res) => { /* no logging */ })",
+          "if (password !== hashedPassword) { return false; }"
+        ],
+        safe: [
+          "if (req.user.role !== 'admin') { logger.warn('Unauthorized access attempt', {user: req.user.id}); return res.status(403).send('Forbidden'); }",
+          "app.post('/admin', (req, res) => { logger.info('Admin action', {user: req.user}); })",
+          "if (password !== hashedPassword) { logger.warn('Failed login attempt', {email}); return false; }"
+        ]
+      },
       description: "Security-critical operations without audit logging",
       
       # Only match actual function definitions
@@ -319,8 +393,25 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
     %{
       id: "js-command-injection-enhanced",
       name: "Command Injection (Enhanced)",
-      type: "command_injection",
-      severity: "critical",
+      type: :command_injection,
+      severity: :critical,
+      languages: ["javascript", "typescript"],
+      frameworks: [],
+      default_tier: :protected,
+      cwe_id: "CWE-78",
+      owasp_category: "A03:2021",
+      test_cases: %{
+        vulnerable: [
+          "exec(`git clone ${req.body.repo}`)",
+          "spawn('rm', ['-rf', userInput])",
+          "execSync('ping ' + req.params.host)"
+        ],
+        safe: [
+          "exec('git clone', [sanitizeRepo(req.body.repo)])",
+          "spawn('rm', ['-rf', path.join(SAFE_DIR, filename)])",
+          "ping.probe(req.params.host, callback)"
+        ]
+      },
       description: "System command execution with user input",
       
       regex: ~r/(exec|spawn|execFile|execSync|spawnSync)\s*\(/,
@@ -372,8 +463,25 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
     %{
       id: "js-xss-enhanced",
       name: "Cross-Site Scripting (Enhanced)",
-      type: "xss",
-      severity: "high",
+      type: :xss,
+      severity: :high,
+      languages: ["javascript", "typescript"],
+      frameworks: ["react", "vue", "angular"],
+      default_tier: :protected,
+      cwe_id: "CWE-79",
+      owasp_category: "A03:2021",
+      test_cases: %{
+        vulnerable: [
+          "element.innerHTML = req.body.content",
+          "document.write(userInput)",
+          "$(element).html(req.params.message)"
+        ],
+        safe: [
+          "element.textContent = req.body.content",
+          "element.appendChild(document.createTextNode(userInput))",
+          "$(element).text(req.params.message)"
+        ]
+      },
       description: "DOM XSS with framework awareness",
       
       regex: ~r/\.innerHTML\s*=|document\.write\s*\(/,

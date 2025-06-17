@@ -35,7 +35,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202122881 do
   use RsolvApi.Security.Patterns.PatternBase
   alias RsolvApi.Security.Pattern
 
-  @impl true
   def pattern do
     %Pattern{
       id: "rails-cve-2021-22881",
@@ -47,15 +46,15 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202122881 do
       frameworks: ["rails"],
       regex: [
         # Direct usage of request.host/protocol in redirects (exclude commented lines)
-        ~r/^(?!.*#)(?!.*\/\/).*redirect_to.*?request\.(?:protocol|host|url|original_url)/,
+        ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?request\.(?:protocol|host|url|original_url)/,
         # Host header string interpolation in redirects  
-        ~r/^(?!.*#)(?!.*\/\/).*redirect_to.*?\#\{request\.(?:protocol|host)\}/,
+        ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?#\{request\.(?:protocol|host)\}/,
         # url_for with request.host parameter (broader pattern)
-        ~r/^(?!.*#)(?!.*\/\/).*url_for\s*\([^)]*host:\s*request\.host(?:_with_port)?/,
+        ~r/^(?!\s*#)(?!\s*\/\/).*url_for\s*\([^)]*host:\s*request\.host(?:_with_port)?/,
         # redirect_to with url_for and host parameter
-        ~r/^(?!.*#)(?!.*\/\/).*redirect_to.*?url_for\s*\([^)]*host:\s*params\[/,
+        ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?url_for\s*\([^)]*host:\s*params\[/,
         # root_url with host parameter from params
-        ~r/^(?!.*#)(?!.*\/\/).*redirect_to.*?root_url\s*\([^)]*host:\s*params\[/,
+        ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?root_url\s*\([^)]*host:\s*params\[/,
         # Dynamic host configuration with user input (broader pattern)  
         ~r/config\.hosts.*?=.*?\[.*?"\#\{request\.host\}/,
         # Host configuration with user input append
@@ -90,7 +89,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202122881 do
     }
   end
 
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -201,8 +199,8 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202122881 do
   ## Examples
 
       iex> enhancement = RsolvApi.Security.Patterns.Rails.Cve202122881.ast_enhancement()
-      iex> Map.keys(enhancement)
-      [:ast_rules, :context_rules, :confidence_rules, :min_confidence]
+      iex> Map.keys(enhancement) |> Enum.sort()
+      [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Rails.Cve202122881.ast_enhancement()
       iex> enhancement.min_confidence
@@ -216,7 +214,6 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202122881 do
       iex> "redirect_to" in enhancement.ast_rules.redirect_analysis.redirect_methods
       true
   """
-  @impl true
   def ast_enhancement do
     %{
       ast_rules: %{
@@ -270,40 +267,5 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202122881 do
     }
   end
 
-  @doc """
-  Determines if this pattern applies to a given file.
-  
-  This pattern applies to Rails controller files, configuration files, and middleware files
-  where Host Authorization and redirect logic would be implemented.
-  """
-  def applies_to_file?(file_path, _content \\ nil) do
-    cond do
-      # Exclude view files explicitly
-      String.contains?(file_path, "/views/") ->
-        false
-      
-      # Rails controllers
-      String.contains?(file_path, "controller") and String.ends_with?(file_path, ".rb") ->
-        true
-      
-      # Rails configuration files  
-      String.contains?(file_path, "config/") and String.ends_with?(file_path, ".rb") ->
-        true
-        
-      # Rails middleware files
-      String.contains?(file_path, "middleware") and String.ends_with?(file_path, ".rb") ->
-        true
-        
-      # Rails application files (not views)
-      String.contains?(file_path, "app/") and String.ends_with?(file_path, ".rb") ->
-        true
-        
-      # Other Ruby files in lib directory
-      String.contains?(file_path, "lib/") and String.ends_with?(file_path, ".rb") ->
-        true
-        
-      true ->
-        false
-    end
-  end
 end
+

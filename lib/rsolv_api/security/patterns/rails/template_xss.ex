@@ -53,7 +53,6 @@ defmodule RsolvApi.Security.Patterns.Rails.TemplateXss do
   
   use RsolvApi.Security.Patterns.PatternBase
   
-  @impl true
   def pattern do
     %RsolvApi.Security.Pattern{
       id: "rails-template-xss",
@@ -133,7 +132,6 @@ defmodule RsolvApi.Security.Patterns.Rails.TemplateXss do
     }
   end
   
-  @impl true
   def vulnerability_metadata do
     %{
       description: """
@@ -382,7 +380,6 @@ defmodule RsolvApi.Security.Patterns.Rails.TemplateXss do
     }
   end
   
-  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
@@ -471,28 +468,5 @@ defmodule RsolvApi.Security.Patterns.Rails.TemplateXss do
     }
   end
   
-  @impl true
-  def applies_to_file?(file_path, frameworks \\ nil) do
-    # Apply to Ruby and ERB files in Rails projects
-    is_template_file = String.ends_with?(file_path, ".rb") || 
-                      String.ends_with?(file_path, ".erb") ||
-                      String.ends_with?(file_path, ".haml") ||
-                      String.ends_with?(file_path, ".slim")
-    
-    # Rails framework check
-    frameworks_list = frameworks || []
-    is_rails = "rails" in frameworks_list
-    
-    # Apply to template files in Rails projects
-    # XSS can occur in views, helpers, and controllers
-    is_rails_file = String.contains?(file_path, "app/views/") ||
-                    String.contains?(file_path, "app/helpers/") ||
-                    String.contains?(file_path, "app/controllers/") ||
-                    String.contains?(file_path, "lib/")
-    
-    # If no frameworks specified but it looks like Rails, include it
-    inferred_rails = frameworks_list == [] && is_rails_file
-    
-    is_template_file && (is_rails || inferred_rails)
-  end
 end
+
