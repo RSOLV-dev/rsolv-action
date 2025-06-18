@@ -163,6 +163,7 @@ defmodule RsolvApi.Security.Pattern do
       severity: to_string(pattern.severity),
       languages: pattern.languages,
       regex_patterns: regex_to_strings(pattern.regex),
+      tier: to_string(pattern.default_tier),
       cwe_id: pattern.cwe_id,
       owasp_category: pattern.owasp_category,
       recommendation: pattern.recommendation,
