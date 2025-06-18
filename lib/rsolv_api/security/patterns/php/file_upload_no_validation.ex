@@ -42,7 +42,7 @@ defmodule RsolvApi.Security.Patterns.Php.FileUploadNoValidation do
         # Path concatenation with $_FILES['name']
         ~r/move_uploaded_file\s*\([^,]+,\s*[^)]*\.\s*\$_FILES\[[^\]]+\]\s*\[["']name["']\]/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-434",
       owasp_category: "A01:2021",
       recommendation: "Validate file type, size, and content. Use a safe upload directory",

@@ -41,7 +41,7 @@ defmodule RsolvApi.Security.Patterns.Php.MissingCsrfToken do
       severity: :medium,
       languages: ["php"],
       regex: ~r/if\s*\(\s*\$_SERVER\[['"]REQUEST_METHOD['"]\]\s*===?\s*['"]POST['"]\s*\)\s*\{(?!.*csrf)/is,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-352",
       owasp_category: "A01:2021",
       recommendation: "Implement CSRF token validation for state-changing operations",

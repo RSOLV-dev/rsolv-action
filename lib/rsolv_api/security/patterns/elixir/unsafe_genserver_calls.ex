@@ -115,7 +115,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeGenserverCalls do
         # GenServer.call with tuple variable - exclude safe variable names
         ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{[^:}][^,}]*,\s*(?!safe_|validated_|checked_)(?:user_input|input|cmd|command|code)/m
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
       recommendation: "Validate and whitelist all GenServer commands, never execute user input directly",

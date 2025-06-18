@@ -103,7 +103,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeFileUpload do
         # Path.join with array notation - exclude comments
         ~r/^(?!\s*#).*Path\.join\s*\(\s*\[[^\]]*(?:\.filename|params\[)[^\]]*\]/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-434",
       owasp_category: "A01:2021",
       recommendation: "Validate file types, sanitize filenames, and use safe upload directories with generated filenames",

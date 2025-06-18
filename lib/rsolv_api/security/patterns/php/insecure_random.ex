@@ -38,7 +38,7 @@ defmodule RsolvApi.Security.Patterns.Php.InsecureRandom do
       severity: :medium,
       languages: ["php"],
       regex: ~r/(rand|mt_rand|srand|mt_srand)\s*\(/,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-338",
       owasp_category: "A02:2021",
       recommendation: "Use random_bytes() or random_int() for cryptographic randomness",

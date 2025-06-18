@@ -89,7 +89,7 @@ defmodule RsolvApi.Security.Patterns.Django.TemplateXss do
         # mark_safe with common unsafe sources
         ~r/mark_safe\s*\(\s*(?:comment|message|content|bio|description|text|html|input|data)/i
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Avoid using |safe filter on user input. Use Django's built-in escaping. If HTML is needed, sanitize with bleach library.",

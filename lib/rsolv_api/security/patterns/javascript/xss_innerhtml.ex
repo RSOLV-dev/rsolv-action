@@ -204,7 +204,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtml do
       # Matches element.innerHTML = value
       # Note: AST enhancement is used to filter out sanitized content
       regex: ~r/^(?!.*\/\/).*\.innerHTML\s*=/m,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Use textContent or innerText for plain text. For HTML content, use DOMPurify.sanitize() or the Sanitizer API.",

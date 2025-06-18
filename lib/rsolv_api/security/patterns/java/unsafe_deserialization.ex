@@ -71,7 +71,7 @@ defmodule RsolvApi.Security.Patterns.Java.UnsafeDeserialization do
         # ObjectInput interface methods
         ~r/ObjectInput\s+\w+[\s\S]*?\.readObject\s*\(\s*\)/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
       recommendation: "Never deserialize untrusted data. Use JSON/XML with schema validation instead",

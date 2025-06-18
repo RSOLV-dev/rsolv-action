@@ -100,7 +100,7 @@ defmodule RsolvApi.Security.Patterns.Java.TrustAllCerts do
         # setDefaultHostnameVerifier and setDefaultSSLSocketFactory - exclude commented lines
         ~r/^(?!.*\/\/).*setDefault(?:HostnameVerifier|SSLSocketFactory)\s*\([^)]*\)/m
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-295",
       owasp_category: "A07:2021",
       recommendation: "Implement proper certificate validation using default TrustManager or custom validation logic",

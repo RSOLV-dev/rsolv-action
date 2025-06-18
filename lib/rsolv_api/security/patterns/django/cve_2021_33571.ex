@@ -68,7 +68,7 @@ defmodule RsolvApi.Security.Patterns.Django.Cve202133571 do
         ~r/from\s+django\.core\.validators\s+import.*URLValidator/,
         ~r/from\s+django\.core\.validators\s+import.*validate_ipv4_address/
       ],
-      default_tier: :public,
+      default_tier: :enterprise,
       cwe_id: "CWE-20",
       owasp_category: "A03:2021",
       recommendation: "Update Django to 3.2.4+, 3.1.12+, or 2.2.24+ and validate IP addresses properly",

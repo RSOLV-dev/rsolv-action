@@ -68,7 +68,7 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202122881 do
         # X-Forwarded-Host header patterns
         ~r/^X-Forwarded-Host:\s*\w+/
       ],
-      default_tier: :public,
+      default_tier: :enterprise,
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
       recommendation: "Use static redirect URLs or validate Host headers against an allowlist. Never use user-controlled Host headers directly in redirects.",

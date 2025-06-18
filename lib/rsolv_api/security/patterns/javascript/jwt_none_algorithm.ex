@@ -67,7 +67,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.JwtNoneAlgorithm do
       languages: ["javascript", "typescript"],
       # Matches jwt.verify without algorithms option or with options but no algorithms
       regex: ~r/jwt\.verify\s*\([^,)]+,[^,)]+(?:,\s*\{(?![^}]*algorithms)[^}]*\}|(?:,\s*[^{])?)?\s*\)/i,
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-347",
       owasp_category: "A02:2021",
       recommendation: "Always specify allowed algorithms in JWT verification.",

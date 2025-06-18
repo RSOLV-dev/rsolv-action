@@ -78,7 +78,7 @@ defmodule RsolvApi.Security.Patterns.Django.MassAssignment do
         ~r/serializer.*=.*Serializer\s*\(\s*data\s*=\s*request\./s,
         ~r/serializer\.save\s*\(\s*\)(?<!is_valid)/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-915",
       owasp_category: "A01:2021",
       recommendation: "Explicitly define allowed fields in forms and serializers",

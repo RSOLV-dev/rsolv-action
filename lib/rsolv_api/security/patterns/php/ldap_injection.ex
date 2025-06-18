@@ -48,7 +48,7 @@ defmodule RsolvApi.Security.Patterns.Php.LdapInjection do
       severity: :high,
       languages: ["php"],
       regex: ~r/(?:ldap_search|ldap_list|ldap_read)\s*\(.*\$_(?:GET|POST|REQUEST|COOKIE)\[/,
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-90",
       owasp_category: "A03:2021",
       recommendation: "Use ldap_escape() to sanitize user input in LDAP filters",

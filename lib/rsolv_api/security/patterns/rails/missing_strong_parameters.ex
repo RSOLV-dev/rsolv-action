@@ -63,7 +63,7 @@ defmodule RsolvApi.Security.Patterns.Rails.MissingStrongParameters do
         # insert_all/upsert_all with params
         ~r/\.(insert_all|upsert_all)\s*\(\s*params\[:[^\]]+\]/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-915",
       owasp_category: "A01:2021",
       recommendation: "Use strong parameters with permit(): params.require(:model).permit(:field1, :field2). Never use permit! in production.",

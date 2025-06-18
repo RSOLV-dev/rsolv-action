@@ -94,7 +94,7 @@ defmodule RsolvApi.Security.Patterns.Java.LdapInjection do
         # Search method with filter as second parameter containing concatenation
         ~r/^(?!.*\/\/).*\.search\s*\([^,]+,\s*["]*[^"]*\+\s*(?!escaped|encoded|sanitized)[\w\[\]\.]+/m
       ],
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-90",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized LDAP queries, escape user input with LdapEncoder.filterEncode(), and validate input against allowlists",

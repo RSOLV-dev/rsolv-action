@@ -43,7 +43,7 @@ defmodule RsolvApi.Security.Patterns.Php.PathTraversal do
       severity: :high,
       languages: ["php"],
       regex: ~r/(file_get_contents|fopen|readfile)\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)|(include|include_once|require|require_once)\s*\(?[^;]*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Validate and sanitize file paths, use basename() or realpath()",

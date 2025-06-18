@@ -38,7 +38,7 @@ defmodule RsolvApi.Security.Patterns.Php.UnsafeDeserialization do
       severity: :critical,
       languages: ["php"],
       regex: ~r/unserialize\s*\(\s*[^)]*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
       recommendation: "Use JSON instead of serialize/unserialize for user data",

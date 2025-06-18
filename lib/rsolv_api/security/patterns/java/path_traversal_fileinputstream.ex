@@ -59,7 +59,7 @@ defmodule RsolvApi.Security.Patterns.Java.PathTraversalFileinputstream do
         # Return statement with new FileInputStream and concatenation
         ~r/return\s+new\s+FileInputStream\s*\(.*\+.*\)/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Validate and sanitize file paths, use Files.newInputStream() with proper validation",

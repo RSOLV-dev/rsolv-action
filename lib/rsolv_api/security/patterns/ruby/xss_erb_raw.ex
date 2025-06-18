@@ -97,7 +97,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.XssErbRaw do
         # Comment detection for limitation testing
         ~r/#.*<%=\s*raw\s+params/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Use Rails' default HTML escaping. If HTML content is needed, use sanitize() helper or validate/allowlist the content.",

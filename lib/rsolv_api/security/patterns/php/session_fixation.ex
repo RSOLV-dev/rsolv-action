@@ -45,7 +45,7 @@ defmodule RsolvApi.Security.Patterns.Php.SessionFixation do
       severity: :high,
       languages: ["php"],
       regex: ~r/session_id\s*\(\s*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-384",
       owasp_category: "A07:2021",
       recommendation: "Regenerate session ID after login with session_regenerate_id(true)",

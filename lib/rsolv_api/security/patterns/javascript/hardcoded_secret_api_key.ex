@@ -64,7 +64,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.HardcodedSecretApiKey do
       severity: :high,
       languages: ["javascript", "typescript"],
       regex: ~r/(?:api[_-]?key|api[_-]?secret|token)\s*[=:]\s*["'`][\w\-]{16,}["'`]/i,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-798",
       owasp_category: "A07:2021",
       recommendation: "Store API keys in environment variables or secure key management systems.",

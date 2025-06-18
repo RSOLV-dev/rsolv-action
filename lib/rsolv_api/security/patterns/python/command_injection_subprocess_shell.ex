@@ -88,7 +88,7 @@ defmodule RsolvApi.Security.Patterns.Python.CommandInjectionSubprocessShell do
         [^)]*                               # any content
         shell\s*=\s*True                    # shell=True parameter
       /x,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       recommendation: "Use shell=False and pass command as list of arguments",

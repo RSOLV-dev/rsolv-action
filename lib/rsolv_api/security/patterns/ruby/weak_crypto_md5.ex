@@ -41,7 +41,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.WeakCryptoMd5 do
         ~r/OpenSSL::Digest(?:\.new\(['"]MD5['"]\)|::MD5)/,
         ~r/\.md5(\s*\(|$|\s|\.)/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-328",
       owasp_category: "A02:2021",
       recommendation: "Use SHA-256 or SHA-384 for cryptographic hashing. For password hashing, use bcrypt.",

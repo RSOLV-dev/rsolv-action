@@ -149,7 +149,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat do
       severity: :critical,
       languages: ["javascript", "typescript"],
       regex: ~r/(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN).*?["']\s*\+\s*\w+/i,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized queries or prepared statements instead of string concatenation",

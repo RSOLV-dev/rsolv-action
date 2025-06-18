@@ -68,7 +68,7 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFormat do
       severity: :high,
       languages: ["python"],
       regex: ~r/["'`].*%[sdif].*["'`]\s*%.*execute|execute.*["'`].*%[sdif].*["'`]\s*%/s,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized queries with execute() method parameters: cursor.execute(query, (param,))",

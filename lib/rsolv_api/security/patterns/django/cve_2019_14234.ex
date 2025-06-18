@@ -91,7 +91,7 @@ defmodule RsolvApi.Security.Patterns.Django.Cve201914234 do
         ~r/__has_keys\s*=\s*request\.POST\.getlist/,
         ~r/metadata__\w+__isnull\s*=\s*False.*metadata__\w+\s*=\s*user_\w+/
       ],
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Update Django to 2.2.4+, 2.1.11+, or 1.11.23+. Validate input and sanitize key parameters before JSONField operations.",

@@ -61,7 +61,7 @@ defmodule RsolvApi.Security.Patterns.Java.WeakCipherDes do
         # Method calls with DES algorithms - exclude comments
         ~r/^(?!.*\/\/).*\.(?:getInstance|init)\s*\([^)]*[\"'](?:DES|DESede|TripleDES|3DES)/im
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-327",
       owasp_category: "A02:2021",
       recommendation: "Use AES with 256-bit keys (AES/GCM/NoPadding) or other modern encryption algorithms instead of DES/3DES",

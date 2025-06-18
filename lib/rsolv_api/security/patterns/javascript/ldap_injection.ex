@@ -96,7 +96,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.LdapInjection do
         # LDAP modify with user input
         ldap\.modify\s*\(\s*[^,]+,\s*\{[^\}]*:\s*(?:req\.|request\.|params\.|query\.|body\.|user|input|data)
       /xi,
-      default_tier: :public,
+      default_tier: :enterprise,
       cwe_id: "CWE-90",
       owasp_category: "A03:2021",
       recommendation: "Always escape special LDAP characters in user input. Use LDAP escape libraries like ldapjs.escape() or implement proper escaping for (, ), *, \\, and null bytes.",

@@ -90,7 +90,7 @@ defmodule RsolvApi.Security.Patterns.Python.PathTraversalOpen do
         # Variable assignment followed by open
         (?:file_path|path|filename)\s*=.*(?:\+|f[\"']|%|\.format).*;\s*open\s*\(
       /x,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Validate and sanitize file paths, use os.path.join() safely",

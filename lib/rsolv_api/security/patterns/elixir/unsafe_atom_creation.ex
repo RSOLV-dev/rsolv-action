@@ -66,7 +66,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeAtomCreation do
         # Dynamic atom interpolation (less common but possible)
         ~r/:"#\{[^}]*(?:params|user|input|data)[^}]*\}"/i
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-400",
       owasp_category: "A05:2021",
       recommendation: "Use String.to_existing_atom/1 or pattern matching instead of dynamic atom creation",

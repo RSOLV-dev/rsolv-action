@@ -58,7 +58,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.PathTraversalConcat do
       severity: :high,
       languages: ["javascript", "typescript"],
       regex: ~r/(?:readFile|writeFile|unlink|mkdir|rmdir|access|stat)(?:Sync)?\s*\([^)]*(?:["'`][^"'`]*["'`]\s*\+|`[^`]*\$\{)/i,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Use path.join with path.basename or validate paths are within expected directory.",

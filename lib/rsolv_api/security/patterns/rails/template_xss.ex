@@ -111,7 +111,7 @@ defmodule RsolvApi.Security.Patterns.Rails.TemplateXss do
         ~r/form_tag\s+url_for\s*\(.*?\.html_safe/,
         ~r/concat\s+raw\s*\(/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Use Rails built-in escaping or sanitization helpers: sanitize(), strip_tags(), or h(). Remove raw() and html_safe() calls on user content.",

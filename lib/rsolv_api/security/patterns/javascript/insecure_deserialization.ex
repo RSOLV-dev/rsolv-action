@@ -133,7 +133,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.InsecureDeserialization do
       severity: :high,
       languages: ["javascript", "typescript"],
       regex: ~r/(?:JSON\.parse|yaml\.load|YAML\.load|YAML\.parse|yamljs\.load|js-yaml\.load|yamlParser\.load|loadYaml|(?<!safe)deserialize|unserialize|eval|Function|vm\.run(?:InContext|InNewContext|InThisContext)?|vm\.Script|runInNewContext|parseXML|parseXmlString|xml2js\.parseString|xmlParse|xmlParser\.parse|xmlToObject|convertXML|processXML|fromJSON|parseObject|reconstruct)\s*\([^)]*?(?:req\.body|request\.body|req\.params|request\.params|req\.query|request\.query|req\b|request\b|params\b|query\b|body\b|user|input|data(?!base64)|payload)/i,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
       recommendation: "Validate data structure before deserialization. Use safe parsing methods.",

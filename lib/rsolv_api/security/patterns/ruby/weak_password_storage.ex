@@ -132,7 +132,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.WeakPasswordStorage do
         ~r/hash\s*=\s*password\.to_s\s*\+\s*["']salt["']/,  # String concatenation hashing
         ~r/(?:password|encrypted_password|password_digest)\s*=\s*password\.crypt\s*\(/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-256",
       owasp_category: "A02:2021",
       recommendation: "Use bcrypt, argon2, or scrypt for password hashing. Rails provides has_secure_password for secure password handling.",

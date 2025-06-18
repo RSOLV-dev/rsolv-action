@@ -101,7 +101,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.WeakCryptoSha1 do
         # MAC with SHA1 (newer API)
         ~r/:crypto\.mac\s*\(\s*:hmac\s*,\s*:sha\b/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-327",
       owasp_category: "A02:2021",
       recommendation: "Use :crypto.hash(:sha256, data) or stronger algorithms. For passwords use Argon2/Bcrypt.",

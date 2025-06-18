@@ -43,7 +43,7 @@ defmodule RsolvApi.Security.Patterns.Python.DebugTrue do
         # app.debug = True (Flask)
         app\.debug\s*=\s*True
       /x,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-215",
       owasp_category: "A05:2021",
       recommendation: "Set DEBUG = False in production environments",

@@ -53,7 +53,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.CommandInjectionSystem do
         # Port.open with args containing variables or user input
         ~r/Port\.open\s*\([^)]*args:\s*\[[^]]*(?:#\{[^}]+\}|user_input|user_|input_)[^]]*\]/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       recommendation: "Use System.cmd with a list of arguments instead of string interpolation",

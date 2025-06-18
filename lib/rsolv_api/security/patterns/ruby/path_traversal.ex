@@ -108,7 +108,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.PathTraversal do
         ~r/render\s+file:\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+)/,
         ~r/render\s+file:\s*["'].*?#\{.*?(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+).*?\}/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Validate file paths using File.basename, restrict access to safe directories, and verify resolved paths stay within allowed boundaries",

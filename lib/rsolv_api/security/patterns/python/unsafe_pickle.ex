@@ -97,7 +97,7 @@ defmodule RsolvApi.Security.Patterns.Python.UnsafePickle do
       # Match pickle.loads, pickle.load, cPickle usage, and direct imports
       # Use word boundary or whitespace to avoid matching json.loads
       regex: ~r/(?:(?:pickle|cPickle)\.|(?:^|\s))(?:loads?|Unpickler)\s*\(/,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
       recommendation: "Use json.loads() or implement custom deserialization with validation",

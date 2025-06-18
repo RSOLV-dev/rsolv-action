@@ -106,7 +106,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.EvalUsage do
         ~r/Object\.const_get\s*\(\s*(?:params|request|user_\w+|user\w*)/,  # Object.const_get(params[:class])
         ~r/Module\.const_get\s*\(\s*(?:params|request|user_\w+|user\w*)/   # Module.const_get(params[:class])
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
       recommendation: "Avoid eval with user input. Use safer alternatives like JSON parsing, whitelisted method calls, or predefined action mappings",

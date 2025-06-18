@@ -118,7 +118,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.PrototypePollution do
       # Simplified regex that catches bracket notation assignment and common merge patterns
       # AST enhancement will filter false positives like safe key validation
       regex: ~r/^(?!.*\/\/).*(?:\[[^\]]+\]\s*=|Object\.assign\s*\([^,)]+,\s*(?:req\.|request\.|params\.|query\.|body\.|payload\.|user|input|data)|\bmerge\s*\([^,)]+,\s*(?:params\b|user\b|input\b|data\b|payload\b))|(?:_\.|lodash\.)(merge|extend)\s*\([^,)]+,\s*[^)]+|(?:\$|jQuery)\.extend\s*\([^,)]+,\s*(?:user|input|.*Data\b)|\bfor\s*\([^)]*\bin\s+(?:req\.|request\.|params\.|query\.|body\.).*\[[^\]]+\]\s*=/mi,
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-1321",
       owasp_category: "A08:2021",
       recommendation: "Validate object keys, avoid direct property assignment with user input.",

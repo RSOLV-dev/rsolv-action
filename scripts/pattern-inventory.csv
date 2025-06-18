@@ -1,0 +1,34 @@
+Language/Framework,Pattern Count,Public Tier,Protected Tier,Notes
+JavaScript,30,15,15,"Includes XSS, SQL injection, command injection, crypto vulnerabilities"
+Python,12,6,6,"Focus on injection vulnerabilities and weak crypto"
+Ruby,20,9,11,"Rails-related vulnerabilities, mass assignment, deserialization"
+Java,17,5,12,"Enterprise vulnerabilities: XXE, deserialization, path traversal"
+Elixir,28,15,13,"Phoenix/OTP specific: atom exhaustion, GenServer vulnerabilities"
+PHP,25,11,14,"Classic web vulnerabilities: file inclusion, register globals"
+Rails,18,6,12,"Framework-specific: ActiveRecord injection, CVEs"
+Django,19,9,10,"ORM injection, template vulnerabilities, CVEs"
+Common,1,1,0,"Cross-language patterns like weak JWT secrets"
+TOTAL,170,77,93,"Current distribution: 45% public, 55% protected"
+
+Pattern Types Distribution:
+sql_injection,17,,"Critical vulnerabilities requiring protection"
+xss,13,,"Most are public tier (educational value)"
+command_injection,10,,"Protected tier (high risk)"
+path_traversal,11,,"Mostly protected tier"
+weak_crypto,11,,"Public tier (educational)"
+authentication,8,,"Mix of public and protected"
+deserialization,9,,"Protected tier (RCE risk)"
+xxe,4,,"Protected tier"
+csrf,4,,"Public tier"
+ssrf,4,,"Protected tier"
+
+Severity Distribution:
+Critical,44,,"26% of patterns"
+High,83,,"49% of patterns"
+Medium,49,,"29% of patterns"
+Low,4,,"2% of patterns"
+
+CVE-Specific Patterns:
+Total CVE patterns,~40,,"Distributed across frameworks"
+Rails CVEs,3,,"CVE-2019-5418, CVE-2021-22881, CVE-2022-22577"
+Django CVEs,5,,"CVE-2018-14574 through CVE-2021-33571"

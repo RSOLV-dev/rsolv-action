@@ -76,7 +76,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.PathTraversal do
         # FileStream with interpolation
         ~r/File\.stream!?\s*\([^"']*#\{/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Validate and sanitize file paths. Use Path.expand/2 with a safe base directory",

@@ -101,7 +101,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XxeExternalEntities do
       severity: :high,
       languages: ["javascript", "typescript"],
       regex: build_xxe_regex(),
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-611",
       owasp_category: "A05:2021",
       recommendation: "Disable external entity processing in XML parsers or use JSON instead.",

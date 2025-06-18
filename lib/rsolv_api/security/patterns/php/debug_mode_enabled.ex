@@ -39,7 +39,7 @@ defmodule RsolvApi.Security.Patterns.Php.DebugModeEnabled do
       severity: :medium,
       languages: ["php"],
       regex: ~r/(ini_set\s*\(\s*['"]display_errors['"]\s*,\s*(['"]?1['"]?|true|['"]on['"]?))|error_reporting\s*\(\s*E_ALL/i,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-489",
       owasp_category: "A05:2021",
       recommendation: "Disable debug mode and error display in production",

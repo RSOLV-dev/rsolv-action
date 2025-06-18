@@ -82,7 +82,7 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202222577 do
         ~r/csp_policy.*?\\*#\{params\[/,
         ~r/csp_policy.*?\\*#\{request\./
       ],
-      default_tier: :public,
+      default_tier: :enterprise,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Validate and sanitize any user input used in Content-Security-Policy headers. Use allowlists for CSP directive values instead of direct user input.",

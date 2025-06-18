@@ -68,7 +68,7 @@ defmodule RsolvApi.Security.Patterns.Java.SqlInjectionStringFormat do
         # Variables assigned with String.format then used in SQL
         ~r/String\s+\w+\s*=\s*String\.format\s*\([^)]*(?:SELECT|INSERT|UPDATE|DELETE)/i
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use PreparedStatement with setString(), setInt(), etc. instead of String.format()",

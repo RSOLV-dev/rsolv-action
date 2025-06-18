@@ -104,7 +104,7 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbing do
         ~r/scope\s+:\w+\s+do.*?get\s+["'].*?\*\w+["']/s,
         ~r/resources\s+:\w+\s+do.*?get\s+["'].*?\*\w+["']/s
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Add path constraints to glob routes. Validate glob parameters and restrict file access to safe directories.",

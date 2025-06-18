@@ -73,7 +73,7 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFstring do
         f["'`].*\{[^}]+\}.*["'`].*execute|  # f-string before execute
         execute.*f["'`].*\{[^}]+\}.*["'`]    # execute before f-string
       /x,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",

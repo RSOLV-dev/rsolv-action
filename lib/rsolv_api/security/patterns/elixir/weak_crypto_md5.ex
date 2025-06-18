@@ -85,7 +85,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.WeakCryptoMd5 do
         # Crypto.hash with MD5 (uppercase module alias)
         ~r/Crypto\.hash\s*\(\s*:md5/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-327",
       owasp_category: "A02:2021",
       recommendation: "Use :crypto.hash(:sha256, data) or Argon2/Bcrypt for passwords",

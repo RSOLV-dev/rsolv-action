@@ -64,7 +64,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.WeakRandom do
         ~r/\bsrand\b/,                      # srand seeding (with or without parentheses)
         ~r/Kernel\.rand/                    # Kernel.rand explicit calls
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-330",
       owasp_category: "A02:2021",
       recommendation: "Use SecureRandom.hex(), SecureRandom.uuid(), or SecureRandom.urlsafe_base64() for cryptographic purposes",

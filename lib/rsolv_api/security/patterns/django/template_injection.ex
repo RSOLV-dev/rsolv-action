@@ -106,7 +106,7 @@ defmodule RsolvApi.Security.Patterns.Django.TemplateInjection do
         ~r/render.*?\.format\s*\(\s*.*?request\./,
         ~r/get_template.*?\.format\s*\(\s*.*?request\./
       ],
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
       recommendation: "Never render user input as template code. Use static template names only.",

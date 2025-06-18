@@ -111,7 +111,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.WeakPasswordHashing do
         # then(&:crypto.hash) pattern - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*then\s*\(&:crypto\.hash/m
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-916",
       owasp_category: "A02:2021",
       recommendation: "Use Argon2, Bcrypt, or Pbkdf2 for password hashing",

@@ -56,7 +56,7 @@ defmodule RsolvApi.Security.Patterns.Java.PathTraversalFile do
         # Return statement with new File and concatenation (handles nested parens)
         ~r/return\s+new\s+File\s*\(.*\+.*\)/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Validate and sanitize file paths, use Paths.get() with canonical path validation",

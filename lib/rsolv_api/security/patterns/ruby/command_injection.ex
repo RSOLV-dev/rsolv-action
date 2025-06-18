@@ -62,7 +62,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.CommandInjection do
         ~r/Kernel\.exec\s*\(\s*['\"].*?#\{/,
         ~r/spawn\s*\(\s*['\"].*?#\{/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       recommendation: "Use array form of system calls or shellescape user input",

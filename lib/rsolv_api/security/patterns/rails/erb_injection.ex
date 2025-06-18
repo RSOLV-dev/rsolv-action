@@ -91,7 +91,7 @@ defmodule RsolvApi.Security.Patterns.Rails.ErbInjection do
         # Template content variables with user input
         ~r/template_content\s*=\s*params\[.*?ERB\.new\s*\(\s*template_content\)/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
       recommendation: "Never render user input as Rails ERB templates. Use static Rails templates with safe data binding and Rails helpers.",

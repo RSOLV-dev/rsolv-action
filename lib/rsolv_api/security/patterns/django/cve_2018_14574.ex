@@ -94,7 +94,7 @@ defmodule RsolvApi.Security.Patterns.Django.Cve201814574 do
         ~r/redirect\s*\(\s*request\.session\.get/,
         ~r/HttpResponseRedirect\s*\(\s*user_url\s*\)/
       ],
-      default_tier: :public,
+      default_tier: :enterprise,
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
       recommendation: "Update Django 2.1.2+, Django 2.0.9+, or Django 1.11.16+. Validate redirect URLs against whitelist using is_safe_url().",

@@ -62,7 +62,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.UnsafeRegex do
       severity: :medium,
       languages: ["javascript", "typescript"],
       regex: ~r/(?:new\s+RegExp|\/)[^)\/]*\([^)]*[*+].*?\)[^)]*[*+\{]|(?:new\s+RegExp|\/)[^)\/]*\([^)]*\{[^}]*\}.*?\)[^)]*[*+\{]|(?:new\s+RegExp|\/)[^)\/]*\([^)]*\|.*?\)[^)]*[*+\{]/i,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-1333",
       owasp_category: "A05:2021",
       recommendation: "Avoid nested quantifiers in regex. Use atomic groups or possessive quantifiers.",

@@ -136,7 +136,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeRedirect do
         # String concatenation patterns - exclude comments
         ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*[^,)]*<>\s*(?:params|path|url|user_|redirect_)/m
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
       recommendation: "Validate redirect URLs against an allowlist of trusted domains or use local redirects with :to option",

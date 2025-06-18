@@ -107,7 +107,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.CookieSecurity do
         # put_resp_cookie with 4+ params for sensitive cookies missing any required flag  
         ~r/put_resp_cookie\s*\(\s*[^,]+\s*,\s*"(?:session|auth|csrf|login|token|user|data)[^"]*"\s*,\s*[^,)]+\s*,(?!(?=.*secure:\s*true)(?=.*http_only:\s*true)(?=.*same_site:\s*"(?:Strict|Lax|None)"))[^)]*\)/ms
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-614",
       owasp_category: "A05:2021",
       recommendation: "Always set secure: true, http_only: true, and same_site flags for cookies containing sensitive data",

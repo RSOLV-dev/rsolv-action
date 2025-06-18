@@ -113,7 +113,7 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfig do
         ~r/config\.web_console\.whitelisted_ips\s*=.*?['"]0\.0\.0\.0['"]/,
         ~r/config\.web_console\.permissions\s*=.*?['"]0\.0\.0\.0['"]/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-489",
       owasp_category: "A05:2021",
       recommendation: "Ensure Rails production environment has consider_all_requests_local=false, debug gems removed, and proper Rails caching enabled",

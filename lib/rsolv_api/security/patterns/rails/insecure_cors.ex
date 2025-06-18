@@ -109,7 +109,7 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCors do
         ~r/origins\s+lambda.*?\{\s*.*?true.*?\}/,
         ~r/origins\s+proc.*?\{\s*.*?true.*?\}/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-346",
       owasp_category: "A05:2021",
       recommendation: "Specify explicit origins, headers, and methods in Rails CORS. Never use credentials: true with origins: \"*\" in Rails",

@@ -206,7 +206,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDocumentWrite do
       # Matches document.write() and document.writeln() calls
       # Also matches window.document.write variations
       regex: ~r/(?:window\.)?document\.write(?:ln)?\s*\(/,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Replace document.write with modern DOM manipulation methods like createElement, textContent, or insertAdjacentHTML with sanitization.",

@@ -71,7 +71,7 @@ defmodule RsolvApi.Security.Patterns.Django.Clickjacking do
         # @xframe_options_sameorigin still allows same-origin attacks
         ~r/@xframe_options_sameorigin/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-1021",
       owasp_category: "A05:2021",
       recommendation: "Set X_FRAME_OPTIONS = 'DENY' in settings",

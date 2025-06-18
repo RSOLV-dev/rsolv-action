@@ -75,7 +75,7 @@ defmodule RsolvApi.Security.Patterns.Django.Cve202133203 do
         ~r/templates\//,
         ~r/path/
       ],
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Update Django to 2.2.24+, 3.1.12+, or 3.2.4+. Use safe_join for path operations.",

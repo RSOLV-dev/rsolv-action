@@ -78,7 +78,7 @@ defmodule RsolvApi.Security.Patterns.Django.Cve202013254 do
         ~r/=\s*request\.[^=]*cache\.set\s*\(\s*\w+/s,
         ~r/cache\.set\s*\(\s*\w+.*request\./s
       ],
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-74",
       owasp_category: "A03:2021",
       recommendation: "Update Django to 3.0.7+ or 2.2.13+. Validate and sanitize cache keys before use.",

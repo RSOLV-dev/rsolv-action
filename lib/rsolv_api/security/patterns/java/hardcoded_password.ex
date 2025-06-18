@@ -109,7 +109,7 @@ defmodule RsolvApi.Security.Patterns.Java.HardcodedPassword do
         # Method calls with credential parameters (addParameter, etc) - exclude commented lines
         ~r/^(?!.*\/\/).*\.(?:addParameter|setParameter)\s*\(\s*[\"'](?:password|secret|key|token|credential)[\"']\s*,\s*[\"'][^\"']{6,}[\"']\s*\)/im
       ],
-      default_tier: :protected,
+      default_tier: :public,
       cwe_id: "CWE-798",
       owasp_category: "A07:2021",
       recommendation: "Use environment variables, configuration files, or secure credential management services to store sensitive credentials",

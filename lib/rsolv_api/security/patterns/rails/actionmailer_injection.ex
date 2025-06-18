@@ -55,7 +55,7 @@ defmodule RsolvApi.Security.Patterns.Rails.ActionmailerInjection do
         ~r/^(?!\s*#).*mail\s*\([\s\S]*?body:\s*ERB\.new\s*\(\s*params\[/m,
         ~r/^(?!\s*#).*mail\s*\([\s\S]*?to:\s*params\[/m
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-117",
       owasp_category: "A03:2021",
       recommendation: "Validate and sanitize email headers. Use address validation for email fields.",

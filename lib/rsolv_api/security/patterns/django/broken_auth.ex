@@ -81,7 +81,7 @@ defmodule RsolvApi.Security.Patterns.Django.BrokenAuth do
         # Missing authentication in sensitive operations
         ~r/User\.objects\.filter\s*\(\s*\)\.delete\s*\(\s*\)(?!.*@login_required)/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-287",
       owasp_category: "A07:2021",
       recommendation: "Use @login_required decorator or LoginRequiredMixin for views requiring authentication",

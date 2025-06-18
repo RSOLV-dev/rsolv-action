@@ -82,7 +82,7 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve20195418 do
         # Variable assignment with path traversal then render partial
         ~r/\w+_path\s*=\s*["'`].*?\.\.\/.*?\\*#\{.*?params[\s\S]*?render\s+partial:/m
       ],
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Never use user input directly in Rails render file/template. Use predefined Rails templates or validate against allowlist.",

@@ -99,7 +99,7 @@ defmodule RsolvApi.Security.Patterns.Django.OrmInjection do
         # aggregate() with **kwargs  
         ~r/\.aggregate\s*\(\s*\*\*\w+\)/
       ],
-      default_tier: :critical,
+      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use Django parameterized queries: Model.objects.raw(\"SELECT * FROM table WHERE id = %s\", [user_id]) or Django ORM methods: filter(name=username)",

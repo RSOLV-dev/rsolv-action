@@ -49,7 +49,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.SqlInjectionFragment do
       # Match fragment usage - AST enhancement distinguishes safe from unsafe
       # Note: This regex is intentionally broad to catch potential issues
       regex: ~r/^[^#]*(?:unsafe_fragment\s*\(|fragment\s*\()/m,
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use Ecto query DSL instead of fragments when possible. When fragments are necessary, ensure all parameters are properly validated and use pinned variables",

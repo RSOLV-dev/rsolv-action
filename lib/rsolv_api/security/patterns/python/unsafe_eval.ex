@@ -77,7 +77,7 @@ defmodule RsolvApi.Security.Patterns.Python.UnsafeEval do
       languages: ["python"],
       # Match eval( but not literal_eval or other safe variants
       regex: ~r/\beval\s*\(/,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-95",
       owasp_category: "A03:2021",
       recommendation: "Use ast.literal_eval() for safe evaluation of literals or custom parsers for complex expressions",

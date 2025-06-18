@@ -108,7 +108,7 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionData do
         ~r/^(?!.*#).*session\[:treatment\]/,
         ~r/^(?!.*#).*session\[:patient_data\]/
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-200",
       owasp_category: "A02:2021",
       recommendation: "Store only non-sensitive identifiers in Rails sessions. Keep sensitive data in secure server-side storage, not Rails session cookies.",

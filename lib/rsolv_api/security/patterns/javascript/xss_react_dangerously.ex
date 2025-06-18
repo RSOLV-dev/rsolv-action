@@ -114,7 +114,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssReactDangerously do
       # Match dangerouslySetInnerHTML with common user input patterns
       # Note: This regex is intentionally broad - AST enhancement filters false positives
       regex: ~r/^(?!.*\/\/).*dangerouslySetInnerHTML\s*[=:]\s*\{\s*\{?\s*__html\s*:\s*(?!(?:DOMPurify\.sanitize|sanitizeHtml|escapeHtml|purify)\s*\(|["'][^"']*["']\s*\}\}|(?:SAFE_|STATIC_))(?:.*\+.*[a-zA-Z_$][\w.$]*|`[^`]*\$\{|[a-zA-Z_$][\w.$]*)/im,
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Avoid dangerouslySetInnerHTML. Use React's default escaping or sanitize with DOMPurify.",

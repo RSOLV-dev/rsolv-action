@@ -71,7 +71,7 @@ defmodule RsolvApi.Security.Patterns.Rails.CallbackSecurityBypass do
         # Legacy _filter versions (exclude comments)
         ~r/^(?!.*#).*skip_before_filter.*?if:\s*->\s*\{[^}]*params\[/m
       ],
-      default_tier: :protected,
+      default_tier: :ai,
       cwe_id: "CWE-285",
       owasp_category: "A01:2021",
       recommendation: "Never use user input in Rails skip callback conditions. Use safe, predefined conditions in Rails controllers.",

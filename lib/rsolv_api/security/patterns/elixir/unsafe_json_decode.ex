@@ -120,7 +120,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeJsonDecode do
         # decode! with specific variable names suggesting user input
         ~r/(?:Jason|Poison|JSON)\.decode!\s*\(\s*(?:user_input|external_json|request_body|payload|raw_data|raw_json|json_string|data|input)\s*\)/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-20",
       owasp_category: "A05:2021",
       recommendation: "Use Jason.decode/1 with proper error handling instead of Jason.decode!/1 to prevent process crashes",

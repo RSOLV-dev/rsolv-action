@@ -84,7 +84,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.Ssrf do
           \{[^}]*url\s*:\s*(?:req\.|request\.|params\.|query\.|body\.|user|input|data)[\w\.]*
         )
       /x,
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-918",
       owasp_category: "A10:2021",
       recommendation: "Validate URLs against an allowlist, block private IP ranges and sensitive protocols. Consider using a proxy service for external requests.",

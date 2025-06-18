@@ -112,7 +112,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.OpenRedirect do
         ~r/(?:url|redirect_url|target)\s*=\s*(?:params|request\.(?:params|parameters)|user[\w_]*|@user)[\[\.]/, 
         ~r/redirect_to\s+(?:url|redirect_url|target)(?:\s|$)/
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
       recommendation: "Validate redirect URLs against an allowlist or use URL parsing to ensure redirects stay within your domain",

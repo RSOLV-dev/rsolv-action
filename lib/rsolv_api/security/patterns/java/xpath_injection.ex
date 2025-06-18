@@ -67,7 +67,7 @@ defmodule RsolvApi.Security.Patterns.Java.XpathInjection do
         # Variable assignment with XPath concatenation
         ~r/String\s+\w+\s*=\s*["'][^"']*(?:\/\/|\[@|text\(\)|count\()[^"']*["']\s*\+/
       ],
-      default_tier: :protected,
+      default_tier: :enterprise,
       cwe_id: "CWE-643",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized XPath with variable resolvers or sanitize input",

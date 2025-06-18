@@ -101,7 +101,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.MissingCsrfProtection do
         # LiveView forms without CSRF (edge case)
         ~r/phx-submit\s*=\s*["'][^"']*["'][^>]*>(?![^<]*csrf)/i
       ],
-      default_tier: :public,
+      default_tier: :ai,
       cwe_id: "CWE-352",
       owasp_category: "A01:2021",
       recommendation: "Enable CSRF protection in all state-changing forms. Phoenix includes it by default.",
