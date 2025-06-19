@@ -8,13 +8,14 @@ RSOLV is a GitHub Action that helps software development teams address their mai
 
 ## Features
 
-- 🔍 Automatically detects issues tagged for automation
+- 🔍 **Proactive Scanning**: Scan repositories for vulnerabilities before they're reported
 - 🤖 Uses AI to analyze issues and generate solutions
 - 🛡️ Runs in a secure, containerized environment
 - 🔀 Creates pull requests with detailed descriptions
 - 🔗 Supports external issue trackers (Jira, Linear, GitLab coming soon)
 - 🔐 Secure by design - no source code leaves your repository
 - 🔑 Single API key - no AI provider accounts needed
+- 🎯 **Find & Fix**: Complete workflow from vulnerability detection to remediation
 
 ## Security Features
 
@@ -95,6 +96,37 @@ securitySettings:
   timeoutSeconds: 300
   requireCodeReview: true
 ```
+
+## Proactive Security Scanning
+
+RSOLV can proactively scan your repository for vulnerabilities and create issues for discovered problems:
+
+```yaml
+name: Weekly Security Scan
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Mondays
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: RSOLV-dev/rsolv-action@main
+        with:
+          api_key: ${{ secrets.RSOLV_API_KEY }}
+          scan_mode: scan  # Enable proactive scanning
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+This will:
+1. Scan your entire repository for security vulnerabilities
+2. Group similar vulnerabilities together
+3. Create GitHub issues with detailed descriptions
+4. Apply the `rsolv:automate` label for processing
+
+See [docs/SCAN-MODE.md](docs/SCAN-MODE.md) for complete documentation.
 
 ## Enhanced Context Gathering (Claude Code)
 

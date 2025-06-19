@@ -44,9 +44,13 @@ inputs:
     description: 'Custom JQL query to find issues (overrides label-based search)'
     required: false
   mode:
-    description: 'Operation mode: full (default) or analyze-only'
+    description: 'Operation mode: full (default), analyze-only, or scan'
     required: false
     default: 'full'
+  scan_mode:
+    description: 'Scan mode operation: fix (default) or scan'
+    required: false
+    default: 'fix'
   enable_security_analysis:
     description: 'Enable security vulnerability analysis'
     required: false
@@ -68,6 +72,7 @@ runs:
     JIRA_RSOLV_LABEL: ${{ inputs.jira_rsolv_label }}
     JIRA_JQL: ${{ inputs.jira_jql }}
     RSOLV_MODE: ${{ inputs.mode }}
+    RSOLV_SCAN_MODE: ${{ inputs.scan_mode }}
     RSOLV_ENABLE_SECURITY_ANALYSIS: ${{ inputs.enable_security_analysis }}
 outputs:
   has_issues:
@@ -78,3 +83,7 @@ outputs:
     description: 'Educational explanation of the issues and fixes'
   issue_analysis:
     description: 'Full analysis of the issues in JSON format'
+  scan_results:
+    description: 'Results from vulnerability scan in JSON format'
+  created_issues:
+    description: 'GitHub issues created from scan results'

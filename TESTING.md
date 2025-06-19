@@ -281,6 +281,72 @@ bun test test1.test.ts test2.test.ts
    afterEach(() => restoreFetch());
    ```
 
+## 🌐 E2E Test Runner
+
+For end-to-end testing without global mocks, use the dedicated E2E test runner:
+
+### Purpose
+The E2E test runner is designed for integration testing with real services:
+- **No Global Mocks**: Tests run against real APIs and services
+- **Real Network Calls**: Actual HTTP requests to staging/production
+- **Authentic Environment**: Real file system, timers, and async operations
+- **Service Integration**: Test complete workflows end-to-end
+
+### Usage
+```bash
+# Run all E2E tests against staging
+./e2e-test-runner.sh
+
+# Run against production (with warning)
+./e2e-test-runner.sh -e production
+
+# Run specific category
+./e2e-test-runner.sh api
+./e2e-test-runner.sh workflow
+./e2e-test-runner.sh integration
+
+# Run single test
+./e2e-test-runner.sh single pattern-api
+
+# Verbose output with artifact preservation
+./e2e-test-runner.sh -v -p all
+```
+
+### Environment Requirements
+```bash
+export RSOLV_API_KEY="sk-your-api-key"
+export GITHUB_TOKEN="ghp_your-token"
+export RSOLV_API_URL="https://api.rsolv-staging.com"  # Optional
+```
+
+### E2E vs Unit Tests
+
+| Aspect | Unit Tests | E2E Tests |
+|--------|------------|-----------|
+| **Mocking** | Global mocks via `test-preload.ts` | No global mocks |
+| **Network** | Mocked fetch responses | Real API calls |
+| **Authentication** | Mock credentials | Real API keys |
+| **File System** | Mocked where needed | Real file operations |
+| **Environment** | Controlled test environment | Real staging/production |
+| **Speed** | Fast (< 2 minutes) | Slower (5-10 minutes) |
+| **Purpose** | Verify code logic | Verify service integration |
+
+### E2E Test Structure
+```typescript
+// E2E tests use real utilities
+const e2eUtils = (globalThis as any).__E2E_TEST_UTILS__;
+
+test('real API integration', async () => {
+  // Real HTTP client - no mocking
+  const client = e2eUtils.createHttpClient();
+  
+  // Actual API call
+  const response = await client.get('/api/v1/patterns/public/javascript');
+  
+  expect(response.patterns).toBeDefined();
+});
+```
+
 ## 📊 Test Runner Benefits
 
 1. **Pollution Prevention**: Proper cleanup between test runs
@@ -289,6 +355,7 @@ bun test test1.test.ts test2.test.ts
 4. **Comprehensive Logging**: Detailed output with color coding
 5. **Consistent Environment**: Clean state for each test run
 6. **Category Organization**: Logical grouping of related tests
+7. **E2E Isolation**: Separate runner for real integration testing
 
 ## 🔍 Legacy Test Scripts (Archived)
 
