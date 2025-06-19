@@ -75,6 +75,28 @@ export class SecurityDetectorV2 {
     return vulnerabilities;
   }
 
+  /**
+   * Alternative method that accepts an object with content, filePath, and language
+   * This is for compatibility with tests and other consumers
+   */
+  async detectIssues(params: { content: string; filePath: string; language: string }): Promise<any[]> {
+    const vulnerabilities = await this.detect(params.content, params.language);
+    
+    // Transform vulnerabilities to match expected format
+    return vulnerabilities.map(vuln => ({
+      patternId: vuln.cweId || `${vuln.type}-001`,
+      severity: vuln.severity,
+      line: vuln.line,
+      column: 1, // We don't track column, so default to 1
+      message: vuln.message,
+      description: vuln.description,
+      file: params.filePath,
+      type: vuln.type,
+      remediation: vuln.remediation,
+      confidence: vuln.confidence
+    }));
+  }
+
   async scanDirectory(directory: string): Promise<SecurityScanResult> {
     logger.info(`SecurityDetectorV2: Starting directory scan of ${directory}`);
     const results: SecurityScanResult = {

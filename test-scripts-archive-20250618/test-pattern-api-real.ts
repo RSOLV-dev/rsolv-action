@@ -8,7 +8,7 @@
 import { PatternAPIClient } from './src/security/pattern-api-client';
 import type { SecurityPattern } from './src/security/types';
 
-const API_URL = 'http://localhost:4001';
+const API_URL = 'http://localhost:4000';
 const TEST_API_KEY = 'rsolv_test_abc123';
 
 let testsPassed = 0;

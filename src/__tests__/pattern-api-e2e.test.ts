@@ -1,10 +1,40 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { SecurityDetectorV2 } from '../security/detector-v2';
-import { PatternApiClient } from '../security/pattern-api-client';
+import { PatternAPIClient } from '../security/pattern-api-client';
 import type { SecurityPattern, SecurityIssue } from '../security/types';
+import { VulnerabilityType } from '../security/types';
 
 // Mock server to simulate the pattern API
 import { createServer, Server } from 'http';
+
+// Helper function to convert VulnerabilityType enum to API string format
+function getApiTypeString(type: VulnerabilityType): string {
+  const typeMap: Record<VulnerabilityType, string> = {
+    [VulnerabilityType.SQL_INJECTION]: 'sql_injection',
+    [VulnerabilityType.XSS]: 'xss',
+    [VulnerabilityType.COMMAND_INJECTION]: 'command_injection',
+    [VulnerabilityType.PATH_TRAVERSAL]: 'path_traversal',
+    [VulnerabilityType.XXE]: 'xxe',
+    [VulnerabilityType.SSRF]: 'ssrf',
+    [VulnerabilityType.INSECURE_DESERIALIZATION]: 'insecure_deserialization',
+    [VulnerabilityType.WEAK_CRYPTO]: 'weak_crypto',
+    [VulnerabilityType.HARDCODED_SECRET]: 'hardcoded_secret',
+    [VulnerabilityType.INSECURE_RANDOM]: 'insecure_random',
+    [VulnerabilityType.OPEN_REDIRECT]: 'open_redirect',
+    [VulnerabilityType.LDAP_INJECTION]: 'ldap_injection',
+    [VulnerabilityType.XPATH_INJECTION]: 'xpath_injection',
+    [VulnerabilityType.NOSQL_INJECTION]: 'nosql_injection',
+    [VulnerabilityType.RCE]: 'rce',
+    [VulnerabilityType.DOS]: 'dos',
+    [VulnerabilityType.TIMING_ATTACK]: 'timing_attack',
+    [VulnerabilityType.CSRF]: 'csrf',
+    [VulnerabilityType.JWT]: 'jwt',
+    [VulnerabilityType.INFORMATION_DISCLOSURE]: 'information_disclosure',
+    [VulnerabilityType.CVE]: 'cve',
+    [VulnerabilityType.UNKNOWN]: 'unknown'
+  };
+  return typeMap[type] || 'unknown';
+}
 
 describe('Pattern API E2E Integration', () => {
   let server: Server;
@@ -15,15 +45,17 @@ describe('Pattern API E2E Integration', () => {
   const mockPatterns: SecurityPattern[] = [
     {
       id: 'sql-injection-001',
+      type: VulnerabilityType.SQL_INJECTION,
       name: 'SQL Injection via String Concatenation',
-      pattern: /query\s*\(\s*['"`].*?\+.*?['"`]\s*\)/,
-      severity: 'critical',
-      language: 'javascript',
-      category: 'injection',
       description: 'Detects SQL queries built with string concatenation',
-      recommendation: 'Use parameterized queries or prepared statements',
-      cwe: 'CWE-89',
-      owasp: 'A03:2021',
+      patterns: {
+        regex: [/query\s*\(\s*['"`].*?\+.*?['"`]\s*\)/]
+      },
+      severity: 'critical',
+      cweId: 'CWE-89',
+      owaspCategory: 'A03:2021',
+      languages: ['javascript'],
+      remediation: 'Use parameterized queries or prepared statements',
       examples: {
         vulnerable: 'db.query("SELECT * FROM users WHERE id = " + userId)',
         secure: 'db.query("SELECT * FROM users WHERE id = ?", [userId])'
@@ -31,15 +63,17 @@ describe('Pattern API E2E Integration', () => {
     },
     {
       id: 'xss-001',
+      type: VulnerabilityType.XSS,
       name: 'Cross-Site Scripting via innerHTML',
-      pattern: /\.innerHTML\s*=\s*[^'"`]+(?:\+|$)/,
-      severity: 'high',
-      language: 'javascript',
-      category: 'xss',
       description: 'Detects potential XSS via innerHTML with dynamic content',
-      recommendation: 'Use textContent or proper sanitization',
-      cwe: 'CWE-79',
-      owasp: 'A03:2021',
+      patterns: {
+        regex: [/\.innerHTML\s*=\s*[^'"`]+(?:\+|$)/]
+      },
+      severity: 'high',
+      cweId: 'CWE-79',
+      owaspCategory: 'A03:2021',
+      languages: ['javascript'],
+      remediation: 'Use textContent or proper sanitization',
       examples: {
         vulnerable: 'element.innerHTML = userInput',
         secure: 'element.textContent = userInput'
@@ -47,15 +81,17 @@ describe('Pattern API E2E Integration', () => {
     },
     {
       id: 'hardcoded-secret-001',
+      type: VulnerabilityType.HARDCODED_SECRET,
       name: 'Hardcoded API Key',
-      pattern: /(?:api[_-]?key|apikey)\s*[:=]\s*['"`][a-zA-Z0-9]{20,}['"`]/i,
-      severity: 'high',
-      language: 'javascript',
-      category: 'sensitive-data',
       description: 'Detects hardcoded API keys in source code',
-      recommendation: 'Use environment variables or secure key management',
-      cwe: 'CWE-798',
-      owasp: 'A02:2021',
+      patterns: {
+        regex: [/(?:api[_-]?key|apikey)\s*[:=]\s*['"`][a-zA-Z0-9]{20,}['"`]/i]
+      },
+      severity: 'high',
+      cweId: 'CWE-798',
+      owaspCategory: 'A02:2021',
+      languages: ['javascript'],
+      remediation: 'Use environment variables or secure key management',
       examples: {
         vulnerable: 'const API_KEY = "sk_live_abcd1234567890"',
         secure: 'const API_KEY = process.env.API_KEY'
@@ -69,18 +105,28 @@ describe('Pattern API E2E Integration', () => {
       server = createServer((req, res) => {
         res.setHeader('Content-Type', 'application/json');
         
-        if (req.url === '/patterns' && req.method === 'GET') {
+        if (req.url === '/javascript?format=enhanced' && req.method === 'GET') {
           res.statusCode = 200;
-          res.end(JSON.stringify({ patterns: mockPatterns }));
-        } else if (req.url === '/patterns?language=javascript' && req.method === 'GET') {
-          res.statusCode = 200;
+          const jsPatterns = mockPatterns.filter(p => p.languages.includes('javascript'));
           res.end(JSON.stringify({ 
-            patterns: mockPatterns.filter(p => p.language === 'javascript') 
-          }));
-        } else if (req.url === '/patterns?category=injection' && req.method === 'GET') {
-          res.statusCode = 200;
-          res.end(JSON.stringify({ 
-            patterns: mockPatterns.filter(p => p.category === 'injection') 
+            count: jsPatterns.length,
+            accessible_tiers: ['public', 'protected'],
+            patterns: jsPatterns.map(p => ({
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              type: getApiTypeString(p.type),
+              severity: p.severity,
+              languages: p.languages,
+              patterns: p.patterns.regex?.map(r => r.source) || [],
+              cwe_id: p.cweId,
+              owasp_category: p.owaspCategory,
+              recommendation: p.remediation,
+              test_cases: {
+                vulnerable: [p.examples.vulnerable],
+                safe: [p.examples.secure]
+              }
+            }))
           }));
         } else if (req.url === '/health' && req.method === 'GET') {
           res.statusCode = 200;
@@ -108,15 +154,19 @@ describe('Pattern API E2E Integration', () => {
 
   test('SecurityDetectorV2 fetches patterns from API and detects vulnerabilities', async () => {
     // Initialize detector with API client
-    const apiClient = new PatternApiClient({
-      baseUrl: apiUrl,
+    const apiClient = new PatternAPIClient({
+      apiUrl: apiUrl,
       apiKey: 'test-key'
     });
     
-    const detector = new SecurityDetectorV2({
-      apiClient,
-      cacheEnabled: false // Disable cache for testing
-    });
+    // Create a pattern source that uses the API client
+    const patternSource = {
+      getPatternsByLanguage: async (lang: string) => apiClient.fetchPatterns(lang),
+      getPatternsByType: async () => [],
+      getAllPatterns: async () => []
+    };
+    
+    const detector = new SecurityDetectorV2(patternSource);
 
     // Code with multiple vulnerabilities
     const vulnerableCode = `
@@ -140,11 +190,7 @@ describe('Pattern API E2E Integration', () => {
       }
     `;
 
-    const issues = await detector.detectIssues({
-      content: vulnerableCode,
-      filePath: 'test.js',
-      language: 'javascript'
-    });
+    const issues = await detector.detect(vulnerableCode, 'javascript');
 
     // Verify issues were detected
     expect(issues.length).toBe(3);
@@ -171,8 +217,8 @@ describe('Pattern API E2E Integration', () => {
   });
 
   test('SecurityDetectorV2 filters patterns by language', async () => {
-    const apiClient = new PatternApiClient({
-      baseUrl: apiUrl,
+    const apiClient = new PatternAPIClient({
+      apiUrl: apiUrl,
       apiKey: 'test-key'
     });
     
@@ -215,11 +261,7 @@ describe('Pattern API E2E Integration', () => {
     `;
 
     // Should fall back to local patterns
-    const issues = await detector.detectIssues({
-      content: vulnerableCode,
-      filePath: 'test.js',
-      language: 'javascript'
-    });
+    const issues = await detector.detect(vulnerableCode, 'javascript');
 
     // Should still detect the SQL injection using fallback patterns
     expect(issues.length).toBe(1);
@@ -227,8 +269,8 @@ describe('Pattern API E2E Integration', () => {
   });
 
   test('SecurityDetectorV2 respects severity filtering', async () => {
-    const apiClient = new PatternApiClient({
-      baseUrl: apiUrl,
+    const apiClient = new PatternAPIClient({
+      apiUrl: apiUrl,
       apiKey: 'test-key'
     });
     
@@ -259,8 +301,8 @@ describe('Pattern API E2E Integration', () => {
   });
 
   test('SecurityDetectorV2 provides detailed issue context', async () => {
-    const apiClient = new PatternApiClient({
-      baseUrl: apiUrl,
+    const apiClient = new PatternAPIClient({
+      apiUrl: apiUrl,
       apiKey: 'test-key'
     });
     
@@ -301,8 +343,8 @@ describe('Pattern API E2E Integration', () => {
   });
 
   test('SecurityDetectorV2 batches multiple file scans efficiently', async () => {
-    const apiClient = new PatternApiClient({
-      baseUrl: apiUrl,
+    const apiClient = new PatternAPIClient({
+      apiUrl: apiUrl,
       apiKey: 'test-key'
     });
     
@@ -347,8 +389,8 @@ describe('Pattern API E2E Integration', () => {
   });
 
   test('Pattern API health check works', async () => {
-    const apiClient = new PatternApiClient({
-      baseUrl: apiUrl,
+    const apiClient = new PatternAPIClient({
+      apiUrl: apiUrl,
       apiKey: 'test-key'
     });
 

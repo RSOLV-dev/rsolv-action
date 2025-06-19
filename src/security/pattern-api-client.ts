@@ -15,13 +15,19 @@ export interface PatternData {
   type: string;
   description: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  patterns: string[];  // Array of regex patterns
+  patterns: string[] | { regex: string[] };  // Can be array or object with regex array
   languages: string[];
   frameworks?: string[];
   recommendation: string;
-  cwe_id: string;      // API returns snake_case
-  owasp_category: string;  // API returns snake_case
-  test_cases: {        // API returns snake_case
+  cwe_id?: string;      // API returns snake_case, optional for compatibility
+  cweId?: string;       // Alternative camelCase format
+  owasp_category?: string;  // API returns snake_case, optional
+  owaspCategory?: string;   // Alternative camelCase format
+  test_cases?: {        // API returns snake_case, optional
+    vulnerable: string[];
+    safe: string[];
+  };
+  testCases?: {         // Alternative camelCase format
     vulnerable: string[];
     safe: string[];
   };
@@ -196,8 +202,26 @@ export class PatternAPIClient {
    * Convert API pattern format to RSOLV-action SecurityPattern format
    */
   private convertToSecurityPattern(apiPattern: PatternData): SecurityPattern {
+    // Handle different API response formats
+    let patternStrings: string[] = [];
+    
+    // Check if patterns is an array (language endpoint format)
+    if (Array.isArray(apiPattern.patterns)) {
+      patternStrings = apiPattern.patterns;
+    } 
+    // Check if patterns is an object with regex array (tier endpoint format)
+    else if (apiPattern.patterns && typeof apiPattern.patterns === 'object' && 
+             'regex' in apiPattern.patterns && Array.isArray((apiPattern.patterns as any).regex)) {
+      patternStrings = (apiPattern.patterns as any).regex;
+    }
+    // Fallback for unexpected format
+    else {
+      logger.warn(`Unexpected patterns format for ${apiPattern.id}:`, apiPattern.patterns);
+      patternStrings = [];
+    }
+    
     // Compile regex patterns from strings
-    const regexPatterns = apiPattern.patterns.map(r => {
+    const regexPatterns = patternStrings.map(r => {
       try {
         // Handle both simple patterns and patterns with flags
         const match = r.match(/^\/(.*)\/([gimsuvy]*)$/);
@@ -230,10 +254,13 @@ export class PatternAPIClient {
       },
       languages: apiPattern.languages,
       frameworks: apiPattern.frameworks || [],
-      cweId: apiPattern.cwe_id,
-      owaspCategory: apiPattern.owasp_category,
+      cweId: apiPattern.cwe_id || apiPattern.cweId || '',
+      owaspCategory: apiPattern.owasp_category || apiPattern.owaspCategory || '',
       remediation: apiPattern.recommendation,
-      testCases: apiPattern.test_cases,
+      examples: {
+        vulnerable: apiPattern.test_cases?.vulnerable?.[0] || apiPattern.testCases?.vulnerable?.[0] || '',
+        secure: apiPattern.test_cases?.safe?.[0] || apiPattern.testCases?.safe?.[0] || ''
+      },
       // AST Enhancement fields
       astRules: apiPattern.ast_rules,
       contextRules,
@@ -279,5 +306,43 @@ export class PatternAPIClient {
     };
     
     return typeMap[type] || VulnerabilityType.UNKNOWN;
+  }
+
+  /**
+   * Clear the pattern cache
+   * Useful when patterns might have been updated on the server
+   */
+  clearCache(): void {
+    this.cache.clear();
+    logger.info('Pattern cache cleared');
+  }
+
+  /**
+   * Check the health of the Pattern API
+   * @returns Health status object
+   */
+  async checkHealth(): Promise<{ status: string; message?: string }> {
+    try {
+      const response = await fetch(`${this.apiUrl}/health`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'RSOLV-Action/1.0'
+        }
+      });
+
+      if (response.ok) {
+        return { status: 'healthy' };
+      } else {
+        return { 
+          status: 'unhealthy', 
+          message: `API returned status ${response.status}` 
+        };
+      }
+    } catch (error) {
+      return { 
+        status: 'unhealthy', 
+        message: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
   }
 }

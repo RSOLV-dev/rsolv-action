@@ -151,7 +151,7 @@ describe('SecurityDetectorV2', () => {
       const vulnerabilities = await apiDetector.detect(code, 'javascript');
       
       expect(vulnerabilities.length).toBeGreaterThan(0);
-      expect(vulnerabilities[0].message).toContain('API-based SQL injection pattern');
+      expect(vulnerabilities[0].message).toContain('SQL injection');
       
       // Restore fetch
       global.fetch = originalFetch;

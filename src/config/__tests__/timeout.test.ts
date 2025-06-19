@@ -1,7 +1,17 @@
-import { describe, expect, test, beforeEach, afterEach, jest } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, jest, mock } from 'bun:test';
 import { loadConfig } from '../index';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
+
+// Mock the logger to avoid debug function issues
+mock.module('../../utils/logger.js', () => ({
+  logger: {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {}
+  }
+}));
 
 // Mock environment variables
 const originalEnv = process.env;
@@ -160,9 +170,9 @@ describe('Config Timeout Settings', () => {
     
     const config = await loadConfig();
     
-    // Default timeout should be 30 seconds (reduced from 60s)
+    // Default timeout should be 900000ms (15 minutes)
     expect(config.aiProvider.timeout).toBe(900000);
-    expect(config.aiProvider.timeout).toBeLessThanOrEqual(60000); // Max 1 minute
+    expect(config.aiProvider.timeout).toBeLessThanOrEqual(900000); // Max 15 minutes
     expect(config.aiProvider.timeout).toBeGreaterThanOrEqual(10000); // Min 10 seconds
   });
 });

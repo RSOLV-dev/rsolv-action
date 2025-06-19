@@ -3,6 +3,16 @@ import { loadConfig } from '../../src/config/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Mock the logger to avoid debug function issues
+mock.module('../../src/utils/logger.js', () => ({
+  logger: {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {}
+  }
+}));
+
 // Create mockFiles object directly
 const mockFiles: Record<string, string> = {};
 
