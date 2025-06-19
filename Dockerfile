@@ -29,7 +29,13 @@ CMD ["bun", "test"]
 FROM base AS builder
 
 # Install Claude Code CLI
-RUN curl -fsSL https://claude.ai/install.sh | sh
+# The installation script puts claude in ~/.local/bin, so we need to find it
+RUN curl -fsSL https://claude.ai/install.sh | sh && \
+    # Find where claude was installed and make it available
+    find /root -name claude -type f -executable 2>/dev/null | head -1 | xargs -I {} cp {} /usr/local/bin/claude && \
+    chmod +x /usr/local/bin/claude && \
+    # Verify it's installed
+    ls -la /usr/local/bin/claude
 
 # Install production dependencies only
 RUN bun install --frozen-lockfile --production
