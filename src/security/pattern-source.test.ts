@@ -4,11 +4,11 @@ import {
   ApiPatternSource, 
   HybridPatternSource,
   createPatternSource 
-} from './pattern-source';
-import { VulnerabilityType } from './types';
+} from './pattern-source.js';
+import { VulnerabilityType } from './types.js';
 
 // Mock the logger module
-mock.module('../utils/logger', () => ({
+mock.module('../utils/logger.js', () => ({
   logger: {
     info: mock(() => {}),
     warn: mock(() => {}),

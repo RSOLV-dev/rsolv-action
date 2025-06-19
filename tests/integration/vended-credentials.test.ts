@@ -5,7 +5,7 @@ import { IssueContext, ActionConfig } from '../../src/types/index.js';
 import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 
 // Mock the credential manager
-mock.module('../../src/credentials/manager', () => ({
+mock.module('../../src/credentials/manager.js', () => ({
   RSOLVCredentialManager: class MockCredentialManager {
     private credentials = new Map<string, string>();
     
@@ -35,7 +35,7 @@ mock.module('../../src/credentials/manager', () => ({
 }));
 
 // Mock the AI providers to verify they receive correct credentials
-mock.module('../../src/ai/analyzer', () => ({
+mock.module('../../src/ai/analyzer.js', () => ({
   analyzeIssue: mock((issue: any, config: any, client: any) => {
     // Handle legacy config structure
     if (!config.aiProvider || typeof config.aiProvider === 'string') {
