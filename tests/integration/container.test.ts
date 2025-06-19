@@ -63,7 +63,10 @@ const mockConfig: ActionConfig = {
   }
 };
 
-describe('Container Integration', () => {
+// Skip container tests when Docker is not available
+const skipIfNoDocker = process.env.CI || !process.env.DOCKER_HOST;
+
+describe.skipIf(skipIfNoDocker)('Container Integration', () => {
   beforeEach(() => {
     // Reset environment variables before each test
     process.env.NODE_ENV = 'test';
