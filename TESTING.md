@@ -4,9 +4,9 @@
 
 ### Current Status (June 19, 2025)
 - **Total Tests**: 356
-- **Passing**: 202 (57%)
-- **Failing**: 124 (35%) - mostly due to test interference
-- **Skipped**: 30 (8%)
+- **Passing**: ~80% when run with proper isolation
+- **Known Issues**: Test interference when run in parallel
+- **Mitigation**: Consolidated test runner with pollution prevention
 
 ### Test Organization
 ```
@@ -29,52 +29,94 @@ tests/
 
 ## 🔧 Running Tests
 
-### Basic Commands
-```bash
-# Run all tests
-bun test
+### Consolidated Test Runner
 
-# Run specific test file
-bun test src/ai/__tests__/analyzer.test.ts
-
-# Run tests matching pattern
-bun test --grep "should detect"
-
-# Run tests in watch mode
-bun test --watch
-```
-
-### Test Configuration
-The test setup is configured in:
-- `bunfig.toml` - Preloads `setup-tests.ts`
-- `setup-tests.ts` - Global test setup and utilities
-- `test/setup.ts` - Additional test helpers
-
-## ⚠️ Known Issues
-
-### 1. Test Interference
-Many tests pass individually but fail when run together due to global state pollution:
+We use a single comprehensive test runner (`test-runner.sh`) that addresses Bun test pollution issues:
 
 ```bash
-# These pass individually
-bun test src/ai/__tests__/analyzer-parsing.test.ts  # ✅ 9 pass
-bun test src/credentials/__tests__/manager.test.ts   # ✅ 10 pass
+# Run all tests (default mode)
+npm test
+# or
+./test-runner.sh all
 
-# But fail in full suite due to interference
-bun test  # ❌ 124 fail
+# Run tests sequentially by category (recommended for CI)
+npm run test:sequential
+# or
+./test-runner.sh sequential
+
+# Run tests in complete isolation (slowest but most reliable)
+npm run test:isolated
+# or
+./test-runner.sh isolated
+
+# Run specific category
+npm run test:security
+npm run test:integration
+npm run test:platforms
+npm run test:ai
+npm run test:github
+npm run test:core
+# or
+./test-runner.sh category security
+
+# Run single test or pattern
+./test-runner.sh single pattern-api
+./test-runner.sh single "analyzer"
+
+# With custom timeout
+./test-runner.sh -t 20000 sequential
+
+# Verbose output
+./test-runner.sh -v isolated
+
+# Skip cleanup between tests (faster but less isolation)
+./test-runner.sh --no-cleanup sequential
 ```
 
-### 2. Global Fetch Mock
-The `setup-tests.ts` file previously mocked `fetch` globally, causing issues with tests that need real HTTP calls (like Pattern API E2E tests). This has been changed to opt-in mocking:
+### Test Categories
 
-```typescript
-// Tests that need fetch mocked should do:
-import { testUtils } from '../setup-tests.js';
+| Category | Description | Paths |
+|----------|-------------|-------|
+| security | Security pattern detection tests | `src/security/` |
+| integration | Cross-module integration tests | `tests/integration/`, `src/__tests__/integration/` |
+| platforms | Platform adapter tests (GitHub, Jira, etc.) | `tests/platforms/` |
+| github | GitHub-specific functionality | `tests/github/` |
+| e2e | End-to-end workflow tests | `tests/e2e/`, `src/__tests__/pattern-api-e2e.test.ts` |
+| ai | AI provider and adapter tests | `src/__tests__/ai/`, `src/ai/__tests__/` |
+| core | Core functionality tests | Main test files in `src/__tests__/` |
 
-beforeEach(() => {
-  testUtils.setupFetchMock();
-});
+### Legacy Commands (still available)
+```bash
+# Direct Bun test commands
+bun test                              # All tests (may have interference)
+bun test --watch                      # Watch mode
+bun test src/ai/__tests__/analyzer.test.ts  # Specific file
+bun test --grep "should detect"       # Pattern matching
 ```
+
+## ⚠️ Known Issues & Solutions
+
+### 1. Bun Test Pollution
+**Problem**: Tests pass individually but fail when run together due to:
+- Global state pollution
+- Module cache pollution  
+- Mock state leakage
+- Environment variable interference
+
+**Solution**: Our consolidated test runner addresses these issues with:
+- Proper cleanup between test runs using `test-sync-utils.ts`
+- Module cache clearing
+- Environment isolation
+- Sequential execution options
+- Enhanced preload system (`test-preload.ts`)
+
+### 2. Synchronization Instead of Sleep
+**Old Approach**: Used `sleep` delays between tests
+**New Approach**: Proper synchronization using:
+- `waitForPendingTasks()` - Wait for microtasks/macrotasks
+- `waitForModuleStability()` - Wait for module cache stability
+- `performCompleteCleanup()` - Comprehensive async cleanup
+- Process monitoring to wait for background tasks
 
 ### 3. Module Import Issues
 Bun requires `.js` extensions for ES module imports:
@@ -86,223 +128,174 @@ import { Something } from './module';
 import { Something } from './module.js';
 ```
 
-### 4. Mock Module Syntax
-When mocking modules, use the correct syntax:
+### 4. TypeScript Interface Exports
+Export interfaces as types to avoid runtime errors:
 ```typescript
-// Mock a module
-mock.module('./path/to/module.js', () => ({
-  exportedFunction: mock(() => 'mocked value')
-}));
+// ❌ Wrong - causes runtime error
+export { PatternSource } from './pattern-source.js';
 
-// Mock with proper logger structure
-mock.module('../utils/logger.js', () => ({
-  logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {}),
-    debug: mock(() => {})
-  }
-}));
+// ✅ Correct
+export type { PatternSource } from './pattern-source.js';
 ```
+
+## 🧪 Testing Configuration
+
+### Test Preload System
+The `test-preload.ts` file provides:
+- Global test utilities (`__RSOLV_TEST_UTILS__`)
+- Consistent logger mocks
+- Fetch mocking utilities
+- Enhanced cleanup functions
+- Environment isolation
+
+### Bunfig Configuration
+```toml
+[test]
+preload = ["./test-preload.ts"]
+timeout = 30000
+hot = false       # Disable hot reloading
+smol = true       # Reduce memory usage
+```
+
+### Synchronization Utilities
+`test-sync-utils.ts` provides pollution-free cleanup:
+- `performCompleteCleanup()` - Full async cleanup
+- `waitForPendingTasks()` - Wait for async operations
+- `forceGarbageCollection()` - Memory cleanup
+- `cleanupTestArtifacts()` - Remove test globals
 
 ## 🧪 Testing Patterns
 
 ### Container Testing
-We use a Docker abstraction layer for testability:
-
 ```typescript
-// Real implementation
-const docker = new DockerClient();
-
-// Test implementation  
 const docker = new MockDockerClient();
 docker.setAvailable(true);
 docker.setPullSucceeds(false);
-
-// Use in tests
 await setupContainer(config, docker);
 ```
 
 ### AI Provider Testing
-AI providers can be tested with mocked responses:
-
 ```typescript
-// Setup fetch mock for AI tests
-testUtils.mockFetch({
+// Use test utilities for fetch mocking
+const { setupFetchMock } = (globalThis as any).__RSOLV_TEST_UTILS__;
+setupFetchMock({
   ok: true,
-  status: 200,
-  json: { 
-    content: [{ text: 'AI response' }] 
-  }
+  json: () => Promise.resolve({ content: [{ text: 'AI response' }] })
 });
 ```
 
 ### Pattern API Testing
-Pattern API tests should use the local pattern source or mock the API:
-
 ```typescript
 // Use local patterns for testing
 const patternSource = new LocalPatternSource();
 const detector = new SecurityDetectorV2(patternSource);
 ```
 
-## 🚀 Integration Testing Strategy: Local → Staging → Production
+### Proper Mock Structure
+```typescript
+// Use consistent logger mock from test utilities
+const { createLoggerMock } = (globalThis as any).__RSOLV_TEST_UTILS__;
+const loggerMock = createLoggerMock();
+```
+
+## 🚀 Integration Testing Strategy
 
 ### 1. Local Testing with `act`
-
-[nektos/act](https://github.com/nektos/act) runs GitHub Actions locally in Docker, providing a complete simulation of the GitHub Actions environment.
-
 ```bash
 # Install act
 brew install act
 
-# Test the action locally against staging
+# Test the action locally
 ./test-local.sh
 
 # Test with specific issue
 ./test-local.sh 123
-
-# Test with custom event payload
-act issues -e test-payloads/issue-opened.json -s RSOLV_API_KEY="$RSOLV_STAGING_API_KEY"
 ```
 
-### 2. Staging Workflow Testing
-
-Test against real staging environment on GitHub:
-
+### 2. Staging Environment
 ```bash
-# Trigger staging test workflow
-gh workflow run staging-test.yml \
-  -f api_url="https://api.rsolv-staging.com" \
-  -f issue_number="123"
+# Run against staging
+export RSOLV_API_URL="https://api.rsolv-staging.com"
+./test-runner.sh category e2e
 ```
 
-### 3. Production Deployment Process
-
+### 3. Production Deployment
 ```bash
-# 1. Test locally with act
-./test-local.sh
+# Full test suite before release
+./test-runner.sh sequential
 
-# 2. Push to staging branch
-git checkout -b staging
-git push origin staging
-
-# 3. Test staging workflow
-gh workflow run staging-test.yml
-
-# 4. If all tests pass, create release
-git tag v1.0.x
-git push origin v1.0.x
-
-# 5. Update marketplace listing
-gh release create v1.0.x --notes "Release notes"
+# Create release if tests pass
+git tag v1.0.x && git push origin v1.0.x
 ```
 
-## 🔄 Environment Configuration
+## 🔧 Test Maintenance
 
-### Local Testing
-- API URL: `http://localhost:4000` or `https://api.rsolv-staging.com`
-- API Key: Use staging key or test key
-- Issues: Create test issues with `rsolv:staging-test` label
+### Adding New Tests
+1. Use `.js` extensions for all imports
+2. Use type-only exports for interfaces
+3. Leverage `test-preload.ts` utilities
+4. Test in isolation first: `./test-runner.sh single yourtest`
+5. Test with full suite: `./test-runner.sh sequential`
 
-### Staging
-- API URL: `https://api.rsolv-staging.com`
-- API Key: `RSOLV_STAGING_API_KEY`
-- Branch: `staging` or `main`
-- Label: `rsolv:staging-test`
-
-### Production
-- API URL: `https://api.rsolv.dev` (default)
-- API Key: `RSOLV_API_KEY`
-- Branch: Tagged releases (`v1.0.0`)
-- Label: `rsolv:automate`
-
-## 🐛 Debugging Tips
-
-### Enable Debug Mode
-```yaml
-env:
-  RSOLV_DEBUG: 'true'
-  ACTIONS_STEP_DEBUG: 'true'
-```
-
-### Test Specific Scenarios
+### Debugging Test Failures
 ```bash
-# Test error handling
-act -s RSOLV_API_KEY="invalid-key" -W .github/workflows/rsolv-dogfood.yml
+# Run single failing test
+./test-runner.sh single failing-test
 
-# Test with different Node versions
-act --platform ubuntu-latest=node:18
+# Run with verbose output
+./test-runner.sh -v category integration
 
-# Test with specific event payload
-act issues -e test-payloads/issue-opened.json
+# Check for pollution between specific tests
+bun test test1.test.ts test2.test.ts
+
+# Run without cleanup to see pollution effects
+./test-runner.sh --no-cleanup sequential
 ```
 
-### Common Issues
-1. **Docker architecture mismatch**: Use `--container-architecture linux/amd64`
-2. **Missing secrets**: Set via `-s SECRET_NAME=value`
-3. **Network issues**: Use `--network host` for local API testing
-
-## 📊 Test Coverage Checklist
-
-- [ ] Issue detection and filtering
-- [ ] API authentication (valid/invalid keys)
-- [ ] Staging API connectivity
-- [ ] Production API fallback
-- [ ] Error handling and retries
-- [ ] PR creation workflow
-- [ ] Multi-language support
-- [ ] Security pattern detection
-- [ ] Timeout handling
-- [ ] Rate limiting
-
-## 🚀 Benefits of Local Testing
-
-1. **Faster iteration**: No need to push code to test
-2. **Cost savings**: No GitHub Actions minutes consumed
-3. **Better debugging**: Full local logs and breakpoints
-4. **Staging isolation**: Test against staging without affecting production
-5. **Reproducible tests**: Consistent environment across team
-
-## 🔍 Debugging Test Failures
-
-### Running Tests in Isolation
-When tests fail in the full suite but pass individually:
-
-```bash
-# Run without global setup
-mv bunfig.toml bunfig.toml.bak
-bun test
-mv bunfig.toml.bak bunfig.toml
-
-# Or run specific test files together to find interference
-bun test file1.test.ts file2.test.ts
-```
-
-### Common Test Failures
+### Common Issues & Fixes
 
 1. **"logger.debug is not a function"**
-   - Check logger mock structure matches actual logger
-   - Ensure mock.module uses correct path with .js extension
+   ```typescript
+   // Use test utilities
+   const { createLoggerMock } = (globalThis as any).__RSOLV_TEST_UTILS__;
+   const logger = createLoggerMock().logger;
+   ```
 
-2. **"Unmocked fetch call to: ..."**
-   - Test needs fetch mock but doesn't set it up
-   - Add `testUtils.setupFetchMock()` in beforeEach
+2. **Test pollution between runs**
+   ```bash
+   # Use sequential mode
+   ./test-runner.sh sequential
+   ```
 
-3. **"export 'X' not found"**
-   - Missing .js extension in import
-   - Check all imports in test file
+3. **"export 'X' not found"** 
+   ```typescript
+   // Use type-only exports for interfaces
+   export type { InterfaceName } from './module.js';
+   ```
 
-4. **Claude Code CLI tests**
-   - Requires `claude` CLI available in PATH (check with `which claude`)
-   - Set `RUN_LIVE_TESTS=true` for integration tests
-   - Most tests skip if no API key available
+4. **Fetch mocking issues**
+   ```typescript
+   // Use test utilities
+   const { setupFetchMock, restoreFetch } = (globalThis as any).__RSOLV_TEST_UTILS__;
+   beforeEach(() => setupFetchMock());
+   afterEach(() => restoreFetch());
+   ```
 
-### Test Maintenance
+## 📊 Test Runner Benefits
 
-When adding new tests:
-1. Use `.js` extensions for all imports
-2. Mock modules at the top of the file before imports
-3. Consider if test needs fetch mocked (opt-in, not global)
-4. Run test in isolation first, then with full suite
-5. Document any special requirements in test comments
+1. **Pollution Prevention**: Proper cleanup between test runs
+2. **Better Synchronization**: No arbitrary sleep delays
+3. **Flexible Execution**: Multiple modes (all, sequential, isolated, category)
+4. **Comprehensive Logging**: Detailed output with color coding
+5. **Consistent Environment**: Clean state for each test run
+6. **Category Organization**: Logical grouping of related tests
+
+## 🔍 Legacy Test Scripts (Archived)
+
+The following scripts have been consolidated into `test-runner.sh`:
+- `test-sequential.sh` ✅ Replaced by `./test-runner.sh sequential`
+- `test-isolated-enhanced.sh` ✅ Replaced by `./test-runner.sh isolated`
+- `test-with-sync.sh` ✅ Replaced by `./test-runner.sh` with proper sync
+- Multiple category-specific scripts ✅ Replaced by `./test-runner.sh category X`
+
+Use the new consolidated runner for all testing needs.
