@@ -12,6 +12,10 @@ on:
           - 'true'
           - 'false'
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   scan-repository:
     runs-on: ubuntu-latest
