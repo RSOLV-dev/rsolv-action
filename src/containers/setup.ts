@@ -20,8 +20,15 @@ export async function setupContainer(config: ActionConfig): Promise<void> {
     // Validate container configuration
     validateContainerConfig(config.containerConfig);
     
-    // Ensure Docker is available
-    await checkDockerAvailability();
+    // Check Docker availability - gracefully disable if not available
+    try {
+      await checkDockerAvailability();
+    } catch (error) {
+      logger.warn('Docker not available, disabling container analysis', error);
+      // Disable container analysis rather than failing
+      config.containerConfig.enabled = false;
+      return;
+    }
     
     // Pull the required container image
     await pullContainerImage(config.containerConfig);
