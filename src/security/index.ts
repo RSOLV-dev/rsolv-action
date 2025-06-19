@@ -1,12 +1,12 @@
 // Export the new detector and pattern system
 export { SecurityDetectorV2 } from './detector-v2.js';
 export { 
-  PatternSource,
   LocalPatternSource,
   ApiPatternSource, 
   HybridPatternSource,
   createPatternSource 
 } from './pattern-source.js';
+export type { PatternSource } from './pattern-source.js';
 export { PatternAPIClient } from './pattern-api-client.js';
 
 // Export types

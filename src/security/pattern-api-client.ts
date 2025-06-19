@@ -235,13 +235,8 @@ export class PatternAPIClient {
       }
     }).filter(Boolean) as RegExp[];
 
-    // Convert context rules exclude_paths to RegExp objects
-    const contextRules = apiPattern.context_rules ? {
-      ...apiPattern.context_rules,
-      excludePaths: apiPattern.context_rules.exclude_paths?.map(path => 
-        typeof path === 'string' ? new RegExp(path) : path
-      ) || []
-    } : undefined;
+    // Convert context rules if present
+    const contextRules = apiPattern.context_rules || undefined;
 
     return {
       id: apiPattern.id,
@@ -250,7 +245,9 @@ export class PatternAPIClient {
       severity: apiPattern.severity,
       description: apiPattern.description,
       patterns: {
-        regex: regexPatterns
+        regex: regexPatterns,
+        // Add AST rules to patterns object if present
+        ast: apiPattern.ast_rules ? [JSON.stringify(apiPattern.ast_rules)] : undefined
       },
       languages: apiPattern.languages,
       frameworks: apiPattern.frameworks || [],

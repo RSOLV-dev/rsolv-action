@@ -1,5 +1,6 @@
 import { Vulnerability, VulnerabilityType, SecurityScanResult } from './types.js';
-import { PatternSource, createPatternSource } from './pattern-source.js';
+import { createPatternSource } from './pattern-source.js';
+import type { PatternSource } from './pattern-source.js';
 import { logger } from '../utils/logger.js';
 
 /**

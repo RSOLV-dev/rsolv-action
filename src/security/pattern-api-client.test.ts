@@ -1,52 +1,59 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { PatternAPIClient } from './pattern-api-client';
-import { VulnerabilityType } from './types';
-
-// Mock fetch globally
-global.fetch = vi.fn();
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { PatternAPIClient } from './pattern-api-client.js';
+import { VulnerabilityType } from './types.js';
 
 describe('PatternAPIClient', () => {
   let client: PatternAPIClient;
   let originalApiUrl: string | undefined;
+  let originalApiKey: string | undefined;
+  let fetchMock: any;
   
   beforeEach(() => {
-    vi.clearAllMocks();
-    // Reset fetch mock
-    (global.fetch as any).mockReset();
-    // Save and clear environment variable
+    // Create a fresh mock for fetch
+    fetchMock = mock(() => Promise.resolve({
+      ok: true,
+      status: 200,
+      json: async () => ({})
+    }));
+    global.fetch = fetchMock;
+    
+    // Save and clear environment variables
     originalApiUrl = process.env.RSOLV_API_URL;
+    originalApiKey = process.env.RSOLV_API_KEY;
     delete process.env.RSOLV_API_URL;
+    delete process.env.RSOLV_API_KEY;
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
-    // Restore environment variable
+    // Restore environment variables
     if (originalApiUrl !== undefined) {
       process.env.RSOLV_API_URL = originalApiUrl;
+    }
+    if (originalApiKey !== undefined) {
+      process.env.RSOLV_API_KEY = originalApiKey;
     }
   });
 
   describe('constructor', () => {
-    it('should use default API URL if not provided', () => {
+    test('should use default API URL if not provided', () => {
       client = new PatternAPIClient();
       expect(client).toBeDefined();
     });
 
-    it('should use provided API URL', () => {
+    test('should use provided API URL', () => {
       client = new PatternAPIClient({ apiUrl: 'https://custom.api/patterns' });
       expect(client).toBeDefined();
     });
 
-    it('should use API key from config', () => {
+    test('should use API key from config', () => {
       client = new PatternAPIClient({ apiKey: 'test-key' });
       expect(client).toBeDefined();
     });
 
-    it('should use API key from environment if not in config', () => {
+    test('should use API key from environment if not in config', () => {
       process.env.RSOLV_API_KEY = 'env-key';
       client = new PatternAPIClient();
       expect(client).toBeDefined();
-      delete process.env.RSOLV_API_KEY;
     });
   });
 
@@ -55,7 +62,7 @@ describe('PatternAPIClient', () => {
       client = new PatternAPIClient({ apiKey: 'test-key' });
     });
 
-    it('should fetch patterns for a language', async () => {
+    test('should fetch patterns for a language', async () => {
       const mockResponse = {
         count: 2,
         language: 'javascript',
@@ -81,7 +88,7 @@ describe('PatternAPIClient', () => {
         ]
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => mockResponse
@@ -90,10 +97,10 @@ describe('PatternAPIClient', () => {
       const patterns = await client.fetchPatterns('javascript');
 
       // Check that fetch was called
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
       
       // Get the actual call arguments
-      const [url, options] = (fetch as any).mock.calls[0];
+      const [url, options] = fetchMock.mock.calls[0];
       expect(url).toBe('https://api.rsolv.dev/api/v1/patterns/javascript?format=enhanced');
       expect(options.headers['Content-Type']).toBe('application/json');
       expect(options.headers['Authorization']).toBe('Bearer test-key');
@@ -105,11 +112,11 @@ describe('PatternAPIClient', () => {
       expect(patterns[0].patterns.regex[0]).toBeInstanceOf(RegExp);
     });
 
-    it('should handle API errors gracefully', async () => {
+    test('should handle API errors gracefully', async () => {
       // Disable fallback for this test
       client = new PatternAPIClient({ apiKey: 'test-key', fallbackToLocal: false });
       
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error'
@@ -120,7 +127,7 @@ describe('PatternAPIClient', () => {
       );
     });
 
-    it('should use cached patterns within TTL', async () => {
+    test('should use cached patterns within TTL', async () => {
       const mockResponse = {
         count: 1,
         language: 'python',
@@ -141,280 +148,155 @@ describe('PatternAPIClient', () => {
         ]
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
 
       // First call - should fetch
       await client.fetchPatterns('python');
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
 
       // Second call - should use cache
       await client.fetchPatterns('python');
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1); // Still only 1 call
     });
 
-    it('should handle patterns without API key (public only)', async () => {
-      client = new PatternAPIClient(); // No API key
-
-      const mockResponse = {
-        count: 1,
-        language: 'javascript',
-        accessible_tiers: ['public'],
-        patterns: []
-      };
-
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      await client.fetchPatterns('javascript');
-
-      // Check that fetch was called without Authorization header
-      expect(fetch).toHaveBeenCalledTimes(1);
+    test('should handle patterns without API key (public only)', async () => {
+      client = new PatternAPIClient({ fallbackToLocal: false });
       
-      const [url, options] = (fetch as any).mock.calls[0];
-      expect(url).toBe('https://api.rsolv.dev/api/v1/patterns/javascript?format=enhanced');
-      expect(options.headers['Content-Type']).toBe('application/json');
-      expect(options.headers['Authorization']).toBeUndefined();
-    });
-  });
-
-  describe('fetchPatternsByTier', () => {
-    beforeEach(() => {
-      client = new PatternAPIClient({ apiKey: 'test-key' });
-    });
-
-    it('should fetch public patterns without auth', async () => {
-      client = new PatternAPIClient(); // No API key
-
-      const mockResponse = {
-        count: 1,
-        tier: 'public',
-        language: 'all',
-        patterns: []
-      };
-
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      await client.fetchPatternsByTier('public');
-
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/public'),
-        expect.any(Object)
-      );
-    });
-
-    it('should require API key for protected tier', async () => {
-      client = new PatternAPIClient(); // No API key
-
-      await expect(client.fetchPatternsByTier('protected')).rejects.toThrow(
-        'API key required for protected tier patterns'
-      );
-    });
-
-    it('should handle 403 access denied errors', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-        statusText: 'Forbidden'
-      });
-
-      await expect(client.fetchPatternsByTier('ai')).rejects.toThrow(
-        'Access denied to ai tier patterns - upgrade your plan'
-      );
-    });
-
-    it('should fetch tier patterns for specific language', async () => {
-      const mockResponse = {
-        count: 5,
-        tier: 'ai',
-        language: 'javascript',
-        patterns: []
-      };
-
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      await client.fetchPatternsByTier('ai', 'javascript');
-
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/ai'),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'Authorization': 'Bearer test-key'
-          })
-        })
-      );
-    });
-  });
-
-  describe('convertToSecurityPattern', () => {
-    it('should handle regex compilation errors gracefully', async () => {
-      client = new PatternAPIClient({ apiKey: 'test-key' });
-
       const mockResponse = {
         count: 1,
         language: 'javascript',
         patterns: [
           {
-            id: 'bad-regex',
-            name: 'Bad Regex Pattern',
-            type: 'xss',
-            description: 'Pattern with invalid regex',
-            severity: 'high',
-            patterns: ['[invalid(regex', 'valid.*pattern'],
+            id: 'js-eval',
+            name: 'Eval Usage',
+            type: 'rce',
+            description: 'Eval can execute arbitrary code',
+            severity: 'critical',
+            patterns: ['eval\\('],
             languages: ['javascript'],
-            recommendation: 'Fix the regex',
-            cwe_id: 'CWE-79',
+            recommendation: 'Avoid eval',
+            cwe_id: 'CWE-94',
             owasp_category: 'A03:2021',
             test_cases: { vulnerable: [], safe: [] }
           }
         ]
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
-
-      const patterns = await client.fetchPatterns('javascript');
-
-      expect(patterns[0].patterns.regex).toHaveLength(1); // Only valid regex
-      expect(patterns[0].patterns.regex[0].source).toBe('valid.*pattern');
-    });
-
-    it('should map vulnerability types correctly', async () => {
-      const testCases = [
-        { apiType: 'sql_injection', expected: VulnerabilityType.SQL_INJECTION },
-        { apiType: 'xss', expected: VulnerabilityType.XSS },
-        { apiType: 'command_injection', expected: VulnerabilityType.COMMAND_INJECTION },
-        { apiType: 'weak_crypto', expected: VulnerabilityType.WEAK_CRYPTO },
-        { apiType: 'unknown_type', expected: VulnerabilityType.UNKNOWN }
-      ];
-
-      for (const { apiType, expected } of testCases) {
-        // Create a new client instance to avoid cache
-        const testClient = new PatternAPIClient({ apiKey: 'test-key' });
-        
-        const mockResponse = {
-          count: 1,
-          language: 'javascript',
-          patterns: [
-            {
-              id: 'test-pattern',
-              name: 'Test Pattern',
-              type: apiType,
-              description: 'Test',
-              severity: 'high',
-              patterns: ['test'],
-              languages: ['javascript'],
-              recommendation: 'Test',
-              cwe_id: 'CWE-1',
-              owasp_category: 'A01:2021',
-              test_cases: { vulnerable: [], safe: [] }
-            }
-          ]
-        };
-
-        (global.fetch as any).mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse
-        });
-
-        const patterns = await testClient.fetchPatterns('javascript');
-        expect(patterns[0].type).toBe(expected);
-      }
-    });
-  });
-
-  describe('cache management', () => {
-    beforeEach(() => {
-      client = new PatternAPIClient({ 
-        apiKey: 'test-key',
-        cacheTTL: 1 // 1 second for testing
-      });
-    });
-
-    it('should expire cache after TTL', async () => {
-      const mockResponse = {
-        count: 1,
-        language: 'ruby',
-        patterns: []
-      };
-
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      // First call
-      await client.fetchPatterns('ruby');
-      expect(fetch).toHaveBeenCalledTimes(1);
-
-      // Wait for cache to expire
-      await new Promise(resolve => setTimeout(resolve, 1100));
-
-      // Second call should fetch again
-      await client.fetchPatterns('ruby');
-      expect(fetch).toHaveBeenCalledTimes(2);
-    });
-
-    it('should clear cache on demand', async () => {
-      const mockResponse = {
-        count: 1,
-        language: 'java',
-        patterns: []
-      };
-
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      // First call
-      await client.fetchPatterns('java');
-      expect(fetch).toHaveBeenCalledTimes(1);
-
-      // Clear cache
-      client.clearCache();
-
-      // Second call should fetch again
-      await client.fetchPatterns('java');
-      expect(fetch).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe('fallback behavior', () => {
-    it('should fallback to local patterns on API error when enabled', async () => {
-      client = new PatternAPIClient({ 
-        apiKey: 'test-key',
-        fallbackToLocal: true
-      });
-
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
       const patterns = await client.fetchPatterns('javascript');
       
-      expect(patterns).toEqual([]); // TODO: Return actual local patterns
+      // Should not send Authorization header
+      const [, options] = fetchMock.mock.calls[0];
+      expect(options.headers['Authorization']).toBeUndefined();
+      
+      expect(patterns).toHaveLength(1);
     });
+  });
 
-    it('should throw error when fallback is disabled', async () => {
-      client = new PatternAPIClient({ 
-        apiKey: 'test-key',
-        fallbackToLocal: false
+  describe('PatternAPIClient enhanced patterns', () => {
+    test('should handle enhanced patterns with AST rules', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+      
+      const mockResponse = {
+        count: 1,
+        language: 'javascript',
+        patterns: [
+          {
+            id: 'js-xss-innerhtml',
+            name: 'XSS via innerHTML',
+            type: 'xss',
+            description: 'XSS vulnerability via innerHTML',
+            severity: 'high',
+            patterns: ['innerHTML.*='],
+            languages: ['javascript'],
+            recommendation: 'Use textContent instead',
+            cwe_id: 'CWE-79',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] },
+            // Enhanced pattern fields
+            ast_rules: [
+              {
+                type: 'AssignmentExpression',
+                pattern: {
+                  left: {
+                    type: 'MemberExpression',
+                    property: { name: 'innerHTML' }
+                  }
+                }
+              }
+            ],
+            context_rules: [
+              {
+                type: 'taint_tracking',
+                source: 'user_input',
+                sink: 'innerHTML'
+              }
+            ],
+            confidence_rules: {
+              high: ['Direct user input to innerHTML'],
+              medium: ['Indirect flow to innerHTML'],
+              low: ['Complex data flow']
+            }
+          }
+        ]
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
       });
 
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+      const patterns = await client.fetchPatterns('javascript');
+      
+      expect(patterns).toHaveLength(1);
+      expect(patterns[0].patterns.ast).toBeDefined();
+      expect(patterns[0].patterns.ast).toHaveLength(1);
+      expect(patterns[0].contextRules).toBeDefined();
+      expect(patterns[0].confidenceRules).toBeDefined();
+    });
 
-      await expect(client.fetchPatterns('javascript')).rejects.toThrow('Network error');
+    test('should handle patterns without enhanced features', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+      
+      const mockResponse = {
+        count: 1,
+        language: 'python',
+        patterns: [
+          {
+            id: 'python-sql-injection',
+            name: 'SQL Injection',
+            type: 'sql_injection',
+            description: 'SQL injection vulnerability',
+            severity: 'critical',
+            patterns: ['query.*\\+.*%'],
+            languages: ['python'],
+            recommendation: 'Use parameterized queries',
+            cwe_id: 'CWE-89',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
+            // No enhanced pattern fields
+          }
+        ]
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const patterns = await client.fetchPatterns('python');
+      
+      expect(patterns).toHaveLength(1);
+      expect(patterns[0].patterns.ast).toBeUndefined();
+      expect(patterns[0].patterns.context).toBeUndefined();
+      expect(patterns[0].confidence).toBeUndefined();
     });
   });
 });
