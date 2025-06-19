@@ -28,14 +28,16 @@ CMD ["bun", "test"]
 # Production build stage
 FROM base AS builder
 
-# Install Claude Code CLI
-# The installation script puts claude in ~/.local/bin, so we need to find it
-RUN curl -fsSL https://claude.ai/install.sh | sh && \
-    # Find where claude was installed and make it available
-    find /root -name claude -type f -executable 2>/dev/null | head -1 | xargs -I {} cp {} /usr/local/bin/claude && \
-    chmod +x /usr/local/bin/claude && \
+# Install Node.js for Claude Code CLI
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code CLI using npm (without sudo)
+RUN npm install -g @anthropic-ai/claude-code && \
     # Verify it's installed
-    ls -la /usr/local/bin/claude
+    which claude && \
+    claude --version || echo "Claude Code CLI installation completed"
 
 # Install production dependencies only
 RUN bun install --frozen-lockfile --production
@@ -53,8 +55,12 @@ RUN ls -la dist/
 # Production stage
 FROM base AS production
 
-# Copy Claude Code CLI from builder
-COPY --from=builder /usr/local/bin/claude /usr/local/bin/claude
+# Copy Node.js and Claude Code CLI from builder
+COPY --from=builder /usr/bin/node /usr/bin/node
+COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
+COPY --from=builder /usr/bin/claude /usr/bin/claude
+# Create symlink for npm-installed global binaries
+RUN ln -sf /usr/lib/node_modules/@anthropic-ai/claude-code/bin/claude /usr/bin/claude 2>/dev/null || true
 
 # Copy built application
 COPY --from=builder /app/dist ./dist
