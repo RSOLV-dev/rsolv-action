@@ -6,10 +6,10 @@ import * as path from 'path';
 // Mock the logger to avoid debug function issues
 mock.module('../../src/utils/logger.js', () => ({
   logger: {
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {}
+    debug: mock(() => {}),
+    info: mock(() => {}),
+    warn: mock(() => {}),
+    error: mock(() => {})
   }
 }));
 

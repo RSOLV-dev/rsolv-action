@@ -172,14 +172,39 @@ describe('Claude Code Adapter', () => {
   test('generateSolution should create a solution from Claude Code output', async () => {
     const adapter = new ClaudeCodeAdapter(mockConfig);
     
+    // Mock the file system and execution
+    const mockFs = await import('fs');
+    const originalWriteFileSync = mockFs.writeFileSync;
+    const originalUnlinkSync = mockFs.unlinkSync;
+    const originalExecSync = (await import('child_process')).execSync;
+    
+    mockFs.writeFileSync = mock(() => {});
+    mockFs.unlinkSync = mock(() => {});
+    
+    // Mock execSync to return a valid Claude Code response
+    const mockOutput = JSON.stringify({
+      title: "Fix test issue",
+      description: "Test solution",
+      files: [{
+        path: "file.ts",
+        changes: "test"
+      }],
+      tests: ["Test 1"]
+    });
+    
+    (await import('child_process')).execSync = mock(() => Buffer.from(mockOutput));
+    
     // Create simple mocks of the methods we need
     const originalIsAvailable = adapter.isAvailable;
     adapter.isAvailable = async () => true;
     
     const solution = await adapter.generateSolution(mockIssueContext, mockAnalysis, mockEnhancedPrompt);
     
-    // Restore original method
+    // Restore original methods
     adapter.isAvailable = originalIsAvailable;
+    mockFs.writeFileSync = originalWriteFileSync;
+    mockFs.unlinkSync = originalUnlinkSync;
+    (await import('child_process')).execSync = originalExecSync;
     
     expect(solution).toBeDefined();
     expect(solution.success).toBe(true);

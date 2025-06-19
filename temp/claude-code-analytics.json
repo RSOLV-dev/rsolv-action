@@ -204,5 +204,29 @@
     "retryCount": 2,
     "errorType": "execution_error",
     "endTime": 1749247758061
+  },
+  {
+    "startTime": 1750292816315,
+    "issueId": "test-issue-123",
+    "successful": false,
+    "retryCount": 2,
+    "errorType": "execution_error",
+    "endTime": 1750292818319
+  },
+  {
+    "startTime": 1750294978761,
+    "issueId": "test-issue-123",
+    "successful": false,
+    "retryCount": 2,
+    "errorType": "execution_error",
+    "endTime": 1750294980770
+  },
+  {
+    "startTime": 1750294988365,
+    "issueId": "test-issue-123",
+    "successful": false,
+    "retryCount": 2,
+    "errorType": "execution_error",
+    "endTime": 1750294990369
   }
 ]
