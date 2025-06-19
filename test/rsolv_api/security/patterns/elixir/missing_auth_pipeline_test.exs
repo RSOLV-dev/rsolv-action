@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.MissingAuthPipelineTest do
       assert pattern.severity == :high
       assert pattern.languages == ["elixir"]
       assert pattern.frameworks == ["phoenix"]
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-306"
       assert pattern.owasp_category == "A01:2021"
       

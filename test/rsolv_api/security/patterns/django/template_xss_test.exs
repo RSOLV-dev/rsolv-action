@@ -16,7 +16,7 @@ defmodule RsolvApi.Security.Patterns.Django.TemplateXssTest do
       assert pattern.severity == :high
       assert pattern.languages == ["python", "html"]
       assert pattern.frameworks == ["django"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-79"
       assert pattern.owasp_category == "A03:2021"
       assert is_list(pattern.regex)

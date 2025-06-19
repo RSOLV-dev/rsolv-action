@@ -22,7 +22,7 @@ defmodule RSOLV.APIIntegrationTest do
       assert body["services"]["ai_providers"]["anthropic"] == "healthy"
       assert body["services"]["ai_providers"]["openai"] == "healthy"
       assert body["services"]["ai_providers"]["openrouter"] == "healthy"
-      assert body["services"]["redis"] == "healthy"
+      # Note: We use DETS for storage, not Redis
     end
   end
   

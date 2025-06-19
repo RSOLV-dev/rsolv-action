@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Django.ClickjackingTest do
       assert pattern.severity == :medium
       assert pattern.languages == ["python"]
       assert pattern.frameworks == ["django"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-1021"
       assert pattern.owasp_category == "A05:2021"
       assert pattern.recommendation =~ "X_FRAME_OPTIONS"

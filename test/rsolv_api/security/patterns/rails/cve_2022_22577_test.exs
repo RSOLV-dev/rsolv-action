@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202222577Test do
       assert pattern.severity == :medium
       assert pattern.languages == ["ruby"]
       assert pattern.frameworks == ["rails"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :enterprise
       assert pattern.cwe_id == "CWE-79"
       assert pattern.owasp_category == "A03:2021"
       

@@ -19,7 +19,7 @@ defmodule RsolvApi.Security.Patterns.Java.WeakHashSha1Test do
       assert is_list(pattern.regex)
       assert length(pattern.regex) >= 3
       assert Enum.all?(pattern.regex, &is_struct(&1, Regex))
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
     end
     
     test "includes comprehensive test cases" do

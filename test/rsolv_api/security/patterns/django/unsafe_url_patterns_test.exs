@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Django.UnsafeUrlPatternsTest do
       assert pattern.severity == :medium
       assert pattern.languages == ["python"]
       assert pattern.frameworks == ["django"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-284"
       assert pattern.owasp_category == "A01:2021"
       assert pattern.recommendation =~ "Use specific URL patterns"

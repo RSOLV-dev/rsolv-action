@@ -16,7 +16,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeAtomCreationTest do
       assert pattern.languages == ["elixir"]
       assert pattern.cwe_id == "CWE-400"
       assert pattern.owasp_category == "A05:2021"
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert is_list(pattern.regex)
       assert length(pattern.regex) > 0
     end

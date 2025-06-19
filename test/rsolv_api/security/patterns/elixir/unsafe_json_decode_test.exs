@@ -14,7 +14,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeJsonDecodeTest do
       assert pattern.type == :dos
       assert pattern.severity == :medium
       assert pattern.languages == ["elixir"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-20"
       assert pattern.owasp_category == "A05:2021"
       

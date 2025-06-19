@@ -28,7 +28,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XxeExternalEntitiesTest do
       assert pattern.type == :xxe
       assert pattern.severity == :high
       assert pattern.languages == ["javascript", "typescript"]
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :enterprise
       assert pattern.cwe_id == "CWE-611"
       assert pattern.owasp_category == "A05:2021"
       assert is_binary(pattern.recommendation)

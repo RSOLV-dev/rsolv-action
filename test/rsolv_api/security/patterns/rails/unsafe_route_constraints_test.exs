@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraintsTest do
       assert pattern.severity == :high
       assert pattern.languages == ["ruby"]
       assert pattern.frameworks == ["rails"]
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-285"
       assert pattern.owasp_category == "A01:2021"
       

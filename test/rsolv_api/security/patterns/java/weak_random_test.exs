@@ -17,7 +17,7 @@ defmodule RsolvApi.Security.Patterns.Java.WeakRandomTest do
       assert pattern.cwe_id == "CWE-338"
       assert pattern.owasp_category == "A02:2021"
       assert is_struct(pattern.regex, Regex) or is_list(pattern.regex)
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
     end
     
     test "includes comprehensive test cases" do

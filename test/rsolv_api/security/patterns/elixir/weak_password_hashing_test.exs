@@ -14,7 +14,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.WeakPasswordHashingTest do
       assert pattern.type == :weak_crypto
       assert pattern.severity == :high
       assert pattern.languages == ["elixir"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-916"
       assert pattern.owasp_category == "A02:2021"
       

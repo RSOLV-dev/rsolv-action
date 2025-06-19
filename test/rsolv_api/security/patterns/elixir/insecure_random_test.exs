@@ -16,7 +16,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.InsecureRandomTest do
       assert pattern.languages == ["elixir"]
       assert pattern.cwe_id == "CWE-338"
       assert pattern.owasp_category == "A02:2021"
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert is_list(pattern.regex)
       assert length(pattern.regex) > 0
     end

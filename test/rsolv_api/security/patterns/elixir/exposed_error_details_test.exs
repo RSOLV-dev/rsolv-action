@@ -14,7 +14,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.ExposedErrorDetailsTest do
       assert pattern.type == :information_disclosure
       assert pattern.severity == :low
       assert pattern.languages == ["elixir"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-209"
       assert pattern.owasp_category == "A05:2021"
       

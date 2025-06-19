@@ -16,7 +16,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.CodeInjectionEvalTest do
       assert pattern.languages == ["elixir"]
       assert pattern.cwe_id == "CWE-94"
       assert pattern.owasp_category == "A03:2021"
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert is_list(pattern.regex)
       assert length(pattern.regex) > 0
     end

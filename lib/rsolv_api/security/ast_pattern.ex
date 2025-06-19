@@ -669,13 +669,113 @@ defmodule RsolvApi.Security.ASTPattern do
   
   # Default enhancement for other patterns
   defp enhance_by_type(pattern) do
-    pattern
-    |> Map.put(:ast_rules, nil)  # Explicitly set to nil for patterns without AST rules yet
-    |> Map.put(:context_rules, %{
-      exclude_paths: [~r/test/, ~r/node_modules/]
-    })
-    |> Map.put(:confidence_rules, nil)
-    |> Map.put(:min_confidence, 0.7)
+    # Try to find a pattern module with AST enhancement
+    case find_pattern_module_with_ast_enhancement(pattern.id) do
+      {:ok, enhancement} ->
+        # Use the AST enhancement from the pattern module
+        pattern
+        |> Map.put(:ast_rules, enhancement.ast_rules)
+        |> Map.put(:context_rules, enhancement.context_rules)
+        |> Map.put(:confidence_rules, enhancement.confidence_rules)
+        |> Map.put(:min_confidence, enhancement.min_confidence)
+      
+      :error ->
+        # No AST enhancement available, use default
+        pattern
+        |> Map.put(:ast_rules, nil)  # Explicitly set to nil for patterns without AST rules yet
+        |> Map.put(:context_rules, %{
+          exclude_paths: [~r/test/, ~r/node_modules/]
+        })
+        |> Map.put(:confidence_rules, nil)
+        |> Map.put(:min_confidence, 0.7)
+    end
+  end
+  
+  # Helper function to find pattern modules with AST enhancements
+  defp find_pattern_module_with_ast_enhancement(pattern_id) do
+    # Try dynamic module resolution based on pattern ID
+    module = case pattern_id do
+      "js-" <> rest -> 
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Javascript, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "python-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Python, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "elixir-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Elixir, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "ruby-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Ruby, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "java-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Java, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      "php-" <> rest ->
+        module_name = rest
+        |> String.split("-")
+        |> Enum.map(&Macro.camelize/1)
+        |> Enum.join("")
+        
+        try do
+          Module.safe_concat([RsolvApi.Security.Patterns.Php, module_name])
+        rescue
+          ArgumentError -> nil
+        end
+        
+      _ ->
+        nil
+    end
+    
+    if module && function_exported?(module, :ast_enhancement, 0) do
+      {:ok, apply(module, :ast_enhancement, [])}
+    else
+      :error
+    end
   end
   
   @doc """

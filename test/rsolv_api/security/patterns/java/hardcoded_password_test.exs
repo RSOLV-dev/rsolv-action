@@ -17,7 +17,7 @@ defmodule RsolvApi.Security.Patterns.Java.HardcodedPasswordTest do
       assert pattern.cwe_id == "CWE-798"
       assert pattern.owasp_category == "A07:2021"
       assert is_struct(pattern.regex, Regex) or is_list(pattern.regex)
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :public
     end
     
     test "includes comprehensive test cases" do

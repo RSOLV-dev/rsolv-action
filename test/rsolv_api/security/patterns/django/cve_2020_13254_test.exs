@@ -13,7 +13,7 @@ defmodule RsolvApi.Security.Patterns.Django.Cve202013254Test do
       assert pattern.severity == :medium
       assert pattern.languages == ["python"]
       assert pattern.frameworks == ["django"]
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :enterprise
       assert pattern.cwe_id == "CWE-74"
       assert pattern.owasp_category == "A03:2021"
       assert is_list(pattern.regex)

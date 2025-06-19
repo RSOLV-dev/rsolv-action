@@ -45,10 +45,10 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
     test "returns enhanced patterns with AST rules for v2 endpoints", %{conn: conn, regular_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v2/patterns/protected/javascript")
+      |> get(~p"/api/v2/patterns/ai/javascript")
       
       assert %{
-        "tier" => "protected",
+        "tier" => "ai",
         "language" => "javascript",
         "format" => "enhanced",
         "patterns" => patterns
@@ -68,7 +68,7 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
     test "v2 endpoint includes backward compatibility fields", %{conn: conn, regular_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v2/patterns/protected/javascript")
+      |> get(~p"/api/v2/patterns/ai/javascript")
       
       assert %{"patterns" => patterns} = json_response(conn, 200)
       
@@ -81,7 +81,7 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
     end
     
     test "returns error for v2 endpoints without authentication", %{conn: conn} do
-      conn = get(conn, ~p"/api/v2/patterns/protected/javascript")
+      conn = get(conn, ~p"/api/v2/patterns/ai/javascript")
       
       assert json_response(conn, 401) == %{
         "error" => "API key required"
@@ -93,10 +93,10 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
     test "returns enhanced format when requested via query param", %{conn: conn, regular_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v1/patterns/protected/javascript?format=enhanced")
+      |> get(~p"/api/v1/patterns/ai/javascript?format=enhanced")
       
       assert %{
-        "tier" => "protected",
+        "tier" => "ai",
         "language" => "javascript",
         "format" => "enhanced",
         "patterns" => patterns
@@ -110,10 +110,10 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
     test "returns standard format by default on v1 endpoints", %{conn: conn, regular_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v1/patterns/protected/javascript")
+      |> get(~p"/api/v1/patterns/ai/javascript")
       
       assert %{
-        "tier" => "protected",
+        "tier" => "ai",
         "language" => "javascript",
         "patterns" => patterns
       } = json_response(conn, 200)
@@ -139,7 +139,7 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
       } = json_response(conn, 200)
       
       assert "public" in tiers
-      assert "protected" in tiers
+      assert "ai" in tiers
       assert is_list(patterns)
       
       # Check mix of enhanced and standard patterns
@@ -154,7 +154,7 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
       |> put_req_header("accept", "application/vnd.rsolv.v2+json")
-      |> get(~p"/api/v1/patterns/protected/javascript")
+      |> get(~p"/api/v1/patterns/ai/javascript")
       
       assert %{
         "format" => "enhanced",
@@ -169,7 +169,7 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
       |> put_req_header("accept", "application/json")
-      |> get(~p"/api/v1/patterns/protected/javascript")
+      |> get(~p"/api/v1/patterns/ai/javascript")
       
       response = json_response(conn, 200)
       refute Map.has_key?(response, "format")
@@ -183,7 +183,7 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
     test "enhanced patterns pass validation", %{conn: conn, regular_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v2/patterns/protected/javascript")
+      |> get(~p"/api/v2/patterns/ai/javascript")
       
       assert %{"patterns" => patterns} = json_response(conn, 200)
       
@@ -208,7 +208,7 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
       
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v2/patterns/protected/javascript")
+      |> get(~p"/api/v2/patterns/ai/javascript")
       
       assert %{
         "patterns" => patterns
@@ -228,7 +228,7 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
     test "includes quick fix and detailed steps when available", %{conn: conn, regular_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v2/patterns/protected/javascript")
+      |> get(~p"/api/v2/patterns/ai/javascript")
       
       assert %{"patterns" => patterns} = json_response(conn, 200)
       
@@ -250,7 +250,7 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
     test "returns 404 for unsupported language", %{conn: conn, regular_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v2/patterns/protected/cobol")
+      |> get(~p"/api/v2/patterns/ai/cobol")
       
       assert json_response(conn, 404) == %{
         "error" => "No patterns found for language: cobol"
@@ -261,10 +261,10 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
     test "returns 404 for invalid tier", %{conn: conn, regular_customer: customer} do
       conn = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v2/patterns/ultra/javascript")
+      |> get(~p"/api/v2/patterns/invalid_tier/javascript")
       
       assert json_response(conn, 404) == %{
-        "error" => "Invalid tier: ultra"
+        "error" => "Invalid tier: invalid_tier"
       }
     end
   end
@@ -274,14 +274,14 @@ defmodule RSOLVWeb.EnhancedPatternControllerTest do
       # First request
       conn1 = conn
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v2/patterns/protected/javascript")
+      |> get(~p"/api/v2/patterns/ai/javascript")
       
       assert %{"patterns" => patterns1} = json_response(conn1, 200)
       
       # Second request should be faster (from cache)
       conn2 = build_conn()
       |> put_req_header("authorization", "Bearer #{customer.api_key}")
-      |> get(~p"/api/v2/patterns/protected/javascript")
+      |> get(~p"/api/v2/patterns/ai/javascript")
       
       assert %{"patterns" => patterns2} = json_response(conn2, 200)
       

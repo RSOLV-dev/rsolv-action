@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.EtsPublicTableTest do
       assert pattern.severity == :medium
       assert pattern.languages == ["elixir"]
       assert pattern.frameworks == []
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-732"
       assert pattern.owasp_category == "A01:2021"
       

@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Python.PathTraversalOpenTest do
       assert pattern.languages == ["python"]
       assert pattern.cwe_id == "CWE-22"
       assert pattern.owasp_category == "A01:2021"
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :ai
     end
   end
 

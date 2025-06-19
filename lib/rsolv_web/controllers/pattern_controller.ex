@@ -74,78 +74,36 @@ defmodule RSOLVWeb.PatternController do
   end
   
   defp format_pattern(%ASTPattern{} = pattern, :enhanced) do
-    # For enhanced patterns, include all fields
-    %{
-      id: pattern.id,
-      name: pattern.name,
-      description: pattern.description,
-      type: to_string(pattern.type),
-      severity: to_string(pattern.severity),
-      tier: to_string(pattern.tier || pattern.default_tier || "public"),
-      languages: pattern.languages,
-      frameworks: pattern.frameworks || [],
-      patterns: ensure_list(regex_to_string(pattern.regex)),
-      cweId: pattern.cwe_id,
-      owaspCategory: pattern.owasp_category,
-      recommendation: pattern.recommendation,
-      testCases: pattern.test_cases,
-      # AST enhancement fields
-      supportsAst: true,
-      astRules: format_ast_rules(pattern.ast_rules),
-      contextRules: format_context_rules(pattern.context_rules),
-      confidenceRules: pattern.confidence_rules,
-      minConfidence: pattern.min_confidence
-    }
+    pattern
+    |> build_enhanced_ast_pattern()
+    |> sanitize_for_json()
   end
   
   defp format_pattern(%ASTPattern{} = pattern, :standard) do
-    # For AST patterns in standard format, convert to standard format
-    Pattern.to_api_format(pattern)
+    pattern
+    |> build_standard_ast_pattern()
+    |> sanitize_for_json()
   end
   
   defp format_pattern(%Pattern{} = pattern, :enhanced) do
-    # For regular patterns with enhanced format, check if we can find the module
-    pattern_module = case find_pattern_module(pattern.id) do
-      {:ok, module} -> module
-      _ -> nil
-    end
-    
-    if pattern_module && function_exported?(pattern_module, :ast_enhancement, 0) do
-      # Pattern supports AST enhancement
-      ast_enhancement = apply(pattern_module, :ast_enhancement, [])
+    case find_ast_enhancement_module(pattern) do
+      {:ok, ast_enhancement} ->
+        pattern
+        |> build_enhanced_regular_pattern(ast_enhancement)
+        |> sanitize_for_json()
       
-      # Convert to enhanced format with AST fields
-      %{
-        id: pattern.id,
-        name: pattern.name,
-        description: pattern.description,
-        type: to_string(pattern.type),
-        severity: to_string(pattern.severity),
-        tier: to_string(pattern.default_tier || "public"),
-        languages: pattern.languages,
-        frameworks: pattern.frameworks || [],
-        patterns: ensure_list(regex_to_string(pattern.regex)),
-        cweId: pattern.cwe_id,
-        owaspCategory: pattern.owasp_category,
-        recommendation: pattern.recommendation,
-        testCases: pattern.test_cases,
-        # AST enhancement fields - properly formatted
-        supportsAst: true,
-        astRules: format_ast_rules(ast_enhancement[:ast_rules]),
-        contextRules: format_context_rules(ast_enhancement[:context_rules]),
-        confidenceRules: ast_enhancement[:confidence_rules],
-        minConfidence: ast_enhancement[:min_confidence]
-      }
-    else
-      # Pattern doesn't support AST enhancement, return standard format with supportsAst: false
-      pattern_map = Pattern.to_api_format(pattern)
-      Map.put(pattern_map, :supportsAst, false)
+      :error ->
+        pattern
+        |> Pattern.to_api_format()
+        |> Map.put(:supportsAst, false)
+        |> sanitize_for_json()
     end
   end
   
   defp format_pattern(pattern, :standard) do
-    # For standard patterns, use existing Pattern.to_api_format/1
-    Pattern.to_api_format(pattern)
+    pattern
+    |> Pattern.to_api_format()
+    |> sanitize_for_json()
   end
   
   defp format_pattern(pattern, format) do
@@ -190,6 +148,97 @@ defmodule RSOLVWeb.PatternController do
     [formatted_rules]
   end
   
+  # Pattern building helpers for better readability
+  
+  defp build_enhanced_ast_pattern(pattern) do
+    %{
+      id: pattern.id,
+      name: pattern.name,
+      description: pattern.description,
+      type: to_string(pattern.type),
+      severity: to_string(pattern.severity),
+      tier: get_pattern_tier_string(pattern),
+      languages: pattern.languages,
+      frameworks: pattern.frameworks || [],
+      patterns: pattern.regex |> regex_to_string() |> ensure_list(),
+      cweId: pattern.cwe_id,
+      owaspCategory: pattern.owasp_category,
+      recommendation: pattern.recommendation,
+      testCases: pattern.test_cases,
+      # AST enhancement fields
+      supportsAst: true,
+      astRules: format_ast_rules(pattern.ast_rules),
+      contextRules: format_context_rules(pattern.context_rules),
+      confidenceRules: pattern.confidence_rules,
+      minConfidence: pattern.min_confidence
+    }
+  end
+  
+  defp build_standard_ast_pattern(pattern) do
+    %{
+      id: pattern.id,
+      name: pattern.name,
+      description: pattern.description,
+      type: to_string(pattern.type),
+      severity: to_string(pattern.severity),
+      tier: get_pattern_tier_string(pattern),
+      languages: pattern.languages,
+      frameworks: pattern.frameworks || [],
+      patterns: pattern.regex |> regex_to_string() |> ensure_list(),
+      cweId: pattern.cwe_id,
+      owaspCategory: pattern.owasp_category,
+      recommendation: pattern.recommendation,
+      testCases: pattern.test_cases
+    }
+  end
+  
+  defp build_enhanced_regular_pattern(pattern, ast_enhancement) do
+    %{
+      id: pattern.id,
+      name: pattern.name,
+      description: pattern.description,
+      type: to_string(pattern.type),
+      severity: to_string(pattern.severity),
+      tier: to_string(pattern.default_tier || "public"),
+      languages: pattern.languages,
+      frameworks: pattern.frameworks || [],
+      patterns: pattern.regex |> regex_to_string() |> ensure_list(),
+      cweId: pattern.cwe_id,
+      owaspCategory: pattern.owasp_category,
+      recommendation: pattern.recommendation,
+      testCases: pattern.test_cases,
+      # AST enhancement fields
+      supportsAst: true,
+      astRules: format_ast_rules(ast_enhancement[:ast_rules]),
+      contextRules: format_context_rules(ast_enhancement[:context_rules]),
+      confidenceRules: ast_enhancement[:confidence_rules],
+      minConfidence: ast_enhancement[:min_confidence]
+    }
+  end
+  
+  defp find_ast_enhancement_module(pattern) do
+    case find_pattern_module(pattern.id) do
+      {:ok, module} when is_atom(module) ->
+        if function_exported?(module, :ast_enhancement, 0) do
+          {:ok, apply(module, :ast_enhancement, [])}
+        else
+          :error
+        end
+      _ ->
+        :error
+    end
+  end
+  
+  defp get_pattern_tier_string(pattern) do
+    to_string(Map.get(pattern, :tier) || Map.get(pattern, :default_tier) || "public")
+  end
+  
+  defp sanitize_for_json(pattern_map) do
+    deep_convert_regex_to_string(pattern_map)
+  end
+  
+  # Regex conversion helpers
+  
   defp deep_convert_regex_to_string(%Regex{} = regex), do: regex_to_string(regex)
   defp deep_convert_regex_to_string(value) when is_map(value) do
     value
@@ -198,6 +247,9 @@ defmodule RSOLVWeb.PatternController do
   end
   defp deep_convert_regex_to_string(value) when is_list(value) do
     Enum.map(value, &deep_convert_regex_to_string/1)
+  end
+  defp deep_convert_regex_to_string(value) when is_tuple(value) do
+    value |> Tuple.to_list() |> Enum.map(&deep_convert_regex_to_string/1) |> List.to_tuple()
   end
   defp deep_convert_regex_to_string(value), do: value
 
@@ -255,18 +307,30 @@ defmodule RSOLVWeb.PatternController do
   GET /api/v1/patterns/ai/:language
   AI patterns - API key + AI flag required
   """
-  def ai(conn, %{"language" => language}) do
+  def ai(conn, params = %{"language" => language}) do
     with {:ok, customer} <- authenticate_request(conn),
          true <- has_ai_access?(customer) do
+      format = String.to_existing_atom(params["format"] || "standard")
       patterns = Security.list_patterns_by_language_and_tier(language, "ai")
-      formatted_patterns = Security.format_patterns_for_api(patterns)
       
-      json(conn, %{
+      # Use format_patterns to handle enhanced format
+      formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
+      
+      response = %{
         patterns: formatted_patterns,
         tier: "ai",
         language: language,
         count: length(formatted_patterns)
-      })
+      }
+      
+      # Add format field for enhanced format
+      response = if format == :enhanced do
+        Map.put(response, :format, "enhanced")
+      else
+        response
+      end
+      
+      json(conn, response)
     else
       false ->
         {:error, :ai_access_denied}
@@ -280,18 +344,30 @@ defmodule RSOLVWeb.PatternController do
   GET /api/v1/patterns/enterprise/:language
   Enterprise patterns - Enterprise auth required
   """
-  def enterprise(conn, %{"language" => language}) do
+  def enterprise(conn, params = %{"language" => language}) do
     with {:ok, customer} <- authenticate_request(conn),
          true <- is_enterprise?(customer) do
+      format = String.to_existing_atom(params["format"] || "standard")
       patterns = Security.list_patterns_by_language_and_tier(language, "enterprise")
-      formatted_patterns = Security.format_patterns_for_api(patterns)
       
-      json(conn, %{
+      # Use format_patterns to handle enhanced format
+      formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
+      
+      response = %{
         patterns: formatted_patterns,
         tier: "enterprise",
         language: language,
         count: length(formatted_patterns)
-      })
+      }
+      
+      # Add format field for enhanced format
+      response = if format == :enhanced do
+        Map.put(response, :format, "enhanced")
+      else
+        response
+      end
+      
+      json(conn, response)
     else
       false ->
         {:error, :enterprise_access_denied}

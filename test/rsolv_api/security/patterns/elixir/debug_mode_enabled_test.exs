@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.DebugModeEnabledTest do
       assert pattern.severity == :medium
       assert pattern.languages == ["elixir"]
       assert pattern.frameworks == ["phoenix"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-489"
       assert pattern.owasp_category == "A05:2021"
       

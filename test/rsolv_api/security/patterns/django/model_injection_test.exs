@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Django.ModelInjectionTest do
       assert pattern.severity == :high
       assert pattern.languages == ["python"]
       assert pattern.frameworks == ["django"]
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-74"
       assert pattern.owasp_category == "A03:2021"
       assert pattern.recommendation =~ "Validate and whitelist fields"

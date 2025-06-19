@@ -137,7 +137,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.UnsafeRegexTest do
       assert pattern.type == :denial_of_service
       assert pattern.severity == :medium
       assert pattern.languages == ["javascript", "typescript"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-1333"
       assert pattern.owasp_category == "A05:2021"
       assert is_binary(pattern.recommendation)

@@ -102,42 +102,41 @@ defmodule RsolvApi.Security.TierAccessTest do
       assert public_count > 0
     end
     
-    test "protected tier includes more patterns than public (cumulative)" do
-      # Get patterns for both tiers
+    test "ai tier includes more patterns than public (cumulative)" do
+      # Get patterns for both tiers  
       public_patterns = ASTPattern.get_patterns("javascript", :public, :standard)
-      protected_patterns = ASTPattern.get_patterns("javascript", :protected, :standard)
-      
-      # Protected should have more patterns due to cumulative access
-      assert length(protected_patterns) > length(public_patterns)
-      
-      # All public pattern IDs should be in protected patterns
-      public_ids = MapSet.new(public_patterns, & &1.id)
-      protected_ids = MapSet.new(protected_patterns, & &1.id)
-      
-      assert MapSet.subset?(public_ids, protected_ids)
-    end
-    
-    test "ai tier includes protected and public patterns (cumulative)" do
-      # Get patterns for different tiers
-      public_patterns = ASTPattern.get_patterns("javascript", :public, :standard)
-      protected_patterns = ASTPattern.get_patterns("javascript", :protected, :standard)
       ai_patterns = ASTPattern.get_patterns("javascript", :ai, :standard)
       
-      # AI should have at least as many as protected
-      assert length(ai_patterns) >= length(protected_patterns)
+      # AI should have more patterns due to cumulative access (includes public + ai)
+      assert length(ai_patterns) > length(public_patterns)
+      
+      # All public pattern IDs should be in ai patterns
+      public_ids = MapSet.new(public_patterns, & &1.id)
+      ai_ids = MapSet.new(ai_patterns, & &1.id)
+      
+      assert MapSet.subset?(public_ids, ai_ids)
+    end
+    
+    test "ai tier has adequate patterns for professional tier" do
+      # Get patterns for different tiers in 3-tier system
+      public_patterns = ASTPattern.get_patterns("javascript", :public, :standard)
+      ai_patterns = ASTPattern.get_patterns("javascript", :ai, :standard)
+      
+      # AI should have significantly more patterns than public (cumulative access)
       assert length(ai_patterns) >= length(public_patterns)
+      
+      # AI tier should have a reasonable number of patterns for professional use
+      assert length(ai_patterns) >= 15  # Expect at least 15 patterns for professional tier
     end
     
     test "enterprise tier returns all available patterns (cumulative)" do
-      # Get patterns for all tiers
+      # Get patterns for all tiers in 3-tier system
       public_patterns = ASTPattern.get_patterns("javascript", :public, :standard)
-      protected_patterns = ASTPattern.get_patterns("javascript", :protected, :standard)
       ai_patterns = ASTPattern.get_patterns("javascript", :ai, :standard)
       enterprise_patterns = ASTPattern.get_patterns("javascript", :enterprise, :standard)
       
-      # Enterprise should have the most patterns
+      # Enterprise should have the most patterns (cumulative access)
       assert length(enterprise_patterns) >= length(ai_patterns)
-      assert length(enterprise_patterns) >= length(protected_patterns)
       assert length(enterprise_patterns) >= length(public_patterns)
       
       # Should have all patterns from lower tiers

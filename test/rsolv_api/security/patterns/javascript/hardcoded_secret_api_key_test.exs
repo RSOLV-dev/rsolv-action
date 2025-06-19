@@ -15,7 +15,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.HardcodedSecretApiKeyTest do
       assert pattern.type == :hardcoded_secret
       assert pattern.severity == :high
       assert pattern.languages == ["javascript", "typescript"]
-      assert pattern.default_tier == :public
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-798"
       assert pattern.owasp_category == "A07:2021"
       assert is_binary(pattern.recommendation)

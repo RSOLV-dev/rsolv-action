@@ -14,7 +14,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.InsufficientInputValidationTest do
       assert pattern.type == :input_validation
       assert pattern.severity == :medium
       assert pattern.languages == ["elixir"]
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-20"
       assert pattern.owasp_category == "A03:2021"
       

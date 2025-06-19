@@ -14,7 +14,7 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
       assert pattern.type == :rce
       assert pattern.severity == :medium
       assert pattern.languages == ["elixir"]
-      assert pattern.default_tier == :protected
+      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-94"
       assert pattern.owasp_category == "A03:2021"
       
