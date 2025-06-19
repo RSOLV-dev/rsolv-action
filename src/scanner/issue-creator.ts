@@ -78,7 +78,9 @@ export class IssueCreator {
       'insecure-deserialization': 'Insecure Deserialization'
     };
     
-    const readableType = typeMap[group.type] || group.type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    // Handle undefined or null types
+    const vulnType = group.type || 'security-vulnerability';
+    const readableType = typeMap[vulnType] || vulnType.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     const fileCount = group.files.length;
     const fileText = fileCount === 1 ? 'file' : 'files';
     
@@ -91,7 +93,8 @@ export class IssueCreator {
     // Header
     sections.push(`## Security Vulnerability Report`);
     sections.push('');
-    sections.push(`**Type**: ${group.type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`);
+    const vulnType = group.type || 'security-vulnerability';
+    sections.push(`**Type**: ${vulnType.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`);
     sections.push(`**Severity**: ${group.severity.toUpperCase()}`);
     sections.push(`**Total Instances**: ${group.count}`);
     sections.push(`**Affected Files**: ${group.files.length}`);
@@ -99,7 +102,7 @@ export class IssueCreator {
     
     // Description
     sections.push(`### Description`);
-    sections.push(this.getVulnerabilityDescription(group.type));
+    sections.push(this.getVulnerabilityDescription(vulnType));
     sections.push('');
     
     // Affected Files
@@ -139,7 +142,7 @@ export class IssueCreator {
     
     // Recommendation
     sections.push(`### Recommendation`);
-    sections.push(this.getVulnerabilityRecommendation(group.type));
+    sections.push(this.getVulnerabilityRecommendation(vulnType));
     sections.push('');
     
     // Footer
