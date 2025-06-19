@@ -201,7 +201,7 @@ Return the complete fixed code for src/auth/login.js.`;
     expect(solution).toBeDefined();
     expect(solution.length).toBeGreaterThan(200);
     expect(solution).toContain('async function');
-    expect(solution).not.toContain("${username}");
+    expect(solution).not.toContain('${username}');
     expect(solution).toMatch(/\$\d|\?|:username/); // Parameterized query markers
   }, 60000);
 });

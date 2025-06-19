@@ -110,7 +110,7 @@ jobs:
 ## How It Works
 
 ### 1. Finding Vulnerabilities
-- RSOLV scans your codebase using 448+ security patterns
+- RSOLV scans your codebase using 172+ security patterns
 - Detects OWASP Top 10 vulnerabilities, CVEs, and framework-specific issues
 - Groups similar vulnerabilities to avoid issue spam
 
@@ -185,13 +185,14 @@ fixes:
     verbosity: detailed  # basic, detailed, or comprehensive
 ```
 
-## API Key Tiers
+## API Access
 
-Your API key determines the patterns available:
+Your API key provides access to our complete pattern library:
 
-- **Free Tier**: 78 basic patterns
-- **Pro Tier**: 172 patterns including framework-specific
-- **Enterprise**: All 448+ patterns with custom rules
+- **With API Key**: All 172 security patterns across 6 languages and frameworks
+- **Demo Mode**: ~20 basic patterns for evaluation (no API key required)
+
+All paying customers receive access to the complete pattern library with no tiers or restrictions.
 
 ## Monitoring Usage
 
@@ -236,7 +237,7 @@ Your API key determines the patterns available:
 ### API key errors
 - Keys should start with `rsolv_`
 - Check key hasn't expired
-- Verify tier supports desired features
+- Verify API key is active and valid
 
 ## Educational Content
 

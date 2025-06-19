@@ -230,13 +230,13 @@ describe('RSOLVCredentialManager', () => {
       };
 
       fetchMock.mockResponseOnce({
-          ok: true,
-          json: initialResponse
-        });
+        ok: true,
+        json: initialResponse
+      });
       fetchMock.mockResponseOnce({
-          ok: true,
-          json: async () => ({ acknowledged: true })
-        });
+        ok: true,
+        json: async () => ({ acknowledged: true })
+      });
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
@@ -264,13 +264,13 @@ describe('RSOLVCredentialManager', () => {
       };
 
       fetchMock.mockResponseOnce({
-          ok: true,
-          json: initialResponse
-        });
+        ok: true,
+        json: initialResponse
+      });
       fetchMock.mockResponseOnce({
-          ok: false,
-          status: 500
-        });
+        ok: false,
+        status: 500
+      });
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');

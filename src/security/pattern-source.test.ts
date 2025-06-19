@@ -68,7 +68,7 @@ describe('LocalPatternSource', () => {
   describe('getAllPatterns', () => {
     it('should return minimal fallback patterns', async () => {
       const patterns = await source.getAllPatterns();
-      expect(patterns.length).toBeLessThan(10); // Only minimal patterns
+      expect(patterns.length).toBeLessThan(25); // Updated for expanded minimal patterns
       
       // Check that we have basic patterns for common languages
       const languages = new Set(patterns.flatMap(p => p.languages));
@@ -160,12 +160,12 @@ describe('ApiPatternSource', () => {
       await source.getAllPatterns();
       
       // Should be called for each supported language
-      expect(calls).toContain('javascript?format=enhanced');
-      expect(calls).toContain('python?format=enhanced');
-      expect(calls).toContain('ruby?format=enhanced');
-      expect(calls).toContain('java?format=enhanced');
-      expect(calls).toContain('php?format=enhanced');
-      expect(calls).toContain('elixir?format=enhanced');
+      expect(calls).toContain('patterns?language=javascript&format=enhanced');
+      expect(calls).toContain('patterns?language=python&format=enhanced');
+      expect(calls).toContain('patterns?language=ruby&format=enhanced');
+      expect(calls).toContain('patterns?language=java&format=enhanced');
+      expect(calls).toContain('patterns?language=php&format=enhanced');
+      expect(calls).toContain('patterns?language=elixir&format=enhanced');
     });
 
     it('should continue fetching even if some languages fail', async () => {

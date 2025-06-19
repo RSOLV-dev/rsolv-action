@@ -178,13 +178,13 @@ describe('Claude Code Adapter', () => {
     
     // Mock execSync to return a valid Claude Code response
     const mockOutput = JSON.stringify({
-      title: "Fix test issue",
-      description: "Test solution",
+      title: 'Fix test issue',
+      description: 'Test solution',
       files: [{
-        path: "file.ts",
-        changes: "test"
+        path: 'file.ts',
+        changes: 'test'
       }],
-      tests: ["Test 1"]
+      tests: ['Test 1']
     });
     
     (await import('child_process')).execSync = mock(() => Buffer.from(mockOutput));

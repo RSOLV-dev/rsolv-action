@@ -4,6 +4,9 @@ bun.lockb
 jspm_packages/
 bower_components/
 
+# Demo repositories (nested git repos)
+demo-repos/
+
 # Build output
 dist/
 lib/

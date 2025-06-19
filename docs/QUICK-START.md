@@ -63,7 +63,7 @@ jobs:
 ## What You Get
 
 ### Security Scanning
-- 448+ security patterns across 8 languages
+- 172+ security patterns across 6 languages
 - OWASP Top 10 coverage
 - Framework-specific patterns (Rails, Django, React, etc.)
 - CVE detection (Log4Shell, Spring4Shell, etc.)

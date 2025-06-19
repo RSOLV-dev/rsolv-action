@@ -112,7 +112,7 @@ describe('Claude Code Adapter', () => {
   test('parseSolution should handle direct JSON in text content', () => {
     const adapter = new ClaudeCodeAdapter(config);
     
-    const rawOutput = `{"id":"msg_123","type":"message","role":"assistant","content":[{"type":"text","text":"{\\"title\\": \\"Fix: Test Issue\\", \\"description\\": \\"Test solution\\", \\"files\\": [{\\"path\\": \\"test.ts\\", \\"changes\\": \\"console.log('fixed')\\"}], \\"tests\\": [\\"Test 1\\"]}"}]}`;
+    const rawOutput = '{"id":"msg_123","type":"message","role":"assistant","content":[{"type":"text","text":"{\\"title\\": \\"Fix: Test Issue\\", \\"description\\": \\"Test solution\\", \\"files\\": [{\\"path\\": \\"test.ts\\", \\"changes\\": \\"console.log(\'fixed\')\\"}], \\"tests\\": [\\"Test 1\\"]}"}]}';
     
     // Access private method through prototype
     const solution = (adapter as any).parseSolution(rawOutput, '/tmp/output', issueContext);
@@ -126,7 +126,7 @@ describe('Claude Code Adapter', () => {
   test('parseSolution should handle JSON in code blocks', () => {
     const adapter = new ClaudeCodeAdapter(config);
     
-    const rawOutput = `{"content":[{"type":"text","text":"Here's the solution:\\n\\n\`\`\`json\\n{\\"title\\": \\"Fix: Test Issue\\", \\"description\\": \\"Test solution\\", \\"files\\": [{\\"path\\": \\"test.ts\\", \\"changes\\": \\"console.log('fixed')\\"}], \\"tests\\": [\\"Test 1\\"]}\\n\`\`\`"}]}`;
+    const rawOutput = '{"content":[{"type":"text","text":"Here\'s the solution:\\n\\n```json\\n{\\"title\\": \\"Fix: Test Issue\\", \\"description\\": \\"Test solution\\", \\"files\\": [{\\"path\\": \\"test.ts\\", \\"changes\\": \\"console.log(\'fixed\')\\"}], \\"tests\\": [\\"Test 1\\"]}\\n```"}]}';
     
     // Access private method through prototype
     const solution = (adapter as any).parseSolution(rawOutput, '/tmp/output', issueContext);

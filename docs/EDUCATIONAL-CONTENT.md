@@ -2,7 +2,7 @@
 
 RSOLV doesn't just fix vulnerabilities - it helps your team learn and prevent future issues. Every fix includes comprehensive educational content tailored to different audiences.
 
-## Three-Tier Explanation System
+## Multi-Level Explanation System
 
 ### 1. Line-Level Explanations (For Developers)
 Specific, actionable guidance for each vulnerability:
