@@ -140,7 +140,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.MissingAuthPipeline do
         # Controllers with sensitive method names but no auth
         ~r/defmodule\s+\w+(?:Web)?\.\w+Controller\s+do(?:(?!plug\s+(?::(?:authenticate|require_|auth)|\w+\.\w*(?:Auth|Authenticate)\w*))(?!pipe_through\s+\[[^\]]*(?:auth|require_|authenticate)[^\]]*\]).)*?def\s+(?:delete|update_password|admin_|manage_)/s
       ],
-      default_tier: :ai,
       cwe_id: "CWE-306",
       owasp_category: "A01:2021",
       recommendation: "Add authentication plugs like :authenticate_user or use authenticated pipelines like [:browser, :require_authenticated_user]",

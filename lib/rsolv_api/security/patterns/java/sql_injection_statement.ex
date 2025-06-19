@@ -62,7 +62,6 @@ defmodule RsolvApi.Security.Patterns.Java.SqlInjectionStatement do
         # createStatement followed by concatenated query
         ~r/createStatement\s*\(\s*\)[^;{]*execute(?:Query|Update)?\s*\([^)]*\+/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use PreparedStatement with parameterized queries instead of Statement with string concatenation",

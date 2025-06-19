@@ -86,7 +86,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.DebugModeEnabled do
         ~r/logger\.(?:debug|info|warn).*?(password|secret|key|token|credential|credit|card|cc_)/i,  # Other logger sensitive logs
         ~r/puts.*?(password|secret|key|token|credential)/i  # Print statements with sensitive data
       ],
-      default_tier: :ai,
       cwe_id: "CWE-489",
       owasp_category: "A05:2021",
       recommendation: "Remove all debugging code, breakpoints, and sensitive logging before deploying to production",

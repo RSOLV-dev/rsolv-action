@@ -113,7 +113,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.DebugModeEnabled do
         ~r/if\s+Mix\.env\(\)\s*!=\s*:prod\s+do.*IO\.inspect/s,
         ~r/unless\s+Mix\.env\(\)\s*==\s*:prod\s+do.*IO\.inspect/s
       ],
-      default_tier: :ai,
       cwe_id: "CWE-489",
       owasp_category: "A05:2021",
       recommendation: "Disable debug configurations in production and replace debug function calls with proper logging",

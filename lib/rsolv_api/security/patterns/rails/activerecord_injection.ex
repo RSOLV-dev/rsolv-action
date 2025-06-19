@@ -81,7 +81,6 @@ defmodule RsolvApi.Security.Patterns.Rails.ActiverecordInjection do
         # delete_all with string interpolation
         ~r/\.delete_all\s*\(\s*["'`].*?#\{[^}]+\}/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use Rails parameterized queries: where(\"name = ?\", params[:name]) or ActiveRecord hash conditions: where(name: params[:name])",

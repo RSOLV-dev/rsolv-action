@@ -35,7 +35,6 @@ defmodule RsolvApi.Security.Patterns.Php.XssEcho do
       severity: :high,
       languages: ["php"],
       regex: ~r/echo\s+(?!htmlspecialchars)(?!.*htmlspecialchars\s*\().*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :public,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Use htmlspecialchars() with ENT_QUOTES flag",

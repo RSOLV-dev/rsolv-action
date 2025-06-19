@@ -49,7 +49,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.MassAssignment do
         ~r/\.new\s*\(\s*params\[/,
         ~r/\.(insert|upsert)\s*\(\s*params\[/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-915",
       owasp_category: "A01:2021",
       recommendation: "Use strong parameters in Rails: params.require(:model).permit(:field1, :field2)",

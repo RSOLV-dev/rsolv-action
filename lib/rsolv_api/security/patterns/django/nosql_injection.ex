@@ -92,7 +92,6 @@ defmodule RsolvApi.Security.Patterns.Django.NosqlInjection do
         # Direct operator injection
         ~r/\{['"]\$(?:gt|lt|ne|regex|in|nin)['"]\s*:\s*request\./
       ],
-      default_tier: :ai,
       cwe_id: "CWE-943",
       owasp_category: "A03:2021",
       recommendation: "Validate and sanitize user input before using in NoSQL queries. Use parameterized queries where possible.",

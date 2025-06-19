@@ -100,7 +100,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssJqueryHtml do
       severity: :high,
       languages: ["javascript", "typescript"],
       regex: ~r/(?:\$(?:\([^)]+\)|\w+)|jQuery\s*\([^)]+\))\.html\s*\(\s*(?!DOMPurify\.sanitize|escapeHtml|sanitizeHTML|purify|SAFE_).*?(?:req\.|request\.|params\.|query\.|body\.|user|input|data|userData|untrusted)/i,
-      default_tier: :public,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Use jQuery text() for plain text, or sanitize HTML with DOMPurify before using html().",

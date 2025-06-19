@@ -64,7 +64,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.HardcodedSecrets do
         ~r/(?:github_token|gh_token)\s*=\s*['\"](?:ghp_|gho_|ghu_|ghs_|ghr_)[\w]{20,}['\"]/i,
         ~r/(?:stripe_key|sk_|pk_)\s*=\s*['\"](?:sk_|pk_)(?:test_|live_)[\w]{24,}['\"]/i
       ],
-      default_tier: :ai,
       cwe_id: "CWE-798",
       owasp_category: "A07:2021",
       recommendation: "Use environment variables or secure key management systems",

@@ -2,7 +2,7 @@ defmodule RSOLVWeb.PatternController do
   use RSOLVWeb, :controller
 
   alias RsolvApi.Security
-  alias RsolvApi.Security.{ASTPattern, Pattern}
+  alias RsolvApi.Security.{ASTPattern, Pattern, DemoPatterns}
   alias RSOLV.Accounts
   alias RsolvApi.FeatureFlags
   
@@ -39,38 +39,21 @@ defmodule RSOLVWeb.PatternController do
   
   @doc """
   GET /api/v1/patterns
-  Get patterns based on query parameters
+  DEPRECATED: This endpoint still supports tier parameter for backward compatibility.
+  Use the 'all' endpoint instead.
   
   Query params:
   - language: javascript, python, ruby, etc. (default: javascript)
-  - tier: public, protected, ai, enterprise (default: public)
+  - tier: DEPRECATED - ignored but kept for backward compatibility
   - format: standard or enhanced (default: standard)
   """
   def index(conn, params) do
-    language = params["language"] || "javascript"
-    tier = String.to_existing_atom(params["tier"] || "public")
-    format = String.to_existing_atom(params["format"] || "standard")
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.index is deprecated. Use 'all' endpoint instead.")
     
-    patterns = ASTPattern.get_patterns(language, tier, format)
-    
-    # Convert patterns to API format
-    formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
-    
-    # Add metadata for monitoring
-    metadata = %{
-      language: language,
-      tier: to_string(tier),
-      format: to_string(format),
-      count: length(patterns),
-      enhanced: format == :enhanced
-    }
-    
-    conn
-    |> put_resp_header("x-pattern-version", "2.0")
-    |> json(%{
-      patterns: formatted_patterns,
-      metadata: metadata
-    })
+    # Redirect to the new tier-less endpoint
+    all(conn, params)
   end
   
   defp format_pattern(%ASTPattern{} = pattern, :enhanced) do
@@ -109,7 +92,7 @@ defmodule RSOLVWeb.PatternController do
   defp format_pattern(pattern, format) do
     # Catch-all for debugging
     require Logger
-    Logger.warn("Unmatched format_pattern: struct=#{pattern.__struct__}, format=#{format}")
+    Logger.warning("Unmatched format_pattern: struct=#{pattern.__struct__}, format=#{format}")
     Pattern.to_api_format(pattern)
   end
   
@@ -157,7 +140,6 @@ defmodule RSOLVWeb.PatternController do
       description: pattern.description,
       type: to_string(pattern.type),
       severity: to_string(pattern.severity),
-      tier: get_pattern_tier_string(pattern),
       languages: pattern.languages,
       frameworks: pattern.frameworks || [],
       patterns: pattern.regex |> regex_to_string() |> ensure_list(),
@@ -181,7 +163,6 @@ defmodule RSOLVWeb.PatternController do
       description: pattern.description,
       type: to_string(pattern.type),
       severity: to_string(pattern.severity),
-      tier: get_pattern_tier_string(pattern),
       languages: pattern.languages,
       frameworks: pattern.frameworks || [],
       patterns: pattern.regex |> regex_to_string() |> ensure_list(),
@@ -199,7 +180,6 @@ defmodule RSOLVWeb.PatternController do
       description: pattern.description,
       type: to_string(pattern.type),
       severity: to_string(pattern.severity),
-      tier: to_string(pattern.default_tier || "public"),
       languages: pattern.languages,
       frameworks: pattern.frameworks || [],
       patterns: pattern.regex |> regex_to_string() |> ensure_list(),
@@ -229,9 +209,6 @@ defmodule RSOLVWeb.PatternController do
     end
   end
   
-  defp get_pattern_tier_string(pattern) do
-    to_string(Map.get(pattern, :tier) || Map.get(pattern, :default_tier) || "public")
-  end
   
   defp sanitize_for_json(pattern_map) do
     deep_convert_regex_to_string(pattern_map)
@@ -255,39 +232,48 @@ defmodule RSOLVWeb.PatternController do
 
   @doc """
   GET /api/v1/patterns/public/:language
-  Public patterns - no authentication required
+  DEPRECATED: Use /api/v1/patterns/:language without authentication instead.
+  Legacy endpoint kept for backward compatibility.
   """
   def public(conn, %{"language" => language}) do
-    if FeatureFlags.tier_access_allowed?("public", nil) do
-      patterns = Security.list_patterns_by_language_and_tier(language, "public")
-      formatted_patterns = Security.format_patterns_for_api(patterns)
-      
-      json(conn, %{
-        patterns: formatted_patterns,
-        tier: "public",
-        language: language,
-        count: length(formatted_patterns)
-      })
-    else
-      {:error, :public_patterns_disabled}
-    end
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.public is deprecated. Use 'all' endpoint without authentication.")
+    
+    # Return demo patterns (same as unauthenticated access)
+    patterns = DemoPatterns.get_demo_patterns(language)
+    formatted_patterns = Enum.map(patterns, fn pattern ->
+      format_pattern_without_tier(pattern, :standard)
+    end)
+    
+    json(conn, %{
+      patterns: formatted_patterns,
+      language: language,
+      count: length(formatted_patterns)
+    })
   end
 
   @doc """
   GET /api/v1/patterns/protected/:language
-  Protected patterns - API key required
+  DEPRECATED: Use /api/v1/patterns/:language with authentication instead.
+  Legacy endpoint kept for backward compatibility.
   """
   def protected(conn, params = %{"language" => language}) do
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.protected is deprecated. Use 'all' endpoint with authentication.")
+    
     with {:ok, _customer} <- authenticate_request(conn) do
       format = String.to_existing_atom(params["format"] || "standard")
-      patterns = Security.list_patterns_by_language_and_tier(language, "protected")
       
-      # Use format_patterns to handle enhanced format
-      formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
+      # Return all patterns (same as authenticated access)
+      patterns = ASTPattern.get_all_patterns_for_language(language, format)
+      formatted_patterns = Enum.map(patterns, fn pattern ->
+        format_pattern_without_tier(pattern, format)
+      end)
       
       response = %{
         patterns: formatted_patterns,
-        tier: "protected",
         language: language,
         count: length(formatted_patterns)
       }
@@ -305,20 +291,25 @@ defmodule RSOLVWeb.PatternController do
 
   @doc """
   GET /api/v1/patterns/ai/:language
-  AI patterns - API key + AI flag required
+  DEPRECATED: All authenticated users now get all patterns.
+  Legacy endpoint kept for backward compatibility.
   """
   def ai(conn, params = %{"language" => language}) do
-    with {:ok, customer} <- authenticate_request(conn),
-         true <- has_ai_access?(customer) do
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.ai is deprecated. All authenticated users get all patterns.")
+    
+    with {:ok, _customer} <- authenticate_request(conn) do
       format = String.to_existing_atom(params["format"] || "standard")
-      patterns = Security.list_patterns_by_language_and_tier(language, "ai")
       
-      # Use format_patterns to handle enhanced format
-      formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
+      # Return all patterns for authenticated users
+      patterns = ASTPattern.get_all_patterns_for_language(language, format)
+      formatted_patterns = Enum.map(patterns, fn pattern ->
+        format_pattern_without_tier(pattern, format)
+      end)
       
       response = %{
         patterns: formatted_patterns,
-        tier: "ai",
         language: language,
         count: length(formatted_patterns)
       }
@@ -331,31 +322,30 @@ defmodule RSOLVWeb.PatternController do
       end
       
       json(conn, response)
-    else
-      false ->
-        {:error, :ai_access_denied}
-      
-      error ->
-        error
     end
   end
 
   @doc """
   GET /api/v1/patterns/enterprise/:language
-  Enterprise patterns - Enterprise auth required
+  DEPRECATED: All authenticated users now get all patterns.
+  Legacy endpoint kept for backward compatibility.
   """
   def enterprise(conn, params = %{"language" => language}) do
-    with {:ok, customer} <- authenticate_request(conn),
-         true <- is_enterprise?(customer) do
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.enterprise is deprecated. All authenticated users get all patterns.")
+    
+    with {:ok, _customer} <- authenticate_request(conn) do
       format = String.to_existing_atom(params["format"] || "standard")
-      patterns = Security.list_patterns_by_language_and_tier(language, "enterprise")
       
-      # Use format_patterns to handle enhanced format
-      formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
+      # Return all patterns for authenticated users
+      patterns = ASTPattern.get_all_patterns_for_language(language, format)
+      formatted_patterns = Enum.map(patterns, fn pattern ->
+        format_pattern_without_tier(pattern, format)
+      end)
       
       response = %{
         patterns: formatted_patterns,
-        tier: "enterprise",
         language: language,
         count: length(formatted_patterns)
       }
@@ -368,89 +358,70 @@ defmodule RSOLVWeb.PatternController do
       end
       
       json(conn, response)
-    else
-      false ->
-        {:error, :enterprise_access_denied}
-      
-      error ->
-        error
     end
   end
 
   @doc """
   GET /api/v1/patterns/:language
-  Combined patterns based on customer's access level
+  DEPRECATED: Use /api/v1/patterns with language parameter instead.
+  Legacy endpoint kept for backward compatibility.
   """
   def by_language(conn, params) do
-    language = params["language"]
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.by_language is deprecated. Use 'all' endpoint instead.")
     
-    # Support format parameter for AST enhancements
-    format = try do
-      String.to_existing_atom(params["format"] || "standard")
-    rescue
-      ArgumentError -> :standard
-    end
-    
-    # Check if metadata should be included
-    include_metadata = params["include_metadata"] == "true"
-    
-    # Determine accessible tiers based on authentication
-    {api_key, customer, ai_enabled} = get_auth_context(conn)
-    accessible_tiers = Security.get_accessible_tiers(api_key, customer, ai_enabled)
-    
-    # Use highest tier available for comprehensive patterns
-    tier = determine_highest_tier(accessible_tiers)
-    
-    # Get patterns in requested format
-    patterns = ASTPattern.get_patterns(language, tier, format)
-    
-    # Format each pattern based on the requested format
-    formatted_patterns = patterns
-    |> Enum.map(&format_pattern(&1, format))
-    |> maybe_add_metadata(include_metadata)
-    
-    json(conn, %{
-      patterns: formatted_patterns,
-      accessible_tiers: accessible_tiers,
-      language: language,
-      count: length(formatted_patterns),
-      format: to_string(format)
-    })
+    # Redirect to the new tier-less endpoint
+    all(conn, params)
   end
 
   @doc """
   GET /api/v1/patterns/public
-  All public patterns (cross-language) - no authentication required
+  DEPRECATED: Use /api/v1/patterns without authentication instead.
+  Legacy endpoint kept for backward compatibility.
   """
   def all_public(conn, _params) do
-    if FeatureFlags.tier_access_allowed?("public", nil) do
-      patterns = Security.list_patterns_by_tier("public")
-      formatted_patterns = Security.format_patterns_for_api(patterns)
-      
-      json(conn, %{
-        patterns: formatted_patterns,
-        tier: "public",
-        language: "all",
-        count: length(formatted_patterns)
-      })
-    else
-      {:error, :public_patterns_disabled}
-    end
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.all_public is deprecated. Use 'all' endpoint without authentication.")
+    
+    # Return demo patterns for all languages
+    patterns = DemoPatterns.get_demo_patterns()
+    formatted_patterns = Enum.map(patterns, fn pattern ->
+      format_pattern_without_tier(pattern, :standard)
+    end)
+    
+    json(conn, %{
+      patterns: formatted_patterns,
+      language: "all",
+      count: length(formatted_patterns)
+    })
   end
 
   @doc """
   GET /api/v1/patterns/protected
-  All protected patterns (cross-language) - API key required
+  DEPRECATED: Use /api/v1/patterns with authentication instead.
+  Legacy endpoint kept for backward compatibility.
   """
   def all_protected(conn, _params) do
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.all_protected is deprecated. Use 'all' endpoint with authentication.")
+    
     with {:ok, _customer} <- authenticate_request(conn) do
-      patterns = Security.list_patterns_by_tier("protected")
-      formatted_patterns = Security.format_patterns_for_api(patterns)
+      # Return all patterns for authenticated users (all languages)
+      languages = ["javascript", "python", "ruby", "java", "elixir", "php"]
+      patterns = Enum.flat_map(languages, fn lang ->
+        ASTPattern.get_all_patterns_for_language(lang, :standard)
+      end)
+      
+      formatted_patterns = Enum.map(patterns, fn pattern ->
+        format_pattern_without_tier(pattern, :standard)
+      end)
       
       json(conn, %{
         patterns: formatted_patterns,
-        tier: "protected",
-        language: "all",
+        language: "all", 
         count: length(formatted_patterns)
       })
     end
@@ -458,107 +429,119 @@ defmodule RSOLVWeb.PatternController do
 
   @doc """
   GET /api/v1/patterns/ai
-  All AI patterns (cross-language) - API key + AI flag required
+  DEPRECATED: All authenticated users now get all patterns.
+  Legacy endpoint kept for backward compatibility.
   """
   def all_ai(conn, _params) do
-    with {:ok, customer} <- authenticate_request(conn),
-         true <- has_ai_access?(customer) do
-      patterns = Security.list_patterns_by_tier("ai")
-      formatted_patterns = Security.format_patterns_for_api(patterns)
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.all_ai is deprecated. All authenticated users get all patterns.")
+    
+    with {:ok, _customer} <- authenticate_request(conn) do
+      # Return all patterns for authenticated users (all languages)
+      languages = ["javascript", "python", "ruby", "java", "elixir", "php"]
+      patterns = Enum.flat_map(languages, fn lang ->
+        ASTPattern.get_all_patterns_for_language(lang, :standard)
+      end)
+      
+      formatted_patterns = Enum.map(patterns, fn pattern ->
+        format_pattern_without_tier(pattern, :standard)
+      end)
       
       json(conn, %{
         patterns: formatted_patterns,
-        tier: "ai",
-        language: "all",
+        language: "all", 
         count: length(formatted_patterns)
       })
-    else
-      false ->
-        {:error, :ai_access_denied}
-      
-      error ->
-        error
     end
   end
 
   @doc """
   GET /api/v1/patterns/enterprise
-  All enterprise patterns (cross-language) - Enterprise auth required
+  DEPRECATED: All authenticated users now get all patterns.
+  Legacy endpoint kept for backward compatibility.
   """
   def all_enterprise(conn, _params) do
-    with {:ok, customer} <- authenticate_request(conn),
-         true <- is_enterprise?(customer) do
-      patterns = Security.list_patterns_by_tier("enterprise")
-      formatted_patterns = Security.format_patterns_for_api(patterns)
+    # Log deprecation warning
+    require Logger
+    Logger.warning("PatternController.all_enterprise is deprecated. All authenticated users get all patterns.")
+    
+    with {:ok, _customer} <- authenticate_request(conn) do
+      # Return all patterns for authenticated users (all languages)
+      languages = ["javascript", "python", "ruby", "java", "elixir", "php"]
+      patterns = Enum.flat_map(languages, fn lang ->
+        ASTPattern.get_all_patterns_for_language(lang, :standard)
+      end)
+      
+      formatted_patterns = Enum.map(patterns, fn pattern ->
+        format_pattern_without_tier(pattern, :standard)
+      end)
       
       json(conn, %{
         patterns: formatted_patterns,
-        tier: "enterprise",
-        language: "all",
+        language: "all", 
         count: length(formatted_patterns)
       })
-    else
-      false ->
-        {:error, :enterprise_access_denied}
-      
-      error ->
-        error
     end
   end
 
   @doc """
   GET /api/v1/patterns
-  All patterns based on customer's access level (cross-language)
+  Get security patterns for a language.
+  
+  Query params:
+  - language: javascript, python, ruby, etc. (default: javascript)
+  - tier: DEPRECATED - kept for backward compatibility but ignored
+  - format: standard (default) or enhanced (with AST rules)
+  
+  Access model:
+  - With API key: Access to all ~172 patterns
+  - Without API key: Access to ~20 demo patterns only
   """
   def all(conn, params) do
-    # Check if this should use legacy behavior:
-    # 1. When explicit query parameters are provided (language, tier, format)
-    # 2. When no parameters at all (default to javascript/public for backward compatibility)
-    use_legacy = params["language"] || params["tier"] || params["format"] || map_size(params) == 0
+    language = params["language"] || "javascript"
+    format = String.to_existing_atom(params["format"] || "standard")
     
-    if use_legacy do
-      # Legacy behavior: use index logic with query parameters
-      language = params["language"] || "javascript"
-      tier = String.to_existing_atom(params["tier"] || "public")
-      format = String.to_existing_atom(params["format"] || "standard")
-      
-      patterns = ASTPattern.get_patterns(language, tier, format)
-      
-      # Convert patterns to API format
-      formatted_patterns = Enum.map(patterns, &format_pattern(&1, format))
-      
-      # Add metadata for monitoring
-      metadata = %{
-        language: language,
-        tier: to_string(tier),
-        format: to_string(format),
-        count: length(patterns),
-        enhanced: format == :enhanced
-      }
-      
-      conn
-      |> put_resp_header("x-pattern-version", "2.0")
-      |> json(%{
-        patterns: formatted_patterns,
-        metadata: metadata
-      })
+    # Check if user has API key
+    has_api_key = has_valid_api_key?(conn)
+    
+    # Debug logging
+    require Logger
+    Logger.info("PatternController.all - has_api_key: #{has_api_key}, language: #{language}")
+    
+    # Get patterns based on authentication
+    patterns = if has_api_key do
+      # Return all patterns for the language
+      all_patterns = ASTPattern.get_all_patterns_for_language(language, format)
+      Logger.info("With API key - returning #{length(all_patterns)} patterns")
+      all_patterns
     else
-      # New behavior: cross-language patterns based on authentication
-      {api_key, customer, ai_enabled} = get_auth_context(conn)
-      accessible_tiers = Security.get_accessible_tiers(api_key, customer, ai_enabled)
-      
-      patterns = Security.list_all_patterns(accessible_tiers)
-      formatted_patterns = Security.format_patterns_for_api(patterns)
-      
-      conn
-      |> put_resp_header("x-pattern-version", "2.0")
-      |> json(%{
-        patterns: formatted_patterns,
-        accessible_tiers: accessible_tiers,
-        language: "all",
-        count: length(formatted_patterns)
-      })
+      # Return only demo patterns
+      demo_patterns = DemoPatterns.get_demo_patterns(language)
+      Logger.info("Without API key - returning #{length(demo_patterns)} demo patterns")
+      demo_patterns
     end
+    
+    # Convert patterns to API format (removing tier information)
+    formatted_patterns = Enum.map(patterns, fn pattern ->
+      format_pattern_without_tier(pattern, format)
+    end)
+    
+    # Build metadata without tier information
+    metadata = %{
+      language: language,
+      format: to_string(format),
+      count: length(formatted_patterns),
+      enhanced: format == :enhanced,
+      access_level: if(has_api_key, do: "full", else: "demo")
+    }
+    
+    conn
+    |> put_resp_header("x-pattern-version", "2.0")
+    |> json(%{
+      patterns: formatted_patterns,
+      metadata: metadata
+    })
   end
   
   @doc """
@@ -703,18 +686,6 @@ defmodule RSOLVWeb.PatternController do
     end
   end
 
-  defp get_auth_context(conn) do
-    case get_req_header(conn, "authorization") do
-      ["Bearer " <> api_key] ->
-        customer = Accounts.get_customer_by_api_key(api_key)
-        # Grant AI access to all authenticated customers for now
-        ai_enabled = customer != nil
-        {api_key, customer, ai_enabled}
-
-      _ ->
-        {nil, nil, false}
-    end
-  end
 
   # V2 API endpoints - Enhanced format by default
   
@@ -732,7 +703,7 @@ defmodule RSOLVWeb.PatternController do
   GET /api/v2/patterns/protected/:language 
   V2 endpoint for protected patterns with enhanced format
   """
-  def v2_protected(conn, %{"language" => language}) do
+  def v2_protected(conn, %{"language" => _language}) do
     # Force enhanced format for v2
     params = Map.put(conn.params, "format", "enhanced")
     protected(conn, params)
@@ -762,33 +733,66 @@ defmodule RSOLVWeb.PatternController do
   GET /api/v2/patterns/:language
   V2 endpoint for all accessible patterns by language with enhanced format
   """
-  def v2_by_language(conn, %{"language" => language}) do
+  def v2_by_language(conn, %{"language" => _language}) do
     # Force enhanced format for v2
     params = Map.put(conn.params, "format", "enhanced")
     by_language(conn, params)
   end
 
-  defp has_ai_access?(customer) do
-    # Use feature flags to determine AI access
-    FeatureFlags.tier_access_allowed?("ai", customer)
-  end
-
-  defp is_enterprise?(customer) do
-    # Use feature flags to determine enterprise access
-    FeatureFlags.tier_access_allowed?("enterprise", customer)
-  end
-
-  defp determine_highest_tier(accessible_tiers) do
-    cond do
-      "enterprise" in accessible_tiers -> :enterprise
-      "ai" in accessible_tiers -> :ai
-      "protected" in accessible_tiers -> :protected
-      true -> :public
-    end
-  end
   
   defp ensure_list(value) when is_list(value), do: value
   defp ensure_list(value), do: [value]
+  
+  defp has_valid_api_key?(conn) do
+    case get_req_header(conn, "authorization") do
+      ["Bearer " <> api_key] ->
+        # Check if API key is valid
+        case Accounts.get_customer_by_api_key(api_key) do
+          nil -> false
+          _customer -> true
+        end
+      _ ->
+        false
+    end
+  end
+  
+  defp format_pattern_without_tier(%Pattern{} = pattern, format) do
+    base_format = Pattern.to_api_format(pattern)
+    
+    # Remove tier field
+    formatted = Map.delete(base_format, :tier)
+    
+    # Add enhanced fields if requested
+    if format == :enhanced do
+      # TODO: Add AST enhancement fields if available
+      formatted
+    else
+      formatted
+    end
+  end
+  
+  defp format_pattern_without_tier(%ASTPattern{} = pattern, format) do
+    formatted = case format do
+      :enhanced ->
+        # Include AST rules for enhanced format
+        build_enhanced_ast_pattern(pattern)
+        |> Map.delete(:tier)
+        
+      :standard ->
+        # Standard format without AST rules
+        build_standard_ast_pattern(pattern)
+        |> Map.delete(:tier)
+    end
+    
+    formatted
+  end
+  
+  defp format_pattern_without_tier(pattern, _format) do
+    # Fallback for other pattern types
+    pattern
+    |> Map.delete(:tier)
+    |> Map.delete(:default_tier)
+  end
   
   defp find_pattern_module(pattern_id) do
     # Try dynamic module resolution first

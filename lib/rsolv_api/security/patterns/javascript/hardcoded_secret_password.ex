@@ -65,7 +65,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.HardcodedSecretPassword do
       severity: :high,
       languages: ["javascript", "typescript"],
       regex: ~r/(?:password|passwd|pwd)\s*[=:]\s*["'`][^"'`]{4,}["'`]/i,
-      default_tier: :public,
       cwe_id: "CWE-798",
       owasp_category: "A07:2021",
       recommendation: "Store passwords in environment variables or secure configuration management systems.",

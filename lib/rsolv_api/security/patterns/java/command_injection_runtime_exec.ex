@@ -59,7 +59,6 @@ defmodule RsolvApi.Security.Patterns.Java.CommandInjectionRuntimeExec do
         # Pipeline and redirection patterns
         ~r/\.exec\s*\(\s*[^)]*["'][^"']*(?:\||>|<|&)[^"']*["']\s*\+[^)]*\)/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       recommendation: "Use ProcessBuilder with array of arguments and validate input",

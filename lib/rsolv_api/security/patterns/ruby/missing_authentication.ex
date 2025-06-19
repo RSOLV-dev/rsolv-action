@@ -47,7 +47,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.MissingAuthentication do
       severity: :high,
       languages: ["ruby"],
       regex: ~r/class\s+\w+Controller\s*<\s*ApplicationController(?:(?!before_action|before_filter|authenticate).)*end/s,
-      default_tier: :ai,
       cwe_id: "CWE-862",
       owasp_category: "A01:2021",
       recommendation: "Add before_action :authenticate_user! to protect sensitive actions",

@@ -63,7 +63,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.EvalUserInput do
       severity: :critical,
       languages: ["javascript", "typescript"],
       regex: ~r/^(?!.*\/\/).*eval\s*\(.*?(?:req\.|request\.|params\.|query\.|body\.|user|input|data|Code)/im,
-      default_tier: :ai,
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
       recommendation: "Avoid eval(). Use JSON.parse() for JSON data or find safer alternatives.",

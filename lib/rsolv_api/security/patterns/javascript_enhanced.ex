@@ -66,7 +66,6 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
       description: "SQL injection with context-aware detection and low false positives",
       languages: ["javascript", "typescript"],
       frameworks: [],
-      default_tier: :protected,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       test_cases: %{
@@ -220,7 +219,6 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
       description: "MongoDB injection with framework awareness",
       languages: ["javascript", "typescript"],
       frameworks: ["mongodb", "mongoose"],
-      default_tier: :protected,
       cwe_id: "CWE-943",
       owasp_category: "A03:2021",
       test_cases: %{
@@ -310,7 +308,6 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
       severity: :medium,
       languages: ["javascript", "typescript"],
       frameworks: ["express", "koa", "fastify"],
-      default_tier: :protected,
       cwe_id: "CWE-778",
       owasp_category: "A09:2021",
       test_cases: %{
@@ -397,7 +394,6 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
       severity: :critical,
       languages: ["javascript", "typescript"],
       frameworks: [],
-      default_tier: :protected,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       test_cases: %{
@@ -467,7 +463,6 @@ defmodule RsolvApi.Security.Patterns.JavascriptEnhanced do
       severity: :high,
       languages: ["javascript", "typescript"],
       frameworks: ["react", "vue", "angular"],
-      default_tier: :protected,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       test_cases: %{

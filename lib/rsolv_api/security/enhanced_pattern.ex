@@ -106,7 +106,6 @@ defmodule RsolvApi.Security.EnhancedPattern do
       languages: enhanced.languages,
       frameworks: enhanced.frameworks,
       regex: enhanced.regex || build_fallback_regex(enhanced),
-      default_tier: enhanced.default_tier,
       cwe_id: enhanced.cwe_id,
       owasp_category: enhanced.owasp_category,
       recommendation: enhanced.recommendation,

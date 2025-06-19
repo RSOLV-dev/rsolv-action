@@ -75,7 +75,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.CodeInjectionEval do
         # Eval in function calls
         ~r/apply\s*\(\s*Code\s*,\s*:eval_/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
       recommendation: "Never evaluate user input as code. Use pattern matching or predefined commands instead",

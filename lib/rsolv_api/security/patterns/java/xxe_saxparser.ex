@@ -92,7 +92,6 @@ defmodule RsolvApi.Security.Patterns.Java.XxeSaxparser do
         # newSAXParser followed by parse or getXMLReader
         ~r/newSAXParser\s*\(\s*\).*\.(?:parse|getXMLReader)\s*\(/ms
       ],
-      default_tier: :enterprise,
       cwe_id: "CWE-611",
       owasp_category: "A05:2021",
       recommendation: "Enable secure processing and disable external entity processing by setting XMLConstants.FEATURE_SECURE_PROCESSING to true and disabling external entity features",

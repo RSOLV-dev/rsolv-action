@@ -118,7 +118,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.InsufficientLogging do
         # Comment detection (for limitation test)
         ~r/#.*rescue/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-778",
       owasp_category: "A09:2021",
       recommendation: "Implement comprehensive security logging for authentication, authorization, and sensitive operations. Log security events with appropriate detail and context.",

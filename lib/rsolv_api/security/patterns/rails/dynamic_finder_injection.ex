@@ -74,7 +74,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DynamicFinderInjection do
         # send with interpolated method containing params
         ~r/\.send\s*\(\s*["'`]#\{[^}]*params[^}]*\}[=]?["'`]/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Avoid dynamic method names with user input in Rails. Use whitelisted method names or ActiveRecord hash-based queries.",

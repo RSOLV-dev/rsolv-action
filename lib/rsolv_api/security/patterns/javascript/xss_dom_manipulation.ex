@@ -116,7 +116,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDomManipulation do
           \.outerHTML\s*=
         )
       /imx,
-      default_tier: :ai,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Use safe DOM methods like textContent or sanitize HTML with DOMPurify before DOM manipulation.",

@@ -35,7 +35,6 @@ defmodule RsolvApi.Security.Patterns.Php.FileInclusion do
       severity: :critical,
       languages: ["php"],
       regex: ~r/(include|require|include_once|require_once)\s*\(?\s*.*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :ai,
       cwe_id: "CWE-98",
       owasp_category: "A03:2021",
       recommendation: "Use a whitelist of allowed files or avoid dynamic inclusion",

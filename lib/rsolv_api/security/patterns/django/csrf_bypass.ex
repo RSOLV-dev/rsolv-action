@@ -89,7 +89,6 @@ defmodule RsolvApi.Security.Patterns.Django.CsrfBypass do
         # Form POST without csrf_token (harder to detect with regex)
         ~r/<form[^>]+method\s*=\s*['""]?post['""]?[^>]*>(?!.*{%\s*csrf_token\s*%})/i
       ],
-      default_tier: :ai,
       cwe_id: "CWE-352",
       owasp_category: "A01:2021",
       recommendation: "Enable CSRF protection. Only use @csrf_exempt when absolutely necessary with additional security measures.",

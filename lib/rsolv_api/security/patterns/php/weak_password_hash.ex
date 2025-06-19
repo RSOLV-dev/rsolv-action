@@ -36,7 +36,6 @@ defmodule RsolvApi.Security.Patterns.Php.WeakPasswordHash do
       severity: :critical,
       languages: ["php"],
       regex: ~r/(md5|sha1)\s*\(\s*.*(?:password|pass|pwd)|crypt\s*\(\s*.*(?:password|pass|pwd)(?!.*\$2[abxy]\$)|hash\s*\(\s*['"](md5|sha1)['"]\s*,\s*.*(?:password|pass|pwd)/i,
-      default_tier: :ai,
       cwe_id: "CWE-916",
       owasp_category: "A02:2021",
       recommendation: "Use password_hash() with PASSWORD_BCRYPT or PASSWORD_ARGON2I",

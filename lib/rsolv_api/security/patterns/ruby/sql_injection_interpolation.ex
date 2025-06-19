@@ -67,7 +67,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.SqlInjectionInterpolation do
         ~r/\.update_all\s*\(\s*[\"'].*?#\{/,
         ~r/\.delete_all\s*\(\s*[\"'].*?#\{/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized queries or ActiveRecord query interface",

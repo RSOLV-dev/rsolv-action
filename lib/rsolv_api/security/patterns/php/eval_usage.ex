@@ -41,7 +41,6 @@ defmodule RsolvApi.Security.Patterns.Php.EvalUsage do
       severity: :critical,
       languages: ["php"],
       regex: ~r/eval\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)/,
-      default_tier: :ai,
       cwe_id: "CWE-95",
       owasp_category: "A03:2021",
       recommendation: "Never use eval() with user input. Find alternative solutions",

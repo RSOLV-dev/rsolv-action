@@ -48,7 +48,6 @@ defmodule RsolvApi.Security.Patterns.Php.XpathInjection do
       severity: :high,
       languages: ["php"],
       regex: ~r/->(query|evaluate)\s*\([^)]*(?:\$_(GET|POST|REQUEST|COOKIE)|['"][^'"]*\$_(GET|POST|REQUEST|COOKIE)|['"]\s*\.\s*\$_(GET|POST|REQUEST|COOKIE))/,
-      default_tier: :enterprise,
       cwe_id: "CWE-643",
       owasp_category: "A03:2021",
       recommendation: "Validate and escape user input in XPath queries, use parameterized queries when possible",

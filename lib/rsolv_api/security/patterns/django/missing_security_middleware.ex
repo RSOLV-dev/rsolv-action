@@ -82,7 +82,6 @@ defmodule RsolvApi.Security.Patterns.Django.MissingSecurityMiddleware do
         ~r/MIDDLEWARE(?:_CLASSES)?\s*=\s*\[\s*\]/,
         ~r/MIDDLEWARE(?:_CLASSES)?\s*=\s*\[\s*['"]django\.middleware\.common\.CommonMiddleware['"]\s*\]/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-16",
       owasp_category: "A05:2021",
       recommendation: "Add security middleware: django.middleware.security.SecurityMiddleware, django.middleware.csrf.CsrfViewMiddleware, and django.middleware.clickjacking.XFrameOptionsMiddleware",

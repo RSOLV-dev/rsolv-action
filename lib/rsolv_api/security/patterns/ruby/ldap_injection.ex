@@ -61,7 +61,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.LdapInjection do
         ~r/\.auth\s*\(\s*['\"].*?#\{/,
         ~r/\.authenticate\s*\(\s*['\"].*?#\{/
       ],
-      default_tier: :enterprise,
       cwe_id: "CWE-90",
       owasp_category: "A03:2021",
       recommendation: "Use Net::LDAP::Filter.escape() to sanitize user input or Net::LDAP::Filter.eq() for safe filter construction",

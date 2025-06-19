@@ -39,7 +39,6 @@ defmodule RsolvApi.Security.Patterns.Php.OpenRedirect do
       severity: :medium,
       languages: ["php"],
       regex: ~r/(header\s*\(\s*["']Location:\s*[^"']*["']?\s*\.\s*\$_(GET|POST|REQUEST|COOKIE))|(wp_redirect\s*\(\s*\$_(GET|POST|REQUEST|COOKIE))/i,
-      default_tier: :public,
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
       recommendation: "Validate redirect URLs against an allowlist",

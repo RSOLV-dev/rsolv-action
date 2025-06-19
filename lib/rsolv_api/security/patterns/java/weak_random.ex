@@ -95,7 +95,6 @@ defmodule RsolvApi.Security.Patterns.Java.WeakRandom do
         # Method calls with random parameters - exclude commented lines
         ~r/^(?!.*\/\/).*\w+\s*\(\s*(?:[^)]*,\s*)?(?:random|rand|rng|generator)(?:\s*,\s*[^)]*)?\s*\)/im
       ],
-      default_tier: :ai,
       cwe_id: "CWE-338",
       owasp_category: "A02:2021",
       recommendation: "Use SecureRandom for cryptographically secure random number generation",

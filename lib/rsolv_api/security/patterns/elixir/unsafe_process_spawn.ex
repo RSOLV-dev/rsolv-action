@@ -115,7 +115,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeProcessSpawn do
         ~r/spawn\s*\([^)]*(?:user_|input|params|request|data)/i,
         ~r/spawn\s+fn[^)]*(?:user_|input|params|request|data)/i
       ],
-      default_tier: :ai,
       cwe_id: "CWE-400",
       owasp_category: "A05:2021",
       recommendation: "Use spawn_link/1, Task.start_link/1, or proper supervision trees instead of unlinked spawn calls",

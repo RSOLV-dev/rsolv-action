@@ -85,7 +85,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.NosqlInjection do
         # $where operator usage
         \$where\s*:\s*(?:req\.(?:body|query|params)|user(?:Input|Data)|input|data)
       /x,
-      default_tier: :ai,
       cwe_id: "CWE-943",
       owasp_category: "A03:2021",
       recommendation: "Sanitize and validate all user input before using in NoSQL queries. Use parameterized queries or ODM/ORM features that handle escaping.",

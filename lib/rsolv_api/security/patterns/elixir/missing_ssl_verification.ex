@@ -121,7 +121,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.MissingSslVerification do
         # Multi-line SSL options with verify_none - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*verify:\s*:verify_none/m
       ],
-      default_tier: :ai,
       cwe_id: "CWE-295",
       owasp_category: "A07:2021",
       recommendation: "Always verify SSL certificates in production, use verify: :verify_peer",

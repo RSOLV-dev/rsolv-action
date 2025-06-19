@@ -177,7 +177,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation do
       languages: ["javascript", "typescript"],
       # Matches template literals containing SQL keywords and ${} interpolation
       regex: ~r/`[^`]*(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|FROM|WHERE)[^`]*\$\{[^}]+\}[^`]*`/i,
-      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized queries instead of string interpolation for SQL queries.",

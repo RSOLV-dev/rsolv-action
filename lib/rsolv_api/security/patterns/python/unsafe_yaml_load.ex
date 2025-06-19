@@ -37,7 +37,6 @@ defmodule RsolvApi.Security.Patterns.Python.UnsafeYamlLoad do
         # Direct load() call after import
         (?:^|\s)load\s*\([^,)]*\)
       /x,
-      default_tier: :ai,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
       recommendation: "Use yaml.safe_load() or yaml.load(data, Loader=yaml.SafeLoader)",

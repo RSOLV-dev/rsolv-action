@@ -211,7 +211,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.CommandInjectionExec do
       languages: ["javascript", "typescript"],
       # Matches exec/execSync with concatenation or interpolation
       regex: ~r/(?:exec|execSync)\s*\([^)]*(?:\+|\$\{)[^)]*[a-zA-Z]/,
-      default_tier: :ai,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       recommendation: "Use execFile with argument array instead of exec. Validate and sanitize all user input.",

@@ -112,7 +112,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.HardcodedSecrets do
         # Elixir keyword list with password (exclude lines starting with #)
         ~r/^[^#]*password:\s*["'][^"']{8,}["']/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-798",
       owasp_category: "A02:2021",
       recommendation: "Use environment variables or runtime configuration to manage secrets securely",

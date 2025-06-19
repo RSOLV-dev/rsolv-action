@@ -42,7 +42,6 @@ defmodule RsolvApi.Security.Patterns.Php.RegisterGlobals do
       # Match potentially uninitialized authentication variables
       # Note: This regex is broad - proper detection requires data flow analysis
       regex: ~r/^(?!.*\/\/).*if\s*\(\s*[!&|(\s]*\$(?!_)(?:authenticated|admin|user_id|logged_in|admin_mode|privileged|bypass_auth)\b/m,
-      default_tier: :ai,
       cwe_id: "CWE-473",
       owasp_category: "A04:2021",
       recommendation: "Initialize all variables and don't rely on register_globals",

@@ -80,7 +80,6 @@ defmodule RsolvApi.Security.Patterns.Django.DebugSettings do
         ~r/^DEBUG\s*=\s*True\s*(?:#.*)?$/m,
         ~r/^DEBUG\s*=\s*True\s*$/m,
       ],
-      default_tier: :ai,
       cwe_id: "CWE-489",
       owasp_category: "A05:2021",
       recommendation: "Set DEBUG = False in production settings. Use environment-specific settings files.",

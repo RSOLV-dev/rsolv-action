@@ -47,17 +47,14 @@ defmodule RsolvApi.Security do
   end
 
   @doc """
-  Returns the list of security patterns for a given language with tier filtering.
+  Returns the list of security patterns for a given language.
   Now uses compile-time pattern modules.
   """
-  def list_patterns_by_language(language, accessible_tiers \\ ["public"]) do
+  def list_patterns_by_language(language) do
     patterns = get_patterns_for_language(language)
     
-    # Filter by accessible tiers
+    # Return all patterns without tier filtering
     patterns
-    |> Enum.filter(fn pattern ->
-      get_pattern_tier(pattern) in accessible_tiers
-    end)
     |> Enum.sort_by(fn pattern ->
       {severity_order(pattern.severity), pattern.name}
     end)

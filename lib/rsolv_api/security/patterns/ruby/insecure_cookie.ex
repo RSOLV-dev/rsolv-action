@@ -111,7 +111,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.InsecureCookie do
         # response.set_cookie without security flags
         ~r/response\.set_cookie\s*\(\s*['"][^'"]+['"]\s*,\s*[^{]/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-614",
       owasp_category: "A05:2021",
       recommendation: "Always set secure: true, httponly: true, and same_site: :strict or :lax for sensitive cookies",

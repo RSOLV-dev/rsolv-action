@@ -106,7 +106,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.SsrfOpenUri do
         ~r/(?:^|[^#])\s*RestClient::Request\.execute\s*\(\s*(?:.*\s+)?url:\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*rest_client\.(?:get|post|put|patch|delete|head|options)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/
       ],
-      default_tier: :enterprise,
       cwe_id: "CWE-918",
       owasp_category: "A10:2021",
       recommendation: "Validate and allowlist URLs before making HTTP requests. Implement request timeouts and restrict access to internal networks.",

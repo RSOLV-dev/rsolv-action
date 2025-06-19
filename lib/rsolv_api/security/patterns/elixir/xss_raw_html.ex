@@ -65,7 +65,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.XssRawHtml do
         # Phoenix.HTML.html_safe with dynamic content
         ~r/Phoenix\.HTML\.html_safe\s*\(\s*(?:@?[a-zA-Z_][a-zA-Z0-9_]*|params\[|assigns\[|conn\.)/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Use Phoenix's automatic HTML escaping or Phoenix.HTML.escape/1 for user input",

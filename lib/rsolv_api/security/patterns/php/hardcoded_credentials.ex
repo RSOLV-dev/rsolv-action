@@ -38,7 +38,6 @@ defmodule RsolvApi.Security.Patterns.Php.HardcodedCredentials do
       severity: :critical,
       languages: ["php"],
       regex: ~r/(?:\$(?:password|passwd|pwd|mysql_pwd|db_password|api_key|apikey|secret|token|auth_token|secret_key)|password|api_key|secret|token)\s*[=:]\s*['"][^'"]{3,}['"]|define\s*\(\s*['"](?:DB_)?(?:PASSWORD|API_KEY|SECRET|TOKEN|AUTH_TOKEN|SECRET_KEY|SECRET_TOKEN)['"]\s*,\s*['"][^'"]{3,}['"]\)|['"](?:password|api_key|secret|token)['"]\s*=>\s*['"][^'"]{3,}['"]/i,
-      default_tier: :ai,
       cwe_id: "CWE-798",
       owasp_category: "A07:2021",
       recommendation: "Use environment variables or secure configuration management",

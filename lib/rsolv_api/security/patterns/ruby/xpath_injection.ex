@@ -60,7 +60,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.XpathInjection do
         ~r/\w+\.parse\s*\(\s*['\"].*?#\{/,
         ~r/(?:find_by_xpath|select_xpath|query_xpath|get_xpath)\s*\(\s*['\"].*?#\{/
       ],
-      default_tier: :enterprise,
       cwe_id: "CWE-643",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized XPath queries or sanitize user input before XPath construction",

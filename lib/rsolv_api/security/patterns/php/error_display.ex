@@ -37,7 +37,6 @@ defmodule RsolvApi.Security.Patterns.Php.ErrorDisplay do
       severity: :low,
       languages: ["php"],
       regex: ~r/(die|exit)\s*\(\s*["'][^"']*["']\s*\.\s*[\w_]+\s*\(/,
-      default_tier: :ai,
       cwe_id: "CWE-209",
       owasp_category: "A05:2021",
       recommendation: "Log errors internally and show generic messages to users",

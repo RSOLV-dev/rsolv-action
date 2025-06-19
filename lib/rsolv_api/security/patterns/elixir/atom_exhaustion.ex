@@ -119,7 +119,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.AtomExhaustion do
         ~r/String\.to_atom\s*\(\s*(?!["']\w+["'])[^)]+\)/,
         ~r/binary_to_atom\s*\(\s*(?!["']\w+["'])[^)]+\)/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-400",
       owasp_category: "A05:2021",
       recommendation: "Use String.to_existing_atom/1, Jason.decode/1 without :atoms, or validate input against known atom lists",

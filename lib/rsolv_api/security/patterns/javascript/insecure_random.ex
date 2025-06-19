@@ -65,7 +65,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.InsecureRandom do
       languages: ["javascript", "typescript"],
       # Matches Math.random() when used with security-related variable names
       regex: ~r/(?:token|key|password|secret|salt|nonce|session|auth)[^;]*=.*Math\.random\s*\(\s*\)|Math\.random\s*\(\s*\)[^;]*(?:token|key|password|secret|salt|nonce|session|auth)/i,
-      default_tier: :public,
       cwe_id: "CWE-330",
       owasp_category: "A02:2021",
       recommendation: "Use crypto.randomBytes() or crypto.getRandomValues() for security purposes.",

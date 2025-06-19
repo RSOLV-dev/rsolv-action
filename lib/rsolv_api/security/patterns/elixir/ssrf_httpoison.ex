@@ -86,7 +86,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.SsrfHttpoison do
         # Finch with user input - exclude comments
         ~r/^(?!.*#).*Finch\.build\s*\(\s*:\w+,\s*[^"']/m
       ],
-      default_tier: :enterprise,
       cwe_id: "CWE-918",
       owasp_category: "A10:2021",
       recommendation: "Validate URLs against an allowlist before making HTTP requests",

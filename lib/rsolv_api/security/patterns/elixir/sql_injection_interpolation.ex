@@ -46,7 +46,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.SqlInjectionInterpolation do
       languages: ["elixir"],
       frameworks: ["ecto"],
       regex: ~r/(?:(?:\w+\.)*\w*[Rr]epo\.query!?|Ecto\.Adapters\.SQL\.query!?|fragment)\s*\(.*?#\{.*?\}/,
-      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized queries with Ecto. Use ^variable syntax or pass parameters separately",

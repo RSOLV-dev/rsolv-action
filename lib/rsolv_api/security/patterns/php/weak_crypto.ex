@@ -47,7 +47,6 @@ defmodule RsolvApi.Security.Patterns.Php.WeakCrypto do
       severity: :medium,
       languages: ["php"],
       regex: ~r/(mcrypt_[a-zA-Z_]+|MCRYPT_(?:DES|3DES|MODE_ECB)|(?:openssl_(?:en|de)crypt|\w+)\s*\([^,]*,?\s*['"][^'"]*(?:des|ecb)[^'"]*['"]|['"][^'"]*(?:des|ecb)[^'"]*['"])/i,
-      default_tier: :ai,
       cwe_id: "CWE-327",
       owasp_category: "A02:2021",
       recommendation: "Use OpenSSL extension with AES-256-GCM or ChaCha20-Poly1305",

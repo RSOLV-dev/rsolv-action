@@ -69,7 +69,6 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousAttrAccessible do
         # ActiveRecord model without attr_accessible (matches the whole class)
         ~r/class\s+\w+\s*<\s*ActiveRecord::Base(?:(?!attr_accessible|attr_protected|end).)*?end/ms
       ],
-      default_tier: :ai,
       cwe_id: "CWE-915",
       owasp_category: "A01:2021",
       recommendation: "Upgrade to Rails 4+ and use strong parameters. If using older Rails, carefully restrict attr_accessible fields.",

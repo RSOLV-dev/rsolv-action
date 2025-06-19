@@ -51,7 +51,6 @@ defmodule RsolvApi.Security.Patterns.Common.WeakJwtSecret do
         # Short secrets (less than 16 chars)
         ~r/(?:jwt|token).*?secret.*?[:=]\s*["'][^"']{1,15}["']/i
       ],
-      default_tier: :ai,  # This is a critical issue, available in public tier
       cwe_id: "CWE-798",
       owasp_category: "A02:2021",
       recommendation: "Use strong, randomly generated secrets of at least 256 bits. Store secrets in secure environment variables or key management systems. Implement key rotation.",

@@ -90,7 +90,6 @@ defmodule RsolvApi.Security.Patterns.Python.CommandInjectionOsSystem do
         # Variable assignment followed by os.system
         (?:cmd|command|exec_str)\s*=.*(?:\+|%\s|\.format|f["']).*os\.system
       /x,
-      default_tier: :ai,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       recommendation: "Use subprocess.run() with shell=False and pass arguments as a list",

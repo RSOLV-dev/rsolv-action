@@ -79,7 +79,6 @@ defmodule RsolvApi.Security.Patterns.Django.ModelInjection do
         # getattr with request data (can lead to information disclosure)
         ~r/getattr\s*\(\s*\w+,\s*request\./
       ],
-      default_tier: :ai,
       cwe_id: "CWE-74",
       owasp_category: "A03:2021",
       recommendation: "Validate and whitelist fields before model operations",

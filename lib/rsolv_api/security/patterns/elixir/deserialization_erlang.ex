@@ -81,7 +81,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.DeserializationErlang do
         # In function calls
         ~r/^(?!\s*#).*apply\s*\(\s*:erlang\s*,\s*:binary_to_term/m
       ],
-      default_tier: :ai,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
       recommendation: "Use JSON for data serialization or validate deserialized data contains no functions",

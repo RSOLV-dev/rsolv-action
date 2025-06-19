@@ -39,7 +39,6 @@ defmodule RsolvApi.Security.Patterns.Php.CommandInjection do
       severity: :critical,
       languages: ["php"],
       regex: ~r/(?:system|exec|shell_exec|passthru)\s*\(\s*.*\$_(GET|POST|REQUEST|COOKIE)|`[^`]*\$_(GET|POST|REQUEST|COOKIE)[^`]*`/,
-      default_tier: :ai,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       recommendation: "Use escapeshellarg() for arguments or avoid system commands entirely",

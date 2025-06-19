@@ -96,7 +96,6 @@ defmodule RsolvApi.Security.Patterns.Django.UnsafeUrlPatterns do
         ~r/include\s*\(\s*['"']rosetta\.urls['"']\)/,
         ~r/include\s*\(\s*['"']hijack\.urls['"']\)/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-284",
       owasp_category: "A01:2021",
       recommendation: "Use specific URL patterns. Change default admin URL. Remove debug tools in production.",

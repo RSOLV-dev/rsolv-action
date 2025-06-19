@@ -94,7 +94,6 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionConfig do
         ~r/Rails\.application\.config\.session_store.*?format:\s*false/,
         ~r/Rails\.application\.config\.session_store.*?format:\s*nil/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-614",
       owasp_category: "A05:2021",
       recommendation: "Configure Rails sessions with secure: true, httponly: true, and same_site: :strict for HTTPS environments. Review Rails session store configuration.",

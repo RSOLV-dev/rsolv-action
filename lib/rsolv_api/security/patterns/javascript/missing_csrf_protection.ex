@@ -102,7 +102,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.MissingCsrfProtection do
           \w+
         )
       /x,
-      default_tier: :ai,
       cwe_id: "CWE-352",
       owasp_category: "A01:2021",
       recommendation: "Implement CSRF protection using tokens, SameSite cookies, or double-submit cookies. Verify the Origin/Referer headers.",

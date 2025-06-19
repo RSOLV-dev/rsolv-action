@@ -799,6 +799,23 @@ defmodule RsolvApi.Security.ASTPattern do
     |> filter_by_tier(tier)
   end
   
+  @doc """
+  Get all patterns for a language regardless of tier.
+  Used for tier-less access with API keys.
+  """
+  def get_all_patterns_for_language(language, format \\ :standard)
+  
+  def get_all_patterns_for_language(language, :enhanced) do
+    # Get all patterns without tier filtering
+    apply(pattern_module(language), :all, [])
+    |> Enum.map(&enhance/1)
+  end
+  
+  def get_all_patterns_for_language(language, :standard) do
+    # Get all patterns without tier filtering
+    apply(pattern_module(language), :all, [])
+  end
+  
   defp pattern_module("javascript"), do: RsolvApi.Security.Patterns.Javascript
   defp pattern_module("python"), do: RsolvApi.Security.Patterns.Python
   defp pattern_module("ruby"), do: RsolvApi.Security.Patterns.Ruby

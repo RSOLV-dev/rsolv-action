@@ -133,7 +133,6 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraints do
         ~r/constraints:\s*\{\s*host:\s*\/.*?#\{.*?params/,
         ~r/constraints\(\s*\{\s*host:\s*\/\.\*.*?\}.*?\)/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-285",
       owasp_category: "A01:2021",
       recommendation: "Use specific, restrictive regex patterns for Rails route constraints. Avoid dynamic constraints with user input in Rails routes.",

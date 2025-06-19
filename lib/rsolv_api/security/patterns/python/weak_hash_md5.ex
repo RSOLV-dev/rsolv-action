@@ -45,7 +45,6 @@ defmodule RsolvApi.Security.Patterns.Python.WeakHashMd5 do
         # Variable containing 'md5' string used with getattr
         \w+\s*=\s*['"]md5['"].*getattr\s*\(\s*hashlib\s*,\s*\w+\)
       /x,
-      default_tier: :ai,
       cwe_id: "CWE-328",
       owasp_category: "A02:2021",
       recommendation: "Use SHA-256, SHA-3, or bcrypt/argon2 for passwords",

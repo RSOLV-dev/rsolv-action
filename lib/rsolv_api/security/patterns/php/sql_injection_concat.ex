@@ -40,7 +40,6 @@ defmodule RsolvApi.Security.Patterns.Php.SqlInjectionConcat do
       severity: :critical,
       languages: ["php"],
       regex: ~r/["'](?:SELECT|DELETE|UPDATE|INSERT).*["']\s*\.\s*\$_(GET|POST|REQUEST|COOKIE)/i,
-      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use prepared statements with parameterized queries (PDO or mysqli)",

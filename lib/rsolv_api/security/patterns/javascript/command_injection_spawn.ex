@@ -64,7 +64,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.CommandInjectionSpawn do
       severity: :critical,
       languages: ["javascript", "typescript"],
       regex: ~r/spawn\s*\([^)]*\{[^}]*shell\s*:\s*true/i,
-      default_tier: :ai,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       recommendation: "Avoid shell:true. Use spawn without shell option and pass arguments as array.",

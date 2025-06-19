@@ -117,7 +117,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.OpenRedirect do
       severity: :medium,
       languages: ["javascript", "typescript"],
       regex: build_open_redirect_regex(),
-      default_tier: :public,
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
       recommendation: "Validate redirect URLs against a whitelist of allowed destinations.",

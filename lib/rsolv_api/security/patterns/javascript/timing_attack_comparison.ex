@@ -75,7 +75,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.TimingAttackComparison do
       languages: ["javascript", "typescript"],
       # Matches comparison operators with security-related variable names on either side
       regex: ~r/(?:(?:secret|token|password|key|hash|auth)[^=]*(?:===|==|!==|!=)|(?:===|==|!==|!=)[^=]*(?:secret|token|password|key|hash|auth))/i,
-      default_tier: :ai,
       cwe_id: "CWE-208",
       owasp_category: "A04:2021",
       recommendation: "Use crypto.timingSafeEqual() for comparing secrets.",

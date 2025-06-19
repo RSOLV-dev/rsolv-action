@@ -6,13 +6,11 @@ defmodule RsolvApi.Security.Pattern do
   - Metadata (id, name, description)
   - Detection rules (regex patterns)
   - Categorization (type, severity, languages)
-  - Access control (default_tier)
   - Standards mapping (cwe_id, owasp_category)
   - Educational content (recommendation, test_cases)
   """
   
   @type severity :: :low | :medium | :high | :critical
-  @type tier :: :public | :protected | :ai | :enterprise
   @type vulnerability_type :: 
     :sql_injection | :xss | :command_injection | :path_traversal |
     :weak_crypto | :hardcoded_secret | :authentication | :csrf |
@@ -43,7 +41,6 @@ defmodule RsolvApi.Security.Pattern do
     languages: [String.t()],
     frameworks: [String.t()] | nil,
     regex: Regex.t() | [Regex.t()],
-    default_tier: tier(),
     cwe_id: String.t() | nil,
     owasp_category: String.t() | nil,
     recommendation: String.t(),
@@ -56,7 +53,7 @@ defmodule RsolvApi.Security.Pattern do
   
   @enforce_keys [
     :id, :name, :description, :type, :severity,
-    :languages, :regex, :default_tier, :recommendation,
+    :languages, :regex, :recommendation,
     :test_cases
   ]
   
@@ -69,7 +66,6 @@ defmodule RsolvApi.Security.Pattern do
     :languages,
     :frameworks,
     :regex,
-    :default_tier,
     :cwe_id,
     :owasp_category,
     :recommendation,
@@ -90,7 +86,6 @@ defmodule RsolvApi.Security.Pattern do
       ...>   severity: :high,
       ...>   languages: ["javascript"],
       ...>   regex: ~r/test/,
-      ...>   default_tier: :protected,
       ...>   recommendation: "Fix it",
       ...>   test_cases: %{vulnerable: ["bad"], safe: ["good"]}
       ...> }
@@ -100,7 +95,6 @@ defmodule RsolvApi.Security.Pattern do
   def valid?(%__MODULE__{} = pattern) do
     valid_id?(pattern.id) &&
     valid_severity?(pattern.severity) &&
-    valid_tier?(pattern.default_tier) &&
     valid_languages?(pattern.languages) &&
     valid_regex?(pattern.regex) &&
     valid_test_cases?(pattern.test_cases)
@@ -114,8 +108,6 @@ defmodule RsolvApi.Security.Pattern do
   defp valid_severity?(severity) when severity in [:low, :medium, :high, :critical], do: true
   defp valid_severity?(_), do: false
   
-  defp valid_tier?(tier) when tier in [:public, :protected, :ai, :enterprise], do: true
-  defp valid_tier?(_), do: false
   
   defp valid_languages?(languages) when is_list(languages) do
     length(languages) > 0 && Enum.all?(languages, &is_binary/1)
@@ -163,7 +155,6 @@ defmodule RsolvApi.Security.Pattern do
       severity: to_string(pattern.severity),
       languages: pattern.languages,
       regex_patterns: regex_to_strings(pattern.regex),
-      tier: to_string(pattern.default_tier),
       cwe_id: pattern.cwe_id,
       owasp_category: pattern.owasp_category,
       recommendation: pattern.recommendation,

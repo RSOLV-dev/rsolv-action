@@ -64,7 +64,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.DebugConsoleLog do
       languages: ["javascript", "typescript"],
       # Matches console methods with sensitive keywords in arguments
       regex: ~r/console\.(?:log|info|warn|error)\s*\([^)]*(?:password|secret|token|key|credential|auth)/i,
-      default_tier: :public,
       cwe_id: "CWE-532",
       owasp_category: "A09:2021",
       recommendation: "Remove console.log statements or use proper logging that filters sensitive data.",

@@ -135,7 +135,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
         ~r/Marshal\.load\s*\(\s*cache\.read/,
         ~r/Marshal\.load\s*\(\s*Rails\.cache/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
       recommendation: "Never use Marshal.load with untrusted data. Use JSON.parse or other safe serialization formats. For Rails, use encrypted cookies and strong parameters.",

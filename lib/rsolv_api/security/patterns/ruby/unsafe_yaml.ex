@@ -98,7 +98,6 @@ defmodule RsolvApi.Security.Patterns.Ruby.UnsafeYaml do
         ~r/YAML::load\s*\(\s*request\./,
         ~r/Psych::load\s*\(\s*request\./
       ],
-      default_tier: :ai,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
       recommendation: "Use YAML.safe_load with explicit permitted_classes to safely deserialize YAML data. Validate and sanitize all user input before processing.",

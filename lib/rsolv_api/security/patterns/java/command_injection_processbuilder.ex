@@ -62,7 +62,6 @@ defmodule RsolvApi.Security.Patterns.Java.CommandInjectionProcessbuilder do
         # add() calls for shell command construction
         ~r/\.add\s*\(\s*["'](?:bash|sh|cmd)["']\s*\)/i
       ],
-      default_tier: :ai,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
       recommendation: "Use ProcessBuilder with separate arguments and validate input",

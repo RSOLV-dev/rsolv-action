@@ -65,7 +65,6 @@ defmodule RsolvApi.Security.Patterns.Django.InsecureSession do
         ~r/^[^#]*LANGUAGE_COOKIE_SECURE\s*=\s*False/m,
         ~r/^[^#]*CSRF_COOKIE_HTTPONLY\s*=\s*False/m
       ],
-      default_tier: :ai,
       cwe_id: "CWE-614",
       owasp_category: "A05:2021",
       recommendation: "Enable secure session cookies: SESSION_COOKIE_SECURE = True, SESSION_COOKIE_HTTPONLY = True, SESSION_COOKIE_SAMESITE = 'Strict'",

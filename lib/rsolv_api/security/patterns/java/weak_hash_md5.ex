@@ -56,7 +56,6 @@ defmodule RsolvApi.Security.Patterns.Java.WeakHashMd5 do
         # Enum or constant references to MD5
         ~r/HashAlgorithm\.MD5|ALGORITHM_MD5|MD5_ALGORITHM/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-327",
       owasp_category: "A02:2021",
       recommendation: "Use SHA-256, SHA-3, or other secure hash algorithms instead of MD5",

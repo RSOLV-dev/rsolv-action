@@ -111,7 +111,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.InsufficientInputValidation do
         # Multi-line Ecto.Changeset.cast patterns - exclude comments
         ~r/^(?!\s*#).*Ecto\.Changeset\.cast\s*\([^)]*\[[^\]]*(?::permissions|:role|:admin)/ms
       ],
-      default_tier: :ai,
       cwe_id: "CWE-20",
       owasp_category: "A03:2021",
       recommendation: "Validate sensitive fields through separate authorization checks and use field whitelisting",

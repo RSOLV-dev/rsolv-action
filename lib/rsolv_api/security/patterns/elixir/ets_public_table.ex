@@ -111,7 +111,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.EtsPublicTable do
         # Sensitive table names with public access
         ~r/:ets\.new\s*\(:[a-z_]*(?:session|auth|token|password|key|user|credential)[a-z_]*,\s*\[[^\]]*:public[^\]]*\]/i
       ],
-      default_tier: :ai,
       cwe_id: "CWE-732",
       owasp_category: "A01:2021",
       recommendation: "Use :protected (default) or :private access for sensitive data. Reserve :public only for truly public read-only data.",

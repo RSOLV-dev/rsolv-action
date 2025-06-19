@@ -43,7 +43,6 @@ defmodule RsolvApi.Security.Patterns.Php.ExtractUsage do
       severity: :high,
       languages: ["php"],
       regex: ~r/extract\s*\(\s*\$_(GET|POST|REQUEST|COOKIE)(?!.*EXTR_SKIP)/,
-      default_tier: :ai,
       cwe_id: "CWE-621",
       owasp_category: "A03:2021",
       recommendation: "Avoid extract() on user input or use EXTR_SKIP flag",

@@ -60,7 +60,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.WeakCryptoMd5 do
       severity: :medium,
       languages: ["javascript", "typescript"],
       regex: ~r/(?:crypto|require\s*\(\s*['"`]crypto['"`]\s*\))\.createHash\s*\(\s*['"`]md5['"`]\s*\)/i,
-      default_tier: :public,
       cwe_id: "CWE-328",
       owasp_category: "A02:2021",
       recommendation: "Use SHA-256 or SHA-3 for hashing. For passwords, use bcrypt, scrypt, or argon2.",

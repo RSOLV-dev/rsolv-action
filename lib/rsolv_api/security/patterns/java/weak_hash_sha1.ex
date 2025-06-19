@@ -63,7 +63,6 @@ defmodule RsolvApi.Security.Patterns.Java.WeakHashSha1 do
         # TLS and signature contexts with SHA-1
         ~r/SHA1withRSA|SHA1PRNG/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-327",
       owasp_category: "A02:2021",
       recommendation: "Use SHA-256, SHA-3, or other secure hash algorithms instead of SHA-1",

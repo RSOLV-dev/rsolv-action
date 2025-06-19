@@ -43,7 +43,6 @@ defmodule RsolvApi.Security.Patterns.Python.WeakHashSha1 do
         # hashlib.sha1 as parameter (without parentheses)
         hashlib\.sha1\b
       /x,
-      default_tier: :ai,
       cwe_id: "CWE-328",
       owasp_category: "A02:2021",
       recommendation: "Use SHA-256, SHA-3, or SHA-512 for secure hashing",

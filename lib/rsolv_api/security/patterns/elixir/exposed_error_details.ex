@@ -109,7 +109,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.ExposedErrorDetails do
         # Pipeline syntax with error responses - exclude comments
         ~r/^(?!\s*#).*\|>\s*(?:json|text|put_resp|send_resp)\s*\([^)]*#\{[^}]*(?:error|exception|inspect)/m
       ],
-      default_tier: :ai,
       cwe_id: "CWE-209",
       owasp_category: "A05:2021",
       recommendation: "Use generic error messages for client responses and log detailed errors server-side only",

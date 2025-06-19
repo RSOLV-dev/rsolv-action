@@ -89,7 +89,6 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionConcat do
         # SQL concatenation in parentheses
         \(["'].*\+.*["']\)
       /ix,
-      default_tier: :ai,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",

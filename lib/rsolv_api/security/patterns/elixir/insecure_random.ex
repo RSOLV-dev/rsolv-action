@@ -62,7 +62,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.InsecureRandom do
         # Base encoding with weak random
         ~r/Base\.(?:encode64|encode32|encode16|url_encode64)\s*\(\s*<<:rand\.uniform/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-338",
       owasp_category: "A02:2021",
       recommendation: "Use :crypto.strong_rand_bytes/1 for cryptographically secure random values",

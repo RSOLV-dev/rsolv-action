@@ -56,7 +56,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.PathTraversalJoin do
       severity: :high,
       languages: ["javascript", "typescript"],
       regex: ~r/(?:path\.)?join\s*\([^)]*,\s*(?:req\.|request\.|params\.|query\.|body\.|user[A-Z]|userInput|input(?!.*sanitize)|data)/i,
-      default_tier: :ai,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Validate and sanitize file paths. Use path.resolve and check if result is within expected directory.",

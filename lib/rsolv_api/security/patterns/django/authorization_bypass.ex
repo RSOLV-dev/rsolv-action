@@ -85,7 +85,6 @@ defmodule RsolvApi.Security.Patterns.Django.AuthorizationBypass do
         # Raw SQL without user constraints
         ~r/\.raw\s*\(\s*['"]\s*(?:DELETE|UPDATE).*WHERE\s+(?!.*user_id)/i
       ],
-      default_tier: :ai,
       cwe_id: "CWE-862",
       owasp_category: "A01:2021",
       recommendation: "Implement proper permission checks using @permission_required or check user.has_perm()",

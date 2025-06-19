@@ -74,7 +74,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.XpathInjection do
         .*?
         \)\s*(?:,|\)|$)
       /x,
-      default_tier: :enterprise,
       cwe_id: "CWE-643",
       owasp_category: "A03:2021",
       recommendation: "Use parameterized XPath queries or properly escape special characters. Never concatenate user input directly into XPath expressions.",

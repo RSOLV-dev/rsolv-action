@@ -68,7 +68,6 @@ defmodule RsolvApi.Security.Patterns.Rails.SessionFixation do
         ~r/^(?!.*#)(?!.*(?:reset_session|session\.regenerate)).*session\[:admin_user\]\s*=\s*true/,
         ~r/^(?!.*#)(?!.*(?:reset_session|session\.regenerate)).*session\[:super_user\]\s*=\s*true/
       ],
-      default_tier: :ai,
       cwe_id: "CWE-384",
       owasp_category: "A07:2021",
       recommendation: "Call Rails reset_session or session.regenerate before setting authentication session variables in Rails controllers",
