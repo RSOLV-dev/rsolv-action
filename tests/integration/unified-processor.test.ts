@@ -5,6 +5,17 @@ import * as analyzer from '../../src/ai/analyzer.js';
 import * as solution from '../../src/ai/solution.js';
 import * as pr from '../../src/github/pr.js';
 
+// Mock the logger module first
+mock.module('../../src/utils/logger.js', () => ({
+  logger: {
+    info: mock(() => {}),
+    warn: mock(() => {}),
+    error: mock(() => {}),
+    debug: mock(() => {}),
+    log: mock(() => {})
+  }
+}));
+
 // Mock the dependencies
 mock.module('../../src/ai/analyzer', () => ({
   analyzeIssue: mock(() => Promise.resolve({

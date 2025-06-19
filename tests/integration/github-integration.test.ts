@@ -4,6 +4,17 @@ import { createPullRequest } from '../../src/github/pr.js';
 import { getRepositoryFiles } from '../../src/github/files.js';
 import { IssueContext, ActionConfig, AnalysisData } from '../../src/types/index.js';
 
+// Mock the logger module first
+mock.module('../../src/utils/logger.js', () => ({
+  logger: {
+    info: mock(() => {}),
+    warn: mock(() => {}),
+    error: mock(() => {}),
+    debug: mock(() => {}),
+    log: mock(() => {})
+  }
+}));
+
 // Mock the GitHub API client
 mock.module('../../src/github/api', () => {
   return {

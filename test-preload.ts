@@ -2,15 +2,8 @@
 // This runs before any test files to ensure clean module loading
 import { mock } from 'bun:test';
 
-// Mock logger module globally before any imports
-mock.module('./src/utils/logger.js', () => ({
-  logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {}),
-    debug: mock(() => {})
-  }
-}));
+// Don't mock logger globally since individual tests override it
+// Instead, provide a robust logger mock factory
 
 // Mock fetch globally but make it opt-in per test
 // This prevents the global fetch mock from interfering with E2E tests
@@ -18,6 +11,17 @@ const originalFetch = globalThis.fetch;
 
 // Create a global test utilities object
 (globalThis as any).__RSOLV_TEST_UTILS__ = {
+  // Create a consistent logger mock structure
+  createLoggerMock: () => ({
+    logger: {
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+      debug: mock(() => {}),
+      log: mock(() => {})
+    }
+  }),
+  
   setupFetchMock: (mockResponse?: any) => {
     const mockFetch = mock((url: string, options?: RequestInit) => {
       if (mockResponse) {

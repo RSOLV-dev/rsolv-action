@@ -6,6 +6,17 @@ import { ActionConfig } from '../../src/types/index.js';
 // Set NODE_ENV to test for testing
 process.env.NODE_ENV = 'test';
 
+// Mock the logger module first
+mock.module('../../src/utils/logger.js', () => ({
+  logger: {
+    info: mock(() => {}),
+    warn: mock(() => {}),
+    error: mock(() => {}),
+    debug: mock(() => {}),
+    log: mock(() => {})
+  }
+}));
+
 // Mock child_process exec
 mock('child_process', () => {
   return {

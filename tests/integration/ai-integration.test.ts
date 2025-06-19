@@ -5,6 +5,17 @@ import { processIssues } from '../../src/ai/unified-processor.js';
 import { getAiClient } from '../../src/ai/client.js';
 import { IssueContext, ActionConfig, AnalysisData } from '../../src/types/index.js';
 
+// Mock the logger module first to prevent undefined function errors
+mock.module('../../src/utils/logger.js', () => ({
+  logger: {
+    info: mock(() => {}),
+    warn: mock(() => {}),
+    error: mock(() => {}),
+    debug: mock(() => {}),
+    log: mock(() => {})
+  }
+}));
+
 // Mock the AI client
 mock.module('../../src/ai/client', () => {
   return {

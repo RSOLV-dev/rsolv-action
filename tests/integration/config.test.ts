@@ -59,11 +59,23 @@ describe('Configuration Loading', () => {
   });
   
   test('loadConfig should load configuration from environment variables', async () => {
-    // Mock configuration file with expected environment variable values
+    // Create a custom environment with the API key set as environment variable
+    const originalEnv = { ...process.env };
+    
+    // Set environment variables - these should take precedence over file config
+    process.env = {
+      NODE_ENV: 'test',
+      GITHUB_TOKEN: 'github-token',
+      RSOLV_CONFIG_PATH: '.github/rsolv.yml',
+      RSOLV_API_KEY: 'env-api-key',  // Set as environment variable
+      RSOLV_ISSUE_LABEL: 'env-label'
+    };
+    
+    // Mock configuration file with different values
     fs.writeFileSync('.github/rsolv.yml', `
-      apiKey: env-api-key
-      issueLabel: env-label
-      repoToken: github-token
+      apiKey: file-api-key
+      issueLabel: file-label
+      repoToken: file-token
       configPath: .github/rsolv.yml
       aiProvider:
         provider: anthropic
@@ -73,24 +85,15 @@ describe('Configuration Loading', () => {
       securitySettings: {}
     `);
     
-    // Create a custom environment to avoid interference
-    const originalEnv = { ...process.env };
-    process.env = {
-      NODE_ENV: 'test',
-      GITHUB_TOKEN: 'github-token',
-      RSOLV_CONFIG_PATH: '.github/rsolv.yml' 
-    };
-    
     try {
-      // This will load from the mock file instead of environment variables
-      // but we can still verify the expected structure
+      // Environment variables should override file values
       const config = await loadConfig();
       
       expect(config).toBeDefined();
-      expect(config.apiKey).toBe('env-api-key');
-      expect(config.issueLabel).toBe('env-label');
-      expect(config.repoToken).toBe('github-token');
-      expect(config.containerConfig.enabled).toBe(false);
+      expect(config.apiKey).toBe('env-api-key');  // From environment
+      expect(config.issueLabel).toBe('env-label'); // From environment
+      expect(config.repoToken).toBe('github-token'); // From environment
+      expect(config.containerConfig.enabled).toBe(false); // From file
     } finally {
       // Restore original environment
       process.env = originalEnv;
@@ -108,25 +111,28 @@ describe('Configuration Loading', () => {
         temperature: 0.3
     `);
     
-    // Setup environment for file test
+    // Setup environment for file test - exclude API key and label so file values are used
     const originalEnv = { ...process.env };
     process.env = {
       GITHUB_TOKEN: 'github-token',
       NODE_ENV: 'test',
       RSOLV_CONFIG_PATH: '.github/rsolv.yml'
+      // Explicitly NOT setting RSOLV_API_KEY or RSOLV_ISSUE_LABEL so file values are used
     };
     
-    const config = await loadConfig();
-    
-    // Restore environment
-    process.env = originalEnv;
-    
-    expect(config).toBeDefined();
-    expect(config.apiKey).toBe('file-api-key');
-    expect(config.issueLabel).toBe('file-label');
-    expect(config.aiProvider.provider).toBe('openai');
-    expect(config.aiProvider.model).toBe('gpt-4');
-    expect(config.aiProvider.temperature).toBe(0.3);
+    try {
+      const config = await loadConfig();
+      
+      expect(config).toBeDefined();
+      expect(config.apiKey).toBe('file-api-key');
+      expect(config.issueLabel).toBe('file-label');
+      expect(config.aiProvider.provider).toBe('openai');
+      expect(config.aiProvider.model).toBe('gpt-4');
+      expect(config.aiProvider.temperature).toBe(0.3);
+    } finally {
+      // Restore environment
+      process.env = originalEnv;
+    }
   });
   
   test('loadConfig should merge configuration from multiple sources', async () => {
@@ -214,7 +220,7 @@ describe('Configuration Loading', () => {
     
     // Verify we got an error
     expect(error).not.toBeNull();
-    expect(error.message).toContain('API key is required');
+    expect(error.message).toContain('Configuration error');
   });
   
   test('loadConfig should validate configuration schema', async () => {

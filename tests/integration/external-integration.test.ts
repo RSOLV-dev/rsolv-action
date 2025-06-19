@@ -2,6 +2,17 @@ import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import { handleExternalWebhook, getRepositoryFromExternalIssue } from '../../src/external/webhook.js';
 import { ActionConfig, IssueContext } from '../../src/types/index.js';
 
+// Mock the logger module first
+mock.module('../../src/utils/logger.js', () => ({
+  logger: {
+    info: mock(() => {}),
+    warn: mock(() => {}),
+    error: mock(() => {}),
+    debug: mock(() => {}),
+    log: mock(() => {})
+  }
+}));
+
 // Mock configuration for tests
 const mockConfig: ActionConfig = {
   apiKey: 'test-api-key',
