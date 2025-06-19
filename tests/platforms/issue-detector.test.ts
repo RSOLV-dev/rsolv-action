@@ -30,8 +30,7 @@ import { detectIssuesFromAllPlatforms } from '../../src/platforms/issue-detector
 import * as githubIssues from '../../src/github/issues';
 import { PlatformFactory } from '../../src/platforms/platform-factory';
 
-// Mock fetch globally
-global.fetch = mock(() => Promise.resolve());
+// Don't mock fetch globally - it interferes with other tests
 
 describe('Multi-Platform Issue Detection', () => {
   let mockConfig: ActionConfig;

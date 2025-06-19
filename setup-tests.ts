@@ -20,30 +20,8 @@ function setupTestEnvironment() {
   process.env.GITHUB_RUN_ID = 'test_run';
   process.env.RSOLV_API_URL = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
   
-  // Create fresh fetch mock
-  fetchMock = mock((input: any, init?: any) => {
-    console.warn(`[TEST] Unmocked fetch call to: ${input}`);
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({}),
-      text: () => Promise.resolve(''),
-      headers: new Headers(),
-      redirected: false,
-      statusText: 'OK',
-      type: 'basic' as ResponseType,
-      url: input?.toString() || '',
-      clone: () => null,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      blob: () => Promise.resolve(new Blob()),
-      formData: () => Promise.resolve(new FormData()),
-      body: null,
-      bodyUsed: false
-    });
-  });
-  
-  // Replace global fetch
-  global.fetch = fetchMock as any;
+  // Don't mock fetch globally by default - let tests opt-in
+  // Tests that need fetch mocked can use testUtils.mockFetch()
 }
 
 // Setup before each test file
@@ -54,17 +32,14 @@ beforeEach(() => {
   // Reset environment
   process.env = { ...originalEnv };
   setupTestEnvironment();
-  
-  // Reset fetch mock
-  if (fetchMock) {
-    fetchMock.mockClear();
-  }
 });
 
 // Cleanup after each test file
 afterEach(() => {
-  // Restore original fetch
-  global.fetch = originalFetch;
+  // Restore original fetch if it was mocked
+  if (global.fetch !== originalFetch) {
+    global.fetch = originalFetch;
+  }
   
   // Restore environment
   process.env = originalEnv;
@@ -86,10 +61,37 @@ setupTestEnvironment();
 
 // Export utilities for tests
 export const testUtils = {
-  mockFetch: (response: any) => {
+  setupFetchMock: () => {
+    // Create fetch mock if not already created
     if (!fetchMock) {
-      throw new Error('Fetch mock not initialized');
+      fetchMock = mock((input: any, init?: any) => {
+        console.warn(`[TEST] Unmocked fetch call to: ${input}`);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({}),
+          text: () => Promise.resolve(''),
+          headers: new Headers(),
+          redirected: false,
+          statusText: 'OK',
+          type: 'basic' as ResponseType,
+          url: input?.toString() || '',
+          clone: () => null,
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+          blob: () => Promise.resolve(new Blob()),
+          formData: () => Promise.resolve(new FormData()),
+          body: null,
+          bodyUsed: false
+        });
+      });
+      global.fetch = fetchMock as any;
     }
+    return fetchMock;
+  },
+  
+  mockFetch: (response: any) => {
+    // Setup fetch mock if needed
+    testUtils.setupFetchMock();
     
     const mockResponse = {
       ok: response.ok ?? true,

@@ -1,12 +1,9 @@
 import { ActionConfig, ContainerConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { DockerOperations, createDockerClient } from './docker-client.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-
-const execPromise = promisify(exec);
 
 interface ContainerRunOptions {
   command: string;
@@ -28,7 +25,8 @@ interface ContainerRunResult {
  */
 export async function runInContainer(
   config: ActionConfig,
-  options: ContainerRunOptions
+  options: ContainerRunOptions,
+  dockerClient?: DockerOperations
 ): Promise<ContainerRunResult> {
   try {
     if (!config.containerConfig.enabled) {
@@ -37,16 +35,8 @@ export async function runInContainer(
     
     logger.info(`Running command in container: ${options.command}`);
     
-    // In test mode, return a simulated successful result
-    if (process.env.NODE_ENV === 'test') {
-      logger.info(`Test environment detected, simulating container execution for: ${options.command}`);
-      return {
-        success: true,
-        stdout: `Simulated output for: ${options.command}`,
-        stderr: '',
-        exitCode: 0
-      };
-    }
+    // Create Docker client if not provided (for testing)
+    const docker = dockerClient || createDockerClient();
     
     // Create temporary directory for container mounts if needed
     const tempDir = options.workDir || await createTempWorkDir();
@@ -55,7 +45,11 @@ export async function runInContainer(
     const dockerCommand = buildDockerCommand(config.containerConfig, options, tempDir);
     
     // Run the container
-    const result = await runContainer(dockerCommand, options.timeout || config.containerConfig.timeout || 300);
+    const result = await runContainer(
+      dockerCommand,
+      options.timeout || config.containerConfig.timeout || 300,
+      docker
+    );
     
     // Clean up if we created a temp dir
     if (!options.workDir) {
@@ -153,16 +147,14 @@ function buildDockerCommand(
  */
 async function runContainer(
   dockerCommand: string,
-  timeoutSeconds: number
+  timeoutSeconds: number,
+  docker: DockerOperations
 ): Promise<ContainerRunResult> {
   try {
     logger.debug(`Running Docker command: ${dockerCommand}`);
     
-    // Set timeout in milliseconds
-    const timeoutMs = timeoutSeconds * 1000;
-    
-    // Execute the command
-    const { stdout, stderr } = await execPromise(dockerCommand, { timeout: timeoutMs });
+    // Execute the command using Docker client
+    const { stdout, stderr } = await docker.runContainer(dockerCommand);
     
     logger.debug('Container execution completed');
     

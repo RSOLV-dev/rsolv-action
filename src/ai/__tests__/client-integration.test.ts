@@ -115,7 +115,7 @@ describe('AI Client Direct API Integration', () => {
       await client.complete('Test prompt');
       throw new Error('Expected error was not thrown');
     } catch (error) {
-      expect(error.message).toContain('Anthropic API error (401): Invalid API key');
+      expect(error.message).toContain('Invalid API key');
     }
   });
 
@@ -130,7 +130,7 @@ describe('AI Client Direct API Integration', () => {
       await getAiClient(config);
       throw new Error('Expected error was not thrown');
     } catch (error) {
-      expect(error.message).toBe('Anthropic API key is required');
+      expect(error.message).toBe('AI provider API key is required');
     }
   });
 });

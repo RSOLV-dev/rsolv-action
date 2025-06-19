@@ -1,10 +1,10 @@
 # Test Suite Status
 
-## Current Status
-- **Total Tests**: 332
-- **Passing**: 207 (62%)
-- **Failing**: 105 (32%)
-- **Skipped**: 20 (6%)
+## Current Status (as of June 19, 2025)
+- **Total Tests**: 356
+- **Passing**: 202 (57%)
+- **Failing**: 124 (35%)
+- **Skipped**: 30 (8%)
 
 ## Recent Fixes
 1. ✅ Fixed configuration test logger.debug issues
@@ -13,6 +13,12 @@
 4. ✅ Core security detector tests passing
 5. ✅ Disabled Linear adapter tests (not needed)
 6. ✅ Skip container tests when Docker not available
+7. ✅ Created testable Docker abstraction layer
+8. ✅ Added comprehensive container unit tests (25 tests all passing)
+9. ✅ Fixed error sanitization test logger mock
+10. ✅ Removed global fetch mock interference
+11. ✅ Fixed Claude Code adapter test mocking issues
+12. ✅ Updated global test setup to be less intrusive
 
 ## Remaining Issues
 

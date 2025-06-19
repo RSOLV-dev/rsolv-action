@@ -5,10 +5,12 @@ import { IssueContext, ActionConfig } from '../../src/types/index.js';
 
 // Mock the logger
 mock.module('../../src/utils/logger', () => ({
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {}
+  logger: {
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    debug: () => {}
+  }
 }));
 
 // Mock modules to force errors

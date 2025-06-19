@@ -64,7 +64,8 @@ const mockConfig: ActionConfig = {
 };
 
 // Skip container tests when Docker is not available
-const skipIfNoDocker = process.env.CI || !process.env.DOCKER_HOST;
+// Docker is available on GitHub Actions, so only skip if explicitly disabled
+const skipIfNoDocker = process.env.SKIP_DOCKER_TESTS === 'true';
 
 describe.skipIf(skipIfNoDocker)('Container Integration', () => {
   beforeEach(() => {

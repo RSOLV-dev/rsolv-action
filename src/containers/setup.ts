@@ -1,14 +1,14 @@
 import { ActionConfig, ContainerConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execPromise = promisify(exec);
+import { DockerOperations, createDockerClient } from './docker-client.js';
 
 /**
  * Set up containerized environment for secure code analysis
  */
-export async function setupContainer(config: ActionConfig): Promise<void> {
+export async function setupContainer(
+  config: ActionConfig,
+  dockerClient?: DockerOperations
+): Promise<void> {
   try {
     if (!config.containerConfig.enabled) {
       logger.info('Container analysis is disabled, skipping container setup');
@@ -20,9 +20,12 @@ export async function setupContainer(config: ActionConfig): Promise<void> {
     // Validate container configuration
     validateContainerConfig(config.containerConfig);
     
+    // Create Docker client if not provided (for testing)
+    const docker = dockerClient || createDockerClient();
+    
     // Check Docker availability - gracefully disable if not available
     try {
-      await checkDockerAvailability();
+      await checkDockerAvailability(docker);
     } catch (error) {
       logger.warn('Docker not available, disabling container analysis', error);
       // Disable container analysis rather than failing
@@ -31,7 +34,7 @@ export async function setupContainer(config: ActionConfig): Promise<void> {
     }
     
     // Pull the required container image
-    await pullContainerImage(config.containerConfig);
+    await pullContainerImage(config.containerConfig, docker);
     
     // Configure container with appropriate security settings
     await configureContainer(config.containerConfig, config.securitySettings);
@@ -69,13 +72,13 @@ function validateContainerConfig(config: ContainerConfig): void {
 /**
  * Check if Docker is available on the system
  */
-async function checkDockerAvailability(): Promise<void> {
+async function checkDockerAvailability(docker: DockerOperations): Promise<void> {
   try {
     logger.debug('Checking Docker availability');
     
-    // Run 'docker version' command to check if Docker is installed and running
-    const { stdout } = await execPromise('docker version --format "{{.Server.Version}}"');
-    logger.debug(`Docker version: ${stdout.trim()}`);
+    // Use Docker client to check availability
+    const version = await docker.checkAvailability();
+    logger.debug(`Docker version: ${version}`);
   } catch (error) {
     logger.error('Docker is not available', error);
     throw new Error('Docker is required for container analysis but is not available or running');
@@ -85,24 +88,17 @@ async function checkDockerAvailability(): Promise<void> {
 /**
  * Pull the container image for analysis
  */
-async function pullContainerImage(config: ContainerConfig): Promise<void> {
+async function pullContainerImage(
+  config: ContainerConfig,
+  docker: DockerOperations
+): Promise<void> {
   try {
     const imageName = config.image || 'rsolv/code-analysis:latest';
     logger.info(`Pulling container image: ${imageName}`);
     
-    // Skip actual Docker pull in test environment
-    if (process.env.NODE_ENV === 'test') {
-      logger.info(`Test environment detected, skipping Docker pull for ${imageName}`);
-      return;
-    }
-    
-    // Actually pull the Docker image
+    // Pull the Docker image using Docker client
     try {
-      const { stdout, stderr } = await execPromise(`docker pull ${imageName}`);
-      logger.debug(`Docker pull output: ${stdout}`);
-      if (stderr) {
-        logger.warn(`Docker pull stderr: ${stderr}`);
-      }
+      await docker.pullImage(imageName);
     } catch (error) {
       // If pull fails and we're in development, continue anyway
       if (process.env.NODE_ENV === 'development') {
