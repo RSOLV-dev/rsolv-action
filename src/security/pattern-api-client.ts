@@ -115,8 +115,9 @@ export class PatternAPIClient {
         headers['Authorization'] = `Bearer ${this.apiKey}`;
       }
 
-      // Use the new tier-less endpoint
-      const response = await fetch(`${this.apiUrl}?language=${language}&format=enhanced`, { headers });
+      // Use the new tier-less endpoint with standard format 
+      // (enhanced format temporarily disabled due to API issues)
+      const response = await fetch(`${this.apiUrl}?language=${language}&format=standard`, { headers });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch patterns: ${response.status} ${response.statusText}`);
