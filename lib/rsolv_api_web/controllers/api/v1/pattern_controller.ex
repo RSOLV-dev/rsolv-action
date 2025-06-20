@@ -19,41 +19,60 @@ defmodule RSOLVWeb.Api.V1.PatternController do
   - Without API key: Access to ~20 demo patterns only
   """
   def index(conn, params) do
-    language = params["language"] || "javascript"
-    format = String.to_existing_atom(params["format"] || "standard")
-    
-    # Check if user has API key
-    has_api_key = has_valid_api_key?(conn)
-    
-    # Get patterns based on authentication
-    patterns = if has_api_key do
-      # Return all patterns for the language
-      ASTPattern.get_all_patterns_for_language(language, format)
-    else
-      # Return only demo patterns
-      DemoPatterns.get_demo_patterns(language)
+    try do
+      language = params["language"] || "javascript"
+      format = case params["format"] do
+        "enhanced" -> :enhanced
+        _ -> :standard
+      end
+      
+      # Check if user has API key
+      has_api_key = has_valid_api_key?(conn)
+      
+      # Get patterns based on authentication
+      patterns = if has_api_key do
+        # Return all patterns for the language
+        ASTPattern.get_all_patterns_for_language(language, format)
+      else
+        # Return only demo patterns
+        DemoPatterns.get_demo_patterns(language)
+      end
+      
+      # Convert patterns to API format (removing tier information)
+      formatted_patterns = Enum.map(patterns, fn pattern ->
+        format_pattern_without_tier(pattern, format)
+      end)
+      
+      # Build metadata without tier information
+      metadata = %{
+        language: language,
+        format: to_string(format),
+        count: length(formatted_patterns),
+        enhanced: format == :enhanced,
+        access_level: if(has_api_key, do: "full", else: "demo")
+      }
+      
+      conn
+      |> put_resp_header("x-pattern-version", "2.0")
+      |> json(%{
+        patterns: formatted_patterns,
+        metadata: metadata
+      })
+    rescue
+      e ->
+        # Log the error for debugging
+        require Logger
+        Logger.error("Pattern API error: #{inspect(e)}")
+        Logger.error(Exception.format_stacktrace())
+        
+        # Return proper 500 error response
+        conn
+        |> put_status(:internal_server_error)
+        |> json(%{
+          error: "Internal server error",
+          message: "An error occurred while processing patterns"
+        })
     end
-    
-    # Convert patterns to API format (removing tier information)
-    formatted_patterns = Enum.map(patterns, fn pattern ->
-      format_pattern_without_tier(pattern, format)
-    end)
-    
-    # Build metadata without tier information
-    metadata = %{
-      language: language,
-      format: to_string(format),
-      count: length(formatted_patterns),
-      enhanced: format == :enhanced,
-      access_level: if(has_api_key, do: "full", else: "demo")
-    }
-    
-    conn
-    |> put_resp_header("x-pattern-version", "2.0")
-    |> json(%{
-      patterns: formatted_patterns,
-      metadata: metadata
-    })
   end
   
   defp has_valid_api_key?(conn) do

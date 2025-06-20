@@ -70,7 +70,7 @@ defmodule RSOLVWeb.Router do
       get "/enhanced/:language", PatternController, :enhanced
       
       # General patterns (access level determined by authentication in controller)
-      get "/", PatternController, :all
+      get "/", Api.V1.PatternController, :index
       get "/:language", PatternController, :by_language
       
       # Pattern metadata endpoint
