@@ -119,6 +119,22 @@ defmodule RSOLV.Accounts do
           created_at: DateTime.utc_now()
         }
       
+      # Full access test API key with no quota limits
+      api_key == "rsolv_test_full_access_no_quota_2025" ->
+        %{
+          id: "test_full_access",
+          name: "Test Full Access",
+          email: "test-full-access@rsolv.dev",
+          api_key: api_key,
+          tier: "enterprise",
+          flags: ["ai_access", "enterprise_access", "quota_exempt"],
+          monthly_limit: 999999,  # Effectively unlimited
+          current_usage: 0,
+          active: true,
+          trial: false,
+          created_at: DateTime.utc_now()
+        }
+      
           # In production, this would query the database for customer-specific keys
           true ->
             nil
