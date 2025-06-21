@@ -84,8 +84,29 @@ export class ClaudeCodeAdapter {
           resolve(false);
         }, 5000);
         
-        const childProcess = spawn(this.executablePath, ['-v'], {
-          shell: true
+        let childProcess;
+        try {
+          childProcess = spawn(this.executablePath, ['-v'], {
+            shell: false,
+            stdio: ['ignore', 'pipe', 'pipe']
+          });
+        } catch (spawnError) {
+          logger.error('Failed to spawn Claude Code for availability check', spawnError);
+          clearTimeout(timeout);
+          resolve(false);
+          return;
+        }
+        
+        if (!childProcess) {
+          clearTimeout(timeout);
+          resolve(false);
+          return;
+        }
+        
+        childProcess.on('error', (error) => {
+          logger.error('Claude Code process error during availability check', error);
+          clearTimeout(timeout);
+          resolve(false);
         });
         
         childProcess.on('close', (code) => {
@@ -492,16 +513,41 @@ export class ClaudeCodeAdapter {
         logger.info('Executing Claude Code with args:', args.join(' '));
       }
       
-      const childProcess = spawn(this.executablePath, args, {
-        cwd: this.repoPath,
-        shell: false, // Changed from true to false
-        env: envVars,
-        stdio: ['pipe', 'pipe', 'pipe'] // Explicit stdio setup
-      });
+      // Log executable details for debugging
+      logger.info(`Claude Code executable path: ${this.executablePath}`);
+      logger.info(`Working directory: ${this.repoPath}`);
+      logger.info(`API key present: ${apiKey ? 'yes' : 'no'}`);
+      
+      let childProcess;
+      try {
+        childProcess = spawn(this.executablePath, args, {
+          cwd: this.repoPath,
+          shell: false, // Changed from true to false
+          env: envVars,
+          stdio: ['pipe', 'pipe', 'pipe'] // Explicit stdio setup
+        });
+      } catch (spawnError) {
+        logger.error('Failed to spawn Claude Code process', spawnError);
+        reject(new Error(`Failed to spawn Claude Code: ${spawnError}`));
+        return;
+      }
+      
+      // Check if childProcess was created successfully
+      if (!childProcess || !childProcess.stdin) {
+        logger.error('Claude Code process spawn returned invalid handle');
+        reject(new Error('Claude Code process failed to start properly'));
+        return;
+      }
       
       // Write the prompt to stdin and close it
-      childProcess.stdin.write(prompt);
-      childProcess.stdin.end();
+      try {
+        childProcess.stdin.write(prompt);
+        childProcess.stdin.end();
+      } catch (stdinError) {
+        logger.error('Failed to write to Claude Code stdin', stdinError);
+        reject(new Error(`Failed to write to Claude Code stdin: ${stdinError}`));
+        return;
+      }
       
       let output = '';
       let errorOutput = '';
@@ -520,6 +566,12 @@ export class ClaudeCodeAdapter {
         childProcess.kill();
         reject(new Error(`Execution timed out after ${timeout/1000} seconds`));
       }, timeout);
+      
+      childProcess.on('error', (error) => {
+        logger.error('Claude Code process error', error);
+        clearTimeout(processTimeout);
+        reject(new Error(`Claude Code process error: ${error.message}`));
+      });
       
       childProcess.stdout.on('data', (data) => {
         const chunk = data.toString();
