@@ -101,7 +101,7 @@ describe('PatternAPIClient', () => {
       
       // Get the actual call arguments
       const [url, options] = fetchMock.mock.calls[0];
-      expect(url).toBe('https://api.rsolv.dev/api/v1/patterns?language=javascript&format=enhanced');
+      expect(url).toBe('https://api.rsolv.dev/api/v1/patterns?language=javascript&format=standard');
       expect(options.headers['Content-Type']).toBe('application/json');
       expect(options.headers['Authorization']).toBe('Bearer test-key');
 
