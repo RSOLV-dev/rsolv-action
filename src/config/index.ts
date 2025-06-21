@@ -46,7 +46,8 @@ const ActionConfigSchema = z.object({
   repoToken: z.string().optional(),
   aiProvider: AiProviderConfigSchema,
   containerConfig: ContainerConfigSchema,
-  securitySettings: SecuritySettingsSchema
+  securitySettings: SecuritySettingsSchema,
+  rsolvApiKey: z.string().optional() // For vended credentials
 });
 
 /**
@@ -241,8 +242,9 @@ function validateConfig(config: any): ActionConfig {
   
   try {
     // Check required fields
-    if (!config.apiKey) {
-      throw new Error('API key is required');
+    // When using vended credentials, rsolvApiKey is used instead of apiKey
+    if (!config.apiKey && !config.rsolvApiKey) {
+      throw new Error('API key or RSOLV API key is required');
     }
     
     // Validate against schema
