@@ -94,6 +94,7 @@ export async function loadConfig(): Promise<ActionConfig> {
     const validatedConfig = validateConfig(mergedConfig);
     
     logger.debug('Configuration loaded successfully');
+    logger.info(`Final config - rsolvApiKey: ${validatedConfig.rsolvApiKey ? 'present' : 'not set'}`);
     
     return validatedConfig;
   } catch (error) {
@@ -171,6 +172,7 @@ async function loadConfigFromFile(configPath: string): Promise<Partial<ActionCon
  */
 function loadConfigFromEnv(): Partial<ActionConfig> {
   logger.info('Loading configuration from environment variables');
+  logger.info(`Environment RSOLV_API_KEY: ${process.env.RSOLV_API_KEY ? 'present' : 'not set'}`);
   
   const envConfig: Partial<ActionConfig> = {
     apiKey: process.env.RSOLV_API_KEY,
