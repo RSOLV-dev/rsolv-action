@@ -174,6 +174,7 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
   
   const envConfig: Partial<ActionConfig> = {
     apiKey: process.env.RSOLV_API_KEY,
+    rsolvApiKey: process.env.RSOLV_API_KEY, // Same key used for vended credentials
     configPath: process.env.RSOLV_CONFIG_PATH,
     issueLabel: process.env.RSOLV_ISSUE_LABEL,
     repoToken: process.env.GITHUB_TOKEN

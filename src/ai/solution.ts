@@ -38,8 +38,8 @@ export async function generateSolution(
       let credentialManager;
       if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
         const { RSOLVCredentialManager } = await import('../credentials/manager.js');
-        credentialManager = new RSOLVCredentialManager(config.rsolvApiKey, config.rsolvApiUrl);
-        await credentialManager.initialize();
+        credentialManager = new RSOLVCredentialManager();
+        await credentialManager.initialize(config.rsolvApiKey);
       }
       
       // Use Claude Code adapter
