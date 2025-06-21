@@ -11,7 +11,8 @@ import { getRepositoryDetails } from './github/api.js';
 async function run(): Promise<ActionStatus> {
   try {
     // Log startup information
-    logger.info('Starting RSOLV action');
+    logger.info('Starting RSOLV action v2.0 - Enhanced Logging Active');
+    logger.info(`Build timestamp: ${new Date().toISOString()}`);
     
     // Load configuration
     const config = await loadConfig();

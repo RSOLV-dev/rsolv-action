@@ -71,7 +71,8 @@ export class SecurityAwareAnalyzer {
     codebaseFiles: Map<string, string>,
     _issue: IssueContext
   ): Promise<SecurityAnalysisResult> {
-    logger.info('Performing security analysis on codebase files');
+    logger.info('=== SECURITY ANALYSIS v2.0 ACTIVE ===');
+    logger.info(`Performing security analysis on ${codebaseFiles.size} codebase files`);
 
     const allVulnerabilities: Vulnerability[] = [];
     const affectedFiles: string[] = [];
