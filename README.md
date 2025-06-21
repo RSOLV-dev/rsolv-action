@@ -290,4 +290,4 @@ MIT License
 
 ## Support
 
-For support, email support@rsolv.dev or open an issue on GitHub.
+For support, email support@rsolv.dev or open an issue on GitHub.# Trigger Docker rebuild with credential manager fix
