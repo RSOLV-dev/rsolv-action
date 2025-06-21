@@ -494,7 +494,7 @@ export class ClaudeCodeAdapter {
       // Support vended credentials
       let apiKey = this.config.apiKey;
       
-      logger.info(`Claude Code config - useVendedCredentials: ${this.config.useVendedCredentials}, credentialManager: ${!!this.credentialManager}`);
+      logger.info(`Claude Code config - useVendedCredentials: ${this.config.useVendedCredentials}, credentialManager: ${!!this.credentialManager}, apiKey: ${this.config.apiKey ? 'config' : 'none'}`);
       
       // If using vended credentials, get the key from credential manager
       if (this.config.useVendedCredentials && this.credentialManager) {
