@@ -145,7 +145,12 @@ async function processIssue(
       const adapter = new EnhancedClaudeCodeAdapter(aiConfig);
       
       // Gather deep context
-      deepContext = await adapter.gatherDeepContext(issue, analysisData);
+      deepContext = await adapter.gatherDeepContext(issue, {
+        contextDepth: options.contextDepth || 'standard',
+        maxExplorationTime: options.contextGatheringTimeout || 600000, // 10 minutes default
+        includeTests: true,
+        includeStyleGuide: true
+      });
       contextGatheringTime = Date.now() - contextStart;
       
       // Generate solution with enhanced context
