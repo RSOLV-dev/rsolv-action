@@ -101,7 +101,7 @@ async function processIssue(
       logger.info(`Using security-aware analysis for issue #${issue.number}`);
       const analyzer = new SecurityAwareAnalyzer();
       const result = await analyzer.analyzeWithSecurity(issue, config);
-      analysisData = result.analysis;
+      analysisData = result;  // Fixed: analyzeWithSecurity returns the analysis data directly
       securityAnalysis = result.securityAnalysis;
     } else {
       analysisData = await analyzeIssue(issue, config, injectedDeps?.aiClient);
