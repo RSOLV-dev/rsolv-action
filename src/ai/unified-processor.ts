@@ -141,8 +141,16 @@ async function processIssue(
         }
       };
       
+      // Get credential manager if using vended credentials
+      let credentialManager;
+      if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+        const { RSOLVCredentialManager } = await import('../credentials/manager.js');
+        credentialManager = new RSOLVCredentialManager();
+        await credentialManager.initialize(config.rsolvApiKey);
+      }
+      
       const contextStart = Date.now();
-      const adapter = new EnhancedClaudeCodeAdapter(aiConfig);
+      const adapter = new EnhancedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
       
       // Gather deep context
       deepContext = await adapter.gatherDeepContext(issue, {

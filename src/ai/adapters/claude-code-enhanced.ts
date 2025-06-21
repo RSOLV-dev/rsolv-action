@@ -67,8 +67,8 @@ export class EnhancedClaudeCodeAdapter extends ClaudeCodeAdapter {
   private contextCache: Map<string, RepositoryContext> = new Map();
   private cacheTimeout: number = 3600000; // 1 hour default
   
-  constructor(config: AIConfig, repoPath: string = process.cwd()) {
-    super(config, repoPath);
+  constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
+    super(config, repoPath, credentialManager);
     
     if (config.claudeCodeConfig?.contextCacheDuration) {
       this.cacheTimeout = config.claudeCodeConfig.contextCacheDuration;
