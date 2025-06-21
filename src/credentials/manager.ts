@@ -69,6 +69,11 @@ export class RSOLVCredentialManager {
       
       // Store credentials
       Object.entries(data.credentials).forEach(([provider, credential]) => {
+        logger.debug(`Storing credential for ${provider}`, { 
+          hasApiKey: !!credential.api_key,
+          apiKeyLength: credential.api_key?.length || 0,
+          expiresAt: credential.expires_at 
+        });
         this.credentials.set(provider, credential);
       });
 
@@ -90,6 +95,12 @@ export class RSOLVCredentialManager {
   getCredential(provider: string): string {
     const credential = this.credentials.get(provider);
     
+    logger.debug(`Getting credential for ${provider}`, {
+      hasCredential: !!credential,
+      hasApiKey: !!credential?.api_key,
+      apiKeyLength: credential?.api_key?.length || 0
+    });
+    
     if (!credential) {
       throw new Error(`No valid credential for ${provider}`);
     }
@@ -97,7 +108,11 @@ export class RSOLVCredentialManager {
     // Check if expired
     const expiresAt = new Date(credential.expires_at);
     if (expiresAt < new Date()) {
-      throw new Error(`No valid credential for ${provider}`);
+      throw new Error(`Credential for ${provider} has expired`);
+    }
+    
+    if (!credential.api_key) {
+      throw new Error(`Credential for ${provider} has no API key`);
     }
 
     return credential.api_key;
