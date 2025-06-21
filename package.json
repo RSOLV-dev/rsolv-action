@@ -29,7 +29,7 @@
     "test:e2e:docker": "cd .. && ./run-e2e-docker.sh"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.11",
+    "@anthropic-ai/claude-code": "^1.0.31",
     "@octokit/rest": "^21.1.1",
     "js-yaml": "^4.1.0",
     "zod": "^3.25.26"
