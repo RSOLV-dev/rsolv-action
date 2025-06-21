@@ -34,13 +34,21 @@ export async function getAiClient(config: AiProviderConfig): Promise<AiClient> {
   // Initialize credential manager if using vended credentials
   if (config.useVendedCredentials && !credentialManager) {
     try {
+      const rsolvApiKey = process.env.RSOLV_API_KEY;
+      if (!rsolvApiKey) {
+        throw new Error('RSOLV_API_KEY environment variable not set for vended credentials');
+      }
+      
+      logger.info('Initializing credential manager for vended credentials');
       credentialManager = new RSOLVCredentialManager();
-      await credentialManager.initialize(process.env.RSOLV_API_KEY || '');
+      await credentialManager.initialize(rsolvApiKey);
+      logger.info('Credential manager initialized successfully');
     } catch (error) {
-      logger.warn('Failed to initialize credential vending', error);
+      logger.error('Failed to initialize credential vending', error);
       // Don't fall back - let the error propagate when trying to use the credentials
       // This preserves the intent to use vended credentials
       credentialManager = null;
+      throw error; // Re-throw to prevent creating clients with null credential manager
     }
   }
   
@@ -250,15 +258,26 @@ class AnthropicClient implements AiClient {
       let apiKey: string | undefined;
       
       try {
-        apiKey = this.config.useVendedCredentials 
-          ? this.credentialManager?.getCredential('anthropic')
-          : this.config.apiKey;
+        if (this.config.useVendedCredentials) {
+          logger.debug(`Attempting to get vended credential - credentialManager exists: ${!!this.credentialManager}`);
+          if (!this.credentialManager) {
+            throw new Error('Credential manager not initialized for vended credentials');
+          }
+          apiKey = this.credentialManager.getCredential('anthropic');
+        } else {
+          apiKey = this.config.apiKey;
+        }
       } catch (error) {
-        throw new Error('Failed to retrieve API key');
+        logger.error('Failed to get API key', { 
+          useVended: this.config.useVendedCredentials,
+          hasCredentialManager: !!this.credentialManager,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        throw new Error(`Failed to retrieve API key: ${error instanceof Error ? error.message : String(error)}`);
       }
       
       if (!apiKey) {
-        throw new Error('Failed to retrieve API key');
+        throw new Error('Failed to retrieve API key - key is empty');
       }
       
       // Make the API call
