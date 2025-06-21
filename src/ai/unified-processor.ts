@@ -143,13 +143,20 @@ async function processIssue(
       
       // Get credential manager if using vended credentials
       let credentialManager;
+      logger.info(`Enhanced context setup - useVendedCredentials: ${config.aiProvider.useVendedCredentials}, rsolvApiKey: ${config.rsolvApiKey ? 'present' : 'missing'}`);
+      
       if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+        logger.info('Creating credential manager for vended credentials');
         const { RSOLVCredentialManager } = await import('../credentials/manager.js');
         credentialManager = new RSOLVCredentialManager();
         await credentialManager.initialize(config.rsolvApiKey);
+        logger.info('Credential manager initialized successfully');
+      } else {
+        logger.info(`Skipping credential manager - useVended: ${config.aiProvider.useVendedCredentials}, apiKey: ${config.rsolvApiKey ? 'present' : 'missing'}`);
       }
       
       const contextStart = Date.now();
+      logger.info(`Creating EnhancedClaudeCodeAdapter with credentialManager: ${!!credentialManager}`);
       const adapter = new EnhancedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
       
       // Gather deep context

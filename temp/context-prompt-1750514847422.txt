@@ -1,0 +1,60 @@
+I need you to perform a comprehensive analysis of this repository to gather deep context for solving an issue.
+
+Issue Context:
+Title: Test Issue
+Description: Test body
+
+Repository: test/repo
+Language: TypeScript
+
+Exploration Depth: medium
+
+Please analyze the repository and provide detailed information about:
+
+1. Architecture and Design Patterns
+   - Overall architecture style
+   - Main design patterns used
+   - Component organization
+   - Module structure
+
+2. Code Conventions and Style
+   - Naming conventions for files, functions, variables
+   - Import/export patterns
+   - Comment and documentation style
+   - Error handling patterns
+
+3. Testing Framework and Patterns
+   - Test framework(s) used
+   - Test file organization
+   - Test naming conventions
+   - Mocking strategies
+
+4. Dependencies and External Libraries
+   - Runtime dependencies and their usage
+   - Development dependencies
+   - Build tools and configurations
+   - External API integrations
+
+5. Related Components
+   - Files likely to be affected by this issue
+   - Related modules and interfaces
+   - Shared utilities or helpers
+   - Configuration files
+
+6. Style Guide and Best Practices
+   - Code formatting rules
+   - Documentation requirements
+   - Security practices
+   - Performance considerations
+
+
+Explore the repository comprehensively, examining:
+- Configuration files (package.json, tsconfig.json, etc.)
+- README and documentation
+- Build and CI/CD configurations
+- Test suites and examples
+- Similar implementations to the requested feature
+
+Take your time to understand the codebase deeply. Look for patterns, conventions, and architectural decisions that should be followed when implementing the solution.
+
+Format your response as a JSON object with the structure defined in the RepositoryContext interface.
