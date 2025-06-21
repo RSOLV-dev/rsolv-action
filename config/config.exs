@@ -50,6 +50,27 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Configure PromEx for Prometheus metrics
+config :rsolv_api, RSOLV.PromEx,
+  disabled: false,
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: [
+    host: System.get_env("GRAFANA_HOST", "http://localhost:3000"),
+    auth_token: System.get_env("GRAFANA_AUTH_TOKEN", ""),
+    upload_dashboards_on_start: true,
+    folder_name: "RSOLV API Dashboards",
+    annotate_app_lifecycle: true
+  ],
+  metrics_server: [
+    port: 4021,
+    path: "/metrics",
+    protocol: :http,
+    pool_size: 5,
+    cowboy_opts: [],
+    auth_strategy: :none
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

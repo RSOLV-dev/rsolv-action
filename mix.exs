@@ -37,7 +37,6 @@ defmodule RSOLV.MixProject do
       {:cors_plug, "~> 3.0"},
       {:bamboo, "~> 2.0"},
       {:bamboo_postmark, "~> 1.0"},
-      {:sentry, "~> 8.0"},
       {:ex_machina, "~> 2.7", only: :test},
       {:mock, "~> 0.3", only: :test},
       {:timex, "~> 3.7"},
@@ -47,7 +46,8 @@ defmodule RSOLV.MixProject do
       {:httpoison, "~> 2.0"},
       {:tesla, "~> 1.4"},
       {:hackney, "~> 1.18"},
-      {:libcluster, "~> 3.3"}
+      {:libcluster, "~> 3.3"},
+      {:prom_ex, "~> 1.9"}
     ]
   end
 

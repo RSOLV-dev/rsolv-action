@@ -3,6 +3,8 @@ defmodule RSOLV.RateLimiter do
   Rate limiting for API requests.
   """
   
+  require Logger
+  
   # Simple counter using persistent_term for testing
   @table_key {__MODULE__, :counters}
   @window_key {__MODULE__, :windows}
@@ -23,11 +25,36 @@ defmodule RSOLV.RateLimiter do
     
     count = get_count(key)
     
-    # Rate limit: 10 requests per minute for testing
-    if count >= 10 do
+    # Rate limit: 100 requests per minute (10x increase)
+    if count >= 100 do
+      # Emit telemetry event for rate limit hit
+      :telemetry.execute(
+        [:rsolv, :rate_limiter, :limit_exceeded],
+        %{count: 1},
+        %{
+          customer_id: customer_id,
+          action: action,
+          current_count: count,
+          limit: 100
+        }
+      )
+      
+      Logger.warning("Rate limit exceeded for customer #{customer_id}, action: #{action}, count: #{count}")
       {:error, :rate_limited}
     else
       record_action(customer_id, action)
+      
+      # Emit telemetry event for successful request
+      :telemetry.execute(
+        [:rsolv, :rate_limiter, :request_allowed],
+        %{count: 1, current_count: count + 1},
+        %{
+          customer_id: customer_id,
+          action: action,
+          limit: 100
+        }
+      )
+      
       :ok
     end
   end

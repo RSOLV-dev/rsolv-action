@@ -77,7 +77,21 @@ defmodule RSOLVWeb.Telemetry do
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),
       summary("vm.total_run_queue_lengths.cpu"),
-      summary("vm.total_run_queue_lengths.io")
+      summary("vm.total_run_queue_lengths.io"),
+      
+      # Rate Limiter Metrics
+      counter("rsolv.rate_limiter.limit_exceeded.count",
+        tags: [:customer_id, :action],
+        description: "Number of rate limit exceeded events"
+      ),
+      counter("rsolv.rate_limiter.request_allowed.count",
+        tags: [:customer_id, :action],
+        description: "Number of requests allowed by rate limiter"
+      ),
+      last_value("rsolv.rate_limiter.request_allowed.current_count",
+        tags: [:customer_id, :action],
+        description: "Current count of requests in the rate limit window"
+      )
     ]
   end
 

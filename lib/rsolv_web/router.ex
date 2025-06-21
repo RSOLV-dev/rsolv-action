@@ -112,4 +112,7 @@ defmodule RSOLVWeb.Router do
       get "/:language", PatternController, :v2_by_language
     end
   end
+  
+  # Prometheus metrics endpoint
+  forward "/metrics", PromEx.Plug, prom_ex_module: RSOLV.PromEx
 end

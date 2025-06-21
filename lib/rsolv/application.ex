@@ -11,6 +11,8 @@ defmodule RSOLV.Application do
     base_children = [
       # Start the Telemetry supervisor
       RSOLVWeb.Telemetry,
+      # Start the PromEx supervisor for Prometheus metrics
+      RSOLV.PromEx,
       # Start the Ecto repository
       RsolvApi.Repo,
       # Start the PubSub system
