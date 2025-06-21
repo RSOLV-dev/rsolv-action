@@ -494,14 +494,19 @@ export class ClaudeCodeAdapter {
       // Support vended credentials
       let apiKey = this.config.apiKey;
       
+      logger.info(`Claude Code config - useVendedCredentials: ${this.config.useVendedCredentials}, credentialManager: ${!!this.credentialManager}`);
+      
       // If using vended credentials, get the key from credential manager
       if (this.config.useVendedCredentials && this.credentialManager) {
         try {
           apiKey = this.credentialManager.getCredential('anthropic');
           logger.info('Using vended Anthropic credential for Claude Code');
+          logger.info(`Vended API key retrieved: ${apiKey ? 'yes (length: ' + apiKey.length + ')' : 'no'}`);
         } catch (error) {
           logger.warn('Failed to get vended credential, falling back to config API key', error);
         }
+      } else {
+        logger.info(`Not using vended credentials - config API key: ${apiKey ? 'yes' : 'no'}`);
       }
       
       const envVars = {
