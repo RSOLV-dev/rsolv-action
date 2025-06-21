@@ -457,7 +457,8 @@ export class ClaudeCodeAdapter {
       
       // Build Claude Code CLI arguments based on configuration
       const args = [
-        '--print'  // Non-interactive mode - prompt will be passed via stdin
+        '-p',  // Prompt flag - expects prompt from stdin
+        '-'    // Read from stdin
       ];
       
       // Add verbose flag first (required for stream-json)
