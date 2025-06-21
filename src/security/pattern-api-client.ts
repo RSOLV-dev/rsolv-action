@@ -23,7 +23,8 @@ export interface PatternData {
   type: string;
   description: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  patterns: string[] | { regex: string[] };  // Can be array or object with regex array
+  patterns?: string[] | { regex: string[] };  // Legacy field - Can be array or object with regex array
+  regex_patterns?: string[];  // Current API format
   languages: string[];
   frameworks?: string[];
   recommendation: string;
@@ -179,11 +180,15 @@ export class PatternAPIClient {
     // Handle different API response formats
     let patternStrings: string[] = [];
     
-    // Check if patterns is an array (language endpoint format)
-    if (Array.isArray(apiPattern.patterns)) {
+    // Check for regex_patterns field (current API format)
+    if (Array.isArray((apiPattern as any).regex_patterns)) {
+      patternStrings = (apiPattern as any).regex_patterns;
+    }
+    // Check if patterns is an array (legacy language endpoint format)
+    else if (Array.isArray(apiPattern.patterns)) {
       patternStrings = apiPattern.patterns;
     } 
-    // Check if patterns is an object with regex array (tier endpoint format)
+    // Check if patterns is an object with regex array (legacy tier endpoint format)
     else if (apiPattern.patterns && typeof apiPattern.patterns === 'object' && 
              'regex' in apiPattern.patterns && Array.isArray((apiPattern.patterns as any).regex)) {
       patternStrings = (apiPattern.patterns as any).regex;
