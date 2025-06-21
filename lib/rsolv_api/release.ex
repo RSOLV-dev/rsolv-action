@@ -33,6 +33,20 @@ defmodule RsolvApi.Release do
     end
   end
 
+  def seed do
+    load_app()
+    
+    # Run the seed script
+    seed_script = Path.join([:code.priv_dir(@app), "repo", "seeds.exs"])
+    
+    if File.exists?(seed_script) do
+      Code.eval_file(seed_script)
+      IO.puts("Seeds executed successfully")
+    else
+      IO.puts("Seeds file not found at: #{seed_script}")
+    end
+  end
+
   defp repos do
     Application.fetch_env!(@app, :ecto_repos)
   end

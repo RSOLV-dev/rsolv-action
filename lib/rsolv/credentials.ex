@@ -12,20 +12,17 @@ defmodule RSOLV.Credentials do
   defp get_provider_key(provider) do
     case provider do
       "anthropic" -> 
-        if Mix.env() == :test do
-          "temp_ant_#{:crypto.strong_rand_bytes(8) |> Base.url_encode64(padding: false)}"
-        else
-          System.get_env("ANTHROPIC_API_KEY") || "sk-ant-mock-key"
-        end
+        # Try both uppercase and lowercase with hyphens (Kubernetes style)
+        System.get_env("ANTHROPIC_API_KEY") || System.get_env("anthropic-api-key") || "sk-ant-mock-key"
       "openai" -> 
-        if Mix.env() == :test do
-          "temp_oai_#{:crypto.strong_rand_bytes(8) |> Base.url_encode64(padding: false)}"
-        else
-          System.get_env("OPENAI_API_KEY") || "sk-mock-key"
-        end
-      "openrouter" -> System.get_env("OPENROUTER_API_KEY") || "sk-or-mock-key"
-      "ollama" -> "local"
-      _ -> "mock_key_#{provider}"
+        # Try both uppercase and lowercase with hyphens (Kubernetes style)
+        System.get_env("OPENAI_API_KEY") || System.get_env("openai-api-key") || "sk-mock-key"
+      "openrouter" -> 
+        System.get_env("OPENROUTER_API_KEY") || System.get_env("openrouter-api-key") || "sk-or-mock-key"
+      "ollama" -> 
+        "local"
+      _ -> 
+        "mock_key_#{provider}"
     end
   end
   
@@ -39,14 +36,28 @@ defmodule RSOLV.Credentials do
     expires_at: expires_at,
     usage_limit: usage_limit
   }) do
+    Logger.info("[Credentials] Starting create_temporary_credential for customer #{customer_id}, provider #{provider}")
+    
     # In production, this would store in database
     # For demo, return the actual provider key
+    provider_key = try do
+      Logger.info("[Credentials] Getting provider key for #{provider}")
+      get_provider_key(provider)
+    rescue
+      e ->
+        Logger.error("[Credentials] Error getting provider key: #{inspect(e)}")
+        Logger.error("[Credentials] Stack trace: #{inspect(__STACKTRACE__)}")
+        reraise e, __STACKTRACE__
+    end
+    
+    Logger.info("[Credentials] Got provider key for #{provider}")
+    
     credential = %{
       id: "cred_#{:crypto.strong_rand_bytes(8) |> Base.url_encode64(padding: false)}",
       customer_id: customer_id,
       provider: provider,
-      api_key: get_provider_key(provider),
-      encrypted_key: get_provider_key(provider),  # For compatibility
+      api_key: provider_key,
+      encrypted_key: provider_key,  # For compatibility
       expires_at: expires_at,
       usage_limit: usage_limit
     }

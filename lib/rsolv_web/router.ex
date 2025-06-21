@@ -69,7 +69,7 @@ defmodule RSOLVWeb.Router do
       get "/enhanced", PatternController, :all_enhanced
       get "/enhanced/:language", PatternController, :enhanced
       
-      # General patterns (access level determined by authentication in controller)
+      # General patterns (access level determined by authentication in controller)  
       get "/", Api.V1.PatternController, :index
       get "/:language", PatternController, :by_language
       
@@ -93,13 +93,7 @@ defmodule RSOLVWeb.Router do
         param: "flag_name"
     end
     
-    # Test endpoints (development only)
-    if Mix.env() != :prod do
-      scope "/test" do
-        get "/patterns/:language", TestPatternController, :all_tiers
-        get "/patterns/:language/:tier", TestPatternController, :by_tier
-      end
-    end
+    # Test endpoints removed - we don't use tiers anymore
   end
 
   # API v2 - Enhanced format by default

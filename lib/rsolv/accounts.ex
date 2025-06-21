@@ -1,6 +1,7 @@
 defmodule RSOLV.Accounts do
   @moduledoc """
   The Accounts context for managing customers and API keys.
+  Updated: #{DateTime.utc_now()}
   """
   
   # Storage for test customer updates
@@ -135,9 +136,35 @@ defmodule RSOLV.Accounts do
           created_at: DateTime.utc_now()
         }
       
-          # In production, this would query the database for customer-specific keys
+          # Check database for customer-specific keys
           true ->
-            nil
+            require Logger
+            Logger.info("[Accounts] Checking database for API key: #{api_key}")
+            
+            import Ecto.Query
+            
+            query = from c in "customers",
+                    where: c.api_key == ^api_key and c.active == true,
+                    select: %{
+                      id: c.id,
+                      name: c.name,
+                      email: c.email,
+                      api_key: c.api_key,
+                      monthly_limit: c.monthly_limit,
+                      current_usage: c.current_usage,
+                      active: c.active,
+                      trial: c.subscription_status == "trial",
+                      created_at: c.inserted_at
+                    }
+            
+            case RsolvApi.Repo.one(query) do
+              nil -> 
+                Logger.info("[Accounts] No customer found in database for API key")
+                nil
+              customer -> 
+                Logger.info("[Accounts] Found customer in database: #{customer.name}")
+                customer
+            end
         end
       
       updated_customer ->

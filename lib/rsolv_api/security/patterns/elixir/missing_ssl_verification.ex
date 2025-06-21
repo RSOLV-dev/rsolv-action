@@ -55,11 +55,11 @@ defmodule RsolvApi.Security.Patterns.Elixir.MissingSslVerification do
   ])
   
   # SAFE - Development-only insecure option
-  if Mix.env() == :dev do
-    HTTPoison.get!(url, [], hackney: [:insecure])
-  else
-    HTTPoison.get!(url)
-  end
+  # if Mix.env() == :dev do
+  #   HTTPoison.get!(url, [], hackney: [:insecure])
+  # else
+  #   HTTPoison.get!(url)
+  # end
   ```
 
   ## Attack Scenarios

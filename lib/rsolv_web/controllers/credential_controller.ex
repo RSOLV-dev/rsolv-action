@@ -10,24 +10,47 @@ defmodule RSOLVWeb.CredentialController do
   @max_ttl_minutes 240  # 4 hours max
 
   def exchange(conn, params) do
+    Logger.info("[CredentialController] Starting exchange with params: #{inspect(params)}")
+    
     with {:ok, api_key} <- validate_api_key(params),
          {:ok, customer} <- authenticate_customer(api_key),
          :ok <- check_rate_limit(customer),
          :ok <- check_usage_limits(customer),
          {:ok, providers} <- validate_providers(params),
-         {:ok, ttl_minutes} <- validate_ttl(params),
-         {:ok, credentials} <- generate_credentials(customer, providers, ttl_minutes),
-         :ok <- store_github_metadata(conn, credentials) do
+         {:ok, ttl_minutes} <- validate_ttl(params) do
       
-      conn
-      |> put_status(:ok)
-      |> json(%{
-        credentials: format_credentials(credentials),
-        usage: %{
-          remaining_fixes: customer.monthly_limit - customer.current_usage,
-          reset_at: get_reset_date()
-        }
-      })
+      Logger.info("[CredentialController] About to call generate_credentials")
+      
+      result = try do
+        generate_credentials(customer, providers, ttl_minutes)
+      rescue
+        e ->
+          Logger.error("[CredentialController] Error in generate_credentials: #{inspect(e)}")
+          Logger.error("[CredentialController] Stack trace: #{inspect(__STACKTRACE__)}")
+          {:error, :generation_failed}
+      end
+      
+      case result do
+        {:ok, credentials} ->
+          Logger.info("[CredentialController] generate_credentials succeeded")
+          
+          :ok = store_github_metadata(conn, credentials)
+          
+          conn
+          |> put_status(:ok)
+          |> json(%{
+            credentials: format_credentials(credentials),
+            usage: %{
+              remaining_fixes: customer.monthly_limit - customer.current_usage,
+              reset_at: get_reset_date()
+            }
+          })
+        
+        {:error, reason} ->
+          conn
+          |> put_status(:internal_server_error)
+          |> json(%{error: "Failed to generate credentials"})
+      end
     else
       {:error, :invalid_api_key} ->
         conn
@@ -130,9 +153,15 @@ defmodule RSOLVWeb.CredentialController do
   defp validate_api_key(_), do: {:error, :missing_parameters}
 
   defp authenticate_customer(api_key) do
+    Logger.info("[CredentialController] Authenticating API key: #{api_key}")
+    
     case Accounts.get_customer_by_api_key(api_key) do
-      nil -> {:error, :invalid_api_key}
-      customer -> {:ok, customer}
+      nil -> 
+        Logger.error("[CredentialController] No customer found for API key: #{api_key}")
+        {:error, :invalid_api_key}
+      customer -> 
+        Logger.info("[CredentialController] Found customer: #{customer.name} (ID: #{customer.id})")
+        {:ok, customer}
     end
   end
 
@@ -168,24 +197,29 @@ defmodule RSOLVWeb.CredentialController do
   defp validate_ttl(_), do: {:ok, 60}  # Default 1 hour
 
   defp generate_credentials(customer, providers, ttl_minutes) do
+    Logger.info("Starting credential generation for customer #{customer.id}, providers: #{inspect(providers)}")
+    
     credentials = Enum.map(providers, fn provider ->
+      Logger.info("Generating credential for provider: #{provider}")
       generate_provider_credential(customer, provider, ttl_minutes)
     end)
     
+    Logger.info("Successfully generated #{length(credentials)} credentials")
     {:ok, credentials}
   rescue
     e ->
       Logger.error("Failed to generate credentials: #{inspect(e)}")
+      Logger.error("Stack trace: #{inspect(__STACKTRACE__)}")
       {:error, :generation_failed}
   end
 
   defp generate_provider_credential(customer, provider, ttl_minutes) do
     expires_at = DateTime.add(DateTime.utc_now(), ttl_minutes * 60, :second)
     
+    # Let the Credentials module handle the actual API key retrieval
     {:ok, credential} = Credentials.create_temporary_credential(%{
       customer_id: customer.id,
       provider: provider,
-      encrypted_key: generate_temp_key(provider),
       expires_at: expires_at,
       usage_limit: customer.monthly_limit - customer.current_usage
     })
