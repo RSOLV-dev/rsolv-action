@@ -55,6 +55,10 @@ inputs:
     description: 'Enable security vulnerability analysis'
     required: false
     default: 'true'
+  max_issues:
+    description: 'Maximum number of issues to process in a single run'
+    required: false
+    default: ''
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -74,6 +78,7 @@ runs:
     RSOLV_MODE: ${{ inputs.mode }}
     RSOLV_SCAN_MODE: ${{ inputs.scan_mode }}
     RSOLV_ENABLE_SECURITY_ANALYSIS: ${{ inputs.enable_security_analysis }}
+    RSOLV_MAX_ISSUES: ${{ inputs.max_issues }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'

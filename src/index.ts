@@ -72,12 +72,18 @@ async function run(): Promise<ActionStatus> {
     logger.info('Analysis container ready');
     
     // Detect issues for automation from all configured platforms
-    const issues = await detectIssuesFromAllPlatforms(config);
+    let issues = await detectIssuesFromAllPlatforms(config);
     logger.info(`Found ${issues.length} issues for automation across all platforms`);
     
     if (issues.length === 0) {
       logger.info('No issues to process, exiting');
       return { success: true, message: 'No issues found for automation' };
+    }
+    
+    // Apply maxIssues limit if configured
+    if (config.maxIssues && config.maxIssues > 0 && issues.length > config.maxIssues) {
+      logger.info(`Limiting processing to ${config.maxIssues} issue(s) as configured`);
+      issues = issues.slice(0, config.maxIssues);
     }
     
     // Process issues with AI (enable security analysis and enhanced context by default)

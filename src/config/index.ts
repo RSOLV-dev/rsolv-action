@@ -47,7 +47,8 @@ const ActionConfigSchema = z.object({
   aiProvider: AiProviderConfigSchema,
   containerConfig: ContainerConfigSchema,
   securitySettings: SecuritySettingsSchema,
-  rsolvApiKey: z.string().optional() // For vended credentials
+  rsolvApiKey: z.string().optional(), // For vended credentials
+  maxIssues: z.number().min(1).optional() // Maximum number of issues to process
 });
 
 /**
@@ -112,6 +113,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
     configPath: '.github/rsolv.yml',
     issueLabel: 'rsolv:automate',
     enableSecurityAnalysis: true,  // Enable security analysis by default
+    maxIssues: undefined, // Process all issues by default
     aiProvider: {
       provider: 'claude-code',
       model: 'claude-sonnet-4-20250514',  // Claude Sonnet 4
@@ -180,7 +182,8 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
     rsolvApiKey: process.env.RSOLV_API_KEY, // Same key used for vended credentials
     configPath: process.env.RSOLV_CONFIG_PATH,
     issueLabel: process.env.RSOLV_ISSUE_LABEL,
-    repoToken: process.env.GITHUB_TOKEN
+    repoToken: process.env.GITHUB_TOKEN,
+    maxIssues: process.env.RSOLV_MAX_ISSUES ? parseInt(process.env.RSOLV_MAX_ISSUES, 10) : undefined
   };
   
   // Parse environment variables JSON string if available

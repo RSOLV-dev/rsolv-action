@@ -11,6 +11,7 @@ export interface ActionConfig {
   securitySettings: SecuritySettings;
   enableSecurityAnalysis?: boolean;
   rsolvApiKey?: string;
+  maxIssues?: number; // Maximum number of issues to process in a single run
 }
 
 export interface ActionStatus {
