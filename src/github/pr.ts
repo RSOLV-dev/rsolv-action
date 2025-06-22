@@ -45,7 +45,8 @@ export async function createPullRequest(
       issue,
       branchName,
       prDescription,
-      analysisData
+      analysisData,
+      config
     );
     
     logger.info(`Successfully created PR #${prResult.pullRequestNumber} for issue #${issue.number}`);
@@ -247,7 +248,7 @@ async function generatePrDescription(
     logger.info(`Generating PR description for issue #${issue.number}`);
     
     // Get AI client
-    const aiClient = getAiClient(config.aiProvider);
+    const aiClient = await getAiClient(config.aiProvider);
     
     // Build PR description prompt
     const prompt = buildPrDescriptionPrompt(issue, analysisData, changes);
@@ -346,7 +347,8 @@ async function createGitHubPR(
   issue: IssueContext,
   branchName: string,
   prDescription: string,
-  analysisData: AnalysisData
+  analysisData: AnalysisData,
+  config: ActionConfig
 ): Promise<PrResult> {
   try {
     // Generate PR title based on issue
