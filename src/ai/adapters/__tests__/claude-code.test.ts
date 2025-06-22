@@ -176,18 +176,18 @@ describe('Claude Code SDK Adapter', () => {
     const result = await adapter.generateSolution(mockIssueContext, mockAnalysis);
     
     expect(result.success).toBe(true);
-    expect(result.message).toBe('Solution generated with Claude Code SDK');
+    expect(result.message).toContain('Solution generated with Claude Code SDK');
     expect(result.changes).toBeDefined();
     expect(result.changes!['src/test.ts']).toBe('console.log("fixed");');
     
     // Should have called query with correct parameters
     expect(mockQuery).toHaveBeenCalledWith({
       prompt: expect.stringContaining('Fix XSS vulnerability'),
-      abortController: expect.any(AbortController),
-      cwd: expect.any(String),
       options: {
-        maxTurns: 10,
-        nonInteractive: true
+        abortController: expect.any(AbortController),
+        cwd: expect.any(String),
+        maxTurns: 30,
+        pathToClaudeCodeExecutable: '/app/node_modules/@anthropic-ai/claude-code/cli.js'
       }
     });
   });
@@ -200,9 +200,12 @@ describe('Claude Code SDK Adapter', () => {
     
     expect(mockQuery).toHaveBeenCalledWith({
       prompt: enhancedPrompt,
-      abortController: expect.any(AbortController),
-      cwd: expect.any(String),
-      options: expect.any(Object)
+      options: {
+        abortController: expect.any(AbortController),
+        cwd: expect.any(String),
+        maxTurns: 30,
+        pathToClaudeCodeExecutable: '/app/node_modules/@anthropic-ai/claude-code/cli.js'
+      }
     });
   });
 
@@ -251,10 +254,10 @@ describe('Claude Code SDK Adapter', () => {
 
   test('should handle timeout with abort controller', async () => {
     // Mock query to never complete
-    (mockQuery as any).mockImplementationOnce(async function* (options: any) {
+    (mockQuery as any).mockImplementationOnce(async function* (params: any) {
       // Wait for abort signal
       await new Promise((resolve, reject) => {
-        options.abortController.signal.addEventListener('abort', () => {
+        params.options.abortController.signal.addEventListener('abort', () => {
           reject(new Error('AbortError'));
         });
       });
@@ -377,8 +380,8 @@ This solution prevents XSS attacks.`;
     
     expect(result.success).toBe(false);
     expect(result.message).toBe('No solution found in response');
-    expect(result.error).toContain('did not generate a valid solution');
-    expect(logger.warn).toHaveBeenCalledWith('No solution found in Claude Code SDK response');
+    expect(result.error).toContain('did not generate a valid JSON solution');
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('No solution found in Claude Code SDK response'));
   });
 
   test('should handle missing SDK gracefully', async () => {
@@ -430,7 +433,7 @@ This solution prevents XSS attacks.`;
     expect(prompt).toContain('30 minutes');
     expect(prompt).toContain('src/login.ts');
     expect(prompt).toContain('src/auth.ts');
-    expect(prompt).toContain('Format your response as a JSON object');
+    expect(prompt).toContain('provide your ultimate solution as a JSON object');
   });
 
   test('should handle direct JSON parsing', async () => {
