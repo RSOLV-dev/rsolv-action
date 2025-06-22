@@ -156,7 +156,7 @@ export class ClaudeCodeAdapter {
             abortController,
             cwd: this.repoPath,
             maxTurns: 30, // Allow many turns for exploration and iterative development
-            pathToClaudeCodeExecutable: '/app/node_modules/@anthropic-ai/claude-code/cli.js',
+            pathToClaudeCodeExecutable: this.claudeConfig.executablePath || '/app/node_modules/@anthropic-ai/claude-code/cli.js',
           },
         })) {
           messages.push(message);

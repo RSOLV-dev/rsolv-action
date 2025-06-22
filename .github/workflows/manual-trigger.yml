@@ -9,7 +9,7 @@ on:
       repository:
         description: 'Repository name (e.g., owner/repo)'
         required: true
-        default: ${{ github.repository }}
+        default: 'RSOLV-dev/RSOLV-action'
 
 jobs:
   rsolv-fix:
