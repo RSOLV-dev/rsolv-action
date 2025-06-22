@@ -90,7 +90,7 @@ export class ClaudeCodeAdapter {
   ): Promise<{ success: boolean; message: string; changes?: Record<string, string>; error?: string }> {
     let errorRetryCount = 0;
     const maxRetries = this.claudeConfig.retryOptions?.maxRetries ?? 2;
-    const timeout = this.claudeConfig.timeout ?? 900000; // 15 minutes default
+    const timeout = this.claudeConfig.timeout ?? 1800000; // 30 minutes default for exploration
     
     // Initialize usage tracking
     const usageEntry: UsageData = {
@@ -143,23 +143,70 @@ export class ClaudeCodeAdapter {
       try {
         const messages: SDKMessage[] = [];
         let solution: PullRequestSolution | null = null;
+        let explorationPhase = true;
+        let messageCount = 0;
+        
+        if (this.claudeConfig.verboseLogging) {
+          logger.info(`Starting Claude Code exploration for issue: ${issueContext.title}`);
+        }
         
         for await (const message of query({
           prompt,
           abortController,
           cwd: this.repoPath,
           options: {
-            maxTurns: 10, // Allow multiple turns for complex solutions
+            maxTurns: 30, // Allow many turns for exploration and iterative development
             nonInteractive: true,
           },
         })) {
           messages.push(message);
+          messageCount++;
+          
+          // Log exploration progress
+          if (this.claudeConfig.verboseLogging && message.type === 'assistant') {
+            const assistantMessage = message as any;
+            if (assistantMessage.message?.content) {
+              for (const content of assistantMessage.message.content) {
+                if (content.type === 'tool_use') {
+                  logger.debug(`Claude exploring: ${content.name} tool`);
+                  explorationPhase = true;
+                } else if (content.type === 'text' && content.text) {
+                  // Check if we're transitioning to solution phase
+                  if (content.text.includes('```json') || content.text.includes('ultimate solution') || content.text.includes('Final Output')) {
+                    explorationPhase = false;
+                    logger.info('Claude transitioning to solution generation phase');
+                  }
+                }
+              }
+            }
+          }
           
           // Try to extract solution from text messages
           if (message.type === 'text' && message.text) {
             const potentialSolution = this.extractSolutionFromText(message.text);
             if (potentialSolution) {
               solution = potentialSolution;
+              if (this.claudeConfig.verboseLogging) {
+                logger.info('Found solution in text message');
+              }
+            }
+          }
+          
+          // Also check assistant messages for embedded solutions
+          if (message.type === 'assistant') {
+            const assistantMessage = message as any;
+            if (assistantMessage.message?.content) {
+              for (const content of assistantMessage.message.content) {
+                if (content.type === 'text' && content.text) {
+                  const potentialSolution = this.extractSolutionFromText(content.text);
+                  if (potentialSolution) {
+                    solution = potentialSolution;
+                    if (this.claudeConfig.verboseLogging) {
+                      logger.info('Found solution in assistant message');
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -174,6 +221,11 @@ export class ClaudeCodeAdapter {
           usageEntry.successful = true;
           this.trackUsage(usageEntry);
           
+          if (this.claudeConfig.verboseLogging) {
+            logger.info(`Claude Code completed exploration with ${messageCount} messages`);
+            logger.info(`Solution found with ${solution.files.length} file(s) to change`);
+          }
+          
           // Convert to expected format
           const changes: Record<string, string> = {};
           solution.files.forEach(file => {
@@ -182,18 +234,26 @@ export class ClaudeCodeAdapter {
           
           return {
             success: true,
-            message: 'Solution generated with Claude Code SDK',
+            message: `Solution generated with Claude Code SDK after ${messageCount} exploration steps`,
             changes
           };
         } else {
-          logger.warn('No solution found in Claude Code SDK response');
+          logger.warn(`No solution found in Claude Code SDK response after ${messageCount} messages`);
           usageEntry.errorType = 'no_solution_found';
           this.trackUsage(usageEntry);
+          
+          // Log the last few messages for debugging
+          if (this.claudeConfig.verboseLogging && messages.length > 0) {
+            logger.debug('Last 3 messages:', messages.slice(-3).map(m => ({
+              type: m.type,
+              content: (m as any).text || (m as any).message?.content?.[0]?.text?.slice(0, 100) || 'N/A'
+            })));
+          }
           
           return {
             success: false,
             message: 'No solution found in response',
-            error: 'Claude Code SDK did not generate a valid solution. Please check logs for details.'
+            error: `Claude Code explored the repository (${messageCount} steps) but did not generate a valid JSON solution. This might indicate the issue requires more context or manual intervention.`
           };
         }
       } catch (queryError) {
@@ -294,37 +354,61 @@ export class ClaudeCodeAdapter {
       return enhancedPrompt;
     }
     
-    return `You are an expert developer tasked with fixing issues in a codebase.
-      
-Issue Title: ${issueContext.title}
-Issue Description: ${issueContext.body}
+    return `You are an expert developer tasked with fixing an issue in a codebase. I need you to explore the repository, understand the problem deeply, and create a comprehensive solution.
 
-Complexity: ${analysis.complexity}
-Estimated Time: ${analysis.estimatedTime} minutes
+## Issue Details:
+- **Title**: ${issueContext.title}
+- **Description**: ${issueContext.body}
+- **Complexity**: ${analysis.complexity}
+- **Estimated Time**: ${analysis.estimatedTime} minutes
+- **Initial Related Files**: ${analysis.relatedFiles?.join(', ') || 'To be discovered through exploration'}
 
-Related Files:
-${analysis.relatedFiles?.join('\n') || 'To be determined by context analysis'}
+## Your Task:
 
-Generate a solution for this issue including:
-1. Code changes with file paths
-2. Tests to validate the fix
-3. A clear explanation of the approach
+### Phase 1: Repository Exploration
+First, explore the repository structure to understand:
+- The overall architecture and file organization
+- Where the vulnerability or issue might be located
+- Related components that might be affected
+- Existing patterns and coding standards
 
-Format your response as a JSON object with the following structure:
+Use tools like Grep, Glob, and Read to explore the codebase thoroughly.
+
+### Phase 2: Deep Analysis
+Once you understand the codebase:
+- Locate the exact source of the issue
+- Understand how the vulnerable code works
+- Identify all files that need changes
+- Consider security implications and edge cases
+
+### Phase 3: Solution Development
+Develop your solution iteratively:
+- Start with the core fix
+- Add necessary validation and error handling
+- Ensure the fix follows existing code patterns
+- Consider adding tests if appropriate
+
+### Phase 4: Final Output
+After you've completed your exploration and solution development, provide your ultimate solution as a JSON object with this EXACT structure:
+
+\`\`\`json
 {
-  "title": "Brief title for the PR",
-  "description": "Detailed description of the solution",
+  "title": "Brief title for the PR (e.g., 'Fix XSS vulnerability in login form')",
+  "description": "Detailed description explaining what was vulnerable, why it was dangerous, and how your fix addresses it",
   "files": [
     {
-      "path": "path/to/file",
-      "changes": "The complete new content for the file"
+      "path": "exact/path/to/file.js",
+      "changes": "The COMPLETE new content for the file (not a diff, but the full file content after changes)"
     }
   ],
   "tests": [
-    "Description of test 1",
-    "Description of test 2"
+    "Description of test case 1 to verify the fix",
+    "Description of test case 2 for edge cases"
   ]
-}`;
+}
+\`\`\`
+
+Remember: Take your time to explore and understand the codebase thoroughly before implementing the solution. The final JSON must be properly formatted and include the complete file contents after your changes.`;
   }
   
   /**

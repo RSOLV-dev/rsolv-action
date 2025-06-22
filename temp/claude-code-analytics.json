@@ -621,5 +621,20 @@
     "successful": true,
     "endTime": 1750548462790,
     "solutionGenerationTime": 0
+  },
+  {
+    "startTime": 1750550011302,
+    "issueId": "test-1750550011300",
+    "successful": false,
+    "endTime": 1750550066108,
+    "solutionGenerationTime": 54806,
+    "errorType": "no_solution_found"
+  },
+  {
+    "startTime": 1750551785800,
+    "issueId": "test-1750551785798",
+    "successful": true,
+    "endTime": 1750552109149,
+    "solutionGenerationTime": 323349
   }
 ]
