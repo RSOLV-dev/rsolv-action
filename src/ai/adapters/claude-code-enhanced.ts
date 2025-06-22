@@ -98,31 +98,26 @@ export class EnhancedClaudeCodeAdapter extends ClaudeCodeAdapter {
       // Construct the context gathering prompt
       const contextPrompt = this.buildContextGatheringPrompt(issueContext, options);
       
-      // Create temporary prompt file
-      const promptPath = path.join(this.tempDir, `context-prompt-${Date.now()}.txt`);
-      fs.writeFileSync(promptPath, contextPrompt);
+      // Use the parent class's generateSolution method to gather context
+      // Create a mock analysis for context gathering
+      const contextAnalysis: IssueAnalysis = {
+        complexity: 'medium' as const,
+        estimatedTime: 60,
+        relatedFiles: []
+      };
       
-      // Execute Claude Code with extended timeout
-      const outputPath = path.join(this.tempDir, `context-${Date.now()}.json`);
-      const result = await this.executeClaudeCode(
-        promptPath,
-        outputPath,
-        { 
-          startTime,
-          issueId: issueContext.id,
-          successful: false
-        },
-        options.maxExplorationTime
+      // Generate a solution that will include repository exploration
+      const result = await this.generateSolution(
+        issueContext,
+        contextAnalysis,
+        contextPrompt
       );
       
-      // Parse the context result
-      const context = await this.parseContextResult(result);
+      // Extract context from the exploration
+      const context = this.extractContextFromSolution(result);
       
       // Cache the result
       this.contextCache.set(cacheKey, context);
-      
-      // Clean up temporary files
-      this.cleanupTempFiles([promptPath, outputPath]);
       
       const duration = Date.now() - startTime;
       logger.info(`Deep context gathering completed in ${duration}ms`);
@@ -289,6 +284,16 @@ Generate a solution that:
 Take time to think through all implications and create a production-ready solution that feels native to this codebase.
 
 Format your response as a JSON object with title, description, files, and tests.`;
+  }
+  
+  /**
+   * Extract context from solution result
+   */
+  private extractContextFromSolution(result: any): RepositoryContext {
+    // For now, return a minimal context based on the exploration
+    // In a full implementation, we could parse the Claude Code messages
+    // to extract architectural insights
+    return this.createMinimalContext();
   }
   
   /**

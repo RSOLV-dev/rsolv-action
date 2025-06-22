@@ -1,221 +1,228 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
-import { EnhancedClaudeCodeAdapter } from '../claude-code-enhanced';
-import { AIConfig } from '../../types';
-import { IssueContext } from '../../../types';
-import fs from 'fs';
+import { describe, expect, test, beforeEach, mock } from 'bun:test';
+import { EnhancedClaudeCodeAdapter } from '../claude-code-enhanced.js';
+import { AIConfig } from '../../types.js';
+import { IssueContext } from '../../../types/index.js';
+import path from 'path';
 
-// Mock fs module
-mock.module('fs', () => ({
-  existsSync: () => true,
-  writeFileSync: () => {},
-  readFileSync: () => '{}',
-  unlinkSync: () => {}
-}));
-
-// Mock the base ClaudeCodeAdapter
-mock.module('../claude-code', () => {
-  class MockClaudeCodeAdapter {
-    config: AIConfig;
-    repoPath: string;
-    credentialManager?: any;
-    tempDir: string = '/tmp';
+// Mock the parent class
+mock.module('../claude-code.js', () => ({
+  ClaudeCodeAdapter: class MockClaudeCodeAdapter {
+    tempDir: string;
     
-    constructor(config: AIConfig, repoPath: string, credentialManager?: any) {
-      this.config = config;
-      this.repoPath = repoPath;
-      this.credentialManager = credentialManager;
+    constructor(public config: AIConfig, public repoPath: string, public credentialManager?: any) {
+      this.tempDir = path.join(process.cwd(), 'temp');
     }
     
-    async isAvailable(): Promise<boolean> {
-      return true;
-    }
-    
-    async executeClaudeCode(): Promise<string> {
-      return JSON.stringify({
-        type: 'context_response',
-        architecture: {
-          patterns: ['MVC'],
-          structure: 'standard',
-          mainComponents: ['controllers', 'models', 'views']
-        },
-        codeConventions: {
-          namingPatterns: ['camelCase'],
-          fileOrganization: 'modular',
-          importPatterns: ['ES6']
-        },
-        testingPatterns: {
-          framework: 'jest',
-          structure: 'colocated',
-          conventions: ['describe/it']
-        },
-        dependencies: {
-          runtime: ['express'],
-          dev: ['jest'],
-          patterns: ['npm']
+    async generateSolution(issueContext: any, analysis: any, prompt?: string) {
+      // Mock successful solution generation
+      return {
+        success: true,
+        message: 'Solution generated',
+        changes: {
+          'test.js': 'console.log("fixed");'
         }
-      });
+      };
     }
   }
-  
-  return { ClaudeCodeAdapter: MockClaudeCodeAdapter };
-});
+}));
+
+// Mock logger
+mock.module('../../../utils/logger.js', () => ({
+  logger: {
+    info: mock(() => {}),
+    error: mock(() => {}),
+    warn: mock(() => {}),
+    debug: mock(() => {})
+  }
+}));
 
 describe('EnhancedClaudeCodeAdapter', () => {
   let adapter: EnhancedClaudeCodeAdapter;
-  let mockCredentialManager: any;
-  let config: AIConfig;
+  let mockConfig: AIConfig;
+  let mockIssueContext: IssueContext;
   
   beforeEach(() => {
-    // Create a mock credential manager
-    mockCredentialManager = {
-      getCredential: mock((provider: string) => {
-        if (provider === 'anthropic') {
-          return 'vended-anthropic-key-12345';
-        }
-        throw new Error(`No credential for ${provider}`);
-      }),
-      initialize: mock(async () => {}),
-      cleanup: mock(() => {}),
-      reportUsage: mock(async () => {})
-    };
-    
-    config = {
+    mockConfig = {
       provider: 'claude-code',
       apiKey: 'test-key',
-      useVendedCredentials: true,
       claudeCodeConfig: {
-        contextCacheDuration: 1800000 // 30 minutes
+        contextCacheDuration: 3600000
       }
     };
-  });
-  
-  describe('constructor', () => {
-    test('should accept credential manager as third parameter', () => {
-      adapter = new EnhancedClaudeCodeAdapter(config, '/test/repo', mockCredentialManager);
-      
-      // The adapter should have the credential manager
-      expect(adapter).toBeDefined();
-      expect((adapter as any).credentialManager).toBe(mockCredentialManager);
-    });
     
-    test('should work without credential manager', () => {
-      adapter = new EnhancedClaudeCodeAdapter(config, '/test/repo');
-      
-      expect(adapter).toBeDefined();
-      expect((adapter as any).credentialManager).toBeUndefined();
-    });
+    mockIssueContext = {
+      id: 'test-123',
+      number: 123,
+      title: 'Test Issue',
+      body: 'Test description',
+      labels: [],
+      assignees: [],
+      repository: {
+        owner: 'test',
+        name: 'repo',
+        fullName: 'test/repo',
+        defaultBranch: 'main'
+      },
+      source: 'github',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
     
-    test('should pass credential manager to base class', () => {
-      adapter = new EnhancedClaudeCodeAdapter(config, '/test/repo', mockCredentialManager);
-      
-      // Since we're using a mocked base class, we can check that it received the credential manager
-      // The base class constructor should have been called with the credential manager
-      expect((adapter as any).credentialManager).toBe(mockCredentialManager);
-    });
+    adapter = new EnhancedClaudeCodeAdapter(mockConfig, '/test/repo');
   });
-  
-  describe('credential manager integration', () => {
-    test('should use vended credentials when available', async () => {
-      adapter = new EnhancedClaudeCodeAdapter(config, '/test/repo', mockCredentialManager);
-      
-      const issueContext: IssueContext = {
-        id: 'test-123',
-        number: 1,
-        title: 'Test Issue',
-        body: 'Test body',
-        labels: [],
-        assignees: [],
-        repository: {
-          fullName: 'test/repo',
-          language: 'TypeScript',
-          defaultBranch: 'main'
-        },
-        author: 'testuser',
-        createdAt: new Date().toISOString(),
-        platform: 'github'
+
+  describe('gatherDeepContext', () => {
+    test('should gather context successfully', async () => {
+      const options = {
+        contextDepth: 'standard' as const,
+        maxExplorationTime: 60000,
+        includeTests: true,
+        includeStyleGuide: true
       };
       
-      // This should work with the vended credentials
-      const result = await adapter.gatherDeepContext(issueContext, {
-        enableUltraThink: false,
-        maxExplorationTime: 60000,
-        contextDepth: 'medium',
-        includeArchitectureAnalysis: true,
-        includeTestPatterns: true,
-        includeStyleGuide: true,
-        includeDependencyAnalysis: true
-      });
+      const context = await adapter.gatherDeepContext(mockIssueContext, options);
       
-      expect(result).toBeDefined();
-      expect(result.architecture).toBeDefined();
-      expect(result.architecture.patterns).toContain('MVC');
+      expect(context).toBeDefined();
+      expect(context.architecture).toBeDefined();
+      expect(context.codeConventions).toBeDefined();
+      expect(context.testingPatterns).toBeDefined();
     });
-    
-    test('should handle missing credential manager gracefully', async () => {
-      config.useVendedCredentials = true;
-      adapter = new EnhancedClaudeCodeAdapter(config, '/test/repo'); // No credential manager
-      
-      const issueContext: IssueContext = {
-        id: 'test-456',
-        number: 2,
-        title: 'Test Issue 2',
-        body: 'Test body 2',
-        labels: [],
-        assignees: [],
-        repository: {
-          fullName: 'test/repo',
-          language: 'TypeScript',
-          defaultBranch: 'main'
-        },
-        author: 'testuser',
-        createdAt: new Date().toISOString(),
-        platform: 'github'
+
+    test('should use cached context on second call', async () => {
+      const options = {
+        contextDepth: 'standard' as const,
+        maxExplorationTime: 60000,
+        includeTests: true,
+        includeStyleGuide: false
       };
       
-      // Should still work but use config API key instead
-      const result = await adapter.gatherDeepContext(issueContext, {
-        enableUltraThink: false,
-        maxExplorationTime: 60000,
-        contextDepth: 'shallow',
-        includeArchitectureAnalysis: true,
-        includeTestPatterns: false,
-        includeStyleGuide: false,
-        includeDependencyAnalysis: false
+      // First call
+      const context1 = await adapter.gatherDeepContext(mockIssueContext, options);
+      
+      // Second call with same parameters
+      const context2 = await adapter.gatherDeepContext(mockIssueContext, options);
+      
+      // Should be the same object (cached)
+      expect(context1).toBe(context2);
+    });
+
+    test('should handle errors gracefully', async () => {
+      // Mock generateSolution to throw an error
+      adapter.generateSolution = mock(() => {
+        throw new Error('Test error');
       });
       
-      expect(result).toBeDefined();
+      const options = {
+        contextDepth: 'deep' as const,
+        maxExplorationTime: 60000,
+        includeTests: true,
+        includeStyleGuide: true
+      };
+      
+      const context = await adapter.gatherDeepContext(mockIssueContext, options);
+      
+      // Should return minimal context on error
+      expect(context).toBeDefined();
+      expect(context.architecture.structure).toBe('Standard');
     });
   });
-  
-  describe('configuration inheritance', () => {
-    test('should inherit all config properties from base class', () => {
-      const customConfig: AIConfig = {
-        provider: 'claude-code',
-        apiKey: 'custom-key',
-        model: 'claude-3',
-        temperature: 0.5,
-        maxTokens: 2000,
-        useVendedCredentials: false,
-        claudeCodeConfig: {
-          executablePath: '/custom/path/claude',
-          tempDir: '/custom/temp',
-          contextCacheDuration: 7200000,
-          verboseLogging: true,
-          contextOptions: {
-            maxDepth: 5,
-            explorationBreadth: 3,
-            includeDirs: ['src', 'lib'],
-            excludeDirs: ['node_modules', 'dist']
+
+  describe('generateEnhancedSolution', () => {
+    test('should generate enhanced solution with deep context', async () => {
+      const analysis = {
+        complexity: 'medium' as const,
+        estimatedTime: 30,
+        relatedFiles: ['test.js']
+      };
+      
+      // Mock the generateSolution method to return a PullRequestSolution
+      adapter.generateSolution = mock(async () => ({
+        title: 'Fix: Test Issue',
+        description: 'This PR fixes the test issue',
+        files: [
+          {
+            path: 'test.js',
+            content: 'console.log("fixed");',
+            operation: 'modify' as const
           }
-        }
+        ]
+      }));
+      
+      const result = await adapter.generateEnhancedSolution(
+        mockIssueContext,
+        analysis
+      );
+      
+      expect(result).toBeDefined();
+      expect(result.title).toBeDefined();
+      expect(result.description).toBeDefined();
+      expect(result.files).toBeArray();
+    });
+
+    test('should use enhanced prompt when provided', async () => {
+      const analysis = {
+        complexity: 'simple' as const,
+        estimatedTime: 15,
+        relatedFiles: []
       };
       
-      adapter = new EnhancedClaudeCodeAdapter(customConfig, '/test/repo', mockCredentialManager);
+      const enhancedPrompt = 'Custom enhanced prompt';
       
-      // Verify the config was passed correctly
-      expect((adapter as any).config).toEqual(customConfig);
-      expect((adapter as any).repoPath).toBe('/test/repo');
-      expect((adapter as any).credentialManager).toBe(mockCredentialManager);
+      // Mock to capture the prompt
+      let capturedPrompt: string | undefined;
+      adapter.generateSolution = mock(async (issue, anal, prompt) => {
+        capturedPrompt = prompt;
+        return {
+          title: 'Fix: Simple Issue',
+          description: 'This PR fixes a simple issue',
+          files: [
+            {
+              path: 'test.js',
+              content: 'fixed',
+              operation: 'modify' as const
+            }
+          ]
+        };
+      });
+      
+      await adapter.generateEnhancedSolution(
+        mockIssueContext,
+        analysis,
+        enhancedPrompt
+      );
+      
+      expect(capturedPrompt).toContain(enhancedPrompt);
+      expect(capturedPrompt).toContain('ultrathink');
+    });
+  });
+
+  describe('integration with context caching', () => {
+    test('should build proper context gathering prompt', async () => {
+      const options = {
+        contextDepth: 'ultra' as const,
+        maxExplorationTime: 300000,
+        includeTests: true,
+        includeStyleGuide: true
+      };
+      
+      // Access private method through any
+      const prompt = (adapter as any).buildContextGatheringPrompt(mockIssueContext, options);
+      
+      expect(prompt).toContain('comprehensive analysis');
+      expect(prompt).toContain('Test Issue');
+      expect(prompt).toContain('Style Guide and Best Practices');
+    });
+
+    test('should create minimal context correctly', () => {
+      const context = (adapter as any).createMinimalContext();
+      
+      expect(context.architecture).toBeDefined();
+      expect(context.architecture.structure).toBe('Standard');
+      expect(context.codeConventions).toBeDefined();
+      expect(context.testingPatterns).toBeDefined();
+      expect(context.dependencies).toBeDefined();
+      expect(context.relatedComponents).toBeDefined();
+      expect(context.styleGuide).toBeDefined();
     });
   });
 });

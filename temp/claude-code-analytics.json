@@ -1,55 +1,5 @@
 [
   {
-    "startTime": 1749135479632,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "totalChunks": 1,
-    "solutionGenerationTime": 12,
-    "endTime": 1749135479648
-  },
-  {
-    "startTime": 1749135894153,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "totalChunks": 1,
-    "solutionGenerationTime": 13,
-    "endTime": 1749135894171
-  },
-  {
-    "startTime": 1749152280502,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "totalChunks": 1,
-    "solutionGenerationTime": 13,
-    "endTime": 1749152280523
-  },
-  {
-    "startTime": 1749162822766,
-    "issueId": "cc-test-123",
-    "successful": false,
-    "retryCount": 1,
-    "errorType": "execution_error",
-    "endTime": 1749163123656
-  },
-  {
-    "startTime": 1749163854440,
-    "issueId": "final-test",
-    "successful": false,
-    "totalChunks": 0,
-    "solutionGenerationTime": 2677,
-    "retryCount": 2,
-    "errorType": "execution_error",
-    "endTime": 1749163862125
-  },
-  {
-    "startTime": 1749247756057,
-    "issueId": "test-issue-123",
-    "successful": false,
-    "retryCount": 2,
-    "errorType": "execution_error",
-    "endTime": 1749247758061
-  },
-  {
     "startTime": 1750292816315,
     "issueId": "test-issue-123",
     "successful": false,
@@ -711,5 +661,47 @@
     "successful": true,
     "endTime": 1750554177067,
     "solutionGenerationTime": 0
+  },
+  {
+    "startTime": 1750555424022,
+    "issueId": "test-123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1750555424024
+  },
+  {
+    "startTime": 1750555424031,
+    "issueId": "test-123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1750555424031
+  },
+  {
+    "startTime": 1750555424035,
+    "issueId": "test-123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1750555424035
+  },
+  {
+    "startTime": 1750555424036,
+    "issueId": "test-123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1750555424036
+  },
+  {
+    "startTime": 1750555677346,
+    "issueId": "test-123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1750555677348
+  },
+  {
+    "startTime": 1750555677349,
+    "issueId": "test-123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1750555677350
   }
 ]
