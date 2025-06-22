@@ -28,18 +28,12 @@ CMD ["bun", "test"]
 # Production build stage
 FROM base AS builder
 
-# Install Node.js for Claude Code CLI
+# Install Node.js for Claude Code SDK
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code CLI using npm (without sudo)
-RUN npm install -g @anthropic-ai/claude-code && \
-    # Verify it's installed
-    which claude && \
-    claude --version || echo "Claude Code CLI installation completed"
-
-# Install production dependencies only
+# Install production dependencies only (includes @anthropic-ai/claude-code)
 RUN bun install --frozen-lockfile --production
 
 # Copy source files
@@ -52,19 +46,22 @@ RUN bun run build
 # Verify build output exists
 RUN ls -la dist/
 
+# Verify Claude Code SDK is installed
+RUN ls -la node_modules/@anthropic-ai/claude-code/cli.js || echo "Claude Code SDK not found"
+
 # Production stage
 FROM base AS production
 
-# Copy Node.js and Claude Code CLI from builder
+# Copy Node.js from builder
 COPY --from=builder /usr/bin/node /usr/bin/node
-COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
-COPY --from=builder /usr/bin/claude /usr/bin/claude
-# Create symlink for npm-installed global binaries
-RUN ln -sf /usr/lib/node_modules/@anthropic-ai/claude-code/bin/claude /usr/bin/claude 2>/dev/null || true
+COPY --from=builder /usr/lib /usr/lib
 
-# Copy built application
+# Copy built application and all dependencies
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
+
+# Verify Claude Code SDK is available
+RUN ls -la /app/node_modules/@anthropic-ai/claude-code/cli.js || echo "Claude Code SDK not found in production"
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh

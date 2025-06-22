@@ -152,11 +152,10 @@ export class ClaudeCodeAdapter {
         
         for await (const message of query({
           prompt,
-          abortController,
-          cwd: this.repoPath,
           options: {
+            abortController,
+            cwd: this.repoPath,
             maxTurns: 30, // Allow many turns for exploration and iterative development
-            nonInteractive: true,
           },
         })) {
           messages.push(message);
