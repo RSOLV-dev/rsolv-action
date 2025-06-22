@@ -2,6 +2,7 @@ import { Vulnerability, VulnerabilityType, SecurityScanResult } from './types.js
 import { createPatternSource } from './pattern-source.js';
 import type { PatternSource } from './pattern-source.js';
 import { logger } from '../utils/logger.js';
+import { ASTPatternInterpreter } from './ast-pattern-interpreter.js';
 
 /**
  * Enhanced SecurityDetector that uses PatternSource for dynamic pattern loading
@@ -10,12 +11,14 @@ import { logger } from '../utils/logger.js';
 export class SecurityDetectorV2 {
   private patternSource: PatternSource;
   private cachedPatterns: Map<string, any[]> = new Map();
+  private astInterpreter: ASTPatternInterpreter;
 
   constructor(patternSource?: PatternSource) {
     this.patternSource = patternSource || createPatternSource();
+    this.astInterpreter = new ASTPatternInterpreter();
   }
 
-  async detect(code: string, language: string): Promise<Vulnerability[]> {
+  async detect(code: string, language: string, filePath: string = 'unknown'): Promise<Vulnerability[]> {
     const vulnerabilities: Vulnerability[] = [];
     const lines = code.split('\n');
     const seen = new Set<string>(); // Track line + type combinations
@@ -25,7 +28,46 @@ export class SecurityDetectorV2 {
       const patterns = await this.patternSource.getPatternsByLanguage(language);
       logger.info(`SecurityDetectorV2: Analyzing ${language} code with ${patterns.length} patterns`);
 
-      for (const pattern of patterns) {
+      // Separate patterns into AST-enhanced and regex-only
+      const astPatterns = patterns.filter(p => p.astRules);
+      const regexPatterns = patterns.filter(p => !p.astRules);
+
+      // Use AST interpreter for patterns with AST rules
+      if (astPatterns.length > 0) {
+        const astFindings = await this.astInterpreter.scanFile(filePath, code, astPatterns);
+        
+        for (const finding of astFindings) {
+          const key = `${finding.line}:${finding.pattern.type}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            
+            // Convert confidence number to string
+            let confidenceLevel: 'high' | 'medium' | 'low';
+            if (finding.confidence >= 0.8) {
+              confidenceLevel = 'high';
+            } else if (finding.confidence >= 0.5) {
+              confidenceLevel = 'medium';
+            } else {
+              confidenceLevel = 'low';
+            }
+            
+            vulnerabilities.push({
+              type: finding.pattern.type,
+              severity: finding.pattern.severity,
+              line: finding.line,
+              message: `${finding.pattern.name}: ${finding.pattern.description}`,
+              description: finding.pattern.description,
+              confidence: confidenceLevel,
+              cweId: finding.pattern.cweId,
+              owaspCategory: finding.pattern.owaspCategory,
+              remediation: finding.pattern.remediation
+            });
+          }
+        }
+      }
+
+      // Use regex detection for patterns without AST rules
+      for (const pattern of regexPatterns) {
         if (pattern.patterns.regex) {
           for (const regex of pattern.patterns.regex) {
             let match;
@@ -81,7 +123,7 @@ export class SecurityDetectorV2 {
    * This is for compatibility with tests and other consumers
    */
   async detectIssues(params: { content: string; filePath: string; language: string }): Promise<any[]> {
-    const vulnerabilities = await this.detect(params.content, params.language);
+    const vulnerabilities = await this.detect(params.content, params.language, params.filePath);
     
     // Transform vulnerabilities to match expected format
     return vulnerabilities.map(vuln => ({
