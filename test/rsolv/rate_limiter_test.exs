@@ -1,104 +1,201 @@
 defmodule RSOLV.RateLimiterTest do
   use ExUnit.Case, async: false
-
+  
   alias RSOLV.RateLimiter
-
+  
   setup do
+    # Ensure rate limiter is started
+    case Process.whereis(RateLimiter) do
+      nil -> 
+        {:ok, _pid} = RateLimiter.start_link([])
+      _ -> 
+        :ok
+    end
+    
     # Reset rate limiter before each test
     RateLimiter.reset()
     :ok
   end
-
+  
   describe "check_rate_limit/2" do
-    test "allows requests under the limit" do
-      customer_id = 1
+    test "allows requests under the rate limit" do
+      customer_id = "test-customer"
+      action = "test-action"
       
-      # First 10 requests should be allowed
-      for _ <- 1..10 do
-        assert :ok = RateLimiter.check_rate_limit(customer_id)
+      # First 100 requests should be allowed
+      for i <- 1..100 do
+        assert :ok = RateLimiter.check_rate_limit(customer_id, action),
+               "Request #{i} should be allowed"
       end
     end
-
-    test "blocks requests over the limit" do
-      customer_id = 1
+    
+    test "blocks requests over the rate limit" do
+      customer_id = "test-customer"
+      action = "test-action"
       
-      # First 10 requests should be allowed
-      for _ <- 1..10 do
-        assert :ok = RateLimiter.check_rate_limit(customer_id)
+      # First 100 requests should be allowed
+      for _ <- 1..100 do
+        assert :ok = RateLimiter.check_rate_limit(customer_id, action)
       end
       
-      # 11th request should be blocked
-      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id)
+      # 101st request should be blocked
+      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id, action)
     end
-
-    test "resets counter after time window expires" do
-      customer_id = 1
-      
-      # Make 10 requests
-      for _ <- 1..10 do
-        assert :ok = RateLimiter.check_rate_limit(customer_id)
+    
+    test "uses separate counters per customer" do
+      # Customer 1 uses their full quota
+      for _ <- 1..100 do
+        assert :ok = RateLimiter.check_rate_limit("customer-1", "action")
       end
+      assert {:error, :rate_limited} = RateLimiter.check_rate_limit("customer-1", "action")
       
-      # 11th request should be blocked
-      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id)
-      
-      # Mock time passing (61 seconds)
-      # This is tricky because we're using System.system_time
-      # For now, we'll just reset manually to test the behavior
-      RateLimiter.reset()
-      
-      # After reset, should allow requests again
-      assert :ok = RateLimiter.check_rate_limit(customer_id)
+      # Customer 2 should still have their full quota
+      for _ <- 1..100 do
+        assert :ok = RateLimiter.check_rate_limit("customer-2", "action")
+      end
+      assert {:error, :rate_limited} = RateLimiter.check_rate_limit("customer-2", "action")
     end
-
-    test "tracks different customers separately" do
-      customer1 = 1
-      customer2 = 2
+    
+    test "uses separate counters per action" do
+      customer_id = "test-customer"
       
-      # Make 10 requests for customer 1
-      for _ <- 1..10 do
-        assert :ok = RateLimiter.check_rate_limit(customer1)
+      # Use full quota for action 1
+      for _ <- 1..100 do
+        assert :ok = RateLimiter.check_rate_limit(customer_id, "action-1")
       end
+      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id, "action-1")
       
-      # Customer 1 should be rate limited
-      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer1)
-      
-      # But customer 2 should still be allowed
-      assert :ok = RateLimiter.check_rate_limit(customer2)
+      # Should still have full quota for action 2
+      for _ <- 1..100 do
+        assert :ok = RateLimiter.check_rate_limit(customer_id, "action-2")
+      end
+      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id, "action-2")
     end
-
-    test "tracks different actions separately" do
-      customer_id = 1
+    
+    test "resets counter after 60 seconds" do
+      customer_id = "test-customer"
+      action = "test-action"
       
-      # Make 10 credential exchange requests
-      for _ <- 1..10 do
-        assert :ok = RateLimiter.check_rate_limit(customer_id, "credential_exchange")
+      # Use full quota
+      for _ <- 1..100 do
+        assert :ok = RateLimiter.check_rate_limit(customer_id, action)
+      end
+      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id, action)
+      
+      # Mock time passage by directly manipulating ETS
+      # This is a bit hacky but avoids sleeping for 60 seconds
+      [{key, _count, _window}] = :ets.lookup(:rsolv_rate_limiter, {customer_id, action})
+      :ets.insert(:rsolv_rate_limiter, {key, 100, System.system_time(:second) - 61})
+      
+      # Should be allowed again
+      assert :ok = RateLimiter.check_rate_limit(customer_id, action)
+    end
+    
+    test "emits telemetry events" do
+      customer_id = "test-customer"
+      action = "test-action"
+      
+      # Attach telemetry handler
+      allowed_ref = make_ref()
+      exceeded_ref = make_ref()
+      test_pid = self()
+      
+      :telemetry.attach(
+        "test-allowed-#{inspect(allowed_ref)}",
+        [:rsolv, :rate_limiter, :request_allowed],
+        fn _event, measurements, metadata, _config ->
+          send(test_pid, {:telemetry_allowed, measurements, metadata})
+        end,
+        nil
+      )
+      
+      :telemetry.attach(
+        "test-exceeded-#{inspect(exceeded_ref)}",
+        [:rsolv, :rate_limiter, :limit_exceeded],
+        fn _event, measurements, metadata, _config ->
+          send(test_pid, {:telemetry_exceeded, measurements, metadata})
+        end,
+        nil
+      )
+      
+      # Make a successful request
+      assert :ok = RateLimiter.check_rate_limit(customer_id, action)
+      
+      assert_receive {:telemetry_allowed, measurements, metadata}
+      assert measurements.count == 1
+      assert measurements.current_count == 1
+      assert metadata.customer_id == customer_id
+      assert metadata.action == action
+      assert metadata.limit == 100
+      
+      # Use up the quota
+      for _ <- 2..100 do
+        RateLimiter.check_rate_limit(customer_id, action)
       end
       
-      # Credential exchange should be rate limited
-      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id, "credential_exchange")
+      # Exceed the limit
+      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id, action)
       
-      # But other actions should still be allowed
-      assert :ok = RateLimiter.check_rate_limit(customer_id, "api_call")
+      assert_receive {:telemetry_exceeded, measurements, metadata}
+      assert measurements.count == 1
+      assert metadata.customer_id == customer_id
+      assert metadata.action == action
+      assert metadata.current_count == 100
+      assert metadata.limit == 100
+      
+      # Cleanup
+      :telemetry.detach("test-allowed-#{inspect(allowed_ref)}")
+      :telemetry.detach("test-exceeded-#{inspect(exceeded_ref)}")
     end
   end
-
+  
   describe "reset/0" do
-    test "clears all rate limit counters" do
-      # Make some requests for different customers
-      assert :ok = RateLimiter.check_rate_limit(1)
-      assert :ok = RateLimiter.check_rate_limit(2)
-      assert :ok = RateLimiter.check_rate_limit(3)
+    test "clears all rate limit data" do
+      # Add some data
+      for i <- 1..50 do
+        RateLimiter.check_rate_limit("customer-#{i}", "action")
+      end
+      
+      # Verify data exists
+      assert length(:ets.tab2list(:rsolv_rate_limiter)) == 50
       
       # Reset
-      assert :ok = RateLimiter.reset()
+      RateLimiter.reset()
       
-      # All customers should be able to make 10 requests again
-      for customer_id <- 1..3 do
-        for _ <- 1..10 do
-          assert :ok = RateLimiter.check_rate_limit(customer_id)
-        end
+      # Verify data is cleared
+      assert :ets.tab2list(:rsolv_rate_limiter) == []
+    end
+  end
+  
+  describe "distributed rate limiting" do
+    @tag :distributed
+    test "syncs rate limit data between nodes" do
+      # This test would require setting up multiple nodes
+      # For now, we'll test the sync mechanism locally
+      
+      customer_id = "sync-test-customer"
+      action = "sync-action"
+      
+      # Add some data
+      for _ <- 1..50 do
+        RateLimiter.check_rate_limit(customer_id, action)
       end
+      
+      # Simulate receiving sync data from another node
+      remote_data = [{{customer_id, action}, 75, System.system_time(:second)}]
+      send(RateLimiter, {:sync_data, :remote_node@host, remote_data})
+      
+      # Give it a moment to process
+      Process.sleep(100)
+      
+      # Check that the higher count was kept
+      # We had 50, remote had 75, so after sync we should see 75
+      for _ <- 1..25 do
+        assert :ok = RateLimiter.check_rate_limit(customer_id, action)
+      end
+      
+      # Should now be at limit (75 + 25 = 100)
+      assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id, action)
     end
   end
 end

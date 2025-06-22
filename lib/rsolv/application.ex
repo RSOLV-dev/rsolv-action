@@ -19,6 +19,8 @@ defmodule RSOLV.Application do
       {Phoenix.PubSub, name: RSOLV.PubSub},
       # Start Cachex
       {Cachex, name: :rsolv_cache},
+      # Start the Rate Limiter
+      RSOLV.RateLimiter,
       # Start the Notifications supervisor
       RSOLV.Notifications.Supervisor,
       # Start the Endpoint (http/https)
