@@ -120,7 +120,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
       temperature: 0.2,
       maxTokens: 4000,
       contextLimit: 100000,
-      timeout: 900000, // 15 minutes for complex analysis and multi-LLM orchestration
+      timeout: 3600000, // 60 minutes for complex analysis and multi-LLM orchestration
       useVendedCredentials: true  // Default to using RSOLV vended credentials
     },
     containerConfig: {
