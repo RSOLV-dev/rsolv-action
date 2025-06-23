@@ -20,7 +20,47 @@ export async function detectIssues(config: ActionConfig): Promise<IssueContext[]
     // Get repository details
     const repoDetails = await getRepositoryDetails(owner, repo);
     
-    // Get issues with either the configured label or 'rsolv' label
+    // Check if a specific issue number is provided (e.g., from workflow_dispatch)
+    const specificIssueNumber = process.env.RSOLV_ISSUE_NUMBER;
+    if (specificIssueNumber) {
+      logger.info(`Processing specific issue #${specificIssueNumber}`);
+      const issue = await getSpecificIssue(owner, repo, parseInt(specificIssueNumber));
+      
+      // Convert single issue to array for consistent handling
+      const allIssues: GitHubIssue[] = issue ? [issue] : [];
+      
+      // Convert GitHub issues to our internal IssueContext format
+      const issueContexts = allIssues.map((issue: GitHubIssue) => ({
+        id: `github-${issue.id}`,
+        number: issue.number,
+        title: issue.title,
+        body: issue.body || '',
+        labels: issue.labels.map((label) => 
+          typeof label === 'string' ? label : label.name
+        ),
+        assignees: issue.assignees?.map((assignee) => assignee.login) || [],
+        repository: {
+          owner,
+          name: repo,
+          fullName: repoFullName,
+          defaultBranch: repoDetails.defaultBranch,
+          language: repoDetails.language,
+        },
+        source: 'github',
+        createdAt: issue.created_at,
+        updatedAt: issue.updated_at,
+        metadata: {
+          htmlUrl: issue.html_url,
+          state: issue.state,
+          locked: issue.locked,
+          draft: issue.draft,
+        },
+      }));
+      
+      return issueContexts;
+    }
+    
+    // Otherwise, get issues with either the configured label or 'rsolv' label
     const labels = [config.issueLabel];
     if (!config.issueLabel.includes('rsolv')) {
       labels.push('rsolv');
@@ -124,6 +164,36 @@ async function getIssuesWithLabel(
   } catch (error) {
     logger.error(`Error getting issues with label ${label}`, error);
     throw new Error(`Failed to get issues with label: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Get a specific issue by number
+ */
+async function getSpecificIssue(owner: string, repo: string, issueNumber: number): Promise<GitHubIssue | null> {
+  try {
+    const client = await getGitHubClient();
+    
+    const { data } = await client.issues.get({
+      owner,
+      repo,
+      issue_number: issueNumber,
+    });
+    
+    // Check if it's a pull request
+    if (data.pull_request) {
+      logger.warn(`Issue #${issueNumber} is actually a pull request, skipping`);
+      return null;
+    }
+    
+    return data as GitHubIssue;
+  } catch (error) {
+    logger.error(`Error getting issue #${issueNumber}`, error);
+    if ((error as any).status === 404) {
+      logger.warn(`Issue #${issueNumber} not found`);
+      return null;
+    }
+    throw new Error(`Failed to get issue: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

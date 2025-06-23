@@ -58,6 +58,10 @@ inputs:
   max_issues:
     description: 'Maximum number of issues to process in a single run'
     required: false
+    default: '1'
+  issue_number:
+    description: 'Specific issue number to process (for workflow_dispatch)'
+    required: false
     default: ''
 runs:
   using: 'docker'
@@ -79,6 +83,7 @@ runs:
     RSOLV_SCAN_MODE: ${{ inputs.scan_mode }}
     RSOLV_ENABLE_SECURITY_ANALYSIS: ${{ inputs.enable_security_analysis }}
     RSOLV_MAX_ISSUES: ${{ inputs.max_issues }}
+    RSOLV_ISSUE_NUMBER: ${{ inputs.issue_number }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'
