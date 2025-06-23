@@ -1,47 +1,5 @@
 [
   {
-    "startTime": 1750548462786,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "endTime": 1750548462786,
-    "solutionGenerationTime": 0
-  },
-  {
-    "startTime": 1750548462786,
-    "issueId": "test-issue-123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750548462786
-  },
-  {
-    "startTime": 1750548462788,
-    "issueId": "test-issue-123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750548462788
-  },
-  {
-    "startTime": 1750548462789,
-    "issueId": "test-issue-123",
-    "successful": false,
-    "endTime": 1750548462789,
-    "solutionGenerationTime": 0,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1750548462789,
-    "issueId": "test-issue-123",
-    "successful": false,
-    "errorType": "sdk_not_available"
-  },
-  {
-    "startTime": 1750548462790,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "endTime": 1750548462790,
-    "solutionGenerationTime": 0
-  },
-  {
     "startTime": 1750550011302,
     "issueId": "test-1750550011300",
     "successful": false,
@@ -716,6 +674,48 @@
     "issueId": "123",
     "successful": true,
     "endTime": 1750614847104,
+    "solutionGenerationTime": 0
+  },
+  {
+    "startTime": 1750618954202,
+    "issueId": "123",
+    "successful": true,
+    "endTime": 1750618954202,
+    "solutionGenerationTime": 0
+  },
+  {
+    "startTime": 1750618954211,
+    "issueId": "123",
+    "successful": true,
+    "endTime": 1750618954211,
+    "solutionGenerationTime": 0
+  },
+  {
+    "startTime": 1750618954211,
+    "issueId": "123",
+    "successful": true,
+    "endTime": 1750618954211,
+    "solutionGenerationTime": 0
+  },
+  {
+    "startTime": 1750618954211,
+    "issueId": "123",
+    "successful": true,
+    "endTime": 1750618954211,
+    "solutionGenerationTime": 0
+  },
+  {
+    "startTime": 1750618954212,
+    "issueId": "123",
+    "successful": true,
+    "endTime": 1750618954212,
+    "solutionGenerationTime": 0
+  },
+  {
+    "startTime": 1750618954212,
+    "issueId": "123",
+    "successful": true,
+    "endTime": 1750618954212,
     "solutionGenerationTime": 0
   }
 ]

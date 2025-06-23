@@ -51,6 +51,9 @@ Thumbs.db
 .env.test.local
 .env.production.local
 
+# Act secrets file (NEVER commit)
+.secrets.act
+
 # Caches
 .cache/
 .parcel-cache/

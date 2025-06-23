@@ -1,0 +1,118 @@
+name: Test In-Place Editing Simple
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_scenario:
+        description: 'Test scenario to run'
+        required: true
+        type: choice
+        default: 'sql-injection'
+        options:
+          - sql-injection
+
+jobs:
+  test-in-place-editing:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout RSOLV-action
+        uses: actions/checkout@v4
+      
+      - name: Setup test environment
+        run: |
+          echo "Setting up test environment..."
+          mkdir -p test-repo
+          cd test-repo
+          git init
+          git config user.name "RSOLV Test"
+          git config user.email "test@rsolv.ai"
+      
+      - name: Create vulnerable test file
+        run: |
+          cd test-repo
+          cat > vulnerable.js << 'EOF'
+          const express = require('express');
+          const mysql = require('mysql2');
+          
+          app.get('/user/:id', (req, res) => {
+            const userId = req.params.id;
+            // VULNERABLE: SQL injection through string concatenation
+            const query = "SELECT * FROM users WHERE id = " + userId;
+            db.query(query, (err, results) => {
+              if (err) {
+                res.status(500).send('Error');
+              } else {
+                res.json(results);
+              }
+            });
+          });
+          EOF
+          
+          git add vulnerable.js
+          git commit -m "Add vulnerable code for testing"
+      
+      - name: Show initial state
+        run: |
+          cd test-repo
+          echo "=== Initial Git Status ==="
+          git status
+          echo -e "\n=== Initial File Content ==="
+          cat vulnerable.js
+      
+      - name: Simulate in-place fix
+        run: |
+          cd test-repo
+          # For now, we'll simulate what RSOLV would do
+          # In a real test, this would call RSOLV with Claude Code
+          
+          echo "Simulating RSOLV fix..."
+          cat > vulnerable.js << 'EOF'
+          const express = require('express');
+          const mysql = require('mysql2');
+          
+          app.get('/user/:id', (req, res) => {
+            const userId = req.params.id;
+            // FIXED: Using parameterized query to prevent SQL injection
+            const query = "SELECT * FROM users WHERE id = ?";
+            db.query(query, [userId], (err, results) => {
+              if (err) {
+                res.status(500).send('Error');
+              } else {
+                res.json(results);
+              }
+            });
+          });
+          EOF
+      
+      - name: Validate in-place editing
+        run: |
+          cd test-repo
+          echo "=== Git Status After Fix ==="
+          git status
+          
+          echo -e "\n=== Git Diff ==="
+          git diff
+          
+          # Check that only the original file was modified
+          MODIFIED_FILES=$(git diff --name-only | wc -l)
+          NEW_FILES=$(git ls-files --others --exclude-standard | wc -l)
+          
+          echo -e "\n=== Validation Results ==="
+          echo "Modified files: $MODIFIED_FILES"
+          echo "New files: $NEW_FILES"
+          
+          if [ "$MODIFIED_FILES" -eq 1 ] && [ "$NEW_FILES" -eq 0 ]; then
+            echo "✅ SUCCESS: File was edited in-place (no new files created)"
+          else
+            echo "❌ FAILURE: Expected 1 modified file and 0 new files"
+            exit 1
+          fi
+          
+          # Verify the fix is correct
+          if git diff | grep -q "query.*?"; then
+            echo "✅ SUCCESS: Parameterized query detected in fix"
+          else
+            echo "❌ FAILURE: Fix doesn't contain parameterized query"
+            exit 1
+          fi

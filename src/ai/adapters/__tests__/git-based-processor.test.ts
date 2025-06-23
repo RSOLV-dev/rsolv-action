@@ -112,24 +112,33 @@ describe('Git-based Issue Processor', () => {
   });
   
   test('should fail if repository has uncommitted changes', async () => {
-    // Override git status mock
-    const mockExecSync = mock((command: string) => {
+    // Temporarily override the mock for this test only
+    const originalMock = (await import('child_process')).execSync;
+    const dirtyGitMock = mock((command: string) => {
       if (command === 'git status --porcelain') {
         return 'M src/some-file.js\n';
       }
       return '';
     });
     
+    // Override the module mock temporarily
     mock.module('child_process', () => ({
-      execSync: mockExecSync
+      execSync: dirtyGitMock
     }));
     
+    // Import fresh instance with dirty git mock
+    delete require.cache[require.resolve('../../git-based-processor.js')];
     const { processIssueWithGit: processWithDirtyRepo } = await import('../../git-based-processor.js');
     
     const result = await processWithDirtyRepo(mockIssue as any, mockConfig as any);
     
     expect(result.success).toBe(false);
     expect(result.error).toContain('Uncommitted changes');
+    
+    // Restore original mock for subsequent tests
+    mock.module('child_process', () => ({
+      execSync: originalMock
+    }));
   });
   
   test('should fail if issue cannot be fixed', async () => {
@@ -150,7 +159,8 @@ describe('Git-based Issue Processor', () => {
       aiProvider: {
         ...mockConfig.aiProvider,
         useVendedCredentials: true
-      }
+      },
+      rsolvApiKey: 'test-rsolv-api-key' // Required for vended credentials
     };
     
     const result = await processIssueWithGit(mockIssue as any, vendedConfig as any);

@@ -1,0 +1,319 @@
+name: Test RSOLV-Action Claude Code Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode'
+        required: true
+        type: choice
+        default: 'tool-monitoring'
+        options:
+          - tool-monitoring
+          - full-integration
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  RSOLV_API_KEY: ${{ secrets.RSOLV_API_KEY }}
+  ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+
+jobs:
+  test-integration:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout RSOLV-action
+        uses: actions/checkout@v4
+        with:
+          path: rsolv-action
+      
+      - name: Setup test repository
+        run: |
+          # Create a test repository with vulnerabilities
+          mkdir -p test-repo
+          cd test-repo
+          git init
+          git config user.name "RSOLV Test"
+          git config user.email "test@rsolv.ai"
+          
+          # Create package.json
+          cat > package.json << 'EOF'
+          {
+            "name": "test-vulnerable-app",
+            "version": "1.0.0",
+            "dependencies": {
+              "express": "^4.18.0",
+              "mysql2": "^3.0.0"
+            }
+          }
+          EOF
+          
+          # Create vulnerable SQL injection file
+          cat > app.js << 'EOF'
+          const express = require('express');
+          const mysql = require('mysql2');
+          
+          const app = express();
+          const db = mysql.createConnection({
+            host: 'localhost',
+            user: 'root',
+            password: 'password',
+            database: 'myapp'
+          });
+          
+          // User management endpoints
+          app.get('/user/:id', (req, res) => {
+            const userId = req.params.id;
+            // VULNERABILITY: SQL injection through string concatenation
+            const query = "SELECT * FROM users WHERE id = " + userId;
+            
+            db.query(query, (err, results) => {
+              if (err) {
+                console.error('Database error:', err);
+                res.status(500).send('Internal server error');
+              } else {
+                res.json(results);
+              }
+            });
+          });
+          
+          app.delete('/user/:id', (req, res) => {
+            const userId = req.params.id;
+            // VULNERABILITY: Another SQL injection
+            const deleteQuery = `DELETE FROM users WHERE id = ${userId}`;
+            
+            db.query(deleteQuery, (err, results) => {
+              if (err) {
+                res.status(500).send('Error deleting user');
+              } else {
+                res.json({ message: 'User deleted' });
+              }
+            });
+          });
+          
+          app.listen(3000, () => {
+            console.log('Server running on port 3000');
+          });
+          EOF
+          
+          # Create XSS vulnerable template
+          mkdir -p views
+          cat > views/profile.js << 'EOF'
+          function renderProfile(user) {
+            // VULNERABILITY: XSS through unescaped user input
+            return `
+              <div class="profile">
+                <h1>${user.name}</h1>
+                <div class="bio">${user.bio}</div>
+                <script>
+                  // User preferences
+                  const prefs = ${JSON.stringify(user.preferences)};
+                </script>
+              </div>
+            `;
+          }
+          
+          module.exports = { renderProfile };
+          EOF
+          
+          git add .
+          git commit -m "Initial commit with vulnerabilities"
+          
+          # Create a branch to work on
+          git checkout -b fix-vulnerabilities
+      
+      - name: Create GitHub issue
+        id: create_issue
+        run: |
+          cd test-repo
+          
+          # Create issue body
+          cat > issue_body.md << 'EOF'
+          ## Security Vulnerabilities Found
+          
+          Our security scan has identified the following vulnerabilities:
+          
+          1. **SQL Injection** in `app.js`
+             - Line 17: String concatenation in SQL query
+             - Line 32: String interpolation in DELETE query
+          
+          2. **Cross-Site Scripting (XSS)** in `views/profile.js`
+             - Line 5: Unescaped user input in HTML
+             - Line 6: Unescaped user bio content
+          
+          Please fix these security issues while preserving application functionality.
+          EOF
+          
+          echo "ISSUE_BODY<<EOF" >> $GITHUB_OUTPUT
+          cat issue_body.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Run RSOLV-action with monitoring
+        if: inputs.test_mode == 'tool-monitoring'
+        run: |
+          cd test-repo
+          
+          # Create monitoring wrapper
+          cat > monitor-rsolv.js << 'EOF'
+          const { spawn } = require('child_process');
+          const fs = require('fs');
+          
+          console.log('🔍 Monitoring RSOLV-action execution...\n');
+          
+          // Track metrics
+          const metrics = {
+            startTime: Date.now(),
+            toolUsage: {},
+            filesModified: 0,
+            filesCreated: 0,
+            errors: []
+          };
+          
+          // Run RSOLV-action
+          const rsolv = spawn('node', [
+            '../rsolv-action/dist/index.js'
+          ], {
+            env: {
+              ...process.env,
+              GITHUB_WORKSPACE: process.cwd(),
+              INPUT_ISSUE_BODY: process.env.ISSUE_BODY,
+              INPUT_API_KEY: process.env.RSOLV_API_KEY,
+              INPUT_MODE: 'fix',
+              INPUT_USE_CLAUDE_CODE: 'true',
+              INPUT_DEBUG: 'true'
+            }
+          });
+          
+          // Capture output
+          let output = '';
+          
+          rsolv.stdout.on('data', (data) => {
+            const text = data.toString();
+            output += text;
+            process.stdout.write(data);
+            
+            // Monitor for tool usage patterns
+            if (text.includes('Tool:')) {
+              const toolMatch = text.match(/Tool: (\w+)/);
+              if (toolMatch) {
+                const tool = toolMatch[1];
+                metrics.toolUsage[tool] = (metrics.toolUsage[tool] || 0) + 1;
+              }
+            }
+          });
+          
+          rsolv.stderr.on('data', (data) => {
+            process.stderr.write(data);
+            metrics.errors.push(data.toString());
+          });
+          
+          rsolv.on('close', (code) => {
+            metrics.endTime = Date.now();
+            metrics.duration = (metrics.endTime - metrics.startTime) / 1000;
+            
+            console.log('\n📊 Execution Metrics:');
+            console.log(`Duration: ${metrics.duration}s`);
+            console.log('Tool usage:', metrics.toolUsage);
+            
+            // Check git changes
+            const { execSync } = require('child_process');
+            const gitStatus = execSync('git status --porcelain').toString();
+            const modifiedFiles = gitStatus.split('\n').filter(l => l.startsWith(' M')).length;
+            const newFiles = gitStatus.split('\n').filter(l => l.startsWith('??')).length;
+            
+            console.log(`\nFiles modified: ${modifiedFiles}`);
+            console.log(`Files created: ${newFiles}`);
+            
+            // Save metrics
+            fs.writeFileSync('rsolv-metrics.json', JSON.stringify(metrics, null, 2));
+            
+            process.exit(code);
+          });
+          EOF
+          
+          # Set issue body
+          export ISSUE_BODY="${{ steps.create_issue.outputs.ISSUE_BODY }}"
+          
+          # Run with monitoring
+          node monitor-rsolv.js
+      
+      - name: Validate results
+        run: |
+          cd test-repo
+          
+          echo "=== Git Status ==="
+          git status
+          
+          echo -e "\n=== Git Diff ==="
+          git diff --stat
+          
+          echo -e "\n=== Detailed Changes ==="
+          git diff
+          
+          # Validate fixes
+          echo -e "\n=== Validation ==="
+          
+          # Check SQL injection fixes
+          if git diff app.js | grep -E "(\\?|parameterized|prepared statement)"; then
+            echo "✅ SQL injection vulnerabilities fixed"
+          else
+            echo "❌ SQL injection vulnerabilities NOT fixed"
+            exit 1
+          fi
+          
+          # Check XSS fixes
+          if git diff views/profile.js | grep -E "(escape|sanitize|textContent)"; then
+            echo "✅ XSS vulnerabilities fixed"
+          else
+            echo "❌ XSS vulnerabilities NOT fixed"
+            exit 1
+          fi
+          
+          # Check file creation patterns
+          NEW_FILES=$(git ls-files --others --exclude-standard | grep -v node_modules | wc -l)
+          if [ "$NEW_FILES" -eq 0 ]; then
+            echo "✅ No new files created (in-place editing)"
+          else
+            echo "⚠️  New files created: $NEW_FILES"
+            git ls-files --others --exclude-standard | grep -v node_modules
+          fi
+          
+          # Load and display metrics if available
+          if [ -f rsolv-metrics.json ]; then
+            echo -e "\n=== Performance Metrics ==="
+            cat rsolv-metrics.json
+          fi
+      
+      - name: Test commit and PR creation
+        if: inputs.test_mode == 'full-integration'
+        run: |
+          cd test-repo
+          
+          # This would normally create a real PR
+          # For testing, we'll simulate the process
+          
+          echo "=== Simulating PR Creation ==="
+          
+          # Check if changes would make a good PR
+          MODIFIED=$(git diff --name-only | wc -l)
+          ADDITIONS=$(git diff --numstat | awk '{sum+=$1} END {print sum}')
+          DELETIONS=$(git diff --numstat | awk '{sum+=$2} END {print sum}')
+          
+          echo "Files changed: $MODIFIED"
+          echo "Lines added: $ADDITIONS"
+          echo "Lines removed: $DELETIONS"
+          
+          if [ "$MODIFIED" -gt 0 ] && [ "$ADDITIONS" -lt 100 ]; then
+            echo "✅ PR would be clean and reviewable"
+          else
+            echo "⚠️  PR might be too large or complex"
+          fi
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rsolv-claude-integration-test
+          path: |
+            test-repo/rsolv-metrics.json
+            test-repo/*.log
+            test-repo/git-diff.patch

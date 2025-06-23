@@ -1,0 +1,361 @@
+name: Test Claude Code Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      vulnerability_type:
+        description: 'Type of vulnerability to test'
+        required: true
+        type: choice
+        default: 'sql-injection'
+        options:
+          - sql-injection
+          - xss
+          - path-traversal
+          - command-injection
+
+jobs:
+  test-claude-code-tools:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout RSOLV-action
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          cd RSOLV-action
+          npm install
+          # Install Claude Code SDK
+          npm install @anthropic-ai/claude-code
+      
+      - name: Create test repository
+        run: |
+          mkdir -p test-repo
+          cd test-repo
+          git init
+          git config user.name "RSOLV Test"
+          git config user.email "test@rsolv.ai"
+      
+      - name: Create vulnerable file based on input
+        run: |
+          cd test-repo
+          
+          case "${{ inputs.vulnerability_type }}" in
+            "sql-injection")
+              cat > app.js << 'EOF'
+          const express = require('express');
+          const mysql = require('mysql2');
+          
+          const app = express();
+          const db = mysql.createConnection({
+            host: 'localhost',
+            user: 'root',
+            password: 'password',
+            database: 'myapp'
+          });
+          
+          app.get('/user/:id', (req, res) => {
+            const userId = req.params.id;
+            // VULNERABLE: Direct string concatenation allows SQL injection
+            const query = "SELECT * FROM users WHERE id = " + userId;
+            
+            db.query(query, (err, results) => {
+              if (err) {
+                console.error('Database error:', err);
+                res.status(500).send('Internal server error');
+              } else {
+                res.json(results);
+              }
+            });
+          });
+          
+          app.listen(3000, () => {
+            console.log('Server running on port 3000');
+          });
+          EOF
+              ;;
+              
+            "xss")
+              cat > template.js << 'EOF'
+          function renderUserProfile(user) {
+            // VULNERABLE: Direct HTML injection without escaping
+            return `
+              <div class="user-profile">
+                <h1>Welcome ${user.name}</h1>
+                <p>Bio: ${user.bio}</p>
+                <div class="description">
+                  ${user.description}
+                </div>
+              </div>
+            `;
+          }
+          
+          module.exports = { renderUserProfile };
+          EOF
+              ;;
+              
+            "path-traversal")
+              cat > fileserver.js << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          
+          function serveFile(req, res) {
+            const fileName = req.params.file;
+            // VULNERABLE: No path validation allows directory traversal
+            const filePath = './uploads/' + fileName;
+            
+            fs.readFile(filePath, (err, data) => {
+              if (err) {
+                res.status(404).send('File not found');
+              } else {
+                res.send(data);
+              }
+            });
+          }
+          
+          module.exports = { serveFile };
+          EOF
+              ;;
+              
+            "command-injection")
+              cat > backup.js << 'EOF'
+          const { exec } = require('child_process');
+          
+          function createBackup(backupName) {
+            // VULNERABLE: Direct command execution with user input
+            const command = `tar -czf backups/${backupName}.tar.gz ./data`;
+            
+            exec(command, (err, stdout, stderr) => {
+              if (err) {
+                console.error('Backup failed:', err);
+                return;
+              }
+              console.log('Backup created successfully');
+            });
+          }
+          
+          module.exports = { createBackup };
+          EOF
+              ;;
+          esac
+          
+          # Get the created filename
+          VULN_FILE=$(ls *.js | head -1)
+          echo "VULN_FILE=$VULN_FILE" >> $GITHUB_ENV
+          
+          git add .
+          git commit -m "Add vulnerable code for testing"
+      
+      - name: Run Claude Code with tool monitoring
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: |
+          cd test-repo
+          
+          # Create a monitoring script to track tool usage
+          cat > monitor-claude.js << 'EOF'
+          const { spawn } = require('child_process');
+          const fs = require('fs');
+          
+          // Track tool usage
+          const toolUsage = {
+            Read: 0,
+            Write: 0,
+            Edit: 0,
+            MultiEdit: 0,
+            Bash: 0,
+            totalCalls: 0
+          };
+          
+          // Run Claude Code with JSON output
+          const claude = spawn('npx', [
+            '@anthropic-ai/claude-code',
+            '--print',
+            '--output-format', 'stream-json',
+            '--max-turns', '5',
+            '--allowedTools', 'Read,Write,Edit,MultiEdit,Bash,Grep',
+            '--append-system-prompt', 'When fixing vulnerabilities, prefer editing existing files over creating new ones. Use Edit or MultiEdit tools when modifying existing code.',
+            `Fix the ${{ inputs.vulnerability_type }} vulnerability in ${process.env.VULN_FILE}. Make the minimal changes necessary to fix the security issue while preserving functionality.`
+          ], {
+            cwd: process.cwd(),
+            env: process.env
+          });
+          
+          let output = '';
+          
+          claude.stdout.on('data', (data) => {
+            output += data.toString();
+            const lines = data.toString().split('\n').filter(l => l.trim());
+            
+            for (const line of lines) {
+              try {
+                const msg = JSON.parse(line);
+                
+                // Track tool usage
+                if (msg.type === 'message' && msg.role === 'assistant' && msg.content) {
+                  for (const block of msg.content) {
+                    if (block.type === 'tool_use' && block.name) {
+                      toolUsage.totalCalls++;
+                      if (toolUsage[block.name] !== undefined) {
+                        toolUsage[block.name]++;
+                      }
+                    }
+                  }
+                }
+              } catch (e) {
+                // Not JSON, skip
+              }
+            }
+          });
+          
+          claude.stderr.on('data', (data) => {
+            console.error('Claude stderr:', data.toString());
+          });
+          
+          claude.on('close', (code) => {
+            console.log('\n=== Tool Usage Report ===');
+            console.log(JSON.stringify(toolUsage, null, 2));
+            
+            // Save full output for analysis
+            fs.writeFileSync('claude-output.json', output);
+            
+            // Analyze tool usage patterns
+            const editRatio = (toolUsage.Edit + toolUsage.MultiEdit) / Math.max(1, toolUsage.totalCalls);
+            console.log(`\nEdit tool usage ratio: ${(editRatio * 100).toFixed(1)}%`);
+            
+            if (editRatio >= 0.8) {
+              console.log('✅ SUCCESS: Claude Code preferred Edit/MultiEdit tools (80%+ usage)');
+            } else {
+              console.log(`⚠️  WARNING: Edit tool usage below 80% threshold (${(editRatio * 100).toFixed(1)}%)`);
+            }
+            
+            process.exit(code);
+          });
+          EOF
+          
+          node monitor-claude.js
+      
+      - name: Validate in-place editing results
+        run: |
+          cd test-repo
+          
+          echo "=== Git Status ==="
+          git status --porcelain
+          
+          echo -e "\n=== Git Diff ==="
+          git diff
+          
+          # Check file modification patterns
+          MODIFIED_FILES=$(git diff --name-only | wc -l)
+          NEW_FILES=$(git ls-files --others --exclude-standard | wc -l)
+          
+          echo -e "\n=== File Modification Summary ==="
+          echo "Modified files: $MODIFIED_FILES"
+          echo "New files: $NEW_FILES"
+          
+          # Validate in-place editing
+          if [ "$NEW_FILES" -eq 0 ]; then
+            echo "✅ SUCCESS: No new files created (pure in-place editing)"
+          else
+            echo "❌ FAILURE: New files were created instead of editing existing ones"
+            git ls-files --others --exclude-standard
+            exit 1
+          fi
+          
+          # Check if vulnerability was actually fixed
+          case "${{ inputs.vulnerability_type }}" in
+            "sql-injection")
+              if git diff | grep -E "(query.*\?|parameterized|prepared statement)"; then
+                echo "✅ SUCCESS: SQL injection fixed with parameterized queries"
+              else
+                echo "❌ FAILURE: SQL injection not properly fixed"
+                exit 1
+              fi
+              ;;
+              
+            "xss")
+              if git diff | grep -E "(escape|sanitize|encode|textContent)"; then
+                echo "✅ SUCCESS: XSS vulnerability fixed with proper escaping"
+              else
+                echo "❌ FAILURE: XSS vulnerability not properly fixed"
+                exit 1
+              fi
+              ;;
+              
+            "path-traversal")
+              if git diff | grep -E "(path\.resolve|path\.join|normalize|basename)"; then
+                echo "✅ SUCCESS: Path traversal fixed with proper validation"
+              else
+                echo "❌ FAILURE: Path traversal not properly fixed"
+                exit 1
+              fi
+              ;;
+              
+            "command-injection")
+              if git diff | grep -E "(spawn|execFile|sanitize|escape)"; then
+                echo "✅ SUCCESS: Command injection fixed with safe execution"
+              else
+                echo "❌ FAILURE: Command injection not properly fixed"
+                exit 1
+              fi
+              ;;
+          esac
+      
+      - name: Test git operations
+        run: |
+          cd test-repo
+          
+          # Create a branch for the fix
+          git checkout -b fix-${{ inputs.vulnerability_type }}
+          
+          # Stage and commit changes
+          git add -A
+          git commit -m "Fix ${{ inputs.vulnerability_type }} vulnerability
+          
+          - Used parameterized queries/proper escaping
+          - Minimal changes to preserve functionality
+          - Security issue resolved"
+          
+          echo -e "\n=== Git Log ==="
+          git log --oneline -5
+          
+          echo -e "\n=== Commit Details ==="
+          git show --stat HEAD
+          
+      - name: Generate fix quality report
+        run: |
+          cd test-repo
+          
+          # Calculate diff metrics
+          LINES_ADDED=$(git diff HEAD~1 --numstat | awk '{sum+=$1} END {print sum}')
+          LINES_REMOVED=$(git diff HEAD~1 --numstat | awk '{sum+=$2} END {print sum}')
+          TOTAL_CHANGES=$((LINES_ADDED + LINES_REMOVED))
+          
+          echo "=== Fix Quality Metrics ==="
+          echo "Lines added: $LINES_ADDED"
+          echo "Lines removed: $LINES_REMOVED"
+          echo "Total changes: $TOTAL_CHANGES"
+          
+          # Check if changes are minimal (< 50 lines)
+          if [ "$TOTAL_CHANGES" -lt 50 ]; then
+            echo "✅ SUCCESS: Minimal diff size ($TOTAL_CHANGES lines)"
+          else
+            echo "⚠️  WARNING: Large diff size ($TOTAL_CHANGES lines)"
+          fi
+          
+          # Archive results
+          mkdir -p ../test-results
+          cp claude-output.json ../test-results/
+          git diff HEAD~1 > ../test-results/fix.patch
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-code-test-${{ inputs.vulnerability_type }}
+          path: test-results/

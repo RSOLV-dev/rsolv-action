@@ -1,0 +1,232 @@
+name: Test In-Place Editing Validation
+
+# This workflow tests RSOLV's in-place editing feature
+# Used with `act` for local testing during TDD development
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_scenario:
+        description: 'Test scenario to run'
+        required: true
+        type: choice
+        options:
+          - sql-injection
+          - xss
+          - path-traversal
+          - command-injection
+      repository:
+        description: 'Repository to test (owner/repo)'
+        required: false
+        default: 'OWASP/nodegoat'
+
+jobs:
+  test-in-place-editing:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout RSOLV-action
+        uses: actions/checkout@v4
+        with:
+          path: rsolv-action
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        working-directory: rsolv-action
+        run: bun install
+      
+      - name: Build RSOLV-action
+        working-directory: rsolv-action
+        run: bun run build
+      
+      - name: Checkout test repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          path: test-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create test vulnerability
+        working-directory: test-repo
+        run: |
+          # Create a test file with the selected vulnerability type
+          case "${{ inputs.test_scenario }}" in
+            sql-injection)
+              cat > test-sql-injection.js << 'EOF'
+          const express = require('express');
+          const mysql = require('mysql2');
+          
+          app.get('/user/:id', (req, res) => {
+            const userId = req.params.id;
+            // VULNERABLE: SQL injection through string concatenation
+            const query = "SELECT * FROM users WHERE id = " + userId;
+            db.query(query, (err, results) => {
+              if (err) {
+                res.status(500).send('Error');
+              } else {
+                res.json(results);
+              }
+            });
+          });
+          EOF
+              ;;
+            xss)
+              cat > test-xss.js << 'EOF'
+          app.get('/welcome', (req, res) => {
+            const name = req.query.name;
+            // VULNERABLE: XSS through direct HTML insertion
+            res.send(`<h1>Welcome ${name}!</h1>`);
+          });
+          EOF
+              ;;
+            path-traversal)
+              cat > test-path-traversal.js << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          
+          app.get('/file', (req, res) => {
+            const filename = req.query.file;
+            // VULNERABLE: Path traversal through unsanitized input
+            const filePath = path.join('./uploads/', filename);
+            fs.readFile(filePath, (err, data) => {
+              if (err) {
+                res.status(404).send('File not found');
+              } else {
+                res.send(data);
+              }
+            });
+          });
+          EOF
+              ;;
+            command-injection)
+              cat > test-command-injection.js << 'EOF'
+          const { exec } = require('child_process');
+          
+          app.get('/ping', (req, res) => {
+            const host = req.query.host;
+            // VULNERABLE: Command injection through unsanitized input
+            exec('ping -c 4 ' + host, (err, stdout) => {
+              if (err) {
+                res.status(500).send('Error');
+              } else {
+                res.send(stdout);
+              }
+            });
+          });
+          EOF
+              ;;
+          esac
+      
+      - name: Run RSOLV vulnerability detection
+        id: detect
+        working-directory: test-repo
+        env:
+          RSOLV_API_KEY: ${{ secrets.RSOLV_API_KEY }}
+        run: |
+          # Run RSOLV to detect vulnerabilities
+          node ../rsolv-action/dist/index.js scan \
+            --language javascript \
+            --path . \
+            --output scan-results.json
+          
+          # Check if vulnerability was detected
+          if [ -s scan-results.json ]; then
+            echo "✅ Vulnerability detected"
+            cat scan-results.json | jq .
+            echo "vulnerability_detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ No vulnerability detected"
+            echo "vulnerability_detected=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+      
+      - name: Setup git for testing
+        working-directory: test-repo
+        run: |
+          git config user.name "RSOLV Test"
+          git config user.email "test@rsolv.ai"
+          git add .
+          git commit -m "Add test vulnerability file"
+      
+      - name: Run RSOLV in-place fix
+        working-directory: test-repo
+        env:
+          RSOLV_API_KEY: ${{ secrets.RSOLV_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create a mock issue for the vulnerability
+          echo "Creating mock issue for ${{ inputs.test_scenario }}..."
+          
+          # Run RSOLV with git-based fixing enabled
+          node ../rsolv-action/dist/index.js fix \
+            --vulnerability-type ${{ inputs.test_scenario }} \
+            --file test-${{ inputs.test_scenario }}.js \
+            --use-git \
+            --in-place
+      
+      - name: Validate fix results
+        working-directory: test-repo
+        run: |
+          echo "=== Git Status ==="
+          git status
+          
+          echo -e "\n=== Git Diff ==="
+          git diff
+          
+          echo -e "\n=== Checking for new files ==="
+          NEW_FILES=$(git ls-files --others --exclude-standard | wc -l)
+          if [ "$NEW_FILES" -gt 0 ]; then
+            echo "❌ New files were created (should edit in-place):"
+            git ls-files --others --exclude-standard
+            exit 1
+          else
+            echo "✅ No new files created - edited in place"
+          fi
+          
+          echo -e "\n=== Checking if original file was modified ==="
+          if git diff --name-only | grep -q "test-${{ inputs.test_scenario }}.js"; then
+            echo "✅ Original file was modified in-place"
+          else
+            echo "❌ Original file was not modified"
+            exit 1
+          fi
+      
+      - name: Re-scan to verify fix
+        working-directory: test-repo
+        env:
+          RSOLV_API_KEY: ${{ secrets.RSOLV_API_KEY }}
+        run: |
+          # Run RSOLV again to ensure vulnerability is fixed
+          node ../rsolv-action/dist/index.js scan \
+            --language javascript \
+            --path . \
+            --output scan-results-after.json || true
+          
+          # Check if vulnerability still exists
+          if [ -s scan-results-after.json ]; then
+            VULN_COUNT=$(cat scan-results-after.json | jq '.vulnerabilities | length')
+            if [ "$VULN_COUNT" -eq 0 ]; then
+              echo "✅ Vulnerability successfully fixed"
+            else
+              echo "❌ Vulnerability still exists after fix"
+              cat scan-results-after.json | jq .
+              exit 1
+            fi
+          else
+            echo "✅ No vulnerabilities found after fix"
+          fi
+      
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ inputs.test_scenario }}
+          path: |
+            test-repo/scan-results.json
+            test-repo/scan-results-after.json
+            test-repo/test-*.js
