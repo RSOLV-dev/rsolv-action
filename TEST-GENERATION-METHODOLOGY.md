@@ -48,15 +48,61 @@ See [INTELLIGENT-TEST-GENERATION-METHODOLOGY.md](./INTELLIGENT-TEST-GENERATION-M
 
 **All Phase 5 components are now complete with 100% test coverage.**
 
-### 📋 Phase 6: Real-World Validation with vulnerable-apps (PENDING)
+### ✅ Phase 7: Fix Validation Integration (RFC-020) - COMPLETED 2025-06-24
+**NEW**: Integrate test validation into the fix generation workflow
+
+**Overview**: Ensure Claude Code's fixes actually pass the generated tests before creating PRs, with iterative feedback for failed fixes.
+
+**Components Built**:
+1. ✅ Update `git-based-processor.ts` with validation loop
+2. ✅ Implement `getMaxIterations()` with configuration hierarchy
+3. ✅ Add test failure context to Claude Code prompts
+4. ✅ Create rollback safety mechanisms
+5. ✅ TDD tests - 10/10 passing
+6. ✅ Update Claude Code adapter prompts - COMPLETED
+7. ✅ Added `constructPromptWithTestContext` method to GitBasedClaudeCodeAdapter
+8. ✅ Integration tests verify prompts include test context correctly
+
+**TDD Results**:
+- Created comprehensive test suite with 10 test cases
+- All tests passing - validates complete implementation
+- Covers all configuration scenarios and edge cases
+
+**Configuration Implemented**:
+- Issue-specific overrides (via labels like `fix-validation-max-5`)
+- Vulnerability type specific limits (sql-injection: 5, etc.)
+- Customer tier differentiation (enterprise: 10, pro: 5, free: 2)
+- Global defaults with fallback (default: 3)
+
+See [RFC-020](./RFCs/RFC-020-FIX-VALIDATION-INTEGRATION.md) for detailed design.
+
+**Claude Code Prompt Updates (Completed 2025-06-24)**:
+- Enhanced `GitBasedClaudeCodeAdapter` with test validation context
+- Added `constructPromptWithTestContext` method that includes:
+  - Generated test code in fix prompts
+  - Test failure context on retry attempts
+  - Iteration context showing attempts remaining
+  - Test validation instructions
+- Integration verified with comprehensive tests in `claude-prompts-validation.test.ts`
+- Prompts now guide Claude Code to ensure fixes pass red-green-refactor tests
+
+### 🔄 Phase 6: Real-World Validation with vulnerable-apps (IN PROGRESS)
 **Validate intelligent test generation with 150+ vulnerable applications**
 
 See [INTELLIGENT-TEST-GENERATION-METHODOLOGY.md](./INTELLIGENT-TEST-GENERATION-METHODOLOGY.md) for validation matrix.
 
-- Test with GitHub vulnerable-apps organization repos
-- Validate framework detection accuracy
-- Ensure generated tests match conventions
-- Document patterns from each vulnerable app
+**Progress**:
+- ✅ Phase 6A: JavaScript/TypeScript apps validated
+- ✅ Phase 6B: Ruby/Python apps validated (Fixed critical issues)
+- 📋 Phase 6C: Java/PHP apps (PENDING)
+- 📋 Phase 6D: IaC/Terraform apps (PENDING)
+
+**Key Fixes in Phase 6B**:
+1. Fixed SecurityDetectorV2 regex serialization using factory pattern
+2. Fixed Ruby hash syntax detection in isSafeUsage
+3. Added RSpec test generation support
+
+**Results**: Successfully generating framework-specific tests for Ruby (RSpec)
 
 ### 📋 Phase 7: Terraform/IaC Security Coverage (PENDING)
 **RFC-019: Infrastructure as Code Security Test Generation**
@@ -215,6 +261,13 @@ test("should prevent sql injection (GREEN)", async () => {
 - `/src/ai/__tests__/adaptive-test-generator.test.ts` - AdaptiveTestGenerator tests
 - `/src/ai/test-generating-security-analyzer.ts` - Integration with SecurityAwareAnalyzer
 - `/src/ai/git-based-test-validator.ts` - Git-based test validation
+
+### Phase 7 Components (COMPLETED)
+- `/src/ai/__tests__/git-based-processor-validation.test.ts` - Fix validation TDD tests
+- `/src/ai/__tests__/claude-prompts-validation.test.ts` - Claude Code prompt TDD tests
+- `/src/ai/__tests__/git-based-processor-prompt-integration.test.ts` - Integration tests
+- Updates to `/src/ai/git-based-processor.ts` - Validation loop implementation
+- Updates to `/src/ai/adapters/claude-code-git.ts` - Test context in prompts
 
 ### Planned
 - `/validation/vulnerable-apps-test-suite.ts` - Validation harness

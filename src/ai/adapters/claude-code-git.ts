@@ -9,6 +9,8 @@ import { IssueAnalysis } from '../types.js';
 import { logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
 import path from 'path';
+import type { AnalysisWithTestsResult } from '../test-generating-security-analyzer.js';
+import type { ValidationResult } from '../git-based-test-validator.js';
 
 /**
  * Result from git-based solution generation
@@ -166,6 +168,77 @@ After completing your edits, provide a summary in this JSON format:
 
 Your changes will be committed to git, so make them production-ready!`;
   }
+  
+  /**
+   * Construct prompt with test validation context
+   */
+  protected constructPromptWithTestContext(
+    issueContext: IssueContext,
+    analysis: IssueAnalysis,
+    testResults?: AnalysisWithTestsResult,
+    validationResult?: ValidationResult,
+    iteration?: { current: number; max: number }
+  ): string {
+    let prompt = this.constructPrompt(issueContext, analysis);
+    
+    // Add test validation context
+    if (testResults?.generatedTests?.success) {
+      prompt += '\n\n## Generated Tests\n';
+      prompt += 'The following tests have been generated to validate your fix:\n\n';
+      testResults.generatedTests.tests.forEach(test => {
+        prompt += `### ${test.framework} Test\n`;
+        prompt += '```' + (test.framework === 'rspec' ? 'ruby' : 'javascript') + '\n';
+        prompt += test.testCode;
+        prompt += '\n```\n\n';
+      });
+      prompt += '**IMPORTANT**: Your fix must make these tests pass!\n';
+      prompt += '- RED test should fail before your fix\n';
+      prompt += '- GREEN test should pass after your fix\n';
+      prompt += '- REFACTOR test should ensure functionality is maintained\n';
+    }
+    
+    // Add validation failure context
+    if (validationResult && !validationResult.success) {
+      prompt += '\n\n## Previous Fix Attempt Failed\n';
+      prompt += `This is attempt ${iteration?.current || 2} of ${iteration?.max || 3}.\n\n`;
+      prompt += '### Test Failure Output:\n';
+      prompt += '```\n';
+      prompt += validationResult.testOutput || 'Tests failed to run';
+      prompt += '\n```\n\n';
+      
+      if (validationResult.failedTests && validationResult.failedTests.length > 0) {
+        prompt += '### Failed Tests:\n';
+        validationResult.failedTests.forEach(test => {
+          prompt += `- ${test.name}: ${test.reason}\n`;
+        });
+        prompt += '\n';
+      }
+      
+      prompt += '**Please analyze the test failures and try a different approach.**\n';
+      prompt += 'Consider:\n';
+      prompt += '- Are you handling all edge cases?\n';
+      prompt += '- Is the fix too restrictive or breaking functionality?\n';
+      prompt += '- Do you need to adjust the implementation strategy?\n';
+    }
+    
+    // Add iteration context
+    if (iteration) {
+      prompt += `\n\n## Iteration Context\n`;
+      prompt += `You have ${iteration.max - iteration.current} attempts remaining.\n`;
+      if (iteration.current === iteration.max) {
+        prompt += '**This is your final attempt.** Ensure the fix is comprehensive.\n';
+      }
+    }
+    
+    // Add test running instructions
+    prompt += '\n\n## Test Validation Instructions\n';
+    prompt += '1. After implementing your fix, explain how to run the tests\n';
+    prompt += '2. Specify which test framework is being used\n';
+    prompt += '3. Include the test command (e.g., `bundle exec rspec` or `npm test`)\n';
+    prompt += '4. Ensure all security tests pass before considering the fix complete\n';
+    
+    return prompt;
+  }
 
   /**
    * Generate solution using git-based approach
@@ -173,7 +246,10 @@ Your changes will be committed to git, so make them production-ready!`;
   async generateSolutionWithGit(
     issueContext: IssueContext,
     analysis: IssueAnalysis,
-    enhancedPrompt?: string
+    enhancedPrompt?: string,
+    testResults?: AnalysisWithTestsResult,
+    validationResult?: ValidationResult,
+    iteration?: { current: number; max: number }
   ): Promise<GitSolutionResult> {
     const startTime = Date.now();
     
@@ -186,7 +262,13 @@ Your changes will be committed to git, so make them production-ready!`;
       
       // Execute Claude Code to make edits
       logger.info('Executing Claude Code to fix vulnerabilities in-place...');
-      const result = await super.generateSolution(issueContext, analysis, enhancedPrompt);
+      
+      // Use enhanced prompt with test context if available
+      const promptToUse = (testResults || validationResult || iteration) 
+        ? this.constructPromptWithTestContext(issueContext, analysis, testResults, validationResult, iteration)
+        : enhancedPrompt;
+      
+      const result = await super.generateSolution(issueContext, analysis, promptToUse);
       
       if (!result.success) {
         return {

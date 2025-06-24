@@ -345,6 +345,22 @@ export class TestFrameworkDetector {
         allFrameworks.push(...result.frameworks);
       }
 
+      // Check requirements.txt (Python)
+      const requirementsPath = path.join(repoPath, 'requirements.txt');
+      if (fs.existsSync(requirementsPath)) {
+        const requirements = fs.readFileSync(requirementsPath, 'utf-8');
+        const result = await this.detectFromRequirements(requirements);
+        allFrameworks.push(...result.frameworks);
+      }
+
+      // Check Gemfile (Ruby)
+      const gemfilePath = path.join(repoPath, 'Gemfile');
+      if (fs.existsSync(gemfilePath)) {
+        const gemfile = fs.readFileSync(gemfilePath, 'utf-8');
+        const result = await this.detectFromGemfile(gemfile);
+        allFrameworks.push(...result.frameworks);
+      }
+
       // Check for test directories
       const possibleTestDirs = ['test', 'tests', '__tests__', 'spec', 'specs'];
       for (const dir of possibleTestDirs) {

@@ -245,7 +245,21 @@ export async function processIssueWithGit(
     while (iteration < maxIterations) {
       logger.info(`Executing Claude Code to fix vulnerabilities (attempt ${iteration + 1}/${maxIterations})...`);
       const adapter = new GitBasedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
-      solution = await adapter.generateSolutionWithGit(currentIssue, analysisData);
+      
+      // Pass test results and validation context to adapter
+      const validationContext = iteration > 0 ? {
+        current: iteration + 1,
+        max: maxIterations
+      } : undefined;
+      
+      solution = await adapter.generateSolutionWithGit(
+        currentIssue, 
+        analysisData,
+        undefined, // no enhanced prompt
+        testResults,
+        undefined, // validation result is embedded in enhanced issue
+        validationContext
+      );
       
       if (!solution.success) {
         return {

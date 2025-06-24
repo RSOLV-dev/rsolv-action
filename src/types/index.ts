@@ -12,6 +12,15 @@ export interface ActionConfig {
   enableSecurityAnalysis?: boolean;
   rsolvApiKey?: string;
   maxIssues?: number; // Maximum number of issues to process in a single run
+  fixValidation?: FixValidationConfig;
+  customerTier?: string;
+}
+
+export interface FixValidationConfig {
+  enabled?: boolean;
+  maxIterations?: number;
+  maxIterationsByType?: Record<string, number>;
+  maxIterationsByTier?: Record<string, number>;
 }
 
 export interface ActionStatus {
