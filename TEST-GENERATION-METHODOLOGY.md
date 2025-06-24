@@ -145,6 +145,27 @@ See [INTELLIGENT-TEST-GENERATION-METHODOLOGY.md](./INTELLIGENT-TEST-GENERATION-M
 - Address framework-specific issues
 - Update documentation based on production insights
 
+## Development Best Practices (Added 2025-06-24)
+
+### TypeScript Validation
+**IMPORTANT**: Always run `npx tsc --noEmit` after making changes to TypeScript files. This catches:
+- Method signature mismatches
+- Missing properties on interfaces
+- Type incompatibilities
+- Import/export issues
+
+Example workflow:
+1. Make changes to TypeScript files
+2. Run `npx tsc --noEmit` to check for type errors
+3. Fix any type errors before running the code
+4. This saves significant debugging time
+
+### Common TypeScript Issues and Fixes
+- **Map iteration**: Use `Array.from(map)` for ES5 compatibility
+- **Interface changes**: Update all implementations when changing interfaces
+- **Method names**: TypeScript catches typos like `detectInFile` vs `detect`
+- **Property access**: Catches missing properties like `testOutput` on `ValidationResult`
+
 ## Key Components Implemented
 
 ### 1. VulnerabilityTestGenerator

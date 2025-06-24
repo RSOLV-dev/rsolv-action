@@ -201,17 +201,22 @@ Your changes will be committed to git, so make them production-ready!`;
     if (validationResult && !validationResult.success) {
       prompt += '\n\n## Previous Fix Attempt Failed\n';
       prompt += `This is attempt ${iteration?.current || 2} of ${iteration?.max || 3}.\n\n`;
-      prompt += '### Test Failure Output:\n';
+      prompt += '### Test Results:\n';
       prompt += '```\n';
-      prompt += validationResult.testOutput || 'Tests failed to run';
+      prompt += `Vulnerable commit - Red test: ${validationResult.vulnerableCommit.redTestPassed ? 'PASSED' : 'FAILED'}\n`;
+      prompt += `Fixed commit - Red test: ${validationResult.fixedCommit.redTestPassed ? 'PASSED' : 'FAILED'}\n`;
+      prompt += `Fixed commit - Green test: ${validationResult.fixedCommit.greenTestPassed ? 'PASSED' : 'FAILED'}\n`;
+      prompt += `Fixed commit - Refactor test: ${validationResult.fixedCommit.refactorTestPassed ? 'PASSED' : 'FAILED'}\n`;
       prompt += '\n```\n\n';
       
-      if (validationResult.failedTests && validationResult.failedTests.length > 0) {
-        prompt += '### Failed Tests:\n';
-        validationResult.failedTests.forEach(test => {
-          prompt += `- ${test.name}: ${test.reason}\n`;
-        });
-        prompt += '\n';
+      if (!validationResult.fixedCommit.redTestPassed) {
+        prompt += '- The vulnerability still exists (RED test failed)\n';
+      }
+      if (!validationResult.fixedCommit.greenTestPassed) {
+        prompt += '- The fix was not properly applied (GREEN test failed)\n';
+      }
+      if (!validationResult.fixedCommit.refactorTestPassed) {
+        prompt += '- The fix broke existing functionality (REFACTOR test failed)\n';
       }
       
       prompt += '**Please analyze the test failures and try a different approach.**\n';
