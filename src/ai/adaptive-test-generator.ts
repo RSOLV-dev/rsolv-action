@@ -161,11 +161,19 @@ export class AdaptiveTestGenerator {
     repoStructure: RepoStructure
   ): Promise<AdaptiveTestResult> {
     try {
+      logger.info('AdaptiveTestGenerator: generateAdaptiveTests called');
+      logger.info('Vulnerability:', JSON.stringify(vulnerability));
+      logger.info('RepoStructure keys:', Object.keys(repoStructure));
+      
       // 1. Detect test framework from repo structure
       const detectionResult = await this.detectFrameworksFromStructure(repoStructure);
+      logger.info('Framework detection result:', JSON.stringify(detectionResult));
+      
       const primaryFramework = this.selectPrimaryFramework(detectionResult.frameworks, vulnerability.file);
+      logger.info('Selected primary framework:', JSON.stringify(primaryFramework));
 
       if (!primaryFramework) {
+        logger.info('No primary framework detected, generating generic tests');
         return this.generateGenericTests(vulnerability);
       }
 
@@ -442,6 +450,8 @@ export class AdaptiveTestGenerator {
         return this.generateMochaTests(testSuite, conventions, vulnerability);
       case 'pytest':
         return this.generatePytestTests(testSuite, conventions, vulnerability);
+      case 'rspec':
+        return this.generateRSpecTests(testSuite, conventions, vulnerability);
       case 'minitest':
         return this.generateMinitestTests(testSuite, conventions, vulnerability);
       case 'exunit':
@@ -640,6 +650,80 @@ describe ${className} do
       result = ${className}.new.process(valid_input)
       _(result).must_be_kind_of String
       _(result).wont_be_empty
+    end
+  end
+end`;
+  }
+
+  /**
+   * Generate RSpec tests
+   */
+  private generateRSpecTests(
+    testSuite: VulnerabilityTestSuite,
+    conventions: any,
+    vulnerability: VulnerabilityWithFile
+  ): string {
+    const className = vulnerability.file
+      ?.split('/')
+      .pop()
+      ?.replace(/\.rb$/, '')
+      .split('_')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join('') || 'Module';
+
+    const controllerName = vulnerability.file?.includes('controller') ? className : `${className}Controller`;
+    
+    return `require 'rails_helper'
+
+RSpec.describe ${controllerName}, type: :controller do
+  describe "${vulnerability.type} vulnerability tests" do
+    context "when vulnerable to ${vulnerability.type.toLowerCase()} (RED)" do
+      it "should be exploitable with malicious input" do
+        # RED: Demonstrate vulnerability exists
+        malicious_input = "${testSuite.red.attackVector}"
+        
+        # For SQL injection in Rails controller
+        params = { user: { id: malicious_input } }
+        
+        # This test should pass BEFORE the fix
+        expect {
+          post :update, params: params
+        }.not_to raise_error
+        
+        # The vulnerability allows SQL injection
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
+    context "when protected against ${vulnerability.type.toLowerCase()} (GREEN)" do
+      it "should prevent exploitation attempts" do
+        # GREEN: Verify fix prevents vulnerability
+        malicious_input = "${testSuite.red.attackVector}"
+        
+        # For SQL injection in Rails controller
+        params = { user: { id: malicious_input } }
+        
+        # After fix, this should raise an error or sanitize input
+        post :update, params: params
+        
+        # Either it should return an error or sanitize the input
+        expect(response).to have_http_status(:bad_request).or have_http_status(:unprocessable_entity)
+      end
+    end
+
+    context "when handling valid input (REFACTOR)" do
+      it "should maintain normal functionality" do
+        # REFACTOR: Ensure functionality is maintained
+        valid_input = "${testSuite.green.validInput}"
+        
+        # For normal user update
+        params = { user: { id: valid_input } }
+        
+        post :update, params: params
+        
+        expect(response).to have_http_status(:ok)
+        expect(assigns(:user)).not_to be_nil
+      end
     end
   end
 end`;

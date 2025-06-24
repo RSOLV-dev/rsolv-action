@@ -1,11 +1,11 @@
 import { SecurityPattern, VulnerabilityType } from './types.js';
 
 /**
- * Demo patterns for users without API key (~20 patterns)
- * These are basic, publicly known patterns that demonstrate RSOLV's capabilities
- * Full pattern library (172 patterns) available with API key
+ * Get minimal patterns with fresh RegExp objects
+ * This factory approach prevents regex serialization issues
  */
-export const minimalFallbackPatterns: SecurityPattern[] = [
+export function getMinimalPatterns(): SecurityPattern[] {
+  return [
   // JavaScript/TypeScript patterns
   // Basic SQL Injection
   {
@@ -110,6 +110,27 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
   
   // Python patterns
   {
+    id: 'python-sql-injection',
+    name: 'Python SQL Injection',
+    type: VulnerabilityType.SQL_INJECTION,
+    severity: 'high',
+    description: 'SQL injection via string formatting or concatenation',
+    patterns: {
+      regex: [
+        /\.raw\s*\(/gi,
+        /execute\s*\(\s*["'].*%[s|d].*["']\s*%/gi,
+        /execute\s*\(\s*["'].*\+.*["']\s*\)/gi,
+        /cursor\.execute\s*\(\s*f["']/gi
+      ]
+    },
+    languages: ['python'],
+    cweId: 'CWE-89',
+    owaspCategory: 'A03:2021',
+    remediation: 'Use parameterized queries with ? or %s placeholders',
+    examples: { vulnerable: '', secure: '' }
+  },
+  
+  {
     id: 'python-eval',
     name: 'Python Eval Usage',
     type: VulnerabilityType.COMMAND_INJECTION,
@@ -148,6 +169,26 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
   },
   
   // Ruby patterns
+  {
+    id: 'ruby-sql-injection',
+    name: 'Ruby SQL Injection',
+    type: VulnerabilityType.SQL_INJECTION,
+    severity: 'high',
+    description: 'SQL injection via string interpolation',
+    patterns: {
+      regex: [
+        /where\s*\(\s*["'].*#\{.*\}.*["']\s*\)/gi,
+        /find_by_sql\s*\(\s*["'].*#\{.*\}.*["']\s*\)/gi,
+        /execute\s*\(\s*["'].*#\{.*\}.*["']\s*\)/gi
+      ]
+    },
+    languages: ['ruby'],
+    cweId: 'CWE-89',
+    owaspCategory: 'A03:2021',
+    remediation: 'Use parameterized queries or ActiveRecord query interface',
+    examples: { vulnerable: '', secure: '' }
+  },
+  
   {
     id: 'ruby-eval',
     name: 'Ruby Eval Usage',
@@ -417,16 +458,24 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
     remediation: 'Update Log4j to version 2.17.0 or later',
     examples: { vulnerable: '', secure: '' }
   }
-];
+  ];
+}
 
 /**
  * Get minimal patterns for a specific language
- * This is intentionally limited to protect IP
+ * Creates fresh RegExp objects to avoid serialization issues
  */
 export function getMinimalPatternsByLanguage(language: string): SecurityPattern[] {
   const normalizedLang = language.toLowerCase();
-  return minimalFallbackPatterns.filter(p => 
+  const allPatterns = getMinimalPatterns();
+  return allPatterns.filter(p => 
     p.languages.includes(normalizedLang) || 
     (normalizedLang === 'typescript' && p.languages.includes('javascript'))
   );
 }
+
+/**
+ * Legacy export for backward compatibility
+ * @deprecated Use getMinimalPatterns() instead to avoid regex serialization issues
+ */
+export const minimalFallbackPatterns = getMinimalPatterns();

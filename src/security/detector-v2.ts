@@ -77,8 +77,16 @@ export class SecurityDetectorV2 {
               const lineNumber = this.getLineNumber(code, match.index);
               const line = lines[lineNumber - 1]?.trim() || '';
               
+              // Debug logging for Ruby SQL injection
+              if (pattern.id === 'ruby-sql-injection' && language === 'ruby') {
+                logger.info(`Ruby SQL match found at line ${lineNumber}: "${line}"`);
+              }
+              
               // Skip if this looks like a safe usage
               if (this.isSafeUsage(line, pattern.type)) {
+                if (pattern.id === 'ruby-sql-injection' && language === 'ruby') {
+                  logger.info(`  Skipped as safe usage`);
+                }
                 continue;
               }
 
@@ -89,7 +97,7 @@ export class SecurityDetectorV2 {
               }
               seen.add(key);
 
-              vulnerabilities.push({
+              const vuln = {
                 type: pattern.type,
                 severity: pattern.severity,
                 line: lineNumber,
@@ -99,7 +107,13 @@ export class SecurityDetectorV2 {
                 cweId: pattern.cweId,
                 owaspCategory: pattern.owaspCategory,
                 remediation: pattern.remediation
-              });
+              };
+              
+              if (pattern.id === 'ruby-sql-injection' && language === 'ruby') {
+                logger.info(`  Adding vulnerability:`, vuln);
+              }
+              
+              vulnerabilities.push(vuln);
 
               // Exit after first match for non-global regex
               if (!regex.global) {
@@ -166,12 +180,25 @@ export class SecurityDetectorV2 {
   }
 
   private isSafeUsage(line: string, type: VulnerabilityType): boolean {
+    // For Ruby code, check if line contains Ruby hash syntax which is NOT safe
+    // Ruby uses :symbol syntax which can look like SQL named parameters
+    if (line.includes('#{') && line.includes('}')) {
+      // Ruby string interpolation is definitely not safe
+      return false;
+    }
+    
+    // Check for Ruby hash access patterns like params[:id] or params[:user][:id]
+    if (/params\s*\[\s*:/.test(line)) {
+      // This is Ruby hash access, not a SQL named parameter
+      return false;
+    }
+    
     // Common safe patterns to reduce false positives
     const safePatterns: Record<string, RegExp[]> = {
       [VulnerabilityType.SQL_INJECTION]: [
-        /\?.+\?/,  // Parameterized query
-        /\$\d+/,   // Positional parameters
-        /:\w+/,    // Named parameters
+        /\?/,          // Parameterized query with ? placeholders
+        /\$\d+/,       // Positional parameters like $1, $2
+        /:\w+(?!\s*\])/, // Named parameters like :id but NOT Ruby symbols like :id]
         /prepare\s*\(/i,
         /setParameter/i,
         /bindParam/i

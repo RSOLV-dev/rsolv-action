@@ -1,6 +1,6 @@
 import { SecurityPattern, VulnerabilityType } from './types.js';
 import { PatternAPIClient } from './pattern-api-client.js';
-import { minimalFallbackPatterns, getMinimalPatternsByLanguage } from './minimal-patterns.js';
+import { getMinimalPatterns, getMinimalPatternsByLanguage } from './minimal-patterns.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -26,8 +26,8 @@ export class LocalPatternSource implements PatternSource {
   }
 
   private initializePatterns(): void {
-    // Use only minimal fallback patterns to protect IP
-    this.patterns = minimalFallbackPatterns;
+    // Use factory function to get fresh patterns with working RegExp objects
+    this.patterns = getMinimalPatterns();
     logger.warn('Using minimal fallback patterns - API connection recommended for full pattern coverage');
   }
 
