@@ -4,7 +4,7 @@ import { processIssues } from '../../src/ai/unified-processor.js';
 import { IssueContext, ActionConfig } from '../../src/types/index.js';
 
 // Mock the logger
-mock.module('../../src/utils/logger', () => ({
+mock.module('../../src/utils/logger.js', () => ({
   logger: {
     info: () => {},
     warn: () => {},
@@ -14,7 +14,7 @@ mock.module('../../src/utils/logger', () => ({
 }));
 
 // Mock modules to force errors
-mock.module('../../src/ai/analyzer', () => ({
+mock.module('../../src/ai/analyzer.js', () => ({
   analyzeIssue: mock(() => {
     throw new Error('Failed to connect to Anthropic API');
   })
@@ -125,7 +125,7 @@ describe('Error Message Sanitization', () => {
 
   test('should sanitize network errors', async () => {
     // Mock a network error
-    mock.module('../../src/ai/analyzer', () => ({
+    mock.module('../../src/ai/analyzer.js', () => ({
       analyzeIssue: mock(() => {
         const error = new Error('Network error: Failed to fetch from https://api.anthropic.com/v1/messages');
         throw error;

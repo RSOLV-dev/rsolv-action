@@ -36,12 +36,13 @@ export class SecurityAwareAnalyzer {
   async analyzeWithSecurity(
     issue: IssueContext,
     config: ActionConfig,
-    codebaseFiles?: Map<string, string>
+    codebaseFiles?: Map<string, string>,
+    injectedClient?: any
   ): Promise<AnalysisData & { securityAnalysis?: SecurityAnalysisResult }> {
     logger.info(`Analyzing issue #${issue.number} with security-aware analysis`);
 
     // Perform standard AI analysis first
-    const standardAnalysis = await this.performStandardAnalysis(issue, config);
+    const standardAnalysis = await this.performStandardAnalysis(issue, config, injectedClient);
 
     // If we have code files, perform security analysis
     let securityAnalysis: SecurityAnalysisResult | undefined;
@@ -222,11 +223,12 @@ export class SecurityAwareAnalyzer {
    */
   private async performStandardAnalysis(
     issue: IssueContext,
-    config: ActionConfig
+    config: ActionConfig,
+    injectedClient?: any
   ): Promise<AnalysisData> {
     // Import the existing analyzer dynamically to avoid circular imports
     const { analyzeIssue } = await import('./analyzer.js');
-    return await analyzeIssue(issue, config);
+    return await analyzeIssue(issue, config, injectedClient);
   }
 
   /**

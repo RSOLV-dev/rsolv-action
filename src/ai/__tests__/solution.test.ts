@@ -2,8 +2,9 @@ import { describe, expect, test, mock } from 'bun:test';
 import { generateSolution } from '../solution.js';
 import { IssueContext, ActionConfig, AnalysisData } from '../../types/index.js';
 
-// Mock the AI client
-mock.module('../client', () => {
+// Mock the AI client using require.resolve
+const clientPath = require.resolve('../client');
+mock.module(clientPath, () => {
   return {
     getAiClient: () => ({
       complete: async () => `Here's the solution:
@@ -23,8 +24,9 @@ This fixes the error handling in the component.`
   };
 });
 
-// Mock the Claude Code adapter
-mock.module('../adapters/claude-code', () => {
+// Mock the Claude Code adapter using require.resolve
+const claudeCodePath = require.resolve('../adapters/claude-code');
+mock.module(claudeCodePath, () => {
   return {
     ClaudeCodeAdapter: class MockClaudeCodeAdapter {
       constructor(_config: any, _repoPath: string) {}
@@ -48,8 +50,22 @@ mock.module('../adapters/claude-code', () => {
   };
 });
 
-// Mock the GitHub files module
-mock.module('../../github/files', () => ({
+// Mock the credentials manager using require.resolve
+const credentialManagerPath = require.resolve('../../credentials/manager');
+mock.module(credentialManagerPath, () => ({
+  initialize: async () => {
+    throw new Error('Test mode - using mock credentials');
+  },
+  exchangeForProviderCredentials: async () => ({
+    provider: 'anthropic',
+    apiKey: 'mock-api-key',
+    model: 'claude-3-5-sonnet-20241022'
+  })
+}));
+
+// Mock the GitHub files module using require.resolve
+const githubFilesPath = require.resolve('../../github/files');
+mock.module(githubFilesPath, () => ({
   getRepositoryFiles: async () => ({
     'src/component.ts': '// Original component code',
     'src/util.ts': '// Original util code'
@@ -161,7 +177,8 @@ describe('Solution Generator', () => {
         maxTokens: 4000,
         contextLimit: 100000,
         timeout: 60000,
-        useVendedCredentials: true
+        useVendedCredentials: false,  // Don't use vended credentials in test
+        apiKey: 'test-api-key'  // Provide API key directly
       },
       enableSecurityAnalysis: true,
       containerConfig: {

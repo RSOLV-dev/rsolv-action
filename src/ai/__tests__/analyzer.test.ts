@@ -4,8 +4,9 @@ import { IssueContext, ActionConfig } from '../../types.js';
 
 describe('Issue Analyzer', () => {
   beforeEach(() => {
-    // Mock the AI client
-    mock.module('../client', () => {
+    // Mock the AI client using require.resolve
+    const clientPath = require.resolve('../client');
+    mock.module(clientPath, () => {
       return {
         getAiClient: () => ({
           complete: async () => `This is a bug issue.
@@ -21,8 +22,9 @@ Suggested Approach: Fix 1 - Update the error handling in the component to proper
       };
     });
 
-    // Mock the security detector
-    mock.module('../../security/index', () => ({
+    // Mock the security detector using require.resolve
+    const securityPath = require.resolve('../../security/index');
+    mock.module(securityPath, () => ({
       SecurityDetector: class {
         analyzeText = () => ({ vulnerabilities: [] });
         analyzeCode = () => ({ vulnerabilities: [] });

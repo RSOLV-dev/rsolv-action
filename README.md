@@ -241,6 +241,39 @@ See [Linear Integration Guide](docs/linear-integration.md) for detailed setup.
 
 GitLab issue tracking integration is under development.
 
+## Troubleshooting
+
+### Common Issues
+
+#### File paths in GitHub Issues
+
+When creating issues that reference file paths, always use **relative paths** instead of absolute paths:
+
+- ✅ **Correct**: `app/data/allocations-dao.js`
+- ❌ **Wrong**: `/app/data/allocations-dao.js`
+
+**Why?** GitHub Actions runs in a containerized environment where the repository is mounted at `/github/workspace`. Absolute paths will cause RSOLV to look in the wrong location and either fail to find files or create new files in unexpected places.
+
+**Example Issue Body**:
+```markdown
+There is a NoSQL injection vulnerability in app/data/allocations-dao.js at line 78.
+The code uses string interpolation in a MongoDB $where clause.
+```
+
+#### Pull Request Creation Failures
+
+If RSOLV fails to create a pull request:
+1. Check that the workflow has `contents: write` and `pull-requests: write` permissions
+2. Verify the GITHUB_TOKEN is properly configured
+3. Check action logs for specific error messages
+
+#### Timeout Issues
+
+For complex vulnerabilities, RSOLV may take longer than expected:
+- Default timeout is 60 minutes
+- Can be adjusted in your workflow configuration
+- Consider processing one issue at a time for complex fixes
+
 ## Development
 
 ### Prerequisites

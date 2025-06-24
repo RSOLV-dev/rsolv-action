@@ -18,7 +18,7 @@ mock.module('../../src/utils/logger.js', () => ({
 }));
 
 // Mock child_process exec
-mock('child_process', () => {
+mock.module('child_process', () => {
   return {
     exec: (command: string, options: any, callback: any) => {
       if (typeof options === 'function') {

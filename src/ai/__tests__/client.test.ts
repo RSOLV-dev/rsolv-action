@@ -5,15 +5,19 @@ import { test, expect, mock, describe, beforeEach } from 'bun:test';
 import { getAiClient } from '../client.js';
 
 // Mock the logger to avoid noisy logs
-mock.module('../../utils/logger', () => ({
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {}
+const loggerPath = require.resolve('../../utils/logger');
+mock.module(loggerPath, () => ({
+  logger: {
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    debug: () => {}
+  }
 }));
 
 // Mock the credential manager
-mock.module('../../credentials/manager', () => ({
+const credentialManagerPath = require.resolve('../../credentials/manager');
+mock.module(credentialManagerPath, () => ({
   RSOLVCredentialManager: class MockCredentialManager {
     private credentials = new Map<string, string>();
     

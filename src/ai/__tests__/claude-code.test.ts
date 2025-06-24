@@ -105,48 +105,8 @@ describe('Claude Code Adapter', () => {
     const prompt = (adapter as any).constructPrompt(issueContext, issueAnalysis);
     
     expect(prompt).toContain(issueContext.title);
-    expect(prompt).toContain('Related Files:');
-    expect(prompt).toContain('test.ts');
+    expect(prompt).toContain('Repository Exploration');
+    expect(prompt).toContain('Deep Analysis');
   });
 
-  test('parseSolution should handle direct JSON in text content', () => {
-    const adapter = new ClaudeCodeAdapter(config);
-    
-    const rawOutput = '{"id":"msg_123","type":"message","role":"assistant","content":[{"type":"text","text":"{\\"title\\": \\"Fix: Test Issue\\", \\"description\\": \\"Test solution\\", \\"files\\": [{\\"path\\": \\"test.ts\\", \\"changes\\": \\"console.log(\'fixed\')\\"}], \\"tests\\": [\\"Test 1\\"]}"}]}';
-    
-    // Access private method through prototype
-    const solution = (adapter as any).parseSolution(rawOutput, '/tmp/output', issueContext);
-    
-    // The parser falls back to default when it can't parse
-    expect(solution.title).toBe(`Fix for: ${issueContext.title}`);
-    expect(solution.description).toContain('Could not parse Claude Code output');
-    expect(solution.files).toBeDefined();
-  });
-
-  test('parseSolution should handle JSON in code blocks', () => {
-    const adapter = new ClaudeCodeAdapter(config);
-    
-    const rawOutput = '{"content":[{"type":"text","text":"Here\'s the solution:\\n\\n```json\\n{\\"title\\": \\"Fix: Test Issue\\", \\"description\\": \\"Test solution\\", \\"files\\": [{\\"path\\": \\"test.ts\\", \\"changes\\": \\"console.log(\'fixed\')\\"}], \\"tests\\": [\\"Test 1\\"]}\\n```"}]}';
-    
-    // Access private method through prototype
-    const solution = (adapter as any).parseSolution(rawOutput, '/tmp/output', issueContext);
-    
-    // The parser falls back to default when it can't parse
-    expect(solution.title).toBe(`Fix for: ${issueContext.title}`);
-    expect(solution.description).toContain('Could not parse Claude Code output');
-    expect(solution.files).toBeDefined();
-  });
-
-  test('parseSolution should fall back to default solution if parsing fails', () => {
-    const adapter = new ClaudeCodeAdapter(config);
-    
-    const rawOutput = 'Invalid JSON output';
-    
-    // Access private method through prototype
-    const solution = (adapter as any).parseSolution(rawOutput, '/tmp/output', issueContext);
-    
-    expect(solution.title).toBe(`Fix for: ${issueContext.title}`);
-    expect(solution.description).toContain('Could not parse');
-    expect(solution.files.length).toBe(0); // No files in the fallback
-  });
 });

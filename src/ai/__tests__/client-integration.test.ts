@@ -29,12 +29,14 @@ describe('AI Client Direct API Integration', () => {
   });
   test('should use direct API key for Anthropic when vending is disabled', async () => {
     // Mock AI response
-    const mockResponse = mockAIResponse('Response with direct API key');
+    const mockResponse = mockAIResponse('anthropic', 'Response with direct API key');
 
-    fetchMock.mockResponseOnce({
+    fetchMock.mockImplementationOnce(() => Promise.resolve({
       ok: true,
-      json: mockResponse
-    });
+      status: 200,
+      json: async () => mockResponse,
+      text: async () => JSON.stringify(mockResponse)
+    } as Response));
 
     const config: AiProviderConfig = {
       provider: 'anthropic',
@@ -47,30 +49,31 @@ describe('AI Client Direct API Integration', () => {
     const response = await client.complete('Test prompt');
 
     // Verify API was called with correct parameters
-    expect(fetchMock.mock.mock.calls.length).toBe(1);
+    expect(fetchMock.mock.calls.length).toBe(1);
     
     // Verify correct headers
-    const fetchCall = fetchMock.mock.mock.calls[0];
+    const fetchCall = fetchMock.mock.calls[0];
     expect(fetchCall[0]).toBe('https://api.anthropic.com/v1/messages');
-    expect(fetchCall[1].headers['X-API-Key']).toBe('direct_ant_key_123');
+    expect(fetchCall[1].headers).toBeDefined();
+    
+    // Check all possible header variations
+    const headers = fetchCall[1].headers;
+    const apiKeyHeader = headers['x-api-key'] || headers['X-API-Key'] || headers['X-Api-Key'];
+    expect(apiKeyHeader).toBe('direct_ant_key_123');
 
     expect(response).toBe('Response with direct API key');
   });
 
   test('should use direct API key for OpenAI when vending is disabled', async () => {
     // Mock OpenAI response
-    const mockResponse = {
-      choices: [{
-        message: {
-          content: 'GPT-4 response'
-        }
-      }]
-    };
+    const mockResponse = mockAIResponse('openai', 'GPT-4 response');
 
-    fetchMock.mockResponseOnce({
+    fetchMock.mockImplementationOnce(() => Promise.resolve({
       ok: true,
-      json: mockResponse
-    });
+      status: 200,
+      json: async () => mockResponse,
+      text: async () => JSON.stringify(mockResponse)
+    } as Response));
 
     const config: AiProviderConfig = {
       provider: 'openai',
@@ -83,10 +86,10 @@ describe('AI Client Direct API Integration', () => {
     const response = await client.complete('Test prompt');
 
     // Verify API was called with correct parameters
-    expect(fetchMock.mock.mock.calls.length).toBe(1);
+    expect(fetchMock.mock.calls.length).toBe(1);
     
     // Verify correct headers
-    const fetchCall = fetchMock.mock.mock.calls[0];
+    const fetchCall = fetchMock.mock.calls[0];
     expect(fetchCall[0]).toBe('https://api.openai.com/v1/chat/completions');
     expect(fetchCall[1].headers['Authorization']).toBe('Bearer direct_oai_key');
 
@@ -95,12 +98,13 @@ describe('AI Client Direct API Integration', () => {
 
   test('should handle API errors gracefully', async () => {
     // Mock error response
-    fetchMock.mockResponseOnce({
+    fetchMock.mockImplementationOnce(() => Promise.resolve({
       ok: false,
       status: 401,
       statusText: 'Unauthorized',
-      json: { error: { message: 'Invalid API key' } }
-    });
+      json: async () => ({ error: { message: 'Invalid API key' } }),
+      text: async () => JSON.stringify({ error: { message: 'Invalid API key' } })
+    } as Response));
 
     const config: AiProviderConfig = {
       provider: 'anthropic',

@@ -29,7 +29,7 @@ export class InPlaceClaudeCodeAdapter extends ClaudeCodeAdapter {
       return enhancedPrompt;
     }
     
-    return `You are an expert security engineer tasked with fixing vulnerabilities in existing code. Your goal is to make minimal, surgical changes that resolve security issues while preserving the existing code structure and functionality.
+    return `You are an expert security engineer tasked with fixing vulnerabilities in existing code. Your goal is to make minimal, surgical changes that resolve security issues while preserving the existing code structure, functionality, and API compatibility.
 
 ## Issue Details:
 - **Title**: ${issueContext.title}
@@ -40,27 +40,46 @@ export class InPlaceClaudeCodeAdapter extends ClaudeCodeAdapter {
 
 ## Your Task:
 
-### Phase 1: Locate the Vulnerability
+### Phase 1: Locate Vulnerability & Analyze Compatibility
 First, find and examine the vulnerable code:
 - Use Grep to search for the vulnerable patterns mentioned in the issue
 - Use Read to examine the full context of vulnerable files
+- Identify the current API (callbacks, promises, sync/async)
+- Look for existing tests that exercise the vulnerable code
 - Understand the existing code structure and conventions
 
-### Phase 2: Plan Minimal Changes
+### Phase 2: Validate Vulnerability (RED Phase)
+Before fixing, demonstrate the vulnerability:
+- Document what malicious input would exploit the vulnerability
+- If possible, create or identify a test that would FAIL on vulnerable code
+- Ensure you understand exactly what makes the code vulnerable
+
+### Phase 3: Plan Minimal Changes with Compatibility
 Identify the smallest possible changes needed:
 - Focus only on the vulnerable code sections
-- Preserve all non-vulnerable functionality
+- **CRITICAL**: Preserve API compatibility
+  - If code uses callbacks, maintain callback interface
+  - If changing patterns, add compatibility wrappers
+  - Never break existing function signatures
 - Maintain the existing code style and patterns
 - Keep the same file structure and organization
 
-### Phase 3: Apply In-Place Fixes
+### Phase 4: Apply In-Place Fixes
 Use the Edit or MultiEdit tools to fix vulnerabilities:
-- **IMPORTANT**: Edit existing files, do NOT create new files
+- **IMPORTANT**: Edit existing files, do NOT create new files unless absolutely necessary
 - Make surgical changes to vulnerable lines only
+- Add compatibility wrappers if API changes are needed
 - Add necessary imports if required
 - Preserve all other code exactly as it is
 
-### Phase 4: Generate Solution Summary
+### Phase 5: Verify Fix Works (GREEN Phase)
+After applying fixes:
+- Verify the vulnerability is actually fixed
+- Ensure legitimate use cases still work
+- Check that no APIs were broken
+- Confirm the fix would make the vulnerability test PASS
+
+### Phase 6: Generate Solution Summary
 After making your edits, provide a JSON summary of what you changed:
 
 \`\`\`json
@@ -72,9 +91,20 @@ After making your edits, provide a JSON summary of what you changed:
       "path": "exact/path/to/edited/file.js",
       "changes_summary": "Brief description of what was changed in this file",
       "vulnerable_lines": [73, 78],
-      "fix_type": "parameterized_query"
+      "fix_type": "parameterized_query",
+      "compatibility_preserved": true
     }
   ],
+  "compatibility_notes": {
+    "api_changed": false,
+    "backward_compatible": true,
+    "compatibility_measures": "Description of any compatibility wrappers added"
+  },
+  "validation_results": {
+    "vulnerability_demonstrated": "Description of how vulnerability was validated",
+    "fix_verified": true,
+    "tests_pass": true
+  },
   "security_impact": "Explanation of how this fix improves security",
   "tests": [
     "Test case to verify the vulnerability is fixed",
@@ -86,11 +116,14 @@ After making your edits, provide a JSON summary of what you changed:
 ## Critical Requirements:
 1. **Edit in place** - Modify existing files using Edit/MultiEdit tools
 2. **Minimal changes** - Only change what's necessary to fix the vulnerability
-3. **Preserve functionality** - Ensure the code still works exactly as before
-4. **Match code style** - Follow the existing file's conventions
-5. **No new files** - All fixes must be applied to existing vulnerable files
+3. **Preserve API compatibility** - NEVER break existing interfaces or function signatures
+4. **Validate the fix** - Demonstrate the vulnerability exists and is fixed
+5. **Match code style** - Follow the existing file's conventions
+6. **No new files** - All fixes must be applied to existing vulnerable files unless absolutely necessary
+7. **Use relative paths** - Use 'app/data/file.js' not '/app/data/file.js'
+8. **Test functionality** - Ensure the code still works exactly as before
 
-Remember: The best security fix is one that can be immediately merged with no additional integration work required.`;
+Remember: The best security fix is one that can be immediately merged with no additional integration work required AND maintains full backward compatibility.`;
   }
 
   /**

@@ -23,17 +23,24 @@ describe('RsolvApiClient', () => {
 
   describe('recordFixAttempt', () => {
     it('should successfully record a fix attempt', async () => {
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         status: 201,
-        json: {
+        json: async () => ({
           id: 123,
           status: 'pending',
           github_org: 'test-org',
           repo_name: 'test-repo',
           pr_number: 456
-        }
-      });
+        }),
+        text: async () => JSON.stringify({
+          id: 123,
+          status: 'pending',
+          github_org: 'test-org',
+          repo_name: 'test-repo',
+          pr_number: 456
+        })
+      } as Response));
       
       const fixAttempt = {
         github_org: 'test-org',
@@ -54,8 +61,8 @@ describe('RsolvApiClient', () => {
       
       const result = await client.recordFixAttempt(fixAttempt);
       
-      expect(fetchMock.mock.mock.calls.length).toBe(1);
-      const [url, options] = fetchMock.mock.mock.calls[0];
+      expect(fetchMock.mock.calls.length).toBe(1);
+      const [url, options] = fetchMock.mock.calls[0];
       expect(url).toBe('https://api.rsolv.dev/api/v1/fix-attempts');
       expect(options.method).toBe('POST');
       expect(options.headers['Content-Type']).toBe('application/json');
@@ -75,17 +82,24 @@ describe('RsolvApiClient', () => {
     });
     
     it('should handle PR without issue reference', async () => {
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         status: 201,
-        json: {
+        json: async () => ({
           id: 124,
           status: 'pending',
           github_org: 'test-org',
           repo_name: 'test-repo',
           pr_number: 789
-        }
-      });
+        }),
+        text: async () => JSON.stringify({
+          id: 124,
+          status: 'pending',
+          github_org: 'test-org',
+          repo_name: 'test-repo',
+          pr_number: 789
+        })
+      } as Response));
       
       const fixAttempt = {
         github_org: 'test-org',
@@ -108,16 +122,22 @@ describe('RsolvApiClient', () => {
     });
     
     it('should handle API errors gracefully', async () => {
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: false,
         status: 422,
-        json: {
+        json: async () => ({
           errors: {
             repo_name: ['can\'t be blank'],
             pr_number: ['can\'t be blank']
           }
-        }
-      });
+        }),
+        text: async () => JSON.stringify({
+          errors: {
+            repo_name: ['can\'t be blank'],
+            pr_number: ['can\'t be blank']
+          }
+        })
+      } as Response));
       
       const fixAttempt = {
         github_org: 'test-org',
@@ -133,7 +153,7 @@ describe('RsolvApiClient', () => {
     });
     
     it('should handle network errors', async () => {
-      fetchMock.mockErrorOnce(new Error('Network error'));
+      fetchMock.mockImplementationOnce(() => Promise.reject(new Error('Network error')));
       
       const fixAttempt = {
         github_org: 'test-org',
@@ -150,13 +170,16 @@ describe('RsolvApiClient', () => {
     });
     
     it('should handle duplicate fix attempts', async () => {
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: false,
         status: 409,
-        json: {
+        json: async () => ({
           error: 'Fix attempt already exists for this PR'
-        }
-      });
+        }),
+        text: async () => JSON.stringify({
+          error: 'Fix attempt already exists for this PR'
+        })
+      } as Response));
       
       const fixAttempt = {
         github_org: 'test-org',

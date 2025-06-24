@@ -21,11 +21,10 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['javascript', 'typescript'],
-    frameworks: [],
     cweId: 'CWE-89',
     owaspCategory: 'A03:2021',
     remediation: 'Use parameterized queries or prepared statements',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   // Basic XSS
@@ -37,16 +36,15 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
     description: 'Potential XSS via innerHTML',
     patterns: {
       regex: [
-        /innerHTML\s*=\s*[^'"`;]*(?:req\.|request\.)/gi,
+        /innerHTML\s*=\s*[^'"`;]*(userInput|userContent|req\.|request\.)/gi,
         /document\.write\s*\(/gi
       ]
     },
     languages: ['javascript', 'typescript'],
-    frameworks: [],
     cweId: 'CWE-79',
     owaspCategory: 'A03:2021',
     remediation: 'Use textContent or proper encoding',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   // Basic Command Injection
@@ -63,11 +61,10 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['javascript', 'python', 'ruby'],
-    frameworks: [],
     cweId: 'CWE-78',
     owaspCategory: 'A03:2021',
     remediation: 'Validate and sanitize all user input',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   // Basic Path Traversal
@@ -84,18 +81,17 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['javascript', 'typescript'],
-    frameworks: [],
     cweId: 'CWE-22',
     owaspCategory: 'A01:2021',
     remediation: 'Validate and sanitize file paths',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   // Python patterns
   {
     id: 'python-eval',
     name: 'Python Eval Usage',
-    type: VulnerabilityType.RCE,
+    type: VulnerabilityType.COMMAND_INJECTION,
     severity: 'critical',
     description: 'Use of eval() with user input',
     patterns: {
@@ -105,11 +101,10 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['python'],
-    frameworks: [],
     cweId: 'CWE-94',
     owaspCategory: 'A03:2021',
     remediation: 'Avoid eval(), use ast.literal_eval() for safe evaluation',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
@@ -125,18 +120,17 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['python'],
-    frameworks: [],
     cweId: 'CWE-502',
     owaspCategory: 'A08:2021',
     remediation: 'Use JSON or other safe serialization formats',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   // Ruby patterns
   {
     id: 'ruby-eval',
     name: 'Ruby Eval Usage',
-    type: VulnerabilityType.RCE,
+    type: VulnerabilityType.COMMAND_INJECTION,
     severity: 'critical',
     description: 'Use of eval with user input',
     patterns: {
@@ -146,11 +140,10 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['ruby'],
-    frameworks: [],
     cweId: 'CWE-94',
     owaspCategory: 'A03:2021',
     remediation: 'Avoid eval, use safe alternatives',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
@@ -166,11 +159,10 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['ruby'],
-    frameworks: [],
     cweId: 'CWE-502',
     owaspCategory: 'A08:2021',
     remediation: 'Use YAML.safe_load instead',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   // Java patterns
@@ -187,17 +179,16 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['java'],
-    frameworks: [],
     cweId: 'CWE-89',
     owaspCategory: 'A03:2021',
     remediation: 'Use PreparedStatement with parameters',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
     id: 'java-xxe',
     name: 'XML External Entity',
-    type: VulnerabilityType.XXE,
+    type: VulnerabilityType.XML_EXTERNAL_ENTITIES,
     severity: 'high',
     description: 'XML parser vulnerable to XXE',
     patterns: {
@@ -207,18 +198,17 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['java'],
-    frameworks: [],
     cweId: 'CWE-611',
     owaspCategory: 'A05:2021',
     remediation: 'Disable external entities and DTD processing',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   // PHP patterns
   {
     id: 'php-eval',
     name: 'PHP Eval Usage',
-    type: VulnerabilityType.RCE,
+    type: VulnerabilityType.COMMAND_INJECTION,
     severity: 'critical',
     description: 'Use of eval() function',
     patterns: {
@@ -228,11 +218,10 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['php'],
-    frameworks: [],
     cweId: 'CWE-94',
     owaspCategory: 'A03:2021',
     remediation: 'Avoid eval(), use safe alternatives',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
@@ -248,18 +237,17 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['php'],
-    frameworks: [],
     cweId: 'CWE-98',
     owaspCategory: 'A03:2021',
     remediation: 'Validate and whitelist file paths',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   // Elixir patterns
   {
     id: 'elixir-code-eval',
     name: 'Elixir Code Evaluation',
-    type: VulnerabilityType.RCE,
+    type: VulnerabilityType.COMMAND_INJECTION,
     severity: 'critical',
     description: 'Dynamic code evaluation',
     patterns: {
@@ -269,17 +257,16 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['elixir'],
-    frameworks: [],
     cweId: 'CWE-94',
     owaspCategory: 'A03:2021',
     remediation: 'Avoid dynamic code evaluation',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
     id: 'elixir-atom-dos',
     name: 'Atom DoS',
-    type: VulnerabilityType.DOS,
+    type: VulnerabilityType.DENIAL_OF_SERVICE,
     severity: 'medium',
     description: 'Creating atoms from user input',
     patterns: {
@@ -289,18 +276,17 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['elixir'],
-    frameworks: [],
     cweId: 'CWE-400',
     owaspCategory: 'A06:2021',
     remediation: 'Use String.to_existing_atom instead',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   // Cross-language patterns
   {
     id: 'hardcoded-secret',
     name: 'Hardcoded Secret',
-    type: VulnerabilityType.HARDCODED_SECRET,
+    type: VulnerabilityType.HARDCODED_SECRETS,
     severity: 'high',
     description: 'Hardcoded password or API key',
     patterns: {
@@ -310,17 +296,16 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['javascript', 'typescript', 'python', 'ruby', 'java', 'php', 'elixir'],
-    frameworks: [],
     cweId: 'CWE-798',
     owaspCategory: 'A07:2021',
     remediation: 'Use environment variables or secure key management',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
     id: 'weak-crypto',
     name: 'Weak Cryptography',
-    type: VulnerabilityType.WEAK_CRYPTO,
+    type: VulnerabilityType.WEAK_CRYPTOGRAPHY,
     severity: 'medium',
     description: 'Use of weak cryptographic algorithms',
     patterns: {
@@ -330,17 +315,16 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['javascript', 'typescript', 'python', 'ruby', 'java', 'php'],
-    frameworks: [],
     cweId: 'CWE-327',
     owaspCategory: 'A02:2021',
     remediation: 'Use SHA-256 or stronger algorithms',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
     id: 'jwt-none-algorithm',
     name: 'JWT None Algorithm',
-    type: VulnerabilityType.JWT,
+    type: VulnerabilityType.BROKEN_AUTHENTICATION,
     severity: 'critical',
     description: 'JWT allowing none algorithm',
     patterns: {
@@ -350,11 +334,10 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['javascript', 'typescript', 'python', 'ruby'],
-    frameworks: [],
     cweId: 'CWE-347',
     owaspCategory: 'A02:2021',
     remediation: 'Always verify JWT signatures',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
@@ -370,11 +353,10 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['javascript', 'typescript'],
-    frameworks: [],
     cweId: 'CWE-601',
     owaspCategory: 'A03:2021',
     remediation: 'Validate redirect URLs against whitelist',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
@@ -390,17 +372,16 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['javascript', 'typescript'],
-    frameworks: [],
     cweId: 'CWE-943',
     owaspCategory: 'A03:2021',
     remediation: 'Sanitize user input and use parameterized queries',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   },
   
   {
     id: 'log4j-jndi',
     name: 'Log4j JNDI Injection (CVE-2021-44228)',
-    type: VulnerabilityType.CVE,
+    type: VulnerabilityType.VULNERABLE_COMPONENTS,
     severity: 'critical',
     description: 'Log4Shell vulnerability pattern',
     patterns: {
@@ -410,11 +391,10 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
       ]
     },
     languages: ['java'],
-    frameworks: [],
     cweId: 'CWE-502',
     owaspCategory: 'A08:2021',
     remediation: 'Update Log4j to version 2.17.0 or later',
-    testCases: { vulnerable: [], safe: [] }
+    examples: { vulnerable: '', secure: '' }
   }
 ];
 

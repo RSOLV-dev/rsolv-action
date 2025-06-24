@@ -17,7 +17,7 @@ mock.module('../../src/utils/logger.js', () => ({
 }));
 
 // Mock the AI client
-mock.module('../../src/ai/client', () => {
+mock.module('../../src/ai/client.js', () => {
   return {
     getAiClient: () => ({
       complete: async (prompt: string) => {
@@ -79,7 +79,7 @@ This solution fixes the issue by properly decoding the token before validation, 
 });
 
 // Mock the GitHub modules
-mock.module('../../src/github/files', () => {
+mock.module('../../src/github/files.js', () => {
   return {
     getRepositoryFiles: async () => ({
       'src/auth/tokenValidator.js': '// Original token validator code',
@@ -88,7 +88,7 @@ mock.module('../../src/github/files', () => {
   };
 });
 
-mock.module('../../src/github/pr', () => {
+mock.module('../../src/github/pr.js', () => {
   return {
     createPullRequest: async () => ({
       success: true,

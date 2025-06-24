@@ -24,8 +24,8 @@ function clearMockFiles() {
 }
 
 // Mock file system
-mock('fs', () => {
-  const actualFs = { ...fs };
+mock.module('fs', () => {
+  const actualFs = require('fs');
   
   return {
     ...actualFs,
@@ -178,21 +178,27 @@ describe('Configuration Loading', () => {
     process.env = {
       RSOLV_API_KEY: 'env-api-key',
       GITHUB_TOKEN: 'github-token',
-      NODE_ENV: 'test'
+      NODE_ENV: 'test',
+      RSOLV_CONFIG_PATH: '.github/rsolv.yml'
     };
     
-    const config = await loadConfig();
+    // Create an empty config file
+    fs.writeFileSync('.github/rsolv.yml', '');
     
-    // Restore environment
-    process.env = originalEnv;
-    
-    expect(config).toBeDefined();
-    expect(config.apiKey).toBe('env-api-key');
-    expect(config.configPath).toBe('.github/rsolv.yml');
-    // Check if properties are defined without asserting specific values
-    expect(config.aiProvider).toBeDefined();
-    expect(config.containerConfig).toBeDefined();
-    expect(config.securitySettings).toBeDefined();
+    try {
+      const config = await loadConfig();
+      
+      expect(config).toBeDefined();
+      expect(config.apiKey).toBe('env-api-key');
+      expect(config.configPath).toBe('.github/rsolv.yml');
+      // Check if properties are defined without asserting specific values
+      expect(config.aiProvider).toBeDefined();
+      expect(config.containerConfig).toBeDefined();
+      expect(config.securitySettings).toBeDefined();
+    } finally {
+      // Restore environment
+      process.env = originalEnv;
+    }
   });
   
   test('loadConfig should validate configuration', async () => {

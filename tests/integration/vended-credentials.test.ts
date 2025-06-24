@@ -71,7 +71,7 @@ mock.module('../../src/ai/analyzer.js', () => ({
   })
 }));
 
-mock.module('../../src/ai/solution', () => ({
+mock.module('../../src/ai/solution.js', () => ({
   generateSolution: mock(() => Promise.resolve({
     success: true,
     message: 'Solution generated with vended credentials',
@@ -81,7 +81,7 @@ mock.module('../../src/ai/solution', () => ({
   }))
 }));
 
-mock.module('../../src/github/pr', () => ({
+mock.module('../../src/github/pr.js', () => ({
   createPullRequest: mock(() => Promise.resolve({
     success: true,
     message: 'Pull request created',
@@ -91,7 +91,7 @@ mock.module('../../src/github/pr', () => ({
 }));
 
 // Mock the EnhancedClaudeCodeAdapter to avoid timeout issues
-mock.module('../../src/ai/adapters/claude-code-enhanced', () => ({
+mock.module('../../src/ai/adapters/claude-code-enhanced.js', () => ({
   EnhancedClaudeCodeAdapter: class {
     constructor(config: any) {
       // Store config for testing

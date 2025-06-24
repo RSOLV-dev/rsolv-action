@@ -16,7 +16,7 @@ mock.module('../../src/utils/logger.js', () => ({
 }));
 
 // Mock the GitHub API client
-mock.module('../../src/github/api', () => {
+mock.module('../../src/github/api.js', () => {
   return {
     getGitHubClient: () => ({
       repos: {
@@ -78,7 +78,7 @@ mock.module('../../src/github/api', () => {
 });
 
 // Mock the AI client
-mock.module('../../src/ai/client', () => ({
+mock.module('../../src/ai/client.js', () => ({
   getAiClient: () => ({
     complete: async (prompt: string) => {
       return 'This pull request fixes the authentication bug reported in issue #42.\n\n## Changes\n- Fixed token validation\n- Added proper error handling\n\n## Testing\n- Added unit tests\n- Manual testing completed';

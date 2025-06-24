@@ -1,10 +1,10 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
-import { processIssue } from '../unified-processor';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { processIssues } from '../unified-processor';
 import { IssueContext } from '../../types';
 import { ActionConfig } from '../../config';
 
 // Mock the credential manager module
-mock.module('../../credentials/manager', () => ({
+mock.module('../../credentials/manager.js', () => ({
   RSOLVCredentialManager: class {
     private apiKey: string = '';
     
@@ -28,7 +28,7 @@ mock.module('../../credentials/manager', () => ({
 
 // Mock the enhanced claude code adapter
 let mockCredentialManagerReceived: any = null;
-mock.module('../adapters/claude-code-enhanced', () => ({
+mock.module('../adapters/claude-code-enhanced.js', () => ({
   EnhancedClaudeCodeAdapter: class {
     config: any;
     repoPath: string;
@@ -40,6 +40,7 @@ mock.module('../adapters/claude-code-enhanced', () => ({
       this.credentialManager = credentialManager;
       // Capture the credential manager for testing
       mockCredentialManagerReceived = credentialManager;
+      console.log('EnhancedClaudeCodeAdapter mock created with credentialManager:', !!credentialManager);
     }
     
     async gatherDeepContext() {
@@ -70,7 +71,7 @@ mock.module('../adapters/claude-code-enhanced', () => ({
 }));
 
 // Mock other dependencies
-mock.module('../analysis', () => ({
+mock.module('../analysis.js', () => ({
   analyzeIssue: async () => ({
     canBeFixed: true,
     issueType: 'bug',
@@ -81,7 +82,7 @@ mock.module('../analysis', () => ({
   })
 }));
 
-mock.module('../solution', () => ({
+mock.module('../solution.js', () => ({
   generateSolution: async () => ({
     success: true,
     changes: {
@@ -90,7 +91,7 @@ mock.module('../solution', () => ({
   })
 }));
 
-mock.module('../pr', () => ({
+mock.module('../../github/pr.js', () => ({
   createPullRequest: async () => ({
     success: true,
     pullRequestUrl: 'https://github.com/test/repo/pull/1',
@@ -106,18 +107,27 @@ describe('Unified Processor Credential Manager Passing', () => {
     // Reset the captured credential manager
     mockCredentialManagerReceived = null;
     
+    // Set NODE_ENV to test to ensure proper test behavior
+    process.env.NODE_ENV = 'test';
+    // Set RSOLV_API_KEY for vended credentials
+    process.env.RSOLV_API_KEY = 'rsolv_test_key_123';
+    
     config = {
+      githubToken: 'test-token',
       aiProvider: {
         provider: 'claude-code',
         apiKey: '',
+        model: 'claude-3-sonnet-20240229',
         useVendedCredentials: true
       },
       rsolvApiKey: 'rsolv_test_key_123',
       enableSecurityAnalysis: false,
       claudeCodeConfig: {
         enableDeepContext: true
-      }
-    };
+      },
+      issueLabel: 'rsolv:automate',
+      dryRun: false
+    } as ActionConfig;
     
     issue = {
       id: 'test-issue-123',
@@ -137,10 +147,19 @@ describe('Unified Processor Credential Manager Passing', () => {
     };
   });
   
+  afterEach(() => {
+    // Clean up environment
+    delete process.env.RSOLV_API_KEY;
+    delete process.env.NODE_ENV;
+  });
+  
   test('should create and pass credential manager to EnhancedClaudeCodeAdapter when using vended credentials', async () => {
-    const result = await processIssue(issue, config, {
+    console.log('Test config before processIssues:', JSON.stringify(config.aiProvider, null, 2));
+    
+    const results = await processIssues([issue], config, {
       enableEnhancedContext: true
     });
+    const result = results[0];
     
     // The credential manager should have been created and passed
     expect(mockCredentialManagerReceived).toBeDefined();
@@ -160,9 +179,10 @@ describe('Unified Processor Credential Manager Passing', () => {
     config.aiProvider.useVendedCredentials = false;
     config.aiProvider.apiKey = 'direct-api-key';
     
-    const result = await processIssue(issue, config, {
+    const results = await processIssues([issue], config, {
       enableEnhancedContext: true
     });
+    const result = results[0];
     
     // No credential manager should be passed
     expect(mockCredentialManagerReceived).toBeUndefined();
@@ -174,9 +194,10 @@ describe('Unified Processor Credential Manager Passing', () => {
   test('should not create credential manager when rsolvApiKey is missing', async () => {
     config.rsolvApiKey = undefined;
     
-    const result = await processIssue(issue, config, {
+    const results = await processIssues([issue], config, {
       enableEnhancedContext: true
     });
+    const result = results[0];
     
     // No credential manager should be passed
     expect(mockCredentialManagerReceived).toBeUndefined();
@@ -187,7 +208,7 @@ describe('Unified Processor Credential Manager Passing', () => {
   
   test('should handle credential manager creation errors gracefully', async () => {
     // Mock a failing credential manager
-    mock.module('../../credentials/manager', () => ({
+    mock.module('../../credentials/manager.js', () => ({
       RSOLVCredentialManager: class {
         async initialize() {
           throw new Error('Failed to initialize credentials');
@@ -196,9 +217,10 @@ describe('Unified Processor Credential Manager Passing', () => {
     }));
     
     // Should not throw, but should continue without credential manager
-    const result = await processIssue(issue, config, {
+    const results = await processIssues([issue], config, {
       enableEnhancedContext: true
     });
+    const result = results[0];
     
     // Should still complete but without credential manager
     expect(result).toBeDefined();

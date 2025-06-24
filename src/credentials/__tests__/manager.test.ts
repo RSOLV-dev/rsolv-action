@@ -55,16 +55,18 @@ describe('RSOLVCredentialManager', () => {
         }
       };
 
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: mockResponse
-      });
+        status: 200,
+        json: async () => mockResponse,
+        text: async () => JSON.stringify(mockResponse)
+      } as Response));
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
 
       // Verify fetch was called correctly
-      expect(fetchMock.mock.mock.calls[0][0]).toBe(
+      expect(fetchMock.mock.calls[0][0]).toBe(
         'https://api.rsolv.dev/api/v1/credentials/exchange',
         {
           method: 'POST',
@@ -88,22 +90,23 @@ describe('RSOLVCredentialManager', () => {
     });
 
     test('should throw error on failed API response', async () => {
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
-        json: async () => ({ error: 'Invalid API key' })
-      });
+        json: async () => ({ error: 'Invalid API key' }),
+        text: async () => JSON.stringify({ error: 'Invalid API key' })
+      } as Response));
 
       const manager = new RSOLVCredentialManager();
       
       await expect(manager.initialize('invalid_key')).rejects.toThrow(
-        'Failed to exchange credentials: Unauthorized'
+        'Failed to exchange credentials: Invalid API key'
       );
     });
 
     test('should throw error on network failure', async () => {
-      fetchMock.mockErrorOnce(new Error('Network error'));
+      fetchMock.mockImplementationOnce(() => Promise.reject(new Error('Network error')));
 
       const manager = new RSOLVCredentialManager();
       
@@ -127,10 +130,12 @@ describe('RSOLVCredentialManager', () => {
         }
       };
 
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: mockResponse
-      });
+        status: 200,
+        json: async () => mockResponse,
+        text: async () => JSON.stringify(mockResponse)
+      } as Response));
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
@@ -153,10 +158,12 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: mockResponse
-      });
+        status: 200,
+        json: async () => mockResponse,
+        text: async () => JSON.stringify(mockResponse)
+      } as Response));
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
@@ -177,16 +184,18 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: mockResponse
-      });
+        status: 200,
+        json: async () => mockResponse,
+        text: async () => JSON.stringify(mockResponse)
+      } as Response));
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
 
       expect(() => manager.getCredential('anthropic')).toThrow(
-        'No valid credential for anthropic'
+        'Credential for anthropic has expired'
       );
     });
 
@@ -201,10 +210,12 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: mockResponse
-      });
+        status: 200,
+        json: async () => mockResponse,
+        text: async () => JSON.stringify(mockResponse)
+      } as Response));
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
@@ -229,14 +240,18 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: initialResponse
-      });
-      fetchMock.mockResponseOnce({
+        status: 200,
+        json: async () => initialResponse,
+        text: async () => JSON.stringify(initialResponse)
+      } as Response));
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: async () => ({ acknowledged: true })
-      });
+        status: 200,
+        json: async () => ({ acknowledged: true }),
+        text: async () => JSON.stringify({ acknowledged: true })
+      } as Response));
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
@@ -247,8 +262,8 @@ describe('RSOLVCredentialManager', () => {
       });
 
       // Verify the second call was for usage reporting
-      expect(fetchMock.mock.mock.calls.length).toBe(2);
-      const secondCall = fetchMock.mock.mock.calls[1];
+      expect(fetchMock.mock.calls.length).toBe(2);
+      const secondCall = fetchMock.mock.calls[1];
       expect(secondCall[0]).toContain('/api/v1/usage/report');
     });
 
@@ -263,14 +278,19 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: initialResponse
-      });
-      fetchMock.mockResponseOnce({
+        status: 200,
+        json: async () => initialResponse,
+        text: async () => JSON.stringify(initialResponse)
+      } as Response));
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: false,
-        status: 500
-      });
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => ({ error: 'Server error' }),
+        text: async () => JSON.stringify({ error: 'Server error' })
+      } as Response));
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
@@ -295,10 +315,12 @@ describe('RSOLVCredentialManager', () => {
         usage: { remaining_fixes: 85 }
       };
 
-      fetchMock.mockResponseOnce({
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: mockResponse
-      });
+        status: 200,
+        json: async () => mockResponse,
+        text: async () => JSON.stringify(mockResponse)
+      } as Response));
 
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');

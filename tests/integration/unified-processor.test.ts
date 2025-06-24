@@ -17,16 +17,19 @@ mock.module('../../src/utils/logger.js', () => ({
 }));
 
 // Mock the dependencies
-mock.module('../../src/ai/analyzer', () => ({
+mock.module('../../src/ai/analyzer.js', () => ({
   analyzeIssue: mock(() => Promise.resolve({
     canBeFixed: true,
     confidence: 0.9,
     suggestedApproach: 'Fix the bug',
-    affectedFiles: ['src/test.ts']
+    affectedFiles: ['src/test.ts'],
+    filesToModify: ['src/test.ts'],
+    estimatedComplexity: 'medium',
+    issueType: 'bug'
   }))
 }));
 
-mock.module('../../src/ai/solution', () => ({
+mock.module('../../src/ai/solution.js', () => ({
   generateSolution: mock(() => Promise.resolve({
     success: true,
     message: 'Solution generated successfully',
@@ -36,7 +39,7 @@ mock.module('../../src/ai/solution', () => ({
   }))
 }));
 
-mock.module('../../src/github/pr', () => ({
+mock.module('../../src/github/pr.js', () => ({
   createPullRequest: mock(() => Promise.resolve({
     success: true,
     message: 'Pull request created successfully',
@@ -45,26 +48,31 @@ mock.module('../../src/github/pr', () => ({
   }))
 }));
 
-mock.module('../../src/ai/security-analyzer', () => ({
+mock.module('../../src/ai/security-analyzer.js', () => ({
   SecurityAwareAnalyzer: class {
     async analyzeWithSecurity() {
       return {
-        analysis: {
-          canBeFixed: true,
-          confidence: 0.9,
-          suggestedApproach: 'Fix the bug with security considerations',
-          affectedFiles: ['src/test.ts']
-        },
+        canBeFixed: true,
+        confidence: 0.9,
+        suggestedApproach: 'Fix the bug with security considerations',
+        affectedFiles: ['src/test.ts'],
+        filesToModify: ['src/test.ts'],
+        estimatedComplexity: 'medium',
+        issueType: 'bug',
         securityAnalysis: {
+          hasSecurityIssues: false,
           vulnerabilities: [],
-          riskLevel: 'low'
+          riskLevel: 'low',
+          affectedFiles: [],
+          recommendations: [],
+          summary: 'No security issues detected'
         }
       };
     }
   }
 }));
 
-mock.module('../../src/ai/adapters/claude-code-enhanced', () => ({
+mock.module('../../src/ai/adapters/claude-code-enhanced.js', () => ({
   EnhancedClaudeCodeAdapter: class {
     async gatherDeepContext() {
       return {

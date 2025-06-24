@@ -64,10 +64,12 @@ describe('AI Client with Credential Vending', () => {
       }
     };
 
-    fetchMock.mockResponseOnce({
+    fetchMock.mockImplementationOnce(() => Promise.resolve({
       ok: true,
-      json: mockAIResponse
-    });
+      status: 200,
+      json: async () => mockAIResponse,
+      text: async () => JSON.stringify(mockAIResponse)
+    } as Response));
 
     // Set RSOLV API key
     process.env.RSOLV_API_KEY = 'rsolv_test_key';
@@ -121,10 +123,12 @@ describe('AI Client with Credential Vending', () => {
       }
     };
 
-    fetchMock.mockResponseOnce({
+    fetchMock.mockImplementationOnce(() => Promise.resolve({
       ok: true,
-      json: mockAIResponse
-    });
+      status: 200,
+      json: async () => mockAIResponse,
+      text: async () => JSON.stringify(mockAIResponse)
+    } as Response));
 
     const config: AiProviderConfig = {
       provider: 'openai',
@@ -167,10 +171,12 @@ describe('AI Client with Credential Vending', () => {
       }
     };
 
-    fetchMock.mockResponseOnce({
+    fetchMock.mockImplementationOnce(() => Promise.resolve({
       ok: true,
-      json: mockAIResponse
-    });
+      status: 200,
+      json: async () => mockAIResponse,
+      text: async () => JSON.stringify(mockAIResponse)
+    } as Response));
 
     const config: AiProviderConfig = {
       provider: 'anthropic',
@@ -188,7 +194,7 @@ describe('AI Client with Credential Vending', () => {
     expect(mockGetCredential).toHaveBeenCalledTimes(2);
     
     // The second API call should use the refreshed credential
-    const calls = fetchMock.mock.mock.calls;
+    const calls = fetchMock.mock.calls;
     expect(calls[1][1].headers['X-API-Key']).toBe('temp_ant_new123');
   });
 
@@ -199,10 +205,12 @@ describe('AI Client with Credential Vending', () => {
       }]
     };
 
-    fetchMock.mockResponseOnce({
+    fetchMock.mockImplementationOnce(() => Promise.resolve({
       ok: true,
-      json: mockAIResponse
-    });
+      status: 200,
+      json: async () => mockAIResponse,
+      text: async () => JSON.stringify(mockAIResponse)
+    } as Response));
 
     const config: AiProviderConfig = {
       provider: 'anthropic',
@@ -215,9 +223,9 @@ describe('AI Client with Credential Vending', () => {
     await client.complete('Test prompt');
 
     // Should use direct API key
-    expect(fetchMock.mock.mock.calls.length).toBe(1);
-    expect(fetchMock.mock.mock.calls[0][0]).toBe('https://api.anthropic.com/v1/messages');
-    expect(fetchMock.mock.mock.calls[0][1].headers['X-API-Key']).toBe('direct_ant_key_123');
+    expect(fetchMock.mock.calls.length).toBe(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.anthropic.com/v1/messages');
+    expect(fetchMock.mock.calls[0][1].headers['X-API-Key']).toBe('direct_ant_key_123');
   });
 
   test('should handle vended credential errors gracefully', async () => {

@@ -101,8 +101,11 @@ export class EnhancedClaudeCodeAdapter extends ClaudeCodeAdapter {
       // Use the parent class's generateSolution method to gather context
       // Create a mock analysis for context gathering
       const contextAnalysis: IssueAnalysis = {
+        summary: 'Analyzing issue for security vulnerabilities',
         complexity: 'medium' as const,
         estimatedTime: 60,
+        potentialFixes: [],
+        recommendedApproach: 'Generate solution using Claude Code SDK',
         relatedFiles: []
       };
       
@@ -144,8 +147,8 @@ export class EnhancedClaudeCodeAdapter extends ClaudeCodeAdapter {
     // First, gather deep context
     const deepContext = await this.gatherDeepContext(issueContext, {
       enableUltraThink: true,
-      maxExplorationTime: this.config.claudeCodeConfig?.contextGatheringTimeout || 300000,
-      contextDepth: this.config.claudeCodeConfig?.contextDepth || 'deep',
+      maxExplorationTime: (this as any).config.claudeCodeConfig?.contextGatheringTimeout || 300000,
+      contextDepth: (this as any).config.claudeCodeConfig?.contextDepth || 'deep',
       includeArchitectureAnalysis: true,
       includeTestPatterns: true,
       includeStyleGuide: true,
@@ -161,7 +164,21 @@ export class EnhancedClaudeCodeAdapter extends ClaudeCodeAdapter {
     );
     
     // Generate solution using the enhanced prompt
-    return await this.generateSolution(issueContext, analysis, solutionPrompt);
+    const result = await this.generateSolution(issueContext, analysis, solutionPrompt);
+    
+    // Convert Solution to PullRequestSolution
+    if (!result.success || !result.changes) {
+      throw new Error(result.error || 'Failed to generate solution');
+    }
+    
+    return {
+      title: `Fix ${issueContext.title}`,
+      description: `This PR fixes the security issue: ${issueContext.body}\n\nGenerated using enhanced Claude Code SDK with deep context analysis.`,
+      files: Object.entries(result.changes).map(([path, changes]) => ({
+        path,
+        changes
+      }))
+    };
   }
   
   /**

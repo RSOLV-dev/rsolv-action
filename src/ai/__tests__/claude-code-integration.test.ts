@@ -11,8 +11,9 @@ describe('Claude Code Integration Tests', () => {
   
   beforeEach(() => {
     if (!USE_REAL_APIS) {
-      // Mock modules for unit testing
-      mock.module('../../utils/logger', () => ({
+      // Mock modules for unit testing using require.resolve
+      const loggerPath = require.resolve('../../utils/logger');
+      mock.module(loggerPath, () => ({
         logger: {
           info: mock(() => {}),
           warn: mock(() => {}),
@@ -21,8 +22,9 @@ describe('Claude Code Integration Tests', () => {
         }
       }));
       
-      // Mock child_process for CLI simulation
-      mock.module('child_process', () => ({
+      // Mock child_process for CLI simulation using require.resolve
+      const childProcessPath = require.resolve('child_process');
+      mock.module(childProcessPath, () => ({
         spawn: () => ({
           stdout: { on: mock(() => {}) },
           stderr: { on: mock(() => {}) },
@@ -35,6 +37,7 @@ describe('Claude Code Integration Tests', () => {
     
     config = {
       provider: 'claude-code',
+      apiKey: 'test-api-key',
       model: 'claude-3-sonnet-20240229',
       temperature: 0.2,
       maxTokens: 4000

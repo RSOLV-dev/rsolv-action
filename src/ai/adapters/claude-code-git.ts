@@ -62,24 +62,59 @@ export class GitBasedClaudeCodeAdapter extends ClaudeCodeAdapter {
 
 ## Your Task:
 
-### Phase 1: Locate Vulnerabilities
+### Phase 1: Locate Vulnerabilities & Check Tests
 - Use Grep to find vulnerable code patterns
 - Use Read to understand the full context
-- Identify all instances that need fixing
+- Search for existing tests that exercise the vulnerable code
+- Identify how the vulnerable code is used (callbacks, promises, etc.)
+- Consider using sequential thinking for complex vulnerability analysis
 
-### Phase 2: Fix Vulnerabilities In-Place
+### Phase 2: Red-Green-Refactor Validation
+**CRITICAL**: Before fixing, validate the vulnerability exists:
+- If tests exist: Run them to establish baseline
+- Create or identify a test that demonstrates the vulnerability
+- Ensure this test would FAIL on vulnerable code (RED phase)
+- Document what malicious input would exploit the vulnerability
+
+### Phase 3: Fix Vulnerabilities In-Place with Compatibility
 **IMPORTANT**: Use the Edit or MultiEdit tools to directly modify the vulnerable files.
 - Make minimal, surgical changes to fix security issues
-- Preserve all non-vulnerable functionality
+- **PRESERVE API COMPATIBILITY**: 
+  - If code uses callbacks, maintain callback interface
+  - If changing from callbacks to async/await, add compatibility wrapper
+  - Never break existing function signatures
 - Maintain existing code style and formatting
 - Fix all instances of the vulnerability
 
-### Phase 3: Verify Your Changes
+Example compatibility wrapper for callback to async conversion:
+\`\`\`javascript
+// Original method for compatibility
+methodName(param1, param2, callback) {
+  if (typeof callback === 'function') {
+    // Callback style
+    this.methodNameAsync(param1, param2)
+      .then(result => callback(null, result))
+      .catch(error => callback(error));
+  } else {
+    // Promise style
+    return this.methodNameAsync(param1, param2);
+  }
+}
+
+// New async implementation
+async methodNameAsync(param1, param2) {
+  // Secure implementation here
+}
+\`\`\`
+
+### Phase 4: Verify Your Changes (GREEN phase)
 - Use Read to verify your edits were applied correctly
 - Ensure the code still makes sense and will function properly
-- Check that you haven't introduced syntax errors
+- Verify the test that demonstrated the vulnerability now PASSES
+- Check that legitimate use cases still work
+- Ensure no breaking changes to public APIs
 
-### Phase 4: Provide Fix Summary
+### Phase 5: Provide Fix Summary
 After completing your edits, provide a summary in this JSON format:
 
 \`\`\`json
@@ -98,10 +133,21 @@ After completing your edits, provide a summary in this JSON format:
       "linesModified": [45, 67, 89]
     }
   ],
+  "compatibilityNotes": {
+    "apiChanged": false,
+    "backwardCompatible": true,
+    "compatibilityMeasures": "Added wrapper to maintain callback interface while using async internally"
+  },
+  "validationResults": {
+    "vulnerabilityDemonstrated": "Showed that input '; DROP TABLE; -- would execute",
+    "testCreated": true,
+    "testPasses": true
+  },
   "securityImpact": "Explanation of how this improves security",
   "testingGuidance": [
     "Test that normal functionality still works",
-    "Verify malicious inputs are now handled safely"
+    "Verify malicious inputs are now handled safely",
+    "Run existing test suite to ensure no regressions"
   ],
   "breakingChanges": false,
   "additionalNotes": "Any other relevant information"
@@ -110,10 +156,13 @@ After completing your edits, provide a summary in this JSON format:
 
 ## Critical Instructions:
 1. **Use Edit/MultiEdit tools** - Do NOT provide file contents in JSON
-2. **Edit existing files only** - Do NOT create new files
+2. **Edit existing files only** - Do NOT create new files unless absolutely necessary (e.g., missing security config file)  
 3. **Make minimal changes** - Only fix the security issue
 4. **Preserve functionality** - The code must still work correctly
-5. **Fix all instances** - Don't leave any vulnerabilities unfixed
+5. **Maintain compatibility** - NEVER break existing APIs or interfaces
+6. **Validate the fix** - Demonstrate vulnerability exists and is fixed
+7. **Fix all instances** - Don't leave any vulnerabilities unfixed
+8. **Use relative paths** - Use paths like 'app/data/file.js' not '/app/data/file.js'
 
 Your changes will be committed to git, so make them production-ready!`;
   }

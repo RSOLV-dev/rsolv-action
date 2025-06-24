@@ -7,12 +7,16 @@ mock.module('node-fetch', () => ({
   default: mockFetch
 }));
 
+// Store original fetch
+const originalFetch = global.fetch;
+
 // Mock the PR creation workflow integration
 describe('PR Integration with Fix Attempt Recording', () => {
   let apiClient: RsolvApiClient;
 
   beforeEach(() => {
     mockFetch.mockClear();
+    global.fetch = mockFetch as any;
     apiClient = new RsolvApiClient({
       baseUrl: 'https://api.rsolv.dev',
       apiKey: 'test-api-key'
@@ -23,14 +27,25 @@ describe('PR Integration with Fix Attempt Recording', () => {
     // Clean up any environment variables
     delete process.env.RSOLV_API_KEY;
     delete process.env.RSOLV_API_URL;
+    // Restore fetch
+    global.fetch = originalFetch;
+    mock.restore();
   });
 
   it('should record fix attempt after successful PR creation', async () => {
     // Mock successful API response
-    const mockResponse = {
+    mockFetch.mockImplementationOnce(() => Promise.resolve({
       ok: true,
       status: 201,
-      json: mock().mockResolvedValue({
+      json: async () => ({
+        id: 123,
+        status: 'pending',
+        github_org: 'test-org',
+        repo_name: 'test-repo',
+        pr_number: 456,
+        billing_status: 'not_billed'
+      }),
+      text: async () => JSON.stringify({
         id: 123,
         status: 'pending',
         github_org: 'test-org',
@@ -38,9 +53,7 @@ describe('PR Integration with Fix Attempt Recording', () => {
         pr_number: 456,
         billing_status: 'not_billed'
       })
-    };
-    
-    mockFetch.mockResolvedValue(mockResponse);
+    } as Response));
 
     // Simulate PR data
     const issueContext = {
@@ -82,32 +95,26 @@ describe('PR Integration with Fix Attempt Recording', () => {
     });
 
     // Verify the API was called correctly
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.rsolv.dev/api/v1/fix-attempts',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer test-api-key'
-        },
-        body: JSON.stringify({
-          github_org: 'test-org',
-          repo_name: 'test-repo',
-          issue_number: 789,
-          pr_number: 456,
-          pr_title: '[RSOLV] Fix security vulnerability (fixes #789)',
-          pr_url: 'https://github.com/test-org/test-repo/pull/456',
-          issue_title: 'Fix security vulnerability',
-          issue_url: 'https://github.com/test-org/test-repo/issues/789',
-          api_key_used: 'test-api-key',
-          metadata: {
-            branch: 'rsolv/789-fix-security',
-            labels: ['rsolv:automated'],
-            created_by: 'rsolv-action'
-          }
-        })
-      }
-    );
+    expect(mockFetch.mock.calls.length).toBe(1);
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.rsolv.dev/api/v1/fix-attempts');
+    expect(options.method).toBe('POST');
+    expect(options.headers['Content-Type']).toBe('application/json');
+    expect(options.headers['Authorization']).toBe('Bearer test-api-key');
+    
+    const body = JSON.parse(options.body);
+    expect(body.github_org).toBe('test-org');
+    expect(body.repo_name).toBe('test-repo');
+    expect(body.issue_number).toBe(789);
+    expect(body.pr_number).toBe(456);
+    expect(body.pr_title).toBe('[RSOLV] Fix security vulnerability (fixes #789)');
+    expect(body.pr_url).toBe('https://github.com/test-org/test-repo/pull/456');
+    expect(body.issue_title).toBe('Fix security vulnerability');
+    expect(body.issue_url).toBe('https://github.com/test-org/test-repo/issues/789');
+    expect(body.api_key_used).toBe('test-api-key');
+    expect(body.metadata.branch).toBe('rsolv/789-fix-security');
+    expect(body.metadata.labels).toEqual(['rsolv:automated']);
+    expect(body.metadata.created_by).toBe('rsolv-action');
 
     // Verify successful result
     expect(result.success).toBe(true);
@@ -117,19 +124,24 @@ describe('PR Integration with Fix Attempt Recording', () => {
 
   it('should handle PR without issue reference', async () => {
     // Mock successful API response
-    const mockResponse = {
+    mockFetch.mockImplementationOnce(() => Promise.resolve({
       ok: true,
       status: 201,
-      json: mock().mockResolvedValue({
+      json: async () => ({
+        id: 124,
+        status: 'pending',
+        github_org: 'test-org',
+        repo_name: 'test-repo',
+        pr_number: 789
+      }),
+      text: async () => JSON.stringify({
         id: 124,
         status: 'pending',
         github_org: 'test-org',
         repo_name: 'test-repo',
         pr_number: 789
       })
-    };
-    
-    mockFetch.mockResolvedValue(mockResponse);
+    } as Response));
 
     // Simulate PR without issue reference
     const prData = {
@@ -158,15 +170,14 @@ describe('PR Integration with Fix Attempt Recording', () => {
     });
 
     // Verify the API was called without issue fields
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.rsolv.dev/api/v1/fix-attempts',
-      expect.objectContaining({
-        body: expect.stringContaining('"pr_number":789')
-      })
-    );
+    expect(mockFetch.mock.calls.length).toBe(1);
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.rsolv.dev/api/v1/fix-attempts');
+    
+    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(requestBody.pr_number).toBe(789);
 
     // Should not contain issue fields
-    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(requestBody.issue_number).toBeUndefined();
     expect(requestBody.issue_title).toBeUndefined();
     expect(requestBody.issue_url).toBeUndefined();
@@ -178,17 +189,20 @@ describe('PR Integration with Fix Attempt Recording', () => {
 
   it('should handle API errors gracefully without failing PR creation', async () => {
     // Mock API error response
-    const mockResponse = {
+    mockFetch.mockImplementationOnce(() => Promise.resolve({
       ok: false,
       status: 422,
-      json: mock().mockResolvedValue({
+      json: async () => ({
+        errors: {
+          repo_name: ['can\'t be blank']
+        }
+      }),
+      text: async () => JSON.stringify({
         errors: {
           repo_name: ['can\'t be blank']
         }
       })
-    };
-    
-    mockFetch.mockResolvedValue(mockResponse);
+    } as Response));
 
     // Record fix attempt
     const result = await apiClient.recordFixAttempt({
@@ -214,7 +228,7 @@ describe('PR Integration with Fix Attempt Recording', () => {
 
   it('should handle network errors gracefully', async () => {
     // Mock network error
-    mockFetch.mockRejectedValue(new Error('Connection timeout'));
+    mockFetch.mockImplementationOnce(() => Promise.reject(new Error('Connection timeout')));
 
     // Record fix attempt
     const result = await apiClient.recordFixAttempt({
@@ -249,13 +263,12 @@ describe('PR Integration with Fix Attempt Recording', () => {
     });
 
     // Mock successful response
-    const mockResponse = {
+    mockFetch.mockImplementationOnce(() => Promise.resolve({
       ok: true,
       status: 201,
-      json: mock().mockResolvedValue({ id: 999 })
-    };
-    
-    mockFetch.mockResolvedValue(mockResponse);
+      json: async () => ({ id: 999 }),
+      text: async () => JSON.stringify({ id: 999 })
+    } as Response));
 
     // Make request
     await envClient.recordFixAttempt({
@@ -269,13 +282,9 @@ describe('PR Integration with Fix Attempt Recording', () => {
     });
 
     // Verify correct URL and auth header
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://staging-api.rsolv.dev/api/v1/fix-attempts',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'Authorization': 'Bearer staging-key'
-        })
-      })
-    );
+    expect(mockFetch.mock.calls.length).toBe(1);
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://staging-api.rsolv.dev/api/v1/fix-attempts');
+    expect(options.headers['Authorization']).toBe('Bearer staging-key');
   });
 });

@@ -117,6 +117,7 @@ async function processIssue(
     
     // Step 2: Solution generation (with optional enhanced context)
     logger.info(`Generating solution for issue #${issue.number}`);
+    logger.info(`Config aiProvider:`, JSON.stringify(config.aiProvider));
     
     let solution;
     let contextGatheringTime;

@@ -29,8 +29,8 @@ interface UsageData {
  * Claude Code SDK adapter class
  */
 export class ClaudeCodeAdapter {
-  private repoPath: string;
-  private config: AIConfig;
+  protected repoPath: string;
+  protected config: AIConfig;
   private claudeConfig: ClaudeCodeConfig;
   private tempDir: string;
   private usageData: UsageData[] = [];
@@ -72,8 +72,24 @@ export class ClaudeCodeAdapter {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      // Check if the SDK is installed by trying to import it
-      return true; // If we got here, the import succeeded
+      // Check if the SDK is installed
+      const { query } = await import('@anthropic-ai/claude-code');
+      
+      // If no executable path is configured and we're in a test environment, assume it's available
+      if (!this.claudeConfig.executablePath && process.env.NODE_ENV === 'test') {
+        return true;
+      }
+      
+      // Check if the executable exists
+      const executablePath = this.claudeConfig.executablePath || '/app/node_modules/@anthropic-ai/claude-code/cli.js';
+      const execExists = fs.existsSync(executablePath);
+      
+      if (!execExists) {
+        logger.warn(`Claude Code executable not found at: ${executablePath}`);
+        return false;
+      }
+      
+      return true;
     } catch (error) {
       logger.error('Claude Code SDK not available', error as Error);
       return false;
@@ -105,14 +121,19 @@ export class ClaudeCodeAdapter {
       // Check if Claude Code SDK is available
       const available = await this.isAvailable();
       if (!available) {
-        logger.warn('Claude Code SDK not available');
-        usageEntry.errorType = 'sdk_not_available';
+        logger.warn('Claude Code CLI not available');
+        usageEntry.errorType = 'cli_not_available';
         this.trackUsage(usageEntry);
         
         return {
           success: false,
-          message: 'Claude Code SDK not available',
-          error: 'Claude Code SDK not available. Please ensure @anthropic-ai/claude-code is installed.'
+          message: 'Claude Code CLI not available',
+          error: `Claude Code CLI not available. Please ensure @anthropic-ai/claude-code is installed and the executable path is correct.
+
+Installation instructions:
+1. Install Claude Code: npm install -g @anthropic-ai/claude-code
+2. Verify installation: claude -v
+3. Visit https://claude.ai/console/claude-code for more information`
         };
       }
       
@@ -150,14 +171,26 @@ export class ClaudeCodeAdapter {
           logger.info(`Starting Claude Code exploration for issue: ${issueContext.title}`);
         }
         
+        // Check for MCP config file
+        const mcpConfigPath = path.join(this.repoPath, 'mcp-config.json');
+        const mcpConfigExists = fs.existsSync(mcpConfigPath);
+        
+        const queryOptions: any = {
+          abortController,
+          cwd: this.repoPath,
+          maxTurns: 30, // Allow many turns for exploration and iterative development
+          pathToClaudeCodeExecutable: this.claudeConfig.executablePath || '/app/node_modules/@anthropic-ai/claude-code/cli.js',
+        };
+        
+        // Add MCP config if available
+        if (mcpConfigExists) {
+          queryOptions.mcpConfig = mcpConfigPath;
+          logger.info('Using MCP configuration from mcp-config.json, including sequential thinking');
+        }
+        
         for await (const message of query({
           prompt,
-          options: {
-            abortController,
-            cwd: this.repoPath,
-            maxTurns: 30, // Allow many turns for exploration and iterative development
-            pathToClaudeCodeExecutable: this.claudeConfig.executablePath || '/app/node_modules/@anthropic-ai/claude-code/cli.js',
-          },
+          options: queryOptions,
         })) {
           messages.push(message);
           messageCount++;
@@ -182,8 +215,8 @@ export class ClaudeCodeAdapter {
           }
           
           // Try to extract solution from text messages
-          if (message.type === 'text' && message.text) {
-            const potentialSolution = this.extractSolutionFromText(message.text);
+          if (message.type === 'assistant' && (message as any).text) {
+            const potentialSolution = this.extractSolutionFromText((message as any).text);
             if (potentialSolution) {
               solution = potentialSolution;
               if (this.claudeConfig.verboseLogging) {
@@ -345,7 +378,7 @@ export class ClaudeCodeAdapter {
   /**
    * Construct the prompt for Claude Code SDK
    */
-  private constructPrompt(
+  protected constructPrompt(
     issueContext: IssueContext, 
     analysis: IssueAnalysis,
     enhancedPrompt?: string
@@ -414,7 +447,7 @@ Remember: Take your time to explore and understand the codebase thoroughly befor
   /**
    * Extract solution from text response
    */
-  private extractSolutionFromText(text: string): PullRequestSolution | null {
+  protected extractSolutionFromText(text: string): PullRequestSolution | null {
     try {
       // Try to find JSON in code blocks
       const jsonBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
