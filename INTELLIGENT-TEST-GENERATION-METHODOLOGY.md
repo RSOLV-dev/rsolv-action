@@ -212,6 +212,18 @@ Create a test generation system that:
 - [ ] Vulnerability detection: 100% of known issues
 - [ ] Convention matching: Indistinguishable from human-written
 
+### Phase 6C: Java/PHP Validation (PENDING)
+
+**Continue validation with Java and PHP vulnerable applications before proceeding.**
+
+### Phase 6D: IaC/Terraform Validation (PENDING)
+
+**Validate with Infrastructure as Code vulnerable applications.**
+
+### Phase 6E: Re-validate Fix Validation (PENDING)
+
+**After completing 6C and 6D, re-validate RFC-020 implementation with all languages.**
+
 ### Phase 7: Terraform/IaC RFC (Week 4)
 
 **RFC-019: Infrastructure as Code Security Test Generation**
@@ -651,11 +663,11 @@ describe("Contributions command injection tests", () => {
 - Test with applications using Jest, Vitest, and other frameworks
 - Validate XSS, SQL injection, and other vulnerability types
 
-## Phase 7: Fix Validation Integration (RFC-020)
+## Phase 6.5: Fix Validation Integration (RFC-020) - IMPLEMENTED PREMATURELY
 
 ### Overview
 
-Following Phase 6 validation, we identified the need to integrate fix validation into the workflow. This ensures that Claude Code's generated fixes actually pass the intelligent tests before creating PRs.
+**⚠️ WARNING**: This was implemented after only Phase 6A and 6B, before completing validation with Java/PHP/IaC apps. Following Phase 6B validation, we identified the need to integrate fix validation into the workflow. This ensures that Claude Code's generated fixes actually pass the intelligent tests before creating PRs.
 
 ### Integration Design
 
@@ -682,8 +694,8 @@ Following Phase 6 validation, we identified the need to integrate fix validation
 - [x] Implement getMaxIterations with configuration hierarchy
 - [x] Add test failure context to Claude Code prompts
 - [x] Create comprehensive tests with TDD approach (10/10 passing)
-- [ ] Test with vulnerable apps
-- [ ] Document configuration options
+- [x] Update Claude Code prompts to include test context
+- ⚠️ NEEDS RE-VALIDATION with Java/PHP/IaC apps after Phase 6C/6D
 
 ### Configuration Example
 

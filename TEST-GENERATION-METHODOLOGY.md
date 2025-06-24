@@ -4,6 +4,22 @@
 
 This document tracks the implementation of automatic red-green-refactor test generation for RSOLV-action, enabling validation that vulnerability fixes actually work and don't break functionality.
 
+## Phase Alignment (Updated 2025-06-24)
+
+**IMPORTANT**: We prematurely implemented fix validation (RFC-020) before completing all language validations. Here's the correct phase ordering:
+
+1. **Phase 1-4**: Core test generation framework (✅ COMPLETED)
+2. **Phase 5**: Intelligent test framework integration (✅ COMPLETED)
+3. **Phase 6**: Real-world validation with vulnerable apps
+   - Phase 6A: JavaScript/TypeScript apps (✅ COMPLETED)
+   - Phase 6B: Ruby/Python apps (✅ COMPLETED)
+   - Phase 6C: Java/PHP apps (📋 PENDING)
+   - Phase 6D: IaC/Terraform apps (📋 PENDING)
+   - Phase 6.5: Fix validation integration (⚠️ IMPLEMENTED PREMATURELY - needs re-validation)
+   - Phase 6E: Re-validate fix validation with Java/PHP/IaC (📋 PENDING)
+4. **Phase 7**: Terraform/IaC RFC-019 (📋 PENDING)
+5. **Phase 8**: Production deployment (📋 PENDING)
+
 ## Implementation Status
 
 ### ✅ Phase 1: Research (COMPLETED)
@@ -48,7 +64,7 @@ See [INTELLIGENT-TEST-GENERATION-METHODOLOGY.md](./INTELLIGENT-TEST-GENERATION-M
 
 **All Phase 5 components are now complete with 100% test coverage.**
 
-### ✅ Phase 7: Fix Validation Integration (RFC-020) - COMPLETED 2025-06-24
+### ⚠️ Phase 6.5: Fix Validation Integration (RFC-020) - IMPLEMENTED PREMATURELY
 **NEW**: Integrate test validation into the fix generation workflow
 
 **Overview**: Ensure Claude Code's fixes actually pass the generated tests before creating PRs, with iterative feedback for failed fixes.
@@ -86,6 +102,8 @@ See [RFC-020](./RFCs/RFC-020-FIX-VALIDATION-INTEGRATION.md) for detailed design.
 - Integration verified with comprehensive tests in `claude-prompts-validation.test.ts`
 - Prompts now guide Claude Code to ensure fixes pass red-green-refactor tests
 
+**⚠️ IMPORTANT**: This was implemented after only Phase 6A and 6B. Must be re-validated with Phase 6C (Java/PHP) and 6D (IaC/Terraform) apps.
+
 ### 🔄 Phase 6: Real-World Validation with vulnerable-apps (IN PROGRESS)
 **Validate intelligent test generation with 150+ vulnerable applications**
 
@@ -103,6 +121,13 @@ See [INTELLIGENT-TEST-GENERATION-METHODOLOGY.md](./INTELLIGENT-TEST-GENERATION-M
 3. Added RSpec test generation support
 
 **Results**: Successfully generating framework-specific tests for Ruby (RSpec)
+
+### 📋 Phase 6E: Re-validate Fix Validation with All Languages (PENDING)
+**After completing Phase 6C and 6D, we must:**
+- Re-test fix validation with Java/PHP apps
+- Re-test fix validation with IaC/Terraform apps
+- Ensure iterative fixes work across all ecosystems
+- Document any language-specific adjustments needed
 
 ### 📋 Phase 7: Terraform/IaC Security Coverage (PENDING)
 **RFC-019: Infrastructure as Code Security Test Generation**
@@ -262,7 +287,7 @@ test("should prevent sql injection (GREEN)", async () => {
 - `/src/ai/test-generating-security-analyzer.ts` - Integration with SecurityAwareAnalyzer
 - `/src/ai/git-based-test-validator.ts` - Git-based test validation
 
-### Phase 7 Components (COMPLETED)
+### Phase 6.5 Components (PREMATURELY IMPLEMENTED)
 - `/src/ai/__tests__/git-based-processor-validation.test.ts` - Fix validation TDD tests
 - `/src/ai/__tests__/claude-prompts-validation.test.ts` - Claude Code prompt TDD tests
 - `/src/ai/__tests__/git-based-processor-prompt-integration.test.ts` - Integration tests
