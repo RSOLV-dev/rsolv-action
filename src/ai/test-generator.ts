@@ -247,6 +247,212 @@ test("{{testName}}", async () => {
   expect(result.success).toBe(true);
   expect(result.data).toBeDefined();
 });`);
+
+    // Broken Authentication Red Test Template
+    this.templates.set('BROKEN_AUTHENTICATION:red', `
+test("{{testName}}", async () => {
+  const bypassPayload = "{{attackVector}}";
+  
+  {{#if isBrowser}}
+  // Attempt to bypass authentication
+  await page.goto('{{protectedUrl}}');
+  await page.evaluate((payload) => {
+    localStorage.setItem('auth-token', payload);
+  }, bypassPayload);
+  await page.reload();
+  
+  // Should be able to access protected content
+  const content = await page.textContent('body');
+  expect(content).not.toContain('Access Denied');
+  {{else}}
+  // Server-side authentication bypass test
+  const result = await {{functionCall}}({
+    headers: { 'Authorization': bypassPayload }
+  });
+  
+  // Vulnerability allows bypass (test passes on vulnerable code)
+  expect(result.authenticated).toBe(true);
+  expect(result.user).toBeDefined();
+  {{/if}}
+});`);
+
+    // Broken Authentication Green Test Template
+    this.templates.set('BROKEN_AUTHENTICATION:green', `
+test("{{testName}}", async () => {
+  const bypassPayload = "{{attackVector}}";
+  const validToken = "{{validInput}}";
+  
+  {{#if isBrowser}}
+  // Test bypass attempt is blocked
+  await page.goto('{{protectedUrl}}');
+  await page.evaluate((payload) => {
+    localStorage.setItem('auth-token', payload);
+  }, bypassPayload);
+  await page.reload();
+  
+  const url = page.url();
+  expect(url).toContain('login');
+  
+  // Test valid authentication works
+  await page.evaluate((token) => {
+    localStorage.setItem('auth-token', token);
+  }, validToken);
+  await page.reload();
+  
+  const content = await page.textContent('body');
+  expect(content).toContain('Welcome');
+  {{else}}
+  // Test bypass is blocked
+  const failResult = await {{functionCall}}({
+    headers: { 'Authorization': bypassPayload }
+  });
+  expect(failResult.authenticated).toBe(false);
+  expect(failResult.error).toContain('Invalid token');
+  
+  // Test valid authentication works
+  const successResult = await {{functionCall}}({
+    headers: { 'Authorization': validToken }
+  });
+  expect(successResult.authenticated).toBe(true);
+  {{/if}}
+});`);
+
+    // CSRF Red Test Template
+    this.templates.set('CSRF:red', `
+test("{{testName}}", async () => {
+  const maliciousOrigin = "{{attackVector}}";
+  
+  {{#if isBrowser}}
+  // CSRF attack from malicious site
+  const response = await fetch('{{targetUrl}}', {
+    method: 'POST',
+    headers: {
+      'Origin': maliciousOrigin,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ action: 'transfer', amount: 1000 })
+  });
+  
+  // Vulnerability allows cross-origin request
+  expect(response.ok).toBe(true);
+  const data = await response.json();
+  expect(data.success).toBe(true);
+  {{else}}
+  // Server-side CSRF test
+  const result = await {{functionCall}}({
+    headers: {
+      'Origin': maliciousOrigin,
+      'Referer': maliciousOrigin
+    },
+    body: { action: 'sensitive-action' }
+  });
+  
+  // Vulnerability allows request without token
+  expect(result.success).toBe(true);
+  expect(result.error).toBeUndefined();
+  {{/if}}
+});`);
+
+    // CSRF Green Test Template  
+    this.templates.set('CSRF:green', `
+test("{{testName}}", async () => {
+  const maliciousOrigin = "{{attackVector}}";
+  const validToken = "{{validInput}}";
+  
+  {{#if isBrowser}}
+  // Test CSRF attack is blocked
+  const failResponse = await fetch('{{targetUrl}}', {
+    method: 'POST',
+    headers: {
+      'Origin': maliciousOrigin,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ action: 'transfer' })
+  });
+  
+  expect(failResponse.status).toBe(403);
+  
+  // Test legitimate request with CSRF token works
+  const successResponse = await fetch('{{targetUrl}}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': validToken
+    },
+    body: JSON.stringify({ action: 'transfer' })
+  });
+  
+  expect(successResponse.ok).toBe(true);
+  {{else}}
+  // Test request without token fails
+  const failResult = await {{functionCall}}({
+    headers: { 'Origin': maliciousOrigin },
+    body: { action: 'sensitive-action' }
+  });
+  expect(failResult.success).toBe(false);
+  expect(failResult.error).toContain('CSRF');
+  
+  // Test request with valid token succeeds
+  const successResult = await {{functionCall}}({
+    headers: { 'X-CSRF-Token': validToken },
+    body: { action: 'sensitive-action' }
+  });
+  expect(successResult.success).toBe(true);
+  {{/if}}
+});`);
+
+    // Security Misconfiguration Red Test Template
+    this.templates.set('SECURITY_MISCONFIGURATION:red', `
+test("{{testName}}", async () => {
+  {{#if isBrowser}}
+  // Test for exposed sensitive endpoints
+  const response = await fetch('{{targetUrl}}/.env');
+  expect(response.status).toBe(200);
+  
+  const configResponse = await fetch('{{targetUrl}}/config.json');
+  expect(configResponse.status).toBe(200);
+  {{else}}
+  // Server-side misconfiguration test
+  const result = await {{functionCall}}({
+    headers: { 'X-Debug-Mode': 'true' }
+  });
+  
+  // Vulnerability exposes sensitive data
+  expect(result.debug).toBeDefined();
+  expect(result.config).toBeDefined();
+  expect(result.env).toBeDefined();
+  {{/if}}
+});`);
+
+    // Security Misconfiguration Green Test Template
+    this.templates.set('SECURITY_MISCONFIGURATION:green', `
+test("{{testName}}", async () => {
+  {{#if isBrowser}}
+  // Test sensitive endpoints are protected
+  const response = await fetch('{{targetUrl}}/.env');
+  expect(response.status).toBe(403);
+  
+  const configResponse = await fetch('{{targetUrl}}/config.json');
+  expect(configResponse.status).toBe(403);
+  
+  // Debug headers should be ignored
+  const debugResponse = await fetch('{{targetUrl}}/api/data', {
+    headers: { 'X-Debug-Mode': 'true' }
+  });
+  const data = await debugResponse.json();
+  expect(data.debug).toBeUndefined();
+  {{else}}
+  // Test secure configuration
+  const result = await {{functionCall}}({
+    headers: { 'X-Debug-Mode': 'true' }
+  });
+  
+  // Sensitive data should not be exposed
+  expect(result.debug).toBeUndefined();
+  expect(result.config).toBeUndefined();
+  expect(result.env).toBeUndefined();
+  {{/if}}
+});`);
   }
   
   loadTemplate(vulnerabilityType: string, testType: 'red' | 'green' | 'refactor'): string {
@@ -491,6 +697,12 @@ export class VulnerabilityTestGenerator {
         return '; cat /etc/passwd';
       case 'PATH_TRAVERSAL':
         return '../../../etc/passwd';
+      case 'BROKEN_AUTHENTICATION':
+        return 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpZCI6MSwiYWRtaW4iOnRydWV9.';
+      case 'CSRF':
+        return 'https://evil-site.com';
+      case 'SECURITY_MISCONFIGURATION':
+        return 'admin=true';
       default:
         return 'malicious_input';
     }
@@ -506,6 +718,12 @@ export class VulnerabilityTestGenerator {
         return 'normal_filename.txt';
       case 'PATH_TRAVERSAL':
         return 'documents/file.txt';
+      case 'BROKEN_AUTHENTICATION':
+        return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiYWRtaW4iOmZhbHNlfQ.valid_signature';
+      case 'CSRF':
+        return 'valid-csrf-token-from-server';
+      case 'SECURITY_MISCONFIGURATION':
+        return 'user=true';
       default:
         return 'valid_input';
     }

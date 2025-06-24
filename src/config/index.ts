@@ -138,6 +138,21 @@ function getDefaultConfig(): Partial<ActionConfig> {
       maxFileSize: 1024 * 1024, // 1 MB
       timeoutSeconds: 300,
       requireCodeReview: true
+    },
+    testGeneration: {
+      enabled: process.env.ENABLE_TEST_GENERATION === 'true',
+      generateForVulnerabilities: true,
+      includeInPR: true,
+      validateFixes: process.env.ENABLE_FIX_VALIDATION === 'true',
+      languages: process.env.TEST_GEN_LANGUAGES?.split(',') || ['javascript', 'typescript'],
+      frameworks: {
+        javascript: ['jest', 'mocha', 'vitest'],
+        typescript: ['jest', 'mocha', 'vitest'],
+        python: ['pytest', 'unittest'],
+        ruby: ['rspec', 'minitest'],
+        php: ['phpunit', 'pest'],
+        java: ['junit5', 'testng']
+      }
     }
   };
 }

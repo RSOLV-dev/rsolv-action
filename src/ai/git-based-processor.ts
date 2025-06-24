@@ -195,9 +195,9 @@ export async function processIssueWithGit(
       };
     }
 
-    // Step 2.5: Generate tests if fix validation is enabled
+    // Step 2.5: Generate tests if test generation or fix validation is enabled
     let testResults: AnalysisWithTestsResult | undefined;
-    if (config.fixValidation?.enabled !== false && config.enableSecurityAnalysis) {
+    if ((config.testGeneration?.enabled || config.fixValidation?.enabled !== false) && config.enableSecurityAnalysis) {
       logger.info(`Generating tests for issue #${issue.number}`);
       const testAnalyzer = new TestGeneratingSecurityAnalyzer();
       
@@ -271,7 +271,7 @@ export async function processIssueWithGit(
       }
       
       // Step 4.5: Validate fix if enabled and tests were generated
-      if (config.fixValidation?.enabled !== false && 
+      if ((config.testGeneration?.validateFixes || config.fixValidation?.enabled !== false) && 
           testResults?.generatedTests?.success && 
           testResults.generatedTests.testSuite) {
         

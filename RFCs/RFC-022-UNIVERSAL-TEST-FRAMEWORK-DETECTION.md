@@ -1,4 +1,4 @@
-# RFC-021: Universal Test Framework Detection via Claude Code SDK
+# RFC-022: Universal Test Framework Detection via Claude Code SDK
 
 **Status:** Draft  
 **Created:** 2025-06-24  

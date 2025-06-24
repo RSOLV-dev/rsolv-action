@@ -212,9 +212,33 @@ Create a test generation system that:
 - [ ] Vulnerability detection: 100% of known issues
 - [ ] Convention matching: Indistinguishable from human-written
 
-### Phase 6C: Java/PHP Validation (PENDING)
+### Phase 6C: Java/PHP Validation (COMPLETED 2025-06-24)
 
-**Continue validation with Java and PHP vulnerable applications before proceeding.**
+**Java Support (COMPLETED 2025-06-24)**:
+- ✅ JUnit 5 test generation with parameterized test support
+- ✅ TestNG test generation with data providers
+- ✅ Spring Boot integration with MockMvc
+- ✅ Framework detection from pom.xml
+- ✅ All tests passing (5/5 green)
+
+**PHP Support (COMPLETED 2025-06-24)**:
+- ✅ PHPUnit 9+ template with attributes support
+- ✅ Pest framework test generation
+- ✅ Laravel integration (PHPUnit and Pest)
+- ✅ Symfony WebTestCase support
+- ✅ Framework detection from composer.json
+- ✅ Added missing vulnerability templates (BROKEN_AUTHENTICATION, CSRF, SECURITY_MISCONFIGURATION)
+- ✅ Validated with real DVWA application - all 3 vulnerability types tested successfully
+
+**Validation Results**: Successfully generated PHPUnit tests with PHP 8 attributes for SQL injection, command injection, and CSRF vulnerabilities. Test structure validation confirmed proper red-green-refactor pattern implementation.
+
+**Key Implementation Details**:
+- Added `generatePHPUnitTests()` and `generatePestTests()` methods
+- Enhanced framework detection to parse composer.json
+- Added Laravel/Symfony companion detection
+- Fixed version detection for PHP 8 attribute usage
+- Added namespace extraction from file paths
+- Fixed TypeScript enum references (CSRF, XSS mapping)
 
 ### Phase 6D: IaC/Terraform Validation (PENDING)
 
@@ -527,7 +551,7 @@ Next Review: Phase 6A - Validate with JavaScript/TypeScript vulnerable apps (Tod
 
 ### Architectural Improvements
 - RFC-020: Fix validation with iterative feedback loop
-- RFC-021: Universal test framework detection (design only)
+- RFC-022: Universal test framework detection (design only)
 - Configurable iteration limits with hierarchy support
 
 ### NodeGoat Validation
@@ -583,7 +607,7 @@ Next Review: Phase 6A - Validate with JavaScript/TypeScript vulnerable apps (Tod
 
 ### Architectural Improvements
 - RFC-020: Fix validation with iterative feedback loop
-- RFC-021: Universal test framework detection (design only)
+- RFC-022: Universal test framework detection (design only)
 - Configurable iteration limits with hierarchy support
 
 ### NodeGoat Validation

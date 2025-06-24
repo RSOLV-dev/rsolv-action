@@ -236,8 +236,20 @@ export function getMinimalPatterns(): SecurityPattern[] {
     description: 'SQL injection via string concatenation',
     patterns: {
       regex: [
-        /createStatement\s*\(\s*\).*executeQuery\s*\(/gi,
-        /"SELECT.*"\s*\+/gi
+        // Direct concatenation in execute methods
+        /\.?execute(?:Query|Update)?\s*\([^)]*\+[^)]*\)/gi,
+        // Variable assignment with SQL + concatenation
+        /String\s+\w*(?:query|sql|statement)\w*\s*=\s*["'].*(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER).*["']\s*\+/gi,
+        // Any SQL keyword in string followed by concatenation
+        /["'].*(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|FROM|WHERE|JOIN|UNION|ORDER BY|GROUP BY).*["']\s*\+/gi,
+        // StringBuilder/StringBuffer with SQL
+        /(?:StringBuilder|StringBuffer)\s*\(?\s*["'].*(?:SELECT|INSERT|UPDATE|DELETE).*["']\s*\)?.*\.append\s*\(/gi,
+        // String.format with SQL (potential for injection)
+        /String\.format\s*\(\s*["'].*(?:SELECT|INSERT|UPDATE|DELETE).*%[sd].*["']/gi,
+        // PreparedStatement with concatenation (defeats the purpose)
+        /prepareStatement\s*\([^)]*\+[^)]*\)/gi,
+        // JDBC template with concatenation
+        /jdbcTemplate\.(?:query|update|execute)\s*\([^)]*\+[^)]*\)/gi
       ]
     },
     languages: ['java'],
@@ -267,6 +279,39 @@ export function getMinimalPatterns(): SecurityPattern[] {
   },
   
   // PHP patterns
+  {
+    id: 'php-sql-injection',
+    name: 'PHP SQL Injection',
+    type: VulnerabilityType.SQL_INJECTION,
+    severity: 'high',
+    description: 'SQL injection via string concatenation or interpolation',
+    patterns: {
+      regex: [
+        // Variable interpolation in SQL strings (matches $id, $user, etc inside SQL)
+        /["'].*(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)[^"']*\$\w+/gi,
+        // Superglobal interpolation ($_GET, $_POST, $_REQUEST)
+        /["'].*(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER).*\$(?:_GET|_POST|_REQUEST)\[/gi,
+        // Concatenation with user input
+        /["'].*(?:SELECT|INSERT|UPDATE|DELETE).*["']\s*\.\s*\$(?:_GET|_POST|_REQUEST)/gi,
+        // mysql_query with concatenation
+        /mysql_query\s*\([^)]*\.\s*\$/gi,
+        // mysqli query with concatenation
+        /mysqli_query\s*\([^,)]*,[^)]*\.\s*\$/gi,
+        // PDO exec with concatenation
+        /->exec\s*\([^)]*\.\s*\$/gi,
+        // Variable assignment with SQL + user input
+        /\$(?:query|sql)\s*=\s*["'].*(?:SELECT|INSERT|UPDATE|DELETE).*["']\s*\.\s*\$/gi,
+        // Curly brace interpolation with superglobals
+        /["'].*(?:SELECT|INSERT|UPDATE|DELETE).*\{\$(?:_GET|_POST|_REQUEST)/gi
+      ]
+    },
+    languages: ['php'],
+    cweId: 'CWE-89',
+    owaspCategory: 'A03:2021',
+    remediation: 'Use prepared statements with PDO or mysqli',
+    examples: { vulnerable: '', secure: '' }
+  },
+  
   {
     id: 'php-eval',
     name: 'PHP Eval Usage',

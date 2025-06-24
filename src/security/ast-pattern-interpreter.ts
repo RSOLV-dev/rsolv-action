@@ -57,29 +57,37 @@ export class ASTPatternInterpreter {
       return findings;
     }
     
-    // Phase 2: AST analysis for candidates only
-    let ast;
-    try {
-      ast = parse(content, {
-        sourceType: 'module',
-        plugins: ['jsx', 'typescript'],
-        errorRecovery: true
-      });
-    } catch (error) {
-      // Fall back to regex-only for unparseable files
-      return this.regexOnlyFallback(filePath, content, candidatePatterns);
-    }
+    // Check if this is a JavaScript/TypeScript file
+    const isJavaScriptFile = this.isJavaScriptFile(filePath);
     
-    // Apply each candidate pattern
-    for (const pattern of candidatePatterns) {
-      if (pattern.astRules) {
-        const patternFindings = this.applyASTPattern(ast, pattern, filePath, content);
-        findings.push(...patternFindings);
-      } else {
-        // Pattern doesn't have AST rules, use regex
-        const regexFindings = this.applyRegexPattern(content, pattern, filePath);
-        findings.push(...regexFindings);
+    // Phase 2: AST analysis for JavaScript/TypeScript files only
+    if (isJavaScriptFile) {
+      let ast;
+      try {
+        ast = parse(content, {
+          sourceType: 'module',
+          plugins: ['jsx', 'typescript'],
+          errorRecovery: true
+        });
+      } catch (error) {
+        // Fall back to regex-only for unparseable files
+        return this.regexOnlyFallback(filePath, content, candidatePatterns);
       }
+    
+      // Apply each candidate pattern
+      for (const pattern of candidatePatterns) {
+        if (pattern.astRules) {
+          const patternFindings = this.applyASTPattern(ast, pattern, filePath, content);
+          findings.push(...patternFindings);
+        } else {
+          // Pattern doesn't have AST rules, use regex
+          const regexFindings = this.applyRegexPattern(content, pattern, filePath);
+          findings.push(...regexFindings);
+        }
+      }
+    } else {
+      // For non-JavaScript files, use regex-only approach
+      return this.regexOnlyFallback(filePath, content, candidatePatterns);
     }
     
     // Filter by minimum confidence
@@ -285,6 +293,16 @@ export class ASTPatternInterpreter {
       /\/spec\//
     ];
     return testPatterns.some(p => p.test(filePath));
+  }
+  
+  private isJavaScriptFile(filePath: string): boolean {
+    // Check if this is a JavaScript or TypeScript file
+    const jsPatterns = [
+      /\.[jt]sx?$/,  // .js, .jsx, .ts, .tsx
+      /\.mjs$/,      // ES modules
+      /\.cjs$/       // CommonJS modules
+    ];
+    return jsPatterns.some(p => p.test(filePath));
   }
   
   private isInDatabaseCall(path: any): boolean {
@@ -562,8 +580,17 @@ export class ASTPatternInterpreter {
     content: string, 
     patterns: SecurityPattern[]
   ): Finding[] {
-    // Simple regex matching when AST parsing fails
-    return [];
+    // Use regex matching when AST parsing fails (e.g., for non-JavaScript languages)
+    const findings: Finding[] = [];
+    
+    for (const pattern of patterns) {
+      // Apply regex patterns regardless of whether pattern has AST rules
+      // This ensures non-JavaScript code can still be analyzed
+      const regexFindings = this.applyRegexPattern(content, pattern, filePath);
+      findings.push(...regexFindings);
+    }
+    
+    return findings;
   }
   
   private applyRegexPattern(
@@ -572,7 +599,41 @@ export class ASTPatternInterpreter {
     filePath: string
   ): Finding[] {
     // Traditional regex matching for patterns without AST rules
-    return [];
+    const findings: Finding[] = [];
+    const lines = content.split('\n');
+    
+    if (!pattern.patterns?.regex) {
+      return findings;
+    }
+    
+    // Test each regex pattern
+    for (const regex of pattern.patterns.regex) {
+      let match;
+      regex.lastIndex = 0; // Reset regex state
+      
+      while ((match = regex.exec(content)) !== null) {
+        // Calculate line number
+        const lineNumber = content.substring(0, match.index).split('\n').length;
+        const line = lines[lineNumber - 1];
+        const column = match.index - content.lastIndexOf('\n', match.index - 1) - 1;
+        
+        findings.push({
+          pattern,
+          file: filePath,
+          line: lineNumber,
+          column: column,
+          code: match[0],
+          confidence: pattern.confidenceRules?.base || 0.8
+        });
+        
+        // Prevent infinite loop on zero-width matches
+        if (match.index === regex.lastIndex) {
+          regex.lastIndex++;
+        }
+      }
+    }
+    
+    return findings;
   }
 }
 

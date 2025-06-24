@@ -14,6 +14,7 @@ export interface ActionConfig {
   maxIssues?: number; // Maximum number of issues to process in a single run
   fixValidation?: FixValidationConfig;
   customerTier?: string;
+  testGeneration?: TestGenerationConfig;
 }
 
 export interface FixValidationConfig {
@@ -21,6 +22,15 @@ export interface FixValidationConfig {
   maxIterations?: number;
   maxIterationsByType?: Record<string, number>;
   maxIterationsByTier?: Record<string, number>;
+}
+
+export interface TestGenerationConfig {
+  enabled?: boolean;
+  frameworks?: Record<string, string[]>;
+  generateForVulnerabilities?: boolean;
+  includeInPR?: boolean;
+  validateFixes?: boolean;
+  languages?: string[];
 }
 
 export interface ActionStatus {
