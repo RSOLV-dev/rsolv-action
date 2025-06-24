@@ -87,6 +87,27 @@ export const minimalFallbackPatterns: SecurityPattern[] = [
     examples: { vulnerable: '', secure: '' }
   },
   
+  // JavaScript eval pattern
+  {
+    id: 'js-eval',
+    name: 'JavaScript Eval Usage',
+    type: VulnerabilityType.COMMAND_INJECTION,
+    severity: 'critical',
+    description: 'Use of eval() function',
+    patterns: {
+      regex: [
+        /eval\s*\(/gi,
+        /Function\s*\(/gi,
+        /setTimeout\s*\([^,]*,[^,)]*\)/gi
+      ]
+    },
+    languages: ['javascript', 'typescript'],
+    cweId: 'CWE-94',
+    owaspCategory: 'A03:2021',
+    remediation: 'Avoid eval(), use JSON.parse() or safer alternatives',
+    examples: { vulnerable: '', secure: '' }
+  },
+  
   // Python patterns
   {
     id: 'python-eval',
