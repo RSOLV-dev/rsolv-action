@@ -26,3 +26,10 @@ config :logger, level: :debug
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+# Use mock parsers in test environment
+config :rsolv_api, :use_mock_parsers, true
+
+# Shorter timeouts for tests
+config :rsolv_api, :parser_timeout, 5_000
+config :rsolv_api, :session_timeout, 300_000  # 5 minutes
