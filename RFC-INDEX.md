@@ -1,37 +1,31 @@
-# RFC Index - RSOLV Project
+# RFC Index - RSOLV-action
 
-This document tracks all Request for Comments (RFC) documents in the RSOLV project. RFCs are used to document architectural decisions, design proposals, and significant feature implementations.
+## RFCs Moved to Project Level
 
-## Active RFCs
+All RFCs have been moved to the main project RFC directory for better organization and to resolve numbering conflicts.
 
-| RFC Number | Title | Status | Created | Author |
-|------------|-------|--------|---------|---------|
-| [RFC-019](./RFCs/RFC-019-TERRAFORM-IAC-SECURITY.md) | Terraform/IaC Security Test Generation | Draft | 2025-06-24 | RSOLV Team |
-| [RFC-020](./RFCs/RFC-020-FIX-VALIDATION-INTEGRATION.md) | Fix Validation Integration | Draft | 2025-06-24 | RSOLV Team |
-| [RFC-021](./RFCs/RFC-021-MULTI-LANGUAGE-AST-PARSING.md) | Multi-Language AST Parsing Architecture | Draft | 2025-06-24 | RSOLV Team |
-| [RFC-022](./RFCs/RFC-022-UNIVERSAL-TEST-FRAMEWORK-DETECTION.md) | Universal Test Framework Detection | Draft | 2025-06-21 | RSOLV Team |
-| [RFC-023](./RFCs/RFC-023-ELIXIR-AST-ANALYSIS-SERVICE.md) | Elixir-Powered AST Analysis Service | Draft | 2025-06-24 | RSOLV Team |
+**Location**: `/home/dylan/dev/rsolv/RFCs/`
 
-## Planned RFCs
+## RFCs Created During Test Generation Implementation
 
-| RFC Number | Title | Status | Description |
-|------------|-------|--------|-------------|
-| RFC-024 | (Next Available) | - | - |
+The following RFCs were created during our test generation framework work and are now at the project level:
 
-## Historical RFCs
+| Original # | New # | Title | Status | Created |
+|------------|-------|-------|--------|---------|
+| RFC-019 | [RFC-027](../RFCs/RFC-027-TERRAFORM-IAC-SECURITY.md) | Terraform/IaC Security Test Generation | Draft | 2025-06-24 |
+| RFC-020 | [RFC-028](../RFCs/RFC-028-FIX-VALIDATION-INTEGRATION.md) | Fix Validation Integration | Implemented | 2025-06-24 |
+| RFC-021 | [RFC-029](../RFCs/RFC-029-MULTI-LANGUAGE-AST-PARSING.md) | Multi-Language AST Parsing Architecture | Draft | 2025-06-24 |
+| RFC-022 | [RFC-030](../RFCs/RFC-030-UNIVERSAL-TEST-FRAMEWORK-DETECTION.md) | Universal Test Framework Detection | Draft | 2025-06-24 |
+| RFC-023 | [RFC-031](../RFCs/RFC-031-ELIXIR-AST-ANALYSIS-SERVICE.md) | Elixir-Powered AST Analysis Service | Draft | 2025-06-24 |
 
-| RFC Number | Title | Status | Notes |
-|------------|-------|--------|-------|
-| RFC-003 | (Unknown) | Referenced | Referenced in codebase but document not found |
-| RFC-008 | Pattern Serving API | Implemented | Core pattern serving architecture (referenced extensively in code) |
+## Context
 
-## RFC Numbering Issue
-
-**Note**: RFC-021 was accidentally assigned to two different RFCs:
-- Multi-Language AST Parsing Architecture (created 2025-06-24)
-- Universal Test Framework Detection (created 2025-06-21)
-
-The Universal Test Framework Detection RFC should be renumbered to RFC-022 to resolve this conflict.
+These RFCs were created during the implementation of the Test Generation Framework (v1.0.0):
+- **RFC-027**: Addresses limited IaC support discovered during Phase 6D validation
+- **RFC-028**: Ensures generated fixes pass tests before PR creation (already implemented)
+- **RFC-029**: Solves the Babel limitation of JavaScript-only AST parsing
+- **RFC-030**: Improves test framework detection using Claude Code SDK
+- **RFC-031**: Proposes using Elixir backend for multi-language AST analysis
 
 ## RFC Process
 
