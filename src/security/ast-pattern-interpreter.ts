@@ -233,7 +233,7 @@ export class ASTPatternInterpreter {
       if (excludeRegex.test(bodyString)) return false;
       
       // Check if it delegates
-      if (pattern.context_rules?.exclude_if_delegates) {
+      if (pattern.contextRules?.exclude_if_delegates) {
         if (this.delegatesToOtherFunction(node)) return false;
       }
       

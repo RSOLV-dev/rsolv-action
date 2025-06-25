@@ -154,7 +154,7 @@ export class TestFrameworkDetector {
     const lines = requirementsTxt.split('\n');
 
     for (const [framework, config] of Object.entries(PYTHON_FRAMEWORKS)) {
-      if (config.patterns) {
+      if ('patterns' in config && config.patterns) {
         for (const pattern of config.patterns) {
           const line = lines.find(l => l.startsWith(pattern));
           if (line) {
@@ -171,7 +171,7 @@ export class TestFrameworkDetector {
             };
 
             // Check for plugins
-            if (config.plugins) {
+            if ('plugins' in config && config.plugins) {
               const foundPlugins = config.plugins.filter(p =>
                 lines.some(l => l.startsWith(p))
               );
@@ -218,8 +218,8 @@ export class TestFrameworkDetector {
           };
 
           // Check for variants (e.g., rspec-rails)
-          if (config.variants) {
-            const variant = config.variants.find(v => 
+          if ('variants' in config && config.variants) {
+            const variant = config.variants.find((v: string) => 
               lines.some(l => l.includes(`gem '${v}'`) || l.includes(`gem "${v}"`))
             );
             if (variant) {

@@ -1,6 +1,6 @@
-import { JiraAdapter } from './jira/jira-adapter';
-import { LinearAdapter } from './linear/linear-adapter';
-import type { PlatformAdapter, PlatformConfig } from './types';
+import { JiraAdapter } from './jira/jira-adapter.js';
+import { LinearAdapter } from './linear/linear-adapter.js';
+import type { PlatformAdapter, PlatformConfig } from './types.js';
 
 export class PlatformFactory {
   static create(platform: string, config: PlatformConfig): PlatformAdapter {

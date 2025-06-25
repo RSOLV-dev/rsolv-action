@@ -1,4 +1,4 @@
-import { Vulnerability } from './types.js';
+import { Vulnerability, VulnerabilityType } from './types.js';
 
 export interface ComplianceReport {
   standard: string;
@@ -328,13 +328,13 @@ export class ComplianceGenerator {
   private generateRecommendations(vulnerabilities: Vulnerability[]): string[] {
     const recommendations: string[] = [];
 
-    if (vulnerabilities.some(v => v.type === 'SQL_INJECTION')) {
+    if (vulnerabilities.some(v => v.type === VulnerabilityType.SQL_INJECTION)) {
       recommendations.push('Implement parameterized queries and input validation');
     }
-    if (vulnerabilities.some(v => v.type === 'XSS')) {
+    if (vulnerabilities.some(v => v.type === VulnerabilityType.XSS)) {
       recommendations.push('Apply output encoding and use Content Security Policy');
     }
-    if (vulnerabilities.some(v => v.type === 'BROKEN_ACCESS_CONTROL')) {
+    if (vulnerabilities.some(v => v.type === VulnerabilityType.BROKEN_ACCESS_CONTROL)) {
       recommendations.push('Implement proper authentication and authorization controls');
     }
 

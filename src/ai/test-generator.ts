@@ -769,10 +769,10 @@ export class VulnerabilityTestGenerator {
   }
   
   private inferFunctionCall(vulnerability: Vulnerability): string {
-    if (vulnerability.location?.file.includes('auth') || vulnerability.location?.file.includes('login')) {
+    if (vulnerability.filePath?.includes('auth') || vulnerability.filePath?.includes('login')) {
       return 'authenticateUser';
     }
-    if (vulnerability.location?.file.includes('user')) {
+    if (vulnerability.filePath?.includes('user')) {
       return 'getUserData';
     }
     return 'processUserInput';

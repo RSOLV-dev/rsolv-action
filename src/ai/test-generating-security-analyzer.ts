@@ -155,9 +155,11 @@ export class TestGeneratingSecurityAnalyzer extends SecurityAwareAnalyzer {
     return {
       type: typeMap[interpretedIssue.vulnerabilityType] || interpretedIssue.vulnerabilityType.toUpperCase(),
       severity: interpretedIssue.severity || 'medium',
-      file: interpretedIssue.affectedFiles?.[0] || 'unknown',
+      filePath: interpretedIssue.affectedFiles?.[0] || 'unknown',
       line: interpretedIssue.affectedLines?.[0] || 0,
-      description: interpretedIssue.description || 'Security vulnerability detected'
+      description: interpretedIssue.description || 'Security vulnerability detected',
+      confidence: 80,
+      message: interpretedIssue.description || 'Security vulnerability detected'
     };
   }
 }

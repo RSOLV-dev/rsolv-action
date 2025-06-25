@@ -109,7 +109,7 @@ async function main() {
   console.log('🧪 Vended Credentials E2E Test');
   console.log('==============================');
   console.log(`API: ${process.env.RSOLV_API_URL}`);
-  console.log(`Key: ${RSOLV_API_KEY.substring(0, 20)}...`);
+  console.log(`Key: ${RSOLV_API_KEY?.substring(0, 20)}...`);
   
   let credentials: VendedCredentials | null = null;
   const results: boolean[] = [];

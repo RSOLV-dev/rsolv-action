@@ -43,6 +43,8 @@ export interface Vulnerability {
   owaspCategory?: string;
   remediation?: string;
   confidence: number; // 0-100
+  filePath?: string;
+  snippet?: string;
 }
 
 export interface SecurityScanResult {

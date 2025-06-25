@@ -7,7 +7,7 @@ import { logger } from '../utils/logger.js';
 import { analyzeIssue } from './analyzer.js';
 import { GitBasedClaudeCodeAdapter } from './adapters/claude-code-git.js';
 import { createPullRequestFromGit } from '../github/pr-git.js';
-import { AIConfig } from './types.js';
+import { AIConfig, IssueAnalysis } from './types.js';
 import { execSync } from 'child_process';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from './test-generating-security-analyzer.js';
 import { GitBasedTestValidator, ValidationResult } from './git-based-test-validator.js';
@@ -252,9 +252,20 @@ export async function processIssueWithGit(
         max: maxIterations
       } : undefined;
       
+      // Convert AnalysisData to IssueAnalysis
+      const issueAnalysis: IssueAnalysis = {
+        summary: `${analysisData.issueType} issue analysis`,
+        complexity: analysisData.estimatedComplexity === 'simple' ? 'low' : 
+                   analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
+        estimatedTime: 60, // default estimate
+        potentialFixes: [analysisData.suggestedApproach],
+        recommendedApproach: analysisData.suggestedApproach,
+        relatedFiles: analysisData.filesToModify
+      };
+      
       solution = await adapter.generateSolutionWithGit(
         currentIssue, 
-        analysisData,
+        issueAnalysis,
         undefined, // no enhanced prompt
         testResults,
         undefined, // validation result is embedded in enhanced issue

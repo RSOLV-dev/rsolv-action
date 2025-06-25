@@ -110,7 +110,7 @@ export class OllamaClient implements AIClient {
         const data = await response.json();
         return data.response;
       } catch (generateError) {
-        logger.info(`Failed to use generate endpoint, falling back to chat: ${generateError.message}`);
+        logger.info(`Failed to use generate endpoint, falling back to chat: ${generateError instanceof Error ? generateError.message : String(generateError)}`);
         
         // Fallback to chat endpoint for newer Ollama versions
         const requestUrl = `${this.apiUrl}/chat`;

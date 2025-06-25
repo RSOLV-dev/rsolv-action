@@ -8,6 +8,7 @@
 import type { FrameworkInfo, DetectionResult } from './test-framework-detector.js';
 
 export interface ClaudeDetectionResult extends DetectionResult {
+  primaryFramework?: FrameworkInfo;
   reasoning?: string;
   suggestedTestCommand?: string;
   setupInstructions?: string[];
@@ -274,11 +275,7 @@ Return a JSON response in this exact format:
       // Ensure the response matches our expected structure
       return {
         detected: parsed.detected || false,
-        primaryFramework: parsed.primaryFramework,
-        allFrameworks: parsed.allFrameworks || [],
-        testFilePatterns: parsed.testFilePatterns || [],
-        testDirectories: parsed.testDirectories || [],
-        frameworks: parsed.allFrameworks || [], // For compatibility
+        frameworks: parsed.frameworks || parsed.allFrameworks || [],
         suggestedTestCommand: parsed.testCommand,
         setupInstructions: parsed.setupInstructions,
         reasoning: parsed.reasoning
@@ -288,9 +285,6 @@ Return a JSON response in this exact format:
       return {
         detected: false,
         frameworks: [],
-        allFrameworks: [],
-        testFilePatterns: [],
-        testDirectories: [],
         reasoning: 'Failed to parse AI response'
       };
     }

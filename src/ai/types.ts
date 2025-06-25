@@ -2,6 +2,9 @@
  * AI provider types and interfaces
  */
 
+// Re-export from security types for convenience
+export type { Vulnerability, VulnerabilityType } from '../security/types.js';
+
 /**
  * Supported AI providers
  */

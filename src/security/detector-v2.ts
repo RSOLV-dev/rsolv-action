@@ -41,15 +41,8 @@ export class SecurityDetectorV2 {
           if (!seen.has(key)) {
             seen.add(key);
             
-            // Convert confidence number to string
-            let confidenceLevel: 'high' | 'medium' | 'low';
-            if (finding.confidence >= 0.8) {
-              confidenceLevel = 'high';
-            } else if (finding.confidence >= 0.5) {
-              confidenceLevel = 'medium';
-            } else {
-              confidenceLevel = 'low';
-            }
+            // Keep confidence as number (0-100 scale)
+            const confidenceNumber = Math.round(finding.confidence * 100);
             
             vulnerabilities.push({
               type: finding.pattern.type,
@@ -57,7 +50,7 @@ export class SecurityDetectorV2 {
               line: finding.line,
               message: `${finding.pattern.name}: ${finding.pattern.description}`,
               description: finding.pattern.description,
-              confidence: confidenceLevel,
+              confidence: confidenceNumber,
               cweId: finding.pattern.cweId,
               owaspCategory: finding.pattern.owaspCategory,
               remediation: finding.pattern.remediation
@@ -158,14 +151,17 @@ export class SecurityDetectorV2 {
     logger.info(`SecurityDetectorV2: Starting directory scan of ${directory}`);
     const results: SecurityScanResult = {
       vulnerabilities: [],
-      fileCount: 0,
-      totalIssues: 0,
-      criticalCount: 0,
-      highCount: 0,
-      mediumCount: 0,
-      lowCount: 0,
-      byType: new Map(),
-      byFile: new Map()
+      summary: {
+        total: 0,
+        byType: {} as Record<VulnerabilityType, number>,
+        bySeverity: {}
+      },
+      metadata: {
+        language: 'unknown',
+        linesScanned: 0,
+        scanDuration: 0,
+        timestamp: new Date().toISOString()
+      }
     };
 
     // TODO: Implement directory scanning logic
@@ -222,7 +218,7 @@ export class SecurityDetectorV2 {
     return patterns.some(pattern => pattern.test(line));
   }
 
-  private getConfidence(line: string, type: VulnerabilityType): 'high' | 'medium' | 'low' {
+  private getConfidence(line: string, type: VulnerabilityType): number {
     // Patterns that indicate definite vulnerabilities
     const highConfidencePatterns: Record<string, RegExp[]> = {
       [VulnerabilityType.SQL_INJECTION]: [
@@ -240,15 +236,15 @@ export class SecurityDetectorV2 {
 
     const patterns = highConfidencePatterns[type] || [];
     if (patterns.some(pattern => pattern.test(line))) {
-      return 'high';
+      return 90; // high confidence
     }
 
     // Check for common safe patterns
     if (this.isSafeUsage(line, type)) {
-      return 'low';
+      return 30; // low confidence
     }
 
-    return 'medium';
+    return 60; // medium confidence
   }
 }
 

@@ -601,8 +601,8 @@ export class CoverageAnalyzer {
     const isSecurityFile = this.isSecurityFile(filePath);
     
     if (isSecurityFile) {
-      if (type === 'low-coverage') return 'critical';
-      if (type === 'file' && coveragePercentage === 0) return 'critical';
+      if (type === 'file') return 'critical';
+      if (type === 'function' && coveragePercentage === 0) return 'critical';
       return type === 'function' || (type === 'block' && blockSize && blockSize >= 3) 
         ? 'critical' 
         : 'high';
