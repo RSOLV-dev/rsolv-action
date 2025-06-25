@@ -463,20 +463,20 @@ if (in_array($_GET['page'], $allowed)) {
   
       iex> enhancement = RsolvApi.Security.Patterns.Php.FileInclusion.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.FileInclusion.ast_enhancement()
       iex> enhancement.min_confidence
       0.85
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.FileInclusion.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       4
   """
   @impl true
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "inclusion_context",
           description: "Verify file inclusion context",

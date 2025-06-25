@@ -801,20 +801,20 @@ defmodule RsolvApi.Security.Patterns.Php.UnsafeDeserialization do
   
       iex> enhancement = RsolvApi.Security.Patterns.Php.UnsafeDeserialization.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.UnsafeDeserialization.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.UnsafeDeserialization.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       4
   """
   @impl true
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "insecure_functions",
           description: "PHP deserialization functions with security implications",

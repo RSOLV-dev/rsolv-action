@@ -18,6 +18,9 @@ COPY config config
 # Development stage - includes full Elixir/mix environment
 FROM base AS development
 
+# Install curl for healthchecks
+RUN apk add --no-cache curl
+
 # Install all dependencies (dev, test, prod)
 RUN mix deps.get
 

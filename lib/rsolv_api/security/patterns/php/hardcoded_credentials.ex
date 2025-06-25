@@ -623,20 +623,20 @@ defmodule RsolvApi.Security.Patterns.Php.HardcodedCredentials do
   
       iex> enhancement = RsolvApi.Security.Patterns.Php.HardcodedCredentials.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.HardcodedCredentials.ast_enhancement()
       iex> enhancement.min_confidence
       0.85
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.HardcodedCredentials.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       5
   """
   @impl true
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "credential_indicators",
           description: "Common credential variable names",

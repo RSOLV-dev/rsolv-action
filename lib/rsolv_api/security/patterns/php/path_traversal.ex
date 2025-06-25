@@ -903,20 +903,20 @@ defmodule RsolvApi.Security.Patterns.Php.PathTraversal do
   
       iex> enhancement = RsolvApi.Security.Patterns.Php.PathTraversal.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.PathTraversal.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.PathTraversal.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       4
   """
   @impl true
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "file_access_functions",
           description: "PHP functions that access or include files",

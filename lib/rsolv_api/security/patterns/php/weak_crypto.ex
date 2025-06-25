@@ -462,21 +462,21 @@ defmodule RsolvApi.Security.Patterns.Php.WeakCrypto do
 
       iex> enhancement = RsolvApi.Security.Patterns.Php.WeakCrypto.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.WeakCrypto.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.WeakCrypto.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       4
   """
   @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.6,
-      rules: [
+      ast_rules: [
         %{
           type: "weak_crypto_functions",
           description: "Identify deprecated mcrypt and weak OpenSSL usage",

@@ -23,6 +23,8 @@ defmodule RSOLV.Application do
       RSOLV.RateLimiter,
       # Start the Notifications supervisor
       RSOLV.Notifications.Supervisor,
+      # Start the Pattern supervisor for security patterns
+      RsolvApi.Security.PatternSupervisor,
       # Start the Endpoint (http/https)
       RSOLVWeb.Endpoint
       # Start a worker by calling: RSOLV.Worker.start_link(arg)

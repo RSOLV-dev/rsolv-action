@@ -523,21 +523,21 @@ defmodule RsolvApi.Security.Patterns.Php.ExtractUsage do
 
       iex> enhancement = RsolvApi.Security.Patterns.Php.ExtractUsage.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.ExtractUsage.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.ExtractUsage.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       4
   """
   @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
-      rules: [
+      ast_rules: [
         %{
           type: "extract_functions",
           description: "Identify extract and similar variable import functions",

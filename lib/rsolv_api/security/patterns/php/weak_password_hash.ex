@@ -535,20 +535,20 @@ defmodule RsolvApi.Security.Patterns.Php.WeakPasswordHash do
   
       iex> enhancement = RsolvApi.Security.Patterns.Php.WeakPasswordHash.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.WeakPasswordHash.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.WeakPasswordHash.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       4
   """
   @impl true
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "hash_context",
           description: "Identify password hashing context",

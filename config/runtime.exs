@@ -35,11 +35,19 @@ database_config = [
 database_config = 
   cond do
     System.get_env("DATABASE_SSL") == "false" ->
-      database_config
+      # Explicitly disable SSL to override any URL parameters
+      Keyword.merge(database_config, [
+        ssl: false
+      ])
     System.get_env("DATABASE_SSL") == "true" ->
       Keyword.merge(database_config, [
         ssl: true,
         ssl_opts: [verify: :verify_none]
+      ])
+    config_env() == :test ->
+      # Test environment should default to no SSL unless explicitly enabled
+      Keyword.merge(database_config, [
+        ssl: false
       ])
     config_env() == :prod ->
       Keyword.merge(database_config, [
@@ -55,7 +63,10 @@ config :rsolv_api, RsolvApi.Repo, database_config
 # Configure the endpoint
 config :rsolv_api, RSOLVWeb.Endpoint,
   url: [host: System.get_env("PHX_HOST") || "localhost", port: 443, scheme: "https"],
-  http: [port: String.to_integer(System.get_env("PORT") || "4000")],
+  http: [
+    ip: {0, 0, 0, 0},
+    port: String.to_integer(System.get_env("PORT") || "4000")
+  ],
   secret_key_base: System.get_env("SECRET_KEY_BASE"),
   server: true
 

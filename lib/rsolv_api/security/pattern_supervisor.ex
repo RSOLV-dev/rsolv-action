@@ -25,14 +25,14 @@ defmodule RsolvApi.Security.PatternSupervisor do
       {Task.Supervisor, name: RsolvApi.Security.TaskSupervisor},
       
       # Telemetry setup
-      {RsolvApi.Security.PatternTelemetry, []},
+      {RsolvApi.Security.PatternTelemetry, []}
       
-      # AI review pool using poolboy
-      :poolboy.child_spec(
-        :ai_review_pool,
-        pool_config(),
-        []
-      )
+      # AI review pool disabled for now (poolboy not in dependencies)
+      # :poolboy.child_spec(
+      #   :ai_review_pool,
+      #   pool_config(),
+      #   []
+      # )
     ]
     
     # If pattern compiler is available, add it

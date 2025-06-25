@@ -605,20 +605,20 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
   
       iex> enhancement = RsolvApi.Security.Patterns.Php.FileUploadNoValidation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.FileUploadNoValidation.ast_enhancement()
       iex> enhancement.min_confidence
       0.75
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.FileUploadNoValidation.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       4
   """
   @impl true
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "upload_context",
           description: "Verify file upload context",

@@ -519,21 +519,21 @@ defmodule RsolvApi.Security.Patterns.Php.DebugModeEnabled do
 
       iex> enhancement = RsolvApi.Security.Patterns.Php.DebugModeEnabled.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.DebugModeEnabled.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.DebugModeEnabled.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       4
   """
   @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
-      rules: [
+      ast_rules: [
         %{
           type: "debug_settings",
           description: "Identify debug-related configurations",

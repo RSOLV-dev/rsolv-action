@@ -544,21 +544,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       iex> enhancement = RsolvApi.Security.Patterns.Php.MissingCsrfToken.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
-      [:min_confidence, :rules]
+      [:ast_rules, :min_confidence]
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.MissingCsrfToken.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
       
       iex> enhancement = RsolvApi.Security.Patterns.Php.MissingCsrfToken.ast_enhancement()
-      iex> length(enhancement.rules)
+      iex> length(enhancement.ast_rules)
       4
   """
   @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
-      rules: [
+      ast_rules: [
         %{
           type: "csrf_validation",
           description: "Identify CSRF protection mechanisms",
