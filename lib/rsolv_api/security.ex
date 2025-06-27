@@ -333,15 +333,8 @@ defmodule RsolvApi.Security do
   end
   
   defp get_pattern_tier(pattern) do
-    # Handle both Pattern and EnhancedPattern structs
-    tier = case pattern do
-      %EnhancedPattern{} -> pattern.default_tier
-      %Pattern{} -> pattern.default_tier
-      _ -> nil
-    end
-    
-    # Use the default_tier or determine based on pattern characteristics
-    tier = tier || determine_tier_from_pattern(pattern)
+    # Determine tier based on pattern characteristics
+    tier = determine_tier_from_pattern(pattern)
     # Convert atom to string for API compatibility
     to_string(tier)
   end
