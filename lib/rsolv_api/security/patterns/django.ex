@@ -7,7 +7,6 @@ defmodule RsolvApi.Security.Patterns.Django do
   Django-specific vulnerability detection.
   """
   
-  alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Django.OrmInjection
   alias RsolvApi.Security.Patterns.Django.NosqlInjection
   alias RsolvApi.Security.Patterns.Django.TemplateXss

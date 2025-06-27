@@ -7,7 +7,6 @@ defmodule RsolvApi.Security.Patterns.Elixir do
   educational documentation.
   """
   
-  alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Elixir.SqlInjectionInterpolation
   alias RsolvApi.Security.Patterns.Elixir.SqlInjectionFragment
   alias RsolvApi.Security.Patterns.Elixir.CommandInjectionSystem
@@ -45,7 +44,7 @@ defmodule RsolvApi.Security.Patterns.Elixir do
       iex> patterns = RsolvApi.Security.Patterns.Elixir.all()
       iex> length(patterns)
       28
-      iex> Enum.all?(patterns, &match?(%Pattern{}, &1))
+      iex> Enum.all?(patterns, &match?(%RsolvApi.Security.Pattern{}, &1))
       true
   """
   def all do

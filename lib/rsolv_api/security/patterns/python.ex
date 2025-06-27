@@ -7,7 +7,6 @@ defmodule RsolvApi.Security.Patterns.Python do
   documentation.
   """
   
-  alias RsolvApi.Security.Pattern
   
   # Import new pattern modules
   alias RsolvApi.Security.Patterns.Python.{
@@ -33,7 +32,7 @@ defmodule RsolvApi.Security.Patterns.Python do
       iex> patterns = RsolvApi.Security.Patterns.Python.all()
       iex> length(patterns)
       12
-      iex> Enum.all?(patterns, &match?(%Pattern{}, &1))
+      iex> Enum.all?(patterns, &match?(%RsolvApi.Security.Pattern{}, &1))
       true
   """
   def all do

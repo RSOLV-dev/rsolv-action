@@ -7,7 +7,6 @@ defmodule RsolvApi.Security.Patterns.Php do
   documentation.
   """
   
-  alias RsolvApi.Security.Pattern
   
   # Import individual pattern modules
   alias RsolvApi.Security.Patterns.Php.SqlInjectionConcat
@@ -44,7 +43,7 @@ defmodule RsolvApi.Security.Patterns.Php do
       iex> patterns = RsolvApi.Security.Patterns.Php.all()
       iex> length(patterns)
       25
-      iex> Enum.all?(patterns, &match?(%Pattern{}, &1))
+      iex> Enum.all?(patterns, &match?(%RsolvApi.Security.Pattern{}, &1))
       true
   """
   def all do

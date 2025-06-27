@@ -88,13 +88,11 @@ defmodule RsolvApi.AST.CodeRetention do
       # Handle both struct and map access
       description = case finding do
         %{description: desc} -> desc
-        %{:description => desc} -> desc
         _ -> nil
       end
       
       context = case finding do
         %{context: ctx} -> ctx
-        %{:context => ctx} -> ctx
         _ -> nil
       end
       

@@ -7,7 +7,6 @@ defmodule RsolvApi.Security.Patterns.Ruby do
   documentation.
   """
   
-  alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Ruby.MissingAuthentication
   alias RsolvApi.Security.Patterns.Ruby.MassAssignment
   alias RsolvApi.Security.Patterns.Ruby.HardcodedSecrets
@@ -117,7 +116,7 @@ defmodule RsolvApi.Security.Patterns.Ruby do
       "CWE-328"
   """
   def weak_crypto_md5 do
-    %Pattern{
+    %RsolvApi.Security.Pattern{
       id: "ruby-weak-crypto-md5",
       name: "Weak Cryptography - MD5 Usage",
       description: "Detects usage of weak MD5 hash algorithm",

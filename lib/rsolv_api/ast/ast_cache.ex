@@ -373,7 +373,7 @@ defmodule RsolvApi.AST.ASTCache do
       sorted_entries = state.entries
       |> Enum.sort_by(fn {_key, entry} -> entry.last_accessed_at end)
       
-      {to_evict, to_keep} = Enum.reduce_while(sorted_entries, {[], state.stats.memory_usage_bytes}, 
+      {to_evict, _to_keep} = Enum.reduce_while(sorted_entries, {[], state.stats.memory_usage_bytes}, 
         fn {key, entry}, {evict_acc, current_memory} ->
           if current_memory - (entry.size_bytes || 0) <= target_memory do
             {:halt, {evict_acc, current_memory}}

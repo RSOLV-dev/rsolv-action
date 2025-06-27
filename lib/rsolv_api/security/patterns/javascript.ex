@@ -7,7 +7,6 @@ defmodule RsolvApi.Security.Patterns.Javascript do
   educational documentation.
   """
   
-  alias RsolvApi.Security.Pattern
   
   # Import new pattern modules
   alias RsolvApi.Security.Patterns.Javascript.{
@@ -51,7 +50,7 @@ defmodule RsolvApi.Security.Patterns.Javascript do
       iex> patterns = RsolvApi.Security.Patterns.Javascript.all()
       iex> length(patterns)
       30
-      iex> Enum.all?(patterns, &match?(%Pattern{}, &1))
+      iex> Enum.all?(patterns, &match?(%RsolvApi.Security.Pattern{}, &1))
       true
   """
   def all do

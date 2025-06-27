@@ -7,7 +7,6 @@ defmodule RsolvApi.Security.Patterns.Java do
   documentation.
   """
   
-  alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Java.SqlInjectionStatement
   alias RsolvApi.Security.Patterns.Java.SqlInjectionStringFormat
   alias RsolvApi.Security.Patterns.Java.UnsafeDeserialization
@@ -34,7 +33,7 @@ defmodule RsolvApi.Security.Patterns.Java do
       iex> patterns = RsolvApi.Security.Patterns.Java.all()
       iex> length(patterns)
       17
-      iex> Enum.all?(patterns, &match?(%Pattern{}, &1))
+      iex> Enum.all?(patterns, &match?(%RsolvApi.Security.Pattern{}, &1))
       true
   """
   def all do

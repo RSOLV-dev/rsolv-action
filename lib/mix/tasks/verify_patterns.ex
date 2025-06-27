@@ -213,11 +213,11 @@ defmodule Mix.Tasks.VerifyPatterns do
     # Test the pattern controller directly
     try do
       # Test getting all patterns
-      all_patterns = RsolvApi.Security.all_patterns()
+      all_patterns = RsolvApi.Security.list_all_patterns()
       pattern_count = length(all_patterns)
       
       # Test getting patterns by language
-      js_patterns = RsolvApi.Security.get_patterns_by_language("javascript")
+      js_patterns = RsolvApi.Security.list_patterns_by_language("javascript")
       js_count = length(js_patterns)
       
       # Test getting patterns by tier (if available)

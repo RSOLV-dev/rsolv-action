@@ -7,7 +7,6 @@ defmodule RsolvApi.Security.Patterns.Rails do
   base Ruby patterns. All patterns are tagged with frameworks: ["rails"].
   """
   
-  alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Rails.MissingStrongParameters
   alias RsolvApi.Security.Patterns.Rails.DangerousAttrAccessible
   alias RsolvApi.Security.Patterns.Rails.ActiverecordInjection
@@ -35,7 +34,7 @@ defmodule RsolvApi.Security.Patterns.Rails do
       iex> patterns = RsolvApi.Security.Patterns.Rails.all()
       iex> length(patterns)
       20
-      iex> Enum.all?(patterns, &match?(%Pattern{}, &1))
+      iex> Enum.all?(patterns, &match?(%RsolvApi.Security.Pattern{}, &1))
       true
       iex> Enum.all?(patterns, & &1.frameworks == ["rails"])
       true
