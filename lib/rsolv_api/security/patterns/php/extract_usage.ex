@@ -285,7 +285,6 @@ defmodule RsolvApi.Security.Patterns.Php.ExtractUsage do
       iex> length(test_cases.negative)
       6
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -360,7 +359,6 @@ defmodule RsolvApi.Security.Patterns.Php.ExtractUsage do
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -468,7 +466,6 @@ defmodule RsolvApi.Security.Patterns.Php.ExtractUsage do
       iex> desc =~ "overwrite"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     Variable extraction vulnerabilities occur when PHP applications use the extract() 

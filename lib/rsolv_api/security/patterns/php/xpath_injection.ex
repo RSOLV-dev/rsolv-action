@@ -314,7 +314,6 @@ defmodule RsolvApi.Security.Patterns.Php.XpathInjection do
       iex> length(test_cases.negative)
       6
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -389,7 +388,6 @@ defmodule RsolvApi.Security.Patterns.Php.XpathInjection do
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -482,7 +480,6 @@ defmodule RsolvApi.Security.Patterns.Php.XpathInjection do
       iex> desc =~ "query"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     XPath injection occurs when applications construct xpath query expressions using 

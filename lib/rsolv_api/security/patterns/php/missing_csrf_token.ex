@@ -263,7 +263,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       iex> length(test_cases.negative)
       7
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -352,7 +351,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -483,7 +481,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       iex> desc =~ "token"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     Cross-Site Request Forgery (CSRF) vulnerabilities occur when web applications 

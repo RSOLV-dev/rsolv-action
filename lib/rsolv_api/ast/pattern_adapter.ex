@@ -73,6 +73,14 @@ defmodule RsolvApi.AST.PatternAdapter do
     }
   end
   
+  # Handle regular Pattern struct
+  def convert_to_matcher_format(%Pattern{} = pattern) do
+    # First enhance it, then convert
+    pattern
+    |> enhance_pattern()
+    |> convert_to_matcher_format()
+  end
+  
   # Convert the complex ast_rules structure to pattern for matching
   defp convert_ast_rules_to_pattern(%{node_type: node_type} = rules) do
     base_pattern = %{
@@ -187,14 +195,6 @@ defmodule RsolvApi.AST.PatternAdapter do
     else
       pattern
     end
-  end
-  
-  # Handle regular Pattern struct
-  def convert_to_matcher_format(%Pattern{} = pattern) do
-    # First enhance it, then convert
-    pattern
-    |> enhance_pattern()
-    |> convert_to_matcher_format()
   end
   
   @doc """

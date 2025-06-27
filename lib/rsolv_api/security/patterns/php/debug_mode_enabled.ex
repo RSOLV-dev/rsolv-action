@@ -241,7 +241,6 @@ defmodule RsolvApi.Security.Patterns.Php.DebugModeEnabled do
       iex> length(test_cases.negative)
       8
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -324,7 +323,6 @@ defmodule RsolvApi.Security.Patterns.Php.DebugModeEnabled do
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -457,7 +455,6 @@ defmodule RsolvApi.Security.Patterns.Php.DebugModeEnabled do
       iex> desc =~ "production"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     Debug mode and verbose error reporting in production environments represent a 

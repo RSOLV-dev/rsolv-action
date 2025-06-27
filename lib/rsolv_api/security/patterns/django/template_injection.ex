@@ -606,7 +606,6 @@ defmodule RsolvApi.Security.Patterns.Django.TemplateInjection do
     }
   end
   
-  @impl true
   def applies_to_file?(file_path, frameworks \\ nil) do
     # Apply to Python files in Django projects
     is_python_file = String.ends_with?(file_path, ".py")

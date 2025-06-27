@@ -257,7 +257,6 @@ defmodule RsolvApi.Security.Patterns.Php.RegisterGlobals do
       iex> length(test_cases.negative)
       6
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -332,7 +331,6 @@ defmodule RsolvApi.Security.Patterns.Php.RegisterGlobals do
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -447,7 +445,6 @@ defmodule RsolvApi.Security.Patterns.Php.RegisterGlobals do
       iex> desc =~ "initialization"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     Register globals vulnerabilities occur when PHP applications use uninitialized 

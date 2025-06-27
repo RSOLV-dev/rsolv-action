@@ -247,6 +247,16 @@ defmodule RsolvApi.AST.ParserPool do
   end
   
   @impl true
+  def handle_cast(:trigger_scaling, state) do
+    if state.scaling_enabled do
+      state = auto_scale(state)
+      {:noreply, state}
+    else
+      {:noreply, state}
+    end
+  end
+  
+  @impl true
   def handle_info(:health_check, state) do
     # Check health of all parsers
     state = Enum.reduce(state.pools, state, fn {language, parsers}, acc ->
@@ -271,16 +281,6 @@ defmodule RsolvApi.AST.ParserPool do
     end
     
     {:noreply, state}
-  end
-  
-  @impl true
-  def handle_cast(:trigger_scaling, state) do
-    if state.scaling_enabled do
-      state = auto_scale(state)
-      {:noreply, state}
-    else
-      {:noreply, state}
-    end
   end
   
   @impl true

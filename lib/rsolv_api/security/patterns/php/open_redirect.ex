@@ -260,7 +260,6 @@ if (in_array($redirect, $allowed_urls)) {
       iex> length(test_cases.negative)
       6
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -335,7 +334,6 @@ if (in_array($redirect, $allowed_urls)) {
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -447,7 +445,6 @@ if (in_array($redirect, $allowed_urls)) {
       iex> desc =~ "validation"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     Open redirect vulnerabilities occur when a web application accepts untrusted 

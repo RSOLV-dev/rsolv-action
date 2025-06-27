@@ -316,7 +316,6 @@ defmodule RsolvApi.Security.Patterns.Php.LdapInjection do
       iex> length(test_cases.negative)
       6
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -391,7 +390,6 @@ defmodule RsolvApi.Security.Patterns.Php.LdapInjection do
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -476,7 +474,6 @@ defmodule RsolvApi.Security.Patterns.Php.LdapInjection do
       iex> desc =~ "filter"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     LDAP injection occurs when applications construct LDAP search filters using 

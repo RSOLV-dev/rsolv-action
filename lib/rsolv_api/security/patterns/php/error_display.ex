@@ -234,7 +234,6 @@ defmodule RsolvApi.Security.Patterns.Php.ErrorDisplay do
       iex> length(test_cases.negative)
       8
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -317,7 +316,6 @@ defmodule RsolvApi.Security.Patterns.Php.ErrorDisplay do
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -479,7 +477,6 @@ defmodule RsolvApi.Security.Patterns.Php.ErrorDisplay do
       iex> desc =~ "sensitive"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     Information disclosure through error messages occurs when applications reveal 

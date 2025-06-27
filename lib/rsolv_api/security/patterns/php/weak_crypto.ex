@@ -289,7 +289,6 @@ defmodule RsolvApi.Security.Patterns.Php.WeakCrypto do
       iex> length(test_cases.negative)
       6
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -364,7 +363,6 @@ defmodule RsolvApi.Security.Patterns.Php.WeakCrypto do
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -427,7 +425,6 @@ defmodule RsolvApi.Security.Patterns.Php.WeakCrypto do
       iex> desc =~ "deprecated"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     Weak cryptography vulnerabilities occur when applications use deprecated, broken, or 

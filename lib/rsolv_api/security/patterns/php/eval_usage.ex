@@ -296,7 +296,6 @@ defmodule RsolvApi.Security.Patterns.Php.EvalUsage do
       iex> length(test_cases.negative)
       6
   """
-  @impl true  
   def test_cases do
     %{
       positive: [
@@ -363,7 +362,6 @@ defmodule RsolvApi.Security.Patterns.Php.EvalUsage do
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
   """
-  @impl true
   def examples do
     %{
       vulnerable: %{
@@ -456,7 +454,6 @@ defmodule RsolvApi.Security.Patterns.Php.EvalUsage do
       iex> desc =~ "remote code execution"
       true
   """
-  @impl true
   def vulnerability_description do
     """
     Code injection via eval() occurs when applications execute user-controlled strings 

@@ -157,7 +157,7 @@ defmodule RSOLVWeb.Api.V1.PatternController do
       nil
     end
   end
-
+  
   defp format_pattern_without_tier(%ASTPattern{} = pattern, format) do
     formatted = case format do
       :enhanced ->
@@ -177,6 +177,13 @@ defmodule RSOLVWeb.Api.V1.PatternController do
     end
     
     formatted
+  end
+  
+  defp format_pattern_without_tier(pattern, _format) do
+    # Fallback for other pattern types
+    pattern
+    |> Map.delete(:tier)
+    |> Map.delete(:default_tier)
   end
   
   # Convert regex fields to strings for JSON serialization
@@ -278,12 +285,5 @@ defmodule RSOLVWeb.Api.V1.PatternController do
       vulnerable: get_in(pattern_map, [:test_cases, :vulnerable]) |> List.first() || "",
       safe: get_in(pattern_map, [:test_cases, :safe]) |> List.first() || ""
     })
-  end
-  
-  defp format_pattern_without_tier(pattern, _format) do
-    # Fallback for other pattern types
-    pattern
-    |> Map.delete(:tier)
-    |> Map.delete(:default_tier)
   end
 end

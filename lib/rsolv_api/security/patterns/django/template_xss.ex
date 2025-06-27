@@ -596,7 +596,6 @@ defmodule RsolvApi.Security.Patterns.Django.TemplateXss do
     }
   end
   
-  @impl true
   def applies_to_file?(file_path, frameworks \\ nil) do
     # Apply to Django template files and Python files
     is_template = String.ends_with?(file_path, ".html") ||
