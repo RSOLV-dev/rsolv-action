@@ -75,7 +75,7 @@ defmodule RsolvApi.Security.PatternTelemetry do
     end
   end
   
-  defp handle_cache_event([:pattern, :cache, type], measurements, metadata, _config) do
+  defp handle_cache_event([:pattern, :cache, type], _measurements, metadata, _config) do
     Logger.debug("Pattern cache #{type}",
       language: metadata.language,
       tier: metadata.tier

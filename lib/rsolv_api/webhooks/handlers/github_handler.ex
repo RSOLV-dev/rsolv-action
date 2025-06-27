@@ -12,7 +12,6 @@ defmodule RsolvApi.Webhooks.Handlers.GitHubHandler do
   
   alias RsolvApi.Billing.FixAttempt
   alias RsolvApi.Repo
-  import Ecto.Query
   require Logger
 
   # Multiple ways to identify RSOLV PRs

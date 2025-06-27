@@ -275,9 +275,11 @@ defmodule RsolvApi.AST.ParserPool do
   
   @impl true
   def handle_info(:check_scaling, state) do
-    if state.scaling_enabled do
-      state = auto_scale(state)
+    state = if state.scaling_enabled do
       Process.send_after(self(), :check_scaling, @scale_check_interval)
+      auto_scale(state)
+    else
+      state
     end
     
     {:noreply, state}

@@ -46,7 +46,7 @@ defmodule RSOLVWeb.CredentialController do
             }
           })
         
-        {:error, reason} ->
+        {:error, _reason} ->
           conn
           |> put_status(:internal_server_error)
           |> json(%{error: "Failed to generate credentials"})

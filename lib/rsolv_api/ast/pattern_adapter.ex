@@ -220,7 +220,7 @@ defmodule RsolvApi.AST.PatternAdapter do
         nil
       end
     rescue
-      error ->
+      _error ->
         nil
     end
     

@@ -44,14 +44,4 @@ defmodule RsolvApi.Security.PatternSupervisor do
     
     Supervisor.init(children, strategy: :one_for_one)
   end
-  
-  defp pool_config do
-    [
-      name: {:local, :ai_review_pool},
-      worker_module: RsolvApi.Security.AIReviewWorker,
-      size: 5,
-      max_overflow: 10,
-      strategy: :fifo
-    ]
-  end
 end

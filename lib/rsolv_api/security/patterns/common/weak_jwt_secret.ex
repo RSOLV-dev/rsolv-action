@@ -77,7 +77,7 @@ defmodule RsolvApi.Security.Patterns.Common.WeakJwtSecret do
   @doc """
   Override to handle multi-language files and embedded JWT usage.
   """
-  def applies_to_file?(file_path, content \\ nil) do
+  def applies_to_file?(_file_path, _content \\ nil) do
     # This pattern applies to ALL files since JWT can be used anywhere
     true
   end
