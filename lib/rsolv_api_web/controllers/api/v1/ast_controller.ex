@@ -10,6 +10,7 @@ defmodule RSOLVWeb.Api.V1.ASTController do
   alias RsolvApi.AST.SessionManager
   alias RsolvApi.AST.Encryption
   alias RSOLV.Accounts
+  alias RSOLV.RateLimiter
   
   require Logger
   
@@ -28,10 +29,11 @@ defmodule RSOLVWeb.Api.V1.ASTController do
     
     with {:ok, api_key} <- get_api_key(conn),
          {:ok, customer} <- validate_api_key(api_key),
+         :ok <- check_rate_limit(customer),
          {:ok, request} <- validate_request(params),
          {:ok, session} <- get_or_create_session(request, customer),
-         {:ok, decrypted_files} <- decrypt_files(request["files"], session),
-         {:ok, results} <- analyze_files(decrypted_files, request["options"], session) do
+         {:ok, decrypted_files, decryption_time} <- decrypt_files_with_timing(request["files"], session),
+         {:ok, results, analysis_time} <- analyze_files_with_timing(decrypted_files, request["options"], session) do
       
       # Clean up decrypted content immediately
       :ok = cleanup_decrypted_files(decrypted_files)
@@ -47,7 +49,7 @@ defmodule RSOLVWeb.Api.V1.ASTController do
         },
         results: format_results(results),
         summary: build_summary(results),
-        timing: build_timing(total_time, results)
+        timing: build_timing_detailed(total_time, decryption_time, analysis_time, results)
       })
     else
       {:error, :auth_required} ->
@@ -70,6 +72,19 @@ defmodule RSOLVWeb.Api.V1.ASTController do
             message: "Invalid or expired API key"
           },
           requestId: request_id
+        })
+        
+      {:error, :rate_limited} ->
+        conn
+        |> put_status(429)
+        |> put_resp_header("retry-after", "60")
+        |> json(%{
+          error: %{
+            code: "RATE_LIMITED",
+            message: "Rate limit exceeded. Please retry after 60 seconds."
+          },
+          requestId: request_id,
+          retryAfter: 60
         })
         
       {:error, {:validation, reason}} ->
@@ -111,6 +126,11 @@ defmodule RSOLVWeb.Api.V1.ASTController do
       nil -> {:error, :invalid_api_key}
       customer -> {:ok, customer}
     end
+  end
+  
+  defp check_rate_limit(customer) do
+    # Rate limit: 100 AST analysis requests per minute per customer
+    RateLimiter.check_rate_limit(customer.id, "ast_analysis")
   end
   
   defp validate_request(params) do
@@ -199,7 +219,9 @@ defmodule RSOLVWeb.Api.V1.ASTController do
     end
   end
   
-  defp decrypt_files(encrypted_files, session) do
+  defp decrypt_files_with_timing(encrypted_files, session) do
+    decryption_start = System.monotonic_time(:millisecond)
+    
     # Decrypt files in parallel
     tasks = Enum.map(encrypted_files, fn file ->
       Task.async(fn ->
@@ -210,22 +232,29 @@ defmodule RSOLVWeb.Api.V1.ASTController do
     # Wait for all with timeout
     results = Task.await_many(tasks, @request_timeout)
     
+    decryption_time = System.monotonic_time(:millisecond) - decryption_start
+    
     # Check for any errors
     errors = Enum.filter(results, &match?({:error, _}, &1))
     
     if Enum.empty?(errors) do
-      {:ok, Enum.map(results, fn {:ok, file} -> file end)}
+      {:ok, Enum.map(results, fn {:ok, file} -> file end), decryption_time}
     else
       {:error, List.first(errors)}
     end
   end
+
   
   defp decrypt_file(file, session) do
-    with {:ok, content} <- Encryption.decrypt(
-           file["encryptedContent"],
+    # Decode base64-encoded values
+    with {:ok, encrypted_content} <- Base.decode64(file["encryptedContent"]),
+         {:ok, iv} <- Base.decode64(file["encryption"]["iv"]),
+         {:ok, auth_tag} <- Base.decode64(file["encryption"]["authTag"]),
+         {:ok, content} <- Encryption.decrypt(
+           encrypted_content,
            session.encryption_key,
-           file["encryption"]["iv"],
-           file["encryption"]["authTag"]
+           iv,
+           auth_tag
          ) do
       {:ok, %{
         path: file["path"],
@@ -233,6 +262,9 @@ defmodule RSOLVWeb.Api.V1.ASTController do
         language: detect_language(file),
         metadata: file["metadata"]
       }}
+    else
+      :error -> {:error, :invalid_base64}
+      error -> error
     end
   end
   
@@ -255,7 +287,9 @@ defmodule RSOLVWeb.Api.V1.ASTController do
     end
   end
   
-  defp analyze_files(files, options, session) do
+  defp analyze_files_with_timing(files, options, session) do
+    analysis_start = System.monotonic_time(:millisecond)
+    
     # Analyze files in parallel
     tasks = Enum.map(files, fn file ->
       Task.async(fn ->
@@ -266,17 +300,20 @@ defmodule RSOLVWeb.Api.V1.ASTController do
     # Wait for results
     results = Task.await_many(tasks, @request_timeout - 5000)  # Leave 5s buffer
     
-    {:ok, results}
+    analysis_time = System.monotonic_time(:millisecond) - analysis_start
+    
+    {:ok, results, analysis_time}
   end
+
   
   defp analyze_file(file, options, _session) do
     start_time = System.monotonic_time(:millisecond)
     
     try do
-      # Call the analysis service
-      case AnalysisService.analyze_file(file, options) do
-        {:ok, findings} ->
-          parse_time = System.monotonic_time(:millisecond) - start_time
+      # Call the analysis service with metrics
+      case AnalysisService.analyze_file_with_metrics(file, options) do
+        {:ok, findings, metrics} ->
+          total_time = System.monotonic_time(:millisecond) - start_time
           
           %{
             path: file.path,
@@ -284,26 +321,48 @@ defmodule RSOLVWeb.Api.V1.ASTController do
             language: file.language,
             findings: findings,
             astStats: %{
-              parseTimeMs: parse_time
+              parseTimeMs: total_time,
+              astParseTime: metrics.ast_parse_time || 0,
+              patternMatchTime: metrics.pattern_match_time || 0,
+              cacheHit: metrics.cache_hit || false,
+              nodeCount: metrics.node_count || 0
             }
           }
           
         {:error, reason} ->
+          total_time = System.monotonic_time(:millisecond) - start_time
+          
           %{
             path: file.path,
             status: "error",
             language: file.language,
             error: format_analysis_error(reason),
-            findings: []
+            findings: [],
+            astStats: %{
+              parseTimeMs: total_time,
+              astParseTime: 0,
+              patternMatchTime: 0,
+              cacheHit: false,
+              nodeCount: 0
+            }
           }
       end
     catch
       :exit, {:timeout, _} ->
+        total_time = System.monotonic_time(:millisecond) - start_time
+        
         %{
           path: file.path,
           status: "timeout",
           language: file.language,
-          findings: []
+          findings: [],
+          astStats: %{
+            parseTimeMs: total_time,
+            astParseTime: 0,
+            patternMatchTime: 0,
+            cacheHit: false,
+            nodeCount: 0
+          }
         }
     end
   end
@@ -369,22 +428,55 @@ defmodule RSOLVWeb.Api.V1.ASTController do
     round(total / length(results))
   end
   
-  defp build_timing(total_time, results) do
+  defp build_timing_detailed(total_time, decryption_time, analysis_time, results) do
+    parse_time = calculate_total_parse_time(results)
+    pattern_match_time = calculate_total_pattern_match_time(results)
+    overhead_time = total_time - decryption_time - analysis_time
+    
     %{
       totalMs: total_time,
       breakdown: %{
-        decryption: 0,  # TODO: Track this
-        parsing: calculate_total_parse_time(results),
-        analysis: 0,    # TODO: Track this
-        encryption: 0   # TODO: Track this
+        decryption: decryption_time,
+        parsing: parse_time,
+        patternMatching: pattern_match_time,
+        analysis: analysis_time,
+        overhead: max(0, overhead_time)  # Time for validation, session management, etc.
+      },
+      performance: %{
+        avgDecryptionPerFile: safe_divide(decryption_time, length(results)),
+        avgParsePerFile: safe_divide(parse_time, length(results)),
+        avgPatternMatchPerFile: safe_divide(pattern_match_time, length(results)),
+        totalFilesProcessed: length(results),
+        parallelEfficiency: calculate_parallel_efficiency(analysis_time, parse_time)
       }
     }
   end
+
   
   defp calculate_total_parse_time(results) do
     Enum.reduce(results, 0, fn r, acc ->
-      acc + (r[:astStats][:parseTimeMs] || 0)
+      acc + (r[:astStats][:astParseTime] || r[:astStats][:parseTimeMs] || 0)
     end)
+  end
+
+  defp calculate_total_pattern_match_time(results) do
+    Enum.reduce(results, 0, fn r, acc ->
+      acc + (r[:astStats][:patternMatchTime] || 0)
+    end)
+  end
+
+  defp safe_divide(_numerator, 0), do: 0
+  defp safe_divide(numerator, denominator), do: round(numerator / denominator)
+
+  defp calculate_parallel_efficiency(analysis_time, parse_time) do
+    # Calculate how much time we saved through parallelization
+    # Perfect efficiency would be parse_time / analysis_time approaching number of files
+    if analysis_time > 0 do
+      efficiency = min(1.0, parse_time / analysis_time)
+      round(efficiency * 100)
+    else
+      0
+    end
   end
   
   defp generate_request_id do

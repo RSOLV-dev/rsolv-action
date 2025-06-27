@@ -13,24 +13,24 @@ The RSOLV Pattern API provides access to a comprehensive library of security vul
 | Tier | Access Level | Pattern Count | Use Case |
 |------|-------------|---------------|----------|
 | **Public** | No authentication | 27 patterns | Basic patterns, demos, open source |
-| **Business** | API key required | 389 patterns | Production security scanning |
-| **Enterprise** | Enterprise API key | 32 patterns | Advanced patterns, customer-specific vulnerabilities |
+| **Business** | API key required | 142 patterns | Production security scanning |
+| **Enterprise** | Enterprise API key | 12 patterns | Advanced patterns, customer-specific vulnerabilities |
 
-**Total Production Patterns**: 448 verified security patterns across 8 languages and 6 frameworks
+**Total Production Patterns**: 181 verified security patterns across 8 languages and 6 frameworks
 
 ## Supported Languages
 
-- **JavaScript/TypeScript** (123 patterns) - Node.js, React, Vue, Angular
-- **Python** (89 patterns) - Core Python vulnerabilities  
-- **Ruby** (72 patterns) - Core Ruby vulnerabilities
-- **Java** (64 patterns) - Spring, Jakarta EE, Android
-- **Elixir/Phoenix** (22 patterns) - OTP, GenServer, Ecto
-- **Django** (18 patterns) - Django-specific framework patterns
-- **Rails** (18 patterns) - Rails-specific framework patterns
+- **JavaScript/TypeScript** (27 patterns) - Node.js, React, Vue, Angular
+- **Python** (12 patterns) - Core Python vulnerabilities  
+- **Ruby** (20 patterns) - Core Ruby vulnerabilities
+- **Java** (17 patterns) - Spring, Jakarta EE, Android
+- **Elixir/Phoenix** (28 patterns) - OTP, GenServer, Ecto
+- **Django** (19 patterns) - Django-specific framework patterns
+- **Rails** (20 patterns) - Rails-specific framework patterns
 - **PHP** (25 patterns) - Laravel, WordPress, Symfony
-- **CVE Patterns** (42 patterns) - Cross-language vulnerability patterns
+- **CVE Patterns** (13 patterns) - Cross-language vulnerability patterns
 
-**Total**: 448 patterns across 8 languages and 6 frameworks
+**Total**: 181 patterns across 8 languages and 6 frameworks
 
 ### Framework-Specific Coverage
 - **Django**: Python web framework security patterns
@@ -109,7 +109,7 @@ Get business-tier security patterns for production security scanning.
 ```json
 {
   "patterns": [...],
-  "total": 389,
+  "total": 142,
   "tier": "business"
 }
 ```
@@ -129,7 +129,7 @@ Get enterprise-tier security patterns for advanced vulnerability detection.
 ```json
 {
   "patterns": [...],
-  "total": 32,
+  "total": 12,
   "tier": "enterprise"
 }
 ```
@@ -158,7 +158,7 @@ Get CVE-based patterns that apply across multiple languages.
       "cvss_score": 10.0
     }
   ],
-  "total": 42,
+  "total": 13,
   "tier": "business"
 }
 ```
@@ -195,22 +195,22 @@ Check API health and pattern statistics.
 {
   "status": "healthy",
   "patterns": {
-    "total": 448,
+    "total": 181,
     "by_tier": {
       "public": 27,
-      "business": 389,
-      "enterprise": 32
+      "business": 142,
+      "enterprise": 12
     },
     "by_language": {
-      "javascript": 123,
-      "python": 89,
-      "ruby": 72,
-      "java": 64,
-      "elixir": 22,
-      "django": 18,
-      "rails": 18,
+      "javascript": 27,
+      "python": 12,
+      "ruby": 20,
+      "java": 17,
+      "elixir": 28,
+      "django": 19,
+      "rails": 20,
       "php": 25,
-      "cve": 42
+      "cve": 13
     }
   },
   "cache_status": "warm",
@@ -444,7 +444,7 @@ For API support and feature requests:
 
 ### Business Tier Limitations
 - **Access**: API key authentication required
-- **Pattern Count**: 389 patterns (87% of total library)
+- **Pattern Count**: 142 patterns (78% of total library)
 - **Languages**: Complete coverage for production security scanning
 - **Use Cases**: Production applications, security audits, CI/CD integration
 - **Rate Limits**: 10,000 requests/hour, 100,000 requests/day
@@ -460,7 +460,7 @@ For API support and feature requests:
 
 ### Enterprise Tier Limitations
 - **Access**: Enterprise API key with enhanced authentication
-- **Pattern Count**: 32 patterns (7% of total library, highest value)
+- **Pattern Count**: 12 patterns (7% of total library, highest value)
 - **Languages**: Advanced patterns across all supported languages
 - **Use Cases**: Large enterprises, security vendors, advanced threat detection
 - **Rate Limits**: Unlimited requests
@@ -525,7 +525,7 @@ For API support and feature requests:
 
 ### v2.0 (June 2025)
 - **3-Tier Architecture**: Implemented public, business, and enterprise tiers
-- **448 Production Patterns**: Verified and deployed comprehensive pattern library
+- **181 Production Patterns**: Verified and deployed comprehensive pattern library
 - **8 Language Support**: JavaScript, Python, Ruby, Java, Elixir, PHP, Django, Rails
 - **CVE Pattern Integration**: 42 cross-language vulnerability patterns
 - **Enhanced Rate Limiting**: Tier-specific rate limits and access controls

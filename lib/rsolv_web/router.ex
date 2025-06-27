@@ -93,6 +93,11 @@ defmodule RSOLVWeb.Router do
         param: "flag_name"
     end
     
+    # AST Analysis (RFC-031)
+    scope "/ast" do
+      post "/analyze", Api.V1.ASTController, :analyze
+    end
+    
     # Test endpoints removed - we don't use tiers anymore
   end
 

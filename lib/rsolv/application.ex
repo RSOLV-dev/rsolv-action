@@ -25,6 +25,11 @@ defmodule RSOLV.Application do
       RSOLV.Notifications.Supervisor,
       # Start the Pattern supervisor for security patterns
       RsolvApi.Security.PatternSupervisor,
+      # Start the AST Analysis services
+      RsolvApi.AST.SessionManager,
+      RsolvApi.AST.PortSupervisor,
+      RsolvApi.AST.ParserRegistry,
+      RsolvApi.AST.AnalysisService,
       # Start the Endpoint (http/https)
       RSOLVWeb.Endpoint
       # Start a worker by calling: RSOLV.Worker.start_link(arg)

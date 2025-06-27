@@ -37,8 +37,8 @@ fi
 
 # PHP
 echo -n "PHP-Parser: "
-if [[ -f "php/lib/vendor/autoload.php" ]]; then
-    if php -r "require 'php/lib/vendor/autoload.php'; use PhpParser\ParserFactory; echo 'OK';" 2>/dev/null | grep -q OK; then
+if [[ -f "php/vendor/autoload.php" ]]; then
+    if php -r "require 'php/vendor/autoload.php'; use PhpParser\ParserFactory; echo 'OK';" 2>/dev/null | grep -q OK; then
         echo -e "${GREEN}✓ Available${NC}"
     else
         echo -e "${RED}✗ Not working${NC}"

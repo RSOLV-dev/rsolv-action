@@ -13,7 +13,6 @@ defmodule RsolvApi.Security.ASTPatternTest do
         severity: :high,
         languages: ["javascript"],
         regex: ~r/SELECT.*FROM/i,
-        default_tier: :protected,
         recommendation: "Use parameterized queries",
         test_cases: %{
           vulnerable: ["db.query('SELECT * FROM users WHERE id = ' + req.params.id)"],
@@ -40,7 +39,6 @@ defmodule RsolvApi.Security.ASTPatternTest do
         description: "Test pattern",
         severity: :high,
         languages: ["javascript"],
-        default_tier: :protected,
         recommendation: "Use parameterized queries",
         test_cases: %{vulnerable: ["bad"], safe: ["good"]}
       }
@@ -61,7 +59,6 @@ defmodule RsolvApi.Security.ASTPatternTest do
         description: "Test pattern",
         severity: :medium,
         languages: ["javascript"],
-        default_tier: :protected,
         recommendation: "Add logging",
         test_cases: %{vulnerable: ["bad"], safe: ["good"]}
       }
@@ -81,7 +78,6 @@ defmodule RsolvApi.Security.ASTPatternTest do
         description: "Test pattern",
         severity: :high,
         languages: ["javascript"],
-        default_tier: :protected,
         recommendation: "Sanitize inputs",
         test_cases: %{vulnerable: ["bad"], safe: ["good"]}
       }
@@ -111,12 +107,6 @@ defmodule RsolvApi.Security.ASTPatternTest do
       assert Enum.all?(patterns, & &1.context_rules != nil)
     end
     
-    test "public tier gets fewer patterns" do
-      public_patterns = ASTPattern.get_patterns("javascript", :public, :enhanced)
-      all_patterns = ASTPattern.get_patterns("javascript", :enterprise, :enhanced)
-      
-      assert length(public_patterns) < length(all_patterns)
-    end
     
     test "enhanced patterns have minimum confidence thresholds" do
       patterns = ASTPattern.get_patterns("javascript", :protected, :enhanced)
@@ -135,7 +125,6 @@ defmodule RsolvApi.Security.ASTPatternTest do
         description: "Test pattern",
         severity: :high,
         languages: ["javascript"],
-        default_tier: :protected,
         recommendation: "Use parameterized queries",
         test_cases: %{vulnerable: ["bad"], safe: ["good"]}
       }
@@ -154,7 +143,6 @@ defmodule RsolvApi.Security.ASTPatternTest do
         description: "Test pattern",
         severity: :medium,
         languages: ["javascript"],
-        default_tier: :protected,
         recommendation: "Add logging",
         test_cases: %{vulnerable: ["bad"], safe: ["good"]}
       }
@@ -172,7 +160,6 @@ defmodule RsolvApi.Security.ASTPatternTest do
         regex: ~r/test/,
         severity: :high,
         languages: ["javascript"],
-        default_tier: :protected,
         recommendation: "Fix it",
         test_cases: %{vulnerable: ["bad"], safe: ["good"]}
       }

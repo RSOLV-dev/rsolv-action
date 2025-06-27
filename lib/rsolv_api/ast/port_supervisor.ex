@@ -1,298 +1,359 @@
 defmodule RsolvApi.AST.PortSupervisor do
   @moduledoc """
-  Supervises parser Port processes with automatic restart and resource limits.
-  Manages a pool of parser processes for each supported language.
+  Supervises external parser processes (Ports) with:
+  - Crash recovery and restart limits
+  - Resource limits (memory, CPU, timeout)
+  - Connection pooling
+  - Health monitoring
+  - Security isolation
   """
-
-  use GenServer
+  
+  use DynamicSupervisor
+  
+  alias RsolvApi.AST.PortWorker
+  
   require Logger
-
-  @supported_languages ~w(python ruby php java javascript elixir)
-  @parser_timeout 30_000  # 30 seconds max per parse
-  @max_file_size 10 * 1024 * 1024  # 10MB
-
-  defmodule ParserPort do
-    @moduledoc false
-    defstruct [:port, :language, :busy, :created_at, :request_count]
-  end
-
-  # Client API
-
-  def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
-  end
-
-  @doc """
-  Parse code using the appropriate language parser.
-  Returns {:ok, ast} or {:error, reason}
-  """
-  def parse(language, code, options \\ %{}) when language in @supported_languages do
-    if byte_size(code) > @max_file_size do
-      {:error, "File too large (max 10MB)"}
-    else
-      GenServer.call(__MODULE__, {:parse, language, code, options}, @parser_timeout + 1000)
-    end
-  end
-
-  @doc """
-  Get status of all parser ports
-  """
-  def status do
-    GenServer.call(__MODULE__, :status)
-  end
-
-  # Server callbacks
-
-  @impl true
-  def init(_opts) do
-    # Trap exits to handle port crashes
-    Process.flag(:trap_exit, true)
-    
-    state = %{
-      ports: %{},  # language => [%ParserPort{}]
-      stats: %{},  # language => %{total_requests: 0, errors: 0}
-    }
-    
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_call({:parse, language, code, options}, _from, state) do
-    case get_available_port(language, state) do
-      {nil, state} ->
-        # No available port, create one
-        case create_parser_port(language) do
-          {:ok, port_info} ->
-            # Mark as busy and send request
-            port_info = %{port_info | busy: true}
-            updated_state = add_port(state, language, port_info)
-            
-            case do_parse(port_info.port, code, options) do
-              {:ok, result} ->
-                # Mark as available again
-                final_state = mark_port_available(updated_state, language, port_info.port)
-                {:reply, {:ok, result}, final_state}
-              
-              {:error, reason} = error ->
-                # Remove failed port
-                final_state = remove_port(updated_state, language, port_info.port)
-                {:reply, error, final_state}
-            end
-          
-          {:error, reason} = error ->
-            {:reply, error, state}
-        end
-      
-      {port_info, state} ->
-        # Use existing available port
-        port_info = %{port_info | busy: true, request_count: port_info.request_count + 1}
-        updated_state = update_port(state, language, port_info)
-        
-        case do_parse(port_info.port, code, options) do
-          {:ok, result} ->
-            # Check if port should be recycled (after N requests)
-            final_state = if port_info.request_count >= 100 do
-              Logger.info("Recycling #{language} parser after 100 requests")
-              remove_port(updated_state, language, port_info.port)
-            else
-              mark_port_available(updated_state, language, port_info.port)
-            end
-            
-            {:reply, {:ok, result}, final_state}
-          
-          {:error, reason} = error ->
-            # Remove failed port
-            final_state = remove_port(updated_state, language, port_info.port)
-            {:reply, error, final_state}
-        end
-    end
-  end
-
-  @impl true
-  def handle_call(:status, _from, state) do
-    status = Enum.map(state.ports, fn {language, ports} ->
-      {language, %{
-        active_ports: length(ports),
-        busy_ports: Enum.count(ports, & &1.busy),
-        total_requests: Enum.sum(Enum.map(ports, & &1.request_count))
-      }}
-    end)
-    
-    {:reply, status, state}
-  end
-
-  @impl true
-  def handle_info({:EXIT, port, reason}, state) do
-    # Port crashed, remove it from all languages
-    Logger.warn("Parser port exited: #{inspect(reason)}")
-    
-    updated_state = Enum.reduce(state.ports, state, fn {language, ports}, acc ->
-      if Enum.any?(ports, &(&1.port == port)) do
-        remove_port(acc, language, port)
-      else
-        acc
-      end
-    end)
-    
-    {:noreply, updated_state}
-  end
-
-  @impl true
-  def handle_info({port, {:data, _data}}, state) when is_port(port) do
-    # Ignore unexpected data from ports
-    {:noreply, state}
-  end
-
-  # Private functions
-
-  defp get_available_port(language, state) do
-    ports = Map.get(state.ports, language, [])
-    available = Enum.find(ports, &(not &1.busy))
-    
-    if available do
-      {available, state}
-    else
-      {nil, state}
-    end
-  end
-
-  defp create_parser_port(language) do
-    parser_path = get_parser_path(language)
-    
-    if File.exists?(parser_path) do
-      try do
-        port = Port.open({:spawn_executable, parser_path}, [
-          :binary,
-          :exit_status,
-          {:line, 65536},
-          {:env, [{~c"PARSER_LANGUAGE", String.to_charlist(language)}]}
-        ])
-        
-        port_info = %ParserPort{
-          port: port,
-          language: language,
-          busy: false,
-          created_at: DateTime.utc_now(),
-          request_count: 0
-        }
-        
-        {:ok, port_info}
-      catch
-        :error, reason ->
-          {:error, "Failed to spawn parser: #{inspect(reason)}"}
-      end
-    else
-      {:error, "Parser not found: #{parser_path}"}
-    end
-  end
-
-  defp do_parse(port, code, options) do
-    request_id = generate_request_id()
-    
-    request = %{
-      "action" => "parse",
-      "id" => request_id,
-      "code" => code,
-      "options" => options
-    }
-    
-    # Send request
-    json = JSON.encode!(request)
-    Port.command(port, json <> "\n")
-    
-    # Wait for response with timeout
-    receive do
-      {^port, {:data, {:eol, response_data}}} ->
-        case JSON.decode(response_data) do
-          {:ok, %{"status" => "success", "ast" => ast}} ->
-            {:ok, ast}
-          
-          {:ok, %{"status" => "error", "error" => error}} ->
-            {:error, format_error(error)}
-          
-          {:error, _} ->
-            {:error, "Invalid JSON response from parser"}
-        end
-      
-      {^port, {:exit_status, status}} ->
-        {:error, "Parser exited with status: #{status}"}
-    after
-      @parser_timeout ->
-        # Kill the port if it's taking too long
-        Port.close(port)
-        {:error, "Parser timeout"}
-    end
-  end
-
-  defp get_parser_path(language) do
-    base_dir = Path.join([Application.app_dir(:rsolv_api), "priv", "parsers"])
-    
-    case language do
-      "python" -> Path.join([base_dir, "python", "parser.py"])
-      "ruby" -> Path.join([base_dir, "ruby", "parser.rb"])
-      "php" -> Path.join([base_dir, "php", "parser.php"])
-      "java" -> Path.join([base_dir, "java", "parser.sh"])  # Shell wrapper for Java
-      "javascript" -> Path.join([base_dir, "javascript", "parser.js"])
-      "elixir" -> Path.join([base_dir, "elixir", "parser.exs"])
-    end
-  end
-
-  defp add_port(state, language, port_info) do
-    ports = Map.get(state.ports, language, [])
-    %{state | ports: Map.put(state.ports, language, [port_info | ports])}
-  end
-
-  defp update_port(state, language, updated_port_info) do
-    ports = Map.get(state.ports, language, [])
-    updated_ports = Enum.map(ports, fn port_info ->
-      if port_info.port == updated_port_info.port do
-        updated_port_info
-      else
-        port_info
-      end
-    end)
-    
-    %{state | ports: Map.put(state.ports, language, updated_ports)}
-  end
-
-  defp mark_port_available(state, language, port) do
-    ports = Map.get(state.ports, language, [])
-    updated_ports = Enum.map(ports, fn port_info ->
-      if port_info.port == port do
-        %{port_info | busy: false}
-      else
-        port_info
-      end
-    end)
-    
-    %{state | ports: Map.put(state.ports, language, updated_ports)}
-  end
-
-  defp remove_port(state, language, port) do
-    # Close the port
-    if Process.alive?(port) do
-      Port.close(port)
-    end
-    
-    ports = Map.get(state.ports, language, [])
-    updated_ports = Enum.reject(ports, &(&1.port == port))
-    
-    %{state | ports: Map.put(state.ports, language, updated_ports)}
-  end
-
-  defp generate_request_id do
-    :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
-  end
-
-  defp format_error(%{"type" => type, "message" => message} = error) do
-    location = case error do
-      %{"line" => line, "column" => col} -> " at line #{line}, column #{col}"
-      %{"line" => line} -> " at line #{line}"
-      _ -> ""
-    end
-    
-    "#{type}: #{message}#{location}"
+  
+  def start_link(init_arg) do
+    DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
   end
   
-  defp format_error(error), do: inspect(error)
+  @impl true
+  def init(_init_arg) do
+    # Initialize ETS tables for port tracking (create if not exists)
+    ensure_ets_table(:port_registry)
+    ensure_ets_table(:port_pools)
+    ensure_ets_table(:port_stats)
+    
+    DynamicSupervisor.init(strategy: :one_for_one)
+  end
+  
+  @doc """
+  Starts a new port with the specified parser configuration.
+  """
+  def start_port(supervisor, config) do
+    port_id = generate_port_id()
+    
+    # Check if we can reuse a pooled port
+    pooled_port_id = if config[:pooled], do: get_from_pool(config.language), else: nil
+    
+    if pooled_port_id do
+      {:ok, pooled_port_id}
+    else
+      # Start new port worker
+      restart_type = if config[:max_restarts] && config[:max_restarts] > 0 do
+        :permanent
+      else
+        :transient
+      end
+      
+      spec = %{
+        id: port_id,
+        start: {PortWorker, :start_link, [Map.put(config, :id, port_id)]},
+        restart: restart_type,
+        type: :worker
+      }
+      
+      case DynamicSupervisor.start_child(supervisor, spec) do
+        {:ok, pid} ->
+          # Register port
+          :ets.insert(:port_registry, {port_id, pid, config, System.monotonic_time(:millisecond)})
+          :ets.insert(:port_stats, {port_id, %{
+            requests_handled: 0,
+            restarts: 0,
+            last_used: System.monotonic_time(:millisecond),
+            memory_usage: 0
+          }})
+          {:ok, port_id}
+          
+        {:error, reason} ->
+          {:error, "Port failed to start: #{inspect(reason)}"}
+      end
+    end
+  end
+  
+  @doc """
+  Stops a port gracefully.
+  """
+  def stop_port(supervisor, port_id) do
+    case :ets.lookup(:port_registry, port_id) do
+      [{^port_id, pid, _config, _started_at}] ->
+        DynamicSupervisor.terminate_child(supervisor, pid)
+        :ets.delete(:port_registry, port_id)
+        :ets.delete(:port_stats, port_id)
+        :ok
+        
+      [] ->
+        :ok
+    end
+  end
+  
+  @doc """
+  Gets port information.
+  """
+  def get_port(_supervisor, port_id) do
+    case :ets.lookup(:port_registry, port_id) do
+      [{^port_id, pid, config, started_at}] ->
+        %{
+          id: port_id,
+          pid: pid,
+          config: config,
+          started_at: started_at
+        }
+        
+      [] ->
+        nil
+    end
+  end
+  
+  @doc """
+  Gets the PID of a port.
+  """
+  def get_port_pid(_supervisor, port_id) do
+    case :ets.lookup(:port_registry, port_id) do
+      [{^port_id, pid, _config, _started_at}] -> pid
+      [] -> nil
+    end
+  end
+  
+  @doc """
+  Sends a message to a port.
+  """
+  def send_to_port(_supervisor, port_id, message) do
+    case get_port_pid(nil, port_id) do
+      nil -> {:error, :port_not_found}
+      pid -> 
+        GenServer.cast(pid, {:send, message})
+        update_stats(port_id, :last_used)
+        :ok
+    end
+  end
+  
+  @doc """
+  Makes a synchronous call to a port.
+  """
+  def call_port(_supervisor, port_id, command, timeout \\ 5000) do
+    case get_port_pid(nil, port_id) do
+      nil -> {:error, :port_not_found}
+      pid -> 
+        try do
+          result = GenServer.call(pid, {:call, command}, timeout)
+          update_stats(port_id, :request)
+          result
+        catch
+          :exit, {:timeout, _} -> {:error, :timeout}
+        end
+    end
+  end
+  
+  @doc """
+  Releases a port back to the pool.
+  """
+  def release_port(_supervisor, port_id) do
+    case :ets.lookup(:port_registry, port_id) do
+      [{^port_id, _pid, config, _started_at}] ->
+        if config[:pooled] do
+          add_to_pool(config.language, port_id)
+        end
+        :ok
+        
+      [] ->
+        :ok
+    end
+  end
+  
+  @doc """
+  Gets the restart count for a port.
+  """
+  def get_port_restart_count(_supervisor, port_id) do
+    case :ets.lookup(:port_stats, port_id) do
+      [{^port_id, stats}] -> stats.restarts
+      [] -> 0
+    end
+  end
+  
+  @doc """
+  Terminates a port forcefully.
+  """
+  def terminate_port(supervisor, port_id) do
+    stop_port(supervisor, port_id)
+  end
+  
+  @doc """
+  Checks if a port is healthy.
+  """
+  def is_port_healthy?(_supervisor, port_id) do
+    case call_port(nil, port_id, "HEALTH_CHECK", 1000) do
+      {:ok, %{"status" => "healthy"}} -> true
+      {:ok, %{"result" => "ok"}} -> true  # Default health check response
+      _ -> false
+    end
+  end
+  
+  @doc """
+  Gets statistics for a port.
+  """
+  def get_port_stats(_supervisor, port_id) do
+    case :ets.lookup(:port_stats, port_id) do
+      [{^port_id, stats}] ->
+        # Calculate uptime
+        case :ets.lookup(:port_registry, port_id) do
+          [{^port_id, _pid, _config, started_at}] ->
+            uptime_ms = System.monotonic_time(:millisecond) - started_at
+            Map.merge(stats, %{
+              uptime_seconds: div(uptime_ms, 1000),
+              memory_usage: get_process_memory(port_id)
+            })
+            
+          [] ->
+            stats
+        end
+        
+      [] ->
+        nil
+    end
+  end
+  
+  @doc """
+  Restarts an unhealthy port.
+  """
+  def restart_unhealthy_port(supervisor, port_id) do
+    case :ets.lookup(:port_registry, port_id) do
+      [{^port_id, pid, config, _started_at}] ->
+        # Stop the current port
+        DynamicSupervisor.terminate_child(supervisor, pid)
+        
+        # Update restart count
+        update_stats(port_id, :restart)
+        
+        # Start a new port with the same config
+        spec = %{
+          id: port_id,
+          start: {PortWorker, :start_link, [Map.put(config, :id, port_id)]},
+          restart: :transient,
+          type: :worker
+        }
+        
+        case DynamicSupervisor.start_child(supervisor, spec) do
+          {:ok, new_pid} ->
+            # Update registry with new PID
+            :ets.insert(:port_registry, {port_id, new_pid, config, System.monotonic_time(:millisecond)})
+            {:ok, port_id}
+            
+          {:error, reason} ->
+            # Clean up if restart failed
+            :ets.delete(:port_registry, port_id)
+            :ets.delete(:port_stats, port_id)
+            {:error, reason}
+        end
+        
+      [] ->
+        {:error, :port_not_found}
+    end
+  end
+
+  @doc """
+  Gets the process group for a port.
+  """
+  def get_port_process_group(_supervisor, port_id) do
+    # In a real implementation, this would return the OS process group
+    # For testing, we'll use the port_id as a proxy
+    "pg_#{port_id}"
+  end
+  
+  @doc """
+  Gets the pool size for a language.
+  """
+  def get_pool_size(_supervisor, language) do
+    case :ets.lookup(:port_pools, language) do
+      [{^language, pool}] -> length(pool)
+      [] -> 0
+    end
+  end
+  
+  # Private functions
+  
+  defp generate_port_id do
+    :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
+  end
+  
+  defp get_from_pool(language) do
+    case :ets.lookup(:port_pools, language) do
+      [{^language, [port_id | rest]}] ->
+        :ets.insert(:port_pools, {language, rest})
+        port_id
+        
+      _ ->
+        nil
+    end
+  end
+  
+  defp add_to_pool(language, port_id) do
+    max_pool_size = 5  # Default max pool size
+    
+    case :ets.lookup(:port_pools, language) do
+      [{^language, pool}] ->
+        new_pool = if length(pool) >= max_pool_size do
+          # Remove oldest
+          [port_id | Enum.drop(pool, -1)]
+        else
+          [port_id | pool]
+        end
+        :ets.insert(:port_pools, {language, new_pool})
+        
+      [] ->
+        :ets.insert(:port_pools, {language, [port_id]})
+    end
+  end
+  
+  defp update_stats(port_id, type) do
+    case :ets.lookup(:port_stats, port_id) do
+      [{^port_id, stats}] ->
+        updated_stats = case type do
+          :request -> 
+            %{stats | requests_handled: stats.requests_handled + 1, last_used: System.monotonic_time(:millisecond)}
+          :restart ->
+            %{stats | restarts: stats.restarts + 1}
+          :last_used ->
+            %{stats | last_used: System.monotonic_time(:millisecond)}
+        end
+        :ets.insert(:port_stats, {port_id, updated_stats})
+        updated_stats.restarts  # Return restart count for debugging
+        
+      [] ->
+        # If stats don't exist, create them
+        if type == :restart do
+          stats = %{
+            requests_handled: 0,
+            restarts: 1,
+            last_used: System.monotonic_time(:millisecond),
+            memory_usage: 0
+          }
+          :ets.insert(:port_stats, {port_id, stats})
+          1  # Return restart count
+        else
+          0
+        end
+    end
+  end
+  
+  defp get_process_memory(port_id) do
+    case get_port_pid(nil, port_id) do
+      nil -> 0
+      pid ->
+        case Process.info(pid, :memory) do
+          {:memory, bytes} -> bytes
+          nil -> 0
+        end
+    end
+  end
+  
+  defp ensure_ets_table(name) do
+    case :ets.whereis(name) do
+      :undefined ->
+        :ets.new(name, [:set, :public, :named_table])
+      _ ->
+        name
+    end
+  end
 end

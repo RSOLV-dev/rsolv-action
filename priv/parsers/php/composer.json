@@ -1,0 +1,16 @@
+{
+    "name": "rsolv/php-ast-parser",
+    "description": "PHP AST Parser for RSOLV RFC-031",
+    "type": "project",
+    "require": {
+        "php": "^7.4|^8.0",
+        "nikic/php-parser": "^4.15"
+    },
+    "autoload": {
+        "psr-4": {
+            "RsolvApi\\PhpParser\\": "src/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

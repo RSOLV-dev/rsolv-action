@@ -34,9 +34,12 @@ def node_to_dict(node):
             fields[field] = node_to_dict(value)
         
         result = {
-            '_type': node.__class__.__name__,
-            '_fields': fields
+            'type': node.__class__.__name__
         }
+        
+        # Add fields directly to result
+        for field, value in fields.items():
+            result[field] = value
         
         # Add location info if available
         if hasattr(node, 'lineno'):
@@ -127,14 +130,55 @@ def main():
             
             request = json.loads(line.strip())
             request_id = request.get('id', 'unknown')
+            command = request.get('command', '')
+            action = request.get('action', command)  # Support both formats
             
-            if request.get('action') != 'parse':
+            if action == 'HEALTH_CHECK':
+                response = {
+                    'id': request_id,
+                    'result': 'ok'
+                }
+            elif action != 'parse' and command != '':
+                # Handle command-based interface (for compatibility with PortWorker)
+                start_time = time.time()
+                code = command  # Treat command as code to parse
+                options = request.get('options', {})
+                filename = request.get('filename', '<string>')
+                
+                # Parse the code
+                tree = ast.parse(code, filename=filename)
+                
+                # Convert AST to dictionary
+                ast_dict = node_to_dict(tree)
+                
+                # Extract security patterns if requested
+                security_patterns = []
+                if options.get('include_security_patterns', True):
+                    security_patterns = find_security_patterns(tree)
+                
+                parse_time_ms = int((time.time() - start_time) * 1000)
+                
+                response = {
+                    'id': request_id,
+                    'status': 'success',
+                    'success': True,
+                    'ast': ast_dict,
+                    'security_patterns': security_patterns,
+                    'metadata': {
+                        'parser_version': '1.0.0',
+                        'language': 'python',
+                        'language_version': sys.version.split()[0],
+                        'parse_time_ms': parse_time_ms,
+                        'ast_node_count': len(list(ast.walk(tree)))
+                    }
+                }
+            elif action != 'parse' and not command:
                 response = {
                     'id': request_id,
                     'status': 'error',
                     'error': {
                         'type': 'InvalidAction',
-                        'message': f"Unknown action: {request.get('action')}"
+                        'message': f"Unknown action: {action}"
                     }
                 }
             else:
@@ -166,7 +210,7 @@ def main():
                         'language': 'python',
                         'language_version': sys.version.split()[0],
                         'parse_time_ms': parse_time_ms,
-                        'ast_node_count': len(ast.walk(tree))
+                        'ast_node_count': len(list(ast.walk(tree)))
                     }
                 }
                 
@@ -174,6 +218,7 @@ def main():
             response = {
                 'id': request_id,
                 'status': 'error',
+                'success': False,
                 'error': {
                     'type': 'SyntaxError',
                     'message': str(e),
@@ -186,6 +231,7 @@ def main():
             response = {
                 'id': 'unknown',
                 'status': 'error',
+                'success': False,
                 'error': {
                     'type': 'JSONDecodeError',
                     'message': f"Invalid JSON: {str(e)}"
@@ -195,6 +241,7 @@ def main():
             response = {
                 'id': request_id,
                 'status': 'error',
+                'success': False,
                 'error': {
                     'type': type(e).__name__,
                     'message': str(e)

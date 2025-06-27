@@ -495,7 +495,7 @@ defmodule RSOLVWeb.PatternController do
   - format: standard (default) or enhanced (with AST rules)
   
   Access model:
-  - With API key: Access to all ~172 patterns
+  - With API key: Access to all ~181 patterns
   - Without API key: Access to ~20 demo patterns only
   """
   def all(conn, params) do
@@ -764,13 +764,68 @@ defmodule RSOLVWeb.PatternController do
     
     # Add enhanced fields if requested
     if format == :enhanced do
-      # TODO: Add AST enhancement fields if available
-      formatted
+      # Add AST enhancement fields if available
+      case get_ast_enhancement_fields(pattern) do
+        nil -> formatted
+        ast_fields -> Map.put(formatted, :astEnhancement, ast_fields)
+      end
     else
       formatted
     end
   end
   
+  defp get_ast_enhancement_fields(%Pattern{} = pattern) do
+    # Try to get AST enhancement from the pattern module
+    pattern_module = pattern_id_to_module(pattern.id)
+    
+    if pattern_module && function_exported?(pattern_module, :ast_enhancement, 0) do
+      apply(pattern_module, :ast_enhancement, [])
+    else
+      nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp pattern_id_to_module(pattern_id) do
+    # Convert pattern ID to module name
+    # e.g., "js-xss-dom-manipulation" -> RsolvApi.Security.Patterns.Javascript.XssDomManipulation
+    parts = String.split(pattern_id, "-")
+    
+    if length(parts) >= 2 do
+      [lang | rest] = parts
+      
+      language = case lang do
+        "js" -> "Javascript"
+        "ts" -> "Typescript"
+        "py" -> "Python"
+        "rb" -> "Ruby"
+        "php" -> "Php"
+        "go" -> "Go"
+        "java" -> "Java"
+        _ -> String.capitalize(lang)
+      end
+      
+      pattern_name = rest
+        |> Enum.map(&String.capitalize/1)
+        |> Enum.join("")
+      
+      module_name = Module.concat([
+        RsolvApi.Security.Patterns,
+        language,
+        pattern_name
+      ])
+      
+      if Code.ensure_loaded?(module_name) do
+        module_name
+      else
+        nil
+      end
+    else
+      nil
+    end
+  end
+
   defp format_pattern_without_tier(%ASTPattern{} = pattern, format) do
     formatted = case format do
       :enhanced ->

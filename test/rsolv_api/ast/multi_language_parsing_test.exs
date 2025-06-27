@@ -1,7 +1,7 @@
 defmodule RsolvApi.AST.MultiLanguageParsingTest do
   use RsolvApi.AST.TestCase
   
-  alias RsolvApi.AST.PortSupervisor
+  alias RsolvApi.AST.{PortSupervisor, ParserRegistry}
   
   describe "Python parsing" do
     test "parses simple Python code" do
@@ -9,7 +9,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
       
       # Create a temporary Python file
       with_temp_file(code, "py", fn path ->
-        {:ok, ast} = PortSupervisor.parse("python", code)
+        {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "python", code)
         
         assert ast["_type"] == "Module"
         assert is_list(ast["_fields"]["body"])
@@ -28,14 +28,14 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
       safe_code = test_code("python", :sql_injection_safe)
       
       # Parse vulnerable code
-      {:ok, vuln_ast} = PortSupervisor.parse("python", vulnerable_code)
+      {:ok, vuln_ast} = ParserRegistry.parse_code("test-session", "test-customer", "python", vulnerable_code)
       
       # Look for f-string with SQL
       joined_strs = find_nodes(vuln_ast, "JoinedStr")
       assert length(joined_strs) > 0
       
       # Parse safe code
-      {:ok, safe_ast} = PortSupervisor.parse("python", safe_code)
+      {:ok, safe_ast} = ParserRegistry.parse_code("test-session", "test-customer", "python", safe_code)
       
       # Safe code should use different pattern
       joined_strs_safe = find_nodes(safe_ast, "JoinedStr")
@@ -46,7 +46,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
     test "handles Python syntax errors gracefully" do
       code = test_code("python", :syntax_error)
       
-      case PortSupervisor.parse("python", code) do
+      case ParserRegistry.parse_code("test-session", "test-customer", "python", code) do
         {:error, reason} ->
           assert String.contains?(reason, "SyntaxError")
         {:ok, _} ->
@@ -57,7 +57,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
     test "detects command injection patterns" do
       code = test_code("python", :command_injection_vulnerable)
       
-      {:ok, ast} = PortSupervisor.parse("python", code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "python", code)
       
       # Find os.system calls
       calls = find_nodes(ast, "Call")
@@ -73,22 +73,20 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
   end
   
   describe "Ruby parsing" do
-    @tag :skip
     test "parses simple Ruby code" do
       code = test_code("ruby", :simple)
       
-      {:ok, ast} = PortSupervisor.parse("ruby", code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "ruby", code)
       
       # Ruby AST structure
       assert ast["type"] == :def or ast[:type] == :def
       assert is_list(ast["children"]) or is_list(ast[:children])
     end
     
-    @tag :skip
     test "detects Ruby SQL injection" do
       vulnerable_code = test_code("ruby", :sql_injection_vulnerable)
       
-      {:ok, ast} = PortSupervisor.parse("ruby", vulnerable_code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "ruby", vulnerable_code)
       
       # Look for string interpolation in where clause
       dstr_nodes = find_nodes(ast, :dstr)
@@ -97,23 +95,21 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
   end
   
   describe "PHP parsing" do
-    @tag :skip
     test "parses simple PHP code" do
       code = test_code("php", :simple)
       
-      {:ok, ast} = PortSupervisor.parse("php", code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "php", code)
       
       # PHP AST should have function nodes
       assert ast != nil
     end
     
-    @tag :skip
     test "detects PHP XSS vulnerabilities" do
       vulnerable_code = test_code("php", :xss_vulnerable)
       safe_code = test_code("php", :xss_safe)
       
-      {:ok, vuln_ast} = PortSupervisor.parse("php", vulnerable_code)
-      {:ok, safe_ast} = PortSupervisor.parse("php", safe_code)
+      {:ok, vuln_ast} = ParserRegistry.parse_code("test-session", "test-customer", "php", vulnerable_code)
+      {:ok, safe_ast} = ParserRegistry.parse_code("test-session", "test-customer", "php", safe_code)
       
       # Vulnerable should have direct echo
       # Safe should have htmlspecialchars
@@ -126,7 +122,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
     test "parses simple Java code" do
       code = test_code("java", :simple)
       
-      {:ok, ast} = PortSupervisor.parse("java", code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "java", code)
       
       # Java AST should have class declaration
       assert ast != nil
@@ -136,7 +132,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
     test "detects Java command injection" do
       code = test_code("java", :command_injection_vulnerable)
       
-      {:ok, ast} = PortSupervisor.parse("java", code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "java", code)
       
       # Look for Runtime.exec calls
       # AST structure depends on parser used
@@ -148,7 +144,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
     test "parses simple JavaScript code" do
       code = test_code("javascript", :simple)
       
-      {:ok, ast} = PortSupervisor.parse("javascript", code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "javascript", code)
       
       # JS AST should have Program root
       assert ast["type"] == "Program" or ast[:type] == "Program"
@@ -157,7 +153,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
     test "detects JavaScript SQL injection" do
       vulnerable_code = test_code("javascript", :sql_injection_vulnerable)
       
-      {:ok, ast} = PortSupervisor.parse("javascript", vulnerable_code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "javascript", vulnerable_code)
       
       # Look for template literals with expressions
       template_literals = find_nodes(ast, "TemplateLiteral")
@@ -166,21 +162,19 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
   end
   
   describe "Elixir parsing" do
-    @tag :skip
     test "parses simple Elixir code" do
       code = test_code("elixir", :simple)
       
-      {:ok, ast} = PortSupervisor.parse("elixir", code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "elixir", code)
       
       # Elixir AST is a tuple structure
       assert is_tuple(ast) or is_map(ast)
     end
     
-    @tag :skip
     test "detects Elixir command injection" do
       code = test_code("elixir", :command_injection_vulnerable)
       
-      {:ok, ast} = PortSupervisor.parse("elixir", code)
+      {:ok, ast} = ParserRegistry.parse_code("test-session", "test-customer", "elixir", code)
       
       # Look for System.shell calls
       assert ast != nil
@@ -195,7 +189,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
         code = test_code(language, :simple)
         
         {time, result} = :timer.tc(fn ->
-          PortSupervisor.parse(language, code)
+          ParserRegistry.parse_code("test-session", "test-customer", language, code)
         end)
         
         assert {:ok, _ast} = result
@@ -212,7 +206,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
           code = test_code(language, :simple)
           
           {time, result} = :timer.tc(fn ->
-            PortSupervisor.parse(language, code)
+            ParserRegistry.parse_code("test-session", "test-customer", language, code)
           end)
           
           {i, language, time, result}
@@ -242,7 +236,7 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
       invalid_json = "not json at all"
       
       # This should fail gracefully
-      {:error, _reason} = PortSupervisor.parse("python", invalid_json)
+      {:error, _reason} = ParserRegistry.parse_code("test-session", "test-customer", "python", invalid_json)
       
       # Parser should still work after error
       code = test_code("python", :simple)

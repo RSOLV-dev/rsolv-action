@@ -1,0 +1,14 @@
+{
+  "name": "rsolv-js-ts-parser",
+  "version": "1.0.0",
+  "description": "JavaScript/TypeScript AST parser for RSOLV using Babel",
+  "main": "parser.js",
+  "dependencies": {
+    "@babel/parser": "^7.23.0",
+    "@babel/traverse": "^7.23.0",
+    "@babel/types": "^7.23.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

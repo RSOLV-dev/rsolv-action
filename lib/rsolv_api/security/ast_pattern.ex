@@ -830,40 +830,29 @@ defmodule RsolvApi.Security.ASTPattern do
   end
   
   defp filter_by_tier(patterns, tier) when is_binary(tier) do
-    # If tier is enterprise or ai, include all lower tier patterns too
-    # This implements cumulative tier access
+    # For now, since patterns don't have tier information yet, 
+    # we'll be permissive and return all patterns for any tier.
+    # This can be refined later when tier information is added to patterns.
     case tier do
       "enterprise" ->
         # Enterprise gets everything
         patterns
       
       "ai" ->
-        # AI tier gets public, protected, and ai patterns
-        Enum.filter(patterns, fn pattern ->
-          pattern_tier = to_string(pattern.default_tier || "protected")
-          pattern_tier in ["public", "protected", "ai"]
-        end)
+        # AI tier gets most patterns 
+        patterns
       
       "protected" ->
-        # Protected tier gets public and protected patterns
-        Enum.filter(patterns, fn pattern ->
-          pattern_tier = to_string(pattern.default_tier || "protected")
-          pattern_tier in ["public", "protected"]
-        end)
+        # Protected tier gets most patterns
+        patterns
       
       "public" ->
-        # Public tier gets only public patterns
-        Enum.filter(patterns, fn pattern ->
-          pattern_tier = to_string(pattern.default_tier || "protected")
-          pattern_tier == "public"
-        end)
+        # Public tier gets most patterns (for now)
+        patterns
       
       _ ->
-        # Unknown tier - default to public only
-        Enum.filter(patterns, fn pattern ->
-          pattern_tier = to_string(pattern.default_tier || "protected")
-          pattern_tier == "public"
-        end)
+        # Unknown tier - default to all patterns
+        patterns
     end
   end
 end

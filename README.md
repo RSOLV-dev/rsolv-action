@@ -6,7 +6,7 @@ Backend API service for the RSOLV automated issue fixing platform.
 
 This API service handles:
 
-- **Security Pattern Serving**: 448+ vulnerability detection patterns across 8 languages
+- **Security Pattern Serving**: 181 vulnerability detection patterns across 8 languages
 - **Authentication and authorization**: API key management and credential vending
 - **Usage tracking and metrics**: Billing and usage analytics
 - **Expert review request management**: Human-in-the-loop workflows

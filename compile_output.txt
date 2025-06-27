@@ -1,0 +1,9 @@
+** (File.Error) could not remove files and directories recursively from "/home/dylan/dev/rsolv/RSOLV-api/_build/dev/lib/gen_stage": file already exists
+    (elixir 1.18.4) lib/file.ex:1388: File.rm_rf!/1
+    (mix 1.18.4) lib/mix/tasks/deps.compile.ex:84: anonymous fn/4 in Mix.Tasks.Deps.Compile.compile/2
+    (elixir 1.18.4) lib/enum.ex:1714: Enum."-map/2-lists^map/1-1-"/2
+    (mix 1.18.4) lib/mix/tasks/deps.compile.ex:82: Mix.Tasks.Deps.Compile.compile/2
+    (mix 1.18.4) lib/mix/tasks/deps.loadpaths.ex:107: anonymous fn/2 in Mix.Tasks.Deps.Loadpaths.deps_check/3
+    (mix 1.18.4) lib/mix/sync/lock.ex:112: Mix.Sync.Lock.with_lock/3
+    (mix 1.18.4) lib/mix/tasks/deps.loadpaths.ex:68: Mix.Tasks.Deps.Loadpaths.run/1
+    (mix 1.18.4) lib/mix/task.ex:495: anonymous fn/3 in Mix.Task.run_task/5

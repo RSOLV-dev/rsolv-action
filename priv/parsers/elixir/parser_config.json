@@ -1,0 +1,46 @@
+{
+  "name": "elixir",
+  "executable": "parser.exs",
+  "timeout": 5000,
+  "supported_extensions": [".ex", ".exs"],
+  "capabilities": {
+    "ast": true,
+    "security_patterns": true
+  },
+  "security_patterns": [
+    {
+      "type": "command_injection",
+      "patterns": [
+        {
+          "description": "System.cmd with user input",
+          "ast_pattern": {
+            "type": "module_call",
+            "module": "System",
+            "function": "cmd"
+          }
+        },
+        {
+          "description": "Port.open with user input",
+          "ast_pattern": {
+            "type": "module_call",
+            "module": "Port",
+            "function": "open"
+          }
+        }
+      ]
+    },
+    {
+      "type": "code_injection",
+      "patterns": [
+        {
+          "description": "Code.eval_string with user input",
+          "ast_pattern": {
+            "type": "module_call",
+            "module": "Code",
+            "function": "eval_string"
+          }
+        }
+      ]
+    }
+  ]
+}

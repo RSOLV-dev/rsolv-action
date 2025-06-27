@@ -10,14 +10,25 @@ defmodule RsolvApi.AST.TestCase do
     quote do
       import RsolvApi.AST.TestCase
       alias RsolvApi.AST.PortSupervisor
-      alias RsolvApi.AST.PortPoc
     end
   end
   
   setup do
     # Ensure Port supervisor is started for tests
-    start_supervised!(RsolvApi.AST.PortSupervisor)
-    :ok
+    case Process.whereis(RsolvApi.AST.PortSupervisor) do
+      nil -> start_supervised!(RsolvApi.AST.PortSupervisor)
+      _pid -> :ok
+    end
+    
+    # Create a test session
+    {:ok, session_id} = RsolvApi.AST.SessionManager.create_session("test-customer")
+    
+    on_exit(fn ->
+      # Clean up session after test
+      RsolvApi.AST.SessionManager.cleanup_session(session_id)
+    end)
+    
+    {:ok, session_id: session_id}
   end
   
   # Test fixtures for different languages
@@ -26,6 +37,33 @@ defmodule RsolvApi.AST.TestCase do
   def test_code(language, type \\ :simple)
   
   # Python test cases
+  # Elixir test code
+  def test_code("elixir", :simple) do
+    """
+    defmodule Example do
+      def hello do
+        "world"
+      end
+    end
+    """
+  end
+
+  def test_code("elixir", :command_injection_vulnerable) do
+    """
+    defmodule Vulnerable do
+      def run_command(user_input) do
+        # VULNERABLE: System.cmd with user input
+        System.cmd("sh", ["-c", user_input])
+      end
+      
+      def another_command(input) do
+        # Also vulnerable
+        Port.open({:spawn, input}, [:binary])
+      end
+    end
+    """
+  end
+
   def test_code("python", :simple) do
     """
     def hello():
@@ -86,7 +124,7 @@ defmodule RsolvApi.AST.TestCase do
   end
   
   def test_code("ruby", :sql_injection_vulnerable) do
-    """
+    ~S"""
     class User < ActiveRecord::Base
       def self.find_by_name(name)
         # VULNERABLE: String interpolation in query
@@ -108,7 +146,7 @@ defmodule RsolvApi.AST.TestCase do
   end
   
   def test_code("ruby", :command_injection_vulnerable) do
-    """
+    ~S"""
     def process_file(filename)
       # VULNERABLE: backticks with interpolation
       `cat #{filename}`
@@ -277,41 +315,6 @@ defmodule RsolvApi.AST.TestCase do
     """
   end
   
-  # Elixir test cases
-  def test_code("elixir", :simple) do
-    """
-    defmodule Hello do
-      def hello do
-        "Hello, World!"
-      end
-    end
-    """
-  end
-  
-  def test_code("elixir", :command_injection_vulnerable) do
-    """
-    defmodule FileProcessor do
-      def process_file(filename) do
-        # VULNERABLE: System.shell with interpolation
-        System.shell("cat #{filename}")
-      end
-    end
-    """
-  end
-  
-  def test_code("elixir", :command_injection_safe) do
-    """
-    defmodule FileProcessor do
-      def process_file(filename) do
-        # SAFE: Using File.read instead
-        case File.read(filename) do
-          {:ok, content} -> content
-          {:error, reason} -> {:error, reason}
-        end
-      end
-    end
-    """
-  end
   
   # Helper to get expected vulnerabilities
   def expected_vulnerabilities(language, code_type) do
@@ -403,14 +406,8 @@ defmodule RsolvApi.AST.TestCase do
   def parse_code(language, code) do
     case language do
       lang when lang in ["python", "ruby"] ->
-        # Use PortPoc for testing
-        results = case lang do
-          "python" -> PortPoc.test_python_parser()
-          "ruby" -> PortPoc.test_ruby_parser()
-        end
-        
-        # For now, return first result
-        List.first(results)
+        # Direct parsing removed - use PortSupervisor.parse instead
+        {:error, "Use PortSupervisor.parse instead"}
         
       _ ->
         {:error, "Parser not implemented for #{language}"}

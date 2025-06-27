@@ -2,7 +2,7 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
   use RSOLVWeb.ConnCase
   
   describe "GET /api/v1/patterns - Tier-less Access (TDD)" do
-    test "returns all ~172 patterns with valid API key", %{conn: conn} do
+    test "returns all ~181 patterns with valid API key", %{conn: conn} do
       # Simulate request with API key
       conn = 
         conn
