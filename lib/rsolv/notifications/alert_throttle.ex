@@ -18,7 +18,7 @@ defmodule RSOLV.Notifications.AlertThrottle do
     case Cachex.get(@cache_name, key) do
       {:ok, nil} ->
         # First alert of the day
-        Cachex.put(@cache_name, key, 1)
+        Cachex.put(@cache_name, key, 1, ttl: @ttl)
         true
       
       {:ok, count} when count < max_daily_alerts ->

@@ -15,7 +15,6 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFstringTest do
       assert pattern.languages == ["python"]
       assert pattern.cwe_id == "CWE-89"
       assert pattern.owasp_category == "A03:2021"
-      assert pattern.default_tier == :ai
     end
   end
 

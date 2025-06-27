@@ -138,9 +138,9 @@ defmodule Mix.Tasks.VerifyPatterns do
         IO.puts("  ✅ #{name}")
       else
         issues = []
-        if length(missing_fields) > 0, do: issues = issues ++ ["Missing: #{inspect(missing_fields)}"]
-        if not regex_valid, do: issues = issues ++ ["Invalid regex"]
-        if not has_test_cases, do: issues = issues ++ ["No test cases"]
+        issues = if length(missing_fields) > 0, do: issues ++ ["Missing: #{inspect(missing_fields)}"], else: issues
+        issues = if not regex_valid, do: issues ++ ["Invalid regex"], else: issues
+        issues = if not has_test_cases, do: issues ++ ["No test cases"], else: issues
         IO.puts("  ❌ #{name} - #{Enum.join(issues, ", ")}")
       end
       

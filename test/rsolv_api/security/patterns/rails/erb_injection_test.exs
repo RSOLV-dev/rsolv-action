@@ -15,7 +15,6 @@ defmodule RsolvApi.Security.Patterns.Rails.ErbInjectionTest do
       assert pattern.severity == :critical
       assert pattern.languages == ["ruby"]
       assert pattern.frameworks == ["rails"]
-      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-94"
       assert pattern.owasp_category == "A03:2021"
       

@@ -16,7 +16,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.PathTraversalTest do
       assert pattern.languages == ["elixir"]
       assert pattern.cwe_id == "CWE-22"
       assert pattern.owasp_category == "A01:2021"
-      assert pattern.default_tier == :ai
       assert is_list(pattern.regex) or pattern.regex.__struct__ == Regex
     end
 

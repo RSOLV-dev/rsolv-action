@@ -69,6 +69,21 @@ defmodule RSOLV.Credentials do
     {:ok, credential}
   end
   
+  # Pattern match for create_temporary_credential with simpler parameters
+  def create_temporary_credential(%{
+    customer_id: customer_id,
+    provider: provider,
+    expires_at: expires_at
+  } = params) when not is_map_key(params, :encrypted_key) do
+    create_temporary_credential(%{
+      customer_id: customer_id,
+      provider: provider,
+      encrypted_key: get_provider_key(provider),
+      expires_at: expires_at,
+      usage_limit: 100
+    })
+  end
+  
   @doc """
   Updates metadata for a credential.
   """
@@ -93,7 +108,7 @@ defmodule RSOLV.Credentials do
       :persistent_term.put(@credentials_table, updated_credentials)
       Logger.info("Successfully updated credential #{credential.id} in storage")
     else
-      Logger.warn("Credential #{credential.id} not found in storage!")
+      Logger.warning("Credential #{credential.id} not found in storage!")
     end
     
     {:ok, updated_credential}
@@ -203,20 +218,6 @@ defmodule RSOLV.Credentials do
     {:ok, Map.put(credential, :revoked, true)}
   end
   
-  # Pattern match for create_temporary_credential with simpler parameters
-  def create_temporary_credential(%{
-    customer_id: customer_id,
-    provider: provider,
-    expires_at: expires_at
-  } = params) when not is_map_key(params, :encrypted_key) do
-    create_temporary_credential(%{
-      customer_id: customer_id,
-      provider: provider,
-      encrypted_key: get_provider_key(provider),
-      expires_at: expires_at,
-      usage_limit: 100
-    })
-  end
   
   # Helper function to track credentials
   defp track_credential(credential) do

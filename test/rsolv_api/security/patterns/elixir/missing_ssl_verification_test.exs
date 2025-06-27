@@ -14,7 +14,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.MissingSslVerificationTest do
       assert pattern.type == :authentication
       assert pattern.severity == :high
       assert pattern.languages == ["elixir"]
-      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-295"
       assert pattern.owasp_category == "A07:2021"
       

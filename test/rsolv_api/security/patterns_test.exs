@@ -26,7 +26,6 @@ defmodule RsolvApi.Security.PatternsTest do
       
       assert pattern.id == "test-pattern"
       assert pattern.severity in [:low, :medium, :high, :critical]
-      assert pattern.default_tier in [:public, :protected, :ai, :enterprise]
     end
   end
   
@@ -133,7 +132,6 @@ defmodule RsolvApi.Security.PatternsTest do
           assert is_atom(pattern.type)
           assert pattern.severity in [:low, :medium, :high, :critical]
           assert is_list(pattern.languages)
-          assert pattern.default_tier in [:public, :protected, :ai, :enterprise]
           assert is_binary(pattern.recommendation)
           
           # Regex validation

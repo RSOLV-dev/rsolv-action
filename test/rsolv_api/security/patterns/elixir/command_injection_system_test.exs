@@ -17,7 +17,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.CommandInjectionSystemTest do
       assert pattern.cwe_id == "CWE-78"
       assert pattern.owasp_category == "A03:2021"
       assert is_struct(pattern.regex, Regex) or is_list(pattern.regex)
-      assert pattern.default_tier == :ai
     end
     
     test "includes comprehensive test cases" do

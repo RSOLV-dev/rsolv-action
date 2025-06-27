@@ -49,9 +49,9 @@ defmodule RsolvApi.AST.ASTCache do
   defmodule CacheConfig do
     @enforce_keys []
     defstruct [
-      max_entries: @default_max_entries,
-      max_memory_mb: @default_max_memory_mb,
-      ttl_seconds: @default_ttl_seconds,
+      max_entries: 10_000,
+      max_memory_mb: 500,
+      ttl_seconds: 3600,
       refresh_ttl_on_access: false,
       enable_memory_tracking: true
     ]

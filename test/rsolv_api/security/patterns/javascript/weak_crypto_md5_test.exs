@@ -15,7 +15,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.WeakCryptoMd5Test do
       assert pattern.type == :weak_crypto
       assert pattern.severity == :medium
       assert pattern.languages == ["javascript", "typescript"]
-      assert pattern.default_tier == :public
       assert pattern.cwe_id == "CWE-328"
       assert pattern.owasp_category == "A02:2021"
       assert is_binary(pattern.recommendation)

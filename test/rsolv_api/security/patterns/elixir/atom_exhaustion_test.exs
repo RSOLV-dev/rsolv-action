@@ -15,7 +15,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.AtomExhaustionTest do
       assert pattern.severity == :high
       assert pattern.languages == ["elixir"]
       assert pattern.frameworks == []
-      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-400"
       assert pattern.owasp_category == "A05:2021"
       

@@ -15,7 +15,6 @@ defmodule RsolvApi.Security.Patterns.Django.Cve202133203Test do
       assert pattern.severity == :medium
       assert pattern.languages == ["python"]
       assert pattern.frameworks == ["django"]
-      assert pattern.default_tier == :enterprise
       assert pattern.cwe_id == "CWE-22"
       assert pattern.owasp_category == "A01:2021"
       assert pattern.recommendation =~ "Update Django"

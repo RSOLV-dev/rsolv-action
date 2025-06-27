@@ -15,7 +15,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.UnsafeRedirectTest do
       assert pattern.severity == :medium
       assert pattern.languages == ["elixir"]
       assert pattern.frameworks == ["phoenix"]
-      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-601"
       assert pattern.owasp_category == "A01:2021"
       

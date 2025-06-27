@@ -110,7 +110,7 @@ defmodule RsolvApi.AST.ASTPatternMatcher do
   def matches_pattern?(_node, _pattern), do: false
   
   # Check additional context requirements from the pattern
-  defp passes_context_requirements?(node, pattern, full_pattern, context) do
+  defp passes_context_requirements?(node, pattern, _full_pattern, context) do
     # Check parent requirements
     parent_ok = if parent_req = pattern["_parent_requirements"] do
       check_parent_requirements(context, parent_req)

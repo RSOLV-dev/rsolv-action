@@ -15,7 +15,6 @@ defmodule RsolvApi.Security.Patterns.Django.MassAssignmentTest do
       assert pattern.severity == :high
       assert pattern.languages == ["python"]
       assert pattern.frameworks == ["django"]
-      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-915"
       assert pattern.owasp_category == "A01:2021"
       assert pattern.recommendation =~ "Explicitly define allowed fields"

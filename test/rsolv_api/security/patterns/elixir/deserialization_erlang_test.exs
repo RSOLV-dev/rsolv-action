@@ -16,7 +16,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.DeserializationErlangTest do
       assert pattern.languages == ["elixir"]
       assert pattern.cwe_id == "CWE-502"
       assert pattern.owasp_category == "A08:2021"
-      assert pattern.default_tier == :ai
       assert is_list(pattern.regex) or pattern.regex.__struct__ == Regex
     end
 

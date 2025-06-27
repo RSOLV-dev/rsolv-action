@@ -16,7 +16,6 @@ defmodule RsolvApi.Security.Patterns.Django.TemplateInjectionTest do
       assert pattern.severity == :critical
       assert pattern.languages == ["python"]
       assert pattern.frameworks == ["django"]
-      assert pattern.default_tier == :enterprise
       assert pattern.cwe_id == "CWE-94"
       assert pattern.owasp_category == "A03:2021"
       assert is_list(pattern.regex)

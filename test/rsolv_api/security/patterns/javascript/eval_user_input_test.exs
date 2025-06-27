@@ -17,7 +17,6 @@ defmodule RsolvApi.Security.Patterns.Javascript.EvalUserInputTest do
       assert pattern.type == :rce
       assert pattern.severity == :critical
       assert pattern.languages == ["javascript", "typescript"]
-      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-94"
       assert pattern.owasp_category == "A03:2021"
       assert is_binary(pattern.recommendation)

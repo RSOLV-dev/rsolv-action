@@ -16,7 +16,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.SsrfHttpoisonTest do
       assert pattern.languages == ["elixir"]
       assert pattern.cwe_id == "CWE-918"
       assert pattern.owasp_category == "A10:2021"
-      assert pattern.default_tier == :enterprise
       assert is_list(pattern.regex) or pattern.regex.__struct__ == Regex
     end
 

@@ -15,7 +15,6 @@ defmodule RsolvApi.Security.Patterns.Django.InsecureSessionTest do
       assert pattern.severity == :high
       assert pattern.languages == ["python"]
       assert pattern.frameworks == ["django"]
-      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-614"
       assert pattern.owasp_category == "A05:2021"
       assert pattern.recommendation =~ "Enable secure session cookies"

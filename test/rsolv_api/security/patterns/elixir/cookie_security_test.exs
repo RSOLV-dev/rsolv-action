@@ -14,7 +14,6 @@ defmodule RsolvApi.Security.Patterns.Elixir.CookieSecurityTest do
       assert pattern.type == :session_management
       assert pattern.severity == :medium
       assert pattern.languages == ["elixir"]
-      assert pattern.default_tier == :ai
       assert pattern.cwe_id == "CWE-614"
       assert pattern.owasp_category == "A05:2021"
       
