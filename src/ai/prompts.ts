@@ -59,6 +59,8 @@ I need you to generate specific code changes to resolve this issue. Here are the
   // Add instructions for the response format
   prompt += `\nIMPORTANT: Format your response EXACTLY as shown below for proper parsing:
 
+CRITICAL: You MUST modify EXISTING files only. DO NOT create new files. Make changes in-place to fix the vulnerability.
+
 For each file that needs to be modified, use one of these formats:
 
 Option 1 (preferred):

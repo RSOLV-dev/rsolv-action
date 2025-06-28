@@ -41,8 +41,10 @@ export class SecurityDetectorV2 {
           if (!seen.has(key)) {
             seen.add(key);
             
-            // Keep confidence as number (0-100 scale)
-            const confidenceNumber = Math.round(finding.confidence * 100);
+            // Convert confidence from 0-1 to 0-100 scale for AST findings
+            const confidenceNumber = finding.confidence <= 1 
+              ? Math.round(finding.confidence * 100)
+              : Math.round(finding.confidence);
             
             vulnerabilities.push({
               type: finding.pattern.type,

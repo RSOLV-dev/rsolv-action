@@ -77,7 +77,9 @@ SECURITY-FOCUSED SOLUTION REQUIREMENTS:
 5. **Implement error handling**: Don't expose sensitive information in error messages
 6. **Add security tests**: Include tests that verify security fixes work correctly
 
-For each file that needs to be modified or created, use this exact format:
+CRITICAL: You MUST modify EXISTING files only. DO NOT create new files. Make changes in-place to fix the vulnerability.
+
+For each file that needs to be modified, use this exact format:
 
 --- filename.ext ---
 \`\`\`language

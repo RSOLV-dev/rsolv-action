@@ -151,6 +151,9 @@ export class SecurityAwareAnalyzer {
       return 'java';
     case 'rs':
       return 'rust';
+    case 'ex':
+    case 'exs':
+      return 'elixir';
     default:
       return null;
     }

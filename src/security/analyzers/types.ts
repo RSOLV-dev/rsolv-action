@@ -111,7 +111,7 @@ export interface ASTAnalysisResponse {
 
 export interface FileAnalysisResult {
   // File path
-  path: string;
+  file: string;
   
   // Analysis status
   status: "success" | "error" | "timeout" | "skipped";
@@ -127,18 +127,18 @@ export interface FileAnalysisResult {
   // Detected language
   language: string;
   
-  // Security findings
-  findings: SecurityFinding[];
+  // Security patterns that matched
+  patterns?: PatternMatch[];
   
   // AST statistics
-  astStats?: {
-    nodeCount: number;
-    maxDepth: number;
+  stats?: {
+    nodes: number;
+    depth: number;
     parseTimeMs: number;
   };
   
   // Raw AST (if requested)
-  rawAst?: any;
+  ast?: any;
 }
 
 export interface SecurityFinding {
@@ -161,7 +161,7 @@ export interface SecurityFinding {
   // Code snippet (encrypted)
   encryptedSnippet?: string;
   
-  // Confidence score (0-1)
+  // Confidence score (0-100)
   confidence: number;
   
   // AST-based context
@@ -232,7 +232,7 @@ export interface ErrorResponse {
 }
 
 // Error codes enum
-export enum ASTErrorCode {
+export enum ErrorCode {
   AUTH_REQUIRED = "AUTH_REQUIRED",
   INVALID_API_KEY = "INVALID_API_KEY",
   SESSION_EXPIRED = "SESSION_EXPIRED",
@@ -242,8 +242,12 @@ export enum ASTErrorCode {
   TOO_MANY_FILES = "TOO_MANY_FILES",
   PARSER_ERROR = "PARSER_ERROR",
   TIMEOUT = "TIMEOUT",
-  INTERNAL_ERROR = "INTERNAL_ERROR"
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+  UNKNOWN_ERROR = "UNKNOWN_ERROR"
 }
+
+// Legacy alias for compatibility
+export const ASTErrorCode = ErrorCode;
 
 // Encryption types
 
@@ -325,4 +329,77 @@ export interface ElixirASTAnalyzerConfig {
   
   // Debug mode
   debug?: boolean;
+}
+
+// Pattern matching types
+
+export interface SecurityPattern {
+  // Pattern ID
+  id: string;
+  
+  // Pattern name
+  name: string;
+  
+  // Pattern description
+  description: string;
+  
+  // Vulnerability type
+  type: string;
+  
+  // Severity
+  severity: "low" | "medium" | "high" | "critical";
+  
+  // CWE ID
+  cwe?: string;
+  
+  // OWASP category
+  owasp?: string;
+  
+  // Recommendation
+  recommendation?: string;
+  
+  // Human-readable message
+  message?: string;
+}
+
+export interface PatternMatch {
+  // Pattern that matched
+  pattern: SecurityPattern;
+  
+  // Location in file
+  location: {
+    start: {
+      line: number;
+      column: number;
+    };
+    end: {
+      line: number;
+      column: number;
+    };
+  };
+  
+  // Confidence score (0-100)
+  confidence: number;
+  
+  // AST node type that matched
+  nodeType?: string;
+  
+  // Context information
+  context?: {
+    parentNode?: string;
+    inTestFile?: boolean;
+    hasValidation?: boolean;
+  };
+}
+
+// Custom error class
+export class ASTAnalysisError extends Error {
+  constructor(
+    message: string,
+    public code: ErrorCode,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'ASTAnalysisError';
+  }
 }
