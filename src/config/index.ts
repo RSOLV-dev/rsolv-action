@@ -115,6 +115,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
     issueLabel: 'rsolv:automate',
     enableSecurityAnalysis: true,  // Enable security analysis by default
     maxIssues: undefined, // Process all issues by default
+    useGitBasedEditing: true,  // Default to true for proper in-place editing (ADR-012)
     aiProvider: {
       provider: 'claude-code',
       model: 'claude-sonnet-4-20250514',  // Claude Sonnet 4
@@ -209,9 +210,11 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
     }
   }
   
-  // Handle useGitBasedEditing (ADR-012)
+  // Handle useGitBasedEditing (ADR-012) - default to true
   if (process.env.RSOLV_USE_GIT_BASED_EDITING !== undefined) {
     envConfig.useGitBasedEditing = process.env.RSOLV_USE_GIT_BASED_EDITING === 'true';
+  } else {
+    envConfig.useGitBasedEditing = true; // Default to true for proper in-place editing
   }
   
   // Parse environment variables JSON string if available
