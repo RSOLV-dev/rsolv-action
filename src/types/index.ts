@@ -15,6 +15,7 @@ export interface ActionConfig {
   fixValidation?: FixValidationConfig;
   customerTier?: string;
   testGeneration?: TestGenerationConfig;
+  useGitBasedEditing?: boolean; // Enable git-based in-place editing (ADR-012)
 }
 
 export interface FixValidationConfig {

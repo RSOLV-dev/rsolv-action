@@ -4,8 +4,11 @@ import { analyzeIssue } from './analyzer.js';
 import { SecurityAwareAnalyzer } from './security-analyzer.js';
 import { generateSolution } from './solution.js';
 import { createPullRequest } from '../github/pr.js';
+import { createPullRequestFromGit } from '../github/pr-git.js';
 // import { getAiClient } from './client.js';
 import { EnhancedClaudeCodeAdapter } from './adapters/claude-code-enhanced.js';
+import { GitBasedClaudeCodeAdapter } from './adapters/claude-code-git.js';
+import { processIssueWithGit } from './git-based-processor.js';
 import { AIConfig } from './types.js';
 import { sanitizeErrorMessage } from '../utils/error-sanitizer.js';
 
@@ -91,6 +94,25 @@ async function processIssue(
   const startTime = Date.now();
   
   try {
+    // Use git-based processing if enabled (ADR-012)
+    if (config.useGitBasedEditing) {
+      logger.info(`Using git-based in-place editing for issue #${issue.number}`);
+      
+      try {
+        const gitResult = await processIssueWithGit(issue, config);
+        return {
+          issueId: issue.id,
+          success: gitResult.success,
+          message: gitResult.message,
+          pullRequestUrl: gitResult.pullRequestUrl,
+          error: gitResult.error,
+          enhancedSolution: true
+        };
+      } catch (error) {
+        logger.error(`Git-based processing failed, falling back to standard processing`, error);
+        // Continue with standard processing below
+      }
+    }
     // Step 1: Analysis (with optional security analysis)
     logger.info(`Analyzing issue #${issue.number}`);
     

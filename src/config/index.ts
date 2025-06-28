@@ -48,7 +48,8 @@ const ActionConfigSchema = z.object({
   containerConfig: ContainerConfigSchema,
   securitySettings: SecuritySettingsSchema,
   rsolvApiKey: z.string().optional(), // For vended credentials
-  maxIssues: z.number().min(1).optional() // Maximum number of issues to process
+  maxIssues: z.number().min(1).optional(), // Maximum number of issues to process
+  useGitBasedEditing: z.boolean().optional() // Enable git-based in-place editing (ADR-012)
 });
 
 /**
@@ -206,7 +207,12 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
     if (!isNaN(parsed)) {
       envConfig.maxIssues = parsed;
     }
-  };
+  }
+  
+  // Handle useGitBasedEditing (ADR-012)
+  if (process.env.RSOLV_USE_GIT_BASED_EDITING !== undefined) {
+    envConfig.useGitBasedEditing = process.env.RSOLV_USE_GIT_BASED_EDITING === 'true';
+  }
   
   // Parse environment variables JSON string if available
   if (process.env.RSOLV_ENVIRONMENT_VARIABLES) {

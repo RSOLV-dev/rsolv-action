@@ -63,6 +63,10 @@ inputs:
     description: 'Specific issue number to process (for workflow_dispatch)'
     required: false
     default: ''
+  use_git_based_editing:
+    description: 'Enable git-based in-place editing for true file modifications (ADR-012)'
+    required: false
+    default: 'false'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -84,6 +88,7 @@ runs:
     RSOLV_ENABLE_SECURITY_ANALYSIS: ${{ inputs.enable_security_analysis }}
     RSOLV_MAX_ISSUES: ${{ inputs.max_issues }}
     RSOLV_ISSUE_NUMBER: ${{ inputs.issue_number }}
+    RSOLV_USE_GIT_BASED_EDITING: ${{ inputs.use_git_based_editing }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'
