@@ -402,7 +402,7 @@ defmodule RsolvApi.Security.Patterns.Python.WeakHashMd5 do
   """
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "context_check",
           description: "Reduce confidence if MD5 is used for non-security purposes",

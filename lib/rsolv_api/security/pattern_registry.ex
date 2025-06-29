@@ -30,14 +30,18 @@ defmodule RsolvApi.Security.PatternRegistry do
   Get all patterns across all languages.
   """
   def get_all_patterns do
-    # Scan all subdirectories
-    pattern_dirs = File.ls!(@pattern_base_path)
-    |> Enum.filter(&File.dir?("#{@pattern_base_path}/#{&1}"))
-    
-    pattern_dirs
-    |> Enum.flat_map(&load_pattern_modules_from_directory("#{@pattern_base_path}/#{&1}"))
-    |> Enum.map(& &1.pattern())
-    |> Enum.uniq_by(& &1.id)
+    # Get all pattern modules directly from the application
+    case Application.spec(:rsolv_api, :modules) do
+      modules when is_list(modules) ->
+        modules
+        |> Enum.filter(&is_pattern_module?/1)
+        |> Enum.filter(&function_exported?(&1, :pattern, 0))
+        |> Enum.map(& &1.pattern())
+        |> Enum.uniq_by(& &1.id)
+      
+      _ ->
+        []
+    end
   end
   
   @doc """
@@ -53,54 +57,83 @@ defmodule RsolvApi.Security.PatternRegistry do
   Takes into account file extension, embedded languages, and content.
   """
   def get_patterns_for_file(file_path, content \\ nil) do
-    all_modules = File.ls!(@pattern_base_path)
-    |> Enum.filter(&File.dir?("#{@pattern_base_path}/#{&1}"))
-    |> Enum.flat_map(&load_pattern_modules_from_directory("#{@pattern_base_path}/#{&1}"))
-    
-    all_modules
-    |> Enum.filter(fn pattern_module ->
-      if function_exported?(pattern_module, :applies_to_file?, 2) do
-        pattern_module.applies_to_file?(file_path, content)
-      else
-        # Fallback to language matching
-        pattern = pattern_module.pattern()
-        matches_file_language?(file_path, pattern.languages)
-      end
-    end)
-    |> Enum.map(& &1.pattern())
+    # Get all pattern modules from the application
+    case Application.spec(:rsolv_api, :modules) do
+      modules when is_list(modules) ->
+        modules
+        |> Enum.filter(&is_pattern_module?/1)
+        |> Enum.filter(&function_exported?(&1, :pattern, 0))
+        |> Enum.filter(fn pattern_module ->
+          if function_exported?(pattern_module, :applies_to_file?, 2) do
+            pattern_module.applies_to_file?(file_path, content)
+          else
+            # Fallback to language matching
+            pattern = pattern_module.pattern()
+            matches_file_language?(file_path, pattern.languages)
+          end
+        end)
+        |> Enum.map(& &1.pattern())
+      
+      _ ->
+        []
+    end
   end
   
   # Private functions
   
   defp load_pattern_modules_from_directory(dir_path) do
-    if File.exists?(dir_path) do
-      File.ls!(dir_path)
-      |> Enum.filter(&String.ends_with?(&1, ".ex"))
-      |> Enum.map(&load_pattern_module("#{dir_path}/#{&1}"))
-      |> Enum.filter(& &1)
-    else
-      []
+    # Extract the language/subdirectory name from the path
+    # e.g., "lib/rsolv_api/security/patterns/python" -> "python"
+    language = Path.basename(dir_path)
+    
+    # Get all modules from the application
+    # This works in both development and releases
+    case Application.spec(:rsolv_api, :modules) do
+      modules when is_list(modules) ->
+        # Filter modules that match our pattern namespace
+        namespace = case language do
+          "common" -> RsolvApi.Security.Patterns.Common
+          "python" -> RsolvApi.Security.Patterns.Python
+          "javascript" -> RsolvApi.Security.Patterns.Javascript
+          "ruby" -> RsolvApi.Security.Patterns.Ruby
+          "php" -> RsolvApi.Security.Patterns.Php
+          "java" -> RsolvApi.Security.Patterns.Java
+          "elixir" -> RsolvApi.Security.Patterns.Elixir
+          "rails" -> RsolvApi.Security.Patterns.Rails
+          "django" -> RsolvApi.Security.Patterns.Django
+          _ -> nil
+        end
+        
+        if namespace do
+          modules
+          |> Enum.filter(&pattern_module_in_namespace?(&1, namespace))
+          |> Enum.filter(&function_exported?(&1, :pattern, 0))
+        else
+          []
+        end
+      
+      _ ->
+        # Fallback to empty if application not loaded yet
+        []
     end
   end
   
-  defp load_pattern_module(file_path) do
-    # Convert file path to module name
-    module_name = file_path_to_module_name(file_path)
+  defp pattern_module_in_namespace?(module, namespace) do
+    module_parts = Module.split(module)
+    namespace_parts = Module.split(namespace)
     
-    try do
-      module = String.to_existing_atom("Elixir.#{module_name}")
-      if function_exported?(module, :pattern, 0) do
-        module
-      else
-        Logger.warning("Pattern module #{module_name} does not export pattern/0")
-        nil
-      end
-    rescue
-      ArgumentError ->
-        # Module doesn't exist yet (might need compilation)
-        Logger.debug("Pattern module #{module_name} not loaded yet")
-        nil
-    end
+    # Check if module starts with namespace
+    List.starts_with?(module_parts, namespace_parts)
+  end
+  
+  defp is_pattern_module?(module) do
+    # Check if module is in the patterns namespace
+    module_parts = Module.split(module)
+    base_parts = Module.split(RsolvApi.Security.Patterns)
+    
+    # Must be in the patterns namespace and not be a base module
+    List.starts_with?(module_parts, base_parts) && 
+      length(module_parts) > length(base_parts)
   end
   
   defp file_path_to_module_name(file_path) do

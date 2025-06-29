@@ -407,7 +407,7 @@ defmodule RsolvApi.Security.Patterns.Python.WeakHashSha1 do
   """
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "context_check",
           description: "Check if SHA1 is used for git compatibility",

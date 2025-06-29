@@ -454,7 +454,7 @@ defmodule RsolvApi.Security.Patterns.Python.DebugTrue do
   """
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "file_context",
           description: "Reduce severity for development/test files",

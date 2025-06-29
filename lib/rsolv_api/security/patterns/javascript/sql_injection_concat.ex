@@ -207,14 +207,11 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat do
         # Must be building a SQL query
         context_analysis: %{
           contains_sql_keywords: true,
-          has_user_input_in_concatenation: true,
-          within_db_call: true
-        },
-        # Parent must be a database query call
-        ancestor_requirements: %{
-          has_db_method_call: ~r/\.(query|execute|exec|run|all|get)/,
-          max_depth: 3  # How far up to look for DB call
+          has_user_input_in_concatenation: true
+          # Relaxed: within_db_call is now optional - gives confidence boost if found
         }
+        # Removed strict ancestor requirements - pattern matcher can't effectively
+        # track context across multiple statements in current implementation
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/fixtures/, ~r/mocks/],
@@ -224,11 +221,12 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat do
         safe_if_input_validated: true        # Has input sanitization
       },
       confidence_rules: %{
-        base: 0.3,
+        base: 0.4,  # Increased base since we relaxed context requirements
         adjustments: %{
-          "direct_req_param_concat" => 0.5,   # req.params.id directly concatenated
-          "within_db_query_call" => 0.3,      # Inside db.query() call
+          "direct_req_param_concat" => 0.4,   # req.params.id directly concatenated
+          "within_db_query_call" => 0.3,      # Bonus if inside db.query() call
           "has_sql_keywords" => 0.2,          # Contains SELECT/INSERT/etc
+          "has_user_input" => 0.1,            # Clear user input present
           "uses_parameterized_query" => -0.9, # Has ?, $1, :param placeholders
           "uses_orm_query_builder" => -0.8,   # Using Knex, Sequelize builders
           "is_console_log" => -1.0,           # Just logging, not querying
@@ -236,7 +234,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat do
           "in_test_file" => -0.9              # Test code
         }
       },
-      min_confidence: 0.8
+      min_confidence: 0.7  # Lowered threshold slightly
     }
   end
 end

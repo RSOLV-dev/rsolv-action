@@ -253,8 +253,10 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionConcat do
         op: "Add",
         sql_context: %{
           left_or_right_is_string: true,
-          contains_sql_pattern: true,
-          followed_by_db_call: true
+          contains_sql_pattern: true
+          # Removed followed_by_db_call requirement - too strict for AST analysis
+          # The pattern matcher analyzes nodes in isolation and can't track
+          # variable usage across statements effectively
         }
       },
       context_rules: %{
@@ -266,10 +268,11 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionConcat do
         safe_patterns: ["logging", "print", "format", "message", "url", "path", "filename"]
       },
       confidence_rules: %{
-        base: 0.5,
+        base: 0.4,  # Lower base since we're not requiring db call context
         adjustments: %{
           "has_sql_keywords" => 0.3,
-          "in_database_method_call" => 0.2,
+          "in_database_method_call" => 0.3,  # Higher bonus if we do find db call
+          "has_user_input" => 0.2,
           "uses_plus_operator" => 0.1,
           "in_test_code" => -1.0,
           "is_logging_statement" => -0.5,

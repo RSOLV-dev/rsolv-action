@@ -48,6 +48,9 @@ COPY lib lib
 COPY priv priv
 COPY rel rel
 
+# Note: Parser dependencies are installed in the production stage
+# We don't need to install them here in the builder stage
+
 # Use parallel compilation
 ENV ERL_FLAGS="+JPperf true"
 ENV ELIXIR_MAKE_CACHE_DIR=/app/.make_cache
@@ -61,8 +64,24 @@ RUN MIX_ENV=prod mix release --overwrite
 # Final production stage - minimal runtime image
 FROM alpine:3.19 AS production
 
-# Install runtime dependencies
-RUN apk add --no-cache openssl ncurses-libs libstdc++ libgcc
+# Install runtime dependencies including parser languages
+# Note: Keeping image relatively small by only including essential runtimes
+RUN apk add --no-cache \
+    # Elixir/Erlang runtime dependencies
+    openssl ncurses-libs libstdc++ libgcc \
+    # Parser runtimes - only the most commonly used initially
+    python3 \
+    ruby \
+    php82 php82-json php82-tokenizer \
+    # Required for JavaScript parser and shell scripts
+    nodejs npm bash
+
+# Install Ruby bundler and parser gem
+RUN gem install bundler parser --no-document && \
+    rm -rf /root/.gem /usr/lib/ruby/gems/*/cache/*
+
+# Install additional PHP extensions that parsers might need
+RUN apk add --no-cache php82-dom php82-mbstring
 
 # Create app user
 RUN adduser -D -h /app app

@@ -426,7 +426,7 @@ defmodule RsolvApi.Security.Patterns.Python.UnsafeYamlLoad do
   """
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: "safe_loader_check",
           description: "Check if SafeLoader is used",
