@@ -252,7 +252,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.DebugConsoleLog do
   
   Applies to JavaScript/TypeScript files that might contain console statements.
   """
-  def applies_to_file?(file_path, content \\ nil) do
+  def applies_to_file?(file_path, content ) do
     cond do
       # JavaScript/TypeScript files
       String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs|cjs)$/i) -> true

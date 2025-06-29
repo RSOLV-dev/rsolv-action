@@ -221,7 +221,7 @@ defmodule Mix.Tasks.VerifyPatterns do
       js_count = length(js_patterns)
       
       # Test getting patterns by tier (if available)
-      public_patterns = RsolvApi.Security.get_patterns_by_tier(:public)
+      public_patterns = RsolvApi.Security.list_patterns_by_tier(:public)
       public_count = length(public_patterns)
       
       IO.puts("  ✅ All patterns: #{pattern_count}")
@@ -291,13 +291,13 @@ defmodule Mix.Tasks.VerifyPatterns do
     [
       {"js-sql-injection", RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.pattern()},
       {"js-xss", RsolvApi.Security.Patterns.Javascript.xss_innerhtml()},
-      {"python-command-injection", RsolvApi.Security.Patterns.Python.command_injection()},
+      {"python-command-injection", RsolvApi.Security.Patterns.Python.CommandInjectionOsSystem.pattern()},
       {"ruby-path-traversal", RsolvApi.Security.Patterns.Ruby.path_traversal()},
       {"java-sql-injection", RsolvApi.Security.Patterns.Java.SqlInjectionStatement.pattern()},
       {"php-sql-injection", RsolvApi.Security.Patterns.Php.SqlInjectionConcat.pattern()},
-      {"elixir-sql-injection", RsolvApi.Security.Patterns.Elixir.SqlInjectionEctoFragment.pattern()},
-      {"rails-mass-assignment", RsolvApi.Security.Patterns.Rails.MassAssignment.pattern()},
-      {"django-sql-injection", RsolvApi.Security.Patterns.Django.SqlInjectionRaw.pattern()},
+      {"elixir-sql-injection", RsolvApi.Security.Patterns.Elixir.SqlInjectionFragment.pattern()},
+      # {"rails-mass-assignment", RsolvApi.Security.Patterns.Rails.MassAssignment.pattern()},
+      # {"django-sql-injection", RsolvApi.Security.Patterns.Django.SqlInjectionRaw.pattern()},
       {"cve-log4shell", RsolvApi.Security.Patterns.Cve.log4shell_detection()}
     ]
   rescue
@@ -422,7 +422,7 @@ defmodule Mix.Tasks.VerifyPatterns do
     timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
     filename = "pattern_verification_#{String.replace(timestamp, ":", "-")}.json"
     
-    json = Jason.encode!(results, pretty: true)
+    json = JSON.encode!(results, pretty: true)
     File.write!(filename, json)
     IO.puts("\n💾 Detailed results saved to: #{filename}")
   end

@@ -4,7 +4,6 @@ defmodule RSOLVWeb.PatternController do
   alias RsolvApi.Security
   alias RsolvApi.Security.{ASTPattern, Pattern, DemoPatterns}
   alias RSOLV.Accounts
-  alias RsolvApi.FeatureFlags
   
   # Require refactored pattern modules so they're available at runtime
   require RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat
@@ -54,46 +53,6 @@ defmodule RSOLVWeb.PatternController do
     
     # Redirect to the new tier-less endpoint
     all(conn, params)
-  end
-  
-  defp format_pattern(%ASTPattern{} = pattern, :enhanced) do
-    pattern
-    |> build_enhanced_ast_pattern()
-    |> sanitize_for_json()
-  end
-  
-  defp format_pattern(%ASTPattern{} = pattern, :standard) do
-    pattern
-    |> build_standard_ast_pattern()
-    |> sanitize_for_json()
-  end
-  
-  defp format_pattern(%Pattern{} = pattern, :enhanced) do
-    case find_ast_enhancement_module(pattern) do
-      {:ok, ast_enhancement} ->
-        pattern
-        |> build_enhanced_regular_pattern(ast_enhancement)
-        |> sanitize_for_json()
-      
-      :error ->
-        pattern
-        |> Pattern.to_api_format()
-        |> Map.put(:supportsAst, false)
-        |> sanitize_for_json()
-    end
-  end
-  
-  defp format_pattern(pattern, :standard) do
-    pattern
-    |> Pattern.to_api_format()
-    |> sanitize_for_json()
-  end
-  
-  defp format_pattern(pattern, format) do
-    # Catch-all for debugging
-    require Logger
-    Logger.warning("Unmatched format_pattern: struct=#{pattern.__struct__}, format=#{format}")
-    Pattern.to_api_format(pattern)
   end
   
   defp regex_to_string(%Regex{} = regex), do: Regex.source(regex)
@@ -171,47 +130,6 @@ defmodule RSOLVWeb.PatternController do
       recommendation: pattern.recommendation,
       testCases: pattern.test_cases
     }
-  end
-  
-  defp build_enhanced_regular_pattern(pattern, ast_enhancement) do
-    %{
-      id: pattern.id,
-      name: pattern.name,
-      description: pattern.description,
-      type: to_string(pattern.type),
-      severity: to_string(pattern.severity),
-      languages: pattern.languages,
-      frameworks: pattern.frameworks || [],
-      patterns: pattern.regex |> regex_to_string() |> ensure_list(),
-      cweId: pattern.cwe_id,
-      owaspCategory: pattern.owasp_category,
-      recommendation: pattern.recommendation,
-      testCases: pattern.test_cases,
-      # AST enhancement fields
-      supportsAst: true,
-      astRules: format_ast_rules(ast_enhancement[:ast_rules]),
-      contextRules: format_context_rules(ast_enhancement[:context_rules]),
-      confidenceRules: ast_enhancement[:confidence_rules],
-      minConfidence: ast_enhancement[:min_confidence]
-    }
-  end
-  
-  defp find_ast_enhancement_module(pattern) do
-    case find_pattern_module(pattern.id) do
-      {:ok, module} when is_atom(module) ->
-        if function_exported?(module, :ast_enhancement, 0) do
-          {:ok, apply(module, :ast_enhancement, [])}
-        else
-          :error
-        end
-      _ ->
-        :error
-    end
-  end
-  
-  
-  defp sanitize_for_json(pattern_map) do
-    deep_convert_regex_to_string(pattern_map)
   end
   
   # Regex conversion helpers
@@ -646,29 +564,6 @@ defmodule RSOLVWeb.PatternController do
       {k, v} -> {to_string(k), v}
     end)
   end
-  
-  defp maybe_add_metadata(patterns, false), do: patterns
-  defp maybe_add_metadata(patterns, true) do
-    Enum.map(patterns, fn pattern ->
-      # Try to find the pattern module and add metadata if available
-      # Handle both atom and string keys for pattern ID
-      pattern_id = pattern[:id] || pattern["id"]
-      
-      case find_pattern_module(pattern_id) do
-        {:ok, module} ->
-          try do
-            metadata = module.vulnerability_metadata()
-            Map.put(pattern, :vulnerability_metadata, format_metadata_for_api(metadata, pattern_id))
-          rescue
-            UndefinedFunctionError ->
-              pattern
-          end
-          
-        {:error, :not_found} ->
-          pattern
-      end
-    end)
-  end
 
   defp authenticate_request(conn) do
     case get_req_header(conn, "authorization") do
@@ -774,6 +669,29 @@ defmodule RSOLVWeb.PatternController do
     end
   end
   
+  defp format_pattern_without_tier(%ASTPattern{} = pattern, format) do
+    formatted = case format do
+      :enhanced ->
+        # Include AST rules for enhanced format
+        build_enhanced_ast_pattern(pattern)
+        |> Map.delete(:tier)
+        
+      :standard ->
+        # Standard format without AST rules
+        build_standard_ast_pattern(pattern)
+        |> Map.delete(:tier)
+    end
+    
+    formatted
+  end
+  
+  defp format_pattern_without_tier(pattern, _format) do
+    # Fallback for other pattern types
+    pattern
+    |> Map.delete(:tier)
+    |> Map.delete(:default_tier)
+  end
+  
   defp get_ast_enhancement_fields(%Pattern{} = pattern) do
     # Try to get AST enhancement from the pattern module
     pattern_module = pattern_id_to_module(pattern.id)
@@ -824,29 +742,6 @@ defmodule RSOLVWeb.PatternController do
     else
       nil
     end
-  end
-
-  defp format_pattern_without_tier(%ASTPattern{} = pattern, format) do
-    formatted = case format do
-      :enhanced ->
-        # Include AST rules for enhanced format
-        build_enhanced_ast_pattern(pattern)
-        |> Map.delete(:tier)
-        
-      :standard ->
-        # Standard format without AST rules
-        build_standard_ast_pattern(pattern)
-        |> Map.delete(:tier)
-    end
-    
-    formatted
-  end
-  
-  defp format_pattern_without_tier(pattern, _format) do
-    # Fallback for other pattern types
-    pattern
-    |> Map.delete(:tier)
-    |> Map.delete(:default_tier)
   end
   
   defp find_pattern_module(pattern_id) do

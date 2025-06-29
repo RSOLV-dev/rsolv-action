@@ -411,7 +411,7 @@ defmodule RsolvApi.AST.ParserPool do
       "command" => "HEALTH_CHECK"
     }
     
-    case PortSupervisor.call_port(nil, parser_id, Jason.encode!(health_check_cmd), 5_000) do
+    case PortSupervisor.call_port(nil, parser_id, JSON.encode!(health_check_cmd), 5_000) do
       {:ok, _} ->
         Logger.debug("Parser warmed: #{language}/#{parser_id}")
         true

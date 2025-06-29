@@ -278,7 +278,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.WeakCryptoSha1 do
   
   Applies to JavaScript/TypeScript files or any file containing crypto operations.
   """
-  def applies_to_file?(file_path, content \\ nil) do
+  def applies_to_file?(file_path, content ) do
     cond do
       # JavaScript/TypeScript files always apply
       String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) -> true

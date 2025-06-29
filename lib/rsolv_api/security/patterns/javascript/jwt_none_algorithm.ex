@@ -261,7 +261,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.JwtNoneAlgorithm do
   
   Applies to JavaScript/TypeScript files that might use JWT verification.
   """
-  def applies_to_file?(file_path, content \\ nil) do
+  def applies_to_file?(file_path, content ) do
     js_ts_file = String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs|cjs)$/i)
     
     if content && js_ts_file do

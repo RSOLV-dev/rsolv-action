@@ -414,7 +414,7 @@ defmodule RsolvApi.AST.ASTCache do
   defp estimate_size(data) do
     # Simple size estimation - could be more sophisticated
     data
-    |> Jason.encode!()
+    |> JSON.encode!()
     |> byte_size()
   rescue
     _ -> 1000  # Fallback estimate

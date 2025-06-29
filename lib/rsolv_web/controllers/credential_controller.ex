@@ -227,20 +227,6 @@ defmodule RSOLVWeb.CredentialController do
     credential
   end
 
-  defp generate_temp_key(provider) do
-    prefix = case provider do
-      "anthropic" -> "temp_ant_"
-      "openai" -> "temp_oai_"
-      "openrouter" -> "temp_ort_"
-      "ollama" -> "temp_oll_"
-      _ -> "temp_"
-    end
-    
-    # This would normally encrypt the actual provider key
-    # For now, generating a mock temporary key
-    prefix <> Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false)
-  end
-
   defp store_github_metadata(conn, credentials) do
     job_id = get_req_header(conn, "x-github-job") |> List.first()
     run_id = get_req_header(conn, "x-github-run") |> List.first()

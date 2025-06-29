@@ -47,8 +47,8 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-# Use Jason for JSON parsing in Phoenix
-config :phoenix, :json_library, Jason
+# Use native JSON module (Elixir 1.18+) for JSON parsing in Phoenix
+config :phoenix, :json_library, JSON
 
 # Configure PromEx for Prometheus metrics
 config :rsolv_api, RSOLV.PromEx,

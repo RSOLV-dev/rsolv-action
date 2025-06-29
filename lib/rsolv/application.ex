@@ -7,6 +7,8 @@ defmodule RSOLV.Application do
 
   @impl true
   def start(_type, _args) do
+    # Ensure JSON encoders are loaded
+    Code.ensure_loaded!(RsolvApi.JsonEncoders)
     # Base children that always start
     base_children = [
       # Start the Telemetry supervisor

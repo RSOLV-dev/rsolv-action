@@ -81,7 +81,7 @@ defmodule RSOLVWeb.WebhookController do
   end
   
   defp parse_body(raw_body) when is_binary(raw_body) do
-    case Jason.decode(raw_body) do
+    case JSON.decode(raw_body) do
       {:ok, parsed} -> parsed
       {:error, _} -> %{}
     end

@@ -27,7 +27,7 @@ defmodule RSOLVWeb.Plugs.CaptureRawBody do
         raw_body = case conn.body_params do
           %{} = params when map_size(params) > 0 -> 
             Logger.debug("CaptureRawBody: Reconstructing from params: #{inspect(params)}")
-            Jason.encode!(params)
+            JSON.encode!(params)
           _ ->
             Logger.debug("CaptureRawBody: No params, using empty string")
             ""

@@ -483,7 +483,7 @@ defmodule RsolvApi.Security.Patterns.Django.OrmInjection do
     }
   end
   
-  def applies_to_file?(file_path, frameworks \\ nil) do
+  def applies_to_file?(file_path, frameworks ) do
     # Apply to Python files in Django projects
     is_python_file = String.ends_with?(file_path, ".py")
     

@@ -117,7 +117,7 @@ defmodule RsolvApi.Security.Patterns.PatternBase do
       - A string containing file content (for embedded language detection)
       - A list of frameworks (for framework-specific patterns)
       """
-      def applies_to_file?(file_path, content_or_frameworks \\ nil) do
+      def applies_to_file?(file_path, content_or_frameworks ) do
         pattern_meta = pattern()
         
         # First check if pattern has explicit file_targeting rules
@@ -439,36 +439,77 @@ defmodule RsolvApi.Security.Patterns.PatternBase do
       defp contains_embedded_language?(content) do
         pattern_type = pattern().type
         
-        # Only check for embedded languages for injection-related patterns
-        case pattern_type do
-          :sql_injection ->
-            # SQL can be embedded in any language
-            content =~ ~r/\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN)\b/i
-            
-          :xss ->
-            # HTML/JS can be embedded in backend languages
-            content =~ ~r/<[^>]+>|innerHTML|document\.write/
-            
-          :command_injection ->
-            # Shell commands can be called from any language
-            content =~ ~r/system|exec|shell|spawn|popen/i
-            
-          # Handle additional common vulnerability types that support embedded languages
-          :injection ->
-            # Generic injection patterns may contain SQL, XSS, or command injection
-            content =~ ~r/\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN)\b/i or
-            content =~ ~r/<[^>]+>|innerHTML|document\.write/ or
-            content =~ ~r/system|exec|shell|spawn|popen/i
-            
-          :rce ->
-            # Remote code execution often involves command injection
-            content =~ ~r/system|exec|shell|spawn|popen/i
-            
-          _ ->
-            # For all other pattern types (crypto, authentication, csrf, etc.), 
-            # embedded language detection doesn't apply
-            false
+        injection_types = [:sql_injection, :xss, :command_injection, :injection, :rce,
+                          :nosql_injection, :ldap_injection, :xpath_injection, :xxe,
+                          :template_injection, :code_injection, :path_traversal, :ssrf]
+        
+        if pattern_type in injection_types do
+          check_embedded_language_for_type(pattern_type, content)
+        else
+          # Non-injection types don't need embedded language checks
+          false
         end
+      end
+      
+      defp check_embedded_language_for_type(:sql_injection, content) do
+        content =~ ~r/\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN)\b/i
+      end
+      
+      defp check_embedded_language_for_type(:xss, content) do
+        content =~ ~r/<[^>]+>|innerHTML|document\.write/
+      end
+      
+      defp check_embedded_language_for_type(:command_injection, content) do
+        content =~ ~r/system|exec|shell|spawn|popen/i
+      end
+      
+      defp check_embedded_language_for_type(:injection, content) do
+        # Generic injection may contain SQL, XSS, or command injection
+        check_embedded_language_for_type(:sql_injection, content) or
+        check_embedded_language_for_type(:xss, content) or
+        check_embedded_language_for_type(:command_injection, content)
+      end
+      
+      defp check_embedded_language_for_type(:rce, content) do
+        # Remote code execution often involves command injection
+        content =~ ~r/system|exec|shell|spawn|popen/i
+      end
+      
+      defp check_embedded_language_for_type(:nosql_injection, content) do
+        content =~ ~r/\$where|\$ne|\$gt|\$lt|\$regex|\.find\(|\.findOne\(/
+      end
+      
+      defp check_embedded_language_for_type(:ldap_injection, content) do
+        content =~ ~r/ldap_search|ldap_bind|ldap_connect/i
+      end
+      
+      defp check_embedded_language_for_type(:xpath_injection, content) do
+        content =~ ~r/xpath|selectNodes|selectSingleNode/i
+      end
+      
+      defp check_embedded_language_for_type(:xxe, content) do
+        content =~ ~r/DOCTYPE|ENTITY|SYSTEM|xml/i
+      end
+      
+      defp check_embedded_language_for_type(:template_injection, content) do
+        content =~ ~r/\{\{|\{%|<%=|<%-/
+      end
+      
+      defp check_embedded_language_for_type(:code_injection, content) do
+        content =~ ~r/eval|exec|system|Function\(/i
+      end
+      
+      defp check_embedded_language_for_type(:path_traversal, content) do
+        content =~ ~r/\.\.\/|\.\.\\|readFile|readdir/i
+      end
+      
+      defp check_embedded_language_for_type(:ssrf, content) do
+        content =~ ~r/http|https|ftp|file:|gopher:|dict:/i
+      end
+      
+      defp check_embedded_language_for_type(_, _content) do
+        # Fallback for any unhandled injection types
+        false
       end
       
       # Helper functions that accept pattern as parameter for explicit targeting
@@ -495,35 +536,15 @@ defmodule RsolvApi.Security.Patterns.PatternBase do
       defp contains_embedded_language_for_pattern?(content, pattern_meta) do
         pattern_type = pattern_meta.type
         
-        # Only check for embedded languages for injection-related patterns
-        case pattern_type do
-          :sql_injection ->
-            # SQL can be embedded in any language
-            content =~ ~r/\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN)\b/i
-            
-          :xss ->
-            # HTML/JS can be embedded in backend languages
-            content =~ ~r/<[^>]+>|innerHTML|document\.write/
-            
-          :command_injection ->
-            # Shell commands can be called from any language
-            content =~ ~r/system|exec|shell|spawn|popen/i
-            
-          # Handle additional common vulnerability types that support embedded languages
-          :injection ->
-            # Generic injection patterns may contain SQL, XSS, or command injection
-            content =~ ~r/\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN)\b/i or
-            content =~ ~r/<[^>]+>|innerHTML|document\.write/ or
-            content =~ ~r/system|exec|shell|spawn|popen/i
-            
-          :rce ->
-            # Remote code execution often involves command injection
-            content =~ ~r/system|exec|shell|spawn|popen/i
-            
-          _ ->
-            # For all other pattern types (crypto, authentication, csrf, etc.), 
-            # embedded language detection doesn't apply
-            false
+        injection_types = [:sql_injection, :xss, :command_injection, :injection, :rce,
+                          :nosql_injection, :ldap_injection, :xpath_injection, :xxe,
+                          :template_injection, :code_injection, :path_traversal, :ssrf]
+        
+        if pattern_type in injection_types do
+          check_embedded_language_for_type(pattern_type, content)
+        else
+          # Non-injection types don't need embedded language checks
+          false
         end
       end
       

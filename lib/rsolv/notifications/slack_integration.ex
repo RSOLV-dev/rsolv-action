@@ -190,7 +190,7 @@ defmodule RSOLV.Notifications.SlackIntegration do
     
     if webhook_url do
       headers = [{"Content-Type", "application/json"}]
-      body = Jason.encode!(message)
+      body = JSON.encode!(message)
       
       case HTTPoison.post(webhook_url, body, headers) do
         {:ok, %HTTPoison.Response{status_code: 200}} ->

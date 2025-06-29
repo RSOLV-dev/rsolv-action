@@ -565,7 +565,7 @@ defmodule RsolvApi.Security.Patterns.Django.DebugSettings do
     }
   end
   
-  def applies_to_file?(file_path, frameworks \\ nil) do
+  def applies_to_file?(file_path, frameworks ) do
     # Apply to Django settings files
     is_python_file = String.ends_with?(file_path, ".py")
     

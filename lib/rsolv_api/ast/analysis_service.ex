@@ -17,7 +17,7 @@ defmodule RsolvApi.AST.AnalysisService do
   # Finding struct
   defmodule Finding do
     @enforce_keys [:patternId, :patternName, :type, :severity, :location, :confidence, :recommendation]
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :patternId, 
       :patternName, 

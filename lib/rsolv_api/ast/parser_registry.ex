@@ -378,7 +378,7 @@ defmodule RsolvApi.AST.ParserRegistry do
               
               response_string when is_binary(response_string) ->
                 # Fallback: try JSON decoding if we get a string
-                case Jason.decode(response_string) do
+                case JSON.decode(response_string) do
                   {:ok, parsed} -> 
                     case parsed do
                       %{"success" => true, "ast" => ast} -> {:ok, ast}

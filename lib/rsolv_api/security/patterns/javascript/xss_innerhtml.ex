@@ -231,7 +231,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtml do
   
   Handles JavaScript/TypeScript files and HTML files with embedded JavaScript.
   """
-  def applies_to_file?(file_path, content \\ nil) do
+  def applies_to_file?(file_path, content ) do
     cond do
       # JavaScript/TypeScript files
       String.match?(file_path, ~r/\.(js|jsx|ts|tsx)$/i) -> true

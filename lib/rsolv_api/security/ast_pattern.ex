@@ -809,6 +809,7 @@ defmodule RsolvApi.Security.ASTPattern do
     # Get all patterns without tier filtering
     apply(pattern_module(language), :all, [])
     |> Enum.map(&enhance/1)
+    |> Enum.map(&convert_regex_to_strings/1)
   end
   
   def get_all_patterns_for_language(language, :standard) do
@@ -823,6 +824,34 @@ defmodule RsolvApi.Security.ASTPattern do
   defp pattern_module("elixir"), do: RsolvApi.Security.Patterns.Elixir
   defp pattern_module("php"), do: RsolvApi.Security.Patterns.Php
   defp pattern_module(_), do: RsolvApi.Security.Patterns.Javascript
+  
+  # Convert all regex objects to strings for JSON serialization
+  defp convert_regex_to_strings(%__MODULE__{} = pattern) do
+    pattern
+    |> Map.from_struct()
+    |> convert_regex_in_map()
+    |> then(&struct(__MODULE__, &1))
+  end
+  
+  defp convert_regex_in_map(map) when is_map(map) do
+    map
+    |> Enum.map(fn
+      {k, %Regex{} = v} -> {k, Regex.source(v)}
+      {k, v} when is_map(v) -> {k, convert_regex_in_map(v)}
+      {k, v} when is_list(v) -> {k, convert_regex_in_list(v)}
+      {k, v} -> {k, v}
+    end)
+    |> Enum.into(%{})
+  end
+  
+  defp convert_regex_in_list(list) when is_list(list) do
+    Enum.map(list, fn
+      %Regex{} = v -> Regex.source(v)
+      v when is_map(v) -> convert_regex_in_map(v)
+      v when is_list(v) -> convert_regex_in_list(v)
+      v -> v
+    end)
+  end
   
   defp filter_by_tier(patterns, tier) when is_atom(tier) do
     # Convert atom to string for comparison

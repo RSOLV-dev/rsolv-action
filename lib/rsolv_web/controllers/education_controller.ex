@@ -32,7 +32,7 @@ defmodule RSOLVWeb.EducationController do
     webhook_url = System.get_env("SLACK_WEBHOOK_URL")
     
     if webhook_url do
-      body = Jason.encode!(%{text: "Test from RSOLV API endpoint"})
+      body = JSON.encode!(%{text: "Test from RSOLV API endpoint"})
       
       case HTTPoison.post(webhook_url, body, [{"Content-Type", "application/json"}]) do
         {:ok, %{status_code: 200}} ->

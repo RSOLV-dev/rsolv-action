@@ -237,7 +237,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.CommandInjectionExec do
   
   Applies to JavaScript/TypeScript files that might use child_process.
   """
-  def applies_to_file?(file_path, content \\ nil) do
+  def applies_to_file?(file_path, content ) do
     cond do
       # JavaScript/TypeScript files
       String.match?(file_path, ~r/\.(js|jsx|ts|tsx)$/i) -> true

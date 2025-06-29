@@ -134,18 +134,29 @@ defmodule RSOLVWeb.Api.V1.ASTController do
   end
   
   defp validate_request(params) do
-    with :ok <- validate_files(params["files"]),
+    Logger.info("validate_request called with params: #{inspect(params)}")
+    Logger.info("params[\"files\"]: #{inspect(params["files"])}")
+    
+    result = with :ok <- validate_files(params["files"]),
          :ok <- validate_options(params["options"]) do
+      Logger.info("Validation successful, returning params")
       {:ok, params}
     end
+    
+    Logger.info("validate_request result: #{inspect(result)}")
+    result
   end
   
-  defp validate_files(nil), do: {:error, {:validation, "files required"}}
-  defp validate_files(files) when not is_list(files), do: {:error, {:validation, "files must be array"}}
+  defp validate_files(nil), do: 
+    (Logger.info("validate_files: files is nil"); {:error, {:validation, "files required"}})
+  defp validate_files(files) when not is_list(files), do: 
+    (Logger.info("validate_files: files is not a list: #{inspect(files)}"); {:error, {:validation, "files must be array"}})
   defp validate_files(files) when length(files) > @max_files do
+    Logger.info("validate_files: too many files: #{length(files)}")
     {:error, {:validation, "maximum #{@max_files} files allowed"}}
   end
   defp validate_files(files) do
+    Logger.info("validate_files: validating #{length(files)} files")
     Enum.reduce_while(files, :ok, fn file, _acc ->
       case validate_file(file) do
         :ok -> {:cont, :ok}
@@ -208,18 +219,32 @@ defmodule RSOLVWeb.Api.V1.ASTController do
   end
   
   defp get_or_create_session(request, customer) do
-    case request["sessionId"] do
+    Logger.info("get_or_create_session called with customer.id: #{customer.id}")
+    
+    result = case request["sessionId"] do
       nil -> 
+        Logger.info("Creating new session for customer #{customer.id}")
         SessionManager.create_session(customer.id)
       session_id ->
+        Logger.info("Looking for existing session: #{session_id}")
         case SessionManager.get_session(session_id, customer.id) do
           {:ok, session} -> {:ok, session}
-          {:error, _} -> SessionManager.create_session(customer.id)
+          {:error, reason} -> 
+            Logger.info("Session not found (#{inspect(reason)}), creating new one")
+            SessionManager.create_session(customer.id)
         end
     end
+    
+    Logger.info("get_or_create_session result: #{inspect(result)}")
+    result
   end
   
-  defp decrypt_files_with_timing(encrypted_files, session) do
+  defp decrypt_files_with_timing(nil, _session) do
+    Logger.warning("decrypt_files_with_timing called with nil files")
+    {:ok, [], 0}
+  end
+  
+  defp decrypt_files_with_timing(encrypted_files, session) when is_list(encrypted_files) do
     decryption_start = System.monotonic_time(:millisecond)
     
     # Decrypt files in parallel
