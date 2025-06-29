@@ -1,5 +1,5 @@
 # Use official Elixir image
-FROM elixir:1.15-alpine AS base
+FROM elixir:1.18-alpine AS base
 
 # Install build dependencies
 RUN apk add --no-cache build-base git postgresql-client

@@ -50,21 +50,21 @@ curl 'http://localhost:4000/api/v1/patterns?language=javascript&format=enhanced'
 
 ## Next Steps
 
-1. **Debug ASTPattern.enhance** 🔄 IN PROGRESS
-   - Issue identified: ASTPattern.enhance returns ASTPattern struct, not a map
-   - Controller tries to access fields that might not exist
-   - Need to check server logs for exact error
+1. ~~**Debug ASTPattern.enhance**~~ ✅ COMPLETED
+   - Root cause: Elixir 1.15 in Dockerfile, needed 1.18+ for native JSON
+   - Fixed by updating Dockerfile to use `elixir:1.18-alpine`
+   - Enhanced format now working perfectly on staging
 
 2. **Fix Test Failures** 🎯 HIGH PRIORITY
    - 96 tests failing (mostly pattern validation)
    - Similar to enhanced pattern fixes - need to adjust regex patterns
    - Update test expectations for realistic regex matching
 
-3. **Complete RFC-032 Phase 3**
-   - Blocked by enhanced format issue
-   - Once fixed: test false positive reduction
-   - Benchmark performance
-   - Update documentation
+3. **Complete RFC-032 Phase 3** 🚀 READY TO START
+   - Enhanced format is now working!
+   - Test false positive reduction with real patterns
+   - Benchmark performance impact
+   - Update documentation for enhanced format usage
 
 ## Key Files Modified
 
@@ -150,5 +150,21 @@ elixir test/debug_enhanced_error.exs
 
 ## Blockers
 1. **Port conflicts**: Can't run full test suite (ports 4000, 5433 in use)
-2. **Enhanced format**: Demo patterns causing 500 errors
+2. ~~**Enhanced format**: Demo patterns causing 500 errors~~ ✅ FIXED - Deployed to staging with Elixir 1.18
 3. **Test environment**: Need docker-compose or staging setup
+
+## Major Breakthrough - 2025-06-28 19:59
+
+The enhanced format 500 error was caused by using Elixir 1.15 in the Dockerfile while we needed Elixir 1.18+ for native JSON support. After updating the Dockerfile to use `elixir:1.18-alpine`, the build succeeded and enhanced patterns are now working perfectly on staging!
+
+**Verification**:
+```bash
+curl -s 'https://api.rsolv-staging.com/api/v1/patterns?language=javascript&format=enhanced'
+# Returns 200 OK with properly serialized regex objects
+```
+
+The enhanced format now includes:
+- AST rules with regex patterns properly serialized as `{"__type__": "regex", "source": "...", "flags": []}`
+- Context rules with path exclusions
+- Confidence scoring rules
+- All regex objects properly handled by JSONSerializer
