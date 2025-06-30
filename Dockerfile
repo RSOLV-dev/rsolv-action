@@ -44,6 +44,23 @@ COPY . .
 # Compile dependencies
 RUN mix deps.compile
 
+# CRITICAL: Compile the application including patterns
+# This ensures pattern modules are available even with volume mounts
+RUN mix compile
+
+# Preserve compiled pattern beams for volume mount scenario
+# Copy them to a location that won't be overridden by volume mounts
+RUN mkdir -p /pattern-beams && \
+    cp -r _build/dev/lib/rsolv_api/ebin/*pattern*.beam /pattern-beams/ 2>/dev/null || true && \
+    cp -r _build/dev/lib/rsolv_api/ebin/*Pattern*.beam /pattern-beams/ 2>/dev/null || true
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# Use entrypoint to ensure compilation
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
 # Default command for development
 CMD ["mix", "phx.server"]
 

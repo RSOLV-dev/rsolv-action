@@ -75,17 +75,19 @@ ASTPatternMatcher skips patterns with nil ast_pattern
 
 ## Implementation Plan
 
-### Phase 1: Prove Hypothesis
-1. Build container without volume mounts
-2. Test pattern module loading
-3. Verify ast_pattern population
-4. Confirm pattern matching works
+### Phase 1: Prove Hypothesis ✅
+1. ✅ Build container without volume mounts
+2. ✅ Test pattern module loading - modules found in _build
+3. ✅ Verify ast_pattern population - old Pattern struct loaded
+4. ✅ Confirm pattern matching works - code path issue identified
 
-### Phase 2: Implement Fix
-1. Modify Dockerfile to pre-compile patterns
-2. Copy beam files to persistent location
-3. Update pattern loading to use pre-compiled files
-4. Test with volume mounts enabled
+### Phase 2: Implement Fix (In Progress)
+1. ✅ Modify Dockerfile to pre-compile patterns
+2. ✅ Copy beam files to persistent location
+3. 🔄 Update entrypoint to ensure compilation on startup
+4. 🔄 Test with volume mounts enabled
+
+**Key Finding**: Volume mounts completely override _build directory, requiring full recompilation on container startup.
 
 ### Phase 3: Optimize Developer Experience
 1. Add pattern compilation check script

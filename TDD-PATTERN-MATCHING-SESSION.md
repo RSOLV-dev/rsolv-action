@@ -113,15 +113,17 @@ Once we identify the issue:
 2. **Pattern Loading**: ✅ Confirmed 429 patterns loaded
 3. **Parser Working**: ✅ Python parser produces correct AST
 4. **Basic Matching Logic**: ✅ Operator matching works correctly
-5. **Current Issue**: Pattern modules not compiling/loading in container
+5. **Current Issue**: **BLOCKED** - Volume mounts override enhanced pattern code
 
 ## Root Cause Identified
 
 The pattern matching returns 0 vulnerabilities because:
-1. Pattern files exist but aren't being compiled into beam files
-2. Volume mount excludes `/app/_build` where compiled files go
-3. PatternAdapter likely returns patterns without `ast_pattern` field
-4. Without `ast_pattern`, the matcher skips all patterns
+1. ✅ Pattern beam files exist in container
+2. ✅ Code path issue resolved - modules can be loaded
+3. **BLOCKER**: Volume mount maps old source code over container
+4. Old pattern modules return Pattern struct without `ast_pattern` field
+5. PatternAdapter uses the old modules, not enhanced ones
+6. Without `ast_pattern`, the matcher skips all patterns
 
 ## Next Immediate Steps
 
