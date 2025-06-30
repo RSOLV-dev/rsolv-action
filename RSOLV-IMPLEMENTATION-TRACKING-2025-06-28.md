@@ -1,5 +1,5 @@
 # RSOLV Implementation Tracking
-## Date: 2025-06-28
+## Date: 2025-06-28 (Updated: 2025-06-29)
 
 ## Executive Summary
 
@@ -49,16 +49,40 @@ We've made significant progress on multiple fronts:
 - **Regex Reconstruction**: ✅ Implemented and tested
 - **AST Analyzer**: ✅ Complete with Elixir support
 
+## June 29 Update: AST Pattern Matching Debug Session
+
+### Progress Made (4-hour session)
+1. **Container Infrastructure**
+   - ✅ Upgraded Docker container from Elixir 1.15.8 to 1.18.4
+   - ✅ Set up volume mounts for faster development iteration
+   - ✅ Fixed all encryption and API method issues
+
+2. **Pattern System Status**
+   - ✅ 429 patterns loading successfully
+   - ✅ Python parser working correctly
+   - ✅ Basic operator matching logic verified
+   - ❌ Pattern matching returns 0 vulnerabilities
+
+3. **Key Finding**
+   - All infrastructure is working correctly
+   - Issue is in the pattern matching algorithm itself
+   - Need to debug inside container with /bin/sh (Alpine Linux)
+
 ## Blocking Issues
 
-1. **Enhanced Format API (High Priority)**
+1. **Pattern Matching Algorithm (High Priority)**
+   - Returns 0 vulnerabilities despite correct setup
+   - Blocking RFC-032 Phase 1.3 completion
+   - Need to debug pattern structure vs AST node format
+
+2. **Enhanced Format API (Medium Priority)**
    - Demo patterns cause 500 errors
-   - Blocking RFC-032 Phase 3 testing
+   - Can work around with server-side AST for now
    - Need to fix ASTPattern.enhance or pre-enhance demo patterns
 
-2. **Port Conflicts (Medium Priority)**
-   - Port 4000 in use (can't run full test suite)
-   - Options: docker-compose, staging deployment, or port cleanup
+3. **Port Conflicts (Low Priority - Resolved)**
+   - Using docker-compose with port 4001
+   - Volume mounts enable live code updates
 
 ## Next Priority Tasks
 
