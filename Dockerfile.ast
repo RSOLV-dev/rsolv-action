@@ -1,0 +1,142 @@
+# AST-enabled Dockerfile for RSOLV API
+# Adds language runtimes for multi-language AST parsing
+
+# Use official Elixir image
+FROM elixir:1.18-alpine AS base
+
+# Install build dependencies
+RUN apk add --no-cache build-base git postgresql-client
+
+# Set working directory
+WORKDIR /app
+
+# Install hex and rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+# Copy mix files
+COPY mix.exs mix.lock ./
+COPY config config
+
+# Development stage - includes full Elixir/mix environment
+FROM base AS development
+
+# Install curl for healthchecks
+RUN apk add --no-cache curl
+
+# Install all dependencies (dev, test, prod)
+RUN mix deps.get
+
+# Copy all source code
+COPY . .
+
+# Compile dependencies
+RUN mix deps.compile
+
+# Default command for development
+CMD ["mix", "phx.server"]
+
+# Production dependencies stage
+FROM base AS prod-deps
+
+# Install only prod dependencies
+RUN mix deps.get --only prod
+RUN mix deps.compile
+
+# Builder stage for production
+FROM prod-deps AS builder
+
+# Copy source code
+COPY lib lib
+COPY priv priv
+COPY rel rel
+
+# Use parallel compilation
+ENV ERL_FLAGS="+JPperf true"
+ENV ELIXIR_MAKE_CACHE_DIR=/app/.make_cache
+
+# Compile the application with optimizations
+RUN MIX_ENV=prod mix compile
+
+# Build release with optimizations
+RUN MIX_ENV=prod mix release --overwrite
+
+# Parser setup stage - prepare language runtimes and dependencies
+FROM alpine:3.19 AS parser-setup
+
+# Install all language runtimes
+RUN apk add --no-cache \
+    python3 py3-pip \
+    ruby ruby-dev \
+    php81 php81-json php81-tokenizer \
+    openjdk11-jre-headless \
+    go \
+    curl git build-base
+
+# Install Ruby parser gem
+RUN gem install parser --no-document
+
+# Setup PHP composer for dependencies (already vendored)
+# The PHP parser dependencies are already in priv/parsers/php/vendor
+
+# Download JavaParser JAR
+RUN mkdir -p /tmp/java-libs && \
+    cd /tmp/java-libs && \
+    curl -L -o javaparser.jar \
+    https://repo1.maven.org/maven2/com/github/javaparser/javaparser-core/3.25.8/javaparser-core-3.25.8.jar
+
+# Final production stage - minimal runtime image with language support
+FROM alpine:3.19 AS production
+
+# Install runtime dependencies including language runtimes
+# Note: We're being selective about what we include to keep image size reasonable
+RUN apk add --no-cache \
+    # Elixir/Erlang runtime
+    openssl ncurses-libs libstdc++ libgcc \
+    # Language runtimes for parsers
+    python3 \
+    ruby \
+    php81 php81-json php81-tokenizer \
+    openjdk11-jre-headless
+
+# Install Go separately (smaller than go package)
+COPY --from=parser-setup /usr/lib/go /usr/lib/go
+ENV PATH="/usr/lib/go/bin:${PATH}"
+
+# Copy Ruby gems from parser-setup
+COPY --from=parser-setup /usr/lib/ruby/gems /usr/lib/ruby/gems
+
+# Copy Java libraries
+COPY --from=parser-setup /tmp/java-libs /opt/java-libs
+
+# Create app user
+RUN adduser -D -h /app app
+
+# Copy release from builder
+COPY --from=builder --chown=app:app /app/_build/prod/rel/rsolv_api /app
+
+# Set environment
+ENV HOME=/app
+ENV MIX_ENV=prod
+ENV PORT=4000
+ENV JAVA_CLASSPATH=/opt/java-libs/javaparser.jar
+
+# Expose port
+EXPOSE 4000
+
+# Switch to app user
+USER app
+
+# Set working directory
+WORKDIR /app
+
+# Verify parsers have what they need
+RUN echo "Parser runtime verification:" && \
+    python3 --version && \
+    ruby --version && \
+    php81 --version && \
+    java --version && \
+    go version || true
+
+# Start the application
+CMD ["bin/rsolv_api", "start"]

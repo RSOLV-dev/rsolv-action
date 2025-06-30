@@ -2,10 +2,14 @@
 # Ruby AST Parser for RSOLV RFC-031
 # Uses Ruby's built-in AST parser to parse Ruby code and returns AST in JSON format via stdin/stdout
 
-# Change to the parser directory to find Gemfile
-Dir.chdir(File.dirname(__FILE__))
+# Try to use bundler if available, otherwise just require gems directly
+begin
+  Dir.chdir(File.dirname(__FILE__))
+  require 'bundler/setup'
+rescue LoadError
+  # Bundler not available, gems should be installed globally
+end
 
-require 'bundler/setup'
 require 'json'
 require 'parser/current'
 require 'timeout'

@@ -12,11 +12,15 @@ if [ ! -d "$SCRIPT_DIR/vendor" ]; then
     exit 1
 fi
 
-# Check if PHP is available
-if ! command -v php >/dev/null 2>&1; then
+# Check if PHP is available (try php82 first, then php)
+if command -v php82 >/dev/null 2>&1; then
+    PHP_CMD="php82"
+elif command -v php >/dev/null 2>&1; then
+    PHP_CMD="php"
+else
     echo "Error: PHP not found in PATH" >&2
     exit 1
 fi
 
 # Run the PHP parser
-exec php "$PHP_FILE" "$@"
+exec "$PHP_CMD" "$PHP_FILE" "$@"

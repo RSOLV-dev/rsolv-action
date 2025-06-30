@@ -18,8 +18,22 @@ COPY config config
 # Development stage - includes full Elixir/mix environment
 FROM base AS development
 
-# Install curl for healthchecks
-RUN apk add --no-cache curl
+# Install curl for healthchecks and parser languages for development
+RUN apk add --no-cache curl \
+    # Parser runtimes needed for development AST analysis
+    python3 \
+    ruby ruby-dev \
+    php82 php82-json php82-tokenizer \
+    # Required for JavaScript parser and shell scripts
+    nodejs npm bash
+
+# Install Ruby bundler and parser gem (make it optional to not block build)
+RUN gem install bundler --no-document || true && \
+    gem install parser --no-document || true && \
+    rm -rf /root/.gem /usr/lib/ruby/gems/*/cache/* || true
+
+# Install additional PHP extensions that parsers might need
+RUN apk add --no-cache php82-dom php82-mbstring
 
 # Install all dependencies (dev, test, prod)
 RUN mix deps.get

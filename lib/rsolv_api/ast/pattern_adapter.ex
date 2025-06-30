@@ -247,6 +247,7 @@ defmodule RsolvApi.AST.PatternAdapter do
     # Load patterns from the registry for this language
     language_patterns = PatternRegistry.get_patterns_for_language(language)
     
+    Logger.info("PatternAdapter loading patterns for #{language}: found #{length(language_patterns)} patterns")
     
     # Enhance each pattern and convert to matcher format
     enhanced_patterns = language_patterns

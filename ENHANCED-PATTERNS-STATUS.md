@@ -118,8 +118,13 @@ elixir test/debug_enhanced_error.exs
 ## E2E Testing Status
 
 - Standard format: ✅ Working
-- Enhanced format with demo patterns: ❌ 500 error
+- Enhanced format with demo patterns: ✅ Fixed (Elixir 1.18 upgrade)
 - Enhanced format with full patterns: 🔄 Needs testing with API key
+- RSOLV Action E2E: ⚠️ Partial success (57.1% accuracy)
+  - Regex patterns matching correctly
+  - AST rules need adjustment in interpreter
+  - No false positives (good!)
+  - 3 false negatives (AST rules not detecting properly)
 
 ## Today's Progress Summary
 
@@ -246,3 +251,33 @@ While the percentage increases look significant, the absolute impact is negligib
 | | Higher security confidence |
 
 **Recommendation**: The performance overhead is acceptable given the massive false positive reduction. Easy optimizations can reduce the impact to near zero.
+
+## E2E Testing with RSOLV Action - 2025-06-28 21:27
+
+### Test Results
+
+We tested the full end-to-end flow with the RSOLV Action using enhanced patterns from staging:
+
+- **Patterns loaded**: 5 enhanced patterns with AST rules
+- **Test accuracy**: 57.1% (4/7 correct)
+- **False positives**: 0 (excellent!)
+- **False negatives**: 3 (needs work)
+
+### Analysis
+
+1. **Regex Pre-filtering**: Working correctly
+   - XSS and command injection patterns matched
+   - SQL injection pattern too specific
+
+2. **AST Rule Application**: Not detecting vulnerabilities
+   - AST rules are present and structured correctly
+   - AST interpreter may need updates to handle enhanced format
+
+3. **False Positive Prevention**: Working perfectly
+   - No false positives in any test case
+   - Test files correctly excluded
+   - Safe patterns not flagged
+
+### Next Steps
+
+The enhanced patterns are being served correctly from the API, but the RSOLV Action's AST interpreter needs refinement to properly apply the AST rules. The fact that we have zero false positives shows the approach is sound - we just need to tune the detection logic.

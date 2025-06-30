@@ -340,8 +340,12 @@ defmodule RsolvApi.AST.AnalysisService do
       # Load patterns for the language
       patterns = PatternAdapter.load_patterns_for_language(file.language)
       
+      Logger.info("AnalysisService: Loaded #{length(patterns)} patterns for #{file.language}")
+      
       # Match patterns against the AST
       {:ok, matches} = ASTPatternMatcher.match_multiple(ast, patterns, file.language)
+      
+      Logger.info("AnalysisService: Found #{length(matches)} matches")
       
       # Convert matches to findings with confidence scoring
       matches

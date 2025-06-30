@@ -116,6 +116,30 @@ defmodule RSOLVWeb.Api.V1.PatternController do
     end
   end
   
+  # Handle ASTPattern structs (returned by enhanced format)
+  defp format_pattern_without_tier(%RsolvApi.Security.ASTPattern{} = ast_pattern, :enhanced) do
+    # Convert ASTPattern to API format directly
+    %{
+      id: ast_pattern.id,
+      name: ast_pattern.name,
+      type: ast_pattern.type,
+      severity: ast_pattern.severity,
+      description: ast_pattern.description,
+      regex: ast_pattern.regex,
+      languages: ast_pattern.languages,
+      frameworks: ast_pattern.frameworks,
+      cwe_id: ast_pattern.cwe_id,
+      owasp_category: ast_pattern.owasp_category,
+      recommendation: ast_pattern.recommendation,
+      # Include enhanced fields
+      ast_rules: ast_pattern.ast_rules,
+      context_rules: ast_pattern.context_rules,
+      confidence_rules: ast_pattern.confidence_rules,
+      min_confidence: ast_pattern.min_confidence
+    }
+  end
+  
+  # Handle regular Pattern structs
   defp format_pattern_without_tier(%Pattern{} = pattern, format) do
     base_format = Pattern.to_api_format(pattern)
     
@@ -134,11 +158,23 @@ defmodule RSOLVWeb.Api.V1.PatternController do
           enhancement = apply(pattern_module, :ast_enhancement, [])
           
           # Add enhancement fields directly to the pattern
-          formatted
-          |> Map.put(:ast_rules, enhancement[:ast_rules])
-          |> Map.put(:context_rules, enhancement[:context_rules])
-          |> Map.put(:confidence_rules, enhancement[:confidence_rules])
-          |> Map.put(:min_confidence, enhancement[:min_confidence])
+          # Some patterns use different structure - normalize them
+          if Map.has_key?(enhancement, :ast_rules) do
+            # Standard structure with ast_rules, context_rules, confidence_rules
+            formatted
+            |> Map.put(:ast_rules, enhancement[:ast_rules])
+            |> Map.put(:context_rules, enhancement[:context_rules])
+            |> Map.put(:confidence_rules, enhancement[:confidence_rules])
+            |> Map.put(:min_confidence, enhancement[:min_confidence])
+          else
+            # Legacy structure with just rules array - convert to standard format
+            # These patterns have a different structure that needs mapping
+            formatted
+            |> Map.put(:ast_rules, enhancement[:rules])
+            |> Map.put(:context_rules, %{})
+            |> Map.put(:confidence_rules, %{})
+            |> Map.put(:min_confidence, enhancement[:min_confidence] || 0.7)
+          end
         rescue
           _ -> formatted
         end
@@ -151,7 +187,6 @@ defmodule RSOLVWeb.Api.V1.PatternController do
           
           formatted
           |> Map.put(:ast_rules, ast_pattern.ast_rules)
-          |> Map.put(:context_rules, ast_pattern.context_rules)
           |> Map.put(:confidence_rules, ast_pattern.confidence_rules)
           |> Map.put(:min_confidence, ast_pattern.min_confidence)
         rescue

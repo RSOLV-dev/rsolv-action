@@ -71,6 +71,11 @@ defmodule RsolvApi.AST.ParserRegistry do
   
   # Server callbacks
   
+  # Get the priv directory for the application
+  defp priv_dir do
+    :code.priv_dir(:rsolv_api) |> List.to_string()
+  end
+  
   @impl true
   def init(_opts) do
     # Initialize parser configurations
@@ -78,7 +83,7 @@ defmodule RsolvApi.AST.ParserRegistry do
       "javascript" => %ParserConfig{
         language: "javascript",
         command: "node",
-        args: [Path.join([File.cwd!(), "priv", "parsers", "javascript", "parser.js"])],
+        args: [Path.join([priv_dir(), "parsers", "javascript", "parser.js"])],
         extensions: [".js", ".jsx"],
         version: "1.0.0",
         timeout: 30_000
@@ -86,7 +91,7 @@ defmodule RsolvApi.AST.ParserRegistry do
       "typescript" => %ParserConfig{
         language: "typescript",
         command: "node",
-        args: [Path.join([File.cwd!(), "priv", "parsers", "javascript", "parser.js"])],
+        args: [Path.join([priv_dir(), "parsers", "javascript", "parser.js"])],
         extensions: [".ts", ".tsx"],
         version: "1.0.0",
         timeout: 30_000
@@ -94,7 +99,7 @@ defmodule RsolvApi.AST.ParserRegistry do
       "python" => %ParserConfig{
         language: "python",
         command: "python3",
-        args: ["-u", Path.join([File.cwd!(), "priv", "parsers", "python", "parser.py"])],
+        args: ["-u", Path.join([priv_dir(), "parsers", "python", "parser.py"])],
         extensions: [".py"],
         version: "1.0.0", 
         timeout: 30_000
@@ -102,7 +107,7 @@ defmodule RsolvApi.AST.ParserRegistry do
       "ruby" => %ParserConfig{
         language: "ruby",
         command: "ruby",
-        args: [Path.join([File.cwd!(), "priv", "parsers", "ruby", "parser.rb"])],
+        args: [Path.join([priv_dir(), "parsers", "ruby", "parser.rb"])],
         extensions: [".rb"],
         version: "1.0.0",
         timeout: 30_000
@@ -110,7 +115,7 @@ defmodule RsolvApi.AST.ParserRegistry do
       "java" => %ParserConfig{
         language: "java",
         command: "bash",
-        args: [Path.join([File.cwd!(), "priv", "parsers", "java", "parser.sh"])],
+        args: [Path.join([priv_dir(), "parsers", "java", "parser.sh"])],
         extensions: [".java"],
         version: "1.0.0",
         timeout: 30_000
@@ -118,7 +123,7 @@ defmodule RsolvApi.AST.ParserRegistry do
       "php" => %ParserConfig{
         language: "php",
         command: "bash",
-        args: [Path.join([File.cwd!(), "priv", "parsers", "php", "parser.sh"])],
+        args: [Path.join([priv_dir(), "parsers", "php", "parser.sh"])],
         extensions: [".php"],
         version: "1.0.0",
         timeout: 30_000
@@ -126,7 +131,7 @@ defmodule RsolvApi.AST.ParserRegistry do
       "go" => %ParserConfig{
         language: "go",
         command: "bash",
-        args: [Path.join([File.cwd!(), "priv", "parsers", "go", "parser.sh"])],
+        args: [Path.join([priv_dir(), "parsers", "go", "parser.sh"])],
         extensions: [".go"],
         version: "1.0.0",
         timeout: 30_000
@@ -134,7 +139,7 @@ defmodule RsolvApi.AST.ParserRegistry do
       "elixir" => %ParserConfig{
         language: "elixir",
         command: "elixir",
-        args: [Path.join([File.cwd!(), "priv", "parsers", "elixir", "parser.exs"])],
+        args: [Path.join([priv_dir(), "parsers", "elixir", "parser.exs"])],
         extensions: [".ex", ".exs"],
         version: "1.0.0",
         timeout: 30_000
