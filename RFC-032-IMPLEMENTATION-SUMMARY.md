@@ -141,11 +141,18 @@ The AST pattern matching is not detecting vulnerabilities even though:
 - Basic operator matching logic is correct
 - All API endpoints return 200 OK
 
-### Next Session Tasks
-1. Debug pattern matching flow inside container (use /bin/sh instead of bash for Alpine)
-2. Inspect actual pattern structure vs AST node format
-3. Test with simplified patterns to isolate issue
-4. Add debug logging to trace matching process
+### Root Cause Identified (June 29, 21:50)
+The pattern matching returns 0 vulnerabilities due to Docker volume mount configuration:
+1. Pattern files exist in `/app/lib/rsolv_api/security/patterns/`
+2. Volume mount excludes `/app/_build` where compiled beam files go
+3. Pattern modules can't be loaded at runtime
+4. PatternAdapter returns patterns without `ast_pattern` field
+5. Matcher skips all patterns with nil `ast_pattern`
+
+### Mitigation Options
+1. **Remove volume mounts** - Slower but ensures compilation
+2. **Pre-compile in Dockerfile** - Best option, keeps fast iteration
+3. **Load from source** - Complex but most flexible
 
 ## Conclusion
 

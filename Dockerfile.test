@@ -1,0 +1,32 @@
+# Test Dockerfile without volume mounts to prove hypothesis
+FROM elixir:1.18-alpine AS test
+
+# Install build dependencies
+RUN apk add --no-cache build-base git postgresql-client curl \
+    python3 ruby ruby-dev php82 php82-json php82-tokenizer \
+    nodejs npm bash
+
+WORKDIR /app
+
+# Install hex and rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+# Copy mix files
+COPY mix.exs mix.lock ./
+COPY config config
+
+# Install dependencies
+RUN mix deps.get
+
+# Copy all source code
+COPY . .
+
+# Compile everything INCLUDING patterns
+RUN mix compile
+
+# Verify pattern module exists
+RUN elixir -e "IO.puts(\"Pattern module loaded: #{Code.ensure_loaded?(RsolvApi.Security.Patterns.Python.SqlInjectionConcat)}\")"
+
+# Default command
+CMD ["mix", "phx.server"]
