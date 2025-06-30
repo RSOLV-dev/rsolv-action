@@ -13,12 +13,11 @@ defmodule RSOLVWeb.Api.V1.PatternController do
   
   Query params:
   - language: javascript, python, ruby, etc.
-  - tier: DEPRECATED - kept for backward compatibility but ignored
   - format: standard (default) or enhanced (with AST rules)
   
   Access model:
-  - With API key: Access to all ~181 patterns
-  - Without API key: Access to ~20 demo patterns only
+  - With API key: Access to all 170 patterns
+  - Without API key: Access to 5 demo patterns per language
   """
   def index(conn, params) do
     try do
@@ -101,6 +100,54 @@ defmodule RSOLVWeb.Api.V1.PatternController do
         |> put_resp_header("content-type", "application/json")
         |> send_resp(500, error_data)
     end
+  end
+  
+  @doc """
+  Get pattern statistics across all languages.
+  """
+  def stats(conn, _params) do
+    try do
+      # Get stats from PatternServer
+      stats = RsolvApi.Security.PatternServer.get_stats()
+      
+      response_data = %{
+        total_patterns: stats.total,
+        by_language: stats.by_language,
+        loaded_at: stats.loaded_at,
+        access_model: %{
+          demo: "5 patterns per language",
+          full: "All #{stats.total} patterns with API key"
+        }
+      }
+      
+      json_data = JSON.encode!(response_data)
+      
+      conn
+      |> put_resp_header("content-type", "application/json")
+      |> send_resp(200, json_data)
+    rescue
+      e ->
+        Logger.error("Pattern stats error: #{inspect(e)}")
+        
+        error_data = JSON.encode!(%{
+          error: "Internal server error",
+          message: "An error occurred while retrieving pattern statistics"
+        })
+        
+        conn
+        |> put_status(:internal_server_error)
+        |> put_resp_header("content-type", "application/json")
+        |> send_resp(500, error_data)
+    end
+  end
+  
+  @doc """
+  V2 API endpoint - returns enhanced format by default.
+  """
+  def index_v2(conn, params) do
+    # Force enhanced format for v2 API
+    enhanced_params = Map.put(params, "format", "enhanced")
+    index(conn, enhanced_params)
   end
   
   defp has_valid_api_key?(conn) do

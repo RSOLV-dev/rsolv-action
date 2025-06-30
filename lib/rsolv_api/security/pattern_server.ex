@@ -22,29 +22,34 @@ defmodule RsolvApi.Security.PatternServer do
   end
   
   @doc """
-  Get patterns for a specific language and tier.
+  Get patterns for a specific language.
   
   ## Examples
   
-      iex> PatternServer.get_patterns("javascript", :public)
+      iex> PatternServer.get_patterns("javascript")
       {:ok, [%Pattern{}, ...]}
   """
-  def get_patterns(language, tier) when is_binary(language) and is_atom(tier) do
+  def get_patterns(language) when is_binary(language) do
     start_time = System.monotonic_time()
     
-    result = case :ets.lookup(@ets_table, {language, tier}) do
+    result = case :ets.lookup(@ets_table, language) do
       [{_key, patterns}] ->
-        :telemetry.execute([:pattern, :cache, :hit], %{count: 1}, %{language: language, tier: tier})
+        :telemetry.execute([:pattern, :cache, :hit], %{count: 1}, %{language: language})
         {:ok, patterns}
       [] ->
-        :telemetry.execute([:pattern, :cache, :miss], %{count: 1}, %{language: language, tier: tier})
-        GenServer.call(__MODULE__, {:load_patterns, language, tier})
+        :telemetry.execute([:pattern, :cache, :miss], %{count: 1}, %{language: language})
+        GenServer.call(__MODULE__, {:load_patterns, language})
     end
     
     duration = System.monotonic_time() - start_time
-    :telemetry.execute([:pattern, :fetch], %{duration: duration}, %{language: language, tier: tier})
+    :telemetry.execute([:pattern, :fetch], %{duration: duration}, %{language: language})
     
     result
+  end
+  
+  # Backward compatibility for tier-based calls
+  def get_patterns(language, _tier) when is_binary(language) do
+    get_patterns(language)
   end
   
   @doc """
@@ -89,13 +94,13 @@ defmodule RsolvApi.Security.PatternServer do
   end
   
   @impl true
-  def handle_call({:load_patterns, language, tier}, _from, state) do
-    Logger.debug("PatternServer: Loading patterns for #{language}/#{tier}")
+  def handle_call({:load_patterns, language}, _from, state) do
+    Logger.debug("PatternServer: Loading patterns for #{language}")
     
-    patterns = load_patterns_for(language, tier)
+    patterns = load_patterns_for(language)
     
     # Cache the loaded patterns
-    :ets.insert(@ets_table, {{language, tier}, patterns})
+    :ets.insert(@ets_table, {language, patterns})
     
     {:reply, {:ok, patterns}, state}
   end
@@ -133,23 +138,27 @@ defmodule RsolvApi.Security.PatternServer do
   # Private Functions
   
   defp load_all_patterns do
-    languages = ["javascript", "python", "ruby", "java", "elixir", "php"]
-    tiers = [:public, :protected, :ai, :enterprise]
+    languages = ["javascript", "python", "ruby", "java", "elixir", "php", "django", "rails", "common"]
     
-    stats = for language <- languages, tier <- tiers, reduce: %{total: 0} do
+    # Load patterns for each language
+    stats = for language <- languages, reduce: %{total: 0, by_language: %{}} do
       acc ->
-        patterns = load_patterns_for(language, tier)
-        :ets.insert(@ets_table, {{language, tier}, patterns})
+        patterns = load_patterns_for(language)
         
-        Map.update(acc, :total, length(patterns), &(&1 + length(patterns)))
-        |> Map.put({language, tier}, length(patterns))
+        # Store patterns by language only
+        :ets.insert(@ets_table, {language, patterns})
+        
+        acc
+        |> Map.update(:total, length(patterns), &(&1 + length(patterns)))
+        |> Map.put(:by_language, Map.put(acc.by_language, language, length(patterns)))
     end
     
-    Logger.info("PatternServer: Loaded #{stats.total} total patterns")
+    Logger.info("PatternServer: Loaded #{stats.total} unique patterns")
+    Logger.info("Patterns by language: #{inspect(stats.by_language)}")
     stats
   end
   
-  defp load_patterns_for(language, tier) do
+  defp load_patterns_for(language) do
     # Get the appropriate module
     module = get_pattern_module(language)
     
@@ -157,39 +166,23 @@ defmodule RsolvApi.Security.PatternServer do
     if Application.get_env(:rsolv_api, :use_enhanced_patterns, false) do
       enhanced_module = get_enhanced_pattern_module(language)
       
-      if Code.ensure_loaded?(enhanced_module) and function_exported?(enhanced_module, :all, 1) do
-        apply(enhanced_module, :all, [tier])
+      if Code.ensure_loaded?(enhanced_module) and function_exported?(enhanced_module, :all, 0) do
+        apply(enhanced_module, :all, [])
       else
         # Fallback to standard patterns
-        get_standard_patterns(module, tier)
+        get_standard_patterns(module)
       end
     else
-      get_standard_patterns(module, tier)
+      get_standard_patterns(module)
     end
   end
   
-  defp get_standard_patterns(module, tier) do
+  defp get_standard_patterns(module) do
     if Code.ensure_loaded?(module) and function_exported?(module, :all, 0) do
-      patterns = apply(module, :all, [])
-      filter_by_tier(patterns, tier)
+      apply(module, :all, [])
     else
       []
     end
-  end
-  
-  defp filter_by_tier(patterns, :public) do
-    # Public tier gets basic patterns
-    Enum.take(patterns, div(length(patterns), 2))
-  end
-  
-  defp filter_by_tier(patterns, :protected) do
-    # Protected tier gets 75% of patterns
-    Enum.take(patterns, round(length(patterns) * 0.75))
-  end
-  
-  defp filter_by_tier(patterns, tier) when tier in [:ai, :enterprise] do
-    # AI and Enterprise get all patterns
-    patterns
   end
   
   defp get_pattern_module("javascript"), do: RsolvApi.Security.Patterns.Javascript
@@ -200,6 +193,7 @@ defmodule RsolvApi.Security.PatternServer do
   defp get_pattern_module("php"), do: RsolvApi.Security.Patterns.Php
   defp get_pattern_module("django"), do: RsolvApi.Security.Patterns.Django
   defp get_pattern_module("rails"), do: RsolvApi.Security.Patterns.Rails
+  defp get_pattern_module("common"), do: RsolvApi.Security.Patterns.Common
   defp get_pattern_module("cve"), do: RsolvApi.Security.Patterns.Cve
   defp get_pattern_module(_), do: nil
   

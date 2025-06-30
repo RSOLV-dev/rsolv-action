@@ -47,31 +47,11 @@ defmodule RSOLVWeb.Router do
     # Usage tracking
     post "/usage/report", CredentialController, :report_usage
 
-    # Security patterns - organized by access tier
+    # Security patterns
     scope "/patterns" do
-      # Public patterns (no authentication required)
-      get "/public", PatternController, :all_public
-      get "/public/:language", PatternController, :public
-      
-      # Protected patterns (require authentication in controller)
-      get "/protected", PatternController, :all_protected
-      get "/protected/:language", PatternController, :protected
-      
-      # AI patterns (require authentication + AI access in controller)
-      get "/ai", PatternController, :all_ai
-      get "/ai/:language", PatternController, :ai
-      
-      # Enterprise patterns (require authentication + enterprise access in controller)
-      get "/enterprise", PatternController, :all_enterprise
-      get "/enterprise/:language", PatternController, :enterprise
-      
-      # Enhanced patterns with AST rules (requires authentication)
-      get "/enhanced", PatternController, :all_enhanced
-      get "/enhanced/:language", PatternController, :enhanced
-      
-      # General patterns (access level determined by authentication in controller)  
+      # Main pattern endpoints (access level determined by authentication)
       get "/", Api.V1.PatternController, :index
-      get "/:language", PatternController, :by_language
+      get "/stats", Api.V1.PatternController, :stats
       
       # Pattern metadata endpoint
       get "/:id/metadata", PatternController, :metadata
@@ -107,14 +87,8 @@ defmodule RSOLVWeb.Router do
 
     # Security patterns with enhanced format by default
     scope "/patterns" do
-      # V2 routes automatically use enhanced format
-      get "/protected/:language", PatternController, :v2_protected
-      get "/ai/:language", PatternController, :v2_ai
-      get "/enterprise/:language", PatternController, :v2_enterprise
-      get "/public/:language", PatternController, :v2_public
-      
-      # Combined endpoint for all accessible tiers
-      get "/:language", PatternController, :v2_by_language
+      # Main pattern endpoint (returns enhanced format by default)
+      get "/", Api.V1.PatternController, :index_v2
     end
   end
   

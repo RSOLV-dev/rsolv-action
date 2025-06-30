@@ -8,7 +8,7 @@ defmodule RsolvApi.AST.PatternAdapter do
   expected by PatternMatcher.
   """
   
-  alias RsolvApi.Security.{Pattern, ASTPattern, PatternRegistry}
+  alias RsolvApi.Security.{Pattern, ASTPattern, PatternRegistry, PatternServer}
   require Logger
   
   @cache_table :pattern_adapter_cache
@@ -244,8 +244,21 @@ defmodule RsolvApi.AST.PatternAdapter do
   # Private functions
   
   defp do_load_patterns(language) do
-    # Load patterns from the registry for this language
-    language_patterns = PatternRegistry.get_patterns_for_language(language)
+    # PatternServer is the production interface - try it first
+    language_patterns = case Process.whereis(PatternServer) do
+      nil ->
+        # PatternServer not running, use PatternRegistry directly
+        Logger.debug("PatternServer not running, using PatternRegistry")
+        PatternRegistry.get_patterns_for_language(language)
+      _pid ->
+        # PatternServer is running, use it
+        case PatternServer.get_patterns(language) do
+          {:ok, patterns} -> patterns
+          _ -> 
+            # Fallback to PatternRegistry if server has issues
+            PatternRegistry.get_patterns_for_language(language)
+        end
+    end
     
     Logger.info("PatternAdapter loading patterns for #{language}: found #{length(language_patterns)} patterns")
     
