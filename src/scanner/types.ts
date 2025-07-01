@@ -3,15 +3,18 @@ import { Vulnerability } from '../security/types.js';
 export type ScanMode = 'fix' | 'scan';
 
 export interface ScanConfig {
-  mode: ScanMode;
+  mode?: ScanMode;
   repository: {
     owner: string;
     name: string;
     defaultBranch: string;
   };
   createIssues: boolean;
-  batchSimilar: boolean;
+  batchSimilar?: boolean;
   issueLabel: string;
+  enableASTValidation?: boolean;
+  astValidationBatchSize?: number;
+  rsolvApiKey?: string; // Needed for validation API
 }
 
 export interface ScanResult {

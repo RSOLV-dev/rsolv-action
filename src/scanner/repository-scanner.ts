@@ -4,6 +4,7 @@ import { logger } from '../utils/logger.js';
 import type { FileToScan, ScanConfig, ScanResult, VulnerabilityGroup } from './types.js';
 import type { Vulnerability } from '../security/types.js';
 import { createPatternSource } from '../security/pattern-source.js';
+import { ASTValidator } from './ast-validator.js';
 
 export class RepositoryScanner {
   private detector: SecurityDetectorV2;
@@ -19,7 +20,7 @@ export class RepositoryScanner {
     
     const startTime = Date.now();
     const files = await this.getRepositoryFiles(config);
-    const vulnerabilities: Vulnerability[] = [];
+    let vulnerabilities: Vulnerability[] = [];
     
     logger.info(`Found ${files.length} files to scan`);
     
@@ -43,6 +44,22 @@ export class RepositoryScanner {
           logger.error(`Error scanning file ${file.path}:`, error);
         }
       }
+    }
+    
+    // Apply AST validation if enabled
+    if (config.enableASTValidation === true && config.rsolvApiKey && typeof config.rsolvApiKey === 'string' && config.rsolvApiKey.length > 0) {
+      logger.info('Performing AST validation on detected vulnerabilities...');
+      const validator = new ASTValidator(config.rsolvApiKey);
+      
+      // Create file contents map
+      const fileContents = new Map<string, string>();
+      files.forEach(f => fileContents.set(f.path, f.content));
+      
+      const preValidationCount = vulnerabilities.length;
+      vulnerabilities = await validator.validateVulnerabilities(vulnerabilities, fileContents);
+      const filtered = preValidationCount - vulnerabilities.length;
+      
+      logger.info(`AST validation complete: ${filtered} false positives filtered out`);
     }
     
     // Group vulnerabilities by type

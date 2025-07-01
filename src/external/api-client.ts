@@ -32,6 +32,36 @@ interface FixAttemptResponse {
   billing_status?: string;
 }
 
+interface VulnerabilityValidationRequest {
+  vulnerabilities: Array<{
+    id: string;
+    patternId: string;
+    filePath: string;
+    line: number;
+    code: string;
+    severity: string;
+  }>;
+  files: Record<string, string>;
+}
+
+interface VulnerabilityValidationResponse {
+  validated: Array<{
+    id: string;
+    isValid: boolean;
+    confidence: number;
+    reason?: string;
+    astContext?: {
+      inUserInputFlow: boolean;
+      hasValidation: boolean;
+    };
+  }>;
+  stats: {
+    total: number;
+    validated: number;
+    rejected: number;
+  };
+}
+
 interface ApiResult<T> {
   success: boolean;
   data?: T;
@@ -106,5 +136,39 @@ export class RsolvApiClient {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  }
+
+  /**
+   * Validate vulnerabilities using server-side AST analysis
+   * 
+   * @param request - Vulnerabilities and file contents to validate
+   * @returns Validation results with confidence scores
+   * 
+   * @example
+   * ```typescript
+   * const response = await client.validateVulnerabilities({
+   *   vulnerabilities: [{ id: 'v1', patternId: 'eval', ... }],
+   *   files: { 'app.js': 'eval(userInput);' }
+   * });
+   * ```
+   */
+  async validateVulnerabilities(
+    request: VulnerabilityValidationRequest
+  ): Promise<VulnerabilityValidationResponse> {
+    const response = await fetch(`${this.baseUrl}/api/v1/vulnerabilities/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Validation API error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json() as Promise<VulnerabilityValidationResponse>;
   }
 }
