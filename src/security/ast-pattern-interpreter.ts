@@ -7,7 +7,7 @@
  */
 
 import { parse } from '@babel/parser';
-import traverse from '@babel/traverse';
+import * as traverse from '@babel/traverse';
 import * as t from '@babel/types';
 
 import { SecurityPattern } from './types.js';
@@ -114,8 +114,8 @@ export class ASTPatternInterpreter {
     
     const self = this; // Capture this context
     
-    traverse(ast, {
-      enter(path) {
+    (traverse as any).default(ast, {
+      enter(path: any) {
         // Check node type if specified
         if (rules.node_type && path.node.type !== rules.node_type) {
           return;
@@ -569,14 +569,14 @@ export class ASTPatternInterpreter {
     
     // If it's assigned to a variable, check all its uses
     if (t.isVariableDeclarator(parent) && parent.init === path.node) {
-      const varName = parent.id.name;
+      const varName = (parent.id as any).name;
       
       // Find the scope and check all references to this variable
       const binding = path.scope.getBinding(varName);
       if (!binding) return false;
       
       // Check all references - if ALL are console.log, it's safe
-      const allForLogging = binding.referencePaths.every(refPath => {
+      const allForLogging = binding.referencePaths.every((refPath: any) => {
         return this.isInConsoleLog(refPath);
       });
       
@@ -652,11 +652,11 @@ export class ASTPatternInterpreter {
 }
 
 // Demo usage
-if (import.meta.main) {
-  console.log("AST Pattern Interpreter ready for integration!");
-  console.log("This dramatically reduces false positives by:");
-  console.log("1. Using AST to understand code structure");
-  console.log("2. Applying context rules (exclude test files, etc.)");
-  console.log("3. Dynamic confidence scoring");
-  console.log("4. Framework-aware detection");
-}
+// if (import.meta.main) {
+//   console.log("AST Pattern Interpreter ready for integration!");
+//   console.log("This dramatically reduces false positives by:");
+//   console.log("1. Using AST to understand code structure");
+//   console.log("2. Applying context rules (exclude test files, etc.)");
+//   console.log("3. Dynamic confidence scoring");
+//   console.log("4. Framework-aware detection");
+// }

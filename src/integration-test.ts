@@ -9,11 +9,12 @@ import { RSOLVCredentialManager } from './credentials/manager.js';
 import { AiProviderConfig } from './types/index.js';
 
 // Mock server to simulate RSOLV API
+// @ts-ignore - Bun types
 import { serve } from 'bun';
 
 const mockApiServer = serve({
   port: 4001,
-  fetch(req) {
+  fetch(req: any) {
     const url = new URL(req.url);
     
     if (url.pathname === '/v1/credentials/exchange' && req.method === 'POST') {

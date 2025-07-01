@@ -1,7 +1,7 @@
 import { ComplianceDocumentationTemplate } from '../types.js';
 import { VulnerabilityType } from '../types.js';
 
-export const javascriptComplianceTemplates: Map<VulnerabilityType, ComplianceDocumentationTemplate> = new Map([
+export const javascriptComplianceTemplates = new Map<VulnerabilityType, ComplianceDocumentationTemplate>([
   [VulnerabilityType.XSS, {
     framework: 'SOC2',
     controlMapping: {

@@ -12,8 +12,8 @@
  *   bun run e2e-real-vended.ts
  */
 
-// Import node's native fetch to bypass any mocks
-import { fetch as nodeFetch } from 'node:https';
+// Use global fetch to bypass any mocks
+const nodeFetch = globalThis.fetch;
 
 // Force production mode
 process.env.NODE_ENV = 'production';

@@ -226,7 +226,7 @@ export class EnhancedSecurityAnalyzer {
       for (const vuln of regexVulns) {
         // Check if this vulnerability was already found by AST
         const isDuplicate = result.vulnerabilities.some(
-          v => v.file === file.path && 
+          v => v.filePath === file.path && 
                v.type === vuln.type &&
                Math.abs(v.line - vuln.line) < 3 // Within 3 lines
         );

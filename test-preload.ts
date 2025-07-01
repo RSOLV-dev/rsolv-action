@@ -5,6 +5,7 @@
  * and prevent test pollution between test suites.
  */
 
+// @ts-ignore - Bun test types
 import { afterEach, beforeEach, mock } from 'bun:test';
 
 // Global test setup

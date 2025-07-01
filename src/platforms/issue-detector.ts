@@ -69,7 +69,9 @@ async function detectJiraIssues(_config: ActionConfig): Promise<IssueContext[]> 
   // Use custom JQL if provided, otherwise search for both labels
   let jiraIssues: UnifiedIssue[];
   if (process.env.JIRA_JQL) {
-    jiraIssues = await adapter.searchIssues(process.env.JIRA_JQL);
+    // Cast to JiraAdapter to access searchIssues method
+    const jiraAdapter = adapter as any;
+    jiraIssues = await jiraAdapter.searchIssues(process.env.JIRA_JQL);
   } else {
     // Use the new method that searches for both labels
     jiraIssues = await adapter.searchRsolvIssues();

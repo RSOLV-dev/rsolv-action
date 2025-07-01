@@ -78,22 +78,22 @@ export class SecurityDetectorV3 {
         const result = await this.astAnalyzer.analyzeFile(filePath, code);
         
         // Convert server results to vulnerabilities
-        if (result.findings) {
-          for (const finding of result.findings) {
-            const key = `${finding.line}:${finding.pattern_type}`;
+        if (result.patterns) {
+          for (const finding of result.patterns) {
+            const key = `${finding.location.start.line}:${finding.pattern.type}`;
             if (!seen.has(key)) {
               seen.add(key);
               
               vulnerabilities.push({
-                type: finding.pattern_type as VulnerabilityType,
-                severity: finding.severity,
-                line: finding.line,
-                message: finding.message,
-                description: finding.description || finding.message,
-                confidence: finding.confidence,
-                cweId: finding.cwe_id,
-                owaspCategory: finding.owasp_category,
-                remediation: finding.remediation
+                type: finding.pattern.type as VulnerabilityType,
+                severity: finding.pattern.severity as 'low' | 'medium' | 'high' | 'critical',
+                line: finding.location.start.line,
+                message: finding.pattern.message || finding.pattern.name,
+                description: finding.pattern.description || finding.pattern.message || '',
+                confidence: finding.confidence || 80,
+                cweId: (finding.pattern as any).cweId || (finding.pattern as any).cwe,
+                owaspCategory: (finding.pattern as any).owaspCategory || (finding.pattern as any).owasp,
+                remediation: (finding.pattern as any).remediation || (finding.pattern as any).recommendation || ''
               });
             }
           }
@@ -179,8 +179,8 @@ export class SecurityDetectorV3 {
     for (const [filePath, fileResult] of Object.entries(analysisResult.results || {})) {
       const vulnerabilities: Vulnerability[] = [];
       
-      if (fileResult.findings) {
-        for (const finding of fileResult.findings) {
+      if ((fileResult as any).findings) {
+        for (const finding of (fileResult as any).findings) {
           vulnerabilities.push({
             type: finding.pattern_type as VulnerabilityType,
             severity: finding.severity,
