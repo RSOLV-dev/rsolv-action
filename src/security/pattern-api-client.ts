@@ -1,6 +1,22 @@
 import { logger } from '../utils/logger.js';
 import { SecurityPattern, VulnerabilityType } from './types.js';
 
+// RFC-032 Phase 2.2: Types for serialized regex format
+interface SerializedRegex {
+  __type__: 'regex';
+  source: string;
+  flags: string[];
+}
+
+// Type guard to check if a value is a serialized regex
+function isSerializedRegex(value: any): value is SerializedRegex {
+  return value && 
+         typeof value === 'object' && 
+         value.__type__ === 'regex' &&
+         typeof value.source === 'string' &&
+         Array.isArray(value.flags);
+}
+
 export interface PatternResponse {
   patterns: PatternData[];
   metadata?: {
@@ -24,7 +40,8 @@ export interface PatternData {
   description: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   patterns?: string[] | { regex: string[] };  // Legacy field - Can be array or object with regex array
-  regex_patterns?: string[];  // Current API format
+  regex_patterns?: string[];  // Current API format (some endpoints)
+  regex?: string | string[];  // Enhanced format field (single pattern or array)
   languages: string[];
   frameworks?: string[];
   recommendation: string;
@@ -176,70 +193,95 @@ export class PatternAPIClient {
    * Convert API pattern format to RSOLV-action SecurityPattern format
    */
   private convertToSecurityPattern(apiPattern: PatternData): SecurityPattern {
-    // Handle different API response formats
-    let patternStrings: string[] = [];
+    // RFC-032: First reconstruct any serialized regex objects in the pattern
+    const reconstructedPattern = this.reconstructPattern(apiPattern);
     
+    // Handle different API response formats
+    let patternData: any[] = [];
+    
+    // Check for regex field (enhanced format - can be string or array)
+    if ((reconstructedPattern as any).regex) {
+      const regexField = (reconstructedPattern as any).regex;
+      if (typeof regexField === 'string') {
+        patternData = [regexField];
+      } else if (Array.isArray(regexField)) {
+        patternData = regexField;
+      }
+    }
     // Check for regex_patterns field (current API format)
-    if (Array.isArray((apiPattern as any).regex_patterns)) {
-      patternStrings = (apiPattern as any).regex_patterns;
+    else if (Array.isArray((reconstructedPattern as any).regex_patterns)) {
+      patternData = (reconstructedPattern as any).regex_patterns;
     }
     // Check if patterns is an array (legacy language endpoint format)
-    else if (Array.isArray(apiPattern.patterns)) {
-      patternStrings = apiPattern.patterns;
+    else if (Array.isArray(reconstructedPattern.patterns)) {
+      patternData = reconstructedPattern.patterns;
     } 
     // Check if patterns is an object with regex array (legacy tier endpoint format)
-    else if (apiPattern.patterns && typeof apiPattern.patterns === 'object' && 
-             'regex' in apiPattern.patterns && Array.isArray((apiPattern.patterns as any).regex)) {
-      patternStrings = (apiPattern.patterns as any).regex;
+    else if (reconstructedPattern.patterns && typeof reconstructedPattern.patterns === 'object' && 
+             'regex' in reconstructedPattern.patterns && Array.isArray((reconstructedPattern.patterns as any).regex)) {
+      patternData = (reconstructedPattern.patterns as any).regex;
     }
     // Fallback for unexpected format
     else {
-      logger.warn(`Unexpected patterns format for ${apiPattern.id}:`, apiPattern.patterns);
-      patternStrings = [];
+      // Only warn if we didn't find any pattern data
+      logger.warn(`No regex patterns found for ${reconstructedPattern.id}`);
+      patternData = [];
     }
     
-    // Compile regex patterns from strings
-    const regexPatterns = patternStrings.map(r => {
+    // Compile regex patterns from strings or use already-reconstructed RegExp objects
+    const regexPatterns = patternData.map(item => {
       try {
-        // Handle both simple patterns and patterns with flags
-        const match = r.match(/^\/(.*)\/([gimsuvy]*)$/);
-        if (match) {
-          return new RegExp(match[1], match[2]);
+        // If it's already a RegExp (from reconstruction), use it directly
+        if (item instanceof RegExp) {
+          return item;
         }
-        return new RegExp(r);
+        
+        // Otherwise, handle string patterns
+        if (typeof item === 'string') {
+          // Handle both simple patterns and patterns with flags
+          const match = item.match(/^\/(.*)\/([gimsuvy]*)$/);
+          if (match) {
+            return new RegExp(match[1], match[2]);
+          }
+          return new RegExp(item);
+        }
+        
+        logger.warn(`Unexpected pattern type for ${reconstructedPattern.id}:`, item);
+        return null;
       } catch (error) {
-        logger.warn(`Failed to compile regex for pattern ${apiPattern.id}: ${r}`, error);
+        logger.warn(`Failed to compile regex for pattern ${reconstructedPattern.id}: ${item}`);
+        logger.error(error);
         return null;
       }
     }).filter(Boolean) as RegExp[];
 
-    // Convert context rules if present
-    const contextRules = apiPattern.context_rules || undefined;
+    // Convert context rules if present (already reconstructed)
+    const contextRules = reconstructedPattern.context_rules || undefined;
 
     return {
-      id: apiPattern.id,
-      name: apiPattern.name,
-      type: this.mapVulnerabilityType(apiPattern.type),
-      severity: apiPattern.severity,
-      description: apiPattern.description,
+      id: reconstructedPattern.id,
+      name: reconstructedPattern.name,
+      type: this.mapVulnerabilityType(reconstructedPattern.type),
+      severity: reconstructedPattern.severity,
+      description: reconstructedPattern.description,
       patterns: {
         regex: regexPatterns,
-        // Add AST rules to patterns object if present
-        ast: apiPattern.ast_rules ? [JSON.stringify(apiPattern.ast_rules)] : undefined
+        // Add AST rules to patterns object if present (already reconstructed)
+        ast: reconstructedPattern.ast_rules ? [JSON.stringify(reconstructedPattern.ast_rules)] : undefined
       },
-      languages: apiPattern.languages,
-      cweId: apiPattern.cwe_id || apiPattern.cweId || '',
-      owaspCategory: apiPattern.owasp_category || apiPattern.owaspCategory || '',
-      remediation: apiPattern.recommendation,
+      languages: reconstructedPattern.languages,
+      cweId: reconstructedPattern.cwe_id || reconstructedPattern.cweId || '',
+      owaspCategory: reconstructedPattern.owasp_category || reconstructedPattern.owaspCategory || '',
+      remediation: reconstructedPattern.recommendation,
       examples: {
-        vulnerable: apiPattern.test_cases?.vulnerable?.[0] || apiPattern.testCases?.vulnerable?.[0] || '',
-        secure: apiPattern.test_cases?.safe?.[0] || apiPattern.testCases?.safe?.[0] || ''
+        vulnerable: reconstructedPattern.test_cases?.vulnerable?.[0] || reconstructedPattern.testCases?.vulnerable?.[0] || '',
+        secure: reconstructedPattern.test_cases?.safe?.[0] || reconstructedPattern.testCases?.safe?.[0] || ''
       },
-      // AST Enhancement fields
-      astRules: apiPattern.ast_rules,
+      // AST Enhancement fields (already reconstructed, may contain RegExp)
+      astRules: reconstructedPattern.ast_rules,
       contextRules,
-      confidenceRules: apiPattern.confidence_rules,
-      minConfidence: apiPattern.min_confidence
+      confidenceRules: reconstructedPattern.confidence_rules,
+      minConfidence: reconstructedPattern.min_confidence
     };
   }
 
@@ -289,6 +331,66 @@ export class PatternAPIClient {
   clearCache(): void {
     this.cache.clear();
     logger.info('Pattern cache cleared');
+  }
+
+  /**
+   * RFC-032 Phase 2.2: Convert Elixir regex flags array to JavaScript flags string
+   */
+  private convertRegexFlags(flags: string[]): string {
+    const flagMap: Record<string, string> = {
+      'i': 'i',  // case insensitive
+      'm': 'm',  // multiline
+      's': 's',  // dotAll (. matches newlines)
+      'u': 'u',  // unicode
+      'g': 'g',  // global
+      'y': 'y',  // sticky
+      'd': 'd',  // hasIndices
+    };
+
+    return flags
+      .map(flag => flagMap[flag] || '')
+      .filter(Boolean)
+      .join('');
+  }
+
+  /**
+   * RFC-032 Phase 2.2: Reconstruct a regex from serialized format
+   */
+  private reconstructRegex(serialized: SerializedRegex): RegExp {
+    const flags = this.convertRegexFlags(serialized.flags);
+    return new RegExp(serialized.source, flags);
+  }
+
+  /**
+   * RFC-032 Phase 2.2: Recursively reconstruct patterns in any data structure
+   */
+  private reconstructPattern(data: any): any {
+    // Handle null/undefined
+    if (data === null || data === undefined) {
+      return data;
+    }
+
+    // Check if it's a serialized regex
+    if (isSerializedRegex(data)) {
+      return this.reconstructRegex(data);
+    }
+
+    // Handle arrays
+    if (Array.isArray(data)) {
+      return data.map(item => this.reconstructPattern(item));
+    }
+
+    // Handle objects
+    if (typeof data === 'object') {
+      const result: any = {};
+      for (const [key, value] of Object.entries(data)) {
+        result[key] = this.reconstructPattern(value);
+      }
+      return result;
+    }
+
+    // Return primitives as-is
+    return data;
   }
 
   /**
