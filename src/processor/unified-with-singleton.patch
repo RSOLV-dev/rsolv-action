@@ -1,0 +1,33 @@
+--- a/src/processor/unified.ts
++++ b/src/processor/unified.ts
+@@ -1,6 +1,7 @@
+ import { IssueContext } from '../types';
+ import { Logger } from '../utils/logger';
+ import { CredentialManager } from '../credentials/manager';
++import { CredentialManagerSingleton } from '../credentials/singleton';
+ import { RsolvApiClient } from '../api/client';
+ import { AIClient, createAIClient } from '../ai/client';
+ import { ClaudeCodeAdapter } from '../ai/adapters/claude-code';
+@@ -68,11 +69,8 @@ export class UnifiedProcessor {
+       logger.info('Enhanced context setup - useVendedCredentials: true, rsolvApiKey: present');
+       
+       if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+-        logger.info('Creating credential manager for vended credentials');
+-        credentialManager = new CredentialManager(rsolvApiClient, config.rsolvApiKey);
+-        logger.info('Initializing credential manager');
+-        await credentialManager.initialize();
+-        logger.info('Credential manager initialized successfully');
++        logger.info('Getting credential manager singleton for vended credentials');
++        credentialManager = await CredentialManagerSingleton.getInstance(rsolvApiClient, config.rsolvApiKey);
+       }
+       
+       // Create the enhanced adapter with credential manager
+@@ -167,7 +165,7 @@ export class UnifiedProcessor {
+       logger.error('Error in unified processor', error);
+       throw error;
+     } finally {
+-      credentialManager?.cleanup();
++      // Don't cleanup singleton - it will be reused
+     }
+   }
+   

@@ -253,7 +253,9 @@ export class ElixirASTAnalyzer {
     const timeout = setTimeout(() => controller.abort(), this.config.timeout!);
 
     try {
-      const response = await fetch(this.config.apiUrl, {
+      // Construct the full AST endpoint URL
+      const astEndpoint = `${this.config.apiUrl}/api/v1/ast/analyze`;
+      const response = await fetch(astEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

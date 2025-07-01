@@ -70,12 +70,12 @@ async function main() {
       },
       metadata: {
         htmlUrl: issue.html_url,
+        url: issue.html_url,
         user: issue.user?.login || 'unknown',
         state: issue.state,
         createdAt: issue.created_at,
         updatedAt: issue.updated_at
-      },
-      url: issue.html_url
+      }
     };
     
     // Create AI config (using default values for demo)

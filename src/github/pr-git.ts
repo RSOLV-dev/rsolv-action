@@ -79,7 +79,7 @@ export async function createPullRequestFromGit(
       if (config.rsolvApiKey) {
         try {
           const apiClient = new RsolvApiClient(config.rsolvApiKey);
-          await apiClient.trackFixAttempt({
+          await apiClient.createFixAttempt({
             issueId: issue.id,
             issueNumber: issue.number,
             repository: issue.repository.fullName,

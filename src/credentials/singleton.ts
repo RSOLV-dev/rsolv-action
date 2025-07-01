@@ -8,6 +8,7 @@ import { logger } from '../utils/logger.js';
 
 export class CredentialManagerSingleton {
   private static instances = new Map<string, RSOLVCredentialManager>();
+  private static initPromises = new Map<string, Promise<RSOLVCredentialManager>>();
   
   /**
    * Get or create a credential manager instance for the given API key
@@ -19,6 +20,29 @@ export class CredentialManagerSingleton {
       return this.instances.get(apiKey)!;
     }
     
+    // Check if initialization is already in progress
+    if (this.initPromises.has(apiKey)) {
+      logger.debug(`Waiting for in-progress initialization for API key`);
+      return this.initPromises.get(apiKey)!;
+    }
+    
+    // Create initialization promise to handle concurrent requests
+    const initPromise = this.createAndInitializeManager(apiKey);
+    this.initPromises.set(apiKey, initPromise);
+    
+    try {
+      const manager = await initPromise;
+      return manager;
+    } finally {
+      // Clean up init promise
+      this.initPromises.delete(apiKey);
+    }
+  }
+  
+  /**
+   * Create and initialize a new manager instance
+   */
+  private static async createAndInitializeManager(apiKey: string): Promise<RSOLVCredentialManager> {
     // Create new instance
     logger.info(`Creating new credential manager instance`);
     const manager = new RSOLVCredentialManager();
@@ -72,6 +96,8 @@ export class CredentialManagerSingleton {
       this.instances.delete(apiKey);
       logger.debug(`Cleared credential manager instance for API key`);
     }
+    // Also clear any pending init promise
+    this.initPromises.delete(apiKey);
   }
   
   /**
@@ -81,6 +107,7 @@ export class CredentialManagerSingleton {
     logger.info(`Cleaning up ${this.instances.size} credential manager instances`);
     this.instances.forEach(manager => manager.cleanup());
     this.instances.clear();
+    this.initPromises.clear();
   }
   
   /**

@@ -34,7 +34,7 @@ export async function detectIssues(config: ActionConfig): Promise<IssueContext[]
         id: `github-${issue.id}`,
         number: issue.number,
         title: issue.title,
-        body: issue.body || '',
+        body: issue.body ?? '',
         labels: issue.labels.map((label) => 
           typeof label === 'string' ? label : label.name
         ),
@@ -87,7 +87,7 @@ export async function detectIssues(config: ActionConfig): Promise<IssueContext[]
       id: `github-${issue.id}`,
       number: issue.number,
       title: issue.title,
-      body: issue.body || '',
+      body: issue.body ?? '',
       labels: issue.labels.map((label) => 
         typeof label === 'string' ? label : label.name
       ),
@@ -124,7 +124,7 @@ interface GitHubIssue {
   id: number;
   number: number;
   title: string;
-  body: string | null;
+  body: string | null | undefined;
   labels: Array<string | { name: string; [key: string]: any }>;
   assignees?: Array<{ login: string; [key: string]: any }>;
   created_at: string;

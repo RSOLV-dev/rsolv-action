@@ -43,15 +43,24 @@ export class ASTPatternInterpreter {
       return [];
     }
     
+    console.log(`[AST] Scanning file: ${filePath}`);
+    console.log(`[AST] Total patterns: ${patterns.length}`);
+    
     // Phase 1: Regex pre-filter (FAST!)
     const candidatePatterns = patterns.filter(pattern => {
       // Check if pattern has regex patterns to test
       if (pattern.patterns?.regex && pattern.patterns.regex.length > 0) {
         // Test each regex pattern
-        return pattern.patterns.regex.some(regex => regex.test(content));
+        const matched = pattern.patterns.regex.some(regex => regex.test(content));
+        if (matched) {
+          console.log(`[AST] Pattern ${pattern.id} matched via regex`);
+        }
+        return matched;
       }
       return false;
     });
+    
+    console.log(`[AST] Candidate patterns after regex filter: ${candidatePatterns.length}`);
     
     if (candidatePatterns.length === 0) {
       return findings;
@@ -77,10 +86,13 @@ export class ASTPatternInterpreter {
       // Apply each candidate pattern
       for (const pattern of candidatePatterns) {
         if (pattern.astRules) {
+          console.log(`[AST] Applying AST rules for pattern ${pattern.id}`);
           const patternFindings = this.applyASTPattern(ast, pattern, filePath, content);
+          console.log(`[AST] Found ${patternFindings.length} issues with AST rules`);
           findings.push(...patternFindings);
         } else {
           // Pattern doesn't have AST rules, use regex
+          console.log(`[AST] Pattern ${pattern.id} has no AST rules, using regex`);
           const regexFindings = this.applyRegexPattern(content, pattern, filePath);
           findings.push(...regexFindings);
         }
@@ -165,6 +177,8 @@ export class ASTPatternInterpreter {
       // Check if this is building a SQL query
       const fullExpression = this.getFullConcatenatedString(path);
       const hasSQL = /\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)\b/i.test(fullExpression);
+      
+      console.log(`[AST] SQL check: BinaryExpression found, hasSQL=${hasSQL}, expression="${fullExpression}"`);
       
       if (hasSQL) {
         // Check if in database call

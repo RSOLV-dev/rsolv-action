@@ -477,7 +477,7 @@ async function recordFixAttempt(
       pr_title: prTitle,
       pr_url: prData.html_url,
       issue_title: issue.title,
-      issue_url: issue.url,
+      issue_url: `https://github.com/${issue.repository.fullName}/issues/${issue.number}`,
       api_key_used: apiKey,
       metadata: {
         branch: prData.head?.ref || `rsolv/${issue.number}`,

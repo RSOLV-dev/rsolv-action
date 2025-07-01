@@ -45,14 +45,20 @@ export async function getRepositoryFiles(
             throw new Error(`Path ${filePath} is a directory, not a file`);
           }
           
-          // Extract and decode content
-          const content = response.data.content;
-          if (content) {
-            // GitHub API returns base64 encoded content
-            fileContents[filePath] = Buffer.from(content, 'base64').toString('utf-8');
-            logger.debug(`Fetched content for ${filePath}`);
+          // Extract and decode content (only files have content)
+          if (response.data.type === 'file' && 'content' in response.data) {
+            const content = response.data.content;
+            if (content) {
+              // GitHub API returns base64 encoded content
+              fileContents[filePath] = Buffer.from(content, 'base64').toString('utf-8');
+              logger.debug(`Fetched content for ${filePath}`);
+            } else {
+              logger.warn(`File ${filePath} has no content`);
+            }
+          } else if (response.data.type === 'symlink') {
+            logger.warn(`Skipping symlink: ${filePath}`);
           } else {
-            throw new Error(`No content returned for ${filePath}`);
+            logger.warn(`Unknown file type for ${filePath}: ${response.data.type}`);
           }
         } catch (error) {
           // If API call fails in development, fall back to mock content

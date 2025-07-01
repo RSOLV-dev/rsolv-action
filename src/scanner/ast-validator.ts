@@ -103,7 +103,10 @@ export class ASTValidator {
       // Process response and filter vulnerabilities
       return this.processValidationResponse(vulnerabilities, response);
     } catch (error) {
-      logger.warn(`AST validation failed, using all vulnerabilities`, error);
+      logger.warn(`AST validation failed, using all vulnerabilities`, {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       // Fail open - return all vulnerabilities if validation fails
       return vulnerabilities;
     }

@@ -39,11 +39,13 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
+    "@types/nock": "^11.1.0",
     "@types/node": "^20.17.50",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "bun-types": "latest",
     "eslint": "^8.57.1",
+    "nock": "^14.0.5",
     "typescript": "^5.8.3"
   }
 }
