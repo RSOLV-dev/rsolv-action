@@ -238,11 +238,11 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionConfigTest do
     end
 
     test "applies to Ruby files" do
-      assert InsecureSessionConfig.applies_to_file?("config/application.rb")
+      assert InsecureSessionConfig.applies_to_file?("config/application.rb", nil)
       assert InsecureSessionConfig.applies_to_file?("config/environments/production.rb", ["rails"])
       assert InsecureSessionConfig.applies_to_file?("config/initializers/session_store.rb", ["rails"])
-      refute InsecureSessionConfig.applies_to_file?("test.js")
-      refute InsecureSessionConfig.applies_to_file?("script.py")
+      refute InsecureSessionConfig.applies_to_file?("test.js", nil)
+      refute InsecureSessionConfig.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

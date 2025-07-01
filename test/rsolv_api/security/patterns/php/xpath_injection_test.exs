@@ -155,14 +155,14 @@ defmodule RsolvApi.Security.Patterns.Php.XpathInjectionTest do
       enhancement = XpathInjection.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.7
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      xpath_functions_rule = Enum.find(enhancement.rules, &(&1.type == "xpath_functions"))
+      xpath_functions_rule = Enum.find(enhancement.ast_rules, &(&1.type == "xpath_functions"))
       assert xpath_functions_rule
       assert "query" in xpath_functions_rule.methods
       assert "evaluate" in xpath_functions_rule.methods
       
-      user_input_rule = Enum.find(enhancement.rules, &(&1.type == "user_input_analysis"))
+      user_input_rule = Enum.find(enhancement.ast_rules, &(&1.type == "user_input_analysis"))
       assert user_input_rule
       assert "$_GET" in user_input_rule.dangerous_sources
       assert "$_POST" in user_input_rule.dangerous_sources

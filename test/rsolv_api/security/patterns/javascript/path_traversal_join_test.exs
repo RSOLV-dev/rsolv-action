@@ -110,16 +110,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.PathTraversalJoinTest do
     
     test "applies_to_file?/1 works correctly" do
       # JavaScript and TypeScript files
-      assert PathTraversalJoin.applies_to_file?("test.js")
-      assert PathTraversalJoin.applies_to_file?("app.jsx")
-      assert PathTraversalJoin.applies_to_file?("server.ts")
-      assert PathTraversalJoin.applies_to_file?("component.tsx")
-      assert PathTraversalJoin.applies_to_file?("module.mjs")
+      assert PathTraversalJoin.applies_to_file?("test.js", nil)
+      assert PathTraversalJoin.applies_to_file?("app.jsx", nil)
+      assert PathTraversalJoin.applies_to_file?("server.ts", nil)
+      assert PathTraversalJoin.applies_to_file?("component.tsx", nil)
+      assert PathTraversalJoin.applies_to_file?("module.mjs", nil)
       
       # Non-JavaScript files
-      refute PathTraversalJoin.applies_to_file?("test.py")
-      refute PathTraversalJoin.applies_to_file?("app.rb")
-      refute PathTraversalJoin.applies_to_file?("server.php")
+      refute PathTraversalJoin.applies_to_file?("test.py", nil)
+      refute PathTraversalJoin.applies_to_file?("app.rb", nil)
+      refute PathTraversalJoin.applies_to_file?("server.php", nil)
     end
     
     test "applies_to_file?/2 detects embedded path operations" do

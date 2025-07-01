@@ -145,12 +145,12 @@ defmodule RsolvApi.Security.Patterns.Python.UnsafePickleTest do
   
   describe "file applicability" do
     test "applies to Python files" do
-      assert UnsafePickle.applies_to_file?("script.py")
-      assert UnsafePickle.applies_to_file?("module.pyw")
-      assert UnsafePickle.applies_to_file?("app.py")
+      assert UnsafePickle.applies_to_file?("script.py", nil)
+      assert UnsafePickle.applies_to_file?("module.pyw", nil)
+      assert UnsafePickle.applies_to_file?("app.py", nil)
       
-      refute UnsafePickle.applies_to_file?("script.js")
-      refute UnsafePickle.applies_to_file?("config.json")
+      refute UnsafePickle.applies_to_file?("script.js", nil)
+      refute UnsafePickle.applies_to_file?("config.json", nil)
     end
   end
 end

@@ -138,13 +138,13 @@ defmodule RsolvApi.Security.Patterns.Php.ErrorDisplayTest do
       enhancement = ErrorDisplay.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.6
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      error_rule = Enum.find(enhancement.rules, &(&1.type == "error_functions"))
+      error_rule = Enum.find(enhancement.ast_rules, &(&1.type == "error_functions"))
       assert error_rule
       assert "mysqli_error" in error_rule.database_errors
       
-      output_rule = Enum.find(enhancement.rules, &(&1.type == "output_context"))
+      output_rule = Enum.find(enhancement.ast_rules, &(&1.type == "output_context"))
       assert output_rule
       assert "die" in output_rule.dangerous_outputs
     end

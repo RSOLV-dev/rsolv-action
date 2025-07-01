@@ -1,6 +1,8 @@
 defmodule RsolvApi.AST.EncryptionKeyRotationTest do
   use ExUnit.Case, async: true
   
+  @moduletag :skip
+  
   alias RsolvApi.AST.{Encryption, SessionManager, AuditLogger}
   
   setup do

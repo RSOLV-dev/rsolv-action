@@ -277,11 +277,11 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeRouteConstraintsTest do
     end
 
     test "applies to Ruby files" do
-      assert UnsafeRouteConstraints.applies_to_file?("config/routes.rb")
+      assert UnsafeRouteConstraints.applies_to_file?("config/routes.rb", nil)
       assert UnsafeRouteConstraints.applies_to_file?("app/controllers/application_controller.rb", ["rails"])
       assert UnsafeRouteConstraints.applies_to_file?("config/application.rb", ["rails"])
-      refute UnsafeRouteConstraints.applies_to_file?("test.js")
-      refute UnsafeRouteConstraints.applies_to_file?("script.py")
+      refute UnsafeRouteConstraints.applies_to_file?("test.js", nil)
+      refute UnsafeRouteConstraints.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

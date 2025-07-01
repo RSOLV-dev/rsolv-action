@@ -136,9 +136,9 @@ defmodule RsolvApi.Security.Patterns.Php.RegisterGlobalsTest do
       enhancement = RegisterGlobals.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.6
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      variable_rule = Enum.find(enhancement.rules, &(&1.type == "variable_analysis"))
+      variable_rule = Enum.find(enhancement.ast_rules, &(&1.type == "variable_analysis"))
       assert variable_rule
       assert "authenticated" in variable_rule.suspicious_variables
       assert "admin" in variable_rule.suspicious_variables

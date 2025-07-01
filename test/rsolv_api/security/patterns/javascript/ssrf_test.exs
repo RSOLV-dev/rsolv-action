@@ -171,21 +171,21 @@ defmodule RsolvApi.Security.Patterns.Javascript.SsrfTest do
 
   describe "applies_to_file?/1" do
     test "applies to JavaScript files" do
-      assert Ssrf.applies_to_file?("webhook-handler.js")
-      assert Ssrf.applies_to_file?("api-client.mjs")
-      assert Ssrf.applies_to_file?("src/services/http.js")
+      assert Ssrf.applies_to_file?("webhook-handler.js", nil)
+      assert Ssrf.applies_to_file?("api-client.mjs", nil)
+      assert Ssrf.applies_to_file?("src/services/http.js", nil)
     end
 
     test "applies to TypeScript files" do
-      assert Ssrf.applies_to_file?("api-service.ts")
-      assert Ssrf.applies_to_file?("webhook.tsx")
-      assert Ssrf.applies_to_file?("lib/fetcher.ts")
+      assert Ssrf.applies_to_file?("api-service.ts", nil)
+      assert Ssrf.applies_to_file?("webhook.tsx", nil)
+      assert Ssrf.applies_to_file?("lib/fetcher.ts", nil)
     end
 
     test "does not apply to non-JS/TS files" do
-      refute Ssrf.applies_to_file?("api.py")
-      refute Ssrf.applies_to_file?("webhook.rb")
-      refute Ssrf.applies_to_file?("README.md")
+      refute Ssrf.applies_to_file?("api.py", nil)
+      refute Ssrf.applies_to_file?("webhook.rb", nil)
+      refute Ssrf.applies_to_file?("README.md", nil)
     end
   end
   

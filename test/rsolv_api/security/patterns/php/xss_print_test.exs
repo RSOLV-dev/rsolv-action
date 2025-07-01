@@ -140,13 +140,13 @@ defmodule RsolvApi.Security.Patterns.Php.XssPrintTest do
       enhancement = XssPrint.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.7
-      assert length(enhancement.rules) >= 2
+      assert length(enhancement.ast_rules) >= 2
       
-      output_context_rule = Enum.find(enhancement.rules, &(&1.type == "output_context"))
+      output_context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "output_context"))
       assert output_context_rule
       assert "print" in output_context_rule.functions
       
-      sanitization_rule = Enum.find(enhancement.rules, &(&1.type == "input_sanitization"))
+      sanitization_rule = Enum.find(enhancement.ast_rules, &(&1.type == "input_sanitization"))
       assert sanitization_rule
       assert "htmlspecialchars" in sanitization_rule.safe_functions
     end

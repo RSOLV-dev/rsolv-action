@@ -240,32 +240,32 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202122881Test do
 
   describe "file applicability" do
     test "applies to Rails controller files" do
-      assert Cve202122881.applies_to_file?("app/controllers/application_controller.rb")
-      assert Cve202122881.applies_to_file?("app/controllers/users_controller.rb")
-      assert Cve202122881.applies_to_file?("lib/controllers/api_controller.rb")
+      assert Cve202122881.applies_to_file?("app/controllers/application_controller.rb", nil)
+      assert Cve202122881.applies_to_file?("app/controllers/users_controller.rb", nil)
+      assert Cve202122881.applies_to_file?("lib/controllers/api_controller.rb", nil)
     end
 
     test "applies to Rails configuration files" do
-      assert Cve202122881.applies_to_file?("config/application.rb")
-      assert Cve202122881.applies_to_file?("config/environments/production.rb")
-      assert Cve202122881.applies_to_file?("config/environments/development.rb")
+      assert Cve202122881.applies_to_file?("config/application.rb", nil)
+      assert Cve202122881.applies_to_file?("config/environments/production.rb", nil)
+      assert Cve202122881.applies_to_file?("config/environments/development.rb", nil)
     end
 
     test "applies to Rails middleware files" do
-      assert Cve202122881.applies_to_file?("app/middleware/host_authorization.rb")
-      assert Cve202122881.applies_to_file?("lib/middleware/custom_host_auth.rb")
+      assert Cve202122881.applies_to_file?("app/middleware/host_authorization.rb", nil)
+      assert Cve202122881.applies_to_file?("lib/middleware/custom_host_auth.rb", nil)
     end
 
     test "does not apply to non-Rails files" do
-      refute Cve202122881.applies_to_file?("package.json")
-      refute Cve202122881.applies_to_file?("Dockerfile")
-      refute Cve202122881.applies_to_file?("README.md")
-      refute Cve202122881.applies_to_file?("spec/javascript/test.js")
+      refute Cve202122881.applies_to_file?("package.json", nil)
+      refute Cve202122881.applies_to_file?("Dockerfile", nil)
+      refute Cve202122881.applies_to_file?("README.md", nil)
+      refute Cve202122881.applies_to_file?("spec/javascript/test.js", nil)
     end
 
     test "does not apply to view files" do
-      refute Cve202122881.applies_to_file?("app/views/users/show.html.erb")
-      refute Cve202122881.applies_to_file?("app/views/layouts/application.html.erb")
+      refute Cve202122881.applies_to_file?("app/views/users/show.html.erb", nil)
+      refute Cve202122881.applies_to_file?("app/views/layouts/application.html.erb", nil)
     end
   end
 end

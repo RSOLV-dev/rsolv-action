@@ -195,16 +195,16 @@ defmodule RsolvApi.Security.Patterns.Django.Cve201814574Test do
       enhancement = Cve201814574.ast_enhancement()
       
       assert is_map(enhancement)
-      assert Map.has_key?(enhancement, :rules)
-      assert is_list(enhancement.rules)
-      assert length(enhancement.rules) >= 2
+      assert Map.has_key?(enhancement, :ast_rules)
+      assert is_list(enhancement.ast_rules)
+      assert length(enhancement.ast_rules) >= 2
     end
 
     test "includes context rules for reducing false positives" do
       enhancement = Cve201814574.ast_enhancement()
       
       # Check for exclusion rules
-      exclusion_rules = Enum.filter(enhancement.rules, &(&1.type == :exclusion))
+      exclusion_rules = Enum.filter(enhancement.ast_rules, &(&1.type == :exclusion))
       assert length(exclusion_rules) >= 1
       
       exclusion_rule = List.first(exclusion_rules)
@@ -216,7 +216,7 @@ defmodule RsolvApi.Security.Patterns.Django.Cve201814574Test do
       enhancement = Cve201814574.ast_enhancement()
       
       # Check for validation rules
-      validation_rules = Enum.filter(enhancement.rules, &(&1.type == :validation))
+      validation_rules = Enum.filter(enhancement.ast_rules, &(&1.type == :validation))
       assert length(validation_rules) >= 1
       
       validation_rule = List.first(validation_rules)
@@ -228,7 +228,7 @@ defmodule RsolvApi.Security.Patterns.Django.Cve201814574Test do
       enhancement = Cve201814574.ast_enhancement()
       
       # Check for confidence adjustment rules
-      confidence_rules = Enum.filter(enhancement.rules, &(&1.type == :confidence_adjustment))
+      confidence_rules = Enum.filter(enhancement.ast_rules, &(&1.type == :confidence_adjustment))
       assert length(confidence_rules) >= 1
       
       confidence_rule = List.first(confidence_rules)

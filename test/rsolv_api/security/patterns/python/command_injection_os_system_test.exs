@@ -1,5 +1,5 @@
 defmodule RsolvApi.Security.Patterns.Python.CommandInjectionOsSystemTest do
-  use RsolvApi.DataCase
+  use ExUnit.Case
   alias RsolvApi.Security.Patterns.Python.CommandInjectionOsSystem
   alias RsolvApi.Security.Pattern
   
@@ -190,13 +190,13 @@ defmodule RsolvApi.Security.Patterns.Python.CommandInjectionOsSystemTest do
 
   describe "applies_to_file?/1" do
     test "applies to Python files" do
-      assert CommandInjectionOsSystem.applies_to_file?("script.py")
-      assert CommandInjectionOsSystem.applies_to_file?("utils/helper.py")
-      assert CommandInjectionOsSystem.applies_to_file?("src/main.py")
+      assert CommandInjectionOsSystem.applies_to_file?("script.py", nil)
+      assert CommandInjectionOsSystem.applies_to_file?("utils/helper.py", nil)
+      assert CommandInjectionOsSystem.applies_to_file?("src/main.py", nil)
       
-      refute CommandInjectionOsSystem.applies_to_file?("script.js")
-      refute CommandInjectionOsSystem.applies_to_file?("config.rb")
-      refute CommandInjectionOsSystem.applies_to_file?("README.md")
+      refute CommandInjectionOsSystem.applies_to_file?("script.js", nil)
+      refute CommandInjectionOsSystem.applies_to_file?("config.rb", nil)
+      refute CommandInjectionOsSystem.applies_to_file?("README.md", nil)
     end
   end
 end

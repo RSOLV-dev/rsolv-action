@@ -135,21 +135,21 @@ defmodule RsolvApi.Security.Patterns.Javascript.NosqlInjectionTest do
 
   describe "applies_to_file?/1" do
     test "applies to JavaScript files" do
-      assert NosqlInjection.applies_to_file?("app.js")
-      assert NosqlInjection.applies_to_file?("server.mjs")
-      assert NosqlInjection.applies_to_file?("routes/api.js")
+      assert NosqlInjection.applies_to_file?("app.js", nil)
+      assert NosqlInjection.applies_to_file?("server.mjs", nil)
+      assert NosqlInjection.applies_to_file?("routes/api.js", nil)
     end
 
     test "applies to TypeScript files" do
-      assert NosqlInjection.applies_to_file?("app.ts")
-      assert NosqlInjection.applies_to_file?("server.tsx")
-      assert NosqlInjection.applies_to_file?("src/models/user.ts")
+      assert NosqlInjection.applies_to_file?("app.ts", nil)
+      assert NosqlInjection.applies_to_file?("server.tsx", nil)
+      assert NosqlInjection.applies_to_file?("src/models/user.ts", nil)
     end
 
     test "does not apply to non-JS/TS files" do
-      refute NosqlInjection.applies_to_file?("style.css")
-      refute NosqlInjection.applies_to_file?("app.py")
-      refute NosqlInjection.applies_to_file?("Gemfile")
+      refute NosqlInjection.applies_to_file?("style.css", nil)
+      refute NosqlInjection.applies_to_file?("app.py", nil)
+      refute NosqlInjection.applies_to_file?("Gemfile", nil)
     end
   end
   

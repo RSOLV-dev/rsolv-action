@@ -8,17 +8,16 @@ defmodule RsolvApi.AST.AnalysisServiceTest do
   setup do
     # Ensure services are started
     case GenServer.whereis(SessionManager) do
-      nil -> start_supervised!(SessionManager)
       _ -> :ok
     end
     
     case GenServer.whereis(ParserRegistry) do
-      nil -> start_supervised!(ParserRegistry)
+      nil -> :ok  # ParserRegistry is started by Application
       _ -> :ok
     end
     
     case GenServer.whereis(AnalysisService) do
-      nil -> start_supervised!(AnalysisService)
+      nil -> :ok  # AnalysisService is started by Application
       _ -> :ok
     end
     

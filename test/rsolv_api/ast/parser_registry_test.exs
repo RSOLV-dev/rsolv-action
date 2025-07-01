@@ -8,12 +8,11 @@ defmodule RsolvApi.AST.ParserRegistryTest do
     # SessionManager and ParserRegistry should already be started by application
     # Just ensure they're running
     case GenServer.whereis(SessionManager) do
-      nil -> start_supervised!(SessionManager)
       _ -> :ok
     end
     
     case GenServer.whereis(ParserRegistry) do
-      nil -> start_supervised!(ParserRegistry)
+      nil -> :ok  # ParserRegistry is started by Application
       _ -> :ok
     end
     

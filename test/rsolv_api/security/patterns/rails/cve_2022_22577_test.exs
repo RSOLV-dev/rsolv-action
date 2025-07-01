@@ -194,11 +194,11 @@ defmodule RsolvApi.Security.Patterns.Rails.Cve202222577Test do
     end
 
     test "applies to Ruby files" do
-      assert Cve202222577.applies_to_file?("app/controllers/api_controller.rb")
+      assert Cve202222577.applies_to_file?("app/controllers/api_controller.rb", nil)
       assert Cve202222577.applies_to_file?("app/controllers/application_controller.rb", ["rails"])
       assert Cve202222577.applies_to_file?("config/application.rb", ["rails"])
-      refute Cve202222577.applies_to_file?("test.js")
-      refute Cve202222577.applies_to_file?("script.py")
+      refute Cve202222577.applies_to_file?("test.js", nil)
+      refute Cve202222577.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

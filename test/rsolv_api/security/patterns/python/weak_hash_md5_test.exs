@@ -146,13 +146,13 @@ defmodule RsolvApi.Security.Patterns.Python.WeakHashMd5Test do
       enhancement = WeakHashMd5.ast_enhancement()
       
       assert enhancement.min_confidence == 0.7
-      assert length(enhancement.rules) == 2
+      assert length(enhancement.ast_rules) == 2
       
-      context_rule = Enum.find(enhancement.rules, &(&1.type == "context_check"))
+      context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "context_check"))
       assert "file_checksum" in context_rule.checks
       assert "cache_key" in context_rule.checks
       
-      severity_rule = Enum.find(enhancement.rules, &(&1.type == "severity_increase"))
+      severity_rule = Enum.find(enhancement.ast_rules, &(&1.type == "severity_increase"))
       assert "password" in severity_rule.contexts
       assert "token" in severity_rule.contexts
     end

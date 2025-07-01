@@ -240,11 +240,11 @@ defmodule RsolvApi.Security.Patterns.Rails.SessionFixationTest do
     end
 
     test "applies to Ruby files" do
-      assert SessionFixation.applies_to_file?("app/controllers/sessions_controller.rb")
+      assert SessionFixation.applies_to_file?("app/controllers/sessions_controller.rb", nil)
       assert SessionFixation.applies_to_file?("app/controllers/authentication_controller.rb", ["rails"])
       assert SessionFixation.applies_to_file?("lib/auth/login.rb", ["rails"])
-      refute SessionFixation.applies_to_file?("test.js")
-      refute SessionFixation.applies_to_file?("script.py")
+      refute SessionFixation.applies_to_file?("test.js", nil)
+      refute SessionFixation.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

@@ -119,13 +119,13 @@ defmodule RsolvApi.Security.Patterns.Php.UnsafeDeserializationTest do
       enhancement = UnsafeDeserialization.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.7
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      insecure_functions_rule = Enum.find(enhancement.rules, &(&1.type == "insecure_functions"))
+      insecure_functions_rule = Enum.find(enhancement.ast_rules, &(&1.type == "insecure_functions"))
       assert insecure_functions_rule
       assert "unserialize" in insecure_functions_rule.functions
       
-      secure_alternatives_rule = Enum.find(enhancement.rules, &(&1.type == "secure_alternatives"))
+      secure_alternatives_rule = Enum.find(enhancement.ast_rules, &(&1.type == "secure_alternatives"))
       assert secure_alternatives_rule
       assert "json_decode" in secure_alternatives_rule.functions
     end

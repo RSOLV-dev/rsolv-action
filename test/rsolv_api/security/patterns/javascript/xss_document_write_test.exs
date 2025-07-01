@@ -106,10 +106,10 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDocumentWriteTest do
   
   describe "applies_to_file?/2" do
     test "applies to JavaScript and TypeScript files" do
-      assert XssDocumentWrite.applies_to_file?("script.js")
-      assert XssDocumentWrite.applies_to_file?("app.ts")
-      assert XssDocumentWrite.applies_to_file?("src/utils/helper.jsx")
-      assert XssDocumentWrite.applies_to_file?("components/widget.tsx")
+      assert XssDocumentWrite.applies_to_file?("script.js", nil)
+      assert XssDocumentWrite.applies_to_file?("app.ts", nil)
+      assert XssDocumentWrite.applies_to_file?("src/utils/helper.jsx", nil)
+      assert XssDocumentWrite.applies_to_file?("components/widget.tsx", nil)
     end
     
     test "applies to HTML files with embedded JavaScript" do
@@ -122,10 +122,10 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssDocumentWriteTest do
     end
     
     test "does not apply to non-JavaScript files" do
-      refute XssDocumentWrite.applies_to_file?("style.css")
-      refute XssDocumentWrite.applies_to_file?("data.json")
-      refute XssDocumentWrite.applies_to_file?("README.md")
-      refute XssDocumentWrite.applies_to_file?("image.png")
+      refute XssDocumentWrite.applies_to_file?("style.css", nil)
+      refute XssDocumentWrite.applies_to_file?("data.json", nil)
+      refute XssDocumentWrite.applies_to_file?("README.md", nil)
+      refute XssDocumentWrite.applies_to_file?("image.png", nil)
     end
   end
 

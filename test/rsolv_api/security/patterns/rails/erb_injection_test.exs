@@ -243,11 +243,11 @@ defmodule RsolvApi.Security.Patterns.Rails.ErbInjectionTest do
     end
 
     test "applies to Ruby files" do
-      assert ErbInjection.applies_to_file?("app/controllers/users_controller.rb")
-      assert ErbInjection.applies_to_file?("app/views/users/show.html.erb")
+      assert ErbInjection.applies_to_file?("app/controllers/users_controller.rb", nil)
+      assert ErbInjection.applies_to_file?("app/views/users/show.html.erb", nil)
       assert ErbInjection.applies_to_file?("lib/template_service.rb", ["rails"])
-      refute ErbInjection.applies_to_file?("test.js")
-      refute ErbInjection.applies_to_file?("script.py")
+      refute ErbInjection.applies_to_file?("test.js", nil)
+      refute ErbInjection.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

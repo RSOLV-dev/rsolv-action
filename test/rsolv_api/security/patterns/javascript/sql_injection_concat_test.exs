@@ -125,14 +125,15 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcatTest do
       assert enhancement.ast_rules.operator == "+"
       assert enhancement.ast_rules.context_analysis.contains_sql_keywords == true
       assert enhancement.ast_rules.context_analysis.has_user_input_in_concatenation == true
-      assert enhancement.ast_rules.context_analysis.within_db_call == true
+      # Note: within_db_call was removed as it's now optional for confidence boost
     end
     
-    test "AST rules check for database method calls in ancestors" do
+    test "AST rules no longer require ancestor checks" do
       enhancement = SqlInjectionConcat.ast_enhancement()
       
-      assert enhancement.ast_rules.ancestor_requirements.has_db_method_call == ~r/\.(query|execute|exec|run|all|get)/
-      assert enhancement.ast_rules.ancestor_requirements.max_depth == 3
+      # Ancestor requirements were removed as pattern matcher can't effectively
+      # track context across multiple statements in current implementation
+      refute Map.has_key?(enhancement.ast_rules, :ancestor_requirements)
     end
     
     test "context rules exclude test files and parameterized queries" do
@@ -174,15 +175,15 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcatTest do
 
   describe "applies_to_file?/2" do
     test "applies to JavaScript files" do
-      assert SqlInjectionConcat.applies_to_file?("app.js")
-      assert SqlInjectionConcat.applies_to_file?("database/queries.js")
-      assert SqlInjectionConcat.applies_to_file?("server.mjs")
+      assert SqlInjectionConcat.applies_to_file?("app.js", nil)
+      assert SqlInjectionConcat.applies_to_file?("database/queries.js", nil)
+      assert SqlInjectionConcat.applies_to_file?("server.mjs", nil)
     end
 
     test "applies to TypeScript files" do
-      assert SqlInjectionConcat.applies_to_file?("app.ts")
-      assert SqlInjectionConcat.applies_to_file?("database/queries.tsx")
-      assert SqlInjectionConcat.applies_to_file?("server.ts")
+      assert SqlInjectionConcat.applies_to_file?("app.ts", nil)
+      assert SqlInjectionConcat.applies_to_file?("database/queries.tsx", nil)
+      assert SqlInjectionConcat.applies_to_file?("server.ts", nil)
     end
 
     test "does not apply to files with different extension even with SQL content" do
@@ -194,8 +195,8 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcatTest do
     end
 
     test "does not apply to non-JS/TS files without SQL" do
-      refute SqlInjectionConcat.applies_to_file?("README.md")
-      refute SqlInjectionConcat.applies_to_file?("styles.css")
+      refute SqlInjectionConcat.applies_to_file?("README.md", nil)
+      refute SqlInjectionConcat.applies_to_file?("styles.css", nil)
     end
   end
 end

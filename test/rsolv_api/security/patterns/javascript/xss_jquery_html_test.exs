@@ -148,13 +148,13 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssJqueryHtmlTest do
   
   describe "file applicability" do
     test "applies to JavaScript and TypeScript files" do
-      assert XssJqueryHtml.applies_to_file?("app.js")
-      assert XssJqueryHtml.applies_to_file?("component.jsx")
-      assert XssJqueryHtml.applies_to_file?("service.ts")
-      assert XssJqueryHtml.applies_to_file?("module.tsx")
+      assert XssJqueryHtml.applies_to_file?("app.js", nil)
+      assert XssJqueryHtml.applies_to_file?("component.jsx", nil)
+      assert XssJqueryHtml.applies_to_file?("service.ts", nil)
+      assert XssJqueryHtml.applies_to_file?("module.tsx", nil)
       
-      refute XssJqueryHtml.applies_to_file?("style.css")
-      refute XssJqueryHtml.applies_to_file?("data.json")
+      refute XssJqueryHtml.applies_to_file?("style.css", nil)
+      refute XssJqueryHtml.applies_to_file?("data.json", nil)
     end
   end
 end

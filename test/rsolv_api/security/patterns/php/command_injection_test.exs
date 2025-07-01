@@ -168,18 +168,18 @@ defmodule RsolvApi.Security.Patterns.Php.CommandInjectionTest do
       enhancement = CommandInjection.ast_enhancement()
       
       assert enhancement.min_confidence == 0.95
-      assert length(enhancement.rules) == 3
+      assert length(enhancement.ast_rules) == 3
       
-      command_context_rule = Enum.find(enhancement.rules, &(&1.type == "command_context"))
+      command_context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "command_context"))
       assert "system" in command_context_rule.functions
       assert "exec" in command_context_rule.functions
       assert "shell_exec" in command_context_rule.functions
       
-      escaping_rule = Enum.find(enhancement.rules, &(&1.type == "input_escaping"))
+      escaping_rule = Enum.find(enhancement.ast_rules, &(&1.type == "input_escaping"))
       assert "escapeshellarg" in escaping_rule.escape_functions
       assert "escapeshellcmd" in escaping_rule.escape_functions
       
-      safe_alternatives_rule = Enum.find(enhancement.rules, &(&1.type == "safe_alternatives"))
+      safe_alternatives_rule = Enum.find(enhancement.ast_rules, &(&1.type == "safe_alternatives"))
       assert "proc_open" in safe_alternatives_rule.functions
       assert "pcntl_exec" in safe_alternatives_rule.functions
     end

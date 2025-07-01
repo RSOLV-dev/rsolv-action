@@ -135,21 +135,21 @@ defmodule RsolvApi.Security.Patterns.Javascript.LdapInjectionTest do
 
   describe "applies_to_file?/1" do
     test "applies to JavaScript files" do
-      assert LdapInjection.applies_to_file?("auth.js")
-      assert LdapInjection.applies_to_file?("ldap-client.mjs")
-      assert LdapInjection.applies_to_file?("src/directory.js")
+      assert LdapInjection.applies_to_file?("auth.js", nil)
+      assert LdapInjection.applies_to_file?("ldap-client.mjs", nil)
+      assert LdapInjection.applies_to_file?("src/directory.js", nil)
     end
 
     test "applies to TypeScript files" do
-      assert LdapInjection.applies_to_file?("auth.ts")
-      assert LdapInjection.applies_to_file?("ldap-service.tsx")
-      assert LdapInjection.applies_to_file?("lib/active-directory.ts")
+      assert LdapInjection.applies_to_file?("auth.ts", nil)
+      assert LdapInjection.applies_to_file?("ldap-service.tsx", nil)
+      assert LdapInjection.applies_to_file?("lib/active-directory.ts", nil)
     end
 
     test "does not apply to non-JS/TS files" do
-      refute LdapInjection.applies_to_file?("ldap.conf")
-      refute LdapInjection.applies_to_file?("auth.py")
-      refute LdapInjection.applies_to_file?("Dockerfile")
+      refute LdapInjection.applies_to_file?("ldap.conf", nil)
+      refute LdapInjection.applies_to_file?("auth.py", nil)
+      refute LdapInjection.applies_to_file?("Dockerfile", nil)
     end
   end
   

@@ -245,11 +245,11 @@ defmodule RsolvApi.Security.Patterns.Rails.ActionmailerInjectionTest do
     end
 
     test "applies to Ruby files" do
-      assert ActionmailerInjection.applies_to_file?("app/mailers/user_mailer.rb")
+      assert ActionmailerInjection.applies_to_file?("app/mailers/user_mailer.rb", nil)
       assert ActionmailerInjection.applies_to_file?("app/mailers/notification_mailer.rb", ["rails"])
       assert ActionmailerInjection.applies_to_file?("app/controllers/emails_controller.rb", ["rails"])
-      refute ActionmailerInjection.applies_to_file?("test.js")
-      refute ActionmailerInjection.applies_to_file?("script.py")
+      refute ActionmailerInjection.applies_to_file?("test.js", nil)
+      refute ActionmailerInjection.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

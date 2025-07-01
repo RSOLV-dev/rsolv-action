@@ -125,21 +125,21 @@ defmodule RsolvApi.Security.Patterns.Javascript.DebugConsoleLogTest do
 
   describe "applies_to_file?/1" do
     test "applies to JavaScript files" do
-      assert DebugConsoleLog.applies_to_file?("app.js")
-      assert DebugConsoleLog.applies_to_file?("server.mjs")
-      assert DebugConsoleLog.applies_to_file?("utils/logger.js")
+      assert DebugConsoleLog.applies_to_file?("app.js", nil)
+      assert DebugConsoleLog.applies_to_file?("server.mjs", nil)
+      assert DebugConsoleLog.applies_to_file?("utils/logger.js", nil)
     end
 
     test "applies to TypeScript files" do
-      assert DebugConsoleLog.applies_to_file?("app.ts")
-      assert DebugConsoleLog.applies_to_file?("server.tsx")
-      assert DebugConsoleLog.applies_to_file?("src/debug.ts")
+      assert DebugConsoleLog.applies_to_file?("app.ts", nil)
+      assert DebugConsoleLog.applies_to_file?("server.tsx", nil)
+      assert DebugConsoleLog.applies_to_file?("src/debug.ts", nil)
     end
 
     test "does not apply to non-JS/TS files" do
-      refute DebugConsoleLog.applies_to_file?("config.json")
-      refute DebugConsoleLog.applies_to_file?("app.py")
-      refute DebugConsoleLog.applies_to_file?("style.css")
+      refute DebugConsoleLog.applies_to_file?("config.json", nil)
+      refute DebugConsoleLog.applies_to_file?("app.py", nil)
+      refute DebugConsoleLog.applies_to_file?("style.css", nil)
     end
   end
   

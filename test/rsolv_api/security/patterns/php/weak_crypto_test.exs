@@ -162,14 +162,14 @@ defmodule RsolvApi.Security.Patterns.Php.WeakCryptoTest do
       enhancement = WeakCrypto.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.6
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      crypto_functions_rule = Enum.find(enhancement.rules, &(&1.type == "weak_crypto_functions"))
+      crypto_functions_rule = Enum.find(enhancement.ast_rules, &(&1.type == "weak_crypto_functions"))
       assert crypto_functions_rule
       assert "mcrypt_encrypt" in crypto_functions_rule.functions
       assert "openssl_encrypt" in crypto_functions_rule.functions
       
-      algorithm_rule = Enum.find(enhancement.rules, &(&1.type == "crypto_algorithm_analysis"))
+      algorithm_rule = Enum.find(enhancement.ast_rules, &(&1.type == "crypto_algorithm_analysis"))
       assert algorithm_rule
       assert "DES" in algorithm_rule.weak_algorithms
       assert "ECB" in algorithm_rule.weak_modes

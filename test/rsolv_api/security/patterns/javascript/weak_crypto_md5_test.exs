@@ -112,16 +112,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.WeakCryptoMd5Test do
     
     test "applies_to_file?/1 works correctly" do
       # JavaScript and TypeScript files
-      assert WeakCryptoMd5.applies_to_file?("test.js")
-      assert WeakCryptoMd5.applies_to_file?("app.jsx")
-      assert WeakCryptoMd5.applies_to_file?("server.ts")
-      assert WeakCryptoMd5.applies_to_file?("component.tsx")
-      assert WeakCryptoMd5.applies_to_file?("module.mjs")
+      assert WeakCryptoMd5.applies_to_file?("test.js", nil)
+      assert WeakCryptoMd5.applies_to_file?("app.jsx", nil)
+      assert WeakCryptoMd5.applies_to_file?("server.ts", nil)
+      assert WeakCryptoMd5.applies_to_file?("component.tsx", nil)
+      assert WeakCryptoMd5.applies_to_file?("module.mjs", nil)
       
       # Non-JavaScript files
-      refute WeakCryptoMd5.applies_to_file?("test.py")
-      refute WeakCryptoMd5.applies_to_file?("app.rb")
-      refute WeakCryptoMd5.applies_to_file?("server.php")
+      refute WeakCryptoMd5.applies_to_file?("test.py", nil)
+      refute WeakCryptoMd5.applies_to_file?("app.rb", nil)
+      refute WeakCryptoMd5.applies_to_file?("server.php", nil)
     end
     
     test "applies_to_file?/2 detects embedded crypto operations" do

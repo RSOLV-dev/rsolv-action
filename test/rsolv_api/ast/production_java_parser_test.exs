@@ -7,12 +7,11 @@ defmodule RsolvApi.AST.ProductionJavaParserTest do
     setup do
       # Ensure managers are started
       case GenServer.whereis(SessionManager) do
-        nil -> start_supervised!(SessionManager)
         _ -> :ok
       end
       
       case GenServer.whereis(ParserRegistry) do
-        nil -> start_supervised!(ParserRegistry)
+        nil -> :ok  # ParserRegistry is started by Application
         _ -> :ok
       end
       

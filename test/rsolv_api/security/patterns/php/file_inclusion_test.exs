@@ -142,13 +142,13 @@ defmodule RsolvApi.Security.Patterns.Php.FileInclusionTest do
       enhancement = FileInclusion.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.8
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      inclusion_context_rule = Enum.find(enhancement.rules, &(&1.type == "inclusion_context"))
+      inclusion_context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "inclusion_context"))
       assert inclusion_context_rule
       assert "include" in inclusion_context_rule.functions
       
-      path_validation_rule = Enum.find(enhancement.rules, &(&1.type == "path_validation"))
+      path_validation_rule = Enum.find(enhancement.ast_rules, &(&1.type == "path_validation"))
       assert path_validation_rule
       assert "realpath" in path_validation_rule.safe_functions
     end

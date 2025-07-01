@@ -25,7 +25,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       """
       
       # Analyze the code
-      result = AnalysisService.analyze_code(test_code, "javascript", session.id, session.customer_id)
+      result = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
       assert {:ok, _analysis} = result
       
       # Verify code is scrubbed from all components
@@ -40,7 +40,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "const password = '#{unique_marker}';"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_code(test_code, "javascript", session.id, session.customer_id)
+      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
       
       # Check all ETS tables for code remnants
       assert CodeRetention.verify_no_code_in_ets(test_code) == :ok
@@ -51,7 +51,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "SELECT * FROM users WHERE id = " <> "#{:rand.uniform(1000)}"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_code(test_code, "javascript", session.id, session.customer_id)
+      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
       
       # Force cleanup
       CodeRetention.force_cleanup()
@@ -64,7 +64,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "eval(userInput)"
       
       # Analyze and capture parser response
-      {:ok, analysis} = AnalysisService.analyze_code(test_code, "javascript", session.id, session.customer_id)
+      {:ok, analysis} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
       
       # Verify AST doesn't contain original code
       assert CodeRetention.verify_ast_scrubbed(analysis.ast) == :ok
@@ -77,7 +77,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       sensitive_code = "const dbPassword = 'production-password-xyz';"
       
       # Analyze the code (which involves encryption/decryption)
-      {:ok, _} = AnalysisService.analyze_code(sensitive_code, "javascript", session.id, session.customer_id)
+      {:ok, _} = AnalysisService.analyze_file(sensitive_code, "javascript", session.id, session.customer_id)
       
       # Verify decrypted code is cleared
       assert CodeRetention.verify_no_decrypted_remnants(sensitive_code) == :ok
@@ -96,7 +96,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       clear_audit_logs()
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_code(test_code, "javascript", session.id, session.customer_id)
+      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
       
       # Check audit logs don't contain sensitive data
       events = AuditLogger.query_events(%{})
@@ -112,7 +112,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "const secret = 'unique-secret-#{:rand.uniform(1000000)}';"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_code(test_code, "javascript", session.id, session.customer_id)
+      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
       
       # Verify no AST-related processes retain the code
       assert CodeRetention.verify_no_code_in_processes(test_code) == :ok
@@ -149,7 +149,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "function leak() { return 'memory-leak-test'; }"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_code(test_code, "javascript", session.id, session.customer_id)
+      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
       
       # Generate retention report
       {:ok, report} = CodeRetention.generate_retention_report()
@@ -166,7 +166,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "const cleanupTest = '#{unique_marker}';"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_code(test_code, "javascript", session.id, session.customer_id)
+      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
       
       # Force garbage collection
       CodeRetention.force_cleanup()

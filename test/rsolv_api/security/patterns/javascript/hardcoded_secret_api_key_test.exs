@@ -121,16 +121,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.HardcodedSecretApiKeyTest do
     
     test "applies_to_file?/1 works correctly" do
       # JavaScript and TypeScript files
-      assert HardcodedSecretApiKey.applies_to_file?("test.js")
-      assert HardcodedSecretApiKey.applies_to_file?("app.jsx")
-      assert HardcodedSecretApiKey.applies_to_file?("server.ts")
-      assert HardcodedSecretApiKey.applies_to_file?("component.tsx")
-      assert HardcodedSecretApiKey.applies_to_file?("module.mjs")
+      assert HardcodedSecretApiKey.applies_to_file?("test.js", nil)
+      assert HardcodedSecretApiKey.applies_to_file?("app.jsx", nil)
+      assert HardcodedSecretApiKey.applies_to_file?("server.ts", nil)
+      assert HardcodedSecretApiKey.applies_to_file?("component.tsx", nil)
+      assert HardcodedSecretApiKey.applies_to_file?("module.mjs", nil)
       
       # Non-JavaScript files
-      refute HardcodedSecretApiKey.applies_to_file?("test.py")
-      refute HardcodedSecretApiKey.applies_to_file?("app.rb")
-      refute HardcodedSecretApiKey.applies_to_file?("server.php")
+      refute HardcodedSecretApiKey.applies_to_file?("test.py", nil)
+      refute HardcodedSecretApiKey.applies_to_file?("app.rb", nil)
+      refute HardcodedSecretApiKey.applies_to_file?("server.php", nil)
     end
     
     test "applies_to_file?/2 detects embedded API key assignments" do

@@ -105,10 +105,10 @@ defmodule RsolvApi.Security.Patterns.Javascript.CommandInjectionExecTest do
   
   describe "applies_to_file?/2" do
     test "applies to JavaScript and TypeScript files" do
-      assert CommandInjectionExec.applies_to_file?("server.js")
-      assert CommandInjectionExec.applies_to_file?("api.ts")
-      assert CommandInjectionExec.applies_to_file?("src/utils/exec.jsx")
-      assert CommandInjectionExec.applies_to_file?("lib/commands.tsx")
+      assert CommandInjectionExec.applies_to_file?("server.js", nil)
+      assert CommandInjectionExec.applies_to_file?("api.ts", nil)
+      assert CommandInjectionExec.applies_to_file?("src/utils/exec.jsx", nil)
+      assert CommandInjectionExec.applies_to_file?("lib/commands.tsx", nil)
     end
     
     test "applies to HTML files with embedded JavaScript" do
@@ -122,10 +122,10 @@ defmodule RsolvApi.Security.Patterns.Javascript.CommandInjectionExecTest do
     end
     
     test "does not apply to non-JavaScript files" do
-      refute CommandInjectionExec.applies_to_file?("style.css")
-      refute CommandInjectionExec.applies_to_file?("data.json")
-      refute CommandInjectionExec.applies_to_file?("README.md")
-      refute CommandInjectionExec.applies_to_file?("config.yml")
+      refute CommandInjectionExec.applies_to_file?("style.css", nil)
+      refute CommandInjectionExec.applies_to_file?("data.json", nil)
+      refute CommandInjectionExec.applies_to_file?("README.md", nil)
+      refute CommandInjectionExec.applies_to_file?("config.yml", nil)
     end
   end
   

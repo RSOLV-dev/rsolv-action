@@ -243,11 +243,11 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureSessionDataTest do
     end
 
     test "applies to Ruby files" do
-      assert InsecureSessionData.applies_to_file?("app/controllers/sessions_controller.rb")
+      assert InsecureSessionData.applies_to_file?("app/controllers/sessions_controller.rb", nil)
       assert InsecureSessionData.applies_to_file?("app/controllers/users_controller.rb", ["rails"])
       assert InsecureSessionData.applies_to_file?("lib/authentication.rb", ["rails"])
-      refute InsecureSessionData.applies_to_file?("test.js")
-      refute InsecureSessionData.applies_to_file?("script.py")
+      refute InsecureSessionData.applies_to_file?("test.js", nil)
+      refute InsecureSessionData.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

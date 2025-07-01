@@ -126,21 +126,21 @@ defmodule RsolvApi.Security.Patterns.Javascript.TimingAttackComparisonTest do
 
   describe "applies_to_file?/1" do
     test "applies to JavaScript files" do
-      assert TimingAttackComparison.applies_to_file?("app.js")
-      assert TimingAttackComparison.applies_to_file?("auth.mjs")
-      assert TimingAttackComparison.applies_to_file?("utils/compare.js")
+      assert TimingAttackComparison.applies_to_file?("app.js", nil)
+      assert TimingAttackComparison.applies_to_file?("auth.mjs", nil)
+      assert TimingAttackComparison.applies_to_file?("utils/compare.js", nil)
     end
 
     test "applies to TypeScript files" do
-      assert TimingAttackComparison.applies_to_file?("app.ts")
-      assert TimingAttackComparison.applies_to_file?("auth.tsx")
-      assert TimingAttackComparison.applies_to_file?("src/security.ts")
+      assert TimingAttackComparison.applies_to_file?("app.ts", nil)
+      assert TimingAttackComparison.applies_to_file?("auth.tsx", nil)
+      assert TimingAttackComparison.applies_to_file?("src/security.ts", nil)
     end
 
     test "does not apply to non-JS/TS files" do
-      refute TimingAttackComparison.applies_to_file?("config.json")
-      refute TimingAttackComparison.applies_to_file?("app.py")
-      refute TimingAttackComparison.applies_to_file?("style.css")
+      refute TimingAttackComparison.applies_to_file?("config.json", nil)
+      refute TimingAttackComparison.applies_to_file?("app.py", nil)
+      refute TimingAttackComparison.applies_to_file?("style.css", nil)
     end
   end
   

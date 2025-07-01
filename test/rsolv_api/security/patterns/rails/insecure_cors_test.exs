@@ -232,11 +232,11 @@ defmodule RsolvApi.Security.Patterns.Rails.InsecureCorsTest do
     end
 
     test "applies to Ruby files" do
-      assert InsecureCors.applies_to_file?("config/initializers/cors.rb")
+      assert InsecureCors.applies_to_file?("config/initializers/cors.rb", nil)
       assert InsecureCors.applies_to_file?("config/application.rb", ["rails"])
       assert InsecureCors.applies_to_file?("app/controllers/application_controller.rb", ["rails"])
-      refute InsecureCors.applies_to_file?("test.js")
-      refute InsecureCors.applies_to_file?("script.py")
+      refute InsecureCors.applies_to_file?("test.js", nil)
+      refute InsecureCors.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

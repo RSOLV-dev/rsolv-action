@@ -167,14 +167,14 @@ defmodule RsolvApi.Security.Patterns.Php.EvalUsageTest do
       enhancement = EvalUsage.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.8
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      eval_functions_rule = Enum.find(enhancement.rules, &(&1.type == "eval_functions"))
+      eval_functions_rule = Enum.find(enhancement.ast_rules, &(&1.type == "eval_functions"))
       assert eval_functions_rule
       assert "eval" in eval_functions_rule.functions
       assert "assert" in eval_functions_rule.functions
       
-      user_input_rule = Enum.find(enhancement.rules, &(&1.type == "user_input_analysis"))
+      user_input_rule = Enum.find(enhancement.ast_rules, &(&1.type == "user_input_analysis"))
       assert user_input_rule
       assert "$_GET" in user_input_rule.dangerous_sources
       assert "$_POST" in user_input_rule.dangerous_sources

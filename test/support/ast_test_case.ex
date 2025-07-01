@@ -25,7 +25,7 @@ defmodule RsolvApi.AST.TestCase do
     
     on_exit(fn ->
       # Clean up session after test
-      RsolvApi.AST.SessionManager.cleanup_session(session_id)
+      RsolvApi.AST.SessionManager.delete_session(session_id, "test-customer")
     end)
     
     {:ok, session_id: session_id}

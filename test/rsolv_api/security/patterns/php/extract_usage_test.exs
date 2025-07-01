@@ -138,13 +138,13 @@ defmodule RsolvApi.Security.Patterns.Php.ExtractUsageTest do
       enhancement = ExtractUsage.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.7
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      functions_rule = Enum.find(enhancement.rules, &(&1.type == "extract_functions"))
+      functions_rule = Enum.find(enhancement.ast_rules, &(&1.type == "extract_functions"))
       assert functions_rule
       assert "extract" in functions_rule.functions
       
-      user_input_rule = Enum.find(enhancement.rules, &(&1.type == "user_input_analysis"))
+      user_input_rule = Enum.find(enhancement.ast_rules, &(&1.type == "user_input_analysis"))
       assert user_input_rule
       assert "$_GET" in user_input_rule.dangerous_sources
       assert "$_POST" in user_input_rule.dangerous_sources

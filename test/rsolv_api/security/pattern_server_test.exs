@@ -3,23 +3,9 @@ defmodule RsolvApi.Security.PatternServerTest do
   alias RsolvApi.Security.PatternServer
   
   setup do
-    # Stop any existing PatternServer
-    case GenServer.whereis(PatternServer) do
-      nil -> :ok
-      pid -> GenServer.stop(pid, :normal, 5000)
-    end
-    
-    # Start a fresh PatternServer for this test
-    {:ok, pid} = PatternServer.start_link()
-    
-    # Ensure cleanup after test
-    on_exit(fn -> 
-      # Only stop if the process is still alive
-      if Process.alive?(pid) do
-        GenServer.stop(pid, :normal, 5000)
-      end
-    end)
-    
+    # PatternServer is started by the application, no need to start it here
+    # Just ensure it's available
+    assert GenServer.whereis(PatternServer) != nil
     :ok
   end
   

@@ -1,5 +1,5 @@
 defmodule RsolvApi.Security.Patterns.Django.OrmInjectionTest do
-  use RsolvApi.DataCase, async: true
+  use ExUnit.Case, async: true
 
   alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.Patterns.Django.OrmInjection

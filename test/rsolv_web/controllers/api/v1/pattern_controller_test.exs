@@ -43,7 +43,7 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
       conn_with_key = 
         conn
         |> put_req_header("authorization", "Bearer rsolv_test_abc123")
-        |> get("/api/v1/patterns?language=javascript&tier=public")
+        |> get("/api/v1/patterns?language=javascript")
       
       %{"patterns" => patterns_with_tier} = json_response(conn_with_key, 200)
       
@@ -148,13 +148,13 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
 
   describe "GET /api/v1/patterns (Legacy tests)" do
     test "returns standard patterns by default", %{conn: conn} do
-      conn = get(conn, "/api/v1/patterns?language=javascript&tier=public")
+      conn = get(conn, "/api/v1/patterns?language=javascript")
       
       assert %{
         "patterns" => patterns,
         "metadata" => %{
           "language" => "javascript",
-          "tier" => "public",
+          
           "format" => "standard",
           "enhanced" => false
         }
@@ -165,13 +165,13 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
     end
     
     test "returns enhanced patterns when format=enhanced", %{conn: conn} do
-      conn = get(conn, "/api/v1/patterns?language=javascript&tier=public&format=enhanced")
+      conn = get(conn, "/api/v1/patterns?language=javascript&format=enhanced")
       
       assert %{
         "patterns" => patterns,
         "metadata" => %{
           "language" => "javascript",
-          "tier" => "public",
+          
           "format" => "enhanced",
           "enhanced" => true
         }
@@ -180,11 +180,11 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
       assert is_list(patterns)
       assert length(patterns) > 0
       
-      # Check that patterns have AST enhancement fields (in camelCase)
+      # Check that patterns have AST enhancement fields
       first_pattern = List.first(patterns)
-      assert Map.has_key?(first_pattern, "astRules")
-      assert Map.has_key?(first_pattern, "contextRules")
-      assert Map.has_key?(first_pattern, "minConfidence")
+      assert Map.has_key?(first_pattern, "ast_rules")
+      assert Map.has_key?(first_pattern, "context_rules")
+      assert Map.has_key?(first_pattern, "min_confidence")
     end
     
     test "defaults to javascript and public tier", %{conn: conn} do
@@ -193,7 +193,7 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
       assert %{
         "metadata" => %{
           "language" => "javascript",
-          "tier" => "public",
+          
           "format" => "standard"
         }
       } = json_response(conn, 200)
@@ -218,27 +218,24 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
       end
     end
     
-    test "handles different tiers", %{conn: conn} do
-      for tier <- ["public", "protected", "ai", "enterprise"] do
-        conn = get(conn, "/api/v1/patterns?tier=#{tier}")
-        
-        assert %{
-          "patterns" => patterns,
-          "metadata" => %{"tier" => ^tier}
-        } = json_response(conn, 200)
-        
-        assert is_list(patterns)
-      end
+    test "returns patterns without tier filtering", %{conn: conn} do
+      conn = get(conn, "/api/v1/patterns")
+      
+      assert %{
+        "patterns" => patterns,
+        "metadata" => metadata
+      } = json_response(conn, 200)
+      
+      assert is_list(patterns)
+      refute Map.has_key?(metadata, "tier")
     end
     
-    test "public tier returns fewer patterns than enterprise", %{conn: conn} do
-      conn_public = get(conn, "/api/v1/patterns?tier=public")
-      %{"patterns" => public_patterns} = json_response(conn_public, 200)
+    test "returns all patterns without tier filtering", %{conn: conn} do
+      conn = get(conn, "/api/v1/patterns")
+      %{"patterns" => patterns} = json_response(conn, 200)
       
-      conn_enterprise = get(conn, "/api/v1/patterns?tier=enterprise")
-      %{"patterns" => enterprise_patterns} = json_response(conn_enterprise, 200)
-      
-      assert length(public_patterns) < length(enterprise_patterns)
+      # All patterns should be returned
+      assert length(patterns) > 0
     end
   end
 end

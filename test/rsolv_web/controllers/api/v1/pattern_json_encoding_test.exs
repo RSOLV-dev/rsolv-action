@@ -93,7 +93,7 @@ defmodule RSOLVWeb.Api.V1.PatternJsonEncodingTest do
   end
   
   describe "End-to-end enhanced format with JSON" do
-    test "enhanced format should return successfully after JSON migration" do
+    test "enhanced format should return successfully after JSON migration", %{conn: conn} do
       # This is our target behavior - currently will fail
       
       conn = get(conn, "/api/v1/patterns?language=elixir&format=enhanced")

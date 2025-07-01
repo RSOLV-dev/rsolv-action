@@ -128,13 +128,13 @@ defmodule RsolvApi.Security.Patterns.Php.DebugModeEnabledTest do
       enhancement = DebugModeEnabled.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.7
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      debug_rule = Enum.find(enhancement.rules, &(&1.type == "debug_settings"))
+      debug_rule = Enum.find(enhancement.ast_rules, &(&1.type == "debug_settings"))
       assert debug_rule
       assert "display_errors" in debug_rule.dangerous_settings
       
-      prod_rule = Enum.find(enhancement.rules, &(&1.type == "production_indicators"))
+      prod_rule = Enum.find(enhancement.ast_rules, &(&1.type == "production_indicators"))
       assert prod_rule
       assert "production" in prod_rule.production_checks
     end

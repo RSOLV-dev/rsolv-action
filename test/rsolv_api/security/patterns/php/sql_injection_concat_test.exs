@@ -152,17 +152,17 @@ defmodule RsolvApi.Security.Patterns.Php.SqlInjectionConcatTest do
       enhancement = SqlInjectionConcat.ast_enhancement()
       
       assert enhancement.min_confidence == 0.9
-      assert length(enhancement.rules) == 3
+      assert length(enhancement.ast_rules) == 3
       
-      db_context_rule = Enum.find(enhancement.rules, &(&1.type == "database_context"))
+      db_context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "database_context"))
       assert "query" in db_context_rule.patterns
       assert "sql" in db_context_rule.patterns
       
-      sanitization_rule = Enum.find(enhancement.rules, &(&1.type == "input_sanitization"))
+      sanitization_rule = Enum.find(enhancement.ast_rules, &(&1.type == "input_sanitization"))
       assert "mysqli_real_escape_string" in sanitization_rule.safe_functions
       assert "addslashes" in sanitization_rule.safe_functions
       
-      prepared_stmt_rule = Enum.find(enhancement.rules, &(&1.type == "prepared_statement_check"))
+      prepared_stmt_rule = Enum.find(enhancement.ast_rules, &(&1.type == "prepared_statement_check"))
       assert "prepare" in prepared_stmt_rule.safe_patterns
       assert "bindParam" in prepared_stmt_rule.safe_patterns
     end

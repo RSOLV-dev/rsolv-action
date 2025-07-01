@@ -134,21 +134,21 @@ defmodule RsolvApi.Security.Patterns.Javascript.XpathInjectionTest do
 
   describe "applies_to_file?/1" do
     test "applies to JavaScript files" do
-      assert XpathInjection.applies_to_file?("xml-parser.js")
-      assert XpathInjection.applies_to_file?("xpath-helper.mjs")
-      assert XpathInjection.applies_to_file?("src/xml/query.js")
+      assert XpathInjection.applies_to_file?("xml-parser.js", nil)
+      assert XpathInjection.applies_to_file?("xpath-helper.mjs", nil)
+      assert XpathInjection.applies_to_file?("src/xml/query.js", nil)
     end
 
     test "applies to TypeScript files" do
-      assert XpathInjection.applies_to_file?("xml-service.ts")
-      assert XpathInjection.applies_to_file?("xpath-utils.tsx")
-      assert XpathInjection.applies_to_file?("lib/xml-processor.ts")
+      assert XpathInjection.applies_to_file?("xml-service.ts", nil)
+      assert XpathInjection.applies_to_file?("xpath-utils.tsx", nil)
+      assert XpathInjection.applies_to_file?("lib/xml-processor.ts", nil)
     end
 
     test "does not apply to non-JS/TS files" do
-      refute XpathInjection.applies_to_file?("query.xml")
-      refute XpathInjection.applies_to_file?("xpath.py")
-      refute XpathInjection.applies_to_file?("Makefile")
+      refute XpathInjection.applies_to_file?("query.xml", nil)
+      refute XpathInjection.applies_to_file?("xpath.py", nil)
+      refute XpathInjection.applies_to_file?("Makefile", nil)
     end
   end
   

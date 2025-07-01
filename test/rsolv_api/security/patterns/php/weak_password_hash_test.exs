@@ -130,13 +130,13 @@ defmodule RsolvApi.Security.Patterns.Php.WeakPasswordHashTest do
       enhancement = WeakPasswordHash.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.8
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      hash_context_rule = Enum.find(enhancement.rules, &(&1.type == "hash_context"))
+      hash_context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "hash_context"))
       assert hash_context_rule
       assert "md5" in hash_context_rule.weak_algorithms
       
-      password_indicators_rule = Enum.find(enhancement.rules, &(&1.type == "password_indicators"))
+      password_indicators_rule = Enum.find(enhancement.ast_rules, &(&1.type == "password_indicators"))
       assert password_indicators_rule
       assert "password" in password_indicators_rule.patterns
     end

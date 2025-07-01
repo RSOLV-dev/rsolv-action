@@ -281,11 +281,11 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousProductionConfigTest do
     end
 
     test "applies to Ruby files" do
-      assert DangerousProductionConfig.applies_to_file?("config/environments/production.rb")
+      assert DangerousProductionConfig.applies_to_file?("config/environments/production.rb", nil)
       assert DangerousProductionConfig.applies_to_file?("config/application.rb", ["rails"])
       assert DangerousProductionConfig.applies_to_file?("Gemfile", ["rails"])
-      refute DangerousProductionConfig.applies_to_file?("test.js")
-      refute DangerousProductionConfig.applies_to_file?("script.py")
+      refute DangerousProductionConfig.applies_to_file?("test.js", nil)
+      refute DangerousProductionConfig.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

@@ -184,11 +184,11 @@ defmodule RsolvApi.Security.Patterns.Rails.DynamicFinderInjectionTest do
     end
 
     test "applies to Ruby files" do
-      assert DynamicFinderInjection.applies_to_file?("app/models/user.rb")
-      assert DynamicFinderInjection.applies_to_file?("app/controllers/posts_controller.rb")
+      assert DynamicFinderInjection.applies_to_file?("app/models/user.rb", nil)
+      assert DynamicFinderInjection.applies_to_file?("app/controllers/posts_controller.rb", nil)
       assert DynamicFinderInjection.applies_to_file?("lib/search_service.rb", ["rails"])
-      refute DynamicFinderInjection.applies_to_file?("test.js")
-      refute DynamicFinderInjection.applies_to_file?("script.py")
+      refute DynamicFinderInjection.applies_to_file?("test.js", nil)
+      refute DynamicFinderInjection.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

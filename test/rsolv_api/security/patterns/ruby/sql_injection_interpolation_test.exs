@@ -193,6 +193,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.SqlInjectionInterpolationTest do
     test "includes SQL-specific AST rules" do
       enhancement = SqlInjectionInterpolation.ast_enhancement()
       
+      assert is_map(enhancement.ast_rules)
       assert enhancement.ast_rules.node_type == "CallExpression"
       assert "where" in enhancement.ast_rules.method_names
     end
@@ -200,8 +201,9 @@ defmodule RsolvApi.Security.Patterns.Ruby.SqlInjectionInterpolationTest do
     test "has proper context detection" do
       enhancement = SqlInjectionInterpolation.ast_enhancement()
       
-      assert enhancement.context_rules.check_sql_context
-      assert "?" in enhancement.context_rules.safe_patterns
+      assert is_map(enhancement.context_rules)
+      assert is_list(enhancement.context_rules.exclude_paths)
+      assert is_map(enhancement.context_rules.safe_patterns)
     end
   end
 end

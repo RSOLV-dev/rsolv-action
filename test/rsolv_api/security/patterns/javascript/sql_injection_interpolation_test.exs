@@ -81,16 +81,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolationTest do
   
   describe "applies_to_file?/2" do
     test "applies to JavaScript and TypeScript files" do
-      assert SqlInjectionInterpolation.applies_to_file?("app.js")
-      assert SqlInjectionInterpolation.applies_to_file?("index.ts")
-      assert SqlInjectionInterpolation.applies_to_file?("src/database.jsx")
-      assert SqlInjectionInterpolation.applies_to_file?("components/User.tsx")
+      assert SqlInjectionInterpolation.applies_to_file?("app.js", nil)
+      assert SqlInjectionInterpolation.applies_to_file?("index.ts", nil)
+      assert SqlInjectionInterpolation.applies_to_file?("src/database.jsx", nil)
+      assert SqlInjectionInterpolation.applies_to_file?("components/User.tsx", nil)
     end
     
     test "does not apply to non-JavaScript files" do
-      refute SqlInjectionInterpolation.applies_to_file?("app.py")
-      refute SqlInjectionInterpolation.applies_to_file?("index.rb")
-      refute SqlInjectionInterpolation.applies_to_file?("config.json")
+      refute SqlInjectionInterpolation.applies_to_file?("app.py", nil)
+      refute SqlInjectionInterpolation.applies_to_file?("index.rb", nil)
+      refute SqlInjectionInterpolation.applies_to_file?("config.json", nil)
     end
   end
 

@@ -130,13 +130,13 @@ defmodule RsolvApi.Security.Patterns.Php.HardcodedCredentialsTest do
       enhancement = HardcodedCredentials.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.8
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      credential_indicators_rule = Enum.find(enhancement.rules, &(&1.type == "credential_indicators"))
+      credential_indicators_rule = Enum.find(enhancement.ast_rules, &(&1.type == "credential_indicators"))
       assert credential_indicators_rule
       assert "password" in credential_indicators_rule.keywords
       
-      safe_patterns_rule = Enum.find(enhancement.rules, &(&1.type == "safe_patterns"))
+      safe_patterns_rule = Enum.find(enhancement.ast_rules, &(&1.type == "safe_patterns"))
       assert safe_patterns_rule
       assert "getenv" in safe_patterns_rule.functions
     end

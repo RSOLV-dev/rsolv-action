@@ -262,11 +262,11 @@ defmodule RsolvApi.Security.Patterns.Rails.TemplateXssTest do
     end
 
     test "applies to Ruby files" do
-      assert TemplateXss.applies_to_file?("app/views/users/show.html.erb")
-      assert TemplateXss.applies_to_file?("app/controllers/users_controller.rb")
+      assert TemplateXss.applies_to_file?("app/views/users/show.html.erb", nil)
+      assert TemplateXss.applies_to_file?("app/controllers/users_controller.rb", nil)
       assert TemplateXss.applies_to_file?("app/helpers/application_helper.rb", ["rails"])
-      refute TemplateXss.applies_to_file?("test.js")
-      refute TemplateXss.applies_to_file?("script.py")
+      refute TemplateXss.applies_to_file?("test.js", nil)
+      refute TemplateXss.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

@@ -1,5 +1,5 @@
 defmodule RsolvApi.Security.Patterns.Python.CommandInjectionSubprocessShellTest do
-  use RsolvApi.DataCase
+  use ExUnit.Case
   alias RsolvApi.Security.Patterns.Python.CommandInjectionSubprocessShell
   alias RsolvApi.Security.Pattern
 
@@ -110,13 +110,13 @@ defmodule RsolvApi.Security.Patterns.Python.CommandInjectionSubprocessShellTest 
 
   describe "applies_to_file?/1" do
     test "applies to Python files" do
-      assert CommandInjectionSubprocessShell.applies_to_file?("script.py")
-      assert CommandInjectionSubprocessShell.applies_to_file?("utils/helper.py")
-      assert CommandInjectionSubprocessShell.applies_to_file?("src/main.py")
+      assert CommandInjectionSubprocessShell.applies_to_file?("script.py", nil)
+      assert CommandInjectionSubprocessShell.applies_to_file?("utils/helper.py", nil)
+      assert CommandInjectionSubprocessShell.applies_to_file?("src/main.py", nil)
       
-      refute CommandInjectionSubprocessShell.applies_to_file?("script.js")
-      refute CommandInjectionSubprocessShell.applies_to_file?("config.rb")
-      refute CommandInjectionSubprocessShell.applies_to_file?("README.md")
+      refute CommandInjectionSubprocessShell.applies_to_file?("script.js", nil)
+      refute CommandInjectionSubprocessShell.applies_to_file?("config.rb", nil)
+      refute CommandInjectionSubprocessShell.applies_to_file?("README.md", nil)
     end
   end
 end

@@ -70,7 +70,7 @@ defmodule RsolvApi.Security.Patterns.JavascriptIntegrationTest do
       # Test that functions can actually be called successfully
       assert %Pattern{} = module.pattern()
       assert is_map(module.vulnerability_metadata())
-      assert is_boolean(module.applies_to_file?("test.js"))
+      assert is_boolean(module.applies_to_file?("test.js", nil))
       assert is_boolean(module.applies_to_file?("test.js", "content"))
     end
     
@@ -80,7 +80,7 @@ defmodule RsolvApi.Security.Patterns.JavascriptIntegrationTest do
       # Test that functions can actually be called successfully
       assert %Pattern{} = module.pattern()
       assert is_map(module.vulnerability_metadata())
-      assert is_boolean(module.applies_to_file?("test.js"))
+      assert is_boolean(module.applies_to_file?("test.js", nil))
       assert is_boolean(module.applies_to_file?("test.js", "content"))
     end
   end

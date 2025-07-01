@@ -128,21 +128,21 @@ defmodule RsolvApi.Security.Patterns.Javascript.JwtNoneAlgorithmTest do
 
   describe "applies_to_file?/1" do
     test "applies to JavaScript files" do
-      assert JwtNoneAlgorithm.applies_to_file?("auth.js")
-      assert JwtNoneAlgorithm.applies_to_file?("middleware/jwt.js")
-      assert JwtNoneAlgorithm.applies_to_file?("src/auth/verify.js")
+      assert JwtNoneAlgorithm.applies_to_file?("auth.js", nil)
+      assert JwtNoneAlgorithm.applies_to_file?("middleware/jwt.js", nil)
+      assert JwtNoneAlgorithm.applies_to_file?("src/auth/verify.js", nil)
     end
 
     test "applies to TypeScript files" do
-      assert JwtNoneAlgorithm.applies_to_file?("auth.ts")
-      assert JwtNoneAlgorithm.applies_to_file?("middleware/jwt.tsx")
-      assert JwtNoneAlgorithm.applies_to_file?("src/auth/verify.ts")
+      assert JwtNoneAlgorithm.applies_to_file?("auth.ts", nil)
+      assert JwtNoneAlgorithm.applies_to_file?("middleware/jwt.tsx", nil)
+      assert JwtNoneAlgorithm.applies_to_file?("src/auth/verify.ts", nil)
     end
 
     test "does not apply to non-JS/TS files" do
-      refute JwtNoneAlgorithm.applies_to_file?("config.json")
-      refute JwtNoneAlgorithm.applies_to_file?("auth.py")
-      refute JwtNoneAlgorithm.applies_to_file?("Gemfile")
+      refute JwtNoneAlgorithm.applies_to_file?("config.json", nil)
+      refute JwtNoneAlgorithm.applies_to_file?("auth.py", nil)
+      refute JwtNoneAlgorithm.applies_to_file?("Gemfile", nil)
     end
   end
   

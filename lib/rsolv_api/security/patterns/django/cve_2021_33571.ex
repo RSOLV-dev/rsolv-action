@@ -199,7 +199,7 @@ validator = URLValidator()
   @impl true
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: :exclusion,
           patterns: [

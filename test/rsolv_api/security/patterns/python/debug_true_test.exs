@@ -156,14 +156,14 @@ defmodule RsolvApi.Security.Patterns.Python.DebugTrueTest do
       enhancement = DebugTrue.ast_enhancement()
       
       assert enhancement.min_confidence == 0.8
-      assert length(enhancement.rules) == 2
+      assert length(enhancement.ast_rules) == 2
       
-      file_rule = Enum.find(enhancement.rules, &(&1.type == "file_context"))
+      file_rule = Enum.find(enhancement.ast_rules, &(&1.type == "file_context"))
       assert "settings/development.py" in file_rule.patterns
       assert "test_settings.py" in file_rule.patterns
       assert file_rule.severity_reduction == :low
       
-      code_rule = Enum.find(enhancement.rules, &(&1.type == "code_context"))
+      code_rule = Enum.find(enhancement.ast_rules, &(&1.type == "code_context"))
       assert Enum.any?(code_rule.checks, &(&1 =~ "environment"))
     end
   end

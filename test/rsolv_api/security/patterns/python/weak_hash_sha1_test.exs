@@ -141,13 +141,13 @@ defmodule RsolvApi.Security.Patterns.Python.WeakHashSha1Test do
       enhancement = WeakHashSha1.ast_enhancement()
       
       assert enhancement.min_confidence == 0.75
-      assert length(enhancement.rules) == 2
+      assert length(enhancement.ast_rules) == 2
       
-      context_rule = Enum.find(enhancement.rules, &(&1.type == "context_check"))
+      context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "context_check"))
       assert "git_hash" in context_rule.checks
       assert "legacy_system" in context_rule.checks
       
-      severity_rule = Enum.find(enhancement.rules, &(&1.type == "severity_increase"))
+      severity_rule = Enum.find(enhancement.ast_rules, &(&1.type == "severity_increase"))
       assert "signature" in severity_rule.contexts
       assert "certificate" in severity_rule.contexts
     end

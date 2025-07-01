@@ -146,13 +146,13 @@ defmodule RsolvApi.Security.Patterns.Python.UnsafeYamlLoadTest do
       enhancement = UnsafeYamlLoad.ast_enhancement()
       
       assert enhancement.min_confidence == 0.85
-      assert length(enhancement.rules) == 2
+      assert length(enhancement.ast_rules) == 2
       
-      safe_loader_rule = Enum.find(enhancement.rules, &(&1.type == "safe_loader_check"))
+      safe_loader_rule = Enum.find(enhancement.ast_rules, &(&1.type == "safe_loader_check"))
       assert "Loader=yaml.SafeLoader" in safe_loader_rule.patterns
       assert "yaml.safe_load" in safe_loader_rule.patterns
       
-      context_rule = Enum.find(enhancement.rules, &(&1.type == "context_check"))
+      context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "context_check"))
       assert "request" in context_rule.untrusted_sources
       assert "user_input" in context_rule.untrusted_sources
     end

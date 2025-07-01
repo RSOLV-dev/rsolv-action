@@ -234,7 +234,7 @@ Model.objects.extra(where=["data->%s = %s"], params=[safe_key, value])|
   @impl true
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: :exclusion,
           patterns: [

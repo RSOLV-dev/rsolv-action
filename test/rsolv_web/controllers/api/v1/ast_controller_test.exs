@@ -7,7 +7,6 @@ defmodule RSOLVWeb.Api.V1.ASTControllerTest do
   setup do
     # Ensure SessionManager is started
     case GenServer.whereis(SessionManager) do
-      nil -> start_supervised!(SessionManager)
       _ -> :ok
     end
     

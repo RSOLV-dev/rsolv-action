@@ -160,12 +160,12 @@ defmodule RsolvApi.Security.Patterns.Python.UnsafeEvalTest do
   
   describe "file applicability" do
     test "applies to Python files" do
-      assert UnsafeEval.applies_to_file?("script.py")
-      assert UnsafeEval.applies_to_file?("module.pyw")
-      assert UnsafeEval.applies_to_file?("app.py")
+      assert UnsafeEval.applies_to_file?("script.py", nil)
+      assert UnsafeEval.applies_to_file?("module.pyw", nil)
+      assert UnsafeEval.applies_to_file?("app.py", nil)
       
-      refute UnsafeEval.applies_to_file?("script.js")
-      refute UnsafeEval.applies_to_file?("config.json")
+      refute UnsafeEval.applies_to_file?("script.js", nil)
+      refute UnsafeEval.applies_to_file?("config.json", nil)
     end
   end
 end

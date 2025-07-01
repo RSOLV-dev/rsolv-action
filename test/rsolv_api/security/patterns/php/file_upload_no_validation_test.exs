@@ -122,13 +122,13 @@ defmodule RsolvApi.Security.Patterns.Php.FileUploadNoValidationTest do
       enhancement = FileUploadNoValidation.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.75
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      upload_context_rule = Enum.find(enhancement.rules, &(&1.type == "upload_context"))
+      upload_context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "upload_context"))
       assert upload_context_rule
       assert "move_uploaded_file" in upload_context_rule.functions
       
-      validation_rule = Enum.find(enhancement.rules, &(&1.type == "validation_checks"))
+      validation_rule = Enum.find(enhancement.ast_rules, &(&1.type == "validation_checks"))
       assert validation_rule
       assert "pathinfo" in validation_rule.validation_functions
     end

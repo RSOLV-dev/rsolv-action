@@ -1,5 +1,5 @@
 defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFstringTest do
-  use RsolvApi.DataCase
+  use ExUnit.Case
   alias RsolvApi.Security.Patterns.Python.SqlInjectionFstring
   alias RsolvApi.Security.Pattern
 
@@ -154,13 +154,13 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFstringTest do
 
   describe "applies_to_file?/1" do
     test "applies to Python files" do
-      assert SqlInjectionFstring.applies_to_file?("app.py")
-      assert SqlInjectionFstring.applies_to_file?("models/user.py")
-      assert SqlInjectionFstring.applies_to_file?("src/database.py")
+      assert SqlInjectionFstring.applies_to_file?("app.py", nil)
+      assert SqlInjectionFstring.applies_to_file?("models/user.py", nil)
+      assert SqlInjectionFstring.applies_to_file?("src/database.py", nil)
       
-      refute SqlInjectionFstring.applies_to_file?("app.js")
-      refute SqlInjectionFstring.applies_to_file?("config.rb")
-      refute SqlInjectionFstring.applies_to_file?("README.md")
+      refute SqlInjectionFstring.applies_to_file?("app.js", nil)
+      refute SqlInjectionFstring.applies_to_file?("config.rb", nil)
+      refute SqlInjectionFstring.applies_to_file?("README.md", nil)
     end
   end
 end

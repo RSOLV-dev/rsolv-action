@@ -171,10 +171,10 @@ defmodule RsolvApi.Security.Patterns.Rails.MissingStrongParametersTest do
     end
 
     test "applies to Rails controller files" do
-      assert MissingStrongParameters.applies_to_file?("app/controllers/users_controller.rb")
-      assert MissingStrongParameters.applies_to_file?("app/controllers/api/v1/posts_controller.rb")
-      refute MissingStrongParameters.applies_to_file?("app/models/user.rb")
-      refute MissingStrongParameters.applies_to_file?("test.js")
+      assert MissingStrongParameters.applies_to_file?("app/controllers/users_controller.rb", nil)
+      assert MissingStrongParameters.applies_to_file?("app/controllers/api/v1/posts_controller.rb", nil)
+      refute MissingStrongParameters.applies_to_file?("app/models/user.rb", nil)
+      refute MissingStrongParameters.applies_to_file?("test.js", nil)
     end
 
     test "applies to ruby files with Rails framework" do

@@ -242,7 +242,7 @@ if redirect_url in ALLOWED_REDIRECTS:
   @impl true
   def ast_enhancement do
     %{
-      rules: [
+      ast_rules: [
         %{
           type: :exclusion,
           patterns: [

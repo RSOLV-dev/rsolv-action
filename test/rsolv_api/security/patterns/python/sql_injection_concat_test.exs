@@ -1,5 +1,5 @@
 defmodule RsolvApi.Security.Patterns.Python.SqlInjectionConcatTest do
-  use RsolvApi.DataCase
+  use ExUnit.Case
   alias RsolvApi.Security.Patterns.Python.SqlInjectionConcat
   alias RsolvApi.Security.Pattern
   
@@ -160,13 +160,13 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionConcatTest do
 
   describe "applies_to_file?/1" do
     test "applies to Python files" do
-      assert SqlInjectionConcat.applies_to_file?("app.py")
-      assert SqlInjectionConcat.applies_to_file?("models/user.py")
-      assert SqlInjectionConcat.applies_to_file?("src/database.py")
+      assert SqlInjectionConcat.applies_to_file?("app.py", nil)
+      assert SqlInjectionConcat.applies_to_file?("models/user.py", nil)
+      assert SqlInjectionConcat.applies_to_file?("src/database.py", nil)
       
-      refute SqlInjectionConcat.applies_to_file?("app.js")
-      refute SqlInjectionConcat.applies_to_file?("config.rb")
-      refute SqlInjectionConcat.applies_to_file?("README.md")
+      refute SqlInjectionConcat.applies_to_file?("app.js", nil)
+      refute SqlInjectionConcat.applies_to_file?("config.rb", nil)
+      refute SqlInjectionConcat.applies_to_file?("README.md", nil)
     end
   end
 end

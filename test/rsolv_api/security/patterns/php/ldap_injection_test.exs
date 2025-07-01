@@ -156,15 +156,15 @@ defmodule RsolvApi.Security.Patterns.Php.LdapInjectionTest do
       enhancement = LdapInjection.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.7
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      ldap_functions_rule = Enum.find(enhancement.rules, &(&1.type == "ldap_functions"))
+      ldap_functions_rule = Enum.find(enhancement.ast_rules, &(&1.type == "ldap_functions"))
       assert ldap_functions_rule
       assert "ldap_search" in ldap_functions_rule.functions
       assert "ldap_list" in ldap_functions_rule.functions
       assert "ldap_read" in ldap_functions_rule.functions
       
-      user_input_rule = Enum.find(enhancement.rules, &(&1.type == "user_input_analysis"))
+      user_input_rule = Enum.find(enhancement.ast_rules, &(&1.type == "user_input_analysis"))
       assert user_input_rule
       assert "$_GET" in user_input_rule.dangerous_sources
       assert "$_POST" in user_input_rule.dangerous_sources

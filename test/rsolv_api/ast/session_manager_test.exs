@@ -5,8 +5,7 @@ defmodule RsolvApi.AST.SessionManagerTest do
   alias RsolvApi.AST.Encryption
   
   setup do
-    # Start the SessionManager
-    start_supervised!(SessionManager)
+    # SessionManager is already started by the application
     :ok
   end
   
@@ -146,23 +145,23 @@ defmodule RsolvApi.AST.SessionManagerTest do
       customer1 = "customer-1"
       customer2 = "customer-2"
       
-      # Start with no sessions
-      assert SessionManager.count_active_sessions() == 0
+      # Get initial count
+      initial_count = SessionManager.count_active_sessions()
       
       # Create sessions
       {:ok, _} = SessionManager.create_session(customer1)
       {:ok, _} = SessionManager.create_session(customer1)
       {:ok, _} = SessionManager.create_session(customer2)
       
-      assert SessionManager.count_active_sessions() == 3
+      assert SessionManager.count_active_sessions() == initial_count + 3
       
       # Create expired session
-      {:ok, expired} = SessionManager.create_session(customer1, 1)
+      {:ok, _expired} = SessionManager.create_session(customer1, 1)
       Process.sleep(1100)
       
       # Cleanup should remove expired
       SessionManager.cleanup_expired_sessions()
-      assert SessionManager.count_active_sessions() == 3
+      assert SessionManager.count_active_sessions() == initial_count + 3
     end
   end
   

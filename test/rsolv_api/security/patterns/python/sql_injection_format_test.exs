@@ -1,5 +1,5 @@
 defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFormatTest do
-  use RsolvApi.DataCase
+  use ExUnit.Case
   alias RsolvApi.Security.Patterns.Python.SqlInjectionFormat
   alias RsolvApi.Security.Pattern
 
@@ -158,13 +158,13 @@ defmodule RsolvApi.Security.Patterns.Python.SqlInjectionFormatTest do
 
   describe "applies_to_file?/1" do
     test "applies to Python files" do
-      assert SqlInjectionFormat.applies_to_file?("app.py")
-      assert SqlInjectionFormat.applies_to_file?("models/user.py")
-      assert SqlInjectionFormat.applies_to_file?("src/database.py")
+      assert SqlInjectionFormat.applies_to_file?("app.py", nil)
+      assert SqlInjectionFormat.applies_to_file?("models/user.py", nil)
+      assert SqlInjectionFormat.applies_to_file?("src/database.py", nil)
       
-      refute SqlInjectionFormat.applies_to_file?("app.js")
-      refute SqlInjectionFormat.applies_to_file?("config.rb")
-      refute SqlInjectionFormat.applies_to_file?("README.md")
+      refute SqlInjectionFormat.applies_to_file?("app.js", nil)
+      refute SqlInjectionFormat.applies_to_file?("config.rb", nil)
+      refute SqlInjectionFormat.applies_to_file?("README.md", nil)
     end
   end
 end

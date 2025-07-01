@@ -150,7 +150,7 @@ results = Enum.map(test_codes, fn {language, code} ->
 end)
 
 # Cleanup
-SessionManager.cleanup_session(session_id)
+SessionManager.delete_session(session_id, "test-customer")
 
 # Summary
 IO.puts "\n\n📊 SUMMARY"

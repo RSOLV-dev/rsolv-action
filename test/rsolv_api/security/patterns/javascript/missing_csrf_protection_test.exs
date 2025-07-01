@@ -169,21 +169,21 @@ defmodule RsolvApi.Security.Patterns.Javascript.MissingCsrfProtectionTest do
 
   describe "applies_to_file?/1" do
     test "applies to JavaScript files" do
-      assert MissingCsrfProtection.applies_to_file?("app.js")
-      assert MissingCsrfProtection.applies_to_file?("routes/api.js")
-      assert MissingCsrfProtection.applies_to_file?("server.mjs")
+      assert MissingCsrfProtection.applies_to_file?("app.js", nil)
+      assert MissingCsrfProtection.applies_to_file?("routes/api.js", nil)
+      assert MissingCsrfProtection.applies_to_file?("server.mjs", nil)
     end
 
     test "applies to TypeScript files" do
-      assert MissingCsrfProtection.applies_to_file?("app.ts")
-      assert MissingCsrfProtection.applies_to_file?("routes/api.tsx")
-      assert MissingCsrfProtection.applies_to_file?("server.ts")
+      assert MissingCsrfProtection.applies_to_file?("app.ts", nil)
+      assert MissingCsrfProtection.applies_to_file?("routes/api.tsx", nil)
+      assert MissingCsrfProtection.applies_to_file?("server.ts", nil)
     end
 
     test "does not apply to non-JS/TS files" do
-      refute MissingCsrfProtection.applies_to_file?("app.py")
-      refute MissingCsrfProtection.applies_to_file?("routes.rb")
-      refute MissingCsrfProtection.applies_to_file?("README.md")
+      refute MissingCsrfProtection.applies_to_file?("app.py", nil)
+      refute MissingCsrfProtection.applies_to_file?("routes.rb", nil)
+      refute MissingCsrfProtection.applies_to_file?("README.md", nil)
     end
   end
 

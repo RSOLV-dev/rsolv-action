@@ -170,10 +170,10 @@ defmodule RsolvApi.Security.Patterns.Rails.DangerousAttrAccessibleTest do
     end
 
     test "applies to Rails model files" do
-      assert DangerousAttrAccessible.applies_to_file?("app/models/user.rb")
-      assert DangerousAttrAccessible.applies_to_file?("app/models/admin/post.rb")
-      refute DangerousAttrAccessible.applies_to_file?("app/controllers/users_controller.rb")
-      refute DangerousAttrAccessible.applies_to_file?("test.js")
+      assert DangerousAttrAccessible.applies_to_file?("app/models/user.rb", nil)
+      assert DangerousAttrAccessible.applies_to_file?("app/models/admin/post.rb", nil)
+      refute DangerousAttrAccessible.applies_to_file?("app/controllers/users_controller.rb", nil)
+      refute DangerousAttrAccessible.applies_to_file?("test.js", nil)
     end
 
     test "applies to ruby files with Rails framework" do

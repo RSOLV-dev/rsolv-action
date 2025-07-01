@@ -14,7 +14,6 @@ defmodule RsolvApi.Security.PatternsTest do
         severity: :high,
         languages: ["javascript"],
         regex: ~r/test/,
-        default_tier: :protected,
         cwe_id: "CWE-89",
         owasp_category: "A03:2021",
         recommendation: "Use prepared statements",

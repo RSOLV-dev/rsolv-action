@@ -104,10 +104,10 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtmlTest do
   
   describe "applies_to_file?/2" do
     test "applies to JavaScript and TypeScript files" do
-      assert XssInnerhtml.applies_to_file?("app.js")
-      assert XssInnerhtml.applies_to_file?("index.ts")
-      assert XssInnerhtml.applies_to_file?("src/components/widget.jsx")
-      assert XssInnerhtml.applies_to_file?("pages/home.tsx")
+      assert XssInnerhtml.applies_to_file?("app.js", nil)
+      assert XssInnerhtml.applies_to_file?("index.ts", nil)
+      assert XssInnerhtml.applies_to_file?("src/components/widget.jsx", nil)
+      assert XssInnerhtml.applies_to_file?("pages/home.tsx", nil)
     end
     
     test "applies to HTML files with embedded JavaScript" do
@@ -120,9 +120,9 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssInnerhtmlTest do
     end
     
     test "does not apply to non-JavaScript files" do
-      refute XssInnerhtml.applies_to_file?("style.css")
-      refute XssInnerhtml.applies_to_file?("data.json")
-      refute XssInnerhtml.applies_to_file?("README.md")
+      refute XssInnerhtml.applies_to_file?("style.css", nil)
+      refute XssInnerhtml.applies_to_file?("data.json", nil)
+      refute XssInnerhtml.applies_to_file?("README.md", nil)
     end
   end
 

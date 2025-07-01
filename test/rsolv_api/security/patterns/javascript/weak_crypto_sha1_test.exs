@@ -113,16 +113,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.WeakCryptoSha1Test do
     
     test "applies_to_file?/1 works correctly" do
       # JavaScript and TypeScript files
-      assert WeakCryptoSha1.applies_to_file?("test.js")
-      assert WeakCryptoSha1.applies_to_file?("app.jsx")
-      assert WeakCryptoSha1.applies_to_file?("server.ts")
-      assert WeakCryptoSha1.applies_to_file?("component.tsx")
-      assert WeakCryptoSha1.applies_to_file?("module.mjs")
+      assert WeakCryptoSha1.applies_to_file?("test.js", nil)
+      assert WeakCryptoSha1.applies_to_file?("app.jsx", nil)
+      assert WeakCryptoSha1.applies_to_file?("server.ts", nil)
+      assert WeakCryptoSha1.applies_to_file?("component.tsx", nil)
+      assert WeakCryptoSha1.applies_to_file?("module.mjs", nil)
       
       # Non-JavaScript files
-      refute WeakCryptoSha1.applies_to_file?("test.py")
-      refute WeakCryptoSha1.applies_to_file?("app.rb")
-      refute WeakCryptoSha1.applies_to_file?("server.php")
+      refute WeakCryptoSha1.applies_to_file?("test.py", nil)
+      refute WeakCryptoSha1.applies_to_file?("app.rb", nil)
+      refute WeakCryptoSha1.applies_to_file?("server.php", nil)
     end
     
     test "applies_to_file?/2 detects embedded crypto operations" do

@@ -32,17 +32,22 @@ defmodule RsolvApi.Integration.PhpPatternAstTest do
       assert response["metadata"]["language"] == "php"
       assert response["metadata"]["format"] == "enhanced"
       
-      # Check if any patterns have AST rules
-      patterns_with_ast = Enum.filter(response["patterns"], fn pattern ->
-        Map.has_key?(pattern, "astRules") && pattern["astRules"] != nil
-      end)
+      # Demo should return 3 PHP patterns
+      assert length(response["patterns"]) == 3
       
-      # At least some patterns should have AST rules
-      assert length(patterns_with_ast) > 0, "No PHP patterns have AST rules"
-      
-      # Verify structure of AST rules
-      Enum.each(patterns_with_ast, fn pattern ->
-        assert is_list(pattern["astRules"]), "astRules should be a list for pattern #{pattern["id"]}"
+      # All PHP demo patterns should have the enhanced format structure
+      Enum.each(response["patterns"], fn pattern ->
+        # Check basic pattern structure
+        assert Map.has_key?(pattern, "id")
+        assert Map.has_key?(pattern, "supportsAst")
+        
+        # If pattern supports AST, check the structure
+        if pattern["supportsAst"] do
+          assert Map.has_key?(pattern, "astRules"), "Pattern #{pattern["id"]} missing astRules"
+          assert Map.has_key?(pattern, "contextRules"), "Pattern #{pattern["id"]} missing contextRules"
+          assert Map.has_key?(pattern, "confidenceRules"), "Pattern #{pattern["id"]} missing confidenceRules"
+          assert Map.has_key?(pattern, "minConfidence"), "Pattern #{pattern["id"]} missing minConfidence"
+        end
         
         # Check that it's not using the old :rules format
         refute Map.has_key?(pattern, "rules"), "Pattern #{pattern["id"]} has 'rules' instead of 'astRules'"
@@ -50,53 +55,41 @@ defmodule RsolvApi.Integration.PhpPatternAstTest do
       end)
     end
     
-    test "PHP command injection pattern has proper AST rules", %{conn: conn, test_customer: test_customer} do
+    test "PHP demo patterns have expected IDs", %{conn: conn} do
       
-      conn = conn
-      |> put_req_header("authorization", "Bearer #{test_customer.api_key}")
-      |> get("/api/v1/patterns?language=php&format=enhanced")
+      conn = get(conn, "/api/v1/patterns?language=php&format=enhanced")
       
       assert response = json_response(conn, 200)
       
-      # Find command injection pattern
-      cmd_injection = Enum.find(response["patterns"], fn p -> 
-        p["id"] == "php-command-injection"
+      # Check that we have the expected demo patterns
+      pattern_ids = Enum.map(response["patterns"], & &1["id"])
+      
+      # Demo patterns for PHP should include these
+      expected_demo_ids = ["php-sql-injection-concat", "php-xss-echo", "php-file-inclusion"]
+      
+      Enum.each(expected_demo_ids, fn id ->
+        assert id in pattern_ids, "Expected demo pattern #{id} not found"
       end)
-      
-      assert cmd_injection, "PHP command injection pattern not found"
-      assert cmd_injection["astRules"], "PHP command injection has no AST rules"
-      assert is_list(cmd_injection["astRules"]), "AST rules should be a list"
-      
-      # Verify AST rule structure
-      first_rule = List.first(cmd_injection["astRules"])
-      assert is_map(first_rule), "AST rule should be a map"
-      assert Map.has_key?(first_rule, "type"), "AST rule should have type"
     end
     
-    test "All PHP patterns with AST enhancement use correct format", %{conn: conn, test_customer: test_customer} do
-      # List of PHP patterns that should have AST enhancement
-      enhanced_patterns = [
-        "php-command-injection",
-        "php-sql-injection-concat",
-        "php-sql-injection-interpolation",
-        "php-xss-echo",
-        "php-xss-print",
-        "php-file-inclusion"
-      ]
-      
-      conn = conn
-      |> put_req_header("authorization", "Bearer #{test_customer.api_key}")
-      |> get("/api/v1/patterns?language=php&format=enhanced")
+    test "PHP demo patterns have AST enhancement fields", %{conn: conn} do
+      # Test with demo patterns
+      conn = get(conn, "/api/v1/patterns?language=php&format=enhanced")
       
       assert response = json_response(conn, 200)
       
-      Enum.each(enhanced_patterns, fn pattern_id ->
-        pattern = Enum.find(response["patterns"], fn p -> p["id"] == pattern_id end)
+      # All demo patterns should have AST enhancement
+      Enum.each(response["patterns"], fn pattern ->
+        pattern_id = pattern["id"]
         
-        assert pattern, "Pattern #{pattern_id} not found"
+        # All PHP patterns support AST
         assert pattern["supportsAst"] == true, "Pattern #{pattern_id} should support AST"
-        assert pattern["astRules"], "Pattern #{pattern_id} should have astRules"
-        assert is_list(pattern["astRules"]), "Pattern #{pattern_id} astRules should be a list"
+        
+        # Check enhanced format fields exist
+        assert Map.has_key?(pattern, "astRules"), "Pattern #{pattern_id} should have astRules"
+        assert Map.has_key?(pattern, "contextRules"), "Pattern #{pattern_id} should have contextRules"
+        assert Map.has_key?(pattern, "confidenceRules"), "Pattern #{pattern_id} should have confidenceRules"
+        assert Map.has_key?(pattern, "minConfidence"), "Pattern #{pattern_id} should have minConfidence"
         
         # Ensure no old format keys exist
         refute Map.has_key?(pattern, "rules"), "Pattern #{pattern_id} has old 'rules' key"

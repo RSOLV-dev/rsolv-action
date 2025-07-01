@@ -110,16 +110,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.PathTraversalConcatTest do
     
     test "applies_to_file?/1 works correctly" do
       # JavaScript and TypeScript files
-      assert PathTraversalConcat.applies_to_file?("test.js")
-      assert PathTraversalConcat.applies_to_file?("app.jsx")
-      assert PathTraversalConcat.applies_to_file?("server.ts")
-      assert PathTraversalConcat.applies_to_file?("component.tsx")
-      assert PathTraversalConcat.applies_to_file?("module.mjs")
+      assert PathTraversalConcat.applies_to_file?("test.js", nil)
+      assert PathTraversalConcat.applies_to_file?("app.jsx", nil)
+      assert PathTraversalConcat.applies_to_file?("server.ts", nil)
+      assert PathTraversalConcat.applies_to_file?("component.tsx", nil)
+      assert PathTraversalConcat.applies_to_file?("module.mjs", nil)
       
       # Non-JavaScript files
-      refute PathTraversalConcat.applies_to_file?("test.py")
-      refute PathTraversalConcat.applies_to_file?("app.rb")
-      refute PathTraversalConcat.applies_to_file?("server.php")
+      refute PathTraversalConcat.applies_to_file?("test.py", nil)
+      refute PathTraversalConcat.applies_to_file?("app.rb", nil)
+      refute PathTraversalConcat.applies_to_file?("server.php", nil)
     end
     
     test "applies_to_file?/2 detects embedded file operations" do

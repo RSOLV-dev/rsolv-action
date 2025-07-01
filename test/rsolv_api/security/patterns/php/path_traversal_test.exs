@@ -157,14 +157,14 @@ defmodule RsolvApi.Security.Patterns.Php.PathTraversalTest do
       enhancement = PathTraversal.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.7
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      file_functions_rule = Enum.find(enhancement.rules, &(&1.type == "file_access_functions"))
+      file_functions_rule = Enum.find(enhancement.ast_rules, &(&1.type == "file_access_functions"))
       assert file_functions_rule
       assert "file_get_contents" in file_functions_rule.functions
       assert "include" in file_functions_rule.functions
       
-      mitigation_rule = Enum.find(enhancement.rules, &(&1.type == "path_validation"))
+      mitigation_rule = Enum.find(enhancement.ast_rules, &(&1.type == "path_validation"))
       assert mitigation_rule
       assert "basename" in mitigation_rule.functions
       assert "realpath" in mitigation_rule.functions

@@ -17,7 +17,6 @@ defmodule RsolvApi.Security.Patterns.PatternBaseTest do
         severity: :high,
         languages: ["javascript"],
         regex: ~r/test/,
-        default_tier: :public,
         recommendation: "Test recommendation",
         test_cases: %{
           vulnerable: ["test vulnerable"],
@@ -46,8 +45,8 @@ defmodule RsolvApi.Security.Patterns.PatternBaseTest do
       assert function_exported?(TestPattern, :vulnerability_metadata, 0)
     end
     
-    test "exports applies_to_file?/1 function" do
-      assert function_exported?(TestPattern, :applies_to_file?, 1)
+    test "does not export applies_to_file?/1 function" do
+      refute function_exported?(TestPattern, :applies_to_file?, 1)
     end
     
     test "exports applies_to_file?/2 function" do
@@ -67,8 +66,8 @@ defmodule RsolvApi.Security.Patterns.PatternBaseTest do
     end
     
     test "applies_to_file?/1 works with file extensions" do
-      assert TestPattern.applies_to_file?("test.js")
-      refute TestPattern.applies_to_file?("test.py")
+      assert TestPattern.applies_to_file?("test.js", nil)
+      refute TestPattern.applies_to_file?("test.py", nil)
     end
   end
   
@@ -86,7 +85,6 @@ defmodule RsolvApi.Security.Patterns.PatternBaseTest do
           severity: :high,
           languages: ["all"],
           regex: ~r/test/,
-          default_tier: :public,
           recommendation: "Test",
           test_cases: %{vulnerable: ["test"], safe: ["test"]}
         }
@@ -96,10 +94,10 @@ defmodule RsolvApi.Security.Patterns.PatternBaseTest do
     end
     
     test "cross-language patterns apply to all files" do
-      assert CrossLanguagePattern.applies_to_file?("test.js")
-      assert CrossLanguagePattern.applies_to_file?("test.py")
-      assert CrossLanguagePattern.applies_to_file?("test.rb")
-      assert CrossLanguagePattern.applies_to_file?("test.unknown")
+      assert CrossLanguagePattern.applies_to_file?("test.js", nil)
+      assert CrossLanguagePattern.applies_to_file?("test.py", nil)
+      assert CrossLanguagePattern.applies_to_file?("test.rb", nil)
+      assert CrossLanguagePattern.applies_to_file?("test.unknown", nil)
     end
   end
 end

@@ -173,13 +173,13 @@ defmodule RsolvApi.Security.Patterns.Javascript.XssReactDangerouslyTest do
   
   describe "file applicability" do
     test "applies to JavaScript and React files" do
-      assert XssReactDangerously.applies_to_file?("app.js")
-      assert XssReactDangerously.applies_to_file?("component.jsx")
-      assert XssReactDangerously.applies_to_file?("service.ts")
-      assert XssReactDangerously.applies_to_file?("module.tsx")
+      assert XssReactDangerously.applies_to_file?("app.js", nil)
+      assert XssReactDangerously.applies_to_file?("component.jsx", nil)
+      assert XssReactDangerously.applies_to_file?("service.ts", nil)
+      assert XssReactDangerously.applies_to_file?("module.tsx", nil)
       
-      refute XssReactDangerously.applies_to_file?("style.css")
-      refute XssReactDangerously.applies_to_file?("data.json")
+      refute XssReactDangerously.applies_to_file?("style.css", nil)
+      refute XssReactDangerously.applies_to_file?("data.json", nil)
     end
   end
 end

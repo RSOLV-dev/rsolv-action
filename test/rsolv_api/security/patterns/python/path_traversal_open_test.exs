@@ -1,5 +1,5 @@
 defmodule RsolvApi.Security.Patterns.Python.PathTraversalOpenTest do
-  use RsolvApi.DataCase
+  use ExUnit.Case
   alias RsolvApi.Security.Patterns.Python.PathTraversalOpen
   alias RsolvApi.Security.Pattern
 
@@ -125,13 +125,13 @@ defmodule RsolvApi.Security.Patterns.Python.PathTraversalOpenTest do
 
   describe "applies_to_file?/1" do
     test "applies to Python files" do
-      assert PathTraversalOpen.applies_to_file?("script.py")
-      assert PathTraversalOpen.applies_to_file?("utils/helper.py")
-      assert PathTraversalOpen.applies_to_file?("src/main.py")
+      assert PathTraversalOpen.applies_to_file?("script.py", nil)
+      assert PathTraversalOpen.applies_to_file?("utils/helper.py", nil)
+      assert PathTraversalOpen.applies_to_file?("src/main.py", nil)
       
-      refute PathTraversalOpen.applies_to_file?("script.js")
-      refute PathTraversalOpen.applies_to_file?("config.rb")
-      refute PathTraversalOpen.applies_to_file?("README.md")
+      refute PathTraversalOpen.applies_to_file?("script.js", nil)
+      refute PathTraversalOpen.applies_to_file?("config.rb", nil)
+      refute PathTraversalOpen.applies_to_file?("README.md", nil)
     end
   end
 end

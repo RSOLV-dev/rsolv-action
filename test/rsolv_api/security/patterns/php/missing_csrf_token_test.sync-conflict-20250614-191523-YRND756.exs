@@ -128,13 +128,13 @@ defmodule RsolvApi.Security.Patterns.Php.MissingCsrfTokenTest do
       enhancement = MissingCsrfToken.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.7
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      csrf_rule = Enum.find(enhancement.rules, &(&1.type == "csrf_validation"))
+      csrf_rule = Enum.find(enhancement.ast_rules, &(&1.type == "csrf_validation"))
       assert csrf_rule
       assert "csrf" in csrf_rule.validation_patterns
       
-      state_rule = Enum.find(enhancement.rules, &(&1.type == "state_changing_operations"))
+      state_rule = Enum.find(enhancement.ast_rules, &(&1.type == "state_changing_operations"))
       assert state_rule
       assert "update" in state_rule.operation_patterns
     end

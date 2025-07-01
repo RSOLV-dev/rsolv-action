@@ -133,16 +133,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.EvalUserInputTest do
     
     test "applies_to_file?/1 works correctly" do
       # JavaScript and TypeScript files
-      assert EvalUserInput.applies_to_file?("test.js")
-      assert EvalUserInput.applies_to_file?("app.jsx")
-      assert EvalUserInput.applies_to_file?("server.ts")
-      assert EvalUserInput.applies_to_file?("component.tsx")
-      assert EvalUserInput.applies_to_file?("module.mjs")
+      assert EvalUserInput.applies_to_file?("test.js", nil)
+      assert EvalUserInput.applies_to_file?("app.jsx", nil)
+      assert EvalUserInput.applies_to_file?("server.ts", nil)
+      assert EvalUserInput.applies_to_file?("component.tsx", nil)
+      assert EvalUserInput.applies_to_file?("module.mjs", nil)
       
       # Non-JavaScript files
-      refute EvalUserInput.applies_to_file?("test.py")
-      refute EvalUserInput.applies_to_file?("app.rb")
-      refute EvalUserInput.applies_to_file?("server.php")
+      refute EvalUserInput.applies_to_file?("test.py", nil)
+      refute EvalUserInput.applies_to_file?("app.rb", nil)
+      refute EvalUserInput.applies_to_file?("server.php", nil)
     end
   end
   

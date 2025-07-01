@@ -136,13 +136,13 @@ defmodule RsolvApi.Security.Patterns.Php.OpenRedirectTest do
       enhancement = OpenRedirect.ast_enhancement()
       
       assert enhancement.min_confidence >= 0.7
-      assert length(enhancement.rules) >= 3
+      assert length(enhancement.ast_rules) >= 3
       
-      redirect_rule = Enum.find(enhancement.rules, &(&1.type == "redirect_functions"))
+      redirect_rule = Enum.find(enhancement.ast_rules, &(&1.type == "redirect_functions"))
       assert redirect_rule
       assert "header" in redirect_rule.functions
       
-      user_input_rule = Enum.find(enhancement.rules, &(&1.type == "user_input_sources"))
+      user_input_rule = Enum.find(enhancement.ast_rules, &(&1.type == "user_input_sources"))
       assert user_input_rule
       assert "$_GET" in user_input_rule.dangerous_sources
     end

@@ -190,11 +190,11 @@ defmodule RsolvApi.Security.Patterns.Rails.ActiverecordInjectionTest do
     end
 
     test "applies to Rails files" do
-      assert ActiverecordInjection.applies_to_file?("app/controllers/users_controller.rb")
-      assert ActiverecordInjection.applies_to_file?("app/models/user.rb")
+      assert ActiverecordInjection.applies_to_file?("app/controllers/users_controller.rb", nil)
+      assert ActiverecordInjection.applies_to_file?("app/models/user.rb", nil)
       assert ActiverecordInjection.applies_to_file?("lib/query_builder.rb", ["rails"])
-      refute ActiverecordInjection.applies_to_file?("test.js")
-      refute ActiverecordInjection.applies_to_file?("script.py")
+      refute ActiverecordInjection.applies_to_file?("test.js", nil)
+      refute ActiverecordInjection.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do

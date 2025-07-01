@@ -176,17 +176,17 @@ defmodule RsolvApi.Security.Patterns.Php.SqlInjectionInterpolationTest do
       enhancement = SqlInjectionInterpolation.ast_enhancement()
       
       assert enhancement.min_confidence == 0.9
-      assert length(enhancement.rules) == 3
+      assert length(enhancement.ast_rules) == 3
       
-      interpolation_rule = Enum.find(enhancement.rules, &(&1.type == "interpolation_detection"))
+      interpolation_rule = Enum.find(enhancement.ast_rules, &(&1.type == "interpolation_detection"))
       assert "double_quotes" in interpolation_rule.string_types
       assert "curly_braces" in interpolation_rule.string_types
       
-      db_context_rule = Enum.find(enhancement.rules, &(&1.type == "database_context"))
+      db_context_rule = Enum.find(enhancement.ast_rules, &(&1.type == "database_context"))
       assert "query" in db_context_rule.patterns
       assert "sql" in db_context_rule.patterns
       
-      sanitization_rule = Enum.find(enhancement.rules, &(&1.type == "input_escaping"))
+      sanitization_rule = Enum.find(enhancement.ast_rules, &(&1.type == "input_escaping"))
       assert "mysqli_real_escape_string" in sanitization_rule.escape_functions
       assert "htmlspecialchars" not in sanitization_rule.escape_functions  # Wrong type of escaping
     end

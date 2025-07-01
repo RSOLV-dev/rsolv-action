@@ -120,16 +120,16 @@ defmodule RsolvApi.Security.Patterns.Javascript.HardcodedSecretPasswordTest do
     
     test "applies_to_file?/1 works correctly" do
       # JavaScript and TypeScript files
-      assert HardcodedSecretPassword.applies_to_file?("test.js")
-      assert HardcodedSecretPassword.applies_to_file?("app.jsx")
-      assert HardcodedSecretPassword.applies_to_file?("server.ts")
-      assert HardcodedSecretPassword.applies_to_file?("component.tsx")
-      assert HardcodedSecretPassword.applies_to_file?("module.mjs")
+      assert HardcodedSecretPassword.applies_to_file?("test.js", nil)
+      assert HardcodedSecretPassword.applies_to_file?("app.jsx", nil)
+      assert HardcodedSecretPassword.applies_to_file?("server.ts", nil)
+      assert HardcodedSecretPassword.applies_to_file?("component.tsx", nil)
+      assert HardcodedSecretPassword.applies_to_file?("module.mjs", nil)
       
       # Non-JavaScript files
-      refute HardcodedSecretPassword.applies_to_file?("test.py")
-      refute HardcodedSecretPassword.applies_to_file?("app.rb")
-      refute HardcodedSecretPassword.applies_to_file?("server.php")
+      refute HardcodedSecretPassword.applies_to_file?("test.py", nil)
+      refute HardcodedSecretPassword.applies_to_file?("app.rb", nil)
+      refute HardcodedSecretPassword.applies_to_file?("server.php", nil)
     end
     
     test "applies_to_file?/2 detects embedded password assignments" do

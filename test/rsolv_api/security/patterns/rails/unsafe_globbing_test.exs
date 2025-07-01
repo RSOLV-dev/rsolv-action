@@ -242,11 +242,11 @@ defmodule RsolvApi.Security.Patterns.Rails.UnsafeGlobbingTest do
     end
 
     test "applies to Ruby files" do
-      assert UnsafeGlobbing.applies_to_file?("config/routes.rb")
+      assert UnsafeGlobbing.applies_to_file?("config/routes.rb", nil)
       assert UnsafeGlobbing.applies_to_file?("config/routes.rb", ["rails"])
       assert UnsafeGlobbing.applies_to_file?("config/application.rb", ["rails"])
-      refute UnsafeGlobbing.applies_to_file?("test.js")
-      refute UnsafeGlobbing.applies_to_file?("script.py")
+      refute UnsafeGlobbing.applies_to_file?("test.js", nil)
+      refute UnsafeGlobbing.applies_to_file?("script.py", nil)
     end
 
     test "applies to ruby files with Rails framework" do
