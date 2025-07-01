@@ -78,6 +78,11 @@ defmodule RSOLVWeb.Router do
       post "/analyze", Api.V1.ASTController, :analyze
     end
     
+    # Vulnerability Validation (RFC-036)
+    scope "/vulnerabilities" do
+      post "/validate", Api.V1.VulnerabilityValidationController, :validate
+    end
+    
     # Test endpoints removed - we don't use tiers anymore
   end
 
