@@ -46,9 +46,9 @@ export class RepositoryScanner {
       }
     }
     
-    // Apply AST validation if enabled
-    if (config.enableASTValidation === true && config.rsolvApiKey && typeof config.rsolvApiKey === 'string' && config.rsolvApiKey.length > 0) {
-      logger.info('Performing AST validation on detected vulnerabilities...');
+    // Apply AST validation if enabled (default is true)
+    if (config.enableASTValidation !== false && config.rsolvApiKey && typeof config.rsolvApiKey === 'string' && config.rsolvApiKey.length > 0) {
+      logger.info('Performing AST validation on detected vulnerabilities (enabled by default)...');
       const validator = new ASTValidator(config.rsolvApiKey);
       
       // Create file contents map
@@ -60,6 +60,8 @@ export class RepositoryScanner {
       const filtered = preValidationCount - vulnerabilities.length;
       
       logger.info(`AST validation complete: ${filtered} false positives filtered out`);
+    } else if (config.enableASTValidation !== false) {
+      logger.warn('AST validation is enabled but skipped - missing RSOLV API key');
     }
     
     // Group vulnerabilities by type

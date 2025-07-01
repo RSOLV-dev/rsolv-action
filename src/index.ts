@@ -44,7 +44,9 @@ async function run(): Promise<ActionStatus> {
         },
         createIssues: true,
         batchSimilar: true,
-        issueLabel: config.issueLabel || 'rsolv:automate'
+        issueLabel: config.issueLabel || 'rsolv:automate',
+        enableASTValidation: process.env.RSOLV_ENABLE_AST_VALIDATION !== 'false', // Default to true
+        rsolvApiKey: config.apiKey
       });
       
       // Set outputs for GitHub Actions

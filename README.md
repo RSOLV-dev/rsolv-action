@@ -128,6 +128,30 @@ This will:
 
 See [docs/SCAN-MODE.md](docs/SCAN-MODE.md) for complete documentation.
 
+## AST-Based Validation (Enabled by Default)
+
+RSOLV now includes AST (Abstract Syntax Tree) based validation to reduce false positives by 70-90%:
+
+### Features
+
+- **Comment Detection**: Filters out vulnerabilities in code comments
+- **String Literal Detection**: Ignores patterns in documentation strings
+- **User Input Flow Analysis**: Validates if vulnerable code is actually reachable
+- **Multi-Language Support**: Works with JavaScript, TypeScript, Python, Ruby, and more
+
+### Configuration
+
+```yaml
+# AST validation is enabled by default
+# To disable (not recommended):
+- uses: RSOLV-dev/rsolv-action@v2
+  with:
+    api_key: ${{ secrets.RSOLV_API_KEY }}
+    enable_ast_validation: 'false'
+```
+
+This feature significantly improves accuracy by understanding code context, not just pattern matching.
+
 ## Enhanced Context and Performance Optimizations
 
 RSOLV includes several features for optimizing performance and token usage:

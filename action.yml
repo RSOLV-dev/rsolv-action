@@ -71,6 +71,10 @@ inputs:
     description: 'Enable enhanced context gathering (uses more tokens but may improve accuracy)'
     required: false
     default: 'false'
+  enable_ast_validation:
+    description: 'Enable AST-based validation to reduce false positives (recommended)'
+    required: false
+    default: 'true'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -94,6 +98,7 @@ runs:
     RSOLV_ISSUE_NUMBER: ${{ inputs.issue_number }}
     RSOLV_USE_GIT_BASED_EDITING: ${{ inputs.use_git_based_editing }}
     RSOLV_ENABLE_ENHANCED_CONTEXT: ${{ inputs.enable_enhanced_context }}
+    RSOLV_ENABLE_AST_VALIDATION: ${{ inputs.enable_ast_validation }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'
