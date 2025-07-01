@@ -233,14 +233,14 @@ defmodule RsolvApi.Security.Patterns.Javascript.PrototypePollutionTest do
       # JavaScript and TypeScript files should be detected
       javascript_files = ["test.js", "app.jsx", "server.ts", "component.tsx", "module.mjs"]
       for file <- javascript_files do
-        assert PrototypePollution.applies_to_file?(file),
+        assert PrototypePollution.applies_to_file?(file, nil),
           "Should apply to JavaScript file: #{file}"
       end
       
       # Other language files should be rejected
       other_language_files = ["test.py", "app.rb", "server.php", "component.vue", "script.sh"]
       for file <- other_language_files do
-        refute PrototypePollution.applies_to_file?(file),
+        refute PrototypePollution.applies_to_file?(file, nil),
           "Should NOT apply to non-JavaScript file: #{file}"
       end
     end

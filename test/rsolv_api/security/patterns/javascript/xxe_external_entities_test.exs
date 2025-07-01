@@ -198,7 +198,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XxeExternalEntitiesTest do
       javascript_files = ["test.js", "app.jsx", "server.ts", "component.tsx", "module.mjs"]
       
       for file <- javascript_files do
-        assert XxeExternalEntities.applies_to_file?(file),
+        assert XxeExternalEntities.applies_to_file?(file, nil),
           "Should apply to JavaScript file: #{file}"
       end
     end
@@ -207,7 +207,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.XxeExternalEntitiesTest do
       other_language_files = ["test.py", "app.rb", "server.php", "component.vue", "script.sh"]
       
       for file <- other_language_files do
-        refute XxeExternalEntities.applies_to_file?(file),
+        refute XxeExternalEntities.applies_to_file?(file, nil),
           "Should NOT apply to non-JavaScript file: #{file}"
       end
     end
