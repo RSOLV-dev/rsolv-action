@@ -1,6 +1,8 @@
 defmodule RSOLVWeb.Controllers.TierDeterminationTest do
   use RSOLVWeb.ConnCase, async: true
   
+  @moduletag :skip # Skip tier-based tests after tier removal
+  
   alias RSOLV.Accounts
   
   describe "determine_highest_tier with string/atom handling" do

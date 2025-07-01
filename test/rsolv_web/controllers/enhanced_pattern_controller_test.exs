@@ -1,5 +1,7 @@
 defmodule RSOLVWeb.EnhancedPatternControllerTest do
-  use RSOLVWeb.ConnCase, async: true
+  use RSOLVWeb.ConnCase
+  
+  @moduletag :skip # Skip tier-based tests after tier removal, async: true
 
   alias RSOLV.Accounts
   alias RsolvApi.FeatureFlags

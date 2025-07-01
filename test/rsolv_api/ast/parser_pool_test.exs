@@ -1,5 +1,5 @@
 defmodule RsolvApi.AST.ParserPoolTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   
   alias RsolvApi.AST.ParserPool
   
@@ -11,7 +11,7 @@ defmodule RsolvApi.AST.ParserPoolTest do
         pre_warm: true
       }
       
-      {:ok, pool} = ParserPool.start_link(config)
+      pool = start_supervised!({ParserPool, config})
       
       # Should have 3 parsers per language
       status = ParserPool.get_pool_status(pool)
@@ -34,7 +34,7 @@ defmodule RsolvApi.AST.ParserPoolTest do
         pre_warm: true
       }
       
-      {:ok, pool} = ParserPool.start_link(config)
+      pool = start_supervised!({ParserPool, config})
       
       # Give parsers time to warm up
       Process.sleep(200)
@@ -51,7 +51,7 @@ defmodule RsolvApi.AST.ParserPoolTest do
         pre_warm: false
       }
       
-      {:ok, pool} = ParserPool.start_link(config)
+      pool = start_supervised!({ParserPool, config})
       
       # Parsers should not be started yet
       status = ParserPool.get_pool_status(pool)
@@ -67,7 +67,7 @@ defmodule RsolvApi.AST.ParserPoolTest do
         pre_warm: true
       }
       
-      {:ok, pool} = ParserPool.start_link(config)
+      pool = start_supervised!({ParserPool, config})
       Process.sleep(300) # Let parsers warm up
       
       {:ok, pool: pool}
@@ -133,7 +133,7 @@ defmodule RsolvApi.AST.ParserPoolTest do
         enable_metrics: true
       }
       
-      {:ok, pool} = ParserPool.start_link(config)
+      pool = start_supervised!({ParserPool, config})
       Process.sleep(100)
       
       {:ok, pool: pool}
@@ -179,7 +179,7 @@ defmodule RsolvApi.AST.ParserPoolTest do
         max_pool_size: 5
       }
       
-      {:ok, pool} = ParserPool.start_link(config)
+      pool = start_supervised!({ParserPool, config})
       Process.sleep(100)
       
       # Create high demand by checking out all parsers and holding them
@@ -231,7 +231,7 @@ defmodule RsolvApi.AST.ParserPoolTest do
         scale_down_after_ms: 100
       }
       
-      {:ok, pool} = ParserPool.start_link(config)
+      pool = start_supervised!({ParserPool, config})
       Process.sleep(500)  # Let parsers warm up
       
       # Simulate parsers being idle by setting their last_used_at to past
