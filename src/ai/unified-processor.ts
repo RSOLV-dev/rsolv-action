@@ -18,7 +18,7 @@ import { sanitizeErrorMessage } from '../utils/error-sanitizer.js';
 export interface ProcessingOptions {
   enableEnhancedContext?: boolean;
   enableSecurityAnalysis?: boolean;
-  contextDepth?: 'basic' | 'standard' | 'deep' | 'ultra';
+  contextDepth?: 'shallow' | 'medium' | 'deep' | 'ultra';
   contextGatheringTimeout?: number;
   verboseLogging?: boolean;
 }
@@ -169,11 +169,10 @@ async function processIssue(
       logger.info(`Enhanced context setup - useVendedCredentials: ${config.aiProvider.useVendedCredentials}, rsolvApiKey: ${config.rsolvApiKey ? 'present' : 'missing'}`);
       
       if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
-        logger.info('Creating credential manager for vended credentials');
-        const { RSOLVCredentialManager } = await import('../credentials/manager.js');
-        credentialManager = new RSOLVCredentialManager();
-        await credentialManager.initialize(config.rsolvApiKey);
-        logger.info('Credential manager initialized successfully');
+        logger.info('Getting credential manager singleton for vended credentials');
+        const { CredentialManagerSingleton } = await import('../credentials/singleton.js');
+        credentialManager = await CredentialManagerSingleton.getInstance(config.rsolvApiKey);
+        logger.info('Credential manager singleton retrieved successfully');
       } else {
         logger.info(`Skipping credential manager - useVended: ${config.aiProvider.useVendedCredentials}, apiKey: ${config.rsolvApiKey ? 'present' : 'missing'}`);
       }
@@ -184,10 +183,13 @@ async function processIssue(
       
       // Gather deep context
       deepContext = await adapter.gatherDeepContext(issue, {
-        contextDepth: options.contextDepth || 'standard',
+        contextDepth: options.contextDepth || 'medium',
         maxExplorationTime: options.contextGatheringTimeout || 600000, // 10 minutes default
-        includeTests: true,
-        includeStyleGuide: true
+        enableUltraThink: options.contextDepth === 'ultra',
+        includeArchitectureAnalysis: true,
+        includeTestPatterns: true,
+        includeStyleGuide: true,
+        includeDependencyAnalysis: true
       });
       contextGatheringTime = Date.now() - contextStart;
       
@@ -229,8 +231,7 @@ async function processIssue(
       issueId: issue.id,
       success: false,
       message: sanitizeErrorMessage(`Error processing issue: ${error instanceof Error ? error.message : String(error)}`),
-      error: sanitizeErrorMessage(String(error)),
-      processingTime: Date.now() - startTime
+      error: sanitizeErrorMessage(String(error))
     };
   }
 }

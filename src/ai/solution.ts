@@ -4,6 +4,7 @@ import { getAiClient } from './client.js';
 import { buildSolutionPrompt, getIssueTypePromptTemplate } from './prompts.js';
 import { ThreeTierExplanationFramework, CompleteExplanation } from '../security/explanation-framework.js';
 import { ClaudeCodeAdapter } from './adapters/claude-code.js';
+import { AIConfig, AIProvider, IssueAnalysis } from './types.js';
 
 /**
  * Result of solution generation
@@ -37,16 +38,37 @@ export async function generateSolution(
       // Get credential manager if using vended credentials
       let credentialManager;
       if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
-        const { RSOLVCredentialManager } = await import('../credentials/manager.js');
-        credentialManager = new RSOLVCredentialManager();
-        await credentialManager.initialize(config.rsolvApiKey);
+        const { CredentialManagerSingleton } = await import('../credentials/singleton.js');
+        credentialManager = await CredentialManagerSingleton.getInstance(config.rsolvApiKey);
       }
       
+      // Convert AiProviderConfig to AIConfig
+      const aiConfig: AIConfig = {
+        provider: config.aiProvider.provider as AIProvider,
+        apiKey: config.aiProvider.apiKey,
+        model: config.aiProvider.model,
+        temperature: config.aiProvider.temperature,
+        maxTokens: config.aiProvider.maxTokens,
+        useVendedCredentials: config.aiProvider.useVendedCredentials,
+        claudeCodeConfig: {}
+      };
+      
       // Use Claude Code adapter
-      const claudeCodeAdapter = new ClaudeCodeAdapter(config.aiProvider, process.cwd(), credentialManager);
+      const claudeCodeAdapter = new ClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+      
+      // Convert AnalysisData to IssueAnalysis
+      const issueAnalysis: IssueAnalysis = {
+        summary: `${analysisData.issueType} issue requiring fixes`,
+        complexity: analysisData.estimatedComplexity === 'simple' ? 'low' : 
+                   analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
+        estimatedTime: 60, // Default estimate
+        potentialFixes: [analysisData.suggestedApproach],
+        recommendedApproach: analysisData.suggestedApproach,
+        relatedFiles: analysisData.filesToModify
+      };
       
       // Use Claude Code for solution generation
-      const claudeResult = await claudeCodeAdapter.generateSolution(issue, analysisData);
+      const claudeResult = await claudeCodeAdapter.generateSolution(issue, issueAnalysis);
       
       // If Claude Code succeeded, return the result
       if (claudeResult.success) {

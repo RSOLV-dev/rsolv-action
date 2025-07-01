@@ -1,6 +1,7 @@
 import { AiProviderConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { RSOLVCredentialManager } from '../credentials/manager.js';
+import { CredentialManagerSingleton } from '../credentials/singleton.js';
 import { sanitizeErrorMessage } from '../utils/error-sanitizer.js';
 
 /**
@@ -24,30 +25,27 @@ export interface CompletionOptions {
   presencePenalty?: number;
 }
 
-// Singleton credential manager instance
-let credentialManager: RSOLVCredentialManager | null = null;
-
 /**
  * Factory function to create an appropriate AI client based on provider config
  */
 export async function getAiClient(config: AiProviderConfig): Promise<AiClient> {
   // Initialize credential manager if using vended credentials
-  if (config.useVendedCredentials && !credentialManager) {
+  let credentialManager: RSOLVCredentialManager | null = null;
+  
+  if (config.useVendedCredentials) {
     try {
       const rsolvApiKey = process.env.RSOLV_API_KEY;
       if (!rsolvApiKey) {
         throw new Error('RSOLV_API_KEY environment variable not set for vended credentials');
       }
       
-      logger.info('Initializing credential manager for vended credentials');
-      credentialManager = new RSOLVCredentialManager();
-      await credentialManager.initialize(rsolvApiKey);
-      logger.info('Credential manager initialized successfully');
+      logger.info('Getting credential manager singleton for vended credentials');
+      credentialManager = await CredentialManagerSingleton.getInstance(rsolvApiKey);
+      logger.info('Credential manager singleton retrieved successfully');
     } catch (error) {
-      logger.error('Failed to initialize credential vending', error);
+      logger.error('Failed to get credential manager singleton', error);
       // Don't fall back - let the error propagate when trying to use the credentials
       // This preserves the intent to use vended credentials
-      credentialManager = null;
       throw error; // Re-throw to prevent creating clients with null credential manager
     }
   }

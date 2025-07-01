@@ -10,6 +10,7 @@ import { logger } from '../../utils/logger.js';
 import { IssueContext } from '../../types/index.js';
 import { PullRequestSolution, AIConfig, ClaudeCodeConfig } from '../types.js';
 import { IssueAnalysis } from '../types.js';
+import { ConversationLogger, ConversationLogEntry } from '../conversation-logger.js';
 
 /**
  * Analytics data for Claude Code usage
@@ -35,6 +36,7 @@ export class ClaudeCodeAdapter {
   private tempDir: string;
   private usageData: UsageData[] = [];
   private credentialManager?: any;
+  private conversationLogger: ConversationLogger;
   
   /**
    * Create a new Claude Code SDK adapter
@@ -47,6 +49,12 @@ export class ClaudeCodeAdapter {
     // Initialize Claude Code config with defaults
     this.claudeConfig = config.claudeCodeConfig || {};
     this.tempDir = this.claudeConfig.tempDir || path.join(process.cwd(), 'temp');
+    
+    // Initialize conversation logger
+    this.conversationLogger = ConversationLogger.getInstance();
+    this.conversationLogger.initialize().catch(err => {
+      logger.warn('Failed to initialize conversation logger:', err);
+    });
     
     // Ensure temp directory exists
     if (!fs.existsSync(this.tempDir)) {
@@ -161,15 +169,23 @@ Installation instructions:
         abortController.abort();
       }, timeout);
       
+      const messages: SDKMessage[] = [];
+      let solution: PullRequestSolution | null = null;
+      let explorationPhase = true;
+      let messageCount = 0;
+      const conversationStartTime = Date.now();
+      
       try {
-        const messages: SDKMessage[] = [];
-        let solution: PullRequestSolution | null = null;
-        let explorationPhase = true;
-        let messageCount = 0;
         
         if (this.claudeConfig.verboseLogging) {
           logger.info(`Starting Claude Code exploration for issue: ${issueContext.title}`);
         }
+        
+        // Start conversation logging
+        await this.conversationLogger.logSummary(
+          issueContext.id,
+          `Starting Claude Code conversation for issue: ${issueContext.title}`
+        );
         
         // Check for MCP config file
         const mcpConfigPath = path.join(this.repoPath, 'mcp-config.json');
@@ -250,6 +266,37 @@ Installation instructions:
         usageEntry.endTime = Date.now();
         usageEntry.solutionGenerationTime = usageEntry.endTime - usageEntry.startTime;
         
+        // Log full conversation if enabled
+        const conversationLogEntry: ConversationLogEntry = {
+          issueId: issueContext.id,
+          timestamp: new Date().toISOString(),
+          provider: 'anthropic',
+          model: 'claude-code',
+          messages: messages.map(msg => ({
+            type: msg.type,
+            content: msg,
+            timestamp: new Date().toISOString()
+          })),
+          metadata: {
+            workflowRun: process.env.GITHUB_RUN_ID,
+            workflowJob: process.env.GITHUB_JOB,
+            repository: process.env.GITHUB_REPOSITORY,
+            issueNumber: parseInt(issueContext.id.split('#')[1] || '0'),
+            duration: Date.now() - conversationStartTime,
+            tokenUsage: {
+              prompt: 0, // Claude Code SDK doesn't expose token usage
+              completion: 0,
+              total: 0
+            }
+          },
+          result: {
+            success: !!solution,
+            solutionGenerated: !!solution
+          }
+        };
+        
+        await this.conversationLogger.logConversation(conversationLogEntry);
+        
         if (solution) {
           usageEntry.successful = true;
           this.trackUsage(usageEntry);
@@ -258,6 +305,11 @@ Installation instructions:
             logger.info(`Claude Code completed exploration with ${messageCount} messages`);
             logger.info(`Solution found with ${solution.files.length} file(s) to change`);
           }
+          
+          await this.conversationLogger.logSummary(
+            issueContext.id,
+            `Claude Code conversation completed successfully with ${messageCount} messages and ${solution.files.length} files changed`
+          );
           
           // Convert to expected format
           const changes: Record<string, string> = {};
@@ -275,6 +327,11 @@ Installation instructions:
           usageEntry.errorType = 'no_solution_found';
           this.trackUsage(usageEntry);
           
+          await this.conversationLogger.logSummary(
+            issueContext.id,
+            `Claude Code conversation completed without solution after ${messageCount} messages`
+          );
+          
           // Log the last few messages for debugging
           if (this.claudeConfig.verboseLogging && messages.length > 0) {
             logger.debug('Last 3 messages:', messages.slice(-3).map(m => ({
@@ -291,7 +348,41 @@ Installation instructions:
         }
       } catch (queryError) {
         const errorMessage = (queryError as Error).message || String(queryError);
-        if ((queryError as Error).name === 'AbortError' || errorMessage.includes('AbortError')) {
+        const errorType = (queryError as Error).name === 'AbortError' || errorMessage.includes('AbortError') 
+          ? 'timeout' 
+          : 'query_error';
+        
+        // Log error to conversation logger
+        const errorLogEntry: ConversationLogEntry = {
+          issueId: issueContext.id,
+          timestamp: new Date().toISOString(),
+          provider: 'anthropic',
+          model: 'claude-code',
+          messages: messages.map((msg: any) => ({
+            type: msg.type,
+            content: msg,
+            timestamp: new Date().toISOString()
+          })),
+          metadata: {
+            workflowRun: process.env.GITHUB_RUN_ID,
+            workflowJob: process.env.GITHUB_JOB,
+            repository: process.env.GITHUB_REPOSITORY,
+            issueNumber: parseInt(issueContext.id.split('#')[1] || '0'),
+            duration: Date.now() - conversationStartTime
+          },
+          result: {
+            success: false,
+            error: errorMessage
+          }
+        };
+        
+        await this.conversationLogger.logConversation(errorLogEntry);
+        await this.conversationLogger.logSummary(
+          issueContext.id,
+          `Claude Code conversation failed: ${errorType} - ${errorMessage}`
+        );
+        
+        if (errorType === 'timeout') {
           logger.error(`Claude Code SDK execution timed out after ${timeout/1000} seconds`);
           usageEntry.errorType = 'timeout';
           

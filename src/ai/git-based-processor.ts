@@ -230,10 +230,9 @@ export async function processIssueWithGit(
     // Get credential manager if using vended credentials
     let credentialManager;
     if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
-      const { RSOLVCredentialManager } = await import('../credentials/manager.js');
-      credentialManager = new RSOLVCredentialManager();
-      await credentialManager.initialize(config.rsolvApiKey);
-      logger.info('Using vended credentials for Claude Code');
+      const { CredentialManagerSingleton } = await import('../credentials/singleton.js');
+      credentialManager = await CredentialManagerSingleton.getInstance(config.rsolvApiKey);
+      logger.info('Using vended credentials singleton for Claude Code');
     }
     
     // Step 4: Execute Claude Code with validation loop

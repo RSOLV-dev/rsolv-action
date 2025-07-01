@@ -22,7 +22,7 @@ export class RSOLVCredentialManager {
   private credentials: Map<string, ProviderCredential> = new Map();
   private apiKey: string = '';
   private rsolvApiUrl: string;
-  private refreshTimers: Map<string, NodeJS.Timer> = new Map();
+  private refreshTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   constructor() {
     this.rsolvApiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';

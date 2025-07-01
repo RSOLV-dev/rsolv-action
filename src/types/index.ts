@@ -16,6 +16,7 @@ export interface ActionConfig {
   customerTier?: string;
   testGeneration?: TestGenerationConfig;
   useGitBasedEditing?: boolean; // Enable git-based in-place editing (ADR-012)
+  claudeCodeConfig?: any; // Claude Code specific configuration
 }
 
 export interface FixValidationConfig {
