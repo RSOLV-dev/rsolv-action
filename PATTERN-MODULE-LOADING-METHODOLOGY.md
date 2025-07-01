@@ -20,24 +20,30 @@
 4. ✅ Checked pattern adapter conversion logic
 5. ✅ Discovered pattern modules don't load in container
 
-### Root Cause Chain
+### Root Cause Chain (Updated)
 ```
-Docker Compose Volume Mount
+Volume mount maps old source code to container
     ↓
-Excludes /app/_build directory
+Pattern modules use old Pattern struct (not EnhancedPattern)
     ↓
-Pattern .beam files not accessible
+No ast_pattern field in Pattern struct
     ↓
-Code.ensure_loaded?(PatternModule) returns false
+PatternAdapter.enhance() creates ASTPattern struct
     ↓
-PatternAdapter can't enhance patterns
+PatternAdapter.convert_to_matcher_format() should add ast_pattern field
     ↓
-Patterns have nil ast_pattern field
+BUT: Old code doesn't have these conversions
     ↓
 ASTPatternMatcher skips patterns with nil ast_pattern
     ↓
 0 vulnerabilities detected
 ```
+
+## Key Discovery
+The issue is NOT that beam files can't be found - they exist and load correctly.
+The issue is that the SOURCE CODE in the container is OLD and doesn't include:
+1. EnhancedPattern struct usage in pattern modules
+2. Proper ast_pattern field generation in PatternAdapter
 
 ## Solution Options Analysis
 

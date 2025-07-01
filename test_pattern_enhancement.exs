@@ -1,64 +1,34 @@
-#!/usr/bin/env elixir
+# Test pattern enhancement flow
+alias RsolvApi.Security.{Pattern, PatternRegistry}
+alias RsolvApi.AST.PatternAdapter
 
-# Test if patterns are being enhanced
-# Run with: docker-compose exec rsolv-api elixir test_pattern_enhancement.exs
-
-# Force compile first
-IO.puts("Compiling patterns...")
-System.shell("cd /app && mix compile --force", stderr_to_stdout: true)
-
-IO.puts("\n🔍 Testing Pattern Enhancement")
-IO.puts("=" |> String.duplicate(60))
-
-# Get raw patterns from registry
-patterns = RsolvApi.Security.PatternRegistry.get_patterns_for_language("python")
-IO.puts("\nPatterns from registry: #{length(patterns)}")
-
-# Find SQL injection pattern
-sql_pattern = Enum.find(patterns, fn p ->
-  String.contains?(p.id || "", "sql") && String.contains?(p.id || "", "concat")
-end)
+# Get the Python SQL injection pattern
+patterns = PatternRegistry.get_patterns_for_language("python")
+sql_pattern = Enum.find(patterns, fn p -> String.contains?(p.id || "", "sql") end)
 
 if sql_pattern do
-  IO.puts("\n✅ Found SQL injection pattern:")
-  IO.puts("ID: #{sql_pattern.id}")
-  IO.puts("Type: #{inspect(sql_pattern.__struct__)}")
-  IO.puts("Has regex? #{not is_nil(sql_pattern.regex)}")
+  IO.puts("Found SQL pattern: #{sql_pattern.id}")
+  IO.puts("Pattern type: #{sql_pattern.type}")
+  IO.puts("Pattern struct: #{inspect(sql_pattern.__struct__)}")
   
-  # Check if it's already enhanced
-  if sql_pattern.__struct__ == RsolvApi.Security.ASTPattern do
-    IO.puts("Already enhanced? YES")
-    IO.puts("Has ast_rules? #{not is_nil(Map.get(sql_pattern, :ast_rules))}")
-  else
-    IO.puts("Already enhanced? NO (still a Pattern)")
+  # Try to enhance it
+  enhanced = PatternAdapter.enhance_pattern(sql_pattern)
+  IO.puts("\nEnhanced pattern struct: #{inspect(enhanced.__struct__)}")
+  IO.puts("Has ast_rules? #{not is_nil(Map.get(enhanced, :ast_rules))}")
+  
+  if enhanced.ast_rules do
+    IO.puts("AST rules: #{inspect(enhanced.ast_rules)}")
   end
-end
-
-# Now test what PatternAdapter does
-IO.puts("\n🔧 Testing PatternAdapter:")
-adapter_patterns = RsolvApi.AST.PatternAdapter.load_patterns_for_language("python")
-IO.puts("Patterns from adapter: #{length(adapter_patterns)}")
-
-# Find SQL pattern from adapter
-adapter_sql = Enum.find(adapter_patterns, fn p ->
-  String.contains?(p.id || "", "sql") && String.contains?(p.id || "", "concat") 
-end)
-
-if adapter_sql do
-  IO.puts("\n✅ Found SQL pattern from adapter:")
-  IO.puts("ID: #{adapter_sql.id}")
-  IO.puts("Has ast_pattern? #{not is_nil(Map.get(adapter_sql, :ast_pattern))}")
   
-  if ast_pattern = Map.get(adapter_sql, :ast_pattern) do
-    IO.puts("\nast_pattern structure:")
-    IO.inspect(ast_pattern, pretty: true, limit: :infinity)
-  else
-    IO.puts("\n❌ No ast_pattern field! This is the problem.")
+  # Try to convert to matcher format
+  matcher_format = PatternAdapter.convert_to_matcher_format(enhanced)
+  IO.puts("\nMatcher format keys: #{inspect(Map.keys(matcher_format))}")
+  IO.puts("Has ast_pattern? #{not is_nil(matcher_format[:ast_pattern])}")
+  
+  if matcher_format[:ast_pattern] do
+    IO.puts("AST pattern: #{inspect(matcher_format[:ast_pattern])}")
   end
 else
-  IO.puts("\n❌ SQL pattern not found in adapter output!")
+  IO.puts("No SQL pattern found")
 end
-
-IO.puts("\n💡 Summary:")
-IO.puts("If ast_pattern is nil, the matcher will skip the pattern")
-IO.puts("This explains why we get 0 vulnerabilities")
+EOF < /dev/null

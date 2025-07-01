@@ -32,6 +32,8 @@ defmodule RSOLV.Application do
       RsolvApi.AST.PortSupervisor,
       RsolvApi.AST.ParserRegistry,
       RsolvApi.AST.AnalysisService,
+      # Start the Validation Cache
+      RsolvApi.Cache.ValidationCache,
       # Start the Endpoint (http/https)
       RSOLVWeb.Endpoint
       # Start a worker by calling: RSOLV.Worker.start_link(arg)

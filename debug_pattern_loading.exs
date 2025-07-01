@@ -1,152 +1,70 @@
-#!/usr/bin/env mix run
+# Debug pattern loading issue
+IO.puts("🔍 Debugging Pattern Loading")
+IO.puts("=" <> String.duplicate("=", 60))
 
-# Debug script to test pattern loading for AST analysis
-# Run with: mix run debug_pattern_loading.exs
-
-require Logger
-
-alias RsolvApi.AST.PatternAdapter
-
-IO.puts "🔍 Debug: Testing Pattern Loading for AST Analysis"
-IO.puts String.duplicate("=", 60)
-
-# Test pattern loading for Python
-IO.puts "\n📊 Testing Python pattern loading..."
-
-try do
-  patterns = PatternAdapter.load_patterns_for_language("python")
-  IO.puts "   ✅ Successfully loaded #{length(patterns)} Python patterns"
-  
-  # Look for SQL injection patterns specifically
-  sql_patterns = Enum.filter(patterns, fn pattern ->
-    String.contains?(pattern.id || "", "sql") || 
-    String.contains?(String.downcase(pattern.title || ""), "sql")
+# Test 1: Check Application.spec
+IO.puts("\n1. Testing Application.spec(:rsolv_api, :modules)")
+modules = Application.spec(:rsolv_api, :modules)
+IO.puts("   Result: #{inspect(modules)}")
+if is_list(modules) do
+  IO.puts("   Module count: #{length(modules)}")
+  pattern_modules = Enum.filter(modules, fn m -> 
+    String.contains?(to_string(m), "Patterns")
   end)
-  
-  IO.puts "   📋 Found #{length(sql_patterns)} SQL-related patterns:"
-  
-  for pattern <- Enum.take(sql_patterns, 5) do
-    IO.puts "      - #{pattern.id}: #{pattern.title}"
-    IO.puts "        Severity: #{pattern.severity}"
-    
-    if Map.has_key?(pattern, :ast_rules) && pattern.ast_rules do
-      IO.puts "        AST Rules: #{inspect(Map.keys(pattern.ast_rules))}"
-    end
-    
-    if Map.has_key?(pattern, :context_rules) && pattern.context_rules do
-      IO.puts "        Context Rules: #{inspect(Map.keys(pattern.context_rules))}"
-    end
-  end
-  
-  # Test a specific pattern that should detect SQL concatenation
-  concat_patterns = Enum.filter(patterns, fn pattern ->
-    pattern.id == "py-sql-injection-concat" || 
-    String.contains?(pattern.id || "", "concat") ||
-    String.contains?(String.downcase(pattern.title || ""), "concat")
-  end)
-  
-  IO.puts "\n🎯 SQL concatenation patterns: #{length(concat_patterns)}"
-  for pattern <- concat_patterns do
-    IO.puts "   - #{pattern.id}: #{pattern.title}"
-    if pattern.ast_rules do
-      IO.puts "     AST Rules Keys: #{inspect(Map.keys(pattern.ast_rules))}"
-    end
-  end
-  
-rescue
-  error ->
-    IO.puts "   ❌ Error loading Python patterns: #{inspect(error)}"
-    IO.puts "   Stack trace:"
-    IO.puts Exception.format_stacktrace(__STACKTRACE__)
+  IO.puts("   Pattern modules: #{length(pattern_modules)}")
 end
 
-# Test the enhanced pattern API directly
-IO.puts "\n🔧 Testing Enhanced Pattern API directly..."
+# Test 2: Check if application is loaded
+IO.puts("\n2. Testing Application.loaded_applications()")
+loaded = Application.loaded_applications()
+rsolv_app = Enum.find(loaded, fn {app, _, _} -> app == :rsolv_api end)
+IO.puts("   RSOLV API loaded? #{not is_nil(rsolv_app)}")
 
-try do
-  # This is what the AST controller should use
-  case RsolvApi.Security.PatternServer.list_patterns("python", "enhanced") do
-    {:ok, api_patterns} ->
-      IO.puts "   ✅ Pattern API returned #{length(api_patterns)} patterns"
-      
-      # Check if we have the right format
-      sample = List.first(api_patterns)
-      if sample do
-        IO.puts "   📋 Sample pattern structure:"
-        IO.puts "      ID: #{sample[:id]}"
-        IO.puts "      Title: #{sample[:title]}"
-        IO.puts "      Has AST rules: #{Map.has_key?(sample, :ast_rules)}"
-        IO.puts "      Has context rules: #{Map.has_key?(sample, :context_rules)}"
-      end
-      
-    {:error, reason} ->
-      IO.puts "   ❌ Pattern API error: #{inspect(reason)}"
-  end
-rescue
-  error ->
-    IO.puts "   ❌ Error calling Pattern API: #{inspect(error)}"
-    IO.puts "   Stack trace:"
-    IO.puts Exception.format_stacktrace(__STACKTRACE__)
+# Test 3: Try to ensure application is started
+IO.puts("\n3. Ensuring application is started")
+case Application.ensure_all_started(:rsolv_api) do
+  {:ok, apps} ->
+    IO.puts("   Started apps: #{inspect(apps)}")
+  {:error, reason} ->
+    IO.puts("   Error: #{inspect(reason)}")
 end
 
-# Test AST pattern matcher directly
-IO.puts "\n🧪 Testing AST Pattern Matcher directly..."
-
+# Test 4: Now check PatternRegistry again
+IO.puts("\n4. Testing PatternRegistry after app start")
 try do
-  # Create a simple AST for our test case
-  test_ast = %{
-    "type" => "Module",
-    "body" => [
-      %{
-        "type" => "Assign",
-        "targets" => [%{"type" => "Name", "id" => "query"}],
-        "value" => %{
-          "type" => "BinOp",
-          "left" => %{"type" => "Constant", "value" => "SELECT * FROM users WHERE id = "},
-          "op" => %{"type" => "Add"},
-          "right" => %{"type" => "Name", "id" => "user_id"}
-        }
-      }
-    ]
-  }
-  
-  patterns = PatternAdapter.load_patterns_for_language("python")
+  patterns = RsolvApi.Security.PatternRegistry.get_patterns_for_language("python")
+  IO.puts("   Patterns loaded: #{length(patterns)}")
   
   if length(patterns) > 0 do
-    alias RsolvApi.AST.ASTPatternMatcher
-    
-    IO.puts "   🎯 Testing pattern matching against sample AST..."
-    
-    case ASTPatternMatcher.match_multiple(test_ast, patterns, "python") do
-      {:ok, matches} ->
-        IO.puts "   ✅ Pattern matching completed successfully"
-        IO.puts "   🔍 Found #{length(matches)} matches:"
-        
-        for match <- matches do
-          IO.puts "      - Type: #{match.type}"
-          IO.puts "        Pattern ID: #{match.pattern_id || 'N/A'}"
-          IO.puts "        Location: Line #{match.line || 'N/A'}, Col #{match.column || 'N/A'}"
-          if match.context do
-            IO.puts "        Context: #{inspect(match.context)}"
-          end
-        end
-        
-      {:error, reason} ->
-        IO.puts "   ❌ Pattern matching failed: #{inspect(reason)}"
-    end
-  else
-    IO.puts "   ⚠️  No patterns loaded for testing"
+    first = hd(patterns)
+    IO.puts("   First pattern ID: #{first.id}")
   end
-  
 rescue
-  error ->
-    IO.puts "   ❌ Error testing AST matcher: #{inspect(error)}"
-    IO.puts "   Stack trace:"
-    IO.puts Exception.format_stacktrace(__STACKTRACE__)
+  e ->
+    IO.puts("   Error: #{Exception.message(e)}")
 end
 
-IO.puts "\n✅ Debug script completed!"
-IO.puts "\nNext steps:"
-IO.puts "1. Check if pattern loading is working correctly"
-IO.puts "2. Verify AST pattern matcher can find vulnerabilities"
-IO.puts "3. Test the full AST analysis pipeline"
+# Test 5: Check PatternServer
+IO.puts("\n5. Checking PatternServer status")
+case Process.whereis(RsolvApi.Security.PatternServer) do
+  nil -> IO.puts("   PatternServer NOT running")
+  pid -> 
+    IO.puts("   PatternServer running at #{inspect(pid)}")
+    # Try to get patterns from server
+    try do
+      patterns = GenServer.call(pid, {:get_patterns, "python"})
+      IO.puts("   Server returned #{length(patterns)} patterns")
+    rescue
+      e -> IO.puts("   Server call error: #{Exception.message(e)}")
+    end
+end
+
+# Test 6: Direct module check
+IO.puts("\n6. Checking pattern modules directly")
+sql_module = RsolvApi.Security.Patterns.Python.SqlInjectionConcat
+IO.puts("   Module exists? #{Code.ensure_loaded?(sql_module)}")
+if Code.ensure_loaded?(sql_module) do
+  pattern = sql_module.pattern()
+  IO.puts("   Pattern ID: #{pattern.id}")
+  IO.puts("   Pattern struct: #{inspect(pattern.__struct__)}")
+end
