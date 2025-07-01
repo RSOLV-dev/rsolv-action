@@ -158,7 +158,7 @@ async function getIssuesWithLabel(
     });
     
     // Filter out pull requests (GitHub API returns both issues and PRs)
-    const issues = data.filter((issue: GitHubIssue) => !issue.pull_request);
+    const issues = data.filter((issue: any) => !issue.pull_request) as GitHubIssue[];
     
     return issues;
   } catch (error) {

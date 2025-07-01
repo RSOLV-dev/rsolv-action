@@ -41,8 +41,28 @@ const [, owner, repo, issueNumber] = match;
 async function main() {
   console.log(`🚀 Starting RSOLV demo for issue: ${owner}/${repo}#${issueNumber}`);
   
+  // Create basic config for demo
+  const config: ActionConfig = {
+    apiKey: process.env.RSOLV_API_KEY || 'demo-key',
+    configPath: 'rsolv.config.json',
+    issueLabel: 'rsolv:fix',
+    repoToken: GITHUB_TOKEN,
+    aiProvider: {
+      provider: 'anthropic',
+      model: 'claude-3-sonnet-20240229',
+      apiKey: process.env.ANTHROPIC_API_KEY
+    },
+    containerConfig: {
+      enabled: false
+    },
+    securitySettings: {
+      scanDependencies: true,
+      preventSecretLeakage: true
+    }
+  };
+
   // Initialize GitHub client
-  const octokit = getGitHubClient({ repoToken: GITHUB_TOKEN });
+  const octokit = getGitHubClient(config);
   
   try {
     // Get issue details
@@ -56,12 +76,16 @@ async function main() {
     // Create issue context
     const issueContext: IssueContext = {
       id: issueNumber,
+      number: issue.number,
       source: 'github',
       title: issue.title,
       body: issue.body || '',
       labels: issue.labels?.map((label: any) => 
         typeof label === 'string' ? label : label.name
       ) || [],
+      assignees: issue.assignees?.map((a: any) => a.login) || [],
+      createdAt: issue.created_at,
+      updatedAt: issue.updated_at,
       repository: {
         owner,
         name: repo,
@@ -141,25 +165,23 @@ async function main() {
     console.log('🔍 Analyzing issue...');
     const analysis = await analyzeIssue(issueContext, config);
     console.log('✅ Issue analysis complete:');
-    console.log(`  Complexity: ${analysis.complexity}`);
-    console.log(`  Estimated Time: ${analysis.estimatedTime} minutes`);
-    console.log(`  Related Files: ${analysis.relatedFiles?.join(', ') || 'None'}`);
+    console.log(`  Complexity: ${analysis.estimatedComplexity}`);
+    console.log(`  Suggested Approach: ${analysis.suggestedApproach}`);
+    console.log(`  Files to Modify: ${analysis.filesToModify?.join(', ') || 'None'}`);
     
     // Generate solution
     console.log('🧠 Generating solution...');
     const solution = await generateSolution(issueContext, analysis, config);
     console.log('✅ Solution generated:');
-    console.log(`  Title: ${solution.title}`);
-    console.log(`  Files to change: ${solution.files.length}`);
+    console.log(`  Success: ${solution.success}`);
+    console.log(`  Message: ${solution.message}`);
+    console.log(`  Changes: ${solution.changes ? Object.keys(solution.changes).length : 0} files`);
     
     // Create pull request
     console.log('🔄 Creating pull request...');
     const result = await createPullRequest(
       issueContext,
-      solution.files.reduce((acc, file) => {
-        acc[file.path] = file.changes;
-        return acc;
-      }, {}),
+      solution.changes || {},
       analysis,
       config
     );

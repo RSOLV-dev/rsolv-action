@@ -557,11 +557,15 @@ export class VulnerabilityTestGenerator {
         }
       };
       
-      const generatedFiles = [
+      const generatedFiles: Array<{
+        path: string;
+        content: string;
+        type: 'unit' | 'integration' | 'e2e';
+      }> = [
         {
           path: `test/${options.vulnerabilityType.toLowerCase()}-vulnerability.test.${options.language === 'typescript' ? 'ts' : 'js'}`,
           content: this.generateTestFile(testSuite, options),
-          type: 'unit' as const
+          type: 'unit'
         }
       ];
       
@@ -569,7 +573,7 @@ export class VulnerabilityTestGenerator {
         generatedFiles.push({
           path: `test/e2e/${options.vulnerabilityType.toLowerCase()}-e2e.test.${options.language === 'typescript' ? 'ts' : 'js'}`,
           content: this.generateE2ETestFile(testSuite, options),
-          type: 'e2e' as const
+          type: 'e2e'
         });
       }
       
