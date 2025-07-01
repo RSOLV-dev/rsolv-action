@@ -67,6 +67,10 @@ inputs:
     description: 'Enable git-based in-place editing for true file modifications (ADR-012)'
     required: false
     default: 'true'
+  enable_enhanced_context:
+    description: 'Enable enhanced context gathering (uses more tokens but may improve accuracy)'
+    required: false
+    default: 'false'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -89,6 +93,7 @@ runs:
     RSOLV_MAX_ISSUES: ${{ inputs.max_issues }}
     RSOLV_ISSUE_NUMBER: ${{ inputs.issue_number }}
     RSOLV_USE_GIT_BASED_EDITING: ${{ inputs.use_git_based_editing }}
+    RSOLV_ENABLE_ENHANCED_CONTEXT: ${{ inputs.enable_enhanced_context }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'

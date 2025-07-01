@@ -86,11 +86,11 @@ async function run(): Promise<ActionStatus> {
       issues = issues.slice(0, config.maxIssues);
     }
     
-    // Process issues with AI (enable security analysis and enhanced context by default)
+    // Process issues with AI (enable security analysis by default, but not enhanced context)
     const processingOptions = {
       enableSecurityAnalysis: config.enableSecurityAnalysis !== false, // Default to true
-      enableEnhancedContext: true, // Enable Claude Code enhanced context gathering
-      verboseLogging: process.env.DEBUG === 'true'
+      enableEnhancedContext: process.env.RSOLV_ENABLE_ENHANCED_CONTEXT === 'true', // Opt-in to reduce token usage
+      verboseLogging: process.env.DEBUG === 'true' || process.env.RSOLV_DEBUG === 'true'
     };
     
     // Add overall timeout to prevent hanging, but allow time for complex analysis
