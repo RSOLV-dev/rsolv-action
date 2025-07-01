@@ -8,8 +8,9 @@ import { createPullRequestFromGit } from '../github/pr-git.js';
 // import { getAiClient } from './client.js';
 import { EnhancedClaudeCodeAdapter } from './adapters/claude-code-enhanced.js';
 import { GitBasedClaudeCodeAdapter } from './adapters/claude-code-git.js';
+import { SinglePassClaudeCodeAdapter } from './adapters/claude-code-single-pass.js';
 import { processIssueWithGit } from './git-based-processor.js';
-import { AIConfig } from './types.js';
+import { AIConfig, IssueAnalysis } from './types.js';
 import { sanitizeErrorMessage } from '../utils/error-sanitizer.js';
 
 /**
@@ -145,8 +146,57 @@ async function processIssue(
     let contextGatheringTime;
     let deepContext;
     
-    if (options.enableEnhancedContext && config.aiProvider.provider === 'claude-code') {
-      // Use enhanced context gathering
+    // Check if we should use Claude Code single-pass mode
+    if (!options.enableEnhancedContext && config.aiProvider.provider === 'claude-code') {
+      // Use single-pass Claude Code adapter for optimized token usage
+      logger.info('Using single-pass Claude Code adapter for optimized processing');
+      
+      const aiConfig: AIConfig = {
+        provider: config.aiProvider.provider as any,
+        apiKey: config.aiProvider.apiKey,
+        model: config.aiProvider.model,
+        temperature: config.aiProvider.temperature,
+        maxTokens: config.aiProvider.maxTokens,
+        useVendedCredentials: config.aiProvider.useVendedCredentials,
+        claudeCodeConfig: {
+          ...config.claudeCodeConfig,
+          enableDeepContext: false,
+          contextDepth: 'shallow',
+          timeout: 420000, // 7 minutes for single-pass
+          verboseLogging: options.verboseLogging || false
+        }
+      };
+      
+      // Get credential manager if using vended credentials
+      let credentialManager;
+      if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+        logger.info('Getting credential manager singleton for vended credentials');
+        const { CredentialManagerSingleton } = await import('../credentials/singleton.js');
+        credentialManager = await CredentialManagerSingleton.getInstance(config.rsolvApiKey);
+      }
+      
+      const contextStart = Date.now();
+      const adapter = new SinglePassClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+      
+      // Convert AnalysisData to IssueAnalysis
+      const issueAnalysis: IssueAnalysis = {
+        summary: `${analysisData.issueType} issue requiring ${analysisData.estimatedComplexity} fix`,
+        complexity: analysisData.estimatedComplexity === 'simple' ? 'low' : 
+                   analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
+        estimatedTime: 60, // default estimate
+        potentialFixes: [analysisData.suggestedApproach],
+        recommendedApproach: analysisData.suggestedApproach,
+        relatedFiles: analysisData.filesToModify
+      };
+      
+      // Generate solution with integrated context gathering
+      solution = await adapter.generateSolutionWithContext(issue, issueAnalysis, undefined, securityAnalysis);
+      contextGatheringTime = Date.now() - contextStart;
+      
+      logger.info(`Single-pass processing completed in ${contextGatheringTime}ms`);
+    }
+    else if (options.enableEnhancedContext && config.aiProvider.provider === 'claude-code') {
+      // Use enhanced context gathering (existing code)
       const aiConfig: AIConfig = {
         provider: config.aiProvider.provider as any,
         apiKey: config.aiProvider.apiKey,
