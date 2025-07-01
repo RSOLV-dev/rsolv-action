@@ -250,7 +250,7 @@ export class PatternAPIClient {
         return null;
       } catch (error) {
         logger.warn(`Failed to compile regex for pattern ${reconstructedPattern.id}: ${item}`);
-        logger.error(error);
+        logger.error(String(error));
         return null;
       }
     }).filter(Boolean) as RegExp[];

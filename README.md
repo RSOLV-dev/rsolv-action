@@ -128,25 +128,63 @@ This will:
 
 See [docs/SCAN-MODE.md](docs/SCAN-MODE.md) for complete documentation.
 
-## Enhanced Context Gathering (Claude Code)
+## Enhanced Context and Performance Optimizations
 
-RSOLV now supports enhanced context gathering using Claude Code for deeper repository understanding:
+RSOLV includes several features for optimizing performance and token usage:
+
+### Single-Pass Processing (Default)
+
+RSOLV now uses single-pass processing by default, combining context gathering and solution generation:
 
 ```yaml
-# Enable enhanced context in your workflow
-env:
-  RSOLV_AI_PROVIDER: 'claude-code'
-  RSOLV_ENABLE_DEEP_CONTEXT: 'true'
-  RSOLV_ENABLE_ULTRA_THINK: 'true'
-  RSOLV_CONTEXT_DEPTH: 'ultra'  # shallow, medium, deep, or ultra
+# Single-pass is enabled by default - no configuration needed
+# To enable enhanced context (two-pass) mode:
+- uses: RSOLV-dev/rsolv-action@v1
+  with:
+    enable_enhanced_context: 'true'
 ```
 
 ### Features
 
-- **Deep Repository Analysis**: Comprehensive understanding of architecture, patterns, and conventions
-- **Ultra-Think Mode**: Uses `ultrathink` for more thorough analysis and better solutions
-- **Context Caching**: Improves performance by caching repository analysis
-- **Customizable Exploration**: Configure which paths and patterns to analyze
+- **Single-Pass Processing**: Reduces token usage by ~50% and processing time by 40-60%
+- **Credential Singleton**: Prevents multiple API authentications, improving reliability
+- **AI Conversation Logging**: Debug AI interactions for troubleshooting (development only)
+- **Enhanced Pattern Support**: Supports latest API patterns with regex field handling
+
+### Advanced Configuration
+
+For scenarios requiring deeper analysis, you can enable enhanced context:
+
+```yaml
+# Enable enhanced context for complex issues
+- uses: RSOLV-dev/rsolv-action@v1
+  with:
+    api_key: ${{ secrets.RSOLV_API_KEY }}
+    enable_enhanced_context: 'true'  # Opt-in for deeper analysis
+  env:
+    RSOLV_CONTEXT_DEPTH: 'deep'  # shallow, medium, deep, or ultra
+```
+
+### Debugging AI Conversations (Development Only)
+
+For debugging AI interactions during development:
+
+```yaml
+# Enable conversation logging
+env:
+  AI_CONVERSATION_LOG_LEVEL: 'full'  # or 'summary' or 'none'
+  AI_CONVERSATION_LOG_DIR: '/tmp/ai-conversation-logs'
+
+# Upload logs as artifacts
+- name: Upload AI Conversation Logs
+  uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: ai-conversation-logs
+    path: /tmp/ai-conversation-logs/
+```
+
+**Note**: This feature is for development only and should be removed before production use.
 
 ### Configuration
 
