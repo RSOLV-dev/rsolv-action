@@ -32,15 +32,17 @@ defmodule RSOLVWeb.Api.V1.PatternJsonEncodingTest do
       end
     end
     
-    test "shows current enhanced format fails due to regex encoding", %{conn: conn} do
-      # When requesting enhanced format, the API should fail
-      # because it tries to encode patterns with regex objects
+    test "shows current enhanced format succeeds with JSONSerializer", %{conn: conn} do
+      # When requesting enhanced format, the API uses JSONSerializer
+      # which properly handles regex objects
       
-      # This currently returns 500 error
       conn = get(conn, "/api/v1/patterns?language=elixir&format=enhanced")
       
-      # Current behavior: returns 500 error
-      assert json_response(conn, 500)
+      # Should return 200 with properly serialized patterns
+      response = json_response(conn, 200)
+      assert response["metadata"]["format"] == "enhanced"
+      assert response["metadata"]["enhanced"] == true
+      assert is_list(response["patterns"])
     end
   end
   
@@ -63,9 +65,9 @@ defmodule RSOLVWeb.Api.V1.PatternJsonEncodingTest do
         pattern: %{
           "__type__" => "regex",
           "source" => "\\.(query|execute|exec|run|all|get)",
-          "flags" => ["unicode"]
+          "flags" => []  # The regex itself doesn't have unicode flag
         },
-        flags: [:unicode]
+        flags: [:unicode]  # This is a separate field
       }
     end
     
@@ -81,12 +83,12 @@ defmodule RSOLVWeb.Api.V1.PatternJsonEncodingTest do
         }
       }
       
-      # Native JSON encoding should work
-      {:ok, json} = JSON.encode(prepared_pattern)
+      # Native JSON encoding should work with Jason
+      json = Jason.encode!(prepared_pattern)
       assert is_binary(json)
       
       # Should be able to decode back
-      {:ok, decoded} = JSON.decode(json)
+      decoded = Jason.decode!(json)
       assert decoded["pattern"]["__type__"] == "regex"
       assert decoded["pattern"]["source"] == "\\.(query|execute|exec|run|all|get)"
     end
