@@ -371,6 +371,7 @@ defmodule RsolvApi.AST.AnalysisService do
           options
         )
         
+        Logger.debug("Match confidence: #{confidence}, min_confidence: #{Map.get(match, :min_confidence, 0.7)}, match: #{inspect(match)}")
         
         # Only report if confidence meets threshold
         # Use pattern-specific threshold if available, otherwise default

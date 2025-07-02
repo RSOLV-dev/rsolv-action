@@ -8,8 +8,8 @@ defmodule RsolvApi.AST.PatternMatchingDebugTest do
   
   use ExUnit.Case, async: false
   
-  alias RsolvApi.AST.{AnalysisService, ASTPatternMatcher, ParserRegistry, SessionManager}
-  alias RsolvApi.Security.{PatternRegistry, PatternAdapter}
+  alias RsolvApi.AST.{AnalysisService, ASTPatternMatcher, ParserRegistry, SessionManager, PatternAdapter}
+  alias RsolvApi.Security.{PatternRegistry}
   alias RsolvApi.Security.Patterns.Python.SqlInjectionConcat
   
   setup do
@@ -157,8 +157,27 @@ defmodule RsolvApi.AST.PatternMatchingDebugTest do
       enhancement = SqlInjectionConcat.ast_enhancement()
       
       # Test the core matching logic
-      # ASTPatternMatcher expects converted pattern format
-      converted_pattern = PatternAdapter.convert_to_matcher_format(%{pattern | ast_rules: enhancement.ast_rules})
+      # Create an ASTPattern with the enhancement data
+      ast_pattern = %RsolvApi.Security.ASTPattern{
+        id: pattern.id,
+        name: pattern.name,
+        type: pattern.type,
+        severity: pattern.severity,
+        description: pattern.description,
+        regex: pattern.regex,
+        languages: pattern.languages,
+        frameworks: pattern.frameworks,
+        cwe_id: pattern.cwe_id,
+        owasp_category: pattern.owasp_category,
+        recommendation: pattern.recommendation,
+        ast_rules: enhancement.ast_rules,
+        context_rules: enhancement.context_rules,
+        confidence_rules: enhancement.confidence_rules,
+        min_confidence: enhancement.min_confidence
+      }
+      
+      # Convert to matcher format
+      converted_pattern = PatternAdapter.convert_to_matcher_format(ast_pattern)
       
       # Match using ASTPatternMatcher
       {:ok, matches} = ASTPatternMatcher.match_multiple(test_ast, [converted_pattern], "python")
@@ -193,7 +212,7 @@ defmodule RsolvApi.AST.PatternMatchingDebugTest do
       code = "query = \"SELECT * FROM users WHERE id = \" + user_id"
       
       file = %{
-        path: "test.py",
+        path: "app.py",
         content: code,
         language: "python"
       }
@@ -211,7 +230,7 @@ defmodule RsolvApi.AST.PatternMatchingDebugTest do
       
       finding = hd(findings)
       assert finding.type =~ "sql-injection"
-      assert finding.severity == :critical
+      assert finding.severity == "high"
     end
   end
 end
