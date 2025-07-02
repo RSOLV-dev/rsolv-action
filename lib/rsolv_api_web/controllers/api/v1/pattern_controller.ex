@@ -5,7 +5,7 @@ defmodule RSOLVWeb.Api.V1.PatternController do
   alias RsolvApi.Security.ASTPattern
   alias RsolvApi.Security.Pattern
   alias RsolvApi.Security.DemoPatterns
-  alias RSOLVApi.Security.Patterns.JSONSerializer
+  alias RsolvApi.Security.Patterns.JSONSerializer
   alias RSOLV.Accounts
   
   @doc """
@@ -37,14 +37,14 @@ defmodule RSOLVWeb.Api.V1.PatternController do
       Logger.info("Has API key: #{has_api_key}")
       
       # Get patterns based on authentication
-      patterns = if has_api_key do
+      {patterns, is_demo} = if has_api_key do
         # Return all patterns for the language
         Logger.info("Getting enhanced patterns for #{language}")
-        ASTPattern.get_all_patterns_for_language(language, format)
+        {ASTPattern.get_all_patterns_for_language(language, format), false}
       else
         # Return only demo patterns
         Logger.info("Getting demo patterns for #{language}")
-        DemoPatterns.get_demo_patterns(language)
+        {DemoPatterns.get_demo_patterns(language), true}
       end
       
       Logger.info("Retrieved #{length(patterns)} patterns")
@@ -52,7 +52,9 @@ defmodule RSOLVWeb.Api.V1.PatternController do
       # Convert patterns to API format (removing tier information)
       formatted_patterns = Enum.map(patterns, fn pattern ->
         Logger.debug("Formatting pattern: #{inspect(pattern.id)}")
-        formatted = format_pattern_without_tier(pattern, format)
+        # Demo patterns should never have enhanced format
+        effective_format = if is_demo, do: :standard, else: format
+        formatted = format_pattern_without_tier(pattern, effective_format)
         Logger.debug("Formatted pattern keys: #{inspect(Map.keys(formatted))}")
         
         # Add vulnerability metadata if requested
@@ -181,24 +183,27 @@ defmodule RSOLVWeb.Api.V1.PatternController do
   
   # Handle ASTPattern structs (returned by enhanced format)
   defp format_pattern_without_tier(%RsolvApi.Security.ASTPattern{} = ast_pattern, :enhanced) do
-    # Convert ASTPattern to API format directly
+    # Convert ASTPattern to API format with camelCase for enhanced fields
     %{
-      id: ast_pattern.id,
-      name: ast_pattern.name,
-      type: ast_pattern.type,
-      severity: ast_pattern.severity,
-      description: ast_pattern.description,
-      regex: ast_pattern.regex,
-      languages: ast_pattern.languages,
-      frameworks: ast_pattern.frameworks,
-      cwe_id: ast_pattern.cwe_id,
-      owasp_category: ast_pattern.owasp_category,
-      recommendation: ast_pattern.recommendation,
-      # Include enhanced fields
-      ast_rules: ast_pattern.ast_rules,
-      context_rules: ast_pattern.context_rules,
-      confidence_rules: ast_pattern.confidence_rules,
-      min_confidence: ast_pattern.min_confidence
+      "id" => ast_pattern.id,
+      "name" => ast_pattern.name,
+      "type" => ast_pattern.type,
+      "severity" => ast_pattern.severity,
+      "description" => ast_pattern.description,
+      "regex" => ast_pattern.regex,
+      "regexPatterns" => if(ast_pattern.regex, do: [ast_pattern.regex], else: []),
+      "languages" => ast_pattern.languages,
+      "frameworks" => ast_pattern.frameworks,
+      "cweId" => ast_pattern.cwe_id,
+      "owaspCategory" => ast_pattern.owasp_category,
+      "recommendation" => ast_pattern.recommendation,
+      "examples" => Map.get(ast_pattern, :examples, %{safe: [], vulnerable: []}),
+      "supportsAst" => true,
+      # Include enhanced fields in camelCase
+      "astRules" => ast_pattern.ast_rules,
+      "contextRules" => ast_pattern.context_rules,
+      "confidenceRules" => ast_pattern.confidence_rules,
+      "minConfidence" => ast_pattern.min_confidence
     }
   end
   
@@ -206,8 +211,23 @@ defmodule RSOLVWeb.Api.V1.PatternController do
   defp format_pattern_without_tier(%Pattern{} = pattern, format) do
     base_format = Pattern.to_api_format(pattern)
     
-    # Remove tier field
-    formatted = Map.delete(base_format, :tier)
+    # Convert to camelCase string keys
+    formatted = %{
+      "id" => base_format.id,
+      "name" => base_format.name,
+      "type" => base_format.type,
+      "severity" => base_format.severity,
+      "description" => base_format.description,
+      "regex" => base_format.regex_patterns,
+      "regexPatterns" => base_format.regex_patterns || [],
+      "languages" => base_format.languages,
+      "frameworks" => Map.get(base_format, :frameworks, []),
+      "cweId" => base_format.cwe_id,
+      "owaspCategory" => base_format.owasp_category,
+      "recommendation" => base_format.recommendation,
+      "examples" => base_format.examples || [],
+      "supportsAst" => Map.get(base_format, :supports_ast, false)
+    }
     
     # Add enhanced fields if requested
     if format == :enhanced do
@@ -223,20 +243,20 @@ defmodule RSOLVWeb.Api.V1.PatternController do
           # Add enhancement fields directly to the pattern
           # Some patterns use different structure - normalize them
           if Map.has_key?(enhancement, :ast_rules) do
-            # Standard structure with ast_rules, context_rules, confidence_rules
+            # Standard structure with ast_rules, context_rules, confidence_rules in camelCase
             formatted
-            |> Map.put(:ast_rules, enhancement[:ast_rules])
-            |> Map.put(:context_rules, enhancement[:context_rules])
-            |> Map.put(:confidence_rules, enhancement[:confidence_rules])
-            |> Map.put(:min_confidence, enhancement[:min_confidence])
+            |> Map.put("astRules", enhancement[:ast_rules])
+            |> Map.put("contextRules", Map.get(enhancement, :context_rules, %{}))
+            |> Map.put("confidenceRules", Map.get(enhancement, :confidence_rules, %{}))
+            |> Map.put("minConfidence", enhancement[:min_confidence])
           else
             # Legacy structure with just rules array - convert to standard format
             # These patterns have a different structure that needs mapping
             formatted
-            |> Map.put(:ast_rules, enhancement[:rules])
-            |> Map.put(:context_rules, %{})
-            |> Map.put(:confidence_rules, %{})
-            |> Map.put(:min_confidence, enhancement[:min_confidence] || 0.7)
+            |> Map.put("astRules", enhancement[:rules])
+            |> Map.put("contextRules", %{})
+            |> Map.put("confidenceRules", %{})
+            |> Map.put("minConfidence", enhancement[:min_confidence] || 0.7)
           end
         rescue
           _ -> formatted
@@ -249,9 +269,10 @@ defmodule RSOLVWeb.Api.V1.PatternController do
           ast_pattern = RsolvApi.Security.ASTPattern.enhance(pattern)
           
           formatted
-          |> Map.put(:ast_rules, ast_pattern.ast_rules)
-          |> Map.put(:confidence_rules, ast_pattern.confidence_rules)
-          |> Map.put(:min_confidence, ast_pattern.min_confidence)
+          |> Map.put("astRules", ast_pattern.ast_rules)
+          |> Map.put("contextRules", ast_pattern.context_rules || %{})
+          |> Map.put("confidenceRules", ast_pattern.confidence_rules)
+          |> Map.put("minConfidence", ast_pattern.min_confidence)
         rescue
           e ->
             Logger.debug("Failed to enhance pattern #{pattern.id}: #{inspect(e)}")
@@ -303,7 +324,7 @@ defmodule RSOLVWeb.Api.V1.PatternController do
     end
   end
   
-  defp add_vulnerability_metadata(formatted_pattern, original_pattern) do
+  defp add_vulnerability_metadata(formatted_pattern, _original_pattern) do
     # Try to get metadata from the pattern module first
     pattern_module = pattern_id_to_module(formatted_pattern[:id] || formatted_pattern["id"])
     

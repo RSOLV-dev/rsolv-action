@@ -11,7 +11,7 @@ defmodule RsolvApi.AST.EnhancedSandbox do
   """
   
   require Logger
-  alias RsolvApi.AST.Sandbox
+  alias RsolvApi.AST.{Sandbox, AuditLogger}
   
   # Suspicious patterns that might indicate malicious input
   @suspicious_patterns [
@@ -151,6 +151,12 @@ defmodule RsolvApi.AST.EnhancedSandbox do
         :ok
       pattern ->
         Logger.warning("Suspicious pattern detected: #{inspect(pattern)}")
+        # Log to AuditLogger for audit trail
+        AuditLogger.log_event(:input_validation_failed, %{
+          language: language,
+          reason: {:suspicious_pattern, pattern},
+          input_preview: String.slice(input, 0, 100)
+        })
         {:error, {:suspicious_pattern, pattern}}
     end
   end
@@ -218,6 +224,11 @@ defmodule RsolvApi.AST.EnhancedSandbox do
           [{^key, count, timestamp}] when now - timestamp < 60 ->
             # Same minute
             if count >= 100 do  # 100 requests per minute
+              AuditLogger.log_event(:rate_limit_exceeded, %{
+                language: config.type,
+                count: count,
+                timestamp: timestamp
+              })
               {:error, :rate_limited}
             else
               :ets.update_counter(:parser_rate_limits, key, {2, 1})

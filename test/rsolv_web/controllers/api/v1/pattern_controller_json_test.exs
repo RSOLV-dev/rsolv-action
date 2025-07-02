@@ -1,6 +1,6 @@
 defmodule RSOLVWeb.Api.V1.PatternControllerJsonTest do
   use RSOLVWeb.ConnCase
-  alias RSOLVApi.Security.Patterns.JSONSerializer
+  alias RsolvApi.Security.Patterns.JSONSerializer
   
   describe "Pattern API with native JSON" do
     test "standard format works with native JSON", %{conn: conn} do
@@ -16,14 +16,16 @@ defmodule RSOLVWeb.Api.V1.PatternControllerJsonTest do
       assert metadata["format"] == "standard"
     end
     
-    test "enhanced format needs JSONSerializer for regex handling", %{conn: conn} do
-      # Currently this will fail because enhanced format has regex objects
-      # We need to integrate JSONSerializer into the pattern formatting
+    test "enhanced format works with JSONSerializer for regex handling", %{conn: conn} do
+      # Enhanced format now properly handles regex objects using JSONSerializer
       
-      # This test demonstrates the current failure
-      assert_raise RuntimeError, fn ->
-        get(conn, "/api/v1/patterns?language=javascript&format=enhanced")
-      end
+      # This should work without errors
+      conn = get(conn, "/api/v1/patterns?language=javascript&format=enhanced")
+      
+      assert %{"patterns" => patterns, "metadata" => metadata} = json_response(conn, 200)
+      assert is_list(patterns)
+      assert metadata["format"] == "enhanced"
+      assert metadata["enhanced"] == true
     end
     
     test "JSONSerializer can handle pattern with regex", %{conn: _conn} do

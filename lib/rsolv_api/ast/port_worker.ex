@@ -37,7 +37,10 @@ defmodule RsolvApi.AST.PortWorker do
     # Create sandbox configuration
     sandbox_config = Sandbox.create_beam_sandbox_config(
       config.language, 
-      %{limits: config[:sandbox_limits] || %{}}
+      %{
+        limits: config[:sandbox_limits] || %{},
+        security: config[:security] || %{}
+      }
     )
     
     state = %__MODULE__{

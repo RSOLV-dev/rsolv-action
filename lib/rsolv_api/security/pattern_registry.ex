@@ -18,6 +18,18 @@ defmodule RsolvApi.Security.PatternRegistry do
   Includes both language-specific and cross-language patterns.
   """
   def get_patterns_for_language(language) do
+    # Use PatternServer if available (which caches patterns efficiently)
+    if Process.whereis(RsolvApi.Security.PatternServer) do
+      case RsolvApi.Security.PatternServer.get_patterns(language) do
+        {:ok, patterns} -> patterns
+        _ -> load_patterns_directly(language)
+      end
+    else
+      load_patterns_directly(language)
+    end
+  end
+  
+  defp load_patterns_directly(language) do
     language_modules = load_pattern_modules_from_directory("#{@pattern_base_path}/#{language}")
     common_modules = load_pattern_modules_from_directory("#{@pattern_base_path}/common")
     

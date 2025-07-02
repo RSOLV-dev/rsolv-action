@@ -50,8 +50,9 @@ defmodule RsolvApi.AST.Sandbox do
         link: false  # Don't link to avoid cascade failures
       ],
       allowed_modules: get_allowed_modules(parser_type),
-      port_env: build_restricted_port_env(parser_type),
-      resource_tracker_name: :"sandbox_#{parser_type}_#{:crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)}"
+      port_env: build_restricted_port_env(parser_type, options[:security] || %{}),
+      resource_tracker_name: :"sandbox_#{parser_type}_#{:crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)}",
+      security: options[:security] || %{}
     }
   end
   
@@ -211,7 +212,7 @@ defmodule RsolvApi.AST.Sandbox do
   defp get_allowed_modules("go"), do: [:file, :binary, :string]
   defp get_allowed_modules(_), do: [:file, :binary, :string]
   
-  defp build_restricted_port_env(parser_type) do
+  defp build_restricted_port_env(parser_type, security_config) do
     base_env = [
       {~c"PATH", ~c"/usr/bin:/bin"},
       {~c"HOME", ~c"/tmp"},
@@ -225,6 +226,14 @@ defmodule RsolvApi.AST.Sandbox do
       {~c"LANG", ~c"C"},
       {~c"LC_ALL", ~c"C"}
     ]
+    
+    # Add security environment variables
+    security_env = [
+      {~c"SECURITY_READ_ONLY_FS", if(security_config[:read_only_fs], do: ~c"true", else: ~c"false")},
+      {~c"SECURITY_NO_NETWORK", if(security_config[:no_network], do: ~c"true", else: ~c"false")}
+    ]
+    
+    base_env = base_env ++ security_env
     
     # Add parser-specific restrictions
     case parser_type do

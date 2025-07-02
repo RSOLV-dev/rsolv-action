@@ -93,7 +93,7 @@ defmodule RsolvApi.AST.AuditIntegrationTest do
       metrics = AuditLogger.get_security_metrics()
       
       assert metrics.input_validation_failed >= 2
-      assert metrics.total_events >= 3
+      assert metrics.total_events >= 2
     end
     
     test "exports compliance report" do

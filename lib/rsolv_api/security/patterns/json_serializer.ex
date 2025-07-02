@@ -1,4 +1,4 @@
-defmodule RSOLVApi.Security.Patterns.JSONSerializer do
+defmodule RsolvApi.Security.Patterns.JSONSerializer do
   @moduledoc """
   Handles JSON serialization of patterns, converting Elixir regex objects
   to a format that can be encoded with native JSON (Elixir 1.18+).
@@ -23,6 +23,13 @@ defmodule RSOLVApi.Security.Patterns.JSONSerializer do
     }
   end
 
+  def prepare_for_json(%{__struct__: _} = struct) do
+    # Convert struct to map and process recursively
+    struct
+    |> Map.from_struct()
+    |> prepare_for_json()
+  end
+  
   def prepare_for_json(data) when is_map(data) do
     data
     |> Enum.map(fn {key, value} -> {key, prepare_for_json(value)} end)
@@ -45,7 +52,9 @@ defmodule RSOLVApi.Security.Patterns.JSONSerializer do
       :dotall -> "s"
       :extended -> "x"
       :unicode -> "u"
-      flag -> Atom.to_string(flag)
+      {:newline, _} -> "newline"
+      flag when is_atom(flag) -> Atom.to_string(flag)
+      flag -> inspect(flag)
     end)
     |> Enum.sort()
   end

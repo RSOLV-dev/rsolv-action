@@ -675,9 +675,9 @@ defmodule RsolvApi.Security.ASTPattern do
         # Use the AST enhancement from the pattern module
         pattern
         |> Map.put(:ast_rules, enhancement.ast_rules)
-        |> Map.put(:context_rules, enhancement.context_rules)
-        |> Map.put(:confidence_rules, enhancement.confidence_rules)
-        |> Map.put(:min_confidence, enhancement.min_confidence)
+        |> Map.put(:context_rules, Map.get(enhancement, :context_rules, %{}))
+        |> Map.put(:confidence_rules, Map.get(enhancement, :confidence_rules, %{}))
+        |> Map.put(:min_confidence, Map.get(enhancement, :min_confidence, 0.7))
       
       :error ->
         # No AST enhancement available, use default

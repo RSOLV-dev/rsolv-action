@@ -35,7 +35,7 @@ defmodule ElixirParser do
   end
 
   defp process_request(line) do
-    case Jason.decode(line) do
+    case JSON.decode(line) do
       {:ok, request} ->
         cond do
           # Health check formats
@@ -243,16 +243,13 @@ defmodule ElixirParser do
   defp format_error(error), do: inspect(error)
 
   defp send_response(response) do
-    json = Jason.encode!(response)
+    json = JSON.encode!(response)
     IO.puts(json)
     # Force flush is automatic with IO.puts
   end
 end
 
-# Add Jason dependency inline for the script
-Mix.install([
-  {:jason, "~> 1.4"}
-])
+# No external dependencies needed - using Elixir's built-in JSON module
 
 # Run the parser
 ElixirParser.main(System.argv())

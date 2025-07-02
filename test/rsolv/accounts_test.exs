@@ -1,6 +1,6 @@
 defmodule RSOLV.AccountsTest do
-  use ExUnit.Case
-
+  use RsolvApi.DataCase
+  
   alias RSOLV.Accounts
 
   describe "get_customer_by_api_key/1" do

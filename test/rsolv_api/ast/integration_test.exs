@@ -113,8 +113,8 @@ defmodule RsolvApi.AST.IntegrationTest do
       
       options = %{"includeSecurityPatterns" => true}
       
-      {:error, {:parser_error, details}} = AnalysisService.analyze_file(file, options)
-      assert details.type != nil
+      {:error, details} = AnalysisService.analyze_file(file, options)
+      assert details.type == :syntax_error
       assert details.message != nil
     end
     

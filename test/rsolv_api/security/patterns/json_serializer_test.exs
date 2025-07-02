@@ -1,6 +1,6 @@
-defmodule RSOLVApi.Security.Patterns.JSONSerializerTest do
+defmodule RsolvApi.Security.Patterns.JSONSerializerTest do
   use ExUnit.Case
-  alias RSOLVApi.Security.Patterns.JSONSerializer
+  alias RsolvApi.Security.Patterns.JSONSerializer
 
   describe "prepare_for_json/1" do
     test "converts simple regex to map" do
@@ -32,7 +32,7 @@ defmodule RSOLVApi.Security.Patterns.JSONSerializerTest do
       assert result == %{
         "__type__" => "regex",
         "source" => "test",
-        "flags" => ["i", "m", "s"]
+        "flags" => ["i", "m", "newline", "s"]
       }
     end
 

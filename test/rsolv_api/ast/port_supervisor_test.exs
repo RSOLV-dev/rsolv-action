@@ -5,8 +5,14 @@ defmodule RsolvApi.AST.PortSupervisorTest do
   alias RsolvApi.AST.PortWorker
   
   setup do
-    # Start the supervisor
-    {:ok, supervisor} = start_supervised(PortSupervisor)
+    # Start the supervisor if not already started
+    supervisor = case Process.whereis(PortSupervisor) do
+      nil ->
+        {:ok, pid} = start_supervised(PortSupervisor)
+        pid
+      pid ->
+        pid
+    end
     {:ok, supervisor: supervisor}
   end
   

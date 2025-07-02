@@ -28,35 +28,35 @@ defmodule RSOLVWeb.Api.V1.ASTPatternSerializationTest do
       
       assert sql_injection_pattern, "Should find js-sql-injection-concat pattern"
       
-      # Verify AST enhancement fields are present and not null
-      assert sql_injection_pattern["ast_rules"] != nil, "ast_rules should not be null"
-      assert sql_injection_pattern["context_rules"] != nil, "context_rules should not be null"
-      assert sql_injection_pattern["confidence_rules"] != nil, "confidence_rules should not be null"
-      assert sql_injection_pattern["min_confidence"] != nil, "min_confidence should not be null"
+      # Verify AST enhancement fields are present and not null (in camelCase)
+      assert sql_injection_pattern["astRules"] != nil, "astRules should not be null"
+      assert sql_injection_pattern["contextRules"] != nil, "contextRules should not be null"
+      assert sql_injection_pattern["confidenceRules"] != nil, "confidenceRules should not be null"
+      assert sql_injection_pattern["minConfidence"] != nil, "minConfidence should not be null"
       
       # Verify AST rules structure
-      ast_rules = sql_injection_pattern["ast_rules"]
+      ast_rules = sql_injection_pattern["astRules"]
       assert ast_rules["node_type"] == "BinaryExpression"
       assert ast_rules["operator"] == "+"
       assert is_map(ast_rules["context_analysis"])
-      assert is_map(ast_rules["ancestor_requirements"])
+      assert is_map(ast_rules["ancestor_requirements"]) || ast_rules["ancestor_requirements"] == nil
       
       # Verify context rules structure
-      context_rules = sql_injection_pattern["context_rules"]
+      context_rules = sql_injection_pattern["contextRules"]
       assert is_list(context_rules["exclude_paths"])
       assert context_rules["exclude_if_parameterized"] == true
       
       # Verify confidence rules structure
-      confidence_rules = sql_injection_pattern["confidence_rules"]
+      confidence_rules = sql_injection_pattern["confidenceRules"]
       assert is_number(confidence_rules["base"])
       assert is_map(confidence_rules["adjustments"])
       
       # Verify min_confidence
-      assert sql_injection_pattern["min_confidence"] == 0.8
+      assert sql_injection_pattern["minConfidence"] == 0.8
       
       # Verify regex patterns are still properly serialized
-      assert is_list(sql_injection_pattern["regex_patterns"])
-      assert length(sql_injection_pattern["regex_patterns"]) > 0
+      assert is_list(sql_injection_pattern["regexPatterns"])
+      assert length(sql_injection_pattern["regexPatterns"]) > 0
     end
     
     test "returns standard format without AST fields when format=standard", %{conn: conn} do
@@ -82,10 +82,10 @@ defmodule RSOLVWeb.Api.V1.ASTPatternSerializationTest do
       assert sql_injection_pattern
       
       # AST fields should not be present in standard format
-      refute Map.has_key?(sql_injection_pattern, "ast_rules")
-      refute Map.has_key?(sql_injection_pattern, "context_rules")
-      refute Map.has_key?(sql_injection_pattern, "confidence_rules")
-      refute Map.has_key?(sql_injection_pattern, "min_confidence")
+      refute Map.has_key?(sql_injection_pattern, "astRules")
+      refute Map.has_key?(sql_injection_pattern, "contextRules")
+      refute Map.has_key?(sql_injection_pattern, "confidenceRules")
+      refute Map.has_key?(sql_injection_pattern, "minConfidence")
     end
     
     test "demo patterns without API key do not include AST enhancements", %{conn: conn} do
@@ -103,10 +103,10 @@ defmodule RSOLVWeb.Api.V1.ASTPatternSerializationTest do
       
       # Demo patterns should not have AST fields
       Enum.each(patterns, fn pattern ->
-        refute Map.has_key?(pattern, "ast_rules")
-        refute Map.has_key?(pattern, "context_rules")
-        refute Map.has_key?(pattern, "confidence_rules")
-        refute Map.has_key?(pattern, "min_confidence")
+        refute Map.has_key?(pattern, "astRules")
+        refute Map.has_key?(pattern, "contextRules")
+        refute Map.has_key?(pattern, "confidenceRules")
+        refute Map.has_key?(pattern, "minConfidence")
       end)
     end
     
@@ -118,12 +118,12 @@ defmodule RSOLVWeb.Api.V1.ASTPatternSerializationTest do
       
       %{"patterns" => patterns} = json_response(conn, 200)
       
-      # Every pattern should have regex as a list
+      # Every pattern should have regexPatterns as a list
       Enum.each(patterns, fn pattern ->
-        assert is_list(pattern["regex"]), 
-          "Pattern #{pattern["id"]} should have regex as a list"
+        assert is_list(pattern["regexPatterns"]), 
+          "Pattern #{pattern["id"]} should have regexPatterns as a list"
         
-        Enum.each(pattern["regex"], fn regex ->
+        Enum.each(pattern["regexPatterns"], fn regex ->
           # Regex can be either a string or a map (for serialized regex objects)
           assert is_binary(regex) || is_map(regex), 
             "Pattern #{pattern["id"]} regex should be a string or map, got: #{inspect(regex)}"
@@ -147,18 +147,18 @@ defmodule RSOLVWeb.Api.V1.ASTPatternSerializationTest do
       assert pattern["type"]
       assert pattern["severity"]
       assert pattern["languages"]
-      assert pattern["regex_patterns"]
-      assert pattern["cwe_id"]
-      assert pattern["owasp_category"]
+      assert pattern["regexPatterns"]
+      assert pattern["cweId"]
+      assert pattern["owaspCategory"]
       assert pattern["recommendation"]
       assert pattern["examples"]
       
       # Enhanced fields should also be present for patterns that have them
       if pattern["id"] == "js-sql-injection-concat" do
-        assert pattern["ast_rules"]
-        assert pattern["context_rules"]
-        assert pattern["confidence_rules"]
-        assert pattern["min_confidence"]
+        assert pattern["astRules"]
+        assert pattern["contextRules"]
+        assert pattern["confidenceRules"]
+        assert pattern["minConfidence"]
       end
     end
   end

@@ -271,6 +271,14 @@ defmodule RsolvApi.AST.ContextAnalyzer do
       {"ruby", "rails"} ->
         %{uses_orm: true, orm_type: "activerecord"}
         
+      {"ruby", _} ->
+        # Check for ActiveRecord method calls even without Rails framework detection
+        if code =~ ~r/\.(where|find|find_by|first|last|all|joins|includes|order|limit)\s*\(/ do
+          %{uses_orm: true, orm_type: "activerecord"}
+        else
+          %{uses_orm: false, orm_type: nil}
+        end
+        
       {"python", "django"} ->
         if code =~ ~r/models\.Model/ do
           %{uses_orm: true, orm_type: "django_orm"}
@@ -360,7 +368,7 @@ defmodule RsolvApi.AST.ContextAnalyzer do
       :sql_injection ->
         # Check for parameterized queries
         code =~ ~r/where\s*\(\s*\w+:\s*\w+/ ||  # Rails style
-        code =~ ~r/\?\s*[,)]/ ||                 # Placeholder style
+        code =~ ~r/\?['"]?\s*[,)]/ ||            # Placeholder style (with optional quote)
         code =~ ~r/%s/ ||                        # Python style
         code =~ ~r/:\w+/                         # Named parameters
         

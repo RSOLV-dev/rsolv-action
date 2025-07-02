@@ -7,47 +7,40 @@ defmodule RsolvApi.Integration.PhpPatternAstTest do
   """
   
   setup do
-    # Create test customers with API keys
+    # Use the standard test API key that exists in test environment
     test_customer = %{
-      id: "test_php_ast_customer",
-      name: "Test PHP AST Customer",
-      email: "phptest@example.com",
-      api_key: "rsolv_test_php_ast_abc123",
-      monthly_limit: 100,
-      current_usage: 0,
-      active: true,
-      trial: true,
-      created_at: DateTime.utc_now()
+      api_key: "rsolv_test_abc123"
     }
     
     %{test_customer: test_customer}
   end
   
   describe "PHP pattern AST enhancement" do
-    test "PHP patterns return ast_rules in enhanced format", %{conn: conn} do
-      # Test without API key (demo patterns)
-      conn = get(conn, "/api/v1/patterns?language=php&format=enhanced")
+    test "PHP patterns return ast_rules in enhanced format", %{conn: conn, test_customer: test_customer} do
+      # Test WITH API key to get enhanced patterns
+      conn = 
+        conn
+        |> put_req_header("authorization", "Bearer #{test_customer.api_key}")
+        |> get("/api/v1/patterns?language=php&format=enhanced")
       
       assert response = json_response(conn, 200)
       assert response["metadata"]["language"] == "php"
       assert response["metadata"]["format"] == "enhanced"
       
-      # Demo should return 3 PHP patterns
-      assert length(response["patterns"]) == 3
+      # Should return full PHP patterns with API key
+      assert length(response["patterns"]) >= 3
       
-      # All PHP demo patterns should have the enhanced format structure
+      # All PHP patterns should have the enhanced format structure with API key
       Enum.each(response["patterns"], fn pattern ->
         # Check basic pattern structure
         assert Map.has_key?(pattern, "id")
         assert Map.has_key?(pattern, "supportsAst")
         
-        # If pattern supports AST, check the structure
-        if pattern["supportsAst"] do
-          assert Map.has_key?(pattern, "astRules"), "Pattern #{pattern["id"]} missing astRules"
-          assert Map.has_key?(pattern, "contextRules"), "Pattern #{pattern["id"]} missing contextRules"
-          assert Map.has_key?(pattern, "confidenceRules"), "Pattern #{pattern["id"]} missing confidenceRules"
-          assert Map.has_key?(pattern, "minConfidence"), "Pattern #{pattern["id"]} missing minConfidence"
-        end
+        # All patterns should have AST fields when authenticated with format=enhanced
+        assert Map.has_key?(pattern, "astRules"), "Pattern #{pattern["id"]} missing astRules"
+        assert Map.has_key?(pattern, "contextRules"), "Pattern #{pattern["id"]} missing contextRules"
+        assert Map.has_key?(pattern, "confidenceRules"), "Pattern #{pattern["id"]} missing confidenceRules"
+        assert Map.has_key?(pattern, "minConfidence"), "Pattern #{pattern["id"]} missing minConfidence"
         
         # Check that it's not using the old :rules format
         refute Map.has_key?(pattern, "rules"), "Pattern #{pattern["id"]} has 'rules' instead of 'astRules'"
@@ -72,28 +65,27 @@ defmodule RsolvApi.Integration.PhpPatternAstTest do
       end)
     end
     
-    test "PHP demo patterns have AST enhancement fields", %{conn: conn} do
-      # Test with demo patterns
+    test "PHP demo patterns do NOT have AST enhancement fields", %{conn: conn} do
+      # Test WITHOUT API key (demo patterns)
       conn = get(conn, "/api/v1/patterns?language=php&format=enhanced")
       
       assert response = json_response(conn, 200)
       
-      # All demo patterns should have AST enhancement
+      # Demo patterns should NOT have AST enhancement fields even with format=enhanced
       Enum.each(response["patterns"], fn pattern ->
         pattern_id = pattern["id"]
         
-        # All PHP patterns support AST
-        assert pattern["supportsAst"] == true, "Pattern #{pattern_id} should support AST"
+        # Demo patterns don't get AST enhancement fields even with format=enhanced
+        refute Map.has_key?(pattern, "astRules"), "Demo pattern #{pattern_id} should NOT have astRules"
+        refute Map.has_key?(pattern, "contextRules"), "Demo pattern #{pattern_id} should NOT have contextRules"
+        refute Map.has_key?(pattern, "confidenceRules"), "Demo pattern #{pattern_id} should NOT have confidenceRules"
+        refute Map.has_key?(pattern, "minConfidence"), "Demo pattern #{pattern_id} should NOT have minConfidence"
+        # Note: supportsAst might still be present in standard format, just not the enhancement fields
         
-        # Check enhanced format fields exist
-        assert Map.has_key?(pattern, "astRules"), "Pattern #{pattern_id} should have astRules"
-        assert Map.has_key?(pattern, "contextRules"), "Pattern #{pattern_id} should have contextRules"
-        assert Map.has_key?(pattern, "confidenceRules"), "Pattern #{pattern_id} should have confidenceRules"
-        assert Map.has_key?(pattern, "minConfidence"), "Pattern #{pattern_id} should have minConfidence"
-        
-        # Ensure no old format keys exist
-        refute Map.has_key?(pattern, "rules"), "Pattern #{pattern_id} has old 'rules' key"
-        refute Map.has_key?(pattern, ":ast_rules"), "Pattern #{pattern_id} has atom key"
+        # Should have basic pattern fields
+        assert Map.has_key?(pattern, "id")
+        assert Map.has_key?(pattern, "name")
+        assert Map.has_key?(pattern, "description")
       end)
     end
   end

@@ -57,7 +57,7 @@ defmodule RSOLVWeb.Api.V1.PatternJsonEncodingTest do
       }
       
       # This function doesn't exist yet - TDD red phase
-      prepared = RSOLVApi.Security.Patterns.JSONSerializer.prepare_for_json(pattern_with_regex)
+      prepared = RsolvApi.Security.Patterns.JSONSerializer.prepare_for_json(pattern_with_regex)
       
       # Should convert regex to a map representation
       assert prepared == %{

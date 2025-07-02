@@ -205,12 +205,12 @@ defmodule RsolvApi.AST.ParserRegistry do
             # Parse the code
             start_time = System.monotonic_time(:millisecond)
             
-            result = case parse_with_parser(parser_id, code, parser_config) do
+            {reply, updated_stats} = case parse_with_parser(parser_id, code, parser_config) do
               {:ok, ast} ->
                 end_time = System.monotonic_time(:millisecond)
                 parse_time = end_time - start_time
                 
-                %ParseResult{
+                result = %ParseResult{
                   language: language,
                   session_id: session_id,
                   parser_id: parser_id,
@@ -221,6 +221,10 @@ defmodule RsolvApi.AST.ParserRegistry do
                     total_time_ms: parse_time
                   }
                 }
+                
+                # Update statistics for success
+                stats = update_statistics(updated_state.stats, result)
+                {{:ok, result}, stats}
               
               {:error, raw_error} ->
                 end_time = System.monotonic_time(:millisecond)
@@ -232,7 +236,8 @@ defmodule RsolvApi.AST.ParserRegistry do
                   error -> error  # In case it's already processed
                 end
                 
-                %ParseResult{
+                # Create result for statistics tracking
+                result = %ParseResult{
                   language: language,
                   session_id: session_id,
                   parser_id: parser_id,
@@ -243,13 +248,14 @@ defmodule RsolvApi.AST.ParserRegistry do
                     total_time_ms: parse_time
                   }
                 }
+                
+                # Update statistics for failure
+                stats = update_statistics(updated_state.stats, result)
+                {{:error, standardized_error}, stats}
             end
             
-            # Update statistics
-            updated_stats = update_statistics(updated_state.stats, result)
             final_state = %{updated_state | stats: updated_stats}
-            
-            {:reply, {:ok, result}, final_state}
+            {:reply, reply, final_state}
         end
     end
   end
@@ -372,6 +378,14 @@ defmodule RsolvApi.AST.ParserRegistry do
               %{"result" => "ok"} ->
                 # Simple health check response - no ID field
                 {:ok, %{"type" => "HealthCheck", "status" => "ok"}}
+              
+              %{"id" => _id, "status" => "success", "ast" => ast} ->
+                # JavaScript parser format
+                {:ok, ast}
+              
+              %{"status" => "success", "ast" => ast} ->
+                # JavaScript parser format - no ID field
+                {:ok, ast}
               
               %{"error" => error} ->
                 # Error response without success field

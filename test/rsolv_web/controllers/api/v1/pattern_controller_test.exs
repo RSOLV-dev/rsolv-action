@@ -1,4 +1,4 @@
-defmodule RSOLVWeb.Api.V1.PatternControllerTest do
+defmodule RsolvWeb.Api.V1.PatternControllerTest do
   use RSOLVWeb.ConnCase
   
   describe "GET /api/v1/patterns - Tier-less Access (TDD)" do
@@ -165,7 +165,10 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
     end
     
     test "returns enhanced patterns when format=enhanced", %{conn: conn} do
-      conn = get(conn, "/api/v1/patterns?language=javascript&format=enhanced")
+      conn = 
+        conn
+        |> put_req_header("authorization", "Bearer rsolv_test_abc123")
+        |> get("/api/v1/patterns?language=javascript&format=enhanced")
       
       assert %{
         "patterns" => patterns,
@@ -180,11 +183,11 @@ defmodule RSOLVWeb.Api.V1.PatternControllerTest do
       assert is_list(patterns)
       assert length(patterns) > 0
       
-      # Check that patterns have AST enhancement fields
+      # Check that patterns have AST enhancement fields (in camelCase)
       first_pattern = List.first(patterns)
-      assert Map.has_key?(first_pattern, "ast_rules")
-      assert Map.has_key?(first_pattern, "context_rules")
-      assert Map.has_key?(first_pattern, "min_confidence")
+      assert Map.has_key?(first_pattern, "astRules")
+      assert Map.has_key?(first_pattern, "contextRules")
+      assert Map.has_key?(first_pattern, "minConfidence")
     end
     
     test "defaults to javascript and public tier", %{conn: conn} do

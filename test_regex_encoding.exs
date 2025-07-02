@@ -42,12 +42,13 @@ if Code.ensure_loaded?(JSON) do
     }
   }
   
-  case JSON.encode(prepared) do
-    {:ok, json} ->
-      IO.puts "✓ Native JSON encoding works with prepared data"
-      IO.puts "  Encoded: #{String.slice(json, 0..60)}..."
-    {:error, reason} ->
-      IO.puts "✗ Native JSON encoding failed: #{inspect(reason)}"
+  try do
+    json = JSON.encode!(prepared)
+    IO.puts "✓ Native JSON encoding works with prepared data"
+    IO.puts "  Encoded: #{String.slice(json, 0..60)}..."
+  rescue
+    e ->
+      IO.puts "✗ Native JSON encoding failed: #{inspect(e)}"
   end
 else
   IO.puts "✗ JSON module not available (need Elixir >= 1.18)"

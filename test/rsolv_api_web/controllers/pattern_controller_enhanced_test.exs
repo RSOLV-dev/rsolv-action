@@ -2,7 +2,7 @@ defmodule RSOLVWeb.Api.V1.PatternControllerEnhancedTest do
   use RSOLVWeb.ConnCase, async: false
   
   alias RsolvApi.Security.Patterns.Javascript.EvalUserInput
-  alias RSOLVApi.Security.Patterns.JSONSerializer
+  alias RsolvApi.Security.Patterns.JSONSerializer
 
   describe "enhanced format" do
     test "includes AST enhancement fields", %{conn: conn} do

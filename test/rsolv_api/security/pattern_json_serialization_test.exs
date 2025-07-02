@@ -1,4 +1,4 @@
-defmodule RSOLVApi.Security.PatternJsonSerializationTest do
+defmodule RsolvApi.Security.PatternJsonSerializationTest do
   use ExUnit.Case
   
   describe "JSON encoding with regex - TDD Red Phase" do
@@ -45,7 +45,7 @@ defmodule RSOLVApi.Security.PatternJsonSerializationTest do
       regex = ~r/test_pattern/i
       
       # The function we need to implement
-      result = RSOLVApi.Security.Patterns.JSONSerializer.prepare_for_json(regex)
+      result = RsolvApi.Security.Patterns.JSONSerializer.prepare_for_json(regex)
       
       assert result == %{
         "__type__" => "regex",
@@ -63,7 +63,7 @@ defmodule RSOLVApi.Security.PatternJsonSerializationTest do
         ]
       }
       
-      result = RSOLVApi.Security.Patterns.JSONSerializer.prepare_for_json(pattern)
+      result = RsolvApi.Security.Patterns.JSONSerializer.prepare_for_json(pattern)
       
       assert result == %{
         id: "sql_injection",
@@ -99,11 +99,11 @@ defmodule RSOLVApi.Security.PatternJsonSerializationTest do
       }
       
       # Using native JSON encoder (available in Elixir 1.18+)
-      {:ok, json} = JSON.encode(prepared)
+      json = JSON.encode!(prepared)
       assert is_binary(json)
       
       # Should decode properly
-      {:ok, decoded} = JSON.decode(json)
+      decoded = JSON.decode!(json)
       assert decoded["pattern"]["__type__"] == "regex"
     end
   end

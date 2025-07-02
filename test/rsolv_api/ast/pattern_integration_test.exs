@@ -125,20 +125,20 @@ defmodule RsolvApi.AST.PatternIntegrationTest do
       
       assert context.uses_orm == true
       
-      # Parameterized queries should be safe - test with context analyzer
-      param_context = RsolvApi.AST.ContextAnalyzer.analyze_code(
+      # Parameterized queries should be safe - test with security context
+      param_context = RsolvApi.AST.ContextAnalyzer.evaluate_security_context(
         "db.query('SELECT * FROM users WHERE id = ?', [id])", 
         "javascript",
-        %{path: "app/controllers/users.js"}
+        %{path: "app/controllers/users.js", pattern_type: :sql_injection}
       )
       
       assert param_context.uses_safe_patterns == true
       
-      # Raw SQL concatenation should not be safe - test with context analyzer
-      unsafe_context = RsolvApi.AST.ContextAnalyzer.analyze_code(
+      # Raw SQL concatenation should not be safe - test with security context
+      unsafe_context = RsolvApi.AST.ContextAnalyzer.evaluate_security_context(
         "db.query('SELECT * FROM users WHERE id = ' + id)", 
         "javascript",
-        %{path: "app/controllers/users.js"}
+        %{path: "app/controllers/users.js", pattern_type: :sql_injection}
       )
       
       assert unsafe_context.uses_safe_patterns == false

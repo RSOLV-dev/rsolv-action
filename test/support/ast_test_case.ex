@@ -374,7 +374,7 @@ defmodule RsolvApi.AST.TestCase do
   
   # Helper to find nodes in AST
   def find_nodes(ast, node_type) when is_map(ast) do
-    nodes = if ast["_type"] == node_type or ast[:type] == node_type do
+    nodes = if ast["_type"] == node_type or ast["type"] == node_type or ast[:type] == node_type do
       [ast]
     else
       []
