@@ -14,21 +14,18 @@ defmodule RsolvApi.AST.TestCase do
   end
   
   setup do
-    # Ensure Port supervisor is started for tests
-    case Process.whereis(RsolvApi.AST.PortSupervisor) do
-      nil -> start_supervised!(RsolvApi.AST.PortSupervisor)
-      _pid -> :ok
-    end
+    # Ensure the application is started for tests
+    Application.ensure_all_started(:rsolv_api)
     
     # Create a test session
-    {:ok, session_id} = RsolvApi.AST.SessionManager.create_session("test-customer")
+    {:ok, session} = RsolvApi.AST.SessionManager.create_session("test-customer")
     
     on_exit(fn ->
       # Clean up session after test
-      RsolvApi.AST.SessionManager.delete_session(session_id, "test-customer")
+      RsolvApi.AST.SessionManager.delete_session(session.id, "test-customer")
     end)
     
-    {:ok, session_id: session_id}
+    {:ok, session_id: session.id, session: session}
   end
   
   # Test fixtures for different languages

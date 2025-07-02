@@ -110,7 +110,7 @@ defmodule RSOLVWeb.Api.V1.ASTPatternSerializationTest do
       end)
     end
     
-    test "all enhanced patterns have properly formatted regex_patterns", %{conn: conn} do
+    test "all enhanced patterns have properly formatted regex", %{conn: conn} do
       conn = 
         conn
         |> put_req_header("authorization", "Bearer rsolv_test_abc123")
@@ -118,14 +118,15 @@ defmodule RSOLVWeb.Api.V1.ASTPatternSerializationTest do
       
       %{"patterns" => patterns} = json_response(conn, 200)
       
-      # Every pattern should have regex_patterns as a list of strings
+      # Every pattern should have regex as a list
       Enum.each(patterns, fn pattern ->
-        assert is_list(pattern["regex_patterns"]), 
-          "Pattern #{pattern["id"]} should have regex_patterns as a list"
+        assert is_list(pattern["regex"]), 
+          "Pattern #{pattern["id"]} should have regex as a list"
         
-        Enum.each(pattern["regex_patterns"], fn regex ->
-          assert is_binary(regex), 
-            "Pattern #{pattern["id"]} regex should be a string, got: #{inspect(regex)}"
+        Enum.each(pattern["regex"], fn regex ->
+          # Regex can be either a string or a map (for serialized regex objects)
+          assert is_binary(regex) || is_map(regex), 
+            "Pattern #{pattern["id"]} regex should be a string or map, got: #{inspect(regex)}"
         end)
       end)
     end

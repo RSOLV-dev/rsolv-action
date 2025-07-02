@@ -1,12 +1,11 @@
 defmodule RsolvApi.AST.FallbackStrategyTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias RsolvApi.AST.{FallbackStrategy, ParserRegistry, SessionManager}
 
   setup do
-    # Ensure clean state
-    Application.stop(:rsolv_api)
-    Application.start(:rsolv_api)
+    # Ensure application is started
+    Application.ensure_all_started(:rsolv_api)
     
     # Create test session
     {:ok, session} = SessionManager.create_session("test-customer")
