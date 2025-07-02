@@ -148,7 +148,9 @@ defmodule RsolvApi.AST.ASTCacheTest do
       assert {:ok, ^ast} = ASTCache.get(cache, file_hash, "javascript")
       
       # Wait for expiration - need to ensure > 1 second passes at second precision
-      Process.sleep(1100)  # Reduced from 2000ms to 1100ms
+      # Since we're using System.system_time(:second), we need to wait at least 2 seconds
+      # to ensure a full second has passed in system time
+      Process.sleep(2000)
       
       # Entry should be expired
       assert {:miss, :expired} = ASTCache.get(cache, file_hash, "javascript")
