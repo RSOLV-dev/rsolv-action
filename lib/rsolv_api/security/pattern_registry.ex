@@ -148,14 +148,6 @@ defmodule RsolvApi.Security.PatternRegistry do
       length(module_parts) > length(base_parts)
   end
   
-  defp file_path_to_module_name(file_path) do
-    file_path
-    |> String.replace_prefix("lib/", "")
-    |> String.replace_suffix(".ex", "")
-    |> String.split("/")
-    |> Enum.map(&Macro.camelize/1)
-    |> Enum.join(".")
-  end
   
   defp matches_file_language?(file_path, languages) do
     if languages == ["all"] or languages == ["*"] do
