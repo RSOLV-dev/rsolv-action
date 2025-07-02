@@ -186,7 +186,7 @@ defmodule RsolvApi.AST.SessionManager do
   
   defp add_session_to_ets(session) do
     # Store session
-    :ets.insert(@sessions_table, {session.id, session})
+    safe_ets_insert(@sessions_table, {session.id, session})
     
     # Update customer session list
     customer_sessions = case :ets.lookup(@customer_sessions_table, session.customer_id) do
@@ -194,7 +194,7 @@ defmodule RsolvApi.AST.SessionManager do
       [] -> [session.id]
     end
     
-    :ets.insert(@customer_sessions_table, {session.customer_id, customer_sessions})
+    safe_ets_insert(@customer_sessions_table, {session.customer_id, customer_sessions})
   end
   
   defp get_session_from_ets(session_id) do
@@ -211,16 +211,16 @@ defmodule RsolvApi.AST.SessionManager do
       
       %Session{customer_id: customer_id} = session ->
         # Remove from sessions table
-        :ets.delete(@sessions_table, session_id)
+        safe_ets_delete(@sessions_table, session_id)
         
         # Remove from customer sessions list
         case :ets.lookup(@customer_sessions_table, customer_id) do
           [{^customer_id, session_list}] ->
             updated_list = Enum.reject(session_list, &(&1 == session_id))
             if updated_list == [] do
-              :ets.delete(@customer_sessions_table, customer_id)
+              safe_ets_delete(@customer_sessions_table, customer_id)
             else
-              :ets.insert(@customer_sessions_table, {customer_id, updated_list})
+              safe_ets_insert(@customer_sessions_table, {customer_id, updated_list})
             end
           [] ->
             :ok
@@ -232,7 +232,7 @@ defmodule RsolvApi.AST.SessionManager do
       other ->
         # Handle unexpected data - just remove from sessions table
         Logger.warning("Unexpected data type in session table for #{session_id}: #{inspect(other)}")
-        :ets.delete(@sessions_table, session_id)
+        safe_ets_delete(@sessions_table, session_id)
     end
   end
   
@@ -287,6 +287,23 @@ defmodule RsolvApi.AST.SessionManager do
     true
   end
   
+  # Safe ETS operations to prevent crashes when tables are deleted during cleanup
+  defp safe_ets_insert(table, key_value) do
+    try do
+      :ets.insert(table, key_value)
+    catch
+      :error, :badarg -> :ok  # Table doesn't exist, ignore gracefully
+    end
+  end
+
+  defp safe_ets_delete(table, key) do
+    try do
+      :ets.delete(table, key)
+    catch
+      :error, :badarg -> :ok  # Table doesn't exist, ignore gracefully
+    end
+  end
+
   defp generate_session_id do
     :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
   end

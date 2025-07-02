@@ -94,7 +94,7 @@ defmodule RsolvApi.AST.Sandbox do
     Process.flag(:max_heap_size, config.limits.max_heap_size)
     
     # Track port creation
-    :ets.update_counter(resource_tracker, :ports_created, 1, {:ports_created, 0})
+    safe_ets_update_counter(resource_tracker, :ports_created, 1, {:ports_created, 0})
     
     case :ets.lookup(resource_tracker, :ports_created) do
       [{:ports_created, count}] when count > config.limits.max_ports ->
@@ -188,7 +188,7 @@ defmodule RsolvApi.AST.Sandbox do
     :timer.apply_interval(1000, __MODULE__, :enforce_limits, [self(), config])
     
     # Track resource usage
-    :ets.insert(resource_tracker, {:process_started, System.monotonic_time(:millisecond)})
+    safe_ets_insert(resource_tracker, {:process_started, System.monotonic_time(:millisecond)})
     
     try do
       # Execute the actual function
@@ -199,7 +199,7 @@ defmodule RsolvApi.AST.Sandbox do
         {:error, {class, reason}}
     after
       # Clean up
-      :ets.insert(resource_tracker, {:process_ended, System.monotonic_time(:millisecond)})
+      safe_ets_insert(resource_tracker, {:process_ended, System.monotonic_time(:millisecond)})
     end
   end
   
@@ -275,6 +275,23 @@ defmodule RsolvApi.AST.Sandbox do
       :ets.delete(resource_tracker)
     end
   end
+
+  # Safe ETS operations to prevent crashes when tables are deleted during cleanup
+  defp safe_ets_insert(table, key_value) do
+    try do
+      :ets.insert(table, key_value)
+    catch
+      :error, :badarg -> :ok  # Table doesn't exist, ignore gracefully
+    end
+  end
+
+  defp safe_ets_update_counter(table, key, increment, default) do
+    try do
+      :ets.update_counter(table, key, increment, default)
+    catch
+      :error, :badarg -> :ok  # Table doesn't exist, ignore gracefully
+    end
+  end
   
   defp start_resource_monitor(pid, config, resource_tracker) do
     # Monitor process every second
@@ -289,7 +306,7 @@ defmodule RsolvApi.AST.Sandbox do
         # Update resource stats
         case get_resource_usage(pid, resource_tracker) do
           {:ok, stats} ->
-            :ets.insert(resource_tracker, {:stats, stats})
+            safe_ets_insert(resource_tracker, {:stats, stats})
             
             # Check limits
             if stats.memory_bytes > config.limits.max_heap_size do
@@ -328,7 +345,7 @@ defmodule RsolvApi.AST.Sandbox do
           port_memory: info[:memory] || 0
         }
         
-        :ets.insert(resource_tracker, {:port_stats, stats})
+        safe_ets_insert(resource_tracker, {:port_stats, stats})
         
         # Sleep and continue monitoring
         Process.sleep(1000)

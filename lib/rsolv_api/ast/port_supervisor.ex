@@ -57,8 +57,8 @@ defmodule RsolvApi.AST.PortSupervisor do
       case DynamicSupervisor.start_child(supervisor, spec) do
         {:ok, pid} ->
           # Register port
-          :ets.insert(:port_registry, {port_id, pid, config, System.monotonic_time(:millisecond)})
-          :ets.insert(:port_stats, {port_id, %{
+          safe_ets_insert(:port_registry, {port_id, pid, config, System.monotonic_time(:millisecond)})
+          safe_ets_insert(:port_stats, {port_id, %{
             requests_handled: 0,
             restarts: 0,
             last_used: System.monotonic_time(:millisecond),
@@ -79,8 +79,8 @@ defmodule RsolvApi.AST.PortSupervisor do
     case :ets.lookup(:port_registry, port_id) do
       [{^port_id, pid, _config, _started_at}] ->
         DynamicSupervisor.terminate_child(supervisor, pid)
-        :ets.delete(:port_registry, port_id)
-        :ets.delete(:port_stats, port_id)
+        safe_ets_delete(:port_registry, port_id)
+        safe_ets_delete(:port_stats, port_id)
         :ok
         
       [] ->
@@ -237,13 +237,13 @@ defmodule RsolvApi.AST.PortSupervisor do
         case DynamicSupervisor.start_child(supervisor, spec) do
           {:ok, new_pid} ->
             # Update registry with new PID
-            :ets.insert(:port_registry, {port_id, new_pid, config, System.monotonic_time(:millisecond)})
+            safe_ets_insert(:port_registry, {port_id, new_pid, config, System.monotonic_time(:millisecond)})
             {:ok, port_id}
             
           {:error, reason} ->
             # Clean up if restart failed
-            :ets.delete(:port_registry, port_id)
-            :ets.delete(:port_stats, port_id)
+            safe_ets_delete(:port_registry, port_id)
+            safe_ets_delete(:port_stats, port_id)
             {:error, reason}
         end
         
@@ -280,7 +280,7 @@ defmodule RsolvApi.AST.PortSupervisor do
   defp get_from_pool(language) do
     case :ets.lookup(:port_pools, language) do
       [{^language, [port_id | rest]}] ->
-        :ets.insert(:port_pools, {language, rest})
+        safe_ets_insert(:port_pools, {language, rest})
         port_id
         
       _ ->
@@ -299,10 +299,10 @@ defmodule RsolvApi.AST.PortSupervisor do
         else
           [port_id | pool]
         end
-        :ets.insert(:port_pools, {language, new_pool})
+        safe_ets_insert(:port_pools, {language, new_pool})
         
       [] ->
-        :ets.insert(:port_pools, {language, [port_id]})
+        safe_ets_insert(:port_pools, {language, [port_id]})
     end
   end
   
@@ -317,7 +317,7 @@ defmodule RsolvApi.AST.PortSupervisor do
           :last_used ->
             %{stats | last_used: System.monotonic_time(:millisecond)}
         end
-        :ets.insert(:port_stats, {port_id, updated_stats})
+        safe_ets_insert(:port_stats, {port_id, updated_stats})
         updated_stats.restarts  # Return restart count for debugging
         
       [] ->
@@ -329,7 +329,7 @@ defmodule RsolvApi.AST.PortSupervisor do
             last_used: System.monotonic_time(:millisecond),
             memory_usage: 0
           }
-          :ets.insert(:port_stats, {port_id, stats})
+          safe_ets_insert(:port_stats, {port_id, stats})
           1  # Return restart count
         else
           0
@@ -348,6 +348,23 @@ defmodule RsolvApi.AST.PortSupervisor do
     end
   end
   
+  # Safe ETS operations to prevent crashes when tables are deleted during cleanup
+  defp safe_ets_insert(table, key_value) do
+    try do
+      :ets.insert(table, key_value)
+    catch
+      :error, :badarg -> :ok  # Table doesn't exist, ignore gracefully
+    end
+  end
+
+  defp safe_ets_delete(table, key) do
+    try do
+      :ets.delete(table, key)
+    catch
+      :error, :badarg -> :ok  # Table doesn't exist, ignore gracefully
+    end
+  end
+
   defp ensure_ets_table(name) do
     case :ets.whereis(name) do
       :undefined ->

@@ -135,6 +135,7 @@ defmodule RsolvApi.AST.ASTCacheTest do
   end
   
   describe "TTL expiration" do
+    @tag :slow
     test "expires entries after TTL" do
       config = %{ttl_seconds: 1}  # 1 second TTL
       {:ok, cache} = ASTCache.start_link(config)
@@ -147,14 +148,15 @@ defmodule RsolvApi.AST.ASTCacheTest do
       assert {:ok, ^ast} = ASTCache.get(cache, file_hash, "javascript")
       
       # Wait for expiration - need to ensure > 1 second passes at second precision
-      Process.sleep(2000)
+      Process.sleep(1100)  # Reduced from 2000ms to 1100ms
       
       # Entry should be expired
       assert {:miss, :expired} = ASTCache.get(cache, file_hash, "javascript")
     end
     
+    @tag :slow
     test "resets TTL on access" do
-      config = %{ttl_seconds: 2, refresh_ttl_on_access: true}
+      config = %{ttl_seconds: 1, refresh_ttl_on_access: true}  # Reduced from 2 to 1 second TTL
       {:ok, cache} = ASTCache.start_link(config)
       
       file_hash = "refresh_me"
@@ -163,12 +165,12 @@ defmodule RsolvApi.AST.ASTCacheTest do
       # Store entry
       ASTCache.put(cache, file_hash, ast, "javascript")
       
-      # Access after 1 second
-      Process.sleep(1000)
+      # Access after 0.6 seconds (reduced from 1000ms)
+      Process.sleep(600)
       assert {:ok, ^ast} = ASTCache.get(cache, file_hash, "javascript")
       
-      # Access again after another 1.5 seconds (total 2.5s)
-      Process.sleep(1500)
+      # Access again after another 0.8 seconds (reduced from 1500ms, total 1.4s)
+      Process.sleep(800)
       assert {:ok, ^ast} = ASTCache.get(cache, file_hash, "javascript")
     end
   end

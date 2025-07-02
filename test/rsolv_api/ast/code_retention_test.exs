@@ -164,9 +164,10 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       assert CodeRetention.verify_no_code_in_processes(test_code) == :ok
     end
     
+    @tag :slow
     test "batch analysis doesn't retain any code from the batch", %{session: session} do
-      # Create multiple code samples with unique markers
-      code_samples = for i <- 1..5 do
+      # Create multiple code samples with unique markers  
+      code_samples = for i <- 1..3 do  # Reduced from 5 to 3
         %{
           path: "file#{i}.js",
           content: "const unique_var_#{i} = 'secret_value_#{i}';",

@@ -215,7 +215,7 @@ defmodule RsolvApi.AST.EnhancedSandbox do
     case :ets.whereis(:parser_rate_limits) do
       :undefined ->
         :ets.new(:parser_rate_limits, [:named_table, :public])
-        :ets.insert(:parser_rate_limits, {key, 1, System.system_time(:second)})
+        safe_ets_insert(:parser_rate_limits, {key, 1, System.system_time(:second)})
         :ok
         
       _table ->
@@ -231,13 +231,13 @@ defmodule RsolvApi.AST.EnhancedSandbox do
               })
               {:error, :rate_limited}
             else
-              :ets.update_counter(:parser_rate_limits, key, {2, 1})
+              safe_ets_update_counter(:parser_rate_limits, key, {2, 1})
               :ok
             end
             
           _ ->
             # New minute
-            :ets.insert(:parser_rate_limits, {key, 1, now})
+            safe_ets_insert(:parser_rate_limits, {key, 1, now})
             :ok
         end
     end
@@ -255,7 +255,7 @@ defmodule RsolvApi.AST.EnhancedSandbox do
         :ok
     end
     
-    :ets.insert(:security_events, {
+    safe_ets_insert(:security_events, {
       {System.system_time(:nanosecond), event_type},
       metadata
     })
@@ -275,5 +275,22 @@ defmodule RsolvApi.AST.EnhancedSandbox do
     |> Enum.group_by(fn {{_time, type}, _meta} -> type end)
     |> Enum.map(fn {type, items} -> {type, length(items)} end)
     |> Map.new()
+  end
+
+  # Safe ETS operations to prevent crashes when tables are deleted during cleanup
+  defp safe_ets_insert(table, key_value) do
+    try do
+      :ets.insert(table, key_value)
+    catch
+      :error, :badarg -> :ok  # Table doesn't exist, ignore gracefully
+    end
+  end
+
+  defp safe_ets_update_counter(table, key, increment) do
+    try do
+      :ets.update_counter(table, key, increment)
+    catch
+      :error, :badarg -> :ok  # Table doesn't exist, ignore gracefully
+    end
   end
 end

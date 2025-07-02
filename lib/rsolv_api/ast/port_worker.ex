@@ -343,7 +343,16 @@ defmodule RsolvApi.AST.PortWorker do
   
   defp notify_supervisor_cleanup(port_id) do
     # Clean up ETS entries
-    :ets.delete(:port_registry, port_id)
-    :ets.delete(:port_stats, port_id)
+    safe_ets_delete(:port_registry, port_id)
+    safe_ets_delete(:port_stats, port_id)
+  end
+  
+  # Safe ETS operations to prevent crashes when tables are deleted during cleanup
+  defp safe_ets_delete(table, key) do
+    try do
+      :ets.delete(table, key)
+    catch
+      :error, :badarg -> :ok  # Table doesn't exist, ignore gracefully
+    end
   end
 end

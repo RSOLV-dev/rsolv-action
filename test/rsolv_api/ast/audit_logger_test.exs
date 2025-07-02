@@ -1,5 +1,5 @@
 defmodule RsolvApi.AST.AuditLoggerTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   
   alias RsolvApi.AST.AuditLogger
   
@@ -9,8 +9,10 @@ defmodule RsolvApi.AST.AuditLoggerTest do
       nil -> 
         {:ok, _pid} = RsolvApi.AST.AuditLogger.start_link()
       pid when is_pid(pid) ->
-        # Reset state by restarting
-        GenServer.stop(pid)
+        # Reset state by restarting - but handle already dead process
+        if Process.alive?(pid) do
+          GenServer.stop(pid)
+        end
         {:ok, _pid} = RsolvApi.AST.AuditLogger.start_link()
     end
     
