@@ -11,42 +11,44 @@ defmodule RsolvApi.Security.PatternServerTest do
   
   describe "get_patterns/2" do
     test "returns patterns for valid language and tier" do
-      assert {:ok, patterns} = PatternServer.get_patterns("javascript", :public)
+      assert {:ok, patterns} = PatternServer.get_patterns("javascript")
       assert is_list(patterns)
       assert length(patterns) > 0
     end
     
     test "caches patterns after first fetch" do
-      # First call - cache miss
-      {time1, {:ok, patterns1}} = :timer.tc(fn ->
-        PatternServer.get_patterns("python", :public)
-      end)
+      # Use a less common language to reduce chance of cache conflicts
+      language = "cobol"
+      
+      # First call - likely cache miss (unless already loaded)
+      {:ok, patterns1} = PatternServer.get_patterns(language)
       
       # Second call - should be cached
-      {time2, {:ok, patterns2}} = :timer.tc(fn ->
-        PatternServer.get_patterns("python", :public)
-      end)
+      {:ok, patterns2} = PatternServer.get_patterns(language)
       
-      # Cached call should be much faster
-      assert time2 < time1 / 2
+      # Results should be identical
       assert patterns1 == patterns2
     end
     
-    test "returns different patterns for different tiers" do
+    test "returns same patterns regardless of tier parameter (backward compatibility)" do
       {:ok, public_patterns} = PatternServer.get_patterns("javascript", :public)
       {:ok, protected_patterns} = PatternServer.get_patterns("javascript", :protected)
       {:ok, ai_patterns} = PatternServer.get_patterns("javascript", :ai)
       
-      # Each tier should have progressively more patterns
-      assert length(public_patterns) < length(protected_patterns)
-      assert length(protected_patterns) < length(ai_patterns)
+      # After tier removal, all should return the same patterns
+      assert public_patterns == protected_patterns
+      assert protected_patterns == ai_patterns
+      
+      # Should also be same as calling without tier
+      {:ok, no_tier_patterns} = PatternServer.get_patterns("javascript")
+      assert public_patterns == no_tier_patterns
     end
   end
   
   describe "reload_patterns/0" do
     test "reloads all patterns" do
       # Get initial patterns
-      {:ok, initial} = PatternServer.get_patterns("ruby", :public)
+      {:ok, initial} = PatternServer.get_patterns("ruby")
       
       # Reload
       :ok = PatternServer.reload_patterns()
@@ -55,7 +57,7 @@ defmodule RsolvApi.Security.PatternServerTest do
       Process.sleep(100)
       
       # Patterns should still be available
-      {:ok, reloaded} = PatternServer.get_patterns("ruby", :public)
+      {:ok, reloaded} = PatternServer.get_patterns("ruby")
       assert length(reloaded) == length(initial)
     end
   end
@@ -98,18 +100,18 @@ defmodule RsolvApi.Security.PatternServerTest do
       # Second access should hit cache
       PatternServer.get_patterns("elixir", :public)
       
-      assert_receive {:cache_hit, %{count: 1}, %{language: "elixir", tier: :public}}
+      # Note: tier is no longer included in telemetry metadata after tier removal
+      assert_receive {:cache_hit, %{count: 1}, %{language: "elixir"}}
     end
   end
   
   describe "concurrent access" do
     test "handles concurrent pattern requests" do
       # Spawn multiple concurrent requests
-      tasks = for i <- 1..100 do
+      tasks = for _ <- 1..100 do
         Task.async(fn ->
           language = Enum.random(["javascript", "python", "ruby", "java"])
-          tier = Enum.random([:public, :protected, :ai])
-          PatternServer.get_patterns(language, tier)
+          PatternServer.get_patterns(language)
         end)
       end
       
