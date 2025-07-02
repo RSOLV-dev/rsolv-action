@@ -25,7 +25,19 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       """
       
       # Analyze the code
-      result = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
+      options = %{
+        language: "javascript",
+        session_id: session.id,
+        customer_id: session.customer_id,
+        content: test_code
+      }
+      file = %{
+        path: "test.js",
+        content: test_code,
+        language: "javascript",
+        metadata: %{}
+      }
+      result = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
       assert {:ok, _analysis} = result
       
       # Verify code is scrubbed from all components
@@ -40,7 +52,13 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "const password = '#{unique_marker}';"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
+      file = %{
+        path: "test.js",
+        content: test_code,
+        language: "javascript",
+        metadata: %{}
+      }
+      {:ok, _} = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
       
       # Check all ETS tables for code remnants
       assert CodeRetention.verify_no_code_in_ets(test_code) == :ok
@@ -48,10 +66,16 @@ defmodule RsolvApi.AST.CodeRetentionTest do
     end
     
     test "code is not retained in AST service process dictionaries", %{session: session} do
-      test_code = "SELECT * FROM users WHERE id = " <> "#{:rand.uniform(1000)}"
+      test_code = "const userId = " <> "#{:rand.uniform(1000)};"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
+      file = %{
+        path: "test.js",
+        content: test_code,
+        language: "javascript",
+        metadata: %{}
+      }
+      {:ok, _} = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
       
       # Force cleanup
       CodeRetention.force_cleanup()
@@ -64,20 +88,30 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "eval(userInput)"
       
       # Analyze and capture parser response
-      {:ok, analysis} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
+      file = %{
+        path: "test.js",
+        content: test_code,
+        language: "javascript",
+        metadata: %{}
+      }
+      {:ok, findings} = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
       
-      # Verify AST doesn't contain original code
-      assert CodeRetention.verify_ast_scrubbed(analysis.ast) == :ok
-      
-      # Verify findings don't leak code
-      assert CodeRetention.verify_findings_scrubbed(analysis.findings) == :ok
+      # For now, just verify findings don't leak code
+      # (AST is not returned from analyze_file, only findings)
+      assert CodeRetention.verify_findings_scrubbed(findings) == :ok
     end
     
     test "encrypted code is properly cleared after decryption", %{session: session} do
       sensitive_code = "const dbPassword = 'production-password-xyz';"
       
       # Analyze the code (which involves encryption/decryption)
-      {:ok, _} = AnalysisService.analyze_file(sensitive_code, "javascript", session.id, session.customer_id)
+      file = %{
+        path: "test.js",
+        content: sensitive_code,
+        language: "javascript",
+        metadata: %{}
+      }
+      {:ok, _} = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
       
       # Verify decrypted code is cleared
       assert CodeRetention.verify_no_decrypted_remnants(sensitive_code) == :ok
@@ -96,7 +130,13 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       clear_audit_logs()
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
+      file = %{
+        path: "test.js",
+        content: test_code,
+        language: "javascript",
+        metadata: %{}
+      }
+      {:ok, _} = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
       
       # Check audit logs don't contain sensitive data
       events = AuditLogger.query_events(%{})
@@ -112,7 +152,13 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "const secret = 'unique-secret-#{:rand.uniform(1000000)}';"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
+      file = %{
+        path: "test.js",
+        content: test_code,
+        language: "javascript",
+        metadata: %{}
+      }
+      {:ok, _} = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
       
       # Verify no AST-related processes retain the code
       assert CodeRetention.verify_no_code_in_processes(test_code) == :ok
@@ -122,10 +168,10 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       # Create multiple code samples with unique markers
       code_samples = for i <- 1..5 do
         %{
-          "path" => "file#{i}.js",
-          "content" => "const unique_var_#{i} = 'secret_value_#{i}';",
-          "language" => "javascript",
-          "size" => 45
+          path: "file#{i}.js",
+          content: "const unique_var_#{i} = 'secret_value_#{i}';",
+          language: "javascript",
+          metadata: %{}
         }
       end
       
@@ -139,7 +185,7 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       
       # Verify none of the code is retained
       Enum.each(code_samples, fn sample ->
-        assert CodeRetention.verify_no_code_in_memory(sample["content"]) == :ok
+        assert CodeRetention.verify_no_code_in_memory(sample.content) == :ok
         assert CodeRetention.verify_no_code_in_memory("unique_var_") == :ok
         assert CodeRetention.verify_no_code_in_memory("secret_value_") == :ok
       end)
@@ -149,7 +195,13 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "function leak() { return 'memory-leak-test'; }"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
+      file = %{
+        path: "test.js",
+        content: test_code,
+        language: "javascript",
+        metadata: %{}
+      }
+      {:ok, _} = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
       
       # Generate retention report
       {:ok, report} = CodeRetention.generate_retention_report()
@@ -166,7 +218,13 @@ defmodule RsolvApi.AST.CodeRetentionTest do
       test_code = "const cleanupTest = '#{unique_marker}';"
       
       # Analyze the code
-      {:ok, _} = AnalysisService.analyze_file(test_code, "javascript", session.id, session.customer_id)
+      file = %{
+        path: "test.js",
+        content: test_code,
+        language: "javascript",
+        metadata: %{}
+      }
+      {:ok, _} = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
       
       # Force garbage collection
       CodeRetention.force_cleanup()
