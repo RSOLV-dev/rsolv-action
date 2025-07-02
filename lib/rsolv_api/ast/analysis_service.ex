@@ -373,7 +373,8 @@ defmodule RsolvApi.AST.AnalysisService do
         
         
         # Only report if confidence meets threshold
-        min_confidence = 0.7  # Default threshold
+        # Use pattern-specific threshold if available, otherwise default
+        min_confidence = Map.get(match, :min_confidence, 0.7)
         if confidence >= min_confidence do
           build_finding_from_match(match, confidence, path_context, code_context)
         else

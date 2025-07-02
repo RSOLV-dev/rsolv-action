@@ -15,7 +15,6 @@ defmodule RSOLVWeb.Api.V1.ASTController do
   
   alias RsolvApi.AST.AnalysisService
   alias RsolvApi.AST.SessionManager
-  alias RsolvApi.AST.Encryption
   alias RSOLV.Accounts
   alias RSOLV.RateLimiter
   
@@ -67,6 +66,17 @@ defmodule RSOLVWeb.Api.V1.ASTController do
           requestId: request_id
         })
         
+      {:error, :invalid_api_key} ->
+        conn
+        |> put_status(401)
+        |> json(%{
+          error: %{
+            code: "INVALID_API_KEY",
+            message: "Invalid or expired API key"
+          },
+          requestId: request_id
+        })
+        
       {:error, :missing_encryption_key} ->
         conn
         |> put_status(400)
@@ -108,6 +118,30 @@ defmodule RSOLVWeb.Api.V1.ASTController do
             code: "DECRYPTION_FAILED",
             message: "Failed to decrypt content. Ensure encryption key matches"
           },
+          requestId: request_id
+        })
+        
+      {:error, {:validation, message}} ->
+        conn
+        |> put_status(400)
+        |> json(%{
+          error: %{
+            code: "INVALID_REQUEST",
+            message: message
+          },
+          requestId: request_id
+        })
+        
+      {:error, :rate_limited} ->
+        conn
+        |> put_resp_header("retry-after", "60")
+        |> put_status(429)
+        |> json(%{
+          error: %{
+            code: "RATE_LIMITED",
+            message: "Rate limit exceeded. Please try again later."
+          },
+          retryAfter: 60,
           requestId: request_id
         })
         
@@ -351,7 +385,7 @@ defmodule RSOLVWeb.Api.V1.ASTController do
     end
   end
   
-  defp cleanup_decrypted_files(files) do
+  defp cleanup_decrypted_files(_files) do
     # Clear sensitive data from memory
     # In Erlang/Elixir, we can't force immediate GC, but we can 
     # ensure references are dropped

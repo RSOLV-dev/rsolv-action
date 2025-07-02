@@ -61,7 +61,7 @@ defmodule RsolvApi.Security.PatternTelemetry do
     
     Logger.debug("Pattern fetch completed",
       language: metadata.language,
-      tier: metadata.tier,
+      tier: Map.get(metadata, :tier, "all"),
       duration_ms: duration_ms
     )
     
@@ -69,7 +69,7 @@ defmodule RsolvApi.Security.PatternTelemetry do
     if function_exported?(:prometheus_histogram, :observe, 2) do
       :prometheus_histogram.observe(
         :pattern_fetch_duration_milliseconds,
-        [metadata.language, to_string(metadata.tier)],
+        [metadata.language, to_string(Map.get(metadata, :tier, "all"))],
         duration_ms
       )
     end
@@ -78,14 +78,14 @@ defmodule RsolvApi.Security.PatternTelemetry do
   defp handle_cache_event([:pattern, :cache, type], _measurements, metadata, _config) do
     Logger.debug("Pattern cache #{type}",
       language: metadata.language,
-      tier: metadata.tier
+      tier: Map.get(metadata, :tier, "all")
     )
     
     # Increment counter
     if function_exported?(:prometheus_counter, :inc, 2) do
       :prometheus_counter.inc(
         :pattern_cache_operations_total,
-        [to_string(type), metadata.language, to_string(metadata.tier)]
+        [to_string(type), metadata.language, to_string(Map.get(metadata, :tier, "all"))]
       )
     end
   end
