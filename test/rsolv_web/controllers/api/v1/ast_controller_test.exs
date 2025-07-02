@@ -126,7 +126,7 @@ defmodule RSOLVWeb.Api.V1.ASTControllerTest do
       assert result["path"] == "test.js"
       
       # Debug: Print the entire result to understand what's happening
-      IO.puts("Full result for test.js: #{inspect(result)}")
+      # Full result available in: result
       
       assert result["status"] == "success"
       assert result["language"] == "javascript"
@@ -145,11 +145,10 @@ defmodule RSOLVWeb.Api.V1.ASTControllerTest do
         assert sql_finding, "No SQL injection finding found. Got types: #{inspect(Enum.map(result["findings"], & &1["type"]))}"
         assert sql_finding["severity"] in ["high", "critical"]
       else
-        IO.puts("WARNING: No findings detected for SQL injection test case")
+        # No findings detected - pattern matching might need adjustment
       end
       
       # Check summary
-      IO.puts("Summary: #{inspect(response["summary"])}")
       # The summary uses totalFiles instead of filesAnalyzed
       assert response["summary"]["totalFiles"] == 1
       # TODO: Fix pattern detection so totalFindings > 0

@@ -188,11 +188,9 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
   end
   
   describe "Elixir parsing" do
-    @tag :skip
     test "parses simple Elixir code", %{session: session, customer_id: customer_id} do
       code = test_code("elixir", :simple)
       
-      # Elixir parser currently has timeout issues - skip for now
       {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "elixir", code)
       ast = result.ast
       
@@ -200,11 +198,9 @@ defmodule RsolvApi.AST.MultiLanguageParsingTest do
       assert is_tuple(ast) or is_map(ast)
     end
     
-    @tag :skip
     test "detects Elixir command injection", %{session: session, customer_id: customer_id} do
       code = test_code("elixir", :command_injection_vulnerable)
       
-      # Elixir parser currently has timeout issues - skip for now
       {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "elixir", code)
       ast = result.ast
       

@@ -47,9 +47,10 @@ defmodule ElixirParser do
             })
             
           Map.get(request, "command") == "HEALTH_CHECK" ->
-            send_response(%{
-              "result" => "ok"
-            })
+            id = Map.get(request, "id")
+            response = %{"result" => "ok"}
+            response = if id, do: Map.put(response, "id", id), else: response
+            send_response(response)
             
           # Parse with action field
           Map.get(request, "action") == "parse" && Map.has_key?(request, "code") ->
@@ -58,6 +59,12 @@ defmodule ElixirParser do
           # Standard format without action field
           Map.has_key?(request, "code") ->
             handle_parse_request(request)
+            
+          # Command-based format (from PortWorker)
+          Map.has_key?(request, "command") && Map.get(request, "command") != "HEALTH_CHECK" ->
+            # Treat command as code to parse
+            request_with_code = Map.put(request, "code", Map.get(request, "command"))
+            handle_parse_request(request_with_code)
             
           true ->
             send_response(%{
