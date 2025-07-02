@@ -1,7 +1,13 @@
 defmodule RsolvApi.AST.BatchProcessorTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   
   alias RsolvApi.AST.BatchProcessor
+  
+  setup do
+    # Ensure the application is started
+    Application.ensure_all_started(:rsolv_api)
+    :ok
+  end
   
   describe "parallel parsing" do
     test "processes multiple files concurrently" do

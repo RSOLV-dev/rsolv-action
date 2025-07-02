@@ -1,26 +1,13 @@
 defmodule RsolvApi.AST.AnalysisServiceTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   
   alias RsolvApi.AST.AnalysisService
   alias RsolvApi.AST.SessionManager
   alias RsolvApi.AST.ParserRegistry
   
   setup do
-    # Ensure services are started
-    case GenServer.whereis(SessionManager) do
-      _ -> :ok
-    end
-    
-    case GenServer.whereis(ParserRegistry) do
-      nil -> :ok  # ParserRegistry is started by Application
-      _ -> :ok
-    end
-    
-    case GenServer.whereis(AnalysisService) do
-      nil -> :ok  # AnalysisService is started by Application
-      _ -> :ok
-    end
-    
+    # Ensure the application is started
+    Application.ensure_all_started(:rsolv_api)
     :ok
   end
   

@@ -14,14 +14,19 @@ defmodule RsolvApi.AST.PatternAdapter do
   @cache_table :pattern_adapter_cache
   @cache_ttl :timer.hours(1)  # Patterns don't change often
   
-  # Initialize cache on module load
-  def __after_compile__(_env, _bytecode) do
-    init_cache()
-  end
-  
-  defp init_cache do
-    if :ets.whereis(@cache_table) == :undefined do
-      :ets.new(@cache_table, [:set, :public, :named_table, {:read_concurrency, true}])
+  # Initialize cache on first use
+  defp ensure_cache_exists do
+    case :ets.whereis(@cache_table) do
+      :undefined ->
+        try do
+          :ets.new(@cache_table, [:set, :public, :named_table, {:read_concurrency, true}])
+        rescue
+          ArgumentError ->
+            # Table was created by another process
+            :ok
+        end
+      _ ->
+        :ok
     end
   end
   
@@ -31,7 +36,7 @@ defmodule RsolvApi.AST.PatternAdapter do
   """
   def load_patterns_for_language(language) do
     # Ensure cache is initialized
-    init_cache()
+    ensure_cache_exists()
     
     cache_key = {:patterns, language}
     
@@ -300,6 +305,7 @@ defmodule RsolvApi.AST.PatternAdapter do
   end
   
   defp cache_patterns(key, patterns) do
+    ensure_cache_exists()
     expiry = System.monotonic_time(:millisecond) + @cache_ttl
     :ets.insert(@cache_table, {key, {patterns, expiry}})
     :ok
