@@ -5,14 +5,14 @@ defmodule RsolvApi.AST.ProductionPythonParserTest do
   
   describe "Production Python Parser" do
     setup do
-      # Ensure managers are started
-      case GenServer.whereis(SessionManager) do
-        _ -> :ok
+      # Ensure SessionManager is available
+      unless Process.whereis(SessionManager) do
+        Application.ensure_all_started(:rsolv_api)
       end
       
-      case GenServer.whereis(ParserRegistry) do
-        nil -> :ok  # ParserRegistry is started by Application
-        _ -> :ok
+      # Ensure ParserRegistry is available
+      unless Process.whereis(ParserRegistry) do
+        Application.ensure_all_started(:rsolv_api)
       end
       
       # Create test customer and session
@@ -80,8 +80,8 @@ defmodule RsolvApi.AST.ProductionPythonParserTest do
       assert result.language == "python"
       assert result.ast == nil
       assert is_map(result.error)
-      assert result.error["type"] == "SyntaxError"
-      assert is_binary(result.error["message"])
+      assert result.error.type == :syntax_error
+      assert is_binary(result.error.message)
     end
     
     test "parses complex Python constructs", %{customer_id: customer_id, session_id: session_id} do

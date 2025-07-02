@@ -5,14 +5,14 @@ defmodule RsolvApi.AST.ProductionJavaScriptParserTest do
   
   describe "Production JavaScript Parser" do
     setup do
-      # Ensure managers are started
-      case GenServer.whereis(SessionManager) do
-        _ -> :ok
+      # Ensure SessionManager is available
+      unless Process.whereis(SessionManager) do
+        Application.ensure_all_started(:rsolv_api)
       end
       
-      case GenServer.whereis(ParserRegistry) do
-        nil -> :ok  # ParserRegistry is started by Application
-        _ -> :ok
+      # Ensure ParserRegistry is available
+      unless Process.whereis(ParserRegistry) do
+        Application.ensure_all_started(:rsolv_api)
       end
       
       # Create test customer and session
@@ -86,7 +86,8 @@ defmodule RsolvApi.AST.ProductionJavaScriptParserTest do
       assert result.language == "javascript"
       assert result.ast == nil
       assert is_map(result.error)
-      assert is_binary(result.error["message"])
+      assert result.error.type == :syntax_error
+      assert is_binary(result.error.message)
     end
     
     test "parses complex JavaScript constructs", %{customer_id: customer_id, session_id: session_id} do
@@ -240,14 +241,14 @@ defmodule RsolvApi.AST.ProductionJavaScriptParserTest do
   
   describe "Production TypeScript Parser" do
     setup do
-      # Ensure managers are started
-      case GenServer.whereis(SessionManager) do
-        _ -> :ok
+      # Ensure SessionManager is available
+      unless Process.whereis(SessionManager) do
+        Application.ensure_all_started(:rsolv_api)
       end
       
-      case GenServer.whereis(ParserRegistry) do
-        nil -> :ok  # ParserRegistry is started by Application
-        _ -> :ok
+      # Ensure ParserRegistry is available
+      unless Process.whereis(ParserRegistry) do
+        Application.ensure_all_started(:rsolv_api)
       end
       
       # Create test customer and session
@@ -341,7 +342,8 @@ defmodule RsolvApi.AST.ProductionJavaScriptParserTest do
       assert result.language == "typescript"
       assert result.ast == nil
       assert is_map(result.error)
-      assert is_binary(result.error["message"])
+      assert result.error.type == :syntax_error
+      assert is_binary(result.error.message)
     end
   end
 end

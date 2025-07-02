@@ -295,7 +295,7 @@ defmodule RsolvApi.AST.PortWorker do
           {from, requests} ->
             # Reply to the waiting process
             reply = case response do
-              %{"error" => error} -> {:ok, %{"error" => error}}
+              %{"error" => _error} -> {:ok, response}  # Return full response with error
               %{"result" => result} -> {:ok, result}
               _ -> {:ok, response}
             end
