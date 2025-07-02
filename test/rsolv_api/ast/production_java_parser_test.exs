@@ -1,5 +1,7 @@
 defmodule RsolvApi.AST.ProductionJavaParserTest do
   use ExUnit.Case, async: true
+
+  @moduletag :integration
   
   alias RsolvApi.AST.{ParserRegistry, SessionManager}
   

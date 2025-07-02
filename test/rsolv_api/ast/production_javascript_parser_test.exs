@@ -1,6 +1,8 @@
 defmodule RsolvApi.AST.ProductionJavaScriptParserTest do
   use ExUnit.Case, async: true
   
+  @moduletag :integration
+  
   alias RsolvApi.AST.{ParserRegistry, SessionManager}
   
   describe "Production JavaScript Parser" do

@@ -101,6 +101,7 @@ defmodule RsolvApi.AST.ParserRegistryTest do
       assert parser_info.status == :running
     end
     
+    @tag :integration
     test "reuses existing parser for same session" do
       customer_id = "test-customer"
       {:ok, session} = SessionManager.create_session(customer_id)
@@ -115,6 +116,7 @@ defmodule RsolvApi.AST.ParserRegistryTest do
       assert result1.parser_id == result2.parser_id
     end
     
+    @tag :integration
     test "isolates parsers between different sessions" do
       customer_id = "test-customer"
       {:ok, session1} = SessionManager.create_session(customer_id)

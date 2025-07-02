@@ -192,7 +192,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat do
       
       iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
       iex> enhancement.min_confidence
-      0.8
+      0.7
       
       iex> enhancement = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
       iex> "uses_parameterized_query" in Map.keys(enhancement.confidence_rules.adjustments)

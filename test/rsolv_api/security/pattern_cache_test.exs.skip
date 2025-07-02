@@ -1,7 +1,8 @@
 defmodule RsolvApi.Security.PatternCacheTest do
   use ExUnit.Case, async: false
   
-  @moduletag :skip
+  # Skip all tests - PatternCache module no longer exists
+  @moduletag skip: "PatternCache module has been removed"
   
   alias RsolvApi.Security.PatternCache
   alias RsolvApi.Security.EnhancedPattern
