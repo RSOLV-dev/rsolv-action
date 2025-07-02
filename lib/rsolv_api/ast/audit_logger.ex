@@ -45,18 +45,6 @@ defmodule RsolvApi.AST.AuditLogger do
   }
   
   # Sensitive field patterns for sanitization
-  # These are compiled at runtime to avoid module attribute limitations
-  defp sensitive_patterns do
-    [
-      ~r/api_key/i,
-      ~r/password/i,
-      ~r/secret/i,
-      ~r/token/i,
-      ~r/credit_card/i,
-      ~r/ssn/i,
-      ~r/private_key/i
-    ]
-  end
   
   defstruct [
     :buffer,
@@ -288,9 +276,15 @@ defmodule RsolvApi.AST.AuditLogger do
   
   defp is_sensitive_field?(field) do
     field_str = to_string(field)
-    Enum.any?(sensitive_patterns(), fn pattern ->
-      Regex.match?(pattern, field_str)
-    end)
+    
+    # Check against each pattern - compiled at build time
+    Regex.match?(~r/api_key/i, field_str) ||
+    Regex.match?(~r/password/i, field_str) ||
+    Regex.match?(~r/secret/i, field_str) ||
+    Regex.match?(~r/token/i, field_str) ||
+    Regex.match?(~r/credit_card/i, field_str) ||
+    Regex.match?(~r/ssn/i, field_str) ||
+    Regex.match?(~r/private_key/i, field_str)
   end
   
   defp schedule_flush do

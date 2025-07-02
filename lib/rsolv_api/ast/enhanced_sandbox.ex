@@ -137,13 +137,16 @@ defmodule RsolvApi.AST.EnhancedSandbox do
   end
   
   defp check_suspicious_patterns(input, language) do
-    # Language-specific patterns
+    # Get base patterns
+    base_patterns = get_base_suspicious_patterns()
+    
+    # Add language-specific patterns
     patterns = case language do
-      "javascript" -> @suspicious_patterns ++ [~r/new\s+Function\s*\(/]
-      "python" -> @suspicious_patterns ++ [~r/__import__/, ~r/compile\s*\(/]
-      "ruby" -> @suspicious_patterns ++ [~r/\bsend\s*\(/, ~r/instance_eval/]
-      "php" -> @suspicious_patterns ++ [~r/\bshell_exec/, ~r/\bpassthru/]
-      _ -> @suspicious_patterns
+      "javascript" -> base_patterns ++ [~r/new\s+Function\s*\(/]
+      "python" -> base_patterns ++ [~r/__import__/, ~r/compile\s*\(/]
+      "ruby" -> base_patterns ++ [~r/\bsend\s*\(/, ~r/instance_eval/]
+      "php" -> base_patterns ++ [~r/\bshell_exec/, ~r/\bpassthru/]
+      _ -> base_patterns
     end
     
     case Enum.find(patterns, fn pattern -> Regex.match?(pattern, input) end) do
@@ -159,6 +162,10 @@ defmodule RsolvApi.AST.EnhancedSandbox do
         })
         {:error, {:suspicious_pattern, pattern}}
     end
+  end
+  
+  defp get_base_suspicious_patterns do
+    @suspicious_patterns
   end
   
   defp check_complexity(input) do
