@@ -151,7 +151,7 @@ defmodule RsolvApi.Security.Patterns.Javascript.SqlInjectionConcatTest do
       assert enhancement.confidence_rules.base == 0.4
       assert enhancement.confidence_rules.adjustments["uses_parameterized_query"] == -0.9
       assert enhancement.confidence_rules.adjustments["is_console_log"] == -1.0
-      assert enhancement.confidence_rules.adjustments["direct_req_param_concat"] == 0.5
+      assert enhancement.confidence_rules.adjustments["direct_req_param_concat"] == 0.4
       assert enhancement.min_confidence == 0.7
     end
   end

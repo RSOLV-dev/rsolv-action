@@ -132,6 +132,14 @@ defmodule RsolvApi.Security.Patterns.PatternBase do
         end
       end
       
+      @doc """
+      Single-arity version of applies_to_file? for convenience.
+      Calls the two-arity version with nil content.
+      """
+      def applies_to_file?(file_path) do
+        applies_to_file?(file_path, nil)
+      end
+      
       # Legacy targeting logic (current implementation)
       defp apply_legacy_targeting(file_path, pattern_meta, content_or_frameworks) do
         # First check language match

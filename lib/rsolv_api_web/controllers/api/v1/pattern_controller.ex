@@ -28,6 +28,7 @@ defmodule RSOLVWeb.Api.V1.PatternController do
         "enhanced" -> :enhanced
         _ -> :standard
       end
+      include_metadata = params["include_metadata"] == "true"
       
       Logger.info("Language: #{language}, Format: #{format}")
       
@@ -53,7 +54,13 @@ defmodule RSOLVWeb.Api.V1.PatternController do
         Logger.debug("Formatting pattern: #{inspect(pattern.id)}")
         formatted = format_pattern_without_tier(pattern, format)
         Logger.debug("Formatted pattern keys: #{inspect(Map.keys(formatted))}")
-        formatted
+        
+        # Add vulnerability metadata if requested
+        if include_metadata do
+          add_vulnerability_metadata(formatted, pattern)
+        else
+          formatted
+        end
       end)
       
       # Build metadata without tier information
@@ -139,6 +146,15 @@ defmodule RSOLVWeb.Api.V1.PatternController do
         |> put_resp_header("content-type", "application/json")
         |> send_resp(500, error_data)
     end
+  end
+  
+  @doc """
+  Get security patterns for a specific language.
+  """
+  def by_language(conn, %{"language" => language} = params) do
+    # Add language to params and delegate to index
+    enhanced_params = Map.put(params, "language", language)
+    index(conn, enhanced_params)
   end
   
   @doc """
@@ -285,6 +301,28 @@ defmodule RSOLVWeb.Api.V1.PatternController do
     else
       nil
     end
+  end
+  
+  defp add_vulnerability_metadata(formatted_pattern, original_pattern) do
+    # Try to get metadata from the pattern module first
+    pattern_module = pattern_id_to_module(formatted_pattern[:id] || formatted_pattern["id"])
+    
+    metadata = if pattern_module && function_exported?(pattern_module, :vulnerability_metadata, 0) do
+      try do
+        apply(pattern_module, :vulnerability_metadata, [])
+      rescue
+        _ -> %{}
+      end
+    else
+      %{}
+    end
+    
+    # Add the metadata to the pattern
+    vulnerability_metadata = Map.merge(metadata, %{
+      pattern_id: formatted_pattern[:id] || formatted_pattern["id"]
+    })
+    
+    Map.put(formatted_pattern, "vulnerability_metadata", vulnerability_metadata)
   end
   
 end

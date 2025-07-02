@@ -53,6 +53,9 @@ defmodule RSOLVWeb.Router do
       get "/", Api.V1.PatternController, :index
       get "/stats", Api.V1.PatternController, :stats
       
+      # Pattern by language endpoint
+      get "/:language", Api.V1.PatternController, :by_language
+      
       # Pattern metadata endpoint
       get "/:id/metadata", PatternController, :metadata
     end

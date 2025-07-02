@@ -45,8 +45,8 @@ defmodule RsolvApi.Security.Patterns.PatternBaseTest do
       assert function_exported?(TestPattern, :vulnerability_metadata, 0)
     end
     
-    test "does not export applies_to_file?/1 function" do
-      refute function_exported?(TestPattern, :applies_to_file?, 1)
+    test "exports applies_to_file?/1 function" do
+      assert function_exported?(TestPattern, :applies_to_file?, 1)
     end
     
     test "exports applies_to_file?/2 function" do
@@ -65,9 +65,14 @@ defmodule RsolvApi.Security.Patterns.PatternBaseTest do
       assert metadata.description == "Test metadata"
     end
     
-    test "applies_to_file?/1 works with file extensions" do
+    test "applies_to_file?/2 works with file extensions" do
       assert TestPattern.applies_to_file?("test.js", nil)
       refute TestPattern.applies_to_file?("test.py", nil)
+    end
+    
+    test "applies_to_file?/1 works with file extensions" do
+      assert TestPattern.applies_to_file?("test.js")
+      refute TestPattern.applies_to_file?("test.py")
     end
   end
   

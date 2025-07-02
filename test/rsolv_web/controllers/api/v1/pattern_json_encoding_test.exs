@@ -16,19 +16,19 @@ defmodule RSOLVWeb.Api.V1.PatternJsonEncodingTest do
         confidence: 90
       }
       
-      # Attempt to encode with Jason should fail
+      # Attempt to encode with JSON should fail
       assert_raise Protocol.UndefinedError, fn ->
-        Jason.encode!(pattern_with_regex)
+        JSON.encode!(pattern_with_regex)
       end
     end
     
-    test "demonstrates regex cannot be encoded by Jason", %{conn: _conn} do
+    test "demonstrates regex cannot be encoded by JSON", %{conn: _conn} do
       # Simple test showing regex encoding failure
       regex = ~r/test_pattern/
       
       # This should raise an error
       assert_raise Protocol.UndefinedError, fn ->
-        Jason.encode!(%{pattern: regex})
+        JSON.encode!(%{pattern: regex})
       end
     end
     

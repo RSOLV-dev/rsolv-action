@@ -74,7 +74,9 @@ defmodule RSOLVWeb.PatternMigrationE2ETest do
       ]
       
       for {pattern_id, expected_text} <- migrated_patterns do
-        conn = get(conn, "/api/v1/patterns/#{pattern_id}/metadata")
+        conn = conn
+        |> put_req_header("authorization", "Bearer rsolv_test_abc123")
+        |> get("/api/v1/patterns/#{pattern_id}/metadata")
         
         assert json = json_response(conn, 200)
         assert json["pattern_id"] == pattern_id
@@ -138,7 +140,9 @@ defmodule RSOLVWeb.PatternMigrationE2ETest do
     
     test "metadata includes comprehensive vulnerability information", %{conn: conn} do
       # Test command injection metadata as example of comprehensive data
-      conn = get(conn, "/api/v1/patterns/js-command-injection-exec/metadata")
+      conn = conn
+      |> put_req_header("authorization", "Bearer rsolv_test_abc123")
+      |> get("/api/v1/patterns/js-command-injection-exec/metadata")
       json = json_response(conn, 200)
       
       # Check description quality
@@ -196,7 +200,9 @@ defmodule RSOLVWeb.PatternMigrationE2ETest do
     end
     
     test "non-existent patterns return 404 for metadata", %{conn: conn} do
-      conn = get(conn, "/api/v1/patterns/non-existent-pattern-id/metadata")
+      conn = conn
+      |> put_req_header("authorization", "Bearer rsolv_test_abc123")
+      |> get("/api/v1/patterns/non-existent-pattern-id/metadata")
       assert json_response(conn, 404)
     end
     
