@@ -10,7 +10,7 @@ defmodule RsolvApi.Cache.ValidationCacheSupervisionTest do
     
     test "ETS table is created on startup" do
       # The ETS table should exist
-      assert :ets.info(ValidationCache.table_name()) != :undefined
+      assert :ets.info(:validation_cache) != :undefined
     end
     
     test "can store and retrieve values after startup" do

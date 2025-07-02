@@ -6,18 +6,27 @@ defmodule RsolvApi.AST.PatternMatchingDebugTest do
   the AST service detects 0 vulnerabilities despite having working infrastructure.
   """
   
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   
-  alias RsolvApi.AST.{AnalysisService, SecurityPatternMatcher}
+  alias RsolvApi.AST.{AnalysisService, ASTPatternMatcher, ParserRegistry, SessionManager}
   alias RsolvApi.Security.{PatternRegistry, PatternAdapter}
   alias RsolvApi.Security.Patterns.Python.SqlInjectionConcat
+  
+  setup do
+    # Ensure the application is started
+    Application.ensure_all_started(:rsolv_api)
+    :ok
+  end
   
   describe "RED Phase: AST Parser Output Structure" do
     test "python parser generates expected AST structure for SQL injection" do
       # Test the raw AST output to understand what the parser actually produces
       code = "query = \"SELECT * FROM users WHERE id = \" + user_id"
       
-      {:ok, ast} = AnalysisService.parse_code(code, "python")
+      # Create a session and parse using ParserRegistry
+      {:ok, session} = SessionManager.create_session("test-client")
+      {:ok, parse_result} = ParserRegistry.parse_code(session.id, "test-client", "python", code)
+      ast = parse_result.ast
       
       # Debug: What does the AST actually look like?
       IO.inspect(ast, label: "Raw Python AST")
@@ -51,16 +60,21 @@ defmodule RsolvApi.AST.PatternMatchingDebugTest do
     test "javascript parser generates expected AST structure for SQL injection" do
       code = "const query = \"SELECT * FROM users WHERE id = \" + userId;"
       
-      {:ok, ast} = AnalysisService.parse_code(code, "javascript")
+      # Create a session and parse using ParserRegistry
+      {:ok, session} = SessionManager.create_session("test-client")
+      {:ok, parse_result} = ParserRegistry.parse_code(session.id, "test-client", "javascript", code)
+      ast = parse_result.ast
       
       IO.inspect(ast, label: "Raw JavaScript AST")
       
       # Expected structure: BinaryExpression with operator: "+"
-      # Find the variable declaration
-      assert ast["type"] == "Program"
-      assert is_list(ast["body"])
+      # JavaScript AST has a File wrapper with program property
+      assert ast["type"] == "File"
+      program = ast["program"]
+      assert program["type"] == "Program"
+      assert is_list(program["body"])
       
-      var_decl = hd(ast["body"])
+      var_decl = hd(program["body"])
       assert var_decl["type"] == "VariableDeclaration"
       
       declarator = hd(var_decl["declarations"])
@@ -143,7 +157,12 @@ defmodule RsolvApi.AST.PatternMatchingDebugTest do
       enhancement = SqlInjectionConcat.ast_enhancement()
       
       # Test the core matching logic
-      result = SecurityPatternMatcher.find_matches(test_ast, pattern, enhancement)
+      # ASTPatternMatcher expects converted pattern format
+      converted_pattern = PatternAdapter.convert_to_matcher_format(%{pattern | ast_rules: enhancement.ast_rules})
+      
+      # Match using ASTPatternMatcher
+      {:ok, matches} = ASTPatternMatcher.match_multiple(test_ast, [converted_pattern], "python")
+      result = matches
       
       IO.inspect(result, label: "Pattern Matching Result")
       
@@ -173,23 +192,26 @@ defmodule RsolvApi.AST.PatternMatchingDebugTest do
       # This is our main failing test - it should pass after we fix the issues above
       code = "query = \"SELECT * FROM users WHERE id = \" + user_id"
       
-      options = %{
-        language: "python",
-        patterns: ["python-sql-injection-concat"]
+      file = %{
+        path: "test.py",
+        content: code,
+        language: "python"
       }
       
-      session = %{id: "test-session"}
+      options = %{
+        "includeSecurityPatterns" => true
+      }
       
-      result = AnalysisService.analyze_file(code, options, session)
+      {:ok, findings} = AnalysisService.analyze_file(file, options)
       
-      IO.inspect(result, label: "End-to-End Analysis Result")
+      IO.inspect(findings, label: "End-to-End Analysis Result")
       
       # This test should fail initially, but will pass after we fix the component issues
-      assert length(result.findings) > 0, "Should detect SQL injection vulnerability"
+      assert length(findings) > 0, "Should detect SQL injection vulnerability"
       
-      finding = hd(result.findings)
-      assert finding.pattern_type == "sql_injection"
-      assert finding.severity == "critical"
+      finding = hd(findings)
+      assert finding.type =~ "sql-injection"
+      assert finding.severity == :critical
     end
   end
 end

@@ -203,7 +203,7 @@ defmodule RsolvApi.Security.Patterns.Ruby.SqlInjectionInterpolationTest do
       
       assert is_map(enhancement.context_rules)
       assert is_list(enhancement.context_rules.exclude_paths)
-      assert is_map(enhancement.context_rules.safe_patterns)
+      assert is_list(enhancement.context_rules.safe_patterns)
     end
   end
 end

@@ -50,11 +50,15 @@ defmodule RsolvApi.Cache.ValidationCache do
     :ok
   end
   
+  def clear() do
+    :ets.delete_all_objects(@table_name)
+    :ok
+  end
+  
   def clear_pattern(_pattern_id) do
     # Since we use hashed keys, we can't efficiently clear by pattern
     # For now, clear all cache when a pattern changes
-    :ets.delete_all_objects(@table_name)
-    :ok
+    clear()
   end
   
   def get_stats() do
