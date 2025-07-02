@@ -83,12 +83,12 @@ defmodule RSOLVWeb.Api.V1.PatternJsonEncodingTest do
         }
       }
       
-      # Native JSON encoding should work with Jason
-      json = Jason.encode!(prepared_pattern)
+      # Native JSON encoding should work
+      json = JSON.encode!(prepared_pattern)
       assert is_binary(json)
       
       # Should be able to decode back
-      decoded = Jason.decode!(json)
+      decoded = JSON.decode!(json)
       assert decoded["pattern"]["__type__"] == "regex"
       assert decoded["pattern"]["source"] == "\\.(query|execute|exec|run|all|get)"
     end
