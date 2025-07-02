@@ -1,23 +1,12 @@
 defmodule RSOLVWeb.Api.V1.ASTControllerTest do
-  use RSOLVWeb.ConnCase, async: true
+  use RSOLVWeb.ConnCase, async: false
   
   alias RsolvApi.AST.SessionManager
   alias RsolvApi.AST.Encryption
   
   setup do
-    # Ensure SessionManager is started
-    case GenServer.whereis(SessionManager) do
-      _ -> :ok
-    end
-    
-    # Ensure RateLimiter is started and clear any rate limit data
-    case GenServer.whereis(RSOLV.RateLimiter) do
-      nil -> 
-        start_supervised!(RSOLV.RateLimiter)
-        :timer.sleep(100) # Give it time to initialize ETS table
-      _ -> 
-        :ok
-    end
+    # Ensure the application is started
+    Application.ensure_all_started(:rsolv_api)
     
     # Clear rate limit data for test customer
     if :ets.whereis(:rsolv_rate_limiter) != :undefined do

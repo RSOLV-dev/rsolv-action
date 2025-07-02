@@ -1,5 +1,7 @@
 defmodule RSOLVWeb.FixAttemptControllerTest do
   use RSOLVWeb.ConnCase
+  use RsolvApi.DataCase
+  
   alias RsolvApi.Billing.FixAttempt
   alias RsolvApi.Repo
   

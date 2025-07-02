@@ -1,5 +1,6 @@
 defmodule RSOLVWeb.WebhookControllerTest do
   use RSOLVWeb.ConnCase
+  use RsolvApi.DataCase
   
   alias RsolvApi.Billing.FixAttempt
   alias RsolvApi.Repo
