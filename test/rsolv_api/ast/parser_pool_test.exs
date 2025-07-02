@@ -134,15 +134,16 @@ defmodule RsolvApi.AST.ParserPoolTest do
       }
       
       pool = start_supervised!({ParserPool, config})
-      Process.sleep(100)
+      # Wait for parsers to warm up
+      Process.sleep(300)
       
       {:ok, pool: pool}
     end
     
     test "tracks utilization metrics", %{pool: pool} do
       # Perform some checkouts
-      {:ok, p1} = ParserPool.checkout(pool, "javascript")
-      {:ok, p2} = ParserPool.checkout(pool, "javascript")
+      {:ok, p1} = ParserPool.checkout(pool, "javascript", timeout: 5000)
+      {:ok, p2} = ParserPool.checkout(pool, "javascript", timeout: 5000)
       Process.sleep(50)
       ParserPool.checkin(pool, "javascript", p1)
       
@@ -180,11 +181,12 @@ defmodule RsolvApi.AST.ParserPoolTest do
       }
       
       pool = start_supervised!({ParserPool, config})
-      Process.sleep(100)
+      # Wait for parsers to warm up
+      Process.sleep(300)
       
       # Create high demand by checking out all parsers and holding them
-      {:ok, p1} = ParserPool.checkout(pool, "javascript")
-      {:ok, p2} = ParserPool.checkout(pool, "javascript")
+      {:ok, p1} = ParserPool.checkout(pool, "javascript", timeout: 5000)
+      {:ok, p2} = ParserPool.checkout(pool, "javascript", timeout: 5000)
       
       # Try to checkout more (should trigger scaling)
       tasks = for _ <- 1..3 do

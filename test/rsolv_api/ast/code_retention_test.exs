@@ -1,5 +1,5 @@
 defmodule RsolvApi.AST.CodeRetentionTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   
   alias RsolvApi.AST.{AnalysisService, SessionManager, ParserPool, AuditLogger}
   alias RsolvApi.AST.CodeRetention
