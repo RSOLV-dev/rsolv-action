@@ -24,6 +24,14 @@ defmodule RsolvApi.AST.FallbackStrategy do
     end
   end
   
+  # Ensure cache is initialized before use
+  defp ensure_cache do
+    case :ets.whereis(@cache_table) do
+      :undefined -> init_cache()
+      _ -> :ok
+    end
+  end
+  
   # Result struct for fallback analysis
   defmodule AnalysisResult do
     @enforce_keys [:strategy, :ast_available]
@@ -118,12 +126,14 @@ defmodule RsolvApi.AST.FallbackStrategy do
   
   defp check_cache(nil), do: :miss
   defp check_cache(cache_key) do
+    ensure_cache()
     case :ets.lookup(@cache_table, cache_key) do
       [{^cache_key, {result, expiry}}] ->
         if expiry > System.monotonic_time(:millisecond) do
           {:ok, result}
         else
           # Expired, remove from cache
+          ensure_cache()
           :ets.delete(@cache_table, cache_key)
           :miss
         end
@@ -183,6 +193,7 @@ defmodule RsolvApi.AST.FallbackStrategy do
             
             # Cache the result if we have a cache key
             if cache_key do
+              ensure_cache()
               expiry = System.monotonic_time(:millisecond) + @cache_ttl
               :ets.insert(@cache_table, {cache_key, {result, expiry}})
             end
