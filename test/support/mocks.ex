@@ -138,81 +138,104 @@ defmodule RsolvWeb.Mocks do
     end)
   end
   
-  # Helper to setup Bypass for ConvertKit API testing
-  def setup_bypass_for_convertkit do
-    # Start Bypass
-    bypass = Bypass.open()
-    
-    # Configure the application to use our bypass server
+  # Helper to setup Mox for ConvertKit API testing
+  def setup_mox_for_convertkit do
+    # Configure the application to use our mock
     Application.put_env(:rsolv, :convertkit, [
       api_key: "test_api_key",
       form_id: "test_form_id", 
       early_access_tag_id: "test_tag_id",
-      api_base_url: "http://localhost:#{bypass.port}/v3"
+      api_base_url: "http://localhost:4000/v3"  # Fixed port instead of bypass.port
     ])
     
-    # Return the bypass instance
-    bypass
+    # Set up the mock to be used by the current process
+    Mox.stub_with(Rsolv.HTTPClientMock, RsolvWeb.Mocks)
+    
+    :ok
   end
   
-  # Functions to set up specific Bypass endpoints
+  # Implement HTTPoison.Base behavior for mocking
+  def post(url, _body, _headers \\ [], _options \\ []) do
+    cond do
+      String.contains?(url, "/v3/subscribers") ->
+        convertkit_fixtures().subscription_success
+      
+      String.contains?(url, "/v3/tags/") and String.contains?(url, "/subscribe") ->
+        convertkit_fixtures().subscription_success
+      
+      true ->
+        convertkit_fixtures().subscription_form_not_found
+    end
+  end
   
-  # Setup endpoint for successful subscription
-  def setup_bypass_subscription_success(bypass) do
-    Bypass.expect(bypass, "POST", "/v3/subscribers", fn conn ->
-      conn
-      |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, Jason.encode!(%{
-        "subscription" => %{
-          "id" => 123456789,
-          "state" => "active",
-          "source" => "API",
-          "created_at" => "2023-05-01T12:00:00Z",
-          "subscriber" => %{
-            "id" => 987654321,
-            "email_address" => "test@example.com"
-          }
-        }
-      }))
+  def get(_url, _headers \\ [], _options \\ []) do
+    convertkit_fixtures().subscription_success
+  end
+  
+  def put(_url, _body, _headers \\ [], _options \\ []) do
+    convertkit_fixtures().subscription_success
+  end
+  
+  def delete(_url, _headers \\ [], _options \\ []) do
+    convertkit_fixtures().subscription_success
+  end
+  
+  def head(_url, _headers \\ [], _options \\ []) do
+    convertkit_fixtures().subscription_success
+  end
+  
+  def patch(_url, _body, _headers \\ [], _options \\ []) do
+    convertkit_fixtures().subscription_success
+  end
+  
+  def options(_url, _headers \\ [], _options \\ []) do
+    convertkit_fixtures().subscription_success
+  end
+  
+  def request(_request) do
+    convertkit_fixtures().subscription_success
+  end
+  
+  # Helper functions for test setup
+  def setup_subscription_success do
+    Mox.stub(Rsolv.HTTPClientMock, :post, fn _url, _body, _headers, _options ->
+      convertkit_fixtures().subscription_success
     end)
   end
   
-  # Setup endpoint for successful tagging
-  def setup_bypass_tag_success(bypass, tag_id \\ "test_tag_id") do
-    Bypass.expect(bypass, "POST", "/v3/tags/#{tag_id}/subscribe", fn conn ->
-      conn
-      |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, Jason.encode!(%{
-        "subscription" => %{
-          "id" => 123456789,
-          "subscriber" => %{
-            "id" => 987654321,
-            "email_address" => "test@example.com"
-          }
-        }
-      }))
+  def setup_tag_success(tag_id \\ "test_tag_id") do
+    Mox.stub(Rsolv.HTTPClientMock, :post, fn url, _body, _headers, _options ->
+      if String.contains?(url, "/v3/tags/#{tag_id}/subscribe") do
+        convertkit_fixtures().subscription_success
+      else
+        convertkit_fixtures().subscription_form_not_found
+      end
     end)
   end
   
-  # Setup endpoint for subscription error
-  def setup_bypass_subscription_error(bypass, status_code \\ 401) do
-    Bypass.expect(bypass, "POST", "/v3/subscribers", fn conn ->
-      conn
-      |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(status_code, Jason.encode!(%{
-        "error" => "Unauthorized"
-      }))
+  def setup_subscription_error(status_code \\ 401) do
+    error_response = %HTTPoison.Response{
+      status_code: status_code,
+      body: Jason.encode!(%{"error" => "Unauthorized"})
+    }
+    
+    Mox.stub(Rsolv.HTTPClientMock, :post, fn _url, _body, _headers, _options ->
+      error_response
     end)
   end
   
-  # Setup endpoint for tag error
-  def setup_bypass_tag_error(bypass, tag_id \\ "test_tag_id", status_code \\ 404) do
-    Bypass.expect(bypass, "POST", "/v3/tags/#{tag_id}/subscribe", fn conn ->
-      conn
-      |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(status_code, Jason.encode!(%{
-        "error" => "Tag not found"
-      }))
+  def setup_tag_error(tag_id \\ "test_tag_id", status_code \\ 404) do
+    error_response = %HTTPoison.Response{
+      status_code: status_code,
+      body: Jason.encode!(%{"error" => "Tag not found"})
+    }
+    
+    Mox.stub(Rsolv.HTTPClientMock, :post, fn url, _body, _headers, _options ->
+      if String.contains?(url, "/v3/tags/#{tag_id}/subscribe") do
+        error_response
+      else
+        convertkit_fixtures().subscription_form_not_found
+      end
     end)
   end
 end
