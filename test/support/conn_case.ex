@@ -1,4 +1,4 @@
-defmodule RSOLVWeb.ConnCase do
+defmodule RsolvWeb.ConnCase do
   @moduledoc """
   This module defines the test case to be used by
   tests that require setting up a connection.
@@ -11,7 +11,7 @@ defmodule RSOLVWeb.ConnCase do
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
   PostgreSQL, you can even run database tests asynchronously
-  by setting `use RSOLVWeb.ConnCase, async: true`, although
+  by setting `use RsolvWeb.ConnCase, async: true`, although
   this option is not recommended for other databases.
   """
 
@@ -22,24 +22,24 @@ defmodule RSOLVWeb.ConnCase do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
-      import RSOLVWeb.ConnCase
-      import RSOLV.Factory
+      import RsolvWeb.ConnCase
+      import Rsolv.Factory
 
-      alias RSOLVWeb.Router.Helpers, as: Routes
+      alias RsolvWeb.Router.Helpers, as: Routes
 
       # The default endpoint for testing
-      @endpoint RSOLVWeb.Endpoint
+      @endpoint RsolvWeb.Endpoint
       
       # Import Phoenix verified routes for ~p sigil
       use Phoenix.VerifiedRoutes,
-        endpoint: RSOLVWeb.Endpoint,
-        router: RSOLVWeb.Router,
+        endpoint: RsolvWeb.Endpoint,
+        router: RsolvWeb.Router,
         statics: ~w(assets)
     end
   end
 
   setup tags do
-    RsolvApi.DataCase.setup_sandbox(tags)
+    Rsolv.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

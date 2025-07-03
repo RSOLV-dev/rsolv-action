@@ -1,40 +1,40 @@
-defmodule RSOLVWeb.PatternController do
-  use RSOLVWeb, :controller
+defmodule RsolvWeb.PatternController do
+  use RsolvWeb, :controller
 
-  alias RsolvApi.Security
-  alias RsolvApi.Security.{ASTPattern, Pattern, DemoPatterns}
-  alias RSOLV.Accounts
+  alias Rsolv.Security
+  alias Rsolv.Security.{ASTPattern, Pattern, DemoPatterns}
+  alias Rsolv.Accounts
   
   # Require refactored pattern modules so they're available at runtime
-  require RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat
-  require RsolvApi.Security.Patterns.Javascript.SqlInjectionInterpolation
-  require RsolvApi.Security.Patterns.Javascript.XssInnerhtml
-  require RsolvApi.Security.Patterns.Javascript.XssDocumentWrite
-  require RsolvApi.Security.Patterns.Javascript.CommandInjectionExec
-  require RsolvApi.Security.Patterns.Javascript.CommandInjectionSpawn
-  require RsolvApi.Security.Patterns.Javascript.PathTraversalJoin
-  require RsolvApi.Security.Patterns.Javascript.PathTraversalConcat
-  require RsolvApi.Security.Patterns.Javascript.WeakCryptoMd5
-  require RsolvApi.Security.Patterns.Javascript.WeakCryptoSha1
-  require RsolvApi.Security.Patterns.Javascript.HardcodedSecretPassword
-  require RsolvApi.Security.Patterns.Javascript.HardcodedSecretApiKey
-  require RsolvApi.Security.Patterns.Javascript.EvalUserInput
-  require RsolvApi.Security.Patterns.Javascript.UnsafeRegex
-  require RsolvApi.Security.Patterns.Javascript.PrototypePollution
-  require RsolvApi.Security.Patterns.Javascript.InsecureDeserialization
-  require RsolvApi.Security.Patterns.Javascript.OpenRedirect
-  require RsolvApi.Security.Patterns.Javascript.XxeExternalEntities
-  require RsolvApi.Security.Patterns.Javascript.NosqlInjection
-  require RsolvApi.Security.Patterns.Javascript.LdapInjection
-  require RsolvApi.Security.Patterns.Javascript.XpathInjection
-  require RsolvApi.Security.Patterns.Javascript.Ssrf
-  require RsolvApi.Security.Patterns.Javascript.MissingCsrfProtection
-  require RsolvApi.Security.Patterns.Javascript.JwtNoneAlgorithm
-  require RsolvApi.Security.Patterns.Javascript.DebugConsoleLog
-  require RsolvApi.Security.Patterns.Javascript.InsecureRandom
-  require RsolvApi.Security.Patterns.Javascript.TimingAttackComparison
+  require Rsolv.Security.Patterns.Javascript.SqlInjectionConcat
+  require Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation
+  require Rsolv.Security.Patterns.Javascript.XssInnerhtml
+  require Rsolv.Security.Patterns.Javascript.XssDocumentWrite
+  require Rsolv.Security.Patterns.Javascript.CommandInjectionExec
+  require Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn
+  require Rsolv.Security.Patterns.Javascript.PathTraversalJoin
+  require Rsolv.Security.Patterns.Javascript.PathTraversalConcat
+  require Rsolv.Security.Patterns.Javascript.WeakCryptoMd5
+  require Rsolv.Security.Patterns.Javascript.WeakCryptoSha1
+  require Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword
+  require Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey
+  require Rsolv.Security.Patterns.Javascript.EvalUserInput
+  require Rsolv.Security.Patterns.Javascript.UnsafeRegex
+  require Rsolv.Security.Patterns.Javascript.PrototypePollution
+  require Rsolv.Security.Patterns.Javascript.InsecureDeserialization
+  require Rsolv.Security.Patterns.Javascript.OpenRedirect
+  require Rsolv.Security.Patterns.Javascript.XxeExternalEntities
+  require Rsolv.Security.Patterns.Javascript.NosqlInjection
+  require Rsolv.Security.Patterns.Javascript.LdapInjection
+  require Rsolv.Security.Patterns.Javascript.XpathInjection
+  require Rsolv.Security.Patterns.Javascript.Ssrf
+  require Rsolv.Security.Patterns.Javascript.MissingCsrfProtection
+  require Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm
+  require Rsolv.Security.Patterns.Javascript.DebugConsoleLog
+  require Rsolv.Security.Patterns.Javascript.InsecureRandom
+  require Rsolv.Security.Patterns.Javascript.TimingAttackComparison
 
-  action_fallback RSOLVWeb.FallbackController
+  action_fallback RsolvWeb.FallbackController
   
   @doc """
   GET /api/v1/patterns
@@ -707,7 +707,7 @@ defmodule RSOLVWeb.PatternController do
 
   defp pattern_id_to_module(pattern_id) do
     # Convert pattern ID to module name
-    # e.g., "js-xss-dom-manipulation" -> RsolvApi.Security.Patterns.Javascript.XssDomManipulation
+    # e.g., "js-xss-dom-manipulation" -> Rsolv.Security.Patterns.Javascript.XssDomManipulation
     parts = String.split(pattern_id, "-")
     
     if length(parts) >= 2 do
@@ -729,7 +729,7 @@ defmodule RSOLVWeb.PatternController do
         |> Enum.join("")
       
       module_name = Module.concat([
-        RsolvApi.Security.Patterns,
+        Rsolv.Security.Patterns,
         language,
         pattern_name
       ])
@@ -754,7 +754,7 @@ defmodule RSOLVWeb.PatternController do
         |> Enum.join("")
         
         try do
-          Module.safe_concat([RsolvApi.Security.Patterns.Javascript, module_name])
+          Module.safe_concat([Rsolv.Security.Patterns.Javascript, module_name])
         rescue
           ArgumentError -> nil
         end
@@ -766,7 +766,7 @@ defmodule RSOLVWeb.PatternController do
         |> Enum.join("")
         
         try do
-          Module.safe_concat([RsolvApi.Security.Patterns.Python, module_name])
+          Module.safe_concat([Rsolv.Security.Patterns.Python, module_name])
         rescue
           ArgumentError -> nil
         end
@@ -778,7 +778,7 @@ defmodule RSOLVWeb.PatternController do
         |> Enum.join("")
         
         try do
-          Module.safe_concat([RsolvApi.Security.Patterns.Elixir, module_name])
+          Module.safe_concat([Rsolv.Security.Patterns.Elixir, module_name])
         rescue
           ArgumentError -> nil
         end
@@ -790,7 +790,7 @@ defmodule RSOLVWeb.PatternController do
         |> Enum.join("")
         
         try do
-          Module.safe_concat([RsolvApi.Security.Patterns.Ruby, module_name])
+          Module.safe_concat([Rsolv.Security.Patterns.Ruby, module_name])
         rescue
           ArgumentError -> nil
         end
@@ -802,7 +802,7 @@ defmodule RSOLVWeb.PatternController do
         |> Enum.join("")
         
         try do
-          Module.safe_concat([RsolvApi.Security.Patterns.Java, module_name])
+          Module.safe_concat([Rsolv.Security.Patterns.Java, module_name])
         rescue
           ArgumentError -> nil
         end
@@ -814,7 +814,7 @@ defmodule RSOLVWeb.PatternController do
         |> Enum.join("")
         
         try do
-          Module.safe_concat([RsolvApi.Security.Patterns.Php, module_name])
+          Module.safe_concat([Rsolv.Security.Patterns.Php, module_name])
         rescue
           ArgumentError -> nil
         end

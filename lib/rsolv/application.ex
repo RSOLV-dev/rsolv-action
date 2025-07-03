@@ -1,4 +1,4 @@
-defmodule RSOLV.Application do
+defmodule Rsolv.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -8,44 +8,44 @@ defmodule RSOLV.Application do
   @impl true
   def start(_type, _args) do
     # Ensure JSON encoders are loaded
-    Code.ensure_loaded!(RsolvApi.JsonEncoders)
+    Code.ensure_loaded!(Rsolv.JsonEncoders)
     # Base children that always start
     base_children = [
       # Start the Telemetry supervisor
-      RSOLVWeb.Telemetry,
+      RsolvWeb.Telemetry,
       # Start the PromEx supervisor for Prometheus metrics
-      RSOLV.PromEx,
+      Rsolv.PromEx,
       # Start the Ecto repository
-      RsolvApi.Repo,
+      Rsolv.Repo,
       # Start the PubSub system
-      {Phoenix.PubSub, name: RSOLV.PubSub},
+      {Phoenix.PubSub, name: Rsolv.PubSub},
       # Start Cachex
       {Cachex, name: :rsolv_cache},
       # Start the Rate Limiter
-      RSOLV.RateLimiter,
+      Rsolv.RateLimiter,
       # Start the Notifications supervisor
-      RSOLV.Notifications.Supervisor,
+      Rsolv.Notifications.Supervisor,
       # Start the Pattern supervisor for security patterns
-      RsolvApi.Security.PatternSupervisor,
+      Rsolv.Security.PatternSupervisor,
       # Start the AST Analysis services
-      RsolvApi.AST.SessionManager,
-      RsolvApi.AST.PortSupervisor,
-      RsolvApi.AST.ParserRegistry,
-      RsolvApi.AST.AnalysisService,
+      Rsolv.AST.SessionManager,
+      Rsolv.AST.PortSupervisor,
+      Rsolv.AST.ParserRegistry,
+      Rsolv.AST.AnalysisService,
       # Start the Validation Cache
-      RsolvApi.Cache.ValidationCache,
+      Rsolv.Cache.ValidationCache,
       # Start the Endpoint (http/https)
-      RSOLVWeb.Endpoint
+      RsolvWeb.Endpoint
       # Start a worker by calling: RSOLV.Worker.start_link(arg)
       # {RSOLV.Worker, arg}
     ]
     
     # Add cluster supervisor if clustering is configured
     cluster_children = 
-      if RSOLV.Cluster.clustering_enabled?() do
+      if Rsolv.Cluster.clustering_enabled?() do
         [
-          {Cluster.Supervisor, [RSOLV.Cluster.topologies(), [name: RSOLV.ClusterSupervisor]]},
-          RSOLV.ClusterMonitor
+          {Cluster.Supervisor, [Rsolv.Cluster.topologies(), [name: Rsolv.ClusterSupervisor]]},
+          Rsolv.ClusterMonitor
         ]
       else
         []
@@ -55,10 +55,10 @@ defmodule RSOLV.Application do
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: RSOLV.Supervisor]
+    opts = [strategy: :one_for_one, name: Rsolv.Supervisor]
     
     # Set up cluster event handlers before starting
-    if RSOLV.Cluster.clustering_enabled?() do
+    if Rsolv.Cluster.clustering_enabled?() do
       :net_kernel.monitor_nodes(true, node_type: :all)
     end
     
@@ -69,7 +69,7 @@ defmodule RSOLV.Application do
   # whenever the application is updated.
   @impl true
   def config_change(changed, _new, removed) do
-    RSOLVWeb.Endpoint.config_change(changed, removed)
+    RsolvWeb.Endpoint.config_change(changed, removed)
     :ok
   end
 end

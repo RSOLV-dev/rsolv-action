@@ -1,4 +1,4 @@
-defmodule RSOLV.Repo.Migrations.AddTrialTrackingToCustomers do
+defmodule Rsolv.Repo.Migrations.AddTrialTrackingToCustomers do
   use Ecto.Migration
 
   def change do

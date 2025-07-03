@@ -1,4 +1,4 @@
-defmodule RSOLV.Factory do
+defmodule Rsolv.Factory do
   @moduledoc """
   Factory for creating test data structures.
   

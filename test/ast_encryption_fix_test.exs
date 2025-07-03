@@ -1,4 +1,4 @@
-defmodule RsolvApi.AST.EncryptionFixTest do
+defmodule Rsolv.AST.EncryptionFixTest do
   @moduledoc """
   TDD tests for fixing the encryption key exchange issue.
   
@@ -7,7 +7,7 @@ defmodule RsolvApi.AST.EncryptionFixTest do
   """
   
   use ExUnit.Case
-  alias RsolvApi.AST.Encryption
+  alias Rsolv.AST.Encryption
   
   describe "Client-provided key encryption" do
     test "server should decrypt using client-provided key from header" do

@@ -1,4 +1,4 @@
-defmodule RsolvApi.Repo.Migrations.MakeIssueNumberNullable do
+defmodule Rsolv.Repo.Migrations.MakeIssueNumberNullable do
   use Ecto.Migration
 
   def change do

@@ -1,4 +1,4 @@
-defmodule RSOLV.RateLimiter do
+defmodule Rsolv.RateLimiter do
   @moduledoc """
   Rate limiting for API requests using distributed ETS.
   """

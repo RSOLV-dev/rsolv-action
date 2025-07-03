@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.PatternMetadataControllerTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.PatternMetadataControllerTest do
+  use RsolvWeb.ConnCase
 
   describe "GET /api/v1/patterns/:id/metadata" do
     test "returns vulnerability metadata for a specific pattern", %{conn: conn} do

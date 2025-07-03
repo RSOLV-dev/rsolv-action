@@ -1,4 +1,4 @@
-defmodule RSOLV.Repo.Migrations.CreateCustomers do
+defmodule Rsolv.Repo.Migrations.CreateCustomers do
   use Ecto.Migration
 
   def change do

@@ -3,8 +3,8 @@
 # Test script to debug enhanced pattern API response
 
 # Get a pattern and enhance it
-alias RsolvApi.Security.ASTPattern
-alias RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat
+alias Rsolv.Security.ASTPattern
+alias Rsolv.Security.Patterns.Javascript.SqlInjectionConcat
 
 # Get the base pattern
 pattern = SqlInjectionConcat.pattern()

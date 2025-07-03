@@ -1,4 +1,4 @@
-defmodule RSOLV.Credentials do
+defmodule Rsolv.Credentials do
   @moduledoc """
   The Credentials context for managing AI provider credentials.
   """

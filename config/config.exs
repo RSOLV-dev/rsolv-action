@@ -7,17 +7,17 @@
 # General application configuration
 import Config
 
-config :rsolv_api,
-  ecto_repos: [RsolvApi.Repo]
+config :rsolv,
+  ecto_repos: [Rsolv.Repo]
 
 # Configures the endpoint
-config :rsolv_api, RSOLVWeb.Endpoint,
+config :rsolv, RsolvWeb.Endpoint,
   url: [host: "localhost"],
   render_errors: [
-    formats: [html: RSOLVWeb.ErrorHTML, json: RSOLVWeb.ErrorJSON],
+    formats: [html: RsolvWeb.ErrorHTML, json: RsolvWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: RSOLV.PubSub,
+  pubsub_server: Rsolv.PubSub,
   live_view: [signing_salt: "changeme"]
 
 # Configure esbuild (the version is required)
@@ -51,7 +51,7 @@ config :logger, :console,
 config :phoenix, :json_library, JSON
 
 # Configure PromEx for Prometheus metrics
-config :rsolv_api, RSOLV.PromEx,
+config :rsolv, Rsolv.PromEx,
   disabled: false,
   manual_metrics_start_delay: :no_delay,
   drop_metrics_groups: [],
@@ -59,7 +59,7 @@ config :rsolv_api, RSOLV.PromEx,
     host: System.get_env("GRAFANA_HOST", "http://localhost:3000"),
     auth_token: System.get_env("GRAFANA_AUTH_TOKEN", ""),
     upload_dashboards_on_start: true,
-    folder_name: "RSOLV API Dashboards",
+    folder_name: "Rsolv API Dashboards",
     annotate_app_lifecycle: true
   ],
   metrics_server: [

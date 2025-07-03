@@ -1,5 +1,5 @@
-defmodule RsolvApi.Integration.PhpPatternAstTest do
-  use RSOLVWeb.ConnCase, async: true
+defmodule Rsolv.Integration.PhpPatternAstTest do
+  use RsolvWeb.ConnCase, async: true
   
   @moduledoc """
   Integration test to verify PHP pattern AST enhancement fix.

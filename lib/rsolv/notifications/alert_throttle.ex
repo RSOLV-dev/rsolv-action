@@ -1,4 +1,4 @@
-defmodule RSOLV.Notifications.AlertThrottle do
+defmodule Rsolv.Notifications.AlertThrottle do
   @moduledoc """
   Manages alert throttling to prevent notification fatigue.
   Uses the existing rsolv_cache for distributed throttle management.

@@ -9,7 +9,7 @@ defmodule DebugEnhancedError do
     IO.puts("\n🔍 Debugging Enhanced Format Error\n")
     
     # Simulate the controller flow
-    alias RsolvApi.Security.{Pattern, DemoPatterns, ASTPattern}
+    alias Rsolv.Security.{Pattern, DemoPatterns, ASTPattern}
     alias RSOLVApi.Security.Patterns.JSONSerializer
     
     # Get demo patterns (what happens without auth)
@@ -86,7 +86,7 @@ defmodule DebugEnhancedError do
         |> Enum.join("")
       
       module_name = Module.concat([
-        RsolvApi.Security.Patterns,
+        Rsolv.Security.Patterns,
         language,
         pattern_name
       ])

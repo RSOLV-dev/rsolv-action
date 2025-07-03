@@ -10,7 +10,7 @@ case Node.connect(:"rsolv@127.0.0.1") do
     IO.puts("✅ Connected to RSOLV node")
     
     # Test pattern loading
-    patterns = :rpc.call(:"rsolv@127.0.0.1", RsolvApi.AST.PatternAdapter, :load_patterns_for_language, ["javascript"])
+    patterns = :rpc.call(:"rsolv@127.0.0.1", Rsolv.AST.PatternAdapter, :load_patterns_for_language, ["javascript"])
     IO.puts("\nLoaded #{length(patterns)} JavaScript patterns")
     
     # Show SQL injection patterns
@@ -42,7 +42,7 @@ case Node.connect(:"rsolv@127.0.0.1") do
     }
     
     # Run analysis
-    result = :rpc.call(:"rsolv@127.0.0.1", RsolvApi.AST.AnalysisService, :analyze_file, [
+    result = :rpc.call(:"rsolv@127.0.0.1", Rsolv.AST.AnalysisService, :analyze_file, [
       test_file, 
       %{"includeSecurityPatterns" => true}
     ])

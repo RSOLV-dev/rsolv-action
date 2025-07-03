@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.Router do
-  use RSOLVWeb, :router
+defmodule RsolvWeb.Router do
+  use RsolvWeb, :router
   require Logger
 
   # Pipelines
@@ -14,7 +14,7 @@ defmodule RSOLVWeb.Router do
   
   pipeline :webhook do
     plug :accepts, ["json"]
-    plug RSOLVWeb.Plugs.CaptureRawBody
+    plug RsolvWeb.Plugs.CaptureRawBody
     plug Plug.Parsers,
       parsers: [:json],
       pass: ["application/json"],
@@ -22,17 +22,17 @@ defmodule RSOLVWeb.Router do
   end
 
   # Health check (outside versioned API)
-  get "/health", RSOLVWeb.HealthController, :check
+  get "/health", RsolvWeb.HealthController, :check
 
   # Webhook endpoints (separate from API versioning)
-  scope "/webhook", RSOLVWeb do
+  scope "/webhook", RsolvWeb do
     pipe_through :webhook
     
     post "/github", WebhookController, :github
   end
 
   # API v1
-  scope "/api/v1", RSOLVWeb, as: :api_v1 do
+  scope "/api/v1", RsolvWeb, as: :api_v1 do
     pipe_through :api
 
     # Core business resources
@@ -90,7 +90,7 @@ defmodule RSOLVWeb.Router do
   end
 
   # API v2 - Enhanced format by default
-  scope "/api/v2", RSOLVWeb, as: :api_v2 do
+  scope "/api/v2", RsolvWeb, as: :api_v2 do
     pipe_through :api
 
     # Security patterns with enhanced format by default
@@ -101,5 +101,5 @@ defmodule RSOLVWeb.Router do
   end
   
   # Prometheus metrics endpoint
-  forward "/metrics", PromEx.Plug, prom_ex_module: RSOLV.PromEx
+  forward "/metrics", PromEx.Plug, prom_ex_module: Rsolv.PromEx
 end

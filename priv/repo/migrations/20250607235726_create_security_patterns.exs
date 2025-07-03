@@ -1,4 +1,4 @@
-defmodule RsolvApi.Repo.Migrations.CreateSecurityPatterns do
+defmodule Rsolv.Repo.Migrations.CreateSecurityPatterns do
   use Ecto.Migration
 
   def change do

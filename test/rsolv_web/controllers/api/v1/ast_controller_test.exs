@@ -1,12 +1,12 @@
-defmodule RSOLVWeb.Api.V1.ASTControllerTest do
-  use RSOLVWeb.ConnCase, async: false
+defmodule RsolvWeb.Api.V1.ASTControllerTest do
+  use RsolvWeb.ConnCase, async: false
   
-  alias RsolvApi.AST.SessionManager
-  alias RsolvApi.AST.Encryption
+  alias Rsolv.AST.SessionManager
+  alias Rsolv.AST.Encryption
   
   setup do
     # Ensure the application is started
-    Application.ensure_all_started(:rsolv_api)
+    Application.ensure_all_started(:rsolv)
     
     # Clear rate limit data for test customer
     if :ets.whereis(:rsolv_rate_limiter) != :undefined do

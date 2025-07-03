@@ -4,8 +4,8 @@ IO.puts("=" <> String.duplicate("=", 60))
 
 # Define a fixed version that uses PatternServer
 defmodule PatternAdapterFix do
-  alias RsolvApi.Security.{PatternServer, ASTPattern}
-  alias RsolvApi.AST.PatternAdapter
+  alias Rsolv.Security.{PatternServer, ASTPattern}
+  alias Rsolv.AST.PatternAdapter
   require Logger
   
   def load_patterns_for_language(language) do
@@ -27,7 +27,7 @@ end
 
 # Test the fix
 IO.puts("\n1. Testing original PatternAdapter:")
-original = RsolvApi.AST.PatternAdapter.load_patterns_for_language("python")
+original = Rsolv.AST.PatternAdapter.load_patterns_for_language("python")
 IO.puts("   Loaded #{length(original)} patterns")
 
 IO.puts("\n2. Testing fixed version:")

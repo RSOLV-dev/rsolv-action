@@ -1,9 +1,9 @@
-defmodule RSOLV.MixProject do
+defmodule Rsolv.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :rsolv_api,
+      app: :rsolv,
       version: "0.1.0",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -15,7 +15,7 @@ defmodule RSOLV.MixProject do
 
   def application do
     [
-      mod: {RSOLV.Application, []},
+      mod: {Rsolv.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end

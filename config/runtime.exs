@@ -3,21 +3,21 @@ import Config
 # Configure clustering
 if config_env() == :prod do
   # Generate a unique node name based on pod name (injected by Kubernetes)
-  node_basename = System.get_env("RELEASE_NODE") || "rsolv_api"
+  node_basename = System.get_env("RELEASE_NODE") || "rsolv"
   pod_name = System.get_env("POD_NAME") || "#{node_basename}-#{:rand.uniform(999999)}"
   pod_namespace = System.get_env("POD_NAMESPACE") || "default"
   
   # Service name should match the headless service in Kubernetes
   service_name = System.get_env("CLUSTER_SERVICE_NAME") || "rsolv-api-headless"
   
-  config :rsolv_api, :cluster,
+  config :rsolv, :cluster,
     topologies: [
       k8s_dns: [
         strategy: Cluster.Strategy.Kubernetes.DNS,
         config: [
           service: service_name,
           namespace: pod_namespace,
-          application_name: "rsolv_api",
+          application_name: "rsolv",
           polling_interval: 5_000,
           mode: :ip
         ]
@@ -58,10 +58,10 @@ database_config =
       database_config
   end
 
-config :rsolv_api, RsolvApi.Repo, database_config
+config :rsolv, Rsolv.Repo, database_config
 
 # Configure the endpoint
-config :rsolv_api, RSOLVWeb.Endpoint,
+config :rsolv, RsolvWeb.Endpoint,
   url: [host: System.get_env("PHX_HOST") || "localhost", port: 443, scheme: "https"],
   http: [
     ip: {0, 0, 0, 0},
@@ -71,24 +71,24 @@ config :rsolv_api, RSOLVWeb.Endpoint,
   server: true
 
 # Configure AI provider keys
-config :rsolv_api, :ai_providers,
+config :rsolv, :ai_providers,
   anthropic_api_key: System.get_env("ANTHROPIC_API_KEY"),
   openai_api_key: System.get_env("OPENAI_API_KEY"),
   openrouter_api_key: System.get_env("OPENROUTER_API_KEY"),
   ollama_base_url: System.get_env("OLLAMA_BASE_URL")
 
 # Configure rate limiting
-config :rsolv_api, :rate_limits,
+config :rsolv, :rate_limits,
   credential_exchange: {10, :minute},  # 10 requests per minute
   usage_report: {100, :minute}         # 100 reports per minute
 
 # Configure credential TTL
-config :rsolv_api, :credentials,
+config :rsolv, :credentials,
   default_ttl_minutes: 60,
   max_ttl_minutes: 240
 
 # Email configuration (for expert reviews)
-config :rsolv_api, RsolvApi.Mailer,
+config :rsolv, Rsolv.Mailer,
   adapter: Bamboo.PostmarkAdapter,
   api_key: System.get_env("POSTMARK_API_KEY")
 
@@ -98,7 +98,7 @@ config :logger, :console,
   metadata: [:request_id]
 
 # Configure Phoenix LiveDashboard
-config :rsolv_api, RSOLVWeb.Endpoint,
+config :rsolv, RsolvWeb.Endpoint,
   live_view: [signing_salt: System.get_env("LIVE_VIEW_SALT")]
 
 # Sentry error tracking

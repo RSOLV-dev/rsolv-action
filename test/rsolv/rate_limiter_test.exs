@@ -1,7 +1,7 @@
-defmodule RSOLV.RateLimiterTest do
+defmodule Rsolv.RateLimiterTest do
   use ExUnit.Case, async: false
   
-  alias RSOLV.RateLimiter
+  alias Rsolv.RateLimiter
   
   setup do
     # Ensure rate limiter is started

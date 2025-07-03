@@ -9,14 +9,14 @@ Code.require_file("lib/rsolv_api/security/patterns/javascript/eval_user_input.ex
 Code.require_file("lib/rsolv_api/security/patterns/json_serializer.ex")
 
 defmodule VerifyEnhancedFormatFix do
-  alias RsolvApi.Security.Pattern
+  alias Rsolv.Security.Pattern
   alias RSOLVApi.Security.Patterns.JSONSerializer
   
   def run do
     IO.puts("\n🔍 Verifying Enhanced Format Fix\n")
     
     # Create a pattern from the eval module
-    pattern_module = RsolvApi.Security.Patterns.Javascript.EvalUserInput
+    pattern_module = Rsolv.Security.Patterns.Javascript.EvalUserInput
     pattern = pattern_module.pattern()
     
     IO.puts("Testing pattern: #{pattern.id}")
@@ -103,7 +103,7 @@ defmodule VerifyEnhancedFormatFix do
       |> Enum.map(&String.capitalize/1)
       |> Enum.join("")
       
-      module_name = "Elixir.RsolvApi.Security.Patterns.#{language}.#{pattern_name}"
+      module_name = "Elixir.Rsolv.Security.Patterns.#{language}.#{pattern_name}"
       
       try do
         String.to_existing_atom(module_name)

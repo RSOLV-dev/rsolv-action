@@ -1,4 +1,4 @@
-defmodule RSOLVWeb.Plugs.CaptureRawBody do
+defmodule RsolvWeb.Plugs.CaptureRawBody do
   @moduledoc """
   Captures the raw request body for webhook signature verification.
   Must be placed before Plug.Parsers in the pipeline.

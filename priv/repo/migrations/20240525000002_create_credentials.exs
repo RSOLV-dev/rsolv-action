@@ -1,4 +1,4 @@
-defmodule RSOLV.Repo.Migrations.CreateCredentials do
+defmodule Rsolv.Repo.Migrations.CreateCredentials do
   use Ecto.Migration
 
   def change do

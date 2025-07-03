@@ -1,4 +1,4 @@
-defmodule RsolvApi.Repo.Migrations.DropPatternTables do
+defmodule Rsolv.Repo.Migrations.DropPatternTables do
   use Ecto.Migration
 
   def change do

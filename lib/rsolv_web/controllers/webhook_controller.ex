@@ -1,7 +1,7 @@
-defmodule RSOLVWeb.WebhookController do
-  use RSOLVWeb, :controller
+defmodule RsolvWeb.WebhookController do
+  use RsolvWeb, :controller
   
-  alias RsolvApi.Webhooks.EventRouter
+  alias Rsolv.Webhooks.EventRouter
   require Logger
 
   # Get webhook secret at runtime, not compile time

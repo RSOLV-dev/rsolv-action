@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.Api.V1.ASTPatternSerializationTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.Api.V1.ASTPatternSerializationTest do
+  use RsolvWeb.ConnCase
   
   describe "GET /api/v1/patterns with format=enhanced - AST Serialization" do
     test "returns AST enhancement fields when format=enhanced with API key", %{conn: conn} do

@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.HealthController do
-  use RSOLVWeb, :controller
+defmodule RsolvWeb.HealthController do
+  use RsolvWeb, :controller
 
   def check(conn, _params) do
     # Basic health check
@@ -39,7 +39,7 @@ defmodule RSOLVWeb.HealthController do
 
   defp check_database do
     try do
-      Ecto.Adapters.SQL.query!(RsolvApi.Repo, "SELECT 1", [])
+      Ecto.Adapters.SQL.query!(Rsolv.Repo, "SELECT 1", [])
       "healthy"
     rescue
       _ -> "unhealthy"
@@ -62,7 +62,7 @@ defmodule RSOLVWeb.HealthController do
   end
   
   defp clustering_info do
-    if Code.ensure_loaded?(RSOLV.Cluster) && function_exported?(RSOLV.Cluster, :clustering_enabled?, 0) && RSOLV.Cluster.clustering_enabled?() do
+    if Code.ensure_loaded?(Rsolv.Cluster) && function_exported?(Rsolv.Cluster, :clustering_enabled?, 0) && Rsolv.Cluster.clustering_enabled?() do
       %{
         enabled: true,
         current_node: Node.self() |> to_string(),

@@ -1,4 +1,4 @@
-defmodule RsolvApi.Unit.PhpAstEnhancementTest do
+defmodule Rsolv.Unit.PhpAstEnhancementTest do
   use ExUnit.Case, async: true
   
   @moduledoc """
@@ -7,10 +7,10 @@ defmodule RsolvApi.Unit.PhpAstEnhancementTest do
   """
   
   # Import PHP pattern modules
-  alias RsolvApi.Security.Patterns.Php.CommandInjection
-  alias RsolvApi.Security.Patterns.Php.SqlInjectionConcat
-  alias RsolvApi.Security.Patterns.Php.XssEcho
-  alias RsolvApi.Security.Patterns.Php.FileInclusion
+  alias Rsolv.Security.Patterns.Php.CommandInjection
+  alias Rsolv.Security.Patterns.Php.SqlInjectionConcat
+  alias Rsolv.Security.Patterns.Php.XssEcho
+  alias Rsolv.Security.Patterns.Php.FileInclusion
   
   describe "PHP pattern AST enhancement field names" do
     test "command injection pattern returns ast_rules not rules" do
@@ -60,29 +60,29 @@ defmodule RsolvApi.Unit.PhpAstEnhancementTest do
       pattern_modules = [
         CommandInjection,
         SqlInjectionConcat,
-        RsolvApi.Security.Patterns.Php.SqlInjectionInterpolation,
+        Rsolv.Security.Patterns.Php.SqlInjectionInterpolation,
         XssEcho,
-        RsolvApi.Security.Patterns.Php.XssPrint,
+        Rsolv.Security.Patterns.Php.XssPrint,
         FileInclusion,
-        RsolvApi.Security.Patterns.Php.FileUploadNoValidation,
-        RsolvApi.Security.Patterns.Php.HardcodedCredentials,
-        RsolvApi.Security.Patterns.Php.InsecureRandom,
-        RsolvApi.Security.Patterns.Php.LdapInjection,
-        RsolvApi.Security.Patterns.Php.MissingCsrfToken,
-        RsolvApi.Security.Patterns.Php.OpenRedirect,
-        RsolvApi.Security.Patterns.Php.PathTraversal,
-        RsolvApi.Security.Patterns.Php.RegisterGlobals,
-        RsolvApi.Security.Patterns.Php.SessionFixation,
-        RsolvApi.Security.Patterns.Php.SsrfVulnerability,
-        RsolvApi.Security.Patterns.Php.UnsafeDeserialization,
-        RsolvApi.Security.Patterns.Php.WeakCrypto,
-        RsolvApi.Security.Patterns.Php.WeakPasswordHash,
-        RsolvApi.Security.Patterns.Php.XpathInjection,
-        RsolvApi.Security.Patterns.Php.XxeVulnerability,
-        RsolvApi.Security.Patterns.Php.EvalUsage,
-        RsolvApi.Security.Patterns.Php.ExtractUsage,
-        RsolvApi.Security.Patterns.Php.DebugModeEnabled,
-        RsolvApi.Security.Patterns.Php.ErrorDisplay
+        Rsolv.Security.Patterns.Php.FileUploadNoValidation,
+        Rsolv.Security.Patterns.Php.HardcodedCredentials,
+        Rsolv.Security.Patterns.Php.InsecureRandom,
+        Rsolv.Security.Patterns.Php.LdapInjection,
+        Rsolv.Security.Patterns.Php.MissingCsrfToken,
+        Rsolv.Security.Patterns.Php.OpenRedirect,
+        Rsolv.Security.Patterns.Php.PathTraversal,
+        Rsolv.Security.Patterns.Php.RegisterGlobals,
+        Rsolv.Security.Patterns.Php.SessionFixation,
+        Rsolv.Security.Patterns.Php.SsrfVulnerability,
+        Rsolv.Security.Patterns.Php.UnsafeDeserialization,
+        Rsolv.Security.Patterns.Php.WeakCrypto,
+        Rsolv.Security.Patterns.Php.WeakPasswordHash,
+        Rsolv.Security.Patterns.Php.XpathInjection,
+        Rsolv.Security.Patterns.Php.XxeVulnerability,
+        Rsolv.Security.Patterns.Php.EvalUsage,
+        Rsolv.Security.Patterns.Php.ExtractUsage,
+        Rsolv.Security.Patterns.Php.DebugModeEnabled,
+        Rsolv.Security.Patterns.Php.ErrorDisplay
       ]
       
       Enum.each(pattern_modules, fn module ->

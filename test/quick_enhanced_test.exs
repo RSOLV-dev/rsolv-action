@@ -3,7 +3,7 @@
 # Quick test to verify enhanced format includes AST data
 
 # First, let's test the pattern module directly
-alias RsolvApi.Security.Patterns.Javascript.EvalUserInput
+alias Rsolv.Security.Patterns.Javascript.EvalUserInput
 
 IO.puts("\n🔍 Testing Enhanced Pattern Format...\n")
 

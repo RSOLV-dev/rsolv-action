@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.Endpoint do
-  use Phoenix.Endpoint, otp_app: :rsolv_api
+defmodule RsolvWeb.Endpoint do
+  use Phoenix.Endpoint, otp_app: :rsolv
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
@@ -19,15 +19,15 @@ defmodule RSOLVWeb.Endpoint do
   # when deploying your static files in production.
   plug Plug.Static,
     at: "/",
-    from: :rsolv_api,
+    from: :rsolv,
     gzip: false,
-    only: RSOLVWeb.static_paths()
+    only: RsolvWeb.static_paths()
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
     plug Phoenix.CodeReloader
-    plug Phoenix.Ecto.CheckRepoStatus, otp_app: :rsolv_api
+    plug Phoenix.Ecto.CheckRepoStatus, otp_app: :rsolv
   end
 
   plug Phoenix.LiveDashboard.RequestLogger,
@@ -41,10 +41,10 @@ defmodule RSOLVWeb.Endpoint do
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library(),
-    body_reader: {RSOLVWeb.Plugs.ParseableBodyReader, :read_body, []}
+    body_reader: {RsolvWeb.Plugs.ParseableBodyReader, :read_body, []}
 
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
-  plug RSOLVWeb.Router
+  plug RsolvWeb.Router
 end

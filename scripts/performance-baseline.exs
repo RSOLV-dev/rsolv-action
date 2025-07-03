@@ -5,7 +5,7 @@ Mix.install([
   {:jason, "~> 1.4"}
 ])
 
-alias RsolvApi.AST.{ParserRegistry, FallbackStrategy}
+alias Rsolv.AST.{ParserRegistry, FallbackStrategy}
 
 defmodule PerformanceTest do
   def run do
@@ -69,7 +69,7 @@ defmodule PerformanceTest do
     # Warm-up
     IO.puts("Warming up parsers...")
     Enum.each(test_cases, fn {lang, code} ->
-      {:ok, _} = RsolvApi.AST.ParserRegistry.parse_code("test", "test", lang, code)
+      {:ok, _} = Rsolv.AST.ParserRegistry.parse_code("test", "test", lang, code)
     end)
     
     IO.puts("\n=== Performance Results ===\n")
@@ -81,7 +81,7 @@ defmodule PerformanceTest do
       
       # Test AST parsing
       {ast_time, ast_result} = :timer.tc(fn ->
-        RsolvApi.AST.ParserRegistry.parse_code("perf_test", "customer_123", language, code)
+        Rsolv.AST.ParserRegistry.parse_code("perf_test", "customer_123", language, code)
       end)
       
       ast_status = case ast_result do
@@ -95,7 +95,7 @@ defmodule PerformanceTest do
       
       # Test with fallback strategy
       {fallback_time, fallback_result} = :timer.tc(fn ->
-        RsolvApi.AST.FallbackStrategy.analyze_with_fallback(
+        Rsolv.AST.FallbackStrategy.analyze_with_fallback(
           "perf_test", 
           "customer_123", 
           language, 
@@ -127,7 +127,7 @@ defmodule PerformanceTest do
       IO.puts("Language: #{language} (syntax error)")
       
       {time, result} = :timer.tc(fn ->
-        RsolvApi.AST.FallbackStrategy.analyze_with_fallback(
+        Rsolv.AST.FallbackStrategy.analyze_with_fallback(
           "error_test",
           "customer_123", 
           language,

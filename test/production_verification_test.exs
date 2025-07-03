@@ -1,13 +1,13 @@
-defmodule RSOLV.ProductionVerificationTest do
+defmodule Rsolv.ProductionVerificationTest do
   @moduledoc """
   Comprehensive test suite to verify production API functionality
   """
-  use RsolvApi.DataCase
+  use Rsolv.DataCase
   import Ecto.Query
   
-  alias RsolvApi.Repo
-  alias RsolvApi.Billing.Customer
-  alias RsolvApi.Billing.FixAttempt
+  alias Rsolv.Repo
+  alias Rsolv.Billing.Customer
+  alias Rsolv.Billing.FixAttempt
   
   @moduletag :integration
   

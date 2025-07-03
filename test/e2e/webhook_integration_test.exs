@@ -1,9 +1,9 @@
-defmodule RSOLVWeb.WebhookIntegrationTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.WebhookIntegrationTest do
+  use RsolvWeb.ConnCase
   
   import Ecto.Query
-  alias RsolvApi.Billing.FixAttempt
-  alias RsolvApi.Repo
+  alias Rsolv.Billing.FixAttempt
+  alias Rsolv.Repo
   
   @github_webhook_secret "test_secret"
   

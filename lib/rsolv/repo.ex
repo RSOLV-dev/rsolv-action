@@ -1,5 +1,5 @@
-defmodule RSOLV.Repo do
+defmodule Rsolv.Repo do
   use Ecto.Repo,
-    otp_app: :rsolv_api,
+    otp_app: :rsolv,
     adapter: Ecto.Adapters.Postgres
 end

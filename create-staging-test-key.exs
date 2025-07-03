@@ -1,6 +1,6 @@
 # Create test API key for staging AST validation testing
-alias RsolvApi.Repo
-alias RsolvApi.Billing.Customer
+alias Rsolv.Repo
+alias Rsolv.Billing.Customer
 
 # Generate a unique API key for testing
 test_api_key = "rsolv_staging_ast_" <> Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)

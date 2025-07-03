@@ -2,8 +2,8 @@
 
 Mix.Task.run("app.start")
 
-alias RSOLV.Accounts
-alias RSOLV.Repo
+alias Rsolv.Accounts
+alias Rsolv.Repo
 
 # Generate a unique API key for the demo
 demo_api_key = "rsolv_demo_" <> Base.encode16(:crypto.strong_rand_bytes(12), case: :lower)

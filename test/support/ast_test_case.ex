@@ -1,4 +1,4 @@
-defmodule RsolvApi.AST.TestCase do
+defmodule Rsolv.AST.TestCase do
   @moduledoc """
   Shared test case for AST-related tests.
   Provides common helpers and test data for multi-language parsing.
@@ -8,21 +8,21 @@ defmodule RsolvApi.AST.TestCase do
   
   using do
     quote do
-      import RsolvApi.AST.TestCase
-      alias RsolvApi.AST.PortSupervisor
+      import Rsolv.AST.TestCase
+      alias Rsolv.AST.PortSupervisor
     end
   end
   
   setup do
     # Ensure the application is started for tests
-    Application.ensure_all_started(:rsolv_api)
+    Application.ensure_all_started(:rsolv)
     
     # Create a test session
-    {:ok, session} = RsolvApi.AST.SessionManager.create_session("test-customer")
+    {:ok, session} = Rsolv.AST.SessionManager.create_session("test-customer")
     
     on_exit(fn ->
       # Clean up session after test
-      RsolvApi.AST.SessionManager.delete_session(session.id, "test-customer")
+      Rsolv.AST.SessionManager.delete_session(session.id, "test-customer")
     end)
     
     {:ok, session_id: session.id, session: session}

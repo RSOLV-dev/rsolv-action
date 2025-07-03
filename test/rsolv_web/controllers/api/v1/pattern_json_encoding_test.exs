@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.Api.V1.PatternJsonEncodingTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.Api.V1.PatternJsonEncodingTest do
+  use RsolvWeb.ConnCase
   
   describe "JSON encoding for patterns with regex" do
     test "fails to encode patterns with regex using Jason (current behavior)", %{conn: conn} do
@@ -57,7 +57,7 @@ defmodule RSOLVWeb.Api.V1.PatternJsonEncodingTest do
       }
       
       # This function doesn't exist yet - TDD red phase
-      prepared = RsolvApi.Security.Patterns.JSONSerializer.prepare_for_json(pattern_with_regex)
+      prepared = Rsolv.Security.Patterns.JSONSerializer.prepare_for_json(pattern_with_regex)
       
       # Should convert regex to a map representation
       assert prepared == %{

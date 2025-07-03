@@ -1,9 +1,9 @@
-defmodule RSOLVWeb.EducationController do
-  use RSOLVWeb, :controller
+defmodule RsolvWeb.EducationController do
+  use RsolvWeb, :controller
   
-  alias RSOLV.Notifications.SlackIntegration
-  alias RSOLV.Notifications.SlackIntegration.FixAlert
-  alias RSOLV.Notifications.EngagementTracker
+  alias Rsolv.Notifications.SlackIntegration
+  alias Rsolv.Notifications.SlackIntegration.FixAlert
+  alias Rsolv.Notifications.EngagementTracker
   
   require Logger
 

@@ -1,7 +1,7 @@
-defmodule RSOLVWeb.FixAttemptController do
-  use RSOLVWeb, :controller
-  alias RsolvApi.Billing.FixAttempt
-  alias RsolvApi.Repo
+defmodule RsolvWeb.FixAttemptController do
+  use RsolvWeb, :controller
+  alias Rsolv.Billing.FixAttempt
+  alias Rsolv.Repo
   require Logger
 
   def create(conn, params) do

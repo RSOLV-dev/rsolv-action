@@ -1,5 +1,5 @@
-defmodule RSOLV.Integration.ASTValidationComprehensiveTest do
-  use RSOLVWeb.ConnCase, async: true
+defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
+  use RsolvWeb.ConnCase, async: true
   
   @api_key "rsolv_test_abc123"
   

@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.PatternMetadataApiTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.PatternMetadataApiTest do
+  use RsolvWeb.ConnCase
   
   describe "GET /api/v1/patterns/:id/metadata" do
     test "returns metadata for migrated patterns", %{conn: conn} do

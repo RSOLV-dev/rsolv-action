@@ -1,4 +1,4 @@
-defmodule RSOLV.Repo.Migrations.CreateUsageRecords do
+defmodule Rsolv.Repo.Migrations.CreateUsageRecords do
   use Ecto.Migration
 
   def change do

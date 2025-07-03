@@ -1,4 +1,4 @@
-defmodule RSOLV.Notifications.EngagementTracker do
+defmodule Rsolv.Notifications.EngagementTracker do
   @moduledoc """
   Tracks engagement metrics for notifications to optimize delivery
   and measure educational impact.

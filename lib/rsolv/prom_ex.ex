@@ -1,5 +1,5 @@
-defmodule RSOLV.PromEx do
-  use PromEx, otp_app: :rsolv_api
+defmodule Rsolv.PromEx do
+  use PromEx, otp_app: :rsolv
 
   alias PromEx.Plugins
 
@@ -9,12 +9,12 @@ defmodule RSOLV.PromEx do
       # PromEx built-in plugins
       Plugins.Application,
       Plugins.Beam,
-      {Plugins.Phoenix, router: RSOLVWeb.Router, endpoint: RSOLVWeb.Endpoint},
-      {Plugins.Ecto, otp_app: :rsolv_api, repos: [RsolvApi.Repo]},
+      {Plugins.Phoenix, router: RsolvWeb.Router, endpoint: RsolvWeb.Endpoint},
+      {Plugins.Ecto, otp_app: :rsolv, repos: [Rsolv.Repo]},
       Plugins.PhoenixLiveView
       
       # TODO: Add custom plugin for rate limiter metrics after fixing metric name format
-      # RSOLV.PromEx.RateLimiterPlugin
+      # Rsolv.PromEx.RateLimiterPlugin
     ]
   end
 

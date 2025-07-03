@@ -1,4 +1,4 @@
-defmodule RSOLV.ClusterMonitor do
+defmodule Rsolv.ClusterMonitor do
   @moduledoc """
   Monitors cluster events and handles node up/down notifications.
   """
@@ -24,13 +24,13 @@ defmodule RSOLV.ClusterMonitor do
   
   @impl true
   def handle_info({:nodeup, node, _node_type}, state) do
-    RSOLV.Cluster.on_node_connect(node)
+    Rsolv.Cluster.on_node_connect(node)
     {:noreply, state}
   end
   
   @impl true
   def handle_info({:nodedown, node, _node_type}, state) do
-    RSOLV.Cluster.on_node_disconnect(node)
+    Rsolv.Cluster.on_node_disconnect(node)
     {:noreply, state}
   end
   

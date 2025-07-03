@@ -1,7 +1,7 @@
-defmodule RSOLV.AccountsTest do
-  use RsolvApi.DataCase
+defmodule Rsolv.AccountsTest do
+  use Rsolv.DataCase
   
-  alias RSOLV.Accounts
+  alias Rsolv.Accounts
 
   describe "get_customer_by_api_key/1" do
     test "returns nil for hardcoded keys when not in allowed list" do

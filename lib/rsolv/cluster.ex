@@ -1,4 +1,4 @@
-defmodule RSOLV.Cluster do
+defmodule Rsolv.Cluster do
   @moduledoc """
   Manages cluster configuration and monitoring for RSOLV API.
   
@@ -14,7 +14,7 @@ defmodule RSOLV.Cluster do
   Returns the current cluster topology configuration.
   """
   def topologies do
-    Application.get_env(:rsolv_api, :cluster, [topologies: []])[:topologies] || []
+    Application.get_env(:rsolv, :cluster, [topologies: []])[:topologies] || []
   end
   
   @doc """
@@ -65,7 +65,7 @@ defmodule RSOLV.Cluster do
     
     # Example: Notify other services about the new node
     Phoenix.PubSub.broadcast(
-      RSOLV.PubSub,
+      Rsolv.PubSub,
       "cluster:events",
       {:node_joined, node, Node.self()}
     )

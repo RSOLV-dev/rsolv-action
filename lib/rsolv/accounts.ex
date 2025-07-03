@@ -1,4 +1,4 @@
-defmodule RSOLV.Accounts do
+defmodule Rsolv.Accounts do
   @moduledoc """
   The Accounts context for managing customers and API keys.
   Updated: #{DateTime.utc_now()}
@@ -157,7 +157,7 @@ defmodule RSOLV.Accounts do
                       created_at: c.inserted_at
                     }
             
-            case RsolvApi.Repo.one(query) do
+            case Rsolv.Repo.one(query) do
               nil -> 
                 Logger.info("[Accounts] No customer found in database for API key")
                 nil

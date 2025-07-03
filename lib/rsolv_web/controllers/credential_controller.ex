@@ -1,9 +1,9 @@
-defmodule RSOLVWeb.CredentialController do
-  use RSOLVWeb, :controller
+defmodule RsolvWeb.CredentialController do
+  use RsolvWeb, :controller
 
-  alias RSOLV.Accounts
-  alias RSOLV.Credentials
-  alias RSOLV.RateLimiter
+  alias Rsolv.Accounts
+  alias Rsolv.Credentials
+  alias Rsolv.RateLimiter
 
   require Logger
 

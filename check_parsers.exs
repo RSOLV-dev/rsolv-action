@@ -4,7 +4,7 @@
 
 {:ok, _} = Application.ensure_all_started(:rsolv_api)
 
-parsers = RsolvApi.AST.ParserRegistry.list_parsers()
+parsers = Rsolv.AST.ParserRegistry.list_parsers()
 
 IO.puts "Available parsers:"
 Enum.each(parsers, fn {lang, config} ->

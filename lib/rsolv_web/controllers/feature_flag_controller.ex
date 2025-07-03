@@ -1,10 +1,10 @@
-defmodule RSOLVWeb.FeatureFlagController do
-  use RSOLVWeb, :controller
+defmodule RsolvWeb.FeatureFlagController do
+  use RsolvWeb, :controller
   
-  alias RsolvApi.FeatureFlags
-  alias RSOLV.Accounts
+  alias Rsolv.FeatureFlags
+  alias Rsolv.Accounts
   
-  action_fallback RSOLVWeb.FallbackController
+  action_fallback RsolvWeb.FallbackController
   
   @doc """
   GET /api/v1/admin/feature-flags
@@ -87,7 +87,7 @@ defmodule RSOLVWeb.FeatureFlagController do
     
     cond do
       System.get_env(env_key) -> "environment"
-      Application.get_env(:rsolv_api, :feature_flags, %{})[flag_name] -> "config"
+      Application.get_env(:rsolv, :feature_flags, %{})[flag_name] -> "config"
       true -> "default"
     end
   end

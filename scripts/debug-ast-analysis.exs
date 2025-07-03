@@ -25,21 +25,21 @@ test_file = %{
 }
 
 # Test the analysis service directly
-alias RsolvApi.AST.AnalysisService
+alias Rsolv.AST.AnalysisService
 
 IO.puts("Testing AST Analysis Service...\n")
 
 # Start the analysis service if not running
-case Process.whereis(RsolvApi.AST.AnalysisService) do
+case Process.whereis(Rsolv.AST.AnalysisService) do
   nil -> 
     IO.puts("Starting AnalysisService...")
-    {:ok, _} = RsolvApi.AST.AnalysisService.start_link()
+    {:ok, _} = Rsolv.AST.AnalysisService.start_link()
   _ -> 
     IO.puts("AnalysisService already running")
 end
 
 # Test pattern loading
-alias RsolvApi.AST.PatternAdapter
+alias Rsolv.AST.PatternAdapter
 patterns = PatternAdapter.load_patterns_for_language("javascript")
 IO.puts("Loaded #{length(patterns)} patterns for JavaScript")
 
@@ -101,8 +101,8 @@ end
 
 # Test AST parsing directly
 IO.puts("\n\nTesting AST parsing...")
-alias RsolvApi.AST.ParserRegistry
-alias RsolvApi.AST.SessionManager
+alias Rsolv.AST.ParserRegistry
+alias Rsolv.AST.SessionManager
 
 {:ok, session} = SessionManager.create_session("debug-test")
 
@@ -120,7 +120,7 @@ end
 
 # Test pattern matching directly
 IO.puts("\n\nTesting pattern matching...")
-alias RsolvApi.AST.ASTPatternMatcher
+alias Rsolv.AST.ASTPatternMatcher
 
 if length(patterns) > 0 do
   # Get a SQL injection pattern

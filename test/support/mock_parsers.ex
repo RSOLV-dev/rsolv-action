@@ -1,4 +1,4 @@
-defmodule RsolvApi.AST.MockParsers do
+defmodule Rsolv.AST.MockParsers do
   @moduledoc """
   Mock parsers for testing without external dependencies.
   Returns pre-defined AST structures for known test cases.

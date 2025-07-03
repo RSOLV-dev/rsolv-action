@@ -2,8 +2,8 @@
 
 # Test enhanced API format directly
 
-alias RsolvApi.Security.ASTPattern
-alias RSOLVWeb.Api.V1.PatternController
+alias Rsolv.Security.ASTPattern
+alias RsolvWeb.Api.V1.PatternController
 alias RSOLVApi.Security.Patterns.JSONSerializer
 
 # Simulate what happens in the controller for enhanced format

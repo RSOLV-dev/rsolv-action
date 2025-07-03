@@ -11,11 +11,11 @@ defmodule Mix.Tasks.TestEnhancement do
     
     # Get all pattern modules
     pattern_modules = [
-      RsolvApi.Security.Patterns.Javascript.EvalUserInput,
-      RsolvApi.Security.Patterns.Javascript.CommandInjectionExec,
-      RsolvApi.Security.Patterns.Javascript.XssInnerHtml,
-      RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat,
-      RsolvApi.Security.Patterns.Javascript.HardcodedSecretApiKey
+      Rsolv.Security.Patterns.Javascript.EvalUserInput,
+      Rsolv.Security.Patterns.Javascript.CommandInjectionExec,
+      Rsolv.Security.Patterns.Javascript.XssInnerHtml,
+      Rsolv.Security.Patterns.Javascript.SqlInjectionConcat,
+      Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey
     ]
     
     # Check which ones have ast_enhancement/0
@@ -27,7 +27,7 @@ defmodule Mix.Tasks.TestEnhancement do
     IO.puts("Patterns with ast_enhancement/0: #{length(patterns_with_enhancement)}")
     
     # Show details for eval pattern
-    eval_module = RsolvApi.Security.Patterns.Javascript.EvalUserInput
+    eval_module = Rsolv.Security.Patterns.Javascript.EvalUserInput
     
     if Code.ensure_loaded?(eval_module) do
       IO.puts("\n📋 Testing #{eval_module}:")

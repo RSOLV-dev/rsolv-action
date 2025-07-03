@@ -1,4 +1,4 @@
-defmodule RSOLVWeb.ErrorJSON do
+defmodule RsolvWeb.ErrorJSON do
   @moduledoc """
   This module is invoked by Phoenix on errors.
   """

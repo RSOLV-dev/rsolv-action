@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.PatternDocumentWriteMetadataTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.PatternDocumentWriteMetadataTest do
+  use RsolvWeb.ConnCase
   
   describe "GET /api/v1/patterns/:id/metadata for XSS document.write" do
     test "returns vulnerability metadata for js-xss-document-write", %{conn: conn} do

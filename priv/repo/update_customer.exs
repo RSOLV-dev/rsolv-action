@@ -5,7 +5,7 @@
 #   mix run priv/repo/update_customer.exs --api-key "rsolv_live_abc123" --deactivate
 #   mix run priv/repo/update_customer.exs --email "customer@example.com" --reset-usage
 
-alias RSOLV.Repo
+alias Rsolv.Repo
 import Ecto.Query
 
 # Parse command line arguments

@@ -11,11 +11,11 @@ defmodule ProveEnhancement do
     
     # Test multiple patterns
     patterns = [
-      RsolvApi.Security.Patterns.Javascript.EvalUserInput,
-      RsolvApi.Security.Patterns.Javascript.CommandInjectionExec,
-      RsolvApi.Security.Patterns.Javascript.XssInnerHtml,
-      RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat,
-      RsolvApi.Security.Patterns.Javascript.HardcodedSecretApiKey
+      Rsolv.Security.Patterns.Javascript.EvalUserInput,
+      Rsolv.Security.Patterns.Javascript.CommandInjectionExec,
+      Rsolv.Security.Patterns.Javascript.XssInnerHtml,
+      Rsolv.Security.Patterns.Javascript.SqlInjectionConcat,
+      Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey
     ]
     
     patterns_with_enhancement = Enum.filter(patterns, fn module ->
@@ -27,11 +27,11 @@ defmodule ProveEnhancement do
     IO.puts("Percentage: #{round(length(patterns_with_enhancement) / length(patterns) * 100)}%\n")
     
     # Show detailed enhancement for eval pattern
-    if Enum.member?(patterns_with_enhancement, RsolvApi.Security.Patterns.Javascript.EvalUserInput) do
+    if Enum.member?(patterns_with_enhancement, Rsolv.Security.Patterns.Javascript.EvalUserInput) do
       IO.puts("📋 Detailed enhancement for js-eval-user-input:")
       
-      pattern = RsolvApi.Security.Patterns.Javascript.EvalUserInput.pattern()
-      enhancement = RsolvApi.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
+      pattern = Rsolv.Security.Patterns.Javascript.EvalUserInput.pattern()
+      enhancement = Rsolv.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
       
       IO.puts("\nPattern ID: #{pattern.id}")
       IO.puts("Pattern has regex: #{inspect(pattern.regex)}")

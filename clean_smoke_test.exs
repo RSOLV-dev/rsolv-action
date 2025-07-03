@@ -13,7 +13,7 @@ Code.prepend_path("_build/dev/lib/rsolv_api/consolidated")
 # Start required applications
 {:ok, _} = Application.ensure_all_started(:rsolv_api)
 
-alias RsolvApi.AST.{SessionManager, ParserRegistry, AnalysisService}
+alias Rsolv.AST.{SessionManager, ParserRegistry, AnalysisService}
 
 IO.puts "🔥 Starting AST Service Smoke Test...\n"
 

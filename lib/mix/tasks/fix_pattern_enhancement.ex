@@ -12,7 +12,7 @@ defmodule Mix.Tasks.FixPatternEnhancement do
     IO.puts("1️⃣ Current situation:")
     
     # Load a pattern the current way
-    patterns = RsolvApi.Security.Patterns.Javascript.all()
+    patterns = Rsolv.Security.Patterns.Javascript.all()
     eval_pattern = Enum.find(patterns, &(&1.id == "js-eval-user-input"))
     
     if eval_pattern do
@@ -68,7 +68,7 @@ defmodule Mix.Tasks.FixPatternEnhancement do
   
   defp pattern_id_to_module(pattern_id) do
     # Convert pattern ID to module name
-    # e.g., "js-eval-user-input" -> RsolvApi.Security.Patterns.Javascript.EvalUserInput
+    # e.g., "js-eval-user-input" -> Rsolv.Security.Patterns.Javascript.EvalUserInput
     parts = String.split(pattern_id, "-")
     
     if length(parts) >= 2 do
@@ -85,7 +85,7 @@ defmodule Mix.Tasks.FixPatternEnhancement do
       |> Enum.map(&String.capitalize/1)
       |> Enum.join("")
       
-      module_name = "Elixir.RsolvApi.Security.Patterns.#{language}.#{pattern_name}"
+      module_name = "Elixir.Rsolv.Security.Patterns.#{language}.#{pattern_name}"
       
       try do
         String.to_existing_atom(module_name)

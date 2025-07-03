@@ -1,16 +1,16 @@
-defmodule RSOLVWeb.CredentialControllerTest do
-  use RSOLVWeb.ConnCase, async: false
+defmodule RsolvWeb.CredentialControllerTest do
+  use RsolvWeb.ConnCase, async: false
 
-  import RSOLV.Factory
+  import Rsolv.Factory
 
-  alias RSOLV.Accounts
-  alias RSOLV.Credentials
+  alias Rsolv.Accounts
+  alias Rsolv.Credentials
 
   setup %{conn: conn} do
     # Reset all test storage between tests
-    RSOLV.RateLimiter.reset()
-    RSOLV.Accounts.reset_test_customers()
-    RSOLV.Credentials.reset_credentials()
+    Rsolv.RateLimiter.reset()
+    Rsolv.Accounts.reset_test_customers()
+    Rsolv.Credentials.reset_credentials()
     
     # Create a test customer with valid subscription
     customer = build(:customer, %{
@@ -104,11 +104,11 @@ defmodule RSOLVWeb.CredentialControllerTest do
       assert json_response(conn, 200)
       
       # Verify rate limiter module exists and check_rate_limit function works
-      assert function_exported?(RSOLV.RateLimiter, :check_rate_limit, 2)
+      assert function_exported?(Rsolv.RateLimiter, :check_rate_limit, 2)
       
       # Verify rate limiting logic is called (it's just set very high at 100/min)
       # In production, this would actually limit after 100 requests
-      result = RSOLV.RateLimiter.check_rate_limit(customer.id, :credential_exchange)
+      result = Rsolv.RateLimiter.check_rate_limit(customer.id, :credential_exchange)
       assert result == :ok
     end
 

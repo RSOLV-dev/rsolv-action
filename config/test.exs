@@ -5,7 +5,7 @@ import Config
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
-config :rsolv_api, RsolvApi.Repo,
+config :rsolv, Rsolv.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
@@ -16,7 +16,7 @@ config :rsolv_api, RsolvApi.Repo,
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :rsolv_api, RSOLVWeb.Endpoint,
+config :rsolv, RsolvWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "test-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789",
   server: false
@@ -28,8 +28,8 @@ config :logger, level: :debug
 config :phoenix, :plug_init_mode, :runtime
 
 # Use mock parsers in test environment
-config :rsolv_api, :use_mock_parsers, true
+config :rsolv, :use_mock_parsers, true
 
 # Shorter timeouts for tests
-config :rsolv_api, :parser_timeout, 5_000
-config :rsolv_api, :session_timeout, 300_000  # 5 minutes
+config :rsolv, :parser_timeout, 5_000
+config :rsolv, :session_timeout, 300_000  # 5 minutes

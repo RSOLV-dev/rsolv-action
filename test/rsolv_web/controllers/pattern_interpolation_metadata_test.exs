@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.PatternInterpolationMetadataTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.PatternInterpolationMetadataTest do
+  use RsolvWeb.ConnCase
   
   describe "GET /api/v1/patterns/:id/metadata for SQL injection interpolation" do
     test "returns vulnerability metadata for js-sql-injection-interpolation", %{conn: conn} do

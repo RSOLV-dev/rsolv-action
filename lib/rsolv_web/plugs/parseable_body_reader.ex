@@ -1,4 +1,4 @@
-defmodule RSOLVWeb.Plugs.ParseableBodyReader do
+defmodule RsolvWeb.Plugs.ParseableBodyReader do
   @moduledoc """
   A body reader that caches the raw body for webhook signature verification
   while still allowing Plug.Parsers to parse the body.

@@ -38,15 +38,15 @@ defmodule Mix.Tasks.VerifyPatterns do
     IO.puts("------------------------------")
     
     pattern_modules = [
-      {RsolvApi.Security.Patterns.Javascript, "JavaScript/TypeScript"},
-      {RsolvApi.Security.Patterns.Python, "Python"},
-      {RsolvApi.Security.Patterns.Ruby, "Ruby"},
-      {RsolvApi.Security.Patterns.Java, "Java"},
-      {RsolvApi.Security.Patterns.Php, "PHP"},
-      {RsolvApi.Security.Patterns.Elixir, "Elixir/Phoenix"},
-      {RsolvApi.Security.Patterns.Rails, "Ruby on Rails"},
-      {RsolvApi.Security.Patterns.Django, "Django/Python"},
-      {RsolvApi.Security.Patterns.Cve, "CVE (Cross-language)"}
+      {Rsolv.Security.Patterns.Javascript, "JavaScript/TypeScript"},
+      {Rsolv.Security.Patterns.Python, "Python"},
+      {Rsolv.Security.Patterns.Ruby, "Ruby"},
+      {Rsolv.Security.Patterns.Java, "Java"},
+      {Rsolv.Security.Patterns.Php, "PHP"},
+      {Rsolv.Security.Patterns.Elixir, "Elixir/Phoenix"},
+      {Rsolv.Security.Patterns.Rails, "Ruby on Rails"},
+      {Rsolv.Security.Patterns.Django, "Django/Python"},
+      {Rsolv.Security.Patterns.Cve, "CVE (Cross-language)"}
     ]
     
     counts = Enum.map(pattern_modules, fn {module, name} ->
@@ -213,15 +213,15 @@ defmodule Mix.Tasks.VerifyPatterns do
     # Test the pattern controller directly
     try do
       # Test getting all patterns
-      all_patterns = RsolvApi.Security.list_all_patterns()
+      all_patterns = Rsolv.Security.list_all_patterns()
       pattern_count = length(all_patterns)
       
       # Test getting patterns by language
-      js_patterns = RsolvApi.Security.list_patterns_by_language("javascript")
+      js_patterns = Rsolv.Security.list_patterns_by_language("javascript")
       js_count = length(js_patterns)
       
       # Test getting patterns by tier (if available)
-      public_patterns = RsolvApi.Security.list_patterns_by_tier(:public)
+      public_patterns = Rsolv.Security.list_patterns_by_tier(:public)
       public_count = length(public_patterns)
       
       IO.puts("  ✅ All patterns: #{pattern_count}")
@@ -249,7 +249,7 @@ defmodule Mix.Tasks.VerifyPatterns do
     # Test that patterns can be retrieved and applied
     try do
       # Get a sample pattern
-      pattern = RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.pattern()
+      pattern = Rsolv.Security.Patterns.Javascript.SqlInjectionConcat.pattern()
       
       # Test it against vulnerable code
       vulnerable_code = ~s|const query = "SELECT * FROM users WHERE id = " + userId;|
@@ -289,16 +289,16 @@ defmodule Mix.Tasks.VerifyPatterns do
 
   defp get_sample_patterns do
     [
-      {"js-sql-injection", RsolvApi.Security.Patterns.Javascript.SqlInjectionConcat.pattern()},
-      {"js-xss", RsolvApi.Security.Patterns.Javascript.xss_innerhtml()},
-      {"python-command-injection", RsolvApi.Security.Patterns.Python.CommandInjectionOsSystem.pattern()},
-      {"ruby-path-traversal", RsolvApi.Security.Patterns.Ruby.path_traversal()},
-      {"java-sql-injection", RsolvApi.Security.Patterns.Java.SqlInjectionStatement.pattern()},
-      {"php-sql-injection", RsolvApi.Security.Patterns.Php.SqlInjectionConcat.pattern()},
-      {"elixir-sql-injection", RsolvApi.Security.Patterns.Elixir.SqlInjectionFragment.pattern()},
-      # {"rails-mass-assignment", RsolvApi.Security.Patterns.Rails.MassAssignment.pattern()},
-      # {"django-sql-injection", RsolvApi.Security.Patterns.Django.SqlInjectionRaw.pattern()},
-      {"cve-log4shell", RsolvApi.Security.Patterns.Cve.log4shell_detection()}
+      {"js-sql-injection", Rsolv.Security.Patterns.Javascript.SqlInjectionConcat.pattern()},
+      {"js-xss", Rsolv.Security.Patterns.Javascript.xss_innerhtml()},
+      {"python-command-injection", Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.pattern()},
+      {"ruby-path-traversal", Rsolv.Security.Patterns.Ruby.path_traversal()},
+      {"java-sql-injection", Rsolv.Security.Patterns.Java.SqlInjectionStatement.pattern()},
+      {"php-sql-injection", Rsolv.Security.Patterns.Php.SqlInjectionConcat.pattern()},
+      {"elixir-sql-injection", Rsolv.Security.Patterns.Elixir.SqlInjectionFragment.pattern()},
+      # {"rails-mass-assignment", Rsolv.Security.Patterns.Rails.MassAssignment.pattern()},
+      # {"django-sql-injection", Rsolv.Security.Patterns.Django.SqlInjectionRaw.pattern()},
+      {"cve-log4shell", Rsolv.Security.Patterns.Cve.log4shell_detection()}
     ]
   rescue
     error ->

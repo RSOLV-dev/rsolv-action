@@ -1,4 +1,4 @@
-defmodule RSOLVWeb.ErrorHTML do
+defmodule RsolvWeb.ErrorHTML do
   @moduledoc """
   This module handles HTML error rendering for the API.
   Since this is primarily an API application, it renders simple text responses.

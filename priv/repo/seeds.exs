@@ -2,8 +2,8 @@
 #
 #     mix run priv/repo/seeds.exs
 
-alias RsolvApi.Repo
-alias RsolvApi.Billing.Customer
+alias Rsolv.Repo
+alias Rsolv.Billing.Customer
 
 # Create test customer for dogfooding
 dogfood_customer = %Customer{

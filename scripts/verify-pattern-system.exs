@@ -46,15 +46,15 @@ defmodule PatternSystemVerifier do
     IO.puts("------------------------------")
     
     pattern_modules = [
-      {RsolvApi.Security.Patterns.Javascript, "javascript"},
-      {RsolvApi.Security.Patterns.Python, "python"},
-      {RsolvApi.Security.Patterns.Ruby, "ruby"},
-      {RsolvApi.Security.Patterns.Java, "java"},
-      {RsolvApi.Security.Patterns.Php, "php"},
-      {RsolvApi.Security.Patterns.Elixir, "elixir"},
-      {RsolvApi.Security.Patterns.Rails, "rails"},
-      {RsolvApi.Security.Patterns.Django, "django"},
-      {RsolvApi.Security.Patterns.Cve, "cve"}
+      {Rsolv.Security.Patterns.Javascript, "javascript"},
+      {Rsolv.Security.Patterns.Python, "python"},
+      {Rsolv.Security.Patterns.Ruby, "ruby"},
+      {Rsolv.Security.Patterns.Java, "java"},
+      {Rsolv.Security.Patterns.Php, "php"},
+      {Rsolv.Security.Patterns.Elixir, "elixir"},
+      {Rsolv.Security.Patterns.Rails, "rails"},
+      {Rsolv.Security.Patterns.Django, "django"},
+      {Rsolv.Security.Patterns.Cve, "cve"}
     ]
     
     counts = Enum.map(pattern_modules, fn {module, name} ->
@@ -235,12 +235,12 @@ defmodule PatternSystemVerifier do
   defp get_sample_patterns do
     # Get a representative sample of patterns for testing
     [
-      {"js-sql-injection", RsolvApi.Security.Patterns.Javascript.sql_injection_concatenation()},
-      {"python-command-injection", RsolvApi.Security.Patterns.Python.command_injection()},
-      {"ruby-path-traversal", RsolvApi.Security.Patterns.Ruby.path_traversal()},
-      {"java-xpath-injection", RsolvApi.Security.Patterns.Java.xpath_injection()},
-      {"php-sql-injection", RsolvApi.Security.Patterns.Php.sql_injection_concatenation()},
-      {"cve-log4shell", RsolvApi.Security.Patterns.Cve.log4shell_jndi_injection()}
+      {"js-sql-injection", Rsolv.Security.Patterns.Javascript.sql_injection_concatenation()},
+      {"python-command-injection", Rsolv.Security.Patterns.Python.command_injection()},
+      {"ruby-path-traversal", Rsolv.Security.Patterns.Ruby.path_traversal()},
+      {"java-xpath-injection", Rsolv.Security.Patterns.Java.xpath_injection()},
+      {"php-sql-injection", Rsolv.Security.Patterns.Php.sql_injection_concatenation()},
+      {"cve-log4shell", Rsolv.Security.Patterns.Cve.log4shell_jndi_injection()}
     ]
   rescue
     _ ->

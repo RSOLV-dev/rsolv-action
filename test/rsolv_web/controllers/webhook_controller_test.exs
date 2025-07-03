@@ -1,8 +1,8 @@
-defmodule RSOLVWeb.WebhookControllerTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.WebhookControllerTest do
+  use RsolvWeb.ConnCase
   
-  alias RsolvApi.Billing.FixAttempt
-  alias RsolvApi.Repo
+  alias Rsolv.Billing.FixAttempt
+  alias Rsolv.Repo
 
   @github_webhook_secret "default_dev_secret"
   

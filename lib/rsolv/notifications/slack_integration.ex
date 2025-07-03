@@ -1,12 +1,12 @@
-defmodule RSOLV.Notifications.SlackIntegration do
+defmodule Rsolv.Notifications.SlackIntegration do
   @moduledoc """
   Handles Slack notifications for RSOLV fixes with intelligent throttling
   and engagement tracking.
   """
 
   require Logger
-  alias RSOLV.Notifications.AlertThrottle
-  alias RSOLV.Notifications.EngagementTracker
+  alias Rsolv.Notifications.AlertThrottle
+  alias Rsolv.Notifications.EngagementTracker
 
   @max_daily_alerts 3
   @webhook_url_key "SLACK_WEBHOOK_URL"

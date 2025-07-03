@@ -1,5 +1,5 @@
-defmodule RSOLVWeb.CredentialVendingTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.CredentialVendingTest do
+  use RsolvWeb.ConnCase
 
   @internal_key "rsolv_test_abc123"  # Use existing test API key
   @invalid_key "invalid_key_12345"

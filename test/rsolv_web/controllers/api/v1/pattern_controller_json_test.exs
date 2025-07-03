@@ -1,6 +1,6 @@
-defmodule RSOLVWeb.Api.V1.PatternControllerJsonTest do
-  use RSOLVWeb.ConnCase
-  alias RsolvApi.Security.Patterns.JSONSerializer
+defmodule RsolvWeb.Api.V1.PatternControllerJsonTest do
+  use RsolvWeb.ConnCase
+  alias Rsolv.Security.Patterns.JSONSerializer
   
   describe "Pattern API with native JSON" do
     test "standard format works with native JSON", %{conn: conn} do

@@ -1,12 +1,12 @@
-defmodule RSOLVWeb do
+defmodule RsolvWeb do
   @moduledoc """
   The entrypoint for defining your web interface, such
   as controllers, components, channels, and so on.
 
   This can be used in your application as:
 
-      use RSOLVWeb, :controller
-      use RSOLVWeb, :html
+      use RsolvWeb, :controller
+      use RsolvWeb, :html
 
   The definitions below will be executed for every view,
   controller, etc, so keep them short and clean, focused
@@ -39,10 +39,10 @@ defmodule RSOLVWeb do
     quote do
       use Phoenix.Controller,
         formats: [:html, :json],
-        layouts: [html: RSOLVWeb.Layouts]
+        layouts: [html: RsolvWeb.Layouts]
 
       import Plug.Conn
-      import RSOLVWeb.Gettext
+      import RsolvWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -51,7 +51,7 @@ defmodule RSOLVWeb do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {RSOLVWeb.Layouts, :app}
+        layout: {RsolvWeb.Layouts, :app}
 
       unquote(html_helpers())
     end
@@ -83,8 +83,8 @@ defmodule RSOLVWeb do
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components and translation
-      import RSOLVWeb.CoreComponents
-      import RSOLVWeb.Gettext
+      import RsolvWeb.CoreComponents
+      import RsolvWeb.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
@@ -97,9 +97,9 @@ defmodule RSOLVWeb do
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,
-        endpoint: RSOLVWeb.Endpoint,
-        router: RSOLVWeb.Router,
-        statics: RSOLVWeb.static_paths()
+        endpoint: RsolvWeb.Endpoint,
+        router: RsolvWeb.Router,
+        statics: RsolvWeb.static_paths()
     end
   end
 

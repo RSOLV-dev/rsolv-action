@@ -1,4 +1,4 @@
-defmodule RSOLV.PromEx.RateLimiterPlugin do
+defmodule Rsolv.PromEx.RateLimiterPlugin do
   @moduledoc """
   PromEx plugin for rate limiter metrics.
   """

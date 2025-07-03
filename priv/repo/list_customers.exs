@@ -5,7 +5,7 @@
 #   mix run priv/repo/list_customers.exs --active-only
 #   mix run priv/repo/list_customers.exs --show-usage
 
-alias RSOLV.Repo
+alias Rsolv.Repo
 import Ecto.Query
 
 # Parse command line arguments

@@ -1,4 +1,4 @@
-defmodule RSOLV.Repo.Migrations.CreateFixAttempts do
+defmodule Rsolv.Repo.Migrations.CreateFixAttempts do
   use Ecto.Migration
 
   def change do

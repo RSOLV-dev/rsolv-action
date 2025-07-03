@@ -1,6 +1,6 @@
 # Create demo customer for end-to-end journey
-alias RsolvApi.Repo
-alias RsolvApi.Billing.Customer
+alias Rsolv.Repo
+alias Rsolv.Billing.Customer
 
 # Generate a unique API key for the demo
 demo_api_key = "rsolv_demo_" <> Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)

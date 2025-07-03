@@ -1,8 +1,8 @@
-defmodule RSOLVWeb.FixAttemptControllerTest do
-  use RSOLVWeb.ConnCase
+defmodule RsolvWeb.FixAttemptControllerTest do
+  use RsolvWeb.ConnCase
   
-  alias RsolvApi.Billing.FixAttempt
-  alias RsolvApi.Repo
+  alias Rsolv.Billing.FixAttempt
+  alias Rsolv.Repo
   
   describe "POST /api/v1/fix-attempts" do
     test "creates fix attempt with valid data", %{conn: conn} do

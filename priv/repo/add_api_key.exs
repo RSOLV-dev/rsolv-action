@@ -8,7 +8,7 @@
 #
 # This will generate a random API key if not provided
 
-alias RSOLV.Repo
+alias Rsolv.Repo
 import Ecto.Query
 
 # Parse command line arguments

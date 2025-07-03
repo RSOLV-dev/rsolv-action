@@ -1,4 +1,4 @@
-defmodule RSOLV.Notifications.Supervisor do
+defmodule Rsolv.Notifications.Supervisor do
   @moduledoc """
   Supervises all notification-related processes
   """
@@ -13,7 +13,7 @@ defmodule RSOLV.Notifications.Supervisor do
   def init(_init_arg) do
     children = [
       # AlertThrottle now uses the existing cache, no need to supervise
-      {RSOLV.Notifications.EngagementTracker, []}
+      {Rsolv.Notifications.EngagementTracker, []}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

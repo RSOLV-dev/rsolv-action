@@ -16,8 +16,8 @@ Code.require_file("lib/rsolv_api/security/pattern.ex")
 Code.require_file("lib/rsolv_api/security/enhanced_pattern.ex")
 Code.require_file("lib/rsolv_api/security/patterns/javascript_enhanced.ex")
 
-alias RsolvApi.Security.EnhancedPattern
-alias RsolvApi.Security.Patterns.JavascriptEnhanced
+alias Rsolv.Security.EnhancedPattern
+alias Rsolv.Security.Patterns.JavascriptEnhanced
 
 IO.puts("=== Enhanced Pattern Demo ===\n")
 

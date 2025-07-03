@@ -2,8 +2,8 @@
 
 Mix.Task.run("app.start")
 
-alias RSOLV.Accounts
-alias RSOLV.Repo
+alias Rsolv.Accounts
+alias Rsolv.Repo
 
 # Create a test customer for API testing
 email = "test@example.com"

@@ -16,8 +16,8 @@ defmodule EncryptionBenchmark do
     IO.puts("")
     
     # Generate test data
-    key = RsolvApi.AST.Encryption.generate_key()
-    session = %RsolvApi.AST.SessionManager.Session{
+    key = Rsolv.AST.Encryption.generate_key()
+    session = %Rsolv.AST.SessionManager.Session{
       id: "bench-session",
       customer_id: "bench-customer",
       encryption_key: key,
@@ -45,12 +45,12 @@ defmodule EncryptionBenchmark do
       
       # Benchmark encryption
       {encrypt_time, {ciphertext, iv, auth_tag}} = :timer.tc(fn ->
-        RsolvApi.AST.Encryption.encrypt(data, key)
+        Rsolv.AST.Encryption.encrypt(data, key)
       end)
       
       # Benchmark decryption
       {decrypt_time, {:ok, _plaintext}} = :timer.tc(fn ->
-        RsolvApi.AST.Encryption.decrypt(ciphertext, key, iv, auth_tag)
+        Rsolv.AST.Encryption.decrypt(ciphertext, key, iv, auth_tag)
       end)
       
       # Calculate throughput (MB/s)
@@ -73,12 +73,12 @@ defmodule EncryptionBenchmark do
       
       # Benchmark preparation
       {prepare_time, {:ok, prepared}} = :timer.tc(fn ->
-        RsolvApi.AST.FileTransmission.prepare_for_transmission(data, session)
+        Rsolv.AST.FileTransmission.prepare_for_transmission(data, session)
       end)
       
       # Benchmark receiving
       {receive_time, {:ok, _received}} = :timer.tc(fn ->
-        RsolvApi.AST.FileTransmission.receive_transmission(
+        Rsolv.AST.FileTransmission.receive_transmission(
           prepared.chunks,
           prepared.metadata.content_hash,
           session
@@ -99,8 +99,8 @@ defmodule EncryptionBenchmark do
     # Sequential
     {seq_time, _} = :timer.tc(fn ->
       for _ <- 1..100 do
-        {ciphertext, iv, auth_tag} = RsolvApi.AST.Encryption.encrypt(data, key)
-        {:ok, _} = RsolvApi.AST.Encryption.decrypt(ciphertext, key, iv, auth_tag)
+        {ciphertext, iv, auth_tag} = Rsolv.AST.Encryption.encrypt(data, key)
+        {:ok, _} = Rsolv.AST.Encryption.decrypt(ciphertext, key, iv, auth_tag)
       end
     end)
     
@@ -108,8 +108,8 @@ defmodule EncryptionBenchmark do
     {conc_time, _} = :timer.tc(fn ->
       tasks = for _ <- 1..100 do
         Task.async(fn ->
-          {ciphertext, iv, auth_tag} = RsolvApi.AST.Encryption.encrypt(data, key)
-          {:ok, _} = RsolvApi.AST.Encryption.decrypt(ciphertext, key, iv, auth_tag)
+          {ciphertext, iv, auth_tag} = Rsolv.AST.Encryption.encrypt(data, key)
+          {:ok, _} = Rsolv.AST.Encryption.decrypt(ciphertext, key, iv, auth_tag)
         end)
       end
       
@@ -129,7 +129,7 @@ defmodule EncryptionBenchmark do
     initial_memory = :erlang.memory(:total)
     
     large_data = :crypto.strong_rand_bytes(100 * 1024 * 1024)
-    {:ok, prepared} = RsolvApi.AST.FileTransmission.prepare_for_transmission(large_data, session)
+    {:ok, prepared} = Rsolv.AST.FileTransmission.prepare_for_transmission(large_data, session)
     
     peak_memory = :erlang.memory(:total)
     

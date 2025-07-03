@@ -5,7 +5,7 @@
 import Ecto.Query
 
 # Get the repo
-repo = RsolvApi.Repo
+repo = Rsolv.Repo
 
 # Check if customer already exists
 existing = repo.one(from c in "customers", where: c.email == "test@example.com", select: c.id)
