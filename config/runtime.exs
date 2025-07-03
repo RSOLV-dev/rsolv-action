@@ -60,6 +60,14 @@ database_config =
 
 config :rsolv, Rsolv.Repo, database_config
 
+# Configure FunWithFlags
+config :fun_with_flags, :persistence,
+  adapter: FunWithFlags.Store.Persistent.Ecto,
+  repo: Rsolv.Repo
+
+# Disable cache notifications to avoid Redis dependency
+config :fun_with_flags, :cache_bust_notifications, enabled: false
+
 # Configure the endpoint
 if config_env() != :test do
   config :rsolv, RsolvWeb.Endpoint,

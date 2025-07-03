@@ -19,6 +19,8 @@ defmodule Rsolv.Application do
       Rsolv.Repo,
       # Start the PubSub system
       {Phoenix.PubSub, name: Rsolv.PubSub},
+      # Start FunWithFlags supervisor
+      FunWithFlags.Supervisor,
       # Start Cachex
       {Cachex, name: :rsolv_cache},
       # Start the Rate Limiter

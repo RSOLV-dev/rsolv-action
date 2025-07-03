@@ -47,7 +47,15 @@ defmodule Rsolv.MixProject do
       {:hackney, "~> 1.18"},
       {:libcluster, "~> 3.3"},
       {:prom_ex, "~> 1.9"},
-      {:bcrypt_elixir, "~> 3.0"}
+      {:bcrypt_elixir, "~> 3.0"},
+      {:phoenix_html, "~> 4.0"},
+      {:phoenix_live_view, "~> 0.20"},
+      {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:fun_with_flags, "~> 1.11"},
+      {:fun_with_flags_ui, "~> 1.0"},
+      {:mdex, "~> 0.7"},
+      {:yaml_elixir, "~> 2.9"},
+      {:mox, "~> 1.0", only: :test}
     ]
   end
 

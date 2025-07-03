@@ -34,3 +34,10 @@ config :rsolv, :use_mock_parsers, true
 # Shorter timeouts for tests
 config :rsolv, :parser_timeout, 5_000
 config :rsolv, :session_timeout, 300_000  # 5 minutes
+
+# Configure FunWithFlags for test environment
+config :fun_with_flags, :persistence,
+  adapter: FunWithFlags.Store.Persistent.Ecto,
+  repo: Rsolv.Repo
+
+config :fun_with_flags, :cache, enabled: false

@@ -2,11 +2,6 @@ defmodule RsolvWeb.Router do
   use RsolvWeb, :router
   import Phoenix.LiveView.Router
   require Logger
-  
-  # Ensure LiveView modules are available at compile time
-  alias RsolvWeb.HomeLive
-  alias RsolvWeb.EarlyAccessLive
-  alias RsolvWeb.PageController
 
   # Pipelines
   pipeline :browser do
@@ -49,8 +44,13 @@ defmodule RsolvWeb.Router do
       live "/signup", RsolvWeb.EarlyAccessLive, :index
     end
     
-    # Regular routes
-    get "/blog", RsolvWeb.PageController, :blog
+    # Blog routes
+    get "/blog", RsolvWeb.BlogController, :index
+    get "/blog/rss.xml", RsolvWeb.BlogController, :rss
+    get "/blog/:slug", RsolvWeb.BlogController, :show
+    
+    # Dashboard routes
+    get "/dashboard", RsolvWeb.DashboardController, :index
   end
 
   # Webhook endpoints (separate from API versioning)
@@ -75,6 +75,14 @@ defmodule RsolvWeb.Router do
 
     # Usage tracking
     post "/usage/report", CredentialController, :report_usage
+    
+    # Feedback
+    scope "/feedback" do
+      get "/", API.FeedbackController, :index
+      post "/", API.FeedbackController, :create
+      get "/stats", API.FeedbackController, :stats
+      get "/:id", API.FeedbackController, :show
+    end
 
     # Security patterns
     scope "/patterns" do
