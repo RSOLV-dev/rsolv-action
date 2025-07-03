@@ -5,7 +5,7 @@ defmodule Rsolv.Customers.ApiKey do
   schema "api_keys" do
     field :key, :string
     field :name, :string
-    field :description, :string
+    field :permissions, {:array, :string}, default: []
     field :active, :boolean, default: true
     field :last_used_at, :naive_datetime
     field :expires_at, :naive_datetime
@@ -18,7 +18,7 @@ defmodule Rsolv.Customers.ApiKey do
   @doc false
   def changeset(api_key, attrs) do
     api_key
-    |> cast(attrs, [:key, :name, :description, :active, :last_used_at, :expires_at, :customer_id])
+    |> cast(attrs, [:key, :name, :permissions, :active, :last_used_at, :expires_at, :customer_id])
     |> generate_key_if_missing()
     |> validate_required([:key, :name, :customer_id])
     |> unique_constraint(:key)

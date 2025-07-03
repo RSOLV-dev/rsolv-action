@@ -142,4 +142,22 @@ defmodule Rsolv.Billing do
       pending: Map.get(stats, "pending", 0) + Map.get(stats, "in_progress", 0)
     }
   end
+
+  @doc """
+  Records usage data for tracking purposes.
+  This is a placeholder implementation during Phase 3 integration.
+
+  ## Examples
+
+      iex> record_usage(%{customer_id: 1, provider: "anthropic", tokens_used: 100})
+      {:ok, %{}}
+
+  """
+  def record_usage(usage_attrs) do
+    # For now, this is a simple logging implementation
+    # In the future this could create usage_records or update metrics
+    require Logger
+    Logger.info("Usage recorded: #{inspect(usage_attrs)}")
+    {:ok, usage_attrs}
+  end
 end

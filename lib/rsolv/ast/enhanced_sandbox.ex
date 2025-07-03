@@ -13,11 +13,12 @@ defmodule Rsolv.AST.EnhancedSandbox do
   require Logger
   alias Rsolv.AST.{Sandbox, AuditLogger}
   
-  # Suspicious patterns that might indicate malicious input
-  @suspicious_patterns [
-    # Zip bombs and recursive includes
-    ~r/\.zip\s*\(/i,
-    ~r/require\s*\(\s*require/i,
+  # Suspicious patterns that might indicate malicious input - using function instead of module attribute
+  defp suspicious_patterns do
+    [
+      # Zip bombs and recursive includes
+      ~r/\.zip\s*\(/i,
+      ~r/require\s*\(\s*require/i,
     ~r/import\s*\(\s*import/i,
     
     # Shell injection attempts
@@ -38,7 +39,8 @@ defmodule Rsolv.AST.EnhancedSandbox do
     
     # Excessive nesting/complexity
     ~r/(\{|\[){50,}/  # More than 50 nested brackets
-  ]
+    ]
+  end
   
   @max_input_complexity 5_000  # Complexity score limit
   # @max_nesting_depth 50         # Maximum AST nesting (reserved for future use)
@@ -165,7 +167,7 @@ defmodule Rsolv.AST.EnhancedSandbox do
   end
   
   defp get_base_suspicious_patterns do
-    @suspicious_patterns
+    suspicious_patterns()
   end
   
   defp check_complexity(input) do

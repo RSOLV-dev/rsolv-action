@@ -7,6 +7,12 @@ defmodule Rsolv.Accounts do
   alias Rsolv.Repo
 
   alias Rsolv.Accounts.{User, UserToken}
+  
+  # Legacy/compatibility functions for controllers during Phase 3 transition
+  # These delegate to the new Customers and Billing contexts
+  defdelegate get_customer_by_api_key(api_key), to: Rsolv.Customers
+  defdelegate update_customer(customer, attrs), to: Rsolv.Customers
+  defdelegate record_usage(usage_attrs), to: Rsolv.Billing
 
   ## Database getters
 
