@@ -78,6 +78,7 @@ FROM prod-deps AS builder
 COPY lib lib
 COPY priv priv
 COPY rel rel
+COPY assets assets
 
 # Note: Parser dependencies are installed in the production stage
 # We don't need to install them here in the builder stage
@@ -88,6 +89,9 @@ ENV ELIXIR_MAKE_CACHE_DIR=/app/.make_cache
 
 # Compile the application with optimizations
 RUN MIX_ENV=prod mix compile
+
+# Generate static asset digests
+RUN MIX_ENV=prod mix phx.digest
 
 # Build release with optimizations
 RUN MIX_ENV=prod mix release --overwrite

@@ -2,6 +2,11 @@ defmodule RsolvWeb.Router do
   use RsolvWeb, :router
   import Phoenix.LiveView.Router
   require Logger
+  
+  # Ensure LiveView modules are available at compile time
+  alias RsolvWeb.HomeLive
+  alias RsolvWeb.EarlyAccessLive
+  alias RsolvWeb.PageController
 
   # Pipelines
   pipeline :browser do
@@ -35,17 +40,17 @@ defmodule RsolvWeb.Router do
   get "/health", RsolvWeb.HealthController, :check
 
   # Web routes
-  scope "/", RsolvWeb do
+  scope "/" do
     pipe_through :browser
 
     # LiveView routes with current path hook
     live_session :default do
-      live "/", HomeLive, :index
-      live "/signup", EarlyAccessLive, :index
+      live "/", RsolvWeb.HomeLive, :index
+      live "/signup", RsolvWeb.EarlyAccessLive, :index
     end
     
     # Regular routes
-    get "/blog", PageController, :blog
+    get "/blog", RsolvWeb.PageController, :blog
   end
 
   # Webhook endpoints (separate from API versioning)
