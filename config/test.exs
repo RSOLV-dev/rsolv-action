@@ -19,7 +19,8 @@ config :rsolv, Rsolv.Repo,
 config :rsolv, RsolvWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "test-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789",
-  server: false
+  server: false,
+  live_view: [signing_salt: "test-liveview-salt"]
 
 # Print only warnings and errors during test
 config :logger, level: :debug

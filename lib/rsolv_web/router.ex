@@ -1,8 +1,18 @@
 defmodule RsolvWeb.Router do
   use RsolvWeb, :router
+  import Phoenix.LiveView.Router
   require Logger
 
   # Pipelines
+  pipeline :browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {RsolvWeb.Layouts, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
     plug Plug.Parsers,
@@ -23,6 +33,20 @@ defmodule RsolvWeb.Router do
 
   # Health check (outside versioned API)
   get "/health", RsolvWeb.HealthController, :check
+
+  # Web routes
+  scope "/", RsolvWeb do
+    pipe_through :browser
+
+    # LiveView routes with current path hook
+    live_session :default do
+      live "/", HomeLive, :index
+      live "/signup", EarlyAccessLive, :index
+    end
+    
+    # Regular routes
+    get "/blog", PageController, :blog
+  end
 
   # Webhook endpoints (separate from API versioning)
   scope "/webhook", RsolvWeb do

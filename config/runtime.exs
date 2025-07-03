@@ -61,14 +61,16 @@ database_config =
 config :rsolv, Rsolv.Repo, database_config
 
 # Configure the endpoint
-config :rsolv, RsolvWeb.Endpoint,
-  url: [host: System.get_env("PHX_HOST") || "localhost", port: 443, scheme: "https"],
-  http: [
-    ip: {0, 0, 0, 0},
-    port: String.to_integer(System.get_env("PORT") || "4000")
-  ],
-  secret_key_base: System.get_env("SECRET_KEY_BASE"),
-  server: true
+if config_env() != :test do
+  config :rsolv, RsolvWeb.Endpoint,
+    url: [host: System.get_env("PHX_HOST") || "localhost", port: 443, scheme: "https"],
+    http: [
+      ip: {0, 0, 0, 0},
+      port: String.to_integer(System.get_env("PORT") || "4000")
+    ],
+    secret_key_base: System.get_env("SECRET_KEY_BASE"),
+    server: true
+end
 
 # Configure AI provider keys
 config :rsolv, :ai_providers,
@@ -98,8 +100,10 @@ config :logger, :console,
   metadata: [:request_id]
 
 # Configure Phoenix LiveDashboard
-config :rsolv, RsolvWeb.Endpoint,
-  live_view: [signing_salt: System.get_env("LIVE_VIEW_SALT")]
+if config_env() != :test do
+  config :rsolv, RsolvWeb.Endpoint,
+    live_view: [signing_salt: System.get_env("LIVE_VIEW_SALT")]
+end
 
 # Sentry error tracking
 if System.get_env("SENTRY_DSN") do

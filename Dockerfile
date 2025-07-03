@@ -118,7 +118,7 @@ RUN apk add --no-cache php82-dom php82-mbstring
 RUN adduser -D -h /app app
 
 # Copy release from builder
-COPY --from=builder --chown=app:app /app/_build/prod/rel/rsolv_api /app
+COPY --from=builder --chown=app:app /app/_build/prod/rel/rsolv /app
 
 # Set environment
 ENV HOME=/app
@@ -135,4 +135,4 @@ USER app
 WORKDIR /app
 
 # Start the application
-CMD ["bin/rsolv_api", "start"]
+CMD ["bin/rsolv", "start"]
