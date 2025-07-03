@@ -1,49 +1,212 @@
-<div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-100">
-  <div class="flex min-h-screen flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
-    <div class="w-full max-w-md space-y-8">
-      <div class="text-center">
-        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-          <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-        </div>
-        <h2 class="mt-6 text-3xl font-bold tracking-tight text-gray-900">Thank You!</h2>
-        <p class="mt-2 text-sm text-gray-600">
-          <%= if assigns[:success_email] do %>
-            We've successfully registered <strong><%= @success_email %></strong> for early access.
-          <% else %>
-            You've been successfully registered for early access.
-          <% end %>
+<div class="flex flex-col min-h-screen">
+  <!-- Celebration Tracking -->
+  <%= if celebration_data = Phoenix.Flash.get(@flash, :celebration_data) do %>
+    <script>
+      // Parse the celebration data
+      const celebrationData = <%= raw(celebration_data) %>;
+      
+      // Track to Plausible Analytics
+      if (window.plausible && typeof window.plausible === 'function') {
+        window.plausible('🎉 New Signup', {
+          props: {
+            domain: celebrationData.email_domain,
+            source: celebrationData.source,
+            medium: celebrationData.medium,
+            campaign: celebrationData.campaign
+          }
+        });
+      }
+      
+      // Track to Simple Analytics
+      if (window.sa_event && typeof window.sa_event === 'function') {
+        window.sa_event('new_signup');
+      }
+      
+      // Track to internal analytics
+      if (window.Analytics && window.Analytics.trackSignupCelebration) {
+        window.Analytics.trackSignupCelebration({
+          email_domain: celebrationData.email_domain,
+          utm_source: celebrationData.source,
+          utm_medium: celebrationData.medium,
+          utm_campaign: celebrationData.campaign
+        });
+      }
+    </script>
+  <% end %>
+  
+  <!-- Hero Section -->
+  <div class="flex-grow bg-gradient-to-b from-gray-900 to-gray-800 py-16 px-4 md:px-8 lg:px-16">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Welcome to RSOLV Early Access!</h1>
+        <div class="h-1 w-20 bg-green-500 mx-auto mb-8"></div>
+        <p class="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
+          Thank you for signing up! We're excited to have you join our early access program.
         </p>
+        
+        <div class="bg-white bg-opacity-10 rounded-lg p-8 backdrop-blur-sm max-w-3xl mx-auto mb-12">
+          <div class="flex items-center justify-center mb-6">
+            <div class="rounded-full bg-green-500 p-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+              </svg>
+            </div>
+          </div>
+          <h2 class="text-2xl font-bold text-white mb-4">You're on the list!</h2>
+          <p class="text-gray-300 mb-6">
+            <%= if assigns[:success_email] do %>
+              We've received your signup (<b><%= assigns.success_email %></b>) for RSOLV's early access program. You'll be among the first to experience our AI-powered issue resolution platform.
+            <% else %>
+              We've received your signup for RSOLV's early access program. You'll be among the first to experience our AI-powered issue resolution platform.
+            <% end %>
+          </p>
+          <p class="text-gray-300 mb-6">
+            We'll send you an email shortly with more details and instructions to get started.
+          </p>
+          
+          <div class="mt-6 pt-6 border-t border-gray-600">
+            <a href="/early-access-feedback" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-brand-blue bg-white bg-opacity-20 hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-blue">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
+              </svg>
+              Have ideas? Share your feedback
+            </a>
+          </div>
+        </div>
       </div>
-
-      <div class="rounded-lg bg-white p-6 shadow">
-        <h3 class="text-lg font-medium text-gray-900">What happens next?</h3>
-        <ul class="mt-4 space-y-3 text-sm text-gray-600">
-          <li class="flex items-start">
-            <svg class="mr-2 h-5 w-5 flex-shrink-0 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+      
+      <!-- Next Steps Section -->
+      <h2 class="text-3xl font-bold text-white mb-8 text-center">Next Steps</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-green-500 transition duration-300">
+          <div class="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white mb-4 mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            You'll receive a welcome email shortly
-          </li>
-          <li class="flex items-start">
-            <svg class="mr-2 h-5 w-5 flex-shrink-0 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-2 text-center">Check Your Email</h3>
+          <p class="text-gray-300 text-center">
+            Look for our welcome email with your activation link and initial setup instructions.
+          </p>
+        </div>
+        
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-green-500 transition duration-300">
+          <div class="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white mb-4 mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
             </svg>
-            We'll notify you when RSOLV launches
-          </li>
-          <li class="flex items-start">
-            <svg class="mr-2 h-5 w-5 flex-shrink-0 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-2 text-center">Set Up Your Account</h3>
+          <p class="text-gray-300 text-center">
+            Complete your profile and set your preferences to customize your RSOLV experience.
+          </p>
+        </div>
+        
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-green-500 transition duration-300">
+          <div class="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white mb-4 mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
             </svg>
-            You'll get exclusive early access benefits
-          </li>
-        </ul>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-2 text-center">Start Using RSOLV</h3>
+          <p class="text-gray-300 text-center">
+            Watch RSOLV automatically detect security vulnerabilities in your codebase without any configuration needed.
+          </p>
+        </div>
       </div>
-
-      <div class="text-center">
-        <a href="/" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-          ← Back to homepage
+      
+      <!-- FAQ Section -->
+      <div class="bg-gray-800 rounded-lg p-8 mb-16">
+        <h2 class="text-3xl font-bold text-white mb-8 text-center">Frequently Asked Questions</h2>
+        
+        <div class="space-y-6 max-w-4xl mx-auto">
+          <div>
+            <h3 class="text-xl font-bold text-white mb-2">When will I get access?</h3>
+            <p class="text-gray-300">
+              We're rolling out access in phases. You should receive your invitation within 48 hours. If you don't see it, please check your spam folder or contact our support team.
+            </p>
+          </div>
+          
+          <div>
+            <h3 class="text-xl font-bold text-white mb-2">How does the early access program work?</h3>
+            <p class="text-gray-300">
+              As an early access user, you'll have the opportunity to test our platform, provide feedback, and help shape the future of RSOLV. You'll receive access to exclusive features and will have a direct line to our development team.
+            </p>
+          </div>
+          
+          <div>
+            <h3 class="text-xl font-bold text-white mb-2">Is there a cost for early access?</h3>
+            <p class="text-gray-300">
+              Early access is provided free of charge. We value your feedback and contributions during this phase. After the official launch, you'll have priority for our premium features.
+            </p>
+          </div>
+          
+          <div>
+            <h3 class="text-xl font-bold text-white mb-2">How can I provide feedback?</h3>
+            <p class="text-gray-300">
+              You'll find feedback options directly within the platform. Additionally, you'll receive periodic surveys and can always reach out to our team via the dedicated support channel for early access users.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Documentation Links -->
+      <h2 class="text-3xl font-bold text-white mb-8 text-center">Helpful Resources</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <a href="/docs/getting-started" class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-green-500 transition duration-300">
+          <h3 class="text-xl font-bold text-white mb-2">Getting Started Guide</h3>
+          <p class="text-gray-300 mb-4">Learn the basics of using RSOLV and set up your first project.</p>
+          <span class="text-green-500 inline-flex items-center">
+            Read guide
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </span>
+        </a>
+        
+        <a href="/docs/features" class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-green-500 transition duration-300">
+          <h3 class="text-xl font-bold text-white mb-2">Feature Overview</h3>
+          <p class="text-gray-300 mb-4">Explore all the features available in the early access program.</p>
+          <span class="text-green-500 inline-flex items-center">
+            View features
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </span>
+        </a>
+        
+        <a href="/docs/early-access" class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-green-500 transition duration-300">
+          <h3 class="text-xl font-bold text-white mb-2">Early Access Terms</h3>
+          <p class="text-gray-300 mb-4">Review the terms and conditions for the early access program.</p>
+          <span class="text-green-500 inline-flex items-center">
+            Read terms
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </span>
+        </a>
+        
+        <a href="/early-access-feedback" class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-brand-green transition duration-300">
+          <h3 class="text-xl font-bold text-white mb-2">Share Your Feedback</h3>
+          <p class="text-gray-300 mb-4">Help shape RSOLV by sharing your experiences, suggestions, and ideas.</p>
+          <span class="text-green-500 inline-flex items-center">
+            Give feedback
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </span>
+        </a>
+      </div>
+      
+      <!-- Return Home Button -->
+      <div class="text-center mt-12">
+        <a href="/" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+          </svg>
+          Return to Home Page
         </a>
       </div>
     </div>

@@ -1,0 +1,743 @@
+<div class="min-h-screen bg-gray-50">
+  <div class="p-4 sm:p-6 lg:p-8">
+    <div class="sm:flex sm:items-center">
+      <div class="sm:flex-auto">
+        <h1 class="text-base font-semibold leading-6 text-gray-900">Early Access Signup Metrics</h1>
+        <p class="mt-2 text-sm text-gray-700">
+          Monitor and analyze early access signups to optimize your conversion funnel.
+        </p>
+        <div class="mt-3 inline-flex">
+          <a href={~p"/dashboard/analytics"} class="inline-flex items-center rounded-l-md bg-white px-2.5 py-1.5 text-sm font-medium text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+            General Analytics
+          </a>
+          <a href={~p"/dashboard/signup-metrics"} class="inline-flex items-center rounded-r-md bg-blue-50 px-2.5 py-1.5 text-sm font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+            Signup Metrics
+          </a>
+        </div>
+      </div>
+      <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+        <div class="flex space-x-2">
+          <div>
+            <form phx-change="change-period">
+              <select name="period" class="rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6">
+                <option value="1d" selected={@period == "1d"}>Last 24 hours</option>
+                <option value="7d" selected={@period == "7d"}>Last 7 days</option>
+                <option value="30d" selected={@period == "30d"}>Last 30 days</option>
+                <option value="90d" selected={@period == "90d"}>Last 90 days</option>
+                <option value="all" selected={@period == "all"}>All time</option>
+              </select>
+            </form>
+          </div>
+          <div class="dropdown">
+            <button class="bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 rounded-md">
+              Export
+            </button>
+            <div class="dropdown-content">
+              <a href={~p"/dashboard/report?type=signup&format=csv&period=#{@period}"}>Download CSV</a>
+              <a href={~p"/dashboard/report?type=signup&format=json&period=#{@period}"}>Download JSON</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Alert - only displayed when there's a data error -->
+    <%= if @data_error do %>
+      <div class="mt-6 rounded-md bg-red-50 p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <!-- Heroicon name: mini/x-circle -->
+            <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Dashboard Error</h3>
+            <div class="mt-2 text-sm text-red-700">
+              <p><%= @data_error %></p>
+              <p class="mt-1">Please try refreshing the page or selecting a different time period.</p>
+            </div>
+            <div class="mt-4">
+              <div class="-mx-2 -my-1.5 flex">
+                <button type="button" phx-click="refresh-data" class="rounded-md bg-red-50 px-2 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50">
+                  Retry Loading
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Metric Cards - Only show if no data_error -->
+    <%= if !@data_error do %>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 my-6">
+        <!-- Total Signups -->
+        <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+          <h2 class="text-sm font-medium text-gray-500">Total Signups</h2>
+          <p class="mt-1 text-3xl font-semibold text-gray-900"><%= @total_signups %></p>
+          <p class="text-xs text-gray-500 mt-1">
+            <%= Date.to_string(@date_range.since) %> to <%= Date.to_string(@date_range.until) %>
+          </p>
+        </div>
+        
+        <!-- Average Daily Signups -->
+        <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+          <h2 class="text-sm font-medium text-gray-500">Avg. Daily Signups</h2>
+          <p class="mt-1 text-3xl font-semibold text-gray-900"><%= @average_daily %></p>
+          <p class="text-xs text-gray-500 mt-1">
+            per day during selected period
+          </p>
+        </div>
+        
+        <!-- Top Source -->
+        <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+          <h2 class="text-sm font-medium text-gray-500">Top Source</h2>
+          <%= if Enum.empty?(@source_breakdown) do %>
+            <p class="mt-1 text-3xl font-semibold text-gray-900">-</p>
+            <p class="text-xs text-gray-500 mt-1">No source data available</p>
+          <% else %>
+            <% top_source = List.first(@source_breakdown) %>
+            <p class="mt-1 text-3xl font-semibold text-gray-900"><%= top_source.source %></p>
+            <p class="text-xs text-gray-500 mt-1">
+              <%= top_source.count %> signups (<%= Float.round(top_source.count / @total_signups * 100, 1) %>%)
+            </p>
+          <% end %>
+        </div>
+        
+        <!-- Funnel Metrics -->
+        <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+          <h2 class="text-sm font-medium text-gray-500">
+            <%= cond do %>
+              <% @view == "funnel" && is_map(@data) && Map.has_key?(@data, :overall_rate) -> %>
+                Visitor-to-Signup Rate
+              <% @view == "overview" && is_map(@data) && Map.has_key?(@data, :conversion_rate) -> %>
+                Form Completion Rate
+              <% true -> %>
+                Active Integrations
+            <% end %>
+          </h2>
+          <%= cond do %>
+            <% @view == "funnel" && is_map(@data) && Map.has_key?(@data, :overall_rate) -> %>
+              <p class="mt-1 text-3xl font-semibold text-gray-900"><%= @data.overall_rate %>%</p>
+              <p class="text-xs text-gray-500 mt-1">
+                visitors completing signup
+              </p>
+            <% @view == "overview" && is_map(@data) && Map.has_key?(@data, :conversion_rate) -> %>
+              <p class="mt-1 text-3xl font-semibold text-gray-900"><%= @data.conversion_rate %>%</p>
+              <p class="text-xs text-gray-500 mt-1">
+                form submissions completed
+              </p>
+            <% true -> %>
+              <p class="mt-1 text-2xl font-semibold text-gray-900">
+                <%= for {service, status} <- @integration_status, status.configured do %>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-1">
+                    <%= service %>
+                  </span>
+                <% end %>
+              </p>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- View Selector Tabs -->
+      <div class="mb-4 border-b border-gray-200">
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+          <a 
+            href="#" 
+            phx-click="change-view" 
+            phx-value-view="overview" 
+            class={"whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm #{if @view == "overview", do: "border-blue-500 text-blue-600", else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}"} 
+            aria-current={if @view == "overview", do: "page", else: nil}
+          >
+            Overview
+          </a>
+          <a 
+            href="#" 
+            phx-click="change-view" 
+            phx-value-view="sources" 
+            class={"whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm #{if @view == "sources", do: "border-blue-500 text-blue-600", else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}"} 
+            aria-current={if @view == "sources", do: "page", else: nil}
+          >
+            Traffic Sources
+          </a>
+          <a 
+            href="#" 
+            phx-click="change-view" 
+            phx-value-view="funnel" 
+            class={"whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm #{if @view == "funnel", do: "border-blue-500 text-blue-600", else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}"} 
+            aria-current={if @view == "funnel", do: "page", else: nil}
+          >
+            Conversion Funnel
+          </a>
+          <a 
+            href="#" 
+            phx-click="change-view" 
+            phx-value-view="timeline" 
+            class={"whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm #{if @view == "timeline", do: "border-blue-500 text-blue-600", else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}"} 
+            aria-current={if @view == "timeline", do: "page", else: nil}
+          >
+            Timeline Analysis
+          </a>
+        </nav>
+      </div>
+
+      <!-- Dashboard Content -->
+      <%= cond do %>
+        <% @data_error -> %>
+          <div class="rounded-md bg-white p-6 shadow-sm border border-gray-200 text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Data Unavailable</h3>
+            <p class="mt-1 text-sm text-gray-500">We're having trouble loading your dashboard data.</p>
+            <div class="mt-6">
+              <button type="button" phx-click="refresh-data" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Retry
+              </button>
+            </div>
+          </div>
+          
+        <% @view == "overview" && is_map(@data) && Map.has_key?(@data, :error) -> %>
+          <div class="rounded-md bg-white p-6 shadow-sm border border-gray-200 text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Overview Data Error</h3>
+            <p class="mt-1 text-sm text-gray-500">The overview data is temporarily unavailable.</p>
+            <div class="mt-6">
+              <button type="button" phx-click="refresh-data" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Try Again
+              </button>
+            </div>
+          </div>
+          
+        <% @view == "overview" -> %>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Signup Trend -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Signup Trend</h3>
+              <%= if Enum.empty?(@data.signup_trend) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No signup data available for this period</p>
+                </div>
+              <% else %>
+                <div id="signup-chart" class="h-64" phx-update="ignore" phx-hook="SimpleChart" data-chartdata={Jason.encode!(@data.signup_trend)}></div>
+              <% end %>
+            </div>
+            
+            <!-- Traffic Sources -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Top Traffic Sources</h3>
+              <%= if Enum.empty?(@data.utm_sources) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No traffic source data available</p>
+                </div>
+              <% else %>
+                <div id="source-chart" class="h-64" phx-update="ignore" phx-hook="PieChart" data-chartdata={Jason.encode!(@data.utm_sources)}></div>
+              <% end %>
+            </div>
+            
+            <!-- Form Metrics Summary -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Form Performance</h3>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h4 class="text-sm font-medium text-gray-500">Submissions</h4>
+                  <p class="mt-1 text-2xl font-semibold text-gray-900"><%= @data.submissions_count %></p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h4 class="text-sm font-medium text-gray-500">Completed</h4>
+                  <p class="mt-1 text-2xl font-semibold text-gray-900"><%= @data.success_count %></p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h4 class="text-sm font-medium text-gray-500">Completion Rate</h4>
+                  <p class="mt-1 text-2xl font-semibold text-gray-900"><%= @data.conversion_rate %>%</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h4 class="text-sm font-medium text-gray-500">Avg. Signups/Day</h4>
+                  <p class="mt-1 text-2xl font-semibold text-gray-900"><%= @average_daily %></p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Recent Signups -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-base font-medium text-gray-900">Recent Signups</h3>
+                <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                  Last <%= length(@most_recent) %> signups
+                </span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-300">
+                  <thead>
+                    <tr>
+                      <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-xs font-semibold text-gray-500">TIME</th>
+                      <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">DOMAIN</th>
+                      <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">SOURCE</th>
+                      <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">TEAM SIZE</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                    <%= for signup <- @most_recent do %>
+                      <tr>
+                        <td class="whitespace-nowrap py-2 pl-4 pr-3 text-xs text-gray-900">
+                          <%= format_datetime(signup.timestamp) %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                          <%= signup.email_domain %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                          <%= signup.source %>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                          <%= signup.team_size %>
+                        </td>
+                      </tr>
+                    <% end %>
+                    <%= if Enum.empty?(@most_recent) do %>
+                      <tr>
+                        <td colspan="4" class="py-4 text-center text-sm text-gray-500">No signup data available</td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+        <% @view == "sources" -> %>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Source Breakdown -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Signup Sources</h3>
+              <%= if Enum.empty?(@data.by_source) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No source data available</p>
+                </div>
+              <% else %>
+                <div class="overflow-y-auto max-h-80">
+                  <table class="min-w-full divide-y divide-gray-300">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-xs font-semibold text-gray-500">SOURCE</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">COUNT</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">PERCENTAGE</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white">
+                      <%= for source <- @data.by_source do %>
+                        <tr>
+                          <td class="whitespace-nowrap py-2 pl-4 pr-3 text-xs text-gray-900">
+                            <%= source.label %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <%= source.count %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2 dark:bg-gray-700" style="width: 100px;">
+                              <div class="bg-blue-600 h-2.5 rounded-full" style={"width: #{source.percentage}%"}></div>
+                            </div>
+                            <%= source.percentage %>%
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              <% end %>
+            </div>
+            
+            <!-- Medium Breakdown -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Signup Mediums</h3>
+              <%= if Enum.empty?(@data.by_medium) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No medium data available</p>
+                </div>
+              <% else %>
+                <div class="overflow-y-auto max-h-80">
+                  <table class="min-w-full divide-y divide-gray-300">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-xs font-semibold text-gray-500">MEDIUM</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">COUNT</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">PERCENTAGE</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white">
+                      <%= for medium <- @data.by_medium do %>
+                        <tr>
+                          <td class="whitespace-nowrap py-2 pl-4 pr-3 text-xs text-gray-900">
+                            <%= medium.label %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <%= medium.count %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2 dark:bg-gray-700" style="width: 100px;">
+                              <div class="bg-green-600 h-2.5 rounded-full" style={"width: #{medium.percentage}%"}></div>
+                            </div>
+                            <%= medium.percentage %>%
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              <% end %>
+            </div>
+            
+            <!-- Campaign Breakdown -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Signup Campaigns</h3>
+              <%= if Enum.empty?(@data.by_campaign) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No campaign data available</p>
+                </div>
+              <% else %>
+                <div class="overflow-y-auto max-h-80">
+                  <table class="min-w-full divide-y divide-gray-300">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-xs font-semibold text-gray-500">CAMPAIGN</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">COUNT</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">PERCENTAGE</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white">
+                      <%= for campaign <- @data.by_campaign do %>
+                        <tr>
+                          <td class="whitespace-nowrap py-2 pl-4 pr-3 text-xs text-gray-900">
+                            <%= campaign.label %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <%= campaign.count %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2 dark:bg-gray-700" style="width: 100px;">
+                              <div class="bg-purple-600 h-2.5 rounded-full" style={"width: #{campaign.percentage}%"}></div>
+                            </div>
+                            <%= campaign.percentage %>%
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              <% end %>
+            </div>
+            
+            <!-- Campaign Details -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Full Campaign Details</h3>
+              <%= if Enum.empty?(@data.campaign_details) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No campaign detail data available</p>
+                </div>
+              <% else %>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-300">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-xs font-semibold text-gray-500">TIME</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">SOURCE</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">MEDIUM</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">CAMPAIGN</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">DOMAIN</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white">
+                      <%= for detail <- Enum.take(@data.campaign_details, 10) do %>
+                        <tr>
+                          <td class="whitespace-nowrap py-2 pl-4 pr-3 text-xs text-gray-900">
+                            <%= format_datetime(detail.timestamp) %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <%= detail.source %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <%= detail.medium %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <%= detail.campaign %>
+                          </td>
+                          <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
+                            <%= detail.domain %>
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="mt-2 text-right">
+                  <p class="text-xs text-gray-500">Showing 10 of <%= length(@data.campaign_details) %> entries</p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+          
+        <% @view == "funnel" -> %>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Funnel Visualization -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200 lg:col-span-2">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Signup Conversion Funnel</h3>
+              <%= if Enum.empty?(@data.funnel_stages) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No funnel data available</p>
+                </div>
+              <% else %>
+                <div class="relative py-8">
+                  <%= for {stage, index} <- Enum.with_index(@data.funnel_stages) do %>
+                    <div class="flex items-center mb-6">
+                      <div class="w-12 flex-shrink-0 text-center">
+                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-900 text-sm font-medium">
+                          <%= index + 1 %>
+                        </span>
+                      </div>
+                      <div class="bg-blue-50 rounded-lg p-3 flex-grow mx-2">
+                        <div class="flex justify-between items-center">
+                          <div>
+                            <p class="text-sm font-medium text-blue-900"><%= stage.name %></p>
+                            <p class="text-xs text-blue-700"><%= stage.count %> users</p>
+                          </div>
+                          <div class="text-right">
+                            <p class="text-xl font-bold text-blue-900"><%= stage.rate %>%</p>
+                            <p class="text-xs text-blue-700">conversion rate</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="w-20 flex-shrink-0 text-center">
+                        <p class="text-sm font-medium text-gray-900"><%= stage.count %></p>
+                      </div>
+                    </div>
+                    <%= if index < length(@data.funnel_stages) - 1 do %>
+                      <div class="ml-6 pl-6 mb-2 border-l-2 border-blue-200">
+                        <div class="flex items-center">
+                          <svg class="h-5 w-5 text-blue-300 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                          </svg>
+                          <% drop_off = Enum.at(@data.drop_offs, index) %>
+                          <p class="text-xs text-gray-500">
+                            <span class="text-red-500 font-medium"><%= drop_off.drop_count %> users dropped off</span> 
+                            (<%= drop_off.drop_rate %>% drop-off rate)
+                          </p>
+                        </div>
+                      </div>
+                    <% end %>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+            
+            <!-- Funnel Metrics -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Funnel Performance</h3>
+              <%= if !is_map(@data) || !Map.has_key?(@data, :funnel_stages) || Enum.empty?(@data.funnel_stages) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No funnel metrics available</p>
+                </div>
+              <% else %>
+                <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                    <dt class="truncate text-sm font-medium text-gray-500">Visitor-to-Form View</dt>
+                    <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+                      <%= Enum.at(@data.funnel_stages, 1).rate %>%
+                    </dd>
+                  </div>
+                  <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                    <dt class="truncate text-sm font-medium text-gray-500">Form View-to-Submit</dt>
+                    <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+                      <%= Enum.at(@data.funnel_stages, 2).rate %>%
+                    </dd>
+                  </div>
+                  <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                    <dt class="truncate text-sm font-medium text-gray-500">Submit-to-Complete</dt>
+                    <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+                      <%= Enum.at(@data.funnel_stages, 3).rate %>%
+                    </dd>
+                  </div>
+                  <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                    <dt class="truncate text-sm font-medium text-gray-500">Overall Conversion</dt>
+                    <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+                      <%= @data.overall_rate %>%
+                    </dd>
+                  </div>
+                </dl>
+              <% end %>
+            </div>
+            
+            <!-- Biggest Drop-offs -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Biggest Drop-offs</h3>
+              <%= if !is_map(@data) || !Map.has_key?(@data, :drop_offs) || Enum.empty?(@data.drop_offs) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No drop-off data available</p>
+                </div>
+              <% else %>
+                <% sorted_drops = Enum.sort_by(@data.drop_offs, & &1.drop_rate, :desc) %>
+                <div class="space-y-4">
+                  <%= for drop <- sorted_drops do %>
+                    <div class="bg-red-50 rounded-lg p-4">
+                      <div class="flex justify-between items-center">
+                        <div>
+                          <p class="text-sm font-medium text-red-900">
+                            <%= drop.from %> → <%= drop.to %>
+                          </p>
+                          <p class="text-xs text-red-700 mt-1">
+                            <%= drop.drop_count %> users dropped off
+                          </p>
+                        </div>
+                        <div>
+                          <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                            <%= drop.drop_rate %>% drop rate
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+                <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <h4 class="text-sm font-medium text-blue-900">Optimization Opportunities</h4>
+                  <ul class="mt-2 list-disc list-inside text-xs text-blue-700 space-y-1">
+                    <li>Focus on improving the step with the highest drop-off rate</li>
+                    <li>Compare drop-off rates across different traffic sources</li>
+                    <li>Test form simplification for higher completion rates</li>
+                    <li>Monitor changes over time as you make improvements</li>
+                  </ul>
+                </div>
+              <% end %>
+            </div>
+          </div>
+          
+        <% @view == "timeline" -> %>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Daily Trend -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Daily Signup Trend</h3>
+              <%= if Enum.empty?(@data.daily_counts) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No daily trend data available</p>
+                </div>
+              <% else %>
+                <div id="daily-chart" class="h-80" phx-update="ignore" phx-hook="SimpleChart" data-chartdata={Jason.encode!(@data.daily_counts)}></div>
+              <% end %>
+            </div>
+            
+            <!-- Weekly Trend -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Weekly Signup Trend</h3>
+              <%= if Enum.empty?(@data.weekly_counts) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No weekly trend data available</p>
+                </div>
+              <% else %>
+                <div id="weekly-chart" class="h-80" phx-update="ignore" phx-hook="BarChart" data-chartdata={Jason.encode!(@data.weekly_counts)}></div>
+              <% end %>
+            </div>
+            
+            <!-- Day of Week Analysis -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Signups by Day of Week</h3>
+              <%= if Enum.empty?(@data.days_of_week) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No day-of-week data available</p>
+                </div>
+              <% else %>
+                <div id="day-of-week-chart" class="h-64" phx-update="ignore" phx-hook="BarChart" data-chartdata={Jason.encode!(@data.days_of_week)}></div>
+                
+                <% max_day = Enum.max_by(@data.days_of_week, & &1.count) %>
+                <% min_day = Enum.min_by(@data.days_of_week, & &1.count) %>
+                
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                  <div class="bg-green-50 p-3 rounded-lg">
+                    <h4 class="text-xs font-medium text-green-800">Best Day</h4>
+                    <p class="mt-1 text-sm font-bold text-green-900"><%= max_day.name %></p>
+                    <p class="text-xs text-green-700"><%= max_day.count %> signups</p>
+                  </div>
+                  <div class="bg-red-50 p-3 rounded-lg">
+                    <h4 class="text-xs font-medium text-red-800">Worst Day</h4>
+                    <p class="mt-1 text-sm font-bold text-red-900"><%= min_day.name %></p>
+                    <p class="text-xs text-red-700"><%= min_day.count %> signups</p>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+            
+            <!-- Time of Day Analysis -->
+            <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <h3 class="text-base font-medium text-gray-900 mb-4">Signups by Hour of Day</h3>
+              <%= if Enum.empty?(@data.hours_of_day) do %>
+                <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
+                  <p>No hour-of-day data available</p>
+                </div>
+              <% else %>
+                <div id="hour-of-day-chart" class="h-64" phx-update="ignore" phx-hook="BarChart" data-chartdata={Jason.encode!(@data.hours_of_day)}></div>
+                
+                <% hours_with_data = Enum.filter(@data.hours_of_day, & &1.count > 0) %>
+                <% max_hour = if Enum.empty?(hours_with_data), do: nil, else: Enum.max_by(hours_with_data, & &1.count) %>
+                
+                <%= if max_hour do %>
+                  <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <h4 class="text-xs font-medium text-blue-800">Peak Signup Time</h4>
+                    <p class="mt-1 text-sm font-bold text-blue-900"><%= max_hour.display %></p>
+                    <p class="text-xs text-blue-700"><%= max_hour.count %> signups</p>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+          
+        <% true -> %>
+          <div class="text-center py-12 rounded-md bg-white p-6 shadow-sm border border-gray-200">
+            <p class="text-gray-500">Select a view to display signup metrics</p>
+          </div>
+      <% end %>
+    <% end %>
+    
+    <div class="mt-6 text-right text-xs text-gray-500">
+      Last updated: <%= format_datetime(@last_updated) %>
+      <%= if !@data_error do %>
+        <button phx-click="refresh-data" class="ml-2 text-blue-500 hover:text-blue-700" title="Refresh data">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<style>
+  .dropdown {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 0.375rem;
+  }
+  
+  .dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+  }
+  
+  .dropdown-content a:hover {
+    background-color: #f1f1f1;
+  }
+  
+  .dropdown:hover .dropdown-content {
+    display: block;
+  }
+</style>

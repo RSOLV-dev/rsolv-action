@@ -19,27 +19,21 @@ defmodule RsolvWeb.ConnCase do
 
   using do
     quote do
+      # The default endpoint for testing
+      @endpoint RsolvWeb.Endpoint
+
+      use RsolvWeb, :verified_routes
+
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
       import RsolvWeb.ConnCase
-      import Rsolv.Factory
-
-      alias RsolvWeb.Router.Helpers, as: Routes
-
-      # The default endpoint for testing
-      @endpoint RsolvWeb.Endpoint
-      
-      # Import Phoenix verified routes for ~p sigil
-      use Phoenix.VerifiedRoutes,
-        endpoint: RsolvWeb.Endpoint,
-        router: RsolvWeb.Router,
-        statics: ~w(assets)
     end
   end
 
   setup tags do
-    Rsolv.DataCase.setup_sandbox(tags)
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
+    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

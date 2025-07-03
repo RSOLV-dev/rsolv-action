@@ -28,6 +28,9 @@ config :logger, level: :debug
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
+# Disable Oban queues in test
+config :rsolv, Oban, testing: :inline
+
 # Use mock parsers in test environment
 config :rsolv, :use_mock_parsers, true
 

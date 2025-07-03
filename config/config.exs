@@ -10,6 +10,12 @@ import Config
 config :rsolv,
   ecto_repos: [Rsolv.Repo]
 
+# Configure Oban for background job processing
+config :rsolv, Oban,
+  repo: Rsolv.Repo,
+  plugins: [Oban.Plugins.Pruner],
+  queues: [default: 10, emails: 5]
+
 # Configures the endpoint
 config :rsolv, RsolvWeb.Endpoint,
   url: [host: "localhost"],

@@ -1,61 +1,170 @@
-<div class="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
-  <div class="prose prose-lg mx-auto">
-    <h1>Terms of Service</h1>
-    
-    <p class="lead">Last updated: <%= Date.utc_today() |> Date.to_string() %></p>
-    
-    <h2>1. Acceptance of Terms</h2>
-    <p>By accessing or using RSOLV's AI-powered security platform ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please do not use our Service.</p>
-    
-    <h2>2. Description of Service</h2>
-    <p>RSOLV provides automated security vulnerability detection and remediation services for software development. Our Service uses artificial intelligence to:</p>
-    <ul>
-      <li>Scan code repositories for security vulnerabilities</li>
-      <li>Generate fixes for identified issues</li>
-      <li>Create pull requests with security improvements</li>
-      <li>Provide security insights and recommendations</li>
-    </ul>
-    
-    <h2>3. User Responsibilities</h2>
-    <p>You agree to:</p>
-    <ul>
-      <li>Provide accurate account information</li>
-      <li>Maintain the security of your account credentials</li>
-      <li>Use the Service only for lawful purposes</li>
-      <li>Not attempt to reverse engineer or compromise our systems</li>
-      <li>Comply with all applicable laws and regulations</li>
-    </ul>
-    
-    <h2>4. Intellectual Property</h2>
-    <p>The Service and its original content, features, and functionality are owned by RSOLV and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.</p>
-    
-    <h2>5. Privacy and Data Protection</h2>
-    <p>Your use of our Service is also governed by our Privacy Policy. By using the Service, you consent to our collection and use of information as described in the Privacy Policy.</p>
-    
-    <h2>6. Limitation of Liability</h2>
-    <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, RSOLV SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY.</p>
-    
-    <h2>7. Disclaimer of Warranties</h2>
-    <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. RSOLV DOES NOT GUARANTEE THAT THE SERVICE WILL IDENTIFY ALL SECURITY VULNERABILITIES OR THAT SUGGESTED FIXES WILL BE ERROR-FREE.</p>
-    
-    <h2>8. Indemnification</h2>
-    <p>You agree to indemnify and hold harmless RSOLV and its officers, directors, employees, and agents from any claims, damages, or expenses arising from your use of the Service or violation of these Terms.</p>
-    
-    <h2>9. Termination</h2>
-    <p>We may terminate or suspend your access to the Service immediately, without prior notice or liability, for any reason, including breach of these Terms.</p>
-    
-    <h2>10. Governing Law</h2>
-    <p>These Terms shall be governed by and construed in accordance with the laws of [Jurisdiction], without regard to its conflict of law provisions.</p>
-    
-    <h2>11. Changes to Terms</h2>
-    <p>We reserve the right to modify these Terms at any time. We will notify users of any material changes via email or through the Service.</p>
-    
-    <h2>12. Contact Information</h2>
-    <p>For questions about these Terms, please contact us at:</p>
-    <p>
-      Email: legal@rsolv.ai<br>
-      Address: RSOLV, Inc.<br>
-      [Address to be provided]
-    </p>
-  </div>
+<div class="min-h-screen bg-white">
+  <!-- Header -->
+  <header class="bg-brand-dark py-6">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between">
+        <a href="/" class="flex items-center">
+          <img src={~p"/images/rsolv_logo_transparent.png"} alt="RSOLV Logo" class="h-10" />
+          <span class="text-white text-2xl font-bold ml-3">RSOLV</span>
+        </a>
+        <nav>
+          <a href="/" class="text-white hover:text-brand-green transition-colors">← Back to Home</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Terms Content -->
+  <section class="py-16">
+    <div class="container mx-auto px-4 max-w-4xl">
+      <h1 class="text-4xl font-bold text-brand-dark mb-8">Terms of Service</h1>
+      
+      <div class="prose prose-lg max-w-none">
+        <p class="text-gray-600 mb-8">
+          Last Updated: May 30, 2025
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">1. Acceptance of Terms</h2>
+        <p>
+          By using RSOLV ("the Service"), you agree to be bound by these Terms of Service. If you don't agree to these terms, please don't use our Service.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">2. Description of Service</h2>
+        <p>
+          RSOLV is an automated issue resolution service that analyzes issues in your code repositories, detects security vulnerabilities, and generates pull requests with fixes. We integrate with GitHub, Jira, Linear, and other development platforms.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">3. Success-Based Billing</h2>
+        
+        <div class="bg-brand-light p-6 rounded-lg mb-6">
+          <h3 class="text-xl font-semibold mb-3">Our Billing Philosophy</h3>
+          <p class="mb-4">
+            At RSOLV, we believe in shared success. Our billing model reflects a simple principle: <strong>we only succeed when you do</strong>.
+          </p>
+        </div>
+
+        <h3 class="text-xl font-semibold mb-3">3.1 What Makes a Fix Billable</h3>
+        <p class="mb-4">
+          A "Billable Fix" occurs when your team achieves value by deploying our solution into your codebase. This typically happens through:
+        </p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Merging a pull request or merge request</li>
+          <li>Applying our changes through your preferred integration method</li>
+          <li>Incorporating our solution into your development workflow</li>
+        </ul>
+        <p class="mb-4">
+          We recognize that every team has different processes, so we define success broadly: if our code becomes part of your codebase and helps solve your issue, that's a win for both of us.
+        </p>
+
+        <h3 class="text-xl font-semibold mb-3">3.2 What's NOT Billable</h3>
+        <p class="mb-4">We don't charge for:</p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Fixes you review but choose not to deploy</li>
+          <li>Solutions that don't meet your standards</li>
+          <li>Pull requests that remain unmerged</li>
+          <li>Any work that doesn't deliver value to your team</li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mb-3">3.3 The 7-Day Success Window</h3>
+        <p class="mb-4">
+          We understand that sometimes a fix might need adjustment after deployment. If you revert our changes within 7 days due to any issues, we'll work with you to make it right - at no additional charge. Your satisfaction is our priority.
+        </p>
+
+        <h3 class="text-xl font-semibold mb-3">3.4 Transparency in Integration</h3>
+        <p class="mb-4">We consider a fix integrated when:</p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>The substantial solution (80% or more) is incorporated into your codebase</li>
+          <li>Your team has actively chosen to deploy our work</li>
+          <li>The fix addresses the originally identified issue</li>
+        </ul>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">4. Pricing Plans</h2>
+        
+        <h3 class="text-xl font-semibold mb-3">4.1 Available Plans</h3>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li><strong>Pay As You Go</strong>: $15 per deployed fix, no monthly commitment</li>
+          <li><strong>Teams Plan</strong>: $499/month includes 60 fixes, additional fixes at $8 each</li>
+          <li><strong>Enterprise</strong>: Custom pricing for large organizations</li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mb-3">4.2 Free Trial</h3>
+        <p class="mb-4">
+          New customers receive 10 free fixes to evaluate our service. No credit card required for the trial. After your 8th fix, we'll ask for payment information to continue.
+        </p>
+
+        <h3 class="text-xl font-semibold mb-3">4.3 Credit Rollover (Teams Plan)</h3>
+        <p class="mb-4">
+          Unused fixes from your Teams Plan roll over to the next month, up to a maximum of 60 rollover credits. This ensures you don't lose value during slower development periods.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">5. User Responsibilities</h2>
+        <p class="mb-4">You agree to:</p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Provide accurate account information</li>
+          <li>Maintain the security of your API keys and credentials</li>
+          <li>Use RSOLV only for lawful purposes</li>
+          <li>Not attempt to reverse engineer our service</li>
+          <li>Review generated fixes before deployment</li>
+        </ul>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">6. Intellectual Property</h2>
+        
+        <h3 class="text-xl font-semibold mb-3">6.1 Your Code</h3>
+        <p class="mb-4">
+          You retain all rights to your code. RSOLV claims no ownership over your repositories, issues, or the fixes we generate for you.
+        </p>
+
+        <h3 class="text-xl font-semibold mb-3">6.2 Generated Fixes</h3>
+        <p class="mb-4">
+          All code generated by RSOLV for your repositories becomes your property upon creation. You're free to use, modify, and distribute these fixes as you see fit.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">7. Privacy and Data Security</h2>
+        <p class="mb-4">
+          We take your privacy seriously. Please review our <a href="/docs/privacy" class="text-brand-blue underline">Privacy Policy</a> for details on how we collect, use, and protect your data.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">8. Service Availability</h2>
+        <p class="mb-4">
+          While we strive for 99.9% uptime, we cannot guarantee uninterrupted service. We'll communicate any planned maintenance in advance when possible.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">9. Limitation of Liability</h2>
+        <p class="mb-4">
+          RSOLV is provided "as is" without warranties of any kind. Our liability is limited to the fees paid for the specific fixes in question. We're not liable for any indirect, consequential, or incidental damages.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">10. Termination</h2>
+        <p class="mb-4">
+          Either party may terminate this agreement at any time. Upon termination:
+        </p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>You'll be billed only for fixes already deployed</li>
+          <li>Your access to the service will end</li>
+          <li>We'll delete your data according to our data retention policy</li>
+        </ul>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">11. Changes to Terms</h2>
+        <p class="mb-4">
+          We may update these terms from time to time. We'll notify you of significant changes via email at least 30 days before they take effect.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">12. Contact Information</h2>
+        <p class="mb-4">
+          For questions about these terms, please contact us at:
+        </p>
+        <ul class="list-none mb-4 ml-4">
+          <li>Email: legal@rsolv.dev</li>
+          <li>Address: RSOLV, Inc., Denver, Colorado</li>
+        </ul>
+
+        <div class="bg-brand-green bg-opacity-10 p-6 rounded-lg mt-8">
+          <h3 class="text-xl font-semibold mb-3 text-brand-dark">Our Success Guarantee</h3>
+          <p class="text-brand-dark">
+            "We're so confident in our fixes that we only charge when you actually use them. If our solution doesn't work for your team, you don't pay. It's that simple."
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>

@@ -1,79 +1,175 @@
-<div class="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
-  <div class="prose prose-lg mx-auto">
-    <h1>Privacy Policy</h1>
-    
-    <p class="lead">Last updated: <%= Date.utc_today() |> Date.to_string() %></p>
-    
-    <h2>Introduction</h2>
-    <p>RSOLV ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered security platform.</p>
-    
-    <h2>Information We Collect</h2>
-    
-    <h3>Personal Information</h3>
-    <p>We may collect personal information that you provide to us, including but not limited to:</p>
-    <ul>
-      <li>Name and email address</li>
-      <li>Company information</li>
-      <li>GitHub account information</li>
-      <li>Payment information (processed securely through our payment providers)</li>
-    </ul>
-    
-    <h3>Technical Information</h3>
-    <p>When you use our service, we automatically collect certain technical information:</p>
-    <ul>
-      <li>IP address and browser information</li>
-      <li>Device and operating system information</li>
-      <li>Usage data and analytics</li>
-      <li>Code repository metadata (not the code itself unless explicitly shared)</li>
-    </ul>
-    
-    <h2>How We Use Your Information</h2>
-    <p>We use the collected information to:</p>
-    <ul>
-      <li>Provide and maintain our security scanning services</li>
-      <li>Improve and personalize your experience</li>
-      <li>Communicate with you about service updates and security alerts</li>
-      <li>Process payments and prevent fraud</li>
-      <li>Comply with legal obligations</li>
-    </ul>
-    
-    <h2>Data Security</h2>
-    <p>We implement industry-standard security measures to protect your information, including:</p>
-    <ul>
-      <li>Encryption of data in transit and at rest</li>
-      <li>Regular security audits and penetration testing</li>
-      <li>Access controls and authentication</li>
-      <li>Secure coding practices</li>
-    </ul>
-    
-    <h2>Data Sharing</h2>
-    <p>We do not sell, trade, or rent your personal information. We may share information only:</p>
-    <ul>
-      <li>With your consent</li>
-      <li>To comply with legal obligations</li>
-      <li>With service providers who assist in our operations</li>
-      <li>To protect our rights and safety</li>
-    </ul>
-    
-    <h2>Your Rights</h2>
-    <p>You have the right to:</p>
-    <ul>
-      <li>Access your personal information</li>
-      <li>Correct inaccurate information</li>
-      <li>Request deletion of your information</li>
-      <li>Opt-out of marketing communications</li>
-      <li>Export your data</li>
-    </ul>
-    
-    <h2>Contact Us</h2>
-    <p>If you have questions about this Privacy Policy, please contact us at:</p>
-    <p>
-      Email: privacy@rsolv.ai<br>
-      Address: RSOLV, Inc.<br>
-      [Address to be provided]
-    </p>
-    
-    <h2>Changes to This Policy</h2>
-    <p>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.</p>
-  </div>
+<div class="min-h-screen bg-white">
+  <!-- Header -->
+  <header class="bg-brand-dark py-6">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between">
+        <a href="/" class="flex items-center">
+          <img src={~p"/images/rsolv_logo_transparent.png"} alt="RSOLV Logo" class="h-10" />
+          <span class="text-white text-2xl font-bold ml-3">RSOLV</span>
+        </a>
+        <nav>
+          <a href="/" class="text-white hover:text-brand-green transition-colors">← Back to Home</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Privacy Content -->
+  <section class="py-16">
+    <div class="container mx-auto px-4 max-w-4xl">
+      <h1 class="text-4xl font-bold text-brand-dark mb-8">Privacy Policy</h1>
+      
+      <div class="prose prose-lg max-w-none">
+        <p class="text-gray-600 mb-8">
+          Last Updated: May 30, 2025
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">1. Our Commitment to Privacy</h2>
+        <p>
+          At RSOLV, we take your privacy seriously. This policy explains what information we collect, how we use it, and your rights regarding your data.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">2. Information We Collect</h2>
+        
+        <h3 class="text-xl font-semibold mb-3">2.1 Account Information</h3>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Email address</li>
+          <li>Company name (optional)</li>
+          <li>Platform preferences (GitHub, Jira, Linear, etc.)</li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mb-3">2.2 Repository Data</h3>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Repository metadata (names, languages used)</li>
+          <li>Issue content and metadata</li>
+          <li>Generated pull requests and fixes</li>
+          <li>Code snippets relevant to issues being resolved</li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mb-3">2.3 Usage Data</h3>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Fix deployment status</li>
+          <li>Feature usage patterns</li>
+          <li>Performance metrics</li>
+          <li>Error logs related to your account</li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mb-3">2.4 Analytics Data</h3>
+        <p class="mb-4">
+          We use privacy-focused analytics (Plausible and SimpleAnalytics) that don't use cookies or track personal information.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">3. How We Use Your Information</h2>
+        
+        <p class="mb-4">We use your information to:</p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Provide the RSOLV service</li>
+          <li>Generate fixes for your issues</li>
+          <li>Improve our security patterns and AI models</li>
+          <li>Send service-related communications</li>
+          <li>Process billing for deployed fixes</li>
+          <li>Provide customer support</li>
+        </ul>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">4. Data Security</h2>
+        
+        <p class="mb-4">We implement industry-standard security measures including:</p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Encryption of data in transit and at rest</li>
+          <li>Regular security audits</li>
+          <li>Access controls and authentication</li>
+          <li>Secure infrastructure on major cloud providers</li>
+        </ul>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">5. Data Sharing</h2>
+        
+        <p class="mb-4">We <strong>never</strong> sell your data. We only share information:</p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>With your explicit consent</li>
+          <li>To comply with legal obligations</li>
+          <li>With service providers who help us operate RSOLV (under strict confidentiality agreements)</li>
+        </ul>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">6. Your Rights</h2>
+        
+        <p class="mb-4">You have the right to:</p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Access your personal data</li>
+          <li>Correct inaccurate data</li>
+          <li>Request deletion of your data</li>
+          <li>Export your data</li>
+          <li>Opt out of marketing communications</li>
+        </ul>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">7. Data Retention</h2>
+        
+        <p class="mb-4">
+          We retain your data only as long as necessary to provide our service. Specifically:
+        </p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Account data: Until you close your account</li>
+          <li>Fix history: 90 days after deployment</li>
+          <li>Billing records: As required by law (typically 7 years)</li>
+          <li>Analytics data: Aggregated and anonymized after 30 days</li>
+        </ul>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">8. Third-Party Services</h2>
+        
+        <p class="mb-4">We use the following third-party services:</p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li><strong>ConvertKit</strong>: Email communications</li>
+          <li><strong>Stripe</strong>: Payment processing (we don't store card details)</li>
+          <li><strong>Plausible/SimpleAnalytics</strong>: Privacy-focused analytics</li>
+          <li><strong>AI Providers</strong>: For generating fixes (code is processed but not stored by providers)</li>
+        </ul>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">9. Cookies</h2>
+        
+        <p class="mb-4">
+          We use minimal, essential cookies only for:
+        </p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+          <li>Maintaining your session</li>
+          <li>Security purposes</li>
+          <li>Remembering your preferences</li>
+        </ul>
+        <p>We don't use tracking or advertising cookies.</p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">10. Children's Privacy</h2>
+        
+        <p class="mb-4">
+          RSOLV is not intended for users under 13 years of age. We don't knowingly collect information from children.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">11. International Data Transfers</h2>
+        
+        <p class="mb-4">
+          Your data may be processed in the United States. We ensure appropriate safeguards are in place for international transfers.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">12. Changes to This Policy</h2>
+        
+        <p class="mb-4">
+          We'll notify you of any material changes to this privacy policy via email at least 30 days before they take effect.
+        </p>
+
+        <h2 class="text-2xl font-bold mt-8 mb-4">13. Contact Us</h2>
+        
+        <p class="mb-4">
+          For privacy-related questions or to exercise your rights:
+        </p>
+        <ul class="list-none mb-4 ml-4">
+          <li>Email: privacy@rsolv.dev</li>
+          <li>Address: RSOLV, Inc., Denver, Colorado</li>
+        </ul>
+
+        <div class="bg-brand-light p-6 rounded-lg mt-8">
+          <h3 class="text-xl font-semibold mb-3 text-brand-dark">Your Privacy Matters</h3>
+          <p class="text-brand-dark">
+            We believe in transparency and minimal data collection. We only collect what's necessary to provide you with an excellent service, and we never monetize your data.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>

@@ -84,6 +84,11 @@ defmodule RsolvWeb do
       import Phoenix.HTML
       # Core UI components and translation
       import RsolvWeb.CoreComponents
+      import RsolvWeb.FeedbackComponent
+      import RsolvWeb.Components.ThemeToggle
+      import RsolvWeb.Components.DarkModeHelpers
+      # Feature flag helpers
+      import RsolvWeb.Helpers.FeatureHelpers
       import RsolvWeb.Gettext
 
       # Shortcut for generating JS commands

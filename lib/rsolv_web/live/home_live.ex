@@ -1,13 +1,26 @@
 defmodule RsolvWeb.HomeLive do
   use RsolvWeb, :live_view
   require Logger
+  alias RsolvWeb.Services.Analytics
+  alias RsolvWeb.Services.EmailSequence
+  alias RsolvWeb.Services.Metrics
+  alias Rsolv.FeatureFlags
+  alias RsolvWeb.Validators.EmailValidator
+  alias RsolvWeb.Services.ConvertKit
 
   @impl true
   def mount(params, session, socket) do
+    # Track page view
+    referrer = Map.get(socket.assigns, :referrer)
+    Analytics.track_page_view("/", referrer, extract_tracking_data(socket))
+    
     socket = 
       socket
       |> assign(:email, "")
       |> assign(:company, "")
+      |> assign(:platforms, "")
+      |> assign(:team_size, "")
+      |> assign(:security_concerns, "")
       |> assign(:errors, %{})
       |> assign(:submitting, false)
       |> assign(:mobile_menu_open, false)
@@ -35,10 +48,14 @@ defmodule RsolvWeb.HomeLive do
   def handle_event("validate", %{"signup" => params}, socket) do
     errors = validate_params(params)
     
+    # Only update fields that are present in params, preserve existing values otherwise
     socket = 
       socket
       |> assign(:email, Map.get(params, "email", socket.assigns.email))
       |> assign(:company, Map.get(params, "company", socket.assigns.company))
+      |> assign(:platforms, Map.get(params, "platforms", socket.assigns.platforms))
+      |> assign(:team_size, Map.get(params, "team_size", socket.assigns.team_size))
+      |> assign(:security_concerns, Map.get(params, "security_concerns", socket.assigns.security_concerns))
       |> assign(:errors, errors)
     
     {:noreply, socket}
@@ -46,19 +63,61 @@ defmodule RsolvWeb.HomeLive do
   
   @impl true
   def handle_event("submit", %{"signup" => params}, socket) do
-    errors = validate_params(params)
-    
-    if Enum.empty?(errors) do
-      # For now, just show a success message
-      socket = 
-        socket
-        |> put_flash(:success, "Thank you for signing up! We'll be in touch soon.")
-        |> assign(:email, "")
-        |> assign(:company, "")
+    # Check if early access signup feature is enabled
+    if not FeatureFlags.enabled?(:early_access_signup) do
+      Analytics.track("feature_disabled_access", %{
+        feature: "early_access_signup",
+        method: "live_view"
+      })
       
+      socket = put_flash(socket, :info, "Early access registrations are currently paused. Please check back later!")
       {:noreply, socket}
     else
-      {:noreply, assign(socket, :errors, errors)}
+      errors = validate_params(params)
+      
+      if Enum.empty?(errors) do
+        socket = assign(socket, :submitting, true)
+        
+        # Process the submission with optional company
+        options = extract_utm_params(socket)
+        |> Map.put(:company, params["company"])
+        
+        case process_early_access_submission(params["email"], socket, options) do
+          {:ok, signup} ->
+            # Extract email domain for analytics
+            email_domain = case String.split(signup.email, "@") do
+              [_, domain] -> domain
+              _ -> "unknown"
+            end
+            
+            # Prepare celebration event data
+            event_data = %{
+              email_domain: email_domain,
+              source: signup.utm_source || "direct",
+              medium: signup.utm_medium || "organic",
+              campaign: signup.utm_campaign || "none"
+            }
+            
+            # Store celebration data in flash for the thank-you page
+            socket = 
+              socket
+              |> put_flash(:success, "Thank you for signing up!")
+              |> put_flash(:celebration_data, Jason.encode!(event_data))
+              |> push_navigate(to: "/thank-you")
+            
+            {:noreply, socket}
+            
+          {:error, message} ->
+            socket = 
+              socket
+              |> assign(:submitting, false)
+              |> put_flash(:error, message)
+            
+            {:noreply, socket}
+        end
+      else
+        {:noreply, assign(socket, :errors, errors)}
+      end
     end
   end
   
@@ -67,92 +126,137 @@ defmodule RsolvWeb.HomeLive do
     
     email = params["email"] || ""
     
-    # Basic email validation
-    errors = if email == "" or not String.contains?(email, "@") do
-      Map.put(errors, :email, "Please enter a valid email address")
-    else
-      errors
+    # Validate email
+    case EmailValidator.validate_with_feedback(email) do
+      {:ok, _} -> errors
+      {:error, message} -> Map.put(errors, :email, message)
     end
-    
-    errors
   end
   
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <div class="min-h-screen bg-white">
-      <!-- Navigation -->
-      <nav class="bg-white shadow">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="flex h-16 justify-between">
-            <div class="flex">
-              <div class="flex flex-shrink-0 items-center">
-                <h1 class="text-xl font-bold">RSOLV</h1>
-              </div>
-            </div>
-            <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <a href="/blog" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900">
-                Blog
-              </a>
-              <a href="/signup" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900">
-                Sign Up
-              </a>
-            </div>
-          </div>
-        </div>
-      </nav>
-      
-      <!-- Hero Section -->
-      <div class="relative isolate px-6 lg:px-8">
-        <div class="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
-          <div class="text-center">
-            <h1 class="text-5xl font-semibold tracking-tight text-gray-900 sm:text-7xl">
-              Fix Security Issues in Real-Time
-            </h1>
-            <p class="mt-8 text-lg font-medium text-gray-500 sm:text-xl">
-              RSOLV automatically detects and fixes security vulnerabilities in your code. 
-              Powered by AI, trusted by developers.
-            </p>
-            
-            <!-- Early Access Form -->
-            <div class="mt-10 flex items-center justify-center gap-x-6">
-              <form phx-submit="submit" phx-change="validate" class="w-full max-w-md">
-                <div class="mt-2">
-                  <input
-                    type="email"
-                    name="signup[email]"
-                    value={@email}
-                    placeholder="Enter your email"
-                    class="block w-full rounded-md border-0 px-4 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                  <%= if @errors[:email] do %>
-                    <p class="mt-2 text-sm text-red-600"><%= @errors[:email] %></p>
-                  <% end %>
-                </div>
-                
-                <div class="mt-4">
-                  <input
-                    type="text"
-                    name="signup[company]"
-                    value={@company}
-                    placeholder="Company (optional)"
-                    class="block w-full rounded-md border-0 px-4 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-                
-                <button
-                  type="submit"
-                  disabled={@submitting}
-                  class="mt-4 w-full rounded-md bg-indigo-600 px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <%= if @submitting, do: "Submitting...", else: "Get Early Access" %>
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
+  defp process_early_access_submission(email, socket, options) do
+    # Track form submission
+    tracking_data = extract_tracking_data(socket)
+    Analytics.track_form_submission("early-access", "submit", tracking_data)
+    
+    # Log for debugging
+    Logger.info("LiveView form submission received", metadata: %{
+      email: email,
+      company: Map.get(options, :company),
+      timestamp: DateTime.utc_now() |> DateTime.to_string()
+    })
+    
+    # Save to database and send to ConvertKit
+    utm_options = extract_utm_params(socket)
+    all_options = Map.merge(utm_options, %{
+      tags: ["landing-page-liveview"],
+      source: "landing-page-liveview",
+      company: Map.get(options, :company)
+    })
+    
+    # Save to database with company field
+    signup_attrs = %{
+      email: email,
+      source: "landing_page_liveview",
+      utm_source: Map.get(all_options, :utm_source),
+      utm_medium: Map.get(all_options, :utm_medium),
+      utm_campaign: Map.get(all_options, :utm_campaign),
+      metadata: all_options
+    }
+    
+    # Add company if provided
+    signup_attrs = if company = Map.get(options, :company) do
+      Map.put(signup_attrs, :company, company)
+    else
+      signup_attrs
+    end
+    
+    # Save to database
+    case Rsolv.EarlyAccess.create_signup(signup_attrs) do
+      {:ok, signup} ->
+        Logger.info("Successfully saved signup to database: #{email}")
+        
+        # Send to ConvertKit with all options including company
+        ConvertKit.subscribe_to_early_access(email, all_options)
+        
+        # Track conversion
+        email_domain = email |> String.split("@") |> List.last()
+        conversion_data = Map.merge(tracking_data, %{
+          email_domain: email_domain,
+          conversion_type: "early_access_signup",
+          source: "landing_page_liveview",
+          form_id: "early-access"
+        })
+        
+        Analytics.track_form_submission("early-access", "success", conversion_data)
+        Analytics.track_conversion("early_access_signup", conversion_data)
+        
+        # Track metrics
+        Metrics.count_signup()
+        Metrics.count_signup_by_source(Map.get(conversion_data, :utm_source, "direct"))
+        
+        # Start email sequence if enabled
+        if FeatureFlags.enabled?(:welcome_email_sequence) do
+          first_name = extract_first_name_from_email(email)
+          EmailSequence.start_early_access_onboarding_sequence(email, first_name)
+        end
+        
+        {:ok, signup}
+        
+      {:error, changeset} ->
+        Logger.error("Failed to save signup: #{inspect(changeset.errors)}")
+        
+        # Return appropriate error message
+        error_message = cond do
+          Enum.any?(changeset.errors, fn {field, {msg, _}} -> field == :email and msg == "has already been taken" end) ->
+            "This email has already signed up for early access."
+          Enum.any?(changeset.errors, fn {field, _} -> field == :email end) ->
+            "Please provide a valid email address."
+          true ->
+            "Unable to process signup. Please try again."
+        end
+        
+        {:error, error_message}
+    end
   end
+  
+  defp generate_tracking_id do
+    :crypto.strong_rand_bytes(16)
+    |> Base.encode16(case: :lower)
+  end
+  
+  defp extract_tracking_data(socket) do
+    %{
+      user_id: generate_tracking_id(),
+      timestamp: DateTime.utc_now() |> DateTime.to_string(),
+      page_path: "/",
+      referrer: Map.get(socket.assigns, :referrer)
+    }
+  end
+  
+  defp extract_utm_params(socket) do
+    # In LiveView, UTM params would be passed through assigns or extracted from the URL
+    %{
+      utm_source: Map.get(socket.assigns, :utm_source),
+      utm_medium: Map.get(socket.assigns, :utm_medium),
+      utm_campaign: Map.get(socket.assigns, :utm_campaign),
+      utm_term: Map.get(socket.assigns, :utm_term),
+      utm_content: Map.get(socket.assigns, :utm_content)
+    }
+  end
+  
+  defp extract_first_name_from_email(email) do
+    case String.split(email, "@") do
+      [local_part | _] ->
+        local_part
+        |> String.downcase()
+        |> String.replace(~r/[^a-z.]/, "")
+        |> String.split(".")
+        |> List.first()
+        |> String.capitalize()
+      _ -> nil
+    end
+  end
+  
+
+  # The render function is now handled by home_live.html.heex template
 end

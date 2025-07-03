@@ -97,6 +97,17 @@ config :rsolv, :credentials,
   default_ttl_minutes: 60,
   max_ttl_minutes: 240
 
+# Configure Kit (ConvertKit) integration - matching original structure
+config :rsolv, :convertkit,
+  api_key: System.get_env("KIT_API_KEY"),
+  form_id: System.get_env("KIT_FORM_ID"),
+  early_access_tag_id: System.get_env("KIT_EA_TAG_ID"),
+  api_base_url: System.get_env("KIT_API_URL") || "https://api.convertkit.com/v3"
+
+# Configure admin notification emails
+config :rsolv,
+  admin_emails: System.get_env("ADMIN_EMAILS", "") |> String.split(",", trim: true)
+
 # Email configuration (for expert reviews)
 config :rsolv, Rsolv.Mailer,
   adapter: Bamboo.PostmarkAdapter,

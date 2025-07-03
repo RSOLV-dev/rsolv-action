@@ -1,211 +1,407 @@
 defmodule Rsolv.FeatureFlags do
   @moduledoc """
-  Simple feature flag system for controlling pattern tier access.
+  Feature flags management using FunWithFlags as the backend.
   
-  This module provides a way to dynamically control which pattern tiers
-  are accessible to different customer segments without code changes.
+  This module provides a thin wrapper around FunWithFlags while maintaining
+  the same API as the original FeatureFlags module. It adds role-based access
+  control on top of FunWithFlags' base flag states.
+  
+  Features can be enabled:
+  1. Globally (for all users via FunWithFlags)
+  2. For specific user groups (via our Groups behavior and role logic)
+  3. For specific users (by email and tags)
+  
+  ## Usage examples:
+  
+  ```elixir
+  # Check if a feature is enabled globally
+  FeatureFlags.enabled?(:interactive_roi_calculator)
+  
+  # Check if a feature is enabled for a specific user by email
+  FeatureFlags.enabled?(:admin_dashboard, user: %{email: "user@example.com"})
+  
+  # Check if a feature is enabled for a user with tags
+  FeatureFlags.enabled?(:advanced_analytics, user: %{email: "user@example.com", tags: ["vip"]})
+  
+  # Check if a feature is enabled for a user with a specific role
+  FeatureFlags.enabled?(:custom_templates, email: "user@example.com")
+  ```
+  
+  ## Early Access Program User Groups
+  
+  The early access program has four user groups, each with different feature access:
+  
+  1. **Early Access**: Basic access with core features only
+  2. **Phase 1**: Core features plus advanced analytics, custom templates, and priority support
+  3. **VIP**: All features including team collaboration and API access
+  4. **Admin**: Complete access to all features including administrative tools
+  
+  This grouping is managed through ConvertKit tags applied to user accounts.
   """
   
-  # Default feature flag configuration
-  # Can be overridden via environment variables or runtime configuration
-  @default_flags %{
-    # Pattern tier access flags
-    "patterns.public.enabled" => true,
-    "patterns.protected.enabled" => true,
-    "patterns.ai.enabled" => true,
-    "patterns.enterprise.enabled" => true,
+  alias FunWithFlags
+  
+  # Define access control based on roles (copied from original module)
+  @role_access %{
+    # Feature access for early access users (basic tier)
+    early_access: [
+      :interactive_roi_calculator,
+      :team_size_field,
+      :feedback_form,
+      :early_access_signup,
+      :welcome_email_sequence,
+      :core_features
+    ],
     
-    # Customer-specific overrides
-    "patterns.ai.grant_all_authenticated" => true,  # Temporary: grant AI access to all authenticated users
-    "patterns.enterprise.internal_only" => true,     # Enterprise tier only for internal/master customers
+    # Feature access for Phase 1 users
+    phase_1: [
+      :interactive_roi_calculator,
+      :team_size_field,
+      :feedback_form,
+      :early_access_signup,
+      :welcome_email_sequence,
+      :core_features,
+      :advanced_analytics,
+      :custom_templates,
+      :priority_support
+    ],
     
-    # Tier inclusion flags (which tiers include lower tiers)
-    "patterns.tier.cumulative" => true,              # Higher tiers include all lower tier patterns
+    # Feature access for VIP users
+    vip: [
+      :interactive_roi_calculator,
+      :team_size_field,
+      :feedback_form,
+      :early_access_signup,
+      :welcome_email_sequence,
+      :core_features,
+      :advanced_analytics,
+      :custom_templates,
+      :team_collaboration,
+      :api_access,
+      :priority_support
+    ],
     
-    # Pattern source flags
-    "patterns.use_compiled_modules" => true,         # Use compiled Elixir modules (vs database)
-    "patterns.include_cve_patterns" => true,         # Include CVE patterns in results
-    "patterns.include_framework_patterns" => true    # Include framework-specific patterns
+    # Feature access for admin users
+    admin: [
+      :interactive_roi_calculator,
+      :team_size_field, 
+      :feedback_form,
+      :early_access_signup,
+      :welcome_email_sequence,
+      :core_features,
+      :advanced_analytics,
+      :custom_templates,
+      :team_collaboration,
+      :api_access,
+      :priority_support,
+      :admin_dashboard,
+      :metrics_dashboard,
+      :feedback_dashboard,
+      :support_ticket_submission,
+      :user_engagement_tracking,
+      :a_b_testing,
+      # Test flags
+      :enabled_test_feature,
+      :test_enabled_feature
+    ]
   }
   
+  # Get admin emails at runtime to avoid compile-time/runtime mismatches
+  defp admin_emails do
+    Application.get_env(:rsolv, :admin_emails, ["admin@rsolv.dev"])
+  end
+
   @doc """
-  Check if a feature flag is enabled.
+  Check if a feature is enabled.
+  
+  ## Options
+  
+  - `:user` - User map with email and optional tags
+  - `:email` - User email string (shorthand for user with email only)
+  - `:role` - Specific role to check against (:early_access, :phase_1, :vip, :admin)
+  
+  If no user context is provided, checks the global flag state from FunWithFlags.
+  If user context is provided, applies role-based logic on top of the base flag state.
   
   ## Examples
   
-      iex> FeatureFlags.enabled?("patterns.public.enabled")
+      iex> FeatureFlags.enabled?(:interactive_roi_calculator)
       true
       
-      iex> FeatureFlags.enabled?("patterns.ai.grant_all_authenticated")
+      iex> FeatureFlags.enabled?(:admin_dashboard, user: %{email: "admin@rsolv.dev"})
       true
+      
+      iex> FeatureFlags.enabled?(:advanced_analytics, user: %{email: "user@example.com", tags: ["vip"]})
+      true
+      
+      iex> FeatureFlags.enabled?(:api_access, email: "regular@example.com")
+      false
   """
-  def enabled?(flag_name) when is_binary(flag_name) do
-    # Check in-memory test flags first (for testing)
-    test_flags = :persistent_term.get({__MODULE__, :test_flags}, %{})
-    case Map.get(test_flags, flag_name) do
+  def enabled?(feature, opts \\ [])
+  
+  def enabled?(feature, []) do
+    # No user context provided, check global flag state
+    FunWithFlags.enabled?(feature)
+  rescue
+    _error -> false
+  end
+  
+  def enabled?(feature, opts) when is_list(opts) do
+    # User context provided, apply role-based logic
+    user = build_user_context(opts)
+    
+    case user do
       nil ->
-        # First check environment variable
-        env_key = "RSOLV_FLAG_" <> String.upcase(String.replace(flag_name, ".", "_"))
+        # No valid user context, fall back to global check
+        FunWithFlags.enabled?(feature)
+      
+      user ->
+        # Check if user has access to this feature based on their role
+        user_role = determine_user_role(user)
+        feature_accessible = feature in get_role_features(user_role)
         
-        case System.get_env(env_key) do
-          "true" -> true
-          "false" -> false
-          "1" -> true
-          "0" -> false
-          nil ->
-            # Fall back to application config
-            case Application.get_env(:rsolv, :feature_flags, %{}) do
-              %{^flag_name => value} -> value
-              _ -> Map.get(@default_flags, flag_name, false)
-            end
-          _ -> false
+        # Feature must be accessible to the user's role
+        # For globally enabled features, role doesn't matter
+        # For role-gated features, check both base state and role access
+        if feature_accessible do
+          # User has role access, check base flag state
+          base_enabled = FunWithFlags.enabled?(feature)
+          base_enabled || role_gated_feature?(feature)
+        else
+          false
         end
-      value -> value
+    end
+  rescue
+    _error -> false
+  end
+  
+  @doc """
+  Enable a feature flag globally.
+  """
+  def enable(feature) do
+    case FunWithFlags.enable(feature) do
+      {:ok, _flag} -> :ok
+      error -> error
     end
   end
   
   @doc """
-  Get all flags with their current values.
+  Disable a feature flag globally.
+  """
+  def disable(feature) do
+    case FunWithFlags.disable(feature) do
+      {:ok, _flag} -> :ok
+      error -> error
+    end
+  end
+  
+  @doc """
+  Enable a feature for a specific group.
+  """
+  def enable_for_group(feature, group) do
+    case FunWithFlags.enable(feature, for_group: group) do
+      {:ok, _flag} -> :ok
+      error -> error
+    end
+  end
+  
+  @doc """
+  Disable a feature for a specific group.
+  """
+  def disable_for_group(feature, group) do
+    case FunWithFlags.disable(feature, for_group: group) do
+      {:ok, _flag} -> :ok
+      error -> error
+    end
+  end
+  
+  @doc """
+  Clear the FunWithFlags cache.
+  """
+  def reload do
+    # FunWithFlags cache management - clear all flags
+    try do
+      # FunWithFlags.clear/1 requires a cache name or :all
+      FunWithFlags.clear(:all)
+      :ok
+    rescue
+      _error ->
+        # If clear/1 doesn't exist, try clearing all known flags individually
+        try do
+          all_flags()
+          |> Enum.each(&FunWithFlags.clear(&1))
+          :ok
+        rescue
+          _error -> :ok
+        end
+    end
+  end
+  
+  @doc """
+  Get all available feature flags.
   """
   def all_flags do
-    # Merge defaults with configured values
-    configured = Application.get_env(:rsolv, :feature_flags, %{})
-    Map.merge(@default_flags, configured)
+    @role_access.admin
   end
   
   @doc """
-  Check if a customer has access to a specific pattern tier.
-  
-  ## Examples
-  
-      iex> FeatureFlags.tier_access_allowed?("public", nil)
-      true
-      
-      iex> FeatureFlags.tier_access_allowed?("ai", %{id: "123"})
-      true  # When patterns.ai.grant_all_authenticated is true
+  Get detailed information about a feature flag.
   """
-  def tier_access_allowed?(tier, customer) do
-    base_flag = "patterns.#{tier}.enabled"
+  def flag_info(feature) do
+    enabled = FunWithFlags.enabled?(feature)
+    required_role = get_minimum_required_role(feature)
     
-    # First check if the tier is enabled at all
-    if enabled?(base_flag) do
-      # Then check customer-specific rules
-      case tier do
-        "public" -> 
-          true  # Public tier is always accessible when enabled
-          
-        "protected" -> 
-          # Protected tier requires authentication
-          not is_nil(customer)
-          
-        "ai" -> 
-          # AI tier requires authentication and AI access
-          not is_nil(customer) and 
-          (enabled?("patterns.ai.grant_all_authenticated") or has_ai_flag?(customer))
-          
-        "enterprise" -> 
-          # Enterprise tier has strict requirements
-          not is_nil(customer) and
-          (is_internal_customer?(customer) or has_enterprise_flag?(customer))
-          
-        _ -> 
-          false
-      end
-    else
-      false
+    %{
+      name: feature,
+      enabled: enabled,
+      required_role: required_role,
+      description: get_feature_description(feature)
+    }
+  rescue
+    _error ->
+      %{
+        name: feature,
+        enabled: false,
+        required_role: :unknown,
+        description: "Unknown feature"
+      }
+  end
+  
+  @doc """
+  Get all features available to a specific user.
+  """
+  def user_features(user) do
+    role = determine_user_role(user)
+    get_role_features(role)
+  end
+
+  @doc """
+  Legacy API: Get features for a specific role.
+  """
+  def for_role(role) do
+    get_role_features(role)
+  end
+
+  @doc """
+  Legacy API: Get features for a specific user.
+  """
+  def for_user(user) do
+    case user do
+      nil -> get_role_features(:early_access)
+      user -> user_features(user)
+    end
+  end
+
+  @doc """
+  Legacy API: Get all flags as a simple list.
+  """
+  def all do
+    all_flags()
+  end
+  
+  # Private helper functions
+  
+  defp build_user_context(opts) do
+    cond do
+      user = Keyword.get(opts, :user) ->
+        user
+        
+      email = Keyword.get(opts, :email) ->
+        %{email: email, tags: []}
+        
+      role = Keyword.get(opts, :role) ->
+        # For role-based checks, create a dummy user with appropriate tags
+        case role do
+          :admin -> %{email: "admin@rsolv.dev", tags: []}
+          :vip -> %{email: "vip@example.com", tags: ["vip"]}
+          :phase_1 -> %{email: "phase1@example.com", tags: ["phase_1"]}
+          :early_access -> %{email: "early@example.com", tags: []}
+          _ -> nil
+        end
+        
+      true ->
+        nil
+    end
+  end
+  
+  defp determine_user_role(%{email: email} = user) when is_binary(email) do
+    tags = Map.get(user, :tags, [])
+    
+    cond do
+      email in admin_emails() -> :admin
+      "vip" in tags -> :vip
+      "phase_1" in tags or "vip" in tags -> :phase_1
+      true -> :early_access
+    end
+  end
+  
+  defp determine_user_role(_), do: :early_access
+  
+  defp get_role_features(role) do
+    Map.get(@role_access, role, [])
+  end
+  
+  defp get_minimum_required_role(feature) do
+    cond do
+      feature in @role_access.early_access -> :early_access
+      feature in @role_access.phase_1 -> :phase_1
+      feature in @role_access.vip -> :vip
+      feature in @role_access.admin -> :admin
+      true -> :unknown
+    end
+  end
+  
+  defp role_gated_feature?(feature) do
+    # Features that are gated by role but disabled globally
+    # These are the premium/admin features that FunWithFlags has disabled
+    # but are accessible via group gates
+    feature in (@role_access.phase_1 ++ @role_access.vip ++ @role_access.admin) and
+      feature not in @role_access.early_access
+  end
+  
+  defp get_feature_description(feature) do
+    case feature do
+      :interactive_roi_calculator -> "Interactive ROI calculator on landing page"
+      :team_size_field -> "Team size field in signup form"
+      :feedback_form -> "Feedback collection form"
+      :early_access_signup -> "Early access program signup"
+      :welcome_email_sequence -> "Automated welcome email sequence"
+      :core_features -> "Core platform features"
+      :advanced_analytics -> "Advanced analytics dashboard"
+      :custom_templates -> "Custom email and page templates"
+      :team_collaboration -> "Team collaboration features"
+      :api_access -> "API access and documentation"
+      :priority_support -> "Priority customer support"
+      :admin_dashboard -> "Administrative dashboard"
+      :metrics_dashboard -> "System metrics dashboard"
+      :feedback_dashboard -> "Feedback management dashboard"
+      :support_ticket_submission -> "Support ticket system"
+      :user_engagement_tracking -> "User engagement analytics"
+      :a_b_testing -> "A/B testing framework"
+      :enabled_test_feature -> "Test feature (enabled)"
+      :test_enabled_feature -> "Test feature (enabled)"
+      :disabled_test_feature -> "Test feature (disabled)"
+      :test_disabled_feature -> "Test feature (disabled)"
+      _ -> "Feature: #{feature}"
     end
   end
   
   @doc """
-  Get accessible tiers for a customer based on feature flags.
+  Get accessible tiers for a customer based on their subscription and feature flags.
   """
   def get_accessible_tiers(customer) do
-    all_tiers = ["public", "protected", "ai", "enterprise"]
-    
-    accessible = Enum.filter(all_tiers, fn tier ->
-      tier_access_allowed?(tier, customer)
-    end)
-    
-    # If cumulative tiers are enabled, ensure lower tiers are included
-    if enabled?("patterns.tier.cumulative") do
-      expand_tiers(accessible)
-    else
-      accessible
+    cond do
+      # Enterprise customer - access to all tiers
+      customer && customer.tier == "enterprise" ->
+        ["free", "pro", "enterprise"]
+      
+      # Pro customer - access to free and pro tiers
+      customer && customer.tier == "pro" ->
+        ["free", "pro"]
+        
+      # Free customer or no customer - only free tier
+      true ->
+        ["free"]
     end
-  end
-  
-  # Private functions
-  
-  defp has_ai_flag?(%{flags: flags}) when is_list(flags) do
-    "ai_access" in flags
-  end
-  defp has_ai_flag?(%{tier: "ai"}), do: true
-  defp has_ai_flag?(%{tier: "enterprise"}), do: true
-  defp has_ai_flag?(_), do: false
-  
-  defp has_enterprise_flag?(%{flags: flags}) when is_list(flags) do
-    "enterprise_access" in flags
-  end
-  defp has_enterprise_flag?(%{tier: "enterprise"}), do: true
-  defp has_enterprise_flag?(_), do: false
-  
-  defp is_internal_customer?(%{id: "internal"}), do: true
-  defp is_internal_customer?(%{id: "master"}), do: true
-  defp is_internal_customer?(%{email: email}) when is_binary(email) do
-    String.ends_with?(email, "@rsolv.dev")
-  end
-  defp is_internal_customer?(_), do: false
-  
-  defp expand_tiers(tiers) do
-    # Define tier hierarchy
-    tier_order = ["public", "protected", "ai", "enterprise"]
-    
-    # Find the highest tier
-    highest_index = tiers
-    |> Enum.map(fn tier -> Enum.find_index(tier_order, &(&1 == tier)) || -1 end)
-    |> Enum.max()
-    
-    if highest_index >= 0 do
-      # Return all tiers up to and including the highest
-      Enum.take(tier_order, highest_index + 1)
-    else
-      []
-    end
-  end
-  
-  @doc """
-  Enable a feature flag (for testing or runtime configuration).
-  
-  Note: This uses FunWithFlags under the hood if available,
-  otherwise falls back to in-memory storage.
-  """
-  def enable(flag_name) do
-    # Update in-memory test flags
-    test_flags = :persistent_term.get({__MODULE__, :test_flags}, %{})
-    new_flags = Map.put(test_flags, flag_name, true)
-    :persistent_term.put({__MODULE__, :test_flags}, new_flags)
-    
-    {:ok, %{flag_name: flag_name, enabled: true}}
-  end
-  
-  @doc """
-  Disable a feature flag (for testing or runtime configuration).
-  """
-  def disable(flag_name) do
-    # Update in-memory test flags
-    test_flags = :persistent_term.get({__MODULE__, :test_flags}, %{})
-    new_flags = Map.put(test_flags, flag_name, false)
-    :persistent_term.put({__MODULE__, :test_flags}, new_flags)
-    
-    {:ok, %{flag_name: flag_name, enabled: false}}
-  end
-  
-  @doc """
-  Enable a feature flag for a specific customer.
-  """
-  def enable_for_customer(flag_name, customer) do
-    # For now, just return success
-    # In production, this would integrate with FunWithFlags
-    {:ok, %{flag_name: flag_name, customer_id: customer.id, enabled: true}}
   end
 end

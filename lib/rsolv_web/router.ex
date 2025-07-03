@@ -1,9 +1,8 @@
 defmodule RsolvWeb.Router do
   use RsolvWeb, :router
   import Phoenix.LiveView.Router
-  require Logger
+  alias RsolvWeb.Plugs.FeatureFlagPlug
 
-  # Pipelines
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -15,135 +14,146 @@ defmodule RsolvWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
-    plug Plug.Parsers,
-      parsers: [:json],
-      pass: ["application/json"],
-      json_decoder: Phoenix.json_library()
-    plug :put_secure_browser_headers
   end
   
-  pipeline :webhook do
-    plug :accepts, ["json"]
-    plug RsolvWeb.Plugs.CaptureRawBody
-    plug Plug.Parsers,
-      parsers: [:json],
-      pass: ["application/json"],
-      json_decoder: Phoenix.json_library()
+  pipeline :metrics do
+    plug RsolvWeb.Plugs.PrometheusExPlug
+  end
+  
+  # Feature flag pipelines
+  pipeline :require_admin_dashboard do
+    plug FeatureFlagPlug, feature: :admin_dashboard, fallback_url: "/", 
+      message: "Admin dashboard is currently unavailable."
+  end
+  
+  pipeline :require_metrics_dashboard do
+    plug FeatureFlagPlug, feature: :metrics_dashboard, fallback_url: "/", 
+      message: "Metrics dashboard is currently unavailable."
+  end
+  
+  pipeline :require_feedback_dashboard do
+    plug FeatureFlagPlug, feature: :feedback_dashboard, fallback_url: "/", 
+      message: "Feedback dashboard is currently unavailable."
   end
 
-  # Health check (outside versioned API)
-  get "/health", RsolvWeb.HealthController, :check
-
-  # Web routes
-  scope "/" do
+  scope "/", RsolvWeb do
     pipe_through :browser
 
     # LiveView routes with current path hook
-    live_session :default do
-      live "/", RsolvWeb.HomeLive, :index
-      live "/signup", RsolvWeb.EarlyAccessLive, :index
+    live_session :default, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
+      live "/", HomeLive, :index
+      live "/signup", EarlyAccessLive, :index
     end
     
-    # Blog routes
-    get "/blog", RsolvWeb.BlogController, :index
-    get "/blog/rss.xml", RsolvWeb.BlogController, :rss
-    get "/blog/:slug", RsolvWeb.BlogController, :show
+    # Regular routes
+    post "/early-access", PageController, :submit_early_access
+    get "/health", PageController, :health
+    get "/thank-you", PageController, :thank_you
+    get "/early-access-feedback", PageController, :early_access_feedback
+    get "/feedback", PageController, :feedback
+    get "/unsubscribe", PageController, :unsubscribe
+    post "/unsubscribe", PageController, :process_unsubscribe
     
-    # Dashboard routes
-    get "/dashboard", RsolvWeb.DashboardController, :index
+    # Analytics tracking endpoint
+    post "/track", TrackController, :track
     
-    # Page routes
-    get "/thank-you", RsolvWeb.PageController, :thank_you
-    get "/docs/privacy", RsolvWeb.PageController, :privacy
-    get "/docs/terms", RsolvWeb.PageController, :terms
-    get "/unsubscribe", RsolvWeb.PageController, :unsubscribe
-    post "/unsubscribe", RsolvWeb.PageController, :process_unsubscribe
+    # Documentation pages
+    get "/docs/terms", PageController, :terms
+    get "/docs/privacy", PageController, :privacy
+    
+    # Blog routes (protected by feature flag in controller)
+    get "/blog", BlogController, :index
+    get "/blog/rss.xml", BlogController, :rss
+    get "/blog/:slug", BlogController, :show
   end
-
-  # Webhook endpoints (separate from API versioning)
-  scope "/webhook", RsolvWeb do
-    pipe_through :webhook
+  
+  # Dashboard routes with authentication and feature flags
+  scope "/dashboard", RsolvWeb do
+    pipe_through [:browser, RsolvWeb.DashboardAuth, :require_admin_dashboard]
     
-    post "/github", WebhookController, :github
+    get "/", DashboardController, :index
+    get "/report", ReportController, :download
   end
-
-  # API v1
-  scope "/api/v1", RsolvWeb, as: :api_v1 do
-    pipe_through :api
-
-    # Core business resources
-    resources "/fix-attempts", FixAttemptController, only: [:create]
-
-    # Credential management
-    scope "/credentials" do
-      post "/exchange", CredentialController, :exchange
-      post "/refresh", CredentialController, :refresh
-    end
-
-    # Usage tracking
-    post "/usage/report", CredentialController, :report_usage
+  
+  # Analytics dashboard with metrics feature flag
+  scope "/dashboard", RsolvWeb do
+    pipe_through [:browser, RsolvWeb.DashboardAuth, :require_admin_dashboard, :require_metrics_dashboard]
     
-    # Feedback
-    scope "/feedback" do
-      get "/", API.FeedbackController, :index
-      post "/", API.FeedbackController, :create
-      get "/stats", API.FeedbackController, :stats
-      get "/:id", API.FeedbackController, :show
-    end
-
-    # Security patterns
-    scope "/patterns" do
-      # Main pattern endpoints (access level determined by authentication)
-      get "/", Api.V1.PatternController, :index
-      get "/stats", Api.V1.PatternController, :stats
-      
-      # Pattern by language endpoint
-      get "/:language", Api.V1.PatternController, :by_language
-      
-      # Pattern metadata endpoint
-      get "/:id/metadata", PatternController, :metadata
-    end
-
-    # Educational features
-    scope "/education" do
-      post "/fix-completed", EducationController, :fix_completed
-      get "/track-click/:alert_id", EducationController, :track_click
-      get "/metrics", EducationController, :metrics
-      get "/debug", EducationController, :debug
-      get "/test-slack", EducationController, :test_slack
-    end
-
-    # Admin features  
-    scope "/admin" do
-      resources "/feature-flags", FeatureFlagController, 
-        only: [:index, :show], 
-        param: "flag_name"
-    end
-    
-    # AST Analysis (RFC-031)
-    scope "/ast" do
-      post "/analyze", Api.V1.ASTController, :analyze
-    end
-    
-    # Vulnerability Validation (RFC-036)
-    scope "/vulnerabilities" do
-      post "/validate", Api.V1.VulnerabilityValidationController, :validate
-    end
-    
-    # Test endpoints removed - we don't use tiers anymore
-  end
-
-  # API v2 - Enhanced format by default
-  scope "/api/v2", RsolvWeb, as: :api_v2 do
-    pipe_through :api
-
-    # Security patterns with enhanced format by default
-    scope "/patterns" do
-      # Main pattern endpoint (returns enhanced format by default)
-      get "/", Api.V1.PatternController, :index_v2
+    live_session :dashboard_analytics, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
+      live "/analytics", DashboardLive, :index
+      live "/signup-metrics", SignupMetricsLive, :index
     end
   end
   
-  # Prometheus metrics endpoint
-  forward "/metrics", PromEx.Plug, prom_ex_module: Rsolv.PromEx
+  # Feedback dashboard with feedback feature flag
+  scope "/dashboard", RsolvWeb do
+    pipe_through [:browser, RsolvWeb.DashboardAuth, :require_admin_dashboard, :require_feedback_dashboard]
+    
+    live_session :dashboard_feedback, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
+      live "/feedback", FeedbackDashLive, :index
+    end
+  end
+
+  # API Routes
+  scope "/api", RsolvWeb.API do
+    pipe_through :api
+    
+    # Feedback endpoints
+    resources "/feedback", FeedbackController, except: [:delete, :new, :edit]
+    get "/feedback/stats", FeedbackController, :stats
+  end
+  
+  # Define metrics feature flag pipeline
+  pipeline :require_metrics_feature do
+    plug RsolvWeb.Plugs.FeatureFlagPlug, feature: :metrics_dashboard
+  end
+
+  # Metrics endpoint (requires metrics feature flag)
+  scope "/metrics" do
+    pipe_through [:metrics, :require_metrics_feature]
+    
+    get "/", RsolvWeb.MetricsController, :index
+  end
+
+  # Import LiveDashboard Router once
+  import Phoenix.LiveDashboard.Router
+  
+  # Enable LiveDashboard and feature flags routes
+  if Application.compile_env(:rsolv, :dev_routes) do
+    # If you want to use the LiveDashboard in production, you should put
+    # it behind authentication and allow only admins to access it.
+    # If your application does not have an admins-only section yet,
+    # you can use Plug.BasicAuth to set up some basic authentication
+    # as long as you are also using SSL (which you should anyway).
+
+    scope "/dev" do
+      pipe_through :browser
+
+      live_dashboard "/dashboard", 
+        metrics: RsolvWeb.Telemetry
+      
+      # FunWithFlags UI in development
+      forward "/feature-flags", FunWithFlags.UI.Router, namespace: "dev-feature-flags"
+      
+      # Add Bamboo email preview in development
+      if Application.compile_env(:rsolv, [:bamboo_preview, :enabled], false) do
+        forward "/sent_emails", Bamboo.SentEmailViewerPlug
+      end
+    end
+  else
+    # Production routes with authentication
+    scope "/live", RsolvWeb do
+      pipe_through [:browser, RsolvWeb.DashboardAuth, :require_admin_dashboard]
+      
+      live_dashboard "/dashboard", 
+        metrics: RsolvWeb.Telemetry
+    end
+    
+    # FunWithFlags UI with auth (admin_dashboard now checked after auth in plug)
+    scope path: "/feature-flags" do
+      pipe_through [:browser, RsolvWeb.DashboardAuth]
+      
+      forward "/", FunWithFlags.UI.Router, namespace: "feature-flags"
+    end
+  end
 end

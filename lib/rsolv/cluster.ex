@@ -1,73 +1,154 @@
 defmodule Rsolv.Cluster do
   @moduledoc """
-  Manages cluster configuration and monitoring for RSOLV API.
+  BEAM clustering support for RSOLV Landing.
   
-  This module provides utilities for:
-  - Monitoring cluster state changes
-  - Tracking connected nodes
-  - Logging cluster events
+  This module handles automatic cluster formation in Kubernetes environments,
+  enabling distributed cache invalidation and state sharing across pods.
   """
   
+  use GenServer
   require Logger
   
   @doc """
-  Returns the current cluster topology configuration.
+  Starts the cluster manager
   """
-  def topologies do
-    Application.get_env(:rsolv, :cluster, [topologies: []])[:topologies] || []
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
   
-  @doc """
-  Called when a node connects to the cluster.
-  """
-  def on_node_connect(node) do
-    Logger.info("Node connected to cluster: #{inspect(node)}")
-    Logger.info("Current cluster members: #{inspect(Node.list())}")
+  @impl true
+  def init(_opts) do
+    # Start clustering based on environment
+    if clustering_enabled?() do
+      Logger.info("Starting BEAM clustering...")
+      setup_cluster()
+    else
+      Logger.info("BEAM clustering disabled")
+    end
     
-    # Synchronize critical state when a new node joins
-    sync_with_node(node)
+    {:ok, %{}}
   end
   
   @doc """
-  Called when a node disconnects from the cluster.
+  Sets up the cluster based on the deployment environment
   """
-  def on_node_disconnect(node) do
-    Logger.warning("Node disconnected from cluster: #{inspect(node)}")
-    Logger.info("Remaining cluster members: #{inspect(Node.list())}")
+  def setup_cluster do
+    case Application.get_env(:rsolv, :cluster_strategy, :none) do
+      :kubernetes -> setup_kubernetes_cluster()
+      :dns -> setup_dns_cluster()
+      :none -> :ok
+      strategy -> Logger.warning("Unknown cluster strategy: #{inspect(strategy)}")
+    end
   end
   
   @doc """
-  Returns information about the current cluster state.
+  Sets up Kubernetes-based clustering using headless service
   """
-  def cluster_info do
-    %{
-      current_node: Node.self(),
-      connected_nodes: Node.list(),
-      cookie: Node.get_cookie(),
-      alive?: Node.alive?(),
-      topologies: topologies()
-    }
+  def setup_kubernetes_cluster do
+    # Use libcluster for Kubernetes service discovery
+    service_name = System.get_env("CLUSTER_SERVICE_NAME") || "rsolv-landing-headless"
+    namespace = System.get_env("POD_NAMESPACE") || "default"
+    
+    topologies = [
+      k8s_dns: [
+        strategy: Cluster.Strategy.Kubernetes.DNS,
+        config: [
+          service: service_name,
+          namespace: namespace,
+          application_name: "rsolv_landing",
+          polling_interval: 5_000,
+          mode: :ip
+        ]
+      ]
+    ]
+    
+    # Start the cluster supervisor
+    children = [
+      {Cluster.Supervisor, [topologies, [name: Rsolv.ClusterSupervisor]]}
+    ]
+    
+    Supervisor.start_link(children, strategy: :one_for_one)
+    
+    Logger.info("Kubernetes clustering configured with headless service")
   end
   
   @doc """
-  Checks if clustering is enabled (production environment).
+  Sets up DNS-based clustering (for non-Kubernetes environments)
+  """
+  def setup_dns_cluster do
+    query = Application.get_env(:rsolv, :dns_cluster_query)
+    
+    if query do
+      topologies = [
+        dns: [
+          strategy: Cluster.Strategy.DNSPoll,
+          config: [
+            polling_interval: 5_000,
+            query: query,
+            node_basename: "rsolv_landing"
+          ]
+        ]
+      ]
+      
+      children = [
+        {Cluster.Supervisor, [topologies, [name: Rsolv.ClusterSupervisor]]}
+      ]
+      
+      Supervisor.start_link(children, strategy: :one_for_one)
+      
+      Logger.info("DNS clustering configured with query: #{query}")
+    else
+      Logger.info("DNS clustering not configured (no query specified)")
+    end
+  end
+  
+  @doc """
+  Checks if clustering is enabled
   """
   def clustering_enabled? do
-    topologies() != []
+    Application.get_env(:rsolv, :enable_clustering, false)
   end
   
-  # Private functions
+  @doc """
+  Returns the current cluster members
+  """
+  def members do
+    [Node.self() | Node.list()]
+  end
   
-  defp sync_with_node(node) do
-    # Here you can add logic to synchronize any distributed state
-    # For example, sync rate limiting counters, cache state, etc.
-    Logger.debug("Synchronizing state with node: #{inspect(node)}")
+  @doc """
+  Broadcasts a message to all nodes in the cluster
+  """
+  def broadcast(message) do
+    for node <- members() do
+      :rpc.cast(node, __MODULE__, :handle_broadcast, [message])
+    end
+  end
+  
+  @doc """
+  Handles incoming broadcast messages
+  """
+  def handle_broadcast(message) do
+    Logger.debug("Received cluster broadcast: #{inspect(message)}")
     
-    # Example: Notify other services about the new node
-    Phoenix.PubSub.broadcast(
-      Rsolv.PubSub,
-      "cluster:events",
-      {:node_joined, node, Node.self()}
-    )
+    case message do
+      {:invalidate_feature_flags_cache} ->
+        # Clear the FunWithFlags cache on this node
+        clear_local_cache()
+        
+      _ ->
+        Logger.debug("Unknown broadcast message: #{inspect(message)}")
+    end
+  end
+  
+  defp clear_local_cache do
+    # This will clear the ETS cache used by FunWithFlags
+    try do
+      :ets.delete_all_objects(:fun_with_flags_cache)
+      Logger.info("Feature flags cache cleared")
+    rescue
+      error ->
+        Logger.error("Failed to clear cache: #{inspect(error)}")
+    end
   end
 end

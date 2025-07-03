@@ -1,31 +1,42 @@
-<div class="min-h-screen bg-gray-50 py-12">
-  <div class="mx-auto max-w-md px-4 sm:px-6 lg:px-8">
-    <div class="bg-white rounded-lg shadow px-6 py-8 text-center">
-      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
-        <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </div>
-      
-      <h2 class="text-2xl font-bold text-gray-900 mb-4">Unsubscribe Failed</h2>
-      
-      <p class="text-gray-600 mb-6">
-        <%= if assigns[:email] do %>
-          We couldn't unsubscribe <strong><%= @email %></strong>. Please check that the email address is correct.
-        <% else %>
-          Please provide a valid email address to unsubscribe.
-        <% end %>
+<.flash_group flash={@flash} />
+
+<section class="py-16 bg-gray-100">
+  <div class="container mx-auto px-4">
+    <div class="text-center mb-10">
+      <h2 class="text-3xl md:text-4xl font-bold mb-3">Unsubscribe Error</h2>
+      <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+        We were unable to process your unsubscribe request.
       </p>
-      
-      <div class="space-y-3">
-        <a href="/unsubscribe" class="block w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-          Try Again
-        </a>
+    </div>
+    
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
+      <div class="text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+          <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </div>
         
-        <a href="/" class="block w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-          Return to Homepage
-        </a>
+        <h3 class="text-xl font-bold mb-4">Unable to Process Request</h3>
+        
+        <p class="text-gray-600 mb-6">
+          <%= if @email && @email != "" do %>
+            We couldn't unsubscribe <span class="font-semibold"><%= @email %></span>. Please check that you've entered a valid email address.
+          <% else %>
+            Please provide a valid email address to unsubscribe.
+          <% end %>
+        </p>
+        
+        <div class="mt-6">
+          <a href="/unsubscribe" class="bg-brand-blue text-white font-semibold py-2 px-6 rounded-md hover:bg-brand-dark transition-colors">
+            Try Again
+          </a>
+        </div>
       </div>
     </div>
+    
+    <div class="mt-8 text-center text-gray-600">
+      <p>If you continue to have issues, please <a href="mailto:support@rsolv.dev" class="text-brand-blue hover:underline">contact our support team</a> for assistance.</p>
+    </div>
   </div>
-</div>
+</section>

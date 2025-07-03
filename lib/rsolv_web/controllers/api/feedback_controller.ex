@@ -2,6 +2,7 @@ defmodule RsolvWeb.API.FeedbackController do
   use RsolvWeb, :controller
   require Logger
   alias Rsolv.Feedback
+  alias RsolvWeb.Services.Metrics
   
   @doc """
   Create a new feedback entry.
@@ -14,39 +15,27 @@ defmodule RsolvWeb.API.FeedbackController do
       email: params["email"],
       message: params["content"] || params["message"],
       rating: params["rating"],
-      tags: params["tags"] || [],
-      source: params["source"] || "api"
+      tags: params["tags"] || []
     }
     
     case Feedback.create_entry(attrs) do
       {:ok, feedback} ->
+        # Track metrics for Prometheus
+        feedback_type = params["feedback_type"] || "general"
+        Metrics.count_feedback_submission(feedback_type, "success")
+        
         conn
         |> put_status(:created)
-        |> json(%{
-          success: true,
-          data: %{
-            id: feedback.id,
-            email: feedback.email,
-            message: feedback.message,
-            rating: feedback.rating,
-            tags: feedback.tags,
-            created_at: feedback.inserted_at
-          }
-        })
+        |> render("show.json", feedback: feedback)
         
-      {:error, changeset} ->
-        errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-          Enum.reduce(opts, msg, fn {key, value}, acc ->
-            String.replace(acc, "%{#{key}}", to_string(value))
-          end)
-        end)
+      {:error, reason} ->
+        # Track error metrics for Prometheus
+        feedback_type = Map.get(params, :feedback_type) || Map.get(params, "feedback_type") || "general"
+        Metrics.count_feedback_submission(feedback_type, "error")
         
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{
-          success: false,
-          errors: errors
-        })
+        |> render("error.json", error: reason)
     end
   end
   
@@ -55,12 +44,7 @@ defmodule RsolvWeb.API.FeedbackController do
   """
   def index(conn, _params) do
     feedback = Feedback.list_entries()
-    
-    conn
-    |> json(%{
-      success: true,
-      data: Enum.map(feedback, &serialize_feedback/1)
-    })
+    render(conn, "index.json", feedback: feedback)
   end
   
   @doc """
@@ -69,21 +53,23 @@ defmodule RsolvWeb.API.FeedbackController do
   def show(conn, %{"id" => id}) do
     try do
       feedback = Feedback.get_entry!(id)
-      
-      conn
-      |> json(%{
-        success: true,
-        data: serialize_feedback(feedback)
-      })
+      render(conn, "show.json", feedback: feedback)
     rescue
       Ecto.NoResultsError ->
         conn
         |> put_status(:not_found)
-        |> json(%{
-          success: false,
-          error: "Feedback not found"
-        })
+        |> render("error.json", error: "Feedback not found")
     end
+  end
+  
+  @doc """
+  Update a feedback entry.
+  """
+  def update(conn, %{"id" => _id} = _params) do
+    # For now, we don't have an update function, so return unimplemented
+    conn
+    |> put_status(:not_implemented)
+    |> render("error.json", error: "Update not implemented")
   end
   
   @doc """
@@ -116,11 +102,7 @@ defmodule RsolvWeb.API.FeedbackController do
       generated_at: DateTime.utc_now()
     }
     
-    conn
-    |> json(%{
-      success: true,
-      data: stats
-    })
+    render(conn, "stats.json", stats: stats)
   end
   
   defp calculate_rating_distribution(entries) do
@@ -129,18 +111,5 @@ defmodule RsolvWeb.API.FeedbackController do
     |> Enum.group_by(& &1.rating)
     |> Enum.map(fn {rating, items} -> {rating, length(items)} end)
     |> Map.new()
-  end
-  
-  defp serialize_feedback(feedback) do
-    %{
-      id: feedback.id,
-      email: feedback.email,
-      message: feedback.message,
-      rating: feedback.rating,
-      tags: feedback.tags,
-      source: feedback.source,
-      created_at: feedback.inserted_at,
-      updated_at: feedback.updated_at
-    }
   end
 end

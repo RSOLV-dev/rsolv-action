@@ -56,7 +56,10 @@ defmodule Rsolv.MixProject do
       {:mdex, "~> 0.7"},
       {:yaml_elixir, "~> 2.9"},
       {:mox, "~> 1.0", only: :test},
-      {:floki, ">= 0.30.0", only: :test}
+      # {:bypass, "~> 2.0", only: :test}, # TODO: Fix ranch version conflict
+      {:floki, ">= 0.30.0", only: :test},
+      {:oban, "~> 2.17"},
+      {:number, "~> 1.0"}
     ]
   end
 
