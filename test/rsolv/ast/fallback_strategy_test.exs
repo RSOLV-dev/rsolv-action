@@ -5,8 +5,6 @@ defmodule Rsolv.AST.FallbackStrategyTest do
 
   setup do
     # Ensure application is started
-    Application.ensure_all_started(:rsolv)
-    
     # Create test session
     {:ok, session} = SessionManager.create_session("test-customer")
     

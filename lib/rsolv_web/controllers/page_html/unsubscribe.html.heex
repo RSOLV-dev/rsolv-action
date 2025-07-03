@@ -1,0 +1,42 @@
+<div class="min-h-screen bg-gray-50 py-12">
+  <div class="mx-auto max-w-md px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-lg shadow px-6 py-8">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">Unsubscribe from RSOLV</h2>
+      
+      <p class="text-gray-600 mb-6">
+        We're sorry to see you go. Enter your email address below to unsubscribe from all RSOLV communications.
+      </p>
+      
+      <form action="/unsubscribe" method="post">
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+        
+        <div class="mb-4">
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+            Email Address
+          </label>
+          <input
+            type="email"
+            name="email"
+            id="email"
+            value={assigns[:email] || ""}
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="your@email.com"
+          />
+        </div>
+        
+        <button
+          type="submit"
+          class="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+        >
+          Unsubscribe
+        </button>
+      </form>
+      
+      <p class="mt-6 text-sm text-gray-500 text-center">
+        Changed your mind? 
+        <a href="/" class="text-indigo-600 hover:text-indigo-500">Return to homepage</a>
+      </p>
+    </div>
+  </div>
+</div>

@@ -19,14 +19,14 @@ defmodule Rsolv.Application do
       Rsolv.Repo,
       # Start the PubSub system
       {Phoenix.PubSub, name: Rsolv.PubSub},
-      # Start FunWithFlags supervisor
-      FunWithFlags.Supervisor,
       # Start Cachex
       {Cachex, name: :rsolv_cache},
       # Start the Rate Limiter
       Rsolv.RateLimiter,
       # Start the Notifications supervisor
       Rsolv.Notifications.Supervisor,
+      # Start the Analytics service
+      Rsolv.Analytics,
       # Start the Pattern supervisor for security patterns
       Rsolv.Security.PatternSupervisor,
       # Start the AST Analysis services
@@ -41,6 +41,15 @@ defmodule Rsolv.Application do
       # Start a worker by calling: RSOLV.Worker.start_link(arg)
       # {RSOLV.Worker, arg}
     ]
+    
+    # Add FunWithFlags only if not already started (handles test environment)
+    base_children = if Process.whereis(FunWithFlags.Supervisor) do
+      base_children
+    else
+      # Insert FunWithFlags after PubSub
+      {before_pubsub, [pubsub | after_pubsub]} = Enum.split_while(base_children, &(&1 != {Phoenix.PubSub, name: Rsolv.PubSub}))
+      before_pubsub ++ [pubsub, FunWithFlags.Supervisor] ++ after_pubsub
+    end
     
     # Add cluster supervisor if clustering is configured
     cluster_children = 

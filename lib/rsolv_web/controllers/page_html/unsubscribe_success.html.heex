@@ -1,0 +1,29 @@
+<div class="min-h-screen bg-gray-50 py-12">
+  <div class="mx-auto max-w-md px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-lg shadow px-6 py-8 text-center">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 mb-4">
+        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+      </div>
+      
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Unsubscribed Successfully</h2>
+      
+      <p class="text-gray-600 mb-6">
+        <%= if assigns[:email] do %>
+          <strong><%= @email %></strong> has been successfully unsubscribed from all RSOLV communications.
+        <% else %>
+          You have been successfully unsubscribed from all RSOLV communications.
+        <% end %>
+      </p>
+      
+      <p class="text-sm text-gray-500 mb-6">
+        You will no longer receive emails from us. If this was a mistake, you can always re-subscribe from our homepage.
+      </p>
+      
+      <a href="/" class="inline-block bg-indigo-600 text-white py-2 px-6 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+        Return to Homepage
+      </a>
+    </div>
+  </div>
+</div>

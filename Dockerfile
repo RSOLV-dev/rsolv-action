@@ -74,14 +74,19 @@ RUN mix deps.compile
 # Builder stage for production
 FROM prod-deps AS builder
 
+# Install Node.js for asset compilation
+RUN apk add --no-cache nodejs npm
+
 # Copy source code
 COPY lib lib
 COPY priv priv
 COPY rel rel
 COPY assets assets
+COPY package.json package-lock.json tailwind.config.js ./
 
-# Note: Parser dependencies are installed in the production stage
-# We don't need to install them here in the builder stage
+# Install npm dependencies and build CSS
+RUN npm install
+RUN npm run deploy
 
 # Use parallel compilation
 ENV ERL_FLAGS="+JPperf true"

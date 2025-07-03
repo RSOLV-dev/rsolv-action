@@ -46,8 +46,14 @@ defmodule Rsolv.Customers do
       %ApiKey{customer_id: customer_id} ->
         get_customer!(customer_id)
       nil ->
-        # Fall back to checking customers table (legacy)
-        Repo.get_by(Customer, api_key: api_key, active: true)
+        # Check customers table
+        case Repo.get_by(Customer, api_key: api_key, active: true) do
+          nil ->
+            # Fall back to LegacyAccounts for test and demo keys
+            Rsolv.LegacyAccounts.get_customer_by_api_key(api_key)
+          customer ->
+            customer
+        end
     end
   end
 

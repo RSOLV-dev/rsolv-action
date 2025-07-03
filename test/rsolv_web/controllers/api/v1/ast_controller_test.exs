@@ -6,8 +6,6 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
   
   setup do
     # Ensure the application is started
-    Application.ensure_all_started(:rsolv)
-    
     # Clear rate limit data for test customer
     if :ets.whereis(:rsolv_rate_limiter) != :undefined do
       :ets.delete_all_objects(:rsolv_rate_limiter)

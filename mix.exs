@@ -55,7 +55,8 @@ defmodule Rsolv.MixProject do
       {:fun_with_flags_ui, "~> 1.0"},
       {:mdex, "~> 0.7"},
       {:yaml_elixir, "~> 2.9"},
-      {:mox, "~> 1.0", only: :test}
+      {:mox, "~> 1.0", only: :test},
+      {:floki, ">= 0.30.0", only: :test}
     ]
   end
 

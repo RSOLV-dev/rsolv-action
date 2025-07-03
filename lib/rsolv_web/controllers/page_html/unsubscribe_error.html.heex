@@ -1,0 +1,31 @@
+<div class="min-h-screen bg-gray-50 py-12">
+  <div class="mx-auto max-w-md px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-lg shadow px-6 py-8 text-center">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
+        <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </div>
+      
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Unsubscribe Failed</h2>
+      
+      <p class="text-gray-600 mb-6">
+        <%= if assigns[:email] do %>
+          We couldn't unsubscribe <strong><%= @email %></strong>. Please check that the email address is correct.
+        <% else %>
+          Please provide a valid email address to unsubscribe.
+        <% end %>
+      </p>
+      
+      <div class="space-y-3">
+        <a href="/unsubscribe" class="block w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+          Try Again
+        </a>
+        
+        <a href="/" class="block w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+          Return to Homepage
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

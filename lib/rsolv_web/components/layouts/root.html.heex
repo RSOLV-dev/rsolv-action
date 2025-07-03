@@ -8,6 +8,7 @@
     <.live_title>
       <%= assigns[:page_title] || "RSOLV" %>
     </.live_title>
+    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
   </head>
   <body>
     <%= @inner_content %>

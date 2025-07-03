@@ -9,12 +9,10 @@ defmodule Rsolv.AST.ProductionJavaScriptParserTest do
     setup do
       # Ensure SessionManager is available
       unless Process.whereis(SessionManager) do
-        Application.ensure_all_started(:rsolv)
       end
       
       # Ensure ParserRegistry is available
       unless Process.whereis(ParserRegistry) do
-        Application.ensure_all_started(:rsolv)
       end
       
       # Create test customer and session
@@ -245,12 +243,10 @@ defmodule Rsolv.AST.ProductionJavaScriptParserTest do
     setup do
       # Ensure SessionManager is available
       unless Process.whereis(SessionManager) do
-        Application.ensure_all_started(:rsolv)
       end
       
       # Ensure ParserRegistry is available
       unless Process.whereis(ParserRegistry) do
-        Application.ensure_all_started(:rsolv)
       end
       
       # Create test customer and session

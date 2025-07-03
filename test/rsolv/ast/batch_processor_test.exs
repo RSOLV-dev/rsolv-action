@@ -5,7 +5,6 @@ defmodule Rsolv.AST.BatchProcessorTest do
   
   setup do
     # Ensure the application is started
-    Application.ensure_all_started(:rsolv)
     :ok
   end
   

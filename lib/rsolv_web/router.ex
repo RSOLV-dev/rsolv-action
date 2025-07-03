@@ -51,6 +51,13 @@ defmodule RsolvWeb.Router do
     
     # Dashboard routes
     get "/dashboard", RsolvWeb.DashboardController, :index
+    
+    # Page routes
+    get "/thank-you", RsolvWeb.PageController, :thank_you
+    get "/docs/privacy", RsolvWeb.PageController, :privacy
+    get "/docs/terms", RsolvWeb.PageController, :terms
+    get "/unsubscribe", RsolvWeb.PageController, :unsubscribe
+    post "/unsubscribe", RsolvWeb.PageController, :process_unsubscribe
   end
 
   # Webhook endpoints (separate from API versioning)

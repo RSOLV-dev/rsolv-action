@@ -15,8 +15,6 @@ defmodule Rsolv.AST.TestCase do
   
   setup do
     # Ensure the application is started for tests
-    Application.ensure_all_started(:rsolv)
-    
     # Create a test session
     {:ok, session} = Rsolv.AST.SessionManager.create_session("test-customer")
     

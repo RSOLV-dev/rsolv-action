@@ -87,17 +87,17 @@ defmodule RsolvWeb.API.FeedbackControllerTest do
       
       conn = get(conn, ~p"/api/v1/feedback/#{entry.id}")
       
+      response = json_response(conn, 200)
+      
       assert %{
         "success" => true,
         "data" => %{
-          "id" => ^entry.id,
+          "id" => id,
           "email" => "test@example.com",
           "message" => "Test feedback"
         }
-      } = json_response(conn, 200)
+      } = response
       
-      # Pattern match to extract the id
-      %{"data" => %{"id" => id}} = json_response(conn, 200)
       assert id == entry.id
     end
     
