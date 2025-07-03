@@ -1,8 +1,8 @@
-defmodule RsolvLanding.Integration.SimpleEmailTest do
+defmodule Rsolv.Integration.SimpleEmailTest do
   use Rsolv.DataCase, async: false
   use Bamboo.Test
   
-  alias RsolvLanding.EmailService
+  alias Rsolv.EmailService
   
   setup do
     # Clear any previous test emails

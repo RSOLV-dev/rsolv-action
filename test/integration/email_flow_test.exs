@@ -1,8 +1,8 @@
-defmodule RsolvLanding.Integration.EmailFlowTest do
+defmodule Rsolv.Integration.EmailFlowTest do
   use Rsolv.DataCase, async: false
   use Bamboo.Test
   
-  alias RsolvLanding.EmailService
+  alias Rsolv.EmailService
   
   describe "email delivery flow" do
     test "welcome email is delivered through the service" do
@@ -61,7 +61,7 @@ defmodule RsolvLanding.Integration.EmailFlowTest do
     
     test "unsubscribed users don't receive emails" do
       # First, mark a user as unsubscribed
-      RsolvLanding.EmailOptOutService.record_unsubscribe("unsubscribed@example.com")
+      Rsolv.EmailOptOutService.record_unsubscribe("unsubscribed@example.com")
       
       # Try to send them an email
       result = EmailService.send_welcome_email("unsubscribed@example.com")

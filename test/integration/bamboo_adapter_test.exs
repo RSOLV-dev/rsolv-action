@@ -1,8 +1,8 @@
-defmodule RsolvLanding.Integration.BambooAdapterTest do
+defmodule Rsolv.Integration.BambooAdapterTest do
   use Rsolv.DataCase, async: false
   use Bamboo.Test
   
-  alias RsolvLanding.{Mailer, Emails}
+  alias Rsolv.{Mailer, Emails}
   
   setup do
     # Clear any previous test emails
@@ -28,7 +28,7 @@ defmodule RsolvLanding.Integration.BambooAdapterTest do
   end
   
   test "verify test environment is using TestAdapter" do
-    config = Application.get_env(:rsolv_landing, RsolvLanding.Mailer)
+    config = Application.get_env(:rsolv_landing, Rsolv.Mailer)
     IO.inspect(config, label: "Mailer config")
     
     assert config[:adapter] == Bamboo.TestAdapter

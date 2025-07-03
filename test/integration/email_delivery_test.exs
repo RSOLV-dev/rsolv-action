@@ -1,8 +1,8 @@
-defmodule RsolvLanding.Integration.EmailDeliveryTest do
+defmodule Rsolv.Integration.EmailDeliveryTest do
   use Rsolv.DataCase, async: false
   use Bamboo.Test
   
-  alias RsolvLanding.EmailService
+  alias Rsolv.EmailService
   
   setup do
     # Clear any previous test emails
@@ -10,7 +10,7 @@ defmodule RsolvLanding.Integration.EmailDeliveryTest do
     
     # Clear unsubscribe cache to ensure emails are sent
     try do
-      :persistent_term.erase({RsolvLanding.EmailOptOutService, :unsubscribed_emails})
+      :persistent_term.erase({Rsolv.EmailOptOutService, :unsubscribed_emails})
     rescue
       _ -> :ok
     end
@@ -69,7 +69,7 @@ defmodule RsolvLanding.Integration.EmailDeliveryTest do
     
     test "respects unsubscribe preferences" do
       # First mark an email as unsubscribed
-      RsolvLanding.EmailOptOutService.record_unsubscribe("opted-out@example.com")
+      Rsolv.EmailOptOutService.record_unsubscribe("opted-out@example.com")
       
       # Try to send to unsubscribed email
       result = EmailService.send_welcome_email("opted-out@example.com")

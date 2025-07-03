@@ -1,7 +1,7 @@
-defmodule RsolvLanding.Integration.DatabaseOperationsTest do
+defmodule Rsolv.Integration.DatabaseOperationsTest do
   use Rsolv.DataCase
   
-  alias RsolvLanding.{Analytics, EarlyAccess, EmailManagement, Feedback}
+  alias Rsolv.{Analytics, EarlyAccess, EmailManagement, Feedback}
   
   describe "Analytics operations" do
     test "tracks events and retrieves them" do
