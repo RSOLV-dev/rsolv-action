@@ -46,7 +46,8 @@ defmodule Rsolv.MixProject do
       {:tesla, "~> 1.4"},
       {:hackney, "~> 1.18"},
       {:libcluster, "~> 3.3"},
-      {:prom_ex, "~> 1.9"}
+      {:prom_ex, "~> 1.9"},
+      {:bcrypt_elixir, "~> 3.0"}
     ]
   end
 

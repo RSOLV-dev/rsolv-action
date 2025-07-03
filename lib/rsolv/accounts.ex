@@ -1,250 +1,359 @@
 defmodule Rsolv.Accounts do
   @moduledoc """
-  The Accounts context for managing customers and API keys.
-  Updated: #{DateTime.utc_now()}
+  The Accounts context.
   """
-  
-  # Storage for test customer updates
-  @table_key {__MODULE__, :test_customers}
-  
+
+  import Ecto.Query, warn: false
+  alias Rsolv.Repo
+
+  alias Rsolv.Accounts.{User, UserToken}
+
+  ## Database getters
+
   @doc """
-  Gets a customer by their API key.
-  
-  Returns nil if no customer found.
+  Gets a user by email.
+
+  ## Examples
+
+      iex> get_user_by_email("foo@example.com")
+      %User{}
+
+      iex> get_user_by_email("unknown@example.com")
+      nil
+
   """
-  def get_customer_by_api_key(api_key) when is_binary(api_key) do
-    # First check for test customer updates
-    test_customers = :persistent_term.get(@table_key, %{})
-    case Map.get(test_customers, api_key) do
-      nil -> 
-        # Check environment variables for valid API keys
-        # This prevents hardcoding keys in source control
-        cond do
-      # Internal API key from environment
-      api_key == System.get_env("INTERNAL_API_KEY") ->
-        %{
-          id: "internal",
-          name: "Internal Testing",
-          api_key: api_key,
-          monthly_limit: 1000,
-          current_usage: 0,
-          active: true,
-          trial: true,
-          created_at: DateTime.utc_now()
-        }
-      
-      # Demo API key from environment
-      api_key == System.get_env("DEMO_API_KEY") ->
-        %{
-          id: "demo",
-          name: "Demo Account",
-          api_key: api_key,
-          monthly_limit: 10,
-          current_usage: 0,
-          active: true,
-          trial: true,
-          created_at: DateTime.utc_now()
-        }
-      
-      # Master API key from environment
-      api_key == System.get_env("MASTER_API_KEY") ->
-        %{
-          id: "master",
-          name: "Master Admin",
-          api_key: api_key,
-          monthly_limit: 10000,
-          current_usage: 0,
-          active: true,
-          trial: false,
-          created_at: DateTime.utc_now()
-        }
-      
-      # Dogfood API key from environment
-      api_key == System.get_env("DOGFOOD_API_KEY") ->
-        %{
-          id: "dogfood",
-          name: "RSOLV Dogfooding",
-          api_key: api_key,
-          monthly_limit: 100,
-          current_usage: 0,
-          active: true,
-          trial: false,
-          created_at: DateTime.utc_now()
-        }
-        
-      # Test API key for main test customer (has enterprise/AI access)
-      api_key == "rsolv_test_abc123" ->
-        %{
-          id: "test_customer_1",
-          name: "Test Customer",
-          email: "test@example.com",
-          api_key: api_key,
-          tier: "enterprise",
-          flags: ["ai_access", "enterprise_access"],
-          monthly_limit: 100,
-          current_usage: 15,
-          active: true,
-          trial: true,
-          created_at: DateTime.utc_now()
-        }
-      
-      # Test API key for regular customers (no enterprise/AI access)
-      api_key == "rsolv_test_regular_def456" ->
-        %{
-          id: "test_customer_regular",
-          name: "Test Regular Customer",
-          email: "regular@example.com",
-          api_key: api_key,
-          tier: "standard",
-          flags: [],
-          monthly_limit: 100,
-          current_usage: 15,
-          active: true,
-          trial: true,
-          created_at: DateTime.utc_now()
-        }
-      
-      # Test API key for enterprise customers
-      api_key == "rsolv_test_enterprise_xyz789" ->
-        %{
-          id: "test_enterprise_customer",
-          name: "Test Enterprise Customer",
-          email: "enterprise@example.com",
-          api_key: api_key,
-          tier: "enterprise",
-          flags: ["ai_access", "enterprise_access"],
-          monthly_limit: 1000,
-          current_usage: 5,
-          active: true,
-          trial: false,
-          created_at: DateTime.utc_now()
-        }
-      
-      # Full access test API key with no quota limits
-      api_key == "rsolv_test_full_access_no_quota_2025" ->
-        %{
-          id: "test_full_access",
-          name: "Test Full Access",
-          email: "test-full-access@rsolv.dev",
-          api_key: api_key,
-          tier: "enterprise",
-          flags: ["ai_access", "enterprise_access", "quota_exempt"],
-          monthly_limit: 999999,  # Effectively unlimited
-          current_usage: 0,
-          active: true,
-          trial: false,
-          created_at: DateTime.utc_now()
-        }
-      
-          # Check database for customer-specific keys
-          true ->
-            require Logger
-            Logger.info("[Accounts] Checking database for API key: #{api_key}")
-            
-            import Ecto.Query
-            
-            query = from c in "customers",
-                    where: c.api_key == ^api_key and c.active == true,
-                    select: %{
-                      id: c.id,
-                      name: c.name,
-                      email: c.email,
-                      api_key: c.api_key,
-                      monthly_limit: c.monthly_limit,
-                      current_usage: c.current_usage,
-                      active: c.active,
-                      trial: c.subscription_status == "trial",
-                      created_at: c.inserted_at
-                    }
-            
-            case Rsolv.Repo.one(query) do
-              nil -> 
-                Logger.info("[Accounts] No customer found in database for API key")
-                nil
-              customer -> 
-                Logger.info("[Accounts] Found customer in database: #{customer.name}")
-                customer
-            end
-        end
-      
-      updated_customer ->
-        updated_customer
+  def get_user_by_email(email) when is_binary(email) do
+    Repo.get_by(User, email: email)
+  end
+
+  @doc """
+  Gets a user by email and password.
+
+  ## Examples
+
+      iex> get_user_by_email_and_password("foo@example.com", "correct_password")
+      %User{}
+
+      iex> get_user_by_email_and_password("foo@example.com", "invalid_password")
+      nil
+
+  """
+  def get_user_by_email_and_password(email, password)
+      when is_binary(email) and is_binary(password) do
+    user = Repo.get_by(User, email: email)
+    if User.valid_password?(user, password), do: user
+  end
+
+  @doc """
+  Gets a single user.
+
+  Raises `Ecto.NoResultsError` if the User does not exist.
+
+  ## Examples
+
+      iex> get_user!(123)
+      %User{}
+
+      iex> get_user!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_user!(id), do: Repo.get!(User, id)
+
+  ## User registration
+
+  @doc """
+  Registers a user.
+
+  ## Examples
+
+      iex> register_user(%{field: value})
+      {:ok, %User{}}
+
+      iex> register_user(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def register_user(attrs) do
+    %User{}
+    |> User.registration_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking user changes.
+
+  ## Examples
+
+      iex> change_user_registration(user)
+      %Ecto.Changeset{data: %User{}}
+
+  """
+  def change_user_registration(%User{} = user, attrs \\ %{}) do
+    User.registration_changeset(user, attrs, hash_password: false, validate_email: false)
+  end
+
+  ## Settings
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for changing the user email.
+
+  ## Examples
+
+      iex> change_user_email(user)
+      %Ecto.Changeset{data: %User{}}
+
+  """
+  def change_user_email(user, attrs \\ %{}) do
+    User.email_changeset(user, attrs, validate_email: false)
+  end
+
+  @doc """
+  Emulates that the email will change without actually changing
+  it in the database.
+
+  ## Examples
+
+      iex> apply_user_email(user, "valid password", %{email: ...})
+      {:ok, %User{}}
+
+      iex> apply_user_email(user, "invalid password", %{email: ...})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def apply_user_email(user, password, attrs) do
+    user
+    |> User.email_changeset(attrs)
+    |> User.validate_current_password(password)
+    |> Ecto.Changeset.apply_action(:update)
+  end
+
+  @doc """
+  Updates the user email using the given token.
+
+  If the token matches, the user email is updated and the token is deleted.
+  The confirmed_at date is also updated to the current time.
+  """
+  def update_user_email(user, token) do
+    context = "change:#{user.email}"
+
+    with {:ok, query} <- UserToken.verify_change_email_token_query(token, context),
+         %UserToken{sent_to: email} <- Repo.one(query),
+         {:ok, _} <- Repo.transaction(user_email_multi(user, email, context)) do
+      :ok
+    else
+      _ -> :error
     end
   end
-  
-  def get_customer_by_api_key(_), do: nil
-  
-  @doc """
-  Updates a customer's attributes.
-  """
-  def update_customer(customer, attrs) do
-    # Mock implementation - in production this would update the database
-    updated_customer = Map.merge(customer, attrs)
-    
-    # Store the updated customer for subsequent lookups
-    customers = :persistent_term.get(@table_key, %{})
-    new_customers = Map.put(customers, customer.api_key, updated_customer)
-    :persistent_term.put(@table_key, new_customers)
-    
-    {:ok, updated_customer}
+
+  defp user_email_multi(user, email, context) do
+    changeset =
+      user
+      |> User.email_changeset(%{email: email})
+      |> User.confirm_changeset()
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
+    |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, [context]))
   end
-  
-  @doc """
-  Gets a customer by ID.
+
+  @doc ~S"""
+  Delivers the update email instructions to the given user.
+
+  ## Examples
+
+      iex> deliver_user_update_email_instructions(user, current_email, &url(~p"/users/settings/confirm_email/#{&1}"))
+      {:ok, %{to: ..., body: ...}}
+
   """
-  def get_customer!(customer_id) do
-    # First check if we have an updated version stored
-    test_customers = :persistent_term.get(@table_key, %{})
-    updated_customer = Enum.find_value(test_customers, fn {_api_key, customer} ->
-      if customer.id == customer_id, do: customer, else: nil
-    end)
-    
-    case updated_customer do
-      nil ->
-        # Return default mock customer
-        %{
-          id: customer_id,
-          name: "Test Customer",
-          email: "test@example.com",
-          api_key: "rsolv_test_abc123",
-          monthly_limit: 100,
-          current_usage: 15,
-          active: true,
-          trial: true,
-          created_at: DateTime.utc_now()
-        }
-      customer -> customer
+  def deliver_user_update_email_instructions(%User{} = user, current_email, update_email_url_fun)
+      when is_function(update_email_url_fun, 1) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
+
+    Repo.insert!(user_token)
+    # UserNotifier.deliver_update_email_instructions(user, update_email_url_fun.(encoded_token))
+    # TODO: Implement email delivery
+    {:ok, encoded_token}
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for changing the user password.
+
+  ## Examples
+
+      iex> change_user_password(user)
+      %Ecto.Changeset{data: %User{}}
+
+  """
+  def change_user_password(user, attrs \\ %{}) do
+    User.password_changeset(user, attrs, hash_password: false)
+  end
+
+  @doc """
+  Updates the user password.
+
+  ## Examples
+
+      iex> update_user_password(user, "valid password", %{password: ...})
+      {:ok, %User{}}
+
+      iex> update_user_password(user, "invalid password", %{password: ...})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_user_password(user, password, attrs) do
+    changeset =
+      user
+      |> User.password_changeset(attrs)
+      |> User.validate_current_password(password)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
+    |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, :all))
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
     end
   end
-  
+
+  ## Session
+
   @doc """
-  Records usage for a customer.
+  Generates a session token.
   """
-  def record_usage(usage_data) do
-    # Mock implementation - in production this would store in database
-    require Logger
-    Logger.info("Recording usage: #{inspect(usage_data)}")
-    {:ok, usage_data}
+  def generate_user_session_token(user) do
+    {token, user_token} = UserToken.build_session_token(user)
+    Repo.insert!(user_token)
+    token
   end
-  
+
   @doc """
-  Gets customer usage summary.
+  Gets the user with the given signed token.
   """
-  def get_customer_usage(customer_id) do
-    # Mock implementation
-    %{
-      customer_id: customer_id,
-      total_tokens: 5000,
-      total_requests: 3,
-      current_month_usage: 2
-    }
+  def get_user_by_session_token(token) do
+    {:ok, query} = UserToken.verify_session_token_query(token)
+    Repo.one(query)
   end
-  
+
   @doc """
-  Reset test customer storage (for testing).
+  Deletes the signed token with the given context.
   """
-  def reset_test_customers() do
-    :persistent_term.put(@table_key, %{})
+  def delete_user_session_token(token) do
+    Repo.delete_all(UserToken.token_and_context_query(token, "session"))
     :ok
+  end
+
+  ## Confirmation
+
+  @doc ~S"""
+  Delivers the confirmation email instructions to the given user.
+
+  ## Examples
+
+      iex> deliver_user_confirmation_instructions(user, &url(~p"/users/confirm/#{&1}"))
+      {:ok, %{to: ..., body: ...}}
+
+      iex> deliver_user_confirmation_instructions(confirmed_user, &url(~p"/users/confirm/#{&1}"))
+      {:error, :already_confirmed}
+
+  """
+  def deliver_user_confirmation_instructions(%User{} = user, confirmation_url_fun)
+      when is_function(confirmation_url_fun, 1) do
+    if user.confirmed_at do
+      {:error, :already_confirmed}
+    else
+      {encoded_token, user_token} = UserToken.build_email_token(user, "confirm")
+      Repo.insert!(user_token)
+      # UserNotifier.deliver_confirmation_instructions(user, confirmation_url_fun.(encoded_token))
+      # TODO: Implement email delivery
+      {:ok, encoded_token}
+    end
+  end
+
+  @doc """
+  Confirms a user by the given token.
+
+  If the token matches, the user account is marked as confirmed
+  and the token is deleted.
+  """
+  def confirm_user(token) do
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "confirm"),
+         %User{} = user <- Repo.one(query),
+         {:ok, %{user: user}} <- Repo.transaction(confirm_user_multi(user)) do
+      {:ok, user}
+    else
+      _ -> :error
+    end
+  end
+
+  defp confirm_user_multi(user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, User.confirm_changeset(user))
+    |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, ["confirm"]))
+  end
+
+  ## Reset password
+
+  @doc ~S"""
+  Delivers the reset password email to the given user.
+
+  ## Examples
+
+      iex> deliver_user_reset_password_instructions(user, &url(~p"/users/reset_password/#{&1}"))
+      {:ok, %{to: ..., body: ...}}
+
+  """
+  def deliver_user_reset_password_instructions(%User{} = user, reset_password_url_fun)
+      when is_function(reset_password_url_fun, 1) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
+    Repo.insert!(user_token)
+    # UserNotifier.deliver_reset_password_instructions(user, reset_password_url_fun.(encoded_token))
+    # TODO: Implement email delivery
+    {:ok, encoded_token}
+  end
+
+  @doc """
+  Gets the user by reset password token.
+
+  ## Examples
+
+      iex> get_user_by_reset_password_token("validtoken")
+      %User{}
+
+      iex> get_user_by_reset_password_token("invalidtoken")
+      nil
+
+  """
+  def get_user_by_reset_password_token(token) do
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "reset_password"),
+         %User{} = user <- Repo.one(query) do
+      user
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Resets the user password.
+
+  ## Examples
+
+      iex> reset_user_password(user, %{password: "new long password", password_confirmation: "new long password"})
+      {:ok, %User{}}
+
+      iex> reset_user_password(user, %{password: "valid", password_confirmation: "not the same"})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def reset_user_password(user, attrs) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, User.password_changeset(user, attrs))
+    |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, :all))
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
+    end
   end
 end

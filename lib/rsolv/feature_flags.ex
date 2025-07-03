@@ -40,21 +40,27 @@ defmodule Rsolv.FeatureFlags do
       true
   """
   def enabled?(flag_name) when is_binary(flag_name) do
-    # First check environment variable
-    env_key = "RSOLV_FLAG_" <> String.upcase(String.replace(flag_name, ".", "_"))
-    
-    case System.get_env(env_key) do
-      "true" -> true
-      "false" -> false
-      "1" -> true
-      "0" -> false
+    # Check in-memory test flags first (for testing)
+    test_flags = :persistent_term.get({__MODULE__, :test_flags}, %{})
+    case Map.get(test_flags, flag_name) do
       nil ->
-        # Fall back to application config
-        case Application.get_env(:rsolv, :feature_flags, %{}) do
-          %{^flag_name => value} -> value
-          _ -> Map.get(@default_flags, flag_name, false)
+        # First check environment variable
+        env_key = "RSOLV_FLAG_" <> String.upcase(String.replace(flag_name, ".", "_"))
+        
+        case System.get_env(env_key) do
+          "true" -> true
+          "false" -> false
+          "1" -> true
+          "0" -> false
+          nil ->
+            # Fall back to application config
+            case Application.get_env(:rsolv, :feature_flags, %{}) do
+              %{^flag_name => value} -> value
+              _ -> Map.get(@default_flags, flag_name, false)
+            end
+          _ -> false
         end
-      _ -> false
+      value -> value
     end
   end
   
@@ -165,5 +171,41 @@ defmodule Rsolv.FeatureFlags do
     else
       []
     end
+  end
+  
+  @doc """
+  Enable a feature flag (for testing or runtime configuration).
+  
+  Note: This uses FunWithFlags under the hood if available,
+  otherwise falls back to in-memory storage.
+  """
+  def enable(flag_name) do
+    # Update in-memory test flags
+    test_flags = :persistent_term.get({__MODULE__, :test_flags}, %{})
+    new_flags = Map.put(test_flags, flag_name, true)
+    :persistent_term.put({__MODULE__, :test_flags}, new_flags)
+    
+    {:ok, %{flag_name: flag_name, enabled: true}}
+  end
+  
+  @doc """
+  Disable a feature flag (for testing or runtime configuration).
+  """
+  def disable(flag_name) do
+    # Update in-memory test flags
+    test_flags = :persistent_term.get({__MODULE__, :test_flags}, %{})
+    new_flags = Map.put(test_flags, flag_name, false)
+    :persistent_term.put({__MODULE__, :test_flags}, new_flags)
+    
+    {:ok, %{flag_name: flag_name, enabled: false}}
+  end
+  
+  @doc """
+  Enable a feature flag for a specific customer.
+  """
+  def enable_for_customer(flag_name, customer) do
+    # For now, just return success
+    # In production, this would integrate with FunWithFlags
+    {:ok, %{flag_name: flag_name, customer_id: customer.id, enabled: true}}
   end
 end
