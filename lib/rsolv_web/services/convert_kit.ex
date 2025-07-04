@@ -211,7 +211,7 @@ defmodule RsolvWeb.Services.ConvertKit do
 
     if is_nil(api_key) do
       Logger.warning("ConvertKit API key not configured for tagging")
-      {:ok, %{status: "mocked_success", message: "Development mode"}}
+      {:ok, %{status_code: 200, message: "Development mode"}}
     else
       # Attempt direct tagging first
       api_base_url = config[:api_base_url]

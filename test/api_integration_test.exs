@@ -71,7 +71,12 @@ defmodule Rsolv.APIIntegrationTest do
       """
       
       {:ok, result} = Rsolv.Repo.query(query)
-      versions = Enum.map(result.rows, fn [v] -> String.to_integer(v) end)
+      versions = Enum.map(result.rows, fn [v] -> 
+        case v do
+          v when is_integer(v) -> v
+          v when is_binary(v) -> String.to_integer(v)
+        end
+      end)
       
       # Verify we have migrations
       assert length(versions) > 0

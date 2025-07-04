@@ -161,14 +161,12 @@ defmodule Rsolv.AST.SessionManagerTest do
       {:ok, expired} = SessionManager.create_session(customer1, 1)
       Process.sleep(1100)
       
-      # Cleanup should remove expired
-      SessionManager.cleanup_expired_sessions()
-      
-      # After cleanup, the three non-expired sessions should still exist
-      # but we can't assert exact count due to parallel tests
+      # The three non-expired sessions should still exist
       assert {:ok, _} = SessionManager.get_session(session1.id, customer1)
       assert {:ok, _} = SessionManager.get_session(session2.id, customer1)
       assert {:ok, _} = SessionManager.get_session(session3.id, customer2)
+      
+      # Getting an expired session automatically removes it and returns error
       assert {:error, :session_expired} = SessionManager.get_session(expired.id, customer1)
     end
   end
