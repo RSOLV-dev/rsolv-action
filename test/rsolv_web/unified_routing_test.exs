@@ -23,6 +23,9 @@ defmodule RsolvWeb.UnifiedRoutingTest do
     end
     
     test "blog routes are accessible", %{conn: conn} do
+      # Enable blog feature flag for this test
+      :ok = FunWithFlags.enable(:blog)
+      
       conn = get(conn, "/blog")
       assert html_response(conn, 200)
     end

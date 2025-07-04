@@ -41,7 +41,7 @@ defmodule RsolvWeb.PatternMetadataControllerTest do
 
   describe "GET /api/v1/patterns with include_metadata query param" do
     test "excludes metadata by default", %{conn: conn} do
-      conn = get(conn, "/api/v1/patterns/javascript")
+      conn = get(conn, "/api/v1/patterns/by-language/javascript")
       json = json_response(conn, 200)
       
       # Should have patterns but no metadata
@@ -51,7 +51,7 @@ defmodule RsolvWeb.PatternMetadataControllerTest do
     end
 
     test "includes metadata when requested", %{conn: conn} do
-      conn = get(conn, "/api/v1/patterns/javascript?include_metadata=true")
+      conn = get(conn, "/api/v1/patterns/by-language/javascript?include_metadata=true")
       json = json_response(conn, 200)
       
       # Should have patterns with metadata
