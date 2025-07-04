@@ -33,7 +33,7 @@ defmodule RsolvWeb.DashboardControllerTest do
       # However, it's being blocked by the feature flag check
       # For now, let's just verify it gets blocked with the right redirect
       assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "not available"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "unavailable"
       
       # Restore environment
       Application.put_env(:rsolv, :env, original_env)

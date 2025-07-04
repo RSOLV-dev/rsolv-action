@@ -4,27 +4,26 @@ defmodule Rsolv.AST.AuditIntegrationTest do
   alias Rsolv.AST.{AuditLogger, EnhancedSandbox}
   
   setup do
-    # Ensure AuditLogger is started fresh for each test
+    # Check if AuditLogger is already started (by application supervision tree)
     case GenServer.whereis(AuditLogger) do
       nil -> 
-        {:ok, _} = AuditLogger.start_link()
-      pid when is_pid(pid) ->
-        # Stop and restart to ensure clean state
-        GenServer.stop(pid)
-        Process.sleep(10)
-        {:ok, _} = AuditLogger.start_link()
+        # If not started, use start_supervised! to ensure cleanup after test
+        start_supervised!(AuditLogger)
+      _pid ->
+        # If already started by application, just clear the data
+        :ok
     end
     
-    # Give GenServer time to initialize
-    Process.sleep(10)
-    
-    # Clear any existing tables
+    # Clear any existing tables for clean test state
     for table <- [:audit_log_buffer, :audit_log_index, :security_events] do
       case :ets.whereis(table) do
         :undefined -> :ok
         _ -> :ets.delete_all_objects(table)
       end
     end
+    
+    # Give processes time to stabilize
+    Process.sleep(10)
     
     {:ok, %{}}
   end

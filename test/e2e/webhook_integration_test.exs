@@ -176,7 +176,7 @@ defmodule RsolvWeb.WebhookIntegrationTest do
     |> put_req_header("content-type", "application/json")
     |> assign(:test_mode, true)
     |> assign(:raw_body, raw_body)  # Manually set raw_body for tests
-    |> post("/webhook/github", raw_body)  # Send raw JSON string, not map
+    |> post("/webhooks/github", raw_body)  # Send raw JSON string, not map
   end
   
   defp compute_signature(payload) do

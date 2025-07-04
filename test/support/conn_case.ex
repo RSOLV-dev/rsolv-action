@@ -32,6 +32,9 @@ defmodule RsolvWeb.ConnCase do
   end
 
   setup tags do
+    # Ensure the application is started
+    Application.ensure_all_started(:rsolv)
+    
     # Ensure the repo is started before trying to use sandbox
     try do
       pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
