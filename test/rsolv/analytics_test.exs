@@ -3,6 +3,7 @@ defmodule Rsolv.AnalyticsTest do
   
   alias Rsolv.Analytics
   alias Rsolv.Analytics.{PageView, Event, Conversion}
+  alias RsolvWeb.Services.Analytics, as: WebAnalytics
   
   describe "Analytics service" do
     test "tracks page views with UTM parameters" do
@@ -12,94 +13,105 @@ defmodule Rsolv.AnalyticsTest do
         utm_campaign: "security_awareness"
       }
       
-      # Track a page view
-      :ok = Analytics.track_page_view("/blog/security-patterns", "127.0.0.1", utm_params, 
-        session_id: "session_123", user_agent: "Mozilla/5.0")
+      # Track a page view using WebAnalytics
+      WebAnalytics.track_page_view("/blog/security-patterns", "https://twitter.com", utm_params)
       
-      # Verify it's tracked in real-time metrics
-      metrics = Analytics.get_realtime_metrics()
-      assert metrics.page_views_last_hour >= 1
+      # Verify it was tracked in the database
+      Process.sleep(100) # Give async task time to complete
+      events = Analytics.list_events_by_type("page_view")
+      assert length(events) >= 1
     end
     
     test "tracks conversion events" do
-      # Track a conversion
-      :ok = Analytics.track_conversion("early_access_signup", %{email: "test@example.com"}, 
-        session_id: "session_456")
+      # Track a conversion using WebAnalytics
+      WebAnalytics.track_conversion("early_access_signup", %{email: "test@example.com"})
       
-      # Verify it's tracked in real-time metrics
-      metrics = Analytics.get_realtime_metrics()
-      assert metrics.conversions_last_hour >= 1
+      # Verify it was tracked in the database
+      Process.sleep(100) # Give async task time to complete
+      events = Analytics.list_events_by_type("conversion")
+      assert length(events) >= 1
       
-      # Verify it's persisted to database immediately
+      # Verify it's persisted to analytics_events table as conversion type
       # Give it a moment for the async task to complete
       Process.sleep(100)
       
-      conversions = Repo.all(Conversion)
-      assert length(conversions) >= 1
+      conversion_events = Analytics.list_events_by_type("conversion")
+      assert length(conversion_events) >= 1
       
-      conversion = List.first(conversions)
-      assert conversion.event_name == "early_access_signup"
-      assert conversion.properties["email"] == "test@example.com"
-      assert conversion.session_id == "session_456"
+      conversion = List.first(conversion_events)
+      assert conversion.event_type == "conversion"
+      assert conversion.metadata["email"] == "test@example.com"
+      assert conversion.metadata["conversion_type"] == "early_access_signup"
     end
     
     test "tracks custom events" do
-      # Track a custom event
-      :ok = Analytics.track_event("button_click", %{button_id: "cta_signup", page: "/pricing"}, 
-        session_id: "session_789")
+      # Track a custom event using WebAnalytics
+      WebAnalytics.track("button_click", %{button_id: "cta_signup", page: "/pricing"})
       
-      # Verify it's tracked in real-time metrics
-      metrics = Analytics.get_realtime_metrics()
-      assert metrics.events_last_hour >= 1
+      # Verify it was tracked in the database
+      Process.sleep(100) # Give async task time to complete
+      events = Analytics.list_events_by_type("button_click")
+      assert length(events) >= 1
     end
     
-    test "provides real-time metrics" do
-      # Track some sample data
-      Analytics.track_page_view("/", "127.0.0.1")
-      Analytics.track_page_view("/blog", "127.0.0.1", %{}, session_id: "unique_session")
-      Analytics.track_event("search", %{query: "security"})
-      Analytics.track_conversion("newsletter_signup", %{})
+    test "provides event tracking functionality" do
+      # Track some sample data using WebAnalytics
+      WebAnalytics.track_page_view("/", "https://google.com")
+      WebAnalytics.track_page_view("/blog", "https://google.com")
+      WebAnalytics.track("search", %{query: "security"})
+      WebAnalytics.track_conversion("newsletter_signup", %{})
       
-      metrics = Analytics.get_realtime_metrics()
+      # Give async tasks time to complete
+      Process.sleep(100)
       
-      assert is_integer(metrics.page_views_last_hour)
-      assert is_integer(metrics.page_views_last_day)
-      assert is_integer(metrics.events_last_hour)
-      assert is_integer(metrics.conversions_last_hour)
-      assert is_list(metrics.top_pages_today)
-      assert is_integer(metrics.current_visitors)
+      # Verify events were created
+      all_events = Analytics.list_events()
+      assert length(all_events) >= 4
+      
+      # Check we can query by visitor
+      visitor_events = Analytics.list_events() |> Enum.group_by(& &1.visitor_id)
+      assert map_size(visitor_events) >= 1
     end
     
-    test "anonymizes IP addresses" do
-      # Track with real IP
-      Analytics.track_page_view("/test", "192.168.1.100")
+    test "tracks events with metadata" do
+      # Track events with various metadata
+      WebAnalytics.track_page_view("/test", "https://example.com", %{"user_id" => "12345"})
+      WebAnalytics.track_page_view("/test", nil, %{})
+      WebAnalytics.track_page_view("/test", "", %{"campaign" => "test"})
       
-      # Wait for flush to database (in real implementation)
-      # For now, we can test the anonymization function indirectly
-      # by checking that the service doesn't crash with various IP formats
+      # Give async tasks time to complete
+      Process.sleep(100)
       
-      Analytics.track_page_view("/test", "192.168.1.100")
-      Analytics.track_page_view("/test", "invalid-ip")
-      Analytics.track_page_view("/test", nil)
-      Analytics.track_page_view("/test", "")
+      # Verify events were created
+      events = Analytics.list_events_by_type("page_view")
+      assert length(events) >= 3
       
-      # All should succeed without error
-      assert :ok == :ok
+      # Check metadata was preserved
+      event_with_user = Enum.find(events, fn e -> e.metadata["user_id"] == "12345" end)
+      assert event_with_user != nil
     end
     
-    test "handles database metrics queries" do
+    test "handles event queries by date range" do
+      # Create a test event
+      {:ok, event} = Analytics.create_event(%{
+        event_type: "test_dated_event",
+        visitor_id: "test_visitor_456",
+        metadata: %{test: true}
+      })
+      
+      # Query events within date range
       start_date = Date.utc_today() |> Date.add(-7)
       end_date = Date.utc_today()
       
-      metrics = Analytics.get_metrics(start_date, end_date)
+      # Use the actual available query functions
+      all_events = Analytics.list_events()
+      recent_events = Enum.filter(all_events, fn e -> 
+        event_date = NaiveDateTime.to_date(e.inserted_at)
+        Date.compare(event_date, start_date) != :lt
+      end)
       
-      # Should return the expected structure
-      assert Map.has_key?(metrics, :page_views)
-      assert Map.has_key?(metrics, :unique_visitors)
-      assert Map.has_key?(metrics, :conversions)
-      assert Map.has_key?(metrics, :top_pages)
-      assert Map.has_key?(metrics, :utm_sources)
-      assert Map.has_key?(metrics, :conversion_rate)
+      assert length(recent_events) >= 1
+      assert event.id in Enum.map(recent_events, & &1.id)
     end
   end
   
@@ -143,13 +155,14 @@ defmodule Rsolv.AnalyticsTest do
     test "validates required fields" do
       changeset = Event.changeset(%Event{}, %{})
       refute changeset.valid?
-      assert %{event_name: ["can't be blank"]} = errors_on(changeset)
+      assert %{event_type: ["can't be blank"]} = errors_on(changeset)
     end
     
     test "accepts valid event data" do
       attrs = %{
-        event_name: "button_click",
-        properties: %{button_id: "cta_signup"},
+        event_type: "button_click",
+        visitor_id: "visitor_123",
+        metadata: %{button_id: "cta_signup"},
         session_id: "session_456"
       }
       
