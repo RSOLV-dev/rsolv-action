@@ -31,6 +31,8 @@ defmodule Rsolv.Application do
       Rsolv.Cluster,
       # Start security services
       Rsolv.Security.PatternServer,
+      # Start rate limiting
+      Rsolv.RateLimiter,
       # Start cache services
       Rsolv.Cache.ValidationCache,
       # Start AST services

@@ -9,7 +9,7 @@ defmodule RsolvWeb.CredentialControllerTest do
   setup %{conn: conn} do
     # Reset all test storage between tests
     Rsolv.RateLimiter.reset()
-    Rsolv.Accounts.reset_test_customers()
+    Rsolv.LegacyAccounts.reset_test_customers()
     Rsolv.Credentials.reset_credentials()
     
     # Create a test customer with valid subscription

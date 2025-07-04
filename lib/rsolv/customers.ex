@@ -94,6 +94,11 @@ defmodule Rsolv.Customers do
     |> Customer.changeset(attrs)
     |> Repo.update()
   end
+  
+  # Handle legacy customers (plain maps) during transition
+  def update_customer(customer, attrs) when is_map(customer) and not is_struct(customer) do
+    Rsolv.LegacyAccounts.update_customer(customer, attrs)
+  end
 
   @doc """
   Deletes a customer.

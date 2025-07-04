@@ -1,0 +1,883 @@
+🚀 RFC-037 Consolidated Service Deployment
+Environment: staging
+Namespace: rsolv-staging
+Image: ghcr.io/rsolv-dev/rsolv-platform:staging
+
+Building consolidated Docker image...
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.97kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/elixir:1.18-alpine
+#2 ...
+
+#3 [internal] load metadata for docker.io/library/alpine:3.19
+#3 DONE 0.3s
+
+#2 [internal] load metadata for docker.io/library/elixir:1.18-alpine
+#2 DONE 0.3s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [base 1/6] FROM docker.io/library/elixir:1.18-alpine@sha256:23f5af82c99c010c1ea7fb0a06c77c95e0a2e2dc747b08b2bcb91f0c36aad1a5
+#5 DONE 0.0s
+
+#6 [production 1/7] FROM docker.io/library/alpine:3.19@sha256:e5d0aea7f7d2954678a9a6269ca2d06e06591881161961ea59e974dff3f12377
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 114.04kB 0.0s done
+#7 DONE 0.0s
+
+#8 [base 2/6] RUN apk add --no-cache build-base git postgresql-client
+#8 CACHED
+
+#9 [base 5/6] COPY mix.exs mix.lock ./
+#9 CACHED
+
+#10 [prod-deps 1/2] RUN mix deps.get --only prod
+#10 CACHED
+
+#11 [base 3/6] WORKDIR /app
+#11 CACHED
+
+#12 [base 6/6] COPY config config
+#12 CACHED
+
+#13 [base 4/6] RUN mix local.hex --force &&     mix local.rebar --force
+#13 CACHED
+
+#14 [prod-deps 2/2] RUN mix deps.compile
+#14 CACHED
+
+#15 [builder  1/10] RUN apk add --no-cache nodejs npm &&     npm install -g bun
+#15 0.155 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/main/x86_64/APKINDEX.tar.gz
+#15 0.382 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/community/x86_64/APKINDEX.tar.gz
+#15 2.119 (1/8) Installing ada-libs (2.9.2-r1)
+#15 2.232 (2/8) Installing icu-data-en (74.2-r0)
+#15 2.996 Executing icu-data-en-74.2-r0.post-install
+#15 2.998 *
+#15 2.998 * If you need ICU with non-English locales and legacy charset support, install
+#15 2.998 * package icu-data-full.
+#15 2.998 *
+#15 2.998 (3/8) Installing icu-libs (74.2-r0)
+#15 4.522 (4/8) Installing simdjson (3.10.1-r0)
+#15 4.575 (5/8) Installing simdutf (5.6.3-r0)
+#15 4.660 (6/8) Installing sqlite-libs (3.48.0-r2)
+#15 5.547 (7/8) Installing nodejs (22.15.1-r0)
+#15 21.06 (8/8) Installing npm (10.9.1-r0)
+#15 23.18 Executing busybox-1.37.0-r12.trigger
+#15 23.18 OK: 327 MiB in 67 packages
+#15 30.26 
+#15 30.26 added 5 packages in 7s
+#15 DONE 30.4s
+
+#16 [builder  2/10] COPY lib lib
+#16 DONE 0.1s
+
+#17 [builder  3/10] COPY priv priv
+#17 DONE 0.2s
+
+#18 [builder  4/10] COPY rel rel
+#18 DONE 0.1s
+
+#19 [builder  5/10] COPY package.json package-lock.json ./
+#19 DONE 0.1s
+
+#20 [builder  6/10] COPY assets assets
+#20 DONE 0.1s
+
+#21 [builder  7/10] RUN bun install
+#21 0.184 bun install v1.2.18 (0d4089ea)
+#21 0.185 [1.09ms] migrated lockfile from package-lock.json
+#21 0.632 Saved lockfile
+#21 0.632 
+#21 0.632 + axios@1.10.0
+#21 0.632 + ts-node@10.9.2
+#21 0.632 + @tailwindcss/forms@0.5.10
+#21 0.632 + @types/node@24.0.10
+#21 0.632 + esbuild@0.20.2
+#21 0.632 + tailwindcss@3.4.17
+#21 0.632 + typescript@5.8.3
+#21 0.632 
+#21 0.632 154 packages installed [449.00ms]
+#21 DONE 0.7s
+
+#22 [builder  8/10] RUN MIX_ENV=prod mix assets.deploy
+#22 0.549 ==> gen_stage
+#22 0.549 Compiling 10 files (.ex)
+#22 0.808 Generated gen_stage app
+#22 0.822 ==> eternal
+#22 0.822 Compiling 5 files (.ex)
+#22 0.852 Generated eternal app
+#22 0.862 ==> combine
+#22 0.862 Compiling 6 files (.ex)
+#22 1.001 Generated combine app
+#22 1.010 ==> mime
+#22 1.010 Compiling 1 file (.ex)
+#22 1.060 Generated mime app
+#22 1.076 ==> toml
+#22 1.076 Compiling 10 files (.ex)
+#22 1.083      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.083      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.083      You may run "mix format --migrate" to change all single-quoted
+#22 1.083      strings to use the ~c sigil and fix this warning.
+#22 1.083      │
+#22 1.083  264 │   defp handle_token(lexer, original, doc, type, skip, _data, lines) when type in '-_' do
+#22 1.083      │                                                                                  ~
+#22 1.083      │
+#22 1.083      └─ lib/decoder.ex:264:82
+#22 1.083 
+#22 1.084      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.084      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.084      You may run "mix format --migrate" to change all single-quoted
+#22 1.084      strings to use the ~c sigil and fix this warning.
+#22 1.084      │
+#22 1.084  371 │       {:ok, {type, _skip, _data, _lines}} when type in '-+' ->
+#22 1.084      │                                                        ~
+#22 1.084      │
+#22 1.084      └─ lib/decoder.ex:371:56
+#22 1.084 
+#22 1.085      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.085      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.085      You may run "mix format --migrate" to change all single-quoted
+#22 1.085      strings to use the ~c sigil and fix this warning.
+#22 1.085      │
+#22 1.085  419 │           {:ok, {:alpha, _, <<c::utf8>>, _}} when c in 'eE' ->
+#22 1.085      │                                                        ~
+#22 1.085      │
+#22 1.085      └─ lib/decoder.ex:419:56
+#22 1.085 
+#22 1.086      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.086      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.086      You may run "mix format --migrate" to change all single-quoted
+#22 1.086      strings to use the ~c sigil and fix this warning.
+#22 1.086      │
+#22 1.086  474 │       {:ok, {:alpha, _, <<c::utf8>>, _}} when c in 'eE' ->
+#22 1.086      │                                                    ~
+#22 1.086      │
+#22 1.086      └─ lib/decoder.ex:474:52
+#22 1.086 
+#22 1.087      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.087      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.087      You may run "mix format --migrate" to change all single-quoted
+#22 1.087      strings to use the ~c sigil and fix this warning.
+#22 1.087      │
+#22 1.087  514 │       {:ok, {sign, _, _, _}} when sign in '-+' and last == ?e ->
+#22 1.087      │                                           ~
+#22 1.087      │
+#22 1.087      └─ lib/decoder.ex:514:43
+#22 1.087 
+#22 1.089      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.089      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.089      You may run "mix format --migrate" to change all single-quoted
+#22 1.089      strings to use the ~c sigil and fix this warning.
+#22 1.089      │
+#22 1.089  518 │       {:ok, {:alpha, _, <<c::utf8>>, _}} when c in 'eE' and signal == ?. ->
+#22 1.089      │                                                    ~
+#22 1.089      │
+#22 1.089      └─ lib/decoder.ex:518:52
+#22 1.089 
+#22 1.090      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.090      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.090      You may run "mix format --migrate" to change all single-quoted
+#22 1.090      strings to use the ~c sigil and fix this warning.
+#22 1.090      │
+#22 1.090  522 │       {:ok, {?_, skip, _, lines}} when last not in '_e.' ->
+#22 1.090      │                                                    ~
+#22 1.090      │
+#22 1.090      └─ lib/decoder.ex:522:52
+#22 1.090 
+#22 1.091      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.091      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.091      You may run "mix format --migrate" to change all single-quoted
+#22 1.091      strings to use the ~c sigil and fix this warning.
+#22 1.091      │
+#22 1.091  538 │       {:ok, {type, skip, data, lines}} when last in 'e.' ->
+#22 1.091      │                                                     ~
+#22 1.091      │
+#22 1.091      └─ lib/decoder.ex:538:53
+#22 1.091 
+#22 1.092      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.092      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.092      You may run "mix format --migrate" to change all single-quoted
+#22 1.092      strings to use the ~c sigil and fix this warning.
+#22 1.092      │
+#22 1.092  542 │       {:ok, {_type, skip, _data, lines} = token} when last not in '_e.' ->
+#22 1.092      │                                                                   ~
+#22 1.092      │
+#22 1.092      └─ lib/decoder.ex:542:67
+#22 1.092 
+#22 1.093      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.093      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.093      You may run "mix format --migrate" to change all single-quoted
+#22 1.093      strings to use the ~c sigil and fix this warning.
+#22 1.093      │
+#22 1.093  682 │         {:ok, {sign, _, _, _}} when sign in '-+' ->
+#22 1.093      │                                             ~
+#22 1.093      │
+#22 1.093      └─ lib/decoder.ex:682:45
+#22 1.093 
+#22 1.095      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.095      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.095      You may run "mix format --migrate" to change all single-quoted
+#22 1.095      strings to use the ~c sigil and fix this warning.
+#22 1.095      │
+#22 1.095  796 │       {:ok, {sign, _, _, _}} when sign in '-+' ->
+#22 1.095      │                                           ~
+#22 1.095      │
+#22 1.095      └─ lib/decoder.ex:796:43
+#22 1.095 
+#22 1.096      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.096      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.096      You may run "mix format --migrate" to change all single-quoted
+#22 1.096      strings to use the ~c sigil and fix this warning.
+#22 1.096      │
+#22 1.096  916 │         {:ok, {type, skip, _, lines}} when type in '-_' ->
+#22 1.096      │                                                    ~
+#22 1.096      │
+#22 1.096      └─ lib/decoder.ex:916:52
+#22 1.096 
+#22 1.099      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.099      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.099      You may run "mix format --migrate" to change all single-quoted
+#22 1.099      strings to use the ~c sigil and fix this warning.
+#22 1.099      │
+#22 1.099  954 │               {:ok, {type, _, _, _}} when type in '-_' ->
+#22 1.099      │                                                   ~
+#22 1.099      │
+#22 1.099      └─ lib/decoder.ex:954:51
+#22 1.099 
+#22 1.102      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.102      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.102      You may run "mix format --migrate" to change all single-quoted
+#22 1.102      strings to use the ~c sigil and fix this warning.
+#22 1.102      │
+#22 1.102  969 │       {:ok, {type, _, _, _}} when type in '-_' ->
+#22 1.102      │                                           ~
+#22 1.102      │
+#22 1.102      └─ lib/decoder.ex:969:43
+#22 1.102 
+#22 1.104      warning: using single-quoted strings to represent charlists is deprecated.
+#22 1.104      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 1.104      You may run "mix format --migrate" to change all single-quoted
+#22 1.104      strings to use the ~c sigil and fix this warning.
+#22 1.104      │
+#22 1.104  983 │           {:ok, {type, _, _, _}} when type in '-_' ->
+#22 1.104      │                                               ~
+#22 1.104      │
+#22 1.104      └─ lib/decoder.ex:983:47
+#22 1.104 
+#22 1.300 Generated toml app
+#22 1.312 ==> nimble_options
+#22 1.312 Compiling 3 files (.ex)
+#22 1.468 Generated nimble_options app
+#22 1.478 ==> comeonin
+#22 1.478 Compiling 3 files (.ex)
+#22 1.490 Generated comeonin app
+#22 1.498 ==> plug_crypto
+#22 1.498 Compiling 5 files (.ex)
+#22 1.550 Generated plug_crypto app
+#22 1.561 ==> hpax
+#22 1.561 Compiling 4 files (.ex)
+#22 1.751 Generated hpax app
+#22 2.020 ==> rsolv
+#22 2.020 ===> Analyzing applications...
+#22 2.028 ===> Compiling yamerl
+#22 2.788 ===> Analyzing applications...
+#22 2.797 ===> Compiling mimerl
+#22 3.519 ===> Analyzing applications...
+#22 3.530 ===> Compiling sleeplocks
+#22 3.832 ===> Analyzing applications...
+#22 3.846 ===> Compiling ranch
+#22 4.061 ==> ssl_verify_fun
+#22 4.061 Compiling 7 files (.erl)
+#22 4.081 Generated ssl_verify_fun app
+#22 4.091 ==> jumper
+#22 4.091 Compiling 1 file (.ex)
+#22 4.097 Generated jumper app
+#22 4.110 ==> castore
+#22 4.110 Compiling 1 file (.ex)
+#22 4.115 Generated castore app
+#22 4.127 ==> octo_fetch
+#22 4.127 Compiling 3 files (.ex)
+#22 4.168 Generated octo_fetch app
+#22 4.177 ==> mint
+#22 4.177 Compiling 1 file (.erl)
+#22 4.212 Compiling 20 files (.ex)
+#22 4.579 Generated mint app
+#22 4.597 ==> elixir_make
+#22 4.597 Compiling 8 files (.ex)
+#22 4.646 Generated elixir_make app
+#22 4.840 ==> rsolv
+#22 4.840 ===> Analyzing applications...
+#22 4.853 ===> Compiling cowlib
+#22 9.097 ==> bcrypt_elixir
+#22 9.100 mkdir -p "/app/_build/prod/lib/bcrypt_elixir/priv"
+#22 9.101 cc -g -O3 -Wall -Wno-format-truncation -I"/usr/local/lib/erlang/erts-16.0.1/include" -Ic_src -fPIC -shared  c_src/bcrypt_nif.c c_src/blowfish.c -o "/app/_build/prod/lib/bcrypt_elixir/priv/bcrypt_nif.so"
+#22 9.368 Compiling 3 files (.ex)
+#22 9.386 Generated bcrypt_elixir app
+#22 9.397 ==> decimal
+#22 9.397 Compiling 4 files (.ex)
+#22 9.628 Generated decimal app
+#22 9.640 ==> number
+#22 9.640 Compiling 10 files (.ex)
+#22 9.697 Generated number app
+#22 9.714 ==> jason
+#22 9.714 Compiling 10 files (.ex)
+#22 10.29 Generated jason app
+#22 10.30 ==> esbuild
+#22 10.30 Compiling 4 files (.ex)
+#22 10.35 Generated esbuild app
+#22 10.36 ==> rustler
+#22 10.36 Compiling 6 files (.ex)
+#22 10.42 Generated rustler app
+#22 10.43 ==> yaml_elixir
+#22 10.43 Compiling 6 files (.ex)
+#22 10.47 Generated yaml_elixir app
+#22 10.48 ==> ex2ms
+#22 10.48 Compiling 1 file (.ex)
+#22 10.51 Generated ex2ms app
+#22 10.52 ==> ex_rated
+#22 10.52 Compiling 3 files (.ex)
+#22 10.55 Generated ex_rated app
+#22 10.75 ==> rsolv
+#22 10.75 ===> Analyzing applications...
+#22 10.77 ===> Compiling unicode_util_compat
+#22 11.14 ===> Analyzing applications...
+#22 11.15 ===> Compiling idna
+#22 13.61 ===> Analyzing applications...
+#22 13.62 ===> Compiling telemetry
+#22 13.76 ==> telemetry_metrics
+#22 13.76 Compiling 7 files (.ex)
+#22 13.81 Generated telemetry_metrics app
+#22 14.03 ==> rsolv
+#22 14.03 ===> Analyzing applications...
+#22 14.04 ===> Compiling telemetry_poller
+#22 14.19 ==> libcluster
+#22 14.19 Compiling 13 files (.ex)
+#22 14.27 Generated libcluster app
+#22 14.28 ==> telemetry_metrics_prometheus_core
+#22 14.28 Compiling 9 files (.ex)
+#22 14.29 warning: first..last inside match is deprecated, you must always match on the step: first..last//var or first..last//_ if you want to ignore it
+#22 14.29   lib/core/registry.ex:87: TelemetryMetricsPrometheus.Core.Registry.validate_distribution_buckets!/1
+#22 14.29 
+#22 14.33 Generated telemetry_metrics_prometheus_core app
+#22 14.35 ==> telemetry_registry
+#22 14.35 Compiling 1 file (.erl)
+#22 14.36 Compiling 1 file (.ex)
+#22 14.38 Generated telemetry_registry app
+#22 14.40 ==> db_connection
+#22 14.40 Compiling 17 files (.ex)
+#22 14.69 Generated db_connection app
+#22 14.71 ==> ecto
+#22 14.71 Compiling 56 files (.ex)
+#22 15.74 Generated ecto app
+#22 15.77 ==> crontab
+#22 15.77 Compiling 7 files (.ex)
+#22 15.82     warning: Application.get_env/3 is discouraged in the module body, use Application.compile_env/3 instead
+#22 15.82     │
+#22 15.82  21 │     @max_runs Application.get_env(:crontab, :max_runs, 10_000)
+#22 15.82     │                           ~
+#22 15.82     │
+#22 15.82     └─ lib/crontab/scheduler.ex:21:27: Crontab.Scheduler (module)
+#22 15.82 
+#22 15.87 Generated crontab app
+#22 16.08 ==> rsolv
+#22 16.08 ===> Analyzing applications...
+#22 16.10 ===> Compiling cowboy
+#22 16.52 ==> phoenix_html
+#22 16.52 Compiling 6 files (.ex)
+#22 16.63 Generated phoenix_html app
+#22 16.65 ==> phoenix_template
+#22 16.65 Compiling 4 files (.ex)
+#22 16.69 Generated phoenix_template app
+#22 16.71 ==> expo
+#22 16.71 Compiling 2 files (.erl)
+#22 16.86 Compiling 22 files (.ex)
+#22 16.96 Generated expo app
+#22 16.98 ==> gettext
+#22 16.98 Compiling 18 files (.ex)
+#22 17.09 Generated gettext app
+#22 17.10 ==> phoenix_pubsub
+#22 17.10 Compiling 11 files (.ex)
+#22 17.23 Generated phoenix_pubsub app
+#22 17.24 ==> rustler_precompiled
+#22 17.24 Compiling 4 files (.ex)
+#22 17.37 Generated rustler_precompiled app
+#22 17.38 ==> autumn
+#22 17.38 Compiling 6 files (.ex)
+#22 17.54 
+#22 17.54 02:43:24.062 [debug] Copying NIF from cache and extracting to /app/_build/prod/lib/autumn/priv/native/libautumnus_nif-v0.4.1-nif-2.15-x86_64-unknown-linux-musl.so.tar.gz
+#22 17.56 Generated autumn app
+#22 17.57 ==> mdex
+#22 17.57 Compiling 9 files (.ex)
+#22 17.75 
+#22 17.75 02:43:24.267 [debug] Copying NIF from cache and extracting to /app/_build/prod/lib/mdex/priv/native/libcomrak_nif-v0.7.5-nif-2.15-x86_64-unknown-linux-musl.so.tar.gz
+#22 19.03 Generated mdex app
+#22 19.24 ==> rsolv
+#22 19.24 ===> Analyzing applications...
+#22 19.26 ===> Compiling certifi
+#22 19.44 ==> plug
+#22 19.44 Compiling 1 file (.erl)
+#22 19.51 Compiling 40 files (.ex)
+#22 20.17 Generated plug app
+#22 20.20 ==> postgrex
+#22 20.20 Compiling 68 files (.ex)
+#22 22.22 Generated postgrex app
+#22 22.23 ==> phoenix_ecto
+#22 22.23 Compiling 7 files (.ex)
+#22 22.32 Generated phoenix_ecto app
+#22 22.34 ==> ecto_sql
+#22 22.34 Compiling 25 files (.ex)
+#22 22.69 Generated ecto_sql app
+#22 22.72 ==> fun_with_flags
+#22 22.72 Compiling 22 files (.ex)
+#22 22.85 Generated fun_with_flags app
+#22 22.88 ==> oban
+#22 22.88 Compiling 61 files (.ex)
+#22 23.19 Generated oban app
+#22 23.42 ==> rsolv
+#22 23.42 ===> Analyzing applications...
+#22 23.43 ===> Compiling parse_trans
+#22 23.85 ==> unsafe
+#22 23.85 Compiling 3 files (.ex)
+#22 23.87 Generated unsafe app
+#22 23.89 ==> cachex
+#22 23.89 Compiling 56 files (.ex)
+#22 24.26 Generated cachex app
+#22 24.30 ==> quantum
+#22 24.30 Compiling 39 files (.ex)
+#22 24.45 Generated quantum app
+#22 24.48 ==> nimble_pool
+#22 24.48 Compiling 2 files (.ex)
+#22 24.58 Generated nimble_pool app
+#22 24.59 ==> finch
+#22 24.59 Compiling 14 files (.ex)
+#22 24.77 Generated finch app
+#22 24.99 ==> rsolv
+#22 24.99 ===> Analyzing applications...
+#22 25.01 ===> Compiling metrics
+#22 25.37 ===> Analyzing applications...
+#22 25.39 ===> Compiling hackney
+#22 25.71 ==> bamboo
+#22 25.71 Compiling 28 files (.ex)
+#22 25.86     warning: Plug.Cowboy.http/3 is undefined (module Plug.Cowboy is not available or is yet to be defined)
+#22 25.86     │
+#22 25.86  11 │     Plug.Cowboy.http(Bamboo.SentEmailViewerPlug, [], port: 4003)
+#22 25.86     │                 ~
+#22 25.86     │
+#22 25.86     └─ lib/mix/start_sent_email_viewer_task.ex:11:17: Mix.Tasks.Bamboo.StartSentEmailViewer.run/1
+#22 25.86 
+#22 25.87 Generated bamboo app
+#22 25.89 ==> bamboo_postmark
+#22 25.89 Compiling 2 files (.ex)
+#22 25.92 Generated bamboo_postmark app
+#22 25.93 ==> tesla
+#22 25.93 Compiling 40 files (.ex)
+#22 26.15 Generated tesla app
+#22 26.18 ==> tzdata
+#22 26.18 Compiling 17 files (.ex)
+#22 26.29 Generated tzdata app
+#22 26.31 ==> timex
+#22 26.31 Compiling 62 files (.ex)
+#22 26.32 warning: defining a Gettext backend by calling
+#22 26.32 
+#22 26.32     use Gettext, otp_app: ...
+#22 26.32 
+#22 26.32 is deprecated. To define a backend, call:
+#22 26.32 
+#22 26.32     use Gettext.Backend, otp_app: :my_app
+#22 26.32 
+#22 26.32 Then, instead of importing your backend, call this in your module:
+#22 26.32 
+#22 26.32     use Gettext, backend: MyApp.Gettext
+#22 26.32 
+#22 26.32   lib/l10n/gettext.ex:2: Timex.Gettext (module)
+#22 26.32 
+#22 26.33     warning: using single-quoted strings to represent charlists is deprecated.
+#22 26.33     Use ~c"" if you indeed want a charlist or use "" instead.
+#22 26.33     You may run "mix format --migrate" to change all single-quoted
+#22 26.33     strings to use the ~c sigil and fix this warning.
+#22 26.33     │
+#22 26.33   7 │   @numeric '.0123456789'
+#22 26.33     │            ~
+#22 26.33     │
+#22 26.33     └─ lib/parse/duration/parsers/iso8601.ex:7:12
+#22 26.33 
+#22 26.33      warning: using single-quoted strings to represent charlists is deprecated.
+#22 26.33      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 26.33      You may run "mix format --migrate" to change all single-quoted
+#22 26.33      strings to use the ~c sigil and fix this warning.
+#22 26.33      │
+#22 26.33  130 │   defp parse_component(<<c::utf8>>, {type, acc}) when c in 'WYMDHS' do
+#22 26.33      │                                                            ~
+#22 26.33      │
+#22 26.33      └─ lib/parse/duration/parsers/iso8601.ex:130:60
+#22 26.33 
+#22 26.33      warning: using single-quoted strings to represent charlists is deprecated.
+#22 26.33      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 26.33      You may run "mix format --migrate" to change all single-quoted
+#22 26.33      strings to use the ~c sigil and fix this warning.
+#22 26.33      │
+#22 26.33  149 │   defp parse_component(<<c::utf8, rest::binary>>, {type, acc}) when c in 'WYMDHS' do
+#22 26.33      │                                                                          ~
+#22 26.33      │
+#22 26.33      └─ lib/parse/duration/parsers/iso8601.ex:149:74
+#22 26.33 
+#22 26.35 warning: min..max inside match is deprecated, you must always match on the step: min..max//var or min..max//_ if you want to ignore it
+#22 26.35   lib/format/datetime/formatter.ex:893: Timex.Format.DateTime.Formatter.width_spec/1
+#22 26.35 
+#22 26.37      warning: using single-quoted strings to represent charlists is deprecated.
+#22 26.37      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 26.37      You may run "mix format --migrate" to change all single-quoted
+#22 26.37      strings to use the ~c sigil and fix this warning.
+#22 26.37      │
+#22 26.37  153 │   @local_tz_key 'SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation'
+#22 26.37      │                 ~
+#22 26.37      │
+#22 26.37      └─ lib/timezone/local.ex:153:17
+#22 26.37 
+#22 26.37      warning: using single-quoted strings to represent charlists is deprecated.
+#22 26.37      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 26.37      You may run "mix format --migrate" to change all single-quoted
+#22 26.37      strings to use the ~c sigil and fix this warning.
+#22 26.37      │
+#22 26.37  154 │   @sys_tz_key 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones'
+#22 26.37      │               ~
+#22 26.37      │
+#22 26.37      └─ lib/timezone/local.ex:154:15
+#22 26.37 
+#22 26.37      warning: using single-quoted strings to represent charlists is deprecated.
+#22 26.37      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 26.37      You may run "mix format --migrate" to change all single-quoted
+#22 26.37      strings to use the ~c sigil and fix this warning.
+#22 26.37      │
+#22 26.37  155 │   @tz_key_name 'TimeZoneKeyName'
+#22 26.37      │                ~
+#22 26.37      │
+#22 26.37      └─ lib/timezone/local.ex:155:16
+#22 26.37 
+#22 26.37      warning: using single-quoted strings to represent charlists is deprecated.
+#22 26.37      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 26.37      You may run "mix format --migrate" to change all single-quoted
+#22 26.37      strings to use the ~c sigil and fix this warning.
+#22 26.37      │
+#22 26.37  162 │     :ok = :win32reg.change_key(handle, '\\local_machine\\#{@local_tz_key}')
+#22 26.37      │                                        ~
+#22 26.37      │
+#22 26.37      └─ lib/timezone/local.ex:162:40
+#22 26.37 
+#22 26.37      warning: using single-quoted strings to represent charlists is deprecated.
+#22 26.37      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 26.37      You may run "mix format --migrate" to change all single-quoted
+#22 26.37      strings to use the ~c sigil and fix this warning.
+#22 26.37      │
+#22 26.37  180 │       localized = List.keyfind(values, 'StandardName', 0)
+#22 26.37      │                                        ~
+#22 26.37      │
+#22 26.37      └─ lib/timezone/local.ex:180:40
+#22 26.37 
+#22 26.37      warning: using single-quoted strings to represent charlists is deprecated.
+#22 26.37      Use ~c"" if you indeed want a charlist or use "" instead.
+#22 26.37      You may run "mix format --migrate" to change all single-quoted
+#22 26.37      strings to use the ~c sigil and fix this warning.
+#22 26.37      │
+#22 26.37  190 │           case List.keyfind(values, 'Std', 0) do
+#22 26.37      │                                     ~
+#22 26.37      │
+#22 26.37      └─ lib/timezone/local.ex:190:37
+#22 26.37 
+#22 26.40     warning: Module.eval_quoted/4 is deprecated. Use Code.eval_quoted/3 instead
+#22 26.40     │
+#22 26.40  22 │     Module.eval_quoted(__MODULE__, quoted, [], __ENV__)
+#22 26.40     │            ~
+#22 26.40     │
+#22 26.40     └─ lib/timezone/utils.ex:22:12: Timex.Timezone.Utils (module)
+#22 26.40 
+#22 26.40     warning: Module.eval_quoted/4 is deprecated. Use Code.eval_quoted/3 instead
+#22 26.40     │
+#22 26.40  42 │     Module.eval_quoted(__MODULE__, quoted, [], __ENV__)
+#22 26.40     │            ~
+#22 26.40     │
+#22 26.40     └─ lib/timezone/utils.ex:42:12: Timex.Timezone.Utils (module)
+#22 26.40 
+#22 26.44       warning: Module.eval_quoted/4 is deprecated. Use Code.eval_quoted/3 instead
+#22 26.44       │
+#22 26.44  1205 │     Module.eval_quoted(__MODULE__, day_quoted, [], __ENV__)
+#22 26.44       │            ~
+#22 26.44       │
+#22 26.44       └─ lib/timex.ex:1205:12: Timex (module)
+#22 26.44 
+#22 26.44       warning: Module.eval_quoted/4 is deprecated. Use Code.eval_quoted/3 instead
+#22 26.44       │
+#22 26.44  1303 │     Module.eval_quoted(__MODULE__, month_quoted, [], __ENV__)
+#22 26.44       │            ~
+#22 26.44       │
+#22 26.44       └─ lib/timex.ex:1303:12: Timex (module)
+#22 26.44 
+#22 31.07 Generated timex app
+#22 31.08 ==> cors_plug
+#22 31.08 Compiling 1 file (.ex)
+#22 31.11 Generated cors_plug app
+#22 31.12 ==> tailwind
+#22 31.12 Compiling 3 files (.ex)
+#22 31.18 Generated tailwind app
+#22 31.39 ==> rsolv
+#22 31.39 ===> Analyzing applications...
+#22 31.41 ===> Compiling cowboy_telemetry
+#22 31.58 ==> plug_cowboy
+#22 31.58 Compiling 5 files (.ex)
+#22 31.63 Generated plug_cowboy app
+#22 31.64 ==> fun_with_flags_ui
+#22 31.64 Compiling 6 files (.ex)
+#22 31.77 Generated fun_with_flags_ui app
+#22 31.78 ==> websock
+#22 31.78 Compiling 1 file (.ex)
+#22 31.80 Generated websock app
+#22 31.81 ==> websock_adapter
+#22 31.81 Compiling 4 files (.ex)
+#22 31.84 Generated websock_adapter app
+#22 31.86 ==> phoenix
+#22 31.86 Compiling 71 files (.ex)
+#22 32.26 Generated phoenix app
+#22 32.30 ==> phoenix_live_view
+#22 32.30 Compiling 39 files (.ex)
+#22 32.98      warning: incompatible types given to String.to_atom/1:
+#22 32.98 
+#22 32.98          String.to_atom(template)
+#22 32.98 
+#22 32.98      given types:
+#22 32.98 
+#22 32.98          -dynamic(false or {term(), binary()})-
+#22 32.98 
+#22 32.98      but expected one of:
+#22 32.98 
+#22 32.98          binary()
+#22 32.98 
+#22 32.98      where "template" was given the type:
+#22 32.98 
+#22 32.98          # type: dynamic(false or {term(), binary()})
+#22 32.98          # from: lib/phoenix_live_view/router.ex:300:18
+#22 32.98          template = Phoenix.LiveView.Utils.normalize_layout(template)
+#22 32.98 
+#22 32.98      typing violation found at:
+#22 32.98      │
+#22 32.98  301 │         Map.put(acc, :root_layout, {mod, String.to_atom(template)})
+#22 32.98      │                                                 ~
+#22 32.98      │
+#22 32.98      └─ lib/phoenix_live_view/router.ex:301:49: Phoenix.LiveView.Router.validate_live_session_opts/3
+#22 32.98 
+#22 32.99 Generated phoenix_live_view app
+#22 33.02 ==> phoenix_live_dashboard
+#22 33.02 Compiling 36 files (.ex)
+#22 33.41 Generated phoenix_live_dashboard app
+#22 33.43 ==> prom_ex
+#22 33.43 Compiling 37 files (.ex)
+#22 33.60 Generated prom_ex app
+#22 33.64 ==> httpoison
+#22 33.64 Compiling 3 files (.ex)
+#22 33.86 Generated httpoison app
+#22 33.88 
+#22 33.88 02:43:40.398 [debug] Downloading tailwind from https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.0/tailwindcss-linux-x64
+#22 68.19 
+#22 68.19 Rebuilding...
+#22 68.30 Warning: Could not read icon directory: /24/outline
+#22 68.30 Warning: Could not read icon directory: /24/solid
+#22 68.30 Warning: Could not read icon directory: /20/solid
+#22 68.30 Warning: Could not read icon directory: /16/solid
+#22 68.73 
+#22 68.73 Done in 566ms.
+#22 68.74 
+#22 68.74 02:44:15.263 [debug] Downloading esbuild from https://registry.npmjs.org/@esbuild/linux-x64/0.17.11
+#22 69.10 
+#22 69.10   ../priv/static/assets/app.js  347.1kb
+#22 69.10 
+#22 69.10 ⚡ Done in 23ms
+#22 69.12 ==> rsolv
+#22 69.12 Compiling 341 files (.ex)
+#22 71.84      warning: Phoenix.Component.used_input?/1 is undefined or private
+#22 71.84      │
+#22 71.84  297 │     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+#22 71.84      │                                   ~
+#22 71.84      │
+#22 71.84      └─ lib/rsolv_web/components/core_components.ex:297:35: RsolvWeb.CoreComponents."input (overridable 1)"/1
+#22 71.84 
+#22 72.09     warning: :prometheus_histogram.observe/3 is undefined (module :prometheus_histogram is not available or is yet to be defined)
+#22 72.09     │
+#22 72.09  70 │       :prometheus_histogram.observe(
+#22 72.09     │                             ~
+#22 72.09     │
+#22 72.09     └─ lib/rsolv/security/pattern_telemetry.ex:70:29: Rsolv.Security.PatternTelemetry.handle_pattern_fetch/4
+#22 72.09 
+#22 72.10     warning: :prometheus_counter.inc/2 is undefined (module :prometheus_counter is not available or is yet to be defined)
+#22 72.10     │
+#22 72.10  86 │       :prometheus_counter.inc(
+#22 72.10     │                           ~
+#22 72.10     │
+#22 72.10     └─ lib/rsolv/security/pattern_telemetry.ex:86:27: Rsolv.Security.PatternTelemetry.handle_cache_event/4
+#22 72.10     └─ lib/rsolv/security/pattern_telemetry.ex:114:27: Rsolv.Security.PatternTelemetry.handle_match_event/4
+#22 72.10 
+#22 72.10      warning: :prometheus_counter.inc/3 is undefined (module :prometheus_counter is not available or is yet to be defined)
+#22 72.10      │
+#22 72.10  134 │       :prometheus_counter.inc(
+#22 72.10      │                           ~
+#22 72.10      │
+#22 72.10      └─ lib/rsolv/security/pattern_telemetry.ex:134:27: Rsolv.Security.PatternTelemetry.handle_ai_review/4
+#22 72.10 
+#22 72.11 Generated rsolv app
+#22 72.41 Check your digested files at "priv/static"
+#22 DONE 72.5s
+
+#23 [builder  9/10] RUN MIX_ENV=prod mix compile
+#23 0.586      warning: Phoenix.Component.used_input?/1 is undefined or private
+#23 0.586      │
+#23 0.586  297 │     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+#23 0.586      │                                   ~
+#23 0.586      │
+#23 0.586      └─ lib/rsolv_web/components/core_components.ex:297:35: RsolvWeb.CoreComponents."input (overridable 1)"/1
+#23 0.586 
+#23 0.586     warning: :prometheus_histogram.observe/3 is undefined (module :prometheus_histogram is not available or is yet to be defined)
+#23 0.586     │
+#23 0.586  70 │       :prometheus_histogram.observe(
+#23 0.586     │                             ~
+#23 0.586     │
+#23 0.586     └─ lib/rsolv/security/pattern_telemetry.ex:70:29: Rsolv.Security.PatternTelemetry.handle_pattern_fetch/4
+#23 0.586 
+#23 0.586     warning: :prometheus_counter.inc/2 is undefined (module :prometheus_counter is not available or is yet to be defined)
+#23 0.586     │
+#23 0.586  86 │       :prometheus_counter.inc(
+#23 0.586     │                           ~
+#23 0.586     │
+#23 0.586     └─ lib/rsolv/security/pattern_telemetry.ex:86:27: Rsolv.Security.PatternTelemetry.handle_cache_event/4
+#23 0.586 
+#23 0.586      warning: :prometheus_counter.inc/2 is undefined (module :prometheus_counter is not available or is yet to be defined)
+#23 0.586      │
+#23 0.586  114 │       :prometheus_counter.inc(
+#23 0.586      │                           ~
+#23 0.586      │
+#23 0.586      └─ lib/rsolv/security/pattern_telemetry.ex:114:27: Rsolv.Security.PatternTelemetry.handle_match_event/4
+#23 0.586 
+#23 0.587      warning: :prometheus_counter.inc/3 is undefined (module :prometheus_counter is not available or is yet to be defined)
+#23 0.587      │
+#23 0.587  134 │       :prometheus_counter.inc(
+#23 0.587      │                           ~
+#23 0.587      │
+#23 0.587      └─ lib/rsolv/security/pattern_telemetry.ex:134:27: Rsolv.Security.PatternTelemetry.handle_ai_review/4
+#23 0.587 
+#23 DONE 0.6s
+
+#24 [builder 10/10] RUN MIX_ENV=prod mix release --overwrite
+#24 0.604      warning: Phoenix.Component.used_input?/1 is undefined or private
+#24 0.604      │
+#24 0.604  297 │     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+#24 0.604      │                                   ~
+#24 0.604      │
+#24 0.604      └─ lib/rsolv_web/components/core_components.ex:297:35: RsolvWeb.CoreComponents."input (overridable 1)"/1
+#24 0.604 
+#24 0.604     warning: :prometheus_histogram.observe/3 is undefined (module :prometheus_histogram is not available or is yet to be defined)
+#24 0.604     │
+#24 0.604  70 │       :prometheus_histogram.observe(
+#24 0.604     │                             ~
+#24 0.604     │
+#24 0.604     └─ lib/rsolv/security/pattern_telemetry.ex:70:29: Rsolv.Security.PatternTelemetry.handle_pattern_fetch/4
+#24 0.604 
+#24 0.604     warning: :prometheus_counter.inc/2 is undefined (module :prometheus_counter is not available or is yet to be defined)
+#24 0.604     │
+#24 0.604  86 │       :prometheus_counter.inc(
+#24 0.604     │                           ~
+#24 0.604     │
+#24 0.604     └─ lib/rsolv/security/pattern_telemetry.ex:86:27: Rsolv.Security.PatternTelemetry.handle_cache_event/4
+#24 0.604 
+#24 0.604      warning: :prometheus_counter.inc/2 is undefined (module :prometheus_counter is not available or is yet to be defined)
+#24 0.604      │
+#24 0.604  114 │       :prometheus_counter.inc(
+#24 0.604      │                           ~
+#24 0.604      │
+#24 0.604      └─ lib/rsolv/security/pattern_telemetry.ex:114:27: Rsolv.Security.PatternTelemetry.handle_match_event/4
+#24 0.604 
+#24 0.604      warning: :prometheus_counter.inc/3 is undefined (module :prometheus_counter is not available or is yet to be defined)
+#24 0.604      │
+#24 0.604  134 │       :prometheus_counter.inc(
+#24 0.604      │                           ~
+#24 0.604      │
+#24 0.604      └─ lib/rsolv/security/pattern_telemetry.ex:134:27: Rsolv.Security.PatternTelemetry.handle_ai_review/4
+#24 0.604 
+#24 0.626 * assembling rsolv-0.1.0 on MIX_ENV=prod
+#24 0.626 * using config/runtime.exs to configure the release at runtime
+#24 0.789 * creating _build/prod/rel/rsolv/releases/0.1.0/vm.args
+#24 0.789 * creating _build/prod/rel/rsolv/releases/0.1.0/remote.vm.args
+#24 0.799 * creating _build/prod/rel/rsolv/releases/0.1.0/env.sh
+#24 0.807 * creating _build/prod/rel/rsolv/releases/0.1.0/env.bat
+#24 0.811 * skipping elixir.bat for windows (bin/elixir.bat not found in the Elixir installation)
+#24 0.811 * skipping iex.bat for windows (bin/iex.bat not found in the Elixir installation)
+#24 1.098 
+#24 1.098 Release created at _build/prod/rel/rsolv
+#24 1.098 
+#24 1.098     # To start your system
+#24 1.098     _build/prod/rel/rsolv/bin/rsolv start
+#24 1.098 
+#24 1.098 Once the release is running:
+#24 1.098 
+#24 1.098     # To connect to it remotely
+#24 1.098     _build/prod/rel/rsolv/bin/rsolv remote
+#24 1.098 
+#24 1.098     # To stop it gracefully (you may also send SIGINT/SIGTERM)
+#24 1.098     _build/prod/rel/rsolv/bin/rsolv stop
+#24 1.098 
+#24 1.098 To list all commands:
+#24 1.098 
+#24 1.098     _build/prod/rel/rsolv/bin/rsolv
+#24 1.098 
+#24 DONE 1.2s
+
+#25 [production 4/7] RUN apk add --no-cache php82-dom php82-mbstring
+#25 CACHED
+
+#26 [production 2/7] RUN apk add --no-cache     openssl ncurses-libs libstdc++ libgcc     python3     ruby     php82 php82-json php82-tokenizer     nodejs npm bash
+#26 CACHED
+
+#27 [production 3/7] RUN gem install bundler parser --no-document &&     rm -rf /root/.gem /usr/lib/ruby/gems/*/cache/*
+#27 CACHED
+
+#28 [production 5/7] RUN adduser -D -h /app app
+#28 CACHED
+
+#29 [production 6/7] COPY --from=builder --chown=app:app /app/_build/prod/rel/rsolv /app
+#29 DONE 0.3s
+
+#30 [production 7/7] WORKDIR /app
+#30 DONE 0.1s
+
+#31 exporting to image
+#31 exporting layers
+#31 exporting layers 0.6s done
+#31 writing image sha256:92095340c62c3b2448cba306e04a52ffaa72d6600c0be1b243d4a306a6938873 done
+#31 naming to ghcr.io/rsolv-dev/rsolv-platform:staging 0.0s done
+#31 DONE 0.6s
+Pushing to GitHub Container Registry...
+The push refers to repository [ghcr.io/rsolv-dev/rsolv-platform]
+5f70bf18a086: Preparing
+2e893086ad31: Preparing
+3528db0d6432: Preparing
+584b27a242e4: Preparing
+ee84fd954cdb: Preparing
+63e0eeabc471: Preparing
+0499fc56f5e2: Preparing
+63e0eeabc471: Waiting
+0499fc56f5e2: Waiting
+3528db0d6432: Layer already exists
+584b27a242e4: Layer already exists
+5f70bf18a086: Layer already exists
+ee84fd954cdb: Layer already exists
+63e0eeabc471: Layer already exists
+0499fc56f5e2: Layer already exists
+2e893086ad31: Pushed
+staging: digest: sha256:e2ba518667ae6e5ee9bd26e1d4c8f5e08087270e84f45be0a4a708fd86b91948 size: 1788
+Applying Kubernetes deployments to rsolv-staging...
+⚠️  Using local k8s/ configs (infrastructure configs not found)
+error: the path "k8s/" does not exist

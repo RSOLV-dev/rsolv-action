@@ -392,11 +392,11 @@ defmodule Rsolv.FeatureFlags do
   def get_accessible_tiers(customer) do
     cond do
       # Enterprise customer - access to all tiers
-      customer && customer.tier == "enterprise" ->
+      customer && Map.get(customer, :tier) == "enterprise" ->
         ["free", "pro", "enterprise"]
       
       # Pro customer - access to free and pro tiers
-      customer && customer.tier == "pro" ->
+      customer && Map.get(customer, :tier) == "pro" ->
         ["free", "pro"]
         
       # Free customer or no customer - only free tier

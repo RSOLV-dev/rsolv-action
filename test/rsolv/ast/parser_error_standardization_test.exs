@@ -50,9 +50,12 @@ defmodule Rsolv.AST.ParserErrorStandardizationTest do
       ]
 
       for {language, invalid_code, validation_fn} <- test_cases do
-        {:error, error} = ParserRegistry.parse_code(session_id, customer_id, language, invalid_code)
+        {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, language, invalid_code)
         
-        assert error != nil
+        assert result.error != nil
+        assert result.ast == nil
+        error = result.error
+        
         assert Map.has_key?(error, :type)
         assert Map.has_key?(error, :language)
         assert Map.has_key?(error, :severity)
@@ -66,8 +69,10 @@ defmodule Rsolv.AST.ParserErrorStandardizationTest do
 
     test "timeout errors are standardized", %{session_id: session_id, customer_id: customer_id} do
       # Force timeout using test signal
-      {:error, error} = ParserRegistry.parse_code(session_id, customer_id, "javascript", "FORCE_TIMEOUT_SIGNAL")
+      {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "javascript", "FORCE_TIMEOUT_SIGNAL")
       
+      assert result.ast == nil
+      error = result.error
       assert error != nil
       assert error.type == :timeout
       assert error.language == "javascript"
@@ -78,8 +83,10 @@ defmodule Rsolv.AST.ParserErrorStandardizationTest do
 
     test "parser crash errors are standardized", %{session_id: session_id, customer_id: customer_id} do
       # Force crash using test signal
-      {:error, error} = ParserRegistry.parse_code(session_id, customer_id, "python", "FORCE_CRASH_SIGNAL")
+      {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "python", "FORCE_CRASH_SIGNAL")
       
+      assert result.ast == nil
+      error = result.error
       assert error != nil
       assert error.type == :parser_crash
       assert error.language == "python" 
@@ -123,8 +130,9 @@ defmodule Rsolv.AST.ParserErrorStandardizationTest do
 
     test "error location information is preserved when available", %{session_id: session_id, customer_id: customer_id} do
       # Test with code that should provide location info
-      {:error, error} = ParserRegistry.parse_code(session_id, customer_id, "javascript", "const x = ;")
+      {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "javascript", "const x = ;")
       
+      error = result.error
       if error && error.location do
         assert is_map(error.location)
         assert Map.has_key?(error.location, :line)
@@ -141,8 +149,9 @@ defmodule Rsolv.AST.ParserErrorStandardizationTest do
       }
       """
       
-      {:error, error} = ParserRegistry.parse_code(session_id, customer_id, "javascript", invalid_code)
+      {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "javascript", invalid_code)
       
+      error = result.error
       if error && error.source_snippet do
         assert is_map(error.source_snippet)
         assert Map.has_key?(error.source_snippet, :lines)
@@ -152,8 +161,9 @@ defmodule Rsolv.AST.ParserErrorStandardizationTest do
     end
 
     test "standardized errors include recovery suggestions", %{session_id: session_id, customer_id: customer_id} do
-      {:error, error} = ParserRegistry.parse_code(session_id, customer_id, "python", "def func(:")
+      {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "python", "def func(:")
       
+      error = result.error
       assert error != nil
       assert is_list(error.suggestions)
       assert length(error.suggestions) > 0
@@ -162,9 +172,10 @@ defmodule Rsolv.AST.ParserErrorStandardizationTest do
 
     test "error timestamps are included", %{session_id: session_id, customer_id: customer_id} do
       before_parse = DateTime.utc_now()
-      {:error, error} = ParserRegistry.parse_code(session_id, customer_id, "javascript", "const x = ;")
+      {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "javascript", "const x = ;")
       after_parse = DateTime.utc_now()
       
+      error = result.error
       if error do
         assert Map.has_key?(error, :timestamp)
         assert error.timestamp != nil
@@ -189,8 +200,11 @@ defmodule Rsolv.AST.ParserErrorStandardizationTest do
       for {language, code} <- error_test_cases do
         result = ParserRegistry.parse_code(session_id, customer_id, language, code)
         
-        # All error cases should return {:error, error_map}
-        assert {:error, error} = result
+        # All error cases should return {:ok, result_with_error}
+        assert {:ok, parse_result} = result
+        assert parse_result.ast == nil
+        error = parse_result.error
+        assert error != nil
         
         for field <- required_fields do
           assert Map.has_key?(error, field), 

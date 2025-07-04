@@ -23,7 +23,7 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
       %{customer_id: customer_id, session_id: session.id}
     end
     
-    test "parses simple Java code with production parser", %{customer_id: customer_id, session_id: session_id} do
+    test "returns ParserNotAvailable error for Java code", %{customer_id: customer_id, session_id: session_id} do
       code = """
       public class HelloWorld {
           public static void main(String[] args) {
@@ -36,16 +36,16 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
       
       assert result.language == "java"
       assert result.session_id == session_id
-      assert result.error == nil
-      assert is_map(result.ast)
+      assert result.error != nil
+      assert result.error.type == :parser_not_available
+      assert result.error.message =~ "Java parser not built"
+      assert result.error.message =~ "requires Maven installation"
+      assert is_nil(result.ast)
       assert is_map(result.timing)
       assert result.timing.parse_time_ms > 0
-      
-      # Check AST structure (using JavaScript fallback parser for now)
-      assert is_map(result.ast)
     end
     
-    test "detects dangerous method patterns in Java code", %{customer_id: customer_id, session_id: session_id} do
+    test "returns ParserNotAvailable error for dangerous Java patterns", %{customer_id: customer_id, session_id: session_id} do
       code = """
       public class VulnerableServlet {
           public void processRequest(String userInput) {
@@ -63,14 +63,13 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
       
       {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "java", code)
       
-      assert result.error == nil
-      assert is_map(result.ast)
-      
-      # Should parse successfully (using fallback for now)
       assert result.language == "java"
+      assert result.error != nil
+      assert result.error.type == :parser_not_available
+      assert is_nil(result.ast)
     end
     
-    test "handles Java syntax errors gracefully", %{customer_id: customer_id, session_id: session_id} do
+    test "returns ParserNotAvailable error for Java syntax errors", %{customer_id: customer_id, session_id: session_id} do
       code = """
       public class BrokenClass {
           public void brokenMethod() {
@@ -81,12 +80,12 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
       {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "java", code)
       
       assert result.language == "java"
-      # Fallback JavaScript parser may or may not handle Java syntax errors
-      # This test verifies the parser doesn't crash
+      assert result.error != nil
+      assert result.error.type == :parser_not_available
       assert is_map(result.timing)
     end
     
-    test "parses complex Java constructs", %{customer_id: customer_id, session_id: session_id} do
+    test "returns ParserNotAvailable error for complex Java constructs", %{customer_id: customer_id, session_id: session_id} do
       code = """
       import java.util.*;
       import java.sql.*;
@@ -118,28 +117,28 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
       
       {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "java", code)
       
-      assert result.error == nil
-      assert is_map(result.ast)
       assert result.language == "java"
+      assert result.error != nil
+      assert result.error.type == :parser_not_available
+      assert is_nil(result.ast)
       
-      # Verify parsing completes
+      # Verify timing is still tracked
       assert is_map(result.timing)
       assert result.timing.parse_time_ms > 0
     end
     
-    test "returns metadata about parser and language version", %{customer_id: customer_id, session_id: session_id} do
+    test "returns ParserNotAvailable error with metadata", %{customer_id: customer_id, session_id: session_id} do
       code = "public class Simple { }"
       
       {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "java", code)
       
-      assert result.error == nil
-      assert is_map(result.ast)
-      
-      # Should parse successfully
       assert result.language == "java"
+      assert result.error != nil
+      assert result.error.type == :parser_not_available
+      assert is_nil(result.ast)
     end
     
-    test "handles timeout scenarios", %{customer_id: customer_id, session_id: session_id} do
+    test "returns ParserNotAvailable error for timeout scenarios", %{customer_id: customer_id, session_id: session_id} do
       # Create moderately complex code that should still parse within timeout
       code = """
       public class ComplexClass {
@@ -147,15 +146,17 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
         "    public void method#{i}() { System.out.println(\"Method #{i}\"); }"
       end) <> "\n}"
       
-      # Should complete successfully even with moderately large input
+      # Should return parser not available error
       {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "java", code)
       
-      assert result.error == nil
-      assert is_map(result.ast)
+      assert result.language == "java"
+      assert result.error != nil
+      assert result.error.type == :parser_not_available
+      assert is_nil(result.ast)
       assert result.timing.parse_time_ms > 0
     end
     
-    test "preserves line and column information", %{customer_id: customer_id, session_id: session_id} do
+    test "returns ParserNotAvailable error when checking line/column info", %{customer_id: customer_id, session_id: session_id} do
       code = """
       public class VulnerableClass {
           public void dangerousMethod() {
@@ -167,14 +168,13 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
       
       {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "java", code)
       
-      assert result.error == nil
-      assert is_map(result.ast)
-      
-      # The AST should be parsed successfully
       assert result.language == "java"
+      assert result.error != nil
+      assert result.error.type == :parser_not_available
+      assert is_nil(result.ast)
     end
     
-    test "detects security patterns in annotations and reflections", %{customer_id: customer_id, session_id: session_id} do
+    test "returns ParserNotAvailable error for security pattern detection", %{customer_id: customer_id, session_id: session_id} do
       code = """
       import java.lang.reflect.*;
       
@@ -196,12 +196,13 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
       
       {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "java", code)
       
-      assert result.error == nil
-      assert is_map(result.ast)
       assert result.language == "java"
+      assert result.error != nil
+      assert result.error.type == :parser_not_available
+      assert is_nil(result.ast)
     end
     
-    test "detects serialization vulnerabilities", %{customer_id: customer_id, session_id: session_id} do
+    test "returns ParserNotAvailable error for serialization checks", %{customer_id: customer_id, session_id: session_id} do
       code = """
       import java.io.*;
       
@@ -217,12 +218,13 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
       
       {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "java", code)
       
-      assert result.error == nil
-      assert is_map(result.ast)
       assert result.language == "java"
+      assert result.error != nil
+      assert result.error.type == :parser_not_available
+      assert is_nil(result.ast)
     end
     
-    test "reuses parser for same session", %{customer_id: customer_id, session_id: session_id} do
+    test "reuses parser instance even with errors", %{customer_id: customer_id, session_id: session_id} do
       code1 = "public class Test1 { }"
       code2 = "public class Test2 { }"
       
@@ -233,9 +235,11 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
       assert result1.parser_id == result2.parser_id
       assert result1.session_id == result2.session_id
       
-      # Both should succeed
-      assert result1.error == nil
-      assert result2.error == nil
+      # Both should have the same parser not available error
+      assert result1.error != nil
+      assert result1.error.type == :parser_not_available
+      assert result2.error != nil
+      assert result2.error.type == :parser_not_available
     end
   end
 end

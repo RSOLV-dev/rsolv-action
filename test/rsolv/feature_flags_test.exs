@@ -3,6 +3,9 @@ defmodule Rsolv.FeatureFlagsTest do
   alias Rsolv.FeatureFlags
   
   setup do
+    # Set admin emails for testing
+    Application.put_env(:rsolv, :admin_emails, ["admin@rsolv.dev"])
+    
     # Enable core features for testing
     :ok = FeatureFlags.enable(:core_features)
     :ok = FeatureFlags.enable(:interactive_roi_calculator)

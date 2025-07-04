@@ -32,7 +32,8 @@ defmodule Rsolv.RateLimiter do
     current_time = System.system_time(:second)
     
     # Get or initialize counter
-    case :ets.lookup(@table_name, key) do
+    try do
+      case :ets.lookup(@table_name, key) do
       [{^key, count, window_start}] ->
         # If more than 60 seconds have passed, reset the counter
         if current_time - window_start > 60 do
@@ -57,6 +58,12 @@ defmodule Rsolv.RateLimiter do
         :ets.insert(@table_name, {key, 1, current_time})
         emit_allowed_telemetry(customer_id, action, 1)
         :ok
+      end
+    catch
+      :error, :badarg ->
+        # Table doesn't exist, allow the request
+        emit_allowed_telemetry(customer_id, action, 1)
+        :ok
     end
   end
   
@@ -72,8 +79,14 @@ defmodule Rsolv.RateLimiter do
   Reset all counters (for testing).
   """
   def reset() do
-    :ets.delete_all_objects(@table_name)
-    :ok
+    case :ets.whereis(@table_name) do
+      :undefined ->
+        # Table doesn't exist yet, that's fine for reset
+        :ok
+      _ ->
+        :ets.delete_all_objects(@table_name)
+        :ok
+    end
   end
   
   # GenServer callbacks

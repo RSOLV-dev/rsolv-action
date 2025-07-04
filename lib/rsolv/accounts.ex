@@ -11,8 +11,10 @@ defmodule Rsolv.Accounts do
   # Legacy/compatibility functions for controllers during Phase 3 transition
   # These delegate to the new Customers and Billing contexts
   defdelegate get_customer_by_api_key(api_key), to: Rsolv.Customers
+  defdelegate get_customer!(id), to: Rsolv.LegacyAccounts
   defdelegate update_customer(customer, attrs), to: Rsolv.Customers
   defdelegate record_usage(usage_attrs), to: Rsolv.Billing
+  defdelegate get_customer_usage(customer_id), to: Rsolv.LegacyAccounts
 
   ## Database getters
 

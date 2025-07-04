@@ -68,11 +68,11 @@ defmodule Rsolv.AST.ParserRegistryTest do
       
       invalid_code = "function test( { invalid syntax"
       
-      {:error, error} = ParserRegistry.parse_code(session.id, customer_id, "javascript", invalid_code)
+      {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "javascript", invalid_code)
       
-      assert error != nil
-      assert is_map(error)
-      assert error.type == :syntax_error
+      assert result.error != nil
+      assert is_map(result.error)
+      assert result.error.type == :syntax_error
     end
     
     test "rejects invalid session" do
@@ -140,12 +140,12 @@ defmodule Rsolv.AST.ParserRegistryTest do
       # This should cause parser to crash but be restarted
       crash_code = "FORCE_CRASH_SIGNAL"
       
-      {:error, error} = ParserRegistry.parse_code(session.id, customer_id, "javascript", crash_code)
+      {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "javascript", crash_code)
       
-      assert error != nil
-      assert is_map(error)
-      assert error.type == :parser_crash
-      assert error.message =~ "crash"
+      assert result.error != nil
+      assert is_map(result.error)
+      assert result.error.type == :parser_crash
+      assert result.error.message =~ "crash"
       
       # Next request should work (parser restarted)
       normal_code = "function test() { return 42; }"
@@ -161,12 +161,12 @@ defmodule Rsolv.AST.ParserRegistryTest do
       # This should timeout
       timeout_code = "FORCE_TIMEOUT_SIGNAL"
       
-      {:error, error} = ParserRegistry.parse_code(session.id, customer_id, "javascript", timeout_code)
+      {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "javascript", timeout_code)
       
-      assert error != nil
-      assert is_map(error)
-      assert error.type == :timeout
-      assert error.message =~ "timeout"
+      assert result.error != nil
+      assert is_map(result.error)
+      assert result.error.type == :timeout
+      assert result.error.message =~ "timeout"
     end
   end
   

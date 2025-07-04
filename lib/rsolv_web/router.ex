@@ -103,6 +103,73 @@ defmodule RsolvWeb.Router do
     resources "/feedback", FeedbackController, except: [:delete, :new, :edit]
   end
   
+  # API v1 Routes (from consolidated RSOLV-api)
+  scope "/api/v1", RsolvWeb do
+    pipe_through :api
+    
+    # Credential exchange endpoints
+    post "/credentials/exchange", CredentialController, :exchange
+    post "/credentials/refresh", CredentialController, :refresh
+    post "/usage/report", CredentialController, :report_usage
+    
+    # Pattern metadata endpoint (uses non-versioned controller)
+    get "/patterns/:id/metadata", PatternController, :metadata
+    
+    # Fix attempts
+    resources "/fix-attempts", FixAttemptController, except: [:new, :edit]
+  end
+  
+  scope "/api/v1", RsolvWeb.Api.V1 do
+    pipe_through :api
+    
+    # Vulnerability validation endpoint
+    post "/vulnerabilities/validate", VulnerabilityValidationController, :validate
+    
+    # Pattern endpoints
+    get "/patterns", PatternController, :index
+    get "/patterns/stats", PatternController, :stats
+    get "/patterns/by-language/:language", PatternController, :by_language
+    get "/patterns/v2", PatternController, :index_v2
+    
+    # AST analysis endpoint
+    post "/ast/analyze", ASTController, :analyze
+    
+    # Audit log endpoint
+    resources "/audit-logs", AuditLogController, only: [:index, :show]
+  end
+  
+  # Legacy pattern endpoints (non-versioned API)
+  scope "/api", RsolvWeb do
+    pipe_through :api
+    
+    # Pattern endpoints
+    get "/patterns", PatternController, :index
+    get "/patterns/public/:language", PatternController, :public
+    get "/patterns/protected/:language", PatternController, :protected
+    get "/patterns/ai/:language", PatternController, :ai
+    get "/patterns/enterprise/:language", PatternController, :enterprise
+    get "/patterns/by-language/:language", PatternController, :by_language
+    get "/patterns/all/public", PatternController, :all_public
+    get "/patterns/all/protected", PatternController, :all_protected
+    get "/patterns/all/ai", PatternController, :all_ai
+    get "/patterns/all/enterprise", PatternController, :all_enterprise
+    
+    # Health check
+    get "/health", HealthController, :index
+    
+    # Webhooks
+    post "/webhooks/github", WebhookController, :github
+    
+    
+    # Education resources
+    get "/education/resources", EducationController, :index
+    get "/education/resources/:id", EducationController, :show
+    
+    # Feature flags
+    get "/feature-flags", FeatureFlagController, :index
+    get "/feature-flags/:flag", FeatureFlagController, :show
+  end
+  
   # Define metrics feature flag pipeline
   pipeline :require_metrics_feature do
     plug RsolvWeb.Plugs.FeatureFlagPlug, feature: :metrics_dashboard

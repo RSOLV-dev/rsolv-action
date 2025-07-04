@@ -28,9 +28,27 @@ defmodule Rsolv.DataCase do
   end
 
   setup tags do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
-    :ok
+    # Ensure the repo is started before trying to use sandbox
+    try do
+      pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
+      on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+      :ok
+    rescue
+      error in RuntimeError ->
+        if error.message =~ "could not lookup Ecto repo" do
+          # Log the error for debugging
+          require Logger
+          Logger.error("Repo not started in DataCase, attempting to start application: #{inspect(error)}")
+          # Try to start the application if needed
+          Application.ensure_all_started(:rsolv)
+          # Retry once
+          pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
+          on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+          :ok
+        else
+          reraise error, __STACKTRACE__
+        end
+    end
   end
 
   @doc """

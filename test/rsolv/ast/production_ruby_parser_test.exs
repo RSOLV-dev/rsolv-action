@@ -136,6 +136,11 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
       
       {:ok, result} = ParserRegistry.parse_code(session_id, customer_id, "ruby", code)
       
+      # Debug output
+      if result.error != nil do
+        IO.inspect(result.error, label: "Ruby parser error for complex constructs")
+      end
+      
       assert result.error == nil
       assert is_map(result.ast)
       assert result.ast["type"] == "module"

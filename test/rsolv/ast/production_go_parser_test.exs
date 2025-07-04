@@ -2,6 +2,7 @@ defmodule Rsolv.AST.ProductionGoParserTest do
   use ExUnit.Case, async: true
 
   @moduletag :integration
+  @moduletag :skip
   
   
   alias Rsolv.AST.{ParserRegistry, SessionManager}

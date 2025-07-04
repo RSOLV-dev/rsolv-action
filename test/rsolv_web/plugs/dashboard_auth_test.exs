@@ -59,7 +59,9 @@ defmodule RsolvWeb.Plugs.DashboardAuthTest do
       auth = Base.encode64("admin:test123")
       
       # Enable a feature that admins have access to
-      FunWithFlags.enable(:admin_dashboard)
+      # FunWithFlags requires an actor struct
+      actor = %FunWithFlags.UI.SimpleActor{id: "admin@test.com"}
+      FunWithFlags.enable(:admin_dashboard, for_actor: actor)
       
       conn =
         conn

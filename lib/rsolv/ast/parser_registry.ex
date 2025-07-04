@@ -128,14 +128,15 @@ defmodule Rsolv.AST.ParserRegistry do
         version: "1.0.0",
         timeout: 30_000
       },
-      "go" => %ParserConfig{
-        language: "go",
-        command: "bash",
-        args: [Path.join([priv_dir(), "parsers", "go", "parser.sh"])],
-        extensions: [".go"],
-        version: "1.0.0",
-        timeout: 30_000
-      },
+      # Go parser not implemented yet - comment out until ready
+      # "go" => %ParserConfig{
+      #   language: "go",
+      #   command: "bash",
+      #   args: [Path.join([priv_dir(), "parsers", "go", "parser.sh"])],
+      #   extensions: [".go"],
+      #   version: "1.0.0",
+      #   timeout: 30_000
+      # },
       "elixir" => %ParserConfig{
         language: "elixir",
         command: "elixir",
@@ -468,6 +469,7 @@ defmodule Rsolv.AST.ParserRegistry do
           "parseerror" -> :syntax_error
           "timeout" -> :timeout
           "crash" -> :parser_crash
+          "parsernotavailable" -> :parser_not_available
           _ -> :unknown_error
         end
         

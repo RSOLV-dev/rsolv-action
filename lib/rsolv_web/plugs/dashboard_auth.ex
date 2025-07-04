@@ -19,13 +19,22 @@ defmodule RsolvWeb.Plugs.DashboardAuth do
     case authenticate(conn) do
       {:ok, user_email} ->
         # Authentication successful, now check feature flag if required
-        if feature && !FunWithFlags.enabled?(feature, for: user_email) do
-          conn
-          |> put_flash(:error, "This feature is not available for your account.")
-          |> redirect(to: "/")
-          |> halt()
+        if feature do
+          # Create an actor struct for FunWithFlags
+          actor = %FunWithFlags.UI.SimpleActor{id: user_email}
+          
+          if !FunWithFlags.enabled?(feature, for: actor) do
+            conn
+            |> put_flash(:error, "This feature is not available for your account.")
+            |> redirect(to: "/")
+            |> halt()
+          else
+            # Both auth and feature flag check passed
+            conn
+            |> assign(:current_user_email, user_email)
+          end
         else
-          # Both auth and feature flag check passed
+          # No feature flag required, just auth passed
           conn
           |> assign(:current_user_email, user_email)
         end

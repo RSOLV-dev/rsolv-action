@@ -71,7 +71,7 @@ defmodule Rsolv.APIIntegrationTest do
       """
       
       {:ok, result} = Rsolv.Repo.query(query)
-      versions = Enum.map(result.rows, fn [v] -> v end)
+      versions = Enum.map(result.rows, fn [v] -> String.to_integer(v) end)
       
       # Verify our new migrations are present
       assert 20250602000001 in versions # CreateFixAttempts

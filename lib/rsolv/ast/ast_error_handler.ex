@@ -106,6 +106,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
       :parser_crash -> :critical
       :timeout -> :medium
       :unsupported_language -> :low
+      :parser_not_available -> :low
       :unknown_error -> :medium
       _ -> :medium
     end
@@ -124,6 +125,8 @@ defmodule Rsolv.AST.ASTErrorHandler do
         crash_suggestions(error)
       :unsupported_language ->
         ["Language '#{error.language}' is not supported. Supported languages: #{Enum.join(@supported_languages, ", ")}"]
+      :parser_not_available ->
+        ["Parser for #{error.language} is not currently available.", "Please check parser installation and dependencies."]
       :unknown_error ->
         ["Unknown error occurred. Consider using fallback parsing strategy.", "Check if source code is valid #{error.language} syntax."]
       _ ->
@@ -140,6 +143,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
       :timeout -> true
       :parser_crash -> false
       :unsupported_language -> false
+      :parser_not_available -> false
       :unknown_error -> true
       _ -> false
     end
@@ -155,6 +159,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
       %{type: :timeout} -> :timeout
       %{type: :parser_crash} -> :parser_crash
       %{type: :unsupported_language} -> :unsupported_language
+      %{type: :parser_not_available} -> :parser_not_available
       _ -> :unknown_error
     end
   end
@@ -169,6 +174,8 @@ defmodule Rsolv.AST.ASTErrorHandler do
       Map.has_key?(error, :type) and error.type == :unsupported_language ->
         error_lang = Map.get(error, :language, "unknown")
         "Language '#{error_lang}' is not supported"
+      Map.has_key?(error, :type) and error.type == :parser_not_available ->
+        "Parser for #{Map.get(error, :language, "unknown")} is not available"
       true -> 
         "Unknown parsing error occurred"
     end
@@ -227,6 +234,9 @@ defmodule Rsolv.AST.ASTErrorHandler do
       
       {:unsupported_language, _} ->
         Map.put(standardized, :supported_languages, @supported_languages)
+      
+      {:parser_not_available, _} ->
+        Map.put(standardized, :required_dependencies, extract_dependencies(error))
       
       {:unknown_error, _} ->
         Map.put(standardized, :original_error, error)
@@ -302,5 +312,14 @@ defmodule Rsolv.AST.ASTErrorHandler do
       "Report this issue to the development team",
       "Consider preprocessing the source code to identify problematic patterns"
     ]
+  end
+  
+  defp extract_dependencies(error) do
+    # Extract dependency info from error message if available
+    if Map.has_key?(error, :message) and String.contains?(error.message || "", "Maven") do
+      ["Maven (Java build tool)"]
+    else
+      []
+    end
   end
 end
