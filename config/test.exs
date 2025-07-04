@@ -62,3 +62,7 @@ config :fun_with_flags, :cache, enabled: false
 
 # Disable cache bust notifications to avoid Redis dependency issues
 config :fun_with_flags, :cache_bust_notifications, enabled: false
+
+# Configure admin emails for testing
+config :rsolv,
+  admin_emails: ["admin@test.com"]
