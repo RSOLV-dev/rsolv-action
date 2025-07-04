@@ -21,13 +21,13 @@ defmodule RsolvWeb.FeatureFlagsHelper do
   """
   def enable_features(features) when is_list(features) do
     # Get current enabled features
-    current_features = Application.get_env(:rsolv_landing, :enabled_features, [])
+    current_features = Application.get_env(:rsolv, :enabled_features, [])
     
     # Add new features without duplicates
     updated_features = Enum.uniq(current_features ++ features)
     
     # Update application environment
-    Application.put_env(:rsolv_landing, :enabled_features, updated_features)
+    Application.put_env(:rsolv, :enabled_features, updated_features)
   end
   
   @doc """
@@ -55,7 +55,7 @@ defmodule RsolvWeb.FeatureFlagsHelper do
       end
   """
   def reset_features do
-    Application.delete_env(:rsolv_landing, :enabled_features)
-    Application.delete_env(:rsolv_landing, :disabled_features)
+    Application.delete_env(:rsolv, :enabled_features)
+    Application.delete_env(:rsolv, :disabled_features)
   end
 end

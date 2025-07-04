@@ -125,7 +125,7 @@ defmodule RsolvWeb.FunWithFlagsHelper do
   """
   def use_static_flags do
     # Configure the app to use static flags only
-    Application.put_env(:rsolv_landing, :use_static_flags_only, true)
+    Application.put_env(:rsolv, :use_static_flags_only, true)
     :ok
   end
 end
