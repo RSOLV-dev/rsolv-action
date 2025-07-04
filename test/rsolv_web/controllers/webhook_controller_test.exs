@@ -119,7 +119,7 @@ defmodule RsolvWeb.WebhookControllerTest do
       conn = conn
         |> put_req_header("x-github-event", "pull_request")
         |> put_req_header("content-type", "application/json")
-        |> post("/webhook/github", %{})
+        |> post("/webhooks/github", %{})
         
       assert json_response(conn, 401) == %{
         "error" => "Missing signature"

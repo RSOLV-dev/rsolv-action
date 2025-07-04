@@ -137,7 +137,8 @@ defmodule RsolvWeb.Services.ConvertKitTest do
 
       # Assert the mock success response
       assert {:ok, response} = result
-      assert response.status == "mocked_success"
+      assert response.status_code == 200
+      assert response.message == "Development mode"
 
       # Restore original config
       Application.put_env(:rsolv, :convertkit, original_config)
@@ -195,7 +196,8 @@ defmodule RsolvWeb.Services.ConvertKitTest do
 
       # Assert the mock success response
       assert {:ok, response} = result
-      assert response.status == "mocked_success"
+      assert response.status_code == 200
+      assert response.message == "Development mode"
 
       # Restore original config
       Application.put_env(:rsolv, :convertkit, original_config)
@@ -295,7 +297,8 @@ defmodule RsolvWeb.Services.ConvertKitTest do
 
       # Assert the mock success response
       assert {:ok, response} = result
-      assert response.status == "mocked_success"
+      assert response.status_code == 200
+      assert response.message == "Development mode"
 
       # Restore original config
       Application.put_env(:rsolv, :convertkit, original_config)

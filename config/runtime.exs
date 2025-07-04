@@ -113,9 +113,11 @@ config :rsolv,
   admin_emails: System.get_env("ADMIN_EMAILS", "") |> String.split(",", trim: true)
 
 # Email configuration (for expert reviews)
-config :rsolv, Rsolv.Mailer,
-  adapter: Bamboo.PostmarkAdapter,
-  api_key: System.get_env("POSTMARK_API_KEY")
+if config_env() != :test do
+  config :rsolv, Rsolv.Mailer,
+    adapter: Bamboo.PostmarkAdapter,
+    api_key: System.get_env("POSTMARK_API_KEY")
+end
 
 # Logger configuration
 config :logger, :console,
