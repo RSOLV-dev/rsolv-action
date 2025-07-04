@@ -103,8 +103,8 @@ defmodule Rsolv.Phase3IntegrationTest do
       })
       
       # Test feature flag enabling
-      flag_name = "test_feature_integration"
-      {:ok, _} = Rsolv.FeatureFlags.enable(flag_name)
+      flag_name = :test_feature_integration
+      :ok = Rsolv.FeatureFlags.enable(flag_name)
       
       assert Rsolv.FeatureFlags.enabled?(flag_name)
     end

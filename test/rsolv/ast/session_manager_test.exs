@@ -142,26 +142,34 @@ defmodule Rsolv.AST.SessionManagerTest do
     end
     
     test "counts active sessions" do
-      customer1 = "customer-1"
-      customer2 = "customer-2"
+      customer1 = "customer-test-count-1-#{System.unique_integer()}"
+      customer2 = "customer-test-count-2-#{System.unique_integer()}"
       
       # Get initial count
       initial_count = SessionManager.count_active_sessions()
       
       # Create sessions
-      {:ok, _} = SessionManager.create_session(customer1)
-      {:ok, _} = SessionManager.create_session(customer1)
-      {:ok, _} = SessionManager.create_session(customer2)
+      {:ok, session1} = SessionManager.create_session(customer1)
+      {:ok, session2} = SessionManager.create_session(customer1)
+      {:ok, session3} = SessionManager.create_session(customer2)
       
-      assert SessionManager.count_active_sessions() == initial_count + 3
+      # Verify count increased by at least 3 (other tests might be running)
+      new_count = SessionManager.count_active_sessions()
+      assert new_count >= initial_count + 3
       
       # Create expired session
-      {:ok, _expired} = SessionManager.create_session(customer1, 1)
+      {:ok, expired} = SessionManager.create_session(customer1, 1)
       Process.sleep(1100)
       
       # Cleanup should remove expired
       SessionManager.cleanup_expired_sessions()
-      assert SessionManager.count_active_sessions() == initial_count + 3
+      
+      # After cleanup, the three non-expired sessions should still exist
+      # but we can't assert exact count due to parallel tests
+      assert {:ok, _} = SessionManager.get_session(session1.id, customer1)
+      assert {:ok, _} = SessionManager.get_session(session2.id, customer1)
+      assert {:ok, _} = SessionManager.get_session(session3.id, customer2)
+      assert {:error, :session_expired} = SessionManager.get_session(expired.id, customer1)
     end
   end
   

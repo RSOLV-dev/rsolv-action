@@ -6,6 +6,16 @@ defmodule RsolvWeb.EarlyAccessFormTest do
   setup :verify_on_exit!
 
   defp setup_mocks do
+    # Configure the HTTP client to use our mock
+    Application.put_env(:rsolv, :http_client, Rsolv.HTTPClientMock)
+    
+    # Configure ConvertKit with valid settings to ensure HTTP calls are made
+    Application.put_env(:rsolv, :convertkit,
+      api_key: "test_api_key",
+      form_id: "test_form_id",
+      api_base_url: "https://api.convertkit.com/v3"
+    )
+    
     # Mock successful HTTP response for ConvertKit (multiple calls expected)
     Rsolv.HTTPClientMock
     |> expect(:post, 2, fn _, _, _, _ ->
