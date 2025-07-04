@@ -1,4 +1,4 @@
-defmodule RsolvLandingWeb.MockPlugs do
+defmodule RsolvWeb.MockPlugs do
   @moduledoc """
   Module for creating test doubles of critical plugs.
   Used to override pipeline behavior for testing LiveViews in isolation.
@@ -20,7 +20,7 @@ defmodule RsolvLandingWeb.MockPlugs do
   """
   def setup_mock_plugs do
     # Store the original module values (add underscore prefix to unused variable)
-    _original_feature_flag_plug = :code.get_object_code(RsolvLandingWeb.Plugs.FeatureFlagPlug)
+    _original_feature_flag_plug = :code.get_object_code(RsolvWeb.Plugs.FeatureFlagPlug)
     
     # Replace with test versions using Mox instead of :meck
     # We're removing the :meck references since it's not working properly

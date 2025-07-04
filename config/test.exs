@@ -38,6 +38,11 @@ config :rsolv, :use_mock_parsers, true
 config :rsolv, :parser_timeout, 5_000
 config :rsolv, :session_timeout, 300_000  # 5 minutes
 
+# Disable parser pool pre-warming in test
+config :rsolv, Rsolv.AST.ParserPool,
+  pre_warm: false,
+  pool_size: 1
+
 # Configure FunWithFlags for test environment
 config :fun_with_flags, :persistence,
   adapter: FunWithFlags.Store.Persistent.Ecto,

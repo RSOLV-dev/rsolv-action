@@ -155,7 +155,7 @@ defmodule Rsolv.Workers.EmailWorker do
       EmailWorker.schedule_sequence("user@example.com", "User", :early_access_onboarding)
   """
   def schedule_sequence(email, first_name, sequence_name) do
-    alias RsolvLandingWeb.Services.EmailSequence
+    alias RsolvWeb.Services.EmailSequence
     
     Logger.info("[EmailWorker] schedule_sequence called", 
       email: email,

@@ -11,7 +11,7 @@ defmodule RsolvWeb.API.FeedbackControllerTest do
 
   describe "create/2" do
     test "creates feedback with valid data", %{conn: conn} do
-      conn = post(conn, ~p"/api/v1/feedback", @valid_attrs)
+      conn = post(conn, ~p"/api/feedback", @valid_attrs)
       
       assert %{
         "success" => true,
@@ -31,7 +31,7 @@ defmodule RsolvWeb.API.FeedbackControllerTest do
       attrs = Map.put(@valid_attrs, "content", "Content field test")
              |> Map.delete("message")
              
-      conn = post(conn, ~p"/api/v1/feedback", attrs)
+      conn = post(conn, ~p"/api/feedback", attrs)
       
       assert %{
         "success" => true,
@@ -40,7 +40,7 @@ defmodule RsolvWeb.API.FeedbackControllerTest do
     end
     
     test "returns errors with invalid data", %{conn: conn} do
-      conn = post(conn, ~p"/api/v1/feedback", %{"email" => "invalid"})
+      conn = post(conn, ~p"/api/feedback", %{"email" => "invalid"})
       
       assert %{
         "success" => false,
@@ -64,7 +64,7 @@ defmodule RsolvWeb.API.FeedbackControllerTest do
         source: "test"
       })
       
-      conn = get(conn, ~p"/api/v1/feedback")
+      conn = get(conn, ~p"/api/feedback")
       
       assert %{
         "success" => true,
@@ -85,7 +85,7 @@ defmodule RsolvWeb.API.FeedbackControllerTest do
         source: "test"
       })
       
-      conn = get(conn, ~p"/api/v1/feedback/#{entry.id}")
+      conn = get(conn, ~p"/api/feedback/#{entry.id}")
       
       response = json_response(conn, 200)
       
@@ -102,7 +102,7 @@ defmodule RsolvWeb.API.FeedbackControllerTest do
     end
     
     test "returns 404 for non-existent entry", %{conn: conn} do
-      conn = get(conn, ~p"/api/v1/feedback/999999")
+      conn = get(conn, ~p"/api/feedback/999999")
       
       assert %{
         "success" => false,
@@ -130,7 +130,7 @@ defmodule RsolvWeb.API.FeedbackControllerTest do
         source: "test"
       })
       
-      conn = get(conn, ~p"/api/v1/feedback/stats")
+      conn = get(conn, ~p"/api/feedback/stats")
       
       assert %{
         "success" => true,

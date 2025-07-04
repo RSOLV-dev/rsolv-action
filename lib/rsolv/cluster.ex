@@ -1,6 +1,6 @@
 defmodule Rsolv.Cluster do
   @moduledoc """
-  BEAM clustering support for RSOLV Landing.
+  BEAM clustering support for RSOLV Platform.
   
   This module handles automatic cluster formation in Kubernetes environments,
   enabling distributed cache invalidation and state sharing across pods.
@@ -45,31 +45,21 @@ defmodule Rsolv.Cluster do
   Sets up Kubernetes-based clustering using headless service
   """
   def setup_kubernetes_cluster do
-    # Use libcluster for Kubernetes service discovery
-    service_name = System.get_env("CLUSTER_SERVICE_NAME") || "rsolv-landing-headless"
-    namespace = System.get_env("POD_NAMESPACE") || "default"
+    # Get topologies from configuration
+    topologies = Application.get_env(:libcluster, :topologies)
     
-    topologies = [
-      k8s_dns: [
-        strategy: Cluster.Strategy.Kubernetes.DNS,
-        config: [
-          service: service_name,
-          namespace: namespace,
-          application_name: "rsolv_landing",
-          polling_interval: 5_000,
-          mode: :ip
-        ]
+    if topologies do
+      # Start the cluster supervisor
+      children = [
+        {Cluster.Supervisor, [topologies, [name: Rsolv.ClusterSupervisor]]}
       ]
-    ]
-    
-    # Start the cluster supervisor
-    children = [
-      {Cluster.Supervisor, [topologies, [name: Rsolv.ClusterSupervisor]]}
-    ]
-    
-    Supervisor.start_link(children, strategy: :one_for_one)
-    
-    Logger.info("Kubernetes clustering configured with headless service")
+      
+      Supervisor.start_link(children, strategy: :one_for_one)
+      
+      Logger.info("Kubernetes clustering configured with topologies: #{inspect(topologies)}")
+    else
+      Logger.warning("No cluster topologies configured")
+    end
   end
   
   @doc """
@@ -85,7 +75,7 @@ defmodule Rsolv.Cluster do
           config: [
             polling_interval: 5_000,
             query: query,
-            node_basename: "rsolv_landing"
+            node_basename: "rsolv"
           ]
         ]
       ]
@@ -150,5 +140,21 @@ defmodule Rsolv.Cluster do
       error ->
         Logger.error("Failed to clear cache: #{inspect(error)}")
     end
+  end
+  
+  @doc """
+  Called when a node connects to the cluster
+  """
+  def on_node_connect(node) do
+    Logger.info("Node connected: #{inspect(node)}")
+    # You can add custom logic here, like syncing state
+  end
+  
+  @doc """
+  Called when a node disconnects from the cluster
+  """
+  def on_node_disconnect(node) do
+    Logger.info("Node disconnected: #{inspect(node)}")
+    # You can add custom logic here, like cleanup
   end
 end

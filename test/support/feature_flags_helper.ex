@@ -1,4 +1,4 @@
-defmodule RsolvLandingWeb.FeatureFlagsHelper do
+defmodule RsolvWeb.FeatureFlagsHelper do
   @moduledoc """
   Helper functions for setting up feature flags during testing.
   """
@@ -15,7 +15,7 @@ defmodule RsolvLandingWeb.FeatureFlagsHelper do
       
       # Or manually with specific features
       setup do
-        RsolvLandingWeb.FeatureFlagsHelper.enable_features([:admin_dashboard, :metrics_dashboard])
+        RsolvWeb.FeatureFlagsHelper.enable_features([:admin_dashboard, :metrics_dashboard])
         :ok
       end
   """
@@ -50,7 +50,7 @@ defmodule RsolvLandingWeb.FeatureFlagsHelper do
   ## Examples
       
       setup do
-        on_exit(fn -> RsolvLandingWeb.FeatureFlagsHelper.reset_features() end)
+        on_exit(fn -> RsolvWeb.FeatureFlagsHelper.reset_features() end)
         :ok
       end
   """

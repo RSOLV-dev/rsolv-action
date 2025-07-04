@@ -1,87 +1,98 @@
 defmodule Rsolv.FeatureFlagsTest do
-  use ExUnit.Case, async: true
+  use Rsolv.DataCase, async: true
   alias Rsolv.FeatureFlags
+  
+  setup do
+    # Enable core features for testing
+    :ok = FeatureFlags.enable(:core_features)
+    :ok = FeatureFlags.enable(:interactive_roi_calculator)
+    :ok = FeatureFlags.enable(:team_size_field)
+    :ok = FeatureFlags.enable(:feedback_form)
+    
+    :ok
+  end
   
   describe "enabled?/1" do
     test "returns true for enabled default flags" do
-      assert FeatureFlags.enabled?("patterns.public.enabled") == true
-      assert FeatureFlags.enabled?("patterns.protected.enabled") == true
-      assert FeatureFlags.enabled?("patterns.ai.enabled") == true
-      assert FeatureFlags.enabled?("patterns.enterprise.enabled") == true
+      # Test with atom-based flags from the role_access map
+      assert FeatureFlags.enabled?(:core_features) == true
+      assert FeatureFlags.enabled?(:interactive_roi_calculator) == true
+      assert FeatureFlags.enabled?(:team_size_field) == true
+      assert FeatureFlags.enabled?(:feedback_form) == true
     end
     
     test "returns false for unknown flags" do
-      assert FeatureFlags.enabled?("unknown.flag") == false
+      assert FeatureFlags.enabled?(:unknown_flag) == false
     end
     
-    test "respects environment variable overrides" do
-      # Set environment variable
-      System.put_env("RSOLV_FLAG_PATTERNS_PUBLIC_ENABLED", "false")
-      assert FeatureFlags.enabled?("patterns.public.enabled") == false
-      
-      # Clean up
-      System.delete_env("RSOLV_FLAG_PATTERNS_PUBLIC_ENABLED")
+    test "returns false for role-gated features without user context" do
+      # These features require specific roles
+      assert FeatureFlags.enabled?(:admin_dashboard) == false
+      assert FeatureFlags.enabled?(:api_access) == false
+      assert FeatureFlags.enabled?(:advanced_analytics) == false
     end
   end
   
-  describe "tier_access_allowed?/2" do
-    test "public tier is accessible without authentication" do
-      assert FeatureFlags.tier_access_allowed?("public", nil) == true
+  describe "enabled? with role-based access" do
+    test "core features are accessible to all roles" do
+      assert FeatureFlags.enabled?(:core_features) == true
+      assert FeatureFlags.enabled?(:core_features, role: :early_access) == true
+      assert FeatureFlags.enabled?(:core_features, role: :phase_1) == true
+      assert FeatureFlags.enabled?(:core_features, role: :vip) == true
+      assert FeatureFlags.enabled?(:core_features, role: :admin) == true
     end
     
-    test "protected tier requires authentication" do
-      assert FeatureFlags.tier_access_allowed?("protected", nil) == false
-      assert FeatureFlags.tier_access_allowed?("protected", %{id: "123"}) == true
+    test "advanced analytics requires phase_1 or higher" do
+      assert FeatureFlags.enabled?(:advanced_analytics, role: :early_access) == false
+      assert FeatureFlags.enabled?(:advanced_analytics, role: :phase_1) == true
+      assert FeatureFlags.enabled?(:advanced_analytics, role: :vip) == true
+      assert FeatureFlags.enabled?(:advanced_analytics, role: :admin) == true
     end
     
-    test "ai tier requires authentication" do
-      assert FeatureFlags.tier_access_allowed?("ai", nil) == false
-      
-      # With grant_all_authenticated enabled (default)
-      assert FeatureFlags.tier_access_allowed?("ai", %{id: "123"}) == true
+    test "api access requires vip or higher" do
+      assert FeatureFlags.enabled?(:api_access, role: :early_access) == false
+      assert FeatureFlags.enabled?(:api_access, role: :phase_1) == false
+      assert FeatureFlags.enabled?(:api_access, role: :vip) == true
+      assert FeatureFlags.enabled?(:api_access, role: :admin) == true
     end
     
-    test "enterprise tier requires special access" do
-      assert FeatureFlags.tier_access_allowed?("enterprise", nil) == false
-      assert FeatureFlags.tier_access_allowed?("enterprise", %{id: "123"}) == false
-      
-      # Internal customers have access
-      assert FeatureFlags.tier_access_allowed?("enterprise", %{id: "internal"}) == true
-      assert FeatureFlags.tier_access_allowed?("enterprise", %{id: "master"}) == true
-      assert FeatureFlags.tier_access_allowed?("enterprise", %{email: "user@rsolv.dev"}) == true
+    test "admin dashboard requires admin role" do
+      assert FeatureFlags.enabled?(:admin_dashboard, role: :early_access) == false
+      assert FeatureFlags.enabled?(:admin_dashboard, role: :phase_1) == false
+      assert FeatureFlags.enabled?(:admin_dashboard, role: :vip) == false
+      assert FeatureFlags.enabled?(:admin_dashboard, role: :admin) == true
     end
     
-    test "respects tier-specific flags" do
-      assert FeatureFlags.tier_access_allowed?("enterprise", %{tier: "enterprise"}) == true
-      assert FeatureFlags.tier_access_allowed?("ai", %{tier: "ai"}) == true
+    test "respects user email for admin access" do
+      assert FeatureFlags.enabled?(:admin_dashboard, email: "admin@rsolv.dev") == true
+      assert FeatureFlags.enabled?(:admin_dashboard, email: "user@example.com") == false
     end
   end
   
   describe "get_accessible_tiers/1" do
-    test "returns only public for unauthenticated users" do
-      assert FeatureFlags.get_accessible_tiers(nil) == ["public"]
+    test "returns only free tier for unauthenticated users" do
+      assert FeatureFlags.get_accessible_tiers(nil) == ["free"]
     end
     
-    test "returns public and protected for authenticated users" do
+    test "returns free tier for free customers" do
+      tiers = FeatureFlags.get_accessible_tiers(%{id: "123", tier: "free"})
+      assert tiers == ["free"]
+    end
+    
+    test "returns free and pro tiers for pro customers" do
+      tiers = FeatureFlags.get_accessible_tiers(%{id: "123", tier: "pro"})
+      assert tiers == ["free", "pro"]
+    end
+    
+    test "returns all tiers for enterprise customers" do
+      tiers = FeatureFlags.get_accessible_tiers(%{id: "internal", tier: "enterprise"})
+      assert tiers == ["free", "pro", "enterprise"]
+    end
+    
+    test "handles missing tier field gracefully" do
+      # Customer without tier field defaults to free
       tiers = FeatureFlags.get_accessible_tiers(%{id: "123"})
-      assert "public" in tiers
-      assert "protected" in tiers
-    end
-    
-    test "includes ai tier for authenticated users with default settings" do
-      tiers = FeatureFlags.get_accessible_tiers(%{id: "123"})
-      assert "ai" in tiers
-    end
-    
-    test "includes enterprise tier for internal users" do
-      tiers = FeatureFlags.get_accessible_tiers(%{id: "internal"})
-      assert "enterprise" in tiers
-    end
-    
-    test "cumulative tiers include all lower tiers" do
-      # Enterprise user should get all tiers
-      tiers = FeatureFlags.get_accessible_tiers(%{id: "internal"})
-      assert tiers == ["public", "protected", "ai", "enterprise"]
+      assert tiers == ["free"]
     end
   end
 end

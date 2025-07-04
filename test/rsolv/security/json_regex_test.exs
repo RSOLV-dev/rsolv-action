@@ -1,4 +1,4 @@
-defmodule RSOLVApi.Security.JsonRegexTest do
+defmodule Rsolv.Security.JsonRegexTest do
   use ExUnit.Case
   
   test "Jason fails to encode regex" do

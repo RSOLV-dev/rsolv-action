@@ -3,6 +3,7 @@ defmodule Rsolv.AST.ProductionJavaScriptParserTest do
   
   @moduletag :integration
   
+  
   alias Rsolv.AST.{ParserRegistry, SessionManager}
   
   describe "Production JavaScript Parser" do

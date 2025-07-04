@@ -8,9 +8,13 @@ if config_env() == :prod do
   pod_namespace = System.get_env("POD_NAMESPACE") || "default"
   
   # Service name should match the headless service in Kubernetes
-  service_name = System.get_env("CLUSTER_SERVICE_NAME") || "rsolv-api-headless"
+  service_name = System.get_env("CLUSTER_SERVICE_NAME") || "staging-rsolv-headless"
   
-  config :rsolv, :cluster,
+  config :rsolv,
+    enable_clustering: true,
+    cluster_strategy: :kubernetes
+    
+  config :libcluster,
     topologies: [
       k8s_dns: [
         strategy: Cluster.Strategy.Kubernetes.DNS,

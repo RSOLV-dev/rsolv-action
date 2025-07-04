@@ -1,4 +1,4 @@
-defmodule RsolvLandingWeb.FunWithFlagsHelper do
+defmodule RsolvWeb.FunWithFlagsHelper do
   @moduledoc """
   Helper module for testing with FunWithFlags in Ecto sandbox mode.
   
@@ -19,8 +19,8 @@ defmodule RsolvLandingWeb.FunWithFlagsHelper do
   """
   def setup_flags do
     # Ensure we're in shared mode for FunWithFlags queries
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(RsolvLanding.Repo)
-    Ecto.Adapters.SQL.Sandbox.mode(RsolvLanding.Repo, {:shared, self()})
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Rsolv.Repo)
+    Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
     
     # Clear any cached flags
     if function_exported?(FunWithFlags.Store.Cache, :flush, 0) do
@@ -35,7 +35,7 @@ defmodule RsolvLandingWeb.FunWithFlagsHelper do
   """
   def enable_flag(flag) when is_atom(flag) do
     # Ensure shared mode
-    Ecto.Adapters.SQL.Sandbox.mode(RsolvLanding.Repo, {:shared, self()})
+    Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
     
     # Enable the flag
     :ok = FunWithFlags.enable(flag)
@@ -53,7 +53,7 @@ defmodule RsolvLandingWeb.FunWithFlagsHelper do
   """
   def disable_flag(flag) when is_atom(flag) do
     # Ensure shared mode
-    Ecto.Adapters.SQL.Sandbox.mode(RsolvLanding.Repo, {:shared, self()})
+    Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
     
     # Disable the flag
     :ok = FunWithFlags.disable(flag)
@@ -71,7 +71,7 @@ defmodule RsolvLandingWeb.FunWithFlagsHelper do
   """
   def enable_flag_for_group(flag, group) when is_atom(flag) and is_atom(group) do
     # Ensure shared mode
-    Ecto.Adapters.SQL.Sandbox.mode(RsolvLanding.Repo, {:shared, self()})
+    Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
     
     # First disable globally
     :ok = FunWithFlags.disable(flag)
@@ -92,7 +92,7 @@ defmodule RsolvLandingWeb.FunWithFlagsHelper do
   """
   def clear_all_flags do
     # Ensure shared mode
-    Ecto.Adapters.SQL.Sandbox.mode(RsolvLanding.Repo, {:shared, self()})
+    Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
     
     # Get all flags and clear them
     case FunWithFlags.all_flags() do

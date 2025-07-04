@@ -15,7 +15,8 @@ defmodule RsolvWeb.API.FeedbackController do
       email: params["email"],
       message: params["content"] || params["message"],
       rating: params["rating"],
-      tags: params["tags"] || []
+      tags: params["tags"] || [],
+      source: params["source"] || "api"
     }
     
     case Feedback.create_entry(attrs) do

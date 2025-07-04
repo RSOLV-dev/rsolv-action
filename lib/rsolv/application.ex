@@ -29,6 +29,18 @@ defmodule Rsolv.Application do
       {Oban, Application.fetch_env!(:rsolv, Oban)},
       # Start the cluster manager (for distributed cache invalidation)
       Rsolv.Cluster,
+      # Start security services
+      Rsolv.Security.PatternServer,
+      # Start cache services
+      Rsolv.Cache.ValidationCache,
+      # Start AST services
+      Rsolv.AST.ASTCache,
+      Rsolv.AST.AuditLogger,
+      Rsolv.AST.SessionManager,
+      Rsolv.AST.ParserRegistry,
+      Rsolv.AST.PortSupervisor,
+      {Rsolv.AST.ParserPool, Application.get_env(:rsolv, Rsolv.AST.ParserPool, [])},
+      Rsolv.AST.AnalysisService,
       # Note: FunWithFlags.Supervisor is started automatically by the library
       # Start a worker by calling: Rsolv.Worker.start_link(arg)
       # {Rsolv.Worker, arg},

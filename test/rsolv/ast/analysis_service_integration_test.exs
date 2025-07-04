@@ -1,6 +1,9 @@
 defmodule Rsolv.AST.AnalysisServiceIntegrationTest do
   use ExUnit.Case, async: false
   
+  @moduletag :integration
+  
+  
   alias Rsolv.AST.{AnalysisService, SessionManager}
   
   setup do

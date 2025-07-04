@@ -99,8 +99,8 @@ defmodule RsolvWeb.Router do
     pipe_through :api
     
     # Feedback endpoints
-    resources "/feedback", FeedbackController, except: [:delete, :new, :edit]
     get "/feedback/stats", FeedbackController, :stats
+    resources "/feedback", FeedbackController, except: [:delete, :new, :edit]
   end
   
   # Define metrics feature flag pipeline

@@ -3,6 +3,7 @@ defmodule Rsolv.AST.ProductionGoParserTest do
 
   @moduletag :integration
   
+  
   alias Rsolv.AST.{ParserRegistry, SessionManager}
   
   describe "Production Go Parser" do

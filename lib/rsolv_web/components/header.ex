@@ -9,15 +9,15 @@ defmodule RsolvWeb.Components.Header do
     
     # Set header styling based on page
     header_class = if is_homepage do
-      "fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-brand-dark/80 dark:bg-dark-900/80 backdrop-blur-sm"
+      "fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white/80 dark:bg-dark-900/80 backdrop-blur-sm"
     else
       "sticky top-0 z-50 bg-white dark:bg-dark-950 shadow-sm border-b border-gray-200 dark:border-dark-800"
     end
     
-    text_color = if is_homepage, do: "text-white", else: "text-gray-900 dark:text-gray-100"
-    link_color = if is_homepage, do: "text-white/90 hover:text-white", else: "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+    text_color = if is_homepage, do: "text-gray-900 dark:text-white", else: "text-gray-900 dark:text-gray-100"
+    link_color = if is_homepage, do: "text-gray-700 dark:text-white/90 hover:text-gray-900 dark:hover:text-white", else: "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
     button_class = if is_homepage do
-      "btn-primary bg-white text-brand-blue hover:bg-gray-100"
+      "bg-brand-blue dark:bg-white text-white dark:text-brand-blue font-medium py-2 px-6 rounded-md hover:bg-blue-600 dark:hover:bg-gray-100 transition-colors"
     else
       "bg-indigo-600 dark:bg-brand-blue text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 dark:hover:bg-blue-600"
     end

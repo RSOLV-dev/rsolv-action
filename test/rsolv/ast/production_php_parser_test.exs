@@ -3,6 +3,7 @@ defmodule Rsolv.AST.ProductionPhpParserTest do
 
   @moduletag :integration
   
+  
   alias Rsolv.AST.{ParserRegistry, SessionManager}
   
   describe "Production PHP Parser" do

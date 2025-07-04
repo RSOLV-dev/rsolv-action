@@ -29,7 +29,7 @@ defmodule Rsolv.EarlyAccess do
   
   # Increment Prometheus metrics for signup alerts
   defp increment_signup_metrics(signup) do
-    alias RsolvLandingWeb.Services.Metrics
+    alias RsolvWeb.Services.Metrics
     
     # Track standard signup metrics
     Metrics.count_signup()

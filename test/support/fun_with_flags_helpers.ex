@@ -1,4 +1,4 @@
-defmodule RsolvLanding.FunWithFlagsHelpers do
+defmodule Rsolv.FunWithFlagsHelpers do
   @moduledoc """
   Test helpers for FunWithFlags feature flag testing.
   """

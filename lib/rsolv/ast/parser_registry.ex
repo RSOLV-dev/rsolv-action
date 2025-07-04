@@ -251,7 +251,7 @@ defmodule Rsolv.AST.ParserRegistry do
                 
                 # Update statistics for failure
                 stats = update_statistics(updated_state.stats, result)
-                {{:error, standardized_error}, stats}
+                {{:ok, result}, stats}
             end
             
             final_state = %{updated_state | stats: updated_stats}

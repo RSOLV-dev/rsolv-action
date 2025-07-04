@@ -1,4 +1,6 @@
-/** @type {import('tailwindcss').Config} */
+// See the Tailwind configuration guide for advanced usage
+// https://tailwindcss.com/docs/configuration
+
 const plugin = require("tailwindcss/plugin")
 const fs = require("fs")
 const path = require("path")
@@ -6,30 +8,9 @@ const path = require("path")
 module.exports = {
   darkMode: 'class',
   content: [
-    "./lib/**/*.{ex,heex,eex}",
-    "./lib/**/views/**/*.{ex,heex,eex}",
-    "./lib/**/live/**/*.{ex,heex,eex}",
-    "./lib/**/components/**/*.{ex,heex,eex}",
-    "./assets/js/**/*.js"
-  ],
-  safelist: [
-    'text-brand-blue',
-    'bg-brand-blue',
-    'text-brand-green',
-    'bg-brand-green',
-    'text-brand-dark',
-    'bg-brand-dark',
-    'text-brand-light',
-    'bg-brand-light',
-    'text-brand-white',
-    'bg-brand-white',
-    'hover:bg-brand-blue',
-    'hover:bg-brand-green',
-    'hover:text-brand-blue',
-    'hover:text-brand-green',
-    'btn-primary',
-    'btn-success',
-    'btn-outline'
+    "./js/**/*.js",
+    "../lib/rsolv_web.ex",
+    "../lib/rsolv_web/**/*.{ex,heex,leex,sface}"
   ],
   theme: {
     extend: {
@@ -64,6 +45,7 @@ module.exports = {
   },
   plugins: [
     require("@tailwindcss/forms"),
+    require("@tailwindcss/typography"),
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:
     //
@@ -78,7 +60,7 @@ module.exports = {
     // See your `CoreComponents.icon/1` for more information.
     //
     plugin(function({matchComponents, theme}) {
-      let iconsDir = path.join(__dirname, "./deps/heroicons/optimized")
+      let iconsDir = path.join(__dirname, "../deps/heroicons/optimized")
       let values = {}
       let icons = [
         ["", "/24/outline"],

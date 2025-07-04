@@ -74,19 +74,22 @@ RUN mix deps.compile
 # Builder stage for production
 FROM prod-deps AS builder
 
-# Install Node.js for asset compilation
-RUN apk add --no-cache nodejs npm
+# Install Node.js and Bun for asset compilation
+RUN apk add --no-cache nodejs npm && \
+    npm install -g bun
 
 # Copy source code
 COPY lib lib
 COPY priv priv
 COPY rel rel
+COPY package.json package-lock.json ./
 COPY assets assets
-COPY package.json package-lock.json tailwind.config.js ./
 
-# Install npm dependencies and build CSS
-RUN npm install
-RUN npm run deploy
+# Install npm dependencies using bun for better performance
+RUN bun install
+
+# Build assets using Mix tasks (handles both esbuild and tailwind)
+RUN MIX_ENV=prod mix assets.deploy
 
 # Use parallel compilation
 ENV ERL_FLAGS="+JPperf true"
@@ -94,9 +97,6 @@ ENV ELIXIR_MAKE_CACHE_DIR=/app/.make_cache
 
 # Compile the application with optimizations
 RUN MIX_ENV=prod mix compile
-
-# Generate static asset digests
-RUN MIX_ENV=prod mix phx.digest
 
 # Build release with optimizations
 RUN MIX_ENV=prod mix release --overwrite

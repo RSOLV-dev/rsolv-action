@@ -1,4 +1,4 @@
-defmodule RsolvLanding.FeatureFlagCase do
+defmodule Rsolv.FeatureFlagCase do
   @moduledoc """
   This module provides test helpers for working with feature flags.
   """
