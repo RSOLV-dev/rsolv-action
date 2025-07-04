@@ -28,6 +28,16 @@ config :logger, level: :debug
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
+# Configure Bamboo mailer for test environment
+config :rsolv, Rsolv.Mailer,
+  adapter: Bamboo.TestAdapter
+
+# Configure ConvertKit for test environment
+config :rsolv, :convertkit,
+  api_key: "test_api_key",
+  form_id: "test_form_id",
+  api_base_url: "https://api.convertkit.com/v3"
+
 # Disable Oban queues in test
 config :rsolv, Oban, testing: :inline
 
