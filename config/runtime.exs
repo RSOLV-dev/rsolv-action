@@ -10,6 +10,11 @@ if config_env() == :prod do
   # Service name should match the headless service in Kubernetes
   service_name = System.get_env("CLUSTER_SERVICE_NAME") || "staging-rsolv-headless"
   
+  # Set Erlang cookie for clustering
+  if erlang_cookie = System.get_env("ERLANG_COOKIE") do
+    Node.set_cookie(String.to_atom(erlang_cookie))
+  end
+  
   config :rsolv,
     enable_clustering: true,
     cluster_strategy: :kubernetes
