@@ -23,7 +23,7 @@ defmodule RsolvWeb.Services.ConvertKit do
     if is_nil(api_key) do
       Logger.warning("ConvertKit API key not configured")
       # Return a mock success in development
-      {:ok, %{status: "mocked_success", message: "Development mode"}}
+      {:ok, %{status_code: 200, message: "Development mode"}}
     else
       # Build fields for tracking
       fields = %{
@@ -281,7 +281,7 @@ defmodule RsolvWeb.Services.ConvertKit do
     if is_nil(api_key) do
       Logger.warning("ConvertKit API key not configured for unsubscribing")
       # Return a mock success in development
-      {:ok, %{status: "mocked_success", message: "Development mode"}}
+      {:ok, %{status_code: 200, message: "Development mode"}}
     else
       # First, get the subscriber ID by email
       subscriber_id = get_subscriber_id(email, api_key, api_base_url)
