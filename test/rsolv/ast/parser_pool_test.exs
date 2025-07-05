@@ -3,9 +3,15 @@ defmodule Rsolv.AST.ParserPoolTest do
   
   alias Rsolv.AST.ParserPool
   
+  # Helper to generate unique pool name for each test
+  defp unique_pool_name do
+    :"test_pool_#{System.unique_integer([:positive])}"
+  end
+  
   describe "pool initialization" do
     test "starts with configured pool size" do
       config = %{
+        name: unique_pool_name(),
         languages: ["javascript", "python"],
         pool_size: 3,
         pre_warm: true
@@ -29,6 +35,7 @@ defmodule Rsolv.AST.ParserPoolTest do
     
     test "pre-warms parsers on startup" do
       config = %{
+        name: unique_pool_name(),
         languages: ["javascript"],
         pool_size: 2,
         pre_warm: true
@@ -46,6 +53,7 @@ defmodule Rsolv.AST.ParserPoolTest do
     
     test "lazy initialization when pre_warm is false" do
       config = %{
+        name: unique_pool_name(),
         languages: ["javascript"],
         pool_size: 2,
         pre_warm: false
@@ -62,6 +70,7 @@ defmodule Rsolv.AST.ParserPoolTest do
   describe "parser checkout/checkin" do
     setup do
       config = %{
+        name: unique_pool_name(),
         languages: ["javascript"],
         pool_size: 2,
         pre_warm: true
@@ -127,6 +136,7 @@ defmodule Rsolv.AST.ParserPoolTest do
   describe "pool metrics" do
     setup do
       config = %{
+        name: unique_pool_name(),
         languages: ["javascript", "python"],
         pool_size: 3,
         pre_warm: true,
@@ -225,6 +235,7 @@ defmodule Rsolv.AST.ParserPoolTest do
     
     test "scales down when low demand" do
       config = %{
+        name: unique_pool_name(),
         languages: ["javascript"],
         pool_size: 5,
         pre_warm: true,

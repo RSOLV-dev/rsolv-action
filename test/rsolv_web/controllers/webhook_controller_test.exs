@@ -37,7 +37,7 @@ defmodule RsolvWeb.WebhookControllerTest do
         |> put_req_header("x-hub-signature-256", signature)
         |> put_req_header("content-type", "application/json")
         |> assign(:test_mode, true)
-        |> post("/webhooks/github", payload)
+        |> post("/api/webhooks/github", payload)
         
       assert json_response(conn, 200) == %{
         "status" => "success",
@@ -86,7 +86,7 @@ defmodule RsolvWeb.WebhookControllerTest do
         |> put_req_header("x-hub-signature-256", signature)
         |> put_req_header("content-type", "application/json")
         |> assign(:test_mode, true)
-        |> post("/webhooks/github", payload)
+        |> post("/api/webhooks/github", payload)
         
       assert json_response(conn, 200) == %{
         "status" => "success",
@@ -108,7 +108,7 @@ defmodule RsolvWeb.WebhookControllerTest do
         |> put_req_header("content-type", "application/json")
         |> assign(:raw_body, raw_body)
         |> assign(:test_mode, false)
-        |> post("/webhooks/github", payload)
+        |> post("/api/webhooks/github", payload)
         
       assert json_response(conn, 401) == %{
         "error" => "Invalid signature"
@@ -119,7 +119,7 @@ defmodule RsolvWeb.WebhookControllerTest do
       conn = conn
         |> put_req_header("x-github-event", "pull_request")
         |> put_req_header("content-type", "application/json")
-        |> post("/webhooks/github", %{})
+        |> post("/api/webhooks/github", %{})
         
       assert json_response(conn, 401) == %{
         "error" => "Missing signature"
