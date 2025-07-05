@@ -62,10 +62,12 @@ defmodule Rsolv.AST.MultiLanguageParsingTest do
     test "handles Python syntax errors gracefully", %{session: session, customer_id: customer_id} do
       code = test_code("python", :syntax_error)
       
-      {:error, error} = ParserRegistry.parse_code(session.id, customer_id, "python", code)
+      {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "python", code)
       
-      # Check error details
-      error_msg = inspect(error)
+      # Check that parsing failed with syntax error
+      assert result.ast == nil
+      assert result.error != nil
+      error_msg = inspect(result.error)
       assert String.contains?(error_msg, "syntax") or String.contains?(error_msg, "SyntaxError")
     end
     
@@ -267,9 +269,10 @@ defmodule Rsolv.AST.MultiLanguageParsingTest do
       # Send invalid data that might crash parser
       invalid_json = "not json at all"
       
-      # This should fail gracefully with an error
-      assert {:error, error} = ParserRegistry.parse_code(session.id, customer_id, "python", invalid_json)
-      assert error != nil
+      # This should fail gracefully with an error in the result
+      assert {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "python", invalid_json)
+      assert result.ast == nil
+      assert result.error != nil
       
       # Parser should still work after error
       code = test_code("python", :simple)

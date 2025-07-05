@@ -40,6 +40,7 @@ defmodule Rsolv.Customers do
   @doc """
   Gets a customer by API key.
   """
+  def get_customer_by_api_key(nil), do: nil
   def get_customer_by_api_key(api_key) when is_binary(api_key) do
     # First check if it's an api_keys table key
     case Repo.get_by(ApiKey, key: api_key, active: true) do

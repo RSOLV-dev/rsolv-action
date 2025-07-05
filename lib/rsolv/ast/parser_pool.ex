@@ -53,8 +53,13 @@ defmodule Rsolv.AST.ParserPool do
   # Client API
   
   def start_link(config) do
-    name = Keyword.get(config, :name, __MODULE__)
-    config = Map.new(config) |> Map.delete(:name)
+    {name, config} = 
+      case config do
+        %{name: name} -> {name, Map.delete(config, :name)}
+        config when is_list(config) -> 
+          {Keyword.get(config, :name, __MODULE__), Keyword.delete(config, :name)}
+        _ -> {__MODULE__, config}
+      end
     GenServer.start_link(__MODULE__, config, name: name)
   end
   
