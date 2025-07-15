@@ -54,8 +54,7 @@ defmodule RsolvWeb.Router do
     get "/unsubscribe", PageController, :unsubscribe
     post "/unsubscribe", PageController, :process_unsubscribe
     
-    # Analytics tracking endpoint
-    post "/track", TrackController, :track
+    # Analytics tracking endpoint (moved to API section for CSRF-free access)
     
     # Documentation pages
     get "/docs/terms", PageController, :terms
@@ -159,6 +158,9 @@ defmodule RsolvWeb.Router do
     
     # Health check
     get "/health", HealthController, :index
+    
+    # Analytics tracking endpoint (CSRF-free for client-side JavaScript)
+    post "/track", TrackController, :track
     
     # Webhooks
     post "/webhooks/github", WebhookController, :github
