@@ -1,5 +1,8 @@
 import Config
 
+# Set environment to test
+config :rsolv, :env, :test
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used
@@ -37,6 +40,9 @@ config :rsolv, :convertkit,
   api_key: "test_api_key",
   form_id: "test_form_id",
   api_base_url: "https://api.convertkit.com/v3"
+
+# Use HTTP client mock in tests
+config :rsolv, :http_client, Rsolv.HTTPClientMock
 
 # Disable Oban queues in test
 config :rsolv, Oban, testing: :inline

@@ -232,6 +232,12 @@ defmodule Rsolv.Analytics do
         |> where([e], fragment("?::date", e.inserted_at) >= ^since)
         |> where([e], fragment("?::date", e.inserted_at) <= ^until)
         
+      :form_events ->
+        Event
+        |> where([e], e.event_type == "form_submit")
+        |> where([e], fragment("?::date", e.inserted_at) >= ^since)
+        |> where([e], fragment("?::date", e.inserted_at) <= ^until)
+        
       :events ->
         Event
         |> where([e], fragment("?::date", e.inserted_at) >= ^since)

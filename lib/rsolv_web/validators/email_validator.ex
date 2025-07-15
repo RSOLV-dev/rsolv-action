@@ -45,8 +45,8 @@ defmodule RsolvWeb.Validators.EmailValidator do
       not String.contains?(email, "@") ->
         {:error, "Email must contain @"}
         
-      # Basic pattern check
-      not String.match?(email, ~r/^[^@\s]+@[^@\s]+\.[^@\s]+$/) ->
+      # Basic pattern check - just check for basic structure
+      not String.match?(email, ~r/^[^@\s]+@[^@\s]+$/) ->
         {:error, "Invalid email format"}
         
       # Enhanced validation
@@ -104,14 +104,15 @@ defmodule RsolvWeb.Validators.EmailValidator do
       String.starts_with?(domain, "-") ->
         {:error, "Domain can't start with a hyphen"}
         
-      String.ends_with?(domain, "-") ->
-        {:error, "Domain can't end with a hyphen"}
-        
       String.starts_with?(domain, ".") ->
         {:error, "Domain can't start with a dot"}
         
       String.ends_with?(domain, ".") ->
         {:error, "Domain can't end with a dot"}
+        
+      # Check if any part ends with hyphen
+      domain |> String.split(".") |> Enum.any?(fn part -> String.ends_with?(part, "-") end) ->
+        {:error, "Domain can't end with a hyphen"}
         
       # TLD validation
       validate_tld(domain) != :ok ->

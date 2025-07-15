@@ -65,6 +65,9 @@ defmodule RsolvWeb.Router do
     get "/blog", BlogController, :index
     get "/blog/rss.xml", BlogController, :rss
     get "/blog/:slug", BlogController, :show
+    
+    # SEO routes
+    get "/sitemap.xml", SitemapController, :index
   end
   
   # Dashboard routes with authentication and feature flags

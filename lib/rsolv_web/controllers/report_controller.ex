@@ -47,14 +47,7 @@ defmodule RsolvWeb.ReportController do
     end
     
     # Log the download
-    Logger.info("Analytics report downloaded", 
-      metadata: %{
-        report_type: report_type,
-        format: format,
-        period: period,
-        record_count: length(data)
-      }
-    )
+    Logger.info("Analytics report downloaded, report_type: #{report_type}, format: #{format}, period: #{period}, record_count: #{length(data)}")
     
     # Return file for download
     conn
