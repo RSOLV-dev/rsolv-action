@@ -36,14 +36,6 @@ defmodule RsolvWeb.Router do
       message: "Feedback dashboard is currently unavailable."
   end
 
-  # Track endpoint - API route for CSRF-free access
-  scope "/api", RsolvWeb do
-    pipe_through :api
-    
-    # Analytics tracking endpoint (CSRF-free for client-side JavaScript)
-    post "/track", TrackController, :track
-  end
-
   scope "/", RsolvWeb do
     pipe_through :browser
 
@@ -166,6 +158,9 @@ defmodule RsolvWeb.Router do
     
     # Health check
     get "/health", HealthController, :index
+    
+    # Analytics tracking endpoint (CSRF-free for client-side JavaScript)
+    post "/track", TrackController, :track
     
     # Webhooks
     post "/webhooks/github", WebhookController, :github
