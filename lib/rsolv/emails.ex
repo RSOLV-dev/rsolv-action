@@ -112,6 +112,37 @@ defmodule Rsolv.Emails do
   end
 
   @doc """
+  Creates a contact form notification email for admins.
+  """
+  def contact_form_notification(contact_data) do
+    subject = "🏢 New Contact Form Submission: #{contact_data.email}"
+    
+    # Get email configuration
+    config = Application.get_env(:rsolv, :email_config, %{
+      sender_email: "support@rsolv.dev",
+      sender_name: "RSOLV Team",
+      reply_to: "support@rsolv.dev"
+    })
+    sender_email = Map.get(config, :sender_email, "support@rsolv.dev")
+    sender_name = Map.get(config, :sender_name, "RSOLV Team")
+    
+    # Get admin emails
+    admin_emails = get_admin_emails()
+    
+    # Build email
+    new_email()
+    |> to(admin_emails)
+    |> from({sender_name, sender_email})
+    |> subject(subject)
+    |> html_body(contact_form_notification_html(contact_data))
+    |> text_body(contact_form_notification_text(contact_data))
+    |> put_header("X-Postmark-Tag", "contact-form")
+    |> put_header("X-Priority", "1")
+    |> put_header("Message-ID", generate_message_id())
+    |> put_private(:tag, "contact-form")
+  end
+
+  @doc """
   Creates an early access guide email for subscribers.
   """
   def early_access_guide_email(to_email, first_name \\ nil) do
@@ -924,4 +955,88 @@ defmodule Rsolv.Emails do
     end
   end
   defp truncate_url(_), do: ""
+  
+  # Contact form notification HTML template
+  defp contact_form_notification_html(contact_data) do
+    """
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-radius: 0 0 8px 8px; }
+        .field { margin-bottom: 15px; }
+        .field-label { font-weight: 600; color: #374151; margin-bottom: 5px; }
+        .field-value { color: #111827; background: white; padding: 10px; border-radius: 4px; border: 1px solid #e5e7eb; }
+        .message { background: white; padding: 15px; border-radius: 4px; border: 1px solid #e5e7eb; margin: 20px 0; }
+        .actions { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+        .btn { display: inline-block; padding: 10px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 4px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0; font-size: 24px;">🏢 New Contact Form Submission</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">#{format_timestamp(contact_data.timestamp)}</p>
+        </div>
+        
+        <div class="content">
+          <div class="field">
+            <div class="field-label">Name</div>
+            <div class="field-value">#{contact_data.name}</div>
+          </div>
+          
+          <div class="field">
+            <div class="field-label">Email</div>
+            <div class="field-value">
+              <a href="mailto:#{contact_data.email}" style="color: #2563eb;">#{contact_data.email}</a>
+            </div>
+          </div>
+          
+          <div class="field">
+            <div class="field-label">Company</div>
+            <div class="field-value">#{contact_data.company}</div>
+          </div>
+          
+          <div class="field">
+            <div class="field-label">Team Size</div>
+            <div class="field-value">#{contact_data.team_size}</div>
+          </div>
+          
+          <div class="message">
+            <div class="field-label" style="margin-bottom: 10px;">Message</div>
+            <div style="white-space: pre-wrap;">#{contact_data.message}</div>
+          </div>
+          
+          <div class="actions">
+            <a href="mailto:#{contact_data.email}" class="btn">Reply to #{contact_data.name}</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+  end
+  
+  # Contact form notification text template
+  defp contact_form_notification_text(contact_data) do
+    """
+    🏢 New Contact Form Submission
+    
+    Name: #{contact_data.name}
+    Email: #{contact_data.email}
+    Company: #{contact_data.company}
+    Team Size: #{contact_data.team_size}
+    Time: #{format_timestamp(contact_data.timestamp)}
+    
+    Message:
+    #{contact_data.message}
+    
+    ---
+    Reply directly to this email or contact them at: #{contact_data.email}
+    """
+  end
 end

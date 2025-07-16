@@ -43,6 +43,7 @@ defmodule RsolvWeb.Router do
     live_session :default, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
       live "/", HomeLive, :index
       live "/signup", EarlyAccessLive, :index
+      live "/contact", ContactLive, :index
     end
     
     # Regular routes
