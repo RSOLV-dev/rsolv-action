@@ -35,6 +35,8 @@ defmodule Rsolv.Application do
       Rsolv.RateLimiter,
       # Start cache services
       Rsolv.Cache.ValidationCache,
+      # Start telemetry reporter for validation metrics
+      Rsolv.Telemetry.ValidationReporter,
       # Start AST services
       Rsolv.AST.ASTCache,
       Rsolv.AST.AuditLogger,

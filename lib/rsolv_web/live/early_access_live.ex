@@ -406,6 +406,45 @@ defmodule RsolvWeb.EarlyAccessLive do
             )
         end
         
+        # Send admin notification email
+        Logger.info("[EARLY ACCESS LIVE] About to send admin notification email",
+          email: email,
+          timestamp: DateTime.utc_now() |> DateTime.to_string()
+        )
+        
+        # Build signup data for admin notification
+        signup_data = %{
+          email: email,
+          company: nil,  # LiveView form doesn't collect company
+          timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
+          source: "early_access_live",
+          utm_source: nil,
+          utm_medium: nil,
+          utm_campaign: nil,
+          referrer: nil
+        }
+        
+        case Rsolv.Emails.admin_signup_notification(signup_data) |> Rsolv.Mailer.deliver_now() do
+          {:ok, result} ->
+            Logger.info("[EARLY ACCESS LIVE] Successfully sent admin notification email",
+              email: email,
+              result: inspect(result),
+              timestamp: DateTime.utc_now() |> DateTime.to_string()
+            )
+          result when is_map(result) ->
+            Logger.info("[EARLY ACCESS LIVE] Admin notification email sent (Bamboo format)",
+              email: email,
+              result: inspect(result),
+              timestamp: DateTime.utc_now() |> DateTime.to_string()
+            )
+          {:error, error} ->
+            Logger.error("[EARLY ACCESS LIVE] Failed to send admin notification email",
+              email: email,
+              error: inspect(error),
+              timestamp: DateTime.utc_now() |> DateTime.to_string()
+            )
+        end
+        
         :ok
       {:error, reason} ->
         Logger.error("Failed to send email to Kit.com: #{email}, reason: #{inspect(reason)}")
