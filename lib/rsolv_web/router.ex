@@ -1,7 +1,7 @@
 defmodule RsolvWeb.Router do
   use RsolvWeb, :router
   import Phoenix.LiveView.Router
-  alias RsolvWeb.Plugs.FeatureFlagPlug
+  alias RsolvWeb.Plugs.{FeatureFlagPlug, DashboardAuth}
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -72,7 +72,7 @@ defmodule RsolvWeb.Router do
   
   # Dashboard routes with authentication and feature flags
   scope "/dashboard", RsolvWeb do
-    pipe_through [:browser, RsolvWeb.DashboardAuth, :require_admin_dashboard]
+    pipe_through [:browser, DashboardAuth, :require_admin_dashboard]
     
     get "/", DashboardController, :index
     get "/report", ReportController, :download
@@ -80,7 +80,7 @@ defmodule RsolvWeb.Router do
   
   # Analytics dashboard with metrics feature flag
   scope "/dashboard", RsolvWeb do
-    pipe_through [:browser, RsolvWeb.DashboardAuth, :require_admin_dashboard, :require_metrics_dashboard]
+    pipe_through [:browser, DashboardAuth, :require_admin_dashboard, :require_metrics_dashboard]
     
     live_session :dashboard_analytics, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
       live "/analytics", DashboardLive, :index
@@ -90,7 +90,7 @@ defmodule RsolvWeb.Router do
   
   # Feedback dashboard with feedback feature flag
   scope "/dashboard", RsolvWeb do
-    pipe_through [:browser, RsolvWeb.DashboardAuth, :require_admin_dashboard, :require_feedback_dashboard]
+    pipe_through [:browser, DashboardAuth, :require_admin_dashboard, :require_feedback_dashboard]
     
     live_session :dashboard_feedback, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
       live "/feedback", FeedbackDashLive, :index
@@ -216,7 +216,7 @@ defmodule RsolvWeb.Router do
   else
     # Production routes with authentication
     scope "/live", RsolvWeb do
-      pipe_through [:browser, RsolvWeb.DashboardAuth, :require_admin_dashboard]
+      pipe_through [:browser, DashboardAuth, :require_admin_dashboard]
       
       live_dashboard "/dashboard", 
         metrics: RsolvWeb.Telemetry
@@ -224,7 +224,7 @@ defmodule RsolvWeb.Router do
     
     # FunWithFlags UI with auth (admin_dashboard now checked after auth in plug)
     scope path: "/feature-flags" do
-      pipe_through [:browser, RsolvWeb.DashboardAuth]
+      pipe_through [:browser, DashboardAuth]
       
       forward "/", FunWithFlags.UI.Router, namespace: "feature-flags"
     end
