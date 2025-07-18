@@ -200,6 +200,45 @@ defmodule RsolvWeb.HomeLive do
           EmailSequence.start_early_access_onboarding_sequence(email, first_name)
         end
         
+        # Send admin notification email
+        Logger.info("[HOME LIVE] About to send admin notification email",
+          email: email,
+          timestamp: DateTime.utc_now() |> DateTime.to_string()
+        )
+        
+        # Build signup data for admin notification
+        signup_data = %{
+          email: email,
+          company: Map.get(options, :company),
+          timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
+          source: "landing_page_liveview",
+          utm_source: Map.get(all_options, :utm_source),
+          utm_medium: Map.get(all_options, :utm_medium),
+          utm_campaign: Map.get(all_options, :utm_campaign),
+          referrer: Map.get(tracking_data, :referrer)
+        }
+        
+        case Rsolv.Emails.admin_signup_notification(signup_data) |> Rsolv.Mailer.deliver_now() do
+          {:ok, result} ->
+            Logger.info("[HOME LIVE] Successfully sent admin notification email",
+              email: email,
+              result: inspect(result),
+              timestamp: DateTime.utc_now() |> DateTime.to_string()
+            )
+          result when is_map(result) ->
+            Logger.info("[HOME LIVE] Admin notification email sent (Bamboo format)",
+              email: email,
+              result: inspect(result),
+              timestamp: DateTime.utc_now() |> DateTime.to_string()
+            )
+          {:error, error} ->
+            Logger.error("[HOME LIVE] Failed to send admin notification email",
+              email: email,
+              error: inspect(error),
+              timestamp: DateTime.utc_now() |> DateTime.to_string()
+            )
+        end
+        
         {:ok, signup}
         
       {:error, changeset} ->
