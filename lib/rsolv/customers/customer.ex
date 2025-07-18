@@ -44,3 +44,8 @@ defmodule Rsolv.Customers.Customer do
     "rsolv_#{Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)}"
   end
 end
+
+# Implement the FunWithFlags.Actor protocol for Customer
+defimpl FunWithFlags.Actor, for: Rsolv.Customers.Customer do
+  def id(%{id: id}), do: "customer:#{id}"
+end

@@ -81,12 +81,12 @@ defmodule Rsolv.ConsolidationSchemaTest do
   describe "feature flags integration" do
     test "feature_flags table exists for FunWithFlags" do
       # This should work with the existing FunWithFlags setup
-      flag_name = "test_feature"
+      flag_name = :test_feature
       
-      {:ok, _} = Rsolv.FeatureFlags.enable(flag_name)
+      :ok = Rsolv.FeatureFlags.enable(flag_name)
       assert Rsolv.FeatureFlags.enabled?(flag_name)
       
-      {:ok, _} = Rsolv.FeatureFlags.disable(flag_name)
+      :ok = Rsolv.FeatureFlags.disable(flag_name)
       refute Rsolv.FeatureFlags.enabled?(flag_name)
     end
     
@@ -101,13 +101,13 @@ defmodule Rsolv.ConsolidationSchemaTest do
         email: "feature-customer@example.com"
       })
       
-      flag_name = "beta_feature"
+      flag_name = :beta_feature
       
       # Enable the flag globally
-      {:ok, _} = Rsolv.FeatureFlags.enable(flag_name)
+      :ok = Rsolv.FeatureFlags.enable(flag_name)
       
       # Enable for specific customer
-      {:ok, _} = Rsolv.FeatureFlags.enable_for_customer(flag_name, customer)
+      :ok = Rsolv.FeatureFlags.enable_for_customer(flag_name, customer)
       
       # Test that the feature flag system works
       assert Rsolv.FeatureFlags.enabled?(flag_name)

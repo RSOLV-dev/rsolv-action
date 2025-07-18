@@ -183,6 +183,7 @@ defmodule Rsolv.AST.ParserPoolTest do
   describe "dynamic scaling" do
     test "scales up when high demand" do
       config = %{
+        name: unique_pool_name(),
         languages: ["javascript"],
         pool_size: 2,
         pre_warm: true,

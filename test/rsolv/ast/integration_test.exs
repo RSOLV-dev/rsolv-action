@@ -113,9 +113,10 @@ defmodule Rsolv.AST.IntegrationTest do
       
       options = %{"includeSecurityPatterns" => true}
       
-      {:error, details} = AnalysisService.analyze_file(file, options)
-      assert details.type == :syntax_error
-      assert details.message != nil
+      result = AnalysisService.analyze_file(file, options)
+      assert {:parser_error, %{type: "ParseError", message: message}} = result
+      assert message.type == :syntax_error
+      assert message.message != nil
     end
     
     test "works with multiple languages", %{session: _session} do

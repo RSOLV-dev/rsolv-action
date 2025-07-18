@@ -4,11 +4,27 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
   
   setup :verify_on_exit!
   
+  setup do
+    # Temporarily override ConvertKit config for this test
+    original_config = Application.get_env(:rsolv, :convertkit)
+    Application.put_env(:rsolv, :convertkit,
+      api_key: "test_api_key",
+      form_id: "test_form_id",
+      api_base_url: "https://api.convertkit.com/v3"
+    )
+    
+    on_exit(fn ->
+      # Restore original config
+      Application.put_env(:rsolv, :convertkit, original_config)
+    end)
+    
+    :ok
+  end
+  
   describe "submit_early_access analytics tracking" do
     test "passes celebration data for Plausible and Simple Analytics", %{conn: conn} do
-      # Mock ConvertKit API calls
-      # First a POST to add subscriber
-      expect(Rsolv.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
+      # Mock ConvertKit API calls - POST to add subscriber, then POST to tag
+      expect(Rsolv.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
         {:ok, %HTTPoison.Response{
           status_code: 200,
           body: Jason.encode!(%{
@@ -17,29 +33,6 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
               "state" => "active"
             }
           })
-        }}
-      end)
-      
-      # Then a GET to check if subscriber exists for tagging
-      expect(Rsolv.HTTPClientMock, :get, 1, fn _url, _headers, _opts ->
-        {:ok, %HTTPoison.Response{
-          status_code: 200,
-          body: Jason.encode!(%{
-            "total_subscribers" => 1,
-            "page" => 1,
-            "total_pages" => 1,
-            "subscribers" => [
-              %{"id" => 12345, "email_address" => "analytics@example.com"}
-            ]
-          })
-        }}
-      end)
-      
-      # Then another POST to tag the subscriber
-      expect(Rsolv.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{
-          status_code: 200,
-          body: Jason.encode!(%{})
         }}
       end)
       
@@ -69,9 +62,8 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
     end
     
     test "provides default values when no UTM parameters present", %{conn: conn} do
-      # Mock ConvertKit API calls
-      # First a POST to add subscriber
-      expect(Rsolv.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
+      # Mock ConvertKit API calls - POST to add subscriber, then POST to tag
+      expect(Rsolv.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
         {:ok, %HTTPoison.Response{
           status_code: 200,
           body: Jason.encode!(%{
@@ -80,29 +72,6 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
               "state" => "active"
             }
           })
-        }}
-      end)
-      
-      # Then a GET to check if subscriber exists for tagging
-      expect(Rsolv.HTTPClientMock, :get, 1, fn _url, _headers, _opts ->
-        {:ok, %HTTPoison.Response{
-          status_code: 200,
-          body: Jason.encode!(%{
-            "total_subscribers" => 1,
-            "page" => 1,
-            "total_pages" => 1,
-            "subscribers" => [
-              %{"id" => 12345, "email_address" => "noparams@example.com"}
-            ]
-          })
-        }}
-      end)
-      
-      # Then another POST to tag the subscriber
-      expect(Rsolv.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{
-          status_code: 200,
-          body: Jason.encode!(%{})
         }}
       end)
       
