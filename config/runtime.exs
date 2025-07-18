@@ -108,9 +108,11 @@ config :rsolv, :convertkit,
   early_access_tag_id: System.get_env("KIT_EA_TAG_ID"),
   api_base_url: System.get_env("KIT_API_URL") || "https://api.convertkit.com/v3"
 
-# Configure admin notification emails
+# Configure admin notification emails and dashboard auth
 config :rsolv,
-  admin_emails: System.get_env("ADMIN_EMAILS", "") |> String.split(",", trim: true)
+  admin_emails: System.get_env("ADMIN_EMAILS", "") |> String.split(",", trim: true),
+  admin_username: System.get_env("ADMIN_USERNAME", "admin"),
+  admin_password: System.get_env("ADMIN_PASSWORD")
 
 # Email configuration (for expert reviews)
 if config_env() != :test do
