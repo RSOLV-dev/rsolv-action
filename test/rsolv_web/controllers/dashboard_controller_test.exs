@@ -1,59 +1,96 @@
 defmodule RsolvWeb.DashboardControllerTest do
   use RsolvWeb.ConnCase
 
-  describe "index/2" do
-    test "returns 401 when accessed without authentication in production", %{conn: conn} do
-      # Simulate production environment
-      original_env = Application.get_env(:rsolv, :env)
-      Application.put_env(:rsolv, :env, :prod)
-      
+  setup do
+    # Clear FunWithFlags cache before each test
+    FunWithFlags.clear(:all)
+    :ok
+  end
+
+  describe "dashboard access" do
+    test "redirects to home when not authenticated", %{conn: conn} do
       conn = get(conn, ~p"/dashboard")
-      
-      assert conn.status == 401
-      assert conn.resp_body == "Unauthorized"
-      
-      # Restore environment
-      Application.put_env(:rsolv, :env, original_env)
+      assert html_response(conn, 401)
+      assert conn.resp_headers |> Enum.any?(fn {k, v} -> k == "www-authenticate" && v =~ "Basic" end)
     end
-    
-    test "redirects to analytics dashboard with valid key in dev", %{conn: conn} do
-      # Simulate dev environment
-      original_env = Application.get_env(:rsolv, :env)
-      Application.put_env(:rsolv, :env, :dev)
+
+    test "redirects to analytics when authenticated and feature flag enabled", %{conn: conn} do
+      # Enable the admin_dashboard feature flag
+      FunWithFlags.enable(:admin_dashboard)
       
-      # Set admin key
-      Application.put_env(:rsolv, :admin_key, "test_admin_key")
+      # Set up basic auth
+      credentials = Base.encode64("admin:test_password")
       
-      # Since the feature flag check is causing issues and we're testing
-      # authentication, not feature flags, let's bypass it for this test
-      # by temporarily removing the feature flag pipeline
-      conn = get(conn, ~p"/dashboard?key=test_admin_key")
+      # Mock the admin password
+      Application.put_env(:rsolv, :admin_password, "test_password")
       
-      # The controller does its own auth check and should redirect
-      # However, it's being blocked by the feature flag check
-      # For now, let's just verify it gets blocked with the right redirect
-      assert redirected_to(conn) == "/"
+      conn = 
+        conn
+        |> put_req_header("authorization", "Basic #{credentials}")
+        |> get(~p"/dashboard")
+      
+      assert redirected_to(conn) == ~p"/dashboard/analytics"
+    end
+
+    test "redirects to home with error when feature flag disabled", %{conn: conn} do
+      # Disable the admin_dashboard feature flag
+      FunWithFlags.disable(:admin_dashboard)
+      
+      # Set up basic auth
+      credentials = Base.encode64("admin:test_password")
+      
+      # Mock the admin password
+      Application.put_env(:rsolv, :admin_password, "test_password")
+      
+      conn = 
+        conn
+        |> put_req_header("authorization", "Basic #{credentials}")
+        |> get(~p"/dashboard")
+      
+      assert redirected_to(conn) == ~p"/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "unavailable"
-      
-      # Restore environment
-      Application.put_env(:rsolv, :env, original_env)
     end
-    
-    test "denies access with invalid key in dev", %{conn: conn} do
-      # Simulate dev environment
-      original_env = Application.get_env(:rsolv, :env)
-      Application.put_env(:rsolv, :env, :dev)
+  end
+
+  describe "analytics dashboard access" do
+    test "blocks access when metrics_dashboard flag is disabled", %{conn: conn} do
+      # Enable admin_dashboard but disable metrics_dashboard
+      FunWithFlags.enable(:admin_dashboard)
+      FunWithFlags.disable(:metrics_dashboard)
       
-      # Set admin key
-      Application.put_env(:rsolv, :admin_key, "test_admin_key")
+      # Set up basic auth
+      credentials = Base.encode64("admin:test_password")
       
-      conn = get(conn, ~p"/dashboard?key=wrong_key")
+      # Mock the admin password
+      Application.put_env(:rsolv, :admin_password, "test_password")
       
-      assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Access denied"
+      conn = 
+        conn
+        |> put_req_header("authorization", "Basic #{credentials}")
+        |> get(~p"/dashboard/analytics")
       
-      # Restore environment
-      Application.put_env(:rsolv, :env, original_env)
+      assert redirected_to(conn) == ~p"/"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Metrics dashboard is currently unavailable"
+    end
+
+    test "allows access when both flags are enabled", %{conn: conn} do
+      # Enable both flags
+      FunWithFlags.enable(:admin_dashboard)
+      FunWithFlags.enable(:metrics_dashboard)
+      
+      # Set up basic auth
+      credentials = Base.encode64("admin:test_password")
+      
+      # Mock the admin password
+      Application.put_env(:rsolv, :admin_password, "test_password")
+      
+      conn = 
+        conn
+        |> put_req_header("authorization", "Basic #{credentials}")
+        |> get(~p"/dashboard/analytics")
+      
+      # Should render the live view
+      assert html_response(conn, 200) =~ "data-phx-main"
     end
   end
 end

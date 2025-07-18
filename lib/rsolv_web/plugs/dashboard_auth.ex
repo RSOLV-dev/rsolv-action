@@ -24,6 +24,7 @@ defmodule RsolvWeb.Plugs.DashboardAuth do
         # Authentication failed
         conn
         |> put_resp_header("www-authenticate", ~s(Basic realm="Admin Dashboard"))
+        |> put_resp_content_type("text/html")
         |> send_resp(401, "Unauthorized")
         |> halt()
     end

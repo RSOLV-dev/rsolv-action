@@ -4,10 +4,9 @@ defmodule Rsolv.Repo.Migrations.EnableMetricsDashboardFlag do
   def up do
     # Enable metrics_dashboard feature flag globally
     execute """
-    INSERT INTO fun_with_flags_toggles (flag_name, gate_type, enabled, inserted_at, updated_at)
-    VALUES ('metrics_dashboard', 'boolean', true, NOW(), NOW())
-    ON CONFLICT (flag_name, gate_type) 
-    DO UPDATE SET enabled = true, updated_at = NOW();
+    UPDATE fun_with_flags_toggles 
+    SET enabled = true
+    WHERE flag_name = 'metrics_dashboard' AND gate_type = 'boolean';
     """
   end
 
