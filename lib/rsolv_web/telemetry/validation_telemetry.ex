@@ -19,9 +19,9 @@ defmodule RsolvWeb.Telemetry.ValidationTelemetry do
       [:rsolv, :validation, :request],
       %{
         duration: duration,
-        vulnerabilities_count: length(validation_results.vulnerabilities),
-        rejected_count: validation_results.stats.rejected,
-        validated_count: validation_results.stats.validated,
+        vulnerabilities_count: length(validation_results.validated),
+        rejected_count: Map.get(validation_results.stats, "rejected", 0),
+        validated_count: Map.get(validation_results.stats, "validated", 0),
         false_positive_rate: calculate_false_positive_rate(validation_results)
       },
       %{
@@ -56,21 +56,21 @@ defmodule RsolvWeb.Telemetry.ValidationTelemetry do
   Emit false positive detection telemetry event.
   """
   def emit_false_positive(validation_results, customer_id) do
-    rejected_vulns = Enum.filter(validation_results.vulnerabilities, fn v -> 
-      !v.is_valid
+    rejected_vulns = Enum.filter(validation_results.validated, fn v -> 
+      !Map.get(v, "isValid", true)
     end)
     
     if length(rejected_vulns) > 0 do
       :telemetry.execute(
         [:rsolv, :validation, :false_positive],
         %{
-          rejected_count: validation_results.stats.rejected,
-          total_count: validation_results.stats.total,
+          rejected_count: Map.get(validation_results.stats, "rejected", 0),
+          total_count: Map.get(validation_results.stats, "total", 0),
           reduction_rate: calculate_false_positive_rate(validation_results)
         },
         %{
           customer_id: customer_id,
-          pattern_ids: Enum.map(rejected_vulns, & &1.pattern_id) |> Enum.uniq()
+          pattern_ids: Enum.map(rejected_vulns, fn v -> Map.get(v, "patternId") end) |> Enum.uniq() |> Enum.reject(&is_nil/1)
         }
       )
     end
@@ -100,8 +100,15 @@ defmodule RsolvWeb.Telemetry.ValidationTelemetry do
 
   # Private functions
 
-  defp calculate_false_positive_rate(%{stats: stats}) when stats.total > 0 do
-    (stats.rejected / stats.total) * 100
+  defp calculate_false_positive_rate(%{stats: stats}) do
+    total = Map.get(stats, "total", 0)
+    rejected = Map.get(stats, "rejected", 0)
+    
+    if total > 0 do
+      (rejected / total) * 100
+    else
+      0.0
+    end
   end
   
   defp calculate_false_positive_rate(_), do: 0.0
