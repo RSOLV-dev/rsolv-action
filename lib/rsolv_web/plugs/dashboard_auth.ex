@@ -8,7 +8,6 @@ defmodule RsolvWeb.Plugs.DashboardAuth do
   """
   
   import Plug.Conn
-  import Phoenix.Controller
   
   def init(opts), do: opts
   

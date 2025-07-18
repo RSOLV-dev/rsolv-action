@@ -69,8 +69,11 @@ config :fun_with_flags, :persistence,
   adapter: FunWithFlags.Store.Persistent.Ecto,
   repo: Rsolv.Repo
 
-# Disable cache notifications to avoid Redis dependency
-config :fun_with_flags, :cache_bust_notifications, enabled: false
+# Enable cache notifications using Phoenix.PubSub (no Redis dependency)
+config :fun_with_flags, :cache_bust_notifications,
+  enabled: true,
+  adapter: FunWithFlags.Notifications.PhoenixPubSub,
+  client: Rsolv.PubSub
 
 # Configure the endpoint
 if config_env() != :test do

@@ -36,6 +36,12 @@ defmodule RsolvWeb.DashboardControllerTest do
       # Disable the admin_dashboard feature flag
       FunWithFlags.disable(:admin_dashboard)
       
+      # Clear cache to ensure flag change takes effect
+      FunWithFlags.clear(:admin_dashboard)
+      
+      # Verify flag is disabled
+      refute FunWithFlags.enabled?(:admin_dashboard)
+      
       # Set up basic auth
       credentials = Base.encode64("admin:test_password")
       
@@ -47,8 +53,9 @@ defmodule RsolvWeb.DashboardControllerTest do
         |> put_req_header("authorization", "Basic #{credentials}")
         |> get(~p"/dashboard")
       
+      # The FeatureFlagPlug should redirect to home when flag is disabled
       assert redirected_to(conn) == ~p"/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "unavailable"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Admin dashboard is currently unavailable"
     end
   end
 
@@ -57,6 +64,12 @@ defmodule RsolvWeb.DashboardControllerTest do
       # Enable admin_dashboard but disable metrics_dashboard
       FunWithFlags.enable(:admin_dashboard)
       FunWithFlags.disable(:metrics_dashboard)
+      
+      # Clear cache to ensure flag changes take effect
+      FunWithFlags.clear(:metrics_dashboard)
+      
+      # Verify flag state
+      refute FunWithFlags.enabled?(:metrics_dashboard)
       
       # Set up basic auth
       credentials = Base.encode64("admin:test_password")
