@@ -1,10 +1,35 @@
 defmodule RsolvWeb.EarlyAccessLiveTest do
   use RsolvWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
+  import Mox
   use Bamboo.Test, shared: true
+
+  setup :verify_on_exit!
+  
+  setup do
+    # Configure ConvertKit settings for test
+    Application.put_env(:rsolv, :convertkit,
+      api_key: "test_api_key",
+      form_id: "test_form_id",
+      api_base_url: "https://api.convertkit.com/v3"
+    )
+    :ok
+  end
 
   describe "admin notification emails" do
     test "admin notification email is sent when user submits early access form via LiveView", %{conn: conn} do
+      # Mock ConvertKit API calls
+      expect(Rsolv.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+        {:ok, %HTTPoison.Response{
+          status_code: 200,
+          body: Jason.encode!(%{
+            "subscription" => %{
+              "id" => 12345,
+              "state" => "active"
+            }
+          })
+        }}
+      end)
       # Setup test data
       email = "test@example.com"
       
