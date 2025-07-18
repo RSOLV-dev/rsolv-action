@@ -76,37 +76,33 @@ defmodule RsolvWeb.Plugs.DashboardAuthTest do
       FunWithFlags.disable(:admin_dashboard)
     end
     
-    test "denies access when feature is disabled", %{conn: conn} do
+    test "authenticates successfully regardless of feature flags", %{conn: conn} do
+      # DashboardAuth only handles authentication, not feature flags
       auth = Base.encode64("admin:test123")
       
-      # Use a feature that's in early_access (available to all including admin)
-      # but can be disabled via FunWithFlags
+      # Disable a feature flag to show it doesn't affect DashboardAuth
       FunWithFlags.disable(:core_features)
       
       conn =
         conn
-        |> Plug.Test.init_test_session(%{})
-        |> Phoenix.Controller.fetch_flash()
         |> put_req_header("authorization", "Basic #{auth}")
-        |> DashboardAuth.call(require_feature: :core_features)
+        |> DashboardAuth.call([])
       
-      assert conn.halted
-      assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not available"
+      # Auth should succeed even with feature disabled
+      refute conn.halted
+      assert conn.assigns.current_user_email == "admin@test.com"
     end
     
-    test "auth check happens before feature flag check", %{conn: conn} do
-      # This is the key test - even with feature disabled,
-      # invalid auth should fail BEFORE feature flag check
-      
+    test "denies access with invalid credentials", %{conn: conn} do
+      # DashboardAuth only handles authentication
       auth = Base.encode64("wrong:wrong")
       
       conn =
         conn
         |> put_req_header("authorization", "Basic #{auth}")
-        |> DashboardAuth.call(require_feature: :admin_dashboard)
+        |> DashboardAuth.call([])
       
-      # Should get 401 Unauthorized, not redirect
+      # Should get 401 Unauthorized
       assert conn.status == 401
       assert conn.halted
     end

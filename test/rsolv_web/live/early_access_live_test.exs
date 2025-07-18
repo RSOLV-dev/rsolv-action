@@ -7,12 +7,31 @@ defmodule RsolvWeb.EarlyAccessLiveTest do
   setup :verify_on_exit!
   
   setup do
-    # Configure ConvertKit settings for test
-    Application.put_env(:rsolv, :convertkit,
+    # Store original configs
+    original_convertkit = Application.get_env(:rsolv, :convertkit)
+    original_http_client = Application.get_env(:rsolv, :http_client)
+    
+    # Set up the correct HTTP client mock
+    Application.put_env(:rsolv, :http_client, Rsolv.HTTPClientMock)
+    
+    # Enable required feature flags
+    FunWithFlags.enable(:early_access_signup)
+    FunWithFlags.enable(:welcome_email_sequence)
+    
+    # Configure ConvertKit settings for test with all required fields
+    Application.put_env(:rsolv, :convertkit, [
       api_key: "test_api_key",
       form_id: "test_form_id",
-      api_base_url: "https://api.convertkit.com/v3"
-    )
+      api_base_url: "https://api.convertkit.com/v3",
+      early_access_tag_id: "7700607"
+    ])
+    
+    on_exit(fn ->
+      # Restore original configs
+      Application.put_env(:rsolv, :convertkit, original_convertkit)
+      Application.put_env(:rsolv, :http_client, original_http_client)
+    end)
+    
     :ok
   end
 
