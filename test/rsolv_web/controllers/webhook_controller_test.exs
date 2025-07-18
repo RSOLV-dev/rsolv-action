@@ -37,7 +37,8 @@ defmodule RsolvWeb.WebhookControllerTest do
         |> put_req_header("x-hub-signature-256", signature)
         |> put_req_header("content-type", "application/json")
         |> assign(:test_mode, true)
-        |> post("/api/webhooks/github", payload)
+        |> assign(:raw_body, raw_body)
+        |> post("/api/webhooks/github", raw_body)
         
       assert json_response(conn, 200) == %{
         "status" => "success",
@@ -86,7 +87,8 @@ defmodule RsolvWeb.WebhookControllerTest do
         |> put_req_header("x-hub-signature-256", signature)
         |> put_req_header("content-type", "application/json")
         |> assign(:test_mode, true)
-        |> post("/api/webhooks/github", payload)
+        |> assign(:raw_body, raw_body)
+        |> post("/api/webhooks/github", raw_body)
         
       assert json_response(conn, 200) == %{
         "status" => "success",

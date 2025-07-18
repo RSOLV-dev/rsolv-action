@@ -178,7 +178,12 @@ defmodule Rsolv.FeatureFlags do
   @doc """
   Enable a feature flag globally.
   """
-  def enable(feature) do
+  def enable(feature) when is_binary(feature) do
+    enable(String.to_atom(feature))
+  end
+  
+  def enable(feature) when is_atom(feature) do
+    # FunWithFlags.enable/1 exists and enables globally
     case FunWithFlags.enable(feature) do
       {:ok, _flag} -> :ok
       error -> error
@@ -188,7 +193,11 @@ defmodule Rsolv.FeatureFlags do
   @doc """
   Disable a feature flag globally.
   """
-  def disable(feature) do
+  def disable(feature) when is_binary(feature) do
+    disable(String.to_atom(feature))
+  end
+  
+  def disable(feature) when is_atom(feature) do
     case FunWithFlags.disable(feature) do
       {:ok, _flag} -> :ok
       error -> error
@@ -198,7 +207,11 @@ defmodule Rsolv.FeatureFlags do
   @doc """
   Enable a feature for a specific group.
   """
-  def enable_for_group(feature, group) do
+  def enable_for_group(feature, group) when is_binary(feature) do
+    enable_for_group(String.to_atom(feature), group)
+  end
+  
+  def enable_for_group(feature, group) when is_atom(feature) do
     case FunWithFlags.enable(feature, for_group: group) do
       {:ok, _flag} -> :ok
       error -> error
@@ -208,8 +221,28 @@ defmodule Rsolv.FeatureFlags do
   @doc """
   Disable a feature for a specific group.
   """
-  def disable_for_group(feature, group) do
+  def disable_for_group(feature, group) when is_binary(feature) do
+    disable_for_group(String.to_atom(feature), group)
+  end
+  
+  def disable_for_group(feature, group) when is_atom(feature) do
     case FunWithFlags.disable(feature, for_group: group) do
+      {:ok, _flag} -> :ok
+      error -> error
+    end
+  end
+  
+  @doc """
+  Enable a feature for a specific customer (actor).
+  """
+  def enable_for_customer(feature, customer) when is_binary(feature) do
+    enable_for_customer(String.to_atom(feature), customer)
+  end
+  
+  def enable_for_customer(feature, customer) when is_atom(feature) do
+    # FunWithFlags accepts any term as an actor
+    # We'll use the customer struct directly
+    case FunWithFlags.enable(feature, for_actor: customer) do
       {:ok, _flag} -> :ok
       error -> error
     end

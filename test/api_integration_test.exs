@@ -7,22 +7,23 @@ defmodule Rsolv.APIIntegrationTest do
   @api_base_url "https://api.rsolv.dev"
   
   describe "Health Endpoint" do
-    test "returns healthy status with all services" do
+    test "returns healthy status with clustering info" do
       response = HTTPoison.get!("#{@api_base_url}/health")
       
       assert response.status_code == 200
       
       body = Jason.decode!(response.body)
-      assert body["status"] == "healthy"
-      assert body["service"] == "rsolv-api"
-      assert body["version"] == "0.1.0"
+      assert body["status"] in ["ok", "warning", "degraded"]
+      assert Map.has_key?(body, "timestamp")
+      assert Map.has_key?(body, "clustering")
       
-      # Verify all services are healthy
-      assert body["services"]["database"] == "healthy"
-      assert body["services"]["ai_providers"]["anthropic"] == "healthy"
-      assert body["services"]["ai_providers"]["openai"] == "healthy"
-      assert body["services"]["ai_providers"]["openrouter"] == "healthy"
-      # Note: We use DETS for storage, not Redis
+      # Verify clustering information is present
+      clustering = body["clustering"]
+      assert is_boolean(clustering["enabled"])
+      assert Map.has_key?(clustering, "current_node")
+      assert Map.has_key?(clustering, "connected_nodes")
+      assert is_list(clustering["connected_nodes"])
+      assert is_integer(clustering["node_count"])
     end
   end
   

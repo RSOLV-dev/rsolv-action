@@ -5,7 +5,7 @@ defmodule RsolvWeb.TrackControllerTest do
   describe "track/2" do
     test "handles page_view event", %{conn: conn} do
       log = capture_log(fn ->
-        conn = post(conn, "/track", %{
+        conn = post(conn, "/api/track", %{
           "type" => "page_view",
           "data" => %{
             "page" => "/home",
@@ -21,7 +21,7 @@ defmodule RsolvWeb.TrackControllerTest do
 
     test "handles form_submit event", %{conn: conn} do
       log = capture_log(fn ->
-        conn = post(conn, "/track", %{
+        conn = post(conn, "/api/track", %{
           "type" => "form_submit",
           "data" => %{
             "form_id" => "contact-form",
@@ -37,7 +37,7 @@ defmodule RsolvWeb.TrackControllerTest do
 
     test "handles conversion event", %{conn: conn} do
       log = capture_log(fn ->
-        conn = post(conn, "/track", %{
+        conn = post(conn, "/api/track", %{
           "type" => "conversion",
           "data" => %{
             "conversion_type" => "signup"
@@ -52,7 +52,7 @@ defmodule RsolvWeb.TrackControllerTest do
 
     test "handles JSON string data", %{conn: conn} do
       log = capture_log(fn ->
-        conn = post(conn, "/track", %{
+        conn = post(conn, "/api/track", %{
           "type" => "custom",
           "data" => Jason.encode!(%{"custom_field" => "value"})
         })
@@ -65,7 +65,7 @@ defmodule RsolvWeb.TrackControllerTest do
 
     test "handles malformed JSON string data", %{conn: conn} do
       log = capture_log(fn ->
-        conn = post(conn, "/track", %{
+        conn = post(conn, "/api/track", %{
           "type" => "custom",
           "data" => "not valid json"
         })
@@ -78,7 +78,7 @@ defmodule RsolvWeb.TrackControllerTest do
 
     test "handles missing event type", %{conn: conn} do
       log = capture_log(fn ->
-        conn = post(conn, "/track", %{
+        conn = post(conn, "/api/track", %{
           "data" => %{"page" => "/home"}
         })
 
@@ -90,7 +90,7 @@ defmodule RsolvWeb.TrackControllerTest do
 
     test "handles missing data", %{conn: conn} do
       log = capture_log(fn ->
-        conn = post(conn, "/track", %{
+        conn = post(conn, "/api/track", %{
           "type" => "page_view"
         })
 
@@ -104,7 +104,7 @@ defmodule RsolvWeb.TrackControllerTest do
       log = capture_log(fn ->
         conn = conn
           |> put_req_header("user-agent", "Test Browser")
-          |> post("/track", %{"type" => "test"})
+          |> post("/api/track", %{"type" => "test"})
 
         assert json_response(conn, 201) == %{"success" => true}
       end)
@@ -125,7 +125,7 @@ defmodule RsolvWeb.TrackControllerTest do
 
       for event_type <- event_types do
         log = capture_log(fn ->
-          conn = post(conn, "/track", %{"type" => event_type})
+          conn = post(conn, "/api/track", %{"type" => event_type})
           assert json_response(conn, 201) == %{"success" => true}
         end)
 

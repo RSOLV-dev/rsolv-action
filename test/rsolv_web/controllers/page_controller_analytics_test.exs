@@ -7,7 +7,8 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
   describe "submit_early_access analytics tracking" do
     test "passes celebration data for Plausible and Simple Analytics", %{conn: conn} do
       # Mock ConvertKit API calls
-      expect(Rsolv.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # First a POST to add subscriber
+      expect(Rsolv.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
         {:ok, %HTTPoison.Response{
           status_code: 200,
           body: Jason.encode!(%{
@@ -16,6 +17,29 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
               "state" => "active"
             }
           })
+        }}
+      end)
+      
+      # Then a GET to check if subscriber exists for tagging
+      expect(Rsolv.HTTPClientMock, :get, 1, fn _url, _headers, _opts ->
+        {:ok, %HTTPoison.Response{
+          status_code: 200,
+          body: Jason.encode!(%{
+            "total_subscribers" => 1,
+            "page" => 1,
+            "total_pages" => 1,
+            "subscribers" => [
+              %{"id" => 12345, "email_address" => "analytics@example.com"}
+            ]
+          })
+        }}
+      end)
+      
+      # Then another POST to tag the subscriber
+      expect(Rsolv.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
+        {:ok, %HTTPoison.Response{
+          status_code: 200,
+          body: Jason.encode!(%{})
         }}
       end)
       
@@ -46,7 +70,8 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
     
     test "provides default values when no UTM parameters present", %{conn: conn} do
       # Mock ConvertKit API calls
-      expect(Rsolv.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # First a POST to add subscriber
+      expect(Rsolv.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
         {:ok, %HTTPoison.Response{
           status_code: 200,
           body: Jason.encode!(%{
@@ -55,6 +80,29 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
               "state" => "active"
             }
           })
+        }}
+      end)
+      
+      # Then a GET to check if subscriber exists for tagging
+      expect(Rsolv.HTTPClientMock, :get, 1, fn _url, _headers, _opts ->
+        {:ok, %HTTPoison.Response{
+          status_code: 200,
+          body: Jason.encode!(%{
+            "total_subscribers" => 1,
+            "page" => 1,
+            "total_pages" => 1,
+            "subscribers" => [
+              %{"id" => 12345, "email_address" => "noparams@example.com"}
+            ]
+          })
+        }}
+      end)
+      
+      # Then another POST to tag the subscriber
+      expect(Rsolv.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
+        {:ok, %HTTPoison.Response{
+          status_code: 200,
+          body: Jason.encode!(%{})
         }}
       end)
       
