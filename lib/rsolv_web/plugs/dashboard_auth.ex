@@ -1,10 +1,10 @@
 defmodule RsolvWeb.Plugs.DashboardAuth do
   @moduledoc """
-  Enhanced dashboard authentication that checks auth BEFORE feature flags.
+  Dashboard authentication plug that verifies HTTP Basic Auth credentials.
   
-  This solves the chicken-and-egg problem where feature flags were checked
-  before authentication, preventing admins from accessing the admin UI
-  even with valid credentials.
+  This plug only handles authentication. Feature flag checking is done
+  separately by FeatureFlagPlug in the router pipeline, ensuring proper
+  separation of concerns.
   """
   
   import Plug.Conn
@@ -12,32 +12,13 @@ defmodule RsolvWeb.Plugs.DashboardAuth do
   
   def init(opts), do: opts
   
-  def call(conn, opts) do
-    feature = Keyword.get(opts, :require_feature)
-    
-    # First, check authentication
+  def call(conn, _opts) do
+    # Only check authentication - feature flags are handled by FeatureFlagPlug in the pipeline
     case authenticate(conn) do
       {:ok, user_email} ->
-        # Authentication successful, now check feature flag if required
-        if feature do
-          # Create an actor struct for FunWithFlags
-          actor = %FunWithFlags.UI.SimpleActor{id: user_email}
-          
-          if !FunWithFlags.enabled?(feature, for: actor) do
-            conn
-            |> put_flash(:error, "This feature is not available for your account.")
-            |> redirect(to: "/")
-            |> halt()
-          else
-            # Both auth and feature flag check passed
-            conn
-            |> assign(:current_user_email, user_email)
-          end
-        else
-          # No feature flag required, just auth passed
-          conn
-          |> assign(:current_user_email, user_email)
-        end
+        # Authentication successful
+        conn
+        |> assign(:current_user_email, user_email)
         
       {:error, _reason} ->
         # Authentication failed
