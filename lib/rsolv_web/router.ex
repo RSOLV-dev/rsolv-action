@@ -203,7 +203,8 @@ defmodule RsolvWeb.Router do
       pipe_through :browser
 
       live_dashboard "/dashboard", 
-        metrics: RsolvWeb.Telemetry
+        metrics: RsolvWeb.Telemetry,
+        request_logger_cookie_domain: nil
       
       # FunWithFlags UI in development
       forward "/feature-flags", FunWithFlags.UI.Router, namespace: "dev-feature-flags"
@@ -219,7 +220,8 @@ defmodule RsolvWeb.Router do
       pipe_through [:browser, DashboardAuth, :require_admin_dashboard]
       
       live_dashboard "/dashboard", 
-        metrics: RsolvWeb.Telemetry
+        metrics: RsolvWeb.Telemetry,
+        request_logger_cookie_domain: ".rsolv.dev"
     end
     
     # FunWithFlags UI with auth (admin_dashboard now checked after auth in plug)
