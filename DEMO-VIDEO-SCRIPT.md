@@ -1,7 +1,15 @@
 # RSOLV Demo Video Script
 
 **Duration**: 10-12 minutes  
+**Setup Time**: 30 minutes pre-recording preparation  
 **Tone**: Professional, excited about security automation
+
+## Quick Recording Checklist
+- [ ] Demo repo created with vulnerabilities
+- [ ] RSOLV API key tested and working
+- [ ] Browser cache cleared
+- [ ] Screen recording software ready
+- [ ] This script visible for reference
 
 ---
 
@@ -211,3 +219,18 @@ Thanks for watching!"
 - Start free trial
 - See documentation
 - Contact sales for enterprise
+
+## Timing Summary
+
+| Section | Duration |
+|---------|----------|
+| Opening | 30 seconds |
+| The Problem | 45 seconds |
+| Quick Setup | 1 minute |
+| Automatic Scanning | 2 minutes |
+| Issue Details | 1.5 minutes |
+| Automated Fix | 3 minutes |
+| PR Review | 2 minutes |
+| ROI & Benefits | 1 minute |
+| Closing | 30 seconds |
+| **Total** | **~12 minutes** |
