@@ -1,7 +1,7 @@
 ---
 title: "Why Security Fixes Take 27 Days (And How to Make it 27 Minutes)"
 excerpt: "Security fixes average 27 days from discovery to deployment. The actual coding? Just 4 hours. Here's where the other 26 days go."
-status: "published"
+status: "draft"
 tags: ["developer-productivity", "security-workflow", "automation", "devops", "context-switching"]
 category: "engineering"
 published_at: "2025-08-06"
