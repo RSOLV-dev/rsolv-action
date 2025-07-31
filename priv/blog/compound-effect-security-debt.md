@@ -1,7 +1,7 @@
 ---
 title: "The Compound Effect of Security Debt"
 excerpt: "Take any vulnerability. Wait 90 days. It's not the same bug anymore—it's multiplied, spread, and made friends. Welcome to compound interest from hell."
-status: "draft"
+status: "published"
 tags: ["security-debt", "technical-debt", "vulnerability-management", "security-strategy", "risk-management"]
 category: "security"
 published_at: "2025-08-13"

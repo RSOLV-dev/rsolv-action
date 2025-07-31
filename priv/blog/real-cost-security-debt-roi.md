@@ -1,7 +1,7 @@
 ---
 title: "The Real Cost of Security Debt (With Numbers)"
 excerpt: "Most CTOs think they spend 10% of dev time on security fixes. It's actually 34%. Here's the math nobody wants to see."
-status: "draft"
+status: "published"
 tags: ["security-debt", "roi", "cost-analysis", "business-case", "metrics"]
 category: "business"
 published_at: "2025-07-30"
