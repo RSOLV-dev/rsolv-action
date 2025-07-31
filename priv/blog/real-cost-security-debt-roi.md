@@ -156,4 +156,4 @@ The conversation usually ends with "When can we start?"
 
 ---
 
-*Want to see these calculations applied to your specific situation? RSOLV provides automated security fixes for $15-40 per merged PR—a 94% cost reduction versus manual remediation. [Calculate your ROI →](/roi-calculator)*
+*Want to see these calculations applied to your specific situation? RSOLV provides automated security fixes for $15-40 per merged PR—a 94% cost reduction versus manual remediation. [Calculate your ROI →](/#roi-calculator)*
