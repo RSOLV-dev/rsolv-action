@@ -1,66 +1,34 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 
-/* Dark mode prose fixes - MUST be in components layer for specificity */
+/* Dark mode typography overrides using Tailwind Typography plugin */
 @layer components {
-  .dark .prose p,
-  .dark .prose li,
-  .dark .prose td,
-  .dark .prose dd,
-  .dark .prose figcaption,
-  .dark .prose blockquote {
-    color: rgb(209 213 219) !important;
-  }
-  
-  .dark .prose strong,
-  .dark .prose b,
-  .dark .prose h1,
-  .dark .prose h2,
-  .dark .prose h3,
-  .dark .prose h4,
-  .dark .prose h5,
-  .dark .prose h6,
-  .dark .prose thead,
-  .dark .prose th {
-    color: rgb(229 231 235) !important;
-  }
-  
-  .dark .prose a {
-    color: rgb(96 165 250) !important;
-  }
-  
-  .dark .prose a:hover {
-    color: rgb(147 187 252) !important;
-  }
-  
-  .dark .prose code {
-    color: rgb(229 231 235) !important;
-  }
-  
-  .dark .prose blockquote {
-    border-left-color: rgb(75 85 99) !important;
-  }
-  
-  .dark .prose hr {
-    border-color: rgb(55 65 81) !important;
-  }
-  
-  .dark .prose thead {
-    border-bottom-color: rgb(75 85 99) !important;
-  }
-  
-  .dark .prose tbody tr {
-    border-bottom-color: rgb(55 65 81) !important;
+  /* Use Tailwind's prose-invert for dark mode with custom color overrides */
+  .dark .prose {
+    --tw-prose-body: theme('colors.gray.300');
+    --tw-prose-headings: theme('colors.gray.100');
+    --tw-prose-lead: theme('colors.gray.300');
+    --tw-prose-links: theme('colors.blue.400');
+    --tw-prose-bold: theme('colors.gray.100');
+    --tw-prose-counters: theme('colors.gray.400');
+    --tw-prose-bullets: theme('colors.gray.400');
+    --tw-prose-hr: theme('colors.gray.700');
+    --tw-prose-quotes: theme('colors.gray.100');
+    --tw-prose-quote-borders: theme('colors.gray.700');
+    --tw-prose-captions: theme('colors.gray.400');
+    --tw-prose-code: theme('colors.gray.100');
+    --tw-prose-pre-code: theme('colors.gray.300');
+    --tw-prose-pre-bg: theme('colors.gray.900');
+    --tw-prose-th-borders: theme('colors.gray.600');
+    --tw-prose-td-borders: theme('colors.gray.700');
   }
 }
 
 @import "tailwindcss/utilities";
 
-
-/* Import Space Grotesk font */
+/* Import fonts */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
 
-/* Import Iosevka font */
 @font-face {
   font-family: 'Iosevka';
   src: url('/fonts/iosevka-regular.woff2') format('woff2');
@@ -77,325 +45,126 @@
   font-display: swap;
 }
 
-/* This file is for your main application CSS */
-
-:root {
-  /* Brand colors - consistent across themes */
-  --brand-blue: #3366FF;
-  --brand-green: #00CC66;
-  --brand-accent: #58a6ff;
-  
-  /* GitHub-style color system - Light mode (default) */
-  --color-bg-canvas: #ffffff;
-  --color-bg-default: #ffffff;
-  --color-bg-subtle: #f6f8fa;
-  --color-bg-inset: #eff2f5;
-  
-  --color-fg-default: #24292f;
-  --color-fg-muted: #57606a;
-  --color-fg-subtle: #6e7781;
-  --color-fg-on-emphasis: #ffffff;
-  
-  --color-border-default: #d0d7de;
-  --color-border-muted: #d8dee4;
-  --color-border-subtle: #eaeef2;
-  
-  --color-shadow-small: 0 1px 0 rgba(27, 31, 36, 0.04);
-  --color-shadow-medium: 0 3px 6px rgba(140, 149, 159, 0.15);
-  --color-shadow-large: 0 8px 24px rgba(140, 149, 159, 0.2);
-  
-  /* Semantic colors */
-  --color-accent-fg: var(--brand-blue);
-  --color-accent-emphasis: var(--brand-blue);
-  --color-success-fg: var(--brand-green);
-  --color-danger-fg: #cf222e;
-  --color-warning-fg: #9a6700;
-  
-  /* Code block colors */
-  --color-code-bg: #f6f8fa;
-  --color-code-border: #d1d9e0;
-}
-
-body {
-  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  color: var(--color-fg-default);
-  background-color: var(--color-bg-canvas);
-}
-
-/* Dark mode color overrides */
-.dark {
-  /* GitHub-style dark mode colors */
-  --color-bg-canvas: #0d1117;
-  --color-bg-default: #0d1117;
-  --color-bg-subtle: #161b22;
-  --color-bg-inset: #010409;
-  
-  --color-fg-default: #e6edf3;
-  --color-fg-muted: #8b949e;
-  --color-fg-subtle: #6e7681;
-  --color-fg-on-emphasis: #ffffff;
-  
-  --color-border-default: #30363d;
-  --color-border-muted: #21262d;
-  --color-border-subtle: #6e7681;
-  
-  --color-shadow-small: 0 0 transparent;
-  --color-shadow-medium: 0 3px 6px #010409;
-  --color-shadow-large: 0 8px 24px #010409;
-  
-  /* Adjusted semantic colors for dark mode */
-  --color-accent-fg: #58a6ff;
-  --color-accent-emphasis: #1f6feb;
-  --color-success-fg: #3fb950;
-  --color-danger-fg: #f85149;
-  --color-warning-fg: #d29922;
-  
-  /* Code block colors for dark mode */
-  --color-code-bg: #161b22;
-  --color-code-border: #30363d;
-}
-
-/* Smooth theme transitions */
-* {
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.code {
-  font-family: 'Iosevka', ui-monospace, monospace;
-}
-
-/* Custom button styles */
-.btn-primary {
-  @apply bg-brand-blue text-white font-medium py-2 px-6 rounded-md hover:bg-opacity-90 transition-colors;
-}
-
-.btn-success {
-  @apply bg-brand-green text-white font-medium py-2 px-6 rounded-md hover:bg-opacity-90 transition-colors;
-}
-
-.btn-outline {
-  @apply border-2 border-brand-blue text-brand-blue font-medium py-2 px-6 rounded-md hover:bg-brand-blue hover:bg-opacity-10 transition-colors;
-}
-
-/* Email signup form */
-.email-input {
-  @apply w-full px-4 py-3 rounded-md bg-white text-gray-800 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-blue;
-}
-
-/* Typography and content styles - using Tailwind's prose-invert for dark mode */
-.prose code {
-  background-color: var(--color-code-bg);
-  border: 1px solid var(--color-code-border);
-  border-radius: 6px;
-  padding: 0.125rem 0.25rem;
-}
-
-/* Typography and content styles - using Tailwind's prose-invert for dark mode */
-
-
-/* Code blocks with MDEx - override default prose styles */
-.prose pre {
-  background-color: var(--color-code-bg);
-  color: var(--color-fg-default);
-  border: 1px solid var(--color-code-border);
-  @apply rounded-2xl shadow-lg my-8 p-6;
-  font-family: 'Iosevka', ui-monospace, 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
-}
-
-.prose pre code {
-  @apply bg-transparent p-0 border-0;
-  color: inherit;
-}
-
-/* Terminal-style code blocks */
-.code-block {
-  @apply bg-brand-dark text-white font-mono rounded-lg shadow-xl overflow-hidden;
-}
-
-/* Hero section gradient */
-.hero-gradient {
-  background: linear-gradient(135deg, var(--brand-blue) 0%, #5b89ff 100%);
-}
-
-/* Custom utilities for success stories */
-.success-story-card {
-  @apply bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition-shadow;
-}
-
-/* Email template styles */
-.email-header {
-  background: linear-gradient(135deg, var(--brand-blue) 0%, #5b89ff 100%);
-  color: white;
-  padding: 2rem;
-  text-align: center;
-}
-
-.email-footer {
-  background-color: var(--brand-light);
-  padding: 2rem;
-  text-align: center;
-  color: var(--brand-dark);
-}
-
-/* Utility classes for dark mode */
-.dark .dark\:bg-dark-800 {
-  background-color: #1e293b;
-}
-
-.dark .dark\:bg-dark-900 {
-  background-color: #0f172a;
-}
-
-.dark .dark\:bg-dark-950 {
-  background-color: #020617;
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+/* CSS Custom Properties for semantic colors */
+@layer base {
+  :root {
+    /* Use Tailwind theme colors for consistency */
+    --color-bg-canvas: theme('colors.brand.light');  /* #F5F5F5 */
+    --color-bg-default: #fafafa;
+    --color-bg-subtle: #f0f0f0;
+    --color-border-default: theme('colors.gray.300');
+    --color-border-muted: theme('colors.gray.200');
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .dark {
+    /* Dark mode using Tailwind's dark color palette */
+    --color-bg-canvas: theme('colors.dark.950');     /* #020617 */
+    --color-bg-default: theme('colors.dark.900');    /* #0f172a */
+    --color-bg-subtle: theme('colors.dark.800');     /* #1e293b */
+    --color-border-default: theme('colors.dark.700');
+    --color-border-muted: theme('colors.dark.800');
+  }
+
+  /* Apply semantic backgrounds using Tailwind utilities */
+  body {
+    @apply font-sans text-gray-900 dark:text-gray-100 transition-colors;
+    background-color: var(--color-bg-canvas);
   }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.5s ease-out forwards;
+/* Utility classes that use our semantic colors */
+@layer utilities {
+  .bg-canvas {
+    background-color: var(--color-bg-canvas);
+  }
+  
+  .bg-DEFAULT {
+    background-color: var(--color-bg-default);
+  }
+  
+  .bg-subtle {
+    background-color: var(--color-bg-subtle);
+  }
+  
+  .border-DEFAULT {
+    border-color: var(--color-border-default);
+  }
+  
+  .border-muted {
+    border-color: var(--color-border-muted);
+  }
 }
 
-/* Ensure clickable elements have pointer cursor */
-[phx-click] {
-  cursor: pointer;
-}
+/* Component-specific styles using Tailwind */
+@layer components {
+  /* Buttons using Tailwind utilities */
+  .btn-primary {
+    @apply bg-brand-blue text-white font-medium py-2 px-6 rounded-md hover:bg-opacity-90 transition-colors;
+  }
 
-/* Ensure all text colors work in both light and dark mode */
-.text-brand-blue {
-  color: var(--brand-blue);
-}
+  .btn-success {
+    @apply bg-brand-green text-white font-medium py-2 px-6 rounded-md hover:bg-opacity-90 transition-colors;
+  }
 
-.text-brand-green {
-  color: var(--brand-green);
-}
+  .btn-outline {
+    @apply border-2 border-brand-blue text-brand-blue font-medium py-2 px-6 rounded-md hover:bg-brand-blue hover:bg-opacity-10 transition-colors;
+  }
 
-.text-brand-dark {
-  color: var(--brand-dark);
-}
+  /* Form inputs using Tailwind */
+  .email-input {
+    @apply w-full px-4 py-3 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue;
+  }
 
-.bg-brand-blue {
-  background-color: var(--brand-blue);
-}
+  /* Cards using semantic colors */
+  .card {
+    @apply rounded-lg shadow-sm transition-shadow;
+    background-color: var(--color-bg-default);
+    border: 1px solid var(--color-border-default);
+  }
 
-.bg-brand-green {
-  background-color: var(--brand-green);
-}
+  /* Code blocks using Tailwind Typography */
+  .prose pre {
+    @apply rounded-2xl shadow-lg my-8 p-6;
+  }
 
-.bg-brand-dark {
-  background-color: var(--brand-dark);
-}
+  .prose code {
+    @apply rounded-md px-1 py-0.5;
+    background-color: var(--color-bg-subtle);
+    border: 1px solid var(--color-border-muted);
+  }
 
-.bg-brand-light {
-  background-color: var(--brand-light);
-}
+  /* Header styles */
+  .dark header {
+    @apply bg-gray-900 border-gray-800;
+  }
 
-/* Form focus states */
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  ring: 2px;
-  ring-color: var(--brand-blue);
-}
-
-/* Card and surface styles */
-.card {
-  background-color: var(--color-bg-default);
-  border: 1px solid var(--color-border-default);
-  border-radius: 8px;
-  box-shadow: var(--color-shadow-small);
-}
-
-.card-subtle {
-  background-color: var(--color-bg-subtle);
-  border: 1px solid var(--color-border-muted);
-}
-
-/* Navigation styles */
-.nav-bg {
-  background-color: var(--color-bg-subtle);
-  border-bottom: 1px solid var(--color-border-default);
-}
-
-/* Success message styles */
-.success-message {
-  @apply px-4 py-3 rounded;
-  background-color: var(--color-success-fg);
-  color: var(--color-fg-on-emphasis);
-  opacity: 0.9;
-}
-
-/* Error message styles */
-.error-message {
-  @apply px-4 py-3 rounded;
-  background-color: var(--color-danger-fg);
-  color: var(--color-fg-on-emphasis);
-  opacity: 0.9;
-}
-
-/* Loading spinner */
-.spinner {
-  @apply inline-block w-8 h-8 border-4 border-gray-200 border-t-brand-blue rounded-full animate-spin;
-}
-
-/* Mobile menu styles */
-.mobile-menu {
-  @apply fixed inset-0 z-50 bg-white dark:bg-dark-900;
-}
-
-/* Responsive utilities */
-@media (max-width: 640px) {
+  /* Hero section gradient */
   .hero-gradient {
-    padding-top: 6rem;
-    padding-bottom: 4rem;
+    background: linear-gradient(135deg, theme('colors.brand.blue') 0%, #5b89ff 100%);
   }
 }
 
-/* Print styles */
-@media print {
-  .no-print {
-    display: none;
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-300;
+}
+
+/* Focus states */
+@layer utilities {
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply outline-none ring-2 ring-brand-blue;
   }
 }
 
-/* Accessibility */
+/* Loading states */
+.spinner {
+  @apply inline-block w-8 h-8 border-4 border-gray-200 dark:border-gray-700 border-t-brand-blue rounded-full animate-spin;
+}
+
+/* Screen reader only */
 .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
   clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--brand-light);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--brand-blue);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #2952cc;
 }

@@ -34,6 +34,20 @@
     <!-- Plausible Analytics -->
     <script defer data-domain="rsolv.dev" src="https://plausible.io/js/script.hash.outbound-links.js"></script>
     <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
+    
+    <!-- Theme initialization -->
+    <script>
+      // Apply theme immediately to prevent flash
+      (function() {
+        const theme = localStorage.getItem('theme') || 
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+        
+        // Set initial icon state immediately after theme is applied
+        // We'll update this again after DOM loads to be safe
+        window.__initialTheme = theme;
+      })();
+    </script>
   </head>
   <body class="h-full bg-canvas antialiased transition-colors">
     <div class="flash-messages">
@@ -121,5 +135,32 @@
         </div>
       </div>
     </footer>
+    
+    <!-- Global theme toggle handler -->
+    <script>
+      document.addEventListener('click', function(e) {
+        const button = e.target.closest('[data-theme-toggle]');
+        if (button) {
+          e.preventDefault();
+          const theme = localStorage.getItem('theme') || 'light';
+          const newTheme = theme === 'dark' ? 'light' : 'dark';
+          
+          localStorage.setItem('theme', newTheme);
+          document.documentElement.classList.toggle('dark', newTheme === 'dark');
+          
+          // Update icons
+          const lightIcon = document.getElementById('theme-toggle-light-icon');
+          const darkIcon = document.getElementById('theme-toggle-dark-icon');
+          
+          if (lightIcon && darkIcon) {
+            lightIcon.classList.toggle('hidden', newTheme === 'light');
+            darkIcon.classList.toggle('hidden', newTheme === 'dark');
+          }
+        }
+      });
+      
+      // Icons are now controlled by CSS classes (hidden dark:block and block dark:hidden)
+      // No JavaScript initialization needed!
+    </script>
   </body>
 </html>

@@ -9,9 +9,9 @@ defmodule RsolvWeb.Components.Header do
     
     # Set header styling based on page
     header_class = if is_homepage do
-      "fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white/80 dark:bg-dark-900/80 backdrop-blur-sm"
+      "fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm"
     else
-      "sticky top-0 z-50 bg-white dark:bg-dark-950 shadow-sm border-b border-gray-200 dark:border-dark-800"
+      "sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800"
     end
     
     text_color = if is_homepage, do: "text-gray-900 dark:text-white", else: "text-gray-900 dark:text-gray-100"
@@ -39,7 +39,12 @@ defmodule RsolvWeb.Components.Header do
         <div class="flex items-center justify-between py-4 text-sm">
           <div class="flex items-center gap-4">
             <a href="/" class="flex items-center">
-              <img src={~p"/images/rsolv_logo_transparent.png"} width="100" alt="RSOLV - Automatic Security Detection" />
+              <img 
+                src={~p"/images/rsolv_logo_transparent.png"} 
+                width="100" 
+                alt="RSOLV - Automatic Security Detection" 
+                id="header-logo"
+              />
             </a>
           </div>
           <nav class="hidden md:flex items-center gap-8">
