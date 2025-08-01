@@ -1,24 +1,24 @@
 ---
-title: "Why Security Fixes Take 27 Days (And How to Make it 27 Minutes)"
-excerpt: "Security fixes average 27 days from discovery to deployment. The actual coding? Just 4 hours. Here's where the other 26 days go."
+title: "Why Security Fixes Take 30+ Days (And How to Make it 30 Minutes)"
+excerpt: "Critical web vulnerabilities take 30-60 days to fix on average. The actual coding? Just 4 hours. Here's where the rest of the time goes."
 status: "draft"
 tags: ["developer-productivity", "security-workflow", "automation", "devops", "context-switching"]
 category: "engineering"
 published_at: "2025-08-06"
 author: "Dylan Fitzgerald"
-canonical_url: "https://rsolv.dev/blog/why-security-fixes-take-27-days"
+canonical_url: "https://rsolv.dev/blog/why-security-fixes-take-30-days"
 page_type: "article"
 ---
 
-# Why Security Fixes Take 27 Days (And How to Make it 27 Minutes)
+# Why Security Fixes Take 30+ Days (And How to Make it 30 Minutes)
 
-**The bottom line: Security fixes take 27 days on average, but only 4 hours is actual coding. The other 26 days? Process overhead, context switching, and waiting. Automation can cut this to 27 minutes.**
+**The bottom line: Critical web application vulnerabilities take 30-60 days to fix on average[^1], but the actual coding takes just 4 hours. The other 29+ days? Process overhead, context switching, and waiting. Automation can cut this to 30 minutes.**
 
 Industry research consistently shows the same depressing pattern across organizations.
 
 Let's walk through the tragicomedy that is modern security remediation.
 
-## The 27-Day Comedy of Errors
+## The 30-Day Comedy of Errors
 
 **Day 1**: Scanner screams "SQL INJECTION! THE WORLD IS ENDING!"
 **Day 2-5**: Security team is drowning in 200 other alerts
@@ -31,11 +31,12 @@ Let's walk through the tragicomedy that is modern security remediation.
 **Day 24**: Code reviewer: "Can you add tests?"
 **Day 25**: Tests break everything
 **Day 26**: Fix the fix that fixed the fix
-**Day 27**: Finally deployed 🎉
+**Day 27**: Code deployed to staging
+**Day 30**: Finally deployed to production 🎉
 
-Four hours of work. Twenty-seven days of process.
+Four hours of work. Thirty days of process.
 
-Think I'm exaggerating? [Edgescan's data](https://www.edgescan.com/wp-content/uploads/2025/04/2024-Vulnerability-Statistics-Report.pdf) shows the average is actually 65 days. I'm being generous.
+Think I'm exaggerating? Industry data shows critical web vulnerabilities take 30-60 days to remediate on average[^1]. CISA recommends just 15 days for critical vulnerabilities[^2], but most organizations can't hit that target. Google's Project Zero gives vendors 90 days before public disclosure[^3], acknowledging the reality of patch timelines.
 
 ## Why Everything Takes Forever
 
@@ -43,7 +44,7 @@ Think I'm exaggerating? [Edgescan's data](https://www.edgescan.com/wp-content/up
 
 Picture this: 3 security engineers. 100+ vulnerabilities per week. Do the math.
 
-[GitLab found](https://about.gitlab.com/developer-survey/) 57% of developers say finding time for security is their biggest challenge. No kidding—when each vuln requires:
+According to GitLab's 2024 Global DevSecOps Report[^3], security remains one of the top challenges for development teams. No kidding—when each vuln requires:
 - Triage (is this real or noise?)
 - Research (what's the actual risk?)
 - Assignment (who owns this code?)
@@ -68,7 +69,7 @@ Here's what happens when a developer finally gets that security ticket:
 3:23 PM: Finally remember what I was doing
 ```
 
-[Microsoft's research](https://www.microsoft.com/en-us/research/uploads/prod/2021/03/Productivity-Assessment-Framework-TSE-2021.pdf) shows each context switch costs 23 minutes. That's not counting the emotional toll of being yanked out of flow state.
+Research from UC Irvine shows it takes an average of 23 minutes and 15 seconds to fully refocus after an interruption[^4]. That's not counting the emotional toll of being yanked out of flow state.
 
 ### The Handoff Hell
 
@@ -94,7 +95,7 @@ Here's my favorite corporate comedy: A critical vulnerability discovered on Mond
 
 Your hackers don't follow Agile. Just saying.
 
-## From 27 Days to 27 Minutes
+## From 30 Days to 30 Minutes
 
 What if security fixes worked like this instead:
 
@@ -103,7 +104,7 @@ What if security fixes worked like this instead:
 **9:05 AM**: PR appears: "Fix SQL injection in user.js"
 **9:10 AM**: You review: "Yep, that's the right fix"
 **9:11 AM**: Merge
-**9:27 AM**: Deployed
+**9:30 AM**: Deployed
 
 No tickets. No meetings. No context switching. Just review and merge.
 
@@ -130,9 +131,9 @@ You never left your flow state. The fix just... happened.
 
 ## The Ripple Effects
 
-[Stripe's research](https://stripe.com/files/reports/the-developer-coefficient.pdf) found devs waste 42% of their time on maintenance. Want to know the worst part? Happy developers become grumpy security fixers.
+Stripe's Developer Coefficient report found developers spend 42% of their time on technical debt and maintenance[^5]. Want to know the worst part? Happy developers become grumpy security fixers.
 
-When you cut fix time from 27 days to 27 minutes:
+When you cut fix time from 30 days to 30 minutes:
 
 **Developers stay happy**: No more context-switching torture
 **Security actually improves**: Fixes deploy before hackers notice
@@ -141,17 +142,31 @@ When you cut fix time from 27 days to 27 minutes:
 
 ## The Path Forward
 
-Here's how to escape the 27-day nightmare:
+Here's how to escape the 30-day nightmare:
 
 **Step 1**: Time your current process (prepare for depression)
 **Step 2**: Count the handoffs (each one adds days)
 **Step 3**: Try automating just one vulnerability type
 **Step 4**: Watch developers actually smile during security work
 
-The tech exists. The ROI is proven. The only question is: How many more 27-day cycles will you accept?
+The tech exists. The ROI is proven. The only question is: How many more 30-day cycles will you accept?
 
 Because somewhere, a hacker is laughing at your sprint planning.
 
 ---
 
-*RSOLV automatically generates security fixes as reviewable PRs, eliminating the 27-day wait. Developers review and merge in minutes, not days. [See how it works →](/demo)*
+*RSOLV automatically generates security fixes as reviewable PRs, eliminating the 30-day wait. Developers review and merge in minutes, not days. [See how it works →](/demo)*
+
+## References
+
+[^1]: Industry reports consistently show 30-60 day remediation times for critical web vulnerabilities. See: Edgescan 2024 Vulnerability Statistics Report (35 days for web applications); "Organizations Take an Average of 60 Days to Patch Critical Risk Vulnerabilities" (2022); Academic research from IEEE showing similar ranges.
+
+[^2]: CISA. *Remediate Vulnerabilities for Internet Accessible Systems*. Retrieved from https://www.cisa.gov/sites/default/files/publications/CISAInsights-Cyber-RemediateVulnerabilitiesforInternetAccessibleSystems_S508C.pdf - Recommends critical vulnerabilities be remediated within 15 days, high within 30 days.
+
+[^3]: Google Project Zero. (2025). *Policy and Disclosure: 2025 Edition*. Retrieved from https://googleprojectzero.blogspot.com/2025/07/reporting-transparency.html - Maintains 90-day disclosure deadline, acknowledging realistic vendor patch timelines.
+
+[^4]: GitLab. (2024). *Global DevSecOps Report*. Retrieved from https://about.gitlab.com/developer-survey/ - Annual survey of over 5,000 development, security, and operations professionals about DevSecOps practices and challenges.
+
+[^5]: Mark, G., Gonzalez, V. M., & Harris, J. (2005). No task left behind? Examining the nature of fragmented work. *Proceedings of CHI 2005*, 321-330. UC Irvine research shows it takes 23 minutes and 15 seconds to fully refocus after interruption.
+
+[^6]: Stripe. (2018). *The Developer Coefficient*. Retrieved from https://stripe.com/files/reports/the-developer-coefficient.pdf - Found developers spend 42% of their time on technical debt and maintenance issues, costing companies ~$85 billion annually.

@@ -35,7 +35,7 @@
     <script defer data-domain="rsolv.dev" src="https://plausible.io/js/script.hash.outbound-links.js"></script>
     <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
   </head>
-  <body class="h-full bg-white dark:bg-dark-950 antialiased transition-colors">
+  <body class="h-full bg-canvas antialiased transition-colors">
     <div class="flash-messages">
       <%= if flash = Phoenix.Flash.get(@flash, :info) do %>
         <div class="bg-brand-green bg-opacity-90 text-white py-4 px-6 flex justify-between items-center" role="alert" phx-click="lv:clear-flash" phx-value-key="info">
@@ -57,50 +57,50 @@
     </div>
     
     <%= @inner_content %>
-    <footer class="bg-brand-dark dark:bg-dark-900 text-white py-12">
+    <footer class="bg-subtle border-t border-DEFAULT text-DEFAULT py-12">
       <div class="container mx-auto px-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <img src={~p"/images/rsolv_logo_transparent.png"} alt="RSOLV Logo" class="h-10 mb-4" />
-            <p class="text-gray-300 mt-4">
+            <p class="text-muted mt-4">
               RSOLV provides security-first issue resolution with compliance documentation across all your development platforms.
             </p>
           </div>
           <div>
             <h3 class="text-lg font-medium mb-4">Features</h3>
             <ul class="space-y-2">
-              <li><a href="/#features" class="text-gray-300 hover:text-white transition-colors">Security-First Solutions</a></li>
-              <li><a href="/#features" class="text-gray-300 hover:text-white transition-colors">Cross-Platform Integration</a></li>
-              <li><a href="/#features" class="text-gray-300 hover:text-white transition-colors">Team Education</a></li>
-              <li><a href="/#pricing" class="text-gray-300 hover:text-white transition-colors">Pricing</a></li>
+              <li><a href="/#features" class="text-muted hover:text-DEFAULT transition-colors">Security-First Solutions</a></li>
+              <li><a href="/#features" class="text-muted hover:text-DEFAULT transition-colors">Cross-Platform Integration</a></li>
+              <li><a href="/#features" class="text-muted hover:text-DEFAULT transition-colors">Team Education</a></li>
+              <li><a href="/#pricing" class="text-muted hover:text-DEFAULT transition-colors">Pricing</a></li>
             </ul>
           </div>
           <div>
             <h3 class="text-lg font-medium mb-4">Resources</h3>
             <ul class="space-y-2">
-              <li><a href="/docs" class="text-gray-300 hover:text-white transition-colors">Documentation</a></li>
-              <li><a href="/blog" class="text-gray-300 hover:text-white transition-colors">Blog</a></li>
-              <li><a href="https://github.com/rsolv-ai/rsolv-action" class="text-gray-300 hover:text-white transition-colors" target="_blank">GitHub Action</a></li>
-              <li><a href="/api" class="text-gray-300 hover:text-white transition-colors">API Reference</a></li>
+              <li><a href="/docs" class="text-muted hover:text-DEFAULT transition-colors">Documentation</a></li>
+              <li><a href="/blog" class="text-muted hover:text-DEFAULT transition-colors">Blog</a></li>
+              <li><a href="https://github.com/rsolv-ai/rsolv-action" class="text-muted hover:text-DEFAULT transition-colors" target="_blank">GitHub Action</a></li>
+              <li><a href="/api" class="text-muted hover:text-DEFAULT transition-colors">API Reference</a></li>
             </ul>
           </div>
           <div>
             <h3 class="text-lg font-medium mb-4">Legal</h3>
             <ul class="space-y-2">
-              <li><a href="/docs/terms" class="text-gray-300 hover:text-white transition-colors">Terms of Service</a></li>
-              <li><a href="/docs/privacy" class="text-gray-300 hover:text-white transition-colors">Privacy Policy</a></li>
+              <li><a href="/docs/terms" class="text-muted hover:text-DEFAULT transition-colors">Terms of Service</a></li>
+              <li><a href="/docs/privacy" class="text-muted hover:text-DEFAULT transition-colors">Privacy Policy</a></li>
             </ul>
             <h3 class="text-lg font-medium mb-2 mt-4">Connect</h3>
             <ul class="space-y-2">
-              <li><a rel="me" href="https://infosec.exchange/@rsolv" class="text-gray-300 hover:text-white transition-colors" target="_blank">Mastodon</a></li>
-              <li><a href="mailto:security@rsolv.dev" class="text-gray-300 hover:text-white transition-colors">Email</a></li>
+              <li><a rel="me" href="https://infosec.exchange/@rsolv" class="text-muted hover:text-DEFAULT transition-colors" target="_blank">Mastodon</a></li>
+              <li><a href="mailto:security@rsolv.dev" class="text-muted hover:text-DEFAULT transition-colors">Email</a></li>
             </ul>
           </div>
         </div>
-        <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+        <div class="border-t border-muted mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4">
-            <p class="text-gray-400">&copy; <%= DateTime.utc_now().year %> RSOLV. All rights reserved.</p>
-            <p class="text-gray-400">Built with ❤️ in Colorado 
+            <p class="text-subtle">&copy; <%= DateTime.utc_now().year %> RSOLV. All rights reserved.</p>
+            <p class="text-subtle">Built with ❤️ in Colorado 
               <span class="inline-flex items-center ml-1" style="width:20px; height:15px;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1200" width="20" height="15" aria-labelledby="colorado-flag-title">
                   <title id="colorado-flag-title">Colorado State Flag</title>
@@ -111,10 +111,10 @@
                 </svg>
               </span>
             </p>
-            <p class="text-gray-400 text-xs">v2025.07</p>
+            <p class="text-subtle text-xs">v2025.07</p>
           </div>
           <div class="mt-4 md:mt-0 flex space-x-4">
-            <a rel="me" href="https://infosec.exchange/@rsolv" class="text-gray-400 hover:text-white transition-colors" target="_blank">
+            <a rel="me" href="https://infosec.exchange/@rsolv" class="text-subtle hover:text-DEFAULT transition-colors" target="_blank">
               <span class="hero-solid-chat-bubble-left-right w-6 h-6"></span>
             </a>
           </div>

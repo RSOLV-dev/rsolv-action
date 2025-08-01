@@ -29,10 +29,82 @@ module.exports = {
     'hover:text-brand-green',
     'btn-primary',
     'btn-success',
-    'btn-outline'
+    'btn-outline',
+    // GitHub-style color utilities
+    'bg-canvas',
+    'bg-subtle',
+    'bg-inset',
+    'text-muted',
+    'text-subtle',
+    'text-emphasis',
+    'border-muted',
+    'border-subtle',
+    'text-accent',
+    'text-success',
+    'text-danger',
+    'text-warning',
+    'card',
+    'card-subtle',
+    'nav-bg',
+    // Typography classes
+    'prose-invert',
+    'dark:prose-invert',
+    // Dark mode support
+    'dark:text-gray-100',
+    'dark:text-gray-200',
+    'dark:text-gray-300',
+    'dark:text-gray-400',
+    'dark:prose-headings:text-gray-200',
+    'dark:prose-p:text-gray-300',
+    'dark:prose-li:text-gray-300',
+    'dark:prose-strong:text-gray-100',
+    'dark:prose-a:text-blue-400',
+    'dark:prose-blockquote:text-gray-300',
+    'dark:prose-code:text-gray-200',
+    'dark:group-hover:text-blue-400',
+    'dark:hover:text-gray-200',
   ],
   theme: {
     extend: {
+      typography: ({ theme }) => ({
+        DEFAULT: {
+          css: {
+            '--tw-prose-body': theme('colors.gray.700'),
+            '--tw-prose-headings': theme('colors.gray.900'),
+            '--tw-prose-lead': theme('colors.gray.600'),
+            '--tw-prose-links': theme('colors.blue.600'),
+            '--tw-prose-bold': theme('colors.gray.900'),
+            '--tw-prose-counters': theme('colors.gray.500'),
+            '--tw-prose-bullets': theme('colors.gray.300'),
+            '--tw-prose-hr': theme('colors.gray.200'),
+            '--tw-prose-quotes': theme('colors.gray.900'),
+            '--tw-prose-quote-borders': theme('colors.gray.200'),
+            '--tw-prose-captions': theme('colors.gray.500'),
+            '--tw-prose-code': theme('colors.gray.900'),
+            '--tw-prose-pre-code': theme('colors.gray.200'),
+            '--tw-prose-pre-bg': theme('colors.gray.800'),
+            '--tw-prose-th-borders': theme('colors.gray.300'),
+            '--tw-prose-td-borders': theme('colors.gray.200'),
+            '--tw-prose-invert-body': theme('colors.gray.300'),
+            '--tw-prose-invert-headings': theme('colors.gray.200'),
+            '--tw-prose-invert-lead': theme('colors.gray.400'),
+            '--tw-prose-invert-links': theme('colors.blue.400'),
+            '--tw-prose-invert-bold': theme('colors.gray.200'),
+            '--tw-prose-invert-counters': theme('colors.gray.400'),
+            '--tw-prose-invert-bullets': theme('colors.gray.600'),
+            '--tw-prose-invert-hr': theme('colors.gray.700'),
+            '--tw-prose-invert-quotes': theme('colors.gray.100'),
+            '--tw-prose-invert-quote-borders': theme('colors.gray.700'),
+            '--tw-prose-invert-captions': theme('colors.gray.400'),
+            '--tw-prose-invert-code': theme('colors.gray.200'),
+            '--tw-prose-invert-pre-code': theme('colors.gray.300'),
+            '--tw-prose-invert-pre-bg': 'rgb(0 0 0 / 50%)',
+            '--tw-prose-invert-th-borders': theme('colors.gray.600'),
+            '--tw-prose-invert-td-borders': theme('colors.gray.700'),
+            maxWidth: 'none',
+          },
+        },
+      }),
       colors: {
         brand: {
           blue: "#3366FF",     // Primary blue
@@ -41,20 +113,55 @@ module.exports = {
           light: "#F5F5F5",    // Light gray
           white: "#FFFFFF",    // White
         },
-        // Dark mode color palette
-        dark: {
-          50: "#f8fafc",
-          100: "#f1f5f9", 
-          200: "#e2e8f0",
-          300: "#cbd5e1",
-          400: "#94a3b8",
-          500: "#64748b",
-          600: "#475569",
-          700: "#334155",
-          800: "#1e293b",
-          900: "#0f172a",
-          950: "#020617"
-        }
+        // GitHub-style color system using CSS variables
+        canvas: 'var(--color-bg-canvas)',
+        default: 'var(--color-bg-default)',
+        subtle: 'var(--color-bg-subtle)',
+        inset: 'var(--color-bg-inset)',
+        
+        fg: {
+          DEFAULT: 'var(--color-fg-default)',
+          muted: 'var(--color-fg-muted)',
+          subtle: 'var(--color-fg-subtle)',
+          emphasis: 'var(--color-fg-on-emphasis)',
+        },
+        
+        border: {
+          DEFAULT: 'var(--color-border-default)',
+          muted: 'var(--color-border-muted)',
+          subtle: 'var(--color-border-subtle)',
+        },
+        
+        accent: {
+          DEFAULT: 'var(--color-accent-fg)',
+          emphasis: 'var(--color-accent-emphasis)',
+        },
+        
+        success: 'var(--color-success-fg)',
+        danger: 'var(--color-danger-fg)',
+        warning: 'var(--color-warning-fg)',
+      },
+      backgroundColor: {
+        canvas: 'var(--color-bg-canvas)',
+        DEFAULT: 'var(--color-bg-default)',
+        subtle: 'var(--color-bg-subtle)',
+        inset: 'var(--color-bg-inset)',
+      },
+      textColor: {
+        DEFAULT: 'var(--color-fg-default)',
+        muted: 'var(--color-fg-muted)',
+        subtle: 'var(--color-fg-subtle)',
+        emphasis: 'var(--color-fg-on-emphasis)',
+      },
+      borderColor: {
+        DEFAULT: 'var(--color-border-default)',
+        muted: 'var(--color-border-muted)',
+        subtle: 'var(--color-border-subtle)',
+      },
+      boxShadow: {
+        sm: 'var(--color-shadow-small)',
+        DEFAULT: 'var(--color-shadow-medium)',
+        lg: 'var(--color-shadow-large)',
       },
       fontFamily: {
         'sans': ['Space Grotesk', 'system-ui', 'sans-serif'],
@@ -64,6 +171,7 @@ module.exports = {
   },
   plugins: [
     require("@tailwindcss/forms"),
+    require("@tailwindcss/typography"),
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:
     //

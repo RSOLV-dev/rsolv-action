@@ -25,23 +25,79 @@
 
 /* This file is for your main application CSS */
 :root {
+  /* Brand colors - consistent across themes */
   --brand-blue: #3366FF;
   --brand-green: #00CC66;
-  --brand-dark: #333333;
-  --brand-light: #F5F5F5;
-  --brand-white: #FFFFFF;
+  --brand-accent: #58a6ff;
+  
+  /* GitHub-style color system - Light mode (default) */
+  --color-bg-canvas: #ffffff;
+  --color-bg-default: #ffffff;
+  --color-bg-subtle: #f6f8fa;
+  --color-bg-inset: #eff2f5;
+  
+  --color-fg-default: #24292f;
+  --color-fg-muted: #57606a;
+  --color-fg-subtle: #6e7781;
+  --color-fg-on-emphasis: #ffffff;
+  
+  --color-border-default: #d0d7de;
+  --color-border-muted: #d8dee4;
+  --color-border-subtle: #eaeef2;
+  
+  --color-shadow-small: 0 1px 0 rgba(27, 31, 36, 0.04);
+  --color-shadow-medium: 0 3px 6px rgba(140, 149, 159, 0.15);
+  --color-shadow-large: 0 8px 24px rgba(140, 149, 159, 0.2);
+  
+  /* Semantic colors */
+  --color-accent-fg: var(--brand-blue);
+  --color-accent-emphasis: var(--brand-blue);
+  --color-success-fg: var(--brand-green);
+  --color-danger-fg: #cf222e;
+  --color-warning-fg: #9a6700;
+  
+  /* Code block colors */
+  --color-code-bg: #f6f8fa;
+  --color-code-border: #d1d9e0;
 }
 
 body {
   font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  color: var(--brand-dark);
-  background-color: var(--brand-white);
+  color: var(--color-fg-default);
+  background-color: var(--color-bg-canvas);
 }
 
-/* Dark mode styles */
-.dark body {
-  color: #e2e8f0;
-  background-color: #020617;
+/* Dark mode color overrides */
+.dark {
+  /* GitHub-style dark mode colors */
+  --color-bg-canvas: #0d1117;
+  --color-bg-default: #0d1117;
+  --color-bg-subtle: #161b22;
+  --color-bg-inset: #010409;
+  
+  --color-fg-default: #e6edf3;
+  --color-fg-muted: #8b949e;
+  --color-fg-subtle: #6e7681;
+  --color-fg-on-emphasis: #ffffff;
+  
+  --color-border-default: #30363d;
+  --color-border-muted: #21262d;
+  --color-border-subtle: #6e7681;
+  
+  --color-shadow-small: 0 0 transparent;
+  --color-shadow-medium: 0 3px 6px #010409;
+  --color-shadow-large: 0 8px 24px #010409;
+  
+  /* Adjusted semantic colors for dark mode */
+  --color-accent-fg: #58a6ff;
+  --color-accent-emphasis: #1f6feb;
+  --color-success-fg: #3fb950;
+  --color-danger-fg: #f85149;
+  --color-warning-fg: #d29922;
+  
+  /* Code block colors for dark mode */
+  --color-code-bg: #161b22;
+  --color-code-border: #30363d;
 }
 
 /* Smooth theme transitions */
@@ -71,15 +127,68 @@ body {
   @apply w-full px-4 py-3 rounded-md bg-white text-gray-800 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-blue;
 }
 
-/* Custom overrides for Tailwind Typography plugin */
+/* Typography and content styles - using Tailwind's prose-invert for dark mode */
+.prose code {
+  background-color: var(--color-code-bg);
+  border: 1px solid var(--color-code-border);
+  border-radius: 6px;
+  padding: 0.125rem 0.25rem;
+}
+
+/* Dark mode prose overrides - fix for Tailwind Typography plugin */
+.dark .prose {
+  color: #d1d5db !important; /* gray-300 */
+}
+
+.dark .prose p,
+.dark .prose li,
+.dark .prose td {
+  color: #d1d5db !important; /* gray-300 */
+}
+
+.dark .prose strong,
+.dark .prose b {
+  color: #e5e7eb !important; /* gray-200 */
+}
+
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+  color: #e5e7eb !important; /* gray-200 */
+}
+
+.dark .prose a {
+  color: #60a5fa !important; /* blue-400 */
+}
+
+.dark .prose a:hover {
+  color: #93bbfc !important; /* blue-300 */
+}
+
+.dark .prose blockquote {
+  color: #d1d5db !important; /* gray-300 */
+  border-left-color: #4b5563 !important; /* gray-600 */
+}
+
+.dark .prose code {
+  color: #e5e7eb !important; /* gray-200 */
+}
+
+
 /* Code blocks with MDEx - override default prose styles */
 .prose pre {
-  @apply bg-gray-900 text-gray-100 rounded-2xl shadow-lg border border-gray-800 my-8 p-6;
+  background-color: var(--color-code-bg);
+  color: var(--color-fg-default);
+  border: 1px solid var(--color-code-border);
+  @apply rounded-2xl shadow-lg my-8 p-6;
   font-family: 'Iosevka', ui-monospace, 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
 }
 
 .prose pre code {
-  @apply bg-transparent p-0;
+  @apply bg-transparent p-0 border-0;
   color: inherit;
 }
 
@@ -185,14 +294,39 @@ select:focus {
   ring-color: var(--brand-blue);
 }
 
+/* Card and surface styles */
+.card {
+  background-color: var(--color-bg-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  box-shadow: var(--color-shadow-small);
+}
+
+.card-subtle {
+  background-color: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-muted);
+}
+
+/* Navigation styles */
+.nav-bg {
+  background-color: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
 /* Success message styles */
 .success-message {
-  @apply bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded;
+  @apply px-4 py-3 rounded;
+  background-color: var(--color-success-fg);
+  color: var(--color-fg-on-emphasis);
+  opacity: 0.9;
 }
 
 /* Error message styles */
 .error-message {
-  @apply bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded;
+  @apply px-4 py-3 rounded;
+  background-color: var(--color-danger-fg);
+  color: var(--color-fg-on-emphasis);
+  opacity: 0.9;
 }
 
 /* Loading spinner */
