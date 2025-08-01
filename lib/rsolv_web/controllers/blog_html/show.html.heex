@@ -27,7 +27,13 @@
                 </header>
                 
                 <!-- Article content with enhanced prose styling -->
-                <div class="mt-8 prose prose-lg max-w-none dark:prose-invert">
+                <div class="mt-8 prose prose-lg max-w-none dark:prose-invert
+                            prose-headings:font-bold 
+                            prose-h2:text-3xl prose-h2:mt-12 prose-h2:mb-6
+                            prose-h3:text-2xl prose-h3:mt-10 prose-h3:mb-4
+                            prose-h4:text-xl prose-h4:mt-8 prose-h4:mb-3
+                            prose-p:leading-relaxed
+                            prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline">
                   <%= raw(@post.html) %>
                 </div>
               </article>
