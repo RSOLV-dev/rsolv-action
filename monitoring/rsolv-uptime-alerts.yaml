@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules-rsolv-uptime
+  namespace: monitoring
+data:
+  rsolv_uptime_alerts.yml: |
+    groups:
+    - name: RSOLVUptimeAlerts
+      interval: 30s
+      rules:
+      # Main site down
+      - alert: RSOLVMainSiteDown
+        expr: probe_success{job="rsolv-platform-uptime", instance="https://rsolv.dev"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: rsolv-platform
+          team: platform
+        annotations:
+          summary: "RSOLV Main Site is DOWN"
+          description: "The main RSOLV website (https://rsolv.dev) has been unreachable for more than 2 minutes."
+          runbook_url: "https://github.com/rsolv-dev/rsolv-infrastructure/wiki/Runbook-Site-Down"
+          
+      # Blog down
+      - alert: RSOLVBlogDown
+        expr: probe_success{job="rsolv-platform-uptime", instance="https://rsolv.dev/blog"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: rsolv-blog
+          team: platform
+        annotations:
+          summary: "RSOLV Blog is DOWN"
+          description: "The RSOLV blog (https://rsolv.dev/blog) has been unreachable for more than 5 minutes."
+          
+      # High response time
+      - alert: RSOLVHighResponseTime
+        expr: probe_http_duration_seconds{job="rsolv-platform-uptime"} > 3
+        for: 5m
+        labels:
+          severity: warning
+          service: rsolv-platform
+          team: platform
+        annotations:
+          summary: "RSOLV Site High Response Time"
+          description: "{{ $labels.instance }} is taking more than 3 seconds to respond (current: {{ $value }}s)."
+          
+      # SSL certificate expiring soon
+      - alert: RSOLVSSLCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry{job="rsolv-platform-uptime"} - time() < 86400 * 7
+        for: 1h
+        labels:
+          severity: warning
+          service: rsolv-platform
+          team: platform
+        annotations:
+          summary: "RSOLV SSL Certificate Expiring Soon"
+          description: "SSL certificate for {{ $labels.instance }} will expire in less than 7 days."
+          
+      # Pod not ready
+      - alert: RSOLVPlatformPodNotReady
+        expr: kube_pod_status_ready{namespace="rsolv-production", pod=~"rsolv-platform-.*", condition="true"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: rsolv-platform
+          team: platform
+        annotations:
+          summary: "RSOLV Platform Pod Not Ready"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for more than 5 minutes."
+          
+      # Deployment replicas mismatch
+      - alert: RSOLVDeploymentReplicasMismatch
+        expr: kube_deployment_spec_replicas{namespace="rsolv-production", deployment="rsolv-platform"} != kube_deployment_status_replicas_available{namespace="rsolv-production", deployment="rsolv-platform"}
+        for: 10m
+        labels:
+          severity: warning
+          service: rsolv-platform
+          team: platform
+        annotations:
+          summary: "RSOLV Deployment Replicas Mismatch"
+          description: "Deployment {{ $labels.deployment }} has {{ $value }} replicas available but expects {{ $labels.spec_replicas }}."
