@@ -49,7 +49,8 @@ const ActionConfigSchema = z.object({
   securitySettings: SecuritySettingsSchema,
   rsolvApiKey: z.string().optional(), // For vended credentials
   maxIssues: z.number().min(1).optional(), // Maximum number of issues to process
-  useGitBasedEditing: z.boolean().optional() // Enable git-based in-place editing (ADR-012)
+  useGitBasedEditing: z.boolean().optional(), // Enable git-based in-place editing (ADR-012)
+  useStructuredPhases: z.boolean().optional() // Enable structured phased prompting (ADR-019)
 });
 
 /**
@@ -116,6 +117,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
     enableSecurityAnalysis: true,  // Enable security analysis by default
     maxIssues: undefined, // Process all issues by default
     useGitBasedEditing: true,  // Default to true for proper in-place editing (ADR-012)
+    useStructuredPhases: true,  // Default to true for reliable file editing (ADR-019)
     aiProvider: {
       provider: 'claude-code',
       model: 'claude-sonnet-4-20250514',  // Claude Sonnet 4
