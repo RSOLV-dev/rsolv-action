@@ -6,6 +6,11 @@ set -e
 if [ -d "/github/workspace" ]; then
   cd /github/workspace
   echo "Running from GitHub workspace: $(pwd)"
+  
+  # Fix git ownership issue in Docker container
+  # GitHub Actions runs as a different user than the container
+  git config --global --add safe.directory /github/workspace
+  echo "Added /github/workspace as safe directory for git"
 else
   # Fallback for local testing
   cd /app
