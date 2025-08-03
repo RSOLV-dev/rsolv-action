@@ -217,9 +217,11 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
     envConfig.useGitBasedEditing = true; // Default to true for proper in-place editing
   }
   
-  // Handle useStructuredPhases - default to false for backward compatibility
+  // Handle useStructuredPhases - default to true for reliable file editing
   if (process.env.RSOLV_USE_STRUCTURED_PHASES !== undefined) {
     envConfig.useStructuredPhases = process.env.RSOLV_USE_STRUCTURED_PHASES === 'true';
+  } else {
+    envConfig.useStructuredPhases = true; // Default to true for proper file editing before JSON
   }
   
   // Parse environment variables JSON string if available

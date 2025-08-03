@@ -78,7 +78,7 @@ inputs:
   use_structured_phases:
     description: 'Enable structured phased prompting to ensure files are edited before JSON generation'
     required: false
-    default: 'false'
+    default: 'true'
 runs:
   using: 'docker'
   image: 'Dockerfile'
