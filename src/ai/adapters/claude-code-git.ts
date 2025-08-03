@@ -362,15 +362,18 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
     let phase1Complete = false;
     let filesEdited = false;
     let jsonProvided = false;
+    let toolsUsed: string[] = [];
     
     for (const message of messages) {
       // Check for phase 1 completion marker
       if (message.type === 'text' && message.text) {
         if (message.text.includes('PHASE 1 COMPLETE')) {
           phase1Complete = true;
+          logger.debug('Found PHASE 1 COMPLETE marker in text message');
         }
         if (message.text.includes('```json')) {
           jsonProvided = true;
+          logger.debug('Found JSON block in text message');
         }
       }
       
@@ -380,32 +383,38 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
           if (content.type === 'text' && content.text) {
             if (content.text.includes('PHASE 1 COMPLETE')) {
               phase1Complete = true;
+              logger.debug('Found PHASE 1 COMPLETE marker in assistant message');
             }
             if (content.text.includes('```json')) {
               jsonProvided = true;
+              logger.debug('Found JSON block in assistant message');
             }
           }
-        }
-      }
-      
-      // Check for file editing tools
-      if (message.type === 'tool_use') {
-        if (message.name === 'Edit' || message.name === 'MultiEdit') {
-          filesEdited = true;
-        }
-      }
-      
-      // Check for assistant messages with tool use
-      if (message.type === 'assistant' && message.message?.content) {
-        for (const content of message.message.content) {
+          
+          // Check for tool use in assistant messages
           if (content.type === 'tool_use') {
+            toolsUsed.push(content.name);
+            logger.debug(`Tool used in assistant message: ${content.name}`);
             if (content.name === 'Edit' || content.name === 'MultiEdit') {
               filesEdited = true;
+              logger.debug(`File editing tool detected: ${content.name}`);
             }
           }
+        }
+      }
+      
+      // Check for direct tool_use messages
+      if (message.type === 'tool_use') {
+        toolsUsed.push(message.name);
+        logger.debug(`Tool used directly: ${message.name}`);
+        if (message.name === 'Edit' || message.name === 'MultiEdit') {
+          filesEdited = true;
+          logger.debug(`File editing tool detected: ${message.name}`);
         }
       }
     }
+    
+    logger.info(`Phase parsing summary: Tools used: [${toolsUsed.join(', ')}], Phase 1 complete: ${phase1Complete}, Files edited: ${filesEdited}, JSON provided: ${jsonProvided}`);
     
     return {
       phase1Complete,
@@ -472,7 +481,11 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
         }
       }
       
-      if (!result.success) {
+      // For structured phases, we expect files to be edited directly, not JSON solution
+      // So we don't fail early if no JSON solution was found
+      const expectingDirectEdits = this.claudeConfig?.useStructuredPhases;
+      
+      if (!result.success && !expectingDirectEdits) {
         return {
           success: false,
           message: result.message,
@@ -481,7 +494,7 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
       }
       
       // If using structured phases, validate phase completion
-      if (this.claudeConfig?.useStructuredPhases && result.messages) {
+      if (expectingDirectEdits && result.messages) {
         const phaseStatus = this.parsePhaseCompletion(result.messages);
         
         if (!phaseStatus.filesEdited) {
@@ -565,6 +578,44 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
                 description: firstChange
               };
             }
+          }
+        }
+      }
+      
+      // For structured phases, try to extract summary from messages if not found in changes
+      if (!summary && expectingDirectEdits && result.messages) {
+        logger.debug('Attempting to extract summary from messages for structured phases');
+        for (const message of result.messages) {
+          if (message.type === 'text' && message.text?.includes('```json')) {
+            const match = message.text.match(/```json\s*([\s\S]*?)\s*```/);
+            if (match) {
+              try {
+                summary = JSON.parse(match[1]);
+                logger.debug('Found summary in text message JSON block');
+                break;
+              } catch (e) {
+                logger.debug('Failed to parse JSON from text message', e);
+              }
+            }
+          }
+          
+          // Check assistant messages
+          if (message.type === 'assistant' && message.message?.content) {
+            for (const content of message.message.content) {
+              if (content.type === 'text' && content.text?.includes('```json')) {
+                const match = content.text.match(/```json\s*([\s\S]*?)\s*```/);
+                if (match) {
+                  try {
+                    summary = JSON.parse(match[1]);
+                    logger.debug('Found summary in assistant message JSON block');
+                    break;
+                  } catch (e) {
+                    logger.debug('Failed to parse JSON from assistant message', e);
+                  }
+                }
+              }
+            }
+            if (summary) break;
           }
         }
       }

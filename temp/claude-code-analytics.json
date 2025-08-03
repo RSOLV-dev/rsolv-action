@@ -1,111 +1,5 @@
 [
   {
-    "startTime": 1750728656664,
-    "issueId": "1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750728656664
-  },
-  {
-    "startTime": 1750728656664,
-    "issueId": "1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750728656664
-  },
-  {
-    "startTime": 1750728656665,
-    "issueId": "1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750728656665
-  },
-  {
-    "startTime": 1750728656665,
-    "issueId": "1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750728656665
-  },
-  {
-    "startTime": 1750728656665,
-    "issueId": "1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750728656665
-  },
-  {
-    "startTime": 1750728658929,
-    "issueId": "123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750728658930
-  },
-  {
-    "startTime": 1750728666759,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "endTime": 1750728666759,
-    "solutionGenerationTime": 0
-  },
-  {
-    "startTime": 1750728666759,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "endTime": 1750728666759,
-    "solutionGenerationTime": 0
-  },
-  {
-    "startTime": 1750728666760,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "endTime": 1750728666760,
-    "solutionGenerationTime": 0
-  },
-  {
-    "startTime": 1750728666760,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "endTime": 1750728666760,
-    "solutionGenerationTime": 0
-  },
-  {
-    "startTime": 1750728666760,
-    "issueId": "test-issue-123",
-    "successful": false,
-    "errorType": "timeout",
-    "endTime": 1750728666862
-  },
-  {
-    "startTime": 1750728666862,
-    "issueId": "test-issue-123",
-    "successful": true,
-    "endTime": 1750728666862,
-    "solutionGenerationTime": 0
-  },
-  {
-    "startTime": 1750728666862,
-    "issueId": "test-issue-123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750728666862
-  },
-  {
-    "startTime": 1750728666863,
-    "issueId": "test-issue-123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1750728666863
-  },
-  {
-    "startTime": 1750728666863,
-    "issueId": "test-issue-123",
-    "successful": false,
-    "endTime": 1750728666863,
-    "solutionGenerationTime": 0,
-    "errorType": "no_solution_found"
-  },
-  {
     "startTime": 1750728666863,
     "issueId": "test-issue-123",
     "successful": false,
@@ -673,5 +567,110 @@
     "successful": false,
     "errorType": "query_error",
     "endTime": 1754258137786
+  },
+  {
+    "startTime": 1754262905831,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262905832
+  },
+  {
+    "startTime": 1754262905832,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262905832
+  },
+  {
+    "startTime": 1754262905833,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262905833
+  },
+  {
+    "startTime": 1754262905833,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262905833
+  },
+  {
+    "startTime": 1754262905833,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262905833
+  },
+  {
+    "startTime": 1754262934011,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262934011
+  },
+  {
+    "startTime": 1754262934012,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262934012
+  },
+  {
+    "startTime": 1754262934021,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262934021
+  },
+  {
+    "startTime": 1754262934021,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262934021
+  },
+  {
+    "startTime": 1754262934022,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262934022
+  },
+  {
+    "startTime": 1754262968894,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262968895
+  },
+  {
+    "startTime": 1754262968904,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262968904
+  },
+  {
+    "startTime": 1754262968905,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262968905
+  },
+  {
+    "startTime": 1754262968905,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262968905
+  },
+  {
+    "startTime": 1754262980058,
+    "issueId": "issue-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1754262980059
   }
 ]
