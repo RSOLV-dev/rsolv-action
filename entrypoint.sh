@@ -1,8 +1,16 @@
 #!/bin/sh
 set -e
 
-# Change to app directory where our code is
-cd /app
+# GitHub Actions mounts the workspace at /github/workspace
+# We need to run from there to have access to the git repository
+if [ -d "/github/workspace" ]; then
+  cd /github/workspace
+  echo "Running from GitHub workspace: $(pwd)"
+else
+  # Fallback for local testing
+  cd /app
+  echo "Running from app directory: $(pwd)"
+fi
 
-# Run the action using the built output
-bun run dist/index.js
+# Run the action using the built output from /app
+exec bun run /app/dist/index.js
