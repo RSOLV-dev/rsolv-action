@@ -258,6 +258,34 @@ Installation instructions:
               }
             }
           }
+          
+          // Check for final result message (SDK v1.0.18+ sends this as the final message)
+          if (message.type === 'result' || message.type === 'final_result') {
+            const resultMessage = message as any;
+            if (this.claudeConfig.verboseLogging) {
+              logger.info(`Received ${message.type} message from Claude Code SDK`);
+            }
+            
+            // Try to extract solution from result message
+            if (resultMessage.text) {
+              const potentialSolution = this.extractSolutionFromText(resultMessage.text);
+              if (potentialSolution) {
+                solution = potentialSolution;
+                logger.info('Found solution in result message');
+              }
+            } else if (resultMessage.content) {
+              // Sometimes the content is in a different structure
+              const potentialSolution = this.extractSolutionFromText(
+                typeof resultMessage.content === 'string' 
+                  ? resultMessage.content 
+                  : JSON.stringify(resultMessage.content)
+              );
+              if (potentialSolution) {
+                solution = potentialSolution;
+                logger.info('Found solution in result message content');
+              }
+            }
+          }
         }
         
         clearTimeout(timeoutId);
@@ -332,12 +360,51 @@ Installation instructions:
             `Claude Code conversation completed without solution after ${messageCount} messages`
           );
           
-          // Log the last few messages for debugging
-          if (this.claudeConfig.verboseLogging && messages.length > 0) {
-            logger.debug('Last 3 messages:', messages.slice(-3).map(m => ({
-              type: m.type,
-              content: (m as any).text || (m as any).message?.content?.[0]?.text?.slice(0, 100) || 'N/A'
-            })));
+          // Enhanced debugging: Log the last few messages to understand what Claude output
+          if (messages.length > 0) {
+            const lastMessages = messages.slice(-5); // Get last 5 messages for better context
+            logger.warn('Last 5 messages from Claude Code SDK:');
+            
+            lastMessages.forEach((m, index) => {
+              const msgInfo: any = {
+                index: messages.length - 5 + index,
+                type: m.type,
+                hasText: !!(m as any).text,
+                hasContent: !!(m as any).content,
+                hasMessage: !!(m as any).message
+              };
+              
+              // Try to extract actual content
+              if ((m as any).text) {
+                msgInfo.textPreview = (m as any).text.slice(0, 200);
+              }
+              if ((m as any).content) {
+                msgInfo.contentType = typeof (m as any).content;
+                if (typeof (m as any).content === 'string') {
+                  msgInfo.contentPreview = (m as any).content.slice(0, 200);
+                }
+              }
+              if ((m as any).message?.content) {
+                msgInfo.messageContent = Array.isArray((m as any).message.content) 
+                  ? (m as any).message.content.map((c: any) => ({ type: c.type, hasText: !!c.text }))
+                  : 'not an array';
+              }
+              
+              logger.warn(`Message ${msgInfo.index}:`, msgInfo);
+            });
+            
+            // Specifically check if there was a result message
+            const resultMessage = messages.find(m => m.type === 'result' || m.type === 'final_result');
+            if (resultMessage) {
+              logger.warn('Found result message but could not extract solution:', {
+                type: resultMessage.type,
+                hasText: !!(resultMessage as any).text,
+                hasContent: !!(resultMessage as any).content,
+                keys: Object.keys(resultMessage)
+              });
+            } else {
+              logger.warn('No result/final_result message found in conversation');
+            }
           }
           
           return {
