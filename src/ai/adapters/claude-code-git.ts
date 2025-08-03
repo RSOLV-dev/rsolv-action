@@ -445,6 +445,33 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
       
       const result = await super.generateSolution(issueContext, analysis, promptToUse);
       
+      // Debug logging for conversation (only when explicitly enabled for security)
+      if (process.env.RSOLV_DEBUG_CONVERSATION === 'true') {
+        logger.warn('⚠️  DEBUG MODE: Conversation logging enabled - DO NOT USE IN PRODUCTION');
+        if (result.messages) {
+          logger.info('=== CLAUDE CODE CONVERSATION START ===');
+          result.messages.forEach((msg: any, index: number) => {
+            logger.info(`Message ${index + 1} (${msg.type}):`);
+            if (msg.type === 'text' && msg.text) {
+              // Truncate very long messages for readability
+              const text = msg.text.length > 500 ? msg.text.substring(0, 500) + '...[truncated]' : msg.text;
+              logger.info(`  Text: ${text}`);
+            } else if (msg.type === 'tool_use') {
+              logger.info(`  Tool: ${msg.name}`);
+              if (msg.input?.path || msg.input?.file_path) {
+                logger.info(`  File: ${msg.input.path || msg.input.file_path}`);
+              }
+              if (msg.input?.old_string) {
+                logger.info(`  Editing: ${msg.input.old_string.substring(0, 100)}...`);
+              }
+            } else if (msg.type === 'assistant' && msg.message?.content) {
+              logger.info(`  Assistant message with ${msg.message.content.length} content items`);
+            }
+          });
+          logger.info('=== CLAUDE CODE CONVERSATION END ===');
+        }
+      }
+      
       if (!result.success) {
         return {
           success: false,
@@ -478,6 +505,28 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
       
       // Check what files were modified
       const modifiedFiles = this.getModifiedFiles();
+      
+      // Debug: Check git status in detail
+      if (process.env.RSOLV_DEBUG_CONVERSATION === 'true') {
+        try {
+          const gitStatus = execSync('git status --porcelain', { 
+            cwd: this.repoPath, 
+            encoding: 'utf8' 
+          });
+          logger.info(`Git status output: ${gitStatus || '(no changes)'}`);
+          
+          // Also check if we're in the right directory
+          const pwd = execSync('pwd', { cwd: this.repoPath, encoding: 'utf8' }).trim();
+          logger.info(`Working directory: ${pwd}`);
+          
+          // List files in current directory
+          const files = execSync('ls -la', { cwd: this.repoPath, encoding: 'utf8' });
+          logger.info(`Files in directory:\n${files}`);
+        } catch (e) {
+          logger.error('Failed to get git debug info:', e);
+        }
+      }
+      
       if (modifiedFiles.length === 0) {
         return {
           success: false,
