@@ -3,6 +3,7 @@
  * and commits them to create clean, reviewable PRs
  */
 import { ClaudeCodeAdapter } from './claude-code.js';
+import { ClaudeCodeCLIAdapter } from './claude-code-cli.js';
 import { IssueContext } from '../../types/index.js';
 import { AIConfig } from '../types.js';
 import { IssueAnalysis } from '../types.js';
@@ -48,8 +49,11 @@ interface PhaseStatus {
 }
 
 export class GitBasedClaudeCodeAdapter extends ClaudeCodeAdapter {
+  private cliAdapter: ClaudeCodeCLIAdapter;
+  
   constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
     super(config, repoPath, credentialManager);
+    this.cliAdapter = new ClaudeCodeCLIAdapter(config, repoPath);
   }
 
   /**
@@ -443,7 +447,17 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
         ? this.constructPromptWithTestContext(issueContext, analysis, testResults, validationResult, iteration)
         : enhancedPrompt;
       
-      const result = await super.generateSolution(issueContext, analysis, promptToUse);
+      // Use CLI adapter if configured, otherwise use SDK
+      const useCLI = process.env.RSOLV_USE_CLI === 'true' || this.claudeConfig?.useStructuredPhases;
+      let result;
+      
+      if (useCLI) {
+        logger.info('Using Claude Code CLI adapter for file editing...');
+        result = await this.cliAdapter.generateSolution(issueContext, analysis, promptToUse);
+      } else {
+        logger.info('Using Claude Code SDK adapter for file editing...');
+        result = await super.generateSolution(issueContext, analysis, promptToUse);
+      }
       
       // Debug logging for conversation (only when explicitly enabled for security)
       if (process.env.RSOLV_DEBUG_CONVERSATION === 'true') {

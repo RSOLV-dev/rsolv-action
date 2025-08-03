@@ -117,7 +117,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
     enableSecurityAnalysis: true,  // Enable security analysis by default
     maxIssues: undefined, // Process all issues by default
     useGitBasedEditing: true,  // Default to true for proper in-place editing (ADR-012)
-    useStructuredPhases: true,  // Default to true for reliable file editing (ADR-019)
+    useStructuredPhases: true,  // Default to true - CLI approach works with structured phases
     aiProvider: {
       provider: 'claude-code',
       model: 'claude-sonnet-4-20250514',  // Claude Sonnet 4
@@ -219,11 +219,11 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
     envConfig.useGitBasedEditing = true; // Default to true for proper in-place editing
   }
   
-  // Handle useStructuredPhases - default to true for reliable file editing
+  // Handle useStructuredPhases - default to true with CLI approach
   if (process.env.RSOLV_USE_STRUCTURED_PHASES !== undefined) {
     envConfig.useStructuredPhases = process.env.RSOLV_USE_STRUCTURED_PHASES === 'true';
   } else {
-    envConfig.useStructuredPhases = true; // Default to true for proper file editing before JSON
+    envConfig.useStructuredPhases = true; // Default to true - CLI approach works with structured phases
   }
   
   // Parse environment variables JSON string if available

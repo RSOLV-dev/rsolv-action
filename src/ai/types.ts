@@ -185,5 +185,6 @@ export interface AIConfig {
   maxTokens?: number;
   useVendedCredentials?: boolean;
   useClaudeCode?: boolean;
+  useStructuredPhases?: boolean;
   claudeCodeConfig?: ClaudeCodeConfig;
 }
