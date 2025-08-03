@@ -198,8 +198,16 @@ Installation instructions:
           pathToClaudeCodeExecutable: this.claudeConfig.executablePath || '/app/node_modules/@anthropic-ai/claude-code/cli.js',
         };
         
-        // Add MCP config if available
-        if (mcpConfigExists) {
+        // For structured phases, we need core Edit/MultiEdit tools, not MCP tools
+        // MCP tools like TodoWrite don't actually edit files and interfere with structured phases
+        const useStructuredPhases = this.claudeConfig?.useStructuredPhases;
+        
+        if (useStructuredPhases) {
+          // Explicitly disable MCP for structured phases to ensure core tools are used
+          queryOptions.mcpConfig = null;
+          logger.info('Disabled MCP for structured phases - using core Edit/MultiEdit tools only');
+        } else if (mcpConfigExists) {
+          // Add MCP config if available and not using structured phases
           queryOptions.mcpConfig = mcpConfigPath;
           logger.info('Using MCP configuration from mcp-config.json, including sequential thinking');
         }
