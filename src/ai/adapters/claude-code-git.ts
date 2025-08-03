@@ -117,44 +117,31 @@ async methodNameAsync(param1, param2) {
 - Ensure no breaking changes to public APIs
 
 ### Phase 5: Provide Fix Summary
-After completing your edits, provide a summary in this JSON format:
+After completing your edits, provide a summary in this EXACT JSON format:
 
 \`\`\`json
 {
   "title": "Fix [vulnerability type] in [component]",
-  "description": "Clear explanation of what was vulnerable and how you fixed it",
-  "vulnerabilityDetails": {
-    "type": "e.g., SQL Injection, XSS, etc.",
-    "severity": "LOW|MEDIUM|HIGH|CRITICAL",
-    "cwe": "CWE-XX identifier if applicable"
-  },
-  "filesModified": [
+  "description": "Clear explanation of what was vulnerable and how you fixed it. Include the vulnerability type, severity, and impact.",
+  "files": [
     {
       "path": "path/to/file.js",
-      "changesDescription": "Replaced string concatenation with parameterized queries",
-      "linesModified": [45, 67, 89]
+      "changes": "Complete content of the fixed file after all edits have been applied"
     }
   ],
-  "compatibilityNotes": {
-    "apiChanged": false,
-    "backwardCompatible": true,
-    "compatibilityMeasures": "Added wrapper to maintain callback interface while using async internally"
-  },
-  "validationResults": {
-    "vulnerabilityDemonstrated": "Showed that input '; DROP TABLE; -- would execute",
-    "testCreated": true,
-    "testPasses": true
-  },
-  "securityImpact": "Explanation of how this improves security",
-  "testingGuidance": [
-    "Test that normal functionality still works",
-    "Verify malicious inputs are now handled safely",
-    "Run existing test suite to ensure no regressions"
-  ],
-  "breakingChanges": false,
-  "additionalNotes": "Any other relevant information"
+  "tests": [
+    "Description of test 1 that validates the fix",
+    "Description of test 2 that ensures no regressions",
+    "Description of test 3 that verifies security improvement"
+  ]
 }
 \`\`\`
+
+**IMPORTANT**: 
+- The "files" array must contain objects with "path" and "changes" properties
+- The "changes" property should contain the COMPLETE updated file content
+- The "tests" array should contain string descriptions of tests to validate the fix
+- This JSON format is required for the fix to be processed correctly
 
 ## Critical Instructions:
 1. **Use Edit/MultiEdit tools** - Do NOT provide file contents in JSON
