@@ -79,14 +79,30 @@ export class GitBasedClaudeCodeAdapter extends ClaudeCodeAdapter {
 - Document what malicious input would exploit the vulnerability
 
 ### Phase 3: Fix Vulnerabilities In-Place with Compatibility
-**IMPORTANT**: Use the Edit or MultiEdit tools to directly modify the vulnerable files.
-- Make minimal, surgical changes to fix security issues
+
+**🚨 CRITICAL REQUIREMENT - YOU MUST FOLLOW THIS EXACT ORDER:**
+
+#### Step 3.1: EDIT FILES FIRST (MANDATORY)
+**YOU MUST use the Edit or MultiEdit tools to modify files BEFORE providing JSON.**
+- ❌ DO NOT skip to JSON without editing files first
+- ❌ DO NOT provide file contents in JSON instead of editing
+- ✅ DO use Edit/MultiEdit tools to make actual file changes
+- ✅ DO wait for "File updated successfully" confirmation
+- ✅ DO make minimal, surgical changes to fix security issues
+
+#### Step 3.2: Preserve Compatibility (WHILE EDITING)
 - **PRESERVE API COMPATIBILITY**: 
   - If code uses callbacks, maintain callback interface
   - If changing from callbacks to async/await, add compatibility wrapper
   - Never break existing function signatures
 - Maintain existing code style and formatting
 - Fix all instances of the vulnerability
+
+#### Step 3.3: Verify Edits Were Applied
+**After using Edit/MultiEdit, confirm the files were modified:**
+- You should see "File [path] has been updated" messages
+- If you don't see these confirmations, the edits didn't work
+- Try again with the Edit tool until you see confirmations
 
 Example compatibility wrapper for callback to async conversion:
 \`\`\`javascript
@@ -116,8 +132,16 @@ async methodNameAsync(param1, param2) {
 - Check that legitimate use cases still work
 - Ensure no breaking changes to public APIs
 
-### Phase 5: Provide Fix Summary
-After completing your edits, provide a summary in this EXACT JSON format:
+### Phase 5: Provide Fix Summary (ONLY AFTER EDITING FILES)
+
+**⚠️ PREREQUISITE: You MUST have already edited files with Edit/MultiEdit tools BEFORE this phase**
+
+After you have:
+1. ✅ Used Edit/MultiEdit tools to modify files
+2. ✅ Seen "File updated successfully" confirmations
+3. ✅ Verified your changes were applied
+
+THEN AND ONLY THEN provide a summary in this EXACT JSON format:
 
 \`\`\`json
 {
@@ -126,7 +150,7 @@ After completing your edits, provide a summary in this EXACT JSON format:
   "files": [
     {
       "path": "path/to/file.js",
-      "changes": "Complete content of the fixed file after all edits have been applied"
+      "changes": "Complete content of the fixed file after all edits have been applied (read it back with Read tool if needed)"
     }
   ],
   "tests": [
@@ -137,15 +161,37 @@ After completing your edits, provide a summary in this EXACT JSON format:
 }
 \`\`\`
 
-**IMPORTANT**: 
-- The "files" array must contain objects with "path" and "changes" properties
-- The "changes" property should contain the COMPLETE updated file content
-- The "tests" array should contain string descriptions of tests to validate the fix
-- This JSON format is required for the fix to be processed correctly
+**VALIDATION CHECKLIST:**
+- [ ] Did you use Edit/MultiEdit tools FIRST? (Required)
+- [ ] Did you see "File updated successfully" messages? (Required)
+- [ ] Are you providing the JSON AFTER editing? (Required)
+- [ ] Does "changes" contain the COMPLETE file content? (Required)
 
-## Critical Instructions:
-1. **Use Edit/MultiEdit tools** - Do NOT provide file contents in JSON
-2. **Edit existing files only** - Do NOT create new files unless absolutely necessary (e.g., missing security config file)  
+**If any checkbox is unchecked, GO BACK and complete the editing phase first!**
+
+## 🔴 CRITICAL - EXECUTION ORDER IS MANDATORY 🔴
+
+**YOU MUST FOLLOW THIS EXACT SEQUENCE:**
+
+1. **FIRST**: Use Edit/MultiEdit tools to modify the vulnerable files
+   - You MUST see "File updated successfully" messages
+   - If you don't see these, the edit didn't work - try again
+
+2. **SECOND**: Read the files back to verify your changes were applied
+   - Use the Read tool to confirm the vulnerability is fixed
+
+3. **THIRD**: Only after steps 1 and 2, provide the JSON summary
+   - Include the complete fixed file content in the "changes" field
+
+**❌ COMMON MISTAKES TO AVOID:**
+- Skipping straight to JSON without editing files
+- Putting file edits in JSON instead of using Edit tools
+- Not waiting for edit confirmation before proceeding
+
+**✅ CORRECT BEHAVIOR:**
+- Edit files → See confirmation → Read to verify → Then provide JSON
+
+Remember: The git-based approach requires ACTUAL file modifications via Edit tools, not just JSON descriptions!
 3. **Make minimal changes** - Only fix the security issue
 4. **Preserve functionality** - The code must still work correctly
 5. **Maintain compatibility** - NEVER break existing APIs or interfaces
