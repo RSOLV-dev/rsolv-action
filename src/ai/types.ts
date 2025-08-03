@@ -145,6 +145,11 @@ export interface ClaudeCodeConfig {
   trackUsage?: boolean;
   
   /**
+   * Use structured phased prompting to ensure files are edited before JSON
+   */
+  useStructuredPhases?: boolean;
+  
+  /**
    * Enhanced context options
    */
   enableDeepContext?: boolean;

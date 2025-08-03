@@ -223,7 +223,8 @@ export async function processIssueWithGit(
       claudeCodeConfig: {
         verboseLogging: true,
         timeout: 600000, // 10 minutes for exploration and editing
-        executablePath: process.env.CLAUDE_CODE_PATH
+        executablePath: process.env.CLAUDE_CODE_PATH,
+        useStructuredPhases: config.useStructuredPhases
       }
     };
     

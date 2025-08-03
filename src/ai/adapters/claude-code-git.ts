@@ -37,6 +37,16 @@ export interface GitSolutionResult {
 /**
  * Claude Code adapter that uses git for change tracking
  */
+/**
+ * Phase status tracking for structured prompting
+ */
+interface PhaseStatus {
+  phase1Complete: boolean;
+  filesEdited: boolean;
+  jsonProvided: boolean;
+  success: boolean;
+}
+
 export class GitBasedClaudeCodeAdapter extends ClaudeCodeAdapter {
   constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
     super(config, repoPath, credentialManager);
@@ -52,6 +62,11 @@ export class GitBasedClaudeCodeAdapter extends ClaudeCodeAdapter {
   ): string {
     if (enhancedPrompt) {
       return enhancedPrompt;
+    }
+    
+    // Use structured phased prompting if enabled
+    if (this.claudeConfig?.useStructuredPhases) {
+      return this.constructStructuredPhasedPrompt(issueContext, analysis);
     }
     
     return `You are an expert security engineer fixing vulnerabilities by directly editing files in a git repository. You have access to file editing tools and will make changes that will be committed to git.
@@ -203,6 +218,68 @@ Your changes will be committed to git, so make them production-ready!`;
   }
   
   /**
+   * Construct a structured phased prompt that guides Claude through distinct phases
+   */
+  private constructStructuredPhasedPrompt(
+    issueContext: IssueContext,
+    analysis: IssueAnalysis
+  ): string {
+    return `You are an expert security engineer fixing vulnerabilities. You MUST complete this task in TWO distinct phases:
+
+## 🚨 CRITICAL: FOLLOW THESE PHASES IN ORDER 🚨
+
+## PHASE 1: FILE EDITING (MANDATORY - DO THIS FIRST)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### Your Task:
+1. Locate the vulnerability: ${issueContext.title}
+   - Description: ${issueContext.body}
+   - Related files: ${analysis.relatedFiles?.join(', ') || 'To be discovered'}
+
+2. Use Edit or MultiEdit tools to fix the vulnerable code
+   - Make minimal, surgical changes
+   - Preserve API compatibility
+   - Fix all instances of the vulnerability
+
+3. After editing, use Read tool to verify your changes were applied
+
+4. Say "PHASE 1 COMPLETE: Files have been edited" when done
+
+⚠️ IMPORTANT: You MUST complete Phase 1 before proceeding to Phase 2.
+Do NOT skip directly to providing JSON.
+
+## PHASE 2: JSON SUMMARY (ONLY AFTER PHASE 1)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Only after you've confirmed "PHASE 1 COMPLETE", provide the JSON summary:
+
+\`\`\`json
+{
+  "title": "Fix [vulnerability type] in [component]",
+  "description": "Clear explanation of what was vulnerable and how you fixed it",
+  "files": [
+    {
+      "path": "path/to/edited/file.js",
+      "changes": "Complete file content after your edits (read it back with Read tool if needed)"
+    }
+  ],
+  "tests": [
+    "Description of test that validates the fix",
+    "Description of test that ensures no regressions"
+  ]
+}
+\`\`\`
+
+## Execution Checklist:
+□ Used Edit/MultiEdit tools
+□ Verified changes with Read tool  
+□ Stated "PHASE 1 COMPLETE"
+□ Provided JSON summary
+
+Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editing.`;
+  }
+  
+  /**
    * Construct prompt with test validation context
    */
   protected constructPromptWithTestContext(
@@ -279,6 +356,66 @@ Your changes will be committed to git, so make them production-ready!`;
   }
 
   /**
+   * Parse phase completion status from Claude's messages
+   */
+  private parsePhaseCompletion(messages: any[]): PhaseStatus {
+    let phase1Complete = false;
+    let filesEdited = false;
+    let jsonProvided = false;
+    
+    for (const message of messages) {
+      // Check for phase 1 completion marker
+      if (message.type === 'text' && message.text) {
+        if (message.text.includes('PHASE 1 COMPLETE')) {
+          phase1Complete = true;
+        }
+        if (message.text.includes('```json')) {
+          jsonProvided = true;
+        }
+      }
+      
+      // Check for assistant messages with text content
+      if (message.type === 'assistant' && message.message?.content) {
+        for (const content of message.message.content) {
+          if (content.type === 'text' && content.text) {
+            if (content.text.includes('PHASE 1 COMPLETE')) {
+              phase1Complete = true;
+            }
+            if (content.text.includes('```json')) {
+              jsonProvided = true;
+            }
+          }
+        }
+      }
+      
+      // Check for file editing tools
+      if (message.type === 'tool_use') {
+        if (message.name === 'Edit' || message.name === 'MultiEdit') {
+          filesEdited = true;
+        }
+      }
+      
+      // Check for assistant messages with tool use
+      if (message.type === 'assistant' && message.message?.content) {
+        for (const content of message.message.content) {
+          if (content.type === 'tool_use') {
+            if (content.name === 'Edit' || content.name === 'MultiEdit') {
+              filesEdited = true;
+            }
+          }
+        }
+      }
+    }
+    
+    return {
+      phase1Complete,
+      filesEdited,
+      jsonProvided,
+      success: phase1Complete && filesEdited && jsonProvided
+    };
+  }
+  
+  /**
    * Generate solution using git-based approach
    */
   async generateSolutionWithGit(
@@ -314,6 +451,29 @@ Your changes will be committed to git, so make them production-ready!`;
           message: result.message,
           error: result.error
         };
+      }
+      
+      // If using structured phases, validate phase completion
+      if (this.claudeConfig?.useStructuredPhases && result.messages) {
+        const phaseStatus = this.parsePhaseCompletion(result.messages);
+        
+        if (!phaseStatus.filesEdited) {
+          return {
+            success: false,
+            message: 'Phase 1 failed: No files were edited',
+            error: 'Phase 1 failed: The files were not edited before providing JSON. Claude must use Edit/MultiEdit tools first.'
+          };
+        }
+        
+        if (phaseStatus.jsonProvided && !phaseStatus.phase1Complete) {
+          return {
+            success: false,
+            message: 'JSON was provided before completing Phase 1',
+            error: 'The files were not edited before providing JSON. Phase 1 must be completed first.'
+          };
+        }
+        
+        logger.info(`Phase status - Phase 1: ${phaseStatus.phase1Complete ? 'Complete' : 'Incomplete'}, Files edited: ${phaseStatus.filesEdited}, JSON provided: ${phaseStatus.jsonProvided}`);
       }
       
       // Check what files were modified

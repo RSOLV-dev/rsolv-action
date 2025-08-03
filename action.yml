@@ -75,6 +75,10 @@ inputs:
     description: 'Enable AST-based validation to reduce false positives (recommended)'
     required: false
     default: 'true'
+  use_structured_phases:
+    description: 'Enable structured phased prompting to ensure files are edited before JSON generation'
+    required: false
+    default: 'false'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -99,6 +103,7 @@ runs:
     RSOLV_USE_GIT_BASED_EDITING: ${{ inputs.use_git_based_editing }}
     RSOLV_ENABLE_ENHANCED_CONTEXT: ${{ inputs.enable_enhanced_context }}
     RSOLV_ENABLE_AST_VALIDATION: ${{ inputs.enable_ast_validation }}
+    RSOLV_USE_STRUCTURED_PHASES: ${{ inputs.use_structured_phases }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'

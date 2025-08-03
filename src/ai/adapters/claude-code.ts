@@ -32,7 +32,7 @@ interface UsageData {
 export class ClaudeCodeAdapter {
   protected repoPath: string;
   protected config: AIConfig;
-  private claudeConfig: ClaudeCodeConfig;
+  protected claudeConfig: ClaudeCodeConfig;
   private tempDir: string;
   private usageData: UsageData[] = [];
   private credentialManager?: any;
@@ -111,7 +111,7 @@ export class ClaudeCodeAdapter {
     issueContext: IssueContext, 
     analysis: IssueAnalysis,
     enhancedPrompt?: string
-  ): Promise<{ success: boolean; message: string; changes?: Record<string, string>; error?: string }> {
+  ): Promise<{ success: boolean; message: string; changes?: Record<string, string>; error?: string; messages?: any[] }> {
     let errorRetryCount = 0;
     const maxRetries = this.claudeConfig.retryOptions?.maxRetries ?? 2;
     const timeout = this.claudeConfig.timeout ?? 1800000; // 30 minutes default for exploration
@@ -260,7 +260,7 @@ Installation instructions:
           }
           
           // Check for final result message (SDK v1.0.18+ sends this as the final message)
-          if (message.type === 'result' || message.type === 'final_result') {
+          if ((message as any).type === 'result' || (message as any).type === 'final_result') {
             const resultMessage = message as any;
             if (this.claudeConfig.verboseLogging) {
               logger.info(`Received ${message.type} message from Claude Code SDK`);
@@ -348,7 +348,8 @@ Installation instructions:
           return {
             success: true,
             message: `Solution generated with Claude Code SDK after ${messageCount} exploration steps`,
-            changes
+            changes,
+            messages
           };
         } else {
           logger.warn(`No solution found in Claude Code SDK response after ${messageCount} messages`);
@@ -394,7 +395,7 @@ Installation instructions:
             });
             
             // Specifically check if there was a result message
-            const resultMessage = messages.find(m => m.type === 'result' || m.type === 'final_result');
+            const resultMessage = messages.find(m => (m as any).type === 'result' || (m as any).type === 'final_result');
             if (resultMessage) {
               logger.warn('Found result message but could not extract solution:', {
                 type: resultMessage.type,
@@ -410,7 +411,8 @@ Installation instructions:
           return {
             success: false,
             message: 'No solution found in response',
-            error: `Claude Code explored the repository (${messageCount} steps) but did not generate a valid JSON solution. This might indicate the issue requires more context or manual intervention.`
+            error: `Claude Code explored the repository (${messageCount} steps) but did not generate a valid JSON solution. This might indicate the issue requires more context or manual intervention.`,
+            messages
           };
         }
       } catch (queryError) {
