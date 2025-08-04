@@ -157,11 +157,11 @@ export class ClaudeCodeCLIAdapter {
       
       let child: any;
       // Try different approaches to find Claude CLI
-      // Pass prompt via stdin without -p flag (which causes print-only mode)
+      // Use permission mode to allow file editing in Docker environment
       const cliCommands = [
-        ['claude', ['-']],  // Global install reading from stdin
-        ['bunx', ['@anthropic-ai/claude-code', '-']],  // Bunx reading from stdin
-        ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', '-']]  // Direct run reading from stdin
+        ['claude', ['--permission-mode', 'bypassPermissions', '-']],  // Global install with write permissions
+        ['bunx', ['@anthropic-ai/claude-code', '--permission-mode', 'bypassPermissions', '-']],  // Bunx with write permissions
+        ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', '--permission-mode', 'bypassPermissions', '-']]  // Direct run with write permissions
       ];
       
       let attemptIndex = 0;
