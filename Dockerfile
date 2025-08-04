@@ -7,6 +7,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y curl git && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install Claude Code CLI globally with bun
+RUN bun install -g @anthropic-ai/claude-code && \
+    which claude && \
+    claude --version || echo "Claude CLI installed but version check failed"
+
 # Copy package files
 COPY package.json bun.lock* ./
 
@@ -28,7 +33,7 @@ CMD ["bun", "test"]
 # Production build stage
 FROM base AS builder
 
-# Install Node.js for Claude Code SDK
+# Install Node.js for Claude Code SDK (some tools still need it)
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -52,7 +57,7 @@ RUN ls -la node_modules/@anthropic-ai/claude-code/cli.js || echo "Claude Code SD
 # Production stage
 FROM base AS production
 
-# Copy Node.js from builder
+# Copy Node.js from builder (some tools still need it)
 COPY --from=builder /usr/bin/node /usr/bin/node
 COPY --from=builder /usr/lib /usr/lib
 

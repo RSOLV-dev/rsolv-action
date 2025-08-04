@@ -161,47 +161,77 @@ export class ClaudeCodeCLIAdapter {
    */
   private executeCLI(args: string[], options: any): Promise<{ success: boolean; output?: string; error?: string }> {
     return new Promise((resolve) => {
-      logger.info(`Executing: claude ${args.join(' ')}`);
+      // Try different approaches to find Claude CLI
+      const cliCommands = [
+        ['bunx', ['@anthropic-ai/claude-code', ...args]],  // Use bunx to auto-install and run
+        ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', ...args]],  // Direct run with bun
+        ['claude', args]  // Fallback to global install
+      ];
       
-      const child = spawn('claude', args, {
-        ...options,
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      child.stdout?.on('data', (data) => {
-        const chunk = data.toString();
-        stdout += chunk;
-        // Log output in real-time for debugging
-        process.stdout.write(chunk);
-      });
-
-      child.stderr?.on('data', (data) => {
-        const chunk = data.toString();
-        stderr += chunk;
-        // Log errors in real-time
-        process.stderr.write(chunk);
-      });
-
-      child.on('close', (code) => {
-        if (code === 0) {
-          resolve({ success: true, output: stdout });
-        } else {
-          resolve({ 
-            success: false, 
-            error: `Claude CLI exited with code ${code}. stderr: ${stderr}` 
+      let attemptIndex = 0;
+      
+      const tryNextCommand = () => {
+        if (attemptIndex >= cliCommands.length) {
+          resolve({
+            success: false,
+            error: 'Could not find Claude Code CLI via bunx, bun, or global install'
           });
+          return;
         }
-      });
-
-      child.on('error', (error) => {
-        resolve({ 
-          success: false, 
-          error: `Failed to start Claude CLI: ${error.message}` 
+        
+        const [command, commandArgs] = cliCommands[attemptIndex];
+        logger.info(`Attempting: ${command} ${commandArgs.join(' ')}`);
+        attemptIndex++;
+        
+        const child = spawn(command, commandArgs, {
+          ...options,
+          stdio: ['pipe', 'pipe', 'pipe']
         });
-      });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout?.on('data', (data) => {
+          const chunk = data.toString();
+          stdout += chunk;
+          // Log output in real-time for debugging
+          process.stdout.write(chunk);
+        });
+
+        child.stderr?.on('data', (data) => {
+          const chunk = data.toString();
+          stderr += chunk;
+          // Log errors in real-time
+          process.stderr.write(chunk);
+        });
+
+        child.on('close', (code) => {
+          if (code === 0) {
+            resolve({ success: true, output: stdout });
+          } else {
+            resolve({ 
+              success: false, 
+              error: `Claude CLI exited with code ${code}. stderr: ${stderr}` 
+            });
+          }
+        });
+
+        child.on('error', (error) => {
+          // If this command failed, try the next one
+          if (attemptIndex < cliCommands.length) {
+            logger.debug(`Command ${command} failed with: ${error.message}, trying next approach...`);
+            tryNextCommand();
+          } else {
+            resolve({ 
+              success: false, 
+              error: `Failed to start Claude CLI: ${error.message}` 
+            });
+          }
+        });
+      };
+      
+      // Start with the first command
+      tryNextCommand();
     });
   }
 
