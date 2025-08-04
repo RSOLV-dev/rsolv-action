@@ -494,8 +494,9 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
         };
       }
       
-      // If using structured phases, validate phase completion
-      if (this.claudeConfig?.useStructuredPhases && result.messages) {
+      // If using structured phases with SDK (not CLI), validate phase completion
+      // CLI adapter handles file editing differently and doesn't use Edit/MultiEdit tools
+      if (this.claudeConfig?.useStructuredPhases && result.messages && !useCLI) {
         const phaseStatus = this.parsePhaseCompletion(result.messages);
         
         if (!phaseStatus.filesEdited) {
