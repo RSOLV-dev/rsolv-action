@@ -161,6 +161,19 @@ export class ClaudeCodeCLIAdapter {
    */
   private executeCLI(args: string[], options: any): Promise<{ success: boolean; output?: string; error?: string }> {
     return new Promise((resolve) => {
+      // Set a 20-minute timeout for Claude CLI
+      const timeout = setTimeout(() => {
+        logger.warn('Claude CLI execution timed out after 20 minutes');
+        if (child && !child.killed) {
+          child.kill('SIGTERM');
+        }
+        resolve({
+          success: false,
+          error: 'Claude CLI execution timed out after 20 minutes'
+        });
+      }, 20 * 60 * 1000); // 20 minutes
+      
+      let child: any;
       // Try different approaches to find Claude CLI
       const cliCommands = [
         ['bunx', ['@anthropic-ai/claude-code', ...args]],  // Use bunx to auto-install and run
@@ -183,7 +196,7 @@ export class ClaudeCodeCLIAdapter {
         logger.info(`Attempting: ${command} ${commandArgs.join(' ')}`);
         attemptIndex++;
         
-        const child = spawn(command, commandArgs, {
+        child = spawn(command, commandArgs, {
           ...options,
           stdio: ['pipe', 'pipe', 'pipe']
         });
@@ -195,6 +208,7 @@ export class ClaudeCodeCLIAdapter {
           const chunk = data.toString();
           stdout += chunk;
           // Log output in real-time for debugging
+          logger.debug(`Claude CLI stdout: ${chunk.slice(0, 200)}`);
           process.stdout.write(chunk);
         });
 
@@ -206,6 +220,7 @@ export class ClaudeCodeCLIAdapter {
         });
 
         child.on('close', (code) => {
+          clearTimeout(timeout); // Clear timeout on completion
           if (code === 0) {
             resolve({ success: true, output: stdout });
           } else {
@@ -222,6 +237,7 @@ export class ClaudeCodeCLIAdapter {
             logger.debug(`Command ${command} failed with: ${error.message}, trying next approach...`);
             tryNextCommand();
           } else {
+            clearTimeout(timeout); // Clear timeout on error
             resolve({ 
               success: false, 
               error: `Failed to start Claude CLI: ${error.message}` 
