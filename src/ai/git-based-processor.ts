@@ -380,10 +380,10 @@ export async function processIssueWithGit(
           solution!.commitHash!,
           {
             ...solution!.summary!,
-            vulnerabilityType: analysis.vulnerabilityType || 'security',
-            severity: analysis.severity || 'medium',
-            cwe: analysis.cwe,
-            isAiGenerated: analysis.isAiGenerated
+            vulnerabilityType: analysisData.vulnerabilityType || 'security',
+            severity: analysisData.severity || 'medium',
+            cwe: analysisData.cwe,
+            isAiGenerated: analysisData.isAiGenerated
           },
           config,
           solution!.diffStats
