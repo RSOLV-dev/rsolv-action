@@ -53,7 +53,7 @@ export class GitBasedClaudeCodeAdapter extends ClaudeCodeAdapter {
   
   constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
     super(config, repoPath, credentialManager);
-    this.cliAdapter = new ClaudeCodeCLIAdapter(config, repoPath);
+    this.cliAdapter = new ClaudeCodeCLIAdapter(config, repoPath, credentialManager);
   }
 
   /**

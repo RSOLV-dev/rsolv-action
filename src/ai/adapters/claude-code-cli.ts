@@ -25,10 +25,12 @@ export interface CLISolutionResult {
 export class ClaudeCodeCLIAdapter {
   private claudeConfig?: AIConfig;
   private repoPath: string;
+  private credentialManager?: any;
 
-  constructor(config: AIConfig, repoPath: string = process.cwd()) {
+  constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
     this.claudeConfig = config;
     this.repoPath = repoPath;
+    this.credentialManager = credentialManager;
   }
 
   /**
@@ -42,13 +44,27 @@ export class ClaudeCodeCLIAdapter {
     try {
       logger.info('Using Claude Code CLI for file editing...');
 
-      // Check for API key first
-      const apiKey = process.env.ANTHROPIC_API_KEY;
+      // Get API key from environment or vended credentials
+      let apiKey = process.env.ANTHROPIC_API_KEY;
+      
+      // If no direct API key, try to get from vended credentials
+      if (!apiKey && this.credentialManager) {
+        try {
+          const credentials = await this.credentialManager.getCredentials();
+          apiKey = credentials?.anthropic_api_key;
+          if (apiKey) {
+            logger.info('Using vended credentials for Claude Code CLI');
+          }
+        } catch (error) {
+          logger.warn('Failed to get vended credentials:', error);
+        }
+      }
+      
       if (!apiKey) {
         return {
           success: false,
           message: 'CLI execution failed',
-          error: 'ANTHROPIC_API_KEY environment variable is required for CLI approach'
+          error: 'ANTHROPIC_API_KEY environment variable or vended credentials required for CLI approach'
         };
       }
 

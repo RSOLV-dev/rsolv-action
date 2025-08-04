@@ -42,7 +42,7 @@ describe('ClaudeCodeCLIAdapter', () => {
       const result = await adapter.generateSolution(mockIssueContext, mockAnalysis);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('ANTHROPIC_API_KEY environment variable is required');
+      expect(result.error).toContain('ANTHROPIC_API_KEY environment variable or vended credentials required');
     });
 
   });
