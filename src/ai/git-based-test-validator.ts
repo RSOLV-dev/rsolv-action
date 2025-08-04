@@ -147,24 +147,79 @@ export class GitBasedTestValidator {
    */
   private runSingleTest(testPath: string, testType: 'red' | 'green' | 'refactor'): boolean {
     try {
-      // Create a wrapper that only runs the specific test
+      // Create a minimal test runner that executes the test code
       const testWrapper = `
+        const { execSync } = require('child_process');
+        const fs = require('fs');
+        const path = require('path');
+        
+        // Load test suite
         const testSuite = require('${testPath}');
         const test = testSuite.${testType};
         
-        // Simple test runner
-        (async () => {
-          try {
-            await eval(test.testCode);
-            process.exit(0);
-          } catch (error) {
-            console.error('Test failed:', error.message);
-            process.exit(1);
+        // Create a proper test file with the test framework
+        const testFileContent = \`
+          // Minimal test runner for validation
+          const assert = require('assert');
+          
+          // Mock test function if not available
+          if (typeof test === 'undefined') {
+            global.test = async (name, fn) => {
+              console.log('Running test:', name);
+              try {
+                await fn();
+                console.log('✓ Test passed');
+              } catch (error) {
+                console.error('✗ Test failed:', error.message);
+                throw error;
+              }
+            };
           }
-        })();
+          
+          // Mock expect if not available
+          if (typeof expect === 'undefined') {
+            global.expect = (actual) => ({
+              toBe: (expected) => assert.strictEqual(actual, expected),
+              toBeTruthy: () => assert.ok(actual),
+              toBeFalsy: () => assert.ok(!actual),
+              toContain: (substring) => assert.ok(actual.includes(substring)),
+              not: {
+                toBe: (expected) => assert.notStrictEqual(actual, expected),
+                toContain: (substring) => assert.ok(!actual.includes(substring))
+              }
+            });
+          }
+          
+          // Execute the test
+          (async () => {
+            try {
+              \${test.testCode}
+              process.exit(0);
+            } catch (error) {
+              console.error('Test execution failed:', error.message);
+              process.exit(1);
+            }
+          })();
+        \`;
+        
+        // Write and execute test file
+        const tempTestFile = '${testPath.replace('.test.js', '')}.${testType}.runner.js';
+        fs.writeFileSync(tempTestFile, testFileContent);
+        
+        try {
+          execSync(\`node \${tempTestFile}\`, { 
+            cwd: '${this.repoPath}',
+            stdio: 'pipe'
+          });
+          fs.unlinkSync(tempTestFile);
+          process.exit(0);
+        } catch (error) {
+          fs.unlinkSync(tempTestFile);
+          process.exit(1);
+        }
       `;
 
-      const wrapperPath = testPath.replace('.test.js', `.${testType}.js`);
+      const wrapperPath = testPath.replace('.test.js', `.${testType}.wrapper.js`);
       writeFileSync(wrapperPath, testWrapper);
 
       execSync(`node ${wrapperPath}`, { 
@@ -175,6 +230,7 @@ export class GitBasedTestValidator {
       unlinkSync(wrapperPath);
       return true;
     } catch (error) {
+      logger.debug(`Test ${testType} failed:`, error);
       return false;
     }
   }
@@ -183,6 +239,9 @@ export class GitBasedTestValidator {
    * Create a test file from the test suite
    */
   private createTestFile(testSuite: VulnerabilityTestSuite): string {
+    // Escape backticks in test code to prevent template literal issues
+    const escapeTestCode = (code: string) => code.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+    
     return `
 // Generated test file for vulnerability validation
 const assert = require('assert');
@@ -190,17 +249,17 @@ const assert = require('assert');
 module.exports = {
   red: {
     testName: "${testSuite.red.testName}",
-    testCode: \`${testSuite.red.testCode}\`,
+    testCode: \`${escapeTestCode(testSuite.red.testCode)}\`,
     expectedBehavior: "${testSuite.red.expectedBehavior}"
   },
   green: {
     testName: "${testSuite.green.testName}",
-    testCode: \`${testSuite.green.testCode}\`,
+    testCode: \`${escapeTestCode(testSuite.green.testCode)}\`,
     expectedBehavior: "${testSuite.green.expectedBehavior}"
   },
   refactor: {
     testName: "${testSuite.refactor.testName}",
-    testCode: \`${testSuite.refactor.testCode}\`,
+    testCode: \`${escapeTestCode(testSuite.refactor.testCode)}\`,
     expectedBehavior: "${testSuite.refactor.expectedBehavior}"
   }
 };
