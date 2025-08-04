@@ -45,7 +45,7 @@ RSOLV provides comprehensive security analysis and remediation:
 
 ### Quick Start Template (Recommended)
 
-For the best experience with automatic file editing and educational PR creation, use this workflow template:
+With our smart defaults, you only need minimal configuration:
 
 ```yaml
 name: RSOLV AutoFix
@@ -71,27 +71,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for better context
+          fetch-depth: 0
       
       - name: RSOLV AutoFix
-        uses: RSOLV-dev/rsolv-action@v2.5.1
+        uses: RSOLV-dev/rsolv-action@v2.5.2
         with:
           api_key: ${{ secrets.RSOLV_API_KEY }}
           issue_number: ${{ inputs.issue_number || github.event.issue.number }}
-          scan_mode: fix
-          enable_enhanced_context: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RSOLV_API_URL: https://api.rsolv.dev  # Use api.rsolv-staging.com for testing
 ```
 
-This template includes:
-- ✅ Manual triggering via workflow_dispatch for testing
-- ✅ Automatic triggering on issue events
-- ✅ Full git history for better analysis
-- ✅ Educational PR creation with vulnerability explanations
-- ✅ Vended credentials (no separate AI API keys needed)
-- ✅ Direct file editing using Claude CLI
+That's it! Our smart defaults include:
+- ✅ **Automatic file editing** using Claude CLI
+- ✅ **Educational PRs** with vulnerability explanations
+- ✅ **Enhanced context** for better analysis
+- ✅ **AST validation** to reduce false positives
+- ✅ **Structured phases** for reliable editing
+- ✅ **Production API** (api.rsolv.dev)
+- ✅ **Vended credentials** (no AI API keys needed)
+
+### Advanced Configuration
+
+For custom settings, you can override any defaults:
+
+```yaml
+- name: RSOLV AutoFix
+  uses: RSOLV-dev/rsolv-action@v2.5.2
+  with:
+    api_key: ${{ secrets.RSOLV_API_KEY }}
+    issue_number: ${{ inputs.issue_number || github.event.issue.number }}
+    scan_mode: fix                      # or 'scan' for detection only
+    enable_enhanced_context: 'true'     # default: true
+    enable_educational_pr: 'true'       # default: true
+    enable_ast_validation: 'true'       # default: true
+    use_structured_phases: 'true'       # default: true
+    api_url: 'https://api.rsolv-staging.com'  # for testing
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
 
 ### Basic Installation
 

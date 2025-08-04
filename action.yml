@@ -70,13 +70,17 @@ inputs:
   enable_enhanced_context:
     description: 'Enable enhanced context gathering (uses more tokens but may improve accuracy)'
     required: false
-    default: 'false'
+    default: 'true'  # Changed to true for better analysis
   enable_ast_validation:
     description: 'Enable AST-based validation to reduce false positives (recommended)'
     required: false
     default: 'true'
   use_structured_phases:
     description: 'Enable structured phased prompting to ensure files are edited before JSON generation'
+    required: false
+    default: 'true'
+  enable_educational_pr:
+    description: 'Enable educational PR descriptions with security explanations'
     required: false
     default: 'true'
 runs:
@@ -104,6 +108,7 @@ runs:
     RSOLV_ENABLE_ENHANCED_CONTEXT: ${{ inputs.enable_enhanced_context }}
     RSOLV_ENABLE_AST_VALIDATION: ${{ inputs.enable_ast_validation }}
     RSOLV_USE_STRUCTURED_PHASES: ${{ inputs.use_structured_phases }}
+    RSOLV_EDUCATIONAL_PR: ${{ inputs.enable_educational_pr }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'
