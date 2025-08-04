@@ -672,6 +672,18 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
    */
   private createCommit(files: string[], message: string): string {
     try {
+      // Configure git user if not set (for GitHub Actions)
+      try {
+        execSync('git config user.email', { cwd: this.repoPath });
+      } catch {
+        execSync('git config user.email "rsolv@users.noreply.github.com"', {
+          cwd: this.repoPath
+        });
+        execSync('git config user.name "RSOLV Bot"', {
+          cwd: this.repoPath
+        });
+      }
+      
       // Stage the modified files
       execSync(`git add ${files.join(' ')}`, {
         cwd: this.repoPath
