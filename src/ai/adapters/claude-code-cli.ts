@@ -265,7 +265,7 @@ export class ClaudeCodeCLIAdapter {
       return this.constructStructuredPhasedPrompt(issueContext, analysis);
     }
     
-    return `You are an expert security engineer fixing vulnerabilities by directly editing files in a git repository.
+    return `You are an expert security engineer fixing vulnerabilities using Test-Driven Development (TDD) methodology.
 
 ## Issue Details:
 - **Title**: ${issueContext.title}
@@ -273,21 +273,26 @@ export class ClaudeCodeCLIAdapter {
 - **Complexity**: ${analysis.complexity}
 - **Files with vulnerabilities**: ${analysis.relatedFiles?.join(', ') || 'To be discovered'}
 
-## Your Task:
+## CRITICAL: Use TDD Red-Green-Refactor Methodology
 
-### Phase 1: Locate Vulnerabilities
-- Use Grep to find vulnerable code patterns
-- Use Read to understand the full context
-- Consider using sequential thinking for complex analysis
+### Phase 1: RED - Prove the Vulnerability Exists
+- Use Read to understand the vulnerable code
+- Identify how the vulnerability can be exploited
+- Document a test that WOULD exploit the vulnerability (e.g., for XSS: injecting '<script>alert("XSS")</script>')
 
-### Phase 2: Fix Vulnerabilities In-Place
-**CRITICAL**: Use Edit or MultiEdit tools to modify files BEFORE providing JSON.
-- Make minimal, surgical changes to fix security issues
-- Preserve API compatibility and existing function signatures
-- Fix all instances of the vulnerability
+### Phase 2: GREEN - Fix the Vulnerability
+- Use Edit or MultiEdit tools to fix the security issue
+- For XSS: Add proper HTML escaping/sanitization
+- For SQL Injection: Use parameterized queries
+- Make minimal changes that prevent the exploit
 
-### Phase 3: Provide Fix Summary (ONLY AFTER EDITING FILES)
-After you have used Edit/MultiEdit tools to modify files, provide this JSON:
+### Phase 3: REFACTOR - Ensure Quality
+- Verify legitimate functionality still works
+- Clean up the fix if needed
+- Ensure no regressions were introduced
+
+### Phase 4: Provide Fix Summary (ONLY AFTER EDITING FILES)
+After completing the TDD cycle and editing files, provide this JSON:
 
 \`\`\`json
 {
@@ -296,74 +301,83 @@ After you have used Edit/MultiEdit tools to modify files, provide this JSON:
   "files": [
     {
       "path": "path/to/file.js",
-      "changes": "Description of changes made"
+      "changes": "Complete fixed code content (use Read to get it if needed)"
     }
   ],
   "tests": [
-    "Description of test that validates the fix"
+    "RED test validates that malicious input like '<script>alert(\\"XSS\\")</script>' in [field] is properly escaped and cannot execute",
+    "GREEN test ensures the fix prevents XSS by escaping dangerous characters in [field] input",
+    "REFACTOR test confirms that valid [functionality] still works correctly and [feature] loads properly"
   ]
 }
 \`\`\`
 
-Remember: Edit files FIRST using Edit/MultiEdit tools, then provide the JSON summary.`;
+Remember: Follow TDD - understand vulnerability (RED), fix it (GREEN), ensure quality (REFACTOR), THEN provide JSON.`;
   }
 
   /**
    * Construct a structured phased prompt for CLI
    */
   private constructStructuredPhasedPrompt(issueContext: IssueContext, analysis: IssueAnalysis): string {
-    return `You are an expert security engineer fixing vulnerabilities. You MUST complete this task in TWO distinct phases:
+    return `You are an expert security engineer using Test-Driven Development (TDD) to fix vulnerabilities.
 
-## 🚨 CRITICAL: FOLLOW THESE PHASES IN ORDER 🚨
+## 🚨 CRITICAL: FOLLOW TDD RED-GREEN-REFACTOR METHODOLOGY 🚨
 
-## PHASE 1: FILE EDITING (MANDATORY - DO THIS FIRST)
+## PHASE 1: RED - UNDERSTAND THE VULNERABILITY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-### Your Task:
 1. Locate the vulnerability: ${issueContext.title}
    - Description: ${issueContext.body}
    - Related files: ${analysis.relatedFiles?.join(', ') || 'To be discovered'}
 
-2. Use Edit or MultiEdit tools to fix the vulnerable code
-   - Make minimal, surgical changes
-   - Preserve API compatibility
-   - Fix all instances of the vulnerability
+2. Use Read to examine the vulnerable code
 
-3. After editing, use Read tool to verify your changes were applied
+3. Identify the attack vector (e.g., for XSS: '<script>alert("XSS")</script>')
 
-4. Say "PHASE 1 COMPLETE: Files have been edited" when done
-
-⚠️ IMPORTANT: You MUST complete Phase 1 before proceeding to Phase 2.
-Do NOT skip directly to providing JSON.
-
-## PHASE 2: JSON SUMMARY (ONLY AFTER PHASE 1)
+## PHASE 2: GREEN - FIX THE VULNERABILITY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Use Edit or MultiEdit tools to fix the vulnerable code
+   - For XSS: Escape HTML entities (&, <, >, ", ')
+   - For SQL Injection: Use parameterized queries
+   - Make minimal changes that block the exploit
 
-Only after you've confirmed "PHASE 1 COMPLETE", provide the JSON summary:
+2. After editing, use Read tool to verify your fix
+
+3. Say "GREEN PHASE COMPLETE: Vulnerability fixed" when done
+
+## PHASE 3: REFACTOR - ENSURE QUALITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Verify legitimate functionality still works
+2. Clean up code if needed
+3. Say "REFACTOR COMPLETE: Code quality verified"
+
+## PHASE 4: JSON SUMMARY (ONLY AFTER ALL PHASES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Provide this JSON with TDD test descriptions:
 
 \`\`\`json
 {
   "title": "Fix [vulnerability type] in [component]",
-  "description": "Clear explanation of what was vulnerable and how you fixed it",
+  "description": "Clear explanation using TDD: RED (vulnerability existed), GREEN (fix applied), REFACTOR (quality ensured)",
   "files": [
     {
       "path": "path/to/edited/file.js",
-      "changes": "Complete file content after your edits (read it back with Read tool if needed)"
+      "changes": "Complete file content after your edits (read it back with Read tool)"
     }
   ],
   "tests": [
-    "Description of test that validates the fix",
-    "Description of test that ensures no regressions"
+    "RED test: Validates that malicious input like '<script>alert(\\"XSS\\")</script>' would have been exploitable before fix",
+    "GREEN test: Ensures the fix prevents the vulnerability by properly escaping/sanitizing input",
+    "REFACTOR test: Confirms legitimate functionality (e.g., livereload) still works correctly"
   ]
 }
 \`\`\`
 
-## Execution Checklist:
-□ Used Edit/MultiEdit tools
-□ Verified changes with Read tool  
-□ Stated "PHASE 1 COMPLETE"
-□ Provided JSON summary
+## TDD Checklist:
+□ RED: Understood vulnerability and attack vector
+□ GREEN: Applied fix using Edit/MultiEdit tools
+□ REFACTOR: Verified no regressions
+□ Provided JSON with TDD test descriptions
 
-Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editing.`;
+Remember: Follow TDD methodology - RED (understand), GREEN (fix), REFACTOR (verify), then JSON.`;
   }
 }
