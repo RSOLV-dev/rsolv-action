@@ -70,35 +70,17 @@ export class ClaudeCodeCLIAdapter {
       // Create prompt
       const prompt = enhancedPrompt || this.constructPrompt(issueContext, analysis);
       
-      // Write prompt to temporary file
-      const tempDir = os.tmpdir();
-      const promptFile = path.join(tempDir, `rsolv-prompt-${Date.now()}.txt`);
-      fs.writeFileSync(promptFile, prompt, 'utf8');
-
-      logger.info(`Prompt written to: ${promptFile}`);
       logger.info(`Working directory: ${this.repoPath}`);
+      logger.info(`Prompt length: ${prompt.length} characters`);
 
-      // Prepare Claude Code CLI command
-      // Note: Claude CLI doesn't support --no-memory flag
-      const args = [
-        promptFile
-      ];
-
-      // Execute Claude Code CLI
-      const result = await this.executeCLI(args, {
+      // Execute Claude Code CLI with prompt via stdin
+      const result = await this.executeCLI(prompt, {
         cwd: this.repoPath,
         env: {
           ...process.env,
           ANTHROPIC_API_KEY: apiKey
         }
-      });
-
-      // Clean up temp file
-      try {
-        fs.unlinkSync(promptFile);
-      } catch (e) {
-        logger.warn('Failed to clean up temp prompt file:', e);
-      }
+      })
 
       if (!result.success) {
         return {
@@ -159,7 +141,7 @@ export class ClaudeCodeCLIAdapter {
   /**
    * Execute Claude Code CLI
    */
-  private executeCLI(args: string[], options: any): Promise<{ success: boolean; output?: string; error?: string }> {
+  private executeCLI(prompt: string, options: any): Promise<{ success: boolean; output?: string; error?: string }> {
     return new Promise((resolve) => {
       // Set a 20-minute timeout for Claude CLI
       const timeout = setTimeout(() => {
@@ -175,10 +157,11 @@ export class ClaudeCodeCLIAdapter {
       
       let child: any;
       // Try different approaches to find Claude CLI
+      // Use -p flag to pass prompt via stdin (as per working implementation)
       const cliCommands = [
-        ['bunx', ['@anthropic-ai/claude-code', ...args]],  // Use bunx to auto-install and run
-        ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', ...args]],  // Direct run with bun
-        ['claude', args]  // Fallback to global install
+        ['claude', ['-p', '-']],  // Global install with stdin
+        ['bunx', ['@anthropic-ai/claude-code', '-p', '-']],  // Bunx with stdin
+        ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', '-p', '-']]  // Direct run with stdin
       ];
       
       let attemptIndex = 0;
@@ -200,6 +183,10 @@ export class ClaudeCodeCLIAdapter {
           ...options,
           stdio: ['pipe', 'pipe', 'pipe']
         });
+
+        // Write prompt to stdin and close it (as per working implementation)
+        child.stdin.write(prompt);
+        child.stdin.end();
 
         let stdout = '';
         let stderr = '';
