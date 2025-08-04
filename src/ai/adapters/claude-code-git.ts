@@ -689,10 +689,25 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
         cwd: this.repoPath
       });
       
-      // Create the commit
-      execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
-        cwd: this.repoPath
-      });
+      // Create the commit using a file to avoid shell escaping issues
+      const fs = require('fs');
+      const os = require('os');
+      const path = require('path');
+      const messageFile = path.join(os.tmpdir(), `commit-msg-${Date.now()}.txt`);
+      fs.writeFileSync(messageFile, message);
+      
+      try {
+        execSync(`git commit -F "${messageFile}"`, {
+          cwd: this.repoPath
+        });
+      } finally {
+        // Clean up the temporary file
+        try {
+          fs.unlinkSync(messageFile);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
       
       // Get the commit hash
       const hash = execSync('git rev-parse HEAD', {
