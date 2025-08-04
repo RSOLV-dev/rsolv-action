@@ -50,8 +50,7 @@ export class ClaudeCodeCLIAdapter {
       // If no direct API key, try to get from vended credentials
       if (!apiKey && this.credentialManager) {
         try {
-          const credentials = await this.credentialManager.getCredentials();
-          apiKey = credentials?.anthropic_api_key;
+          apiKey = this.credentialManager.getCredential('anthropic');
           if (apiKey) {
             logger.info('Using vended credentials for Claude Code CLI');
           }
