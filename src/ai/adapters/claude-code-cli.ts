@@ -157,11 +157,11 @@ export class ClaudeCodeCLIAdapter {
       
       let child: any;
       // Try different approaches to find Claude CLI
-      // Use -p flag to pass prompt via stdin (as per working implementation)
+      // Pass prompt via stdin without -p flag (which causes print-only mode)
       const cliCommands = [
-        ['claude', ['-p', '-']],  // Global install with stdin
-        ['bunx', ['@anthropic-ai/claude-code', '-p', '-']],  // Bunx with stdin
-        ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', '-p', '-']]  // Direct run with stdin
+        ['claude', ['-']],  // Global install reading from stdin
+        ['bunx', ['@anthropic-ai/claude-code', '-']],  // Bunx reading from stdin
+        ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', '-']]  // Direct run reading from stdin
       ];
       
       let attemptIndex = 0;
