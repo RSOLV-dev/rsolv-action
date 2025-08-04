@@ -1,12 +1,98 @@
-# RSOLV Demo Environment Guide
+# RSOLV Demo Guide
 
-This guide provides detailed instructions for using the RSOLV Demo Environment created for Day 5.
+This guide provides instructions for demonstrating RSOLV to customers via the GitHub web interface, as well as using the interactive CLI demo environment.
 
-## Overview
+## Customer Demo via GitHub UI
 
-The RSOLV Demo Environment is an interactive CLI tool that allows you to manually exercise all components of the RSOLV system. It provides a guided workflow through the entire process of issue analysis, solution generation, PR creation, and feedback collection.
+### Quick Setup
 
-## Getting Started
+1. **Prerequisites**
+   - RSOLV API Key from https://rsolv.dev
+   - GitHub repository (use https://github.com/RSOLV-dev/rsolv-demo-vulnerable-app or your own)
+   - Add secret: Settings → Secrets → New repository secret → Name: `RSOLV_API_KEY`
+
+2. **Add Workflow File**
+   Create `.github/workflows/rsolv-autofix.yml`:
+   ```yaml
+   name: RSOLV AutoFix
+   
+   on:
+     issues:
+       types: [opened, labeled]
+     workflow_dispatch:
+       inputs:
+         issue_number:
+           description: 'Issue number to fix'
+           required: true
+           type: string
+   
+   permissions:
+     issues: write
+     contents: write
+     pull-requests: write
+   
+   jobs:
+     autofix:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v4
+           with:
+             fetch-depth: 0
+         
+         - name: RSOLV AutoFix
+           uses: RSOLV-dev/rsolv-action@v2.5.2
+           with:
+             api_key: ${{ secrets.RSOLV_API_KEY }}
+             issue_number: ${{ inputs.issue_number || github.event.issue.number }}
+           env:
+             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+   ```
+
+### Running the Demo
+
+1. **Navigate to Actions Tab**
+   - Go to repository → Actions → "RSOLV AutoFix" workflow
+
+2. **Run Workflow**
+   - Click "Run workflow"
+   - Enter issue number (e.g., 55 for XSS)
+   - Click green "Run workflow" button
+
+3. **Watch Progress** (1-2 minutes)
+   - Analyzes issue
+   - Identifies vulnerability
+   - Edits files directly
+   - Creates educational PR
+
+4. **Review Pull Request**
+   - Navigate to Pull Requests tab
+   - Open the new PR
+   - Show educational content:
+     - Vulnerability explanation
+     - How the fix works
+     - Best practices
+     - RSOLV branding
+
+### Demo Issues Available
+
+- **#55**: Cross-Site Scripting (XSS) - High severity
+- **#56**: Denial of Service - Medium severity
+- **#57**: Open Redirect - Medium severity
+- **#58**: Weak Cryptography - Medium severity
+- **#59**: Information Disclosure - Low severity
+
+### Key Talking Points
+
+- **No AI Keys Required**: "We handle all AI complexity"
+- **Direct File Editing**: "Creates ready-to-merge PRs"
+- **Educational Value**: "Every fix teaches your team"
+- **Success-Based Pricing**: "Only pay for deployed fixes"
+
+## Interactive CLI Demo Environment
+
+The CLI demo provides deeper exploration of RSOLV's capabilities.
+
+### Getting Started
 
 ### Prerequisites
 
