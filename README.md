@@ -43,7 +43,59 @@ RSOLV provides comprehensive security analysis and remediation:
 
 ## Installation
 
-Add the following to your workflow file:
+### Quick Start Template (Recommended)
+
+For the best experience with automatic file editing and educational PR creation, use this workflow template:
+
+```yaml
+name: RSOLV AutoFix
+
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to fix'
+        required: true
+        type: string
+
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better context
+      
+      - name: RSOLV AutoFix
+        uses: RSOLV-dev/rsolv-action@v2.5.1
+        with:
+          api_key: ${{ secrets.RSOLV_API_KEY }}
+          issue_number: ${{ inputs.issue_number || github.event.issue.number }}
+          scan_mode: fix
+          enable_enhanced_context: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RSOLV_API_URL: https://api.rsolv.dev  # Use api.rsolv-staging.com for testing
+```
+
+This template includes:
+- ✅ Manual triggering via workflow_dispatch for testing
+- ✅ Automatic triggering on issue events
+- ✅ Full git history for better analysis
+- ✅ Educational PR creation with vulnerability explanations
+- ✅ Vended credentials (no separate AI API keys needed)
+- ✅ Direct file editing using Claude CLI
+
+### Basic Installation
+
+For simpler setups without manual triggering:
 
 ```yaml
 name: RSOLV Automation
