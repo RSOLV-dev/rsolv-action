@@ -79,8 +79,8 @@ export class ClaudeCodeCLIAdapter {
       logger.info(`Working directory: ${this.repoPath}`);
 
       // Prepare Claude Code CLI command
+      // Note: Claude CLI doesn't support --no-memory flag
       const args = [
-        '--no-memory',  // Don't use memory for standalone fix
         promptFile
       ];
 
