@@ -7,6 +7,7 @@ import { logger } from '../utils/logger.js';
 import { analyzeIssue } from './analyzer.js';
 import { GitBasedClaudeCodeAdapter } from './adapters/claude-code-git.js';
 import { createPullRequestFromGit } from '../github/pr-git.js';
+import { createEducationalPullRequest } from '../github/pr-git-educational.js';
 import { AIConfig, IssueAnalysis } from './types.js';
 import { execSync } from 'child_process';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from './test-generating-security-analyzer.js';
@@ -338,13 +339,31 @@ export async function processIssueWithGit(
     
     // Step 5: Create PR from the git commit
     logger.info(`Creating PR from commit ${solution!.commitHash?.substring(0, 8)}`);
-    const prResult = await createPullRequestFromGit(
-      issue,
-      solution!.commitHash!,
-      solution!.summary!,
-      config,
-      solution!.diffStats
-    );
+    
+    // Use educational PR creation for better user engagement
+    const useEducationalPR = process.env.RSOLV_EDUCATIONAL_PR !== 'false';
+    
+    const prResult = useEducationalPR 
+      ? await createEducationalPullRequest(
+          issue,
+          solution!.commitHash!,
+          {
+            ...solution!.summary!,
+            vulnerabilityType: analysis.vulnerabilityType || 'security',
+            severity: analysis.severity || 'medium',
+            cwe: analysis.cwe,
+            isAiGenerated: analysis.isAiGenerated
+          },
+          config,
+          solution!.diffStats
+        )
+      : await createPullRequestFromGit(
+          issue,
+          solution!.commitHash!,
+          solution!.summary!,
+          config,
+          solution!.diffStats
+        );
     
     if (!prResult.success) {
       // Try to undo the commit if PR creation failed
