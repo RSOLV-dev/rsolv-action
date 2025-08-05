@@ -157,6 +157,12 @@ function getDefaultConfig(): Partial<ActionConfig> {
         php: ['phpunit', 'pest'],
         java: ['junit5', 'testng']
       }
+    },
+    fixValidation: {
+      enabled: process.env.DISABLE_FIX_VALIDATION === 'true' ? false : true, // Enabled by default
+      maxIterations: 3,
+      maxIterationsByType: {},
+      maxIterationsByTier: {}
     }
   };
 }
