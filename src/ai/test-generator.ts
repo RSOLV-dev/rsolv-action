@@ -233,6 +233,46 @@ test("{{testName}}", async () => {
   {{/if}}
 });`);
 
+    // Denial of Service Red Test Template (ReDoS)
+    this.templates.set('DENIAL_OF_SERVICE:red', `
+test("{{testName}}", async () => {
+  const maliciousInput = "{{attackVector}}";
+  {{#if isBrowser}}
+  await page.fill('{{inputSelector}}', maliciousInput);
+  await page.click('{{submitSelector}}');
+  // Should not hang or timeout
+  {{else}}
+  const start = Date.now();
+  const result = await {{functionCall}}(maliciousInput);
+  const duration = Date.now() - start;
+  // Should complete quickly (vulnerability exists if it takes too long)
+  expect(duration).toBeLessThan(1000);
+  {{/if}}
+});`);
+
+    // Denial of Service Green Test Template
+    this.templates.set('DENIAL_OF_SERVICE:green', `
+test("{{testName}}", async () => {
+  const maliciousInput = "{{attackVector}}";
+  const validInput = "{{validInput}}";
+  
+  {{#if isBrowser}}
+  await page.fill('{{inputSelector}}', maliciousInput);
+  await page.click('{{submitSelector}}');
+  // Should handle malicious input gracefully
+  {{else}}
+  // Test with malicious input - should complete quickly
+  const start = Date.now();
+  const result = await {{functionCall}}(maliciousInput);
+  const duration = Date.now() - start;
+  expect(duration).toBeLessThan(100); // Should be fast
+  
+  // Test with valid input
+  const validResult = await {{functionCall}}(validInput);
+  expect(validResult).toBeTruthy();
+  {{/if}}
+});`);
+
     // Functional Refactor Test Template
     this.templates.set('GENERIC:refactor', `
 test("{{testName}}", async () => {
@@ -456,7 +496,9 @@ test("{{testName}}", async () => {
   }
   
   loadTemplate(vulnerabilityType: string, testType: 'red' | 'green' | 'refactor'): string {
-    const key = `${vulnerabilityType}:${testType}`;
+    // Normalize to uppercase for consistency
+    const normalizedType = vulnerabilityType.toUpperCase().replace(/-/g, '_');
+    const key = `${normalizedType}:${testType}`;
     let template = this.templates.get(key);
     
     if (!template && testType === 'refactor') {
@@ -464,6 +506,8 @@ test("{{testName}}", async () => {
     }
     
     if (!template) {
+      // Log available templates for debugging
+      logger.warn(`Template not found for ${key}. Available templates: ${Array.from(this.templates.keys()).join(', ')}`);
       throw new Error(`Template not found for ${key}`);
     }
     
@@ -692,7 +736,10 @@ export class VulnerabilityTestGenerator {
   }
   
   private getAttackVector(vulnerabilityType: string): string {
-    switch (vulnerabilityType) {
+    // Normalize to uppercase for consistency
+    const normalizedType = vulnerabilityType.toUpperCase().replace(/-/g, '_');
+    
+    switch (normalizedType) {
       case 'SQL_INJECTION':
         return "'; DROP TABLE users; --";
       case 'XSS':
@@ -707,13 +754,19 @@ export class VulnerabilityTestGenerator {
         return 'https://evil-site.com';
       case 'SECURITY_MISCONFIGURATION':
         return 'admin=true';
+      case 'DENIAL_OF_SERVICE':
+      case 'REDOS':
+        return '(a+)+$'; // Regex that can cause exponential backtracking
       default:
         return 'malicious_input';
     }
   }
   
   private getValidInput(vulnerabilityType: string): string {
-    switch (vulnerabilityType) {
+    // Normalize to uppercase for consistency
+    const normalizedType = vulnerabilityType.toUpperCase().replace(/-/g, '_');
+    
+    switch (normalizedType) {
       case 'SQL_INJECTION':
         return 'validpassword123';
       case 'XSS':
@@ -728,6 +781,9 @@ export class VulnerabilityTestGenerator {
         return 'valid-csrf-token-from-server';
       case 'SECURITY_MISCONFIGURATION':
         return 'user=true';
+      case 'DENIAL_OF_SERVICE':
+      case 'REDOS':
+        return 'normal_text';
       default:
         return 'valid_input';
     }
