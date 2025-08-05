@@ -12,6 +12,8 @@ import { IssueInterpreter, type InterpretedIssue } from './issue-interpreter.js'
 import { VulnerabilityTestGenerator, type VulnerabilityTestSuite, type TestGenerationOptions } from './test-generator.js';
 import { VulnerabilityType, type Vulnerability } from '../security/types.js';
 import { logger } from '../utils/logger.js';
+import { AITestGenerator } from './ai-test-generator.js';
+import { AIConfig } from './types.js';
 
 // Extended vulnerability type that includes file information
 interface VulnerabilityWithFile extends Vulnerability {
@@ -34,13 +36,20 @@ export interface RepoStructure {
 
 export class AdaptiveTestGenerator {
   private baseGenerator: VulnerabilityTestGenerator;
+  private aiGenerator?: AITestGenerator;
+  private useAIGeneration: boolean;
 
   constructor(
     private frameworkDetector: TestFrameworkDetector,
     private coverageAnalyzer: CoverageAnalyzer,
-    private issueInterpreter: IssueInterpreter
+    private issueInterpreter: IssueInterpreter,
+    private aiConfig?: AIConfig
   ) {
     this.baseGenerator = new VulnerabilityTestGenerator();
+    this.useAIGeneration = !!aiConfig && process.env.DISABLE_AI_TEST_GEN !== 'true';
+    if (this.useAIGeneration && aiConfig) {
+      this.aiGenerator = new AITestGenerator(aiConfig);
+    }
   }
 
   /**
@@ -248,6 +257,12 @@ export class AdaptiveTestGenerator {
       
       const primaryFramework = this.selectPrimaryFramework(detectionResult.frameworks, vulnerability.file);
       logger.info('Selected primary framework:', JSON.stringify(primaryFramework));
+
+      // Use AI generation if enabled
+      if (this.useAIGeneration && this.aiGenerator) {
+        logger.info('Using AI-based test generation');
+        return this.generateAITests(vulnerability, repoStructure, primaryFramework);
+      }
 
       if (!primaryFramework) {
         logger.info('No primary framework detected, generating generic tests');
@@ -1334,6 +1349,89 @@ function testFunctionalityMaintained() {
   // TODO: Call function with valid input
   // TODO: Assert expected behavior works correctly
 }`;
+  }
+
+  /**
+   * Generate tests using AI
+   */
+  private async generateAITests(
+    vulnerability: VulnerabilityWithFile,
+    repoStructure: RepoStructure,
+    framework?: DetectedFramework | null
+  ): Promise<AdaptiveTestResult> {
+    try {
+      // Get the vulnerable file content
+      const fileContent = vulnerability.file ? repoStructure[vulnerability.file] : undefined;
+      
+      // Determine language from file extension or framework
+      const language = this.detectLanguage(vulnerability.file || '', framework);
+      
+      const options: TestGenerationOptions = {
+        vulnerabilityType: vulnerability.type,
+        language,
+        testFramework: framework?.name || 'jest',
+        includeE2E: false
+      };
+
+      const result = await this.aiGenerator!.generateTests(vulnerability, options, fileContent);
+      
+      if (!result.success || !result.testSuite) {
+        logger.error('AI test generation failed, falling back to template-based');
+        return this.generateGenericTests(vulnerability);
+      }
+
+      return {
+        success: true,
+        framework: framework?.name || 'generic',
+        testCode: result.testCode,
+        testSuite: result.testSuite,
+        suggestedFileName: this.suggestTestFileName(vulnerability.file || 'test', framework),
+        notes: 'Tests generated using AI for maximum context awareness'
+      };
+    } catch (error) {
+      logger.error('Error in AI test generation', error);
+      return this.generateGenericTests(vulnerability);
+    }
+  }
+
+  /**
+   * Detect programming language from file path or framework
+   */
+  private detectLanguage(filePath: string, framework?: DetectedFramework | null): string {
+    if (framework) {
+      // Map framework to language
+      const frameworkLanguageMap: Record<string, string> = {
+        'jest': 'javascript',
+        'mocha': 'javascript',
+        'vitest': 'javascript',
+        'cypress': 'javascript',
+        'pytest': 'python',
+        'unittest': 'python',
+        'rspec': 'ruby',
+        'minitest': 'ruby',
+        'phpunit': 'php',
+        'pest': 'php',
+        'exunit': 'elixir'
+      };
+      const lang = frameworkLanguageMap[framework.name.toLowerCase()];
+      if (lang) return lang;
+    }
+
+    // Detect from file extension
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    const extLanguageMap: Record<string, string> = {
+      'js': 'javascript',
+      'jsx': 'javascript',
+      'ts': 'typescript',
+      'tsx': 'typescript',
+      'py': 'python',
+      'rb': 'ruby',
+      'php': 'php',
+      'ex': 'elixir',
+      'exs': 'elixir'
+    };
+    
+    return extLanguageMap[ext || ''] || 'javascript';
   }
 
   /**

@@ -40,7 +40,7 @@ export class TestGeneratingSecurityAnalyzer extends SecurityAwareAnalyzer {
   private issueInterpreter: IssueInterpreter;
   private adaptiveGenerator: AdaptiveTestGenerator;
 
-  constructor() {
+  constructor(aiConfig?: any) {
     super();
     this.frameworkDetector = new TestFrameworkDetector();
     this.coverageAnalyzer = new CoverageAnalyzer();
@@ -48,7 +48,8 @@ export class TestGeneratingSecurityAnalyzer extends SecurityAwareAnalyzer {
     this.adaptiveGenerator = new AdaptiveTestGenerator(
       this.frameworkDetector,
       this.coverageAnalyzer,
-      this.issueInterpreter
+      this.issueInterpreter,
+      aiConfig
     );
   }
 

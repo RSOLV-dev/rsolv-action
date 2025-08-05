@@ -200,7 +200,18 @@ export async function processIssueWithGit(
     let testResults: AnalysisWithTestsResult | undefined;
     if ((config.testGeneration?.enabled || config.fixValidation?.enabled !== false) && config.enableSecurityAnalysis) {
       logger.info(`Generating tests for issue #${issue.number}`);
-      const testAnalyzer = new TestGeneratingSecurityAnalyzer();
+      
+      // Pass AI config for test generation
+      const aiConfig: AIConfig = {
+        provider: 'anthropic',
+        apiKey: config.aiProvider.apiKey,
+        model: config.aiProvider.model,
+        temperature: 0.2,
+        maxTokens: config.aiProvider.maxTokens,
+        useVendedCredentials: config.aiProvider.useVendedCredentials
+      };
+      
+      const testAnalyzer = new TestGeneratingSecurityAnalyzer(aiConfig);
       
       // Get codebase files for test generation
       const codebaseFiles = new Map<string, string>();
