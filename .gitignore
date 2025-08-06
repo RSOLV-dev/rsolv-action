@@ -96,4 +96,4 @@ test-ollama-output*.json
 .\#*
 .projectile
 TAGS
-tags
+tags.rsolv/
