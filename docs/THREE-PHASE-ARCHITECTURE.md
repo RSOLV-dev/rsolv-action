@@ -20,6 +20,84 @@ Each phase can run independently or as part of a complete pipeline.
 
 ## Usage Examples
 
+### GitHub Action Usage
+
+The three-phase architecture can be used in GitHub Actions with the `mode` input:
+
+```yaml
+name: RSOLV Security Fix
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  security-fix:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: rsolv-dev/RSOLV-action@v2
+      with:
+        api_key: ${{ secrets.RSOLV_API_KEY }}
+        mode: 'full'  # Run all phases: scan, validate, mitigate
+        issue_number: ${{ github.event.issue.number }}
+```
+
+#### Individual Phase Examples
+
+**Scan Only** - Find vulnerabilities and create issues:
+```yaml
+- uses: rsolv-dev/RSOLV-action@v2
+  with:
+    mode: 'scan'
+    api_key: ${{ secrets.RSOLV_API_KEY }}
+```
+
+**Validate Only** - Generate tests for existing issues:
+```yaml
+- uses: rsolv-dev/RSOLV-action@v2
+  with:
+    mode: 'validate'
+    issue_number: ${{ github.event.issue.number }}
+    api_key: ${{ secrets.RSOLV_API_KEY }}
+```
+
+**Mitigate Only** - Apply fixes using existing validation data:
+```yaml
+- uses: rsolv-dev/RSOLV-action@v2
+  with:
+    mode: 'mitigate'
+    issue_number: ${{ github.event.issue.number }}
+    api_key: ${{ secrets.RSOLV_API_KEY }}
+```
+
+### CLI Usage
+
+The action also supports direct CLI invocation with mode flags:
+
+```bash
+# Run full pipeline
+node dist/index.js --mode full
+
+# Run individual phases
+node dist/index.js --mode scan
+node dist/index.js --mode validate --issue 123
+node dist/index.js --mode mitigate --issue 123
+
+# Alternative syntax
+node dist/index.js --mode=scan
+```
+
+Environment variables are also supported:
+
+```bash
+export RSOLV_MODE=scan
+export RSOLV_ISSUE_NUMBER=123
+export RSOLV_API_KEY=your_key_here
+node dist/index.js
+```
+
+### Programmatic Usage
+
 ### Full Pipeline Mode
 
 Run all three phases sequentially:

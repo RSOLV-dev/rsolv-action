@@ -44,7 +44,7 @@ inputs:
     description: 'Custom JQL query to find issues (overrides label-based search)'
     required: false
   mode:
-    description: 'Operation mode: full (default), analyze-only, or scan'
+    description: 'Operation mode: scan, validate, mitigate, or full (all phases)'
     required: false
     default: 'full'
   scan_mode:

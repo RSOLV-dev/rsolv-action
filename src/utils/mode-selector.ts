@@ -3,9 +3,9 @@
  * Implements RFC-041 mode selection decisions
  */
 
-export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'fix' | 'full';
+export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'full';
 
-const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'fix', 'full'];
+const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'full'];
 
 export interface ModeRequirements {
   requiresIssue: boolean;
@@ -63,8 +63,8 @@ export function getExecutionMode(): ExecutionMode {
     return 'scan';
   }
   
-  // 4. Default to 'fix' mode for backward compatibility
-  return 'fix';
+  // 4. Default to 'full' mode (all phases)
+  return 'full';
 }
 
 /**
@@ -100,12 +100,6 @@ export function getModeRequirements(mode: ExecutionMode): ModeRequirements {
         requiresValidation: true
       };
     
-    case 'fix':
-      return {
-        requiresIssue: true,
-        requiresScanData: false,
-        requiresValidation: false // Fix mode does its own validation
-      };
     
     case 'full':
       return {
@@ -130,8 +124,6 @@ export function getModeDescription(mode: ExecutionMode): string {
       return 'Validate vulnerabilities with failing tests';
     case 'mitigate':
       return 'Fix validated vulnerabilities';
-    case 'fix':
-      return 'Process existing issues (legacy mode)';
     case 'full':
       return 'Run all phases: scan, validate, and mitigate';
     default:
