@@ -1385,7 +1385,7 @@ function testFunctionalityMaintained() {
         framework: framework?.name || 'generic',
         testCode: result.testCode,
         testSuite: result.testSuite,
-        suggestedFileName: this.suggestTestFileName(vulnerability.file || 'test', framework),
+        suggestedFileName: this.suggestFileName(vulnerability.file || 'test', { framework }),
         notes: 'Tests generated using AI for maximum context awareness'
       };
     } catch (error) {

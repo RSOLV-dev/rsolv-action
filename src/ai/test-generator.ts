@@ -37,7 +37,7 @@ export interface VulnerabilityTestSuite {
 
 export interface TestGenerationOptions {
   vulnerabilityType: string;
-  language: 'javascript' | 'typescript' | 'python' | 'java' | 'ruby' | 'php';
+  language: 'javascript' | 'typescript' | 'python' | 'java' | 'ruby' | 'php' | 'elixir';
   testFramework: 'bun' | 'jest' | 'mocha' | 'cypress';
   includeE2E: boolean;
   astPattern?: any;

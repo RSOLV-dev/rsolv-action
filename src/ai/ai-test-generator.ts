@@ -5,8 +5,9 @@
 import { Vulnerability } from '../security/types.js';
 import { TestGenerationOptions, VulnerabilityTestSuite } from './test-generator.js';
 import { logger } from '../utils/logger.js';
-import { AIClient } from './client.js';
+import { AiClient, getAiClient } from './client.js';
 import { AIConfig } from './types.js';
+import { AiProviderConfig } from '../types/index.js';
 
 export interface AITestGenerationResult {
   success: boolean;
@@ -17,10 +18,28 @@ export interface AITestGenerationResult {
 }
 
 export class AITestGenerator {
-  private aiClient: AIClient;
+  private aiClient: AiClient | null = null;
+  private aiConfig: AIConfig;
 
   constructor(aiConfig: AIConfig) {
-    this.aiClient = new AIClient(aiConfig);
+    this.aiConfig = aiConfig;
+  }
+
+  private async getClient(): Promise<AiClient> {
+    if (!this.aiClient) {
+      // Convert AIConfig to AiProviderConfig
+      const providerConfig: AiProviderConfig = {
+        provider: this.aiConfig.provider || 'anthropic',
+        apiKey: this.aiConfig.apiKey || '',
+        model: this.aiConfig.model,
+        temperature: this.aiConfig.temperature,
+        maxTokens: this.aiConfig.maxTokens,
+        useVendedCredentials: this.aiConfig.useVendedCredentials
+      };
+      
+      this.aiClient = await getAiClient(providerConfig);
+    }
+    return this.aiClient;
   }
 
   async generateTests(
@@ -32,10 +51,11 @@ export class AITestGenerator {
       logger.info(`Generating AI-powered tests for ${vulnerability.type} vulnerability`);
 
       const prompt = this.constructTestGenerationPrompt(vulnerability, options, fileContent);
-      const response = await this.aiClient.complete(prompt);
+      const client = await this.getClient();
+      const response = await client.complete(prompt);
       
       // Parse the AI response to extract test suite
-      const testSuite = this.parseTestSuite(response.content);
+      const testSuite = this.parseTestSuite(response);
       
       if (!testSuite) {
         throw new Error('Failed to parse test suite from AI response');
@@ -90,7 +110,10 @@ ${vulnerability.remediation ? `- Remediation: ${vulnerability.remediation}` : ''
 ${fileContent ? `## Vulnerable Code:\n\`\`\`${options.language}\n${fileContent}\n\`\`\`` : ''}
 
 ## Response Format:
-Provide a JSON object with this structure:
+IMPORTANT: Return ONLY valid JSON without any markdown formatting, code blocks, or explanations.
+Do NOT wrap the JSON in backticks or any other formatting.
+
+Return a raw JSON object with exactly this structure:
 {
   "red": {
     "testName": "descriptive test name",
@@ -112,23 +135,58 @@ Provide a JSON object with this structure:
   }
 }
 
-Generate executable test code that can be run immediately, not pseudo-code or descriptions.`;
+The testCode field must contain complete, executable test code that can be run immediately.
+Return ONLY the JSON object, nothing else.`;
   }
 
   private parseTestSuite(aiResponse: string): VulnerabilityTestSuite | null {
     try {
-      // Extract JSON from the response
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        logger.error('No JSON found in AI response');
+      let jsonString: string | null = null;
+      
+      // Try multiple extraction strategies
+      // 1. Check for markdown code blocks with json
+      const markdownJsonMatch = aiResponse.match(/```json\s*([\s\S]*?)```/);
+      if (markdownJsonMatch) {
+        jsonString = markdownJsonMatch[1].trim();
+      }
+      
+      // 2. Check for any markdown code blocks
+      if (!jsonString) {
+        const markdownMatch = aiResponse.match(/```[\s\S]*?\n([\s\S]*?)```/);
+        if (markdownMatch) {
+          jsonString = markdownMatch[1].trim();
+        }
+      }
+      
+      // 3. Try to extract raw JSON object
+      if (!jsonString) {
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonString = jsonMatch[0];
+        }
+      }
+      
+      // 4. If response looks like pure JSON, use it directly
+      if (!jsonString && aiResponse.trim().startsWith('{')) {
+        jsonString = aiResponse.trim();
+      }
+      
+      if (!jsonString) {
+        logger.error('No JSON found in AI response. Response preview:', aiResponse.substring(0, 200));
         return null;
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
+      // Clean up common issues
+      jsonString = jsonString
+        .replace(/^\s*```\s*json?\s*/gm, '') // Remove stray markdown markers
+        .replace(/\s*```\s*$/gm, '')
+        .trim();
+
+      const parsed = JSON.parse(jsonString);
       
       // Validate the structure
       if (!parsed.red || !parsed.green || !parsed.refactor) {
-        logger.error('Invalid test suite structure');
+        logger.error('Invalid test suite structure. Keys found:', Object.keys(parsed));
         return null;
       }
 
@@ -153,7 +211,8 @@ Generate executable test code that can be run immediately, not pseudo-code or de
         }
       };
     } catch (error) {
-      logger.error('Failed to parse AI response', error);
+      logger.error('Failed to parse AI response:', error);
+      logger.debug('Response that failed to parse:', aiResponse.substring(0, 500));
       return null;
     }
   }
