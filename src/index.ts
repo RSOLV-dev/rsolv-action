@@ -7,6 +7,8 @@ import { setupContainer } from './containers/setup.js';
 import { ActionStatus } from './types/index.js';
 import { ScanOrchestrator } from './scanner/index.js';
 import { getRepositoryDetails } from './github/api.js';
+import { getExecutionMode, getModeDescription } from './utils/mode-selector.js';
+import { PhaseExecutor } from './modes/phase-executor/index.js';
 
 async function run(): Promise<ActionStatus> {
   try {
@@ -18,10 +20,47 @@ async function run(): Promise<ActionStatus> {
     const config = await loadConfig();
     logger.info('Configuration loaded successfully');
     
-    // Check if we're in scan mode
-    const scanMode = process.env.RSOLV_SCAN_MODE || 'fix';
+    // Get execution mode using new mode selector
+    const mode = getExecutionMode();
+    logger.info(`Execution mode: ${mode} - ${getModeDescription(mode)}`);
     
-    if (scanMode === 'scan') {
+    // Handle new three-phase modes
+    if (mode === 'scan' || mode === 'validate' || mode === 'mitigate' || mode === 'full') {
+      const executor = new PhaseExecutor(config);
+      
+      // Get repository information
+      const repoFullName = process.env.GITHUB_REPOSITORY;
+      if (!repoFullName) {
+        throw new Error('GITHUB_REPOSITORY environment variable not set');
+      }
+      
+      const [owner, name] = repoFullName.split('/');
+      const repoDetails = await getRepositoryDetails(owner, name);
+      
+      // Execute the selected mode
+      const result = await executor.execute(mode, {
+        repository: {
+          owner,
+          name,
+          defaultBranch: repoDetails.defaultBranch || 'main'
+        },
+        issueNumber: process.env.ISSUE_NUMBER ? parseInt(process.env.ISSUE_NUMBER) : undefined
+      });
+      
+      // Set outputs for GitHub Actions
+      if (process.env.GITHUB_OUTPUT && result.data) {
+        const fs = await import('fs');
+        fs.appendFileSync(process.env.GITHUB_OUTPUT, `phase_results=${JSON.stringify(result)}\n`);
+      }
+      
+      return {
+        success: result.success,
+        message: result.message || `${mode} phase completed`
+      };
+    }
+    
+    // Legacy scan mode for backward compatibility
+    if (mode === 'fix' && process.env.RSOLV_SCAN_MODE === 'scan') {
       logger.info('Running in SCAN mode - proactive vulnerability detection');
       
       // Get repository information from environment
