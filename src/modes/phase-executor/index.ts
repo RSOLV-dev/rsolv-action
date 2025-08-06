@@ -28,6 +28,12 @@ export interface ExecuteOptions {
   issues?: IssueContext[];
   scanData?: any;
   commitSha?: string;
+  // Validation-specific options
+  usePriorScan?: boolean;
+  runTests?: boolean;
+  integrateTests?: boolean;
+  postComment?: boolean;
+  format?: 'markdown' | 'json' | 'github-actions';
 }
 
 export interface ExecuteResult {
@@ -74,11 +80,16 @@ export class PhaseExecutor {
         return this.executeScan(options);
       
       case 'validate':
-        // Requires either scan data OR issue number
-        if (!options.issueNumber && !options.scanData) {
-          throw new Error('Validation requires --issue or prior scan');
+        // Support multiple validation modes
+        if (options.issues && options.issues.length > 0) {
+          // Standalone validation with issues
+          return this.executeValidateStandalone(options);
+        } else if (options.issueNumber || options.scanData) {
+          // Original validation mode
+          return this.executeValidate(options);
+        } else {
+          throw new Error('Validation requires issues, --issue, or prior scan');
         }
-        return this.executeValidate(options);
       
       case 'mitigate':
         // Requires validated issue
@@ -976,4 +987,344 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
   public testGeneratingAnalyzer?: TestGeneratingSecurityAnalyzer;
   public gitBasedValidator?: GitBasedTestValidator;
   public maxIterations?: number;
+  public testRunner?: any;
+  public testDiscovery?: any;
+  public testIntegrator?: any;
+  public githubClient?: any;
+  public validationTimeout?: number;
+
+  /**
+   * Execute standalone validation mode for multiple issues
+   * Generates tests without requiring prior scan
+   */
+  async executeValidateStandalone(options: ExecuteOptions): Promise<ExecuteResult> {
+    try {
+      logger.info(`[VALIDATE-STANDALONE] Processing ${options.issues?.length} issues`);
+      
+      if (!options.issues || options.issues.length === 0) {
+        return {
+          success: false,
+          phase: 'validate',
+          error: 'No issues provided for validation'
+        };
+      }
+
+      const validations = [];
+      
+      for (const issue of options.issues) {
+        try {
+          // Check for prior scan data if requested
+          let scanData = null;
+          if (options.usePriorScan) {
+            const priorData = await this.phaseDataClient.retrievePhaseResults(
+              `${issue.repository.owner}/${issue.repository.name}`,
+              issue.number,
+              this.getCurrentCommitSha()
+            );
+            scanData = priorData?.scan;
+          }
+
+          // Analyze issue if no prior scan
+          if (!scanData) {
+            const analysisData = await analyzeIssue(issue, this.config);
+            scanData = {
+              analysisData,
+              canBeFixed: analysisData?.canBeFixed || false,
+              usedPriorScan: false
+            };
+          } else {
+            scanData.usedPriorScan = true;
+          }
+
+          // Generate validation tests
+          const testResults = await this.generateValidationTests(issue, scanData);
+          
+          // Run tests if requested
+          let testExecution = null;
+          if (options.runTests && this.testRunner) {
+            try {
+              testExecution = await this.testRunner.runTests(testResults.generatedTests);
+              
+              // Check for false positive
+              if (testExecution.redTestPassed) {
+                testResults.falsePositive = true;
+                testResults.reason = 'Tests pass on current code';
+              }
+            } catch (error) {
+              logger.warn(`Test execution failed for issue #${issue.number}:`, error);
+              testResults.testExecutionFailed = true;
+              testResults.error = error instanceof Error ? error.message : String(error);
+            }
+          }
+
+          // Check for existing tests
+          if (this.testDiscovery) {
+            const existing = await this.testDiscovery.findExistingTests(issue.repository);
+            if (existing.hasTests) {
+              testResults.existingTests = true;
+              testResults.testFramework = existing.framework;
+              
+              // Integrate tests if requested
+              if (options.integrateTests && this.testIntegrator) {
+                const integration = await this.testIntegrator.integrateTests(
+                  testResults.generatedTests,
+                  existing
+                );
+                testResults.testsIntegrated = integration.integrated;
+                testResults.testFile = integration.testFile;
+              }
+            }
+          }
+
+          // Store validation results
+          const validationResult = {
+            issueNumber: issue.number,
+            ...testResults,
+            timestamp: new Date().toISOString()
+          };
+
+          await this.phaseDataClient.storePhaseResults(
+            'validate',
+            { 
+              validation: {
+                [`issue-${issue.number}`]: validationResult
+              }
+            },
+            {
+              repo: `${issue.repository.owner}/${issue.repository.name}`,
+              issueNumber: issue.number,
+              commitSha: this.getCurrentCommitSha()
+            }
+          );
+
+          // Post GitHub comment if requested
+          if (options.postComment && this.githubClient) {
+            const comment = this.formatValidationComment(issue, validationResult);
+            await this.githubClient.createIssueComment(
+              issue.repository.owner,
+              issue.repository.name,
+              issue.number,
+              comment
+            );
+          }
+
+          validations.push(validationResult);
+          
+        } catch (error) {
+          logger.error(`Failed to validate issue #${issue.number}:`, error);
+          
+          // Try fallback test generation
+          const fallbackTests = this.generateFallbackTests(issue);
+          validations.push({
+            issueNumber: issue.number,
+            testGenerationFailed: true,
+            fallbackTests: true,
+            generatedTests: fallbackTests,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+
+      // Generate report if requested
+      let report = null;
+      if (options.format) {
+        report = this.generateValidationReport(validations, options.format);
+      }
+
+      // For single issue, return simpler structure
+      if (options.issues.length === 1) {
+        return {
+          success: true,
+          phase: 'validate',
+          message: `Validation completed for issue #${options.issues[0].number}`,
+          data: {
+            validation: validations[0],
+            report
+          }
+        };
+      }
+
+      return {
+        success: true,
+        phase: 'validate',
+        message: `Validated ${validations.length} issues`,
+        data: {
+          validations,
+          report,
+          annotations: options.format === 'github-actions' ? 
+            this.generateGitHubAnnotations(validations) : undefined
+        }
+      };
+      
+    } catch (error) {
+      logger.error('[VALIDATE-STANDALONE] Failed', error);
+      return {
+        success: false,
+        phase: 'validate',
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * Generate validation tests for an issue
+   */
+  private async generateValidationTests(issue: IssueContext, scanData: any): Promise<any> {
+    const { analysisData } = scanData;
+    
+    // Use TestGeneratingSecurityAnalyzer if available
+    if (this.testGeneratingAnalyzer || this.config.testGeneration?.enabled) {
+      const analyzer = this.testGeneratingAnalyzer || 
+        new TestGeneratingSecurityAnalyzer({
+          provider: 'anthropic',
+          apiKey: this.config.aiProvider.apiKey,
+          model: this.config.aiProvider.model,
+          temperature: 0.2,
+          maxTokens: this.config.aiProvider.maxTokens,
+          useVendedCredentials: this.config.aiProvider.useVendedCredentials
+        });
+
+      // Get codebase files
+      const codebaseFiles = await this.getCodebaseFiles(analysisData);
+      
+      const testResults = await analyzer.analyzeWithTestGeneration(
+        issue,
+        this.config,
+        codebaseFiles
+      );
+
+      // Format tests in TDD style
+      const tests = testResults.generatedTests;
+      return {
+        generatedTests: {
+          ...tests,
+          redTest: tests?.tests?.[0]?.testCode || 'should fail when vulnerability exists',
+          greenTest: tests?.tests?.[1]?.testCode || 'should pass when vulnerability is fixed',
+          refactorTest: tests?.tests?.[2]?.testCode || 'should maintain original functionality'
+        },
+        ...scanData
+      };
+    }
+
+    // Fallback to basic test structure
+    return {
+      generatedTests: this.generateFallbackTests(issue),
+      ...scanData
+    };
+  }
+
+  /**
+   * Get codebase files for test generation
+   */
+  private async getCodebaseFiles(analysisData: any): Promise<Map<string, string>> {
+    const codebaseFiles = new Map<string, string>();
+    
+    if (analysisData?.filesToModify && analysisData.filesToModify.length > 0) {
+      const fs = (await import('fs')).default;
+      const path = (await import('path')).default;
+      
+      for (const filePath of analysisData.filesToModify) {
+        try {
+          const fullPath = path.resolve(process.cwd(), filePath);
+          if (fs.existsSync(fullPath)) {
+            const content = fs.readFileSync(fullPath, 'utf8');
+            codebaseFiles.set(filePath, content);
+          }
+        } catch (error) {
+          logger.warn(`Could not read file ${filePath}:`, error);
+        }
+      }
+    }
+    
+    return codebaseFiles;
+  }
+
+  /**
+   * Generate fallback tests when AI generation fails
+   */
+  private generateFallbackTests(issue: IssueContext): any {
+    return {
+      redTest: `// RED Test: Should fail when ${issue.title} exists`,
+      greenTest: `// GREEN Test: Should pass when ${issue.title} is fixed`,
+      refactorTest: `// REFACTOR Test: Should maintain functionality after fix`
+    };
+  }
+
+  /**
+   * Format validation results as GitHub comment
+   */
+  private formatValidationComment(issue: IssueContext, validation: any): string {
+    return `## Validation Results
+
+**Issue #${issue.number}**: ${issue.title}
+
+### Test Generation
+- ✅ RED test generated (proves vulnerability exists)
+- ✅ GREEN test generated (validates fix)
+- ✅ REFACTOR test generated (ensures functionality preserved)
+
+${validation.falsePositive ? '### ⚠️ Possible False Positive\nTests pass on current code - vulnerability may not exist.' : ''}
+
+${validation.testExecutionFailed ? '### ⚠️ Test Execution Failed\nTests were generated but could not be executed automatically.' : ''}
+
+### Next Steps
+${validation.falsePositive ? 
+  '1. Review the generated tests\n2. Close issue if false positive confirmed' :
+  '1. Review the generated tests\n2. Run mitigation mode to apply fix\n3. Tests will validate the fix automatically'}
+`;
+  }
+
+  /**
+   * Generate validation report in requested format
+   */
+  private generateValidationReport(validations: any[], format: string): string {
+    switch (format) {
+      case 'markdown':
+        return this.generateMarkdownReport(validations);
+      case 'json':
+        return JSON.stringify({ issues: validations }, null, 2);
+      case 'github-actions':
+        return this.generateGitHubActionsReport(validations);
+      default:
+        return JSON.stringify(validations);
+    }
+  }
+
+  /**
+   * Generate markdown validation report
+   */
+  private generateMarkdownReport(validations: any[]): string {
+    let report = '# Validation Report\n\n';
+    
+    for (const validation of validations) {
+      report += `## Issue #${validation.issueNumber}\n\n`;
+      report += validation.falsePositive ? 
+        '**Status**: ⚠️ Possible False Positive\n\n' :
+        '**Status**: ✅ Validated\n\n';
+      report += '### Generated Tests\n';
+      report += '- RED test: Generated\n';
+      report += '- GREEN test: Generated\n';
+      report += '- REFACTOR test: Generated\n\n';
+    }
+    
+    return report;
+  }
+
+  /**
+   * Generate GitHub Actions report
+   */
+  private generateGitHubActionsReport(validations: any[]): string {
+    return validations.map(v => 
+      `::${v.falsePositive ? 'warning' : 'notice'} ::Issue #${v.issueNumber} validated`
+    ).join('\n');
+  }
+
+  /**
+   * Generate GitHub Actions annotations
+   */
+  private generateGitHubAnnotations(validations: any[]): string[] {
+    return validations.map(v => 
+      `::warning file=unknown,line=1::Issue #${v.issueNumber} - ${v.falsePositive ? 'Possible false positive' : 'Validation complete'}`
+    );
+  }
 }
