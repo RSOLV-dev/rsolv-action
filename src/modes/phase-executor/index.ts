@@ -5,7 +5,6 @@
 
 import { PhaseDataClient, PhaseData } from '../phase-data-client/index.js';
 import { ScanOrchestrator } from '../../scanner/index.js';
-import { processIssueWithGit } from '../../ai/git-based-processor.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from '../../ai/test-generating-security-analyzer.js';
 import { GitBasedTestValidator } from '../../ai/git-based-test-validator.js';
@@ -94,10 +93,6 @@ export class PhaseExecutor {
       case 'mitigate':
         // Use standalone mitigation mode
         return this.executeMitigateStandalone(options);
-      
-      case 'fix':
-        // Legacy mode - use existing processIssueWithGit
-        return this.executeFix(options);
       
       case 'full':
         // Run all phases
@@ -291,38 +286,6 @@ export class PhaseExecutor {
       return {
         success: false,
         phase: 'mitigate',
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Execute fix mode (legacy)
-   */
-  async executeFix(options: ExecuteOptions): Promise<ExecuteResult> {
-    try {
-      if (!options.issues || options.issues.length === 0) {
-        throw new Error('Fix mode requires issues');
-      }
-
-      // Use existing processIssueWithGit for backward compatibility
-      const results = [];
-      for (const issue of options.issues) {
-        const result = await processIssueWithGit(issue, this.config);
-        results.push(result);
-      }
-
-      return {
-        success: true,
-        phase: 'fix',
-        message: `Processed ${results.length} issues`,
-        data: { results }
-      };
-    } catch (error) {
-      logger.error('Fix phase failed', error);
-      return {
-        success: false,
-        phase: 'fix',
         error: error instanceof Error ? error.message : String(error)
       };
     }
@@ -1082,13 +1045,13 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           // Skip validation if issue cannot be fixed
           if (!scanData.canBeFixed) {
             logger.info(`[VALIDATE] Skipping issue #${issue.number} - cannot be automatically fixed`);
-            validationResults[`issue-${issue.number}`] = {
+            validations.push({
               issueNumber: issue.number,
               validated: false,
               canBeFixed: false,
               reason: 'Issue cannot be automatically fixed',
               timestamp: new Date().toISOString()
-            };
+            });
             continue;
           }
 
@@ -1187,21 +1150,38 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
         report = this.generateValidationReport(validations, options.format);
       }
 
+      // Check if any validations succeeded
+      const hasSuccessfulValidation = validations.some(v => 
+        v.validated !== false && 
+        !v.testGenerationFailed &&
+        v.canBeFixed !== false
+      );
+      
       // For single issue, return simpler structure
       if (options.issues.length === 1) {
+        const validation = validations[0];
+        const isSuccess = validation.validated !== false && 
+                         validation.canBeFixed !== false &&
+                         !validation.testGenerationFailed;
+        
         return {
-          success: true,
+          success: isSuccess,
           phase: 'validate',
-          message: `Validation completed for issue #${options.issues[0].number}`,
+          message: validation.canBeFixed === false ? 
+            'Issue cannot be automatically fixed' :
+            validation.testGenerationFailed ?
+            'Test generation failed' :
+            `Validation completed for issue #${options.issues[0].number}`,
           data: {
-            validation: validations[0],
+            validation,
             report
-          }
+          },
+          error: validation.testGenerationFailed ? validation.error : undefined
         };
       }
 
       return {
-        success: true,
+        success: hasSuccessfulValidation,
         phase: 'validate',
         message: `Validated ${validations.length} issues`,
         data: {
