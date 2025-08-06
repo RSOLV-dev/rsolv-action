@@ -11,8 +11,11 @@ export class ModeSelector {
    * Parse mode configuration from environment and arguments
    */
   static getModeConfig(): ModeConfig {
-    // Get mode from environment or default to 'fix' for backward compatibility
-    const modeEnv = process.env.RSOLV_MODE || process.env.RSOLV_SCAN_MODE || 'fix';
+    // Get mode from environment (required)
+    const modeEnv = process.env.RSOLV_MODE;
+    if (!modeEnv) {
+      throw new Error('RSOLV_MODE environment variable is required. Options: scan, validate, mitigate, fix, full');
+    }
     const mode = this.normalizeMode(modeEnv);
     
     // Get issue ID(s) for targeted modes
@@ -85,8 +88,7 @@ export class ModeSelector {
         return 'full';
       
       default:
-        logger.warn(`Unknown mode '${mode}', defaulting to 'fix'`);
-        return 'fix';
+        throw new Error(`Unknown mode '${mode}'. Valid options: scan, validate, mitigate, fix, full`);
     }
   }
   
@@ -98,8 +100,8 @@ export class ModeSelector {
     issueId?: number, 
     issueIds?: number[]
   ): void {
-    // Modes that require issue specification (fix mode is optional for backward compat)
-    const requiresIssue = ['validate', 'mitigate'];
+    // All modes except scan and full require issue specification
+    const requiresIssue = ['validate', 'mitigate', 'fix'];
     
     if (requiresIssue.includes(mode) && !issueId && !issueIds) {
       throw new Error(
@@ -107,9 +109,9 @@ export class ModeSelector {
       );
     }
     
-    // Scan mode shouldn't have issue IDs
-    if (mode === 'scan' && (issueId || issueIds)) {
-      logger.warn('Scan mode ignores issue IDs - scanning entire repository');
+    // Scan and full modes shouldn't have issue IDs
+    if (['scan', 'full'].includes(mode) && (issueId || issueIds)) {
+      logger.warn(`${mode} mode ignores issue IDs - processing entire repository`);
     }
     
     // Can't specify both single and multiple issue IDs

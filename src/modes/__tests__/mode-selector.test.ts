@@ -22,16 +22,13 @@ describe('ModeSelector', () => {
   });
   
   describe('getModeConfig', () => {
-    it('should default to fix mode for backward compatibility', () => {
+    it('should require RSOLV_MODE environment variable', () => {
       // No environment variables set
       delete process.env.RSOLV_MODE;
-      delete process.env.RSOLV_SCAN_MODE;
       
-      const config = ModeSelector.getModeConfig();
-      
-      expect(config.mode).toBe('fix');
-      expect(config.issueId).toBeUndefined();
-      expect(config.issueIds).toBeUndefined();
+      expect(() => ModeSelector.getModeConfig()).toThrow(
+        'RSOLV_MODE environment variable is required. Options: scan, validate, mitigate, fix, full'
+      );
     });
     
     it('should recognize scan mode from RSOLV_MODE', () => {
@@ -82,6 +79,7 @@ describe('ModeSelector', () => {
     
     it('should respect max issues limit', () => {
       process.env.RSOLV_MODE = 'fix';
+      process.env.RSOLV_ISSUE_ID = '123';  // Now required for fix mode
       process.env.RSOLV_MAX_ISSUES = '5';
       
       const config = ModeSelector.getModeConfig();
@@ -127,22 +125,13 @@ describe('ModeSelector', () => {
       );
     });
     
-    it('should support legacy RSOLV_SCAN_MODE variable', () => {
-      process.env.RSOLV_SCAN_MODE = 'scan';
+    it('should throw error when fix mode lacks issue ID', () => {
+      process.env.RSOLV_MODE = 'fix';
+      // No issue ID provided
       
-      const config = ModeSelector.getModeConfig();
-      
-      expect(config.mode).toBe('scan');
-    });
-    
-    it('should prefer RSOLV_MODE over RSOLV_SCAN_MODE', () => {
-      process.env.RSOLV_MODE = 'validate';
-      process.env.RSOLV_SCAN_MODE = 'scan';
-      process.env.RSOLV_ISSUE_ID = '123';
-      
-      const config = ModeSelector.getModeConfig();
-      
-      expect(config.mode).toBe('validate');
+      expect(() => ModeSelector.getModeConfig()).toThrow(
+        "Mode 'fix' requires RSOLV_ISSUE_ID or RSOLV_ISSUE_IDS to be set"
+      );
     });
   });
   
@@ -155,8 +144,8 @@ describe('ModeSelector', () => {
         { input: 'test', expected: 'validate', needsIssue: true },
         { input: 'mitigation', expected: 'mitigate', needsIssue: true },
         { input: 'repair', expected: 'mitigate', needsIssue: true },
-        { input: 'auto', expected: 'fix', needsIssue: false },
-        { input: 'combined', expected: 'fix', needsIssue: false },
+        { input: 'auto', expected: 'fix', needsIssue: true },
+        { input: 'combined', expected: 'fix', needsIssue: true },
         { input: 'all', expected: 'full', needsIssue: false },
         { input: 'complete', expected: 'full', needsIssue: false }
       ];
@@ -174,12 +163,12 @@ describe('ModeSelector', () => {
       });
     });
     
-    it('should default unknown modes to fix', () => {
+    it('should throw error for unknown modes', () => {
       process.env.RSOLV_MODE = 'unknown-mode';
       
-      const config = ModeSelector.getModeConfig();
-      
-      expect(config.mode).toBe('fix');
+      expect(() => ModeSelector.getModeConfig()).toThrow(
+        "Unknown mode 'unknown-mode'. Valid options: scan, validate, mitigate, fix, full"
+      );
     });
   });
   
