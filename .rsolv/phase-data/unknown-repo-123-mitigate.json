@@ -1,0 +1,21 @@
+{
+  "phase": "mitigate",
+  "data": {
+    "mitigation": {
+      "issue-123": {
+        "fixed": true,
+        "prUrl": "https://github.com/test/pr/1",
+        "filesModified": [
+          "user.js"
+        ],
+        "timestamp": "2025-08-06T20:50:49.276Z"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "unknown/repo",
+    "issueNumber": 123,
+    "commitSha": "23c695f21e892e9b6cb94050e290302997d8a56d"
+  },
+  "timestamp": "2025-08-06T20:50:49.279Z"
+}

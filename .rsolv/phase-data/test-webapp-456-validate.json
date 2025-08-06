@@ -1,0 +1,38 @@
+{
+  "phase": "validate",
+  "data": {
+    "validation": {
+      "issue-456": {
+        "issueNumber": 456,
+        "generatedTests": {
+          "success": false,
+          "tests": [],
+          "error": "Failed to generate tests for detected vulnerabilities",
+          "redTest": "should fail when vulnerability exists",
+          "greenTest": "should pass when vulnerability is fixed",
+          "refactorTest": "should maintain original functionality"
+        },
+        "analysisData": {
+          "canBeFixed": true,
+          "issueType": "sql-injection",
+          "filesToModify": [
+            "user.js"
+          ],
+          "suggestedApproach": "Use parameterized queries",
+          "estimatedComplexity": "medium",
+          "vulnerabilityType": "SQL_INJECTION",
+          "severity": "high"
+        },
+        "canBeFixed": true,
+        "usedPriorScan": false,
+        "timestamp": "2025-08-06T20:50:49.336Z"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "test/webapp",
+    "issueNumber": 456,
+    "commitSha": "abc123def456"
+  },
+  "timestamp": "2025-08-06T20:50:49.339Z"
+}

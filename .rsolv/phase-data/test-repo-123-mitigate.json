@@ -1,0 +1,25 @@
+{
+  "phase": "mitigate",
+  "data": {
+    "mitigation": {
+      "pullRequestUrl": "https://github.com/test/repo/pull/1",
+      "pullRequestNumber": 1,
+      "commitHash": "fix-commit-123",
+      "filesModified": [
+        "user.js"
+      ],
+      "diffStats": {
+        "insertions": 10,
+        "deletions": 5,
+        "filesChanged": 1
+      },
+      "timestamp": "2025-08-06T20:50:49.297Z"
+    }
+  },
+  "metadata": {
+    "repo": "test/repo",
+    "issueNumber": 123,
+    "commitSha": "fix-commit-123"
+  },
+  "timestamp": "2025-08-06T20:50:49.299Z"
+}
