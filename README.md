@@ -135,6 +135,16 @@ jobs:
           issue_label: 'rsolv:automate'  # Optional: custom label
 ```
 
+## Three-Phase Architecture
+
+RSOLV now uses a modular three-phase architecture for processing issues:
+
+1. **SCAN** - Analyze issues and determine fixability
+2. **VALIDATE** - Generate tests to prove vulnerabilities
+3. **MITIGATE** - Apply fixes and create pull requests
+
+See [Three-Phase Architecture Documentation](docs/THREE-PHASE-ARCHITECTURE.md) for detailed usage examples and configuration options.
+
 ## Configuration
 
 RSOLV can be configured using a `.github/rsolv.yml` file in your repository:
