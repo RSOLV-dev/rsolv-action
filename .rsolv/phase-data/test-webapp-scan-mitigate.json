@@ -1,0 +1,16 @@
+{
+  "phase": "mitigate",
+  "data": {
+    "mitigation": {
+      "issue-789": {
+        "success": false,
+        "error": "No validation data for this issue"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "test/webapp",
+    "commitSha": "abc123def456"
+  },
+  "timestamp": "2025-08-06T22:25:42.001Z"
+}

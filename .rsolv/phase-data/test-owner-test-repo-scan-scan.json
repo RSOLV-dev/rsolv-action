@@ -1,0 +1,21 @@
+{
+  "phase": "scan",
+  "data": {
+    "scan": {
+      "vulnerabilities": [
+        {
+          "type": "sql-injection",
+          "file": "user.js",
+          "line": 42
+        }
+      ],
+      "timestamp": "2025-08-06T22:26:43.260Z",
+      "commitHash": "666c9b27afc6b9fa35cf6afdede4290cc253f03f"
+    }
+  },
+  "metadata": {
+    "repo": "test-owner/test-repo",
+    "commitSha": "666c9b27afc6b9fa35cf6afdede4290cc253f03f"
+  },
+  "timestamp": "2025-08-06T22:26:43.262Z"
+}

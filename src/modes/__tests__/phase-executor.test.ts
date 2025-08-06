@@ -73,7 +73,7 @@ describe('PhaseExecutor', () => {
       // Should fail without issue or scan data
       await expect(
         executor.execute('validate', {})
-      ).rejects.toThrow('Validation requires --issue or prior scan');
+      ).rejects.toThrow('Validation requires issues, --issue, or prior scan');
 
       // Should succeed with issue number
       const result = await executor.execute('validate', {
@@ -86,16 +86,35 @@ describe('PhaseExecutor', () => {
       const { PhaseExecutor } = await import('../phase-executor');
       executor = new PhaseExecutor(mockConfig);
 
-      // Should fail without issue
-      await expect(
-        executor.execute('mitigate', {})
-      ).rejects.toThrow('Mitigation requires --issue');
+      // Should fail without issue but return success: false instead of throwing
+      const result = await executor.execute('mitigate', {});
+      expect(result.success).toBe(false);
+      expect(result.error || result.message || '').toContain('No issues provided for mitigation');
 
-      // Should succeed with issue number
-      const result = await executor.execute('mitigate', {
+      // Should succeed with issue number (mock validation data)
+      const mockValidation = {
+        validation: {
+          generatedTests: {
+            success: true,
+            testSuite: 'test code',
+            tests: [{ name: 'test', code: 'test code', type: 'red' }]
+          }
+        }
+      };
+      executor.phaseDataClient.retrievePhaseResults = mock(() => Promise.resolve(mockValidation));
+      
+      const result2 = await executor.execute('mitigate', {
+        repository: {
+          owner: 'test-owner',
+          name: 'test-repo',
+          fullName: 'test-owner/test-repo'
+        },
         issueNumber: 123
       });
-      expect(result.success).toBe(true);
+      if (!result2.success) {
+        console.log('Debug - result2:', result2);
+      }
+      expect(result2.success).toBe(true);
     });
 
 

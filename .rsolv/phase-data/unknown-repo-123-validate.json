@@ -1,0 +1,20 @@
+{
+  "phase": "validate",
+  "data": {
+    "validation": {
+      "issue-123": {
+        "validated": true,
+        "tests": [
+          "test1.js"
+        ],
+        "timestamp": "2025-08-06T22:26:43.262Z"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "unknown/repo",
+    "issueNumber": 123,
+    "commitSha": "666c9b27afc6b9fa35cf6afdede4290cc253f03f"
+  },
+  "timestamp": "2025-08-06T22:26:43.266Z"
+}
