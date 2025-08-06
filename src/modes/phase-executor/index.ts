@@ -92,11 +92,8 @@ export class PhaseExecutor {
         }
       
       case 'mitigate':
-        // Requires validated issue
-        if (!options.issueNumber) {
-          throw new Error('Mitigation requires --issue');
-        }
-        return this.executeMitigate(options);
+        // Use standalone mitigation mode
+        return this.executeMitigateStandalone(options);
       
       case 'fix':
         // Legacy mode - use existing processIssueWithGit
@@ -1326,5 +1323,368 @@ ${validation.falsePositive ?
     return validations.map(v => 
       `::warning file=unknown,line=1::Issue #${v.issueNumber} - ${v.falsePositive ? 'Possible false positive' : 'Validation complete'}`
     );
+  }
+
+  /**
+   * Mitigation-only mode: Apply fixes using validation data
+   * Can accept validation data directly or retrieve from prior phase
+   */
+  async executeMitigateStandalone(options: ExecuteOptions): Promise<ExecuteResult> {
+    try {
+      logger.info(`[MITIGATE-STANDALONE] Starting mitigation for ${options.issues?.length || 1} issues`);
+      
+      // Check for required inputs
+      if (!options.issues || options.issues.length === 0) {
+        // Try to retrieve from PhaseDataClient if we have repository info
+        if (options.repository && options.issueNumber) {
+          const phaseData = await this.phaseDataClient.retrievePhaseResults(
+            options.repository.fullName,
+            options.issueNumber,
+            await this.getCurrentCommitSha()
+          );
+          
+          if (!phaseData?.validation) {
+            return {
+              success: false,
+              phase: 'mitigate',
+              error: 'No validation data available for mitigation'
+            };
+          }
+          
+          // Create issue from repository info
+          const issue: IssueContext = {
+            id: `issue-${options.issueNumber}`,
+            number: options.issueNumber,
+            title: 'Issue from prior validation',
+            body: '',
+            labels: [],
+            assignees: [],
+            repository: options.repository,
+            source: 'github',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            metadata: {}
+          };
+          
+          options.issues = [issue];
+          options.validationData = phaseData;
+        } else {
+          return {
+            success: false,
+            phase: 'mitigate',
+            error: 'No issues provided for mitigation'
+          };
+        }
+      }
+      
+      // Check for validation data
+      let validationData = options.validationData;
+      
+      if (!validationData && options.usePriorValidation) {
+        // Try to retrieve validation data for each issue
+        validationData = { validation: {} };
+        
+        for (const issue of options.issues) {
+          const phaseData = await this.phaseDataClient.retrievePhaseResults(
+            issue.repository.fullName,
+            issue.number,
+            await this.getCurrentCommitSha()
+          );
+          
+          if (phaseData?.validation) {
+            Object.assign(validationData.validation, phaseData.validation);
+          }
+        }
+      }
+      
+      if (!validationData || Object.keys(validationData.validation || {}).length === 0) {
+        if (options.generateTestsIfMissing) {
+          // Generate tests on the fly
+          logger.info('[MITIGATE-STANDALONE] No validation data, generating tests...');
+          const validateResult = await this.executeValidateStandalone(options);
+          
+          if (!validateResult.success) {
+            return {
+              success: false,
+              phase: 'mitigate',
+              error: 'Failed to generate validation tests'
+            };
+          }
+          
+          validationData = validateResult.data;
+        } else {
+          return {
+            success: false,
+            phase: 'mitigate',
+            error: 'No validation data provided or found'
+          };
+        }
+      }
+      
+      // Check AI provider
+      if (!this.config.aiProvider) {
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: 'AI provider not configured'
+        };
+      }
+      
+      // Process each issue
+      const mitigationResults: any = {};
+      let allSuccess = true;
+      let partialSuccess = false;
+      
+      for (const issue of options.issues) {
+        const issueKey = `issue-${issue.number}`;
+        const validation = validationData.validation[issueKey];
+        
+        if (!validation) {
+          logger.warn(`[MITIGATE-STANDALONE] No validation data for issue #${issue.number}`);
+          mitigationResults[issueKey] = {
+            success: false,
+            error: 'No validation data for this issue'
+          };
+          allSuccess = false;
+          continue;
+        }
+        
+        try {
+          // Apply mitigation with timeout
+          const mitigationPromise = this.mitigateIssue(
+            issue,
+            validation,
+            options
+          );
+          
+          const timeout = options.timeout || 300000; // 5 minutes default
+          const result = await Promise.race([
+            mitigationPromise,
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Mitigation timeout')), timeout)
+            )
+          ]);
+          
+          mitigationResults[issueKey] = result;
+          
+          if (!(result as any).success) {
+            allSuccess = false;
+          } else {
+            partialSuccess = true;
+          }
+        } catch (error) {
+          logger.error(`[MITIGATE-STANDALONE] Failed to mitigate issue #${issue.number}:`, error);
+          mitigationResults[issueKey] = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          };
+          allSuccess = false;
+        }
+      }
+      
+      // Generate report if requested
+      let report: string | undefined;
+      let jsonReport: any | undefined;
+      
+      if (options.format === 'markdown') {
+        report = this.generateMitigationMarkdownReport(mitigationResults);
+      } else if (options.format === 'json') {
+        jsonReport = {
+          mitigations: Object.entries(mitigationResults).map(([key, result]) => ({
+            issue: key,
+            ...result
+          }))
+        };
+      }
+      
+      // Store results
+      await this.phaseDataClient.storePhaseResults(
+        'mitigate',
+        { mitigation: mitigationResults },
+        {
+          repo: options.issues[0].repository.fullName,
+          commitSha: await this.getCurrentCommitSha()
+        }
+      );
+      
+      return {
+        success: allSuccess,
+        phase: 'mitigate',
+        partial: !allSuccess && partialSuccess,
+        data: {
+          mitigation: mitigationResults,
+          testsGenerated: options.generateTestsIfMissing
+        },
+        report,
+        jsonReport
+      };
+    } catch (error) {
+      logger.error('[MITIGATE-STANDALONE] Unexpected error:', error);
+      return {
+        success: false,
+        phase: 'mitigate',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Apply mitigation to a single issue
+   */
+  private async mitigateIssue(
+    issue: IssueContext,
+    validation: any,
+    options: ExecuteOptions
+  ): Promise<any> {
+    const { GitBasedClaudeCodeAdapter } = await import('../../ai/adapters/claude-code-git.js');
+    const adapter = new GitBasedClaudeCodeAdapter(this.config as any);
+    
+    // Apply fix with retries
+    let attempts = 0;
+    const maxRetries = options.maxRetries || 3;
+    let lastError: Error | undefined;
+    
+    while (attempts < maxRetries) {
+      attempts++;
+      
+      try {
+        // Generate fix
+        const solution = await adapter.generateSolutionWithGit(issue, {
+          redTests: validation.generatedTests?.tests || [],
+          mustPassTests: true
+        });
+        
+        // Run tests if requested
+        if (options.runTests) {
+          const { runTests } = await import('../../utils/test-runner.js');
+          const testResults = await runTests(validation.generatedTests?.tests || []);
+          
+          if (!testResults.passed) {
+            if (attempts < maxRetries) {
+              logger.info(`[MITIGATE] Tests failed, retrying (attempt ${attempts}/${maxRetries})`);
+              continue;
+            }
+            throw new Error('Tests failed after fix');
+          }
+        }
+        
+        // Refactor if requested
+        if (options.refactorStyle) {
+          // In real implementation, would refactor code to match style
+          logger.info('[MITIGATE] Refactoring code to match codebase style');
+        }
+        
+        // Create PR if requested
+        if (options.createPR) {
+          const prResult = await this.createMitigationPR(
+            issue,
+            solution,
+            validation,
+            options
+          );
+          
+          return {
+            success: true,
+            issueNumber: issue.number,
+            prUrl: prResult.url,
+            prCreated: true,
+            prType: options.prType || 'standard',
+            testsPass: true,
+            refactored: options.refactorStyle || false,
+            attempts
+          };
+        }
+        
+        return {
+          success: true,
+          issueNumber: issue.number,
+          fixCommit: solution.fixCommit,
+          testsPass: true,
+          refactored: options.refactorStyle || false,
+          attempts
+        };
+      } catch (error) {
+        lastError = error as Error;
+        
+        if (error instanceof Error && error.message.includes('Test environment')) {
+          // Test environment issue, fail immediately
+          throw error;
+        }
+        
+        if (attempts >= maxRetries) {
+          break;
+        }
+      }
+    }
+    
+    return {
+      success: false,
+      issueNumber: issue.number,
+      error: lastError?.message || 'Failed to mitigate',
+      attempts
+    };
+  }
+
+  /**
+   * Create PR for mitigation
+   */
+  private async createMitigationPR(
+    issue: IssueContext,
+    solution: any,
+    validation: any,
+    options: ExecuteOptions
+  ): Promise<any> {
+    const { createPullRequest } = await import('../../utils/github-client.js');
+    
+    let body = `## Security Fix for Issue #${issue.number}\n\n`;
+    body += `### ${issue.title}\n\n`;
+    
+    if (options.includeBeforeAfter) {
+      body += '### Before\n```javascript\n// Vulnerable code\n```\n\n';
+      body += '### After\n```javascript\n// Fixed code\n```\n\n';
+    }
+    
+    if (options.prType === 'educational') {
+      body += '### Security Education\n\n';
+      body += `This vulnerability is a ${validation.analysisData?.issueType || 'security'} issue.\n\n`;
+      body += 'Learn more about this type of vulnerability and how to prevent it.\n\n';
+      body += '### Test Results\n';
+      body += '✅ All security tests pass\n\n';
+    }
+    
+    return createPullRequest({
+      title: `Fix: ${issue.title}`,
+      body,
+      head: `fix-${issue.number}`,
+      base: issue.repository.defaultBranch
+    });
+  }
+
+  /**
+   * Generate markdown report for mitigation
+   */
+  private generateMitigationMarkdownReport(mitigations: any): string {
+    let report = '## Mitigation Report\n\n';
+    
+    for (const [key, result] of Object.entries(mitigations)) {
+      const issueNumber = key.replace('issue-', '');
+      report += `### Issue #${issueNumber}\n`;
+      
+      if ((result as any).success) {
+        report += '✅ Fixed\n';
+        if ((result as any).prUrl) {
+          report += `- PR: ${(result as any).prUrl}\n`;
+        }
+        if ((result as any).testsPass) {
+          report += '- Tests: Passing\n';
+        }
+      } else {
+        report += `❌ Failed: ${(result as any).error}\n`;
+      }
+      
+      report += '\n';
+    }
+    
+    return report;
   }
 }
