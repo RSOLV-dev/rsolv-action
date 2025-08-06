@@ -14,6 +14,7 @@ describe('Three-Phase Integration', () => {
   let mockConfig: ActionConfig;
   let mockIssue: IssueContext;
   let phaseDataDir: string;
+  let phaseDataStore: Map<string, any>;
 
   beforeEach(async () => {
     mock.restore();
@@ -21,6 +22,33 @@ describe('Three-Phase Integration', () => {
     // Create temp directory for phase data
     phaseDataDir = '.rsolv/test-phase-data';
     await fs.mkdir(phaseDataDir, { recursive: true });
+    
+    // Mock phase data storage
+    phaseDataStore = new Map();
+    
+    // Mock PhaseDataClient
+    mock.module('../phase-data-client/index.js', () => ({
+      PhaseDataClient: class {
+        async storePhaseResults(phase: string, data: any, context: any) {
+          const key = `${context.repo}-${context.issueNumber}-${phase}`;
+          phaseDataStore.set(key, data);
+          return true;
+        }
+        
+        async retrievePhaseResults(repo: string, issueNumber: number, commitSha: string) {
+          // Try all phases
+          const scanKey = `${repo}-${issueNumber}-scan`;
+          const validateKey = `${repo}-${issueNumber}-validate`;
+          const mitigateKey = `${repo}-${issueNumber}-mitigate`;
+          
+          return {
+            ...phaseDataStore.get(scanKey),
+            ...phaseDataStore.get(validateKey),
+            ...phaseDataStore.get(mitigateKey)
+          };
+        }
+      }
+    }));
     
     mockConfig = {
       aiProvider: {
@@ -75,6 +103,9 @@ describe('Three-Phase Integration', () => {
       // Mock git status
       mock.module('child_process', () => ({
         execSync: (cmd: string) => {
+          if (cmd.includes('--porcelain')) {
+            return ''; // Empty means clean
+          }
           if (cmd.includes('git status')) {
             return 'nothing to commit, working tree clean';
           }
@@ -86,7 +117,7 @@ describe('Three-Phase Integration', () => {
       }));
 
       // Mock issue analysis
-      mock.module('../../ai/issue-analyzer.js', () => ({
+      mock.module('../../ai/analyzer.js', () => ({
         analyzeIssue: async () => ({
           canBeFixed: true,
           issueType: 'security',
@@ -99,16 +130,26 @@ describe('Three-Phase Integration', () => {
       // Mock test generation
       mock.module('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
-          async generateTestsForIssue() {
+          async analyzeWithTestGeneration() {
             return {
               success: true,
-              tests: [
-                {
-                  name: 'should detect buffer overflow',
-                  code: 'test("overflow", () => { expect(overflow).toBe(true); })',
-                  type: 'red'
-                }
-              ]
+              generatedTests: {
+                success: true,
+                tests: [
+                  {
+                    name: 'should detect buffer overflow',
+                    testCode: 'test("overflow", () => { expect(overflow).toBe(true); })',
+                    framework: 'jest',
+                    type: 'red'
+                  }
+                ],
+                testSuite: 'test("overflow", () => { expect(overflow).toBe(true); })'
+              },
+              analysis: {
+                canBeFixed: true,
+                issueType: 'security',
+                filesToModify: ['src/image-processor.js']
+              }
             };
           }
         }
@@ -160,7 +201,12 @@ describe('Three-Phase Integration', () => {
     test('should handle data passing between phases', async () => {
       // Mock implementations
       mock.module('child_process', () => ({
-        execSync: () => 'nothing to commit, working tree clean'
+        execSync: (cmd: string) => {
+          if (cmd.includes('--porcelain')) {
+            return ''; // Empty means clean
+          }
+          return 'nothing to commit, working tree clean';
+        }
       }));
 
       let scanData: any;
@@ -187,17 +233,27 @@ describe('Three-Phase Integration', () => {
       // VALIDATE phase should receive scan data
       mock.module('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
-          async generateTestsForIssue(issue: any, analysis: any) {
+          async analyzeWithTestGeneration(issue: any, config: any, codebaseFiles: any) {
             // Should receive scan data
-            expect(analysis).toBeTruthy();
+            expect(issue).toBeTruthy();
             
             validationData = {
               success: true,
-              tests: [{
-                name: 'test',
-                code: 'test code',
-                type: 'red'
-              }]
+              generatedTests: {
+                success: true,
+                tests: [{
+                  name: 'test',
+                  testCode: 'test code',
+                  framework: 'jest',
+                  type: 'red'
+                }],
+                testSuite: 'test code'
+              },
+              analysis: {
+                canBeFixed: true,
+                issueType: 'security',
+                filesToModify: ['app.js']
+              }
             };
             return validationData;
           }
@@ -236,13 +292,20 @@ describe('Three-Phase Integration', () => {
 
     test('should stop pipeline if scan determines issue cannot be fixed', async () => {
       mock.module('child_process', () => ({
-        execSync: () => 'nothing to commit, working tree clean'
+        execSync: (cmd: string) => {
+          if (cmd.includes('--porcelain')) {
+            return ''; // Empty means clean
+          }
+          return 'nothing to commit, working tree clean';
+        }
       }));
 
-      mock.module('../../ai/issue-analyzer.js', () => ({
+      mock.module('../../ai/analyzer.js', () => ({
         analyzeIssue: async () => ({
           canBeFixed: false,
-          reason: 'Issue is not a security vulnerability'
+          reason: 'Issue is not a security vulnerability',
+          filesToModify: [],
+          suggestedApproach: ''
         })
       }));
 
@@ -269,10 +332,15 @@ describe('Three-Phase Integration', () => {
     test('should maintain compatibility with fix mode', async () => {
       // Mock all required components
       mock.module('child_process', () => ({
-        execSync: () => 'nothing to commit, working tree clean'
+        execSync: (cmd: string) => {
+          if (cmd.includes('--porcelain')) {
+            return ''; // Empty means clean
+          }
+          return 'nothing to commit, working tree clean';
+        }
       }));
 
-      mock.module('../../ai/issue-analyzer.js', () => ({
+      mock.module('../../ai/analyzer.js', () => ({
         analyzeIssue: async () => ({
           canBeFixed: true,
           issueType: 'security',
@@ -282,14 +350,24 @@ describe('Three-Phase Integration', () => {
 
       mock.module('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
-          async generateTestsForIssue() {
+          async analyzeWithTestGeneration() {
             return {
               success: true,
-              tests: [{
-                name: 'test',
-                code: 'test',
-                type: 'red'
-              }]
+              generatedTests: {
+                success: true,
+                tests: [{
+                  name: 'test',
+                  testCode: 'test',
+                  framework: 'jest',
+                  type: 'red'
+                }],
+                testSuite: 'test'
+              },
+              analysis: {
+                canBeFixed: true,
+                issueType: 'security',
+                filesToModify: ['file.js']
+              }
             };
           }
         }
@@ -325,7 +403,12 @@ describe('Three-Phase Integration', () => {
       
       // Mock necessary components
       mock.module('child_process', () => ({
-        execSync: () => 'nothing to commit, working tree clean'
+        execSync: (cmd: string) => {
+          if (cmd.includes('--porcelain')) {
+            return ''; // Empty means clean
+          }
+          return 'nothing to commit, working tree clean';
+        }
       }));
 
       // This should still work as before
@@ -339,10 +422,15 @@ describe('Three-Phase Integration', () => {
   describe('Error Recovery', () => {
     test('should handle validation failure gracefully', async () => {
       mock.module('child_process', () => ({
-        execSync: () => 'nothing to commit, working tree clean'
+        execSync: (cmd: string) => {
+          if (cmd.includes('--porcelain')) {
+            return ''; // Empty means clean
+          }
+          return 'nothing to commit, working tree clean';
+        }
       }));
 
-      mock.module('../../ai/issue-analyzer.js', () => ({
+      mock.module('../../ai/analyzer.js', () => ({
         analyzeIssue: async () => ({
           canBeFixed: true,
           issueType: 'security'
@@ -352,7 +440,7 @@ describe('Three-Phase Integration', () => {
       // Make validation fail
       mock.module('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
-          async generateTestsForIssue() {
+          async analyzeWithTestGeneration() {
             throw new Error('AI service unavailable');
           }
         }
@@ -384,10 +472,15 @@ describe('Three-Phase Integration', () => {
     test('should handle mitigation failure and allow retry', async () => {
       // Setup successful scan and validation
       mock.module('child_process', () => ({
-        execSync: () => 'nothing to commit, working tree clean'
+        execSync: (cmd: string) => {
+          if (cmd.includes('--porcelain')) {
+            return ''; // Empty means clean
+          }
+          return 'nothing to commit, working tree clean';
+        }
       }));
 
-      mock.module('../../ai/issue-analyzer.js', () => ({
+      mock.module('../../ai/analyzer.js', () => ({
         analyzeIssue: async () => ({
           canBeFixed: true,
           issueType: 'security'
@@ -396,14 +489,24 @@ describe('Three-Phase Integration', () => {
 
       mock.module('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
-          async generateTestsForIssue() {
+          async analyzeWithTestGeneration() {
             return {
               success: true,
-              tests: [{
-                name: 'test',
-                code: 'test',
-                type: 'red'
-              }]
+              generatedTests: {
+                success: true,
+                tests: [{
+                  name: 'test',
+                  testCode: 'test',
+                  framework: 'jest',
+                  type: 'red'
+                }],
+                testSuite: 'test'
+              },
+              analysis: {
+                canBeFixed: true,
+                issueType: 'security',
+                filesToModify: ['file.js']
+              }
             };
           }
         }
@@ -453,7 +556,12 @@ describe('Three-Phase Integration', () => {
     test('should complete full pipeline within reasonable time', async () => {
       // Mock all components with minimal delays
       mock.module('child_process', () => ({
-        execSync: () => 'clean'
+        execSync: (cmd: string) => {
+          if (cmd.includes('--porcelain')) {
+            return ''; // Empty means clean
+          }
+          return 'clean';
+        }
       }));
 
       mock.module('../../ai/issue-analyzer.js', () => ({
@@ -465,9 +573,21 @@ describe('Three-Phase Integration', () => {
 
       mock.module('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
-          async generateTestsForIssue() {
+          async analyzeWithTestGeneration() {
             await new Promise(r => setTimeout(r, 10));
-            return { success: true, tests: [] };
+            return { 
+              success: true, 
+              generatedTests: {
+                success: true,
+                tests: [],
+                testSuite: ''
+              },
+              analysis: {
+                canBeFixed: true,
+                issueType: 'security',
+                filesToModify: ['file.js']
+              }
+            };
           }
         }
       }));

@@ -135,12 +135,12 @@ export class PhaseExecutor {
         for (const issue of options.issues) {
           try {
             const result = await this.executeScanForIssue(issue);
-            if (result.success && result.data?.scan) {
+            if (result.success && result.data) {
               scanResults.vulnerabilities.push({
                 issueNumber: issue.number,
-                ...result.data.scan
+                ...result.data
               });
-              if (!result.data.scan.canBeFixed) {
+              if (!result.data.canBeFixed) {
                 scanResults.canBeFixed = false;
               }
             }
@@ -1496,7 +1496,18 @@ ${validation.falsePositive ?
       
       for (const issue of options.issues) {
         const issueKey = `issue-${issue.number}`;
-        const validation = validationData.validation[issueKey];
+        
+        // Handle both single issue and multi-issue validation data structures
+        let validation;
+        if (validationData.validation) {
+          // Check if it's a single validation object or a map
+          if (validationData.validation[issueKey]) {
+            validation = validationData.validation[issueKey];
+          } else if (validationData.validation.issueNumber === issue.number) {
+            // Single issue validation structure
+            validation = validationData.validation;
+          }
+        }
         
         if (!validation) {
           logger.warn(`[MITIGATE-STANDALONE] No validation data for issue #${issue.number}`);
