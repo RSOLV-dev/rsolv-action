@@ -6,6 +6,7 @@
  */
 
 import type { Vulnerability } from './types.js';
+import { logger } from '../utils/logger.js';
 
 // === CORE TYPES ===
 

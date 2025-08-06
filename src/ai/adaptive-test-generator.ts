@@ -1368,8 +1368,8 @@ function testFunctionalityMaintained() {
       
       const options: TestGenerationOptions = {
         vulnerabilityType: vulnerability.type,
-        language,
-        testFramework: framework?.name || 'jest',
+        language: language as "javascript" | "typescript" | "python" | "ruby" | "php" | "java" | "elixir",
+        testFramework: (framework?.name || 'jest') as "jest" | "mocha" | "bun" | "cypress",
         includeE2E: false
       };
 

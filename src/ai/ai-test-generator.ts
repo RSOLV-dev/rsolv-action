@@ -31,7 +31,7 @@ export class AITestGenerator {
       const providerConfig: AiProviderConfig = {
         provider: this.aiConfig.provider || 'anthropic',
         apiKey: this.aiConfig.apiKey || '',
-        model: this.aiConfig.model,
+        model: this.aiConfig.model || 'claude-3-sonnet',
         temperature: this.aiConfig.temperature,
         maxTokens: this.aiConfig.maxTokens,
         useVendedCredentials: this.aiConfig.useVendedCredentials

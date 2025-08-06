@@ -176,10 +176,11 @@ export class ClaudeCodeCLIAdapter {
         }
         
         const [command, commandArgs] = cliCommands[attemptIndex];
-        logger.info(`Attempting: ${command} ${commandArgs.join(' ')}`);
+        const argsArray = Array.isArray(commandArgs) ? commandArgs : [commandArgs];
+        logger.info(`Attempting: ${command} ${argsArray.join(' ')}`);
         attemptIndex++;
         
-        child = spawn(command, commandArgs, {
+        child = spawn(command, argsArray, {
           ...options,
           stdio: ['pipe', 'pipe', 'pipe']
         });
@@ -191,7 +192,7 @@ export class ClaudeCodeCLIAdapter {
         let stdout = '';
         let stderr = '';
 
-        child.stdout?.on('data', (data) => {
+        child.stdout?.on('data', (data: Buffer) => {
           const chunk = data.toString();
           stdout += chunk;
           // Log output in real-time for debugging
@@ -199,14 +200,14 @@ export class ClaudeCodeCLIAdapter {
           process.stdout.write(chunk);
         });
 
-        child.stderr?.on('data', (data) => {
+        child.stderr?.on('data', (data: Buffer) => {
           const chunk = data.toString();
           stderr += chunk;
           // Log errors in real-time
           process.stderr.write(chunk);
         });
 
-        child.on('close', (code) => {
+        child.on('close', (code: number | null) => {
           clearTimeout(timeout); // Clear timeout on completion
           if (code === 0) {
             resolve({ success: true, output: stdout });
@@ -218,7 +219,7 @@ export class ClaudeCodeCLIAdapter {
           }
         });
 
-        child.on('error', (error) => {
+        child.on('error', (error: Error) => {
           // If this command failed, try the next one
           if (attemptIndex < cliCommands.length) {
             logger.debug(`Command ${command} failed with: ${error.message}, trying next approach...`);
