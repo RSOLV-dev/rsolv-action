@@ -1,0 +1,447 @@
+/**
+ * Tests for phase decomposition of processIssueWithGit
+ * Testing the extracted phases from processIssueWithGit
+ */
+
+import { describe, test, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
+import { PhaseExecutor } from '../phase-executor/index.js';
+import { IssueContext, ActionConfig } from '../../types/index.js';
+import * as childProcess from 'child_process';
+
+describe('Phase Decomposition - processIssueWithGit refactoring', () => {
+  let executor: PhaseExecutor;
+  let mockConfig: ActionConfig;
+  let mockIssue: IssueContext;
+
+  beforeEach(() => {
+    // Reset mocks
+    mock.restore();
+    
+    // Mock analyzeIssue to return proper structure
+    mock.module('../../ai/analyzer.js', () => ({
+      analyzeIssue: mock(() => Promise.resolve({
+        canBeFixed: true,
+        issueType: 'sql-injection',
+        filesToModify: ['user.js'],
+        suggestedApproach: 'Use parameterized queries',
+        estimatedComplexity: 'medium',
+        vulnerabilityType: 'SQL_INJECTION',
+        severity: 'high'
+      }))
+    }));
+    
+    // Mock git status to be clean by default
+    mock.module('child_process', () => ({
+      execSync: mock((cmd: string) => {
+        if (cmd.includes('git status')) {
+          return ''; // Clean status
+        }
+        if (cmd.includes('git rev-parse HEAD')) {
+          return 'abc123def456';
+        }
+        return '';
+      })
+    }));
+    
+    mockConfig = {
+      aiProvider: {
+        provider: 'anthropic',
+        apiKey: 'test-key',
+        model: 'claude-3',
+        maxTokens: 4000
+      },
+      enableSecurityAnalysis: true,
+      fixValidation: {
+        enabled: true,
+        maxIterations: 3
+      },
+      testGeneration: {
+        enabled: true,
+        validateFixes: true
+      }
+    } as ActionConfig;
+
+    mockIssue = {
+      id: 'issue-123',
+      number: 123,
+      title: 'SQL Injection in user.js',
+      body: 'Found SQL injection vulnerability',
+      labels: ['rsolv:automate'],
+      assignees: [],
+      repository: {
+        owner: 'test',
+        name: 'repo',
+        fullName: 'test/repo',
+        defaultBranch: 'main',
+        language: 'JavaScript'
+      },
+      source: 'github',
+      createdAt: '2025-08-06T10:00:00Z',
+      updatedAt: '2025-08-06T10:00:00Z',
+      metadata: {}
+    };
+
+    executor = new PhaseExecutor(mockConfig);
+  });
+
+  afterEach(() => {
+    mock.restore();
+  });
+
+  describe('Scan Phase Extraction', () => {
+    test('executeScanForIssue should analyze issue and determine if fixable', async () => {
+      // This method doesn't exist yet - RED phase
+      const result = await executor.executeScanForIssue(mockIssue);
+      
+      expect(result.success).toBe(true);
+      expect(result.phase).toBe('scan');
+      expect(result.data).toHaveProperty('canBeFixed');
+      expect(result.data).toHaveProperty('analysisData');
+      expect(result.data).toHaveProperty('gitStatus');
+    });
+
+    test('executeScanForIssue should fail if git has uncommitted changes', async () => {
+      // Mock dirty git state
+      const mockCheckGitStatus = mock(() => ({
+        clean: false,
+        modifiedFiles: ['file1.js', 'file2.js']
+      }));
+      
+      executor.checkGitStatus = mockCheckGitStatus;
+      
+      const result = await executor.executeScanForIssue(mockIssue);
+      
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Uncommitted changes');
+    });
+
+    test('executeScanForIssue should store scan results in PhaseDataClient', async () => {
+      const storeSpy = mock(() => Promise.resolve());
+      executor.phaseDataClient.storePhaseResults = storeSpy;
+      
+      await executor.executeScanForIssue(mockIssue);
+      
+      expect(storeSpy).toHaveBeenCalledWith(
+        'scan',
+        expect.objectContaining({
+          scan: expect.objectContaining({
+            analysisData: expect.any(Object),
+            canBeFixed: expect.any(Boolean)
+          })
+        }),
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('Validate Phase Extraction', () => {
+    test('executeValidateForIssue should generate tests for vulnerability', async () => {
+      // This method doesn't exist yet - RED phase
+      const scanData = {
+        analysisData: {
+          canBeFixed: true,
+          issueType: 'sql-injection',
+          filesToModify: ['user.js']
+        }
+      };
+      
+      const result = await executor.executeValidateForIssue(mockIssue, scanData);
+      
+      expect(result.success).toBe(true);
+      expect(result.phase).toBe('validate');
+      expect(result.data).toHaveProperty('generatedTests');
+      expect(result.data.generatedTests).toHaveProperty('testSuite');
+    });
+
+    test('executeValidateForIssue should use TestGeneratingSecurityAnalyzer', async () => {
+      const mockAnalyzer = {
+        analyzeWithTestGeneration: mock(() => Promise.resolve({
+          generatedTests: {
+            success: true,
+            testSuite: 'test code here',
+            tests: [{
+              testCode: 'test code',
+              framework: 'jest'
+            }]
+          }
+        }))
+      };
+      
+      executor.testGeneratingAnalyzer = mockAnalyzer;
+      
+      const scanData = {
+        analysisData: {
+          canBeFixed: true,
+          filesToModify: ['user.js']
+        }
+      };
+      
+      const result = await executor.executeValidateForIssue(mockIssue, scanData);
+      
+      expect(mockAnalyzer.analyzeWithTestGeneration).toHaveBeenCalled();
+      expect(result.data.generatedTests.success).toBe(true);
+    });
+
+    test('executeValidateForIssue should store validation results', async () => {
+      const storeSpy = mock(() => Promise.resolve());
+      executor.phaseDataClient.storePhaseResults = storeSpy;
+      
+      const scanData = {
+        analysisData: {
+          canBeFixed: true,
+          filesToModify: ['user.js']
+        }
+      };
+      
+      await executor.executeValidateForIssue(mockIssue, scanData);
+      
+      expect(storeSpy).toHaveBeenCalledWith(
+        'validate',
+        expect.objectContaining({
+          validation: expect.objectContaining({
+            generatedTests: expect.any(Object)
+          })
+        }),
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('Mitigate Phase Extraction', () => {
+    test('executeMitigateForIssue should apply fix using Claude Code', async () => {
+      // Mock the Claude Code adapter
+      mock.module('../../ai/adapters/claude-code-git.js', () => ({
+        GitBasedClaudeCodeAdapter: class {
+          constructor() {}
+          async generateSolutionWithGit() {
+            return {
+              success: true,
+              commitHash: 'fix-commit-123',
+              summary: { title: 'Fix SQL injection' },
+              filesModified: ['user.js'],
+              diffStats: { insertions: 10, deletions: 5, filesChanged: 1 }
+            };
+          }
+        }
+      }));
+      
+      // Mock PR creation
+      mock.module('../../github/pr-git-educational.js', () => ({
+        createEducationalPullRequest: mock(() => Promise.resolve({
+          success: true,
+          pullRequestUrl: 'https://github.com/test/repo/pull/1',
+          pullRequestNumber: 1
+        }))
+      }));
+      
+      mock.module('../../github/pr-git.js', () => ({
+        createPullRequestFromGit: mock(() => Promise.resolve({
+          success: true,
+          pullRequestUrl: 'https://github.com/test/repo/pull/1',
+          pullRequestNumber: 1
+        }))
+      }));
+      
+      const validationData = {
+        generatedTests: {
+          success: true,
+          testSuite: 'test code',
+          tests: [{
+            testCode: 'test',
+            framework: 'jest'
+          }]
+        }
+      };
+      
+      const scanData = {
+        analysisData: {
+          canBeFixed: true,
+          issueType: 'sql-injection',
+          suggestedApproach: 'Use parameterized queries'
+        }
+      };
+      
+      const result = await executor.executeMitigateForIssue(
+        mockIssue, 
+        scanData,
+        validationData
+      );
+      
+      expect(result.success).toBe(true);
+      expect(result.phase).toBe('mitigate');
+      expect(result.data).toHaveProperty('pullRequestUrl');
+      expect(result.data).toHaveProperty('commitHash');
+    });
+
+    test('executeMitigateForIssue should validate fix with generated tests', async () => {
+      const mockValidator = {
+        validateFixWithTests: mock(() => Promise.resolve({
+          isValidFix: true,
+          fixedCommit: {
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
+        }))
+      };
+      
+      executor.gitBasedValidator = mockValidator;
+      
+      const validationData = {
+        generatedTests: {
+          success: true,
+          testSuite: 'test code'
+        }
+      };
+      
+      const scanData = {
+        analysisData: {
+          canBeFixed: true
+        }
+      };
+      
+      await executor.executeMitigateForIssue(mockIssue, scanData, validationData);
+      
+      expect(mockValidator.validateFixWithTests).toHaveBeenCalled();
+    });
+
+    test('executeMitigateForIssue should retry on validation failure', async () => {
+      let attemptCount = 0;
+      const mockValidator = {
+        validateFixWithTests: mock(() => {
+          attemptCount++;
+          return Promise.resolve({
+            isValidFix: attemptCount >= 2, // Fail first, succeed second
+            fixedCommit: {
+              redTestPassed: attemptCount >= 2,
+              greenTestPassed: true,
+              refactorTestPassed: true
+            }
+          });
+        })
+      };
+      
+      executor.gitBasedValidator = mockValidator;
+      executor.maxIterations = 3;
+      
+      const validationData = {
+        generatedTests: {
+          success: true,
+          testSuite: 'test code'
+        }
+      };
+      
+      const scanData = {
+        analysisData: {
+          canBeFixed: true
+        }
+      };
+      
+      const result = await executor.executeMitigateForIssue(
+        mockIssue, 
+        scanData, 
+        validationData
+      );
+      
+      expect(attemptCount).toBe(2);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('Full Three-Phase Execution', () => {
+    test('executeThreePhaseForIssue should run all phases sequentially', async () => {
+      // This method doesn't exist yet - RED phase
+      const result = await executor.executeThreePhaseForIssue(mockIssue);
+      
+      expect(result.success).toBe(true);
+      expect(result.phase).toBe('three-phase');
+      expect(result.data).toHaveProperty('scan');
+      expect(result.data).toHaveProperty('validation');
+      expect(result.data).toHaveProperty('mitigation');
+    });
+
+    test('executeThreePhaseForIssue should abort if scan determines not fixable', async () => {
+      executor.executeScanForIssue = mock(() => Promise.resolve({
+        success: true,
+        phase: 'scan',
+        data: {
+          canBeFixed: false,
+          analysisData: {
+            canBeFixed: false,
+            reason: 'Too complex'
+          }
+        }
+      }));
+      
+      const result = await executor.executeThreePhaseForIssue(mockIssue);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('cannot be fixed');
+      expect(result.data).not.toHaveProperty('validation');
+      expect(result.data).not.toHaveProperty('mitigation');
+    });
+
+    test('executeThreePhaseForIssue should pass data between phases', async () => {
+      const scanSpy = mock(() => Promise.resolve({
+        success: true,
+        phase: 'scan',
+        data: { canBeFixed: true, analysisData: { test: 'scan' } }
+      }));
+      
+      const validateSpy = mock(() => Promise.resolve({
+        success: true,
+        phase: 'validate',
+        data: { generatedTests: { test: 'validate' } }
+      }));
+      
+      const mitigateSpy = mock(() => Promise.resolve({
+        success: true,
+        phase: 'mitigate',
+        data: { pullRequestUrl: 'https://github.com/pr/1' }
+      }));
+      
+      executor.executeScanForIssue = scanSpy;
+      executor.executeValidateForIssue = validateSpy;
+      executor.executeMitigateForIssue = mitigateSpy;
+      
+      await executor.executeThreePhaseForIssue(mockIssue);
+      
+      // Validate should receive scan data
+      expect(validateSpy).toHaveBeenCalledWith(
+        mockIssue,
+        expect.objectContaining({ analysisData: { test: 'scan' } })
+      );
+      
+      // Mitigate should receive both scan and validation data
+      expect(mitigateSpy).toHaveBeenCalledWith(
+        mockIssue,
+        expect.objectContaining({ analysisData: { test: 'scan' } }),
+        expect.objectContaining({ generatedTests: { test: 'validate' } })
+      );
+    });
+  });
+
+  describe('Backward Compatibility', () => {
+    test('executeFix should still use original processIssueWithGit', async () => {
+      const mockProcessIssueWithGit = mock(() => Promise.resolve({
+        issueId: 'issue-123',
+        success: true,
+        message: 'Fixed',
+        pullRequestUrl: 'https://github.com/pr/1'
+      }));
+      
+      // Mock the import
+      const { processIssueWithGit } = await import('../../ai/git-based-processor.js');
+      mock.module('../../ai/git-based-processor.js', () => ({
+        processIssueWithGit: mockProcessIssueWithGit
+      }));
+      
+      const result = await executor.executeFix({
+        issues: [mockIssue]
+      });
+      
+      expect(result.success).toBe(true);
+      expect(result.phase).toBe('fix');
+    });
+  });
+});
