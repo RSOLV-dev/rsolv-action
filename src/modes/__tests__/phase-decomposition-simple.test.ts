@@ -55,33 +55,32 @@ describe('Phase Decomposition - Simple Tests', () => {
     executor.checkGitStatus = () => ({ clean: true, modifiedFiles: [] });
     
     // Mock analyzeIssue
-    const analyzeIssueMock = () => Promise.resolve({
-      canBeFixed: true,
-      issueType: 'test',
-      filesToModify: [],
-      suggestedApproach: 'test'
-    });
-    
-    // Override the module import
-    const originalAnalyzeIssue = await import('../../ai/analyzer.js');
-    (originalAnalyzeIssue as any).analyzeIssue = analyzeIssueMock;
-    
-    // Test structure without actually calling external services
-    const result = {
-      success: true,
-      phase: 'scan',
-      message: 'Test',
-      data: {
+    executor.analyzer = {
+      analyzeIssue: () => Promise.resolve({
         canBeFixed: true,
-        analysisData: {},
-        gitStatus: { clean: true, modifiedFiles: [] }
-      }
-    };
+        issueType: 'test',
+        filesToModify: [],
+        suggestedApproach: 'test',
+        vulnerabilityType: 'TEST',
+        severity: 'low'
+      })
+    } as any;
+    
+    // Mock PhaseDataClient
+    executor.phaseDataClient = {
+      storePhaseResults: () => Promise.resolve()
+    } as any;
+    
+    // Actually call the method
+    const result = await executor.executeScanForIssue(mockIssue);
     
     expect(result).toHaveProperty('success');
     expect(result).toHaveProperty('phase');
+    expect(result.phase).toBe('scan');
     expect(result).toHaveProperty('data');
     expect(result.data).toHaveProperty('canBeFixed');
+    expect(result.data).toHaveProperty('analysisData');
+    expect(result.data).toHaveProperty('gitStatus');
   });
 
   test('executeValidateForIssue accepts scan data', async () => {

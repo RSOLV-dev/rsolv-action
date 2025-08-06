@@ -1,0 +1,19 @@
+{
+  "phase": "mitigate",
+  "data": {
+    "mitigation": {
+      "issue-789": {
+        "success": true,
+        "issueNumber": 789,
+        "testsPass": true,
+        "refactored": false,
+        "attempts": 1
+      }
+    }
+  },
+  "metadata": {
+    "repo": "test/webapp",
+    "commitSha": "a2b67eb26b07b640f95e63230112721be2fd7509"
+  },
+  "timestamp": "2025-08-06T21:48:38.340Z"
+}

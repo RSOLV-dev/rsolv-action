@@ -89,7 +89,15 @@ export class ClaudeCodeAdapter {
       }
       
       // Check if the executable exists
-      const executablePath = this.claudeConfig.executablePath || '/app/node_modules/@anthropic-ai/claude-code/cli.js';
+      // Try multiple locations for the Claude Code executable
+      const possiblePaths = [
+        this.claudeConfig.executablePath,
+        path.join(__dirname, '..', '..', '..', 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
+        path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
+        '/home/dylan/dev/rsolv/RSOLV-action/node_modules/@anthropic-ai/claude-code/cli.js'
+      ].filter(Boolean);
+      
+      const executablePath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
       const execExists = fs.existsSync(executablePath);
       
       if (!execExists) {
@@ -195,7 +203,15 @@ Installation instructions:
           abortController,
           cwd: this.repoPath,
           maxTurns: 30, // Allow many turns for exploration and iterative development
-          pathToClaudeCodeExecutable: this.claudeConfig.executablePath || '/app/node_modules/@anthropic-ai/claude-code/cli.js',
+          pathToClaudeCodeExecutable: (() => {
+            const possiblePaths = [
+              this.claudeConfig.executablePath,
+              path.join(__dirname, '..', '..', '..', 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
+              path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
+              '/home/dylan/dev/rsolv/RSOLV-action/node_modules/@anthropic-ai/claude-code/cli.js'
+            ].filter(Boolean);
+            return possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+          })(),
         };
         
         // For structured phases, we need core Edit/MultiEdit tools, not MCP tools
