@@ -242,10 +242,38 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
         }))
       }));
       
+      // Mock test validator directly on executor instance
+      executor.gitBasedValidator = {
+        validateFixWithTests: mock(() => Promise.resolve({
+          isValidFix: true,
+          fixedCommit: {
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
+        }))
+      } as any;
+      
       const validationData = {
         generatedTests: {
           success: true,
-          testSuite: 'test code',
+          testSuite: {
+            red: {
+              testName: 'SQL Injection RED test',
+              testCode: 'assert(vulnerabilityExists())',
+              expectedBehavior: 'Should detect vulnerability'
+            },
+            green: {
+              testName: 'SQL Injection GREEN test',
+              testCode: 'assert(!vulnerabilityExists())',
+              expectedBehavior: 'Should pass after fix'
+            },
+            refactor: {
+              testName: 'Refactor validation test',
+              testCode: 'assert(functionalityPreserved())',
+              expectedBehavior: 'Should maintain functionality'
+            }
+          },
           tests: [{
             testCode: 'test',
             framework: 'jest'
@@ -267,6 +295,9 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
         validationData
       );
       
+      if (!result.success) {
+        console.log('Test result:', result);
+      }
       expect(result.success).toBe(true);
       expect(result.phase).toBe('mitigate');
       expect(result.data).toHaveProperty('pullRequestUrl');

@@ -26,14 +26,14 @@
         },
         "canBeFixed": true,
         "usedPriorScan": false,
-        "timestamp": "2025-08-06T21:48:38.324Z"
+        "timestamp": "2025-08-06T22:10:53.589Z"
       }
     }
   },
   "metadata": {
     "repo": "test/webapp",
     "issueNumber": 456,
-    "commitSha": "a2b67eb26b07b640f95e63230112721be2fd7509"
+    "commitSha": "8d712c83717a62605029f4fb8bc1c6b4c144a06f"
   },
-  "timestamp": "2025-08-06T21:48:38.328Z"
+  "timestamp": "2025-08-06T22:10:53.593Z"
 }

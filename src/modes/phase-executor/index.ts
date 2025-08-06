@@ -1050,6 +1050,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
               validated: false,
               canBeFixed: false,
               reason: 'Issue cannot be automatically fixed',
+              usedPriorScan: scanData.usedPriorScan || false,
               timestamp: new Date().toISOString()
             });
             continue;
@@ -1099,6 +1100,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           const validationResult = {
             issueNumber: issue.number,
             ...testResults,
+            usedPriorScan: scanData.usedPriorScan || false,
             timestamp: new Date().toISOString()
           };
 

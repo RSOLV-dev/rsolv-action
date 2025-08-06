@@ -18,6 +18,33 @@ describe('Mitigation-Only Mode', () => {
     // Clean up mocks to prevent pollution
     mock.restore();
     
+    // Mock Claude Code adapter to prevent actual execution
+    mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      GitBasedClaudeCodeAdapter: class {
+        async generateSolutionWithGit() {
+          return {
+            success: true,
+            prUrl: 'https://github.com/test/webapp/pull/790',
+            fixCommit: 'abc123',
+            filesModified: ['src/user.js']
+          };
+        }
+      }
+    }));
+    
+    // Mock git status to be clean
+    mock.module('child_process', () => ({
+      execSync: mock((cmd: string) => {
+        if (cmd.includes('git status --porcelain')) {
+          return ''; // Clean status
+        }
+        if (cmd.includes('git rev-parse HEAD')) {
+          return 'abc123def456';
+        }
+        return '';
+      })
+    }));
+    
     mockConfig = {
       aiProvider: {
         provider: 'anthropic',
@@ -161,7 +188,7 @@ describe('Mitigation-Only Mode', () => {
   describe('Fix Application', () => {
     test('should apply fix using GitBasedClaudeCodeAdapter', async () => {
       // Mock the adapter
-      mock.module('../../ai/git-based-claude-code-adapter.js', () => ({
+      mock.module('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit() {
             return {
@@ -359,7 +386,7 @@ describe('Mitigation-Only Mode', () => {
       const issue2 = { ...mockIssue, number: 791, id: 'issue-791' };
       
       // Make second issue fail
-      mock.module('../../ai/git-based-claude-code-adapter.js', () => ({
+      mock.module('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit(issue: any) {
             if (issue.number === 791) {
@@ -430,7 +457,7 @@ describe('Mitigation-Only Mode', () => {
 
     test('should timeout if fix takes too long', async () => {
       // Mock slow fix generation
-      mock.module('../../ai/git-based-claude-code-adapter.js', () => ({
+      mock.module('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit() {
             await new Promise(resolve => setTimeout(resolve, 10000));
