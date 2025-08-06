@@ -1,0 +1,15 @@
+{
+  "phase": "scan",
+  "data": {
+    "scan": {
+      "vulnerabilities": [],
+      "timestamp": "2025-08-06T20:15:30.300Z",
+      "commitHash": "abc123def456"
+    }
+  },
+  "metadata": {
+    "repo": "test/webapp",
+    "commitSha": "abc123def456"
+  },
+  "timestamp": "2025-08-06T20:15:30.322Z"
+}

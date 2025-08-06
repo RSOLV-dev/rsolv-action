@@ -113,15 +113,61 @@ export class PhaseExecutor {
    */
   async executeScan(options: ExecuteOptions): Promise<ExecuteResult> {
     try {
-      if (!options.repository) {
+      // Extract repository from options or first issue
+      let repository = options.repository;
+      if (!repository && options.issues && options.issues.length > 0) {
+        repository = options.issues[0].repository;
+      }
+      
+      if (!repository) {
         throw new Error('Scan mode requires repository information');
       }
 
+      // If we have specific issues, scan them individually
+      if (options.issues && options.issues.length > 0) {
+        const scanResults: any = {
+          canBeFixed: true,
+          vulnerabilities: [],
+          timestamp: new Date().toISOString(),
+          commitHash: await this.getCurrentCommitSha()
+        };
+
+        for (const issue of options.issues) {
+          try {
+            const result = await this.executeScanForIssue(issue);
+            if (result.success && result.data?.scan) {
+              scanResults.vulnerabilities.push({
+                issueNumber: issue.number,
+                ...result.data.scan
+              });
+              if (!result.data.scan.canBeFixed) {
+                scanResults.canBeFixed = false;
+              }
+            }
+          } catch (err) {
+            logger.warn(`Failed to scan issue #${issue.number}:`, err);
+          }
+        }
+
+        // Store combined results
+        await this.storePhaseData('scan', scanResults, {
+          repo: `${repository.owner}/${repository.name}`,
+          commitSha: scanResults.commitHash
+        });
+
+        return {
+          success: true,
+          phase: 'scan',
+          data: { scan: scanResults }
+        };
+      }
+
+      // Full repository scan (original behavior)
       const scanResult = await this.getScanner().performScan({
         mode: 'scan',
         repository: {
-          ...options.repository,
-          defaultBranch: options.repository.defaultBranch || 'main'
+          ...repository,
+          defaultBranch: repository.defaultBranch || 'main'
         },
         createIssues: true,
         batchSimilar: true,
@@ -133,7 +179,7 @@ export class PhaseExecutor {
       // Store scan results
       const commitSha = options.commitSha || this.getCurrentCommitSha();
       await this.storePhaseData('scan', scanResult, {
-        repo: `${options.repository.owner}/${options.repository.name}`,
+        repo: `${repository.owner}/${repository.name}`,
         commitSha
       });
 
@@ -1031,6 +1077,19 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             };
           } else {
             scanData.usedPriorScan = true;
+          }
+
+          // Skip validation if issue cannot be fixed
+          if (!scanData.canBeFixed) {
+            logger.info(`[VALIDATE] Skipping issue #${issue.number} - cannot be automatically fixed`);
+            validationResults[`issue-${issue.number}`] = {
+              issueNumber: issue.number,
+              validated: false,
+              canBeFixed: false,
+              reason: 'Issue cannot be automatically fixed',
+              timestamp: new Date().toISOString()
+            };
+            continue;
           }
 
           // Generate validation tests
