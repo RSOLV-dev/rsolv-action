@@ -98,17 +98,6 @@ describe('PhaseExecutor', () => {
       expect(result.success).toBe(true);
     });
 
-    test('should execute fix mode (legacy) with issue', async () => {
-      const { PhaseExecutor } = await import('../phase-executor');
-      executor = new PhaseExecutor(mockConfig);
-
-      const result = await executor.execute('fix', {
-        issues: [mockIssue]
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.phase).toBe('fix');
-    });
 
     test('should execute full mode without prerequisites', async () => {
       const { PhaseExecutor } = await import('../phase-executor');

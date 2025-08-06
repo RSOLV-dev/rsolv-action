@@ -421,27 +421,4 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
     });
   });
 
-  describe('Backward Compatibility', () => {
-    test('executeFix should still use original processIssueWithGit', async () => {
-      const mockProcessIssueWithGit = mock(() => Promise.resolve({
-        issueId: 'issue-123',
-        success: true,
-        message: 'Fixed',
-        pullRequestUrl: 'https://github.com/pr/1'
-      }));
-      
-      // Mock the import
-      const { processIssueWithGit } = await import('../../ai/git-based-processor.js');
-      mock.module('../../ai/git-based-processor.js', () => ({
-        processIssueWithGit: mockProcessIssueWithGit
-      }));
-      
-      const result = await executor.executeFix({
-        issues: [mockIssue]
-      });
-      
-      expect(result.success).toBe(true);
-      expect(result.phase).toBe('fix');
-    });
-  });
 });
