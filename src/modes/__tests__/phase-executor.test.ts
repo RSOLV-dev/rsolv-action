@@ -15,10 +15,38 @@ describe('PhaseExecutor', () => {
     // Clear all mocks to avoid pollution
     mock.restore();
     
+    // Mock AI components globally to prevent configuration errors
+    mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      GitBasedClaudeCodeAdapter: class {
+        async generateSolutionWithGit() {
+          return {
+            success: true,
+            pullRequestUrl: 'https://github.com/test/repo/pull/1',
+            pullRequestNumber: 1,
+            commitHash: 'abc123',
+            filesModified: ['test.js']
+          };
+        }
+      }
+    }));
+    
+    mock.module('../../ai/git-based-test-validator.js', () => ({
+      GitBasedTestValidator: class {
+        async validateFixWithTests() {
+          return { isValidFix: true };
+        }
+      }
+    }));
+    
     // Set up common mocks
     mockConfig = {
       githubToken: 'test-token',
-      apiKey: 'test-api-key'
+      apiKey: 'test-api-key',
+      aiProvider: {
+        provider: 'anthropic',
+        apiKey: 'test-anthropic-key',
+        model: 'claude-3-sonnet'
+      }
     } as ActionConfig;
 
     mockIssue = {
@@ -91,13 +119,17 @@ describe('PhaseExecutor', () => {
       expect(result.success).toBe(false);
       expect(result.error || result.message || '').toContain('No issues provided for mitigation');
 
-      // Should succeed with issue number (mock validation data)
+      // Should succeed with issue number (mock validation data and AI components)
       const mockValidation = {
         validation: {
-          generatedTests: {
-            success: true,
-            testSuite: 'test code',
-            tests: [{ name: 'test', code: 'test code', type: 'red' }]
+          "issue-123": {
+            generatedTests: {
+              success: true,
+              testSuite: 'test code',
+              tests: [{ name: 'test', code: 'test code', type: 'red' }]
+            },
+            validated: true,
+            analysisData: { canBeFixed: true }
           }
         }
       };

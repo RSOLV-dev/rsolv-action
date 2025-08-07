@@ -2,6 +2,9 @@
   "phase": "scan",
   "data": {
     "scan": {
+      "vulnerabilities": [],
+      "timestamp": "2025-08-07T00:01:18.900Z",
+      "commitHash": "abc123def456",
       "canBeFixed": true,
       "analysisData": {
         "canBeFixed": true,
@@ -17,8 +20,7 @@
       "gitStatus": {
         "clean": true,
         "modifiedFiles": []
-      },
-      "timestamp": "2025-08-06T22:21:35.788Z"
+      }
     }
   },
   "metadata": {
@@ -26,5 +28,5 @@
     "issueNumber": 123,
     "commitSha": "abc123def456"
   },
-  "timestamp": "2025-08-06T22:21:35.790Z"
+  "timestamp": "2025-08-07T00:01:18.901Z"
 }

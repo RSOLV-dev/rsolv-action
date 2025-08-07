@@ -158,7 +158,7 @@ export class ClaudeCodeCLIAdapter {
       let child: any;
       // Try different approaches to find Claude CLI
       // Use --print for non-interactive mode with acceptEdits permission
-      const cliCommands = [
+      const cliCommands: [string, string[]][] = [
         ['claude', ['--print', '--permission-mode', 'acceptEdits', '-']],  // Global install
         ['bunx', ['@anthropic-ai/claude-code', '--print', '--permission-mode', 'acceptEdits', '-']],  // Bunx
         ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', '--print', '--permission-mode', 'acceptEdits', '-']]  // Direct run
@@ -176,11 +176,10 @@ export class ClaudeCodeCLIAdapter {
         }
         
         const [command, commandArgs] = cliCommands[attemptIndex];
-        const argsArray = Array.isArray(commandArgs) ? commandArgs : [commandArgs];
-        logger.info(`Attempting: ${command} ${argsArray.join(' ')}`);
+        logger.info(`Attempting: ${command} ${commandArgs.join(' ')}`);
         attemptIndex++;
         
-        child = spawn(command, argsArray, {
+        child = spawn(command, commandArgs, {
           ...options,
           stdio: ['pipe', 'pipe', 'pipe']
         });

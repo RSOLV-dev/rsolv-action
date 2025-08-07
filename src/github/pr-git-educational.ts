@@ -119,7 +119,7 @@ export async function createEducationalPullRequest(
     const educationalContent = generateEducationalContent(summary, issue);
     
     // Generate comprehensive PR body
-    const prBody = generateEducationalPrBody(issue, summary, diffStats, educationalContent);
+    const prBody = generateEducationalPrBody(issue, summary, educationalContent, diffStats);
     
     // Create the pull request
     const github = getGitHubClient();
@@ -280,12 +280,12 @@ function generateEducationalPrBody(
     cwe?: string;
     tests?: string[];
   },
+  educationalContent: string,
   diffStats?: {
     insertions: number;
     deletions: number;
     filesChanged: number;
-  },
-  educationalContent: string
+  }
 ): string {
   const sections: string[] = [];
   

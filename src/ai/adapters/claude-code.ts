@@ -97,8 +97,9 @@ export class ClaudeCodeAdapter {
         '/home/dylan/dev/rsolv/RSOLV-action/node_modules/@anthropic-ai/claude-code/cli.js'
       ].filter(Boolean);
       
-      const executablePath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
-      const execExists = executablePath ? fs.existsSync(executablePath) : false;
+      const foundPath = possiblePaths.find(p => p && fs.existsSync(p));
+      const executablePath: string = foundPath || (possiblePaths.length > 0 && possiblePaths[0] ? possiblePaths[0] : '/dev/null');
+      const execExists = fs.existsSync(executablePath);
       
       if (!execExists) {
         logger.warn(`Claude Code executable not found at: ${executablePath}`);
@@ -210,7 +211,8 @@ Installation instructions:
               path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
               '/home/dylan/dev/rsolv/RSOLV-action/node_modules/@anthropic-ai/claude-code/cli.js'
             ].filter(Boolean);
-            return possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0] || '';
+            const found = possiblePaths.find(p => p && fs.existsSync(p));
+            return found || (possiblePaths.length > 0 && possiblePaths[0] ? possiblePaths[0] : '/dev/null');
           })(),
         };
         

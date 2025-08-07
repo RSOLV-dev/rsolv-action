@@ -96,6 +96,11 @@ export interface AnalysisData {
   codeSnippets?: Record<string, string>;
   confidenceScore?: number;
   canBeFixed?: boolean;
+  vulnerabilityType?: string;
+  severity?: string;
+  cwe?: string;
+  isAiGenerated?: boolean;
+  cannotFixReason?: string;
 }
 
 export type IssueType = 

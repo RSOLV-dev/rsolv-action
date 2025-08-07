@@ -80,14 +80,15 @@ export class ValidationMode {
       // Step 5: Run tests to verify they fail (proving vulnerability exists)
       logger.info(`Running RED tests to prove vulnerability exists`);
       const validator = new GitBasedTestValidator();
-      const validationResult = await validator.validateTests(
-        testResults.generatedTests.testSuite,
-        process.cwd()
+      const validationResult = await validator.validateFixWithTests(
+        'HEAD',
+        'HEAD',
+        testResults.generatedTests.testSuite
       );
       
       // Step 6: Determine validation status
       // RED tests should FAIL on vulnerable code to prove vulnerability exists
-      if (validationResult.passed) {
+      if (validationResult.success) {
         // Tests passed = no vulnerability = false positive
         logger.info(`Tests passed on vulnerable code - marking as false positive`);
         this.addToFalsePositiveCache(issue);

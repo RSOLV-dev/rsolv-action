@@ -33,6 +33,17 @@ export interface ExecuteOptions {
   integrateTests?: boolean;
   postComment?: boolean;
   format?: 'markdown' | 'json' | 'github-actions';
+  
+  // Mitigation-specific options
+  validationData?: any;
+  usePriorValidation?: boolean;
+  generateTestsIfMissing?: boolean;
+  timeout?: number;
+  maxRetries?: number;
+  refactorStyle?: string;
+  createPR?: boolean;
+  prType?: string;
+  includeBeforeAfter?: boolean;
 }
 
 export interface ExecuteResult {
@@ -41,6 +52,8 @@ export interface ExecuteResult {
   message?: string;
   data?: any;
   error?: string;
+  report?: string;
+  jsonReport?: any;
 }
 
 export class PhaseExecutor {
@@ -423,13 +436,16 @@ export class PhaseExecutor {
       }
       
       const scanResult = {
+        vulnerabilities: [], // No vulnerabilities found in single issue analysis
+        timestamp: new Date().toISOString(),
+        commitHash: this.getCurrentCommitSha(),
+        // Additional data for internal use
         canBeFixed: analysisData.canBeFixed || false,
         analysisData,
-        gitStatus,
-        timestamp: new Date().toISOString()
+        gitStatus
       };
       
-      // Store scan results
+      // Store scan results  
       const commitSha = this.getCurrentCommitSha();
       await this.phaseDataClient.storePhaseResults(
         'scan',
@@ -549,13 +565,15 @@ export class PhaseExecutor {
         );
       }
       
+      const issueKey = `issue-${issue.number}`;
       const validationResult = {
-        generatedTests: testResults?.generatedTests || {
-          success: false,
-          message: 'Test generation disabled'
-        },
-        analysisData,
-        timestamp: new Date().toISOString()
+        [issueKey]: {
+          validated: testResults?.generatedTests?.success || false,
+          redTests: testResults?.generatedTests || null,
+          testResults: testResults || null,
+          falsePositiveReason: undefined,
+          timestamp: new Date().toISOString()
+        }
       };
       
       // Store validation results
@@ -573,10 +591,10 @@ export class PhaseExecutor {
       return {
         success: true,
         phase: 'validate',
-        message: validationResult.generatedTests.success ? 
+        message: validationResult[issueKey]?.validated ? 
           'Tests generated successfully' : 
           'Test generation skipped or failed',
-        data: validationResult
+        data: { validation: validationResult }
       };
     } catch (error) {
       logger.error('[VALIDATE] Failed to generate tests', error);
@@ -769,13 +787,14 @@ export class PhaseExecutor {
       logger.info(`[MITIGATE] Successfully created PR in ${processingTime}ms`);
       
       // Store mitigation results
+      const issueKey = `issue-${issue.number}`;
       const mitigationResult = {
-        pullRequestUrl: prResult.pullRequestUrl,
-        pullRequestNumber: prResult.pullRequestNumber,
-        commitHash: solution!.commitHash,
-        filesModified: solution!.filesModified,
-        diffStats: solution!.diffStats,
-        timestamp: new Date().toISOString()
+        [issueKey]: {
+          fixed: solution!.success || false,
+          prUrl: prResult.pullRequestUrl,
+          fixCommit: solution!.commitHash,
+          timestamp: new Date().toISOString()
+        }
       };
       
       await this.phaseDataClient.storePhaseResults(
@@ -1039,18 +1058,20 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
               usedPriorScan: false
             };
           } else {
-            scanData.usedPriorScan = true;
+            // scanData.usedPriorScan = true; - can't modify read-only scan data
+            // We'll track this in validation instead
           }
 
           // Skip validation if issue cannot be fixed
-          if (!scanData.canBeFixed) {
+          const canBeFixed = 'canBeFixed' in scanData ? scanData.canBeFixed : true;
+          if (!canBeFixed) {
             logger.info(`[VALIDATE] Skipping issue #${issue.number} - cannot be automatically fixed`);
             validations.push({
               issueNumber: issue.number,
               validated: false,
               canBeFixed: false,
               reason: 'Issue cannot be automatically fixed',
-              usedPriorScan: scanData.usedPriorScan || false,
+              usedPriorScan: 'usedPriorScan' in scanData ? scanData.usedPriorScan : false,
               timestamp: new Date().toISOString()
             });
             continue;
@@ -1100,7 +1121,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           const validationResult = {
             issueNumber: issue.number,
             ...testResults,
-            usedPriorScan: scanData.usedPriorScan || false,
+            usedPriorScan: 'usedPriorScan' in scanData ? scanData.usedPriorScan : false,
             timestamp: new Date().toISOString()
           };
 
@@ -1379,7 +1400,7 @@ ${validation.falsePositive ?
         // Try to retrieve from PhaseDataClient if we have repository info
         if (options.repository && options.issueNumber) {
           const phaseData = await this.phaseDataClient.retrievePhaseResults(
-            options.repository.fullName,
+            `${options.repository.owner}/${options.repository.name}`,
             options.issueNumber,
             await this.getCurrentCommitSha()
           );
@@ -1400,7 +1421,11 @@ ${validation.falsePositive ?
             body: '',
             labels: [],
             assignees: [],
-            repository: options.repository,
+            repository: {
+              ...options.repository,
+              fullName: `${options.repository.owner}/${options.repository.name}`,
+              defaultBranch: options.repository.defaultBranch || 'main'
+            },
             source: 'github',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -1544,7 +1569,7 @@ ${validation.falsePositive ?
         jsonReport = {
           mitigations: Object.entries(mitigationResults).map(([key, result]) => ({
             issue: key,
-            ...result
+            ...(typeof result === 'object' && result !== null ? result : { result })
           }))
         };
       }
@@ -1562,7 +1587,7 @@ ${validation.falsePositive ?
       return {
         success: allSuccess,
         phase: 'mitigate',
-        partial: !allSuccess && partialSuccess,
+        message: !allSuccess && partialSuccess ? 'Partial success' : undefined,
         data: {
           mitigation: mitigationResults,
           testsGenerated: options.generateTestsIfMissing
@@ -1601,10 +1626,18 @@ ${validation.falsePositive ?
       
       try {
         // Generate fix
-        const solution = await adapter.generateSolutionWithGit(issue, {
-          redTests: validation.generatedTests?.tests || [],
-          mustPassTests: true
-        });
+        const solution = await adapter.generateSolutionWithGit(
+          issue,
+          { 
+            summary: 'Security issue fix',
+            complexity: 'medium' as const,
+            estimatedTime: 30,
+            potentialFixes: ['Apply security fix'],
+            recommendedApproach: 'Fix security vulnerability'
+          },
+          undefined,
+          validation.generatedTests
+        );
         
         // Run tests if requested
         if (options.runTests) {
@@ -1650,7 +1683,7 @@ ${validation.falsePositive ?
         return {
           success: true,
           issueNumber: issue.number,
-          fixCommit: solution.fixCommit,
+          fixCommit: solution.commitHash,
           testsPass: true,
           refactored: options.refactorStyle || false,
           attempts
