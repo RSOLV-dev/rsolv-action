@@ -58,6 +58,52 @@ export async function getRepositoryDetails(owner: string, repo: string): Promise
 }
 
 /**
+ * Get an issue from GitHub
+ */
+export async function getIssue(
+  owner: string,
+  repo: string,
+  issueNumber: number
+): Promise<any> {
+  try {
+    const client = getGitHubClient();
+    
+    const { data } = await client.issues.get({
+      owner,
+      repo,
+      issue_number: issueNumber,
+    });
+    
+    return {
+      id: data.id.toString(),
+      number: data.number,
+      title: data.title,
+      body: data.body || '',
+      labels: data.labels.map(label => 
+        typeof label === 'string' ? label : label.name || ''
+      ),
+      assignees: data.assignees?.map(a => a.login) || [],
+      repository: {
+        owner,
+        name: repo,
+        fullName: `${owner}/${repo}`,
+        defaultBranch: 'main' // Would need separate API call to get this
+      },
+      source: 'github',
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      metadata: {
+        state: data.state,
+        user: data.user?.login
+      }
+    };
+  } catch (error) {
+    logger.error(`Error getting issue #${issueNumber} from ${owner}/${repo}`, error);
+    return null;
+  }
+}
+
+/**
  * Create a comment on an issue
  */
 export async function createIssueComment(
