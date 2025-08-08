@@ -47,7 +47,7 @@ export class IssueCreator {
       repo: config.repository.name,
       title,
       body,
-      labels: [config.issueLabel, 'security', group.severity, 'automated-scan']
+      labels: ['rsolv:detected', 'security', group.severity, 'automated-scan']
     });
     
     return {

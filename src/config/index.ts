@@ -41,6 +41,7 @@ const ActionConfigSchema = z.object({
   apiKey: z.string(),
   configPath: z.string(),
   issueLabel: z.string(),
+  scanLabel: z.string().optional(),  // Label for scan-detected issues
   enableSecurityAnalysis: z.boolean().optional(),
   environmentVariables: z.record(z.string(), z.string()).optional(),
   repoToken: z.string().optional(),
@@ -114,6 +115,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
   return {
     configPath: '.github/rsolv.yml',
     issueLabel: 'rsolv:automate',
+    scanLabel: 'rsolv:detected',  // Label for issues found during scanning
     enableSecurityAnalysis: true,  // Enable security analysis by default
     maxIssues: undefined, // Process all issues by default
     useGitBasedEditing: true,  // Default to true for proper in-place editing (ADR-012)

@@ -4,6 +4,7 @@ export interface ActionConfig {
   apiKey: string;
   configPath: string;
   issueLabel: string;
+  scanLabel?: string;  // Label for scan-detected issues (default: 'rsolv:detected')
   environmentVariables?: Record<string, string>;
   repoToken?: string;
   aiProvider: AiProviderConfig;
