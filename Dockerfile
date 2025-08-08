@@ -102,28 +102,22 @@ RUN MIX_ENV=prod mix compile
 RUN MIX_ENV=prod mix release --overwrite
 
 # Final production stage - minimal runtime image
-# Using Alpine 3.22 to match the elixir:1.18-alpine base image OpenSSL version
-FROM alpine:3.22 AS production
+FROM alpine:3.19 AS production
 
 # Install runtime dependencies including parser languages
 # Note: Keeping image relatively small by only including essential runtimes
 RUN apk add --no-cache \
     # Elixir/Erlang runtime dependencies
     openssl ncurses-libs libstdc++ libgcc \
-    # Health check and debugging
-    curl \
     # Parser runtimes - only the most commonly used initially
     python3 \
-    ruby ruby-dev \
+    ruby \
     php82 php82-json php82-tokenizer \
     # Required for JavaScript parser and shell scripts
     nodejs npm bash
 
 # Install Ruby bundler and parser gem
-# Need build tools temporarily for native extensions
-RUN apk add --no-cache --virtual .build-deps build-base && \
-    gem install bundler parser --no-document && \
-    apk del .build-deps && \
+RUN gem install bundler parser --no-document && \
     rm -rf /root/.gem /usr/lib/ruby/gems/*/cache/*
 
 # Install additional PHP extensions that parsers might need

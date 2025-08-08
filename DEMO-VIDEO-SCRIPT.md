@@ -1,7 +1,7 @@
 # RSOLV Demo Video Script
 
-**Duration**: 10-12 minutes  
-**Setup Time**: 30 minutes pre-recording preparation  
+**Duration**: ~12 minutes edited (from 30-45 min recording)  
+**Focus**: What actually works, no fake features  
 **Tone**: Professional, excited about security automation
 
 ## Quick Recording Checklist
@@ -15,222 +15,259 @@
 
 ## Opening (30 seconds)
 
-"Hi, I'm demonstrating RSOLV - the AI-powered security platform that automatically finds and fixes vulnerabilities in your code.
+"Today I'm demonstrating RSOLV on NodeGoat - OWASP's deliberately vulnerable Node.js application used by security professionals worldwide for training.
 
-Today I'll show you how RSOLV can transform your security workflow - from detecting vulnerabilities with 90% fewer false positives, to automatically generating secure fixes that follow best practices.
-
-Let's see it in action."
+If RSOLV can automatically fix these intentionally complex vulnerabilities, imagine what it can do for your production code."
 
 ---
 
-## Part 1: The Problem (45 seconds)
+## Part 1: The Problem (1 minute)
 
-[Show vulnerable code on screen]
+[Show app/data/allocations-dao.js:78]
 
-"Here's a typical Node.js application. Like many apps, it has security vulnerabilities hiding in the code. 
+"Here's NodeGoat's allocations DAO with a critical NoSQL injection. Line 78 uses MongoDB's dangerous $where operator with user input - this allows arbitrary JavaScript execution on your database server.
 
-This SQL injection vulnerability [highlight line] could allow attackers to steal your entire database. 
+Finding these vulnerabilities manually is time-consuming. Fixing them correctly requires security expertise. And ensuring they stay fixed as code evolves is an ongoing challenge.
 
-This XSS vulnerability [highlight line] could let hackers inject malicious scripts.
-
-Finding these manually takes hours. Fixing them correctly takes expertise. And keeping them fixed as code evolves? Nearly impossible.
-
-That's where RSOLV comes in."
+Let me show you how RSOLV automates this entire process."
 
 ---
 
-## Part 2: Quick Setup (1 minute)
+## Part 2: How RSOLV Works (1 minute)
 
-[Show RSOLV dashboard]
+[Navigate to Actions tab]
 
-"Getting started with RSOLV takes just minutes.
+"RSOLV integrates seamlessly with GitHub - no CLI or special tools needed.
 
-First, I'll sign up for early access on rsolv.dev. 
+Customers use RSOLV through two simple workflows:
+1. Security Scan - Detects all vulnerabilities in your codebase
+2. Fix Issues - Generates production-ready fixes for specific vulnerabilities
 
-[Show email signup]
+Everything happens through the GitHub interface your team already knows.
 
-Now I can access my dashboard and get my API key.
-
-[Copy API key]
-
-Let me add this to my GitHub repository...
-
-[Show GitHub secrets page]
-
-And add the RSOLV workflow...
-
-[Show workflow file]
-
-This workflow will scan weekly and automatically fix issues when I add a label. 
-
-Let's commit and push."
+Let me show you the customer experience."
 
 ---
 
-## Part 3: Automatic Scanning (2 minutes)
+## Part 3: Triggering a Vulnerability Scan (2 minutes)
 
-[Trigger workflow]
+[Already on Actions tab]
 
-"Now let's run our first security scan.
+"Let's start by scanning this codebase. This is exactly what a customer would do.
 
-RSOLV is analyzing my entire codebase, using advanced AST parsing to understand the actual flow of data through my application.
+[Click 'RSOLV Security Scan' workflow]
 
-[Show running workflow]
+I'll click on the Security Scan workflow...
 
-This is key - RSOLV doesn't just pattern match. It understands your code's structure, which reduces false positives by 70-90%.
+[Click 'Run workflow' dropdown, then green 'Run workflow' button]
 
-[Show completed scan]
+...and simply click Run workflow. That's it - no configuration needed.
 
-Look at that - RSOLV found multiple critical vulnerabilities and automatically created detailed GitHub issues.
+[Click into the running workflow]
 
-[Open issue list]
+RSOLV is now scanning every file for vulnerabilities. It uses AST parsing to understand the code structure and eliminate false positives.
 
-Let's look at one of these issues..."
-
----
-
-## Part 4: Issue Details (1.5 minutes)
-
-[Open SQL injection issue]
-
-"Here's the SQL injection issue RSOLV created.
-
-Notice how specific it is - exact file locations, line numbers, and code snippets. 
-
-It explains the security impact in business terms - potential data breach, compliance violations, financial losses.
-
-It even shows me exactly which lines are vulnerable and why.
-
-But here's the amazing part - RSOLV doesn't just find problems. It can fix them too."
+This typically takes 2-3 minutes for a codebase this size."
 
 ---
 
-## Part 5: Automated Fix Generation (3 minutes)
+## Part 4: Detection Results (2 minutes)
 
-[Add rsolv:automate label]
+[Click Issues tab after scan completes]
 
-"By adding this label, I'm telling RSOLV to automatically fix these vulnerabilities.
+"The scan has completed. Look at what RSOLV found.
 
-[Show workflow running]
+[Show list of issues]
 
-Behind the scenes, RSOLV is now:
-- Using Claude's advanced AI to understand my codebase
-- Analyzing the vulnerability in context
-- Generating a comprehensive fix that follows security best practices
-- Even writing tests to ensure the fix works
+RSOLV detected multiple vulnerabilities across the codebase. Notice these aren't false positives - RSOLV uses AST validation to ensure accuracy.
 
-This isn't just find-and-replace. RSOLV understands my code patterns, frameworks, and architecture.
+[Click on NoSQL injection issue]
 
-[Refresh page, show PR created]
+Let's focus on this critical NoSQL injection. Look at the comprehensive details:
+- Exact location: file and line number
+- Proof of concept showing how to exploit it
+- Business impact if exploited
+- CVSS severity rating
 
-And there it is - a complete pull request with the fix!"
+[Click the file link to show actual code]
 
----
+Here's the actual vulnerability - MongoDB's $where operator with user input.
 
-## Part 6: Pull Request Review (2 minutes)
+[Go back to issue]
 
-[Open pull request]
-
-"Let's look at what RSOLV generated.
-
-First, notice the comprehensive description. It explains what was vulnerable and why.
-
-[Scroll to changes]
-
-Here are the code changes. RSOLV replaced the vulnerable string concatenation with properly parameterized queries. This completely prevents SQL injection.
-
-[Show test section]
-
-It even added security tests to ensure the vulnerability doesn't come back.
-
-[Show educational section]
-
-And look at this - educational explanations at three levels:
-- Executive summary with business impact
-- Technical details for developers  
-- Best practices for the future
-
-This isn't just fixing code - it's teaching your team to write more secure code."
+Now let's fix this specific vulnerability."
 
 ---
 
-## Part 7: ROI and Benefits (1 minute)
+## Part 5: Live Fix Generation (3 minutes)
 
-[Show metrics/dashboard]
+[On the NoSQL issue page]
 
-"Let's talk about impact.
+"Now I'll trigger RSOLV to fix this specific vulnerability. Watch how simple this is.
 
-What normally takes a security expert hours, RSOLV does in minutes.
+[Click Labels gear icon in right sidebar]
 
-With 90% fewer false positives, your team focuses on real vulnerabilities, not noise.
+I just click on Labels...
 
-Every fix follows security best practices and includes tests.
+[Type 'rsolv:automate' and select it]
 
-And your team learns secure coding patterns with every PR.
+...and add the 'rsolv:automate' label. That's it.
 
-For one customer, RSOLV reduced their security debt by 85% in just 3 months."
+[Click Actions tab]
+
+RSOLV is now generating a fix for this specific issue. It's using Claude's AI to:
+- Understand the vulnerability in context
+- Generate a secure fix following best practices
+- Add comprehensive tests
+- Create educational documentation
+
+[Click into the running workflow to show logs]
+
+You can see the progress in real-time. This takes about 10-15 minutes.
+
+[Speed up/cut to completion]
+
+## Part 6: Reviewing the Generated Pull Request (3 minutes)
+
+[Click Pull requests tab]
+
+"The fix is complete. Let's review what RSOLV generated.
+
+[Click on the newly created PR]
+
+Here's the pull request. Notice several things:
+
+First, the comprehensive description explains exactly what was vulnerable and why.
+
+[Click 'Files changed' tab]
+
+In the code changes, RSOLV replaced the dangerous $where clause with safe MongoDB operators - using proper parameterized queries like { userId: parsedUserId, stocks: { $gt: parsedThreshold } }.
+
+[Scroll down to show tests]
+
+[Show test section if present]
+
+It also added tests to ensure the vulnerability can't resurface.
+
+[Click back to 'Conversation' tab and scroll to educational section]
+
+And here's what sets RSOLV apart - educational explanations that help your team understand:
+- What the vulnerability was
+- How the fix prevents it
+- Best practices going forward
+
+This isn't just fixing code - it's improving your team's security knowledge.
+
+Notice that we scanned and found many vulnerabilities, but we're fixing them one at a time. This gives your team control over what gets fixed and when."
+
+---
+
+## Part 6: The Value Proposition (2 minutes)
+
+[Back to repo main page]
+
+"Let's talk about what this means for your team:
+
+**Time Savings**: What takes a security expert hours, RSOLV does automatically.
+
+**Consistency**: Every fix follows security best practices.
+
+**Education**: Your developers learn secure coding patterns from every PR.
+
+**Coverage**: RSOLV finds vulnerabilities that manual reviews might miss.
+
+**Integration**: Works with your existing GitHub workflow - no new tools to learn."
+
+---
+
+## Part 7: Technical Depth (1 minute)
+
+"The fact that RSOLV can fix OWASP's NodeGoat demonstrates real capability:
+
+- NodeGoat is the industry standard for security training
+- These vulnerabilities are intentionally complex
+- RSOLV uses AST parsing and Claude's AI to understand context
+- Fixes follow MongoDB and OWASP best practices
+- If it can handle NodeGoat, it can handle your production code
+
+This isn't a toy demo - it's fixing real vulnerabilities used to train security professionals."
 
 ---
 
 ## Closing (30 seconds)
 
-[Show RSOLV homepage]
-
 "RSOLV transforms security from a bottleneck into an automated workflow.
 
-Find vulnerabilities faster. Fix them automatically. Teach your team in the process.
+We're currently in early access, working with select teams to refine the technology.
 
-Visit rsolv.dev to start your free trial and see how RSOLV can secure your code today.
+If you're interested in automated security fixes for your codebase, reach out to learn more about getting access.
 
 Thanks for watching!"
 
 ---
 
-## B-Roll Suggestions
+## B-Roll and Editing Notes
 
-1. **Code scrolling** showing various vulnerabilities
-2. **GitHub Actions** running in real-time
-3. **Dashboard metrics** showing scan results
-4. **PR diff view** highlighting secure changes
-5. **Terminal output** showing RSOLV in action
+### Speed Up:
+- Workflow execution (show progress bar)
+- Log scrolling
+- Waiting periods
 
-## Key Phrases to Emphasize
+### Highlight:
+- Vulnerable code lines
+- Fixed code comparisons
+- Test additions
+- Educational content
 
-- "90% fewer false positives"
-- "AI-powered fixes"
-- "Teaches secure coding"
-- "Minutes, not hours"
-- "Follows best practices"
-- "Includes tests"
-- "Business impact"
+### Add in Post:
+- Annotations pointing out key features
+- Timer showing processing speed
+- Before/after code comparisons
+- Security impact callouts
 
-## Technical Details to Mention
+---
 
-- AST (Abstract Syntax Tree) parsing
-- Claude AI integration
-- Test-driven development
-- Parameterized queries
-- Security best practices
-- OWASP coverage
+## Key Messages (Stay Honest):
 
-## Call-to-Action
+✅ **DO Say:**
+- "Works entirely through GitHub's web interface"
+- "Scans find multiple vulnerabilities with AST validation"
+- "Fix vulnerabilities one at a time with full control"
+- "Uses Claude's advanced AI for fixes"
+- "Includes tests and documentation"
+- "Currently in early access"
 
-- Visit rsolv.dev
-- Start free trial
-- See documentation
-- Contact sales for enterprise
+❌ **DON'T Say:**
+- "Sign up for free trial" (no signup system)
+- "Check your dashboard" (doesn't exist)
+- "View billing/usage" (not implemented)
+- "Only pay for merged PRs" (no payment system)
 
-## Timing Summary
+---
 
-| Section | Duration |
-|---------|----------|
-| Opening | 30 seconds |
-| The Problem | 45 seconds |
-| Quick Setup | 1 minute |
-| Automatic Scanning | 2 minutes |
-| Issue Details | 1.5 minutes |
-| Automated Fix | 3 minutes |
-| PR Review | 2 minutes |
-| ROI & Benefits | 1 minute |
-| Closing | 30 seconds |
-| **Total** | **~12 minutes** |
+## If Asked About Access:
+
+"We're in early access, working closely with development teams to ensure RSOLV meets real-world needs. If you're interested, reach out and we'll discuss getting you set up with an API key."
+
+---
+
+## Technical Details to Have Ready:
+
+- Supports JavaScript, TypeScript, Python, Ruby
+- Covers OWASP Top 10 vulnerabilities
+- Uses GitHub Actions for automation
+- Powered by Claude AI
+- Generates tests in appropriate framework
+
+---
+
+## This Demo Shows REAL Value:
+
+No fake features needed - the core technology is impressive:
+1. **It actually works** - finds real vulnerabilities
+2. **Quality fixes** - not just find/replace
+3. **Educational value** - teaches security
+4. **GitHub native** - fits existing workflow
+5. **AI-powered** - leverages Claude's capabilities
+
+**Focus on what EXISTS and it's a strong demo!**

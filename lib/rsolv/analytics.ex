@@ -13,8 +13,8 @@ defmodule Rsolv.Analytics do
   Automatically ensures the partition exists for the event's timestamp.
   """
   def create_event(attrs \\ %{}) do
-    # Ensure partition exists for the event timestamp
-    ensure_partition_exists(attrs[:inserted_at] || DateTime.utc_now())
+    # TODO: Re-enable partition creation when function is available
+    # ensure_partition_exists(attrs[:inserted_at] || DateTime.utc_now())
     
     %Event{}
     |> Event.changeset(attrs)

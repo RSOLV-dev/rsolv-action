@@ -1,4 +1,0 @@
-#!/bin/sh
-# Script to run migrations in production
-cd -P -- "$(dirname -- "$0")"
-exec ./rsolv eval "Rsolv.ReleaseTasks.migrate"

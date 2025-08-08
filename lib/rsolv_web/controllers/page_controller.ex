@@ -23,18 +23,12 @@ defmodule RsolvWeb.PageController do
       true -> "single_node"
     end
     
-    # Check database health
-    {db_status, db_message} = check_database_health()
-    
-    # Check analytics readiness (partition exists for current month)
-    {analytics_status, analytics_message} = check_analytics_health()
-    
-    # Determine overall health status
-    overall_status = cond do
-      db_status == "error" || analytics_status == "error" -> "unhealthy"
-      db_status == "warning" || analytics_status == "warning" -> "degraded"
-      cluster_status == "single_node" -> "warning"
-      true -> "ok"
+    # Overall health status
+    overall_status = case cluster_status do
+      "not_configured" -> "ok"  # Non-clustered is fine
+      "healthy" -> "ok"         # Clustered with peers is good
+      "single_node" -> "warning" # Clustered but alone might be a problem
+      _ -> "degraded"
     end
     
     # Build response
@@ -47,76 +41,13 @@ defmodule RsolvWeb.PageController do
         current_node: to_string(current_node),
         connected_nodes: Enum.map(connected_nodes, &to_string/1),
         node_count: node_count
-      },
-      database: %{
-        status: db_status,
-        message: db_message
-      },
-      analytics: %{
-        status: analytics_status,
-        message: analytics_message
       }
     }
-    
-    # Return appropriate status code based on health
-    status_code = case overall_status do
-      "unhealthy" -> 503
-      "degraded" -> 200  # Still return 200 for degraded to avoid k8s killing the pod
-      _ -> 200
-    end
     
     # Return health check response
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(status_code, JSON.encode!(health_data))
-  end
-  
-  # Check database connectivity
-  defp check_database_health do
-    try do
-      # Simple query to test database connection
-      Rsolv.Repo.query!("SELECT 1")
-      {"ok", "Database connection successful"}
-    rescue
-      error ->
-        Logger.error("Health check: Database error", error: inspect(error))
-        {"error", "Database connection failed: #{inspect(error)}"}
-    end
-  end
-  
-  # Check if analytics partitions are properly set up
-  defp check_analytics_health do
-    try do
-      # Get current date for partition check
-      current_date = Date.utc_today()
-      partition_name = "analytics_events_#{current_date.year}_#{String.pad_leading(to_string(current_date.month), 2, "0")}"
-      
-      # Check if partition exists
-      query = """
-        SELECT EXISTS (
-          SELECT 1 
-          FROM pg_tables 
-          WHERE schemaname = 'public' 
-            AND tablename = $1
-        )
-      """
-      
-      case Rsolv.Repo.query(query, [partition_name]) do
-        {:ok, %{rows: [[true]]}} ->
-          {"ok", "Analytics partition exists for current month"}
-        {:ok, %{rows: [[false]]}} ->
-          # Try to create the partition
-          Logger.info("Health check: Creating missing analytics partition for #{partition_name}")
-          Rsolv.Analytics.ensure_partition_exists(DateTime.utc_now())
-          {"warning", "Analytics partition was missing but has been created"}
-        {:error, error} ->
-          {"error", "Failed to check analytics partition: #{inspect(error)}"}
-      end
-    rescue
-      error ->
-        Logger.error("Health check: Analytics error", error: inspect(error))
-        {"error", "Analytics health check failed: #{inspect(error)}"}
-    end
+    |> send_resp(200, Jason.encode!(health_data))
   end
 
   def home(conn, _params) do
@@ -369,7 +300,7 @@ defmodule RsolvWeb.PageController do
             source: Map.get(utm_params, :utm_source, "direct"),
             medium: Map.get(utm_params, :utm_medium, "organic"),
             campaign: Map.get(utm_params, :utm_campaign, "none")
-          } |> JSON.encode!()
+          } |> Jason.encode!()
           
           # Store email in session for thank you page personalization
           conn = conn

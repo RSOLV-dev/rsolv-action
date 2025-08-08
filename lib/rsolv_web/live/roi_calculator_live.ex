@@ -26,7 +26,7 @@ defmodule RsolvWeb.RoiCalculatorLive do
         end
       val -> val * 1.0
     end
-    hourly_rate = String.to_integer(params["hourly_rate"] || "85")
+    hourly_rate = String.to_integer(params["hourly_rate"] || "150")
     fix_deployment_rate = String.to_integer(params["fix_deployment_rate"] || "80")
 
     socket = calculate_roi(socket, monthly_issues, hours_per_fix, hourly_rate, fix_deployment_rate)
@@ -37,10 +37,10 @@ defmodule RsolvWeb.RoiCalculatorLive do
   defp assign_defaults(socket) do
     socket
     |> assign(:monthly_issues, 50)
-    |> assign(:hours_per_fix, 6.0)  # Updated to match blog research: 5.5 dev + 1.5 coordination
-    |> assign(:hourly_rate, 85)     # Updated to match blog research: $130K salary + overhead
+    |> assign(:hours_per_fix, 3.0)
+    |> assign(:hourly_rate, 150)
     |> assign(:fix_deployment_rate, 80)
-    |> calculate_roi(50, 6.0, 85, 80)
+    |> calculate_roi(50, 3.0, 150, 80)
   end
 
   defp calculate_roi(socket, monthly_issues, hours_per_fix, hourly_rate, fix_deployment_rate) do
