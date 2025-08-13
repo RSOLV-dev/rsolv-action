@@ -5,10 +5,10 @@
 
 import { logger } from '../utils/logger.js';
 import { IssueContext } from '../types/index.js';
-import * as github from '@actions/github';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { updateIssue, addLabels } from '../github/api.js';
 
 export interface DetailedVulnerability {
   file: string;
@@ -35,11 +35,11 @@ export interface ValidationResult {
 }
 
 export class ValidationEnricher {
-  private octokit: ReturnType<typeof github.getOctokit>;
+  private githubToken: string;
   private rsolvApiKey?: string;
 
   constructor(githubToken: string, rsolvApiKey?: string) {
-    this.octokit = github.getOctokit(githubToken);
+    this.githubToken = githubToken;
     this.rsolvApiKey = rsolvApiKey;
   }
 
@@ -67,20 +67,20 @@ export class ValidationEnricher {
       // Step 3: Update issue body with validation results
       const updatedBody = this.generateEnrichedIssueBody(issue, vulnerabilities);
       
-      await this.octokit.rest.issues.update({
-        owner: issue.repository.owner,
-        repo: issue.repository.name,
-        issue_number: issue.number,
-        body: updatedBody
-      });
+      await updateIssue(
+        issue.repository.owner,
+        issue.repository.name,
+        issue.number,
+        { body: updatedBody }
+      );
 
       // Step 4: Add validated label
-      await this.octokit.rest.issues.addLabels({
-        owner: issue.repository.owner,
-        repo: issue.repository.name,
-        issue_number: issue.number,
-        labels: ['rsolv:validated']
-      });
+      await addLabels(
+        issue.repository.owner,
+        issue.repository.name,
+        issue.number,
+        ['rsolv:validated']
+      );
 
       logger.info(`[VALIDATE] Successfully enriched issue #${issue.number}`);
 

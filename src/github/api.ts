@@ -249,3 +249,47 @@ export async function createPullRequest(
     throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
+// Helper functions for ValidationEnricher
+export async function updateIssue(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  updates: { body?: string; title?: string; state?: string }
+): Promise<void> {
+  const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}`;
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(updates)
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to update issue: ${response.statusText}`);
+  }
+}
+
+export async function addLabels(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  labels: string[]
+): Promise<void> {
+  const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/labels`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ labels })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to add labels: ${response.statusText}`);
+  }
+}
