@@ -392,7 +392,7 @@ export class PhaseExecutor {
       
       // Safe label checking - labels might be an array of strings or objects
       const labelNames = Array.isArray(issue.labels) 
-        ? issue.labels.map(l => typeof l === 'string' ? l : l.name || '')
+        ? issue.labels.map((l: string | { name?: string }) => typeof l === 'string' ? l : l.name || '')
         : [];
       
       const hasAutomateLabel = labelNames.includes('rsolv:automate');
@@ -619,6 +619,7 @@ export class PhaseExecutor {
       // Store mitigation results
       logger.info('[MITIGATE] Step 6: Storing mitigation results...');
       try {
+        const issueKey = `issue-${options.issueNumber}`;
         const storePromise = this.storePhaseData('mitigation', {
           [issueKey]: mitigationResult
         }, {

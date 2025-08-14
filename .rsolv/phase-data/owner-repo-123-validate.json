@@ -1,0 +1,20 @@
+{
+  "phase": "validate",
+  "data": {
+    "validation": {
+      "issue-123": {
+        "validated": true,
+        "vulnerabilities": [],
+        "hasSpecificVulnerabilities": false,
+        "confidence": "none",
+        "timestamp": "2025-08-14T12:00:00.000Z"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "owner/repo",
+    "issueNumber": 123,
+    "commitSha": "abc123"
+  },
+  "timestamp": "2025-08-14T15:41:54.230Z"
+}

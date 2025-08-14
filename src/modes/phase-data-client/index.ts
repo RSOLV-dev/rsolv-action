@@ -236,6 +236,7 @@ Phase data stored for ${phase} phase (commit: ${metadata.commitSha.substring(0, 
       const pattern = /<!-- RSOLV_PHASE_DATA:(\w+):([a-f0-9]+)\n([\s\S]*?)\n-->/g;
       
       for (const comment of comments) {
+        if (!comment.body) continue;
         const matches = [...comment.body.matchAll(pattern)];
         for (const match of matches) {
           const [, phase, sha, jsonData] = match;
