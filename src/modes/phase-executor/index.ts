@@ -274,7 +274,7 @@ export class PhaseExecutor {
       });
 
       // Return success with enrichment details
-      return {
+      const result = {
         success: true,
         phase: 'validate',
         message: enrichmentResult.vulnerabilities.length > 0 ?
@@ -285,6 +285,9 @@ export class PhaseExecutor {
           enrichmentResult
         }
       };
+      
+      logger.info('[VALIDATE] executeValidate returning successfully', { success: true });
+      return result;
     } catch (error) {
       logger.error('Validation phase failed', error);
       return {
@@ -343,9 +346,12 @@ export class PhaseExecutor {
         logger.info('[MITIGATE] No validation found, running VALIDATE phase first');
         
         // Run validation phase
+        logger.info('[MITIGATE] Running executeValidate...');
         const validateResult = await this.executeValidate(options);
+        logger.info('[MITIGATE] executeValidate completed', { success: validateResult.success });
         
         if (!validateResult.success) {
+          logger.error('[MITIGATE] Validation failed', validateResult);
           return {
             success: false,
             phase: 'mitigate',
@@ -355,11 +361,13 @@ export class PhaseExecutor {
         }
         
         // Get the validation data that was just stored
+        logger.info('[MITIGATE] Retrieving validation data...');
         validationData = await this.phaseDataClient.retrievePhaseResults(
           `${options.repository.owner}/${options.repository.name}`,
           options.issueNumber,
           commitSha
         );
+        logger.info('[MITIGATE] Retrieved validation data', { hasData: !!validationData });
       }
 
       // Check if we have validation data now
