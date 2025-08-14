@@ -6,22 +6,27 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 
 ## High Priority Tasks
 
-### 1. Create Test with Actual Vulnerable Code in Repository
-**Why**: Current tests use example code in issues, but validation only checks real files
+### 1. Fix PhaseDataClient for Cross-Phase Data Persistence
+**Why**: Validation enriches issues but mitigation can't find the validation data
 **What to do**:
-1. Create a test file in nodegoat-vulnerability-demo with actual SQL injection
-2. Example: `test/vulnerable-example.js` with:
-   ```javascript
-   function getUserById(req, res) {
-     const query = "SELECT * FROM users WHERE id = '" + req.params.id + "'";
-     db.query(query, callback);
-   }
-   ```
-3. Create issue referencing this actual file
-4. Test that validation finds the vulnerability
-5. Test that mitigation generates a fix
+1. Debug why validation data isn't being stored/retrieved
+2. Check if platform API is working or if fallback to local storage is needed
+3. Ensure validation phase stores data with key `issue-{number}`
+4. Ensure mitigation phase retrieves data with same key
+5. Test complete SCAN→VALIDATE→MITIGATE flow
 
-### 2. Verify AST Validation API Integration
+### 2. Test End-to-End Workflow (NO MANUAL STEPS)
+**Why**: The three-phase architecture must work automatically
+**What to do**:
+1. Run SCAN workflow to detect vulnerabilities and create issues
+2. Issues should get `rsolv:detected` label
+3. Run VALIDATE workflow on detected issues
+4. Issues should get `rsolv:validated` label and enrichment
+5. Run MITIGATE workflow on validated issues
+6. PRs should be created with fixes
+**DO NOT**: Create issues manually - this breaks the architecture
+
+### 3. Verify AST Validation API Integration
 **Why**: AST validation reduces false positives but wasn't fully tested
 **What to do**:
 1. Add test to verify `runASTValidation` is called when rsolvApiKey is present
@@ -37,7 +42,7 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
    ```
 5. Add integration test with real API if test key available
 
-### 3. Test Credential Vending for AI Fix Generation
+### 4. Test Credential Vending for AI Fix Generation
 **Why**: Vended credentials allow GitHub Actions to use AI without storing keys
 **What to do**:
 1. Test with `useVendedCredentials: true` in config
@@ -47,7 +52,7 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 5. Test fallback when vending fails
 6. Check timeout handling for credential requests
 
-### 4. Clean Up Debug Logging
+### 5. Clean Up Debug Logging
 **Why**: Too much logging impacts performance and readability
 **What to do**:
 1. Review all logger.info calls added during debugging
@@ -62,7 +67,7 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
    - Detailed object logging
    - Validation data structure dumps
 
-### 5. Add Integration Tests for Full Three-Phase Flow
+### 6. Add Integration Tests for Full Three-Phase Flow
 **Why**: Need end-to-end testing of SCAN → VALIDATE → MITIGATE
 **What to do**:
 1. Create test that:
@@ -77,7 +82,7 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
    - Invalid vulnerability type
    - API failures
 
-### 6. Performance Optimization
+### 7. Performance Optimization
 **Why**: Timeouts were added but not optimized
 **Current timeouts**:
 - GitHub API: 30s
@@ -91,7 +96,7 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 3. Add configurable timeouts via environment variables
 4. Consider parallel operations where possible
 
-### 7. Documentation Updates
+### 8. Documentation Updates
 **Why**: New three-phase architecture needs user documentation
 **What to do**:
 1. Update README.md with three-phase explanation
@@ -102,7 +107,7 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 
 ## Medium Priority Tasks
 
-### 8. Add More Vulnerability Patterns
+### 9. Add More Vulnerability Patterns
 **Current patterns**: SQL injection, XSS, Command injection, NoSQL injection
 **Add patterns for**:
 - LDAP injection
@@ -112,7 +117,7 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 - Insecure deserialization
 - JWT vulnerabilities
 
-### 9. Improve Pattern Accuracy
+### 10. Improve Pattern Accuracy
 **Current issues**:
 - SQL pattern is very broad (matches any string concatenation with SELECT)
 - XSS pattern might have false positives
@@ -121,7 +126,7 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 2. Consider context (is it actually executing SQL?)
 3. Add severity scoring based on context
 
-### 10. Add Metrics and Monitoring
+### 11. Add Metrics and Monitoring
 **What to track**:
 - Phase execution times
 - Vulnerability detection rates
@@ -131,13 +136,13 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 
 ## Low Priority Tasks
 
-### 11. Refactor for Maintainability
+### 12. Refactor for Maintainability
 - Extract timeout values to constants
 - Create separate files for each phase executor
 - Standardize error handling patterns
 - Add more type safety
 
-### 12. Add Caching
+### 13. Add Caching
 - Cache validation results for same commit
 - Cache AST validation responses
 - Cache file reads
@@ -166,8 +171,15 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 - [ ] Deploy to production
 
 ## Notes for Next Session
-- The validation enricher is working correctly but only validates real files
-- Test issues need to reference actual vulnerable code in the repository
-- Consider creating a `test-vulnerabilities/` directory with known vulnerable code
-- The three-phase architecture is solid but needs production hardening
+- **CRITICAL**: Never create issues manually - use SCAN workflow to create them
+- The validation enricher is working correctly and detects real vulnerabilities
+- NodeGoat has real vulnerabilities (eval injection) perfect for testing
+- Main blocker: PhaseDataClient not persisting validation data between phases
+- The three-phase architecture is solid but needs cross-phase data persistence
 - Credential vending is critical for customer adoption - prioritize testing
+
+## Workflow Testing Order
+1. Run SCAN to create issues
+2. Run VALIDATE to enrich them
+3. Run MITIGATE to fix them
+4. NO MANUAL STEPS - everything must work automatically

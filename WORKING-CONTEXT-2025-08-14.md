@@ -5,11 +5,19 @@
 2. Reference: `/home/dylan/dev/rsolv/RSOLV-action/docs/THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md` for what was fixed
 3. Reference: `/home/dylan/dev/rsolv/RSOLV-action/docs/TODO-CONTINUATION.md` for next steps
 
+## CRITICAL: Testing Approach
+**DO NOT CREATE ISSUES MANUALLY** - The three-phase architecture must be tested end-to-end:
+1. **SCAN** workflow creates issues when vulnerabilities are detected
+2. **VALIDATE** workflow enriches those issues with details
+3. **MITIGATE** workflow fixes the validated vulnerabilities
+
+Manual issue creation breaks the architecture and doesn't test the real flow.
+
 ## Current Status
-- **Fixed**: v3.3.1-v3.3.5 released with error handling, timeouts, validation enricher fixes
-- **Working**: Three-phase architecture (SCAN→VALIDATE→MITIGATE) functioning correctly
-- **Issue**: Validation finds 0 vulnerabilities because issues reference example code, not actual files
-- **Next Priority**: Create actual vulnerable files in repo for testing (TODO item #1)
+- **Fixed**: v3.3.1-v3.3.6 released with SSJS injection detection
+- **Working**: Validation detects eval() vulnerabilities correctly
+- **Issue**: Validation data not being stored/retrieved between phases
+- **Next Priority**: Fix PhaseDataClient to properly store validation results
 
 ## Key Files Modified
 - `/src/modes/phase-executor/index.ts` - Added timeouts, logging
@@ -17,8 +25,11 @@
 - `/src/ai/git-based-processor.ts` - Fixed .rsolv directory handling
 
 ## Test Repository
-- `nodegoat-vulnerability-demo` - Using issue #205 for testing
-- Workflow: `.github/workflows/rsolv-fix-issues.yml` using v3.3.5
+- `nodegoat-vulnerability-demo` - NodeGoat has real vulnerabilities (eval injection in contributions.js)
+- Workflows updated to v3.3.6:
+  - `.github/workflows/rsolv-security-scan.yml` - SCAN phase (creates issues)
+  - `.github/workflows/rsolv-validate.yml` - VALIDATE phase (enriches issues)
+  - `.github/workflows/rsolv-fix-issues.yml` - MITIGATE phase (fixes issues)
 
 ## Environment Setup
 ```bash
@@ -28,10 +39,11 @@ export GITHUB_TOKEN=<your-token>
 ```
 
 ## Next Immediate Steps
-1. Create `test/vulnerable-example.js` with real SQL injection
-2. Test validation finds it
-3. Test mitigation generates fix
-4. Then proceed with TODO items #2-10
+1. Fix PhaseDataClient to store/retrieve validation data
+2. Run SCAN workflow to create issues (NOT manual creation)
+3. Run VALIDATE workflow to enrich issues
+4. Run MITIGATE workflow to fix issues
+5. Verify complete end-to-end flow works
 
 ## TDD Approach Used
 - Write failing test → Fix code → Refactor
