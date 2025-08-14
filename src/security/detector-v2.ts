@@ -55,7 +55,9 @@ export class SecurityDetectorV2 {
               confidence: confidenceNumber,
               cweId: finding.pattern.cweId,
               owaspCategory: finding.pattern.owaspCategory,
-              remediation: finding.pattern.remediation
+              remediation: finding.pattern.remediation,
+              filePath: filePath,
+              snippet: lines[finding.line - 1]?.trim() || ''
             });
           }
         }
@@ -101,7 +103,9 @@ export class SecurityDetectorV2 {
                 confidence: this.getConfidence(line, pattern.type),
                 cweId: pattern.cweId,
                 owaspCategory: pattern.owaspCategory,
-                remediation: pattern.remediation
+                remediation: pattern.remediation,
+                filePath: filePath,
+                snippet: line.trim()
               };
               
               if (pattern.id === 'ruby-sql-injection' && language === 'ruby') {
