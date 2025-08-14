@@ -26,12 +26,7 @@ config :rsolv, RsolvWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "development-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789",
   watchers: [
-    # Tailwind CSS
-    tailwind: {
-      "tailwindcss",
-      ["--input=assets/css/app.css", "--output=priv/static/assets/app.css", "--watch"],
-      cd: Path.expand("..", __DIR__)
-    }
+    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
 
 # ## SSL Support

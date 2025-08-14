@@ -1,7 +1,7 @@
 defmodule RsolvWeb.HealthController do
   use RsolvWeb, :controller
 
-  def check(conn, _params) do
+  def index(conn, _params) do
     # Basic health check
     health_status = %{
       status: "ok",

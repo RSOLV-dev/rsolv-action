@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rsolv-platform-migrate
+  # generateName: rsolv-migrate-  # Use this instead of name for unique jobs
+spec:
+  ttlSecondsAfterFinished: 300  # Auto-cleanup after 5 minutes
+  backoffLimit: 1  # Only retry once on failure
+  template:
+    metadata:
+      labels:
+        app: rsolv-platform
+        component: migration
+    spec:
+      restartPolicy: Never
+      initContainers:
+      # Health check before running migrations
+      - name: check-db
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z postgres-nfs.default.svc.cluster.local 5432; do echo waiting for db; sleep 2; done;']
+      containers:
+      - name: migrate
+        image: ghcr.io/rsolv-dev/rsolv-platform:staging  # Set via kustomize or sed
+        command: ["/app/bin/rsolv", "eval", "Rsolv.ReleaseTasks.migrate"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-platform-db-secret
+              key: database-url
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: phoenix-secrets
+              key: SECRET_KEY_BASE
+        - name: PHX_HOST
+          value: "rsolv-staging.com"
+        - name: PHX_SERVER
+          value: "false"  # Don't start the web server
+        - name: POOL_SIZE
+          value: "2"  # Small pool for migration
+      imagePullSecrets:
+      - name: ghcr-secret

@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      # Postmark for email notifications
+      smtp_smarthost: 'smtp.postmarkapp.com:587'
+      smtp_from: 'alerts@rsolv.dev'
+      smtp_auth_username: '82dfc287-055a-4e27-a8f2-3f7c412a1f89'
+      smtp_auth_password: '82dfc287-055a-4e27-a8f2-3f7c412a1f89'
+      smtp_require_tls: true
+      resolve_timeout: 5m
+      
+    route:
+      group_by: ['alertname']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 1h
+      receiver: 'default-notifications'
+      routes:
+      # Critical RSOLV alerts - immediate notification with webhook
+      - match:
+          alertname: RSOLVMainSiteDown
+        receiver: 'critical-site-down-webhook'
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 5m
+        group_by: ['severity']
+      # Other critical alerts
+      - match:
+          severity: critical
+        receiver: 'critical-notifications'
+        group_by: ['severity']
+        continue: true
+      # Warning alerts
+      - match:
+          severity: warning
+        receiver: 'warning-notifications'
+        group_by: ['severity']
+        
+    receivers:
+    - name: 'default-notifications'
+      email_configs:
+      - to: 'admin@rsolv.dev'
+        send_resolved: true
+        headers:
+          Subject: 'RSOLV Alert: {{ .GroupLabels.alertname }}'
+    
+    # This receiver uses both email AND webhook
+    - name: 'critical-site-down-webhook'
+      email_configs:
+      - to: 'admin@rsolv.dev'
+        send_resolved: false  # Don't send resolved via email
+        headers:
+          Subject: '🚨 CRITICAL: RSOLV Site is DOWN!'
+        html: |
+          <h2>🚨 RSOLV Site is DOWN!</h2>
+          <p><strong>Alert:</strong> {{ .GroupLabels.alertname }}</p>
+          <p><strong>Instance:</strong> {{ range .Alerts }}{{ .Labels.instance }}<br>{{ end }}</p>
+          <p><strong>Description:</strong> {{ range .Alerts }}{{ .Annotations.description }}<br>{{ end }}</p>
+          <p><strong>Status:</strong> {{ .Status }}</p>
+          <p><a href="https://grafana.rsolv.dev/d/rsolv-uptime/rsolv-platform-uptime">View Dashboard</a></p>
+      webhook_configs:
+      - url: 'http://webhook-receiver.monitoring.svc.cluster.local/webhook'
+        send_resolved: true  # Send resolved via webhook
+        
+    - name: 'critical-notifications'
+      email_configs:
+      - to: 'admin@rsolv.dev'
+        send_resolved: true
+        headers:
+          Subject: 'CRITICAL: {{ .GroupLabels.alertname }}'
+          
+    - name: 'warning-notifications'
+      email_configs:
+      - to: 'admin@rsolv.dev'
+        send_resolved: true
+        headers:
+          Subject: 'Warning: {{ .GroupLabels.alertname }}'
+        
+    inhibit_rules:
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'instance']

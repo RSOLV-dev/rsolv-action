@@ -1,12 +1,34 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
+
+/* Dark mode typography overrides using Tailwind Typography plugin */
+@layer components {
+  /* Use Tailwind's prose-invert for dark mode with custom color overrides */
+  .dark .prose {
+    --tw-prose-body: theme('colors.gray.300');
+    --tw-prose-headings: theme('colors.gray.100');
+    --tw-prose-lead: theme('colors.gray.300');
+    --tw-prose-links: theme('colors.blue.400');
+    --tw-prose-bold: theme('colors.gray.100');
+    --tw-prose-counters: theme('colors.gray.400');
+    --tw-prose-bullets: theme('colors.gray.400');
+    --tw-prose-hr: theme('colors.gray.700');
+    --tw-prose-quotes: theme('colors.gray.100');
+    --tw-prose-quote-borders: theme('colors.gray.700');
+    --tw-prose-captions: theme('colors.gray.400');
+    --tw-prose-code: theme('colors.gray.100');
+    --tw-prose-pre-code: theme('colors.gray.300');
+    --tw-prose-pre-bg: theme('colors.gray.900');
+    --tw-prose-th-borders: theme('colors.gray.600');
+    --tw-prose-td-borders: theme('colors.gray.700');
+  }
+}
+
 @import "tailwindcss/utilities";
 
-
-/* Import Space Grotesk font */
+/* Import fonts */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
 
-/* Import Iosevka font */
 @font-face {
   font-family: 'Iosevka';
   src: url('/fonts/iosevka-regular.woff2') format('woff2');
@@ -23,230 +45,126 @@
   font-display: swap;
 }
 
-/* This file is for your main application CSS */
-:root {
-  --brand-blue: #3366FF;
-  --brand-green: #00CC66;
-  --brand-dark: #333333;
-  --brand-light: #F5F5F5;
-  --brand-white: #FFFFFF;
-}
-
-body {
-  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  color: var(--brand-dark);
-  background-color: var(--brand-white);
-}
-
-/* Dark mode styles */
-.dark body {
-  color: #e2e8f0;
-  background-color: #020617;
-}
-
-/* Smooth theme transitions */
-* {
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.code {
-  font-family: 'Iosevka', ui-monospace, monospace;
-}
-
-/* Custom button styles */
-.btn-primary {
-  @apply bg-brand-blue text-white font-medium py-2 px-6 rounded-md hover:bg-opacity-90 transition-colors;
-}
-
-.btn-success {
-  @apply bg-brand-green text-white font-medium py-2 px-6 rounded-md hover:bg-opacity-90 transition-colors;
-}
-
-.btn-outline {
-  @apply border-2 border-brand-blue text-brand-blue font-medium py-2 px-6 rounded-md hover:bg-brand-blue hover:bg-opacity-10 transition-colors;
-}
-
-/* Email signup form */
-.email-input {
-  @apply w-full px-4 py-3 rounded-md bg-white text-gray-800 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-blue;
-}
-
-/* Custom overrides for Tailwind Typography plugin */
-/* Code blocks with MDEx - override default prose styles */
-.prose pre {
-  @apply bg-gray-900 text-gray-100 rounded-2xl shadow-lg border border-gray-800 my-8 p-6;
-  font-family: 'Iosevka', ui-monospace, 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
-}
-
-.prose pre code {
-  @apply bg-transparent p-0;
-  color: inherit;
-}
-
-/* Terminal-style code blocks */
-.code-block {
-  @apply bg-brand-dark text-white font-mono rounded-lg shadow-xl overflow-hidden;
-}
-
-/* Hero section gradient */
-.hero-gradient {
-  background: linear-gradient(135deg, var(--brand-blue) 0%, #5b89ff 100%);
-}
-
-/* Custom utilities for success stories */
-.success-story-card {
-  @apply bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition-shadow;
-}
-
-/* Email template styles */
-.email-header {
-  background: linear-gradient(135deg, var(--brand-blue) 0%, #5b89ff 100%);
-  color: white;
-  padding: 2rem;
-  text-align: center;
-}
-
-.email-footer {
-  background-color: var(--brand-light);
-  padding: 2rem;
-  text-align: center;
-  color: var(--brand-dark);
-}
-
-/* Utility classes for dark mode */
-.dark .dark\:bg-dark-800 {
-  background-color: #1e293b;
-}
-
-.dark .dark\:bg-dark-900 {
-  background-color: #0f172a;
-}
-
-.dark .dark\:bg-dark-950 {
-  background-color: #020617;
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+/* CSS Custom Properties for semantic colors */
+@layer base {
+  :root {
+    /* Use Tailwind theme colors for consistency */
+    --color-bg-canvas: theme('colors.brand.light');  /* #F5F5F5 */
+    --color-bg-default: #fafafa;
+    --color-bg-subtle: #f0f0f0;
+    --color-border-default: theme('colors.gray.300');
+    --color-border-muted: theme('colors.gray.200');
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .dark {
+    /* Dark mode using Tailwind's slate color palette */
+    --color-bg-canvas: theme('colors.slate.950');     /* #020617 */
+    --color-bg-default: theme('colors.slate.900');    /* #0f172a */
+    --color-bg-subtle: theme('colors.slate.800');     /* #1e293b */
+    --color-border-default: theme('colors.slate.700');
+    --color-border-muted: theme('colors.slate.800');
+  }
+
+  /* Apply semantic backgrounds using Tailwind utilities */
+  body {
+    @apply font-sans text-gray-900 dark:text-gray-100 transition-colors;
+    background-color: var(--color-bg-canvas);
   }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.5s ease-out forwards;
+/* Utility classes that use our semantic colors */
+@layer utilities {
+  .bg-canvas {
+    background-color: var(--color-bg-canvas);
+  }
+  
+  .bg-DEFAULT {
+    background-color: var(--color-bg-default);
+  }
+  
+  .bg-subtle {
+    background-color: var(--color-bg-subtle);
+  }
+  
+  .border-DEFAULT {
+    border-color: var(--color-border-default);
+  }
+  
+  .border-muted {
+    border-color: var(--color-border-muted);
+  }
 }
 
-/* Ensure clickable elements have pointer cursor */
-[phx-click] {
-  cursor: pointer;
-}
+/* Component-specific styles using Tailwind */
+@layer components {
+  /* Buttons using Tailwind utilities */
+  .btn-primary {
+    @apply bg-brand-blue text-white font-medium py-2 px-6 rounded-md hover:bg-opacity-90 transition-colors;
+  }
 
-/* Ensure all text colors work in both light and dark mode */
-.text-brand-blue {
-  color: var(--brand-blue);
-}
+  .btn-success {
+    @apply bg-brand-green text-white font-medium py-2 px-6 rounded-md hover:bg-opacity-90 transition-colors;
+  }
 
-.text-brand-green {
-  color: var(--brand-green);
-}
+  .btn-outline {
+    @apply border-2 border-brand-blue text-brand-blue font-medium py-2 px-6 rounded-md hover:bg-brand-blue hover:bg-opacity-10 transition-colors;
+  }
 
-.text-brand-dark {
-  color: var(--brand-dark);
-}
+  /* Form inputs using Tailwind */
+  .email-input {
+    @apply w-full px-4 py-3 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue;
+  }
 
-.bg-brand-blue {
-  background-color: var(--brand-blue);
-}
+  /* Cards using semantic colors */
+  .card {
+    @apply rounded-lg shadow-sm transition-shadow;
+    background-color: var(--color-bg-default);
+    border: 1px solid var(--color-border-default);
+  }
 
-.bg-brand-green {
-  background-color: var(--brand-green);
-}
+  /* Code blocks using Tailwind Typography */
+  .prose pre {
+    @apply rounded-2xl shadow-lg my-8 p-6;
+  }
 
-.bg-brand-dark {
-  background-color: var(--brand-dark);
-}
+  .prose code {
+    @apply rounded-md px-1 py-0.5;
+    background-color: var(--color-bg-subtle);
+    border: 1px solid var(--color-border-muted);
+  }
 
-.bg-brand-light {
-  background-color: var(--brand-light);
-}
+  /* Header styles */
+  .dark header {
+    @apply bg-gray-900 border-gray-800;
+  }
 
-/* Form focus states */
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  ring: 2px;
-  ring-color: var(--brand-blue);
-}
-
-/* Success message styles */
-.success-message {
-  @apply bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded;
-}
-
-/* Error message styles */
-.error-message {
-  @apply bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded;
-}
-
-/* Loading spinner */
-.spinner {
-  @apply inline-block w-8 h-8 border-4 border-gray-200 border-t-brand-blue rounded-full animate-spin;
-}
-
-/* Mobile menu styles */
-.mobile-menu {
-  @apply fixed inset-0 z-50 bg-white dark:bg-dark-900;
-}
-
-/* Responsive utilities */
-@media (max-width: 640px) {
+  /* Hero section gradient */
   .hero-gradient {
-    padding-top: 6rem;
-    padding-bottom: 4rem;
+    background: linear-gradient(135deg, theme('colors.brand.blue') 0%, #5b89ff 100%);
   }
 }
 
-/* Print styles */
-@media print {
-  .no-print {
-    display: none;
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-300;
+}
+
+/* Focus states */
+@layer utilities {
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply outline-none ring-2 ring-brand-blue;
   }
 }
 
-/* Accessibility */
+/* Loading states */
+.spinner {
+  @apply inline-block w-8 h-8 border-4 border-gray-200 dark:border-gray-700 border-t-brand-blue rounded-full animate-spin;
+}
+
+/* Screen reader only */
 .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
   clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--brand-light);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--brand-blue);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #2952cc;
 }

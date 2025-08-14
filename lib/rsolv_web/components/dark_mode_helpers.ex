@@ -18,7 +18,7 @@ defmodule RsolvWeb.Components.DarkModeHelpers do
       </div>
   """
   def card_classes(additional_classes \\ "") do
-    "bg-white dark:bg-dark-800 #{additional_classes}"
+    "bg-white dark:bg-slate-800 #{additional_classes}"
   end
 
   @doc """
@@ -26,7 +26,7 @@ defmodule RsolvWeb.Components.DarkModeHelpers do
   """
   def input_classes(additional_classes \\ "") do
     "shadow appearance-none border dark:border-gray-600 rounded w-full py-2 px-3 " <>
-    "text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-700 " <>
+    "text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 " <>
     "leading-tight focus:outline-none focus:shadow-outline " <>
     "focus:ring-2 focus:ring-brand-blue dark:focus:ring-brand-green #{additional_classes}"
   end
@@ -46,9 +46,9 @@ defmodule RsolvWeb.Components.DarkModeHelpers do
   """
   def section_classes(variant \\ :default, additional_classes \\ "") do
     base = case variant do
-      :light -> "bg-brand-light dark:bg-dark-900"
-      :dark -> "bg-gray-50 dark:bg-dark-900"
-      _ -> "bg-white dark:bg-dark-950"
+      :light -> "bg-brand-light dark:bg-slate-900"
+      :dark -> "bg-gray-50 dark:bg-slate-900"
+      _ -> "bg-white dark:bg-slate-950"
     end
     "#{base} #{additional_classes}"
   end

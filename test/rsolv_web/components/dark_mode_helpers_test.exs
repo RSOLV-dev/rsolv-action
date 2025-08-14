@@ -5,12 +5,12 @@ defmodule RsolvWeb.Components.DarkModeHelpersTest do
 
   describe "card_classes/1" do
     test "returns default card classes" do
-      assert DarkModeHelpers.card_classes() == "bg-white dark:bg-dark-800 "
+      assert DarkModeHelpers.card_classes() == "bg-white dark:bg-slate-800 "
     end
 
     test "appends additional classes" do
       assert DarkModeHelpers.card_classes("shadow-lg rounded-lg") == 
-        "bg-white dark:bg-dark-800 shadow-lg rounded-lg"
+        "bg-white dark:bg-slate-800 shadow-lg rounded-lg"
     end
   end
 
@@ -22,7 +22,7 @@ defmodule RsolvWeb.Components.DarkModeHelpersTest do
       assert result =~ "shadow appearance-none"
       assert result =~ "border dark:border-gray-600"
       assert result =~ "text-gray-700 dark:text-gray-200"
-      assert result =~ "bg-white dark:bg-dark-700"
+      assert result =~ "bg-white dark:bg-slate-700"
       assert result =~ "focus:ring-brand-blue dark:focus:ring-brand-green"
     end
 
@@ -41,19 +41,19 @@ defmodule RsolvWeb.Components.DarkModeHelpersTest do
 
   describe "section_classes/2" do
     test "returns default section classes" do
-      assert DarkModeHelpers.section_classes() == "bg-white dark:bg-dark-950 "
+      assert DarkModeHelpers.section_classes() == "bg-white dark:bg-slate-950 "
     end
 
     test "returns light variant classes" do
-      assert DarkModeHelpers.section_classes(:light) == "bg-brand-light dark:bg-dark-900 "
+      assert DarkModeHelpers.section_classes(:light) == "bg-brand-light dark:bg-slate-900 "
     end
 
     test "returns dark variant classes" do
-      assert DarkModeHelpers.section_classes(:dark) == "bg-gray-50 dark:bg-dark-900 "
+      assert DarkModeHelpers.section_classes(:dark) == "bg-gray-50 dark:bg-slate-900 "
     end
 
     test "appends additional classes" do
-      assert DarkModeHelpers.section_classes(:default, "py-20") == "bg-white dark:bg-dark-950 py-20"
+      assert DarkModeHelpers.section_classes(:default, "py-20") == "bg-white dark:bg-slate-950 py-20"
     end
   end
 

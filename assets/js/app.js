@@ -2,19 +2,6 @@
 // to get started and then uncomment the line below.
 // import "./user_socket.js"
 
-// You can include dependencies in two ways.
-//
-// The simplest option is to put them in assets/vendor and
-// import them using relative paths:
-//
-//     import "../vendor/some-package.js"
-//
-// Alternatively, you can `npm install some-package --prefix assets` and import
-// them using a path starting with the package name:
-//
-//     import "some-package"
-//
-
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
 import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
@@ -26,7 +13,6 @@ import DashboardHooks from "./dashboard_charts"
 import ResponsiveChartHooks from "./responsive_charts"
 import FeedbackModule from "./feedback"
 import { initRoiCalculator } from "./roi_calculator"
-import { DarkThemeToggle } from "../vendor/toggle_theme"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
@@ -35,8 +21,6 @@ const Hooks = {
   ...DashboardHooks,
   ...ResponsiveChartHooks,
   
-  // Dark theme toggle hook (imported from vendor)
-  DarkThemeToggle,
   
   FocusInput: {
     mounted() {
@@ -91,10 +75,10 @@ const Hooks = {
 };
 
 let liveSocket = new LiveSocket("/live", Socket, {
-  longPollFallbackMs: 10000, // Increase timeout to 10 seconds
+  longPollFallbackMs: 10000,
   params: {_csrf_token: csrfToken},
   hooks: Hooks,
-  transport: WebSocket // Explicitly use WebSocket 
+  transport: WebSocket
 })
 
 // Show progress bar on live navigation and form submits
@@ -113,16 +97,11 @@ window.liveSocket = liveSocket
 
 // Mobile menu functionality
 document.addEventListener("DOMContentLoaded", function() {
-  // Theme initialization is now handled by the vendor/toggle_theme.js module
-  
   // Initialize analytics system
   Analytics.init();
   
   // Initialize feedback module
   FeedbackModule.init();
-  
-  // Initialize sticky header
-  initStickyHeader();
   
   // Initialize ROI calculator if present
   initRoiCalculator();
@@ -149,12 +128,14 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
   
-  // Track section visibilty with Intersection Observer
+  // Track section visibility with Intersection Observer
   setupSectionVisibility();
   
   // Add UTM parameter persistence to all links
   preserveUtmParams();
+  
 });
+
 
 // Track section visibility using Intersection Observer
 function setupSectionVisibility() {
@@ -249,10 +230,3 @@ function preserveUtmParams() {
     });
   });
 }
-
-// Initialize sticky header behavior
-function initStickyHeader() {
-  // Header now has persistent background, no need for scroll behavior
-}
-
-
