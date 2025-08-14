@@ -452,10 +452,35 @@ export class PhaseExecutor {
       }
 
       // Check if we have validation data now
-      const issueKey = `issue-${options.issueNumber}`;
-      const validation = validationData?.validation?.[issueKey];
+      logger.info('[MITIGATE] Step 4: Checking validation data...');
+      
+      let validation;
+      try {
+        const issueKey = `issue-${options.issueNumber}`;
+        logger.info('[MITIGATE] Looking for validation with key:', issueKey);
+        logger.info('[MITIGATE] Available validation data:', {
+          hasValidationData: !!validationData,
+          validationKeys: validationData ? Object.keys(validationData) : [],
+          validationProp: validationData?.validation ? Object.keys(validationData.validation) : []
+        });
+        
+        validation = validationData?.validation?.[issueKey];
+        logger.info('[MITIGATE] Validation lookup result:', {
+          found: !!validation,
+          validationType: validation ? typeof validation : 'undefined'
+        });
+      } catch (error) {
+        logger.error('[MITIGATE] Error accessing validation data:', error);
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: `Failed to access validation data: ${error instanceof Error ? error.message : String(error)}`,
+          data: { validationAccessError: true }
+        };
+      }
       
       if (!validation) {
+        logger.warn('[MITIGATE] No validation data found for issue');
         return {
           success: false,
           phase: 'mitigate',
@@ -463,6 +488,8 @@ export class PhaseExecutor {
           data: { validationRequired: true }
         };
       }
+      
+      logger.info('[MITIGATE] Step 4 complete: Validation data found');
 
       // Check if validation found specific vulnerabilities (handle both old and new formats)
       const validationAny = validation as any;
