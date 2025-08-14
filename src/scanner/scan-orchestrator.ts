@@ -1,6 +1,7 @@
 import { RepositoryScanner } from './repository-scanner.js';
 import { IssueCreator } from './issue-creator.js';
 import { logger } from '../utils/logger.js';
+import { ensureLabelsExist } from '../github/label-manager.js';
 import type { ScanConfig, ScanResult } from './types.js';
 
 export class ScanOrchestrator {
@@ -16,6 +17,15 @@ export class ScanOrchestrator {
     logger.info('Starting proactive security scan');
     
     try {
+      // Ensure all required labels exist first
+      if (config.createIssues && process.env.GITHUB_TOKEN) {
+        await ensureLabelsExist(
+          config.repository.owner, 
+          config.repository.name, 
+          process.env.GITHUB_TOKEN
+        );
+      }
+      
       // Perform the scan
       const scanResult = await this.scanner.scan(config);
       
