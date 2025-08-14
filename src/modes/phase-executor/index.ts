@@ -372,9 +372,12 @@ export class PhaseExecutor {
 
       // Check if we have validation data now
       const issueKey = `issue-${options.issueNumber}`;
+      logger.info('[MITIGATE] Looking for validation under key:', issueKey);
+      logger.info('[MITIGATE] ValidationData structure:', JSON.stringify(validationData, null, 2));
       const validation = validationData?.validation?.[issueKey];
       
       if (!validation) {
+        logger.warn('[MITIGATE] No validation found under key:', issueKey);
         return {
           success: false,
           phase: 'mitigate',
