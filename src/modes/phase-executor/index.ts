@@ -104,8 +104,8 @@ export class PhaseExecutor {
         }
       
       case 'mitigate':
-        // Use standalone mitigation mode
-        return this.executeMitigateStandalone(options);
+        // Use the enhanced mitigation that fetches the issue
+        return this.executeMitigate(options);
       
       case 'full':
         // Run all phases
