@@ -243,6 +243,7 @@ export class ValidationEnricher {
     if (title.includes('nosql injection')) return 'nosql-injection';
     if (title.includes('xxe') || title.includes('xml external entity')) return 'xxe';
     if (title.includes('ssrf') || title.includes('server-side request forgery')) return 'ssrf';
+    if (title.includes('javascript injection') || title.includes('eval')) return 'ssjs-injection';
     
     return 'generic';
   }
@@ -320,6 +321,24 @@ export class ValidationEnricher {
           confidence: 'medium',
           suggestedFix: 'Validate input structure',
           cweId: 'CWE-943',
+          owasp: 'A03:2021'
+        }
+      ],
+      'ssjs-injection': [
+        {
+          name: 'eval() with user input',
+          regex: /eval\s*\(\s*(?:req\.|request\.|params|query|body)/gi,
+          confidence: 'high',
+          suggestedFix: 'Use parseInt/parseFloat or JSON.parse instead of eval',
+          cweId: 'CWE-94',
+          owasp: 'A03:2021'
+        },
+        {
+          name: 'Function constructor with user input',
+          regex: /new\s+Function\s*\([^)]*(?:req\.|params|query|body)/gi,
+          confidence: 'high',
+          suggestedFix: 'Avoid dynamic code generation',
+          cweId: 'CWE-94',
           owasp: 'A03:2021'
         }
       ],
