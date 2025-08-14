@@ -404,50 +404,68 @@ export class PhaseExecutor {
         hasValidatedLabel
       });
       
-      if (!validationData?.validation && hasAutomateLabel && !hasValidatedLabel) {
-        logger.info('[MITIGATE] Step 3: No validation found, running VALIDATE phase first');
-        
-        // Run validation phase with timeout
-        try {
-          const validatePromise = this.executeValidate(options);
-          const validateTimeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Validation timeout after 60s')), 60000)
-          );
+      // If no validation data, check if we should run validation or proceed without it
+      if (!validationData?.validation) {
+        if (hasAutomateLabel) {
+          // If automate label is present, we can proceed without validation
+          logger.info('[MITIGATE] Step 3: rsolv:automate label found, proceeding without validation data');
+          // Create synthetic validation data for issues with automate label
+          validationData = {
+            validation: {
+              [`issue-${options.issueNumber}`]: {
+                hasSpecificVulnerabilities: true,
+                vulnerabilities: [],
+                validated: true,
+                message: 'Proceeding with automate label'
+              }
+            }
+          };
+        } else if (!hasValidatedLabel) {
+          // No automate label and not validated - run validation first
+          logger.info('[MITIGATE] Step 3: No validation found, running VALIDATE phase first');
           
-          const validateResult = await Promise.race([validatePromise, validateTimeoutPromise]) as ExecuteResult;
-          
-          if (!validateResult.success) {
-            logger.error('[MITIGATE] Step 3 failed: Auto-validation failed');
+          // Run validation phase with timeout
+          try {
+            const validatePromise = this.executeValidate(options);
+            const validateTimeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Validation timeout after 60s')), 60000)
+            );
+            
+            const validateResult = await Promise.race([validatePromise, validateTimeoutPromise]) as ExecuteResult;
+            
+            if (!validateResult.success) {
+              logger.error('[MITIGATE] Step 3 failed: Auto-validation failed');
+              return {
+                success: false,
+                phase: 'mitigate',
+                error: `Auto-validation failed: ${validateResult.error}`,
+                data: { validationAttempted: true }
+              };
+            }
+            
+            logger.info('[MITIGATE] Step 3a: Validation succeeded, retrieving stored data...');
+            // Get the validation data that was just stored
+            const dataPromise2 = this.phaseDataClient.retrievePhaseResults(
+              `${options.repository.owner}/${options.repository.name}`,
+              options.issueNumber,
+              commitSha
+            );
+            
+            const dataTimeoutPromise2 = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Phase data retrieval timeout after 15s')), 15000)
+            );
+            
+            validationData = await Promise.race([dataPromise2, dataTimeoutPromise2]) as any;
+            logger.info('[MITIGATE] Step 3 complete: Validation data retrieved');
+          } catch (error) {
+            logger.error('[MITIGATE] Step 3 failed:', error);
             return {
               success: false,
               phase: 'mitigate',
-              error: `Auto-validation failed: ${validateResult.error}`,
-              data: { validationAttempted: true }
+              error: `Validation phase error: ${error instanceof Error ? error.message : String(error)}`,
+              data: { validationError: true }
             };
           }
-          
-          logger.info('[MITIGATE] Step 3a: Validation succeeded, retrieving stored data...');
-          // Get the validation data that was just stored
-          const dataPromise2 = this.phaseDataClient.retrievePhaseResults(
-            `${options.repository.owner}/${options.repository.name}`,
-            options.issueNumber,
-            commitSha
-          );
-          
-          const dataTimeoutPromise2 = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Phase data retrieval timeout after 15s')), 15000)
-          );
-          
-          validationData = await Promise.race([dataPromise2, dataTimeoutPromise2]) as any;
-          logger.info('[MITIGATE] Step 3 complete: Validation data retrieved');
-        } catch (error) {
-          logger.error('[MITIGATE] Step 3 failed:', error);
-          return {
-            success: false,
-            phase: 'mitigate',
-            error: `Validation phase error: ${error instanceof Error ? error.message : String(error)}`,
-            data: { validationError: true }
-          };
         }
       }
 
@@ -480,13 +498,24 @@ export class PhaseExecutor {
       }
       
       if (!validation) {
-        logger.warn('[MITIGATE] No validation data found for issue');
-        return {
-          success: false,
-          phase: 'mitigate',
-          error: 'No validation data available. Please run validation first or add rsolv:automate label.',
-          data: { validationRequired: true }
-        };
+        // If we still don't have validation and we have the automate label, create synthetic validation
+        if (hasAutomateLabel) {
+          logger.warn('[MITIGATE] No validation data found, but rsolv:automate label present - proceeding anyway');
+          validation = {
+            hasSpecificVulnerabilities: true,
+            vulnerabilities: [],
+            validated: true,
+            message: 'Proceeding with automate label without validation'
+          };
+        } else {
+          logger.warn('[MITIGATE] No validation data found for issue');
+          return {
+            success: false,
+            phase: 'mitigate',
+            error: 'No validation data available. Please run validation first or add rsolv:automate label.',
+            data: { validationRequired: true }
+          };
+        }
       }
       
       logger.info('[MITIGATE] Step 4 complete: Validation data found');
