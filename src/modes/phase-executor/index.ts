@@ -286,7 +286,6 @@ export class PhaseExecutor {
         }
       };
       
-      logger.info('[VALIDATE] executeValidate returning successfully', { success: true });
       return result;
     } catch (error) {
       logger.error('Validation phase failed', error);
@@ -346,12 +345,9 @@ export class PhaseExecutor {
         logger.info('[MITIGATE] No validation found, running VALIDATE phase first');
         
         // Run validation phase
-        logger.info('[MITIGATE] Running executeValidate...');
         const validateResult = await this.executeValidate(options);
-        logger.info('[MITIGATE] executeValidate completed', { success: validateResult.success });
         
         if (!validateResult.success) {
-          logger.error('[MITIGATE] Validation failed', validateResult);
           return {
             success: false,
             phase: 'mitigate',
@@ -361,23 +357,18 @@ export class PhaseExecutor {
         }
         
         // Get the validation data that was just stored
-        logger.info('[MITIGATE] Retrieving validation data...');
         validationData = await this.phaseDataClient.retrievePhaseResults(
           `${options.repository.owner}/${options.repository.name}`,
           options.issueNumber,
           commitSha
         );
-        logger.info('[MITIGATE] Retrieved validation data', { hasData: !!validationData });
       }
 
       // Check if we have validation data now
       const issueKey = `issue-${options.issueNumber}`;
-      logger.info('[MITIGATE] Looking for validation under key:', issueKey);
-      logger.info('[MITIGATE] ValidationData structure:', JSON.stringify(validationData, null, 2));
       const validation = validationData?.validation?.[issueKey];
       
       if (!validation) {
-        logger.warn('[MITIGATE] No validation found under key:', issueKey);
         return {
           success: false,
           phase: 'mitigate',
@@ -417,15 +408,6 @@ export class PhaseExecutor {
 
       // Use the actual AI processor to generate fixes
       logger.info(`[MITIGATE] Generating fix for ${vulnerabilities.length} validated vulnerabilities`);
-      
-      // Debug logging
-      logger.info('[MITIGATE] Config check:', {
-        hasApiKey: !!this.config.apiKey,
-        hasRsolvApiKey: !!this.config.rsolvApiKey,
-        aiProvider: this.config.aiProvider?.provider,
-        useVendedCredentials: this.config.aiProvider?.useVendedCredentials,
-        issueNumber: enhancedIssue.number
-      });
       
       // Check for required credentials before proceeding
       if (this.config.aiProvider?.useVendedCredentials && !this.config.rsolvApiKey) {
