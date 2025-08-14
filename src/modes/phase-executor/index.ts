@@ -407,6 +407,14 @@ export class PhaseExecutor {
       // Use the actual AI processor to generate fixes
       logger.info(`[MITIGATE] Generating fix for ${vulnerabilities.length} validated vulnerabilities`);
       
+      // Debug logging
+      logger.info('[MITIGATE] Config check:', {
+        hasApiKey: !!this.config.apiKey,
+        hasRsolvApiKey: !!this.config.rsolvApiKey,
+        aiProvider: this.config.aiProvider?.provider,
+        issueNumber: enhancedIssue.number
+      });
+      
       // Import the processor
       const { processIssues } = await import('../../ai/unified-processor.js');
       
@@ -429,8 +437,12 @@ export class PhaseExecutor {
         };
       } else {
         // Failed to create PR
-        const error = processingResults[0]?.error || 'Unknown error during fix generation';
-        logger.error('[MITIGATE] Failed to generate fix', { error });
+        const error = processingResults[0]?.error || processingResults[0]?.message || 'Unknown error during fix generation';
+        logger.error('[MITIGATE] Failed to generate fix', { 
+          error,
+          result: processingResults[0],
+          hasResult: processingResults.length > 0
+        });
         return {
           success: false,
           phase: 'mitigate',
