@@ -320,7 +320,7 @@ export async function processIssueWithGit(
       }
       
       // Step 4.5: Validate fix if enabled and tests were generated
-      if ((config.testGeneration?.validateFixes || config.fixValidation?.enabled !== false) && 
+      if (config.fixValidation?.enabled === true && 
           testResults?.generatedTests?.success && 
           testResults.generatedTests.testSuite) {
         
