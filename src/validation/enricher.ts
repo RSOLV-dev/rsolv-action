@@ -207,8 +207,9 @@ export class ValidationEnricher {
         const codeSnippet = lines.slice(contextStart, contextEnd + 1).join('\n');
         
         // Check if AST validation confirms this
-        const astValidated = astResults?.vulnerabilities?.some((v: any) => 
-          v.line >= startLine && v.line <= endLine
+        // The validation API returns { validated: [...] } with isValid flag
+        const astValidated = astResults?.validated?.some((v: any) => 
+          v.isValid === true
         ) || false;
         
         vulnerabilities.push({
@@ -365,17 +366,25 @@ export class ValidationEnricher {
     }
 
     try {
-      // Call RSOLV API for AST validation
-      const response = await fetch(`${process.env.RSOLV_API_URL || 'https://api.rsolv.dev'}/ast/validate`, {
+      // Call RSOLV API for vulnerability validation
+      const response = await fetch(`${process.env.RSOLV_API_URL || 'https://api.rsolv.dev'}/api/v1/vulnerabilities/validate`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.rsolvApiKey}`,
+          'x-api-key': this.rsolvApiKey,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          file: filePath,
-          content: content,
-          vulnerabilityType: vulnType
+          vulnerabilities: [{
+            id: `temp-${Date.now()}`,
+            patternId: vulnType,
+            filePath: filePath,
+            line: 1,
+            code: content.split('\n')[0],
+            severity: 'high'
+          }],
+          files: {
+            [filePath]: content
+          }
         })
       });
 

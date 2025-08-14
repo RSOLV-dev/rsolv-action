@@ -182,6 +182,150 @@ describe('ValidationEnricher', () => {
     });
   });
 
+  describe('AST Validation', () => {
+    beforeEach(() => {
+      // Mock fetch globally
+      global.fetch = vi.fn();
+    });
+
+    it('should call AST validation API with correct parameters when API key is provided', async () => {
+      const mockFetch = global.fetch as any;
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          validated: [
+            {
+              id: 'temp-123',
+              isValid: true,
+              confidence: 0.95,
+              astContext: {
+                inUserInputFlow: true,
+                hasValidation: false
+              }
+            }
+          ],
+          stats: {
+            total: 1,
+            validated: 1,
+            rejected: 0
+          }
+        })
+      });
+
+      const fs = await import('fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(
+        'const preTax = eval(req.body.preTax);'
+      );
+
+      const issue: IssueContext = {
+        id: 'test-eval',
+        number: 216,
+        title: 'Server-Side JavaScript Injection via eval()',
+        body: 'app/routes/contributions.js\n- **Lines 60-63**: Direct use of eval() on user input',
+        labels: ['security', 'rsolv:detected'],
+        repository: {
+          owner: 'test',
+          name: 'repo',
+          fullName: 'test/repo'
+        }
+      };
+
+      // Test private method through analyzeFile which calls runASTValidation
+      const vulnerabilities = await (enricher as any).analyzeFile('app/routes/contributions.js', issue);
+
+      // Verify AST validation was called
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/vulnerabilities/validate'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'x-api-key': 'rsolv-api-key',
+            'Content-Type': 'application/json'
+          }),
+          body: expect.stringContaining('contributions.js')
+        })
+      );
+
+      // Verify AST results are used
+      expect(vulnerabilities).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            astValidation: true
+          })
+        ])
+      );
+    });
+
+    it('should handle AST validation API failures gracefully', async () => {
+      const mockFetch = global.fetch as any;
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Not Found'
+      });
+
+      const fs = await import('fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(
+        'const preTax = eval(req.body.preTax);'
+      );
+
+      const issue: IssueContext = {
+        id: 'test-eval-fail',
+        number: 217,
+        title: 'Server-Side JavaScript Injection via eval()',
+        body: 'app/routes/contributions.js',
+        labels: ['security'],
+        repository: {
+          owner: 'test',
+          name: 'repo',
+          fullName: 'test/repo'
+        }
+      };
+
+      // Should still return vulnerabilities even if AST fails
+      const vulnerabilities = await (enricher as any).analyzeFile('app/routes/contributions.js', issue);
+      
+      expect(mockFetch).toHaveBeenCalled();
+      // Should still detect via regex patterns
+      expect(vulnerabilities.length).toBeGreaterThan(0);
+    });
+
+    it('should not call AST validation when no API key is provided', async () => {
+      // Create enricher without API key
+      const enricherNoKey = new ValidationEnricher('github-token', undefined);
+      const mockFetch = global.fetch as any;
+      mockFetch.mockClear();
+
+      const fs = await import('fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(
+        'const preTax = eval(req.body.preTax);'
+      );
+
+      const issue: IssueContext = {
+        id: 'test-no-key',
+        number: 218,
+        title: 'JavaScript Injection',
+        body: 'app/routes/contributions.js',
+        labels: ['security'],
+        repository: {
+          owner: 'test',
+          name: 'repo',
+          fullName: 'test/repo'
+        }
+      };
+
+      await (enricherNoKey as any).analyzeFile('app/routes/contributions.js', issue);
+
+      // Should not call AST validation without API key
+      expect(mockFetch).not.toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/vulnerabilities/validate'),
+        expect.anything()
+      );
+    });
+  });
+
   describe('extractVulnerabilityType', () => {
     it('should detect SQL injection from issue title', () => {
       const issue: IssueContext = {
