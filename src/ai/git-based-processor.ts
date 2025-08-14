@@ -471,8 +471,14 @@ function checkGitStatus(): { clean: boolean; modifiedFiles: string[] } {
     
     const modifiedFiles = status
       .split('\n')
-      .map(line => line.substring(3).trim())
-      .filter(file => file.length > 0);
+      .map(line => line.substring(2).trim()) // Git status has 2-char prefix
+      .filter(file => file.length > 0)
+      .filter(file => !file.startsWith('.rsolv/')); // Ignore .rsolv directory
+    
+    // If only .rsolv files were modified, consider it clean
+    if (modifiedFiles.length === 0) {
+      return { clean: true, modifiedFiles: [] };
+    }
     
     return { clean: false, modifiedFiles };
     
