@@ -67,11 +67,21 @@ export class PhaseDataClient {
   ): Promise<StoreResult> {
     // For now, use GitHub comments as storage since platform API doesn't have these endpoints
     // This ensures data persists across different GitHub Actions runners
+    console.log(`[PhaseDataClient] storePhaseResults called:`, {
+      phase,
+      hasIssueNumber: !!metadata.issueNumber,
+      issueNumber: metadata.issueNumber,
+      repo: metadata.repo,
+      commitSha: metadata.commitSha?.substring(0, 8)
+    });
+    
     if (metadata.issueNumber) {
+      console.log(`[PhaseDataClient] Storing in GitHub comment for issue #${metadata.issueNumber}`);
       return this.storeInGitHubComment(phase, data, metadata);
     }
     
     // Fallback to local storage for non-issue operations
+    console.log(`[PhaseDataClient] No issue number, storing locally`);
     return this.storeLocally(phase, data, metadata);
   }
   
@@ -202,13 +212,16 @@ ${JSON.stringify(commentData, null, 2)}
 Phase data stored for ${phase} phase (commit: ${metadata.commitSha.substring(0, 8)})`;
     
     try {
+      console.log(`[PhaseDataClient] Creating GitHub comment on ${owner}/${name}#${metadata.issueNumber}`);
       await createIssueComment(owner, name, metadata.issueNumber, commentBody);
+      console.log(`[PhaseDataClient] Successfully created GitHub comment`);
       return {
         success: true,
         storage: 'platform' as const,
         message: 'Stored in GitHub comment'
       };
     } catch (error) {
+      console.error(`[PhaseDataClient] Failed to create GitHub comment:`, error);
       // Fallback to local storage
       return this.storeLocally(phase, data, metadata);
     }

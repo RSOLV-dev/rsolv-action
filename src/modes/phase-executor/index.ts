@@ -265,6 +265,7 @@ export class PhaseExecutor {
       };
 
       const commitSha = options.commitSha || this.getCurrentCommitSha();
+      console.log(`[PhaseExecutor] Storing validation data for issue #${options.issueNumber}`);
       await this.storePhaseData('validation', {
         [`issue-${options.issueNumber}`]: validationData
       }, {
@@ -272,6 +273,7 @@ export class PhaseExecutor {
         issueNumber: options.issueNumber,
         commitSha
       });
+      console.log(`[PhaseExecutor] Validation data stored`);
 
       // Return success with enrichment details
       const result = {
