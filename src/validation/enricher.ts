@@ -142,6 +142,22 @@ export class ValidationEnricher {
           files.push(fileMatch[1].trim());
         }
       }
+      
+      // Pattern 4: Look for file paths in plain comments (without File: prefix)
+      // Matches: // app/routes/profile.js or # lib/auth.py or /* src/main.java */
+      const supportedExtensions = 'js|ts|jsx|tsx|py|rb|java|go|php|cs';
+      const plainCommentPattern = new RegExp(
+        `(?:^|\\n)\\s*(?:\\/\\/|#|\\/\\*)\\s*([a-zA-Z0-9_\\-\\.\\/]+\\.(${supportedExtensions}))\\s*(?:\\*\\/)?`,
+        'gm'
+      );
+      let plainMatch;
+      while ((plainMatch = plainCommentPattern.exec(block)) !== null) {
+        const filePath = plainMatch[1].trim();
+        // Ensure it looks like a valid file path (contains at least one /)
+        if (filePath.includes('/') && !files.includes(filePath)) {
+          files.push(filePath);
+        }
+      }
     }
 
     return files;
@@ -177,7 +193,7 @@ export class ValidationEnricher {
     const patterns = this.getPatterns(vulnType);
     
     for (const pattern of patterns) {
-      const regex = new RegExp(pattern.regex, 'gm');
+      const regex = pattern.regex;
       let match;
       
       while ((match = regex.exec(content)) !== null) {
@@ -236,7 +252,7 @@ export class ValidationEnricher {
    */
   private getPatterns(vulnType: string): Array<{
     name: string;
-    regex: string;
+    regex: RegExp;
     confidence: string;
     suggestedFix?: string;
     cweId?: string;
@@ -246,7 +262,7 @@ export class ValidationEnricher {
       'sql-injection': [
         {
           name: 'String concatenation in SQL query',
-          regex: /(?:query|execute|prepare)\s*\([^)]*\+[^)]*\)/,
+          regex: /(?:query|execute|prepare|SELECT|INSERT|UPDATE|DELETE).*["'`].*\+.*["'`]/gi,
           confidence: 'high',
           suggestedFix: 'Use parameterized queries',
           cweId: 'CWE-89',
@@ -254,7 +270,7 @@ export class ValidationEnricher {
         },
         {
           name: 'Template literal in SQL query',
-          regex: /(?:query|execute|prepare)\s*\(`[^`]*\$\{[^}]+\}[^`]*`\)/,
+          regex: /(?:query|execute|prepare)\s*\(`[^`]*\$\{[^}]+\}[^`]*`\)/g,
           confidence: 'high',
           suggestedFix: 'Use parameterized queries',
           cweId: 'CWE-89',
@@ -264,7 +280,7 @@ export class ValidationEnricher {
       'xss': [
         {
           name: 'Direct HTML injection',
-          regex: /innerHTML\s*=\s*[^;]+user|req\.|params|query/,
+          regex: /innerHTML\s*=\s*[^;]+user|req\.|params|query/g,
           confidence: 'high',
           suggestedFix: 'Use textContent or escape HTML',
           cweId: 'CWE-79',
@@ -272,7 +288,7 @@ export class ValidationEnricher {
         },
         {
           name: 'Unescaped template rendering',
-          regex: /\{\{\{[^}]+\}\}\}/,
+          regex: /\{\{\{[^}]+\}\}\}/g,
           confidence: 'medium',
           suggestedFix: 'Use escaped template syntax',
           cweId: 'CWE-79',
@@ -282,7 +298,7 @@ export class ValidationEnricher {
       'command-injection': [
         {
           name: 'exec with user input',
-          regex: /(?:exec|spawn|execFile)\s*\([^)]*(?:req\.|params|query|body)/,
+          regex: /(?:exec|spawn|execFile)\s*\([^)]*(?:req\.|params|query|body)/g,
           confidence: 'high',
           suggestedFix: 'Validate and sanitize input',
           cweId: 'CWE-78',
@@ -292,7 +308,7 @@ export class ValidationEnricher {
       'nosql-injection': [
         {
           name: 'MongoDB $where operator',
-          regex: /\$where.*(?:req\.|params|query|body)/,
+          regex: /\$where.*(?:req\.|params|query|body)/g,
           confidence: 'high',
           suggestedFix: 'Avoid $where, use standard queries',
           cweId: 'CWE-943',
@@ -300,7 +316,7 @@ export class ValidationEnricher {
         },
         {
           name: 'Direct object injection',
-          regex: /find\s*\(\s*(?:req\.body|req\.query|req\.params)/,
+          regex: /find\s*\(\s*(?:req\.body|req\.query|req\.params)/g,
           confidence: 'medium',
           suggestedFix: 'Validate input structure',
           cweId: 'CWE-943',
@@ -310,7 +326,7 @@ export class ValidationEnricher {
       'generic': [
         {
           name: 'Potential security issue',
-          regex: /(?:eval|Function)\s*\(/,
+          regex: /(?:eval|Function)\s*\(/g,
           confidence: 'low',
           suggestedFix: 'Review for security implications',
           cweId: 'CWE-94'
