@@ -65,26 +65,14 @@ export class PhaseDataClient {
       commitSha: string;
     }
   ): Promise<StoreResult> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/v1/phases/store`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify({
-          phase,
-          data,
-          ...metadata
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Platform storage failed: ${response.statusText}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      // Fallback to local storage
-      return this.storeLocally(phase, data, metadata);
+    // For now, use GitHub comments as storage since platform API doesn't have these endpoints
+    // This ensures data persists across different GitHub Actions runners
+    if (metadata.issueNumber) {
+      return this.storeInGitHubComment(phase, data, metadata);
     }
+    
+    // Fallback to local storage for non-issue operations
+    return this.storeLocally(phase, data, metadata);
   }
   
   async retrievePhaseResults(
@@ -92,28 +80,15 @@ export class PhaseDataClient {
     issueNumber: number,
     commitSha: string
   ): Promise<PhaseData | null> {
-    try {
-      const response = await fetch(
-        `${this.baseUrl}/api/v1/phases/retrieve?` +
-        `repo=${repo}&issue=${issueNumber}&commit=${commitSha}`,
-        { headers: this.headers }
-      );
-      
-      if (response.status === 404) {
-        // Fallback to local storage immediately on 404
-        return this.retrieveLocally(repo, issueNumber, commitSha);
-      }
-      
-      if (!response.ok) {
-        throw new Error(`Platform retrieval failed: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      // Fallback to local storage
-      return this.retrieveLocally(repo, issueNumber, commitSha);
+    // For now, use GitHub comments as storage since platform API doesn't have these endpoints
+    // This ensures data persists across different GitHub Actions runners
+    const result = await this.retrieveFromGitHubComment(repo, issueNumber, commitSha);
+    if (result) {
+      return result;
     }
+    
+    // Fallback to local storage
+    return this.retrieveLocally(repo, issueNumber, commitSha);
   }
   
   async validatePhaseTransition(
@@ -202,5 +177,82 @@ export class PhaseDataClient {
   private async getCurrentCommitSha(): Promise<string> {
     const { execSync } = await import('child_process');
     return execSync('git rev-parse HEAD').toString().trim();
+  }
+
+  // GitHub comment-based storage for cross-workflow persistence
+  private async storeInGitHubComment(
+    phase: string,
+    data: PhaseData,
+    metadata: any
+  ): Promise<StoreResult> {
+    const { createIssueComment } = await import('../../github/api.js');
+    
+    const [owner, name] = metadata.repo.split('/');
+    const commentData = {
+      phase,
+      data,
+      metadata,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Create a hidden comment with phase data
+    const commentBody = `<!-- RSOLV_PHASE_DATA:${phase}:${metadata.commitSha}
+${JSON.stringify(commentData, null, 2)}
+-->
+Phase data stored for ${phase} phase (commit: ${metadata.commitSha.substring(0, 8)})`;
+    
+    try {
+      await createIssueComment(owner, name, metadata.issueNumber, commentBody);
+      return {
+        success: true,
+        storage: 'platform' as const,
+        message: 'Stored in GitHub comment'
+      };
+    } catch (error) {
+      // Fallback to local storage
+      return this.storeLocally(phase, data, metadata);
+    }
+  }
+  
+  private async retrieveFromGitHubComment(
+    repo: string,
+    issueNumber: number,
+    commitSha: string
+  ): Promise<PhaseData | null> {
+    try {
+      const { getGitHubClient } = await import('../../github/api.js');
+      const [owner, name] = repo.split('/');
+      
+      // GitHub API doesn't return comments with getIssue, need to fetch separately
+      const octokit = getGitHubClient();
+      const { data: comments } = await octokit.rest.issues.listComments({
+        owner,
+        repo: name,
+        issue_number: issueNumber
+      });
+      
+      // Find phase data comments
+      const phaseData: PhaseData = {};
+      const pattern = /<!-- RSOLV_PHASE_DATA:(\w+):([a-f0-9]+)\n([\s\S]*?)\n-->/g;
+      
+      for (const comment of comments) {
+        const matches = [...comment.body.matchAll(pattern)];
+        for (const match of matches) {
+          const [, phase, sha, jsonData] = match;
+          if (sha === commitSha || commitSha === 'latest') {
+            try {
+              const parsed = JSON.parse(jsonData);
+              Object.assign(phaseData, parsed.data);
+            } catch {
+              // Invalid JSON, skip
+            }
+          }
+        }
+      }
+      
+      return Object.keys(phaseData).length > 0 ? phaseData : null;
+    } catch (error) {
+      return null;
+    }
   }
 }
