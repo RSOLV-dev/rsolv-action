@@ -459,19 +459,29 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
         result = await super.generateSolution(issueContext, analysis, promptToUse);
       }
       
-      // Debug logging for conversation (only when explicitly enabled for security)
-      if (process.env.RSOLV_DEBUG_CONVERSATION === 'true') {
-        logger.warn('⚠️  DEBUG MODE: Conversation logging enabled - DO NOT USE IN PRODUCTION');
+      // Enhanced debug logging for conversation
+      const debugMode = process.env.RSOLV_DEBUG_CONVERSATION === 'true' || process.env.RSOLV_DEBUG === 'true';
+      if (debugMode) {
+        logger.warn('⚠️  DEBUG MODE: AI conversation logging enabled');
+        logger.info('=== MITIGATE PHASE DEBUG INFO ===');
+        logger.info(`Issue: #${issueContext.number} - ${issueContext.title}`);
+        logger.info(`Analysis complexity: ${analysis.complexity}`);
+        logger.info(`Using CLI adapter: ${useCLI}`);
+        logger.info(`Test results available: ${!!testResults}`);
+        logger.info(`Validation results available: ${!!validationResult}`);
+        logger.info(`Iteration: ${iteration ? `${iteration.current}/${iteration.max}` : 'N/A'}`);
+        
         if (result.messages) {
           logger.info('=== CLAUDE CODE CONVERSATION START ===');
+          logger.info(`Total messages: ${result.messages.length}`);
           result.messages.forEach((msg: any, index: number) => {
-            logger.info(`Message ${index + 1} (${msg.type}):`);
+            logger.info(`\n--- Message ${index + 1} (${msg.type}) ---`);
             if (msg.type === 'text' && msg.text) {
-              // Truncate very long messages for readability
-              const text = msg.text.length > 500 ? msg.text.substring(0, 500) + '...[truncated]' : msg.text;
-              logger.info(`  Text: ${text}`);
+              // Log full text for debugging
+              logger.info(`Text content (${msg.text.length} chars):`);
+              logger.info(msg.text);
             } else if (msg.type === 'tool_use') {
-              logger.info(`  Tool: ${msg.name}`);
+              logger.info(`Tool used: ${msg.name}`);
               if (msg.input?.path || msg.input?.file_path) {
                 logger.info(`  File: ${msg.input.path || msg.input.file_path}`);
               }
@@ -518,31 +528,63 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
         logger.info(`Phase status - Phase 1: ${phaseStatus.phase1Complete ? 'Complete' : 'Incomplete'}, Files edited: ${phaseStatus.filesEdited}, JSON provided: ${phaseStatus.jsonProvided}`);
       }
       
+      // Log the result from Claude
+      if (debugMode) {
+        logger.info('=== CLAUDE CODE RESULT ===');
+        logger.info(`Success: ${result.success}`);
+        logger.info(`Message: ${result.message}`);
+        if (result.error) {
+          logger.error(`Error: ${result.error}`);
+        }
+      }
+      
       // Check what files were modified
       const modifiedFiles = this.getModifiedFiles();
       
-      // Debug: Check git status in detail
-      if (process.env.RSOLV_DEBUG_CONVERSATION === 'true') {
+      // Enhanced debug: Check git status in detail
+      if (debugMode) {
+        logger.info('=== GIT STATUS CHECK ===');
         try {
           const gitStatus = execSync('git status --porcelain', { 
             cwd: this.repoPath, 
             encoding: 'utf8' 
           });
-          logger.info(`Git status output: ${gitStatus || '(no changes)'}`);
+          logger.info(`Git status output:\n${gitStatus || '(no changes)'}`);
           
           // Also check if we're in the right directory
           const pwd = execSync('pwd', { cwd: this.repoPath, encoding: 'utf8' }).trim();
           logger.info(`Working directory: ${pwd}`);
           
-          // List files in current directory
-          const files = execSync('ls -la', { cwd: this.repoPath, encoding: 'utf8' });
-          logger.info(`Files in directory:\n${files}`);
+          // Show git diff if there are changes
+          if (modifiedFiles.length > 0) {
+            const gitDiff = execSync('git diff --stat', { 
+              cwd: this.repoPath, 
+              encoding: 'utf8' 
+            });
+            logger.info(`Git diff stats:\n${gitDiff}`);
+            
+            // Show first 1000 chars of actual diff
+            const gitDiffFull = execSync('git diff', { 
+              cwd: this.repoPath, 
+              encoding: 'utf8' 
+            });
+            logger.info(`Git diff preview (first 1000 chars):\n${gitDiffFull.substring(0, 1000)}`);
+          }
         } catch (e) {
           logger.error('Failed to get git debug info:', e);
         }
       }
       
       if (modifiedFiles.length === 0) {
+        if (debugMode) {
+          logger.warn('=== NO FILES MODIFIED ===');
+          logger.warn('Claude Code completed but did not modify any files.');
+          logger.warn('Possible reasons:');
+          logger.warn('1. The vulnerability was not found');
+          logger.warn('2. Claude decided no changes were needed');
+          logger.warn('3. File edits failed silently');
+          logger.warn('Check the conversation log above for details.');
+        }
         return {
           success: false,
           message: 'No files were modified',
