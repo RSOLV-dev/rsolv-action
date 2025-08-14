@@ -384,8 +384,25 @@ export class PhaseExecutor {
       }
 
       // If no validation data and issue has rsolv:automate but not rsolv:validated
-      const hasAutomateLabel = issue.labels.includes('rsolv:automate');
-      const hasValidatedLabel = issue.labels.includes('rsolv:validated');
+      logger.info('[MITIGATE] Checking labels...', {
+        labels: issue.labels,
+        labelType: typeof issue.labels,
+        isArray: Array.isArray(issue.labels)
+      });
+      
+      // Safe label checking - labels might be an array of strings or objects
+      const labelNames = Array.isArray(issue.labels) 
+        ? issue.labels.map(l => typeof l === 'string' ? l : l.name || '')
+        : [];
+      
+      const hasAutomateLabel = labelNames.includes('rsolv:automate');
+      const hasValidatedLabel = labelNames.includes('rsolv:validated');
+      
+      logger.info('[MITIGATE] Label check complete', {
+        labelNames,
+        hasAutomateLabel,
+        hasValidatedLabel
+      });
       
       if (!validationData?.validation && hasAutomateLabel && !hasValidatedLabel) {
         logger.info('[MITIGATE] Step 3: No validation found, running VALIDATE phase first');
