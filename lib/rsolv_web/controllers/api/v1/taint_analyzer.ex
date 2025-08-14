@@ -224,7 +224,12 @@ defmodule RsolvWeb.Api.V1.TaintAnalyzer do
     start_line = max(0, line_number - 5)
     end_line = min(length(lines) - 1, line_number + 5)
     
-    nearby_lines = Enum.slice(lines, start_line..end_line)
+    # Use explicit step when creating range to avoid negative step warning
+    nearby_lines = if start_line <= end_line do
+      Enum.slice(lines, start_line..end_line//1)
+    else
+      []
+    end
     
     Enum.any?(nearby_lines, fn line ->
       Enum.any?(@sanitization_patterns, fn pattern ->
