@@ -412,14 +412,37 @@ export class PhaseExecutor {
         hasApiKey: !!this.config.apiKey,
         hasRsolvApiKey: !!this.config.rsolvApiKey,
         aiProvider: this.config.aiProvider?.provider,
+        useVendedCredentials: this.config.aiProvider?.useVendedCredentials,
         issueNumber: enhancedIssue.number
       });
+      
+      // Check for required credentials before proceeding
+      if (this.config.aiProvider?.useVendedCredentials && !this.config.rsolvApiKey) {
+        logger.error('[MITIGATE] Vended credentials enabled but RSOLV_API_KEY is missing');
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: 'RSOLV_API_KEY is required for vended credentials but was not provided',
+          data: { credentialError: true }
+        };
+      }
       
       // Import the processor
       const { processIssues } = await import('../../ai/unified-processor.js');
       
-      // Process the issue to generate a fix
-      const processingResults = await processIssues([enhancedIssue], this.config);
+      // Process the issue to generate a fix with error handling
+      let processingResults;
+      try {
+        processingResults = await processIssues([enhancedIssue], this.config);
+      } catch (error) {
+        logger.error('[MITIGATE] Error during processIssues:', error);
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: `Failed to process issue: ${error instanceof Error ? error.message : String(error)}`,
+          data: { processingError: true }
+        };
+      }
       
       let mitigationResult;
       if (processingResults.length > 0 && processingResults[0].pullRequestUrl) {
