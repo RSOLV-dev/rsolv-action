@@ -302,7 +302,7 @@ export class PhaseExecutor {
    */
   async executeMitigate(options: ExecuteOptions): Promise<ExecuteResult> {
     const startTime = Date.now();
-    const timeout = 300000; // 5 minute overall timeout
+    const timeout = 600000; // 10 minute overall timeout (increased for demo)
     
     try {
       logger.info('[MITIGATE] Starting enhanced mitigation phase', {
