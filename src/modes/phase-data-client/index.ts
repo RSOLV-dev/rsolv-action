@@ -92,6 +92,7 @@ export class PhaseDataClient {
     issueNumber: number,
     commitSha: string
   ): Promise<PhaseData | null> {
+    console.log(`[PhaseDataClient] Retrieving phase results for ${repo} issue #${issueNumber}`);
     try {
       const response = await fetch(
         `${this.baseUrl}/api/v1/phases/retrieve?` +
@@ -99,16 +100,23 @@ export class PhaseDataClient {
         { headers: this.headers }
       );
       
+      console.log(`[PhaseDataClient] Platform API response: ${response.status}`);
+      
       if (response.status === 404) {
-        return null;  // No data exists
+        console.log('[PhaseDataClient] Platform API returned 404, falling back to local storage');
+        // Fallback to local storage immediately on 404
+        return this.retrieveLocally(repo, issueNumber, commitSha);
       }
       
       if (!response.ok) {
         throw new Error(`Platform retrieval failed: ${response.statusText}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      console.log('[PhaseDataClient] Retrieved from platform:', data);
+      return data;
     } catch (error) {
+      console.log('[PhaseDataClient] Platform error, falling back to local:', error);
       // Fallback to local storage
       return this.retrieveLocally(repo, issueNumber, commitSha);
     }
@@ -169,6 +177,7 @@ export class PhaseDataClient {
     issueNumber: number,
     commitSha: string
   ): Promise<PhaseData | null> {
+    console.log(`[PhaseDataClient] Retrieving locally for ${repo} issue #${issueNumber}`);
     const fs = await import('fs/promises');
     const path = await import('path');
     
@@ -176,9 +185,14 @@ export class PhaseDataClient {
     const repoName = repo.replace('/', '-');
     const pattern = `${repoName}-${issueNumber}-`;
     
+    console.log(`[PhaseDataClient] Looking in ${dir} for files matching ${pattern}*`);
+    
     try {
       const files = await fs.readdir(dir);
+      console.log(`[PhaseDataClient] Found ${files.length} files in directory:`, files);
+      
       const matches = files.filter(f => f.startsWith(pattern));
+      console.log(`[PhaseDataClient] Found ${matches.length} matching files:`, matches);
       
       const allData: PhaseData = {};
       for (const file of matches) {
