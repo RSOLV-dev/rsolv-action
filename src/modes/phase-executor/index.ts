@@ -301,11 +301,19 @@ export class PhaseExecutor {
    * Execute mitigation phase - Enhanced to use validation data
    */
   async executeMitigate(options: ExecuteOptions): Promise<ExecuteResult> {
+    const startTime = Date.now();
+    const timeout = 300000; // 5 minute overall timeout
+    
     try {
-      logger.info('[MITIGATE] Starting enhanced mitigation phase');
+      logger.info('[MITIGATE] Starting enhanced mitigation phase', {
+        issueNumber: options.issueNumber,
+        repository: options.repository,
+        timestamp: new Date().toISOString()
+      });
       
       // Check requirements
       if (!options.issueNumber || !options.repository) {
+        logger.error('[MITIGATE] Missing required parameters');
         return {
           success: false,
           phase: 'mitigate',
@@ -313,13 +321,32 @@ export class PhaseExecutor {
         };
       }
 
-      // Get the issue from GitHub
+      // Get the issue from GitHub with timeout
+      logger.info('[MITIGATE] Step 1: Fetching issue from GitHub...');
       const { getIssue } = await import('../../github/api.js');
-      const issue = await getIssue(
+      
+      const issuePromise = getIssue(
         options.repository.owner,
         options.repository.name,
         options.issueNumber
       );
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('GitHub API timeout after 30s')), 30000)
+      );
+      
+      let issue;
+      try {
+        issue = await Promise.race([issuePromise, timeoutPromise]) as any;
+        logger.info('[MITIGATE] Step 1 complete: Successfully fetched issue from GitHub');
+      } catch (error) {
+        logger.error('[MITIGATE] Step 1 failed: Error fetching issue from GitHub:', error);
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: `Failed to fetch issue: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
 
       if (!issue) {
         return {
@@ -329,39 +356,82 @@ export class PhaseExecutor {
         };
       }
 
-      // Check for validation data
+      // Check for validation data with timeout
+      logger.info('[MITIGATE] Step 2: Retrieving validation data...');
       const commitSha = options.commitSha || this.getCurrentCommitSha();
-      let validationData = await this.phaseDataClient.retrievePhaseResults(
-        `${options.repository.owner}/${options.repository.name}`,
-        options.issueNumber,
-        commitSha
-      );
+      
+      let validationData;
+      try {
+        const dataPromise = this.phaseDataClient.retrievePhaseResults(
+          `${options.repository.owner}/${options.repository.name}`,
+          options.issueNumber,
+          commitSha
+        );
+        
+        const dataTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Phase data retrieval timeout after 15s')), 15000)
+        );
+        
+        validationData = await Promise.race([dataPromise, dataTimeoutPromise]) as any;
+        logger.info('[MITIGATE] Step 2 complete: Retrieved validation data', {
+          hasData: !!validationData,
+          keys: validationData ? Object.keys(validationData) : []
+        });
+      } catch (error) {
+        logger.warn('[MITIGATE] Step 2 warning: Failed to retrieve validation data:', error);
+        // Continue without validation data, will check labels
+        validationData = null;
+      }
 
       // If no validation data and issue has rsolv:automate but not rsolv:validated
       const hasAutomateLabel = issue.labels.includes('rsolv:automate');
       const hasValidatedLabel = issue.labels.includes('rsolv:validated');
       
       if (!validationData?.validation && hasAutomateLabel && !hasValidatedLabel) {
-        logger.info('[MITIGATE] No validation found, running VALIDATE phase first');
+        logger.info('[MITIGATE] Step 3: No validation found, running VALIDATE phase first');
         
-        // Run validation phase
-        const validateResult = await this.executeValidate(options);
-        
-        if (!validateResult.success) {
+        // Run validation phase with timeout
+        try {
+          const validatePromise = this.executeValidate(options);
+          const validateTimeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Validation timeout after 60s')), 60000)
+          );
+          
+          const validateResult = await Promise.race([validatePromise, validateTimeoutPromise]) as ExecuteResult;
+          
+          if (!validateResult.success) {
+            logger.error('[MITIGATE] Step 3 failed: Auto-validation failed');
+            return {
+              success: false,
+              phase: 'mitigate',
+              error: `Auto-validation failed: ${validateResult.error}`,
+              data: { validationAttempted: true }
+            };
+          }
+          
+          logger.info('[MITIGATE] Step 3a: Validation succeeded, retrieving stored data...');
+          // Get the validation data that was just stored
+          const dataPromise2 = this.phaseDataClient.retrievePhaseResults(
+            `${options.repository.owner}/${options.repository.name}`,
+            options.issueNumber,
+            commitSha
+          );
+          
+          const dataTimeoutPromise2 = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Phase data retrieval timeout after 15s')), 15000)
+          );
+          
+          validationData = await Promise.race([dataPromise2, dataTimeoutPromise2]) as any;
+          logger.info('[MITIGATE] Step 3 complete: Validation data retrieved');
+        } catch (error) {
+          logger.error('[MITIGATE] Step 3 failed:', error);
           return {
             success: false,
             phase: 'mitigate',
-            error: `Auto-validation failed: ${validateResult.error}`,
-            data: { validationAttempted: true }
+            error: `Validation phase error: ${error instanceof Error ? error.message : String(error)}`,
+            data: { validationError: true }
           };
         }
-        
-        // Get the validation data that was just stored
-        validationData = await this.phaseDataClient.retrievePhaseResults(
-          `${options.repository.owner}/${options.repository.name}`,
-          options.issueNumber,
-          commitSha
-        );
       }
 
       // Check if we have validation data now
@@ -421,19 +491,51 @@ export class PhaseExecutor {
       }
       
       // Import the processor
+      logger.info('[MITIGATE] Step 4: Importing AI processor...');
       const { processIssues } = await import('../../ai/unified-processor.js');
+      logger.info('[MITIGATE] Step 4 complete: AI processor imported successfully');
       
-      // Process the issue to generate a fix with error handling
+      // Check time remaining
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = timeout - elapsedTime;
+      if (remainingTime <= 0) {
+        logger.error('[MITIGATE] Overall timeout exceeded before processing');
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: 'Mitigation timeout exceeded',
+          data: { timeout: true, elapsed: elapsedTime }
+        };
+      }
+      
+      // Process the issue to generate a fix with timeout
+      logger.info('[MITIGATE] Step 5: Starting AI processing...', {
+        remainingTime: Math.round(remainingTime / 1000) + 's',
+        vulnerabilityCount: vulnerabilities.length,
+        hasVendedCredentials: this.config.aiProvider?.useVendedCredentials,
+        hasRsolvApiKey: !!this.config.rsolvApiKey
+      });
+      
       let processingResults;
       try {
-        processingResults = await processIssues([enhancedIssue], this.config);
+        const processPromise = processIssues([enhancedIssue], this.config);
+        const processTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`AI processing timeout after ${Math.round(remainingTime/1000)}s`)), remainingTime)
+        );
+        
+        processingResults = await Promise.race([processPromise, processTimeoutPromise]) as any;
+        logger.info('[MITIGATE] Step 5 complete: AI processing finished', {
+          hasResults: !!processingResults,
+          resultCount: processingResults?.length || 0,
+          firstResult: processingResults?.[0] ? Object.keys(processingResults[0]) : []
+        });
       } catch (error) {
-        logger.error('[MITIGATE] Error during processIssues:', error);
+        logger.error('[MITIGATE] Step 5 failed: Error during processIssues:', error);
         return {
           success: false,
           phase: 'mitigate',
           error: `Failed to process issue: ${error instanceof Error ? error.message : String(error)}`,
-          data: { processingError: true }
+          data: { processingError: true, elapsed: Date.now() - startTime }
         };
       }
       
@@ -471,12 +573,33 @@ export class PhaseExecutor {
       }
 
       // Store mitigation results
-      await this.storePhaseData('mitigation', {
-        [issueKey]: mitigationResult
-      }, {
-        repo: `${options.repository.owner}/${options.repository.name}`,
-        issueNumber: options.issueNumber,
-        commitSha
+      logger.info('[MITIGATE] Step 6: Storing mitigation results...');
+      try {
+        const storePromise = this.storePhaseData('mitigation', {
+          [issueKey]: mitigationResult
+        }, {
+          repo: `${options.repository.owner}/${options.repository.name}`,
+          issueNumber: options.issueNumber,
+          commitSha
+        });
+        
+        const storeTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Store timeout after 10s')), 10000)
+        );
+        
+        await Promise.race([storePromise, storeTimeoutPromise]);
+        logger.info('[MITIGATE] Step 6 complete: Mitigation results stored');
+      } catch (error) {
+        logger.warn('[MITIGATE] Step 6 warning: Failed to store results (non-fatal):', error);
+        // Continue - storage failure is non-fatal
+      }
+
+      const totalTime = Date.now() - startTime;
+      logger.info('[MITIGATE] SUCCESS: Mitigation completed', {
+        prUrl: mitigationResult.prUrl,
+        vulnerabilitiesFixed: mitigationResult.vulnerabilitiesFixed,
+        totalTimeMs: totalTime,
+        totalTimeSec: Math.round(totalTime / 1000)
       });
 
       return {
@@ -485,15 +608,26 @@ export class PhaseExecutor {
         message: `Fixed ${mitigationResult.vulnerabilitiesFixed} vulnerabilities and created PR`,
         data: { 
           mitigation: mitigationResult,
-          validationUsed: true
+          validationUsed: true,
+          executionTimeMs: totalTime
         }
       };
     } catch (error) {
-      logger.error('Mitigation phase failed', error);
+      const totalTime = Date.now() - startTime;
+      logger.error('[MITIGATE] FAILED: Mitigation phase failed', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        totalTimeMs: totalTime,
+        totalTimeSec: Math.round(totalTime / 1000)
+      });
       return {
         success: false,
         phase: 'mitigate',
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
+        data: {
+          executionTimeMs: totalTime,
+          errorDetails: error instanceof Error ? error.stack : String(error)
+        }
       };
     }
   }
