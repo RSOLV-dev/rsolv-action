@@ -404,30 +404,42 @@ export class PhaseExecutor {
         specificVulnerabilities: vulnerabilities
       };
 
-      // For now, mock the actual fix generation
-      // In real implementation, this would use AI adapter with enhanced context
+      // Use the actual AI processor to generate fixes
       logger.info(`[MITIGATE] Generating fix for ${vulnerabilities.length} validated vulnerabilities`);
       
-      let mitigationResult = {
-        fixed: true,
-        prUrl: `https://github.com/${options.repository.owner}/${options.repository.name}/pull/999`,
-        filesModified: vulnerabilities.length > 0 ? 
-          [...new Set(vulnerabilities.map((v: any) => v.file))] : 
-          ['unknown.js'],
-        vulnerabilitiesFixed: vulnerabilities.length,
-        usedValidationData: true,
-        validationConfidence: confidence,
-        timestamp: new Date().toISOString()
-      };
-
-      // If we have a real fixer implementation, use it
-      if (this.fixer) {
-        const result = await this.fixer.applyFix({
-          ...options,
-          enhancedIssue,
-          validationData: validation
-        });
-        Object.assign(mitigationResult, result);
+      // Import the processor
+      const { processIssues } = await import('../../ai/unified-processor.js');
+      
+      // Process the issue to generate a fix
+      const processingResults = await processIssues([enhancedIssue], this.config);
+      
+      let mitigationResult;
+      if (processingResults.length > 0 && processingResults[0].pullRequestUrl) {
+        // Success - PR was created
+        const result = processingResults[0];
+        mitigationResult = {
+          fixed: true,
+          prUrl: result.pullRequestUrl,
+          prNumber: result.pullRequestUrl ? parseInt(result.pullRequestUrl.split('/').pop() || '0') : 0,
+          filesModified: [],  // Not available from the result
+          vulnerabilitiesFixed: vulnerabilities.length,
+          usedValidationData: true,
+          validationConfidence: confidence,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        // Failed to create PR
+        const error = processingResults[0]?.error || 'Unknown error during fix generation';
+        logger.error('[MITIGATE] Failed to generate fix', { error });
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: `Failed to generate fix: ${error}`,
+          data: { 
+            processingResults,
+            validation
+          }
+        };
       }
 
       // Store mitigation results
