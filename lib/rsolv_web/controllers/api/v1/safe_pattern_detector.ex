@@ -121,15 +121,6 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     patterns = get_nosql_safe_patterns("javascript")
     safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
     
-    # Check for dangerous MongoDB operators
-    dangerous_patterns = [
-      ~r/\$where/,                    # $where operator
-      ~r/\$query/,                    # $query operator
-      ~r/\$ne/,                       # $ne can be exploited
-      ~r/\$gt/,                       # $gt in wrong context
-      ~r/\$regex/,                    # $regex with user input
-    ]
-    
     # If it contains $where, it's definitely unsafe
     has_where = Regex.match?(~r/\$where/, code)
     
