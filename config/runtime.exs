@@ -1,5 +1,11 @@
 import Config
 
+# Fix DNS resolution on Alpine Linux (musl libc)
+# This must be done before any network operations
+if config_env() == :prod do
+  :inet_db.set_lookup([:dns])
+end
+
 # Configure clustering
 if config_env() == :prod do
   # Generate a unique node name based on pod name (injected by Kubernetes)
