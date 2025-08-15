@@ -1,9 +1,0 @@
-{
-  "phase": "scan",
-  "data": {},
-  "metadata": {
-    "repo": "test/repo",
-    "commitSha": "abc123"
-  },
-  "timestamp": "2025-08-15T22:19:41.536Z"
-}
