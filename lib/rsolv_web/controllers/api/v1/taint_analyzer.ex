@@ -15,47 +15,9 @@ defmodule RsolvWeb.Api.V1.TaintAnalyzer do
   """
   
   # User input patterns for different languages
-  @user_input_patterns [
-    # JavaScript/Node.js
-    ~r/req\.(body|params|query|headers)/,
-    ~r/request\.(body|params|query|headers)/,
-    # Python/Flask/Django
-    ~r/request\.(form|args|values|json|data)/,
-    ~r/request\.GET/,
-    ~r/request\.POST/,
-    # PHP
-    ~r/\$_(GET|POST|REQUEST|COOKIE|SERVER)/,
-    # Ruby/Rails
-    ~r/params\[/
-  ]
+  # Moved to helper functions to avoid compilation issues
   
-  # Suspicious variable names that suggest user input
-  @suspicious_names [
-    ~r/^user(Input|Code|Query|Data|Expression)$/,
-    ~r/^input(Data)?$/,
-    ~r/^untrusted(Data)?$/,
-    ~r/^external(Input|Data)$/,
-    ~r/^(user|input|data|code|query|expression)$/i
-  ]
-  
-  # Sanitization function patterns
-  @sanitization_patterns [
-    ~r/sanitize/i,
-    ~r/escape/i,
-    ~r/validate/i,
-    ~r/clean/i,
-    ~r/filter/i,
-    ~r/purify/i,
-    ~r/strip/i,
-    # Validation checks
-    ~r/isValid/,
-    ~r/check[A-Z]/,
-    # Common sanitization libraries
-    ~r/DOMPurify/,
-    ~r/xss/i,
-    ~r/htmlspecialchars/,
-    ~r/mysql_real_escape_string/
-  ]
+  # Pattern definitions moved to helper functions to avoid compilation issues
   
   @doc """
   Analyzes code for taint flow and returns detailed analysis.
@@ -109,9 +71,25 @@ defmodule RsolvWeb.Api.V1.TaintAnalyzer do
   Checks if code contains direct user input.
   """
   def has_direct_input?(code) do
-    Enum.any?(@user_input_patterns, fn pattern ->
+    Enum.any?(get_user_input_patterns(), fn pattern ->
       Regex.match?(pattern, code)
     end)
+  end
+  
+  defp get_user_input_patterns do
+    [
+      # JavaScript/Node.js
+      ~r/req\.(body|params|query|headers)/,
+      ~r/request\.(body|params|query|headers)/,
+      # Python/Flask/Django
+      ~r/request\.(form|args|values|json|data)/,
+      ~r/request\.GET/,
+      ~r/request\.POST/,
+      # PHP
+      ~r/\$_(GET|POST|REQUEST|COOKIE|SERVER)/,
+      # Ruby/Rails
+      ~r/params\[/
+    ]
   end
   
   @doc """
@@ -122,12 +100,22 @@ defmodule RsolvWeb.Api.V1.TaintAnalyzer do
     var_name = extract_variable_name(code)
     
     if var_name do
-      Enum.any?(@suspicious_names, fn pattern ->
+      Enum.any?(get_suspicious_names(), fn pattern ->
         Regex.match?(pattern, var_name)
       end)
     else
       false
     end
+  end
+  
+  defp get_suspicious_names do
+    [
+      ~r/^user(Input|Code|Query|Data|Expression)$/,
+      ~r/^input(Data)?$/,
+      ~r/^untrusted(Data)?$/,
+      ~r/^external(Input|Data)$/,
+      ~r/^(user|input|data|code|query|expression)$/i
+    ]
   end
   
   @doc """
@@ -232,10 +220,30 @@ defmodule RsolvWeb.Api.V1.TaintAnalyzer do
     end
     
     Enum.any?(nearby_lines, fn line ->
-      Enum.any?(@sanitization_patterns, fn pattern ->
+      Enum.any?(get_sanitization_patterns(), fn pattern ->
         Regex.match?(pattern, line)
       end)
     end)
+  end
+  
+  defp get_sanitization_patterns do
+    [
+      ~r/sanitize/i,
+      ~r/escape/i,
+      ~r/validate/i,
+      ~r/clean/i,
+      ~r/filter/i,
+      ~r/purify/i,
+      ~r/strip/i,
+      # Validation checks
+      ~r/isValid/,
+      ~r/check[A-Z]/,
+      # Common sanitization libraries
+      ~r/DOMPurify/,
+      ~r/xss/i,
+      ~r/htmlspecialchars/,
+      ~r/mysql_real_escape_string/
+    ]
   end
   
   @doc """
