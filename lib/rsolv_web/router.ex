@@ -139,6 +139,10 @@ defmodule RsolvWeb.Router do
     
     # Audit log endpoint
     resources "/audit-logs", AuditLogController, only: [:index, :show]
+    
+    # Phase data endpoints
+    post "/phases/store", PhaseController, :store
+    get "/phases/retrieve", PhaseController, :retrieve
   end
   
   # Legacy pattern endpoints (non-versioned API)

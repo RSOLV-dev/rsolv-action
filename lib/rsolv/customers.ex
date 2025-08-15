@@ -7,6 +7,23 @@ defmodule Rsolv.Customers do
   alias Rsolv.Repo
 
   alias Rsolv.Customers.{Customer, ApiKey}
+  
+  @doc """
+  Gets an API key by its key value.
+  
+  ## Examples
+  
+      iex> get_api_key_by_key("test_abc123")
+      %ApiKey{}
+      
+      iex> get_api_key_by_key("invalid")
+      nil
+  """
+  def get_api_key_by_key(key) when is_binary(key) do
+    Repo.get_by(ApiKey, key: key, active: true)
+    |> Repo.preload(:customer)
+  end
+  def get_api_key_by_key(_), do: nil
 
   @doc """
   Returns the list of customers.
