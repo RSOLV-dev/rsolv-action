@@ -3,17 +3,29 @@
  * Following RFC-041 specification for phase data storage
  */
 
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { PhaseDataClient, StoreResult, PhaseData } from '../index.js';
 
 describe('PhaseDataClient', () => {
   let client: PhaseDataClient;
   const mockApiKey = 'test-api-key';
   const mockBaseUrl = 'https://test.api.rsolv.dev';
+  const originalEnv = process.env.USE_PLATFORM_STORAGE;
 
   beforeEach(() => {
     // Reset fetch mock
     global.fetch = mock(async () => new Response());
+    // Enable platform storage for tests
+    process.env.USE_PLATFORM_STORAGE = 'true';
+  });
+
+  afterEach(() => {
+    // Restore original env
+    if (originalEnv !== undefined) {
+      process.env.USE_PLATFORM_STORAGE = originalEnv;
+    } else {
+      delete process.env.USE_PLATFORM_STORAGE;
+    }
   });
 
   describe('storePhaseResults', () => {
@@ -91,6 +103,32 @@ describe('PhaseDataClient', () => {
 
       // Assert
       expect(global.fetch).toHaveBeenCalled();
+    });
+
+    test('should skip platform when USE_PLATFORM_STORAGE is false', async () => {
+      // Arrange
+      process.env.USE_PLATFORM_STORAGE = 'false';
+      client = new PhaseDataClient(mockApiKey);
+      
+      // Mock file system for local storage
+      const mockWriteFile = mock(async () => {});
+      const mockMkdir = mock(async () => {});
+      
+      mock.module('fs/promises', () => ({
+        writeFile: mockWriteFile,
+        mkdir: mockMkdir
+      }));
+
+      // Act
+      const result = await client.storePhaseResults('scan', {}, {
+        repo: 'test/repo',
+        commitSha: 'abc123'
+      });
+
+      // Assert
+      expect(result.success).toBe(true);
+      expect(result.storage).toBe('local');
+      expect(global.fetch).not.toHaveBeenCalled();
     });
 
     test('should fall back to local storage on API failure', async () => {
@@ -186,12 +224,24 @@ describe('PhaseDataClient', () => {
       );
 
       // Mock file system for local retrieval
-      const mockReaddir = mock(async () => ['test-repo-123-scan.json']);
-      const mockReadFile = mock(async () => JSON.stringify({
-        phase: 'scan',
-        data: { scan: { vulnerabilities: [] } },
-        metadata: { commitSha: 'abc123' }
-      }));
+      const mockReaddir = mock(async () => {
+        console.log('mockReaddir called');
+        return ['test-repo-123-scan.json'];
+      });
+      const mockReadFile = mock(async () => {
+        console.log('mockReadFile called');
+        return JSON.stringify({
+          phase: 'scan',
+          data: { 
+            scan: { 
+              vulnerabilities: [],
+              timestamp: new Date().toISOString(),
+              commitHash: 'abc123'
+            } 
+          },
+          metadata: { commitSha: 'abc123' }
+        });
+      });
       
       mock.module('fs/promises', () => ({
         readdir: mockReaddir,

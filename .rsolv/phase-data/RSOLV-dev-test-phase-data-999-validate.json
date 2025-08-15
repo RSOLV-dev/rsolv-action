@@ -1,0 +1,29 @@
+{
+  "phase": "validate",
+  "data": {
+    "validation": {
+      "issue-999": {
+        "validated": true,
+        "vulnerabilities": [
+          {
+            "type": "sql-injection",
+            "file": "test.js",
+            "line": 42,
+            "severity": "high"
+          }
+        ],
+        "redTests": {
+          "count": 2,
+          "passed": 2
+        },
+        "timestamp": "2025-08-15T22:34:38.054Z"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "RSOLV-dev/test-phase-data",
+    "issueNumber": 999,
+    "commitSha": "test-1755297277954"
+  },
+  "timestamp": "2025-08-15T22:34:38.069Z"
+}

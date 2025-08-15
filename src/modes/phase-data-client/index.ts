@@ -11,40 +11,50 @@ export interface StoreResult {
   warning?: string;
 }
 
+interface Vulnerability {
+  type: string;
+  file: string;
+  line: number;
+  [key: string]: any;
+}
+
+interface ValidationData {
+  validated: boolean;
+  vulnerabilities?: Vulnerability[];
+  redTests?: any;
+  testResults?: any;
+  falsePositiveReason?: string;
+  timestamp: string;
+}
+
+interface MitigationData {
+  fixed: boolean;
+  prUrl?: string;
+  prNumber?: number;
+  fixCommit?: string;
+  filesChanged?: number;
+  timestamp: string;
+}
+
 export interface PhaseData {
   scan?: {
-    vulnerabilities: Array<{
-      type: string;
-      file: string;
-      line: number;
-      [key: string]: any;
-    }>;
+    vulnerabilities: Vulnerability[];
     timestamp: string;
     commitHash: string;
   };
   
   validation?: {
-    [issueId: string]: {
-      validated: boolean;
-      redTests?: any;
-      testResults?: any;
-      falsePositiveReason?: string;
-      timestamp: string;
-    };
+    [issueId: string]: ValidationData;
   };
   
   mitigation?: {
-    [issueId: string]: {
-      fixed: boolean;
-      prUrl?: string;
-      fixCommit?: string;
-      timestamp: string;
-    };
+    [issueId: string]: MitigationData;
   };
 }
 
 export class PhaseDataClient {
   private readonly headers: Headers;
+  private readonly usePlatformStorage: boolean;
   
   constructor(
     private apiKey: string,
@@ -54,6 +64,10 @@ export class PhaseDataClient {
       'Content-Type': 'application/json',
       'X-API-Key': apiKey
     });
+    
+    // Environment variable flag for gradual rollout
+    // Default to true unless explicitly disabled
+    this.usePlatformStorage = process.env.USE_PLATFORM_STORAGE !== 'false';
   }
   
   async storePhaseResults(
@@ -63,25 +77,39 @@ export class PhaseDataClient {
       repo: string;
       issueNumber?: number;
       commitSha: string;
+      branch?: string;
     }
   ): Promise<StoreResult> {
+    // Skip platform storage if not enabled
+    if (!this.usePlatformStorage) {
+      return this.storeLocally(phase, data, metadata);
+    }
+    
     try {
+      // Format data for platform API based on phase
+      const platformData = this.formatDataForPlatform(phase, data, metadata);
+      
       const response = await fetch(`${this.baseUrl}/api/v1/phases/store`, {
         method: 'POST',
         headers: this.headers,
-        body: JSON.stringify({
-          phase,
-          data,
-          ...metadata
-        })
+        body: JSON.stringify(platformData)
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Platform storage failed: ${response.status} - ${errorText}`);
         throw new Error(`Platform storage failed: ${response.statusText}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      return {
+        success: result.success,
+        id: result.id,
+        storage: 'platform',
+        message: `Stored ${phase} data to platform`
+      };
     } catch (error) {
+      console.warn(`Platform storage failed, falling back to local: ${error}`);
       // Fallback to local storage
       return this.storeLocally(phase, data, metadata);
     }
@@ -92,25 +120,34 @@ export class PhaseDataClient {
     issueNumber: number,
     commitSha: string
   ): Promise<PhaseData | null> {
+    // Skip platform retrieval if not enabled
+    if (!this.usePlatformStorage) {
+      return this.retrieveLocally(repo, issueNumber, commitSha);
+    }
+    
     try {
       const response = await fetch(
         `${this.baseUrl}/api/v1/phases/retrieve?` +
-        `repo=${repo}&issue=${issueNumber}&commit=${commitSha}`,
+        `repo=${encodeURIComponent(repo)}&issue=${issueNumber}&commit=${encodeURIComponent(commitSha)}`,
         { headers: this.headers }
       );
       
       if (response.status === 404) {
-        // Fallback to local storage immediately on 404
+        // No data found, fallback to local
         return this.retrieveLocally(repo, issueNumber, commitSha);
       }
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Platform retrieval failed: ${response.status} - ${errorText}`);
         throw new Error(`Platform retrieval failed: ${response.statusText}`);
       }
       
       const data = await response.json();
+      // Platform returns data in the expected PhaseData format
       return data;
     } catch (error) {
+      console.warn(`Platform retrieval failed, falling back to local: ${error}`);
       // Fallback to local storage
       return this.retrieveLocally(repo, issueNumber, commitSha);
     }
@@ -135,6 +172,69 @@ export class PhaseDataClient {
     };
     
     return validTransitions[fromPhase]?.includes(toPhase) ?? false;
+  }
+  
+  // Helper to format data for platform API
+  private formatDataForPlatform(
+    phase: 'scan' | 'validate' | 'mitigate',
+    data: PhaseData,
+    metadata: {
+      repo: string;
+      issueNumber?: number;
+      commitSha: string;
+      branch?: string;
+    }
+  ): any {
+    const basePayload = {
+      phase,
+      repo: metadata.repo,
+      commit_sha: metadata.commitSha,  // Platform expects snake_case
+    };
+    
+    switch (phase) {
+      case 'scan':
+        return {
+          ...basePayload,
+          branch: metadata.branch || 'main',
+          data: data.scan || {
+            vulnerabilities: [],
+            timestamp: new Date().toISOString(),
+            commitHash: metadata.commitSha
+          }
+        };
+      
+      case 'validate':
+        const validationKey = `issue-${metadata.issueNumber}`;
+        const validationData: ValidationData | undefined = data.validation?.[validationKey] || 
+                              data.validation?.[metadata.issueNumber?.toString() || ''];
+        return {
+          ...basePayload,
+          issue_number: metadata.issueNumber,  // Platform expects snake_case
+          data: {
+            ...(validationData || {}),
+            vulnerabilities: validationData?.vulnerabilities || [],
+            validated: validationData?.validated || false
+          }
+        };
+      
+      case 'mitigate':
+        const mitigationKey = `issue-${metadata.issueNumber}`;
+        const mitigationData: MitigationData | undefined = data.mitigation?.[mitigationKey] || 
+                               data.mitigation?.[metadata.issueNumber?.toString() || ''];
+        return {
+          ...basePayload,
+          issue_number: metadata.issueNumber,  // Platform expects snake_case
+          data: {
+            ...(mitigationData || {}),
+            pr_url: mitigationData?.prUrl,
+            pr_number: mitigationData?.prNumber,
+            files_changed: mitigationData?.filesChanged
+          }
+        };
+      
+      default:
+        throw new Error(`Unknown phase: ${phase}`);
+    }
   }
   
   // Local storage fallback for platform unavailability
