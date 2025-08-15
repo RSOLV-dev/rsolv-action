@@ -21,53 +21,8 @@ defmodule RsolvWeb.Api.V1.FilePathClassifier do
   - Application files: 1.0x multiplier (no reduction)
   """
   
-  # Vendor patterns - third-party code and build outputs
-  @vendor_patterns [
-    ~r|/vendor/|,           # Common vendor directory
-    ~r|/node_modules/|,     # NPM packages
-    ~r|/bower_components/|, # Bower packages
-    ~r|/assets/vendor/|,    # Asset vendor directory
-    ~r|/lib/third-party/|,  # Third-party libraries
-    ~r|/public/vendor/|,    # Public vendor assets
-    ~r|/static/vendor/|,    # Static vendor assets
-    ~r|\.min\.js$|,         # Minified JavaScript
-    ~r|\.min\.css$|,        # Minified CSS
-    ~r|-min\.js$|,          # Alternative minified naming
-    ~r|/dist/|,             # Distribution builds
-    ~r|/build/|             # Build outputs
-  ]
-  
-  # Test patterns - test code and fixtures
-  @test_patterns [
-    ~r|/test/|,         # Test directory
-    ~r|/tests/|,        # Tests directory
-    ~r|/spec/|,         # Specification tests
-    ~r|/__tests__/|,    # Jest convention
-    ~r|/__test__/|,     # Alternative Jest
-    ~r|\.test\.|,       # Test file suffix
-    ~r|\.spec\.|,       # Spec file suffix
-    ~r|_test\.|,        # Underscore test suffix
-    ~r|_spec\.|,        # Underscore spec suffix
-    ~r|/e2e/|,          # End-to-end tests
-    ~r|/integration/|,  # Integration tests
-    ~r|/fixtures/|,     # Test fixtures
-    ~r|/mocks/|,        # Mock objects
-    ~r|/stubs/|         # Test stubs
-  ]
-  
-  # Configuration patterns - build and config files
-  @config_patterns [
-    ~r|/config/|,       # Config directory
-    ~r|\.config\.|,     # Config file suffix
-    ~r|webpack\.|,      # Webpack config
-    ~r|rollup\.|,       # Rollup config
-    ~r|gulpfile|,       # Gulp config
-    ~r|Gruntfile|,      # Grunt config
-    ~r|\.eslintrc|,     # ESLint config
-    ~r|\.babelrc|,      # Babel config
-    ~r|tsconfig\.|,     # TypeScript config
-    ~r|jest\.config|    # Jest config
-  ]
+  # Pattern definitions moved to helper functions to avoid compilation issues
+  # with regex module attributes in production builds
   
   # Confidence multipliers by classification
   @confidence_multipliers %{
@@ -103,11 +58,62 @@ defmodule RsolvWeb.Api.V1.FilePathClassifier do
   
   def classify(file_path) when is_binary(file_path) do
     cond do
-      matches_any?(@vendor_patterns, file_path) -> :vendor
-      matches_any?(@test_patterns, file_path) -> :test
-      matches_any?(@config_patterns, file_path) -> :config
+      matches_any?(get_vendor_patterns(), file_path) -> :vendor
+      matches_any?(get_test_patterns(), file_path) -> :test
+      matches_any?(get_config_patterns(), file_path) -> :config
       true -> :application
     end
+  end
+  
+  defp get_vendor_patterns do
+    [
+      ~r|/vendor/|,           # Common vendor directory
+      ~r|/node_modules/|,     # NPM packages
+      ~r|/bower_components/|, # Bower packages
+      ~r|/assets/vendor/|,    # Asset vendor directory
+      ~r|/lib/third-party/|,  # Third-party libraries
+      ~r|/public/vendor/|,    # Public vendor assets
+      ~r|/static/vendor/|,    # Static vendor assets
+      ~r|\.min\.js$|,         # Minified JavaScript
+      ~r|\.min\.css$|,        # Minified CSS
+      ~r|-min\.js$|,          # Alternative minified naming
+      ~r|/dist/|,             # Distribution builds
+      ~r|/build/|             # Build outputs
+    ]
+  end
+  
+  defp get_test_patterns do
+    [
+      ~r|/test/|,         # Test directory
+      ~r|/tests/|,        # Tests directory
+      ~r|/spec/|,         # Specification tests
+      ~r|/__tests__/|,    # Jest convention
+      ~r|/__test__/|,     # Alternative Jest
+      ~r|\.test\.|,       # Test file suffix
+      ~r|\.spec\.|,       # Spec file suffix
+      ~r|_test\.|,        # Underscore test suffix
+      ~r|_spec\.|,        # Underscore spec suffix
+      ~r|/e2e/|,          # End-to-end tests
+      ~r|/integration/|,  # Integration tests
+      ~r|/fixtures/|,     # Test fixtures
+      ~r|/mocks/|,        # Mock objects
+      ~r|/stubs/|         # Test stubs
+    ]
+  end
+  
+  defp get_config_patterns do
+    [
+      ~r|/config/|,       # Config directory
+      ~r|\.config\.|,     # Config file suffix
+      ~r|webpack\.|,      # Webpack config
+      ~r|rollup\.|,       # Rollup config
+      ~r|gulpfile|,       # Gulp config
+      ~r|Gruntfile|,      # Grunt config
+      ~r|\.eslintrc|,     # ESLint config
+      ~r|\.babelrc|,      # Babel config
+      ~r|tsconfig\.|,     # TypeScript config
+      ~r|jest\.config|    # Jest config
+    ]
   end
   
   @doc """
