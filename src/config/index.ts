@@ -204,11 +204,18 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
   logger.info('Loading configuration from environment variables');
   logger.info(`Environment RSOLV_API_KEY: ${process.env.RSOLV_API_KEY ? 'present' : 'not set'}`);
   
+  // Map GitHub Actions inputs to environment variables
+  // GitHub Actions sets inputs as INPUT_<UPPERCASE_NAME>
+  const apiKey = process.env.RSOLV_API_KEY || 
+                  process.env.INPUT_API_KEY || 
+                  process.env.INPUT_RSOLVAPI_KEY || 
+                  process.env.INPUT_RSOLVAPIKEY;
+  
   const envConfig: Partial<ActionConfig> = {
-    apiKey: process.env.RSOLV_API_KEY,
-    rsolvApiKey: process.env.RSOLV_API_KEY, // Same key used for vended credentials
-    configPath: process.env.RSOLV_CONFIG_PATH,
-    issueLabel: process.env.RSOLV_ISSUE_LABEL,
+    apiKey: apiKey,
+    rsolvApiKey: apiKey, // Same key used for vended credentials
+    configPath: process.env.RSOLV_CONFIG_PATH || process.env.INPUT_CONFIG_PATH,
+    issueLabel: process.env.RSOLV_ISSUE_LABEL || process.env.INPUT_ISSUE_LABEL,
     repoToken: process.env.GITHUB_TOKEN
   };
   

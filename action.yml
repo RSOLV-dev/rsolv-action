@@ -6,8 +6,11 @@ branding:
   color: 'purple'
 inputs:
   api_key:
-    description: 'RSOLV API key for authentication'
-    required: true
+    description: 'RSOLV API key for authentication (deprecated, use rsolvApiKey)'
+    required: false
+  rsolvApiKey:
+    description: 'RSOLV API key for platform authentication and phase data persistence'
+    required: false
   config_path:
     description: 'Path to RSOLV configuration file'
     required: false

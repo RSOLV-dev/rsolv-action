@@ -51,8 +51,8 @@ export function getExecutionMode(): ExecutionMode {
     return cliMode as ExecutionMode;
   }
   
-  // 2. Check RSOLV_MODE env var
-  const envMode = process.env.RSOLV_MODE;
+  // 2. Check RSOLV_MODE env var or GitHub Actions input
+  const envMode = process.env.RSOLV_MODE || process.env.INPUT_MODE;
   if (envMode && validateMode(envMode)) {
     return envMode as ExecutionMode;
   }
