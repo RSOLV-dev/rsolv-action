@@ -45,6 +45,7 @@ export interface PhaseData {
 
 export class PhaseDataClient {
   private readonly headers: Headers;
+  private readonly usePlatformStorage: boolean;
   
   constructor(
     private apiKey: string,
@@ -54,6 +55,9 @@ export class PhaseDataClient {
       'Content-Type': 'application/json',
       'X-API-Key': apiKey
     });
+    
+    // Use platform storage by default, unless explicitly disabled
+    this.usePlatformStorage = process.env.USE_PLATFORM_STORAGE !== 'false';
   }
   
   async storePhaseResults(
@@ -65,12 +69,26 @@ export class PhaseDataClient {
       commitSha: string;
     }
   ): Promise<StoreResult> {
+    // If platform storage is disabled, go straight to local
+    if (!this.usePlatformStorage) {
+      return this.storeLocally(phase, data, metadata);
+    }
+    
     try {
+      // Map client phase names to platform phase names
+      const phaseMapping: { [key: string]: string } = {
+        'scan': 'scan',
+        'validate': 'validation',
+        'mitigate': 'mitigation'
+      };
+      
+      const platformPhase = phaseMapping[phase] || phase;
+      
       const response = await fetch(`${this.baseUrl}/api/v1/phases/store`, {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify({
-          phase,
+          phase: platformPhase,
           data,
           ...metadata
         })
@@ -80,9 +98,11 @@ export class PhaseDataClient {
         throw new Error(`Platform storage failed: ${response.statusText}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      return { ...result, storage: 'platform' as const };
     } catch (error) {
       // Fallback to local storage
+      console.warn('Platform storage failed, falling back to local:', error);
       return this.storeLocally(phase, data, metadata);
     }
   }
@@ -92,10 +112,15 @@ export class PhaseDataClient {
     issueNumber: number,
     commitSha: string
   ): Promise<PhaseData | null> {
+    // If platform storage is disabled, go straight to local
+    if (!this.usePlatformStorage) {
+      return this.retrieveLocally(repo, issueNumber, commitSha);
+    }
+    
     try {
       const response = await fetch(
         `${this.baseUrl}/api/v1/phases/retrieve?` +
-        `repo=${repo}&issue=${issueNumber}&commit=${commitSha}`,
+        `repo=${encodeURIComponent(repo)}&issue=${issueNumber}&commit=${encodeURIComponent(commitSha)}`,
         { headers: this.headers }
       );
       
@@ -109,9 +134,21 @@ export class PhaseDataClient {
       }
       
       const data = await response.json();
+      
+      // Map platform phase names back to client phase names if needed
+      if (data && data.validation && !data.validate) {
+        data.validate = data.validation;
+        delete data.validation;
+      }
+      if (data && data.mitigation && !data.mitigate) {
+        data.mitigate = data.mitigation;
+        delete data.mitigation;
+      }
+      
       return data;
     } catch (error) {
       // Fallback to local storage
+      console.warn('Platform retrieval failed, falling back to local:', error);
       return this.retrieveLocally(repo, issueNumber, commitSha);
     }
   }

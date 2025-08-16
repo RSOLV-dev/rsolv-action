@@ -68,7 +68,7 @@ export class PhaseExecutor {
   constructor(config: ActionConfig) {
     this.config = config;
     this.phaseDataClient = new PhaseDataClient(
-      config.apiKey || '',
+      config.rsolvApiKey || config.apiKey || '',
       process.env.RSOLV_API_URL
     );
     // Lazy initialize scanner only when needed to avoid token requirement in tests
@@ -392,7 +392,7 @@ export class PhaseExecutor {
       
       // Safe label checking - labels might be an array of strings or objects
       const labelNames = Array.isArray(issue.labels) 
-        ? issue.labels.map(l => typeof l === 'string' ? l : l.name || '')
+        ? issue.labels.map((l: string | { name?: string }) => typeof l === 'string' ? l : l.name || '')
         : [];
       
       const hasAutomateLabel = labelNames.includes('rsolv:automate');
@@ -583,6 +583,7 @@ export class PhaseExecutor {
         };
       }
       
+      const issueKey = `issue-${options.issueNumber}`;
       let mitigationResult;
       if (processingResults.length > 0 && processingResults[0].pullRequestUrl) {
         // Success - PR was created
