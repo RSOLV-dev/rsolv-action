@@ -210,35 +210,40 @@ defmodule Rsolv.Phases do
          {:ok, _forge_account} <- verify_namespace_ownership(customer, repo_attrs),
          {:ok, repository} <- get_repository(repo_attrs) do
       
-      phase_data = %{}
-      
-      # Get scan data for this commit
-      phase_data = case get_scan_execution(repository.id, commit_sha) do
-        nil -> phase_data
-        scan -> Map.put(phase_data, "scan", scan.data)
+      # If no repository exists, return empty phase data
+      if is_nil(repository) do
+        {:ok, %{}}
+      else
+        phase_data = %{}
+        
+        # Get scan data for this commit
+        phase_data = case get_scan_execution(repository.id, commit_sha) do
+          nil -> phase_data
+          scan -> Map.put(phase_data, "scan", scan.data)
+        end
+        
+        # Get validation data for this issue
+        phase_data = case get_validation_execution(repository.id, issue_number) do
+          nil -> phase_data
+          validation -> 
+            validation_data = %{
+              "issue-#{issue_number}" => validation.data
+            }
+            Map.put(phase_data, "validation", validation_data)
+        end
+        
+        # Get mitigation data for this issue
+        phase_data = case get_mitigation_execution(repository.id, issue_number) do
+          nil -> phase_data
+          mitigation ->
+            mitigation_data = %{
+              "issue-#{issue_number}" => mitigation.data
+            }
+            Map.put(phase_data, "mitigation", mitigation_data)
+        end
+        
+        {:ok, phase_data}
       end
-      
-      # Get validation data for this issue
-      phase_data = case get_validation_execution(repository.id, issue_number) do
-        nil -> phase_data
-        validation -> 
-          validation_data = %{
-            "issue-#{issue_number}" => validation.data
-          }
-          Map.put(phase_data, "validation", validation_data)
-      end
-      
-      # Get mitigation data for this issue
-      phase_data = case get_mitigation_execution(repository.id, issue_number) do
-        nil -> phase_data
-        mitigation ->
-          mitigation_data = %{
-            "issue-#{issue_number}" => mitigation.data
-          }
-          Map.put(phase_data, "mitigation", mitigation_data)
-      end
-      
-      {:ok, phase_data}
     end
   end
   
