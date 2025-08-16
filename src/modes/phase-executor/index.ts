@@ -461,10 +461,12 @@ export class PhaseExecutor {
         logger.info('[MITIGATE] Available validation data:', {
           hasValidationData: !!validationData,
           validationKeys: validationData ? Object.keys(validationData) : [],
-          validationProp: validationData?.validation ? Object.keys(validationData.validation) : []
+          validationProp: validationData?.validation ? Object.keys(validationData.validation) : [],
+          validateProp: validationData?.validate ? Object.keys(validationData.validate) : []
         });
         
-        validation = validationData?.validation?.[issueKey];
+        // Check both 'validation' and 'validate' (PhaseDataClient remaps validation->validate)
+        validation = validationData?.validation?.[issueKey] || validationData?.validate?.[issueKey];
         logger.info('[MITIGATE] Validation lookup result:', {
           found: !!validation,
           validationType: validation ? typeof validation : 'undefined'
@@ -1786,7 +1788,8 @@ ${validation.falsePositive ?
             await this.getCurrentCommitSha()
           );
           
-          if (!phaseData?.validation) {
+          // Check both 'validation' and 'validate' (PhaseDataClient remaps validation->validate)
+          if (!phaseData?.validation && !phaseData?.validate) {
             return {
               success: false,
               phase: 'mitigate',
@@ -1838,8 +1841,11 @@ ${validation.falsePositive ?
             await this.getCurrentCommitSha()
           );
           
+          // Handle both 'validation' and 'validate' (PhaseDataClient remaps validation->validate)
           if (phaseData?.validation) {
             Object.assign(validationData.validation, phaseData.validation);
+          } else if (phaseData?.validate) {
+            Object.assign(validationData.validation, phaseData.validate);
           }
         }
       }
@@ -1886,14 +1892,16 @@ ${validation.falsePositive ?
         const issueKey = `issue-${issue.number}`;
         
         // Handle both single issue and multi-issue validation data structures
+        // Also handle both 'validation' and 'validate' (PhaseDataClient remaps validation->validate)
         let validation;
-        if (validationData.validation) {
+        const validationObj = validationData.validation || validationData.validate;
+        if (validationObj) {
           // Check if it's a single validation object or a map
-          if (validationData.validation[issueKey]) {
-            validation = validationData.validation[issueKey];
-          } else if (validationData.validation.issueNumber === issue.number) {
+          if (validationObj[issueKey]) {
+            validation = validationObj[issueKey];
+          } else if (validationObj.issueNumber === issue.number) {
             // Single issue validation structure
-            validation = validationData.validation;
+            validation = validationObj;
           }
         }
         

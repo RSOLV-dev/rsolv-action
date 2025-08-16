@@ -23,6 +23,7 @@ export interface PhaseData {
     commitHash: string;
   };
   
+  // Platform returns 'validation', client uses 'validate' 
   validation?: {
     [issueId: string]: {
       validated: boolean;
@@ -33,7 +34,28 @@ export interface PhaseData {
     };
   };
   
+  // Alias for validation (after remapping)
+  validate?: {
+    [issueId: string]: {
+      validated: boolean;
+      redTests?: any;
+      testResults?: any;
+      falsePositiveReason?: string;
+      timestamp: string;
+    };
+  };
+  
   mitigation?: {
+    [issueId: string]: {
+      fixed: boolean;
+      prUrl?: string;
+      fixCommit?: string;
+      timestamp: string;
+    };
+  };
+  
+  // Alias for mitigation (after remapping)
+  mitigate?: {
     [issueId: string]: {
       fixed: boolean;
       prUrl?: string;
@@ -135,16 +157,26 @@ export class PhaseDataClient {
       
       const data = await response.json();
       
+      // Log what we got from platform for debugging
+      console.log('[PhaseDataClient] Retrieved from platform:', {
+        hasValidation: !!data?.validation,
+        hasValidate: !!data?.validate,
+        keys: Object.keys(data || {})
+      });
+      
       // Map platform phase names back to client phase names if needed
       if (data && data.validation && !data.validate) {
+        console.log('[PhaseDataClient] Mapping validation -> validate');
         data.validate = data.validation;
         delete data.validation;
       }
       if (data && data.mitigation && !data.mitigate) {
+        console.log('[PhaseDataClient] Mapping mitigation -> mitigate');
         data.mitigate = data.mitigation;
         delete data.mitigation;
       }
       
+      console.log('[PhaseDataClient] Returning data with keys:', Object.keys(data || {}));
       return data;
     } catch (error) {
       // Fallback to local storage
