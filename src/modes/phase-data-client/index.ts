@@ -185,8 +185,15 @@ export class PhaseDataClient {
       branch?: string;
     }
   ): any {
+    // Map client phase names to platform phase names
+    const phaseMapping: { [key: string]: string } = {
+      'scan': 'scan',
+      'validate': 'validation',
+      'mitigate': 'mitigation'
+    };
+    
     const basePayload = {
-      phase,
+      phase: phaseMapping[phase] || phase,
       repo: metadata.repo,
       commit_sha: metadata.commitSha,  // Platform expects snake_case
     };
@@ -211,9 +218,9 @@ export class PhaseDataClient {
           ...basePayload,
           issue_number: metadata.issueNumber,  // Platform expects snake_case
           data: {
-            ...(validationData || {}),
-            vulnerabilities: validationData?.vulnerabilities || [],
-            validated: validationData?.validated || false
+            validation: {
+              [validationKey]: validationData || {}
+            }
           }
         };
       
@@ -225,10 +232,9 @@ export class PhaseDataClient {
           ...basePayload,
           issue_number: metadata.issueNumber,  // Platform expects snake_case
           data: {
-            ...(mitigationData || {}),
-            pr_url: mitigationData?.prUrl,
-            pr_number: mitigationData?.prNumber,
-            files_changed: mitigationData?.filesChanged
+            mitigation: {
+              [mitigationKey]: mitigationData || {}
+            }
           }
         };
       

@@ -1,0 +1,18 @@
+{
+  "phase": "mitigate",
+  "data": {
+    "mitigation": {
+      "issue-42": {
+        "fixed": true,
+        "prUrl": "https://github.com/test/pr/1",
+        "timestamp": "2025-08-16T14:44:21.721Z"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "RSOLV-dev/test-1755355446",
+    "issueNumber": 42,
+    "commitSha": "commit-1755355446"
+  },
+  "timestamp": "2025-08-16T14:44:26.725Z"
+}

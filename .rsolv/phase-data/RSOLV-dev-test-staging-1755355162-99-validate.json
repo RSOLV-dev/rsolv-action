@@ -1,0 +1,29 @@
+{
+  "phase": "validate",
+  "data": {
+    "validation": {
+      "issue-99": {
+        "validated": true,
+        "confidence": 0.95,
+        "vulnerabilities": [
+          {
+            "description": "Cross-site scripting vulnerability",
+            "file": "app.js",
+            "line": 42,
+            "severity": "high",
+            "type": "xss"
+          }
+        ],
+        "testResults": "All validation tests passed",
+        "timestamp": "2025-08-16T14:39:23.414Z"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "RSOLV-dev/test-staging-1755355162",
+    "issueNumber": 99,
+    "commitSha": "abc123",
+    "branch": "main"
+  },
+  "timestamp": "2025-08-16T14:39:23.426Z"
+}

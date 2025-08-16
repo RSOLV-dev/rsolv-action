@@ -1,0 +1,94 @@
+name: Test Staging Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_issue:
+        description: 'Test issue number'
+        required: false
+        default: '99'
+
+jobs:
+  test-three-phase-flow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build action
+        run: npm run build
+        
+      - name: Test SCAN phase
+        env:
+          RSOLV_API_KEY: ${{ env.RSOLV_API_KEY }}
+          RSOLV_API_URL: ${{ env.RSOLV_API_URL }}
+          USE_PLATFORM_STORAGE: ${{ env.USE_PLATFORM_STORAGE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Testing SCAN phase..."
+          node -e "
+          const { PhaseDataClient } = require('./dist/modes/phase-data-client');
+          const client = new PhaseDataClient(process.env.RSOLV_API_KEY, process.env.RSOLV_API_URL);
+          
+          const scanData = {
+            vulnerabilities: [{type: 'xss', file: 'test.js', line: 10}],
+            timestamp: new Date().toISOString()
+          };
+          
+          client.savePhaseData('scan', 'RSOLV-dev/test-staging', 99, 'test123', 'main', scanData)
+            .then(() => console.log('✅ SCAN phase data saved'))
+            .catch(err => { console.error('❌ SCAN failed:', err); process.exit(1); });
+          "
+          
+      - name: Test VALIDATE phase
+        env:
+          RSOLV_API_KEY: ${{ env.RSOLV_API_KEY }}
+          RSOLV_API_URL: ${{ env.RSOLV_API_URL }}
+          USE_PLATFORM_STORAGE: ${{ env.USE_PLATFORM_STORAGE }}
+        run: |
+          echo "Testing VALIDATE phase..."
+          node -e "
+          const { PhaseDataClient } = require('./dist/modes/phase-data-client');
+          const client = new PhaseDataClient(process.env.RSOLV_API_KEY, process.env.RSOLV_API_URL);
+          
+          client.getPhaseData('validate', 'RSOLV-dev/test-staging', 99, 'test123')
+            .then(data => {
+              if (!data?.scan) throw new Error('No SCAN data retrieved');
+              console.log('✅ Retrieved SCAN data in VALIDATE phase');
+              
+              const validationData = {
+                'issue-99': { validated: true, confidence: 0.95 }
+              };
+              return client.savePhaseData('validation', 'RSOLV-dev/test-staging', 99, 'test123', 'main', validationData);
+            })
+            .then(() => console.log('✅ VALIDATION phase data saved'))
+            .catch(err => { console.error('❌ VALIDATE failed:', err); process.exit(1); });
+          "
+          
+      - name: Test MITIGATE phase
+        env:
+          RSOLV_API_KEY: ${{ env.RSOLV_API_KEY }}
+          RSOLV_API_URL: ${{ env.RSOLV_API_URL }}
+          USE_PLATFORM_STORAGE: ${{ env.USE_PLATFORM_STORAGE }}
+        run: |
+          echo "Testing MITIGATE phase..."
+          node -e "
+          const { PhaseDataClient } = require('./dist/modes/phase-data-client');
+          const client = new PhaseDataClient(process.env.RSOLV_API_KEY, process.env.RSOLV_API_URL);
+          
+          client.getPhaseData('mitigation', 'RSOLV-dev/test-staging', 99, 'test123')
+            .then(data => {
+              if (!data?.scan) throw new Error('No SCAN data in MITIGATE');
+              if (!data?.validation?.['issue-99']) throw new Error('No VALIDATION data in MITIGATE');
+              console.log('✅ Retrieved both SCAN and VALIDATION data in MITIGATE phase');
+              console.log('✅✅✅ THREE-PHASE FLOW WORKING ON STAGING! ✅✅✅');
+            })
+            .catch(err => { console.error('❌ MITIGATE failed:', err); process.exit(1); });
+          "
