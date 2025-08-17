@@ -137,6 +137,10 @@ defmodule RsolvWeb.Router do
     # AST analysis endpoint
     post "/ast/analyze", ASTController, :analyze
     
+    # Compatibility route for GitHub Action (v3.5.2 and earlier)
+    # TODO: Remove after updating action to use /api/v1/vulnerabilities/validate
+    post "/ast/validate", VulnerabilityValidationRouter, :validate
+    
     # Audit log endpoint
     resources "/audit-logs", AuditLogController, only: [:index, :show]
     
