@@ -122,4 +122,116 @@ defmodule Rsolv.ValidationCache do
         {:error, changeset}
     end
   end
+  
+  @doc """
+  Retrieves a cached validation result if it exists and is valid.
+  
+  Checks cache validity based on TTL expiration and optional file hash validation.
+  This is the primary method for checking if we've already validated a vulnerability
+  as a false positive.
+  
+  ## Parameters
+  
+    - forge_account_id: Integer ID of the forge account
+    - repository: String repository identifier (e.g., "RSOLV-dev/nodegoat")
+    - locations: List of location maps with :file_path and :line keys
+    - vulnerability_type: String vulnerability type (e.g., "sql-injection")
+    - file_hashes: Optional map of file paths to SHA-256 hashes for validation
+  
+  ## Returns
+  
+    - `{:ok, cached_validation}` - Cache hit with valid entry
+    - `{:miss, nil}` - No cache entry found
+    - `{:expired, nil}` - Entry found but past TTL
+    - `{:invalidated, nil}` - Entry found but file content changed
+  
+  ## Examples
+  
+      # Basic retrieval without file hash checking
+      iex> ValidationCache.get(1, "org/repo", [%{file_path: "app.js", line: 42}], "xss")
+      {:ok, %CachedValidation{...}}
+      
+      # With file hash validation
+      iex> ValidationCache.get(
+      ...>   1, "org/repo", 
+      ...>   [%{file_path: "app.js", line: 42}],
+      ...>   "xss",
+      ...>   %{"app.js" => "sha256:abc123"}
+      ...> )
+      {:invalidated, nil}  # If hash doesn't match
+  
+  ## Cache Hit Rate Tracking
+  
+  The return tuple's first element can be used to track cache effectiveness:
+  - `:ok` = cache hit
+  - `:miss`, `:expired`, `:invalidated` = cache miss
+  """
+  def get(forge_account_id, repository, locations, vulnerability_type, file_hashes \\ nil) do
+    cache_key = generate_lookup_key(forge_account_id, repository, locations, vulnerability_type)
+    
+    cache_key
+    |> fetch_cache_entry()
+    |> validate_cache_entry(file_hashes)
+    |> log_cache_result(cache_key)
+  end
+  
+  # Private retrieval functions
+  
+  defp generate_lookup_key(forge_account_id, repository, locations, vulnerability_type) do
+    KeyGenerator.generate_key(
+      forge_account_id,
+      repository,
+      locations,
+      vulnerability_type
+    )
+  end
+  
+  defp fetch_cache_entry(cache_key) do
+    case Repo.get_by(CachedValidation, cache_key: cache_key) do
+      nil -> {:miss, nil}
+      cached -> {:found, cached}
+    end
+  end
+  
+  defp validate_cache_entry({:miss, nil}, _file_hashes), do: {:miss, nil}
+  
+  defp validate_cache_entry({:found, cached}, file_hashes) do
+    cond do
+      entry_expired?(cached) ->
+        {:expired, nil}
+        
+      hashes_mismatch?(cached, file_hashes) ->
+        {:invalidated, nil}
+        
+      true ->
+        {:ok, cached}
+    end
+  end
+  
+  defp entry_expired?(cached) do
+    DateTime.compare(DateTime.utc_now(), cached.ttl_expires_at) == :gt
+  end
+  
+  defp hashes_mismatch?(_cached, nil), do: false
+  defp hashes_mismatch?(cached, provided_hashes) do
+    !Map.equal?(cached.file_hashes, provided_hashes)
+  end
+  
+  defp log_cache_result(result, cache_key) do
+    case result do
+      {:ok, cached} ->
+        Logger.debug("Cache hit", cache_key: cache_key)
+        
+      {:miss, _} ->
+        Logger.debug("Cache miss", cache_key: cache_key)
+        
+      {:expired, _} ->
+        Logger.debug("Cache expired", cache_key: cache_key)
+        
+      {:invalidated, _} ->
+        Logger.debug("Cache invalidated by file change", cache_key: cache_key)
+    end
+    
+    result
+  end
 end
