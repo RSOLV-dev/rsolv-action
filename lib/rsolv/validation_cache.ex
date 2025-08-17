@@ -187,7 +187,12 @@ defmodule Rsolv.ValidationCache do
   end
   
   defp fetch_cache_entry(cache_key) do
-    case Repo.get_by(CachedValidation, cache_key: cache_key) do
+    # Don't return invalidated entries
+    query = from c in CachedValidation,
+      where: c.cache_key == ^cache_key,
+      where: is_nil(c.invalidated_at)
+    
+    case Repo.one(query) do
       nil -> {:miss, nil}
       cached -> {:found, cached}
     end
@@ -233,5 +238,173 @@ defmodule Rsolv.ValidationCache do
     end
     
     result
+  end
+  
+  # Cache Invalidation Functions
+  
+  @doc """
+  Invalidates a specific cache entry by ID.
+  
+  Marks the entry as invalidated with a timestamp and reason, preventing
+  it from being returned by future cache lookups.
+  
+  ## Parameters
+  
+    - cache_id: Integer ID of the cache entry
+    - reason: Atom or string reason for invalidation
+      - `:file_change` or `"file_change"` - File content changed
+      - `:ttl_expired` or `"ttl_expired"` - TTL expiration
+      - `:manual` or `"manual"` - Manual invalidation
+  
+  ## Returns
+  
+    - `{:ok, invalidated_entry}` on success
+    - `{:error, :not_found}` if entry doesn't exist
+  
+  ## Examples
+  
+      iex> ValidationCache.invalidate(123, :file_change)
+      {:ok, %CachedValidation{invalidated_at: ~U[...], invalidation_reason: "file_change"}}
+      
+      iex> ValidationCache.invalidate(999999, :manual)
+      {:error, :not_found}
+  """
+  def invalidate(cache_id, reason) when is_atom(reason) do
+    invalidate(cache_id, Atom.to_string(reason))
+  end
+  
+  def invalidate(cache_id, reason) when is_binary(reason) do
+    with {:fetch, cached} when not is_nil(cached) <- {:fetch, Repo.get(CachedValidation, cache_id)},
+         {:update, {:ok, invalidated}} <- {:update, do_invalidate(cached, reason)} do
+      Logger.info("Cache entry invalidated", 
+        cache_id: cache_id,
+        reason: reason
+      )
+      {:ok, invalidated}
+    else
+      {:fetch, nil} -> 
+        {:error, :not_found}
+      {:update, {:error, changeset}} -> 
+        {:error, changeset}
+    end
+  end
+  
+  @doc """
+  Invalidates all cache entries containing a specific file.
+  
+  This is the primary invalidation method called when a file is modified.
+  It finds all cache entries where the file appears in the locations array
+  and marks them as invalidated.
+  
+  ## Parameters
+  
+    - forge_account_id: Integer ID of the forge account
+    - repository: String repository identifier (e.g., "RSOLV-dev/nodegoat")
+    - file_path: String path of the file that changed (e.g., "app/routes/profile.js")
+  
+  ## Returns
+  
+    - `{:ok, count}` with number of invalidated entries
+  
+  ## Examples
+  
+      iex> ValidationCache.invalidate_by_file(1, "org/repo", "app.js")
+      {:ok, 3}  # Invalidated 3 cache entries containing app.js
+      
+      iex> ValidationCache.invalidate_by_file(1, "org/repo", "nonexistent.js")
+      {:ok, 0}  # No entries to invalidate
+  
+  ## Performance Note
+  
+  Uses PostgreSQL JSONB operators for efficient array searching.
+  The query is optimized with indexes on forge_account_id and repository.
+  """
+  def invalidate_by_file(forge_account_id, repository, file_path) do
+    count = forge_account_id
+    |> build_file_invalidation_query(repository, file_path)
+    |> perform_bulk_invalidation("file_change")
+    
+    Logger.info("Invalidated cache entries for file change",
+      forge_account_id: forge_account_id,
+      repository: repository,
+      file_path: file_path,
+      count: count
+    )
+    
+    {:ok, count}
+  end
+  
+  @doc """
+  Invalidates all cache entries for a repository.
+  
+  Used for bulk invalidation when major changes occur to a repository
+  (e.g., branch switch, rebase, force push).
+  
+  ## Parameters
+  
+    - forge_account_id: Integer ID of the forge account
+    - repository: String repository identifier
+  
+  ## Returns
+  
+    - `{:ok, count}` with number of invalidated entries
+  
+  ## Examples
+  
+      iex> ValidationCache.invalidate_by_repository(1, "org/repo")
+      {:ok, 42}  # Invalidated all 42 cache entries for the repository
+  """
+  def invalidate_by_repository(forge_account_id, repository) do
+    count = forge_account_id
+    |> build_repository_invalidation_query(repository)
+    |> perform_bulk_invalidation("repository_change")
+    
+    Logger.info("Invalidated all cache entries for repository",
+      forge_account_id: forge_account_id,
+      repository: repository,
+      count: count
+    )
+    
+    {:ok, count}
+  end
+  
+  # Private invalidation helpers
+  
+  defp do_invalidate(cached, reason) do
+    cached
+    |> Ecto.Changeset.change(%{
+      invalidated_at: DateTime.utc_now(),
+      invalidation_reason: reason
+    })
+    |> Repo.update()
+  end
+  
+  defp build_file_invalidation_query(forge_account_id, repository, file_path) do
+    from c in CachedValidation,
+      where: c.forge_account_id == ^forge_account_id,
+      where: c.repository == ^repository,
+      where: is_nil(c.invalidated_at),
+      where: fragment(
+        "EXISTS (SELECT 1 FROM jsonb_array_elements(?) AS loc WHERE loc->>'file_path' = ?)",
+        c.locations, 
+        ^file_path
+      )
+  end
+  
+  defp build_repository_invalidation_query(forge_account_id, repository) do
+    from c in CachedValidation,
+      where: c.forge_account_id == ^forge_account_id,
+      where: c.repository == ^repository,
+      where: is_nil(c.invalidated_at)
+  end
+  
+  defp perform_bulk_invalidation(query, reason) do
+    {count, _} = Repo.update_all(query, 
+      set: [
+        invalidated_at: DateTime.utc_now(),
+        invalidation_reason: reason
+      ]
+    )
+    count
   end
 end
