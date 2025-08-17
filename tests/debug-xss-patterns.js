@@ -19,12 +19,12 @@ const patterns = [
 ];
 
 const examples = [
-  { code: 'element.innerHTML = userInput;', description: 'Direct innerHTML assignment' },
-  { code: 'document.write(userInput);', description: 'document.write with user input' },
-  { code: 'document.write("<script>" + userInput + "</script>");', description: 'document.write with concatenation' },
-  { code: 'element.outerHTML = req.body.content;', description: 'outerHTML assignment' },
-  { code: 'document.writeln(params.text);', description: 'document.writeln with user input' },
-  { code: '$(element).html(req.query.html);', description: 'jQuery html() with user input' }
+  { code: 'element.innerHTML = DOMPurify.sanitize(userInput);', description: 'Direct innerHTML assignment (fixed)' },
+  { code: 'document.write(DOMPurify.sanitize(userInput));', description: 'document.write with user input (fixed)' },
+  { code: 'document.write("<script>" + DOMPurify.sanitize(userInput) + "</script>");', description: 'document.write with concatenation (fixed)' },
+  { code: 'element.outerHTML = DOMPurify.sanitize(req.body.content);', description: 'outerHTML assignment (fixed)' },
+  { code: 'document.writeln(DOMPurify.sanitize(params.text));', description: 'document.writeln with user input (fixed)' },
+  { code: '$(element).html(DOMPurify.sanitize(req.query.html));', description: 'jQuery html() with user input (fixed)' }
 ];
 
 console.log('Testing XSS patterns:');

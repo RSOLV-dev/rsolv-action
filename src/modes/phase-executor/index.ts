@@ -1022,6 +1022,10 @@ export class PhaseExecutor {
       // Get credential manager if using vended credentials
       let credentialManager;
       if (this.config.aiProvider.useVendedCredentials && this.config.rsolvApiKey) {
+        // Set RSOLV_API_KEY environment variable for AI client
+        process.env.RSOLV_API_KEY = this.config.rsolvApiKey;
+        logger.info('Set RSOLV_API_KEY environment variable for vended credentials');
+        
         const { CredentialManagerSingleton } = await import('../../credentials/singleton.js');
         credentialManager = await CredentialManagerSingleton.getInstance(this.config.rsolvApiKey);
         logger.info('Using vended credentials singleton for Claude Code');

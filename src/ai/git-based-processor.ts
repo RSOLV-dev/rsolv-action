@@ -269,6 +269,10 @@ export async function processIssueWithGit(
     // Get credential manager if using vended credentials
     let credentialManager;
     if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+      // Set RSOLV_API_KEY environment variable for AI client
+      process.env.RSOLV_API_KEY = config.rsolvApiKey;
+      logger.info('Set RSOLV_API_KEY environment variable for vended credentials');
+      
       const { CredentialManagerSingleton } = await import('../credentials/singleton.js');
       credentialManager = await CredentialManagerSingleton.getInstance(config.rsolvApiKey);
       logger.info('Using vended credentials singleton for Claude Code');

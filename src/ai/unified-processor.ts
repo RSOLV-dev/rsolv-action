@@ -170,6 +170,10 @@ async function processIssue(
       // Get credential manager if using vended credentials
       let credentialManager;
       if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+        // Set RSOLV_API_KEY environment variable for AI client
+        process.env.RSOLV_API_KEY = config.rsolvApiKey;
+        logger.info('Set RSOLV_API_KEY environment variable for vended credentials');
+        
         logger.info('Getting credential manager singleton for vended credentials');
         const { CredentialManagerSingleton } = await import('../credentials/singleton.js');
         credentialManager = await CredentialManagerSingleton.getInstance(config.rsolvApiKey);
@@ -219,6 +223,10 @@ async function processIssue(
       logger.info(`Enhanced context setup - useVendedCredentials: ${config.aiProvider.useVendedCredentials}, rsolvApiKey: ${config.rsolvApiKey ? 'present' : 'missing'}`);
       
       if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+        // Set RSOLV_API_KEY environment variable for AI client
+        process.env.RSOLV_API_KEY = config.rsolvApiKey;
+        logger.info('Set RSOLV_API_KEY environment variable for vended credentials');
+        
         logger.info('Getting credential manager singleton for vended credentials');
         const { CredentialManagerSingleton } = await import('../credentials/singleton.js');
         credentialManager = await CredentialManagerSingleton.getInstance(config.rsolvApiKey);
