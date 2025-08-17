@@ -98,6 +98,12 @@ export async function loadConfig(): Promise<ActionConfig> {
     // Validate configuration
     const validatedConfig = validateConfig(mergedConfig);
     
+    // Set RSOLV_API_KEY environment variable if using vended credentials
+    if (validatedConfig.aiProvider.useVendedCredentials && validatedConfig.rsolvApiKey) {
+      process.env.RSOLV_API_KEY = validatedConfig.rsolvApiKey;
+      logger.info('Set RSOLV_API_KEY environment variable for vended credentials (config loader)');
+    }
+    
     logger.debug('Configuration loaded successfully');
     logger.info(`Final config - rsolvApiKey: ${validatedConfig.rsolvApiKey ? 'present' : 'not set'}`);
     
