@@ -318,10 +318,42 @@ export class ValidationEnricher {
       ],
       'xss': [
         {
-          name: 'Direct HTML injection',
-          regex: /innerHTML\s*=\s*[^;]+user|req\.|params|query/g,
+          name: 'Direct HTML injection via innerHTML',
+          regex: /innerHTML\s*=\s*[^;]+(?:user|req\.|params|query)/gi,
           confidence: 'high',
           suggestedFix: 'Use textContent or escape HTML',
+          cweId: 'CWE-79',
+          owasp: 'A03:2021'
+        },
+        {
+          name: 'Document.write with user input or concatenation',
+          regex: /document\.write(?:ln)?\s*\([^)]*[\+`]/gi,
+          confidence: 'high',
+          suggestedFix: 'Avoid document.write, use safe DOM manipulation methods',
+          cweId: 'CWE-79',
+          owasp: 'A03:2021'
+        },
+        {
+          name: 'Document.write with direct user input',
+          regex: /document\.write(?:ln)?\s*\([^)]*(?:user|req\.|params|query)/gi,
+          confidence: 'high',
+          suggestedFix: 'Avoid document.write, use safe DOM manipulation methods',
+          cweId: 'CWE-79',
+          owasp: 'A03:2021'
+        },
+        {
+          name: 'OuterHTML injection',
+          regex: /outerHTML\s*=\s*[^;]+(?:user|req\.|params|query)/gi,
+          confidence: 'high',
+          suggestedFix: 'Use safe DOM manipulation methods',
+          cweId: 'CWE-79',
+          owasp: 'A03:2021'
+        },
+        {
+          name: 'jQuery html() with user input',
+          regex: /\$\([^)]+\)\.html\s*\([^)]*(?:user|req\.|params|query)/gi,
+          confidence: 'high',
+          suggestedFix: 'Use jQuery text() or escape HTML',
           cweId: 'CWE-79',
           owasp: 'A03:2021'
         },
