@@ -9,6 +9,7 @@ import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { updateIssue, addLabels } from '../github/api.js';
+import { BatchValidator } from './batch-validator.js';
 
 export interface DetailedVulnerability {
   file: string;
@@ -37,10 +38,17 @@ export interface ValidationResult {
 export class ValidationEnricher {
   private githubToken: string;
   private rsolvApiKey?: string;
+  private batchValidator?: BatchValidator;
 
   constructor(githubToken: string, rsolvApiKey?: string) {
     this.githubToken = githubToken;
     this.rsolvApiKey = rsolvApiKey;
+    if (rsolvApiKey) {
+      logger.info(`[VALIDATE] Initializing BatchValidator with API key`);
+      this.batchValidator = new BatchValidator(rsolvApiKey, process.env.RSOLV_API_URL);
+    } else {
+      logger.info(`[VALIDATE] No RSOLV API key provided, batch validation disabled`);
+    }
   }
 
   /**
@@ -56,13 +64,45 @@ export class ValidationEnricher {
 
       // Step 2: Analyze each file for specific vulnerabilities
       const vulnerabilities: DetailedVulnerability[] = [];
+      const fileContents: Record<string, string> = {};
       
       for (const filePath of fileReferences) {
-        const fileVulns = await this.analyzeFile(filePath, issue);
+        const fileVulns = await this.analyzeFile(filePath, issue, fileContents);
         vulnerabilities.push(...fileVulns);
       }
 
       logger.info(`[VALIDATE] Found ${vulnerabilities.length} specific vulnerabilities`);
+      
+      // Step 2.5: Run batch validation if API key is available
+      if (this.batchValidator && vulnerabilities.length > 0) {
+        logger.info(`[VALIDATE] Running batch validation for ${vulnerabilities.length} vulnerabilities`);
+        const validationResponse = await this.batchValidator.validateBatch(
+          issue.repository.fullName,
+          vulnerabilities.map(v => ({
+            file: v.file,
+            line: v.startLine,
+            endLine: v.endLine,
+            code: v.codeSnippet,
+            type: this.extractVulnerabilityType(issue)
+          })),
+          fileContents
+        );
+        
+        if (validationResponse) {
+          // Update vulnerability confidence based on validation results
+          for (const vuln of vulnerabilities) {
+            const validated = validationResponse.validated.find(
+              v => v.filePath === vuln.file && 
+                   v.line >= vuln.startLine && 
+                   v.line <= vuln.endLine
+            );
+            if (validated) {
+              vuln.astValidation = !validated.falsePositive;
+              vuln.confidence = validated.falsePositive ? 'low' : 'high';
+            }
+          }
+        }
+      }
 
       // Step 3: Update issue body with validation results
       const updatedBody = this.generateEnrichedIssueBody(issue, vulnerabilities);
@@ -166,7 +206,7 @@ export class ValidationEnricher {
   /**
    * Analyze a file for specific vulnerabilities
    */
-  private async analyzeFile(filePath: string, issue: IssueContext): Promise<DetailedVulnerability[]> {
+  private async analyzeFile(filePath: string, issue: IssueContext, fileContents: Record<string, string>): Promise<DetailedVulnerability[]> {
     const vulnerabilities: DetailedVulnerability[] = [];
     
     // Check if file exists
@@ -179,15 +219,15 @@ export class ValidationEnricher {
     // Read file content
     const content = fs.readFileSync(fullPath, 'utf8');
     const lines = content.split('\n');
+    
+    // Store content for batch validation
+    fileContents[filePath] = content;
 
     // Extract vulnerability type from issue title
     const vulnType = this.extractVulnerabilityType(issue);
     
-    // Run AST validation if available
-    let astResults: any = null;
-    if (this.rsolvApiKey) {
-      astResults = await this.runASTValidation(filePath, content, vulnType);
-    }
+    // Note: AST validation is now done in batch after all files are analyzed
+    // Removed individual file validation here
 
     // Pattern-based detection based on vulnerability type
     const patterns = this.getPatterns(vulnType);
@@ -206,10 +246,8 @@ export class ValidationEnricher {
         const contextEnd = Math.min(lines.length - 1, endLine + 2);
         const codeSnippet = lines.slice(contextStart, contextEnd + 1).join('\n');
         
-        // Check if AST validation confirms this
-        const astValidated = astResults?.vulnerabilities?.some((v: any) => 
-          v.line >= startLine && v.line <= endLine
-        ) || false;
+        // AST validation will be done in batch
+        const astValidated = false; // Will be updated by batch validation
         
         vulnerabilities.push({
           file: filePath,
@@ -356,41 +394,8 @@ export class ValidationEnricher {
     return patterns[vulnType] || patterns['generic'];
   }
 
-  /**
-   * Run AST validation using RSOLV API
-   */
-  private async runASTValidation(filePath: string, content: string, vulnType: string): Promise<any> {
-    if (!this.rsolvApiKey) {
-      return null;
-    }
-
-    try {
-      // Call RSOLV API for AST validation
-      // IMPORTANT: Use /api/v1/ast/validate endpoint (compatibility with platform)
-      const response = await fetch(`${process.env.RSOLV_API_URL || 'https://api.rsolv.dev'}/api/v1/ast/validate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.rsolvApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          file: filePath,
-          content: content,
-          vulnerabilityType: vulnType
-        })
-      });
-
-      if (!response.ok) {
-        logger.warn(`[VALIDATE] AST validation failed for ${filePath}: ${response.statusText}`);
-        return null;
-      }
-
-      return await response.json();
-    } catch (error) {
-      logger.warn(`[VALIDATE] AST validation error for ${filePath}:`, error);
-      return null;
-    }
-  }
+  // Note: Individual file validation is now replaced by batch validation
+  // See BatchValidator class for the new implementation
 
   /**
    * Generate enriched issue body with validation results
