@@ -66,8 +66,11 @@ config :fun_with_flags, :persistence,
 
 config :fun_with_flags, :cache, enabled: false
 
-# Disable cache bust notifications to avoid Redis dependency issues
-config :fun_with_flags, :cache_bust_notifications, enabled: false
+# Enable cache bust notifications using Phoenix.PubSub (no Redis required)
+config :fun_with_flags, :cache_bust_notifications,
+  enabled: true,
+  adapter: FunWithFlags.Notifications.PhoenixPubSub,
+  client: Rsolv.PubSub
 
 # Configure admin emails for testing
 config :rsolv,
