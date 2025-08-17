@@ -1,0 +1,215 @@
+{
+  "dashboard": {
+    "title": "False Positive Cache - Staging",
+    "uid": "fp-cache-staging",
+    "tags": ["cache", "performance", "staging"],
+    "timezone": "browser",
+    "schemaVersion": 30,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "type": "graph",
+        "title": "Cache Hit Rate",
+        "targets": [
+          {
+            "expr": "rate(rsolv_cache_hits_total[5m]) / (rate(rsolv_cache_hits_total[5m]) + rate(rsolv_cache_misses_total[5m])) * 100",
+            "legendFormat": "Hit Rate %",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent", "min": 0, "max": 100},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "type": "graph",
+        "title": "Response Times",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(rsolv_cache_response_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 Cache Hit",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(rsolv_validation_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 Validation",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "ms", "min": 0},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+        "type": "stat",
+        "title": "Total Cached Entries",
+        "targets": [
+          {
+            "expr": "rsolv_cache_entries_total",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "orientation": "auto",
+          "text": {},
+          "textMode": "auto",
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+        "type": "stat",
+        "title": "Cache Memory Usage",
+        "targets": [
+          {
+            "expr": "rsolv_cache_memory_bytes / 1024 / 1024",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "unit": "MB",
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+        "type": "stat",
+        "title": "Invalidations/Hour",
+        "targets": [
+          {
+            "expr": "rate(rsolv_cache_invalidations_total[1h]) * 3600",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+        "type": "graph",
+        "title": "Cache Operations by Type",
+        "targets": [
+          {
+            "expr": "rate(rsolv_cache_hits_total[5m])",
+            "legendFormat": "Hits",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(rsolv_cache_misses_total[5m])",
+            "legendFormat": "Misses",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(rsolv_cache_invalidations_total[5m])",
+            "legendFormat": "Invalidations",
+            "refId": "C"
+          },
+          {
+            "expr": "rate(rsolv_cache_writes_total[5m])",
+            "legendFormat": "Writes",
+            "refId": "D"
+          }
+        ],
+        "yaxes": [
+          {"format": "ops", "min": 0},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "type": "table",
+        "title": "Top Cached Patterns",
+        "targets": [
+          {
+            "expr": "topk(10, rsolv_cache_pattern_hits)",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "type": "graph",
+        "title": "False Positive Detection Rate",
+        "targets": [
+          {
+            "expr": "rate(rsolv_false_positives_detected_total[5m]) / rate(rsolv_vulnerabilities_validated_total[5m]) * 100",
+            "legendFormat": "FP Rate %",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent", "min": 0},
+          {"format": "short"}
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "constant",
+          "current": {
+            "value": "staging",
+            "text": "Staging"
+          },
+          "hide": 0,
+          "query": "staging",
+          "skipUrlSync": false
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "changes(rsolv_deployment_info[5m]) > 0",
+          "name": "Deployments",
+          "tagKeys": "version",
+          "titleFormat": "Deployment",
+          "iconColor": "blue"
+        }
+      ]
+    }
+  }
+}
