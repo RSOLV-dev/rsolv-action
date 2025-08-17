@@ -366,7 +366,8 @@ export class ValidationEnricher {
 
     try {
       // Call RSOLV API for AST validation
-      const response = await fetch(`${process.env.RSOLV_API_URL || 'https://api.rsolv.dev'}/ast/validate`, {
+      // IMPORTANT: Use /api/v1/ast/validate endpoint (compatibility with platform)
+      const response = await fetch(`${process.env.RSOLV_API_URL || 'https://api.rsolv.dev'}/api/v1/ast/validate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.rsolvApiKey}`,
