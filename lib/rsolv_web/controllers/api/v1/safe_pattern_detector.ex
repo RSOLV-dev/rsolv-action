@@ -166,8 +166,8 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
       ~r/insertAdjacentHTML\(/,       # insertAdjacentHTML
     ]
     
-    # If it has escaping AND no direct HTML insertion, it's safe
-    safe || !Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    # Only safe if it has escaping AND no direct HTML insertion
+    safe && !Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
   end
   
   def is_safe_pattern?(:code_injection, code, %{language: "javascript"}) do
@@ -185,11 +185,24 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     # Check for safe command execution patterns
     safe_patterns = [
       ~r/execFile\(/,                  # execFile is safer than exec
-      ~r/spawn\(['"]/,                 # spawn with literal command
-      ~r/exec\(['"][^$`]+['"]\)/,      # exec with no interpolation
+      ~r/spawn\(['"][^'"]+['"]\s*,\s*\[/,  # spawn with array of args
+      ~r/exec\(['"][^'"$`]+['"]\)\s*$/,    # exec with literal string only (no concat)
     ]
     
-    Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    # Check for unsafe patterns that override safe detection
+    unsafe_patterns = [
+      ~r/exec\([^)]*\+/,               # exec with string concatenation
+      ~r/exec\([^)]*\$\{/,             # exec with template literals
+      ~r/exec\([^)]*req\./,            # exec with request data
+      ~r/exec\([^)]*params/,           # exec with params
+      ~r/shell\s*:\s*true/,            # shell: true option
+    ]
+    
+    has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    
+    # Only safe if it matches safe patterns AND doesn't match unsafe patterns
+    has_safe && !has_unsafe
   end
   
   def is_safe_pattern?(:path_traversal, code, %{language: _language}) do
@@ -203,6 +216,32 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     ]
     
     Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+  end
+  
+  def is_safe_pattern?(:ssrf, code, %{language: _language}) do
+    # Check for safe URL patterns (constants, not user input)
+    safe_patterns = [
+      ~r/axios\.get\(['"][^'"]+['"]\)/,        # Literal URL
+      ~r/fetch\(['"][^'"]+['"]\)/,             # Literal URL
+      ~r/\$\{[A-Z_]+\}/,                        # Using constants like ${API_BASE}
+      ~r/process\.env\.[A-Z_]+/,               # Environment variables
+    ]
+    
+    # Check for unsafe patterns with user input
+    unsafe_patterns = [
+      ~r/req\.\w+/,                    # Request data
+      ~r/params/,                       # Parameters
+      ~r/body\./,                       # Body data
+      ~r/query\./,                      # Query data
+      ~r/userInput/,                    # Obvious user input
+      ~r/userProvidedUrl/,              # Obvious user input
+    ]
+    
+    has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    
+    # Only safe if it doesn't have user input
+    has_safe && !has_unsafe
   end
   
   # Default case - not recognized as safe
@@ -221,6 +260,7 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
         :code_injection -> "Eval with literal or constant - not user-controlled"
         :command_injection -> "Safe command execution pattern"
         :path_traversal -> "Path is properly sanitized"
+        :ssrf -> "Using constant URL - not user-controlled"
         _ -> "Pattern recognized as safe"
       end
     else
@@ -232,6 +272,7 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
         :code_injection -> "Potential code injection - avoid eval with user input"
         :command_injection -> "Potential command injection - use safe execution methods"
         :path_traversal -> "Potential path traversal - sanitize file paths"
+        :ssrf -> "Potential SSRF - validate and whitelist URLs"
         _ -> "Pattern may be vulnerable"
       end
     end
