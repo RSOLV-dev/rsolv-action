@@ -3,7 +3,7 @@ defmodule Rsolv.Repo.Migrations.CreateRepositories do
 
   def change do
     create table(:repositories) do
-      add :forge_type, :forge_type, null: false
+      add :forge_type, :string, null: false
       add :namespace, :string, null: false  # e.g., "RSOLV-dev"
       add :name, :string, null: false       # e.g., "nodegoat-demo"
       add :full_path, :string, null: false  # computed: "RSOLV-dev/nodegoat-demo"
