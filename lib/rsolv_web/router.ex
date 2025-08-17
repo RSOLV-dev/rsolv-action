@@ -125,8 +125,8 @@ defmodule RsolvWeb.Router do
   scope "/api/v1", RsolvWeb.Api.V1 do
     pipe_through :api
     
-    # Vulnerability validation endpoint (using new cache-enabled controller for testing)
-    post "/vulnerabilities/validate", VulnerabilityValidationControllerWithCache, :validate
+    # Vulnerability validation endpoint (routed based on feature flag)
+    post "/vulnerabilities/validate", VulnerabilityValidationRouter, :validate
     
     # Pattern endpoints
     get "/patterns", PatternController, :index
