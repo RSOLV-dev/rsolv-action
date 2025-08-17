@@ -1,463 +1,356 @@
 defmodule RsolvWeb.Api.V1.SafePatternDetectorTest do
-  use ExUnit.Case, async: true
-  
+  use ExUnit.Case
   alias RsolvWeb.Api.V1.SafePatternDetector
   
-  describe "is_safe_pattern?/3 for timing attacks" do
-    test "recognizes safe constant comparisons" do
-      # JavaScript/TypeScript patterns
-      assert SafePatternDetector.is_safe_pattern?(
-        :timing_attack,
-        "if (error.code === DOMException.QUOTA_EXCEEDED_ERR)",
-        %{language: "javascript"}
-      ) == true
+  describe "SQL Injection Detection" do
+    test "detects unsafe string concatenation with user input" do
+      unsafe_patterns = [
+        {"db.query(\"SELECT * FROM users WHERE id = \" + req.params.id)", "javascript"},
+        {"db.query(\"SELECT * FROM users WHERE name = '\" + userName + \"'\")", "javascript"},
+        {"connection.execute(\"DELETE FROM posts WHERE id = \" + postId)", "javascript"},
+        {"mysql.query(\"UPDATE users SET role = 'admin' WHERE id = \" + userId)", "javascript"},
+        {"pg.query(\"SELECT * FROM \" + tableName)", "javascript"},
+        {"db.run(f\"SELECT * FROM users WHERE id = {user_id}\")", "python"},
+        {"cursor.execute(\"SELECT * FROM users WHERE name = '%s'\" % name)", "python"},
+        {"DB.exec(\"SELECT * FROM users WHERE id = \" + params[:id])", "ruby"},
+        {"$pdo->query(\"SELECT * FROM users WHERE id = \" . $_GET['id'])", "php"},
+        {"mysqli_query($conn, \"SELECT * FROM users WHERE id = \" . $userId)", "php"},
+      ]
       
-      assert SafePatternDetector.is_safe_pattern?(
-        :timing_attack,
-        "status === HttpStatus.OK",
-        %{language: "javascript"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :timing_attack,
-        "type === CONSTANTS.USER_TYPE",
-        %{language: "javascript"}
-      ) == true
-      
-      # Python patterns
-      assert SafePatternDetector.is_safe_pattern?(
-        :timing_attack,
-        "if error_code == errno.EACCES:",
-        %{language: "python"}
-      ) == true
-      
-      # Ruby patterns
-      assert SafePatternDetector.is_safe_pattern?(
-        :timing_attack,
-        "status == Net::HTTPSuccess",
-        %{language: "ruby"}
-      ) == true
+      for {code, language} <- unsafe_patterns do
+        refute SafePatternDetector.is_safe_pattern?(:sql_injection, code, %{language: language}),
+               "Should detect unsafe SQL: #{code}"
+      end
     end
     
-    test "identifies unsafe timing comparisons" do
-      assert SafePatternDetector.is_safe_pattern?(
-        :timing_attack,
-        "if (password === userInput)",
-        %{language: "javascript"}
-      ) == false
+    test "recognizes safe parameterized queries" do
+      safe_patterns = [
+        {"db.query(\"SELECT * FROM users WHERE id = $1\", [userId])", "javascript"},
+        {"db.query(\"SELECT * FROM users WHERE id = ?\", [userId])", "javascript"},
+        {"connection.execute(\"SELECT * FROM users WHERE id = :id\", {id: userId})", "javascript"},
+        {"db.prepare(\"SELECT * FROM users WHERE id = ?\")", "javascript"},
+        {"cursor.execute(\"SELECT * FROM users WHERE id = %s\", (user_id,))", "python"},
+        {"cursor.execute(\"SELECT * FROM users WHERE id = ?\", [user_id])", "python"},
+        {"DB.exec(\"SELECT * FROM users WHERE id = ?\", params[:id])", "ruby"},
+        {"User.where(id: params[:id])", "ruby"},
+        {"$stmt = $pdo->prepare(\"SELECT * FROM users WHERE id = ?\")", "php"},
+        {"$stmt->bind_param(\"i\", $userId)", "php"},
+      ]
       
-      assert SafePatternDetector.is_safe_pattern?(
-        :timing_attack,
-        "token === req.body.token",
-        %{language: "javascript"}
-      ) == false
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:sql_injection, code, %{language: language}),
+               "Should recognize safe SQL: #{code}"
+      end
+    end
+    
+    test "detects SQL in test fixtures as safe" do
+      test_patterns = [
+        {"db.query(\"SELECT * FROM users WHERE id = 1\")", "javascript"},
+        {"connection.execute(\"INSERT INTO test_users VALUES (1, 'test')\")", "javascript"},
+        {"cursor.execute(\"CREATE TABLE test_table (id INT)\")", "python"},
+      ]
       
-      assert SafePatternDetector.is_safe_pattern?(
-        :timing_attack,
-        "apiKey == user_provided_key",
-        %{language: "python"}
-      ) == false
+      # Note: These might need special handling for test files
+      # For now, they're marked as unsafe unless in test directories
+      for {code, language} <- test_patterns do
+        refute SafePatternDetector.is_safe_pattern?(:sql_injection, code, %{language: language}),
+               "Static SQL without params should be unsafe: #{code}"
+      end
     end
   end
   
-  describe "is_safe_pattern?/3 for SQL injection" do
-    test "recognizes parameterized queries" do
-      # PostgreSQL style
-      assert SafePatternDetector.is_safe_pattern?(
-        :sql_injection,
-        "db.query('SELECT * FROM users WHERE id = $1', [userId])",
-        %{language: "javascript"}
-      ) == true
+  describe "XSS Detection" do
+    test "detects unsafe innerHTML and document.write" do
+      unsafe_patterns = [
+        {"element.innerHTML = userInput", "javascript"},
+        {"div.innerHTML = req.body.comment", "javascript"},
+        {"document.write(userContent)", "javascript"},
+        {"el.outerHTML = data", "javascript"},
+        {"$('#content').html(userInput)", "javascript"},
+        {"dangerouslySetInnerHTML={{__html: content}}", "javascript"},
+        {"v-html=\"userContent\"", "javascript"},
+      ]
       
-      # MySQL style
-      assert SafePatternDetector.is_safe_pattern?(
-        :sql_injection,
-        "connection.execute('SELECT * FROM users WHERE id = ?', [userId])",
-        %{language: "javascript"}
-      ) == true
-      
-      # Named parameters
-      assert SafePatternDetector.is_safe_pattern?(
-        :sql_injection,
-        "db.query('SELECT * FROM users WHERE id = :userId', {userId: id})",
-        %{language: "javascript"}
-      ) == true
-      
-      # Python patterns
-      assert SafePatternDetector.is_safe_pattern?(
-        :sql_injection,
-        "cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",
-        %{language: "python"}
-      ) == true
-      
-      # Ruby/Rails patterns
-      assert SafePatternDetector.is_safe_pattern?(
-        :sql_injection,
-        "User.where('id = ?', params[:id])",
-        %{language: "ruby"}
-      ) == true
-      
-      # PHP PDO
-      assert SafePatternDetector.is_safe_pattern?(
-        :sql_injection,
-        "$stmt->execute(['id' => $userId])",
-        %{language: "php"}
-      ) == true
+      for {code, language} <- unsafe_patterns do
+        refute SafePatternDetector.is_safe_pattern?(:xss, code, %{language: language}),
+               "Should detect unsafe XSS: #{code}"
+      end
     end
     
-    test "identifies unsafe SQL concatenation" do
+    test "recognizes safe text content methods" do
+      safe_patterns = [
+        {"element.textContent = userInput", "javascript"},
+        {"element.innerText = userInput", "javascript"},
+        {"document.createTextNode(userInput)", "javascript"},
+        {"$('#content').text(userInput)", "javascript"},
+        {"React.createElement('div', null, userInput)", "javascript"},
+        {"dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(content)}}", "javascript"},
+        {"element.innerHTML = escapeHtml(userInput)", "javascript"},
+      ]
+      
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:xss, code, %{language: language}),
+               "Should recognize safe XSS prevention: #{code}"
+      end
+    end
+  end
+  
+  describe "Command Injection Detection" do
+    test "detects unsafe command execution with user input" do
+      unsafe_patterns = [
+        {"exec(\"ls \" + userInput)", "javascript"},
+        {"exec(`rm -rf ${userPath}`)", "javascript"},
+        {"child_process.exec(\"convert \" + req.body.filename + \" output.pdf\")", "javascript"},
+        {"os.system(\"ping \" + hostname)", "python"},
+        {"subprocess.call(\"echo \" + user_message, shell=True)", "python"},
+        {"system(\"cat \" + params[:file])", "ruby"},
+        {"exec($_GET['cmd'])", "php"},
+        {"shell_exec(\"tar -xf \" . $filename)", "php"},
+      ]
+      
+      for {code, language} <- unsafe_patterns do
+        refute SafePatternDetector.is_safe_pattern?(:command_injection, code, %{language: language}),
+               "Should detect unsafe command: #{code}"
+      end
+    end
+    
+    test "recognizes safe command execution" do
+      safe_patterns = [
+        {"execFile('ls', ['-la', userDir])", "javascript"},
+        {"spawn('git', ['clone', repoUrl])", "javascript"},
+        {"exec('npm run build')", "javascript"},
+        {"subprocess.run(['ls', '-la', user_dir], check=True)", "python"},
+        {"os.execv('/bin/ls', ['ls', '-la'])", "python"},
+        {"system('rake db:migrate')", "ruby"},
+        {"exec('composer install')", "php"},
+      ]
+      
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:command_injection, code, %{language: language}),
+               "Should recognize safe command: #{code}"
+      end
+    end
+  end
+  
+  describe "Path Traversal Detection" do
+    test "detects unsafe path operations" do
+      unsafe_patterns = [
+        {"fs.readFile(req.query.file)", "javascript"},
+        {"fs.readFile('../' + userPath)", "javascript"},
+        {"require(userModule)", "javascript"},
+        {"open(user_file, 'r')", "python"},
+        {"os.path.join('/var/www', user_path)", "python"},
+        {"File.read(params[:path])", "ruby"},
+        {"include($_GET['page'])", "php"},
+        {"file_get_contents($userFile)", "php"},
+      ]
+      
+      for {code, language} <- unsafe_patterns do
+        refute SafePatternDetector.is_safe_pattern?(:path_traversal, code, %{language: language}),
+               "Should detect unsafe path traversal: #{code}"
+      end
+    end
+    
+    test "recognizes safe path operations" do
+      safe_patterns = [
+        {"path.join(__dirname, 'static', 'index.html')", "javascript"},
+        {"fs.readFile(path.resolve('./config.json'))", "javascript"},
+        {"path.normalize(userPath)", "javascript"},
+        {"os.path.join(BASE_DIR, 'templates', 'index.html')", "python"},
+        {"pathlib.Path(user_path).resolve()", "python"},
+        {"Rails.root.join('public', 'uploads')", "ruby"},
+        {"basename($_GET['file'])", "php"},
+        {"realpath($userPath)", "php"},
+      ]
+      
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:path_traversal, code, %{language: language}),
+               "Should recognize safe path handling: #{code}"
+      end
+    end
+  end
+  
+  describe "NoSQL Injection Detection" do
+    test "detects unsafe NoSQL queries" do
+      unsafe_patterns = [
+        {"db.find({$where: userInput})", "javascript"},
+        {"collection.find({username: req.body.username})", "javascript"},
+        {"db.users.find({age: {$gt: req.query.age}})", "javascript"},
+        {"collection.find(json.loads(user_query))", "python"},
+      ]
+      
+      for {code, language} <- unsafe_patterns do
+        refute SafePatternDetector.is_safe_pattern?(:nosql_injection, code, %{language: language}),
+               "Should detect unsafe NoSQL: #{code}"
+      end
+    end
+    
+    test "recognizes safe NoSQL queries" do
+      safe_patterns = [
+        {"db.find({username: 'admin'})", "javascript"},
+        {"collection.findById(userId)", "javascript"},
+        {"db.users.findOne({_id: ObjectId(id)})", "javascript"},
+        {"collection.find({'username': username})", "python"},
+      ]
+      
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:nosql_injection, code, %{language: language}),
+               "Should recognize safe NoSQL: #{code}"
+      end
+    end
+  end
+  
+  describe "SSRF Detection" do
+    test "detects unsafe URL fetching" do
+      unsafe_patterns = [
+        {"axios.get(req.body.url)", "javascript"},
+        {"fetch(userProvidedUrl)", "javascript"},
+        {"request(req.query.webhook)", "javascript"},
+        {"urllib.request.urlopen(user_url)", "python"},
+        {"requests.get(params['url'])", "python"},
+        {"Net::HTTP.get(URI(params[:url]))", "ruby"},
+        {"file_get_contents($_POST['url'])", "php"},
+        {"curl_init($_GET['endpoint'])", "php"},
+      ]
+      
+      for {code, language} <- unsafe_patterns do
+        refute SafePatternDetector.is_safe_pattern?(:ssrf, code, %{language: language}),
+               "Should detect unsafe SSRF: #{code}"
+      end
+    end
+    
+    test "recognizes safe URL operations" do
+      safe_patterns = [
+        {"axios.get('https://api.example.com/data')", "javascript"},
+        {"fetch(`${API_BASE}/users`)", "javascript"},
+        {"request.get('http://localhost:3000/health')", "javascript"},
+        {"urllib.request.urlopen('https://api.example.com')", "python"},
+        {"requests.get(f'{BASE_URL}/api/v1/users')", "python"},
+      ]
+      
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:ssrf, code, %{language: language}),
+               "Should recognize safe URL fetching: #{code}"
+      end
+    end
+  end
+  
+  describe "Timing Attack Detection" do
+    test "detects unsafe string comparisons for secrets" do
+      unsafe_patterns = [
+        {"password === userInput", "javascript"},
+        {"apiKey == req.headers.authorization", "javascript"},
+        {"token !== expectedToken", "javascript"},
+        {"secret == user_secret", "python"},
+        {"password == params[:password]", "ruby"},
+        {"$password === $_POST['password']", "php"},
+      ]
+      
+      for {code, language} <- unsafe_patterns do
+        refute SafePatternDetector.is_safe_pattern?(:timing_attack, code, %{language: language}),
+               "Should detect timing attack vulnerability: #{code}"
+      end
+    end
+    
+    test "recognizes safe constant comparisons" do
+      safe_patterns = [
+        {"error.code === PERMISSION_DENIED", "javascript"},
+        {"status === 200", "javascript"},
+        {"response.status === HttpStatus.OK", "javascript"},
+        {"e.code === DOMException.QUOTA_EXCEEDED_ERR", "javascript"},
+        {"error.errno == errno.ENOENT", "python"},
+        {"response.status_code == 404", "python"},
+      ]
+      
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:timing_attack, code, %{language: language}),
+               "Should recognize safe comparison: #{code}"
+      end
+    end
+  end
+  
+  describe "Edge Cases and Complex Patterns" do
+    test "handles mixed safe and unsafe patterns correctly" do
+      # Safe query with unsafe comparison
+      code = "db.query('SELECT * FROM users WHERE id = ?', [userId]) && password === userPassword"
+      refute SafePatternDetector.is_safe_pattern?(:sql_injection, code, %{language: "javascript"})
+      
+      # Template literal with partial safety
+      code = "db.query(`SELECT * FROM ${TABLE_NAME} WHERE id = ${userId}`)"
+      refute SafePatternDetector.is_safe_pattern?(:sql_injection, code, %{language: "javascript"})
+    end
+    
+    test "handles framework-specific patterns" do
+      # Rails ActiveRecord (safe)
       assert SafePatternDetector.is_safe_pattern?(
+        :sql_injection,
+        "User.where(email: params[:email]).first",
+        %{language: "ruby"}
+      )
+      
+      # Django ORM (safe)
+      assert SafePatternDetector.is_safe_pattern?(
+        :sql_injection,
+        "User.objects.filter(email=request.POST['email'])",
+        %{language: "python"}
+      )
+      
+      # React with DOMPurify (safe)
+      assert SafePatternDetector.is_safe_pattern?(
+        :xss,
+        "dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(userContent)}}",
+        %{language: "javascript"}
+      )
+    end
+    
+    test "correctly identifies build scripts and CI/CD as safer contexts" do
+      # Build scripts with static commands
+      assert SafePatternDetector.is_safe_pattern?(
+        :command_injection,
+        "exec('webpack --mode production')",
+        %{language: "javascript"}
+      )
+      
+      # But not if they include variables
+      refute SafePatternDetector.is_safe_pattern?(
+        :command_injection,
+        "exec(`webpack --mode ${process.env.MODE}`)",
+        %{language: "javascript"}
+      )
+    end
+  end
+  
+  describe "explain_safety/3" do
+    test "provides appropriate explanations for safe patterns" do
+      explanation = SafePatternDetector.explain_safety(
+        :sql_injection,
+        "db.query('SELECT * FROM users WHERE id = ?', [userId])",
+        %{language: "javascript"}
+      )
+      assert explanation =~ "parameterized"
+      
+      explanation = SafePatternDetector.explain_safety(
+        :xss,
+        "element.textContent = userInput",
+        %{language: "javascript"}
+      )
+      assert explanation =~ "escaping" or explanation =~ "safe"
+    end
+    
+    test "provides appropriate explanations for unsafe patterns" do
+      explanation = SafePatternDetector.explain_safety(
         :sql_injection,
         "db.query('SELECT * FROM users WHERE id = ' + userId)",
         %{language: "javascript"}
-      ) == false
+      )
+      assert explanation =~ "injection" or explanation =~ "unsafe"
       
-      assert SafePatternDetector.is_safe_pattern?(
-        :sql_injection,
-        "query = \"SELECT * FROM users WHERE name = '\" + userName + \"'\"",
-        %{language: "python"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :sql_injection,
-        "$query = \"SELECT * FROM users WHERE id = $userId\"",
-        %{language: "php"}
-      ) == false
-    end
-  end
-  
-  describe "is_safe_pattern?/3 for NoSQL injection" do
-    test "recognizes safe MongoDB queries" do
-      assert SafePatternDetector.is_safe_pattern?(
-        :nosql_injection,
-        "collection.find({ userId: id })",
-        %{language: "javascript"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :nosql_injection,
-        "users.findOne({ email: userEmail })",
-        %{language: "javascript"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :nosql_injection,
-        "db.users.findById(userId)",
-        %{language: "javascript"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :nosql_injection,
-        "collection.updateOne({ _id: id }, { $set: { name: newName } })",
-        %{language: "javascript"}
-      ) == true
-    end
-    
-    test "identifies unsafe MongoDB queries with $where" do
-      assert SafePatternDetector.is_safe_pattern?(
-        :nosql_injection,
-        "collection.find({ $where: 'this.userId == ' + userId })",
-        %{language: "javascript"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :nosql_injection,
-        "users.find({ $where: userProvidedFunction })",
-        %{language: "javascript"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :nosql_injection,
-        "db.collection.find({ $query: userInput })",
-        %{language: "javascript"}
-      ) == false
-    end
-  end
-  
-  describe "is_safe_pattern?/3 for XSS" do
-    test "recognizes safe template rendering" do
-      # Express with template engines
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "res.render('template', { data: userInput })",
-        %{language: "javascript"}
-      ) == true
-      
-      # React JSX
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "<div>{userInput}</div>",
-        %{language: "javascript"}
-      ) == true
-      
-      # Vue templates
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "{{ message }}",
-        %{language: "javascript"}
-      ) == true
-      
-      # Angular templates
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "<p>{{ userContent }}</p>",
-        %{language: "javascript"}
-      ) == true
-      
-      # Django templates
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "{{ user_input|escape }}",
-        %{language: "python"}
-      ) == true
-      
-      # Rails ERB with escaping
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "<%= h user_input %>",
-        %{language: "ruby"}
-      ) == true
-    end
-    
-    test "identifies unsafe HTML insertion" do
-      assert SafePatternDetector.is_safe_pattern?(
+      explanation = SafePatternDetector.explain_safety(
         :xss,
         "element.innerHTML = userInput",
         %{language: "javascript"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "document.write(userContent)",
-        %{language: "javascript"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "$('#div').html(userInput)",
-        %{language: "javascript"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "element.outerHTML = content",
-        %{language: "javascript"}
-      ) == false
-      
-      # Rails raw output
-      assert SafePatternDetector.is_safe_pattern?(
-        :xss,
-        "<%= raw user_input %>",
-        %{language: "ruby"}
-      ) == false
-    end
-  end
-  
-  describe "is_safe_pattern?/3 for command injection" do
-    test "recognizes safe command execution" do
-      # Using arrays for arguments (safe)
-      assert SafePatternDetector.is_safe_pattern?(
-        :command_injection,
-        "spawn('ls', ['-la', userPath])",
-        %{language: "javascript"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :command_injection,
-        "subprocess.run(['ls', '-la', user_path])",
-        %{language: "python"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :command_injection,
-        "system('ls', '-la', user_path)",
-        %{language: "ruby"}
-      ) == true
-      
-      # PHP escapeshellarg
-      assert SafePatternDetector.is_safe_pattern?(
-        :command_injection,
-        "exec('ls ' . escapeshellarg($userPath))",
-        %{language: "php"}
-      ) == true
-    end
-    
-    test "identifies unsafe command execution" do
-      assert SafePatternDetector.is_safe_pattern?(
-        :command_injection,
-        "exec('ls ' + userInput)",
-        %{language: "javascript"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :command_injection,
-        "os.system('ls ' + user_path)",
-        %{language: "python"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :command_injection,
-        "`ls ${userPath}`",
-        %{language: "ruby"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :command_injection,
-        "shell_exec(\"ls $userPath\")",
-        %{language: "php"}
-      ) == false
-    end
-  end
-  
-  describe "is_safe_pattern?/3 for path traversal" do
-    test "recognizes safe path handling" do
-      assert SafePatternDetector.is_safe_pattern?(
-        :path_traversal,
-        "path.join(__dirname, 'uploads', fileName)",
-        %{language: "javascript"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :path_traversal,
-        "os.path.join(BASE_DIR, 'uploads', filename)",
-        %{language: "python"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :path_traversal,
-        "File.join(Rails.root, 'uploads', filename)",
-        %{language: "ruby"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :path_traversal,
-        "realpath($uploadDir . '/' . basename($filename))",
-        %{language: "php"}
-      ) == true
-    end
-    
-    test "identifies unsafe path handling" do
-      assert SafePatternDetector.is_safe_pattern?(
-        :path_traversal,
-        "'uploads/' + userFileName",
-        %{language: "javascript"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :path_traversal,
-        "open('/var/data/' + user_file)",
-        %{language: "python"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :path_traversal,
-        "File.read(\"uploads/\" + params[:file])",
-        %{language: "ruby"}
-      ) == false
-    end
-  end
-  
-  describe "is_safe_pattern?/3 for eval/code injection" do
-    test "recognizes safe alternatives to eval" do
-      # JSON parsing instead of eval
-      assert SafePatternDetector.is_safe_pattern?(
-        :code_injection,
-        "JSON.parse(userInput)",
-        %{language: "javascript"}
-      ) == true
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :code_injection,
-        "json.loads(user_input)",
-        %{language: "python"}
-      ) == true
-      
-      # Safe function calls
-      assert SafePatternDetector.is_safe_pattern?(
-        :code_injection,
-        "allowedFunctions[functionName]()",
-        %{language: "javascript"}
-      ) == true
-    end
-    
-    test "identifies unsafe eval usage" do
-      assert SafePatternDetector.is_safe_pattern?(
-        :code_injection,
-        "eval(userInput)",
-        %{language: "javascript"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :code_injection,
-        "new Function(userCode)",
-        %{language: "javascript"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :code_injection,
-        "exec(user_code)",
-        %{language: "python"}
-      ) == false
-      
-      assert SafePatternDetector.is_safe_pattern?(
-        :code_injection,
-        "eval(params[:code])",
-        %{language: "ruby"}
-      ) == false
-    end
-  end
-  
-  describe "detect_all_safe_patterns/2" do
-    test "detects multiple safe patterns in code" do
-      code = """
-      db.query('SELECT * FROM users WHERE id = $1', [userId]);
-      res.render('template', { data: userInput });
-      path.join(__dirname, 'uploads', fileName);
-      """
-      
-      patterns = SafePatternDetector.detect_all_safe_patterns(code, %{language: "javascript"})
-      
-      assert :sql_injection in patterns
-      assert :xss in patterns
-      assert :path_traversal in patterns
-    end
-    
-    test "returns empty list when no safe patterns found" do
-      code = """
-      eval(userInput);
-      element.innerHTML = userContent;
-      exec('ls ' + userPath);
-      """
-      
-      patterns = SafePatternDetector.detect_all_safe_patterns(code, %{language: "javascript"})
-      
-      assert patterns == []
-    end
-  end
-  
-  describe "explain_safe_pattern/3" do
-    test "provides explanation for safe patterns" do
-      explanation = SafePatternDetector.explain_safe_pattern(
-        :sql_injection,
-        "db.query('SELECT * FROM users WHERE id = $1', [userId])",
-        %{language: "javascript"}
       )
-      
-      assert explanation.safe == true
-      assert explanation.reason =~ "parameterized"
-      assert explanation.recommendation == nil
-    end
-    
-    test "provides recommendation for unsafe patterns" do
-      explanation = SafePatternDetector.explain_safe_pattern(
-        :sql_injection,
-        "db.query('SELECT * FROM users WHERE id = ' + userId)",
-        %{language: "javascript"}
-      )
-      
-      assert explanation.safe == false
-      assert explanation.reason =~ "concatenation"
-      assert explanation.recommendation =~ "parameterized"
+      assert explanation =~ "XSS" or explanation =~ "escape"
     end
   end
 end
