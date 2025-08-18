@@ -343,7 +343,7 @@ export async function processIssueWithGit(
         logger.info('📋 Skipping fix validation (DISABLE_FIX_VALIDATION=true)');
         logger.info('Fix will be applied without validation - proceeding to PR creation');
         break; // Exit the iteration loop and proceed to PR creation
-      } else if (config.testGeneration?.validateFixes || config.fixValidation?.enabled !== false) {
+      } else if (config.testGeneration?.validateFixes === true || config.fixValidation?.enabled === true) {
         
         // Check if we should use static validation for this vulnerability type
         const { shouldUseStaticValidation } = await import('./static-xss-validator.js');
