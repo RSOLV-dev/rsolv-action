@@ -287,7 +287,18 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
    * Extract specific vulnerability details from issue context
    */
   private getSpecificVulnerabilityDetails(issueContext: any): string {
+    // Enhanced debug logging
+    logger.info('[DEBUG] getSpecificVulnerabilityDetails called');
+    logger.info('[DEBUG] issueContext keys:', Object.keys(issueContext || {}));
+    logger.info('[DEBUG] specificVulnerabilities present:', !!issueContext.specificVulnerabilities);
+    logger.info('[DEBUG] specificVulnerabilities length:', issueContext.specificVulnerabilities?.length || 0);
+    
+    if (issueContext.specificVulnerabilities && issueContext.specificVulnerabilities.length > 0) {
+      logger.info('[DEBUG] First vulnerability:', JSON.stringify(issueContext.specificVulnerabilities[0], null, 2));
+    }
+    
     if (!issueContext.specificVulnerabilities || issueContext.specificVulnerabilities.length === 0) {
+      logger.warn('[DEBUG] No specific vulnerabilities found in issue context');
       return '';
     }
     
@@ -303,6 +314,8 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
       }
       groupedByFile[file].push(vuln);
     });
+    
+    logger.info('[DEBUG] Vulnerabilities grouped by file:', Object.keys(groupedByFile));
     
     Object.entries(groupedByFile).forEach(([file, vulns]) => {
       details += `### File: ${file}\n`;
@@ -322,6 +335,7 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
     details += '❌ DO NOT modify vendor/third-party libraries\n';
     details += '❌ Focus ONLY on the vulnerabilities listed above\n\n';
     
+    logger.info('[DEBUG] Generated vulnerability details section length:', details.length);
     return details;
   }
   
@@ -366,6 +380,15 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
     validationResult?: ValidationResult,
     iteration?: { current: number; max: number }
   ): string {
+    // Debug logging for prompt construction
+    logger.info('[DEBUG] constructPromptWithTestContext called');
+    logger.info('[DEBUG] Issue context:', {
+      hasTitle: !!issueContext.title,
+      hasBody: !!issueContext.body,
+      hasSpecificVulnerabilities: !!issueContext.specificVulnerabilities,
+      vulnerabilityCount: issueContext.specificVulnerabilities?.length || 0
+    });
+    
     // Start with enhanced prompt including constraints
     let prompt = `You are an expert security engineer fixing vulnerabilities.
 
@@ -558,10 +581,27 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
       // Execute Claude Code to make edits
       logger.info('Executing Claude Code to fix vulnerabilities in-place...');
       
+      // Debug logging before prompt construction
+      logger.info('[DEBUG] About to construct prompt:', {
+        hasTestResults: !!testResults,
+        hasValidationResult: !!validationResult,
+        hasIteration: !!iteration,
+        issueContextKeys: Object.keys(issueContext),
+        hasSpecificVulnerabilities: !!issueContext.specificVulnerabilities
+      });
+      
       // Use enhanced prompt with test context if available
       const promptToUse = (testResults || validationResult || iteration) 
         ? this.constructPromptWithTestContext(issueContext, analysis, testResults, validationResult, iteration)
         : enhancedPrompt;
+      
+      // Log the prompt being used (first 500 chars)
+      logger.info('[DEBUG] Prompt includes SPECIFIC VULNERABILITIES:', promptToUse.includes('SPECIFIC VULNERABILITIES TO FIX'));
+      if (promptToUse.includes('SPECIFIC VULNERABILITIES TO FIX')) {
+        const startIdx = promptToUse.indexOf('SPECIFIC VULNERABILITIES TO FIX');
+        const endIdx = Math.min(startIdx + 1000, promptToUse.length);
+        logger.info('[DEBUG] Vulnerability section:', promptToUse.substring(startIdx, endIdx));
+      }
       
       // Use CLI adapter if configured, otherwise use SDK
       const useCLI = process.env.RSOLV_USE_CLI === 'true' || this.claudeConfig?.useStructuredPhases;
