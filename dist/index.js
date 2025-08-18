@@ -1949,7 +1949,80 @@ Only after you've confirmed "PHASE 1 COMPLETE", provide the JSON summary:
 □ Stated "PHASE 1 COMPLETE"
 □ Provided JSON summary
 
-Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editing.`}constructPromptWithTestContext(J,X,G,Q,W){let Y=this.constructPrompt(J,X);if(G?.generatedTests?.success)Y+=`
+Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editing.`}getSpecificVulnerabilityDetails(J){if(!J.specificVulnerabilities||J.specificVulnerabilities.length===0)return"";let X=`
+## SPECIFIC VULNERABILITIES TO FIX
+`;X+=`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+`,X+=`⚠️ You MUST fix ONLY these specific issues:
+
+`;let G={};return J.specificVulnerabilities.forEach((Q)=>{let W=Q.file||Q.path||"unknown";if(!G[W])G[W]=[];G[W].push(Q)}),Object.entries(G).forEach(([Q,W])=>{X+=`### File: ${Q}
+`,W.forEach((Y)=>{if(X+=`- **Line ${Y.line}**: ${Y.message||Y.description}
+`,Y.snippet||Y.code)X+=`  Code: \`${Y.snippet||Y.code}\`
+`;if(Y.remediation)X+=`  Fix: ${Y.remediation}
+`}),X+=`
+`}),X+=`❌ DO NOT fix issues in other files
+`,X+=`❌ DO NOT modify vendor/third-party libraries
+`,X+=`❌ Focus ONLY on the vulnerabilities listed above
+
+`,X}getVulnerabilitySpecificGuidance(J){let X=J.title.toLowerCase(),G=J.body.toLowerCase(),Q="";if(X.includes("insecure_deserialization")||X.includes("eval")||G.includes("eval(")||G.includes("deserializing"))Q+=`
+## EVAL/DESERIALIZATION FIX GUIDANCE
+`,Q+=`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+`,Q+=`This vulnerability uses eval() which executes arbitrary code.
+
+`,Q+=`✅ CORRECT FIX:
+`,Q+=`- For numbers: Use parseInt(value, 10) or parseFloat(value)
+`,Q+=`- For JSON: Use JSON.parse(value)
+`,Q+=`- For math: Use a safe expression evaluator
+`,Q+=`- Check if there's a commented fix in the code!
+
+`,Q+=`❌ INCORRECT:
+`,Q+=`- Trying to sanitize input for eval (still unsafe)
+`,Q+=`- Using new Function() (also unsafe)
+
+`,Q+=`Example:
+`,Q+="```javascript\n",Q+=`// VULNERABLE: const value = eval(userInput);
+`,Q+=`// FIXED: const value = parseInt(userInput, 10);
+`,Q+="```\n\n";return Q}constructPromptWithTestContext(J,X,G,Q,W){let Y=`You are an expert security engineer fixing vulnerabilities.
+
+## \uD83D\uDEA8 CRITICAL CONSTRAINTS - READ FIRST \uD83D\uDEA8
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. **NEVER MODIFY TEST FILES** - You must NEVER edit files in test/, spec/, or __tests__ directories
+2. **NEVER BYPASS TESTS** - Do not change test code to make tests pass
+3. **ONLY FIX IMPLEMENTATION** - Only modify the actual vulnerable code files
+4. **If a test fails, fix the IMPLEMENTATION, not the test**
+5. **Test files are READ-ONLY** - You may read them to understand requirements
+6. **DO NOT modify vendor/third-party libraries** unless the vulnerability is specifically there
+
+${this.getSpecificVulnerabilityDetails(J)}
+
+## TEST EXECUTION CAPABILITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You can run tests to verify your fix works:
+
+\`\`\`bash
+# Run all tests
+npm test
+
+# Run specific test file  
+npm test -- path/to/test.js
+
+# Check if your changes fixed the vulnerability
+npm test -- --grep "security"
+\`\`\`
+
+**IMPORTANT**: 
+- Use the Bash tool to run tests
+- If tests fail, read the error output
+- Adjust your fix based on test feedback
+- You have 3 attempts to get tests passing
+- DO NOT modify the tests to make them pass
+
+${this.getVulnerabilitySpecificGuidance(J)}
+
+`;if(Y+=this.constructPrompt(J,X),G?.generatedTests?.success)Y+=`
 
 ## Generated Tests
 `,Y+=`The following tests have been generated to validate your fix:

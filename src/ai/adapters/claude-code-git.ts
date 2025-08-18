@@ -284,6 +284,79 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
   }
   
   /**
+   * Extract specific vulnerability details from issue context
+   */
+  private getSpecificVulnerabilityDetails(issueContext: any): string {
+    if (!issueContext.specificVulnerabilities || issueContext.specificVulnerabilities.length === 0) {
+      return '';
+    }
+    
+    let details = '\n## SPECIFIC VULNERABILITIES TO FIX\n';
+    details += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    details += '⚠️ You MUST fix ONLY these specific issues:\n\n';
+    
+    const groupedByFile: Record<string, any[]> = {};
+    issueContext.specificVulnerabilities.forEach((vuln: any) => {
+      const file = vuln.file || vuln.path || 'unknown';
+      if (!groupedByFile[file]) {
+        groupedByFile[file] = [];
+      }
+      groupedByFile[file].push(vuln);
+    });
+    
+    Object.entries(groupedByFile).forEach(([file, vulns]) => {
+      details += `### File: ${file}\n`;
+      vulns.forEach((vuln: any) => {
+        details += `- **Line ${vuln.line}**: ${vuln.message || vuln.description}\n`;
+        if (vuln.snippet || vuln.code) {
+          details += `  Code: \`${vuln.snippet || vuln.code}\`\n`;
+        }
+        if (vuln.remediation) {
+          details += `  Fix: ${vuln.remediation}\n`;
+        }
+      });
+      details += '\n';
+    });
+    
+    details += '❌ DO NOT fix issues in other files\n';
+    details += '❌ DO NOT modify vendor/third-party libraries\n';
+    details += '❌ Focus ONLY on the vulnerabilities listed above\n\n';
+    
+    return details;
+  }
+  
+  /**
+   * Provide vulnerability-specific fix guidance
+   */
+  private getVulnerabilitySpecificGuidance(issueContext: any): string {
+    const title = issueContext.title.toLowerCase();
+    const body = issueContext.body.toLowerCase();
+    let guidance = '';
+    
+    if (title.includes('insecure_deserialization') || title.includes('eval') || 
+        body.includes('eval(') || body.includes('deserializing')) {
+      guidance += '\n## EVAL/DESERIALIZATION FIX GUIDANCE\n';
+      guidance += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+      guidance += 'This vulnerability uses eval() which executes arbitrary code.\n\n';
+      guidance += '✅ CORRECT FIX:\n';
+      guidance += '- For numbers: Use parseInt(value, 10) or parseFloat(value)\n';
+      guidance += '- For JSON: Use JSON.parse(value)\n';
+      guidance += '- For math: Use a safe expression evaluator\n';
+      guidance += '- Check if there\'s a commented fix in the code!\n\n';
+      guidance += '❌ INCORRECT:\n';
+      guidance += '- Trying to sanitize input for eval (still unsafe)\n';
+      guidance += '- Using new Function() (also unsafe)\n\n';
+      guidance += 'Example:\n';
+      guidance += '```javascript\n';
+      guidance += '// VULNERABLE: const value = eval(userInput);\n';
+      guidance += '// FIXED: const value = parseInt(userInput, 10);\n';
+      guidance += '```\n\n';
+    }
+    
+    return guidance;
+  }
+
+  /**
    * Construct prompt with test validation context
    */
   protected constructPromptWithTestContext(
@@ -293,7 +366,50 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
     validationResult?: ValidationResult,
     iteration?: { current: number; max: number }
   ): string {
-    let prompt = this.constructPrompt(issueContext, analysis);
+    // Start with enhanced prompt including constraints
+    let prompt = `You are an expert security engineer fixing vulnerabilities.
+
+## 🚨 CRITICAL CONSTRAINTS - READ FIRST 🚨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. **NEVER MODIFY TEST FILES** - You must NEVER edit files in test/, spec/, or __tests__ directories
+2. **NEVER BYPASS TESTS** - Do not change test code to make tests pass
+3. **ONLY FIX IMPLEMENTATION** - Only modify the actual vulnerable code files
+4. **If a test fails, fix the IMPLEMENTATION, not the test**
+5. **Test files are READ-ONLY** - You may read them to understand requirements
+6. **DO NOT modify vendor/third-party libraries** unless the vulnerability is specifically there
+
+${this.getSpecificVulnerabilityDetails(issueContext)}
+
+## TEST EXECUTION CAPABILITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You can run tests to verify your fix works:
+
+\`\`\`bash
+# Run all tests
+npm test
+
+# Run specific test file  
+npm test -- path/to/test.js
+
+# Check if your changes fixed the vulnerability
+npm test -- --grep "security"
+\`\`\`
+
+**IMPORTANT**: 
+- Use the Bash tool to run tests
+- If tests fail, read the error output
+- Adjust your fix based on test feedback
+- You have 3 attempts to get tests passing
+- DO NOT modify the tests to make them pass
+
+${this.getVulnerabilitySpecificGuidance(issueContext)}
+
+`;
+    
+    // Add the rest of the original prompt
+    prompt += this.constructPrompt(issueContext, analysis);
     
     // Add test validation context
     if (testResults?.generatedTests?.success) {
