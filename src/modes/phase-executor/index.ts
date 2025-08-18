@@ -1077,12 +1077,18 @@ export class PhaseExecutor {
         }
         
         // Validate fix if tests were generated
+        logger.info(`[MITIGATE DEBUG] DISABLE_FIX_VALIDATION env: ${process.env.DISABLE_FIX_VALIDATION}`);
+        logger.info(`[MITIGATE DEBUG] config.fixValidation?.enabled: ${this.config.fixValidation?.enabled}`);
+        logger.info(`[MITIGATE DEBUG] config.testGeneration?.validateFixes: ${this.config.testGeneration?.validateFixes}`);
+        
         const skipValidation = this.config.fixValidation?.enabled === false;
+        logger.info(`[MITIGATE DEBUG] skipValidation calculated as: ${skipValidation}`);
         
         if (skipValidation) {
           logger.info(`[MITIGATE] 📋 Skipping fix validation (DISABLE_FIX_VALIDATION=true)`);
           logger.info(`[MITIGATE] Fix will be applied without validation - proceeding to PR creation`);
-        } else if ((this.config.testGeneration?.validateFixes || this.config.fixValidation?.enabled !== false) &&
+          break; // Exit the iteration loop and proceed to PR creation
+        } else if ((this.config.testGeneration?.validateFixes === true || this.config.fixValidation?.enabled === true) &&
             generatedTests?.success && generatedTests.testSuite) {
           
           logger.info(`[MITIGATE] Validating fix with tests...`);
