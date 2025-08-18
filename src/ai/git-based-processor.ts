@@ -81,6 +81,7 @@ function createEnhancedIssueWithTestFailure(
   
   return {
     ...issue,
+    specificVulnerabilities: issue.specificVulnerabilities, // Preserve specific vulnerabilities
     body: `${issue.body}
 
 ## Previous Fix Attempt Failed
@@ -172,6 +173,11 @@ export async function processIssueWithGit(
   
   try {
     logger.info(`Processing issue #${issue.number} with git-based approach`);
+    logger.info('[DEBUG] Issue has specificVulnerabilities:', !!issue.specificVulnerabilities);
+    if (issue.specificVulnerabilities) {
+      logger.info('[DEBUG] Vulnerability count:', issue.specificVulnerabilities.length);
+      logger.info('[DEBUG] First vulnerability:', JSON.stringify(issue.specificVulnerabilities[0], null, 2));
+    }
     
     // Step 1: Ensure clean git state
     const gitStatus = checkGitStatus();
@@ -421,6 +427,7 @@ export async function processIssueWithGit(
             // Static validation - create custom enhanced issue
             currentIssue = {
               ...issue,
+              specificVulnerabilities: issue.specificVulnerabilities, // Preserve specific vulnerabilities
               body: `${issue.body}
 
 ## Previous Fix Attempt Failed (Static Analysis)
