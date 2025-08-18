@@ -330,7 +330,13 @@ export async function processIssueWithGit(
       }
       
       // Step 4.5: Validate fix if enabled
+      // DEBUG: Log config values to understand why validation isn't being skipped
+      logger.info(`[DEBUG] DISABLE_FIX_VALIDATION env var: ${process.env.DISABLE_FIX_VALIDATION}`);
+      logger.info(`[DEBUG] config.fixValidation?.enabled: ${config.fixValidation?.enabled}`);
+      logger.info(`[DEBUG] config.testGeneration?.validateFixes: ${config.testGeneration?.validateFixes}`);
+      
       const skipValidation = config.fixValidation?.enabled === false;
+      logger.info(`[DEBUG] skipValidation calculated as: ${skipValidation}`);
       
       if (skipValidation) {
         // Skip validation when explicitly disabled (e.g., DISABLE_FIX_VALIDATION=true)

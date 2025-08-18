@@ -167,7 +167,13 @@ function getDefaultConfig(): Partial<ActionConfig> {
       }
     },
     fixValidation: {
-      enabled: process.env.DISABLE_FIX_VALIDATION === 'true' ? false : true, // Enabled by default
+      enabled: (() => {
+        const envValue = process.env.DISABLE_FIX_VALIDATION;
+        const isDisabled = envValue === 'true';
+        console.log(`[CONFIG DEBUG] DISABLE_FIX_VALIDATION env: "${envValue}"`);
+        console.log(`[CONFIG DEBUG] Setting fixValidation.enabled to: ${!isDisabled}`);
+        return !isDisabled;
+      })(),
       maxIterations: 3,
       maxIterationsByType: {},
       maxIterationsByTier: {}
