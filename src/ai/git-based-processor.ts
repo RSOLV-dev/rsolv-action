@@ -330,7 +330,14 @@ export async function processIssueWithGit(
       }
       
       // Step 4.5: Validate fix if enabled
-      if (config.testGeneration?.validateFixes || config.fixValidation?.enabled !== false) {
+      const skipValidation = config.fixValidation?.enabled === false;
+      
+      if (skipValidation) {
+        // Skip validation when explicitly disabled (e.g., DISABLE_FIX_VALIDATION=true)
+        logger.info('📋 Skipping fix validation (DISABLE_FIX_VALIDATION=true)');
+        logger.info('Fix will be applied without validation - proceeding to PR creation');
+        break; // Exit the iteration loop and proceed to PR creation
+      } else if (config.testGeneration?.validateFixes || config.fixValidation?.enabled !== false) {
         
         // Check if we should use static validation for this vulnerability type
         const { shouldUseStaticValidation } = await import('./static-xss-validator.js');
@@ -461,7 +468,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             currentIssue = createEnhancedIssueWithTestFailure(
               issue,
               validationResult,
-              testResults,
+              testResults!,
               iteration,
               maxIterations
             );

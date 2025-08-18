@@ -63,6 +63,13 @@ export interface IssueContext {
   createdAt: string;
   updatedAt: string;
   metadata?: Record<string, any>;
+  specificVulnerabilities?: Array<{
+    file: string;
+    line: number;
+    type: string;
+    severity: string;
+    description: string;
+  }>;
 }
 
 export interface IssueProcessingResult {

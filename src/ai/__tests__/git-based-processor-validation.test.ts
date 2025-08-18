@@ -426,4 +426,154 @@ describe('Git-based processor with fix validation', () => {
       expect(result.message).toContain('failed after 5 attempts'); // SQL injection limit
     });
   });
+
+  describe('when DISABLE_FIX_VALIDATION is set', () => {
+    it('should skip validation when fixValidation.enabled is false', async () => {
+      // Arrange
+      mockConfig.fixValidation = {
+        enabled: false, // This is set by DISABLE_FIX_VALIDATION='true'
+        maxIterations: 3
+      };
+
+      const mockAnalyzer = {
+        analyzeWithTestGeneration: mock().mockResolvedValue({
+          canBeFixed: true,
+          generatedTests: {
+            success: true,
+            testSuite: mockTestSuite,
+            tests: []
+          }
+        })
+      };
+
+      const mockAdapter = {
+        generateSolutionWithGit: mock().mockResolvedValue({
+          success: true,
+          commitHash: 'abc123',
+          message: 'Fixed vulnerability',
+          filesModified: ['file.js'],
+          summary: 'Fix applied',
+          diffStats: '+10 -5'
+        })
+      };
+
+      const mockValidator = {
+        validateFixWithTests: mock()
+      };
+
+      const mockCreatePR = mock().mockResolvedValue({
+        success: true,
+        pullRequestNumber: 123,
+        pullRequestUrl: 'https://github.com/test/repo/pull/123'
+      });
+
+      (TestGeneratingSecurityAnalyzer as any).mockReturnValue(mockAnalyzer);
+      (GitBasedClaudeCodeAdapter as any).mockReturnValue(mockAdapter);
+      (GitBasedTestValidator as any).mockReturnValue(mockValidator);
+      
+      // Mock the PR creation
+      const prModule = await import('../../github/pr-git.js');
+      (prModule.createPullRequestFromGit as any) = mockCreatePR;
+      
+      (execSync as any).mockReturnValue(''); // Clean git status
+
+      // Act
+      const result = await processIssueWithGit(mockIssue, mockConfig);
+
+      // Assert
+      expect(mockValidator.validateFixWithTests).not.toHaveBeenCalled();
+      expect(mockAdapter.generateSolutionWithGit).toHaveBeenCalledTimes(1);
+      expect(mockCreatePR).toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(result.pullRequestUrl).toBe('https://github.com/test/repo/pull/123');
+    });
+
+    it('should run validation when fixValidation.enabled is true', async () => {
+      // Arrange
+      mockConfig.fixValidation = {
+        enabled: true, // This is the default when DISABLE_FIX_VALIDATION is not set
+        maxIterations: 3
+      };
+
+      const mockAnalyzer = {
+        analyzeWithTestGeneration: mock().mockResolvedValue({
+          canBeFixed: true,
+          generatedTests: {
+            success: true,
+            testSuite: mockTestSuite,
+            tests: []
+          }
+        })
+      };
+
+      const mockAdapter = {
+        generateSolutionWithGit: mock().mockResolvedValue({
+          success: true,
+          commitHash: 'abc123',
+          message: 'Fixed vulnerability',
+          filesModified: ['file.js']
+        })
+      };
+
+      const mockValidator = {
+        validateFixWithTests: mock().mockResolvedValue(mockValidationResult)
+      };
+
+      (TestGeneratingSecurityAnalyzer as any).mockReturnValue(mockAnalyzer);
+      (GitBasedClaudeCodeAdapter as any).mockReturnValue(mockAdapter);
+      (GitBasedTestValidator as any).mockReturnValue(mockValidator);
+      (execSync as any).mockReturnValue(''); // Clean git status
+
+      // Act
+      await processIssueWithGit(mockIssue, mockConfig);
+
+      // Assert
+      expect(mockValidator.validateFixWithTests).toHaveBeenCalledWith(
+        expect.any(String),
+        'abc123',
+        mockTestSuite
+      );
+    });
+
+    it('should log when validation is skipped', async () => {
+      // Arrange
+      mockConfig.fixValidation = {
+        enabled: false
+      };
+
+      const mockAdapter = {
+        generateSolutionWithGit: mock().mockResolvedValue({
+          success: true,
+          commitHash: 'abc123',
+          message: 'Fixed',
+          filesModified: ['file.js'],
+          summary: 'Fix applied',
+          diffStats: '+10 -5'
+        })
+      };
+
+      const loggerSpy = mock();
+      const originalLogger = console.log;
+      console.log = loggerSpy;
+
+      (GitBasedClaudeCodeAdapter as any).mockReturnValue(mockAdapter);
+      (execSync as any).mockReturnValue('');
+
+      // Act  
+      await processIssueWithGit(mockIssue, mockConfig);
+
+      // Assert
+      const logCalls = loggerSpy.mock.calls.map((call: any[]) => call.join(' '));
+      const hasSkipLog = logCalls.some((log: string) => 
+        log.includes('Skipping fix validation') || 
+        log.includes('DISABLE_FIX_VALIDATION')
+      );
+      
+      // Note: This will fail initially as the feature isn't implemented yet
+      expect(hasSkipLog).toBe(true);
+
+      // Restore logger
+      console.log = originalLogger;
+    });
+  });
 });

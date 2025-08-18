@@ -596,11 +596,13 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
         : enhancedPrompt;
       
       // Log the prompt being used (first 500 chars)
-      logger.info('[DEBUG] Prompt includes SPECIFIC VULNERABILITIES:', promptToUse.includes('SPECIFIC VULNERABILITIES TO FIX'));
-      if (promptToUse.includes('SPECIFIC VULNERABILITIES TO FIX')) {
-        const startIdx = promptToUse.indexOf('SPECIFIC VULNERABILITIES TO FIX');
-        const endIdx = Math.min(startIdx + 1000, promptToUse.length);
-        logger.info('[DEBUG] Vulnerability section:', promptToUse.substring(startIdx, endIdx));
+      if (promptToUse) {
+        logger.info('[DEBUG] Prompt includes SPECIFIC VULNERABILITIES:', promptToUse.includes('SPECIFIC VULNERABILITIES TO FIX'));
+        if (promptToUse.includes('SPECIFIC VULNERABILITIES TO FIX')) {
+          const startIdx = promptToUse.indexOf('SPECIFIC VULNERABILITIES TO FIX');
+          const endIdx = Math.min(startIdx + 1000, promptToUse.length);
+          logger.info('[DEBUG] Vulnerability section:', promptToUse.substring(startIdx, endIdx));
+        }
       }
       
       // Use CLI adapter if configured, otherwise use SDK

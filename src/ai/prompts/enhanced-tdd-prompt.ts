@@ -11,6 +11,7 @@ export interface TDDPromptOptions {
   testResults?: any;
   validationResult?: any;
   iteration?: { current: number; max: number };
+  maxIterations?: number;
 }
 
 /**
