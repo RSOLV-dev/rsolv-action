@@ -302,7 +302,9 @@ export class PhaseExecutor {
    */
   async executeMitigate(options: ExecuteOptions): Promise<ExecuteResult> {
     const startTime = Date.now();
-    const timeout = 300000; // 5 minute overall timeout
+    // Increase timeout for multi-file vulnerabilities
+    // Default 5 minutes, but can be extended based on file count
+    let timeout = 300000; // 5 minute base timeout
     
     try {
       logger.info('[MITIGATE] Starting enhanced mitigation phase', {
@@ -559,6 +561,14 @@ export class PhaseExecutor {
       
       // RFC-047: Check if vulnerability involves vendor files
       const affectedFiles = vulnerabilities.flatMap((v: any) => v.files || []);
+      
+      // Adjust timeout based on file count
+      if (affectedFiles.length > 3) {
+        const perFileTimeout = 60000; // 1 minute per file for complex vulnerabilities
+        timeout = Math.max(timeout, affectedFiles.length * perFileTimeout);
+        logger.info(`[MITIGATE] Adjusted timeout for ${affectedFiles.length} files: ${timeout}ms`);
+      }
+      
       const vendorFiles = await Promise.all(
         affectedFiles.map(async (file: string) => ({
           file,

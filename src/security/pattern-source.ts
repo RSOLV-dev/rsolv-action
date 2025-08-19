@@ -33,15 +33,26 @@ export class LocalPatternSource implements PatternSource {
     // Use factory function to get fresh patterns with working RegExp objects
     this.patterns = getMinimalPatterns();
     
-    // Log critical error about fallback
-    logger.error('🚨 CRITICAL: Falling back to minimal patterns', {
-      reason: 'LocalPatternSource being used instead of API patterns',
-      patternCount: this.patterns.length,
-      impact: 'Detection capability severely limited - will miss most vulnerabilities',
-      recommendation: 'Ensure RSOLV_API_KEY is set and accessible'
-    });
+    // Only log error if this is the primary source, not when used as fallback
+    const isUsedAsStandalone = !process.env.RSOLV_API_KEY;
     
-    logger.warn('Using minimal fallback patterns - API connection recommended for full pattern coverage');
+    if (isUsedAsStandalone) {
+      // Log critical error only when no API key is available
+      logger.error('🚨 CRITICAL: Using minimal patterns only', {
+        reason: 'No RSOLV_API_KEY provided',
+        patternCount: this.patterns.length,
+        impact: 'Detection capability severely limited - will miss most vulnerabilities',
+        recommendation: 'Set RSOLV_API_KEY environment variable'
+      });
+      
+      logger.warn('Using minimal fallback patterns - API connection recommended for full pattern coverage');
+    } else {
+      // This is being used as fallback in HybridPatternSource
+      logger.debug('LocalPatternSource initialized as fallback', {
+        patternCount: this.patterns.length,
+        mode: 'fallback'
+      });
+    }
     
     // Check for critical pattern types
     this.validateCriticalPatternCoverage();
