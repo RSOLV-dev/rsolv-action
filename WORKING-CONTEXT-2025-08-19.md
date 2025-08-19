@@ -5,22 +5,10 @@ Successfully completed E2E demo with 100% success rate. System is functionally c
 
 ## Critical Path Items (MUST DO)
 
-### 1. ❗ Remove Debug Logging from Production Code
-**Priority**: CRITICAL - Currently in main branch
-**Files affected**:
-- `src/modes/phase-executor/index.ts` - MITIGATE DEBUG logs
-- `src/ai/git-based-processor.ts` - DEBUG logs for config values
-- `src/config/index.ts` - CONFIG DEBUG console.log statements
-- `src/ai/adapters/claude-code-git.ts` - specificVulnerabilities debug logs
-
-**Action**:
-```bash
-# Remove or conditionally wrap all debug logging
-# Example: logger.info(`[DEBUG]...`) → if (process.env.RSOLV_DEBUG) logger.info(...)
-```
-
-### 2. ❗ Process Remaining 8 NodeGoat Vulnerabilities
+### 1. ❗ Process Remaining 8 NodeGoat Vulnerabilities
 **Priority**: CRITICAL - Proves system works for all vulnerability types
+**Note**: Keep debug logging active during this process to diagnose any issues!
+
 **Open Issues**:
 - #320 - Command Injection (critical)
 - #322 - XML External Entities (high)
@@ -35,7 +23,22 @@ Successfully completed E2E demo with 100% success rate. System is functionally c
 ```bash
 # Run VALIDATE phase for each issue
 # Then MITIGATE phase with DISABLE_FIX_VALIDATION=true
-# Verify fixes are appropriate
+# Watch debug logs to understand what's happening
+```
+
+### 2. 🔍 Keep Debug Logging Active (FOR NOW)
+**Why**: We need visibility while processing remaining vulnerabilities and fixing test templates
+**When to remove**: After all 9 vulnerability types are successfully processed
+**Files with debug logging**:
+- `src/modes/phase-executor/index.ts` - MITIGATE DEBUG logs
+- `src/ai/git-based-processor.ts` - DEBUG logs for config values
+- `src/config/index.ts` - CONFIG DEBUG console.log statements
+- `src/ai/adapters/claude-code-git.ts` - specificVulnerabilities debug logs
+
+**Future Action**:
+```bash
+# After all vulnerabilities are processed successfully:
+# Wrap in conditionals: logger.info(`[DEBUG]...`) → if (process.env.RSOLV_DEBUG) logger.info(...)
 ```
 
 ## Important Items (SHOULD DO)
