@@ -493,14 +493,25 @@ export class PhaseExecutor {
       
       logger.info('[MITIGATE] Step 4 complete: Validation data found');
 
+      // DEBUG: Log the actual validation data structure
+      logger.info('[MITIGATE DEBUG] Validation data structure:', JSON.stringify(validation, null, 2));
+      
       // Check if validation found specific vulnerabilities (handle both old and new formats)
       const validationAny = validation as any;
       const hasSpecificVulnerabilities = 'hasSpecificVulnerabilities' in validationAny ? 
         validationAny.hasSpecificVulnerabilities : 
         (validationAny.vulnerabilities && validationAny.vulnerabilities.length > 0);
+      
+      logger.info('[MITIGATE DEBUG] Vulnerability check:', {
+        hasSpecificVulnerabilities,
+        hasSpecificVulnerabilitiesField: 'hasSpecificVulnerabilities' in validationAny,
+        vulnerabilitiesLength: validationAny.vulnerabilities?.length || 0,
+        validationKeys: Object.keys(validationAny)
+      });
         
       if (!hasSpecificVulnerabilities) {
         logger.warn('[MITIGATE] No specific vulnerabilities found, possible false positive');
+        logger.warn('[MITIGATE DEBUG] Full validation object causing false positive:', validation);
         return {
           success: false,
           phase: 'mitigate',
