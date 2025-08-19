@@ -260,10 +260,15 @@ defmodule Rsolv.Phases do
   
   defp get_scan_execution(nil, _), do: nil
   defp get_scan_execution(repository_id, commit_sha) do
-    Repo.get_by(ScanExecution,
-      repository_id: repository_id,
-      commit_sha: commit_sha
-    )
+    # Get the most recent scan for this commit
+    # Multiple scans can exist if the same commit was scanned multiple times
+    import Ecto.Query
+    
+    ScanExecution
+    |> where([s], s.repository_id == ^repository_id and s.commit_sha == ^commit_sha)
+    |> order_by([s], desc: s.inserted_at)
+    |> limit(1)
+    |> Repo.one()
   end
   
   defp get_validation_execution(nil, _), do: nil
