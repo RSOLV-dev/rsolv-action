@@ -542,14 +542,19 @@ export class PhaseExecutor {
         specificVulnerabilities: vulnerabilities
       };
 
-      // RFC-046 & RFC-047: Check for chunking and vendor detection before processing
+      // RFC-046 & RFC-047: Check for extended conversation/chunking and vendor detection before processing
       logger.info('[MITIGATE] Step 5: Checking for vendor files and multi-file vulnerabilities...');
       
       // Import integrations
       const { ChunkingIntegration } = await import('../../chunking/index.js');
       const { VendorDetectionIntegration } = await import('../../vendor/index.js');
+      const { ExtendedConversationIntegration } = await import('../../extended-conversation/index.js');
       
-      const chunkingIntegration = new ChunkingIntegration();
+      // Use extended conversation by default, fall back to chunking if configured
+      const useExtendedConversation = process.env.USE_EXTENDED_CONVERSATION !== 'false';
+      const multiFileHandler = useExtendedConversation 
+        ? new ExtendedConversationIntegration()
+        : new ChunkingIntegration();
       const vendorIntegration = new VendorDetectionIntegration();
       
       // RFC-047: Check if vulnerability involves vendor files
@@ -580,11 +585,21 @@ export class PhaseExecutor {
         }
       }
       
-      // RFC-046: Check if vulnerability needs chunking
+      // RFC-046: Check if vulnerability needs multi-file handling
       const totalFiles = affectedFiles.length;
-      if (chunkingIntegration.shouldChunk({ files: affectedFiles, vulnerabilities })) {
-        logger.info(`[MITIGATE] RFC-046: Multi-file vulnerability (${totalFiles} files) will be chunked`);
-        const chunkResult = await chunkingIntegration.processWithChunking(
+      const shouldHandleMultiFile = useExtendedConversation
+        ? (multiFileHandler as any).shouldUseExtendedConversation({ files: affectedFiles, vulnerabilities })
+        : (multiFileHandler as any).shouldChunk({ files: affectedFiles, vulnerabilities });
+        
+      if (shouldHandleMultiFile) {
+        const approach = useExtendedConversation ? 'extended conversation' : 'chunking';
+        logger.info(`[MITIGATE] RFC-046: Multi-file vulnerability (${totalFiles} files) will use ${approach}`);
+        
+        const processMethod = useExtendedConversation 
+          ? 'processWithExtendedConversation'
+          : 'processWithChunking';
+          
+        const result = await (multiFileHandler as any)[processMethod](
           { 
             ...enhancedIssue, 
             files: affectedFiles,
@@ -593,23 +608,27 @@ export class PhaseExecutor {
           options.issueNumber!
         );
         
-        if (chunkResult.chunked) {
+        if (result.success || result.chunked) {
+          const message = useExtendedConversation
+            ? `Multi-file vulnerability fixed in single PR using extended conversation`
+            : `Multi-file vulnerability chunked into ${result.chunks} PRs for manageable fixes`;
+          
           return {
             success: true,
             phase: 'mitigate',
-            message: `Multi-file vulnerability chunked into ${chunkResult.chunks} PRs for manageable fixes`,
-            data: chunkResult
+            message,
+            data: result
           };
         }
         
-        if (chunkResult.requiresManual) {
+        if (result.requiresManual) {
           return {
             success: false,
             phase: 'mitigate',
             error: 'Vulnerability too complex for automated fixing',
             data: { 
-              ...chunkResult,
-              manualGuide: chunkResult.guide
+              ...result,
+              manualGuide: result.guide
             }
           };
         }
