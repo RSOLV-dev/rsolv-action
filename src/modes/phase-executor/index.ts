@@ -306,11 +306,18 @@ export class PhaseExecutor {
     // Default 5 minutes, but can be extended based on file count
     let timeout = 300000; // 5 minute base timeout
     
+    // Override timeout from environment for testing
+    if (process.env.AI_TIMEOUT_OVERRIDE) {
+      timeout = parseInt(process.env.AI_TIMEOUT_OVERRIDE, 10);
+      logger.info(`[MITIGATE] Using timeout override: ${timeout}ms`);
+    }
+    
     try {
       logger.info('[MITIGATE] Starting enhanced mitigation phase', {
         issueNumber: options.issueNumber,
         repository: options.repository,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        initialTimeout: timeout
       });
       
       // Check requirements
@@ -356,6 +363,27 @@ export class PhaseExecutor {
           phase: 'mitigate',
           error: `Issue #${options.issueNumber} not found`
         };
+      }
+
+      // Parse issue to estimate file count and adjust timeout EARLY
+      logger.info('[MITIGATE] Analyzing issue for file count...');
+      const issueBody = issue.body || '';
+      const issueTitle = issue.title || '';
+      
+      // Look for file count in title or body
+      let estimatedFileCount = 1;
+      const fileCountMatch = issueTitle.match(/(\d+)\s+files?/i) || issueBody.match(/(\d+)\s+files?/i);
+      if (fileCountMatch) {
+        estimatedFileCount = parseInt(fileCountMatch[1], 10);
+        logger.info(`[MITIGATE] Detected ${estimatedFileCount} files from issue description`);
+      }
+      
+      // Adjust timeout based on estimated file count
+      if (estimatedFileCount > 3) {
+        const perFileTimeout = 60000; // 1 minute per file
+        const newTimeout = Math.max(timeout, estimatedFileCount * perFileTimeout);
+        logger.info(`[MITIGATE] Adjusting timeout for ${estimatedFileCount} files: ${timeout}ms -> ${newTimeout}ms`);
+        timeout = newTimeout;
       }
 
       // Check for validation data with timeout
