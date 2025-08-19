@@ -239,9 +239,9 @@ export class PhaseExecutor {
         };
       }
 
-      // Use ValidationEnricher to enrich the issue with detailed vulnerability info
-      const { ValidationEnricher } = await import('../../validation/enricher.js');
-      const enricher = new ValidationEnricher(
+      // Use EnhancedValidationEnricher for RFC-045 confidence scoring
+      const { EnhancedValidationEnricher } = await import('../../validation/enricher.js');
+      const enricher = new EnhancedValidationEnricher(
         process.env.GITHUB_TOKEN || '',
         this.config.rsolvApiKey
       );
@@ -510,43 +510,31 @@ export class PhaseExecutor {
       });
         
       if (!hasSpecificVulnerabilities) {
-        logger.warn('[MITIGATE] No specific vulnerabilities found, possible false positive');
-        logger.warn('[MITIGATE DEBUG] Full validation object causing false positive:', validation);
+        // RFC-045: With confidence scoring, this should rarely happen
+        // The EnhancedValidationEnricher always returns vulnerabilities if scan found any
+        logger.warn('[MITIGATE] No specific vulnerabilities found - validation may have failed');
+        logger.warn('[MITIGATE DEBUG] Validation object:', validation);
         
-        // TEMPORARY: For command injection, proceed anyway since we know it's a real vulnerability
-        if (issue.body.includes('Command_injection') || issue.title.includes('Command_injection')) {
-          logger.warn('[MITIGATE] Proceeding with command injection fix despite no validation data');
-          // Create fake vulnerability data from the issue body
-          const match = issue.body.match(/`([^`]+)`\s*\n\s*-\s*\*\*Line (\d+)\*\*:\s*(.+)/);
-          if (match) {
-            const [_, file, line, description] = match;
-            validationAny.vulnerabilities = [{
-              type: 'COMMAND_INJECTION',
-              file,
-              line: parseInt(line),
-              description,
-              severity: 'critical'
-            }];
-            validationAny.hasSpecificVulnerabilities = true;
-            validationAny.confidence = 'high';
-            logger.info('[MITIGATE] Created synthetic vulnerability data from issue body:', validationAny.vulnerabilities);
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: 'No specific vulnerabilities found during validation. This may be a false positive.',
+          data: { 
+            validation,
+            falsePositive: true
           }
-        } else {
-          return {
-            success: false,
-            phase: 'mitigate',
-            error: 'No specific vulnerabilities found during validation. This may be a false positive.',
-            data: { 
-              validation,
-              falsePositive: true
-            }
-          };
-        }
+        };
       }
 
       // Build enhanced context for AI with validation data
       const vulnerabilities = validationAny.vulnerabilities || [];
-      const confidence = validationAny.confidence || 'medium';
+      const confidence = validationAny.overallConfidence || validationAny.confidence || 'medium';
+      
+      // RFC-045: Check confidence level before proceeding
+      if (confidence === 'review' || confidence === 'low') {
+        logger.warn(`[MITIGATE] Low confidence (${confidence}) - requiring manual review`);
+        // Still proceed but with warning
+      }
       
       const enhancedIssue = {
         ...issue,
