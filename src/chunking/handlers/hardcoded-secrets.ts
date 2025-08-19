@@ -2,7 +2,7 @@
  * RFC-046: Special Handler for Hardcoded Secrets
  */
 
-import { HardcodedSecret, FixResult } from '../types';
+import { HardcodedSecret, FixResult } from '../types.js';
 
 export class HardcodedSecretsHandler {
   async handle(vulnerability: HardcodedSecret): Promise<FixResult> {

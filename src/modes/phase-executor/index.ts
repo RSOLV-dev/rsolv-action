@@ -259,8 +259,8 @@ export class PhaseExecutor {
         timestamp: enrichmentResult.validationTimestamp.toISOString(),
         hasSpecificVulnerabilities: enrichmentResult.vulnerabilities.length > 0,
         confidence: enrichmentResult.vulnerabilities.length > 0 ? 
-          (enrichmentResult.vulnerabilities.some(v => v.confidence === 'high') ? 'high' :
-           enrichmentResult.vulnerabilities.some(v => v.confidence === 'medium') ? 'medium' : 'low') :
+          (enrichmentResult.vulnerabilities.some((v: any) => v.confidence === 'high') ? 'high' :
+           enrichmentResult.vulnerabilities.some((v: any) => v.confidence === 'medium') ? 'medium' : 'low') :
           'none'
       };
 
@@ -542,6 +542,79 @@ export class PhaseExecutor {
         specificVulnerabilities: vulnerabilities
       };
 
+      // RFC-046 & RFC-047: Check for chunking and vendor detection before processing
+      logger.info('[MITIGATE] Step 5: Checking for vendor files and multi-file vulnerabilities...');
+      
+      // Import integrations
+      const { ChunkingIntegration } = await import('../../chunking/index.js');
+      const { VendorDetectionIntegration } = await import('../../vendor/index.js');
+      
+      const chunkingIntegration = new ChunkingIntegration();
+      const vendorIntegration = new VendorDetectionIntegration();
+      
+      // RFC-047: Check if vulnerability involves vendor files
+      const affectedFiles = vulnerabilities.flatMap((v: any) => v.files || []);
+      const vendorFiles = await Promise.all(
+        affectedFiles.map(async (file: string) => ({
+          file,
+          isVendor: await vendorIntegration.isVendorFile(file)
+        }))
+      );
+      
+      const hasVendorFiles = vendorFiles.some(f => f.isVendor);
+      if (hasVendorFiles) {
+        logger.info('[MITIGATE] RFC-047: Vendor files detected, handling as vendor vulnerability');
+        const vendorResult = await vendorIntegration.processVulnerability({
+          ...enhancedIssue,
+          files: affectedFiles,
+          vendorFiles: vendorFiles.filter(f => f.isVendor).map(f => f.file)
+        });
+        
+        if (vendorResult.action === 'issue_created') {
+          return {
+            success: true,
+            phase: 'mitigate',
+            message: 'Vendor library vulnerability detected. Update recommendation created instead of patch.',
+            data: vendorResult
+          };
+        }
+      }
+      
+      // RFC-046: Check if vulnerability needs chunking
+      const totalFiles = affectedFiles.length;
+      if (chunkingIntegration.shouldChunk({ files: affectedFiles, vulnerabilities })) {
+        logger.info(`[MITIGATE] RFC-046: Multi-file vulnerability (${totalFiles} files) will be chunked`);
+        const chunkResult = await chunkingIntegration.processWithChunking(
+          { 
+            ...enhancedIssue, 
+            files: affectedFiles,
+            type: vulnerabilities[0]?.type || 'UNKNOWN'
+          },
+          options.issueNumber!
+        );
+        
+        if (chunkResult.chunked) {
+          return {
+            success: true,
+            phase: 'mitigate',
+            message: `Multi-file vulnerability chunked into ${chunkResult.chunks} PRs for manageable fixes`,
+            data: chunkResult
+          };
+        }
+        
+        if (chunkResult.requiresManual) {
+          return {
+            success: false,
+            phase: 'mitigate',
+            error: 'Vulnerability too complex for automated fixing',
+            data: { 
+              ...chunkResult,
+              manualGuide: chunkResult.guide
+            }
+          };
+        }
+      }
+      
       // Use the actual AI processor to generate fixes
       logger.info(`[MITIGATE] Generating fix for ${vulnerabilities.length} validated vulnerabilities`);
       

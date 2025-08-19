@@ -2,12 +2,12 @@
  * RFC-046: Multi-file Vulnerability Chunking - Main Export
  */
 
-export { VulnerabilityChunker } from './vulnerability-chunker';
-export { MultiPRGenerator } from './multi-pr-generator';
-export { ComplexityAnalyzer, ComplexityRouter, FixComplexity } from './complexity-analyzer';
-export { HardcodedSecretsHandler } from './handlers/hardcoded-secrets';
+export { VulnerabilityChunker } from './vulnerability-chunker.js';
+export { MultiPRGenerator } from './multi-pr-generator.js';
+export { ComplexityAnalyzer, ComplexityRouter, FixComplexity } from './complexity-analyzer.js';
+export { HardcodedSecretsHandler } from './handlers/hardcoded-secrets.js';
 
-export * from './types';
+export * from './types.js';
 
 import { 
   VulnerabilityChunker,
@@ -16,7 +16,7 @@ import {
   ChunkingConfig,
   MultiFileVulnerability,
   FixComplexity
-} from './index';
+} from './index.js';
 
 /**
  * Main integration point for chunking functionality

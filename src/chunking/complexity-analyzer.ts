@@ -6,9 +6,9 @@ import {
   MultiFileVulnerability, 
   FixComplexity,
   ComplexityFactors
-} from './types';
+} from './types.js';
 
-export { FixComplexity } from './types';
+export { FixComplexity } from './types.js';
 
 export class ComplexityAnalyzer {
   analyze(vulnerability: any): FixComplexity {

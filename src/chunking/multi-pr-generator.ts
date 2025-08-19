@@ -2,7 +2,7 @@
  * RFC-046: Multi-PR Generation for Chunked Vulnerabilities
  */
 
-import { Chunk, PR } from './types';
+import { Chunk, PR } from './types.js';
 
 export class MultiPRGenerator {
   private prNumbers: Map<string, number> = new Map();
