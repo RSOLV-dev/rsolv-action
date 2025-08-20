@@ -3,7 +3,8 @@
  * Implements RFC-048: Claude Code Max Development Mode and Retry Mechanism
  */
 
-import { ClaudeCodeCLIAdapter, CLISolutionResult } from './claude-code-cli.js';
+import { ClaudeCodeCLIAdapter } from './claude-code-cli.js';
+import type { CLISolutionResult } from './claude-code-cli.js';
 import { IssueContext } from '../../types/index.js';
 import { AIConfig } from '../types.js';
 import { IssueAnalysis } from '../types.js';

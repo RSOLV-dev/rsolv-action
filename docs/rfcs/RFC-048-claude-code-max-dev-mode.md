@@ -136,30 +136,45 @@ class RetryableClaudeCodeCLI {
 }
 ```
 
-### 3. Claude Code Max Integration
+### 3. Claude Code Max Integration (No API Key Required)
 
 ```typescript
-class ClaudeCodeCLIAdapter extends RetryableClaudeCodeCLI {
+/**
+ * Check if Claude CLI is available and authenticated
+ */
+export function isClaudeMaxAvailable(): boolean {
+  try {
+    // Test if Claude command works (requires signed-in Claude desktop app)
+    const result = execSync('echo "test" | claude --print 2>&1', { 
+      encoding: 'utf-8',
+      timeout: 10000
+    }).toString().trim();
+    
+    return result.length > 0 && !result.includes('error');
+  } catch (error) {
+    return false;
+  }
+}
+
+class ClaudeCodeMaxAdapter extends RetryableClaudeCodeCLI {
   async generateSolution(
     issueContext: IssueContext,
     analysis: IssueAnalysis,
     enhancedPrompt?: string
   ): Promise<CLISolutionResult> {
-    // Check for development mode
     const isDev = isDevelopmentMode();
     
-    // Get appropriate API key
-    let apiKey = this.getApiKey(isDev);
-    
-    if (!apiKey) {
-      return {
-        success: false,
-        message: 'No API key available',
-        error: isDev 
-          ? 'Claude Code Max API key not configured for development mode'
-          : 'No API key or vended credentials available'
-      };
-    }
+    if (isDev && isClaudeMaxAvailable()) {
+      logger.info('🚀 Using Claude Code Max (signed-in account)');
+      
+      // Execute with Claude Max - NO API KEY NEEDED
+      const result = await this.executeWithRetry(prompt, {
+        cwd: this.repoPath,
+        env: {
+          ...process.env,
+          ANTHROPIC_API_KEY: undefined // Ensure we use signed-in account
+        }
+      });
     
     logger.info(`Using ${isDev ? 'Claude Code Max (dev)' : 'production'} API`);
     
@@ -301,9 +316,16 @@ describe('RetryableClaudeCodeCLI', () => {
 ### Environment Variables
 
 ```bash
-# Development mode
+# Development mode - enables Claude Code Max if available
 RSOLV_DEV_MODE=true
-CLAUDE_CODE_MAX_API_KEY=your_claude_code_max_key
+# or
+USE_CLAUDE_CODE_MAX=true
+
+# No API key needed for Claude Code Max!
+# Just ensure Claude desktop app is:
+# 1. Installed
+# 2. Signed in
+# 3. Available in PATH as 'claude' command
 
 # Retry configuration (optional)
 RSOLV_RETRY_MAX_ATTEMPTS=3

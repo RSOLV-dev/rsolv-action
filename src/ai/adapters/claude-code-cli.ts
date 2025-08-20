@@ -19,6 +19,9 @@ export interface CLISolutionResult {
   messages?: any[];
 }
 
+// Export type for use in other modules
+export type { CLISolutionResult as CLISolutionResultType };
+
 /**
  * Claude Code adapter that uses CLI directly
  */
