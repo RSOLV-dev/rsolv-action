@@ -558,7 +558,7 @@ export class PhaseExecutor {
 
       // Build enhanced context for AI with validation data
       // TODO: Replace with proper ValidationData type once we know the actual structure
-      const vulnerabilities: any[] = validationAny.vulnerabilities || [];
+      let vulnerabilities: any[] = validationAny.vulnerabilities || [];
       const confidence: string = validationAny.overallConfidence || validationAny.confidence || 'medium';
       
       // DEBUG: Log the actual structure of vulnerabilities to diagnose vendor detection issue
@@ -568,6 +568,32 @@ export class PhaseExecutor {
         vulnerabilityKeys: vulnerabilities[0] ? Object.keys(vulnerabilities[0]) : [],
         validationKeys: Object.keys(validationAny)
       });
+      
+      // RFC-047 FIX: Parse issue body to get real filenames
+      // The validation service returns "unknown.js" instead of actual filenames
+      // We need to extract them from the issue body and enhance the validation data
+      logger.info('[MITIGATE] Step 4a: Parsing issue body to extract real filenames...');
+      const { parseIssueBody, enhanceValidationData } = await import('./utils/issue-body-parser.js');
+      const parsedIssueBody = parseIssueBody(issueBody);
+      
+      // Enhance validation data with real filenames
+      if (vulnerabilities.length > 0 && parsedIssueBody.files.length > 0) {
+        const enhancedData = enhanceValidationData(validationAny, parsedIssueBody);
+        vulnerabilities = enhancedData.vulnerabilities;
+        
+        logger.info('[MITIGATE] Step 4a complete: Enhanced validation data with real filenames', {
+          originalFiles: validationAny.vulnerabilities.map((v: any) => v.file),
+          enhancedFiles: vulnerabilities.map((v: any) => v.file),
+          filesFixed: vulnerabilities.filter((v: any, i: number) => 
+            v.file !== validationAny.vulnerabilities[i]?.file
+          ).length
+        });
+      } else {
+        logger.warn('[MITIGATE] Step 4a: Could not enhance validation data', {
+          hasVulnerabilities: vulnerabilities.length > 0,
+          hasParsedFiles: parsedIssueBody.files.length > 0
+        });
+      }
       
       // RFC-045: Check confidence level before proceeding
       if (confidence === 'review' || confidence === 'low') {
