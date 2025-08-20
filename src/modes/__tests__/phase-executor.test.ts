@@ -273,6 +273,166 @@ describe('PhaseExecutor', () => {
     });
   });
 
+  describe('vendor detection regression tests', () => {
+    test('should handle vulnerabilities with singular "file" property', async () => {
+      // Mock GitHub API globally first
+      mock.module('../../github/api.js', () => ({
+        getIssue: mock(async () => ({
+          title: 'Security Vulnerability: weak_cryptography',
+          body: JSON.stringify({ 
+            vulnerabilities: [
+              { type: 'weak_cryptography', file: 'app/assets/vendor/jquery.min.js', line: 42 },
+              { type: 'sql_injection', file: 'app/models/user.rb', line: 100 }
+            ]
+          }),
+          labels: ['rsolv:automate']
+        }))
+      }));
+
+      // Mock vendor detection
+      let capturedFiles: string[] = [];
+      mock.module('../../vendor/index.js', () => ({
+        VendorDetectionIntegration: class {
+          async isVendorFile(file: string) {
+            capturedFiles.push(file);
+            return file.includes('vendor') || file.includes('.min.');
+          }
+          async processVulnerability(vuln: any) {
+            return { action: 'issue_created', type: 'vendor_update' };
+          }
+        }
+      }));
+
+      // Mock phase data client
+      mock.module('../../external/phase-data-client.js', () => ({
+        PhaseDataClient: class {
+          async retrievePhaseResults() { return null; }
+          async storePhaseResults() { return { success: true }; }
+        }
+      }));
+
+      const { PhaseExecutor } = await import('../phase-executor');
+      const executor = new PhaseExecutor(mockConfig);
+
+      // Execute mitigate which should trigger vendor detection
+      const result = await executor.executeMitigate({
+        issueNumber: 123,
+        repository: mockIssue.repository
+      });
+
+      // Verify that files were extracted correctly from singular 'file' property
+      expect(capturedFiles).toContain('app/assets/vendor/jquery.min.js');
+    });
+
+    test('should handle vulnerabilities with plural "files" property', async () => {
+      // Mock GitHub API globally first
+      mock.module('../../github/api.js', () => ({
+        getIssue: mock(async () => ({
+          title: 'Security Vulnerability: information_disclosure',
+          body: JSON.stringify({ 
+            vulnerabilities: [
+              { 
+                type: 'information_disclosure', 
+                files: ['config/secrets.yml', 'app/config/database.yml'],
+                line: 1 
+              }
+            ]
+          }),
+          labels: ['rsolv:automate']
+        }))
+      }));
+
+      // Mock vendor detection
+      let capturedFiles: string[] = [];
+      mock.module('../../vendor/index.js', () => ({
+        VendorDetectionIntegration: class {
+          async isVendorFile(file: string) {
+            capturedFiles.push(file);
+            return file.includes('vendor');
+          }
+          async processVulnerability(vuln: any) {
+            return { action: 'normal_fix' };
+          }
+        }
+      }));
+
+      // Mock phase data client
+      mock.module('../../external/phase-data-client.js', () => ({
+        PhaseDataClient: class {
+          async retrievePhaseResults() { return null; }
+          async storePhaseResults() { return { success: true }; }
+        }
+      }));
+
+      const { PhaseExecutor } = await import('../phase-executor');
+      const executor = new PhaseExecutor(mockConfig);
+
+      // Execute mitigate which should trigger vendor detection
+      const result = await executor.executeMitigate({
+        issueNumber: 123,
+        repository: mockIssue.repository
+      });
+
+      // Verify that files were extracted correctly from plural 'files' property
+      expect(capturedFiles).toContain('config/secrets.yml');
+      expect(capturedFiles).toContain('app/config/database.yml');
+    });
+
+    test('should handle mixed vulnerabilities with both file and files properties', async () => {
+      // Mock GitHub API globally first
+      mock.module('../../github/api.js', () => ({
+        getIssue: mock(async () => ({
+          title: 'Multiple vulnerabilities found',
+          body: JSON.stringify({ 
+            vulnerabilities: [
+              { type: 'weak_cryptography', file: 'vendor/jquery.min.js', line: 42 },
+              { type: 'sql_injection', files: ['app/models/user.rb', 'app/models/admin.rb'], line: 100 },
+              { type: 'xss', line: 50 } // No file property at all
+            ]
+          }),
+          labels: ['rsolv:automate']
+        }))
+      }));
+
+      // Mock vendor detection
+      let capturedFiles: string[] = [];
+      mock.module('../../vendor/index.js', () => ({
+        VendorDetectionIntegration: class {
+          async isVendorFile(file: string) {
+            capturedFiles.push(file);
+            return file.includes('vendor');
+          }
+          async processVulnerability(vuln: any) {
+            return { action: 'vendor_update' };
+          }
+        }
+      }));
+
+      // Mock phase data client
+      mock.module('../../external/phase-data-client.js', () => ({
+        PhaseDataClient: class {
+          async retrievePhaseResults() { return null; }
+          async storePhaseResults() { return { success: true }; }
+        }
+      }));
+
+      const { PhaseExecutor } = await import('../phase-executor');
+      const executor = new PhaseExecutor(mockConfig);
+
+      // Execute mitigate which should trigger vendor detection
+      const result = await executor.executeMitigate({
+        issueNumber: 123,
+        repository: mockIssue.repository
+      });
+
+      // Verify that all files were extracted correctly
+      expect(capturedFiles).toContain('vendor/jquery.min.js'); // from 'file'
+      expect(capturedFiles).toContain('app/models/user.rb');   // from 'files'
+      expect(capturedFiles).toContain('app/models/admin.rb');  // from 'files'
+      expect(capturedFiles.length).toBe(3); // No spurious entries from the XSS vuln
+    });
+  });
+
   describe('phase data persistence', () => {
     test('should store phase results using PhaseDataClient', async () => {
       const { PhaseExecutor } = await import('../phase-executor');

@@ -588,7 +588,12 @@ export class PhaseExecutor {
       const vendorIntegration = new VendorDetectionIntegration();
       
       // RFC-047: Check if vulnerability involves vendor files
-      const affectedFiles = vulnerabilities.flatMap((v: any) => v.files || []);
+      // Handle both singular 'file' and plural 'files' properties
+      const affectedFiles = vulnerabilities.flatMap((v: any) => {
+        if (v.file) return [v.file];
+        if (v.files) return v.files;
+        return [];
+      });
       
       // Adjust timeout based on file count
       if (affectedFiles.length > 3) {
