@@ -557,8 +557,17 @@ export class PhaseExecutor {
       }
 
       // Build enhanced context for AI with validation data
-      const vulnerabilities = validationAny.vulnerabilities || [];
-      const confidence = validationAny.overallConfidence || validationAny.confidence || 'medium';
+      // TODO: Replace with proper ValidationData type once we know the actual structure
+      const vulnerabilities: any[] = validationAny.vulnerabilities || [];
+      const confidence: string = validationAny.overallConfidence || validationAny.confidence || 'medium';
+      
+      // DEBUG: Log the actual structure of vulnerabilities to diagnose vendor detection issue
+      logger.info('[MITIGATE] DEBUG: Vulnerability data structure:', {
+        vulnerabilityCount: vulnerabilities.length,
+        firstVulnerability: vulnerabilities[0] ? JSON.stringify(vulnerabilities[0]) : 'none',
+        vulnerabilityKeys: vulnerabilities[0] ? Object.keys(vulnerabilities[0]) : [],
+        validationKeys: Object.keys(validationAny)
+      });
       
       // RFC-045: Check confidence level before proceeding
       if (confidence === 'review' || confidence === 'low') {
@@ -588,12 +597,9 @@ export class PhaseExecutor {
       const vendorIntegration = new VendorDetectionIntegration();
       
       // RFC-047: Check if vulnerability involves vendor files
-      // Handle both singular 'file' and plural 'files' properties
-      const affectedFiles = vulnerabilities.flatMap((v: any) => {
-        if (v.file) return [v.file];
-        if (v.files) return v.files;
-        return [];
-      });
+      // Use robust extraction that handles multiple possible data structures
+      const { extractFilesFromVulnerabilities } = await import('./utils/file-extraction.js');
+      const affectedFiles = extractFilesFromVulnerabilities(vulnerabilities, 'MITIGATE');
       
       // Adjust timeout based on file count
       if (affectedFiles.length > 3) {
@@ -608,6 +614,12 @@ export class PhaseExecutor {
           isVendor: await vendorIntegration.isVendorFile(file)
         }))
       );
+      
+      logger.info('[MITIGATE] Vendor detection results:', {
+        totalFiles: affectedFiles.length,
+        vendorFiles: vendorFiles.filter(f => f.isVendor).map(f => f.file),
+        nonVendorFiles: vendorFiles.filter(f => !f.isVendor).map(f => f.file)
+      });
       
       const hasVendorFiles = vendorFiles.some(f => f.isVendor);
       if (hasVendorFiles) {
