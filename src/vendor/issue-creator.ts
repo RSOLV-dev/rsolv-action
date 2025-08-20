@@ -2,7 +2,7 @@
  * RFC-047: Vendor-specific Issue Creation
  */
 
-import { VendorVulnerability, Issue } from './types';
+import { VendorVulnerability, Issue } from './types.js';
 
 export class VendorIssueCreator {
   async createIssue(vulnerability: VendorVulnerability): Promise<Issue> {
