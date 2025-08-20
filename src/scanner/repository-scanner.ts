@@ -24,8 +24,17 @@ export class RepositoryScanner {
     
     logger.info(`Found ${files.length} files to scan`);
     
-    // Scan each file
-    for (const file of files) {
+    // Scan each file with progress logging
+    logger.info(`Starting vulnerability detection on ${files.length} files...`);
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Log progress every 10 files or on first/last file
+      if (i === 0 || i === files.length - 1 || (i + 1) % 10 === 0) {
+        logger.info(`Scanning progress: ${i + 1}/${files.length} files (${file.path})`);
+      }
+      
       if (file.language && this.isSupportedLanguage(file.language)) {
         try {
           const fileVulnerabilities = await this.detector.detect(file.content, file.language);
@@ -45,6 +54,8 @@ export class RepositoryScanner {
         }
       }
     }
+    
+    logger.info(`Scanning complete. Total vulnerabilities found: ${vulnerabilities.length}`);
     
     // Apply AST validation if enabled (default is true)
     if (config.enableASTValidation !== false && config.rsolvApiKey && typeof config.rsolvApiKey === 'string' && config.rsolvApiKey.length > 0) {
@@ -102,9 +113,17 @@ export class RepositoryScanner {
         item.size && item.size < 1000000 // Skip files larger than 1MB
       );
       
-      // Fetch content for each file
-      for (const file of codeFiles) {
+      // Fetch content for each file with progress logging
+      logger.info(`Fetching content for ${codeFiles.length} code files...`);
+      
+      for (let i = 0; i < codeFiles.length; i++) {
+        const file = codeFiles[i];
         if (!file.path || !file.sha) continue;
+        
+        // Log progress every 10 files or on first/last file
+        if (i === 0 || i === codeFiles.length - 1 || (i + 1) % 10 === 0) {
+          logger.info(`Progress: ${i + 1}/${codeFiles.length} files fetched (${file.path})`);
+        }
         
         try {
           const { data: blob } = await this.github.git.getBlob({
@@ -128,6 +147,8 @@ export class RepositoryScanner {
           logger.error(`Error fetching content for ${file.path}:`, error);
         }
       }
+      
+      logger.info(`Completed fetching ${files.length} files with supported languages`);
     } catch (error) {
       logger.error('Error getting repository files:', error);
       throw error;

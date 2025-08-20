@@ -6,6 +6,8 @@ import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { analyzeIssue } from './analyzer.js';
 import { GitBasedClaudeCodeAdapter } from './adapters/claude-code-git.js';
+import { ClaudeCodeMaxAdapter } from './adapters/claude-code-cli-dev.js';
+import { isClaudeMaxAvailable } from './adapters/claude-code-cli-dev.js';
 import { createPullRequestFromGit } from '../github/pr-git.js';
 import { createEducationalPullRequest } from '../github/pr-git-educational.js';
 import { AIConfig, IssueAnalysis } from './types.js';
@@ -272,9 +274,14 @@ export async function processIssueWithGit(
       }
     };
     
-    // Get credential manager if using vended credentials
+    // Check if we should use Claude Max in development mode
+    const isDevMode = process.env.RSOLV_DEV_MODE === 'true' && 
+                      process.env.RSOLV_USE_CLAUDE_MAX === 'true';
+    const useClaudeMax = isDevMode && isClaudeMaxAvailable();
+    
+    // Get credential manager if using vended credentials (but not in dev mode with Claude Max)
     let credentialManager;
-    if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+    if (!useClaudeMax && config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
       // Set RSOLV_API_KEY environment variable for AI client
       process.env.RSOLV_API_KEY = config.rsolvApiKey;
       logger.info('Set RSOLV_API_KEY environment variable for vended credentials');
@@ -292,7 +299,15 @@ export async function processIssueWithGit(
     
     while (iteration < maxIterations) {
       logger.info(`Executing Claude Code to fix vulnerabilities (attempt ${iteration + 1}/${maxIterations})...`);
-      const adapter = new GitBasedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+      
+      // Use Claude Max adapter in dev mode, otherwise use the standard adapter
+      const adapter = useClaudeMax 
+        ? new ClaudeCodeMaxAdapter(aiConfig, process.cwd(), credentialManager)
+        : new GitBasedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+      
+      if (useClaudeMax) {
+        logger.info('🚀 Using Claude Code Max (local authentication) for development');
+      }
       
       // Pass test results and validation context to adapter
       const validationContext = iteration > 0 ? {

@@ -123,6 +123,23 @@ export class ClaudeCodeMaxAdapter extends RetryableClaudeCodeCLI {
   }
   
   /**
+   * Generate solution with git support (wrapper for compatibility)
+   */
+  async generateSolutionWithGit(
+    issueContext: IssueContext,
+    analysis: IssueAnalysis,
+    enhancedPrompt?: string,
+    testResults?: any,
+    validationResult?: any,
+    validationContext?: any
+  ): Promise<CLISolutionResult> {
+    // In dev mode with Claude Max, we use the simpler generateSolution
+    // The git operations are handled by Claude Code Max directly
+    logger.info('Claude Code Max: Using generateSolution (git operations handled by Claude)');
+    return this.generateSolution(issueContext, analysis, enhancedPrompt);
+  }
+  
+  /**
    * Check if running in development mode
    */
   private isDevelopmentMode(): boolean {
