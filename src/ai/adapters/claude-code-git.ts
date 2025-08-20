@@ -3,7 +3,7 @@
  * and commits them to create clean, reviewable PRs
  */
 import { ClaudeCodeAdapter } from './claude-code.js';
-import { ClaudeCodeCLIAdapter } from './claude-code-cli.js';
+import { RetryableClaudeCodeCLI } from './claude-code-cli-retry.js';
 import { IssueContext } from '../../types/index.js';
 import { AIConfig } from '../types.js';
 import { IssueAnalysis } from '../types.js';
@@ -49,11 +49,11 @@ interface PhaseStatus {
 }
 
 export class GitBasedClaudeCodeAdapter extends ClaudeCodeAdapter {
-  private cliAdapter: ClaudeCodeCLIAdapter;
+  private cliAdapter: RetryableClaudeCodeCLI;
   
   constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
     super(config, repoPath, credentialManager);
-    this.cliAdapter = new ClaudeCodeCLIAdapter(config, repoPath, credentialManager);
+    this.cliAdapter = new RetryableClaudeCodeCLI(config, repoPath, credentialManager);
   }
 
   /**

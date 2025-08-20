@@ -23,9 +23,9 @@ export interface CLISolutionResult {
  * Claude Code adapter that uses CLI directly
  */
 export class ClaudeCodeCLIAdapter {
-  private claudeConfig?: AIConfig;
-  private repoPath: string;
-  private credentialManager?: any;
+  protected claudeConfig?: AIConfig;
+  protected repoPath: string;
+  protected credentialManager?: any;
 
   constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
     this.claudeConfig = config;
@@ -141,7 +141,7 @@ export class ClaudeCodeCLIAdapter {
   /**
    * Execute Claude Code CLI
    */
-  private executeCLI(prompt: string, options: any): Promise<{ success: boolean; output?: string; error?: string }> {
+  protected executeCLI(prompt: string, options: any): Promise<{ success: boolean; output?: string; error?: string }> {
     return new Promise((resolve) => {
       // Set a 20-minute timeout for Claude CLI
       const timeout = setTimeout(() => {
@@ -241,7 +241,7 @@ export class ClaudeCodeCLIAdapter {
   /**
    * Get list of modified files using git
    */
-  private getModifiedFiles(): string[] {
+  protected getModifiedFiles(): string[] {
     try {
       const { execSync } = require('child_process');
       const output = execSync('git diff --name-only', {
@@ -259,7 +259,7 @@ export class ClaudeCodeCLIAdapter {
   /**
    * Construct the prompt for CLI usage
    */
-  private constructPrompt(issueContext: IssueContext, analysis: IssueAnalysis): string {
+  protected constructPrompt(issueContext: IssueContext, analysis: IssueAnalysis): string {
     // Use structured phased prompting if enabled
     if (this.claudeConfig?.useStructuredPhases) {
       return this.constructStructuredPhasedPrompt(issueContext, analysis);
