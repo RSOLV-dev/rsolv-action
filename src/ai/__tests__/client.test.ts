@@ -124,15 +124,12 @@ describe('AI Client Factory', () => {
     test('should handle missing RSOLV_API_KEY gracefully', async () => {
       process.env.RSOLV_API_KEY = '';
       
-      // Should still create client but credential manager initialization might fail
-      const client = await getAiClient({
+      // Should throw an error when RSOLV_API_KEY is missing
+      await expect(getAiClient({
         provider: 'anthropic',
         apiKey: '',
         useVendedCredentials: true
-      });
-      
-      expect(client).toBeDefined();
-      // Actual API calls would fail later due to missing credentials
+      })).rejects.toThrow('RSOLV_API_KEY environment variable not set for vended credentials');
     });
 
     test('should not require API key when using vended credentials', async () => {

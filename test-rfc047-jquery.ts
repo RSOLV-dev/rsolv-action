@@ -5,7 +5,7 @@
  * Reproduces issue #322 where XXE was detected in jQuery minified file
  */
 
-import { VendorDetectionIntegration } from './src/vendor/index';
+import { VendorDetectionIntegration } from './src/vendor/index.js';
 
 const JQUERY_XXE_VULNERABILITY = {
   type: 'XXE',
@@ -78,16 +78,17 @@ async function test() {
   
   for (const vuln of OTHER_VENDOR_CASES) {
     const result = await integration.processVulnerability(vuln);
-    const shouldPatch = await integration.shouldPatchFile(vuln.file);
+    const isVendor = await integration.isVendorFile(vuln.file);
+    const shouldPatch = !isVendor; // Don't patch vendor files
     
     console.log(`  ${vuln.file}:`);
     console.log(`    Type: ${result.type}, Should patch: ${shouldPatch}`);
     
     results.push({
       test: vuln.file,
-      success: (result.type === 'vendor') === vuln.file.includes('node_modules') || 
+      success: (result.type === 'vendor') === (vuln.file.includes('node_modules') || 
                vuln.file.includes('bower_components') ||
-               vuln.file.includes('vendor'),
+               vuln.file.includes('vendor')),
       type: result.type,
       shouldPatch
     });
@@ -103,7 +104,7 @@ async function test() {
     console.log(`  Creates PR: ${jqueryResult.issue.createsPR}`);
     console.log('\n  Body preview:');
     const bodyLines = jqueryResult.issue.body.split('\n').slice(0, 10);
-    bodyLines.forEach(line => console.log(`    ${line}`));
+    bodyLines.forEach((line: string) => console.log(`    ${line}`));
     console.log('    ...');
   }
   

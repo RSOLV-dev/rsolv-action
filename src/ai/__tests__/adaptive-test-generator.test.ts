@@ -181,8 +181,10 @@ describe('AdaptiveTestGenerator', () => {
       expect(result.testCode).toContain('use PHPUnit\\Framework\\TestCase;');
       expect(result.testCode).toMatch(/class UserProfile.*Test extends TestCase/);
       expect(result.testCode).toMatch(/public function test.*VulnerabilityRed\(\)/);
-      expect(result.testCode).toContain('$this->assertStringNotContainsString(\'<script>\', $result)');
-      expect(result.testCode).toContain('@group security');
+      // Modern PHPUnit uses attributes instead of annotations
+      expect(result.testCode).toContain('#[Group(\'security\')]');
+      // Check for security assertions
+      expect(result.testCode).toContain('assertStringNotContainsString');
       expect(result.framework).toBe('phpunit');
     });
   });

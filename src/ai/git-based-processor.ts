@@ -15,6 +15,15 @@ import { execSync } from 'child_process';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from './test-generating-security-analyzer.js';
 import { GitBasedTestValidator, ValidationResult } from './git-based-test-validator.js';
 import { VulnerabilityType } from '../security/types.js';
+import type { GitSolutionResult } from './adapters/claude-code-git.js';
+import type { CLISolutionResult } from './adapters/claude-code-cli.js';
+
+/**
+ * Type guard to check if solution is GitSolutionResult
+ */
+function isGitSolutionResult(solution: CLISolutionResult | GitSolutionResult): solution is GitSolutionResult {
+  return 'commitHash' in solution;
+}
 
 /**
  * Get maximum iterations based on configuration hierarchy
@@ -377,7 +386,7 @@ export async function processIssueWithGit(
           const staticValidation = staticValidator.validateXSSFix(
             filePath,
             beforeFixCommit,
-            solution.commitHash!
+            isGitSolutionResult(solution) ? solution.commitHash! : 'HEAD'
           );
           
           if (staticValidation.isValidFix) {
@@ -406,7 +415,7 @@ export async function processIssueWithGit(
           
           validationResult = await validator.validateFixWithTests(
             beforeFixCommit,
-            solution.commitHash!,
+            isGitSolutionResult(solution) ? solution.commitHash! : 'HEAD',
             testResults.generatedTests.testSuite
           );
           
@@ -508,12 +517,13 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
     }
     
     // Step 5: Create PR from the git commit
-    logger.info(`Creating PR from commit ${solution!.commitHash?.substring(0, 8)}`);
+    const commitHash = isGitSolutionResult(solution!) ? solution!.commitHash : undefined;
+    logger.info(`Creating PR from commit ${commitHash?.substring(0, 8) || 'HEAD'}`);
     
     // Use educational PR creation for better user engagement
     const useEducationalPR = process.env.RSOLV_EDUCATIONAL_PR !== 'false';
     
-    const prResult = useEducationalPR 
+    const prResult = useEducationalPR && isGitSolutionResult(solution!)
       ? await createEducationalPullRequest(
           issue,
           solution!.commitHash!,
@@ -527,15 +537,15 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           config,
           solution!.diffStats
         )
-      : await createPullRequestFromGit(
+      : isGitSolutionResult(solution!) ? await createPullRequestFromGit(
           issue,
           solution!.commitHash!,
           solution!.summary!,
           config,
           solution!.diffStats
-        );
+        ) : null;
     
-    if (!prResult.success) {
+    if (!prResult || !prResult.success) {
       // Try to undo the commit if PR creation failed
       try {
         execSync('git reset --hard HEAD~1', { encoding: 'utf-8' });
@@ -547,8 +557,8 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
       return {
         issueId: issue.id,
         success: false,
-        message: prResult.message,
-        error: prResult.error
+        message: prResult?.message || 'Failed to create PR',
+        error: prResult?.error || 'Unknown error'
       };
     }
     
@@ -558,11 +568,11 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
     return {
       issueId: issue.id,
       success: true,
-      message: `Created PR #${prResult.pullRequestNumber}`,
-      pullRequestUrl: prResult.pullRequestUrl,
-      pullRequestNumber: prResult.pullRequestNumber,
-      filesModified: solution!.filesModified,
-      diffStats: solution!.diffStats
+      message: `Created PR #${prResult!.pullRequestNumber}`,
+      pullRequestUrl: prResult!.pullRequestUrl,
+      pullRequestNumber: prResult!.pullRequestNumber,
+      filesModified: isGitSolutionResult(solution!) ? solution!.filesModified : undefined,
+      diffStats: isGitSolutionResult(solution!) ? solution!.diffStats : undefined
     };
     
   } catch (error) {

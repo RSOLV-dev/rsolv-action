@@ -40,8 +40,8 @@ export class ClaudeCodeDevProvider {
   }
   
   isEnabled(): boolean {
-    return this.config.enabled && 
-           (this.config.sessionToken || this.config.authToken);
+    return !!this.config.enabled && 
+           !!(this.config.sessionToken || this.config.authToken);
   }
   
   async generateFix(

@@ -6,7 +6,8 @@ preload = ["./test-preload.ts"]
 # Force sequential execution to prevent test interference
 bail = false
 # Extended timeout for integration tests with enhanced cleanup
-timeout = 30000
+# Increased to 60 seconds for AST service integration tests
+timeout = 60000
 # Disable hot reloading to prevent state leakage
 hot = false
 # Enhanced module resolution

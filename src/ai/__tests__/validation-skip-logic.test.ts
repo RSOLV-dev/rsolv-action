@@ -35,7 +35,8 @@ describe('Validation Skip Logic', () => {
       config.testGeneration?.validateFixes || 
       config.fixValidation?.enabled !== false;
     
-    return !skipValidation && wouldEnterValidation;
+    // The bug is that it enters validation even when skipValidation is true
+    return wouldEnterValidation;
   }
 
   describe('shouldSkipValidation (correct logic)', () => {

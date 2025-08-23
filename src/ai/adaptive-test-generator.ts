@@ -1771,7 +1771,7 @@ class ${className}${vulnerability.type.replace(/_/g, '')}Test extends TestCase
         ]);
         
         // The fix should block the attack
-        $response->assertStatus(400);
+        $response->assertStatus(${vulnerability.type === VulnerabilityType.BROKEN_AUTHENTICATION ? 401 : 400});
         $response->assertJson([
             'error' => 'Invalid input detected'
         ]);

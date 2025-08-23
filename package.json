@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "@types/babel__traverse": "^7.20.7",
+    "@types/bun": "^1.2.20",
     "@types/js-yaml": "^4.0.9",
     "@types/nock": "^11.1.0",
     "@types/node": "^20.17.50",

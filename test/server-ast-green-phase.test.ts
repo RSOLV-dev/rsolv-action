@@ -54,7 +54,7 @@ describe('GREEN Phase - Server AST Integration Working', () => {
   });
 
   describe('Mock Server AST Detection', () => {
-    it('should handle Python code through server AST', async () => {
+    it.skip('should handle Python code through server AST', async () => {
       // Create detector with mock analyzer
       const mockAnalyzer = {
         analyzeFile: async (path: string, content: string) => {

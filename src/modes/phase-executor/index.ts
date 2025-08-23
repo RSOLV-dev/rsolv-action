@@ -14,6 +14,8 @@ import { createPullRequestFromGit } from '../../github/pr-git.js';
 import { AIConfig, IssueAnalysis } from '../../ai/types.js';
 // import { getIssue } from '../../github/api.js'; // Not needed yet
 import type { ActionConfig, IssueContext } from '../../types/index.js';
+import type { Vulnerability } from '../../security/types.js';
+import type { ValidationResult, MitigationResult } from '../types.js';
 import { logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
 
@@ -53,7 +55,7 @@ export interface ExecuteResult {
   data?: any;
   error?: string;
   report?: string;
-  jsonReport?: any;
+  jsonReport?: Record<string, unknown>;
 }
 
 export class PhaseExecutor {
@@ -62,8 +64,8 @@ export class PhaseExecutor {
   private config: ActionConfig;
   
   // These will be used for mocking in tests
-  public testGenerator?: any;
-  public fixer?: any;
+  public testGenerator?: TestGeneratingSecurityAnalyzer;
+  public fixer?: GitBasedClaudeCodeAdapter;
 
   constructor(config: ActionConfig) {
     this.config = config;
@@ -133,7 +135,7 @@ export class PhaseExecutor {
 
       // If we have specific issues, scan them individually
       if (options.issues && options.issues.length > 0) {
-        const scanResults: any = {
+        const scanResults: Record<string, any> = {
           canBeFixed: true,
           vulnerabilities: [],
           timestamp: new Date().toISOString(),
@@ -259,8 +261,8 @@ export class PhaseExecutor {
         timestamp: enrichmentResult.validationTimestamp.toISOString(),
         hasSpecificVulnerabilities: enrichmentResult.vulnerabilities.length > 0,
         confidence: enrichmentResult.vulnerabilities.length > 0 ? 
-          (enrichmentResult.vulnerabilities.some((v: any) => v.confidence === 'high') ? 'high' :
-           enrichmentResult.vulnerabilities.some((v: any) => v.confidence === 'medium') ? 'medium' : 'low') :
+          (enrichmentResult.vulnerabilities.some((v: Record<string, any>) => v.confidence === 'high') ? 'high' :
+           enrichmentResult.vulnerabilities.some((v: Record<string, any>) => v.confidence === 'medium') ? 'medium' : 'low') :
           'none'
       };
 
@@ -582,8 +584,8 @@ export class PhaseExecutor {
         vulnerabilities = enhancedData.vulnerabilities;
         
         logger.info('[MITIGATE] Step 4a complete: Enhanced validation data with real filenames', {
-          originalFiles: validationAny.vulnerabilities.map((v: any) => v.file),
-          enhancedFiles: vulnerabilities.map((v: any) => v.file),
+          originalFiles: validationAny.vulnerabilities.map((v: any) => v.filePath || v.file),
+          enhancedFiles: vulnerabilities.map((v: any) => v.filePath || v.file),
           filesFixed: vulnerabilities.filter((v: any, i: number) => 
             v.file !== validationAny.vulnerabilities[i]?.file
           ).length

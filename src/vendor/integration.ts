@@ -16,7 +16,7 @@ export class VendorDetectionIntegration {
   constructor() {
     this.detector = new VendorDetector();
     this.analyzer = new DependencyAnalyzer();
-    this.handler = new VendorVulnerabilityHandler();
+    this.handler = new VendorVulnerabilityHandler(this.detector, this.analyzer);
     this.recommender = new UpdateRecommender();
   }
   

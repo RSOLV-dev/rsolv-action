@@ -11,7 +11,7 @@ describe('Credential Lifecycle Issues', () => {
     mockApiClient = {
       exchangeCredentials: vi.fn(),
       refreshCredentials: vi.fn(),
-    } as any;
+    } as Partial<RsolvApiClient> as RsolvApiClient;
   });
 
   afterEach(() => {
@@ -26,7 +26,7 @@ describe('Credential Lifecycle Issues', () => {
       const apiKey = 'rsolv_test_full_access_no_quota_2025';
       
       // First credential exchange (for initial analysis)
-      const manager1 = new CredentialManager(mockApiClient, apiKey);
+      const manager1 = new RSOLVCredentialManager();
       mockApiClient.exchangeCredentials.mockResolvedValueOnce({
         credentials: {
           anthropic: { api_key: 'vended-key-1', expires_at: new Date(Date.now() + 3600000).toISOString() }
@@ -65,12 +65,12 @@ describe('Credential Lifecycle Issues', () => {
     it('should reuse the same credential manager instance', async () => {
       // Create a singleton pattern
       class CredentialManagerSingleton {
-        private static instances = new Map<string, CredentialManager>();
+        private static instances = new Map<string, RSOLVCredentialManager>();
         
-        static async getInstance(apiClient: RsolvApiClient, apiKey: string): Promise<CredentialManager> {
+        static async getInstance(apiClient: RsolvApiClient, apiKey: string): Promise<RSOLVCredentialManager> {
           if (!this.instances.has(apiKey)) {
-            const manager = new CredentialManager(apiClient, apiKey);
-            await manager.initialize();
+            const manager = new RSOLVCredentialManager();
+            await manager.initialize(apiKey);
             this.instances.set(apiKey, manager);
           }
           return this.instances.get(apiKey)!;
@@ -106,7 +106,7 @@ describe('Credential Lifecycle Issues', () => {
 
   describe('Solution 2: Handle credential expiration gracefully', () => {
     it('should refresh expired credentials automatically', async () => {
-      const manager = new CredentialManager(mockApiClient, 'test-api-key');
+      const manager = new RSOLVCredentialManager();
       
       // Initial exchange with short TTL (5 seconds)
       mockApiClient.exchangeCredentials.mockResolvedValueOnce({
@@ -119,7 +119,7 @@ describe('Credential Lifecycle Issues', () => {
         usage: { remaining_fixes: 999999 }
       });
       
-      await manager.initialize();
+      await manager.initialize('test-api-key');
       const initialCred = await manager.getCredential('anthropic');
       expect(initialCred).toBe('vended-key-1');
       
@@ -145,7 +145,7 @@ describe('Credential Lifecycle Issues', () => {
 
   describe('Solution 3: Retry on exchange failure', () => {
     it('should retry credential exchange with exponential backoff', async () => {
-      const manager = new CredentialManager(mockApiClient, 'test-api-key');
+      const manager = new RSOLVCredentialManager();
       
       // First two attempts fail, third succeeds
       mockApiClient.exchangeCredentials
@@ -162,7 +162,7 @@ describe('Credential Lifecycle Issues', () => {
       const initializeWithRetry = async (maxRetries = 3) => {
         for (let i = 0; i < maxRetries; i++) {
           try {
-            await manager.initialize();
+            await manager.initialize('test-api-key');
             return;
           } catch (error) {
             if (i === maxRetries - 1) throw error;

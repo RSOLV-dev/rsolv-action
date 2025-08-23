@@ -6,7 +6,8 @@
 
 import { ClaudeCodeMaxAdapter } from './src/ai/adapters/claude-code-cli-dev.js';
 import { isClaudeMaxAvailable } from './src/ai/adapters/claude-code-cli-dev.js';
-import { AIConfig } from './src/ai/types.js';
+import { AIConfig, IssueAnalysis } from './src/ai/types.js';
+import { IssueContext } from './src/types/index.js';
 
 // Track token usage
 let apiCallsAvoided = 0;
@@ -130,25 +131,38 @@ function runCommand(userInput) {
   
   // Use Claude Code Max to fix it
   const config: AIConfig = {
-    provider: 'claude',
+    provider: 'anthropic',
     model: 'claude-3-sonnet',
     temperature: 0.2
   };
   
   const adapter = new ClaudeCodeMaxAdapter(config, process.cwd());
   
-  const issueContext = {
+  const issueContext: IssueContext = {
+    id: '1',
     title: 'Command injection vulnerability',
     body: 'User input is passed directly to exec without sanitization',
     number: 1,
     labels: ['security'],
-    repository: { owner: 'demo', name: 'test' }
+    assignees: [],
+    repository: { 
+      owner: 'demo', 
+      name: 'test',
+      fullName: 'demo/test',
+      defaultBranch: 'main'
+    },
+    source: 'github',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
   
-  const analysis = {
+  const analysis: IssueAnalysis = {
+    summary: 'Command injection vulnerability needs fixing',
     complexity: 'low',
-    relatedFiles: [testFile],
-    suggestedApproach: 'Use execFile or sanitize input'
+    estimatedTime: 5,
+    potentialFixes: ['Use execFile', 'Sanitize input'],
+    recommendedApproach: 'Use execFile or sanitize input',
+    relatedFiles: [testFile]
   };
   
   console.log('\nFixing with Claude Code Max...');

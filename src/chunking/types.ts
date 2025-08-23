@@ -98,4 +98,4 @@ export const TOKENS_PER_FILE_OVERHEAD = 100; // File path, imports, etc.
 export const MAX_SAFE_TOKENS = 7500; // Leave buffer for response
 
 // VulnerabilityChunker is implemented in vulnerability-chunker.ts
-export { VulnerabilityChunker } from './vulnerability-chunker';
+export { VulnerabilityChunker } from './vulnerability-chunker.js';
