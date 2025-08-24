@@ -3,7 +3,7 @@
  * Testing the extracted phases from processIssueWithGit
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock, spyOn } from 'vitest';
 import { PhaseExecutor } from '../phase-executor/index.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 import * as childProcess from 'child_process';
@@ -18,7 +18,7 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
     mock.restore();
     
     // Mock analyzeIssue to return proper structure
-    mock.module('../../ai/analyzer.js', () => ({
+    vi.mock('../../ai/analyzer.js', () => ({
       analyzeIssue: mock(() => Promise.resolve({
         canBeFixed: true,
         issueType: 'sql-injection',
@@ -31,7 +31,7 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
     }));
     
     // Mock git status to be clean by default
-    mock.module('child_process', () => ({
+    vi.mock('child_process', () => ({
       execSync: mock((cmd: string) => {
         if (cmd.includes('git status')) {
           return ''; // Clean status
@@ -210,7 +210,7 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
   describe('Mitigate Phase Extraction', () => {
     test('executeMitigateForIssue should apply fix using Claude Code', async () => {
       // Mock the Claude Code adapter
-      mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      vi.mock('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           constructor() {}
           async generateSolutionWithGit() {
@@ -226,7 +226,7 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
       }));
       
       // Mock PR creation
-      mock.module('../../github/pr-git-educational.js', () => ({
+      vi.mock('../../github/pr-git-educational.js', () => ({
         createEducationalPullRequest: mock(() => Promise.resolve({
           success: true,
           pullRequestUrl: 'https://github.com/test/repo/pull/1',
@@ -234,7 +234,7 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
         }))
       }));
       
-      mock.module('../../github/pr-git.js', () => ({
+      vi.mock('../../github/pr-git.js', () => ({
         createPullRequestFromGit: mock(() => Promise.resolve({
           success: true,
           pullRequestUrl: 'https://github.com/test/repo/pull/1',

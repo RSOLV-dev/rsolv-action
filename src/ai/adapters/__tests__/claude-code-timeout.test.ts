@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, jest, spyOn } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, jest, spyOn } from 'vitest';
 import { ClaudeCodeAdapter } from '../claude-code';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
@@ -52,12 +52,12 @@ describe('Claude Code Adapter Timeout Behavior', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     adapter = new ClaudeCodeAdapter(mockConfig);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test('should timeout availability check after 5 seconds', async () => {
@@ -92,8 +92,8 @@ describe('Claude Code Adapter Timeout Behavior', () => {
 
   test('should handle file system errors gracefully', async () => {
     // Test file system error handling by simulating temp directory creation failure
-    const fsExistsSpy = spyOn(fs, 'existsSync').mockReturnValue(false);
-    const fsMkdirSpy = spyOn(fs, 'mkdirSync').mockImplementation(() => {
+    const fsExistsSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+    const fsMkdirSpy = vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {
       throw new Error('Permission denied');
     });
     

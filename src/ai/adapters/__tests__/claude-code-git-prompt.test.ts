@@ -68,7 +68,7 @@ document.write(location.host);
   describe('RED Phase - Current Prompt Failures', () => {
     it('should fail when Claude only provides JSON without editing files', async () => {
       // This test documents the current failing behavior
-      const spy = jest.spyOn(adapter as any, 'getModifiedFiles');
+      const spy = jest.vi.spyOn(adapter as any, 'getModifiedFiles');
       
       // Mock Claude returning JSON but not editing
       spy.mockReturnValue([]);
@@ -85,7 +85,7 @@ document.write(location.host);
 
     it('should fail to create PR when files are not actually modified', async () => {
       // Document that PR creation fails without file modifications
-      const getModifiedFilesSpy = jest.spyOn(adapter as any, 'getModifiedFiles');
+      const getModifiedFilesSpy = jest.vi.spyOn(adapter as any, 'getModifiedFiles');
       getModifiedFilesSpy.mockReturnValue([]);
       
       const result = await adapter.generateSolutionWithGit(
@@ -112,7 +112,7 @@ document.write(location.host);
       expect(improvedPrompt).toContain('DO NOT just provide file contents in JSON');
       
       // Mock successful file modification
-      const getModifiedFilesSpy = jest.spyOn(adapter as any, 'getModifiedFiles');
+      const getModifiedFilesSpy = jest.vi.spyOn(adapter as any, 'getModifiedFiles');
       getModifiedFilesSpy.mockReturnValue(['vulnerable.js']);
       
       const result = await adapter.generateSolutionWithGit(
@@ -126,8 +126,8 @@ document.write(location.host);
 
     it('should validate that both Edit tools AND JSON are used', async () => {
       // Test that we get both file edits and JSON summary
-      const getModifiedFilesSpy = jest.spyOn(adapter as any, 'getModifiedFiles');
-      const extractSolutionSpy = jest.spyOn(adapter as any, 'extractSolutionFromText');
+      const getModifiedFilesSpy = jest.vi.spyOn(adapter as any, 'getModifiedFiles');
+      const extractSolutionSpy = jest.vi.spyOn(adapter as any, 'extractSolutionFromText');
       
       // Mock both conditions met
       getModifiedFilesSpy.mockReturnValue(['vulnerable.js']);

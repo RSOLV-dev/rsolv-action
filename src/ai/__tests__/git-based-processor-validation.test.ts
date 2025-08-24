@@ -3,7 +3,7 @@
  * TDD Phase: RED - Writing failing tests first
  */
 
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { processIssueWithGit } from '../git-based-processor.js';
 import { TestGeneratingSecurityAnalyzer } from '../test-generating-security-analyzer.js';
 import { GitBasedTestValidator } from '../git-based-test-validator.js';
@@ -12,23 +12,23 @@ import { IssueContext, ActionConfig } from '../../types/index.js';
 import { execSync } from 'child_process';
 
 // Mock modules
-mock.module('../test-generating-security-analyzer.js', () => ({
+vi.mock('../test-generating-security-analyzer.js', () => ({
   TestGeneratingSecurityAnalyzer: mock()
 }));
 
-mock.module('../git-based-test-validator.js', () => ({
+vi.mock('../git-based-test-validator.js', () => ({
   GitBasedTestValidator: mock()
 }));
 
-mock.module('../adapters/claude-code-git.js', () => ({
+vi.mock('../adapters/claude-code-git.js', () => ({
   GitBasedClaudeCodeAdapter: mock()
 }));
 
-mock.module('../../github/pr-git.js', () => ({
+vi.mock('../../github/pr-git.js', () => ({
   createPullRequestFromGit: mock()
 }));
 
-mock.module('child_process', () => ({
+vi.mock('child_process', () => ({
   execSync: mock()
 }));
 
@@ -332,7 +332,7 @@ describe('Git-based processor with fix validation', () => {
         pullRequestNumber: 1
       });
 
-      mock.module('../../github/pr-git.js', () => ({
+      vi.mock('../../github/pr-git.js', () => ({
         createPullRequestFromGit: mockCreatePR
       }));
 

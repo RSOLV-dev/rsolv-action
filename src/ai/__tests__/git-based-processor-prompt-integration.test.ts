@@ -2,16 +2,16 @@
  * Integration tests for git-based-processor prompt enhancement with test context
  */
 
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { processIssueWithGit } from '../git-based-processor.js';
 import type { IssueContext, ActionConfig } from '../../types/index.js';
 
 // Mock all dependencies
-mock.module('child_process', () => ({
+vi.mock('child_process', () => ({
   execSync: mock(() => '')
 }));
 
-mock.module('../analyzer.js', () => ({
+vi.mock('../analyzer.js', () => ({
   analyzeIssue: mock(() => Promise.resolve({
     canBeFixed: true,
     files: ['test.js'],
@@ -20,7 +20,7 @@ mock.module('../analyzer.js', () => ({
   }))
 }));
 
-mock.module('../test-generating-security-analyzer.js', () => ({
+vi.mock('../test-generating-security-analyzer.js', () => ({
   TestGeneratingSecurityAnalyzer: mock(() => ({
     analyzeWithTestGeneration: mock(() => Promise.resolve({
       canBeFixed: true,
@@ -48,7 +48,7 @@ mock.module('../test-generating-security-analyzer.js', () => ({
   }))
 }));
 
-mock.module('../git-based-test-validator.js', () => ({
+vi.mock('../git-based-test-validator.js', () => ({
   GitBasedTestValidator: mock(() => ({
     validateFixWithTests: mock(() => Promise.resolve({
       isValidFix: false,
@@ -67,7 +67,7 @@ mock.module('../git-based-test-validator.js', () => ({
 // Track the calls to generateSolutionWithGit
 let generateSolutionWithGitCalls: any[] = [];
 
-mock.module('../adapters/claude-code-git.js', () => ({
+vi.mock('../adapters/claude-code-git.js', () => ({
   GitBasedClaudeCodeAdapter: mock(() => ({
     generateSolutionWithGit: mock((...args) => {
       generateSolutionWithGitCalls.push(args);
@@ -88,7 +88,7 @@ mock.module('../adapters/claude-code-git.js', () => ({
   }))
 }));
 
-mock.module('../../github/pr-git.js', () => ({
+vi.mock('../../github/pr-git.js', () => ({
   createPullRequestFromGit: mock(() => Promise.resolve({
     success: true,
     message: 'PR created',
@@ -97,7 +97,7 @@ mock.module('../../github/pr-git.js', () => ({
   }))
 }));
 
-mock.module('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger.js', () => ({
   logger: {
     info: mock(() => {}),
     warn: mock(() => {}),

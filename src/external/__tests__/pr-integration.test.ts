@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, mock, afterEach } from 'bun:test';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { RsolvApiClient } from '../api-client.js';
 
 // Mock node-fetch
 const mockFetch = mock();
-mock.module('node-fetch', () => ({
+vi.mock('node-fetch', () => ({
   default: mockFetch
 }));
 

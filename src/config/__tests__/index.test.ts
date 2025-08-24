@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, mock } from 'vitest';
 import { loadConfig } from '../index.js';
 import fs from 'fs';
 import * as yaml from 'js-yaml';
@@ -8,12 +8,12 @@ const mockExistsSync = mock((path: string) => path === '.github/rsolv.yml');
 const mockReadFileSync = mock(() => '');
 
 // Mock the modules
-mock.module('fs', () => ({
+vi.mock('fs', () => ({
   existsSync: mockExistsSync,
   readFileSync: mockReadFileSync,
 }));
 
-mock.module('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger.js', () => ({
   logger: {
     info: mock(() => {}),
     debug: mock(() => {}),

@@ -1,4 +1,4 @@
-import { describe, it, expect, mock } from 'bun:test';
+import { describe, it, expect, mock } from 'vitest';
 import { LinearAdapter } from './linear-adapter';
 // import type { ActionConfig } from '../../types';
 

@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 import { sanitizeErrorMessage, sanitizeError } from '../error-sanitizer.js';
 
 describe('Error Sanitizer', () => {

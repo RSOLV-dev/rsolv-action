@@ -3,14 +3,14 @@
  * Follows RED-GREEN-REFACTOR methodology
  */
 
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, mock } from 'vitest';
 import { createEducationalPullRequest } from '../pr-git-educational.js';
 
 // Track git commands globally
 let globalGitCommands: string[] = [];
 
 // Mock child_process module
-mock.module('child_process', () => ({
+vi.mock('child_process', () => ({
   execSync: mock((cmd: string) => {
     globalGitCommands.push(cmd);
     return Buffer.from('');
@@ -18,7 +18,7 @@ mock.module('child_process', () => ({
 }));
 
 // Mock GitHub API module
-mock.module('../api.js', () => ({
+vi.mock('../api.js', () => ({
   getGitHubClient: mock(() => ({
     pulls: {
       create: mock((params: any) => {

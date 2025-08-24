@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, mock } from 'vitest';
 import { getAiClient } from '../client';
 import { AiProviderConfig } from '../../types';
 import { setupFetchMock } from '../../../test-helpers/simple-mocks';
@@ -8,7 +8,7 @@ const mockGetCredential = mock(() => 'temp_credential_xyz');
 const mockReportUsage = mock(() => Promise.resolve());
 const mockInitialize = mock(() => Promise.resolve());
 
-mock.module('../../credentials/manager', () => ({
+vi.mock('../../credentials/manager', () => ({
   RSOLVCredentialManager: class {
     initialize = mockInitialize;
     getCredential = mockGetCredential;

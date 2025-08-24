@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, mock, afterEach } from 'bun:test';
+import { describe, expect, test, beforeEach, mock, afterEach } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
 import { AIConfig } from '../../types.js';
 import type { SDKMessage } from '@anthropic-ai/claude-code';
@@ -17,7 +17,7 @@ const mockExecSync = mock((command: string) => {
   return '';
 });
 
-mock.module('child_process', () => ({
+vi.mock('child_process', () => ({
   execSync: mockExecSync
 }));
 
@@ -44,12 +44,12 @@ const mockQueryFunction = mock(async function* () {
   } as SDKMessage;
 });
 
-mock.module('@anthropic-ai/claude-code', () => ({
+vi.mock('@anthropic-ai/claude-code', () => ({
   query: mockQueryFunction
 }));
 
 // Mock the parent class methods
-mock.module('../claude-code.js', () => {
+vi.mock('../claude-code.js', () => {
   return {
     ClaudeCodeAdapter: class MockClaudeCodeAdapter {
       repoPath: string;

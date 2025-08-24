@@ -3,7 +3,7 @@
  * Phase 6C: Enhance PHPUnit and add Pest framework support
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { AdaptiveTestGenerator } from '../adaptive-test-generator.js';
 import { TestFrameworkDetector } from '../test-framework-detector.js';
 import { CoverageAnalyzer } from '../coverage-analyzer.js';

@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, mock, afterEach } from 'bun:test';
+import { describe, expect, test, beforeEach, mock, afterEach } from 'vitest';
 import { AIConfig } from '../../types.js';
 import path from 'path';
 import type { SDKMessage } from '@anthropic-ai/claude-code';
@@ -22,7 +22,7 @@ const mockQueryFunction = mock(async function* (options: any) {
 
 // Mock the @anthropic-ai/claude-code module using require.resolve for better isolation
 const claudeCodePath = require.resolve('@anthropic-ai/claude-code');
-mock.module(claudeCodePath, () => {
+vi.mock(claudeCodePath, () => {
   return {
     query: mockQueryFunction
   };
@@ -60,7 +60,7 @@ const mockMkdirSync = mock(() => {});
 const mockUnlinkSync = mock(() => {});
 
 const fsPath = require.resolve('fs');
-mock.module(fsPath, () => ({
+vi.mock(fsPath, () => ({
   writeFileSync: mockWriteFileSync,
   readFileSync: mockReadFileSync,
   existsSync: mockExistsSync,
@@ -70,7 +70,7 @@ mock.module(fsPath, () => ({
 
 // Mock the logger using require.resolve
 const loggerPath = require.resolve('../../../utils/logger');
-mock.module(loggerPath, () => {
+vi.mock(loggerPath, () => {
   return {
     logger: {
       info: mock(() => {}),

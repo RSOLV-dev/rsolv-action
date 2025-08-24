@@ -1,9 +1,9 @@
-import { test, expect, describe, beforeEach, mock } from 'bun:test';
+import { test, expect, describe, beforeEach, mock } from 'vitest';
 import { processIssues } from '../unified-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 
 // Mock the AI client
-mock.module('../client', () => ({
+vi.mock('../client', () => ({
   getAiClient: () => ({
     complete: mock((prompt: string) => {
       // Return appropriate response based on the prompt content
@@ -56,7 +56,7 @@ This fixes the SQL injection vulnerability by using parameterized queries.`);
 }));
 
 // Mock the GitHub API
-mock.module('../../github/api', () => ({
+vi.mock('../../github/api', () => ({
   getRepositoryDetails: () => Promise.resolve({
     owner: 'test',
     name: 'repo',
@@ -66,7 +66,7 @@ mock.module('../../github/api', () => ({
 }));
 
 // Mock PR creation
-mock.module('../../github/pr', () => ({
+vi.mock('../../github/pr', () => ({
   createPullRequest: () => Promise.resolve({
     success: true,
     pullRequestUrl: 'https://github.com/test/repo/pull/1',
@@ -75,7 +75,7 @@ mock.module('../../github/pr', () => ({
 }));
 
 // Mock file operations
-mock.module('../../github/files', () => ({
+vi.mock('../../github/files', () => ({
   getRepositoryFiles: () => Promise.resolve({
     'src/auth/login.js': `
       function authenticateUser(username, password) {

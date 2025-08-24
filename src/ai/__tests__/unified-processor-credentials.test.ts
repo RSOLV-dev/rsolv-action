@@ -1,10 +1,10 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'vitest';
 import { processIssues } from '../unified-processor';
 import { IssueContext } from '../../types';
 import { ActionConfig } from '../../config';
 
 // Mock the credential manager module
-mock.module('../../credentials/manager.js', () => ({
+vi.mock('../../credentials/manager.js', () => ({
   RSOLVCredentialManager: class {
     private apiKey: string = '';
     
@@ -28,7 +28,7 @@ mock.module('../../credentials/manager.js', () => ({
 
 // Mock the enhanced claude code adapter
 let mockCredentialManagerReceived: any = null;
-mock.module('../adapters/claude-code-enhanced.js', () => ({
+vi.mock('../adapters/claude-code-enhanced.js', () => ({
   EnhancedClaudeCodeAdapter: class {
     config: any;
     repoPath: string;
@@ -71,7 +71,7 @@ mock.module('../adapters/claude-code-enhanced.js', () => ({
 }));
 
 // Mock other dependencies
-mock.module('../analysis.js', () => ({
+vi.mock('../analysis.js', () => ({
   analyzeIssue: async () => ({
     canBeFixed: true,
     issueType: 'bug',
@@ -82,7 +82,7 @@ mock.module('../analysis.js', () => ({
   })
 }));
 
-mock.module('../solution.js', () => ({
+vi.mock('../solution.js', () => ({
   generateSolution: async () => ({
     success: true,
     changes: {
@@ -91,7 +91,7 @@ mock.module('../solution.js', () => ({
   })
 }));
 
-mock.module('../../github/pr.js', () => ({
+vi.mock('../../github/pr.js', () => ({
   createPullRequest: async () => ({
     success: true,
     pullRequestUrl: 'https://github.com/test/repo/pull/1',
@@ -208,7 +208,7 @@ describe('Unified Processor Credential Manager Passing', () => {
   
   test('should handle credential manager creation errors gracefully', async () => {
     // Mock a failing credential manager
-    mock.module('../../credentials/manager.js', () => ({
+    vi.mock('../../credentials/manager.js', () => ({
       RSOLVCredentialManager: class {
         async initialize() {
           throw new Error('Failed to initialize credentials');

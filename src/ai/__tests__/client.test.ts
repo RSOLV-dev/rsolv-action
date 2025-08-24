@@ -1,12 +1,12 @@
 /**
  * Tests for the AI client factory
  */
-import { test, expect, mock, describe, beforeEach } from 'bun:test';
+import { test, expect, mock, describe, beforeEach } from 'vitest';
 import { getAiClient } from '../client.js';
 
 // Mock the logger to avoid noisy logs
 const loggerPath = require.resolve('../../utils/logger');
-mock.module(loggerPath, () => ({
+vi.mock(loggerPath, () => ({
   logger: {
     info: () => {},
     warn: () => {},
@@ -17,7 +17,7 @@ mock.module(loggerPath, () => ({
 
 // Mock the credential manager
 const credentialManagerPath = require.resolve('../../credentials/manager');
-mock.module(credentialManagerPath, () => ({
+vi.mock(credentialManagerPath, () => ({
   RSOLVCredentialManager: class MockCredentialManager {
     private credentials = new Map<string, string>();
     

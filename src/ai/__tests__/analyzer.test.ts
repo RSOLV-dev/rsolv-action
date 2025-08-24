@@ -1,4 +1,4 @@
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, mock, beforeEach } from 'vitest';
 import { analyzeIssue } from '../analyzer.js';
 import { IssueContext, ActionConfig } from '../../types.js';
 
@@ -6,7 +6,7 @@ describe('Issue Analyzer', () => {
   beforeEach(() => {
     // Mock the AI client using require.resolve
     const clientPath = require.resolve('../client');
-    mock.module(clientPath, () => {
+    vi.mock(clientPath, () => {
       return {
         getAiClient: () => ({
           complete: async () => `This is a bug issue.
@@ -24,7 +24,7 @@ Suggested Approach: Fix 1 - Update the error handling in the component to proper
 
     // Mock the security detector using require.resolve
     const securityPath = require.resolve('../../security/index');
-    mock.module(securityPath, () => ({
+    vi.mock(securityPath, () => ({
       SecurityDetector: class {
         analyzeText = () => ({ vulnerabilities: [] });
         analyzeCode = () => ({ vulnerabilities: [] });

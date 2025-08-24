@@ -4,7 +4,7 @@
  * More comprehensive mocking will be done during refactoring
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 import { processIssueWithGit, getMaxIterations } from '../git-based-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 

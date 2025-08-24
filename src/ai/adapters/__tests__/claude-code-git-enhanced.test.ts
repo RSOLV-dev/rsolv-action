@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
 import { IssueContext } from '../../../types/index.js';
 

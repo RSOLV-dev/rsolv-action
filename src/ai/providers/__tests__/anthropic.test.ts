@@ -1,4 +1,4 @@
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, mock, beforeEach } from 'vitest';
 import { AnthropicClient } from '../anthropic.js';
 import { AIConfig } from '../../types.js';
 

@@ -1,7 +1,7 @@
-import { mock } from 'bun:test';
+import { vi } from 'vitest';
 
 export function setupFetchMock() {
-  const mockFetch = mock((url: string, options?: any) => {
+  const mockFetch = vi.fn((url: string, options?: any) => {
     return Promise.resolve({
       ok: true,
       status: 200,

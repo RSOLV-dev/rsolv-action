@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, mock } from 'vitest';
 import { processIssueWithGit } from '../../git-based-processor.js';
 
 // Mock dependencies
@@ -19,7 +19,7 @@ const mockCreatePullRequestFromGit = mock(() => ({
 }));
 
 // Mock child_process for git commands
-mock.module('child_process', () => ({
+vi.mock('child_process', () => ({
   execSync: mock((command: string) => {
     if (command === 'git status --porcelain') {
       return '';
@@ -29,22 +29,22 @@ mock.module('child_process', () => ({
 }));
 
 // Mock the other modules
-mock.module('../../analyzer.js', () => ({
+vi.mock('../../analyzer.js', () => ({
   analyzeIssue: mockAnalyzeIssue
 }));
 
-mock.module('../../../github/pr-git.js', () => ({
+vi.mock('../../../github/pr-git.js', () => ({
   createPullRequestFromGit: mockCreatePullRequestFromGit
 }));
 
-mock.module('../../../credentials/manager.js', () => ({
+vi.mock('../../../credentials/manager.js', () => ({
   RSOLVCredentialManager: class {
     async initialize() {}
   }
 }));
 
 // Mock GitBasedClaudeCodeAdapter
-mock.module('../claude-code-git.js', () => ({
+vi.mock('../claude-code-git.js', () => ({
   GitBasedClaudeCodeAdapter: class {
     async generateSolutionWithGit() {
       return {
@@ -122,7 +122,7 @@ describe('Git-based Issue Processor', () => {
     });
     
     // Override the module mock temporarily
-    mock.module('child_process', () => ({
+    vi.mock('child_process', () => ({
       execSync: dirtyGitMock
     }));
     
@@ -136,7 +136,7 @@ describe('Git-based Issue Processor', () => {
     expect(result.error).toContain('Uncommitted changes');
     
     // Restore original mock for subsequent tests
-    mock.module('child_process', () => ({
+    vi.mock('child_process', () => ({
       execSync: originalMock
     }));
   });

@@ -3,7 +3,7 @@
  * Following RFC-041 specification for phase data storage
  */
 
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, mock } from 'vitest';
 import { PhaseDataClient, StoreResult, PhaseData } from '../index.js';
 
 describe('PhaseDataClient', () => {
@@ -106,7 +106,7 @@ describe('PhaseDataClient', () => {
       const mockWriteFile = mock(async () => {});
       const mockMkdir = mock(async () => {});
       
-      mock.module('fs/promises', () => ({
+      vi.mock('fs/promises', () => ({
         writeFile: mockWriteFile,
         mkdir: mockMkdir
       }));
@@ -193,7 +193,7 @@ describe('PhaseDataClient', () => {
         metadata: { commitSha: 'abc123' }
       }));
       
-      mock.module('fs/promises', () => ({
+      vi.mock('fs/promises', () => ({
         readdir: mockReaddir,
         readFile: mockReadFile
       }));
@@ -213,7 +213,7 @@ describe('PhaseDataClient', () => {
       client = new PhaseDataClient(mockApiKey);
       
       // Mock git command to return current commit
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: () => 'abc123\n'
       }));
 
@@ -228,7 +228,7 @@ describe('PhaseDataClient', () => {
       client = new PhaseDataClient(mockApiKey);
       
       // Mock git to return different commit
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: () => 'different-commit\n'
       }));
 

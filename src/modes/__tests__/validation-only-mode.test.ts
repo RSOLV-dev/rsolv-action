@@ -3,7 +3,7 @@
  * RED phase - write failing tests first
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'vitest';
 import { PhaseExecutor } from '../phase-executor/index.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 
@@ -302,7 +302,7 @@ describe('Validation-Only Mode', () => {
     });
 
     test('should handle test generation failure', async () => {
-      mock.module('../../ai/test-generating-security-analyzer.js', () => ({
+      vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
           async analyzeWithTestGeneration() {
             throw new Error('AI service unavailable');
@@ -323,7 +323,7 @@ describe('Validation-Only Mode', () => {
 
     test('should timeout long-running validations', async () => {
       // Mock a slow test generation that will timeout
-      mock.module('../../ai/test-generating-security-analyzer.js', () => ({
+      vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
           async analyzeWithTestGeneration() {
             return new Promise(resolve => {

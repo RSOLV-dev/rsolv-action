@@ -1,7 +1,7 @@
 /**
  * Tests for Claude Code CLI adapter
  */
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { ClaudeCodeCLIAdapter } from '../claude-code-cli.js';
 import { AIConfig } from '../../types.js';
 import { IssueContext } from '../../../types/index.js';

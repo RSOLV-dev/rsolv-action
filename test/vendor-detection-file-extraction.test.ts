@@ -3,7 +3,7 @@
  * Tests the specific fix for handling both 'file' and 'files' properties
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 
 describe('Vendor Detection File Extraction (RFC-047 Fix)', () => {
   test('should extract files from vulnerabilities with singular "file" property', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { parse } from '@babel/parser';
 
 describe('Babel Parser Language Support', () => {

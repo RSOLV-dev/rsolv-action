@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ElixirASTAnalyzer } from '../elixir-ast-analyzer.js';
 import { FileSelectionOptions } from '../types.js';
 import { FileSelector } from '../file-selector.js';

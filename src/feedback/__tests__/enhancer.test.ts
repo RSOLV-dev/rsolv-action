@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach } from 'vitest';
 import { PromptEnhancer } from '../enhancer.js';
 import type { IssueContext } from '../../types.js';
 import type { 

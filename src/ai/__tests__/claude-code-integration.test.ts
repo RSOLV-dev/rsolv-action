@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, mock } from 'vitest';
 import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
 import { getAiClient } from '../client.js';
 import { AIConfig } from '../types.js';
@@ -13,7 +13,7 @@ describe('Claude Code Integration Tests', () => {
     if (!USE_REAL_APIS) {
       // Mock modules for unit testing using require.resolve
       const loggerPath = require.resolve('../../utils/logger');
-      mock.module(loggerPath, () => ({
+      vi.mock(loggerPath, () => ({
         logger: {
           info: mock(() => {}),
           warn: mock(() => {}),
@@ -24,7 +24,7 @@ describe('Claude Code Integration Tests', () => {
       
       // Mock child_process for CLI simulation using require.resolve
       const childProcessPath = require.resolve('child_process');
-      mock.module(childProcessPath, () => ({
+      vi.mock(childProcessPath, () => ({
         spawn: () => ({
           stdout: { on: mock(() => {}) },
           stderr: { on: mock(() => {}) },
@@ -151,7 +151,7 @@ describe.skipIf(!USE_REAL_APIS || !process.env.COMPARE_MODE)('Mock vs Real Compa
     };
 
     // Get mocked response
-    mock.module('child_process', () => ({
+    vi.mock('child_process', () => ({
       spawn: () => ({
         stdout: { 
           on: (event: string, cb: Function) => {

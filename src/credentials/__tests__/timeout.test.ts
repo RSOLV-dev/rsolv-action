@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, jest, spyOn } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, jest, spyOn } from 'vitest';
 import { RSOLVCredentialManager } from '../manager';
 
 describe('Credential Manager Timeout Behavior', () => {
@@ -9,7 +9,7 @@ describe('Credential Manager Timeout Behavior', () => {
     // Clear RSOLV_API_URL to use default
     delete process.env.RSOLV_API_URL;
     manager = new RSOLVCredentialManager();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -25,7 +25,7 @@ describe('Credential Manager Timeout Behavior', () => {
   test('should timeout credential exchange after 15 seconds', async () => {
     // Mock fetch to never resolve
     let abortSignal: AbortSignal | undefined;
-    const fetchSpy = spyOn(global, 'fetch').mockImplementation((_url: string, options: any) => {
+    const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation((_url: string, options: any) => {
       abortSignal = options.signal;
       return new Promise(() => {}); // Never resolves
     });
@@ -46,7 +46,7 @@ describe('Credential Manager Timeout Behavior', () => {
 
   test('should timeout usage reporting after 5 seconds', async () => {
     // First initialize successfully
-    const fetchSpy = spyOn(global, 'fetch').mockResolvedValueOnce({
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         credentials: {
@@ -90,10 +90,10 @@ describe('Credential Manager Timeout Behavior', () => {
 
   test('should schedule refresh with proper timeout configuration', async () => {
     // For this test, just verify that refresh scheduling works
-    const clearTimeoutSpy = spyOn(global, 'clearTimeout');
+    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
     
     // Initialize with credentials that will schedule refresh
-    const fetchSpy = spyOn(global, 'fetch').mockResolvedValueOnce({
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         credentials: {
@@ -123,7 +123,7 @@ describe('Credential Manager Timeout Behavior', () => {
 
   test('should handle timeout errors gracefully', async () => {
     // Mock fetch to simulate timeout
-    const fetchSpy = spyOn(global, 'fetch').mockRejectedValue(new Error('The operation was aborted due to timeout'));
+    const fetchSpy = vi.spyOn(global, 'fetch').mockRejectedValue(new Error('The operation was aborted due to timeout'));
     
     // Initialize should throw with appropriate error
     await expect(manager.initialize('test-api-key')).rejects.toThrow('The operation was aborted due to timeout');
@@ -133,7 +133,7 @@ describe('Credential Manager Timeout Behavior', () => {
 
   test('should not hang when API is slow', async () => {
     // Mock fetch to resolve just before timeout
-    const fetchSpy = spyOn(global, 'fetch').mockImplementation(() => {
+    const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(() => {
       return new Promise(resolve => {
         setTimeout(() => {
           resolve({
@@ -170,10 +170,10 @@ describe('Credential Manager Timeout Behavior', () => {
   });
 
   test('should clean up timers on cleanup', async () => {
-    const clearTimeoutSpy = spyOn(global, 'clearTimeout');
+    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
     
     // Initialize with credentials that will schedule refresh
-    const fetchSpy = spyOn(global, 'fetch').mockResolvedValueOnce({
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         credentials: {

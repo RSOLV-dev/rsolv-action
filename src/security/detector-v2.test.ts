@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SecurityDetectorV2 } from './detector-v2.js';
 import { LocalPatternSource, HybridPatternSource } from './pattern-source.js';
 import { VulnerabilityType } from './types.js';
 
 // Mock the logger
-mock.module('../utils/logger.js', () => ({
+vi.mock('../utils/logger.js', () => ({
   logger: {
     info: mock(() => {}),
     warn: mock(() => {}),

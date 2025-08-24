@@ -10,7 +10,7 @@
  * - ANTHROPIC_API_KEY=xxx - Your Anthropic API key
  * - OPENAI_API_KEY=xxx - Your OpenAI API key
  */
-import { test, expect, describe } from 'bun:test';
+import { test, expect, describe } from 'vitest';
 import { getAiClient } from '../client.js';
 import { AiProviderConfig } from '../../types/index.js';
 

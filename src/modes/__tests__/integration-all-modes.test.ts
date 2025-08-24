@@ -3,7 +3,7 @@
  * Tests the full pipeline: SCAN → VALIDATE → MITIGATE
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'vitest';
 import { PhaseExecutor } from '../phase-executor/index.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 import fs from 'fs/promises';
@@ -27,7 +27,7 @@ describe('Three-Phase Integration', () => {
     phaseDataStore = new Map();
     
     // Mock PhaseDataClient
-    mock.module('../phase-data-client/index.js', () => ({
+    vi.mock('../phase-data-client/index.js', () => ({
       PhaseDataClient: class {
         async storePhaseResults(phase: string, data: any, context: any) {
           const key = `${context.repo}-${context.issueNumber}-${phase}`;
@@ -101,7 +101,7 @@ describe('Three-Phase Integration', () => {
   describe('Full Pipeline', () => {
     test('should execute all three phases sequentially', async () => {
       // Mock git status
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: (cmd: string) => {
           if (cmd.includes('--porcelain')) {
             return ''; // Empty means clean
@@ -117,7 +117,7 @@ describe('Three-Phase Integration', () => {
       }));
 
       // Mock issue analysis
-      mock.module('../../ai/analyzer.js', () => ({
+      vi.mock('../../ai/analyzer.js', () => ({
         analyzeIssue: async () => ({
           canBeFixed: true,
           issueType: 'security',
@@ -128,7 +128,7 @@ describe('Three-Phase Integration', () => {
       }));
 
       // Mock test generation
-      mock.module('../../ai/test-generating-security-analyzer.js', () => ({
+      vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
           async analyzeWithTestGeneration() {
             return {
@@ -156,7 +156,7 @@ describe('Three-Phase Integration', () => {
       }));
 
       // Mock fix generation
-      mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      vi.mock('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit() {
             return {
@@ -200,7 +200,7 @@ describe('Three-Phase Integration', () => {
 
     test('should handle data passing between phases', async () => {
       // Mock implementations
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: (cmd: string) => {
           if (cmd.includes('--porcelain')) {
             return ''; // Empty means clean
@@ -213,7 +213,7 @@ describe('Three-Phase Integration', () => {
       let validationData: any;
 
       // SCAN phase
-      mock.module('../../ai/issue-analyzer.js', () => ({
+      vi.mock('../../ai/issue-analyzer.js', () => ({
         analyzeIssue: async () => {
           scanData = {
             canBeFixed: true,
@@ -231,7 +231,7 @@ describe('Three-Phase Integration', () => {
       expect(scanResult.success).toBe(true);
 
       // VALIDATE phase should receive scan data
-      mock.module('../../ai/test-generating-security-analyzer.js', () => ({
+      vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
           async analyzeWithTestGeneration(issue: any, config: any, codebaseFiles: any) {
             // Should receive scan data
@@ -268,7 +268,7 @@ describe('Three-Phase Integration', () => {
       expect(validateResult.success).toBe(true);
 
       // MITIGATE phase should receive validation data
-      mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      vi.mock('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit(issue: any, options: any) {
             // Should receive validation data with tests
@@ -291,7 +291,7 @@ describe('Three-Phase Integration', () => {
     });
 
     test('should stop pipeline if scan determines issue cannot be fixed', async () => {
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: (cmd: string) => {
           if (cmd.includes('--porcelain')) {
             return ''; // Empty means clean
@@ -300,7 +300,7 @@ describe('Three-Phase Integration', () => {
         }
       }));
 
-      mock.module('../../ai/analyzer.js', () => ({
+      vi.mock('../../ai/analyzer.js', () => ({
         analyzeIssue: async () => ({
           canBeFixed: false,
           reason: 'Issue is not a security vulnerability',
@@ -331,7 +331,7 @@ describe('Three-Phase Integration', () => {
 
   describe('Error Recovery', () => {
     test('should handle validation failure gracefully', async () => {
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: (cmd: string) => {
           if (cmd.includes('--porcelain')) {
             return ''; // Empty means clean
@@ -340,7 +340,7 @@ describe('Three-Phase Integration', () => {
         }
       }));
 
-      mock.module('../../ai/analyzer.js', () => ({
+      vi.mock('../../ai/analyzer.js', () => ({
         analyzeIssue: async () => ({
           canBeFixed: true,
           issueType: 'security'
@@ -348,7 +348,7 @@ describe('Three-Phase Integration', () => {
       }));
 
       // Make validation fail
-      mock.module('../../ai/test-generating-security-analyzer.js', () => ({
+      vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
           async analyzeWithTestGeneration() {
             throw new Error('AI service unavailable');
@@ -381,7 +381,7 @@ describe('Three-Phase Integration', () => {
 
     test('should handle mitigation failure and allow retry', async () => {
       // Setup successful scan and validation
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: (cmd: string) => {
           if (cmd.includes('--porcelain')) {
             return ''; // Empty means clean
@@ -390,14 +390,14 @@ describe('Three-Phase Integration', () => {
         }
       }));
 
-      mock.module('../../ai/analyzer.js', () => ({
+      vi.mock('../../ai/analyzer.js', () => ({
         analyzeIssue: async () => ({
           canBeFixed: true,
           issueType: 'security'
         })
       }));
 
-      mock.module('../../ai/test-generating-security-analyzer.js', () => ({
+      vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
           async analyzeWithTestGeneration() {
             return {
@@ -423,7 +423,7 @@ describe('Three-Phase Integration', () => {
       }));
 
       let attempts = 0;
-      mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      vi.mock('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit() {
             attempts++;
@@ -465,7 +465,7 @@ describe('Three-Phase Integration', () => {
   describe('Performance', () => {
     test('should complete full pipeline within reasonable time', async () => {
       // Mock all components with minimal delays
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: (cmd: string) => {
           if (cmd.includes('--porcelain')) {
             return ''; // Empty means clean
@@ -474,14 +474,14 @@ describe('Three-Phase Integration', () => {
         }
       }));
 
-      mock.module('../../ai/issue-analyzer.js', () => ({
+      vi.mock('../../ai/issue-analyzer.js', () => ({
         analyzeIssue: async () => {
           await new Promise(r => setTimeout(r, 10));
           return { canBeFixed: true };
         }
       }));
 
-      mock.module('../../ai/test-generating-security-analyzer.js', () => ({
+      vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
         TestGeneratingSecurityAnalyzer: class {
           async analyzeWithTestGeneration() {
             await new Promise(r => setTimeout(r, 10));
@@ -502,7 +502,7 @@ describe('Three-Phase Integration', () => {
         }
       }));
 
-      mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      vi.mock('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit() {
             await new Promise(r => setTimeout(r, 10));

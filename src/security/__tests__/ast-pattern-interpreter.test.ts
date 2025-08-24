@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { SecurityPattern, VulnerabilityType } from '../types.js';
 
 // Mock AST pattern with SQL injection detection

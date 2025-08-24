@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { SecurityDetectorV2 } from '../src/security/detector-v2';
 
 describe('Memory Investigation', () => {

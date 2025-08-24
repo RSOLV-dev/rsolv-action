@@ -7,7 +7,7 @@
  * 
  * Run with: VENDED_CREDENTIAL_E2E_TEST=true RSOLV_API_KEY=xxx bun test vended-credential-e2e.test.ts
  */
-import { describe, test, expect, beforeAll } from 'bun:test';
+import { describe, test, expect, beforeAll } from 'vitest';
 import { getAiClient } from '../client.js';
 import { AiProviderConfig } from '../../types/index.js';
 import { RSOLVCredentialManager } from '../../credentials/manager.js';

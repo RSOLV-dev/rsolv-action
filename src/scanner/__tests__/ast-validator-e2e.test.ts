@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ASTValidator } from '../ast-validator.js';
 import { RepositoryScanner } from '../repository-scanner.js';
 import { RsolvApiClient } from '../../external/api-client.js';

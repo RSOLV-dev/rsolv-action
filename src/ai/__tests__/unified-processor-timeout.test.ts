@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, jest, spyOn } from 'bun:test';
+import { describe, expect, test, beforeEach, jest, spyOn } from 'vitest';
 import { processIssues, ProcessingOptions } from '../unified-processor';
 import { ActionConfig, IssueContext } from '../../types/index.js';
 import * as analyzerModule from '../analyzer';
@@ -65,18 +65,18 @@ describe('Unified Processor Timeout Behavior', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('should use default context gathering timeout of 30 seconds', async () => {
     // Mock all dependencies
-    const analyzeIssueSpy = spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
-    const generateSolutionSpy = spyOn(solutionModule, 'generateSolution').mockResolvedValue({
+    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
+    const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
       success: true,
       message: 'Solution generated',
       changes: { 'test.ts': 'fixed content' }
     });
-    const createPullRequestSpy = spyOn(githubModule, 'createPullRequest').mockResolvedValue({
+    const createPullRequestSpy = vi.spyOn(githubModule, 'createPullRequest').mockResolvedValue({
       success: true,
       pullRequestUrl: 'https://github.com/test/repo/pull/1',
       message: 'PR created'
@@ -101,13 +101,13 @@ describe('Unified Processor Timeout Behavior', () => {
 
   test('should use custom context gathering timeout when specified', async () => {
     // Mock all dependencies
-    const analyzeIssueSpy = spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
-    const generateSolutionSpy = spyOn(solutionModule, 'generateSolution').mockResolvedValue({
+    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
+    const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
       success: true,
       message: 'Solution generated',
       changes: { 'test.ts': 'fixed content' }
     });
-    const createPullRequestSpy = spyOn(githubModule, 'createPullRequest').mockResolvedValue({
+    const createPullRequestSpy = vi.spyOn(githubModule, 'createPullRequest').mockResolvedValue({
       success: true,
       pullRequestUrl: 'https://github.com/test/repo/pull/1',
       message: 'PR created'
@@ -134,7 +134,7 @@ describe('Unified Processor Timeout Behavior', () => {
 
   test('should handle analysis failure gracefully', async () => {
     // Mock analyzer to fail
-    const analyzeIssueSpy = spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue({
+    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue({
       canBeFixed: false,
       complexity: 'high' as const,
       estimatedTime: 0,
@@ -142,7 +142,7 @@ describe('Unified Processor Timeout Behavior', () => {
       suggestedApproach: 'Cannot be fixed'
     });
     
-    const generateSolutionSpy = spyOn(solutionModule, 'generateSolution').mockResolvedValue({
+    const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
       success: true,
       message: 'Solution generated',
       changes: { 'test.ts': 'fixed content' }
@@ -161,8 +161,8 @@ describe('Unified Processor Timeout Behavior', () => {
 
   test('should handle solution generation failure', async () => {
     // Mock dependencies
-    const analyzeIssueSpy = spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
-    const generateSolutionSpy = spyOn(solutionModule, 'generateSolution').mockResolvedValue({
+    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
+    const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
       success: false,
       message: 'Solution generation failed'
     });
@@ -179,13 +179,13 @@ describe('Unified Processor Timeout Behavior', () => {
 
   test('should set different configurations based on context depth', async () => {
     // Mock all dependencies
-    const analyzeIssueSpy = spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
-    const generateSolutionSpy = spyOn(solutionModule, 'generateSolution').mockResolvedValue({
+    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
+    const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
       success: true,
       message: 'Solution generated',
       changes: { 'test.ts': 'fixed content' }
     });
-    const createPullRequestSpy = spyOn(githubModule, 'createPullRequest').mockResolvedValue({
+    const createPullRequestSpy = vi.spyOn(githubModule, 'createPullRequest').mockResolvedValue({
       success: true,
       pullRequestUrl: 'https://github.com/test/repo/pull/1',
       message: 'PR created'
@@ -194,7 +194,7 @@ describe('Unified Processor Timeout Behavior', () => {
     const depths: Array<'basic' | 'standard' | 'deep' | 'ultra'> = ['basic', 'standard', 'deep', 'ultra'];
     
     for (const depth of depths) {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       
       const options: ProcessingOptions = {
         enableEnhancedContext: true,
@@ -217,7 +217,7 @@ describe('Unified Processor Timeout Behavior', () => {
     
     // Mock dependencies with different responses for each issue
     let callCount = 0;
-    const analyzeIssueSpy = spyOn(analyzerModule, 'analyzeIssue').mockImplementation(async () => {
+    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockImplementation(async () => {
       callCount++;
       if (callCount === 1) {
         await new Promise(resolve => setTimeout(resolve, 100)); // Add small delay
@@ -225,13 +225,13 @@ describe('Unified Processor Timeout Behavior', () => {
       return mockAnalysis;
     });
     
-    const generateSolutionSpy = spyOn(solutionModule, 'generateSolution').mockResolvedValue({
+    const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
       success: true,
       message: 'Solution generated',
       changes: { 'test.ts': 'fixed content' }
     });
     
-    const createPullRequestSpy = spyOn(githubModule, 'createPullRequest').mockResolvedValue({
+    const createPullRequestSpy = vi.spyOn(githubModule, 'createPullRequest').mockResolvedValue({
       success: true,
       pullRequestUrl: 'https://github.com/test/repo/pull/1',
       message: 'PR created'
@@ -250,7 +250,7 @@ describe('Unified Processor Timeout Behavior', () => {
 
   test('should handle errors with sanitized messages', async () => {
     // Make analyze fail with sensitive error
-    const analyzeIssueSpy = spyOn(analyzerModule, 'analyzeIssue').mockRejectedValue(
+    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockRejectedValue(
       new Error('Failed with API key: sk-123456')
     );
 
@@ -267,12 +267,12 @@ describe('Unified Processor Timeout Behavior', () => {
 
   test('should include processing time in results', async () => {
     // Mock dependencies with artificial delays
-    const analyzeIssueSpy = spyOn(analyzerModule, 'analyzeIssue').mockImplementation(async () => {
+    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockImplementation(async () => {
       await new Promise(resolve => setTimeout(resolve, 100));
       return mockAnalysis;
     });
     
-    const generateSolutionSpy = spyOn(solutionModule, 'generateSolution').mockImplementation(async () => {
+    const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockImplementation(async () => {
       await new Promise(resolve => setTimeout(resolve, 100));
       return {
         success: true,
@@ -281,7 +281,7 @@ describe('Unified Processor Timeout Behavior', () => {
       };
     });
     
-    const createPullRequestSpy = spyOn(githubModule, 'createPullRequest').mockImplementation(async () => {
+    const createPullRequestSpy = vi.spyOn(githubModule, 'createPullRequest').mockImplementation(async () => {
       await new Promise(resolve => setTimeout(resolve, 100));
       return {
         success: true,

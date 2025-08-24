@@ -161,7 +161,7 @@ describe('Structured Phased Prompting - RED Phase', () => {
   describe('Phase 3: Integration with generateSolutionWithGit', () => {
     it('should use structured phases when configured', () => {
       // Verify the adapter was created with useStructuredPhases
-      const generateSpy = jest.spyOn(adapter, 'generateSolutionWithGit');
+      const generateSpy = jest.vi.spyOn(adapter, 'generateSolutionWithGit');
       
       adapter.generateSolutionWithGit(mockIssueContext, mockAnalysis);
       
@@ -172,7 +172,7 @@ describe('Structured Phased Prompting - RED Phase', () => {
 
     it('should return error when Phase 1 fails', async () => {
       // Mock super.generateSolution to return success with messages
-      jest.spyOn(ClaudeCodeAdapter.prototype, 'generateSolution').mockResolvedValue({
+      jest.vi.spyOn(ClaudeCodeAdapter.prototype, 'generateSolution').mockResolvedValue({
         success: true,
         message: 'Test message',
         changes: {},
@@ -183,7 +183,7 @@ describe('Structured Phased Prompting - RED Phase', () => {
       });
       
       // Mock no file edits
-      jest.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue([]);
+      jest.vi.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue([]);
       
       const result = await adapter.generateSolutionWithGit(
         mockIssueContext,
@@ -196,7 +196,7 @@ describe('Structured Phased Prompting - RED Phase', () => {
 
     it('should return error when JSON is provided before editing', async () => {
       // Mock super.generateSolution to return success with messages
-      jest.spyOn(ClaudeCodeAdapter.prototype, 'generateSolution').mockResolvedValue({
+      jest.vi.spyOn(ClaudeCodeAdapter.prototype, 'generateSolution').mockResolvedValue({
         success: true,
         message: 'Test message',
         changes: {},
@@ -207,7 +207,7 @@ describe('Structured Phased Prompting - RED Phase', () => {
       });
       
       // Mock no file edits
-      jest.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue([]);
+      jest.vi.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue([]);
       
       const result = await adapter.generateSolutionWithGit(
         mockIssueContext,
@@ -220,7 +220,7 @@ describe('Structured Phased Prompting - RED Phase', () => {
 
     it('should succeed when phases complete in correct order', async () => {
       // Mock super.generateSolution to return success with proper phase completion
-      jest.spyOn(ClaudeCodeAdapter.prototype, 'generateSolution').mockResolvedValue({
+      jest.vi.spyOn(ClaudeCodeAdapter.prototype, 'generateSolution').mockResolvedValue({
         success: true,
         message: 'Test message',
         changes: { 'src/render.js': 'fixed content' },
@@ -232,13 +232,13 @@ describe('Structured Phased Prompting - RED Phase', () => {
       });
       
       // Mock successful file modifications
-      jest.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue(['src/render.js']);
-      jest.spyOn(adapter as any, 'getDiffStats').mockReturnValue({
+      jest.vi.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue(['src/render.js']);
+      jest.vi.spyOn(adapter as any, 'getDiffStats').mockReturnValue({
         filesChanged: 1,
         insertions: 5,
         deletions: 2
       });
-      jest.spyOn(adapter as any, 'createCommit').mockReturnValue('abc123');
+      jest.vi.spyOn(adapter as any, 'createCommit').mockReturnValue('abc123');
       
       const result = await adapter.generateSolutionWithGit(
         mockIssueContext,
@@ -253,7 +253,7 @@ describe('Structured Phased Prompting - RED Phase', () => {
   describe('Phase 4: Metrics and Logging', () => {
     it('should log phase status when using structured phases', async () => {
       // Mock super.generateSolution
-      jest.spyOn(ClaudeCodeAdapter.prototype, 'generateSolution').mockResolvedValue({
+      jest.vi.spyOn(ClaudeCodeAdapter.prototype, 'generateSolution').mockResolvedValue({
         success: true,
         message: 'Test message',
         changes: { 'src/render.js': 'fixed content' },
@@ -265,13 +265,13 @@ describe('Structured Phased Prompting - RED Phase', () => {
       });
       
       // Mock file modifications
-      jest.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue(['src/render.js']);
-      jest.spyOn(adapter as any, 'getDiffStats').mockReturnValue({
+      jest.vi.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue(['src/render.js']);
+      jest.vi.spyOn(adapter as any, 'getDiffStats').mockReturnValue({
         filesChanged: 1,
         insertions: 5,
         deletions: 2
       });
-      jest.spyOn(adapter as any, 'createCommit').mockReturnValue('abc123');
+      jest.vi.spyOn(adapter as any, 'createCommit').mockReturnValue('abc123');
       
       const result = await adapter.generateSolutionWithGit(
         mockIssueContext,

@@ -1,11 +1,11 @@
-import { describe, expect, test, beforeEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, mock } from 'vitest';
 import { EnhancedClaudeCodeAdapter } from '../claude-code-enhanced.js';
 import { AIConfig } from '../../types.js';
 import { IssueContext } from '../../../types/index.js';
 import path from 'path';
 
 // Mock the parent class
-mock.module('../claude-code.js', () => ({
+vi.mock('../claude-code.js', () => ({
   ClaudeCodeAdapter: class MockClaudeCodeAdapter {
     tempDir: string;
     
@@ -27,7 +27,7 @@ mock.module('../claude-code.js', () => ({
 }));
 
 // Mock logger
-mock.module('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger.js', () => ({
   logger: {
     info: mock(() => {}),
     error: mock(() => {}),

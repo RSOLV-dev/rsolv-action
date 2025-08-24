@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, mock } from 'vitest';
 import { RSOLVCredentialManager } from '../manager';
 import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 

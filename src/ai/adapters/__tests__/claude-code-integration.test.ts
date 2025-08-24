@@ -1,4 +1,4 @@
-import { describe, expect, test, mock, spyOn } from 'bun:test';
+import { describe, expect, test, mock, spyOn } from 'vitest';
 import { ClaudeCodeAdapter } from '../claude-code.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
@@ -21,7 +21,7 @@ describe('Claude Code CLI Integration', () => {
 
   test.skipIf(skipTest)('should check if Claude CLI is available', async () => {
     // Mock fs.existsSync to return true for the test
-    const existsSyncSpy = spyOn(fs, 'existsSync').mockReturnValue(true);
+    const existsSyncSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
     
     const adapter = new ClaudeCodeAdapter({
       apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || 'test-key',

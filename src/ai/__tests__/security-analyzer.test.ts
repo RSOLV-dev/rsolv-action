@@ -1,10 +1,10 @@
-import { describe, it, expect, mock } from 'bun:test';
+import { describe, it, expect, mock } from 'vitest';
 import { SecurityAwareAnalyzer } from '../security-analyzer.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 
 // Mock the AI client using require.resolve to avoid mock pollution
 const clientPath = require.resolve('../client');
-mock.module(clientPath, () => ({
+vi.mock(clientPath, () => ({
   getAiClient: () => ({
     complete: async (prompt: string) => {
       // Return different responses based on prompt content

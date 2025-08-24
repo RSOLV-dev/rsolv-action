@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { getMinimalPatterns, getMinimalPatternsByLanguage } from '../minimal-patterns.js';
 import { SecurityPattern, VulnerabilityType } from '../types.js';
 

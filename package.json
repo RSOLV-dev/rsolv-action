@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
-    "test": "./test-runner.sh all",
+    "test": "vitest",
+    "test:bun-old": "./test-runner.sh all",
     "test:all": "./test-runner.sh all",
     "test:sequential": "./test-runner.sh sequential",
     "test:isolated": "./test-runner.sh isolated",
@@ -45,9 +46,12 @@
     "@types/node": "^20.17.50",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "@vitest/ui": "^3.2.4",
     "bun-types": "latest",
     "eslint": "^8.57.1",
+    "happy-dom": "^18.0.1",
     "nock": "^14.0.5",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }

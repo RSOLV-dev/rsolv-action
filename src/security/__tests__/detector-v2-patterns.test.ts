@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { SecurityDetectorV2 } from '../detector-v2.js';
 import { LocalPatternSource } from '../pattern-source.js';
 

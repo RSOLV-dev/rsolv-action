@@ -127,7 +127,7 @@ function processInput(userInput) {
 
     it('should handle conversation flow correctly', async () => {
       // Spy on the query function to verify two-phase flow
-      const querySpy = jest.spyOn(adapter as any, 'executeClaudeQuery');
+      const querySpy = jest.vi.spyOn(adapter as any, 'executeClaudeQuery');
       
       const result = await adapter.generateSolutionWithTwoPhases(
         mockIssueContext,
@@ -160,7 +160,7 @@ function processInput(userInput) {
 
     it('should handle phase failures gracefully', async () => {
       // Mock phase 1 failure (no files edited)
-      jest.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue([]);
+      jest.vi.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue([]);
       
       const result = await adapter.generateSolutionWithTwoPhases(
         mockIssueContext,

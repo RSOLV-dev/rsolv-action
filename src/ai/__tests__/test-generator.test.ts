@@ -10,7 +10,7 @@
  * 3. REFACTOR: Improve implementation while keeping tests green
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach } from 'vitest';
 import type { IssueContext, ActionConfig } from '../../types/index.js';
 import type { Vulnerability } from '../types.js';
 

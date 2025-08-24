@@ -9,7 +9,7 @@
  * 4. Document side effects (git operations, PR creation)
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { processIssueWithGit, getMaxIterations } from '../git-based-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 import * as child_process from 'child_process';
@@ -19,7 +19,7 @@ let gitStatusReturn = '';
 let gitRevParseReturn = 'abc123def456\n';
 
 // Mock child_process with dynamic returns
-mock.module('child_process', () => ({
+vi.mock('child_process', () => ({
   execSync: (command: string, options?: any) => {
     if (command === 'git rev-parse HEAD') {
       return gitRevParseReturn;
@@ -38,7 +38,7 @@ mock.module('child_process', () => ({
 const mockExistsSync = mock(() => true);
 const mockReadFileSync = mock(() => 'file content');
 
-mock.module('fs', () => ({
+vi.mock('fs', () => ({
   existsSync: mockExistsSync,
   readFileSync: mockReadFileSync,
   default: {
@@ -48,7 +48,7 @@ mock.module('fs', () => ({
 }));
 
 // Mock logger
-mock.module('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger.js', () => ({
   logger: {
     info: mock(() => {}),
     error: mock(() => {}),
@@ -69,7 +69,7 @@ const mockAnalyzeIssue = mock(async () => ({
   cwe: 'CWE-89'
 }));
 
-mock.module('../analyzer.js', () => ({
+vi.mock('../analyzer.js', () => ({
   analyzeIssue: mockAnalyzeIssue
 }));
 
@@ -90,7 +90,7 @@ class MockTestGeneratingSecurityAnalyzer {
   analyzeWithTestGeneration = mockAnalyzeWithTestGeneration;
 }
 
-mock.module('../test-generating-security-analyzer.js', () => ({
+vi.mock('../test-generating-security-analyzer.js', () => ({
   TestGeneratingSecurityAnalyzer: MockTestGeneratingSecurityAnalyzer
 }));
 
@@ -113,7 +113,7 @@ class MockGitBasedTestValidator {
   validateFixWithTests = mockValidateFixWithTests;
 }
 
-mock.module('../git-based-test-validator.js', () => ({
+vi.mock('../git-based-test-validator.js', () => ({
   GitBasedTestValidator: MockGitBasedTestValidator
 }));
 
@@ -125,7 +125,7 @@ const mockCreatePullRequestFromGit = mock(async () => ({
   pullRequestNumber: 1
 }));
 
-mock.module('../../github/pr-git.js', () => ({
+vi.mock('../../github/pr-git.js', () => ({
   createPullRequestFromGit: mockCreatePullRequestFromGit
 }));
 
@@ -136,7 +136,7 @@ const mockCreateEducationalPullRequest = mock(async () => ({
   pullRequestNumber: 1
 }));
 
-mock.module('../../github/pr-git-educational.js', () => ({
+vi.mock('../../github/pr-git-educational.js', () => ({
   createEducationalPullRequest: mockCreateEducationalPullRequest
 }));
 
@@ -154,19 +154,19 @@ class MockGitBasedClaudeCodeAdapter {
   generateSolutionWithGit = mockGenerateSolutionWithGit;
 }
 
-mock.module('../adapters/claude-code-git.js', () => ({
+vi.mock('../adapters/claude-code-git.js', () => ({
   GitBasedClaudeCodeAdapter: MockGitBasedClaudeCodeAdapter
 }));
 
 // Mock vulnerable file scanner
-mock.module('../vulnerable-file-scanner.js', () => ({
+vi.mock('../vulnerable-file-scanner.js', () => ({
   getVulnerableFiles: mock(async () => new Map())
 }));
 
 // Mock credential manager
 class MockCredentialManager {}
 
-mock.module('../../credentials/singleton.js', () => ({
+vi.mock('../../credentials/singleton.js', () => ({
   CredentialManagerSingleton: {
     getInstance: mock(async () => new MockCredentialManager())
   }
@@ -506,7 +506,7 @@ describe('processIssueWithGit - Characterization Tests', () => {
       const originalExecSync = child_process.execSync;
       
       // Create a mock that throws on git status
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: (command: string, options?: any) => {
           if (command === 'git status --porcelain') {
             throw new Error('Not a git repository');
@@ -524,7 +524,7 @@ describe('processIssueWithGit - Characterization Tests', () => {
       expect(result.error).toBe('Uncommitted changes in: unknown');
       
       // Restore original mock
-      mock.module('child_process', () => ({
+      vi.mock('child_process', () => ({
         execSync: (command: string, options?: any) => {
           if (command === 'git rev-parse HEAD') {
             return gitRevParseReturn;

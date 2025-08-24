@@ -3,7 +3,7 @@
  * Following RFC-041 simple switch-based execution for v1
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'vitest';
 import type { IssueContext, ActionConfig } from '../../types/index.js';
 
 describe('PhaseExecutor', () => {
@@ -16,7 +16,7 @@ describe('PhaseExecutor', () => {
     mock.restore();
     
     // Mock AI components globally to prevent configuration errors
-    mock.module('../../ai/adapters/claude-code-git.js', () => ({
+    vi.mock('../../ai/adapters/claude-code-git.js', () => ({
       GitBasedClaudeCodeAdapter: class {
         async generateSolutionWithGit() {
           return {
@@ -30,7 +30,7 @@ describe('PhaseExecutor', () => {
       }
     }));
     
-    mock.module('../../ai/git-based-test-validator.js', () => ({
+    vi.mock('../../ai/git-based-test-validator.js', () => ({
       GitBasedTestValidator: class {
         async validateFixWithTests() {
           return { isValidFix: true };
@@ -276,7 +276,7 @@ describe('PhaseExecutor', () => {
   describe('vendor detection regression tests', () => {
     test('should handle vulnerabilities with singular "file" property', async () => {
       // Mock GitHub API globally first
-      mock.module('../../github/api.js', () => ({
+      vi.mock('../../github/api.js', () => ({
         getIssue: mock(async () => ({
           title: 'Security Vulnerability: weak_cryptography',
           body: JSON.stringify({ 
@@ -291,7 +291,7 @@ describe('PhaseExecutor', () => {
 
       // Mock vendor detection
       let capturedFiles: string[] = [];
-      mock.module('../../vendor/index.js', () => ({
+      vi.mock('../../vendor/index.js', () => ({
         VendorDetectionIntegration: class {
           async isVendorFile(file: string) {
             capturedFiles.push(file);
@@ -304,7 +304,7 @@ describe('PhaseExecutor', () => {
       }));
 
       // Mock phase data client
-      mock.module('../../external/phase-data-client.js', () => ({
+      vi.mock('../../external/phase-data-client.js', () => ({
         PhaseDataClient: class {
           async retrievePhaseResults() { return null; }
           async storePhaseResults() { return { success: true }; }
@@ -326,7 +326,7 @@ describe('PhaseExecutor', () => {
 
     test('should handle vulnerabilities with plural "files" property', async () => {
       // Mock GitHub API globally first
-      mock.module('../../github/api.js', () => ({
+      vi.mock('../../github/api.js', () => ({
         getIssue: mock(async () => ({
           title: 'Security Vulnerability: information_disclosure',
           body: JSON.stringify({ 
@@ -344,7 +344,7 @@ describe('PhaseExecutor', () => {
 
       // Mock vendor detection
       let capturedFiles: string[] = [];
-      mock.module('../../vendor/index.js', () => ({
+      vi.mock('../../vendor/index.js', () => ({
         VendorDetectionIntegration: class {
           async isVendorFile(file: string) {
             capturedFiles.push(file);
@@ -357,7 +357,7 @@ describe('PhaseExecutor', () => {
       }));
 
       // Mock phase data client
-      mock.module('../../external/phase-data-client.js', () => ({
+      vi.mock('../../external/phase-data-client.js', () => ({
         PhaseDataClient: class {
           async retrievePhaseResults() { return null; }
           async storePhaseResults() { return { success: true }; }
@@ -380,7 +380,7 @@ describe('PhaseExecutor', () => {
 
     test('should handle mixed vulnerabilities with both file and files properties', async () => {
       // Mock GitHub API globally first
-      mock.module('../../github/api.js', () => ({
+      vi.mock('../../github/api.js', () => ({
         getIssue: mock(async () => ({
           title: 'Multiple vulnerabilities found',
           body: JSON.stringify({ 
@@ -396,7 +396,7 @@ describe('PhaseExecutor', () => {
 
       // Mock vendor detection
       let capturedFiles: string[] = [];
-      mock.module('../../vendor/index.js', () => ({
+      vi.mock('../../vendor/index.js', () => ({
         VendorDetectionIntegration: class {
           async isVendorFile(file: string) {
             capturedFiles.push(file);
@@ -409,7 +409,7 @@ describe('PhaseExecutor', () => {
       }));
 
       // Mock phase data client
-      mock.module('../../external/phase-data-client.js', () => ({
+      vi.mock('../../external/phase-data-client.js', () => ({
         PhaseDataClient: class {
           async retrievePhaseResults() { return null; }
           async storePhaseResults() { return { success: true }; }

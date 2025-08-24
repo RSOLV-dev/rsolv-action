@@ -5,7 +5,7 @@
  * These tests follow TDD - RED phase (all should fail initially)
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach } from 'vitest';
 import { TestFrameworkDetector } from '../test-framework-detector.js';
 import type { DetectionResult, FrameworkInfo } from '../test-framework-detector.js';
 

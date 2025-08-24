@@ -1,12 +1,12 @@
 /**
  * Tests for Claude Code adapter
  */
-import { test, expect, mock, describe } from 'bun:test';
+import { test, expect, mock, describe } from 'vitest';
 import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
 import { AIConfig } from '../types.js';
 
 // Mock the logger to avoid console output during tests
-mock.module('../../utils/logger', () => ({
+vi.mock('../../utils/logger', () => ({
   logger: {
     info: () => {},
     warn: () => {},
@@ -17,7 +17,7 @@ mock.module('../../utils/logger', () => ({
 
 describe('Claude Code Adapter', () => {
   // Mock child_process for CLI availability check
-  mock.module('child_process', () => {
+  vi.mock('child_process', () => {
     return {
       spawn: (command: string, args: string[], _options: any) => {
         const mockProcess = {

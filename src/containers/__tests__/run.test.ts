@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from 'bun:test';
+import { describe, expect, test, beforeEach } from 'vitest';
 import { runInContainer } from '../run.js';
 import { MockDockerClient } from '../docker-client.js';
 import { ActionConfig } from '../../types/index.js';

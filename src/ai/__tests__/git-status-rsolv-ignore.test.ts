@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, mock, jest, spyOn } from 'bun:test';
+import { describe, it, expect, beforeEach, vi, jest, spyOn } from 'vitest';
 import * as child_process from 'child_process';
 import { processIssueWithGit } from '../git-based-processor.js';
 
 describe('Git Status - .rsolv Directory Handling', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
   
   it('should ignore .rsolv/ directory in git status check', async () => {
     // Mock git status to return only .rsolv files
-    spyOn(child_process, 'execSync').mockImplementation((cmd: string) => {
+    vi.spyOn(child_process, 'execSync').mockImplementation((cmd: string) => {
       if (cmd === 'git status --porcelain') {
         return '?? .rsolv/phase-data/test-123.json\n?? .rsolv/cache/data.json';
       }
@@ -53,7 +53,7 @@ describe('Git Status - .rsolv Directory Handling', () => {
   
   it('should still detect real uncommitted changes', async () => {
     // Mock git status to return real changes plus .rsolv files
-    spyOn(child_process, 'execSync').mockImplementation((cmd: string) => {
+    vi.spyOn(child_process, 'execSync').mockImplementation((cmd: string) => {
       if (cmd === 'git status --porcelain') {
         return ' M src/index.js\n?? .rsolv/phase-data/test.json\n M package.json';
       }

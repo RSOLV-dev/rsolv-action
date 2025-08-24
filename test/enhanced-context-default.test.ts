@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeEach, mock, jest } from 'bun:test';
+import { describe, it, expect, beforeEach, vi, jest } from 'vitest';
 
 // Mock modules before importing dependencies
-const analyzeIssueMock = jest.fn();
-const gatherDeepContextMock = jest.fn();
+const analyzeIssueMock = vi.fn();
+const gatherDeepContextMock = vi.fn();
 
-mock.module('../src/ai/analyzer', () => ({
+vi.mock('../src/ai/analyzer', () => ({
   analyzeIssue: analyzeIssueMock
 }));
 
-mock.module('../src/ai/adapters/claude-code-enhanced', () => ({
+vi.mock('../src/ai/adapters/claude-code-enhanced', () => ({
   EnhancedClaudeCodeAdapter: class {
     gatherDeepContext = gatherDeepContextMock;
   }
@@ -54,7 +54,7 @@ describe('Enhanced Context Default Behavior', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Setup default mock behavior
     analyzeIssueMock.mockResolvedValue({

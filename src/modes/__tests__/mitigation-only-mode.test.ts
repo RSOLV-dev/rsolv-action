@@ -4,7 +4,7 @@
  * These tests should FAIL initially (RED phase)
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'vitest';
 import { PhaseExecutor } from '../phase-executor/index.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 
@@ -25,7 +25,7 @@ describe('Mitigation-Only Mode', () => {
     }
     
     // Mock Claude Code adapter to prevent actual execution
-    mock.module('../../ai/adapters/claude-code-git.js', () => ({
+    vi.mock('../../ai/adapters/claude-code-git.js', () => ({
       GitBasedClaudeCodeAdapter: class {
         async generateSolutionWithGit() {
           return {
@@ -39,7 +39,7 @@ describe('Mitigation-Only Mode', () => {
     }));
     
     // Mock git status to be clean
-    mock.module('child_process', () => ({
+    vi.mock('child_process', () => ({
       execSync: mock((cmd: string) => {
         if (cmd.includes('git status --porcelain')) {
           return ''; // Clean status
@@ -180,7 +180,7 @@ describe('Mitigation-Only Mode', () => {
         scan: { canBeFixed: true }
       };
 
-      mock.module('../phase-data-client/index.js', () => ({
+      vi.mock('../phase-data-client/index.js', () => ({
         PhaseDataClient: class {
           async retrievePhaseResults() {
             return mockPhaseData;
@@ -211,7 +211,7 @@ describe('Mitigation-Only Mode', () => {
   describe('Fix Application', () => {
     test('should apply fix using GitBasedClaudeCodeAdapter', async () => {
       // Mock the adapter
-      mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      vi.mock('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit() {
             return {
@@ -239,7 +239,7 @@ describe('Mitigation-Only Mode', () => {
 
     test('should verify tests pass after fix (GREEN phase)', async () => {
       // Mock test runner
-      mock.module('../../utils/test-runner.js', () => ({
+      vi.mock('../../utils/test-runner.js', () => ({
         runTests: async () => ({
           passed: true,
           failed: 0,
@@ -262,7 +262,7 @@ describe('Mitigation-Only Mode', () => {
       let attemptCount = 0;
       
       // Mock test runner to fail first time, pass second
-      mock.module('../../utils/test-runner.js', () => ({
+      vi.mock('../../utils/test-runner.js', () => ({
         runTests: async () => {
           attemptCount++;
           return {
@@ -301,7 +301,7 @@ describe('Mitigation-Only Mode', () => {
   describe('PR Creation', () => {
     test('should create educational PR with test results', async () => {
       // Mock GitHub API
-      mock.module('../../utils/github-client.js', () => ({
+      vi.mock('../../utils/github-client.js', () => ({
         createPullRequest: async () => ({
           number: 790,
           url: 'https://github.com/test/webapp/pull/790',
@@ -326,7 +326,7 @@ describe('Mitigation-Only Mode', () => {
       let prDescription = '';
       
       // Mock GitHub to capture PR description
-      mock.module('../../utils/github-client.js', () => ({
+      vi.mock('../../utils/github-client.js', () => ({
         createPullRequest: async (options: any) => {
           prDescription = options.body;
           return {
@@ -353,7 +353,7 @@ describe('Mitigation-Only Mode', () => {
       let prDescription = '';
       
       // Mock GitHub
-      mock.module('../../utils/github-client.js', () => ({
+      vi.mock('../../utils/github-client.js', () => ({
         createPullRequest: async (options: any) => {
           prDescription = options.body;
           return {
@@ -413,7 +413,7 @@ describe('Mitigation-Only Mode', () => {
       const issue2 = { ...mockIssue, number: 791, id: 'issue-791' };
       
       // Make second issue fail
-      mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      vi.mock('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit(issue: any) {
             if (issue.number === 791) {
@@ -465,7 +465,7 @@ describe('Mitigation-Only Mode', () => {
 
     test('should handle test execution failures', async () => {
       // Mock test runner to always fail
-      mock.module('../../utils/test-runner.js', () => ({
+      vi.mock('../../utils/test-runner.js', () => ({
         runTests: async () => {
           throw new Error('Test environment not available');
         }
@@ -486,7 +486,7 @@ describe('Mitigation-Only Mode', () => {
 
     test('should timeout if fix takes too long', async () => {
       // Mock slow fix generation
-      mock.module('../../ai/adapters/claude-code-git.js', () => ({
+      vi.mock('../../ai/adapters/claude-code-git.js', () => ({
         GitBasedClaudeCodeAdapter: class {
           async generateSolutionWithGit() {
             await new Promise(resolve => setTimeout(resolve, 10000));

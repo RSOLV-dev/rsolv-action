@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock, jest, spyOn } from 'bun:test';
-const vi = { fn: jest.fn, clearAllMocks: jest.clearAllMocks, restoreAllMocks: jest.restoreAllMocks };
+import { describe, it, expect, beforeEach, afterEach, vi, jest, spyOn } from 'vitest';
 import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 
 // Mock fetch globally
@@ -9,7 +8,7 @@ describe('Credential Lifecycle Issues - TDD', () => {
   let mockFetch: any;
   
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockFetch = global.fetch as any;
   });
 

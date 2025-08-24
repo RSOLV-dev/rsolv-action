@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, mock } from 'vitest';
 import { getAiClient } from '../client';
 import { AiProviderConfig } from '../../types';
 import { setupFetchMock, mockAIResponse } from '../../../test-helpers/simple-mocks';

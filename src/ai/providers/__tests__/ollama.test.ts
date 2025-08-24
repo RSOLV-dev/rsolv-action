@@ -1,8 +1,8 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, mock } from 'vitest';
 import { AIConfig } from '../../types.js';
 
 // Mock logger
-mock.module('../../../utils/logger', () => {
+vi.mock('../../../utils/logger', () => {
   return {
     logger: {
       info: () => {},

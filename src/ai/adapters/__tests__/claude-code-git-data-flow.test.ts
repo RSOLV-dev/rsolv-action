@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
 import { IssueContext } from '../../../types/index.js';
 
@@ -7,7 +7,7 @@ describe('GitBasedClaudeCodeAdapter - Data Flow Tests', () => {
   
   beforeEach(() => {
     // Mock the logger to capture debug output
-    mock.module('../../../utils/logger.js', () => ({
+    vi.mock('../../../utils/logger.js', () => ({
       logger: {
         info: mock(() => {}),
         warn: mock(() => {}),

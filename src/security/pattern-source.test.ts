@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { 
   LocalPatternSource, 
   ApiPatternSource, 
@@ -8,7 +8,7 @@ import {
 import { VulnerabilityType } from './types.js';
 
 // Mock the logger module
-mock.module('../utils/logger.js', () => ({
+vi.mock('../utils/logger.js', () => ({
   logger: {
     info: mock(() => {}),
     warn: mock(() => {}),

@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, mock, jest, spyOn } from 'bun:test';
-const vi = { fn: jest.fn, clearAllMocks: jest.clearAllMocks, restoreAllMocks: jest.restoreAllMocks };
+import { describe, it, expect, beforeEach, vi, jest, spyOn } from 'vitest';
 import { ensureLabelsExist } from '../label-manager.js';
 
 // Mock fetch globally
@@ -7,7 +6,7 @@ global.fetch = vi.fn();
 
 describe('Label Manager', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should create missing labels', async () => {

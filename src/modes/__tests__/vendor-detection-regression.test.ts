@@ -3,7 +3,7 @@
  * Tests that the fix correctly handles both 'file' and 'files' properties
  */
 
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, mock } from 'vitest';
 import type { ActionConfig } from '../../types/index.js';
 
 describe('Vendor Detection Regression Tests (RFC-047)', () => {
@@ -26,7 +26,7 @@ describe('Vendor Detection Regression Tests (RFC-047)', () => {
     } as ActionConfig;
 
     // Mock all dependencies before import
-    mock.module('../../github/api.js', () => ({
+    vi.mock('../../github/api.js', () => ({
       getIssue: mock(async (owner: string, repo: string, issueNumber: number) => {
         // Return different data based on issue number for different tests
         if (issueNumber === 1) {
@@ -72,7 +72,7 @@ describe('Vendor Detection Regression Tests (RFC-047)', () => {
     }));
 
     // Mock vendor detection to capture files
-    mock.module('../../vendor/index.js', () => ({
+    vi.mock('../../vendor/index.js', () => ({
       VendorDetectionIntegration: class {
         async isVendorFile(file: string) {
           capturedFiles.push(file);
@@ -85,7 +85,7 @@ describe('Vendor Detection Regression Tests (RFC-047)', () => {
     }));
 
     // Mock phase data client
-    mock.module('../../external/phase-data-client.js', () => ({
+    vi.mock('../../external/phase-data-client.js', () => ({
       PhaseDataClient: class {
         async retrievePhaseResults() { return null; }
         async storePhaseResults() { return { success: true }; }
@@ -93,7 +93,7 @@ describe('Vendor Detection Regression Tests (RFC-047)', () => {
     }));
 
     // Mock AI components
-    mock.module('../../ai/adapters/claude-code-git.js', () => ({
+    vi.mock('../../ai/adapters/claude-code-git.js', () => ({
       GitBasedClaudeCodeAdapter: class {
         async generateSolutionWithGit() {
           return {
@@ -107,7 +107,7 @@ describe('Vendor Detection Regression Tests (RFC-047)', () => {
       }
     }));
     
-    mock.module('../../ai/git-based-test-validator.js', () => ({
+    vi.mock('../../ai/git-based-test-validator.js', () => ({
       GitBasedTestValidator: class {
         async validateFixWithTests() {
           return { isValidFix: true };

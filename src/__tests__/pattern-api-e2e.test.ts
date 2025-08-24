@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll, afterAll, mock } from 'bun:test';
+import { describe, test, expect, beforeAll, afterAll, mock } from 'vitest';
 import { SecurityDetectorV2 } from '../security/detector-v2';
 import { PatternAPIClient } from '../security/pattern-api-client';
 import type { SecurityPattern, SecurityIssue } from '../security/types';
@@ -8,7 +8,7 @@ import { VulnerabilityType } from '../security/types';
 import { createServer, Server } from 'http';
 
 // Disable the global fetch mock for this E2E test
-mock.module('node:https', () => ({
+vi.mock('node:https', () => ({
   default: {}
 }));
 

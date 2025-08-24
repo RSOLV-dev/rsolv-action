@@ -1,5 +1,4 @@
-import { describe, it, expect, mock, jest, spyOn, beforeEach, afterEach } from 'bun:test';
-const vi = { fn: jest.fn, clearAllMocks: jest.clearAllMocks, restoreAllMocks: jest.restoreAllMocks };
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PhaseExecutor } from '../index.js';
 import { ActionConfig } from '../../../types/index.js';
 
@@ -39,7 +38,7 @@ describe('PhaseExecutor - Mitigate Phase Credential Handling', () => {
   });
   
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     delete process.env.RSOLV_API_KEY;
     delete process.env.GITHUB_TOKEN;
     delete process.env.GITHUB_REPOSITORY;
@@ -55,19 +54,19 @@ describe('PhaseExecutor - Mitigate Phase Credential Handling', () => {
     
     // We'll spy on the actual processIssues call instead
     const processIssuesModule = await import('../../../ai/unified-processor.js');
-    spyOn(processIssuesModule, 'processIssues').mockImplementation(mockProcessIssues);
+    vi.spyOn(processIssuesModule, 'processIssues').mockImplementation(mockProcessIssues);
     
     // Mock GitHub API
     const githubApiModule = await import('../../../github/api.js');
-    spyOn(githubApiModule, 'getIssue').mockResolvedValue({
+    vi.spyOn(githubApiModule, 'getIssue').mockResolvedValue({
       id: 'issue-1',
       number: 123,
       title: 'Test Issue',
       body: '## Vulnerabilities\n- XSS in file.js:10',
       labels: ['rsolv:validated']
     });
-    spyOn(githubApiModule, 'updateIssueLabels').mockResolvedValue(undefined);
-    spyOn(githubApiModule, 'createIssueComment').mockResolvedValue(undefined);
+    vi.spyOn(githubApiModule, 'updateIssueLabels').mockResolvedValue(undefined);
+    vi.spyOn(githubApiModule, 'createIssueComment').mockResolvedValue(undefined);
     
     // Mock phase data client - need correct structure for validation data
     executor.phaseDataClient.getPhaseData = vi.fn().mockResolvedValue({
@@ -130,7 +129,7 @@ describe('PhaseExecutor - Mitigate Phase Credential Handling', () => {
     
     // Mock GitHub API
     const githubApiModule = await import('../../../github/api.js');
-    spyOn(githubApiModule, 'getIssue').mockResolvedValue({
+    vi.spyOn(githubApiModule, 'getIssue').mockResolvedValue({
       id: 'issue-1',
       number: 123,
       title: 'Test Issue',

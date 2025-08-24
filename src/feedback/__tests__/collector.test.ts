@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock, Mock } from 'bun:test';
+import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import { FeedbackCollector } from '../collector.js';
 import type { FeedbackEvent } from '../types.js';
 

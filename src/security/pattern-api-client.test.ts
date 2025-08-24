@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'vitest';
 import { PatternAPIClient } from './pattern-api-client.js';
 import { VulnerabilityType } from './types.js';
 

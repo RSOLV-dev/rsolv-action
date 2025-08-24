@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { EnhancedSecurityAnalyzer } from '../enhanced-security-analyzer.js';
 import { VulnerabilityType } from '../../types.js';
 

@@ -3,7 +3,7 @@
  * These tests define the expected behavior before implementation
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 import type { 
   IssueBodyVulnerability,
   ParsedIssueBody,

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, skipIf } from 'bun:test';
+import { describe, it, expect, beforeAll, skipIf } from 'vitest';
 import { ASTValidator } from '../ast-validator.js';
 import type { Vulnerability } from '../../security/types.js';
 
