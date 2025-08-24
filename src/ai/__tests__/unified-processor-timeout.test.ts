@@ -1,10 +1,23 @@
-import { describe, expect, test, beforeEach, jest, spyOn } from 'vitest';
+import { describe, expect, test, beforeEach, vi } from 'vitest';
 import { processIssues, ProcessingOptions } from '../unified-processor';
 import { ActionConfig, IssueContext } from '../../types/index.js';
 import * as analyzerModule from '../analyzer';
 import * as solutionModule from '../solution';
 import * as githubModule from '../../github/pr';
 import { EnhancedClaudeCodeAdapter } from '../adapters/claude-code-enhanced';
+import { ClaudeCodeAdapter } from '../adapters/claude-code';
+
+// Mock ClaudeCodeAdapter to always be available in tests
+vi.mock('../adapters/claude-code', () => ({
+  ClaudeCodeAdapter: vi.fn().mockImplementation(() => ({
+    isAvailable: vi.fn().mockResolvedValue(true),
+    generateSolution: vi.fn().mockResolvedValue({
+      success: true,
+      message: 'Solution generated',
+      changes: {}
+    })
+  }))
+}));
 
 describe('Unified Processor Timeout Behavior', () => {
   const mockConfig: ActionConfig = {

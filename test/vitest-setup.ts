@@ -44,6 +44,18 @@ vi.mock('child_process', () => ({
 
 // Mock fs for tests that don't need real file system
 vi.mock('fs', () => ({
+  default: {
+    existsSync: vi.fn(() => true),
+    readFileSync: vi.fn(() => ''),
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    promises: {
+      readFile: vi.fn(() => Promise.resolve('')),
+      writeFile: vi.fn(() => Promise.resolve()),
+      mkdir: vi.fn(() => Promise.resolve()),
+      rm: vi.fn(() => Promise.resolve()),
+    },
+  },
   existsSync: vi.fn(() => true),
   readFileSync: vi.fn(() => ''),
   writeFileSync: vi.fn(),

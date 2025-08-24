@@ -51,8 +51,6 @@ export default defineConfig({
       }
     },
     
-    // Suppress console output in tests
-    logLevel: 'error',
   },
   
   resolve: {

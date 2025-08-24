@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'vitest';
+import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { RSOLVCredentialManager } from '../manager';
 import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 
@@ -20,21 +20,23 @@ describe('RSOLVCredentialManager', () => {
     };
     
     // Clear mocks
-    mock.restore();
+    vi.clearAllMocks();
     // Setup fetch mock
     fetchMock = setupFetchMock();
     manager = new RSOLVCredentialManager();
   });
 
   afterEach(() => {
-    // Cleanup manager
-    manager.cleanup();
+    // Cleanup manager if initialized
+    if (manager) {
+      manager.cleanup();
+    }
     // Restore environment
     process.env = originalEnv;
     // Restore fetch
     global.fetch = originalFetch;
     // Clear mocks
-    mock.restore();
+    vi.clearAllMocks();
   });
   describe('initialize', () => {
     test('should exchange RSOLV API key for temporary credentials', async () => {
