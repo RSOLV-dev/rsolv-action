@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, mock, jest, spyOn } from 'bun:test';
+const vi = { fn: jest.fn, clearAllMocks: jest.clearAllMocks, restoreAllMocks: jest.restoreAllMocks };
 import { createPatternSource, LocalPatternSource, ApiPatternSource, HybridPatternSource } from '../../src/security/pattern-source.js';
 import { logger } from '../../src/utils/logger.js';
 
@@ -14,14 +15,14 @@ describe('Pattern Source Fallback Detection', () => {
     delete process.env.USE_LOCAL_PATTERNS;
     
     // Spy on logger methods
-    loggerErrorSpy = vi.spyOn(logger, 'error');
-    loggerWarnSpy = vi.spyOn(logger, 'warn');
+    loggerErrorSpy = spyOn(logger, 'error');
+    loggerWarnSpy = spyOn(logger, 'warn');
   });
   
   afterEach(() => {
     // Restore environment
     process.env = { ...originalEnv };
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
   
   describe('Minimal Pattern Fallback', () => {
@@ -93,7 +94,7 @@ describe('Pattern Source Fallback Detection', () => {
       process.env.RSOLV_API_KEY = 'test-key';
       
       // Mock successful API response
-      vi.mock('../../src/security/pattern-api-client.js', () => ({
+      mock.module('../../src/security/pattern-api-client.js', () => ({
         PatternAPIClient: vi.fn().mockImplementation(() => ({
           fetchPatterns: vi.fn().mockResolvedValue(
             Array(30).fill(null).map((_, i) => ({

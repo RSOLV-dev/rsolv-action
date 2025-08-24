@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, mock, jest, spyOn, beforeEach, afterEach } from 'bun:test';
+const vi = { fn: jest.fn, clearAllMocks: jest.clearAllMocks, restoreAllMocks: jest.restoreAllMocks };
 import { PhaseExecutor } from '../index.js';
 import { ActionConfig } from '../../../types/index.js';
 import * as fs from 'fs/promises';
@@ -42,7 +43,7 @@ describe('PhaseExecutor - Mitigate with Auto-Validation Flow', () => {
     
     // Mock GitHub API
     const githubApi = await import('../../../github/api.js');
-    vi.spyOn(githubApi, 'getIssue').mockResolvedValue({
+    spyOn(githubApi, 'getIssue').mockResolvedValue({
       id: 'issue-1',
       number: 789,
       title: 'Security Issue',
@@ -54,12 +55,12 @@ describe('PhaseExecutor - Mitigate with Auto-Validation Flow', () => {
         fullName: 'test-owner/test-repo'
       }
     });
-    vi.spyOn(githubApi, 'updateIssueLabels').mockResolvedValue(undefined);
-    vi.spyOn(githubApi, 'createIssueComment').mockResolvedValue(undefined);
+    spyOn(githubApi, 'updateIssueLabels').mockResolvedValue(undefined);
+    spyOn(githubApi, 'createIssueComment').mockResolvedValue(undefined);
     
     // Mock validation enricher
     const enricherModule = await import('../../../validation/enricher.js');
-    vi.spyOn(enricherModule.ValidationEnricher.prototype, 'enrichIssue').mockResolvedValue({
+    spyOn(enricherModule.ValidationEnricher.prototype, 'enrichIssue').mockResolvedValue({
       issueNumber: 789,
       originalIssue: {} as any,
       validationTimestamp: new Date(),
@@ -78,7 +79,7 @@ describe('PhaseExecutor - Mitigate with Auto-Validation Flow', () => {
   });
   
   afterEach(async () => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     try {
       await fs.rm(testDir, { recursive: true, force: true });
     } catch (e) {
@@ -94,7 +95,7 @@ describe('PhaseExecutor - Mitigate with Auto-Validation Flow', () => {
       success: true,
       pullRequestUrl: 'https://github.com/test/repo/pull/1'
     }]);
-    vi.spyOn(processIssuesModule, 'processIssues').mockImplementation(mockProcessIssues);
+    spyOn(processIssuesModule, 'processIssues').mockImplementation(mockProcessIssues);
     
     // Execute mitigate - should auto-run validation first
     const result = await executor.executeMitigate({
@@ -123,7 +124,7 @@ describe('PhaseExecutor - Mitigate with Auto-Validation Flow', () => {
   it('should fail gracefully when validation finds no vulnerabilities', async () => {
     // Mock enricher to return no vulnerabilities
     const enricherModule = await import('../../../validation/enricher.js');
-    vi.spyOn(enricherModule.ValidationEnricher.prototype, 'enrichIssue').mockResolvedValue({
+    spyOn(enricherModule.ValidationEnricher.prototype, 'enrichIssue').mockResolvedValue({
       issueNumber: 789,
       originalIssue: {} as any,
       validationTimestamp: new Date(),

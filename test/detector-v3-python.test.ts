@@ -19,7 +19,7 @@ def get_user(user_id):
     });
 
     console.log('Testing Python SQL injection detection...');
-    const vulnerabilities = await detector.detect(pythonCode, 'python', 'test.py');
+    const vulnerabilities = await detector.detect(pythonCode, 'python', 'test.py');  // Now works with test.py after fixing confidence multiplier
     
     console.log('Vulnerabilities detected:', vulnerabilities.length);
     console.log('Vulnerabilities:', JSON.stringify(vulnerabilities, null, 2));

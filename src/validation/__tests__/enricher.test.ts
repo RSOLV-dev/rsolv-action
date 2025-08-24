@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, mock, jest, spyOn } from 'bun:test';
+const vi = { fn: jest.fn, clearAllMocks: jest.clearAllMocks, restoreAllMocks: jest.restoreAllMocks };
 import { ValidationEnricher } from '../enricher.js';
 import { IssueContext } from '../../types/index.js';
 
@@ -6,7 +7,7 @@ describe('ValidationEnricher', () => {
   let enricher: ValidationEnricher;
   
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     enricher = new ValidationEnricher('github-token', 'rsolv-api-key');
   });
 
@@ -116,7 +117,7 @@ describe('ValidationEnricher', () => {
   describe('analyzeFile', () => {
     beforeEach(() => {
       // Mock file system
-      vi.mock('fs', () => ({
+      mock.module('fs', () => ({
         existsSync: vi.fn(() => true),
         readFileSync: vi.fn()
       }));

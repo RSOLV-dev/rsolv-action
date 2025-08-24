@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, mock, jest, spyOn } from 'bun:test';
+const vi = { fn: jest.fn, clearAllMocks: jest.clearAllMocks, restoreAllMocks: jest.restoreAllMocks };
 import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 import { RsolvApiClient } from '../../src/api/client.js';
 
@@ -7,7 +8,7 @@ describe('Credential Lifecycle Issues', () => {
   let mockApiClient: RsolvApiClient;
   
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     mockApiClient = {
       exchangeCredentials: vi.fn(),
       refreshCredentials: vi.fn(),

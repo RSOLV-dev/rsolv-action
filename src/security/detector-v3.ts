@@ -78,8 +78,10 @@ export class SecurityDetectorV3 {
         const result = await this.astAnalyzer.analyzeFile(filePath, code);
         
         // Convert server results to vulnerabilities
-        if (result.patterns) {
-          for (const finding of result.patterns) {
+        // Server returns 'patterns' field
+        const findings = result.patterns || [];
+        if (findings.length > 0) {
+          for (const finding of findings) {
             const key = `${finding.location.start.line}:${finding.pattern.type}`;
             if (!seen.has(key)) {
               seen.add(key);

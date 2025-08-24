@@ -533,14 +533,15 @@ Different endpoints use different authentication methods:
 
 **Problem**: AST endpoint returns empty results even with vulnerable code
 
-**Cause**: Encryption key format or content encoding issues
+**Common Causes**:
 
-**Debug**:
-```bash
-# Generate proper 32-byte key
-openssl rand -base64 32
-# Use this key in X-Encryption-Key header
-```
+1. **Test File Confidence**: Files with "test" in the path (e.g., `test.py`, `test_app.js`) get a 0.85x confidence multiplier
+   - This is intentional but conservative - test files often contain real vulnerabilities (hardcoded secrets, vulnerable examples)
+   - If you're not seeing detections in test files, check if confidence is just below threshold
+
+2. **Encryption key format issues**
+   - **Solution**: Generate proper 32-byte key: `openssl rand -base64 32`
+   - Use this key in X-Encryption-Key header
 
 ## License
 

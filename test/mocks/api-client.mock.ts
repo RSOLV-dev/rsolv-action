@@ -3,7 +3,8 @@
  * Provides consistent, predictable responses without hitting real APIs
  */
 
-import { vi } from 'vitest';
+import { jest, spyOn, mock } from 'bun:test';
+const vi = { fn: jest.fn, clearAllMocks: jest.clearAllMocks, restoreAllMocks: jest.restoreAllMocks };
 
 export class MockRsolvApiClient {
   constructor(public apiKey: string) {}

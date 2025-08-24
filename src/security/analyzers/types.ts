@@ -138,7 +138,7 @@ export interface FileAnalysisResult {
   };
   
   // Raw AST (if requested)
-  ast?: any;
+  ast?: Record<string, unknown>;
 }
 
 export interface SecurityFinding {

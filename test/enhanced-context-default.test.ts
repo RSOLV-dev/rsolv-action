@@ -1,4 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, mock, jest } from 'bun:test';
+
+// Mock modules before importing dependencies
+const analyzeIssueMock = jest.fn();
+const gatherDeepContextMock = jest.fn();
+
+mock.module('../src/ai/analyzer', () => ({
+  analyzeIssue: analyzeIssueMock
+}));
+
+mock.module('../src/ai/adapters/claude-code-enhanced', () => ({
+  EnhancedClaudeCodeAdapter: class {
+    gatherDeepContext = gatherDeepContextMock;
+  }
+}));
+
+// Now import after mocks are set up
 import { processIssues } from '../src/ai/unified-processor';
 import { IssueContext, ActionConfig } from '../src/types';
 
@@ -38,12 +54,10 @@ describe('Enhanced Context Default Behavior', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should NOT enable enhanced context by default', async () => {
-    // Mock the underlying functions to track what options are passed
-    const analyzeIssueSpy = vi.fn().mockResolvedValue({
+    jest.clearAllMocks();
+    
+    // Setup default mock behavior
+    analyzeIssueMock.mockResolvedValue({
       canBeFixed: true,
       issueType: 'security',
       filesToModify: ['test.js'],
@@ -51,20 +65,18 @@ describe('Enhanced Context Default Behavior', () => {
       requiredContext: [],
       suggestedApproach: 'Fix vulnerability'
     });
+    
+    gatherDeepContextMock.mockResolvedValue({
+      architecture: { patterns: [], structure: '', mainComponents: [] },
+      codeConventions: { namingPatterns: [], fileOrganization: '', importPatterns: [] },
+      testingPatterns: { framework: '', structure: '', conventions: [] },
+      dependencies: { runtime: [], dev: [], patterns: [] },
+      relatedComponents: { files: [], modules: [], interfaces: [] },
+      styleGuide: { formatting: '', documentation: '', errorHandling: '' }
+    });
+  });
 
-    const gatherDeepContextSpy = vi.fn();
-
-    // Mock the modules
-    vi.doMock('../src/ai/analyzer', () => ({
-      analyzeIssue: analyzeIssueSpy
-    }));
-
-    vi.doMock('../src/ai/adapters/claude-code-enhanced', () => ({
-      EnhancedClaudeCodeAdapter: class {
-        gatherDeepContext = gatherDeepContextSpy;
-      }
-    }));
-
+  it('should NOT enable enhanced context by default', async () => {
     // Test with no options (should use defaults)
     try {
       await processIssues([mockIssue], mockConfig);
@@ -73,25 +85,10 @@ describe('Enhanced Context Default Behavior', () => {
     }
 
     // Enhanced context should NOT be called by default
-    expect(gatherDeepContextSpy).not.toHaveBeenCalled();
+    expect(gatherDeepContextMock).not.toHaveBeenCalled();
   });
 
   it('should enable enhanced context only when explicitly requested', async () => {
-    const gatherDeepContextSpy = vi.fn().mockResolvedValue({
-      architecture: { patterns: [], structure: '', mainComponents: [] },
-      codeConventions: { namingPatterns: [], fileOrganization: '', importPatterns: [] },
-      testingPatterns: { framework: '', structure: '', conventions: [] },
-      dependencies: { runtime: [], dev: [], patterns: [] },
-      relatedComponents: { files: [], modules: [], interfaces: [] },
-      styleGuide: { formatting: '', documentation: '', errorHandling: '' }
-    });
-
-    vi.doMock('../src/ai/adapters/claude-code-enhanced', () => ({
-      EnhancedClaudeCodeAdapter: class {
-        gatherDeepContext = gatherDeepContextSpy;
-      }
-    }));
-
     // Test with enhanced context explicitly enabled
     const options = {
       enableEnhancedContext: true,
@@ -105,6 +102,6 @@ describe('Enhanced Context Default Behavior', () => {
     }
 
     // Should be called when explicitly enabled
-    expect(gatherDeepContextSpy).toHaveBeenCalled();
+    expect(gatherDeepContextMock).toHaveBeenCalled();
   });
 });
