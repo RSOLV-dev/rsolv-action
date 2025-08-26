@@ -73,9 +73,38 @@ defmodule Rsolv.AST.ConfidenceScorer do
   defp adjust_for_ast_match(confidence, %{ast_match: :partial}), do: confidence * 0.7
   defp adjust_for_ast_match(confidence, _), do: confidence
   
-  defp adjust_for_user_input(confidence, %{has_user_input: true}), do: confidence * 1.15
-  defp adjust_for_user_input(confidence, %{has_user_input: false}), do: confidence * 0.7
-  defp adjust_for_user_input(confidence, _), do: confidence
+  defp adjust_for_user_input(confidence, context) do
+    pattern_type = Map.get(context, :pattern_type)
+    has_user_input = Map.get(context, :has_user_input)
+    
+    case {pattern_type, has_user_input} do
+      # Patterns that don't need user input - no penalty
+      {:hardcoded_secret, false} -> confidence
+      {:weak_crypto, false} -> confidence  
+      {:weak_random, false} -> confidence
+      {:insecure_random, false} -> confidence
+      
+      # Critical patterns - minimal penalty even without user input
+      {:code_injection, false} -> confidence * 0.95
+      {:rce, false} -> confidence * 0.95
+      {:remote_code_execution, false} -> confidence * 0.95
+      {:command_injection, false} -> confidence * 0.92
+      
+      # Injection patterns - moderate penalty without user input
+      {:sql_injection, false} -> confidence * 0.85
+      {:xss, false} -> confidence * 0.85
+      {:nosql_injection, false} -> confidence * 0.85
+      
+      # Confirmed user input - boost confidence
+      {_, true} -> confidence * 1.15
+      
+      # Unknown pattern without user input - small penalty
+      {_, false} -> confidence * 0.9
+      
+      # No information - neutral
+      _ -> confidence
+    end
+  end
   
   defp adjust_for_framework_protection(confidence, %{framework_protection: true}), do: confidence * 0.4
   defp adjust_for_framework_protection(confidence, _), do: confidence
