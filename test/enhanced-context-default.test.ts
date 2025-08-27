@@ -56,14 +56,14 @@ describe('Enhanced Context Default Behavior', () => {
     vi.clearAllMocks();
     
     // Setup default mock behavior
-    vi.mocked(analyzeIssue).mockResolvedValue({
+    vi.mocked(analyzeIssue).mockImplementation(async () => ({
       canBeFixed: true,
       issueType: 'security',
       filesToModify: ['test.js'],
       estimatedComplexity: 'simple',
       requiredContext: [],
       suggestedApproach: 'Fix vulnerability'
-    });
+    }));
     
     gatherDeepContextMock.mockResolvedValue({
       architecture: { patterns: [], structure: '', mainComponents: [] },

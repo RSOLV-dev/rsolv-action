@@ -2,8 +2,8 @@
   "phase": "validate",
   "data": {
     "validation": {
-      "issue-456": {
-        "issueNumber": 456,
+      "issue-457": {
+        "issueNumber": 457,
         "validated": true,
         "generatedTests": {
           "success": true,
@@ -25,7 +25,7 @@
         },
         "canBeFixed": true,
         "usedPriorScan": false,
-        "timestamp": "2025-08-27T01:44:43.647Z",
+        "timestamp": "2025-08-27T01:44:43.645Z",
         "hasSpecificVulnerabilities": false,
         "vulnerabilities": [],
         "confidence": "low"
@@ -34,8 +34,8 @@
   },
   "metadata": {
     "repo": "test/webapp",
-    "issueNumber": 456,
+    "issueNumber": 457,
     "commitSha": "abc123def456"
   },
-  "timestamp": "2025-08-27T01:44:43.648Z"
+  "timestamp": "2025-08-27T01:44:43.646Z"
 }

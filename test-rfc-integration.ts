@@ -5,7 +5,7 @@
  * Tests that all three RFCs are properly wired into the phase executor
  */
 
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { PhaseExecutor } from './src/modes/phase-executor/index.js';
 import { ChunkingIntegration } from './src/chunking/index.js';
 import { VendorDetectionIntegration } from './src/vendor/index.js';

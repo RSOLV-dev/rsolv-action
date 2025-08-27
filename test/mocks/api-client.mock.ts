@@ -3,13 +3,12 @@
  * Provides consistent, predictable responses without hitting real APIs
  */
 
-import { jest, spyOn, mock } from 'bun:test';
-const vi = { fn: jest.fn, clearAllMocks: jest.clearAllMocks, restoreAllMocks: jest.restoreAllMocks };
+import { vi } from 'vitest';
 
 export class MockRsolvApiClient {
   constructor(public apiKey: string) {}
   
-  getPatterns = vi.fn().mockResolvedValue([
+  getPatterns = vi.fn(async () => [
     {
       id: 'sql-injection-1',
       type: 'sql_injection',
@@ -28,7 +27,7 @@ export class MockRsolvApiClient {
     }
   ]);
   
-  validateVulnerabilities = vi.fn().mockResolvedValue({
+  validateVulnerabilities = vi.fn(async () => ({
     validated: [
       {
         id: 'test-1',
@@ -42,9 +41,9 @@ export class MockRsolvApiClient {
       validated: 1,
       rejected: 0
     }
-  });
+  }));
   
-  exchangeCredentials = vi.fn().mockResolvedValue({
+  exchangeCredentials = vi.fn(async () => ({
     credentials: {
       anthropic: {
         api_key: 'mock-anthropic-key',
@@ -59,31 +58,31 @@ export class MockRsolvApiClient {
       remaining_fixes: 100,
       reset_at: new Date(Date.now() + 86400000).toISOString()
     }
-  });
+  }));
   
-  refreshCredentials = vi.fn().mockResolvedValue({
+  refreshCredentials = vi.fn(async () => ({
     credentials: {
       anthropic: {
         api_key: 'mock-refreshed-anthropic-key',
         expires_at: new Date(Date.now() + 3600000).toISOString()
       }
     }
-  });
+  }));
   
-  recordFixAttempt = vi.fn().mockResolvedValue({
+  recordFixAttempt = vi.fn(async () => ({
     success: true,
     fixId: 'fix-123',
     message: 'Fix attempt recorded'
-  });
+  }));
   
-  analyzeWithAST = vi.fn().mockResolvedValue({
+  analyzeWithAST = vi.fn(async () => ({
     vulnerabilities: [],
     metadata: {
       language: 'javascript',
       parseTime: 10,
       analysisTime: 20
     }
-  });
+  }));
 }
 
 export function createMockApiClient(apiKey = 'test-api-key'): MockRsolvApiClient {

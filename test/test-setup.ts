@@ -1,7 +1,7 @@
-// Global test setup for Bun tests
-// Use with: bun test --preload ./test/test-setup.ts
+// Global test setup for Vitest tests
+// Used automatically by vitest.config.ts setupFiles
 
-import { mock, afterEach } from 'bun:test';
+import { afterEach, vi } from 'vitest';
 
 // Track all active timers and intervals
 const activeTimers = new Set<Timer>();
