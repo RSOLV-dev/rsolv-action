@@ -6,7 +6,7 @@
         "fixed": true,
         "prUrl": "https://github.com/test/repo/pull/1",
         "fixCommit": "fix-commit-123",
-        "timestamp": "2025-08-27T01:36:52.421Z"
+        "timestamp": "2025-08-27T01:42:11.499Z"
       }
     }
   },
@@ -15,5 +15,5 @@
     "issueNumber": 123,
     "commitSha": "fix-commit-123"
   },
-  "timestamp": "2025-08-27T01:36:52.424Z"
+  "timestamp": "2025-08-27T01:42:11.503Z"
 }

@@ -40,7 +40,9 @@
     "@babel/traverse": "^7.27.4",
     "@babel/types": "^7.27.6",
     "@octokit/rest": "^21.1.1",
+    "@types/uuid": "^10.0.0",
     "js-yaml": "^4.1.0",
+    "uuid": "^11.1.0",
     "zod": "^3.25.26"
   },
   "devDependencies": {
