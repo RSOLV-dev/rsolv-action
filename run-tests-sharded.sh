@@ -13,8 +13,8 @@ mkdir -p .vitest-reports
 # Run each shard
 for i in $(seq 1 $NUM_SHARDS); do
   echo "Running shard $i/$NUM_SHARDS..."
-  RSOLV_API_KEY=${RSOLV_API_KEY:-rsolv_staging_api_key_19278} \
-  RSOLV_API_URL=${RSOLV_API_URL:-https://api-staging.rsolv.dev} \
+  RSOLV_API_KEY=${RSOLV_API_KEY:-test-working-api-key-2025} \
+  RSOLV_API_URL=${RSOLV_API_URL:-http://localhost:4000} \
   npx vitest run --reporter=blob --shard=$i/$NUM_SHARDS || exit 1
 done
 

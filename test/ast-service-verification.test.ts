@@ -6,8 +6,8 @@ import * as crypto from 'crypto';
 
 describe('AST Service Verification - REVIEW Phase', () => {
   let detector: SecurityDetectorV3;
-  const API_KEY = process.env.RSOLV_API_KEY || 'rsolv_staging_demo_key';
-  const API_URL = process.env.RSOLV_API_URL || 'https://api.rsolv-staging.com';
+  const API_KEY = process.env.RSOLV_API_KEY || 'test-working-api-key-2025';
+  const API_URL = process.env.RSOLV_API_URL || 'http://localhost:4000';
 
   beforeAll(() => {
     const patternSource = new HybridPatternSource(API_KEY, API_URL);

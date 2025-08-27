@@ -24,7 +24,11 @@ describe('AST Analyzer Fallback Strategy', () => {
       // Mock fetch to simulate service unavailable
       global.fetch = async (url: string) => {
         if (url.includes('/health')) {
-          return { ok: false, status: 503 } as any;
+          return {
+            ok: false,
+            status: 503,
+            json: async () => ({ error: 'Service Unavailable' })
+          } as Response;
         }
         throw new Error('Service Unavailable');
       };
@@ -59,7 +63,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             setTimeout(() => reject(error), 100);
           });
         }
-        return { ok: true } as any;
+        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
       };
 
       const files = new Map<string, string>();
@@ -112,7 +116,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             })
           } as any;
         }
-        return { ok: true } as any;
+        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
       };
 
       const files = new Map<string, string>();
@@ -174,7 +178,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             })
           } as any;
         }
-        return { ok: true } as any;
+        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
       };
 
       const files = new Map<string, string>();
@@ -242,7 +246,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             })
           } as any;
         }
-        return { ok: true } as any;
+        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
       };
 
       const files = new Map<string, string>();
@@ -325,7 +329,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             })
           } as any;
         }
-        return { ok: true } as any;
+        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
       };
 
       const files = new Map<string, string>();
