@@ -5,6 +5,24 @@ import { VulnerabilityType } from '../../types.js';
 describe('AST Analyzer Fallback Strategy', () => {
   let analyzer: EnhancedSecurityAnalyzer;
   
+  // Mock patterns that match test code
+  const mockPatterns = [
+    {
+      id: 'js-eval-user-input',
+      regex: ['^(?!.*//).*eval\\s*\\(.*?(?:req\\.|request\\.|params\\.|query\\.|body\\.|user|input|data|Code)'],
+      type: 'rce',
+      severity: 'critical',
+      name: 'Dangerous eval() with User Input'
+    },
+    {
+      id: 'js-sql-injection-concat',
+      regex: ['(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN).*?["\']\\s*\\+\\s*\\w+'],
+      type: 'sql_injection', 
+      severity: 'critical',
+      name: 'SQL Injection via String Concatenation'
+    }
+  ];
+  
   const mockConfig = {
     apiUrl: 'http://localhost:4000',
     apiKey: 'test-api-key',
@@ -63,7 +81,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             setTimeout(() => reject(error), 100);
           });
         }
-        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
+        return { ok: true, json: async () => ({ patterns: mockPatterns }) } as Response;
       };
 
       const files = new Map<string, string>();
@@ -116,7 +134,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             })
           } as any;
         }
-        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
+        return { ok: true, json: async () => ({ patterns: mockPatterns }) } as Response;
       };
 
       const files = new Map<string, string>();
@@ -178,7 +196,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             })
           } as any;
         }
-        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
+        return { ok: true, json: async () => ({ patterns: mockPatterns }) } as Response;
       };
 
       const files = new Map<string, string>();
@@ -246,7 +264,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             })
           } as any;
         }
-        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
+        return { ok: true, json: async () => ({ patterns: mockPatterns }) } as Response;
       };
 
       const files = new Map<string, string>();
@@ -329,7 +347,7 @@ describe('AST Analyzer Fallback Strategy', () => {
             })
           } as any;
         }
-        return { ok: true, json: async () => ({ patterns: [] }) } as Response;
+        return { ok: true, json: async () => ({ patterns: mockPatterns }) } as Response;
       };
 
       const files = new Map<string, string>();

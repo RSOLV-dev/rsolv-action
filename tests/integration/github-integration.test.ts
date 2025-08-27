@@ -244,44 +244,51 @@ describe('GitHub Integration', () => {
 
   describe('File Operations', () => {
     test('should get repository files', async () => {
-      const config: ActionConfig = {
+      const issue: IssueContext = {
+        id: 'test-issue-1',
+        number: 1,
+        title: 'Test Issue',
+        body: 'Test issue body',
+        labels: [],
+        assignees: [],
         repository: {
           owner: 'test-owner',
           name: 'test-repo',
           fullName: 'test-owner/test-repo',
           defaultBranch: 'main'
         },
-        token: 'test-token',
-        workflow: {
-          autoFix: true,
-          createPullRequest: false
-        }
+        source: 'github',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      const files = await getRepositoryFiles(['src/index.js'], config);
+      const files = await getRepositoryFiles(issue, ['src/index.js']);
       
-      expect(files).toHaveLength(1);
-      expect(files[0].path).toBe('src/index.js');
-      expect(files[0].content).toBeDefined();
+      expect(Object.keys(files)).toHaveLength(1);
+      expect(files['src/index.js']).toBeDefined();
     });
 
     test('should handle file not found', async () => {
-      const config: ActionConfig = {
+      const issue: IssueContext = {
+        id: 'test-issue-2',
+        number: 2,
+        title: 'Test Issue',
+        body: 'Test issue body',
+        labels: [],
+        assignees: [],
         repository: {
           owner: 'test-owner',
           name: 'test-repo',
           fullName: 'test-owner/test-repo',
           defaultBranch: 'main'
         },
-        token: 'test-token',
-        workflow: {
-          autoFix: false,
-          createPullRequest: false
-        }
+        source: 'github',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      const files = await getRepositoryFiles(['not-found.js'], config);
-      expect(files).toHaveLength(0);
+      const files = await getRepositoryFiles(issue, ['not-found.js']);
+      expect(Object.keys(files)).toHaveLength(0);
     });
   });
 });
