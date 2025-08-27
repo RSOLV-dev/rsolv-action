@@ -43,13 +43,13 @@ export default defineConfig({
       '**/vulnerable-apps/**',  // Exclude demo applications
     ],
     
-    // Use vmThreads for better memory management
-    pool: 'vmThreads',
+    // Use forks for better process.chdir() support in regression tests
+    pool: 'forks',
     poolOptions: {
-      vmThreads: {
+      forks: {
         // Recycle workers more aggressively
         memoryLimit: '512MB',
-        maxThreads: 2,
+        maxForks: 2,
       }
     },
     

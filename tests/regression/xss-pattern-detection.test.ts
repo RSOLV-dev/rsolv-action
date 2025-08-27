@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ValidationEnricher } from '../../src/validation/enricher';
+import { ValidationEnricher } from '../../src/validation/enricher.js';
 
 // Mock the GitHub API utilities
 import { vi } from 'vitest';

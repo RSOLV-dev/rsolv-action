@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ValidationService } from '../../src/services/validation';
-import { APIClient } from '../../src/external/api-client';
+import { BatchValidator } from '../../src/validation/batch-validator.js';
+import { RsolvApiClient } from '../../src/external/api-client.js';
 
 /**
  * Regression tests for validation endpoint issues discovered during E2E testing
@@ -17,17 +17,17 @@ describe('Regression: Validation Endpoint Compatibility', () => {
     vi.resetModules();
   });
 
-  let validationService: ValidationService;
-  let apiClient: APIClient;
+  let batchValidator: BatchValidator;
+  let apiClient: RsolvApiClient;
 
   beforeEach(() => {
     // Mock the API client to test endpoint calls
-    apiClient = new APIClient({
+    apiClient = new RsolvApiClient({
       apiKey: 'test-api-key',
       apiUrl: 'https://api.rsolv.dev'
     });
     
-    validationService = new ValidationService(apiClient);
+    batchValidator = new BatchValidator();
   });
 
   describe('Issue #610: API endpoint mismatch', () => {

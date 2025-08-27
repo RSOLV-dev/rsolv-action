@@ -137,17 +137,19 @@ describe.skipIf(skipIfNoDocker)('Container Integration', () => {
     process.env.NODE_ENV = 'production';
     
     // Mock exec to simulate failure for invalid-command
-    const { exec } = await import('child_process');
-    vi.mocked(exec).mockImplementationOnce((command: any, options: any, callback: any) => {
-      if (typeof options === 'function') {
-        callback = options;
+    vi.doMock('child_process', () => ({
+      exec: (command: string, options: any, callback: any) => {
+        if (typeof options === 'function') {
+          callback = options;
+          options = {};
+        }
+        if (command.includes('invalid-command')) {
+          callback(new Error('Command not found'), { stdout: '', stderr: 'Command not found' });
+          return;
+        }
+        callback(null, { stdout: 'Success', stderr: '' });
       }
-      if (command.includes('invalid-command')) {
-        callback(new Error('Command not found'), { stdout: '', stderr: 'Command not found' });
-        return;
-      }
-      callback(null, { stdout: 'Success', stderr: '' });
-    });
+    }));
     
     try {
       const result = await runInContainer(mockConfig, {
