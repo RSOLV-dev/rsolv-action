@@ -6,7 +6,7 @@
  * both testGeneration.validateFixes and fixValidation.enabled
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ActionConfig } from '../../types/index.js';
 import { loadConfig } from '../../config/index.js';
 

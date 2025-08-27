@@ -4,6 +4,7 @@
  */
 
 import { logger } from '../../../utils/logger.js';
+import type { ValidationData } from '../../../types/vulnerability.js';
 
 /**
  * Represents a vulnerability found in the issue body
@@ -151,7 +152,7 @@ export function parseIssueBody(issueBody: string): ParsedIssueBody {
  * @returns Enhanced validation data with correct filenames
  */
 export function enhanceValidationData(
-  validationData: any, // Will be properly typed when integrated
+  validationData: ValidationData,
   parsedBody: ParsedIssueBody
 ): EnhancedValidationData {
   // Create a copy to avoid mutations

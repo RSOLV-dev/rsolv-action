@@ -1,11 +1,11 @@
-import { test, expect, describe, beforeEach, mock } from 'vitest';
+import { test, expect, describe, beforeEach, vi } from 'vitest';
 import { processIssues } from '../unified-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 
 // Mock the AI client
 vi.mock('../client', () => ({
   getAiClient: () => ({
-    complete: mock((prompt: string) => {
+    complete: vi.fn((prompt: string) => {
       // Return appropriate response based on the prompt content
       if (prompt.includes('analyze')) {
         return Promise.resolve(JSON.stringify({
@@ -32,7 +32,7 @@ function authenticateUser(username, password) {
 This fixes the SQL injection vulnerability by using parameterized queries.`);
       }
     }),
-    analyzeIssue: mock(() => Promise.resolve({
+    analyzeIssue: vi.fn(() => Promise.resolve({
       issueType: 'security',
       filesToModify: ['src/auth/login.js'],
       estimatedComplexity: 'medium',
@@ -40,7 +40,7 @@ This fixes the SQL injection vulnerability by using parameterized queries.`);
       suggestedApproach: 'Fix SQL injection vulnerability',
       canBeFixed: true
     })),
-    generateSolution: mock(() => Promise.resolve({
+    generateSolution: vi.fn(() => Promise.resolve({
       success: true,
       solution: {
         title: 'Fix SQL injection vulnerability',

@@ -18,7 +18,7 @@ describe('RsolvApiClient', () => {
   
   afterEach(() => {
     global.fetch = originalFetch;
-    mock.restore();
+    vi.restoreAllMocks();
   });
 
   describe('recordFixAttempt', () => {

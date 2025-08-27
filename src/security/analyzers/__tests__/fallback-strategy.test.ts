@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EnhancedSecurityAnalyzer } from '../enhanced-security-analyzer.js';
 import { VulnerabilityType } from '../../types.js';
 

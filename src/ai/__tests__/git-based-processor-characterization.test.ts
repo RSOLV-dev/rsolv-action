@@ -14,30 +14,70 @@ import { processIssueWithGit, getMaxIterations } from '../git-based-processor.js
 import { IssueContext, ActionConfig } from '../../types/index.js';
 import * as child_process from 'child_process';
 
+// Hoist mock functions and classes so they're available in vi.mock factories
+const { mockAnalyzeIssue, mockAnalyzeWithTestGeneration, mockValidateFixWithTests, mockCreatePullRequestFromGit, mockCreateEducationalPullRequest, mockGenerateSolutionWithGit, mockExistsSync, mockReadFileSync, mockExecSync, MockGitBasedClaudeCodeAdapter, MockTestGeneratingSecurityAnalyzer, MockGitBasedTestValidator } = vi.hoisted(() => {
+  const analyzeIssue = vi.fn();
+  const analyzeWithTestGeneration = vi.fn();
+  const validateFixWithTests = vi.fn();
+  const createPullRequestFromGit = vi.fn();
+  const createEducationalPullRequest = vi.fn();
+  const generateSolutionWithGit = vi.fn();
+  const existsSync = vi.fn();
+  const readFileSync = vi.fn();
+  const execSync = vi.fn();
+  
+  class GitBasedClaudeCodeAdapter {
+    generateSolutionWithGit = generateSolutionWithGit;
+  }
+  
+  class TestGeneratingSecurityAnalyzer {
+    analyzeWithTestGeneration = analyzeWithTestGeneration;
+  }
+  
+  class GitBasedTestValidator {
+    validateFixWithTests = validateFixWithTests;
+  }
+  
+  return {
+    mockAnalyzeIssue: analyzeIssue,
+    mockAnalyzeWithTestGeneration: analyzeWithTestGeneration,
+    mockValidateFixWithTests: validateFixWithTests,
+    mockCreatePullRequestFromGit: createPullRequestFromGit,
+    mockCreateEducationalPullRequest: createEducationalPullRequest,
+    mockGenerateSolutionWithGit: generateSolutionWithGit,
+    mockExistsSync: existsSync,
+    mockReadFileSync: readFileSync,
+    mockExecSync: execSync,
+    MockGitBasedClaudeCodeAdapter: GitBasedClaudeCodeAdapter,
+    MockTestGeneratingSecurityAnalyzer: TestGeneratingSecurityAnalyzer,
+    MockGitBasedTestValidator: GitBasedTestValidator
+  };
+});
+
 // Default mock return values
 let gitStatusReturn = '';
 let gitRevParseReturn = 'abc123def456\n';
 
-// Mock child_process with dynamic returns
-vi.mock('child_process', () => ({
-  execSync: (command: string, options?: any) => {
-    if (command === 'git rev-parse HEAD') {
-      return gitRevParseReturn;
-    }
-    if (command === 'git status --porcelain') {
-      return gitStatusReturn;
-    }
-    if (command.startsWith('git reset --hard')) {
-      return '';
-    }
+// Set up default mock implementation
+mockExecSync.mockImplementation((command: string, options?: any) => {
+  if (command === 'git rev-parse HEAD') {
+    return gitRevParseReturn;
+  }
+  if (command === 'git status --porcelain') {
+    return gitStatusReturn;
+  }
+  if (command.startsWith('git reset --hard')) {
     return '';
   }
+  return '';
+});
+
+// Mock child_process with dynamic returns
+vi.mock('child_process', () => ({
+  execSync: mockExecSync
 }));
 
 // Mock file system
-const mockExistsSync = mock(() => true);
-const mockReadFileSync = mock(() => 'file content');
-
 vi.mock('fs', () => ({
   existsSync: mockExistsSync,
   readFileSync: mockReadFileSync,
@@ -47,112 +87,42 @@ vi.mock('fs', () => ({
   }
 }));
 
-// Mock logger
+// Mock logger with proper exports
 vi.mock('../../utils/logger.js', () => ({
+  Logger: class {
+    info = vi.fn();
+    error = vi.fn();
+    warn = vi.fn();
+    debug = vi.fn();
+  },
   logger: {
-    info: mock(() => {}),
-    error: mock(() => {}),
-    warn: mock(() => {}),
-    debug: mock(() => {})
+    debug: vi.fn(() => {}),
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
   }
-}));
-
-// Mock analyzer
-const mockAnalyzeIssue = mock(async () => ({
-  canBeFixed: true,
-  issueType: 'security',
-  estimatedComplexity: 'simple',
-  suggestedApproach: 'Fix SQL injection',
-  filesToModify: ['src/auth/login.ts'],
-  vulnerabilityType: 'sql-injection',
-  severity: 'high',
-  cwe: 'CWE-89'
 }));
 
 vi.mock('../analyzer.js', () => ({
   analyzeIssue: mockAnalyzeIssue
 }));
 
-// Mock test generator
-const mockAnalyzeWithTestGeneration = mock(async () => ({
-  analysis: { summary: 'SQL injection found' },
-  generatedTests: {
-    success: true,
-    testSuite: 'test code here',
-    tests: [{
-      testCode: 'describe("SQL injection test")',
-      framework: 'jest'
-    }]
-  }
-}));
-
-class MockTestGeneratingSecurityAnalyzer {
-  analyzeWithTestGeneration = mockAnalyzeWithTestGeneration;
-}
-
 vi.mock('../test-generating-security-analyzer.js', () => ({
   TestGeneratingSecurityAnalyzer: MockTestGeneratingSecurityAnalyzer
 }));
 
-// Mock validator
-const mockValidateFixWithTests = mock(async () => ({
-  isValidFix: true,
-  baselineCommit: {
-    redTestPassed: false,
-    greenTestPassed: true,
-    refactorTestPassed: true
-  },
-  fixedCommit: {
-    redTestPassed: true,
-    greenTestPassed: true,
-    refactorTestPassed: true
-  }
-}));
-
-class MockGitBasedTestValidator {
-  validateFixWithTests = mockValidateFixWithTests;
-}
-
 vi.mock('../git-based-test-validator.js', () => ({
   GitBasedTestValidator: MockGitBasedTestValidator
-}));
-
-// Mock PR creators
-const mockCreatePullRequestFromGit = mock(async () => ({
-  success: true,
-  message: 'PR created',
-  pullRequestUrl: 'https://github.com/test/pr/1',
-  pullRequestNumber: 1
 }));
 
 vi.mock('../../github/pr-git.js', () => ({
   createPullRequestFromGit: mockCreatePullRequestFromGit
 }));
 
-const mockCreateEducationalPullRequest = mock(async () => ({
-  success: true,
-  message: 'Educational PR created',
-  pullRequestUrl: 'https://github.com/test/pr/1',
-  pullRequestNumber: 1
-}));
-
 vi.mock('../../github/pr-git-educational.js', () => ({
   createEducationalPullRequest: mockCreateEducationalPullRequest
 }));
-
-// Mock Claude Code adapter
-const mockGenerateSolutionWithGit = mock(async () => ({
-  success: true,
-  message: 'Fixed vulnerability',
-  commitHash: 'fix123abc',
-  filesModified: ['src/auth/login.ts'],
-  diffStats: { insertions: 5, deletions: 3, filesChanged: 1 },
-  summary: { description: 'Fixed SQL injection' }
-}));
-
-class MockGitBasedClaudeCodeAdapter {
-  generateSolutionWithGit = mockGenerateSolutionWithGit;
-}
 
 vi.mock('../adapters/claude-code-git.js', () => ({
   GitBasedClaudeCodeAdapter: MockGitBasedClaudeCodeAdapter
@@ -160,7 +130,7 @@ vi.mock('../adapters/claude-code-git.js', () => ({
 
 // Mock vulnerable file scanner
 vi.mock('../vulnerable-file-scanner.js', () => ({
-  getVulnerableFiles: mock(async () => new Map())
+  getVulnerableFiles: vi.fn(async () => new Map())
 }));
 
 // Mock credential manager
@@ -168,7 +138,7 @@ class MockCredentialManager {}
 
 vi.mock('../../credentials/singleton.js', () => ({
   CredentialManagerSingleton: {
-    getInstance: mock(async () => new MockCredentialManager())
+    getInstance: vi.fn(async () => new MockCredentialManager())
   }
 }));
 
@@ -188,6 +158,82 @@ describe('processIssueWithGit - Characterization Tests', () => {
     mockCreatePullRequestFromGit.mockClear();
     mockCreateEducationalPullRequest.mockClear();
     mockGenerateSolutionWithGit.mockClear();
+    mockExecSync.mockClear();
+    
+    // Reset execSync default implementation
+    mockExecSync.mockImplementation((command: string, options?: any) => {
+      if (command === 'git rev-parse HEAD') {
+        return gitRevParseReturn;
+      }
+      if (command === 'git status --porcelain') {
+        return gitStatusReturn;
+      }
+      if (command.startsWith('git reset --hard')) {
+        return '';
+      }
+      return '';
+    });
+    
+    // Setup default mock return values
+    mockAnalyzeIssue.mockResolvedValue({
+      canBeFixed: true,
+      issueType: 'security',
+      estimatedComplexity: 'simple',
+      suggestedApproach: 'Fix SQL injection',
+      filesToModify: ['src/auth/login.ts'],
+      vulnerabilityType: 'sql-injection',
+      severity: 'high',
+      cwe: 'CWE-89'
+    });
+    
+    mockAnalyzeWithTestGeneration.mockResolvedValue({
+      analysis: { summary: 'SQL injection found' },
+      generatedTests: {
+        success: true,
+        testSuite: 'test code here',
+        tests: [{
+          testCode: 'describe("SQL injection test")',
+          framework: 'jest'
+        }]
+      }
+    });
+    
+    mockValidateFixWithTests.mockResolvedValue({
+      isValidFix: true,
+      baselineCommit: {
+        redTestPassed: false,
+        greenTestPassed: true,
+        refactorTestPassed: true
+      },
+      fixedCommit: {
+        redTestPassed: true,
+        greenTestPassed: true,
+        refactorTestPassed: true
+      }
+    });
+    
+    mockCreatePullRequestFromGit.mockResolvedValue({
+      success: true,
+      message: 'PR created',
+      pullRequestUrl: 'https://github.com/test/pr/1',
+      pullRequestNumber: 1
+    });
+    
+    mockCreateEducationalPullRequest.mockResolvedValue({
+      success: true,
+      message: 'Educational PR created',
+      pullRequestUrl: 'https://github.com/test/pr/1',
+      pullRequestNumber: 1
+    });
+    
+    mockGenerateSolutionWithGit.mockResolvedValue({
+      success: true,
+      message: 'Fixed vulnerability',
+      commitHash: 'fix123abc',
+      filesModified: ['src/auth/login.ts'],
+      diffStats: { insertions: 5, deletions: 3, filesChanged: 1 },
+      summary: { description: 'Fixed SQL injection' }
+    });
     
     // Setup default mock issue
     mockIssue = {
@@ -420,7 +466,7 @@ describe('processIssueWithGit - Characterization Tests', () => {
       expect(mockValidateFixWithTests).toHaveBeenCalledTimes(2);
       expect(result.success).toBe(false);
       expect(result.message).toBe('Fix validation failed after 2 attempts');
-      expect(result.error).toContain('The vulnerability still exists');
+      expect(result.error).toContain('Fix validation failed - tests did not pass');
     });
   });
 
@@ -502,39 +548,35 @@ describe('processIssueWithGit - Characterization Tests', () => {
 
     test('should handle git command failures gracefully', async () => {
       // Arrange - simulate git status command failure
-      // We'll need to re-mock the module to throw
-      const originalExecSync = child_process.execSync;
+      mockAnalyzeIssue.mockResolvedValue({
+        canBeFixed: true,
+        issueType: 'security',
+        estimatedComplexity: 'simple',
+        suggestedApproach: 'Fix injection',
+        filesToModify: ['src/db.js'],
+        vulnerabilityType: 'sql-injection',
+        severity: 'high',
+        cwe: 'CWE-89'
+      });
       
-      // Create a mock that throws on git status
-      vi.mock('child_process', () => ({
-        execSync: (command: string, options?: any) => {
-          if (command === 'git status --porcelain') {
-            throw new Error('Not a git repository');
-          }
-          return '';
+      // Make execSync throw an error for git status
+      mockExecSync.mockImplementation((command: string) => {
+        if (command === 'git status --porcelain') {
+          throw new Error('Not a git repository');
         }
-      }));
+        if (command === 'git rev-parse HEAD') {
+          return gitRevParseReturn;
+        }
+        return '';
+      });
 
       // Act
       const result = await processIssueWithGit(mockIssue, mockConfig);
 
-      // Assert
+      // Assert - When git status fails, it's treated as uncommitted changes
       expect(result.success).toBe(false);
       expect(result.message).toBe('Repository has uncommitted changes');
       expect(result.error).toBe('Uncommitted changes in: unknown');
-      
-      // Restore original mock
-      vi.mock('child_process', () => ({
-        execSync: (command: string, options?: any) => {
-          if (command === 'git rev-parse HEAD') {
-            return gitRevParseReturn;
-          }
-          if (command === 'git status --porcelain') {
-            return gitStatusReturn;
-          }
-          return '';
-        }
-      }));
     });
   });
 

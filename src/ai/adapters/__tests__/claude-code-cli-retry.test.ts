@@ -3,7 +3,7 @@
  * Following red-green-refactor methodology
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, mock, vi } from 'vitest';
 import type { RetryConfig, CLISolutionResult } from '../claude-code-cli-retry';
 
 // Mock implementation for testing - will be replaced with real implementation

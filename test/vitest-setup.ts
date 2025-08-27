@@ -1,20 +1,23 @@
 // Global setup for Vitest tests
-import { afterEach, vi } from 'vitest';
+import { afterEach, vi, beforeAll, afterAll } from 'vitest';
+import { setupMSW } from '../src/test/mocks/server';
+import { setupTestEnvironment } from '../test-fixtures/mock-claude-code-sdk';
 
-// Mock fetch globally
-global.fetch = vi.fn(() =>
-  Promise.resolve({
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
-  } as Response)
-);
+// Setup MSW for API mocking
+setupMSW();
 
-// Set test environment variables
+// Setup Claude Code SDK mocking to prevent process spawning
+setupTestEnvironment();
+
+// DO NOT mock fetch globally - let MSW handle it
+// Only mock fetch in specific tests that need it
+
+// Set test environment variables - MUST be set before any imports
 process.env.NODE_ENV = 'test';
 process.env.CI = 'true';
 process.env.LOG_LEVEL = 'error';
+// Ensure no executable path is set in tests (allows NODE_ENV=test check to work)
+delete process.env.CLAUDE_CODE_PATH;
 
 // Global cleanup after each test
 afterEach(() => {
@@ -24,56 +27,23 @@ afterEach(() => {
   // Clear all timers
   vi.clearAllTimers();
   
-  // Reset fetch mock
-  if (global.fetch && typeof (global.fetch as any).mockReset === 'function') {
-    (global.fetch as any).mockReset();
+  // Reset modules to prevent mock contamination between tests
+  vi.resetModules();
+  
+  // Force garbage collection if available (requires --expose-gc flag)
+  if (global.gc) {
+    global.gc();
   }
 });
 
-// Mock commonly problematic modules globally
-vi.mock('child_process', () => ({
-  execSync: vi.fn(() => ''),
-  exec: vi.fn(),
-  spawn: vi.fn(() => ({
-    on: vi.fn(),
-    stdout: { on: vi.fn() },
-    stderr: { on: vi.fn() },
-    kill: vi.fn(),
-  })),
-}));
+// DO NOT mock modules globally - let individual tests mock what they need
+// This prevents mock conflicts between test files
+// Only exception: MSW for HTTP requests (handled above)
 
-// Mock fs for tests that don't need real file system
-vi.mock('fs', () => ({
-  default: {
-    existsSync: vi.fn(() => true),
-    readFileSync: vi.fn(() => ''),
-    writeFileSync: vi.fn(),
-    mkdirSync: vi.fn(),
-    promises: {
-      readFile: vi.fn(() => Promise.resolve('')),
-      writeFile: vi.fn(() => Promise.resolve()),
-      mkdir: vi.fn(() => Promise.resolve()),
-      rm: vi.fn(() => Promise.resolve()),
-    },
-  },
-  existsSync: vi.fn(() => true),
-  readFileSync: vi.fn(() => ''),
-  writeFileSync: vi.fn(),
-  mkdirSync: vi.fn(),
-  promises: {
-    readFile: vi.fn(() => Promise.resolve('')),
-    writeFile: vi.fn(() => Promise.resolve()),
-    mkdir: vi.fn(() => Promise.resolve()),
-    rm: vi.fn(() => Promise.resolve()),
-  },
-}));
+// Don't mock fs globally - let individual tests mock as needed
+// This prevents issues with modules that legitimately need fs access
 
-// Mock the Claude Code SDK
-vi.mock('@anthropic-ai/claude-code', () => ({
-  ClaudeCodeSDK: vi.fn().mockImplementation(() => ({
-    query: vi.fn(() => Promise.resolve({ success: true })),
-    close: vi.fn(),
-  })),
-}));
+// DO NOT mock @anthropic-ai/claude-code globally
+// Individual tests should mock this as needed to prevent conflicts
 
 console.log('[Vitest Setup] Test environment configured');

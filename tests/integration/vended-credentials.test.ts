@@ -1,11 +1,11 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { processIssues } from '../../src/ai/unified-processor.js';
 import { getAiClient } from '../../src/ai/client.js';
 import { IssueContext, ActionConfig } from '../../src/types/index.js';
 import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 
 // Mock the credential manager
-mock.module('../../src/credentials/manager.js', () => ({
+vi.mock('../../src/credentials/manager.js', () => ({
   RSOLVCredentialManager: class MockCredentialManager {
     private credentials = new Map<string, string>();
     
@@ -35,8 +35,8 @@ mock.module('../../src/credentials/manager.js', () => ({
 }));
 
 // Mock the AI providers to verify they receive correct credentials
-mock.module('../../src/ai/analyzer.js', () => ({
-  analyzeIssue: mock((issue: any, config: any, client: any) => {
+vi.mock('../../src/ai/analyzer.js', () => ({
+  analyzeIssue: vi.fn((issue: any, config: any, client: any) => {
     // Handle legacy config structure
     if (!config.aiProvider || typeof config.aiProvider === 'string') {
       throw new Error('Invalid configuration: aiProvider must be an object');
@@ -71,8 +71,8 @@ mock.module('../../src/ai/analyzer.js', () => ({
   })
 }));
 
-mock.module('../../src/ai/solution.js', () => ({
-  generateSolution: mock(() => Promise.resolve({
+vi.mock('../../src/ai/solution.js', () => ({
+  generateSolution: vi.fn(() => Promise.resolve({
     success: true,
     message: 'Solution generated with vended credentials',
     changes: {
@@ -81,8 +81,8 @@ mock.module('../../src/ai/solution.js', () => ({
   }))
 }));
 
-mock.module('../../src/github/pr.js', () => ({
-  createPullRequest: mock(() => Promise.resolve({
+vi.mock('../../src/github/pr.js', () => ({
+  createPullRequest: vi.fn(() => Promise.resolve({
     success: true,
     message: 'Pull request created',
     pullRequestUrl: 'https://github.com/test/repo/pull/1',
@@ -91,7 +91,7 @@ mock.module('../../src/github/pr.js', () => ({
 }));
 
 // Mock the EnhancedClaudeCodeAdapter to avoid timeout issues
-mock.module('../../src/ai/adapters/claude-code-enhanced.js', () => ({
+vi.mock('../../src/ai/adapters/claude-code-enhanced.js', () => ({
   EnhancedClaudeCodeAdapter: class {
     constructor(config: any) {
       // Store config for testing
@@ -111,6 +111,14 @@ mock.module('../../src/ai/adapters/claude-code-enhanced.js', () => ({
 }));
 
 describe('Vended Credentials Integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   let mockIssue: IssueContext;
   
   beforeEach(() => {

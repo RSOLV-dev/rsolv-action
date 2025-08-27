@@ -6,9 +6,10 @@ import { VulnerabilityType } from './types.js';
 // Mock the logger
 vi.mock('../utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {})
+    debug: vi.fn(() => {}),
+    info: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    error: vi.fn(() => {})
   }
 }));
 
@@ -101,7 +102,7 @@ describe('SecurityDetectorV2', () => {
       const vulnerabilities = await detector.detect(code, 'javascript');
       
       const highConfidence = vulnerabilities.find(v => v.line === 3);
-      expect(highConfidence?.confidence).toBe('high');
+      expect(highConfidence?.confidence).toBeGreaterThanOrEqual(75); // High confidence threshold
     });
 
     it('should detect dangerous function usage', async () => {
@@ -125,7 +126,7 @@ describe('SecurityDetectorV2', () => {
     it('should use API patterns when configured', async () => {
       // Mock fetch for API
       const originalFetch = global.fetch;
-      global.fetch = mock(() => Promise.resolve({
+      global.fetch = vi.fn(() => Promise.resolve({
         ok: true,
         json: () => Promise.resolve({
           patterns: [{
@@ -162,9 +163,9 @@ describe('SecurityDetectorV2', () => {
     it('should handle pattern source errors gracefully', async () => {
       // Create a mock pattern source that throws
       const errorSource = {
-        getPatternsByLanguage: mock(() => Promise.reject(new Error('API Error'))),
-        getPatternsByType: mock(() => Promise.reject(new Error('API Error'))),
-        getAllPatterns: mock(() => Promise.reject(new Error('API Error')))
+        getPatternsByLanguage: vi.fn(() => Promise.reject(new Error('API Error'))),
+        getPatternsByType: vi.fn(() => Promise.reject(new Error('API Error'))),
+        getAllPatterns: vi.fn(() => Promise.reject(new Error('API Error')))
       };
       
       const errorDetector = new SecurityDetectorV2(errorSource as any);

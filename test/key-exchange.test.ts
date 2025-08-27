@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as crypto from 'crypto';
 
 // RED Phase: Write failing tests for proper key exchange

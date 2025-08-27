@@ -8,11 +8,11 @@ import type { IssueContext, ActionConfig } from '../../types/index.js';
 
 // Mock all dependencies
 vi.mock('child_process', () => ({
-  execSync: mock(() => '')
+  execSync: vi.fn(() => '')
 }));
 
 vi.mock('../analyzer.js', () => ({
-  analyzeIssue: mock(() => Promise.resolve({
+  analyzeIssue: vi.fn(() => Promise.resolve({
     canBeFixed: true,
     files: ['test.js'],
     filesToModify: ['test.js'],
@@ -21,8 +21,8 @@ vi.mock('../analyzer.js', () => ({
 }));
 
 vi.mock('../test-generating-security-analyzer.js', () => ({
-  TestGeneratingSecurityAnalyzer: mock(() => ({
-    analyzeWithTestGeneration: mock(() => Promise.resolve({
+  TestGeneratingSecurityAnalyzer: vi.fn(() => ({
+    analyzeWithTestGeneration: vi.fn(() => Promise.resolve({
       canBeFixed: true,
       files: ['test.js'],
       filesToModify: ['test.js'],
@@ -49,8 +49,8 @@ vi.mock('../test-generating-security-analyzer.js', () => ({
 }));
 
 vi.mock('../git-based-test-validator.js', () => ({
-  GitBasedTestValidator: mock(() => ({
-    validateFixWithTests: mock(() => Promise.resolve({
+  GitBasedTestValidator: vi.fn(() => ({
+    validateFixWithTests: vi.fn(() => Promise.resolve({
       isValidFix: false,
       success: false,
       testOutput: 'Test failed',
@@ -68,8 +68,8 @@ vi.mock('../git-based-test-validator.js', () => ({
 let generateSolutionWithGitCalls: any[] = [];
 
 vi.mock('../adapters/claude-code-git.js', () => ({
-  GitBasedClaudeCodeAdapter: mock(() => ({
-    generateSolutionWithGit: mock((...args) => {
+  GitBasedClaudeCodeAdapter: vi.fn(() => ({
+    generateSolutionWithGit: vi.fn((...args) => {
       generateSolutionWithGitCalls.push(args);
       return Promise.resolve({
         success: true,
@@ -89,7 +89,7 @@ vi.mock('../adapters/claude-code-git.js', () => ({
 }));
 
 vi.mock('../../github/pr-git.js', () => ({
-  createPullRequestFromGit: mock(() => Promise.resolve({
+  createPullRequestFromGit: vi.fn(() => Promise.resolve({
     success: true,
     message: 'PR created',
     pullRequestUrl: 'https://github.com/test/test/pull/1',
@@ -99,9 +99,10 @@ vi.mock('../../github/pr-git.js', () => ({
 
 vi.mock('../../utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {})
+    debug: vi.fn(() => {}),
+    info: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    error: vi.fn(() => {})
   }
 }));
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { SecurityDetectorV2 } from '../detector-v2.js';
 import { LocalPatternSource } from '../pattern-source.js';
 import { getMinimalPatternsByLanguage } from '../minimal-patterns.js';

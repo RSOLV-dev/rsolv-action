@@ -69,22 +69,20 @@ describe('RSOLVCredentialManager', () => {
 
       // Verify fetch was called correctly
       expect(fetchMock.mock.calls[0][0]).toBe(
-        'https://api.rsolv.dev/api/v1/credentials/exchange',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer test_api_key_123',
-            'Content-Type': 'application/json',
-            'X-GitHub-Job': 'test_job_123',
-            'X-GitHub-Run': 'test_run_456'
-          },
-          body: JSON.stringify({
-            api_key: 'test_api_key_123',
-            providers: ['anthropic', 'openai', 'openrouter'],
-            ttl_minutes: 60
-          })
-        }
+        'https://api.rsolv.dev/api/v1/credentials/exchange'
       );
+      
+      const fetchOptions = fetchMock.mock.calls[0][1];
+      expect(fetchOptions.method).toBe('POST');
+      expect(fetchOptions.headers['Authorization']).toBe('Bearer test_api_key_123');
+      expect(fetchOptions.headers['Content-Type']).toBe('application/json');
+      expect(fetchOptions.headers['X-GitHub-Job']).toBe('test_job_123');
+      expect(fetchOptions.headers['X-GitHub-Run']).toBe('test_run_456');
+      
+      const body = JSON.parse(fetchOptions.body);
+      expect(body.api_key).toBe('test_api_key_123');
+      expect(body.providers).toEqual(['anthropic', 'openai', 'openrouter']);
+      expect(body.ttl_minutes).toBe(60);
 
       // Verify credentials are accessible
       expect(manager.getCredential('anthropic')).toBe('temp_ant_xyz789');

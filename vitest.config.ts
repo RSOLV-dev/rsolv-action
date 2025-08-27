@@ -40,16 +40,30 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       '**/*.bun-backup',
+      '**/vulnerable-apps/**',  // Exclude demo applications
     ],
     
-    // Run tests sequentially by default to avoid conflicts
-    // Can be overridden with --parallel flag
-    pool: 'forks',
+    // Use vmThreads for better memory management
+    pool: 'vmThreads',
     poolOptions: {
-      forks: {
-        singleFork: true,
+      vmThreads: {
+        // Recycle workers more aggressively
+        memoryLimit: '512MB',
+        maxThreads: 2,
       }
     },
+    
+    // Log heap usage for debugging
+    logHeapUsage: true,
+    
+    // Test sharding for large test suites
+    maxConcurrency: 2,
+    
+    // Disable isolation for better performance (tests must be properly isolated)
+    isolate: false,
+    
+    // Force garbage collection between tests
+    teardownTimeout: 1000,
     
   },
   

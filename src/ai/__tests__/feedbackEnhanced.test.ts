@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { generateSolutionWithFeedback } from '../feedbackEnhanced.js';
 import type { IssueContext } from '../../types.js';
 import type { IssueAnalysis, PullRequestSolution, AIConfig } from '../types.js';

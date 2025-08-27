@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { SecurityDetectorV3 } from '../src/security/detector-v3';
 import { HybridPatternSource } from '../src/security/pattern-source';
 import { ElixirASTAnalyzer } from '../src/clients/elixir-ast-analyzer';

@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from 'vitest';
+import { describe, expect, test, beforeEach, vi } from 'vitest';
 import { setupContainer } from '../setup.js';
 import { MockDockerClient } from '../docker-client.js';
 import { ActionConfig } from '../../types/index.js';

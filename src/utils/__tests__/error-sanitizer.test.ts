@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { sanitizeErrorMessage, sanitizeError } from '../error-sanitizer.js';
 
 describe('Error Sanitizer', () => {

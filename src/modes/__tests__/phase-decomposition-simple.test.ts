@@ -3,7 +3,7 @@
  * Focus on testing that the methods exist and have correct signatures
  */
 
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { PhaseExecutor } from '../phase-executor/index.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 

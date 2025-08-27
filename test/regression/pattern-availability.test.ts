@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { createPatternSource } from '../../src/security/pattern-source.js';
 import { VulnerabilityType } from '../../src/security/types.js';
 

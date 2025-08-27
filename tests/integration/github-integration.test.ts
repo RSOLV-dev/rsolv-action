@@ -1,183 +1,287 @@
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { detectIssues } from '../../src/github/issues.js';
 import { createPullRequest } from '../../src/github/pr.js';
 import { getRepositoryFiles } from '../../src/github/files.js';
 import { IssueContext, ActionConfig, AnalysisData } from '../../src/types/index.js';
 
-// Mock the logger module first
-mock.module('../../src/utils/logger.js', () => ({
+// Mock the logger module
+vi.mock('../../src/utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {}),
-    debug: mock(() => {}),
-    log: mock(() => {})
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    log: vi.fn()
+  }
+}));
+
+// Mock AI client
+vi.mock('../../src/ai/client.js', () => ({
+  getAiClient: vi.fn(() => ({
+    generateText: vi.fn(async () => 'Generated PR description'),
+    name: 'test-ai'
+  }))
+}));
+
+// Mock external API client
+vi.mock('../../src/external/api-client.js', () => ({
+  RsolvApiClient: class {
+    recordPullRequestCreated() { return Promise.resolve(); }
   }
 }));
 
 // Mock the GitHub API client
-mock.module('../../src/github/api.js', () => {
-  return {
-    getGitHubClient: () => ({
-      repos: {
-        getContent: async ({ owner, repo, path, ref }: any) => {
-          if (path === 'not-found.js') {
-            throw { status: 404, message: 'Not found' };
-          }
-          
-          return {
-            data: {
-              sha: 'abc123',
-              content: Buffer.from('// Mock file content').toString('base64')
-            }
-          };
-        },
-        createOrUpdateFileContents: async () => ({ data: { commit: { sha: 'def456' } } }),
-      },
-      git: {
-        getRef: async ({ ref }: any) => ({ data: { object: { sha: '789xyz' } } }),
-        createRef: async () => ({ data: { ref: 'refs/heads/test-branch' } })
-      },
-      pulls: {
-        create: async ({ title, head, base }: any) => ({
+vi.mock('../../src/github/api.js', () => ({
+  getGitHubClient: vi.fn(() => ({
+    repos: {
+      get: vi.fn(async () => ({
+        data: {
+          default_branch: 'main',
+          language: 'JavaScript'
+        }
+      })),
+      getContent: vi.fn(async ({ owner, repo, path, ref }: any) => {
+        if (path === 'not-found.js') {
+          throw { status: 404, message: 'Not found' };
+        }
+        
+        return {
           data: {
-            number: 123,
-            html_url: 'https://github.com/test-owner/test-repo/pull/123'
+            sha: 'abc123',
+            content: Buffer.from('// Mock file content').toString('base64')
           }
-        })
-      },
-      issues: {
-        listForRepo: async ({ labels }: any) => ({
-          data: [
-            {
-              id: 'issue-1',
-              number: 42,
-              title: 'Test Issue',
-              body: 'This is a test issue',
-              labels: [{ name: labels }],
-              assignees: [],
-              created_at: '2025-03-23T00:00:00Z',
-              updated_at: '2025-03-23T01:00:00Z',
-              html_url: 'https://github.com/test-owner/test-repo/issues/42'
-            }
-          ]
-        }),
-        addLabels: async () => ({}),
-        createComment: async () => ({})
-      }
-    }),
-    getRepositoryDetails: async () => ({
-      id: 'repo-123',
-      name: 'test-repo',
-      fullName: 'test-owner/test-repo',
-      owner: 'test-owner',
-      defaultBranch: 'main',
-      language: 'TypeScript'
-    })
-  };
-});
-
-// Mock the AI client
-mock.module('../../src/ai/client.js', () => ({
-  getAiClient: () => ({
-    complete: async (prompt: string) => {
-      return 'This pull request fixes the authentication bug reported in issue #42.\n\n## Changes\n- Fixed token validation\n- Added proper error handling\n\n## Testing\n- Added unit tests\n- Manual testing completed';
+        };
+      }),
+      createOrUpdateFileContents: vi.fn(async () => ({ 
+        data: { commit: { sha: 'def456' } } 
+      }))
+    },
+    git: {
+      getRef: vi.fn(async ({ ref }: any) => ({ 
+        data: { object: { sha: '789xyz' } } 
+      })),
+      createRef: vi.fn(async () => ({ 
+        data: { ref: 'refs/heads/test-branch' } 
+      }))
+    },
+    pulls: {
+      create: vi.fn(async ({ title, head, base }: any) => ({
+        data: {
+          number: 123,
+          html_url: 'https://github.com/test-owner/test-repo/pull/123'
+        }
+      }))
+    },
+    issues: {
+      get: vi.fn(async ({ issue_number }: any) => ({
+        data: {
+          id: 1001,
+          number: issue_number,
+          title: 'Security Issue',
+          labels: [{ name: 'security' }],
+          body: 'SQL injection vulnerability',
+          created_at: new Date().toISOString(),
+          assignees: [],
+          pull_request: undefined
+        }
+      })),
+      listForRepo: vi.fn(async ({ labels }: any) => ({
+        data: (labels === 'security' || labels?.includes?.('security')) ? [
+          {
+            id: 1001,
+            number: 1,
+            title: 'Security Issue',
+            labels: [{ name: 'security' }],
+            body: 'SQL injection vulnerability',
+            created_at: new Date().toISOString(),
+            assignees: []
+          }
+        ] : []
+      })),
+      createComment: vi.fn(async () => ({ 
+        data: { id: 999 } 
+      }))
     }
-  })
+  })),
+  getRepositoryDetails: vi.fn(async () => ({
+    defaultBranch: 'main',
+    language: 'JavaScript'
+  }))
 }));
 
-// Mock configuration for tests
-const mockConfig: ActionConfig = {
-  apiKey: 'test-api-key',
-  configPath: '.github/rsolv.yml',
-  issueLabel: 'rsolv:automate',
-  aiProvider: {
-    provider: 'anthropic',
-    model: 'claude-3-sonnet-20240229'
-  },
-  containerConfig: {
-    enabled: false
-  },
-  securitySettings: {
-    disableNetworkAccess: true,
-    preventSecretLeakage: true
-  }
-};
-
-// Mock issue data
-const mockIssue: IssueContext = {
-  id: 'github-123',
-  number: 42,
-  title: 'Fix bug in authentication',
-  body: 'There is a bug in the authentication system.',
-  labels: ['bug', 'rsolv:automate'],
-  assignees: [],
-  repository: {
-    owner: 'test-owner',
-    name: 'test-repo',
-    fullName: 'test-owner/test-repo',
-    defaultBranch: 'main',
-    language: 'TypeScript'
-  },
-  source: 'github',
-  createdAt: '2025-03-23T00:00:00Z',
-  updatedAt: '2025-03-23T01:00:00Z'
-};
-
-// Mock analysis data
-const mockAnalysis: AnalysisData = {
-  issueType: 'bug',
-  filesToModify: ['src/auth.ts', 'src/utils.ts'],
-  estimatedComplexity: 'medium',
-  requiredContext: [],
-  suggestedApproach: 'Fix the authentication token validation'
-};
-
 describe('GitHub Integration', () => {
+  const originalEnv = process.env;
+  
   beforeEach(() => {
-    // Set environment variables for tests
+    vi.clearAllMocks();
+    // Set up required environment variables
+    process.env = { ...originalEnv };
     process.env.GITHUB_REPOSITORY = 'test-owner/test-repo';
     process.env.GITHUB_TOKEN = 'test-token';
-    process.env.NODE_ENV = 'test';
   });
-  
-  test('detectIssues should find issues with automation label', async () => {
-    const issues = await detectIssues(mockConfig);
-    
-    expect(issues).toBeDefined();
-    expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0].number).toBe(42);
+
+  afterEach(() => {
+    vi.resetModules();
+    // Restore original environment
+    process.env = originalEnv;
   });
-  
-  test('getRepositoryFiles should fetch file contents', async () => {
-    const filePaths = ['src/auth.ts', 'src/utils.ts'];
-    const fileContents = await getRepositoryFiles(mockIssue, filePaths);
-    
-    expect(fileContents).toBeDefined();
-    expect(Object.keys(fileContents).length).toBe(2);
-    expect(fileContents['src/auth.ts']).toBeDefined();
-    expect(fileContents['src/utils.ts']).toBeDefined();
+
+  describe('Issue Detection', () => {
+    test('should detect security issues with labels', async () => {
+      const config: ActionConfig = {
+        issueLabel: 'security',
+        repository: {
+          owner: 'test-owner',
+          name: 'test-repo',
+          fullName: 'test-owner/test-repo',
+          defaultBranch: 'main'
+        },
+        token: 'test-token',
+        workflow: {
+          autoFix: true,
+          createPullRequest: true
+        },
+        aiProvider: {
+          provider: 'anthropic',
+          apiKey: 'test-key'
+        },
+        configPath: '.github/rsolv.yml',
+        apiKey: 'test-api-key'
+      } as ActionConfig;
+
+      const issues = await detectIssues(config);
+      
+      expect(issues).toHaveLength(1);
+      expect(issues[0].title).toBe('Security Issue');
+      expect(issues[0].labels).toContain('security');
+    });
+
+    test('should handle empty issue list', async () => {
+      const config: ActionConfig = {
+        issueLabel: 'non-existent',
+        repository: {
+          owner: 'test-owner',
+          name: 'test-repo',
+          fullName: 'test-owner/test-repo',
+          defaultBranch: 'main'
+        },
+        token: 'test-token',
+        workflow: {
+          autoFix: true,
+          createPullRequest: false
+        },
+        aiProvider: {
+          provider: 'anthropic',
+          apiKey: 'test-key'
+        },
+        configPath: '.github/rsolv.yml',
+        apiKey: 'test-api-key'
+      } as ActionConfig;
+
+      const issues = await detectIssues(config);
+      expect(issues).toHaveLength(0);
+    });
   });
-  
-  test('getRepositoryFiles should handle file not found', async () => {
-    const filePaths = ['not-found.js'];
-    const fileContents = await getRepositoryFiles(mockIssue, filePaths);
-    
-    expect(fileContents).toBeDefined();
-    // In test mode, it should still return a mock file
-    expect(Object.keys(fileContents).length).toBe(1);
+
+  describe('Pull Request Creation', () => {
+    test('should create a pull request with fixes', async () => {
+      const issue: IssueContext = {
+        id: '123',
+        number: 1,
+        title: 'Security Issue',
+        body: 'SQL injection in user.js',
+        labels: [],
+        repository: {
+          owner: 'test-owner',
+          name: 'test-repo',
+          fullName: 'test-owner/test-repo'
+        }
+      };
+
+      const analysisData: AnalysisData = {
+        fixes: [
+          {
+            file: 'user.js',
+            content: '// Fixed content',
+            description: 'Fixed SQL injection'
+          }
+        ],
+        summary: 'Fixed security vulnerability',
+        issueNumber: 1
+      };
+
+      const config: ActionConfig = {
+        repository: {
+          owner: 'test-owner',
+          name: 'test-repo',
+          fullName: 'test-owner/test-repo',
+          defaultBranch: 'main'
+        },
+        token: 'test-token',
+        workflow: {
+          autoFix: true,
+          createPullRequest: true
+        },
+        aiProvider: {
+          provider: 'anthropic',
+          apiKey: 'test-key'
+        },
+        configPath: '.github/rsolv.yml',
+        apiKey: 'test-api-key',
+        issueLabel: 'rsolv'
+      } as ActionConfig;
+
+      const changes = {
+        'user.js': '// Fixed content'
+      };
+      
+      const pr = await createPullRequest(issue, changes, analysisData, config);
+      
+      expect(pr.pullRequestNumber).toBe(123);
+      expect(pr.pullRequestUrl).toContain('github.com');
+    });
   });
-  
-  test('createPullRequest should create a PR with file changes', async () => {
-    const changes = {
-      'src/auth.ts': 'export function authenticate() { /* fixed */ }',
-      'src/utils.ts': 'export function validate() { /* fixed */ }'
-    };
-    
-    const result = await createPullRequest(mockIssue, changes, mockAnalysis, mockConfig);
-    
-    expect(result.success).toBe(true);
-    expect(result.pullRequestUrl).toBeDefined();
-    expect(result.pullRequestNumber).toBeDefined();
+
+  describe('File Operations', () => {
+    test('should get repository files', async () => {
+      const config: ActionConfig = {
+        repository: {
+          owner: 'test-owner',
+          name: 'test-repo',
+          fullName: 'test-owner/test-repo',
+          defaultBranch: 'main'
+        },
+        token: 'test-token',
+        workflow: {
+          autoFix: true,
+          createPullRequest: false
+        }
+      };
+
+      const files = await getRepositoryFiles(['src/index.js'], config);
+      
+      expect(files).toHaveLength(1);
+      expect(files[0].path).toBe('src/index.js');
+      expect(files[0].content).toBeDefined();
+    });
+
+    test('should handle file not found', async () => {
+      const config: ActionConfig = {
+        repository: {
+          owner: 'test-owner',
+          name: 'test-repo',
+          fullName: 'test-owner/test-repo',
+          defaultBranch: 'main'
+        },
+        token: 'test-token',
+        workflow: {
+          autoFix: false,
+          createPullRequest: false
+        }
+      };
+
+      const files = await getRepositoryFiles(['not-found.js'], config);
+      expect(files).toHaveLength(0);
+    });
   });
 });

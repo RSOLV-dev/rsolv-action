@@ -65,7 +65,7 @@ describe('PhaseExecutor - Mitigate Phase Credential Handling', () => {
       body: '## Vulnerabilities\n- XSS in file.js:10',
       labels: ['rsolv:validated']
     });
-    vi.spyOn(githubApiModule, 'updateIssueLabels').mockResolvedValue(undefined);
+    vi.spyOn(githubApiModule, 'addLabels').mockResolvedValue(undefined);
     vi.spyOn(githubApiModule, 'createIssueComment').mockResolvedValue(undefined);
     
     // Mock phase data client - need correct structure for validation data

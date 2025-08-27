@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, mock } from 'vitest';
+import { describe, expect, test, beforeEach, mock, vi } from 'vitest';
 import { EnhancedClaudeCodeAdapter } from '../claude-code-enhanced.js';
 import { AIConfig } from '../../types.js';
 import { IssueContext } from '../../../types/index.js';
@@ -29,10 +29,10 @@ vi.mock('../claude-code.js', () => ({
 // Mock logger
 vi.mock('../../../utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    error: mock(() => {}),
-    warn: mock(() => {}),
-    debug: mock(() => {})
+    debug: vi.fn(() => {}),
+    info: vi.fn(() => {}),
+    error: vi.fn(() => {}),
+    warn: vi.fn(() => {})
   }
 }));
 
@@ -108,7 +108,7 @@ describe('EnhancedClaudeCodeAdapter', () => {
 
     test('should handle errors gracefully', async () => {
       // Mock generateSolution to throw an error
-      adapter.generateSolution = mock(() => {
+      adapter.generateSolution = vi.fn(() => {
         throw new Error('Test error');
       });
       
@@ -135,17 +135,13 @@ describe('EnhancedClaudeCodeAdapter', () => {
         relatedFiles: ['test.js']
       };
       
-      // Mock the generateSolution method to return a PullRequestSolution
-      adapter.generateSolution = mock(async () => ({
-        title: 'Fix: Test Issue',
-        description: 'This PR fixes the test issue',
-        files: [
-          {
-            path: 'test.js',
-            content: 'console.log("fixed");',
-            operation: 'modify' as const
-          }
-        ]
+      // Mock the generateSolution method to return the expected format
+      adapter.generateSolution = vi.fn(async () => ({
+        success: true,
+        message: 'Solution generated',
+        changes: {
+          'test.js': 'console.log("fixed");'
+        }
       }));
       
       const result = await adapter.generateEnhancedSolution(
@@ -156,7 +152,7 @@ describe('EnhancedClaudeCodeAdapter', () => {
       expect(result).toBeDefined();
       expect(result.title).toBeDefined();
       expect(result.description).toBeDefined();
-      expect(result.files).toBeArray();
+      expect(Array.isArray(result.files)).toBe(true);
     });
 
     test('should use enhanced prompt when provided', async () => {
@@ -170,18 +166,14 @@ describe('EnhancedClaudeCodeAdapter', () => {
       
       // Mock to capture the prompt
       let capturedPrompt: string | undefined;
-      adapter.generateSolution = mock(async (issue, anal, prompt) => {
+      adapter.generateSolution = vi.fn(async (issue, anal, prompt) => {
         capturedPrompt = prompt;
         return {
-          title: 'Fix: Simple Issue',
-          description: 'This PR fixes a simple issue',
-          files: [
-            {
-              path: 'test.js',
-              content: 'fixed',
-              operation: 'modify' as const
-            }
-          ]
+          success: true,
+          message: 'Solution generated',
+          changes: {
+            'test.js': 'fixed'
+          }
         };
       });
       

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { processIssues } from '../../src/ai/unified-processor.js';
 import { IssueContext, ActionConfig } from '../../src/types/index.js';
 import * as analyzer from '../../src/ai/analyzer.js';
@@ -6,19 +6,19 @@ import * as solution from '../../src/ai/solution.js';
 import * as pr from '../../src/github/pr.js';
 
 // Mock the logger module first
-mock.module('../../src/utils/logger.js', () => ({
+vi.mock('../../src/utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {}),
-    debug: mock(() => {}),
-    log: mock(() => {})
+    info: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    error: vi.fn(() => {}),
+    debug: vi.fn(() => {}),
+    log: vi.fn(() => {})
   }
 }));
 
 // Mock the dependencies
-mock.module('../../src/ai/analyzer.js', () => ({
-  analyzeIssue: mock(() => Promise.resolve({
+vi.mock('../../src/ai/analyzer.js', () => ({
+  analyzeIssue: vi.fn(() => Promise.resolve({
     canBeFixed: true,
     confidence: 0.9,
     suggestedApproach: 'Fix the bug',
@@ -29,8 +29,8 @@ mock.module('../../src/ai/analyzer.js', () => ({
   }))
 }));
 
-mock.module('../../src/ai/solution.js', () => ({
-  generateSolution: mock(() => Promise.resolve({
+vi.mock('../../src/ai/solution.js', () => ({
+  generateSolution: vi.fn(() => Promise.resolve({
     success: true,
     message: 'Solution generated successfully',
     changes: {
@@ -39,8 +39,8 @@ mock.module('../../src/ai/solution.js', () => ({
   }))
 }));
 
-mock.module('../../src/github/pr.js', () => ({
-  createPullRequest: mock(() => Promise.resolve({
+vi.mock('../../src/github/pr.js', () => ({
+  createPullRequest: vi.fn(() => Promise.resolve({
     success: true,
     message: 'Pull request created successfully',
     pullRequestUrl: 'https://github.com/test/repo/pull/1',
@@ -48,7 +48,7 @@ mock.module('../../src/github/pr.js', () => ({
   }))
 }));
 
-mock.module('../../src/ai/security-analyzer.js', () => ({
+vi.mock('../../src/ai/security-analyzer.js', () => ({
   SecurityAwareAnalyzer: class {
     async analyzeWithSecurity() {
       return {
@@ -72,7 +72,7 @@ mock.module('../../src/ai/security-analyzer.js', () => ({
   }
 }));
 
-mock.module('../../src/ai/adapters/claude-code-enhanced.js', () => ({
+vi.mock('../../src/ai/adapters/claude-code-enhanced.js', () => ({
   EnhancedClaudeCodeAdapter: class {
     async gatherDeepContext() {
       return {
@@ -85,6 +85,14 @@ mock.module('../../src/ai/adapters/claude-code-enhanced.js', () => ({
 }));
 
 describe('Unified Processor', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   let mockIssue: IssueContext;
   let mockConfig: ActionConfig;
 

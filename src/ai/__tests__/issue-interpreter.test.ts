@@ -5,7 +5,7 @@
  * These tests follow TDD - RED phase (all should fail initially)
  */
 
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { IssueInterpreter } from '../issue-interpreter.js';
 import type { 
   InterpretedIssue, 

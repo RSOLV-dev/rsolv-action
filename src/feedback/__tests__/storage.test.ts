@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FeedbackStorage } from '../storage.js';
 import type { FeedbackEvent } from '../types.js';
 import fs from 'fs';

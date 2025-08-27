@@ -1,0 +1,1531 @@
+
+> rsolv-action@0.1.0 test
+> NODE_OPTIONS='--max-old-space-size=8192 --expose-gc' vitest run
+
+
+ RUN  v3.2.4 /home/dylan/dev/rsolv/RSOLV-action
+
+stdout | src/security/__tests__/ast-pattern-interpreter.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/__tests__/client-with-credentials.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/client-with-credentials.test.ts (5 tests) 22ms 14 MB heap used
+stdout | src/ai/__tests__/client.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/security/__tests__/ast-pattern-interpreter.test.ts > AST Pattern Interpreter > should use AST rules to reduce false positives in SQL injection detection
+[AST] Scanning file: api/users.js
+[AST] Total patterns: 1
+[AST] Pattern js-sql-injection-concat matched via regex
+[AST] Candidate patterns after regex filter: 1
+[AST] Applying AST rules for pattern js-sql-injection-concat
+[AST] SQL check: BinaryExpression found, hasSQL=true, expression="SELECT * FROM users WHERE id = USER_INPUT"
+[AST] Found 1 issues with AST rules
+
+stdout | src/security/__tests__/ast-pattern-interpreter.test.ts > AST Pattern Interpreter > should use AST rules to reduce false positives in SQL injection detection
+[AST] Scanning file: debug.js
+[AST] Total patterns: 1
+[AST] Pattern js-sql-injection-concat matched via regex
+[AST] Candidate patterns after regex filter: 1
+[AST] Applying AST rules for pattern js-sql-injection-concat
+[AST] SQL check: BinaryExpression found, hasSQL=true, expression="SELECT * FROM users WHERE id = USER_INPUT"
+[AST] SQL check: BinaryExpression found, hasSQL=false, expression="Query: USER_INPUT"
+[AST] Found 0 issues with AST rules
+
+stdout | src/security/__tests__/ast-pattern-interpreter.test.ts > AST Pattern Interpreter > should use AST rules to reduce false positives in SQL injection detection
+[AST] Scanning file: api/secure-users.js
+[AST] Total patterns: 1
+[AST] Candidate patterns after regex filter: 0
+
+ ✓ src/ai/__tests__/client.test.ts (11 tests) 37ms 14 MB heap used
+stdout | src/ai/__tests__/processor-security-integration.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/__tests__/processor-security-integration.test.ts > Security-Aware Processor Integration > should include security analysis data when processing security issues
+❌ Security analysis not yet available in result data
+
+ ✓ src/ai/__tests__/processor-security-integration.test.ts (3 tests) 623ms 25 MB heap used
+stdout | test/credentials/credential-lifecycle.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ test/credentials/credential-lifecycle.test.ts (5 tests | 4 failed) 362ms 26 MB heap used
+   × Credential Lifecycle Issues > Issue: Multiple credential managers created > should demonstrate the current problem - multiple managers 23ms
+     → Failed to exchange credentials: Not found
+   × Credential Lifecycle Issues > Solution 1: Singleton credential manager > should reuse the same credential manager instance 9ms
+     → Failed to exchange credentials: Not found
+   × Credential Lifecycle Issues > Solution 2: Handle credential expiration gracefully > should refresh expired credentials automatically 9ms
+     → Failed to exchange credentials: Not found
+   × Credential Lifecycle Issues > Solution 3: Retry on exchange failure > should retry credential exchange with exponential backoff 317ms
+     → Failed to exchange credentials: Not found
+   ✓ Credential Lifecycle Issues > Claude conversation logging > should log full Claude conversations when enabled 4ms
+stdout | src/ai/__tests__/solution.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/__tests__/solution.test.ts (3 tests | 3 failed) 325ms 27 MB heap used
+   × Solution Generator > generateSolution should return solution from AI client 209ms
+     → expected undefined to be defined
+   × Solution Generator > generateSolution should use Claude Code adapter when provider is claude-code 8ms
+     → expected false to be true // Object.is equality
+   × Solution Generator > generateSolution should fallback to standard AI client for non-claude-code providers 108ms
+     → the given combination of arguments (undefined and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+stdout | src/security/analyzers/__tests__/elixir-ast-analyzer.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/security/analyzers/__tests__/elixir-ast-analyzer.test.ts (10 tests | 1 failed) 158ms 28 MB heap used
+   × ElixirASTAnalyzer > encryption integration > should encrypt files before sending to API 7ms
+     → expected undefined to be 'Bearer test-api-key' // Object.is equality
+   ✓ ElixirASTAnalyzer > encryption integration > should handle multiple files with different languages 6ms
+   ✓ ElixirASTAnalyzer > encryption integration > should generate correct content hash 6ms
+   ✓ ElixirASTAnalyzer > encryption integration > should reuse session ID across requests 5ms
+   ✓ ElixirASTAnalyzer > encryption integration > should handle encryption key rotation 5ms
+   ✓ ElixirASTAnalyzer > error handling > should handle API errors gracefully 4ms
+   ✓ ElixirASTAnalyzer > error handling > should handle timeouts 107ms
+   ✓ ElixirASTAnalyzer > health check > should check service health 6ms
+   ✓ ElixirASTAnalyzer > health check > should handle health check failures 6ms
+   ✓ ElixirASTAnalyzer > vulnerability extraction > should extract vulnerabilities from response 5ms
+stdout | src/security/pattern-source.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/pattern-source.test.ts (17 tests) 87ms 28 MB heap used
+stdout | src/ai/__tests__/git-based-processor-validation.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/__tests__/git-based-processor-validation.test.ts > Git-based processor with fix validation > when fix validation is enabled > should generate tests before creating fix
+Result: {
+  issueId: [32m'test-1'[39m,
+  success: [33mfalse[39m,
+  message: [32m'Claude Code SDK execution failed'[39m,
+  error: [32m"Claude Code SDK execution failed: Cannot read properties of undefined (reading 'Symbol(Symbol.asyncIterator)')"[39m
+}
+mockAnalyzeWithTestGeneration called: [33m0[39m
+
+ ❯ src/ai/__tests__/git-based-processor-validation.test.ts (13 tests | 11 failed | 1 skipped) 449ms 31 MB heap used
+   × Git-based processor with fix validation > when fix validation is enabled > should generate tests before creating fix 66ms
+     → expected "spy" to be called with arguments: [ …(3) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   × Git-based processor with fix validation > when fix validation is enabled > should validate fix after generation 40ms
+     → expected "spy" to be called with arguments: [ Any<String>, 'abc123', { …(3) } ][90m
+
+Number of calls: [1m0[22m
+[39m
+   × Git-based processor with fix validation > when fix validation is enabled > should retry with enhanced context when validation fails 38ms
+     → expected "spy" to be called 2 times, but got 0 times
+   × Git-based processor with fix validation > when fix validation is enabled > should respect configurable iteration limits 39ms
+     → expected "spy" to be called 2 times, but got 0 times
+   × Git-based processor with fix validation > when fix validation is enabled > should use label-based iteration override 39ms
+     → expected "spy" to be called 5 times, but got 0 times
+   × Git-based processor with fix validation > when fix validation is enabled > should rollback changes when all iterations fail 39ms
+     → expected "spy" to be called with arguments: [ StringContaining{…}, Any<Object> ][90m
+
+Number of calls: [1m0[22m
+[39m
+   ✓ Git-based processor with fix validation > when fix validation is enabled > should skip validation when disabled 8ms
+   × Git-based processor with fix validation > when fix validation is enabled > should create PR only when validation passes 48ms
+     → expected false to be true // Object.is equality
+   × Git-based processor with fix validation > when fix validation is enabled > should include test code in enhanced context 40ms
+     → Cannot read properties of undefined (reading '0')
+   × Git-based processor with fix validation > when fix validation is enabled > should handle vulnerability type specific limits 39ms
+     → expected 'Claude Code SDK execution failed' to contain 'failed after 5 attempts'
+   × Git-based processor with fix validation > when DISABLE_FIX_VALIDATION is set > should skip validation when fixValidation.enabled is false 7ms
+     → expected "spy" to be called 1 times, but got 0 times
+   × Git-based processor with fix validation > when DISABLE_FIX_VALIDATION is set > should run validation when fixValidation.enabled is true 44ms
+     → expected "spy" to be called with arguments: [ Any<String>, 'abc123', { …(3) } ][90m
+
+Number of calls: [1m0[22m
+[39m
+   ↓ Git-based processor with fix validation > when DISABLE_FIX_VALIDATION is set > should log when validation is skipped
+stdout | src/modes/__tests__/phase-executor.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/modes/__tests__/phase-executor.test.ts > PhaseExecutor > execute method > should require issue for mitigate mode
+Debug - result2: {
+  success: [33mfalse[39m,
+  phase: [32m'mitigate'[39m,
+  error: [32m'Failed to generate fix: Unknown error during fix generation'[39m,
+  data: {
+    processingResults: [90mundefined[39m,
+    validation: {
+      vulnerabilities: [36m[Array][39m,
+      hasSpecificVulnerabilities: [33mtrue[39m,
+      validated: [33mtrue[39m,
+      generatedTests: [36m[Object][39m,
+      analysisData: [36m[Object][39m
+    }
+  }
+}
+
+ ✓ src/modes/__tests__/phase-executor.test.ts (11 tests) 216ms 33 MB heap used
+stdout | src/validation/__tests__/enricher.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/validation/__tests__/enricher.test.ts (9 tests) 87ms 35 MB heap used
+stdout | src/ai/adapters/__tests__/claude-code-git-prompt.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/claude-code-git-prompt.test.ts (7 tests | 5 failed) 87ms 36 MB heap used
+   × GitBasedClaudeCodeAdapter Prompt Effectiveness > RED Phase - Current Prompt Failures > should fail when Claude only provides JSON without editing files 10ms
+     → expected 'Claude Code SDK execution failed' to contain 'No files were modified'
+   ✓ GitBasedClaudeCodeAdapter Prompt Effectiveness > RED Phase - Current Prompt Failures > should fail to create PR when files are not actually modified 10ms
+   × GitBasedClaudeCodeAdapter Prompt Effectiveness > GREEN Phase - Prompt Improvements > should successfully edit files when prompt explicitly requires Edit tool usage 14ms
+     → Cannot read properties of undefined (reading 'toLowerCase')
+   × GitBasedClaudeCodeAdapter Prompt Effectiveness > GREEN Phase - Prompt Improvements > should validate that both Edit tools AND JSON are used 16ms
+     → expected false to be true // Object.is equality
+   × GitBasedClaudeCodeAdapter Prompt Effectiveness > REFACTOR Phase - Optimized Prompt > should use concise but effective prompt structure 12ms
+     → Cannot read properties of undefined (reading 'toLowerCase')
+   × GitBasedClaudeCodeAdapter Prompt Effectiveness > REFACTOR Phase - Optimized Prompt > should maintain backward compatibility with existing adapters 13ms
+     → expected GitBasedClaudeCodeAdapter{ …(8) } to have property "analyzeIssue"
+   ✓ GitBasedClaudeCodeAdapter Prompt Effectiveness > Integration Tests > should handle real Claude responses correctly 11ms
+stdout | src/security/detector-v2.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/security/detector-v2.test.ts (10 tests | 1 failed) 64ms 36 MB heap used
+   ✓ SecurityDetectorV2 > detect > should detect SQL injection vulnerabilities 7ms
+   ✓ SecurityDetectorV2 > detect > should detect XSS vulnerabilities 7ms
+   ✓ SecurityDetectorV2 > detect > should not flag safe parameterized queries 8ms
+   ✓ SecurityDetectorV2 > detect > should detect vulnerabilities in Python code 7ms
+   ✓ SecurityDetectorV2 > detect > should handle empty code gracefully 6ms
+   ✓ SecurityDetectorV2 > detect > should deduplicate vulnerabilities on the same line 6ms
+   × SecurityDetectorV2 > detect > should assign confidence levels correctly 6ms
+     → expected 90 to be 'high' // Object.is equality
+   ✓ SecurityDetectorV2 > detect > should detect dangerous function usage 6ms
+   ✓ SecurityDetectorV2 > with API pattern source > should use API patterns when configured 6ms
+   ✓ SecurityDetectorV2 > error handling > should handle pattern source errors gracefully 6ms
+stdout | src/ai/adapters/__tests__/structured-phases.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/structured-phases.test.ts (17 tests | 5 failed) 104ms 36 MB heap used
+   ✓ Structured Phased Prompting - RED Phase > Phase 1: Prompt Construction > should successfully call structured phased prompt method 7ms
+   ✓ Structured Phased Prompting - RED Phase > Phase 1: Prompt Construction > should include phase markers in prompt 5ms
+   ✓ Structured Phased Prompting - RED Phase > Phase 1: Prompt Construction > should include execution checklist 5ms
+   ✓ Structured Phased Prompting - RED Phase > Phase 1: Prompt Construction > should emphasize editing before JSON 5ms
+   ✓ Structured Phased Prompting - RED Phase > Phase 2: Phase Detection > should successfully call parsePhaseCompletion method 5ms
+   ✓ Structured Phased Prompting - RED Phase > Phase 2: Phase Detection > should detect when Phase 1 is complete 5ms
+   ✓ Structured Phased Prompting - RED Phase > Phase 2: Phase Detection > should detect when files are edited without phase marker 8ms
+   ✓ Structured Phased Prompting - RED Phase > Phase 2: Phase Detection > should detect when JSON is provided 6ms
+   ✓ Structured Phased Prompting - RED Phase > Phase 2: Phase Detection > should mark success only when both phases complete 6ms
+   × Structured Phased Prompting - RED Phase > Phase 3: Integration with generateSolutionWithGit > should use structured phases when configured 8ms
+     → Cannot read properties of undefined (reading 'spyOn')
+   × Structured Phased Prompting - RED Phase > Phase 3: Integration with generateSolutionWithGit > should return error when Phase 1 fails 6ms
+     → Cannot read properties of undefined (reading 'spyOn')
+   × Structured Phased Prompting - RED Phase > Phase 3: Integration with generateSolutionWithGit > should return error when JSON is provided before editing 6ms
+     → Cannot read properties of undefined (reading 'spyOn')
+   × Structured Phased Prompting - RED Phase > Phase 3: Integration with generateSolutionWithGit > should succeed when phases complete in correct order 6ms
+     → Cannot read properties of undefined (reading 'spyOn')
+   × Structured Phased Prompting - RED Phase > Phase 4: Metrics and Logging > should log phase status when using structured phases 6ms
+     → Cannot read properties of undefined (reading 'spyOn')
+   ✓ Structured Phased Prompting - RED Phase > Phase 4: Metrics and Logging > should properly parse phase completion from messages 7ms
+   ✓ Expected Failures - Documentation > Current implementation should fail to edit files 5ms
+   ✓ Expected Failures - Documentation > Current implementation generates JSON without editing 5ms
+stdout | test/server-ast-integration-safe.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ test/server-ast-integration-safe.test.ts (8 tests | 1 failed) 58ms 36 MB heap used
+   ✓ Server-Side AST Integration - Safe RED Phase Tests > Architecture Tests - Confirm Current State > should show detector uses client-side ASTPatternInterpreter 6ms
+   ✓ Server-Side AST Integration - Safe RED Phase Tests > Architecture Tests - Confirm Current State > should show we need ElixirASTAnalyzer for server-side AST 6ms
+   ✓ Server-Side AST Integration - Safe RED Phase Tests > Language Support Tests - Without Actually Parsing > should demonstrate that Python detection requires server-side AST 7ms
+   ✓ Server-Side AST Integration - Safe RED Phase Tests > Language Support Tests - Without Actually Parsing > should show that multi-language support is needed 8ms
+   ✓ Server-Side AST Integration - Safe RED Phase Tests > Safe Detection Tests - Only JS/TS > should detect JS vulnerabilities with current system 13ms
+   × Server-Side AST Integration - Safe RED Phase Tests > Safe Detection Tests - Only JS/TS > should NOT attempt to parse non-JS languages with Babel 6ms
+     → mock is not defined
+   ✓ Server-Side AST Integration - Safe RED Phase Tests > Server-Side AST Requirements > should require server-side AST for accurate multi-language detection 6ms
+   ✓ Server-Side AST Integration - Safe RED Phase Tests > Server-Side AST Requirements > should show ElixirASTAnalyzer can handle multiple languages 6ms
+stdout | src/ai/adapters/__tests__/claude-code-git.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/claude-code-git.test.ts (4 tests | 3 failed) 33ms 37 MB heap used
+   × GitBasedClaudeCodeAdapter > should generate solution with git metadata 12ms
+     → expected false to be true // Object.is equality
+   × GitBasedClaudeCodeAdapter > should handle git command failures gracefully 8ms
+     → expected 'Claude Code SDK execution failed: Can…' to contain 'Git operations failed'
+   × GitBasedClaudeCodeAdapter > should use enhanced prompt for git-based workflow 6ms
+     → expected "spy" to be called at least once
+   ✓ GitBasedClaudeCodeAdapter > should extract solution from various response formats 6ms
+stdout | src/__tests__/mode-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/__tests__/mode-integration.test.ts (9 tests | 9 failed) 64ms 37 MB heap used
+   × Mode Selection Integration > getModeFromArgs > should extract mode from CLI arguments 9ms
+     → Cannot find module '../utils/mode-selector'
+Require stack:
+- /home/dylan/dev/rsolv/RSOLV-action/src/__tests__/mode-integration.test.ts
+   × Mode Selection Integration > getModeFromArgs > should return undefined when no mode in args 7ms
+     → Cannot find module '../utils/mode-selector'
+Require stack:
+- /home/dylan/dev/rsolv/RSOLV-action/src/__tests__/mode-integration.test.ts
+   × Mode Selection Integration > getExecutionMode > should prioritize CLI args over environment variable 10ms
+     → Cannot find module '../utils/mode-selector'
+Require stack:
+- /home/dylan/dev/rsolv/RSOLV-action/src/__tests__/mode-integration.test.ts
+   × Mode Selection Integration > getExecutionMode > should use environment variable when no CLI args 6ms
+     → Cannot find module '../utils/mode-selector'
+Require stack:
+- /home/dylan/dev/rsolv/RSOLV-action/src/__tests__/mode-integration.test.ts
+   × Mode Selection Integration > getExecutionMode > should default to "fix" when no mode specified 6ms
+     → Cannot find module '../utils/mode-selector'
+Require stack:
+- /home/dylan/dev/rsolv/RSOLV-action/src/__tests__/mode-integration.test.ts
+   × Mode Selection Integration > getExecutionMode > should support all valid modes 6ms
+     → Cannot find module '../utils/mode-selector'
+Require stack:
+- /home/dylan/dev/rsolv/RSOLV-action/src/__tests__/mode-integration.test.ts
+   × Mode Selection Integration > getExecutionMode > should handle legacy RSOLV_SCAN_MODE for backward compatibility 6ms
+     → Cannot find module '../utils/mode-selector'
+Require stack:
+- /home/dylan/dev/rsolv/RSOLV-action/src/__tests__/mode-integration.test.ts
+   × Mode Selection Integration > validateMode > should validate mode is supported 6ms
+     → Cannot find module '../utils/mode-selector'
+Require stack:
+- /home/dylan/dev/rsolv/RSOLV-action/src/__tests__/mode-integration.test.ts
+   × Mode Selection Integration > getModeRequirements > should return requirements for each mode 7ms
+     → Cannot find module '../utils/mode-selector'
+Require stack:
+- /home/dylan/dev/rsolv/RSOLV-action/src/__tests__/mode-integration.test.ts
+stdout | src/config/__tests__/index.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/adapters/__tests__/claude-code-enhanced.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/claude-code-enhanced.test.ts (7 tests | 2 failed) 46ms 38 MB heap used
+   ✓ EnhancedClaudeCodeAdapter > gatherDeepContext > should gather context successfully 9ms
+   ✓ EnhancedClaudeCodeAdapter > gatherDeepContext > should use cached context on second call 8ms
+   ✓ EnhancedClaudeCodeAdapter > gatherDeepContext > should handle errors gracefully 5ms
+   × EnhancedClaudeCodeAdapter > generateEnhancedSolution > should generate enhanced solution with deep context 6ms
+     → Failed to generate solution
+   × EnhancedClaudeCodeAdapter > generateEnhancedSolution > should use enhanced prompt when provided 6ms
+     → Failed to generate solution
+   ✓ EnhancedClaudeCodeAdapter > integration with context caching > should build proper context gathering prompt 6ms
+   ✓ EnhancedClaudeCodeAdapter > integration with context caching > should create minimal context correctly 6ms
+stdout | src/github/__tests__/pr-git-educational.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/github/__tests__/pr-git-educational.test.ts (4 tests | 4 failed) 29ms 38 MB heap used
+   × Educational PR Creation > RED Phase - Educational Content Generation > should include educational vulnerability explanation 7ms
+     → expected undefined to be defined
+   × Educational PR Creation > RED Phase - Educational Content Generation > should include AI-specific vulnerability context for slopsquatting 7ms
+     → the given combination of arguments (undefined and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+   × Educational PR Creation > RED Phase - Educational Content Generation > should include RSOLV value proposition 6ms
+     → the given combination of arguments (undefined and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+   × Educational PR Creation > GREEN Phase - Complete Flow > should create educational PR with all components 7ms
+     → expected false to be true // Object.is equality
+stdout | src/ai/providers/__tests__/anthropic.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/providers/__tests__/anthropic.test.ts (4 tests | 4 failed) 27ms 38 MB heap used
+   × Anthropic Client > constructor should initialize with default values 8ms
+     → cannot spy on a non-function value
+   × Anthropic Client > constructor should accept valid API key 6ms
+     → cannot spy on a non-function value
+   × Anthropic Client > analyzeIssue should return issue analysis 6ms
+     → cannot spy on a non-function value
+   × Anthropic Client > generateSolution should return pull request solution 7ms
+     → cannot spy on a non-function value
+stdout | src/config/__tests__/timeout.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | test/security/pattern-source-fallback.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ test/security/pattern-source-fallback.test.ts (6 tests | 4 failed) 47ms 38 MB heap used
+   × Pattern Source Fallback Detection > Minimal Pattern Fallback > should log ERROR when falling back to minimal patterns due to missing API key 7ms
+     → expected "spy" to be called with arguments: [ StringContaining{…}, …(1) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   × Pattern Source Fallback Detection > Minimal Pattern Fallback > should track pattern source metrics 7ms
+     → expected "spy" to be called with arguments: [ StringContaining{…}, …(1) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   ✓ Pattern Source Fallback Detection > Minimal Pattern Fallback > should fail CI/CD when USE_FAIL_ON_MINIMAL_PATTERNS is set 7ms
+   × Pattern Source Fallback Detection > API Pattern Source > should log success metrics when using API patterns 11ms
+     → expected "spy" to be called with arguments: [ StringContaining{…}, …(1) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   × Pattern Source Fallback Detection > Regression Guards > should validate minimum pattern requirements per language 6ms
+     → expected "spy" to be called with arguments: [ StringContaining{…}, …(1) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   ✓ Pattern Source Fallback Detection > Regression Guards > should validate critical vulnerability types are covered 8ms
+stdout | src/security/pattern-regex-reconstruction.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/security/pattern-regex-reconstruction.test.ts (7 tests | 1 failed) 59ms 39 MB heap used
+   × Pattern API Regex Reconstruction > Phase 2.1: Failing tests for regex reconstruction > should fail to reconstruct regex from serialized format 12ms
+     → expected [Function] to throw an error
+   ✓ Pattern API Regex Reconstruction > Phase 2.1: Failing tests for regex reconstruction > should fail to handle enhanced pattern response with serialized regex 8ms
+   ✓ Pattern API Regex Reconstruction > Phase 2.1: Failing tests for regex reconstruction > should demonstrate the need for regex flag mapping 7ms
+   ✓ Pattern API Regex Reconstruction > Phase 2.1: Failing tests for regex reconstruction > should fail to handle nested regex in AST rules 7ms
+   ✓ Pattern API Regex Reconstruction > Phase 2.1: Failing tests for regex reconstruction > should fail to handle regex in context rules 10ms
+   ✓ Pattern API Regex Reconstruction > Expected behavior after implementation > should correctly reconstruct regex from serialized format 8ms
+   ✓ Pattern API Regex Reconstruction > Expected behavior after implementation > should handle complex patterns with multiple regex objects 7ms
+stdout | src/ai/__tests__/git-based-processor-prompt-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/__tests__/git-based-processor-prompt-integration.test.ts (3 tests | 1 failed) 97ms 39 MB heap used
+   × Git-based Processor Prompt Integration > should pass test results to adapter on first attempt 43ms
+     → expected 0 to be greater than 0
+   ✓ Git-based Processor Prompt Integration > should pass validation context on retry after failed validation 7ms
+   ✓ Git-based Processor Prompt Integration > should enhance issue context with test failure info on retry 48ms
+stdout | src/ai/adapters/__tests__/two-phase-conversation.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/two-phase-conversation.test.ts (8 tests | 4 failed) 59ms 39 MB heap used
+   ✓ Two-Phase Claude Code Conversation > RED Phase - Current Single-Phase Failures > should fail with single-phase approach (files not edited) 10ms
+   × Two-Phase Claude Code Conversation > GREEN Phase - Two-Phase Solution > should successfully edit files then provide JSON with two-phase approach 8ms
+     → expected undefined to be defined
+   × Two-Phase Claude Code Conversation > GREEN Phase - Two-Phase Solution > should handle conversation flow correctly 7ms
+     → expected "spy" to be called at least once
+   ✓ Two-Phase Claude Code Conversation > REFACTOR Phase - Optimized Implementation > should use clean separation of concerns 7ms
+   ✓ Two-Phase Claude Code Conversation > REFACTOR Phase - Optimized Implementation > should handle phase failures gracefully 6ms
+   × Two-Phase Claude Code Conversation > REFACTOR Phase - Optimized Implementation > should maintain conversation context between phases 7ms
+     → expected false to be true // Object.is equality
+   ✓ Two-Phase Claude Code Conversation > REFACTOR Phase - Optimized Implementation > should complete within reasonable time 7ms
+   × Two-Phase Claude Code Conversation > Integration Tests > should work with real Claude Code SDK 8ms
+     → expected false to be true // Object.is equality
+stdout | src/ai/adapters/__tests__/claude-code-timeout.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/claude-code-timeout.test.ts (8 tests | 7 failed) 66ms 40 MB heap used
+   × Claude Code Adapter Timeout Behavior > should timeout availability check after 5 seconds 8ms
+     → expected true to be false // Object.is equality
+   × Claude Code Adapter Timeout Behavior > should timeout when Claude Code CLI is not available 7ms
+     → expected 'Claude Code SDK execution failed' to be 'Claude Code CLI not available' // Object.is equality
+   × Claude Code Adapter Timeout Behavior > should handle file system errors gracefully 7ms
+     → Cannot spy on export "existsSync". Module namespace is not configurable in ESM. See: https://vitest.dev/guide/browser/#limitations
+   × Claude Code Adapter Timeout Behavior > should respect timeout configuration in config 11ms
+     → expected 'Claude Code SDK execution failed' to be 'Claude Code CLI not available' // Object.is equality
+   × Claude Code Adapter Timeout Behavior > should track usage data for timeout scenarios 10ms
+     → expected 'query_error' to be 'cli_not_available' // Object.is equality
+   × Claude Code Adapter Timeout Behavior > should provide helpful error messages for timeout scenarios 7ms
+     → expected 'Claude Code SDK execution failed: Can…' to contain 'Claude Code CLI not available'
+   ✓ Claude Code Adapter Timeout Behavior > should include retry count in usage analytics 7ms
+   × Claude Code Adapter Timeout Behavior > should get analytics summary correctly 8ms
+     → expected { total: 2, successful: +0, …(4) } to match object { total: 2, successful: +0, …(2) }
+(3 matching properties omitted from actual)
+stdout | src/ai/__tests__/claude-code-integration.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/__tests__/claude-code-integration.test.ts > Claude Code Integration Tests > should generate solution with Claude Code when available
+Result: {
+  success: [33mfalse[39m,
+  message: [32m'Claude Code SDK execution failed'[39m,
+  error: [32m"Claude Code SDK execution failed: Cannot read properties of undefined (reading 'Symbol(Symbol.asyncIterator)')"[39m
+}
+
+ ❯ src/ai/__tests__/claude-code-integration.test.ts (6 tests | 3 failed) 57ms 40 MB heap used
+   ✓ Claude Code Integration Tests > should initialize Claude Code adapter 9ms
+   × Claude Code Integration Tests > should generate solution with Claude Code when available 14ms
+     → expected false to be true // Object.is equality
+   × Claude Code Integration Tests > should fall back gracefully when Claude Code is not available 8ms
+     → expected true to be false // Object.is equality
+   × Claude Code Integration Tests > should handle errors gracefully 9ms
+     → expected 'Claude Code SDK execution failed: Can…' to contain 'error'
+   ✓ Claude Code Integration Tests > should use vended credentials when configured 9ms
+   ✓ Claude Code Integration Tests > should integrate with standard AI client 8ms
+stdout | src/__tests__/workflow-timeout.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/adapters/__tests__/claude-code-cli.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/claude-code-cli.test.ts (3 tests | 2 failed) 31ms 40 MB heap used
+   ✓ ClaudeCodeCLIAdapter > generateSolution > should fail without ANTHROPIC_API_KEY 9ms
+   × ClaudeCodeCLIAdapter > constructPrompt > should generate structured phased prompt when enabled 12ms
+     → expected 'You are an expert security engineer u…' to contain 'PHASE 1: FILE EDITING'
+   × ClaudeCodeCLIAdapter > constructPrompt > should generate regular prompt when structured phases disabled 9ms
+     → expected 'You are an expert security engineer f…' to contain 'Edit files FIRST using Edit/MultiEdit…'
+stdout | test/credentials/credential-lifecycle-proper.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ test/credentials/credential-lifecycle-proper.test.ts (4 tests | 4 failed) 34ms 40 MB heap used
+   × Credential Lifecycle Issues - TDD > Current Problem: Multiple credential exchanges > should demonstrate the problem - multiple managers create multiple exchanges 12ms
+     → mockFetch.mockResolvedValueOnce is not a function
+   × Credential Lifecycle Issues - TDD > Testing the Singleton Solution > should reuse the same credential manager instance 7ms
+     → mockFetch.mockResolvedValue is not a function
+   × Credential Lifecycle Issues - TDD > Testing Error Handling > should throw on network errors without retry 7ms
+     → mockFetch.mockRejectedValueOnce is not a function
+   × Credential Lifecycle Issues - TDD > Testing Credential Expiration Handling > should detect expired credentials 8ms
+     → mockFetch.mockResolvedValueOnce is not a function
+stdout | src/ai/adapters/__tests__/claude-code-git-data-flow.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/claude-code-git-data-flow.test.ts (4 tests | 2 failed) 34ms 41 MB heap used
+   ✓ GitBasedClaudeCodeAdapter - Data Flow Tests > specificVulnerabilities data flow > should pass specificVulnerabilities from issueContext to prompt 8ms
+   × GitBasedClaudeCodeAdapter - Data Flow Tests > specificVulnerabilities data flow > should log debug info when specificVulnerabilities are present 9ms
+     → expected false to be true // Object.is equality
+   ✓ GitBasedClaudeCodeAdapter - Data Flow Tests > specificVulnerabilities data flow > should handle missing specificVulnerabilities gracefully 8ms
+   × GitBasedClaudeCodeAdapter - Data Flow Tests > generateSolution data flow > should preserve specificVulnerabilities through generateSolution call 8ms
+     → the given combination of arguments (undefined and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+stdout | src/ai/__tests__/unified-processor-credentials.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/__tests__/unified-processor-credentials.test.ts > Unified Processor Credential Manager Passing > should create and pass credential manager to EnhancedClaudeCodeAdapter when using vended credentials
+Test config before processIssues: {
+  "provider": "claude-code",
+  "apiKey": "",
+  "model": "claude-3-sonnet-20240229",
+  "useVendedCredentials": true
+}
+
+stdout | src/ai/__tests__/unified-processor-credentials.test.ts > Unified Processor Credential Manager Passing > should create and pass credential manager to EnhancedClaudeCodeAdapter when using vended credentials
+CredentialManagerSingleton.getInstance called with: rsolv_test_key_123
+
+stdout | src/ai/__tests__/unified-processor-credentials.test.ts > Unified Processor Credential Manager Passing > should create and pass credential manager to EnhancedClaudeCodeAdapter when using vended credentials
+CredentialManagerSingleton.getInstance called with: rsolv_test_key_123
+
+stdout | src/ai/__tests__/unified-processor-credentials.test.ts > Unified Processor Credential Manager Passing > should handle credential manager creation errors gracefully
+CredentialManagerSingleton.getInstance called with: rsolv_test_key_123
+
+stdout | src/ai/__tests__/unified-processor-credentials.test.ts > Unified Processor Credential Manager Passing > should handle credential manager creation errors gracefully
+CredentialManagerSingleton.getInstance called with: rsolv_test_key_123
+
+ ❯ src/ai/__tests__/unified-processor-credentials.test.ts (4 tests | 3 failed) 47ms 41 MB heap used
+   × Unified Processor Credential Manager Passing > should create and pass credential manager to EnhancedClaudeCodeAdapter when using vended credentials 18ms
+     → expected undefined to be defined
+   × Unified Processor Credential Manager Passing > should not create credential manager when useVendedCredentials is false 9ms
+     → expected false to be true // Object.is equality
+   × Unified Processor Credential Manager Passing > should not create credential manager when rsolvApiKey is missing 11ms
+     → expected false to be true // Object.is equality
+   ✓ Unified Processor Credential Manager Passing > should handle credential manager creation errors gracefully 9ms
+stdout | test/server-ast-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ test/server-ast-integration.test.ts (8 tests | 1 failed | 5 skipped) 40ms 41 MB heap used
+   ✓ Server-Side AST Integration > AST Integration Tests > should use ASTPatternInterpreter for vulnerability detection 10ms
+   × Server-Side AST Integration > AST Integration Tests > should detect JavaScript eval injection 14ms
+     → expected undefined to be defined
+   ↓ Server-Side AST Integration > AST Integration Tests > should detect Python SQL injection via server AST
+   ↓ Server-Side AST Integration > AST Integration Tests > should detect Ruby command injection via server AST
+   ↓ Server-Side AST Integration > AST Integration Tests > should detect PHP XSS via server AST
+   ↓ Server-Side AST Integration > AST Integration Tests > should achieve >90% accuracy on mixed language corpus
+   ↓ Server-Side AST Integration > AST Integration Tests > should use server-side AST service endpoint
+   ✓ Server-Side AST Integration > Test Infrastructure > should have ElixirASTAnalyzer class available 16ms
+stdout | src/ai/adapters/__tests__/git-based-processor.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/git-based-processor.test.ts (4 tests | 3 failed) 34ms 41 MB heap used
+   × Git-based Issue Processor > should process issue successfully with git-based approach 9ms
+     → expected false to be true // Object.is equality
+   × Git-based Issue Processor > should fail if repository has uncommitted changes 8ms
+     → the given combination of arguments (undefined and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+   ✓ Git-based Issue Processor > should fail if issue cannot be fixed 9ms
+   × Git-based Issue Processor > should use vended credentials when configured 8ms
+     → expected false to be true // Object.is equality
+stdout | test/enhanced-context-default.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ test/enhanced-context-default.test.ts (2 tests | 1 failed) 23ms 42 MB heap used
+   ✓ Enhanced Context Default Behavior > should NOT enable enhanced context by default 11ms
+   × Enhanced Context Default Behavior > should enable enhanced context only when explicitly requested 11ms
+     → expected "spy" to be called at least once
+stdout | test/detector-v3-python.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | test/detector-v3-python.test.ts > SecurityDetectorV3 - Python Support > should detect SQL injection in Python code using server-side AST
+Testing Python SQL injection detection...
+
+stdout | test/detector-v3-python.test.ts > SecurityDetectorV3 - Python Support > should detect SQL injection in Python code using server-side AST
+Vulnerabilities detected: [33m0[39m
+Vulnerabilities: []
+
+ ❯ test/detector-v3-python.test.ts (1 test | 1 failed) 14ms 42 MB heap used
+   × SecurityDetectorV3 - Python Support > should detect SQL injection in Python code using server-side AST 14ms
+     → expected 0 to be greater than 0
+stdout | src/ai/adapters/__tests__/claude-code-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/adapters/__tests__/claude-code-integration.test.ts (3 tests | 1 failed | 1 skipped) 19ms 42 MB heap used
+   × Claude Code CLI Integration > should check if Claude CLI is available 9ms
+     → Cannot spy on export "existsSync". Module namespace is not configurable in ESM. See: https://vitest.dev/guide/browser/#limitations
+   ✓ Claude Code CLI Integration > should construct a proper prompt 10ms
+   ↓ Claude Code CLI Integration > should generate a real solution using Claude CLI
+stdout | src/__tests__/ai/anthropic-vending.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/__tests__/ai/anthropic-vending.test.ts (2 tests | 1 failed) 19ms 42 MB heap used
+   × Anthropic Client with Vended Credentials > should NOT throw when creating Anthropic client with vended credentials and no API key 10ms
+     → expected undefined to be defined
+   ✓ Anthropic Client with Vended Credentials > should throw when creating Anthropic client without vended credentials and no API key 8ms
+stdout | src/ai/__tests__/git-status-rsolv-ignore.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/__tests__/git-status-rsolv-ignore.test.ts (2 tests | 1 failed) 27ms 42 MB heap used
+   ✓ Git Status - .rsolv Directory Handling > should ignore .rsolv/ directory in git status check 8ms
+   × Git Status - .rsolv Directory Handling > should still detect real uncommitted changes 19ms
+     → expected 'Failed to generate solution' to be 'Repository has uncommitted changes' // Object.is equality
+stdout | src/ai/__tests__/analyzer.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/__tests__/analyzer.test.ts (1 test | 1 failed) 11ms 42 MB heap used
+   × Issue Analyzer > analyzeIssue should return analysis from AI client 11ms
+     → expected 'complex' to be 'medium' // Object.is equality
+stdout | test/ast-service-verification.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | test/babel-parser-issue.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | test/key-exchange.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | test/scanner/ast-validator.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | test/scanner/repository-scanner-ast.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ test/scanner/repository-scanner-ast.test.ts (4 tests | 4 failed) 36ms 43 MB heap used
+   × RepositoryScanner with AST Validation > should use AST validation when enabled and API key is provided 11ms
+     → mock is not defined
+   × RepositoryScanner with AST Validation > should skip AST validation when disabled 9ms
+     → mock is not defined
+   × RepositoryScanner with AST Validation > should skip AST validation when no API key is provided 7ms
+     → mock is not defined
+   × RepositoryScanner with AST Validation > should provide file contents to AST validator 9ms
+     → mock is not defined
+stdout | tests/ai/solution-generation.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/e2e/example-e2e.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/e2e/pattern-api-enhanced-format.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/github/multi-label.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/platforms/issue-detector.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/ai-integration.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/config.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/container.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/credential-singleton.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/error-sanitization.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/external-integration.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/github-integration.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/jira-workflow.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/unified-processor.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/integration/vended-credentials.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/security/security-analyzer-integration.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/regression/validation-endpoint.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/regression/validation-payload-format.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/regression/xss-pattern-detection.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/feedback/__tests__/enhancer.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/feedback/__tests__/storage.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/github/__tests__/label-manager.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/modes/__tests__/integration-all-modes.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/modes/__tests__/integration-all-modes.test.ts (6 tests | 4 failed) 55ms 46 MB heap used
+   × Three-Phase Integration > Full Pipeline > should execute all three phases sequentially 11ms
+     → expected undefined to be defined
+   × Three-Phase Integration > Full Pipeline > should handle data passing between phases 9ms
+     → expected undefined to be defined
+   × Three-Phase Integration > Full Pipeline > should stop pipeline if scan determines issue cannot be fixed 10ms
+     → expected true to be false // Object.is equality
+   ✓ Three-Phase Integration > Error Recovery > should handle validation failure gracefully 8ms
+   × Three-Phase Integration > Error Recovery > should handle mitigation failure and allow retry 8ms
+     → expected false to be true // Object.is equality
+   ✓ Three-Phase Integration > Performance > should complete full pipeline within reasonable time 7ms
+stdout | src/modes/__tests__/mitigation-only-mode.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/modes/__tests__/mitigation-only-mode.test.ts > Mitigation-Only Mode > Basic Execution > should execute mitigation with validation data from prior phase
+Mitigation failed: {
+  success: [33mfalse[39m,
+  phase: [32m'mitigate'[39m,
+  error: [32m'No validation data available. Please run validation first or add rsolv:automate label.'[39m,
+  data: { validationRequired: [33mtrue[39m }
+}
+
+ ❯ src/modes/__tests__/mitigation-only-mode.test.ts (15 tests | 10 failed | 2 skipped) 112ms 47 MB heap used
+   × Mitigation-Only Mode > Basic Execution > should execute mitigation with validation data from prior phase 16ms
+     → expected false to be true // Object.is equality
+   ✓ Mitigation-Only Mode > Basic Execution > should handle missing validation data gracefully 8ms
+   × Mitigation-Only Mode > Basic Execution > should retrieve validation data from PhaseDataClient if not provided 9ms
+     → expected "spy" to be called at least once
+   × Mitigation-Only Mode > Fix Application > should apply fix using GitBasedClaudeCodeAdapter 9ms
+     → expected "spy" to be called with arguments: [ ArrayContaining{…}, Any<Object> ][90m
+
+Number of calls: [1m0[22m
+[39m
+   × Mitigation-Only Mode > Fix Application > should verify tests pass after fix (GREEN phase) 7ms
+     → expected "spy" to be called at least once
+   × Mitigation-Only Mode > Fix Application > should retry fix if tests fail 8ms
+     → expected "spy" to be called 1 times, but got 0 times
+   × Mitigation-Only Mode > Fix Application > should refactor code to match codebase style 7ms
+     → expected "spy" to be called at least once
+   × Mitigation-Only Mode > PR Creation > should create educational PR with test results 7ms
+     → expected false to be true // Object.is equality
+   × Mitigation-Only Mode > PR Creation > should include before/after code in PR description 8ms
+     → expected false to be true // Object.is equality
+   × Mitigation-Only Mode > PR Creation > should add security education context to PR 8ms
+     → expected "spy" to be called at least once
+   ↓ Mitigation-Only Mode > Multiple Issues > should handle multiple issues in batch
+   ↓ Mitigation-Only Mode > Multiple Issues > should handle partial failures gracefully
+   ✓ Mitigation-Only Mode > Error Handling > should handle missing AI adapter gracefully 7ms
+   × Mitigation-Only Mode > Error Handling > should handle test execution failures 7ms
+     → expected "spy" to be called at least once
+   ✓ Mitigation-Only Mode > Error Handling > should timeout if fix takes too long 8ms
+stdout | src/modes/__tests__/phase-decomposition-simple.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/modes/__tests__/phase-decomposition-simple.test.ts (8 tests) 65ms 47 MB heap used
+stdout | src/modes/__tests__/phase-decomposition.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/modes/__tests__/phase-decomposition.test.ts > Phase Decomposition - processIssueWithGit refactoring > Mitigate Phase Extraction > executeMitigateForIssue should apply fix using Claude Code
+Test result: {
+  success: [33mfalse[39m,
+  phase: [32m'mitigate'[39m,
+  message: [32m'Failed to create pull request'[39m,
+  error: [32m"Cannot read properties of undefined (reading 'create')"[39m
+}
+
+ ❯ src/modes/__tests__/phase-decomposition.test.ts (12 tests | 3 failed) 99ms 47 MB heap used
+   ✓ Phase Decomposition - processIssueWithGit refactoring > Scan Phase Extraction > executeScanForIssue should analyze issue and determine if fixable 9ms
+   ✓ Phase Decomposition - processIssueWithGit refactoring > Scan Phase Extraction > executeScanForIssue should fail if git has uncommitted changes 9ms
+   ✓ Phase Decomposition - processIssueWithGit refactoring > Scan Phase Extraction > executeScanForIssue should store scan results in PhaseDataClient 8ms
+   ✓ Phase Decomposition - processIssueWithGit refactoring > Validate Phase Extraction > executeValidateForIssue should generate tests for vulnerability 8ms
+   ✓ Phase Decomposition - processIssueWithGit refactoring > Validate Phase Extraction > executeValidateForIssue should use TestGeneratingSecurityAnalyzer 7ms
+   ✓ Phase Decomposition - processIssueWithGit refactoring > Validate Phase Extraction > executeValidateForIssue should store validation results 8ms
+   × Phase Decomposition - processIssueWithGit refactoring > Mitigate Phase Extraction > executeMitigateForIssue should apply fix using Claude Code 11ms
+     → expected false to be true // Object.is equality
+   ✓ Phase Decomposition - processIssueWithGit refactoring > Mitigate Phase Extraction > executeMitigateForIssue should validate fix with generated tests 8ms
+   × Phase Decomposition - processIssueWithGit refactoring > Mitigate Phase Extraction > executeMitigateForIssue should retry on validation failure 8ms
+     → expected false to be true // Object.is equality
+   × Phase Decomposition - processIssueWithGit refactoring > Full Three-Phase Execution > executeThreePhaseForIssue should run all phases sequentially 7ms
+     → expected false to be true // Object.is equality
+   ✓ Phase Decomposition - processIssueWithGit refactoring > Full Three-Phase Execution > executeThreePhaseForIssue should abort if scan determines not fixable 8ms
+   ✓ Phase Decomposition - processIssueWithGit refactoring > Full Three-Phase Execution > executeThreePhaseForIssue should pass data between phases 8ms
+stdout | src/modes/__tests__/validation-only-mode.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/modes/__tests__/validation-only-mode.test.ts (19 tests) 175ms 48 MB heap used
+stdout | src/modes/__tests__/vendor-detection-regression.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/modes/__tests__/vendor-detection-regression.test.ts (3 tests | 3 failed) 28ms 48 MB heap used
+   × Vendor Detection Regression Tests (RFC-047) > should handle vulnerabilities with singular "file" property 9ms
+     → expected [] to include 'app/assets/vendor/jquery.min.js'
+   × Vendor Detection Regression Tests (RFC-047) > should handle vulnerabilities with plural "files" property 9ms
+     → expected [] to include 'config/secrets.yml'
+   × Vendor Detection Regression Tests (RFC-047) > should handle mixed vulnerabilities with both file and files properties 9ms
+     → expected [] to include 'vendor/jquery.min.js'
+stdout | src/scanner/__tests__/ast-validator-e2e.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/scanner/__tests__/ast-validator-e2e.test.ts (9 tests) 92ms 48 MB heap used
+stdout | src/scanner/__tests__/ast-validator-live-api.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/scanner/__tests__/ast-validator-live-api.test.ts > AST Validator Live API Tests > Performance Tests > should handle large batch efficiently
+Processed 50 vulnerabilities in 6ms
+
+ ❯ src/scanner/__tests__/ast-validator-live-api.test.ts (10 tests | 3 failed) 157ms 49 MB heap used
+   × AST Validator Live API Tests > Real API Integration > should validate JavaScript eval injection in comments 14ms
+     → expected [ { type: 'js-eval-injection', …(5) } ] to have a length of +0 but got 1
+   ✓ AST Validator Live API Tests > Real API Integration > should validate real eval injection with user input 15ms
+   × AST Validator Live API Tests > Real API Integration > should handle Python exec in string literals 15ms
+     → expected [ { …(6) } ] to have a length of +0 but got 1
+   ✓ AST Validator Live API Tests > Real API Integration > should handle Ruby eval with proper context 13ms
+   × AST Validator Live API Tests > Real API Integration > should handle batch processing with mixed results 14ms
+     → expected [ { …(6) }, { …(6) }, { …(6) } ] to have a length of 1 but got 3
+   ✓ AST Validator Live API Tests > Real API Integration > should handle API errors gracefully 15ms
+   ✓ AST Validator Live API Tests > Performance Tests > should handle large batch efficiently 14ms
+   ✓ AST Validator Live API Tests > Multi-language Support > should validate JavaScript vulnerabilities 13ms
+   ✓ AST Validator Live API Tests > Multi-language Support > should validate Python vulnerabilities 20ms
+   ✓ AST Validator Live API Tests > Multi-language Support > should validate Ruby vulnerabilities 17ms
+stdout | tests/platforms/jira/jira-adapter.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/platforms/jira/jira-integration.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | tests/platforms/jira/label-search.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/modes/phase-executor/__tests__/mitigate-credentials.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/modes/phase-executor/__tests__/mitigate-credentials.test.ts (2 tests) 22ms 49 MB heap used
+stdout | src/modes/phase-executor/__tests__/mitigate-validation-flow.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/modes/phase-executor/__tests__/mitigate-validation-flow.test.ts > PhaseExecutor - Mitigate with Auto-Validation Flow > should run validation and then proceed with mitigation when rsolv:automate is present
+Mitigation failed: No validation data available. Please run validation first or add rsolv:automate label.
+
+ ❯ src/modes/phase-executor/__tests__/mitigate-validation-flow.test.ts (2 tests | 2 failed) 20ms 49 MB heap used
+   × PhaseExecutor - Mitigate with Auto-Validation Flow > should run validation and then proceed with mitigation when rsolv:automate is present 12ms
+     → expected false to be true // Object.is equality
+   × PhaseExecutor - Mitigate with Auto-Validation Flow > should fail gracefully when validation finds no vulnerabilities 8ms
+     → expected false to be true // Object.is equality
+stdout | src/modes/phase-executor/__tests__/phase-data-persistence.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/modes/phase-executor/__tests__/phase-data-persistence.test.ts > PhaseExecutor - Phase Data Persistence > should handle the actual structure returned by retrievePhaseResults
+Retrieved data structure: [90mundefined[39m
+
+ ❯ src/modes/phase-executor/__tests__/phase-data-persistence.test.ts (2 tests | 2 failed) 24ms 49 MB heap used
+   × PhaseExecutor - Phase Data Persistence > should store and retrieve validation data with correct structure 13ms
+     → expected undefined to be defined
+   × PhaseExecutor - Phase Data Persistence > should handle the actual structure returned by retrievePhaseResults 11ms
+     → expected undefined to be defined
+stdout | src/ai/adapters/__tests__/claude-code-cli-retry.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/adapters/__tests__/claude-code-cli-retry.test.ts (17 tests) 563ms 50 MB heap used
+stdout | src/ai/__tests__/unified-processor-timeout.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/__tests__/unified-processor-timeout.test.ts (8 tests | 6 failed) 296ms 50 MB heap used
+   × Unified Processor Timeout Behavior > should use default context gathering timeout of 30 seconds 12ms
+     → expected "createPullRequest" to be called at least once
+   × Unified Processor Timeout Behavior > should use custom context gathering timeout when specified 11ms
+     → expected "createPullRequest" to be called at least once
+   ✓ Unified Processor Timeout Behavior > should handle analysis failure gracefully 9ms
+   × Unified Processor Timeout Behavior > should handle solution generation failure 15ms
+     → expected 'Claude Code SDK execution failed' to be 'Solution generation failed' // Object.is equality
+   × Unified Processor Timeout Behavior > should set different configurations based on context depth 9ms
+     → expected "createPullRequest" to be called at least once
+   × Unified Processor Timeout Behavior > should process multiple issues with timeout handling 115ms
+     → expected false to be true // Object.is equality
+   ✓ Unified Processor Timeout Behavior > should handle errors with sanitized messages 10ms
+   × Unified Processor Timeout Behavior > should include processing time in results 113ms
+     → expected false to be true // Object.is equality
+stdout | src/credentials/__tests__/timeout.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/credentials/__tests__/timeout.test.ts (6 tests) 358ms 50 MB heap used
+stdout | src/ai/adapters/__tests__/claude-code.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/adapters/__tests__/claude-code.test.ts > Claude Code SDK Adapter > should generate solution with basic prompt
+Result: {
+  "success": false,
+  "message": "Claude Code SDK execution failed",
+  "error": "Claude Code SDK execution failed: Cannot read properties of undefined (reading 'Symbol(Symbol.asyncIterator)')"
+}
+
+ ❯ src/ai/adapters/__tests__/claude-code.test.ts (16 tests | 10 failed) 163ms 51 MB heap used
+   × Claude Code SDK Adapter > should create instance with correct configuration 9ms
+     → expected "spy" to be called with arguments: [ StringContaining{…}, Any<String> ][90m
+
+Number of calls: [1m0[22m
+[39m
+   ✓ Claude Code SDK Adapter > should detect SDK availability 9ms
+   × Claude Code SDK Adapter > should generate solution with basic prompt 10ms
+     → expected false to be true // Object.is equality
+   × Claude Code SDK Adapter > should use enhanced prompt when provided 11ms
+     → expected "spy" to be called at least once
+   × Claude Code SDK Adapter > should handle vended credentials correctly 12ms
+     → expected "spy" to be called with arguments: [ Array(1) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   × Claude Code SDK Adapter > should extract solution from text messages 10ms
+     → expected false to be true // Object.is equality
+   × Claude Code SDK Adapter > should handle timeout with abort controller 10ms
+     → expected 'Claude Code SDK execution failed: Can…' to contain 'timed out'
+   × Claude Code SDK Adapter > should track usage analytics 11ms
+     → expected { startTime: 1756159274842, …(4) } to have property "successful" with value true
+   × Claude Code SDK Adapter > should handle SDK query errors gracefully 10ms
+     → expected 'Claude Code SDK execution failed: Can…' to contain 'SDK query failed'
+   ✓ Claude Code SDK Adapter > should extract solutions from code blocks 8ms
+   × Claude Code SDK Adapter > should return error when no solution found 16ms
+     → expected 'Claude Code SDK execution failed' to be 'No solution found in response' // Object.is equality
+   ✓ Claude Code SDK Adapter > should handle missing SDK gracefully 9ms
+   × Claude Code SDK Adapter > should fallback when credential manager fails 10ms
+     → expected "spy" to be called with arguments: [ …(2) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   ✓ Claude Code SDK Adapter > should construct proper default prompt 11ms
+   ✓ Claude Code SDK Adapter > should handle direct JSON parsing 8ms
+   ✓ Claude Code SDK Adapter > should return null for invalid solution format 9ms
+stdout | src/security/analyzers/__tests__/fallback-strategy.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/analyzers/__tests__/fallback-strategy.test.ts (7 tests) 164ms 51 MB heap used
+stdout | src/security/__tests__/cve-correlator.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/__tests__/cve-correlator.test.ts (14 tests) 175ms 52 MB heap used
+stdout | src/ai/__tests__/adaptive-test-generator.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/adaptive-test-generator.test.ts (16 tests) 162ms 52 MB heap used
+stdout | src/ai/__tests__/issue-interpreter.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/issue-interpreter.test.ts (21 tests) 202ms 53 MB heap used
+stdout | src/vendor/__tests__/vendor-detector.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/vendor/__tests__/vendor-detector.test.ts (18 tests) 150ms 53 MB heap used
+stdout | src/modes/__tests__/mode-selector.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/modes/__tests__/mode-selector.test.ts (18 tests) 170ms 53 MB heap used
+stdout | src/ai/__tests__/test-framework-detector.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/test-framework-detector.test.ts (19 tests) 172ms 53 MB heap used
+stdout | src/containers/__tests__/setup.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/containers/__tests__/setup.test.ts (13 tests) 123ms 54 MB heap used
+stdout | src/ai/__tests__/coverage-analyzer.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/coverage-analyzer.test.ts (16 tests) 148ms 54 MB heap used
+stdout | src/ai/__tests__/test-generator.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/test-generator.test.ts (13 tests) 123ms 54 MB heap used
+stdout | src/ai/__tests__/security-prompts.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/security-prompts.test.ts (16 tests) 164ms 54 MB heap used
+stdout | src/chunking/__tests__/vulnerability-chunker.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/chunking/__tests__/vulnerability-chunker.test.ts (12 tests) 125ms 54 MB heap used
+stdout | src/utils/__tests__/error-sanitizer.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/utils/__tests__/error-sanitizer.test.ts
+✅ Error sanitizer tests created
+
+ ✓ src/utils/__tests__/error-sanitizer.test.ts (11 tests) 120ms 55 MB heap used
+stdout | src/containers/__tests__/run.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/containers/__tests__/run.test.ts (12 tests) 132ms 55 MB heap used
+stdout | src/security/analyzers/__tests__/file-selector.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/analyzers/__tests__/file-selector.test.ts (12 tests) 160ms 55 MB heap used
+stdout | src/ai/__tests__/fix-iteration-core.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/fix-iteration-core.test.ts (11 tests) 193ms 55 MB heap used
+stdout | src/security/pattern-api-client.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/pattern-api-client.test.ts (10 tests) 121ms 55 MB heap used
+stdout | src/ai/__tests__/phase-6d-iac-validation.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/__tests__/phase-6d-iac-validation.test.ts > Phase 6D: IaC/Terraform Validation > Terraform Vulnerability Examples > should handle public S3 bucket vulnerability
+Generated test code: // Generic test template - adapt to your test framework
+// File: main.tf
+// Vulnerability: security_misconfiguration
+
+// RED Test: should be vulnerable to security misconfiguration (RED)
+// Purpose: Demonstrate the vulnerability exists
+function testVulnerabilityExists() {
+  const maliciousInput = "admin=true";
+  // TODO: Call vulnerable function with malicious input
+  // TODO: Assert that attack succeeds (should fail when fixed)
+}
+
+// GREEN Test: should prevent security misconfiguration (GREEN)
+// Purpose: Verify the fix prevents the vulnerability
+function testVulnerabilityFixed() {
+  const maliciousInput = "admin=true";
+  // TODO: Call fixed function with malicious input
+  // TODO: Assert that attack is prevented
+}
+
+// REFACTOR Test: should maintain functionality after security fix
+// Purpose: Ensure normal functionality still works
+function testFunctionalityMaintained() {
+  const validInput = "user=true";
+  // TODO: Call function with valid input
+  // TODO: Assert expected behavior works correctly
+}
+
+stdout | src/ai/__tests__/phase-6d-iac-validation.test.ts > Phase 6D: IaC/Terraform Validation > IaC Test Framework Detection > should detect Terratest framework
+Terratest detection result: {
+  success: [33mtrue[39m,
+  framework: [32m'generic'[39m,
+  testCode: [32m'// Generic test template - adapt to your test framework\n'[39m +
+    [32m'// File: test/main_test.go\n'[39m +
+    [32m'// Vulnerability: security_misconfiguration\n'[39m +
+    [32m'\n'[39m +
+    [32m'// RED Test: should be vulnerable to security misconfiguration (RED)\n'[39m +
+    [32m'// Purpose: Demonstrate the vulnerability exists\n'[39m +
+    [32m'function testVulnerabilityExists() {\n'[39m +
+    [32m'  const maliciousInput = "admin=true";\n'[39m +
+    [32m'  // TODO: Call vulnerable function with malicious input\n'[39m +
+    [32m'  // TODO: Assert that attack succeeds (should fail when fixed)\n'[39m +
+    [32m'}\n'[39m +
+    [32m'\n'[39m +
+    [32m'// GREEN Test: should prevent security misconfiguration (GREEN)\n'[39m +
+    [32m'// Purpose: Verify the fix prevents the vulnerability\n'[39m +
+    [32m'function testVulnerabilityFixed() {\n'[39m +
+    [32m'  const maliciousInput = "admin=true";\n'[39m +
+    [32m'  // TODO: Call fixed function with malicious input\n'[39m +
+    [32m'  // TODO: Assert that attack is prevented\n'[39m +
+    [32m'}\n'[39m +
+    [32m'\n'[39m +
+    [32m'// REFACTOR Test: should maintain functionality after security fix\n'[39m +
+    [32m'// Purpose: Ensure normal functionality still works\n'[39m +
+    [32m'function testFunctionalityMaintained() {\n'[39m +
+    [32m'  const validInput = "user=true";\n'[39m +
+    [32m'  // TODO: Call function with valid input\n'[39m +
+    [32m'  // TODO: Assert expected behavior works correctly\n'[39m +
+    [32m'}'[39m,
+  testSuite: {
+    red: {
+      testName: [32m'should be vulnerable to security misconfiguration (RED)'[39m,
+      testCode: [32m'test("should be vulnerable to security misconfiguration (RED)", async () => {\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Server-side misconfiguration test\n'[39m +
+        [32m'  const result = await processUserInput({\n'[39m +
+        [32m"    headers: { 'X-Debug-Mode': 'true' }\n"[39m +
+        [32m'  });\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Vulnerability exposes sensitive data\n'[39m +
+        [32m'  expect(result.debug).toBeDefined();\n'[39m +
+        [32m'  expect(result.config).toBeDefined();\n'[39m +
+        [32m'  expect(result.env).toBeDefined();\n'[39m +
+        [32m'  \n'[39m +
+        [32m'});'[39m,
+      attackVector: [32m'admin=true'[39m,
+      expectedBehavior: [32m'should_fail_on_vulnerable_code'[39m
+    },
+    green: {
+      testName: [32m'should prevent security misconfiguration (GREEN)'[39m,
+      testCode: [32m'test("should prevent security misconfiguration (GREEN)", async () => {\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Test secure configuration\n'[39m +
+        [32m'  const result = await processUserInput({\n'[39m +
+        [32m"    headers: { 'X-Debug-Mode': 'true' }\n"[39m +
+        [32m'  });\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Sensitive data should not be exposed\n'[39m +
+        [32m'  expect(result.debug).toBeUndefined();\n'[39m +
+        [32m'  expect(result.config).toBeUndefined();\n'[39m +
+        [32m'  expect(result.env).toBeUndefined();\n'[39m +
+        [32m'  \n'[39m +
+        [32m'});'[39m,
+      validInput: [32m'user=true'[39m,
+      expectedBehavior: [32m'should_pass_on_fixed_code'[39m
+    },
+    refactor: {
+      testName: [32m'should maintain functionality after security fix'[39m,
+      testCode: [32m'test("should maintain functionality after security fix", async () => {\n'[39m +
+        [32m'  // Test core functionality still works\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Core functionality should work\n'[39m +
+        [32m'  \n'[39m +
+        [32m'\n'[39m +
+        [32m'  // Data should be processed\n'[39m +
+        [32m'  \n'[39m +
+        [32m'\n'[39m +
+        [32m'  // Output should be correct\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  \n'[39m +
+        [32m'  const normalInput = "user=true";\n'[39m +
+        [32m"  const result = await processUserInput('normaluser', normalInput);\n"[39m +
+        [32m'  \n'[39m +
+        [32m'  expect(result.success).toBe(true);\n'[39m +
+        [32m'  expect(result.data).toBeDefined();\n'[39m +
+        [32m'});'[39m,
+      functionalValidation: [36m[Array][39m,
+      expectedBehavior: [32m'should_pass_on_both_versions'[39m
+    }
+  },
+  notes: [32m'No test framework detected, using generic template'[39m
+}
+
+stdout | src/ai/__tests__/phase-6d-iac-validation.test.ts > Phase 6D: IaC/Terraform Validation > IaC Test Framework Detection > should detect Kitchen-Terraform
+Kitchen-Terraform detection: {
+  success: [33mtrue[39m,
+  framework: [32m'generic'[39m,
+  testCode: [32m'// Generic test template - adapt to your test framework\n'[39m +
+    [32m'// File: .kitchen.yml\n'[39m +
+    [32m'// Vulnerability: security_misconfiguration\n'[39m +
+    [32m'\n'[39m +
+    [32m'// RED Test: should be vulnerable to security misconfiguration (RED)\n'[39m +
+    [32m'// Purpose: Demonstrate the vulnerability exists\n'[39m +
+    [32m'function testVulnerabilityExists() {\n'[39m +
+    [32m'  const maliciousInput = "admin=true";\n'[39m +
+    [32m'  // TODO: Call vulnerable function with malicious input\n'[39m +
+    [32m'  // TODO: Assert that attack succeeds (should fail when fixed)\n'[39m +
+    [32m'}\n'[39m +
+    [32m'\n'[39m +
+    [32m'// GREEN Test: should prevent security misconfiguration (GREEN)\n'[39m +
+    [32m'// Purpose: Verify the fix prevents the vulnerability\n'[39m +
+    [32m'function testVulnerabilityFixed() {\n'[39m +
+    [32m'  const maliciousInput = "admin=true";\n'[39m +
+    [32m'  // TODO: Call fixed function with malicious input\n'[39m +
+    [32m'  // TODO: Assert that attack is prevented\n'[39m +
+    [32m'}\n'[39m +
+    [32m'\n'[39m +
+    [32m'// REFACTOR Test: should maintain functionality after security fix\n'[39m +
+    [32m'// Purpose: Ensure normal functionality still works\n'[39m +
+    [32m'function testFunctionalityMaintained() {\n'[39m +
+    [32m'  const validInput = "user=true";\n'[39m +
+    [32m'  // TODO: Call function with valid input\n'[39m +
+    [32m'  // TODO: Assert expected behavior works correctly\n'[39m +
+    [32m'}'[39m,
+  testSuite: {
+    red: {
+      testName: [32m'should be vulnerable to security misconfiguration (RED)'[39m,
+      testCode: [32m'test("should be vulnerable to security misconfiguration (RED)", async () => {\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Server-side misconfiguration test\n'[39m +
+        [32m'  const result = await processUserInput({\n'[39m +
+        [32m"    headers: { 'X-Debug-Mode': 'true' }\n"[39m +
+        [32m'  });\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Vulnerability exposes sensitive data\n'[39m +
+        [32m'  expect(result.debug).toBeDefined();\n'[39m +
+        [32m'  expect(result.config).toBeDefined();\n'[39m +
+        [32m'  expect(result.env).toBeDefined();\n'[39m +
+        [32m'  \n'[39m +
+        [32m'});'[39m,
+      attackVector: [32m'admin=true'[39m,
+      expectedBehavior: [32m'should_fail_on_vulnerable_code'[39m
+    },
+    green: {
+      testName: [32m'should prevent security misconfiguration (GREEN)'[39m,
+      testCode: [32m'test("should prevent security misconfiguration (GREEN)", async () => {\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Test secure configuration\n'[39m +
+        [32m'  const result = await processUserInput({\n'[39m +
+        [32m"    headers: { 'X-Debug-Mode': 'true' }\n"[39m +
+        [32m'  });\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Sensitive data should not be exposed\n'[39m +
+        [32m'  expect(result.debug).toBeUndefined();\n'[39m +
+        [32m'  expect(result.config).toBeUndefined();\n'[39m +
+        [32m'  expect(result.env).toBeUndefined();\n'[39m +
+        [32m'  \n'[39m +
+        [32m'});'[39m,
+      validInput: [32m'user=true'[39m,
+      expectedBehavior: [32m'should_pass_on_fixed_code'[39m
+    },
+    refactor: {
+      testName: [32m'should maintain functionality after security fix'[39m,
+      testCode: [32m'test("should maintain functionality after security fix", async () => {\n'[39m +
+        [32m'  // Test core functionality still works\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  // Core functionality should work\n'[39m +
+        [32m'  \n'[39m +
+        [32m'\n'[39m +
+        [32m'  // Data should be processed\n'[39m +
+        [32m'  \n'[39m +
+        [32m'\n'[39m +
+        [32m'  // Output should be correct\n'[39m +
+        [32m'  \n'[39m +
+        [32m'  \n'[39m +
+        [32m'  const normalInput = "user=true";\n'[39m +
+        [32m"  const result = await processUserInput('normaluser', normalInput);\n"[39m +
+        [32m'  \n'[39m +
+        [32m'  expect(result.success).toBe(true);\n'[39m +
+        [32m'  expect(result.data).toBeDefined();\n'[39m +
+        [32m'});'[39m,
+      functionalValidation: [36m[Array][39m,
+      expectedBehavior: [32m'should_pass_on_both_versions'[39m
+    }
+  },
+  notes: [32m'No test framework detected, using generic template'[39m
+}
+
+stdout | src/ai/__tests__/phase-6d-iac-validation.test.ts > Phase 6D: IaC/Terraform Validation > IaC Pattern Limitations > should demonstrate current IaC detection limitations
+IaC-specific test coverage: { hasEncryptionTest: [33mfalse[39m, hasPublicAccessTest: [33mfalse[39m }
+
+ ✓ src/ai/__tests__/phase-6d-iac-validation.test.ts (9 tests) 125ms 55 MB heap used
+stdout | src/security/__tests__/explanation-framework.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/__tests__/explanation-framework.test.ts (10 tests) 134ms 55 MB heap used
+stdout | src/modes/phase-executor/utils/__tests__/issue-body-parser.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/modes/phase-executor/utils/__tests__/issue-body-parser.test.ts (9 tests) 131ms 56 MB heap used
+stdout | src/feedback/__tests__/collector.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/feedback/__tests__/collector.test.ts (8 tests) 139ms 56 MB heap used
+stdout | src/security/pattern-api-client-tier-removal.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/security/pattern-api-client-tier-removal.test.ts (8 tests | 1 failed) 130ms 56 MB heap used
+   ✓ PatternAPIClient - Tier Removal (TDD) > Tier-less Pattern Access > fetchPatterns should not include tier parameter in request 18ms
+   ✓ PatternAPIClient - Tier Removal (TDD) > Tier-less Pattern Access > fetchPatterns response should not contain tier fields 17ms
+   ✓ PatternAPIClient - Tier Removal (TDD) > Tier-less Pattern Access > fetchPatterns should return all patterns with valid API key 17ms
+   × PatternAPIClient - Tier Removal (TDD) > Tier-less Pattern Access > fetchPatterns without API key should return demo patterns only 15ms
+     → expected 'Bearer env-key' to be undefined
+   ✓ PatternAPIClient - Tier Removal (TDD) > Tier-less Pattern Access > deprecated fetchPatternsByTier should still work for backward compatibility 14ms
+   ✓ PatternAPIClient - Tier Removal (TDD) > Tier-less Pattern Access > PatternResponse type should not require tier fields 15ms
+   ✓ PatternAPIClient - Tier Removal (TDD) > Tier-less Pattern Access > error messages should not mention tiers 16ms
+   ✓ PatternAPIClient - Tier Removal (TDD) > Pattern counting without tiers > should return total pattern count across all languages 16ms
+stdout | src/modes/phase-executor/__tests__/file-extraction.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/modes/phase-executor/__tests__/file-extraction.test.ts (8 tests) 115ms 56 MB heap used
+stdout | src/credentials/__tests__/manager.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/credentials/__tests__/manager.test.ts (10 tests) 145ms 57 MB heap used
+stdout | src/ai/__tests__/git-based-processor-characterization.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/__tests__/git-based-processor-characterization.test.ts (18 tests | 12 failed) 177ms 58 MB heap used
+   × processIssueWithGit - Characterization Tests > Phase 1: Git State Check > should fail if repository has uncommitted changes 11ms
+     → expected { issueId: 'github-123', …(3) } to deeply equal { issueId: 'github-123', …(3) }
+   × processIssueWithGit - Characterization Tests > Phase 1: Git State Check > should proceed with clean git state 11ms
+     → expected 'No API key available' to be 'Issue cannot be automatically fixed b…' // Object.is equality
+   × processIssueWithGit - Characterization Tests > Phase 2: Issue Analysis > should stop if issue cannot be fixed 10ms
+     → expected { issueId: 'github-123', …(3) } to deeply equal { issueId: 'github-123', …(2) }
+   × processIssueWithGit - Characterization Tests > Phase 2: Issue Analysis > should proceed to test generation if issue can be fixed 11ms
+     → expected "spy" to be called at least once
+   × processIssueWithGit - Characterization Tests > Phase 3: Test Generation > should generate tests when test generation is enabled 10ms
+     → expected "spy" to be called with arguments: [ { id: 'github-123', …(10) }, …(2) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   ✓ processIssueWithGit - Characterization Tests > Phase 3: Test Generation > should skip test generation when disabled 8ms
+   × processIssueWithGit - Characterization Tests > Phase 4: Fix Validation Loop > should validate fix when validation is enabled 10ms
+     → expected "spy" to be called with arguments: [ 'abc123def456', 'fix123abc', …(1) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   × processIssueWithGit - Characterization Tests > Phase 4: Fix Validation Loop > should retry fix when validation fails 8ms
+     → expected "spy" to be called 2 times, but got 0 times
+   × processIssueWithGit - Characterization Tests > Phase 4: Fix Validation Loop > should fail after max iterations 8ms
+     → expected "spy" to be called 2 times, but got 0 times
+   × processIssueWithGit - Characterization Tests > Phase 5: PR Creation > should create educational PR by default 11ms
+     → expected "spy" to be called with arguments: [ { id: 'github-123', …(10) }, …(4) ][90m
+
+Number of calls: [1m0[22m
+[39m
+   × processIssueWithGit - Characterization Tests > Phase 5: PR Creation > should use regular PR when educational is disabled 9ms
+     → expected "spy" to be called at least once
+   × processIssueWithGit - Characterization Tests > Phase 5: PR Creation > should rollback commit if PR creation fails 11ms
+     → expected 'No API key or vended credentials avai…' to be 'GitHub API error' // Object.is equality
+   ✓ processIssueWithGit - Characterization Tests > Error Handling > should handle and rollback on unexpected errors 9ms
+   × processIssueWithGit - Characterization Tests > Error Handling > should handle git command failures gracefully 13ms
+     → expected 'No API key available' to be 'Repository has uncommitted changes' // Object.is equality
+   ✓ processIssueWithGit - Characterization Tests > getMaxIterations > should use issue label override first 8ms
+   ✓ processIssueWithGit - Characterization Tests > getMaxIterations > should use global config if no label override 8ms
+   ✓ processIssueWithGit - Characterization Tests > getMaxIterations > should use default if no config 10ms
+   ✓ processIssueWithGit - Characterization Tests > getMaxIterations > should handle vulnerability type specific config 9ms
+stdout | src/modes/phase-data-client/__tests__/client.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/modes/phase-data-client/__tests__/client.test.ts > PhaseDataClient > retrievePhaseResults > should retrieve phase results successfully
+[PhaseDataClient] Retrieved from platform: { hasValidation: [33mfalse[39m, hasValidate: [33mfalse[39m, keys: [ [32m'scan'[39m ] }
+[PhaseDataClient] Returning data with keys: [ [32m'scan'[39m ]
+
+ ✓ src/modes/phase-data-client/__tests__/client.test.ts (8 tests) 87ms 58 MB heap used
+stdout | src/validation/__tests__/confidence-scoring.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/validation/__tests__/confidence-scoring.test.ts (10 tests) 103ms 58 MB heap used
+stdout | src/security/__tests__/safe-usage.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/__tests__/safe-usage.test.ts (7 tests) 77ms 58 MB heap used
+stdout | src/security/__tests__/pattern-factory.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/__tests__/pattern-factory.test.ts (9 tests) 87ms 58 MB heap used
+stdout | src/ai/__tests__/analyzer-parsing.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/analyzer-parsing.test.ts (9 tests) 96ms 58 MB heap used
+stdout | test/server-ast-green-phase.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ test/server-ast-green-phase.test.ts (8 tests | 1 skipped) 74ms 58 MB heap used
+stdout | src/ai/__tests__/security-analyzer.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/security-analyzer.test.ts (8 tests) 124ms 59 MB heap used
+stdout | src/ai/__tests__/claude-prompts-validation.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/claude-prompts-validation.test.ts (8 tests) 81ms 59 MB heap used
+stdout | src/modes/phase-executor/__tests__/vendor-detection-tdd.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/modes/phase-executor/__tests__/vendor-detection-tdd.test.ts (6 tests) 62ms 59 MB heap used
+stdout | src/ai/__tests__/validation-skip-logic.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/validation-skip-logic.test.ts (9 tests) 88ms 59 MB heap used
+stdout | src/ai/__tests__/phase-6e-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/phase-6e-integration.test.ts (7 tests) 72ms 59 MB heap used
+stdout | src/security/pattern-regex-reconstruction-success.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/pattern-regex-reconstruction-success.test.ts (6 tests) 70ms 59 MB heap used
+stdout | src/__tests__/index-maxissues.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/__tests__/index-maxissues.test.ts (6 tests) 59ms 59 MB heap used
+stdout | test/ai/conversation-logger.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ test/ai/conversation-logger.test.ts (5 tests) 61ms 59 MB heap used
+stdout | test/regression/pattern-availability.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ test/regression/pattern-availability.test.ts (6 tests | 2 failed) 92ms 59 MB heap used
+   × Pattern Availability Regression Test > when RSOLV_API_KEY is available > should provide at least 25 patterns per major language 15ms
+     → javascript should have at least 25 patterns: expected 10 to be greater than or equal to 25
+   × Pattern Availability Regression Test > when RSOLV_API_KEY is available > should cover all critical vulnerability types 40ms
+     → sql_injection should have patterns: expected 0 to be greater than 0
+   ✓ Pattern Availability Regression Test > minimal patterns baseline (always runs) > should have at least 10 JavaScript patterns in minimal set 8ms
+   ✓ Pattern Availability Regression Test > minimal patterns baseline (always runs) > should detect pattern count degradation 9ms
+   ✓ Pattern Availability Regression Test > pattern quality checks > should have valid regex patterns 10ms
+   ✓ Pattern Availability Regression Test > pattern quality checks > should have unique pattern IDs 10ms
+stdout | test/vendor-detection-file-extraction.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ test/vendor-detection-file-extraction.test.ts (5 tests) 55ms 59 MB heap used
+stdout | src/security/__tests__/compliance.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/__tests__/compliance.test.ts (6 tests) 68ms 60 MB heap used
+stdout | src/security/__tests__/detector-v2-patterns.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/security/__tests__/detector-v2-patterns.test.ts (5 tests) 57ms 60 MB heap used
+stdout | src/ai/__tests__/phase-6e-java-php-validation.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/__tests__/phase-6e-java-php-validation.test.ts > Phase 6E: Java/PHP Fix Validation > Java SQL Injection Fix Iteration > should iterate until Java SQL injection is properly fixed
+Iteration 1 failed: Still vulnerable to SQL injection with quote escaping
+Iteration 2 failed: String.format does not prevent SQL injection
+
+ ✓ src/ai/__tests__/phase-6e-java-php-validation.test.ts (7 tests) 77ms 60 MB heap used
+stdout | src/validation/enricher.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/validation/enricher.test.ts (6 tests) 70ms 60 MB heap used
+stdout | src/ai/__tests__/test-generator-enhanced.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/test-generator-enhanced.test.ts (6 tests) 71ms 60 MB heap used
+stdout | test/server-ast-unit.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ test/server-ast-unit.test.ts (4 tests) 46ms 60 MB heap used
+stdout | src/security/__tests__/ruby-detection.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/security/__tests__/ruby-detection.test.ts > Ruby Vulnerability Detection > should detect Ruby SQL injection with detector
+Single line vulnerabilities: [
+  {
+    type: [32m'sql_injection'[39m,
+    severity: [32m'high'[39m,
+    line: [33m1[39m,
+    message: [32m'Ruby SQL Injection: SQL injection via string interpolation'[39m,
+    description: [32m'SQL injection via string interpolation'[39m,
+    confidence: [33m60[39m,
+    cweId: [32m'CWE-89'[39m,
+    owaspCategory: [32m'A03:2021'[39m,
+    remediation: [32m'Use parameterized queries or ActiveRecord query interface'[39m
+  }
+]
+
+stdout | src/security/__tests__/ruby-detection.test.ts > Ruby Vulnerability Detection > should detect Ruby SQL injection in full code
+Full code vulnerabilities: [
+  {
+    type: [32m'sql_injection'[39m,
+    severity: [32m'high'[39m,
+    line: [33m6[39m,
+    message: [32m'Ruby SQL Injection: SQL injection via string interpolation'[39m,
+    description: [32m'SQL injection via string interpolation'[39m,
+    confidence: [33m60[39m,
+    cweId: [32m'CWE-89'[39m,
+    owaspCategory: [32m'A03:2021'[39m,
+    remediation: [32m'Use parameterized queries or ActiveRecord query interface'[39m
+  }
+]
+
+ ✓ src/security/__tests__/ruby-detection.test.ts (4 tests) 44ms 60 MB heap used
+stdout | src/ai/__tests__/disable-validation-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/disable-validation-integration.test.ts (6 tests) 58ms 60 MB heap used
+stdout | src/feedback/__tests__/types.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/feedback/__tests__/types.test.ts (4 tests) 45ms 60 MB heap used
+stdout | src/ai/__tests__/git-based-processor-simple-characterization.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/git-based-processor-simple-characterization.test.ts (5 tests) 46ms 60 MB heap used
+stdout | src/ai/providers/__tests__/ollama.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/providers/__tests__/ollama.test.ts (6 tests) 61ms 61 MB heap used
+stdout | src/ai/__tests__/disable-validation-bug.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | src/ai/__tests__/adaptive-test-generator-java.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/adaptive-test-generator-java.test.ts (5 tests) 52ms 61 MB heap used
+stdout | test/ai/vended-credentials-env.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ test/ai/vended-credentials-env.test.ts (3 tests) 28ms 61 MB heap used
+stdout | test/memory-investigation.test.ts
+[Vitest Setup] Test environment configured
+
+stdout | test/memory-investigation.test.ts > Memory Investigation > should check pattern loading without detection
+Pattern source type: LocalPatternSource
+Loading JavaScript patterns...
+
+stdout | test/memory-investigation.test.ts > Memory Investigation > should check pattern loading without detection
+JavaScript patterns loaded: [33m10[39m
+Loading Python patterns...
+
+stdout | test/memory-investigation.test.ts > Memory Investigation > should check pattern loading without detection
+Python patterns loaded: [33m7[39m
+
+stdout | test/memory-investigation.test.ts > Memory Investigation > should test small code detection
+Testing detection on small code...
+
+stdout | test/memory-investigation.test.ts > Memory Investigation > should test small code detection
+Detection results: [33m1[39m
+
+stdout | test/memory-investigation.test.ts > Memory Investigation > should check AST interpreter directly
+AST Interpreter type: ASTPatternInterpreter
+AST Interpreter properties: []
+
+ ✓ test/memory-investigation.test.ts (3 tests) 34ms 61 MB heap used
+stdout | src/ai/adapters/__tests__/prompt-generation-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/adapters/__tests__/prompt-generation-integration.test.ts (4 tests) 48ms 61 MB heap used
+stdout | src/ai/__tests__/adaptive-test-generator-php.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/adaptive-test-generator-php.test.ts (6 tests | 2 skipped) 50ms 61 MB heap used
+stdout | src/external/__tests__/pr-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/external/__tests__/pr-integration.test.ts (5 tests) 54ms 61 MB heap used
+stdout | src/ai/__tests__/client-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/client-integration.test.ts (4 tests) 44ms 61 MB heap used
+stdout | src/ai/__tests__/claude-code.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/claude-code.test.ts (3 tests) 34ms 61 MB heap used
+stdout | src/external/__tests__/api-client.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/external/__tests__/api-client.test.ts (5 tests) 53ms 61 MB heap used
+stdout | src/ai/adapters/__tests__/claude-code-git-enhanced.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/adapters/__tests__/claude-code-git-enhanced.test.ts (3 tests) 34ms 61 MB heap used
+stdout | src/ai/__tests__/fix-iteration-java-php.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/fix-iteration-java-php.test.ts (5 tests | 2 skipped) 34ms 62 MB heap used
+stdout | src/ai/__tests__/unified-processor-vulnerability-flow.test.ts
+[Vitest Setup] Test environment configured
+
+ ❯ src/ai/__tests__/unified-processor-vulnerability-flow.test.ts (2 tests | 2 failed) 23ms 62 MB heap used
+   × Unified Processor - specificVulnerabilities data flow > should pass specificVulnerabilities from issue context to Claude adapter 11ms
+     → expected null to be truthy
+   × Unified Processor - specificVulnerabilities data flow > should preserve specificVulnerabilities through TDD validator flow 12ms
+     → expected 0 to be greater than 0
+stdout | src/__tests__/integration/pr-tracking.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/__tests__/integration/pr-tracking.test.ts (2 tests) 21ms 62 MB heap used
+stdout | src/ai/__tests__/feedbackEnhanced.test.ts
+[Vitest Setup] Test environment configured
+
+ ✓ src/ai/__tests__/feedbackEnhanced.test.ts (2 tests) 19ms 62 MB heap used
+stdout | test/server-ast-red-phase.test.ts
+[Vitest Setup] Test environment configured
+
+ ↓ test/server-ast-red-phase.test.ts (4 tests | 4 skipped)
+stdout | src/__tests__/pattern-api-e2e.test.ts
+[Vitest Setup] Test environment configured
+
+ ↓ src/__tests__/pattern-api-e2e.test.ts (7 tests | 7 skipped)
+stdout | test/integration/api-endpoints.test.ts
+[Vitest Setup] Test environment configured
+
+ ↓ test/integration/api-endpoints.test.ts (8 tests | 8 skipped)
+stdout | src/ai/__tests__/claude-code-live.test.ts
+[Vitest Setup] Test environment configured
+
+ ↓ src/ai/__tests__/claude-code-live.test.ts (4 tests | 4 skipped)
+stdout | src/ai/__tests__/llm-adapters-live.test.ts
+[Vitest Setup] Test environment configured
+
+ ↓ src/ai/__tests__/llm-adapters-live.test.ts (5 tests)
+stdout | src/ai/__tests__/vended-credential-e2e.test.ts
+[Vitest Setup] Test environment configured
+
+ ↓ src/ai/__tests__/vended-credential-e2e.test.ts (5 tests | 5 skipped)
+stdout | src/platforms/linear/linear-adapter.test.ts
+[Vitest Setup] Test environment configured
+
+ ↓ src/platforms/linear/linear-adapter.test.ts (13 tests | 13 skipped)
+stdout | src/platforms/linear/linear-integration.test.ts
+[Vitest Setup] Test environment configured
+
+ ↓ src/platforms/linear/linear-integration.test.ts (8 tests | 8 skipped)

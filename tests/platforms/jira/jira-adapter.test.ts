@@ -1,8 +1,16 @@
-import { describe, test, expect, beforeEach, mock, spyOn } from 'bun:test';
+import { describe, test, expect, beforeEach, vi, vi } from 'vitest';
 import { JiraAdapter } from '../../../src/platforms/jira/jira-adapter';
 import type { PlatformConfig, UnifiedIssue } from '../../../src/platforms/types';
 
 describe('JiraAdapter', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   let adapter: JiraAdapter;
   let fetchSpy: any;
   
@@ -17,7 +25,7 @@ describe('JiraAdapter', () => {
 
   beforeEach(() => {
     // Use spyOn instead of replacing global.fetch
-    fetchSpy = spyOn(global, 'fetch');
+    fetchSpy = vi.spyOn(global, 'fetch');
     adapter = new JiraAdapter(mockConfig.jira!);
   });
 

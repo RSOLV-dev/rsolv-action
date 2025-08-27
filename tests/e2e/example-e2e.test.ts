@@ -5,7 +5,7 @@
  * without interference from global mocks used in unit tests.
  */
 
-import { describe, test, expect, beforeAll } from 'bun:test';
+import { describe, test, expect, beforeAll } from 'vitest';
 
 // Access E2E test utilities (no global mocks)
 const e2eUtils = (globalThis as any).__E2E_TEST_UTILS__;
@@ -19,6 +19,14 @@ let testConfig: {
 };
 
 describe('E2E Example Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   beforeAll(() => {
     // Validate E2E environment
     testConfig = e2eUtils.validateE2EEnvironment();

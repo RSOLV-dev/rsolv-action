@@ -3,7 +3,7 @@
  * Tests the fix for the DISABLE_FIX_VALIDATION bug
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('Validation Skip Logic', () => {
   

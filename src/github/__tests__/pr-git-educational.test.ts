@@ -3,7 +3,7 @@
  * Follows RED-GREEN-REFACTOR methodology
  */
 
-import { describe, test, expect, beforeEach, mock } from 'vitest';
+import { describe, test, expect, beforeEach, mock, vi } from 'vitest';
 import { createEducationalPullRequest } from '../pr-git-educational.js';
 
 // Track git commands globally
@@ -11,17 +11,22 @@ let globalGitCommands: string[] = [];
 
 // Mock child_process module
 vi.mock('child_process', () => ({
-  execSync: mock((cmd: string) => {
+  execSync: vi.fn((cmd: string) => {
     globalGitCommands.push(cmd);
     return Buffer.from('');
   })
 }));
 
+// Store PR body globally for assertion
+let globalPRBody = '';
+
 // Mock GitHub API module
 vi.mock('../api.js', () => ({
-  getGitHubClient: mock(() => ({
+  getGitHubClient: vi.fn(() => ({
     pulls: {
-      create: mock((params: any) => {
+      create: vi.fn((params: any) => {
+        // Capture PR body for assertion
+        globalPRBody = params?.body || '';
         // Return different URLs based on the repository
         const repoName = params?.owner === 'RSOLV-dev' ? 'RSOLV-dev/demo' : 'user/repo';
         return Promise.resolve({
@@ -31,7 +36,7 @@ vi.mock('../api.js', () => ({
           }
         });
       }),
-      list: mock(() => Promise.resolve({ data: [] }))
+      list: vi.fn(() => Promise.resolve({ data: [] }))
     }
   }))
 }));
@@ -40,6 +45,7 @@ describe('Educational PR Creation', () => {
   beforeEach(() => {
     // Reset mocks before each test
     globalGitCommands = [];
+    globalPRBody = '';
   });
 
   describe('RED Phase - Educational Content Generation', () => {
@@ -189,7 +195,6 @@ describe('Educational PR Creation', () => {
       // Git commands are tracked globally
 
       // GitHub API already mocked at module level
-      let prBody = '';
 
       const result = await createEducationalPullRequest(
         issue,
@@ -214,13 +219,13 @@ describe('Educational PR Creation', () => {
       expect(globalGitCommands.some(cmd => cmd.includes('git push'))).toBe(true);
       
       // Verify PR body includes educational content
-      expect(prBody).toContain('📚 Understanding This Fix');
-      expect(prBody).toContain('🛡️ What is Cross-Site Scripting');
-      expect(prBody).toContain('🔧 How This Fix Works');
-      expect(prBody).toContain('✅ Best Practices');
-      expect(prBody).toContain('🤖 About RSOLV');
-      expect(prBody).toContain('Success-based pricing');
-      expect(prBody).toContain('181+ patterns');
+      expect(globalPRBody).toContain('📚 Understanding This Fix');
+      expect(globalPRBody).toContain('🛡️ What is Cross-Site Scripting');
+      expect(globalPRBody).toContain('🔧 How This Fix Works');
+      expect(globalPRBody).toContain('✅ Best Practices');
+      expect(globalPRBody).toContain('🤖 About RSOLV');
+      expect(globalPRBody).toContain('Success-based pricing');
+      expect(globalPRBody).toContain('181+ patterns');
     });
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, test, mock, spyOn } from 'vitest';
+import { describe, expect, test, mock, spyOn, vi } from 'vitest';
 import { ClaudeCodeAdapter } from '../claude-code.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';

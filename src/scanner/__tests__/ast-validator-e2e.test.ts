@@ -13,23 +13,33 @@ describe('AST Validator E2E Integration Tests', () => {
   let validator: ASTValidator;
   let scanner: RepositoryScanner;
   let originalApiUrl: string | undefined;
+  let originalGithubToken: string | undefined;
   
   beforeEach(() => {
-    // Save original API URL
+    // Save original environment
     originalApiUrl = process.env.RSOLV_API_URL;
-    // Set test API URL
+    originalGithubToken = process.env.GITHUB_TOKEN;
+    
+    // Set test environment
     process.env.RSOLV_API_URL = TEST_API_URL;
+    process.env.GITHUB_TOKEN = 'test-github-token';
     
     validator = new ASTValidator(TEST_API_KEY);
     scanner = new RepositoryScanner();
   });
   
   afterEach(() => {
-    // Restore original API URL
+    // Restore original environment
     if (originalApiUrl) {
       process.env.RSOLV_API_URL = originalApiUrl;
     } else {
       delete process.env.RSOLV_API_URL;
+    }
+    
+    if (originalGithubToken) {
+      process.env.GITHUB_TOKEN = originalGithubToken;
+    } else {
+      delete process.env.GITHUB_TOKEN;
     }
   });
   
@@ -93,7 +103,7 @@ function process(userInput) {
       
       // Mock the API client method
       const originalValidateVulnerabilities = RsolvApiClient.prototype.validateVulnerabilities;
-      RsolvApiClient.prototype.validateVulnerabilities = mock(() => Promise.resolve(mockResponse));
+      RsolvApiClient.prototype.validateVulnerabilities = vi.fn(() => Promise.resolve(mockResponse));
       
       try {
         const validated = await validator.validateVulnerabilities(vulnerabilities, fileContents);
@@ -124,7 +134,7 @@ function process(userInput) {
       
       // Mock API to throw error
       const originalValidateVulnerabilities = RsolvApiClient.prototype.validateVulnerabilities;
-      RsolvApiClient.prototype.validateVulnerabilities = mock(() => 
+      RsolvApiClient.prototype.validateVulnerabilities = vi.fn(() => 
         Promise.reject(new Error('Network error'))
       );
       
@@ -161,7 +171,7 @@ function process(userInput) {
       
       // Mock to capture the request
       const originalValidateVulnerabilities = RsolvApiClient.prototype.validateVulnerabilities;
-      RsolvApiClient.prototype.validateVulnerabilities = mock((request) => {
+      RsolvApiClient.prototype.validateVulnerabilities = vi.fn((request) => {
         capturedRequest = request;
         return Promise.resolve({
           validated: [{
@@ -209,7 +219,7 @@ function process(userInput) {
       };
       
       // Mock GitHub API
-      const mockGetTree = mock(() => Promise.resolve({
+      const mockGetTree = vi.fn(() => Promise.resolve({
         data: {
           tree: [
             { type: 'blob', path: 'app.js', sha: 'abc123', size: 100 }
@@ -217,7 +227,7 @@ function process(userInput) {
         }
       }));
       
-      const mockGetBlob = mock(() => Promise.resolve({
+      const mockGetBlob = vi.fn(() => Promise.resolve({
         data: {
           content: Buffer.from(`const userInput = req.body.code;
 eval(userInput); // vulnerability`).toString('base64')
@@ -236,7 +246,7 @@ eval(userInput); // vulnerability`).toString('base64')
       };
       
       const originalValidateVulnerabilities = RsolvApiClient.prototype.validateVulnerabilities;
-      RsolvApiClient.prototype.validateVulnerabilities = mock(() => 
+      RsolvApiClient.prototype.validateVulnerabilities = vi.fn(() => 
         Promise.resolve(mockValidationResponse)
       );
       
@@ -279,7 +289,7 @@ eval(userInput); // vulnerability`).toString('base64')
       };
       
       // Mock GitHub API
-      const mockGetTree = mock(() => Promise.resolve({
+      const mockGetTree = vi.fn(() => Promise.resolve({
         data: { tree: [] }
       }));
       
@@ -291,7 +301,7 @@ eval(userInput); // vulnerability`).toString('base64')
       // Spy on validation API
       const originalValidateVulnerabilities = RsolvApiClient.prototype.validateVulnerabilities;
       let validationCalled = false;
-      RsolvApiClient.prototype.validateVulnerabilities = mock(() => {
+      RsolvApiClient.prototype.validateVulnerabilities = vi.fn(() => {
         validationCalled = true;
         return Promise.resolve({ validated: [], stats: { total: 0, validated: 0, rejected: 0 } });
       });
@@ -337,7 +347,7 @@ eval(userInput); // vulnerability`).toString('base64')
       };
       
       const originalValidateVulnerabilities = RsolvApiClient.prototype.validateVulnerabilities;
-      RsolvApiClient.prototype.validateVulnerabilities = mock(() => Promise.resolve(mockResponse));
+      RsolvApiClient.prototype.validateVulnerabilities = vi.fn(() => Promise.resolve(mockResponse));
       
       try {
         const validated = await validator.validateVulnerabilities(vulnerabilities, fileContents);
@@ -361,7 +371,7 @@ eval(userInput); // vulnerability`).toString('base64')
       
       // Mock malformed response
       const originalValidateVulnerabilities = RsolvApiClient.prototype.validateVulnerabilities;
-      RsolvApiClient.prototype.validateVulnerabilities = mock(() => 
+      RsolvApiClient.prototype.validateVulnerabilities = vi.fn(() => 
         Promise.resolve({} as any) // Missing required fields
       );
       
@@ -392,7 +402,7 @@ eval(userInput); // vulnerability`).toString('base64')
       let apiCallCount = 0;
       
       const originalValidateVulnerabilities = RsolvApiClient.prototype.validateVulnerabilities;
-      RsolvApiClient.prototype.validateVulnerabilities = mock((request) => {
+      RsolvApiClient.prototype.validateVulnerabilities = vi.fn((request) => {
         apiCallCount++;
         
         // Verify all vulnerabilities are in single request

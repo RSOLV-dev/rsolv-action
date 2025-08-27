@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SecurityDetectorV3 } from '../src/security/detector-v3';
 import { ElixirASTAnalyzer } from '../src/security/analyzers/elixir-ast-analyzer';
 

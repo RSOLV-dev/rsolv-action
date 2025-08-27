@@ -7,7 +7,7 @@
  * - Enhanced functional validation
  */
 
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { VulnerabilityTestGenerator } from '../test-generator.js';
 import type { Vulnerability } from '../types.js';
 

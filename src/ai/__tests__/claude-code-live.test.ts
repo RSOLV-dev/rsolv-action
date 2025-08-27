@@ -4,7 +4,7 @@
  * 
  * Run with: CLAUDE_CODE_LIVE_TEST=true bun test claude-code-live.test.ts
  */
-import { test, expect, describe } from 'vitest';
+import { test, expect, describe, vi } from 'vitest';
 import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
 import { AIConfig } from '../types.js';
 

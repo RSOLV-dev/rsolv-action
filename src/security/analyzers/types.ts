@@ -113,6 +113,9 @@ export interface FileAnalysisResult {
   // File path
   file: string;
   
+  // Alternative path property (for compatibility)
+  path?: string;
+  
   // Analysis status
   status: "success" | "error" | "timeout" | "skipped";
   
@@ -129,6 +132,9 @@ export interface FileAnalysisResult {
   
   // Security patterns that matched
   patterns?: PatternMatch[];
+  
+  // Alternative findings property (for compatibility with server response)
+  findings?: PatternMatch[];
   
   // AST statistics
   stats?: {

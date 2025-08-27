@@ -1,4 +1,4 @@
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { setupContainer } from '../../src/containers/setup.js';
 import { runInContainer } from '../../src/containers/run.js';
 import { ActionConfig } from '../../src/types/index.js';
@@ -7,18 +7,18 @@ import { ActionConfig } from '../../src/types/index.js';
 process.env.NODE_ENV = 'test';
 
 // Mock the logger module first
-mock.module('../../src/utils/logger.js', () => ({
+vi.mock('../../src/utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {}),
-    debug: mock(() => {}),
-    log: mock(() => {})
+    info: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    error: vi.fn(() => {}),
+    debug: vi.fn(() => {}),
+    log: vi.fn(() => {})
   }
 }));
 
 // Mock child_process exec
-mock.module('child_process', () => {
+vi.mock('child_process', () => {
   return {
     exec: (command: string, options: any, callback: any) => {
       if (typeof options === 'function') {
@@ -136,19 +136,17 @@ describe.skipIf(skipIfNoDocker)('Container Integration', () => {
     // Temporarily change NODE_ENV to make the test fail as expected
     process.env.NODE_ENV = 'production';
     
-    // Mock additional failure case
-    mock('child_process', () => {
-      return {
-        exec: (command: string, options: any, callback: any) => {
-          if (command.includes('docker run') && command.includes('invalid-command')) {
-            callback({ code: 1, stderr: 'Command not found', stdout: '' });
-            return;
-          }
-          
-          // Let other commands succeed
-          callback(null, { stdout: 'Success', stderr: '' });
-        }
-      };
+    // Mock exec to simulate failure for invalid-command
+    const { exec } = await import('child_process');
+    vi.mocked(exec).mockImplementationOnce((command: any, options: any, callback: any) => {
+      if (typeof options === 'function') {
+        callback = options;
+      }
+      if (command.includes('invalid-command')) {
+        callback(new Error('Command not found'), { stdout: '', stderr: 'Command not found' });
+        return;
+      }
+      callback(null, { stdout: 'Success', stderr: '' });
     });
     
     try {

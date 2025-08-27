@@ -7,8 +7,8 @@ import { VulnerabilityType } from '../../src/security/types.js';
 // Mock the API client
 vi.mock('../../src/external/api-client.js', () => {
   return {
-    RsolvApiClient: mock(() => ({
-      validateVulnerabilities: mock()
+    RsolvApiClient: vi.fn(() => ({
+      validateVulnerabilities: vi.fn()
     }))
   };
 });

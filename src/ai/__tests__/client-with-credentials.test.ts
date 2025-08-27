@@ -1,12 +1,12 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'vitest';
+import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { getAiClient } from '../client';
 import { AiProviderConfig } from '../../types';
 import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 
 // Mock the credential manager module
-const mockGetCredential = mock(() => 'temp_credential_xyz');
-const mockReportUsage = mock(() => Promise.resolve());
-const mockInitialize = mock(() => Promise.resolve());
+const mockGetCredential = vi.fn(() => 'temp_credential_xyz');
+const mockReportUsage = vi.fn(() => Promise.resolve());
+const mockInitialize = vi.fn(() => Promise.resolve());
 
 vi.mock('../../credentials/manager', () => ({
   RSOLVCredentialManager: class {
@@ -34,7 +34,7 @@ beforeEach(() => {
   mockGetCredential.mockClear();
   mockReportUsage.mockClear();
   mockInitialize.mockClear();
-  mock.restore();
+  vi.clearAllMocks();
   // Setup fetch mock
   fetchMock = setupFetchMock();
 });
@@ -45,7 +45,7 @@ afterEach(() => {
   // Restore fetch
   global.fetch = originalFetch;
   // Clear mocks
-  mock.restore();
+  vi.clearAllMocks();
 });
 
 // Test the credential vending system integration with AI clients

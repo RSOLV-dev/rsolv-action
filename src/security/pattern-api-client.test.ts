@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, mock, vi } from 'vitest';
 import { PatternAPIClient } from './pattern-api-client.js';
 import { VulnerabilityType } from './types.js';
 
@@ -10,7 +10,7 @@ describe('PatternAPIClient', () => {
   
   beforeEach(() => {
     // Create a fresh mock for fetch
-    fetchMock = mock(() => Promise.resolve({
+    fetchMock = vi.fn(() => Promise.resolve({
       ok: true,
       status: 200,
       json: async () => ({})

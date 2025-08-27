@@ -1,13 +1,13 @@
 /**
  * Tests for the AI client factory
  */
-import { test, expect, mock, describe, beforeEach } from 'vitest';
+import { test, expect, vi, describe, beforeEach, vi } from 'vitest';
 import { getAiClient } from '../client.js';
 
 // Mock the logger to avoid noisy logs
-const loggerPath = require.resolve('../../utils/logger');
-vi.mock(loggerPath, () => ({
+vi.mock('../../utils/logger', () => ({
   logger: {
+    debug: vi.fn(() => {}),
     info: () => {},
     warn: () => {},
     error: () => {},
@@ -16,8 +16,7 @@ vi.mock(loggerPath, () => ({
 }));
 
 // Mock the credential manager
-const credentialManagerPath = require.resolve('../../credentials/manager');
-vi.mock(credentialManagerPath, () => ({
+vi.mock('../../credentials/manager', () => ({
   RSOLVCredentialManager: class MockCredentialManager {
     private credentials = new Map<string, string>();
     
@@ -99,13 +98,13 @@ describe('AI Client Factory', () => {
     });
 
     test('should throw for unknown providers', async () => {
-      await expect(async () => {
-        await getAiClient({
+      await expect(
+        getAiClient({
           // @ts-expect-error - Testing with invalid provider
           provider: 'unknown-provider',
           apiKey: 'test-key'
-        });
-      }).toThrow('Unsupported AI provider: unknown-provider');
+        })
+      ).rejects.toThrow('Unsupported AI provider: unknown-provider');
     });
   });
 
@@ -144,13 +143,13 @@ describe('AI Client Factory', () => {
     });
 
     test('should throw error when no API key and not using vended credentials', async () => {
-      await expect(async () => {
-        await getAiClient({
+      await expect(
+        getAiClient({
           provider: 'anthropic',
           apiKey: '',  // No API key
           useVendedCredentials: false
-        });
-      }).toThrow('AI provider API key is required');
+        })
+      ).rejects.toThrow('AI provider API key is required');
     });
   });
 

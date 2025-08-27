@@ -1,7 +1,7 @@
 /**
  * Tests for Claude Code CLI adapter
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ClaudeCodeCLIAdapter } from '../claude-code-cli.js';
 import { AIConfig } from '../../types.js';
 import { IssueContext } from '../../../types/index.js';
@@ -56,9 +56,9 @@ describe('ClaudeCodeCLIAdapter', () => {
 
       const prompt = (adapter as any).constructPrompt(mockIssueContext, mockAnalysis);
 
-      expect(prompt).toContain('PHASE 1: FILE EDITING');
-      expect(prompt).toContain('PHASE 2: JSON SUMMARY');
-      expect(prompt).toContain('PHASE 1 COMPLETE');
+      expect(prompt).toContain('PHASE 1: RED - UNDERSTAND THE VULNERABILITY');
+      expect(prompt).toContain('PHASE 2: GREEN - FIX THE VULNERABILITY');
+      expect(prompt).toContain('PHASE 3: REFACTOR - ENSURE QUALITY');
     });
 
     it('should generate regular prompt when structured phases disabled', () => {
@@ -69,8 +69,8 @@ describe('ClaudeCodeCLIAdapter', () => {
 
       const prompt = (adapter as any).constructPrompt(mockIssueContext, mockAnalysis);
 
-      expect(prompt).not.toContain('PHASE 1: FILE EDITING');
-      expect(prompt).toContain('Edit files FIRST using Edit/MultiEdit tools');
+      expect(prompt).not.toContain('PHASE 1: RED');
+      expect(prompt).toContain('Test-Driven Development');
     });
   });
 });

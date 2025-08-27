@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import { JiraAdapter } from '../../../src/platforms/jira/jira-adapter';
 import type { UnifiedIssue } from '../../../src/platforms/types';
 

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll, afterAll, mock } from 'vitest';
+import { describe, test, expect, beforeAll, afterAll, mock, vi } from 'vitest';
 import { SecurityDetectorV2 } from '../security/detector-v2';
 import { PatternAPIClient } from '../security/pattern-api-client';
 import type { SecurityPattern, SecurityIssue } from '../security/types';

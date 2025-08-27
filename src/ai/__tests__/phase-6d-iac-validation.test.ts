@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { AdaptiveTestGenerator } from '../adaptive-test-generator.js';
 import { TestFrameworkDetector } from '../test-framework-detector.js';
 import { CoverageAnalyzer } from '../coverage-analyzer.js';

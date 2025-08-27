@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ValidationEnricher } from '../../src/validation/enricher';
 
 // Mock the GitHub API utilities
-mock.module('../../src/github/api.js', () => ({
-  updateIssue: mock(() => Promise.resolve()),
-  addLabels: mock(() => Promise.resolve())
+vi.mock('../../src/github/api.js', () => ({
+  updateIssue: vi.fn(() => Promise.resolve()),
+  addLabels: vi.fn(() => Promise.resolve())
 }));
 
 describe('Validation Payload Format', () => {
@@ -19,7 +19,7 @@ describe('Validation Payload Format', () => {
     originalFetch = global.fetch;
     
     // Create mock fetch
-    fetchMock = mock((url: string, options?: RequestInit) => {
+    fetchMock = vi.fn((url: string, options?: RequestInit) => {
       // Capture the request for inspection
       const body = options?.body ? JSON.parse(options.body as string) : null;
       
@@ -221,7 +221,7 @@ db.execute(sql);`
     };
     
     // Override fetch mock for this test
-    global.fetch = mock(() => Promise.resolve({
+    global.fetch = vi.fn(() => Promise.resolve({
       ok: true,
       statusText: 'OK',
       json: () => Promise.resolve(mockResponse)

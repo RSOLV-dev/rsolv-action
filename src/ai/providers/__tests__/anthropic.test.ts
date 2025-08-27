@@ -1,11 +1,11 @@
-import { describe, expect, test, mock, beforeEach } from 'vitest';
+import { describe, expect, test, mock, beforeEach, vi } from 'vitest';
 import { AnthropicClient } from '../anthropic.js';
 import { AIConfig } from '../../types.js';
 
 describe('Anthropic Client', () => {
   beforeEach(() => {
     // Mock child_process
-    mock('child_process', () => {
+    vi.fn('child_process', () => {
       return {
         exec: (command: string, options: any, callback: any) => {
           // Handle different commands

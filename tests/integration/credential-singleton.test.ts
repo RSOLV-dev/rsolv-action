@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CredentialManagerSingleton } from '../../src/credentials/singleton.js';
 import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 
@@ -15,7 +15,7 @@ describe('CredentialManagerSingleton Integration Tests', () => {
     // Clean up any existing instances
     CredentialManagerSingleton.cleanup();
     // Reset fetch mock
-    fetchMock = mock();
+    fetchMock = vi.fn();
     global.fetch = fetchMock;
   });
   

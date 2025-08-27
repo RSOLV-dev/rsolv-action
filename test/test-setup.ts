@@ -71,8 +71,11 @@ const originalFetch = global.fetch;
 global.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   
-  // Allow localhost and test domains
-  if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('test')) {
+  // Allow localhost, test domains, and staging API
+  if (url.includes('localhost') || 
+      url.includes('127.0.0.1') || 
+      url.includes('test') ||
+      url.includes('api.rsolv-staging.com')) {
     return originalFetch(input, init);
   }
   

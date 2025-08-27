@@ -5,7 +5,7 @@
  * context when generating fixes, as specified in RFC-020.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../adapters/claude-code-git.js';
 import type { IssueContext } from '../../types/index.js';
 import type { AIConfig, IssueAnalysis } from '../types.js';

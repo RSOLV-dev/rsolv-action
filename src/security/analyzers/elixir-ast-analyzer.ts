@@ -118,17 +118,28 @@ export class ElixirASTAnalyzer {
     const vulnerabilities: Array<any> = [];
 
     for (const result of response.results) {
-      if (result.status === 'success' && result.patterns) {
-        for (const pattern of result.patterns) {
+      // Server returns 'findings' field per RFC-031
+      const items = result.findings;
+      if (result.status === 'success' && items) {
+        for (const item of items) {
+          // Handle server response format - pattern can have various shapes
+          const pattern = (item as any).pattern || item;
+          const location = (item as any).location || (pattern as any).location;
+          
+          if (!location || !location.start) {
+            logger.warn('ElixirAstAnalyzer: Skipping item without location', item);
+            continue;
+          }
+          
           vulnerabilities.push({
-            file: result.file,
-            type: pattern.pattern.type,
-            severity: pattern.pattern.severity,
-            message: pattern.pattern.message || pattern.pattern.description,
-            line: pattern.location.start.line,
-            column: pattern.location.start.column,
-            pattern: pattern.pattern,
-            confidence: pattern.confidence
+            file: result.path || result.file,
+            type: pattern.type || (pattern as any).patternId,
+            severity: pattern.severity || 'medium',
+            message: pattern.message || (pattern as any).patternName || pattern.description,
+            line: location.start.line || (location as any).startLine,
+            column: location.start.column || (location as any).startColumn || 0,
+            pattern: pattern,
+            confidence: (item as any).confidence || (pattern as any).confidence || 80
           });
         }
       }

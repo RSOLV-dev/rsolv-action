@@ -1,15 +1,11 @@
-import { describe, expect, test, mock, beforeEach } from 'vitest';
+import { describe, expect, test, vi, beforeEach, vi } from 'vitest';
 import { analyzeIssue } from '../analyzer.js';
 import { IssueContext, ActionConfig } from '../../types.js';
 
-describe('Issue Analyzer', () => {
-  beforeEach(() => {
-    // Mock the AI client using require.resolve
-    const clientPath = require.resolve('../client');
-    vi.mock(clientPath, () => {
-      return {
-        getAiClient: () => ({
-          complete: async () => `This is a bug issue.
+// Mock the AI client
+vi.mock('../client', () => ({
+  getAiClient: () => ({
+    complete: async () => `This is a bug issue.
 
 Files to modify:
 - \`src/component.ts\`
@@ -18,19 +14,22 @@ Files to modify:
 This is a moderate issue that requires updating error handling.
 
 Suggested Approach: Fix 1 - Update the error handling in the component to properly catch exceptions.`
-        })
-      };
-    });
+  })
+}));
 
-    // Mock the security detector using require.resolve
-    const securityPath = require.resolve('../../security/index');
-    vi.mock(securityPath, () => ({
-      SecurityDetector: class {
-        analyzeText = () => ({ vulnerabilities: [] });
-        analyzeCode = () => ({ vulnerabilities: [] });
-      }
-    }));
+// Mock the security detector
+vi.mock('../../security/index', () => ({
+  SecurityDetector: class {
+    analyzeText = () => ({ vulnerabilities: [] });
+    analyzeCode = () => ({ vulnerabilities: [] });
+  }
+}));
+
+describe('Issue Analyzer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
+
   test('analyzeIssue should return analysis from AI client', async () => {
     const issueContext: IssueContext = {
       id: '123',

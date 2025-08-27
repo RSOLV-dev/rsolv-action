@@ -5,7 +5,7 @@
  * These tests follow TDD - RED phase (all should fail initially)
  */
 
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { CoverageAnalyzer } from '../coverage-analyzer.js';
 import type { CoverageReport, CoverageGap, FileCoverage } from '../coverage-analyzer.js';
 

@@ -4,7 +4,7 @@
  * Run with: INTEGRATION_TEST=true bun test test/integration/api-endpoints.test.ts
  */
 
-import { describe, it, expect, beforeAll, skipIf } from 'vitest';
+import { describe, it, expect, beforeAll, skipIf, vi } from 'vitest';
 import { RsolvApiClient } from '../../src/external/api-client.js';
 import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 

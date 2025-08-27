@@ -4,7 +4,7 @@
  * and PASS after we fix the vendor detection
  */
 
-import { describe, test, expect, beforeEach, mock } from 'vitest';
+import { describe, test, expect, beforeEach, mock, vi } from 'vitest';
 import type { ValidationData, ScannedVulnerability } from '../../../types/vulnerability';
 
 describe('Vendor Detection TDD - File Extraction from Validation Data', () => {

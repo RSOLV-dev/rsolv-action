@@ -1,9 +1,17 @@
-import { describe, test, expect, beforeAll } from 'bun:test';
+import { describe, test, expect, beforeAll } from 'vitest';
 import { generateSolution } from '../../src/ai/solution.js';
 import { IssueContext, ActionConfig, AnalysisData } from '../../src/types/index.js';
 import { SecurityAnalysisResult } from '../../src/ai/security-analyzer.js';
 
 describe('Solution Generation with Fallback', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   let config: ActionConfig;
   
   beforeAll(() => {

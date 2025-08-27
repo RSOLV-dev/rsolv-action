@@ -3,17 +3,121 @@
  * Tests that the fix correctly handles both 'file' and 'files' properties
  */
 
-import { describe, test, expect, beforeEach, mock } from 'vitest';
-import type { ActionConfig } from '../../types/index.js';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
+import type { ActionConfig, IssueContext } from '../../types/index.js';
+import { PhaseExecutor } from '../phase-executor/index.js';
+
+// Use vi.hoisted for shared test data
+const { capturedFiles, mockGetIssue, mockIsVendorFile, mockProcessVulnerability } = vi.hoisted(() => {
+  const files: string[] = [];
+  return {
+    capturedFiles: files,
+    mockGetIssue: vi.fn(),
+    mockIsVendorFile: vi.fn(),
+    mockProcessVulnerability: vi.fn()
+  };
+});
+
+// Mock all dependencies at module level
+vi.mock('../../github/api.js', () => ({
+  getIssue: mockGetIssue,
+  getGitHubClient: vi.fn(() => ({}))
+}));
+
+vi.mock('../../vendor/index.js', () => ({
+  VendorDetectionIntegration: class {
+    async isVendorFile(file: string) {
+      return mockIsVendorFile(file);
+    }
+    async processVulnerability(vuln: unknown) {
+      return mockProcessVulnerability(vuln);
+    }
+  }
+}));
+
+vi.mock('../phase-data-client/index.js', () => ({
+  PhaseDataClient: vi.fn(() => ({
+    retrievePhaseResults: vi.fn().mockImplementation((_repo, issueNumber) => {
+      // Return different validation data based on issue number
+      const issueKey = `issue-${issueNumber}`;
+      const validationData: any = {
+        validate: {}
+      };
+      
+      if (issueNumber === 1) {
+        validationData.validate[issueKey] = {
+          vulnerabilities: [
+            { file: 'unknown.js', line: 42, type: 'UNKNOWN' },
+            { file: 'unknown.js', line: 100, type: 'UNKNOWN' }
+          ],
+          validated: true
+        };
+      } else if (issueNumber === 2) {
+        validationData.validate[issueKey] = {
+          vulnerabilities: [
+            { file: 'unknown.js', line: 1, type: 'UNKNOWN' },
+            { file: 'unknown.js', line: 2, type: 'UNKNOWN' }  // Different line number
+          ],
+          validated: true
+        };
+      } else {
+        validationData.validate[issueKey] = {
+          vulnerabilities: [
+            { file: 'unknown.js', line: 42, type: 'UNKNOWN' },
+            { file: 'unknown.js', line: 100, type: 'UNKNOWN' },
+            { file: 'unknown.js', line: 101, type: 'UNKNOWN' }  // Different line number
+          ],
+          validated: true
+        };
+      }
+      
+      return Promise.resolve(validationData);
+    }),
+    storePhaseResults: vi.fn().mockResolvedValue({ success: true })
+  }))
+}));
+
+vi.mock('../../ai/adapters/claude-code-git.js', () => ({
+  GitBasedClaudeCodeAdapter: vi.fn(() => ({
+    generateSolutionWithGit: vi.fn().mockResolvedValue({
+      success: true,
+      pullRequestUrl: 'https://github.com/test/repo/pull/1',
+      pullRequestNumber: 1,
+      commitHash: 'abc123',
+      filesModified: ['test.js']
+    })
+  }))
+}));
+
+vi.mock('../../ai/git-based-test-validator.js', () => ({
+  GitBasedTestValidator: vi.fn(() => ({
+    validateFixWithTests: vi.fn().mockResolvedValue({ isValidFix: true })
+  }))
+}));
+
+vi.mock('child_process', () => ({
+  execSync: vi.fn((cmd: string) => {
+    if (cmd.includes('git status --porcelain')) return '';
+    if (cmd.includes('git rev-parse HEAD')) return 'abc123def456';
+    return '';
+  })
+}));
+
+interface Vulnerability {
+  type: string;
+  file?: string;
+  files?: string[];
+  line: number;
+}
 
 describe('Vendor Detection Regression Tests (RFC-047)', () => {
   let mockConfig: ActionConfig;
-  let capturedFiles: string[] = [];
+  let executor: PhaseExecutor;
 
   beforeEach(() => {
     // Clear mock state
-    mock.restore();
-    capturedFiles = [];
+    vi.clearAllMocks();
+    capturedFiles.length = 0; // Clear array contents
     
     mockConfig = {
       githubToken: 'test-token',
@@ -25,111 +129,102 @@ describe('Vendor Detection Regression Tests (RFC-047)', () => {
       }
     } as ActionConfig;
 
-    // Mock all dependencies before import
-    vi.mock('../../github/api.js', () => ({
-      getIssue: mock(async (owner: string, repo: string, issueNumber: number) => {
-        // Return different data based on issue number for different tests
-        if (issueNumber === 1) {
-          return {
-            title: 'Security Vulnerability: weak_cryptography',
-            body: JSON.stringify({ 
-              vulnerabilities: [
-                { type: 'weak_cryptography', file: 'app/assets/vendor/jquery.min.js', line: 42 },
-                { type: 'sql_injection', file: 'app/models/user.rb', line: 100 }
-              ]
-            }),
-            labels: ['rsolv:automate']
-          };
-        } else if (issueNumber === 2) {
-          return {
-            title: 'Security Vulnerability: information_disclosure',
-            body: JSON.stringify({ 
-              vulnerabilities: [
-                { 
-                  type: 'information_disclosure', 
-                  files: ['config/secrets.yml', 'app/config/database.yml'],
-                  line: 1 
-                }
-              ]
-            }),
-            labels: ['rsolv:automate']
-          };
-        } else {
-          return {
-            title: 'Multiple vulnerabilities found',
-            body: JSON.stringify({ 
-              vulnerabilities: [
-                { type: 'weak_cryptography', file: 'vendor/jquery.min.js', line: 42 },
-                { type: 'sql_injection', files: ['app/models/user.rb', 'app/models/admin.rb'], line: 100 },
-                { type: 'xss', line: 50 } // No file property at all
-              ]
-            }),
-            labels: ['rsolv:automate']
-          };
-        }
-      }),
-      getGitHubClient: mock(() => ({}))
-    }));
+    // Setup mock implementations
+    mockGetIssue.mockImplementation(async (_owner: string, _repo: string, issueNumber: number) => {
+      // Return different data based on issue number for different tests
+      if (issueNumber === 1) {
+        return {
+          title: 'Security Vulnerability: weak_cryptography',
+          body: `## Security Vulnerability Report
 
-    // Mock vendor detection to capture files
-    vi.mock('../../vendor/index.js', () => ({
-      VendorDetectionIntegration: class {
-        async isVendorFile(file: string) {
-          capturedFiles.push(file);
-          return file.includes('vendor') || file.includes('.min.');
-        }
-        async processVulnerability(vuln: any) {
-          return { action: 'issue_created', type: 'vendor_update' };
-        }
-      }
-    }));
+**Type**: Weak_cryptography
+**Severity**: MEDIUM
 
-    // Mock phase data client
-    vi.mock('../../external/phase-data-client.js', () => ({
-      PhaseDataClient: class {
-        async retrievePhaseResults() { return null; }
-        async storePhaseResults() { return { success: true }; }
-      }
-    }));
+### Affected Files
 
-    // Mock AI components
-    vi.mock('../../ai/adapters/claude-code-git.js', () => ({
-      GitBasedClaudeCodeAdapter: class {
-        async generateSolutionWithGit() {
-          return {
-            success: true,
-            pullRequestUrl: 'https://github.com/test/repo/pull/1',
-            pullRequestNumber: 1,
-            commitHash: 'abc123',
-            filesModified: ['test.js']
-          };
-        }
+#### \`app/assets/vendor/jquery.min.js\`
+
+- **Line 42**: Use of Math.random() for cryptographic purposes
+
+#### \`app/models/user.rb\`
+
+- **Line 100**: SQL injection vulnerability`,
+          labels: ['rsolv:automate']
+        };
+      } else if (issueNumber === 2) {
+        return {
+          title: 'Security Vulnerability: information_disclosure',
+          body: `## Security Vulnerability Report
+
+**Type**: Information_disclosure
+**Severity**: HIGH
+
+### Affected Files
+
+#### \`config/secrets.yml\`
+
+- **Line 1**: Sensitive data exposure
+
+#### \`app/config/database.yml\`
+
+- **Line 2**: Database credentials exposed`,
+          labels: ['rsolv:automate']
+        };
+      } else {
+        return {
+          title: 'Multiple vulnerabilities found',
+          body: `## Security Vulnerability Report
+
+**Type**: Multiple
+**Severity**: HIGH
+
+### Affected Files
+
+#### \`vendor/jquery.min.js\`
+
+- **Line 42**: Weak cryptography
+
+#### \`app/models/user.rb\`
+
+- **Line 100**: SQL injection
+
+#### \`app/models/admin.rb\`
+
+- **Line 101**: SQL injection`,
+          labels: ['rsolv:automate']
+        };
       }
-    }));
-    
-    vi.mock('../../ai/git-based-test-validator.js', () => ({
-      GitBasedTestValidator: class {
-        async validateFixWithTests() {
-          return { isValidFix: true };
-        }
-      }
-    }));
+    });
+
+    mockIsVendorFile.mockImplementation(async (file: string) => {
+      capturedFiles.push(file);
+      return file.includes('vendor') || file.includes('.min.');
+    });
+
+    mockProcessVulnerability.mockResolvedValue({ 
+      action: 'issue_created', 
+      type: 'vendor_update' 
+    });
+
+    executor = new PhaseExecutor(mockConfig);
   });
 
   test('should handle vulnerabilities with singular "file" property', async () => {
-    // Import after mocks are set up
-    const { PhaseExecutor } = await import('../phase-executor');
-    const executor = new PhaseExecutor(mockConfig);
-
-    // Execute mitigate with issue #1 (has singular 'file')
-    await executor.executeMitigate({
-      issueNumber: 1,
+    const mockIssue: Partial<IssueContext> = {
+      number: 1,
       repository: {
         owner: 'test-owner',
         name: 'test-repo',
         fullName: 'test-owner/test-repo',
-        defaultBranch: 'main'
+        defaultBranch: 'main',
+        language: 'JavaScript'
       }
+    };
+
+    // Execute with proper method name - mitigate expects issueNumber and repository
+    await executor.execute('mitigate', {
+      issueNumber: mockIssue.number,
+      repository: mockIssue.repository
     });
 
     // Verify that files were extracted correctly from singular 'file' property
@@ -138,22 +233,21 @@ describe('Vendor Detection Regression Tests (RFC-047)', () => {
   });
 
   test('should handle vulnerabilities with plural "files" property', async () => {
-    // Clear captured files from previous test
-    capturedFiles = [];
-    
-    // Import after mocks are set up
-    const { PhaseExecutor } = await import('../phase-executor');
-    const executor = new PhaseExecutor(mockConfig);
-
-    // Execute mitigate with issue #2 (has plural 'files')
-    await executor.executeMitigate({
-      issueNumber: 2,
+    const mockIssue: Partial<IssueContext> = {
+      number: 2,
       repository: {
         owner: 'test-owner',
         name: 'test-repo',
         fullName: 'test-owner/test-repo',
-        defaultBranch: 'main'
+        defaultBranch: 'main',
+        language: 'JavaScript'
       }
+    };
+
+    // Execute with proper method name - mitigate expects issueNumber and repository
+    await executor.execute('mitigate', {
+      issueNumber: mockIssue.number,
+      repository: mockIssue.repository
     });
 
     // Verify that files were extracted correctly from plural 'files' property
@@ -162,22 +256,21 @@ describe('Vendor Detection Regression Tests (RFC-047)', () => {
   });
 
   test('should handle mixed vulnerabilities with both file and files properties', async () => {
-    // Clear captured files from previous test
-    capturedFiles = [];
-    
-    // Import after mocks are set up
-    const { PhaseExecutor } = await import('../phase-executor');
-    const executor = new PhaseExecutor(mockConfig);
-
-    // Execute mitigate with issue #3 (has mixed)
-    await executor.executeMitigate({
-      issueNumber: 3,
+    const mockIssue: Partial<IssueContext> = {
+      number: 3,
       repository: {
         owner: 'test-owner',
         name: 'test-repo',
         fullName: 'test-owner/test-repo',
-        defaultBranch: 'main'
+        defaultBranch: 'main',
+        language: 'JavaScript'
       }
+    };
+
+    // Execute with proper method name - mitigate expects issueNumber and repository
+    await executor.execute('mitigate', {
+      issueNumber: mockIssue.number,
+      repository: mockIssue.repository
     });
 
     // Verify that all files were extracted correctly

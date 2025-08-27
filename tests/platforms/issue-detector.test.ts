@@ -1,24 +1,24 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import type { ActionConfig } from '../../src/types';
 
 // Create mocks
-const mockDetectIssues = mock(() => Promise.resolve([]));
-const mockSearchIssues = mock(() => Promise.resolve([]));
-const mockSearchRsolvIssues = mock(() => Promise.resolve([]));
-const mockCreate = mock(() => ({
+const mockDetectIssues = vi.fn(() => Promise.resolve([]));
+const mockSearchIssues = vi.fn(() => Promise.resolve([]));
+const mockSearchRsolvIssues = vi.fn(() => Promise.resolve([]));
+const mockCreate = vi.fn(() => ({
   searchIssues: mockSearchIssues,
   searchRsolvIssues: mockSearchRsolvIssues
 }));
 
 // Mock the modules using Bun's mock system
-mock.module('../../src/github/issues', () => ({
+vi.mock('../../src/github/issues', () => ({
   detectIssues: mockDetectIssues
 }));
 
-mock.module('../../src/platforms/platform-factory', () => ({
+vi.mock('../../src/platforms/platform-factory', () => ({
   PlatformFactory: {
     create: mockCreate,
-    createAndAuthenticate: mock(() => Promise.resolve({
+    createAndAuthenticate: vi.fn(() => Promise.resolve({
       searchIssues: mockSearchIssues,
       searchRsolvIssues: mockSearchRsolvIssues
     }))
@@ -33,6 +33,14 @@ import { PlatformFactory } from '../../src/platforms/platform-factory';
 // Don't mock fetch globally - it interferes with other tests
 
 describe('Multi-Platform Issue Detection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   let mockConfig: ActionConfig;
 
   beforeEach(() => {

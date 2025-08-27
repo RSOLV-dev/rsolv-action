@@ -1,15 +1,15 @@
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { handleExternalWebhook, getRepositoryFromExternalIssue } from '../../src/external/webhook.js';
 import { ActionConfig, IssueContext } from '../../src/types/index.js';
 
 // Mock the logger module first
-mock.module('../../src/utils/logger.js', () => ({
+vi.mock('../../src/utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {}),
-    debug: mock(() => {}),
-    log: mock(() => {})
+    info: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    error: vi.fn(() => {}),
+    debug: vi.fn(() => {}),
+    log: vi.fn(() => {})
   }
 }));
 
@@ -93,6 +93,14 @@ const mockLinearPayload = {
 };
 
 describe('External Issue Tracker Integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   beforeEach(() => {
     // Set environment variables for tests
     process.env.JIRA_BASE_URL = 'https://jira.example.com';

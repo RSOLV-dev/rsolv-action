@@ -155,6 +155,7 @@ export class ASTValidator {
     const validated = vulnerabilities.filter(vuln => {
       const vulnId = `${vuln.type}-${vuln.line}-${vuln.column || 0}`;
       const validation = validationMap.get(vulnId);
+      
       if (!validation) {
         // No validation result, keep the vulnerability
         return true;

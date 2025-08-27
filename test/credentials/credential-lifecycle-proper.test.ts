@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi, jest, spyOn } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, jest, spyOn, vi } from 'vitest';
 import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 
 // Mock fetch globally

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { GitBasedProcessor } from '../git-based-processor.js';
 import { AdaptiveTestGenerator } from '../adaptive-test-generator.js';
 import { TestFrameworkDetector } from '../test-framework-detector.js';

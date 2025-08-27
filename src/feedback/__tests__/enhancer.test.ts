@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from 'vitest';
+import { describe, it, expect, mock, beforeEach, vi } from 'vitest';
 import { PromptEnhancer } from '../enhancer.js';
 import type { IssueContext } from '../../types.js';
 import type { 
@@ -52,7 +52,7 @@ describe('PromptEnhancer', () => {
     
     // Create mock storage
     mockStorage = {
-      queryFeedback: mock((query: any = {}) => {
+      queryFeedback: vi.fn((query: any = {}) => {
         if (query.issueId) {
           return Promise.resolve(
             mockFeedback.filter(f => f.issueId === query.issueId)
@@ -203,7 +203,7 @@ describe('PromptEnhancer', () => {
     
     it('handles errors gracefully', async () => {
       // Make the storage throw an error
-      (enhancer as any)._storage.queryFeedback = mock(() => {
+      (enhancer as any)._storage.queryFeedback = vi.fn(() => {
         throw new Error('Storage error');
       });
       

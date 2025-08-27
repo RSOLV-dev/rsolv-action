@@ -3,8 +3,31 @@
  * Following RFC-041 specification for phase data storage
  */
 
-import { describe, test, expect, beforeEach, mock } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { PhaseDataClient, StoreResult, PhaseData } from '../index.js';
+
+// Use vi.hoisted to make mock functions available during mock factory
+const { mockWriteFile, mockMkdir, mockReadFile, mockAccess, mockReaddir } = vi.hoisted(() => ({
+  mockWriteFile: vi.fn().mockResolvedValue(undefined),
+  mockMkdir: vi.fn().mockResolvedValue(undefined),
+  mockReadFile: vi.fn().mockResolvedValue('{}'),
+  mockAccess: vi.fn().mockRejectedValue(new Error('File not found')),
+  mockReaddir: vi.fn().mockResolvedValue([])
+}));
+
+// Mock fs/promises at module level
+vi.mock('fs/promises', () => ({
+  writeFile: mockWriteFile,
+  mkdir: mockMkdir,
+  readFile: mockReadFile,
+  access: mockAccess,
+  readdir: mockReaddir
+}));
+
+// Mock child_process at module level
+vi.mock('child_process', () => ({
+  execSync: vi.fn().mockReturnValue('abc123\n')
+}));
 
 describe('PhaseDataClient', () => {
   let client: PhaseDataClient;
@@ -13,7 +36,7 @@ describe('PhaseDataClient', () => {
 
   beforeEach(() => {
     // Reset fetch mock
-    global.fetch = mock(async () => new Response());
+    global.fetch = vi.fn(async () => new Response());
   });
 
   describe('storePhaseResults', () => {
@@ -29,7 +52,7 @@ describe('PhaseDataClient', () => {
         message: 'Phase data stored successfully'
       };
       
-      global.fetch = mock(async () => 
+      global.fetch = vi.fn(async () => 
         new Response(JSON.stringify(mockResponse), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
@@ -74,7 +97,7 @@ describe('PhaseDataClient', () => {
       // Arrange
       client = new PhaseDataClient(mockApiKey);
       
-      global.fetch = mock(async (url: string, options?: RequestInit) => {
+      global.fetch = vi.fn(async (url: string, options?: RequestInit) => {
         // Capture the headers for verification
         const headers = options?.headers as Headers;
         expect(headers.get('X-API-Key')).toBe(mockApiKey);
@@ -98,18 +121,11 @@ describe('PhaseDataClient', () => {
       client = new PhaseDataClient(mockApiKey);
       
       // Mock fetch to fail
-      global.fetch = mock(async () => {
+      global.fetch = vi.fn(async () => {
         throw new Error('Network error');
       });
 
-      // Mock file system for local storage
-      const mockWriteFile = mock(async () => {});
-      const mockMkdir = mock(async () => {});
-      
-      vi.mock('fs/promises', () => ({
-        writeFile: mockWriteFile,
-        mkdir: mockMkdir
-      }));
+      // File system is mocked at module level
 
       // Act
       const result = await client.storePhaseResults('scan', {}, {
@@ -137,7 +153,7 @@ describe('PhaseDataClient', () => {
         }
       };
       
-      global.fetch = mock(async () => 
+      global.fetch = vi.fn(async () => 
         new Response(JSON.stringify(mockData), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
@@ -165,7 +181,7 @@ describe('PhaseDataClient', () => {
       // Arrange
       client = new PhaseDataClient(mockApiKey);
       
-      global.fetch = mock(async () => 
+      global.fetch = vi.fn(async () => 
         new Response('Not found', { status: 404 })
       );
 
@@ -181,21 +197,16 @@ describe('PhaseDataClient', () => {
       client = new PhaseDataClient(mockApiKey);
       
       // Mock fetch to fail with non-404 error
-      global.fetch = mock(async () => 
+      global.fetch = vi.fn(async () => 
         new Response('Server error', { status: 500 })
       );
 
-      // Mock file system for local retrieval
-      const mockReaddir = mock(async () => ['test-repo-123-scan.json']);
-      const mockReadFile = mock(async () => JSON.stringify({
+      // Setup file system mocks for local retrieval
+      mockReaddir.mockResolvedValueOnce(['test-repo-123-scan.json']);
+      mockReadFile.mockResolvedValueOnce(JSON.stringify({
         phase: 'scan',
         data: { scan: { vulnerabilities: [] } },
         metadata: { commitSha: 'abc123' }
-      }));
-      
-      vi.mock('fs/promises', () => ({
-        readdir: mockReaddir,
-        readFile: mockReadFile
       }));
 
       // Act
@@ -213,9 +224,9 @@ describe('PhaseDataClient', () => {
       client = new PhaseDataClient(mockApiKey);
       
       // Mock git command to return current commit
-      vi.mock('child_process', () => ({
-        execSync: () => 'abc123\n'
-      }));
+      // Mock child_process is already at module level, just change its return value
+      const childProcess = await import('child_process');
+      vi.mocked(childProcess.execSync).mockReturnValue('abc123\n' as any);
 
       // Act & Assert
       expect(await client.validatePhaseTransition('scan', 'validate', 'abc123')).toBe(true);
@@ -228,9 +239,9 @@ describe('PhaseDataClient', () => {
       client = new PhaseDataClient(mockApiKey);
       
       // Mock git to return different commit
-      vi.mock('child_process', () => ({
-        execSync: () => 'different-commit\n'
-      }));
+      // Mock child_process is already at module level, just change its return value
+      const childProcess = await import('child_process');
+      vi.mocked(childProcess.execSync).mockReturnValue('different-commit\n' as any);
 
       // Act
       const result = await client.validatePhaseTransition('scan', 'validate', 'abc123');

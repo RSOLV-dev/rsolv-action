@@ -1,16 +1,24 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ValidationEnricher } from '../../src/validation/enricher';
 
 // Mock the GitHub API utilities
-import { mock } from 'bun:test';
-mock.module('../../src/github/api.js', () => ({
-  updateIssue: mock(() => Promise.resolve()),
-  addLabels: mock(() => Promise.resolve())
+import { vi } from 'vitest';
+vi.mock('../../src/github/api.js', () => ({
+  updateIssue: vi.fn(() => Promise.resolve()),
+  addLabels: vi.fn(() => Promise.resolve())
 }));
 
 describe('XSS Pattern Detection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   let enricher: ValidationEnricher;
   
   beforeEach(() => {

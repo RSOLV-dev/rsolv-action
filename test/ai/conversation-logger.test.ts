@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ConversationLogger } from '../../src/ai/conversation-logger.js';
 import * as fs from 'fs';
 import * as path from 'path';

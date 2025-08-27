@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GitBasedTestValidator } from '../git-based-test-validator.js';
 import { AdaptiveTestGenerator } from '../adaptive-test-generator.js';
 import { TestFrameworkDetector } from '../test-framework-detector.js';
@@ -9,28 +9,34 @@ import { getMaxIterations } from '../git-based-processor.js';
 import { SecurityPattern, VulnerabilityType } from '../../security/types.js';
 import { TestFramework } from '../types.js';
 import { ActionConfig, IssueContext } from '../../types/index.js';
-import * as fs from 'fs/promises';
 import * as path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import * as fs from 'fs/promises';
 
-const execAsync = promisify(exec);
+// Mock fs and child_process to avoid actual file operations
+vi.mock('fs/promises', () => ({
+  mkdir: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
+  writeFile: vi.fn().mockResolvedValue(undefined),
+  readFile: vi.fn().mockResolvedValue('')
+}));
+
+vi.mock('child_process', () => ({
+  exec: vi.fn((cmd: string, opts: any, cb: Function) => {
+    if (cb) cb(null, '', '');
+  }),
+  execSync: vi.fn(() => '')  // Default to empty string
+}));
 
 describe('Fix Iteration Validation - Java/PHP', () => {
   let testDir: string;
   let validator: GitBasedTestValidator;
   let generator: AdaptiveTestGenerator;
 
-  beforeEach(async () => {
-    // Create a temporary test directory
+  beforeEach(() => {
+    // Use a mock test directory
     testDir = path.join(process.cwd(), 'tmp', `fix-iteration-test-${Date.now()}`);
-    await fs.mkdir(testDir, { recursive: true });
     
-    // Initialize git repo
-    await execAsync('git init', { cwd: testDir });
-    await execAsync('git config user.email "test@example.com"', { cwd: testDir });
-    await execAsync('git config user.name "Test User"', { cwd: testDir });
-    
+    // Initialize components without actual file operations
     validator = new GitBasedTestValidator();
     const frameworkDetector = new TestFrameworkDetector();
     const coverageAnalyzer = new CoverageAnalyzer();
@@ -38,9 +44,9 @@ describe('Fix Iteration Validation - Java/PHP', () => {
     generator = new AdaptiveTestGenerator(frameworkDetector, coverageAnalyzer, issueInterpreter);
   });
 
-  afterEach(async () => {
-    // Clean up test directory
-    await fs.rm(testDir, { recursive: true, force: true });
+  afterEach(() => {
+    // Clear mocks
+    vi.clearAllMocks();
   });
 
   describe('Java SQL Injection Fix Iteration', () => {

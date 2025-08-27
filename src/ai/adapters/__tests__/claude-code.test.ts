@@ -1,66 +1,87 @@
-import { describe, expect, test, beforeEach, mock, afterEach } from 'vitest';
+import { describe, expect, test, beforeEach, mock, afterEach, vi } from 'vitest';
 import { AIConfig } from '../../types.js';
 import path from 'path';
 import type { SDKMessage } from '@anthropic-ai/claude-code';
 
-// Create a mock query function we can reference
-const mockQueryFunction = mock(async function* (options: any) {
-  // Default behavior - yield a text message with a solution
-  yield {
-    type: 'text',
-    text: JSON.stringify({
-      title: 'Fix: Test issue',
-      description: 'Test solution',
-      files: [{
-        path: 'src/test.ts',
-        changes: 'console.log("fixed");'
-      }],
-      tests: ['Test case 1']
-    })
-  } as SDKMessage;
-});
-
-// Mock the @anthropic-ai/claude-code module using require.resolve for better isolation
-const claudeCodePath = require.resolve('@anthropic-ai/claude-code');
-vi.mock(claudeCodePath, () => {
+// Use vi.hoisted to ensure mocks are available during module initialization
+const { mockQueryFunction, mockWriteFileSync, mockReadFileSync, mockExistsSync, mockMkdirSync, mockUnlinkSync, mockAnalytics } = vi.hoisted(() => {
+  const analytics: any[] = [];
+  
+  const queryFn = vi.fn(async function* (options: any) {
+    // Default behavior - yield an assistant message with a solution
+    yield {
+      type: 'assistant',
+      text: JSON.stringify({
+        title: 'Fix: Test issue',
+        description: 'Test solution',
+        files: [{
+          path: 'src/test.ts',
+          changes: 'console.log("fixed");'
+        }],
+        tests: ['Test case 1']
+      })
+    } as SDKMessage;
+  });
+  
+  const writeFileSync = vi.fn((path: string, content: string) => {
+    if (path.includes('analytics')) {
+      try {
+        const data = JSON.parse(content);
+        // Only keep last entry to avoid accumulation
+        if (analytics.length > 0) {
+          analytics.length = 0;
+        }
+        analytics.push(...data);
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  });
+  
+  const readFileSync = vi.fn((path: string) => {
+    if (path.includes('analytics')) {
+      return JSON.stringify(analytics);
+    }
+    return '{}';
+  });
+  
+  const existsSync = vi.fn((path: string) => {
+    return path.includes('temp') || path.includes('analytics');
+  });
+  
+  const mkdirSync = vi.fn(() => {});
+  const unlinkSync = vi.fn(() => {});
+  
   return {
-    query: mockQueryFunction
+    mockQueryFunction: queryFn,
+    mockWriteFileSync: writeFileSync,
+    mockReadFileSync: readFileSync,
+    mockExistsSync: existsSync,
+    mockMkdirSync: mkdirSync,
+    mockUnlinkSync: unlinkSync,
+    mockAnalytics: analytics
   };
 });
 
-// Mock the file system
-const mockAnalytics: any[] = [];
-const mockWriteFileSync = mock((path: string, content: string) => {
-  if (path.includes('analytics')) {
-    try {
-      const data = JSON.parse(content);
-      // Only keep last entry to avoid accumulation
-      if (mockAnalytics.length > 0) {
-        mockAnalytics.length = 0;
-      }
-      mockAnalytics.push(...data);
-    } catch (e) {
-      // Ignore parse errors
+// Mock the @anthropic-ai/claude-code module
+vi.mock('@anthropic-ai/claude-code', () => {
+  return {
+    query: mockQueryFunction,
+    default: {
+      query: mockQueryFunction
     }
-  }
+  };
 });
 
-const mockReadFileSync = mock((path: string) => {
-  if (path.includes('analytics')) {
-    return JSON.stringify(mockAnalytics);
-  }
-  return '{}';
-});
-
-const mockExistsSync = mock((path: string) => {
-  return path.includes('temp') || path.includes('analytics');
-});
-
-const mockMkdirSync = mock(() => {});
-const mockUnlinkSync = mock(() => {});
-
-const fsPath = require.resolve('fs');
-vi.mock(fsPath, () => ({
+// Mock fs
+vi.mock('fs', () => ({
+  default: {
+    writeFileSync: mockWriteFileSync,
+    readFileSync: mockReadFileSync,
+    existsSync: mockExistsSync,
+    mkdirSync: mockMkdirSync,
+    unlinkSync: mockUnlinkSync
+  },
   writeFileSync: mockWriteFileSync,
   readFileSync: mockReadFileSync,
   existsSync: mockExistsSync,
@@ -68,15 +89,20 @@ vi.mock(fsPath, () => ({
   unlinkSync: mockUnlinkSync
 }));
 
-// Mock the logger using require.resolve
-const loggerPath = require.resolve('../../../utils/logger');
-vi.mock(loggerPath, () => {
+// Mock the logger
+vi.mock('../../utils/logger', () => {
   return {
+    Logger: class {
+      info = vi.fn();
+      warn = vi.fn();
+      error = vi.fn();
+      debug = vi.fn();
+    },
     logger: {
-      info: mock(() => {}),
-      warn: mock(() => {}),
-      error: mock(() => {}),
-      debug: mock(() => {})
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn()
     }
   };
 });
@@ -126,7 +152,7 @@ describe('Claude Code SDK Adapter', () => {
   };
   
   const mockCredentialManager = {
-    getCredential: mock((provider: string) => {
+    getCredential: vi.fn((provider: string) => {
       if (provider === 'anthropic') {
         return 'vended-api-key';
       }
@@ -137,6 +163,9 @@ describe('Claude Code SDK Adapter', () => {
   beforeEach(() => {
     // Save original environment
     originalEnv = { ...process.env };
+    
+    // Set test environment
+    process.env.NODE_ENV = 'test';
     
     // Clear any previous mocks
     (mockQuery as any).mockClear();
@@ -199,6 +228,11 @@ describe('Claude Code SDK Adapter', () => {
     
     const result = await adapter.generateSolution(mockIssueContext, mockAnalysis);
     
+    // Debug output
+    if (!result.success) {
+      console.log('Result:', JSON.stringify(result, null, 2));
+    }
+    
     expect(result.success).toBe(true);
     expect(result.message).toContain('Solution generated with Claude Code SDK');
     expect(result.changes).toBeDefined();
@@ -244,13 +278,13 @@ describe('Claude Code SDK Adapter', () => {
 
   test('should extract solution from text messages', async () => {
     // Mock query to return solution in different formats
-    (mockQuery as any).mockImplementationOnce(async function* () {
+    mockQueryFunction.mockImplementationOnce(async function* () {
       // First, non-solution text
       yield { type: 'text', text: 'Analyzing the issue...' } as SDKMessage;
       
       // Then solution in code block
       yield {
-        type: 'text',
+        type: 'assistant',
         text: `Here's the solution:
 \`\`\`json
 {
@@ -417,7 +451,7 @@ This solution prevents XSS attacks.`;
   test('should fallback when credential manager fails', async () => {
     // Mock credential manager to throw
     const failingCredentialManager = {
-      getCredential: mock(() => {
+      getCredential: vi.fn(() => {
         throw new Error('Credential service unavailable');
       })
     };

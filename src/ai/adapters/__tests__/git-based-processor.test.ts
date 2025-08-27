@@ -1,31 +1,45 @@
-import { describe, expect, test, beforeEach, mock } from 'vitest';
-import { processIssueWithGit } from '../../git-based-processor.js';
+import { describe, expect, test, beforeEach, vi } from 'vitest';
 
-// Mock dependencies
-const mockCheckGitStatus = mock(() => ({ clean: true, modifiedFiles: [] }));
-const mockAnalyzeIssue = mock(() => ({
-  canBeFixed: true,
-  summary: 'SQL injection vulnerability',
-  complexity: 'medium',
-  estimatedTime: 30,
-  relatedFiles: ['src/routes/users.js']
-}));
-
-const mockCreatePullRequestFromGit = mock(() => ({
-  success: true,
-  pullRequestUrl: 'https://github.com/test/repo/pull/123',
-  pullRequestNumber: 123,
-  branchName: 'rsolv/fix-issue-42'
-}));
-
-// Mock child_process for git commands
-vi.mock('child_process', () => ({
-  execSync: mock((command: string) => {
+// Use vi.hoisted for all mock functions
+const { mockCheckGitStatus, mockAnalyzeIssue, mockCreatePullRequestFromGit, mockExecSync } = vi.hoisted(() => {
+  const checkGitStatus = vi.fn();
+  const analyzeIssue = vi.fn();
+  const createPullRequestFromGit = vi.fn();
+  const execSync = vi.fn();
+  
+  // Set default implementations
+  checkGitStatus.mockReturnValue({ clean: true, modifiedFiles: [] });
+  analyzeIssue.mockReturnValue({
+    canBeFixed: true,
+    summary: 'SQL injection vulnerability',
+    complexity: 'medium',
+    estimatedTime: 30,
+    relatedFiles: ['src/routes/users.js']
+  });
+  createPullRequestFromGit.mockReturnValue({
+    success: true,
+    pullRequestUrl: 'https://github.com/test/repo/pull/123',
+    pullRequestNumber: 123,
+    branchName: 'rsolv/fix-issue-42'
+  });
+  execSync.mockImplementation((command: string) => {
     if (command === 'git status --porcelain') {
       return '';
     }
     return '';
-  })
+  });
+  
+  return {
+    mockCheckGitStatus: checkGitStatus,
+    mockAnalyzeIssue: analyzeIssue,
+    mockCreatePullRequestFromGit: createPullRequestFromGit,
+    mockExecSync: execSync
+  };
+});
+
+// Mock child_process for git commands
+vi.mock('child_process', () => ({
+  execSync: mockExecSync
 }));
 
 // Mock the other modules
@@ -67,6 +81,9 @@ vi.mock('../claude-code-git.js', () => ({
     }
   }
 }));
+
+// Import after mocks
+import { processIssueWithGit } from '../../git-based-processor.js';
 
 describe('Git-based Issue Processor', () => {
   const mockIssue = {
@@ -113,32 +130,17 @@ describe('Git-based Issue Processor', () => {
   
   test('should fail if repository has uncommitted changes', async () => {
     // Temporarily override the mock for this test only
-    const originalMock = (await import('child_process')).execSync;
-    const dirtyGitMock = mock((command: string) => {
+    mockExecSync.mockImplementationOnce((command: string) => {
       if (command === 'git status --porcelain') {
         return 'M src/some-file.js\n';
       }
       return '';
     });
     
-    // Override the module mock temporarily
-    vi.mock('child_process', () => ({
-      execSync: dirtyGitMock
-    }));
-    
-    // Import fresh instance with dirty git mock
-    delete require.cache[require.resolve('../../git-based-processor.js')];
-    const { processIssueWithGit: processWithDirtyRepo } = await import('../../git-based-processor.js');
-    
-    const result = await processWithDirtyRepo(mockIssue as any, mockConfig as any);
+    const result = await processIssueWithGit(mockIssue as any, mockConfig as any);
     
     expect(result.success).toBe(false);
     expect(result.error).toContain('Uncommitted changes');
-    
-    // Restore original mock for subsequent tests
-    vi.mock('child_process', () => ({
-      execSync: originalMock
-    }));
   });
   
   test('should fail if issue cannot be fixed', async () => {

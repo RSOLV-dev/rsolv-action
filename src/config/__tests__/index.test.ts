@@ -1,11 +1,11 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'vitest';
+import { describe, expect, test, beforeEach, afterEach, mock, vi } from 'vitest';
 import { loadConfig } from '../index.js';
 import fs from 'fs';
 import * as yaml from 'js-yaml';
 
 // Create mock functions
-const mockExistsSync = mock((path: string) => path === '.github/rsolv.yml');
-const mockReadFileSync = mock(() => '');
+const mockExistsSync = vi.fn((path: string) => path === '.github/rsolv.yml');
+const mockReadFileSync = vi.fn(() => '');
 
 // Mock the modules
 vi.mock('fs', () => ({
@@ -15,10 +15,10 @@ vi.mock('fs', () => ({
 
 vi.mock('../../utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    debug: mock(() => {}),
-    error: mock(() => {}),
-    warn: mock(() => {}),
+    debug: vi.fn(() => {}),
+    info: vi.fn(() => {}),
+    error: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
   }
 }));
 

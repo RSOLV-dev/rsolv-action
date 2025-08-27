@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ValidationService } from '../../src/services/validation';
 import { APIClient } from '../../src/external/api-client';
 
@@ -9,6 +9,14 @@ import { APIClient } from '../../src/external/api-client';
  */
 
 describe('Regression: Validation Endpoint Compatibility', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   let validationService: ValidationService;
   let apiClient: APIClient;
 
@@ -24,7 +32,7 @@ describe('Regression: Validation Endpoint Compatibility', () => {
 
   describe('Issue #610: API endpoint mismatch', () => {
     it('should use /api/v1/vulnerabilities/validate as primary endpoint', async () => {
-      const mockFetch = mock((url: string, options: any) => {
+      const mockFetch = vi.fn((url: string, options: any) => {
         expect(url).toBe('https://api.rsolv.dev/api/v1/vulnerabilities/validate');
         return Promise.resolve({
           ok: true,
@@ -49,7 +57,7 @@ describe('Regression: Validation Endpoint Compatibility', () => {
 
     it('should fallback to /api/v1/ast/validate if primary fails with 404', async () => {
       let callCount = 0;
-      const mockFetch = mock((url: string, options: any) => {
+      const mockFetch = vi.fn((url: string, options: any) => {
         callCount++;
         
         if (callCount === 1) {
@@ -86,7 +94,7 @@ describe('Regression: Validation Endpoint Compatibility', () => {
     });
 
     it('should NOT use /ast/validate without api/v1 prefix', async () => {
-      const mockFetch = mock((url: string, options: any) => {
+      const mockFetch = vi.fn((url: string, options: any) => {
         // Should never call the legacy endpoint
         expect(url).not.toBe('https://api.rsolv.dev/ast/validate');
         return Promise.resolve({
@@ -110,7 +118,7 @@ describe('Regression: Validation Endpoint Compatibility', () => {
 
   describe('Issue #617: Validation returning actual results', () => {
     it('should return vulnerability validation results not empty array', async () => {
-      const mockFetch = mock(() => {
+      const mockFetch = vi.fn(() => {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({
@@ -176,7 +184,7 @@ describe('Regression: Validation Endpoint Compatibility', () => {
     });
 
     it('should handle NoSQL injection with $where correctly', async () => {
-      const mockFetch = mock(() => {
+      const mockFetch = vi.fn(() => {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({
@@ -230,7 +238,7 @@ describe('Regression: Validation Endpoint Compatibility', () => {
 
   describe('Cache functionality regression', () => {
     it('should include cache stats in response', async () => {
-      const mockFetch = mock(() => {
+      const mockFetch = vi.fn(() => {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({
@@ -284,7 +292,7 @@ describe('Regression: Validation Endpoint Compatibility', () => {
 
   describe('Error handling regression', () => {
     it('should provide clear error message when API key is invalid', async () => {
-      const mockFetch = mock(() => {
+      const mockFetch = vi.fn(() => {
         return Promise.resolve({
           ok: false,
           status: 401,
@@ -311,7 +319,7 @@ describe('Regression: Validation Endpoint Compatibility', () => {
     });
 
     it('should handle malformed repository names gracefully', async () => {
-      const mockFetch = mock(() => {
+      const mockFetch = vi.fn(() => {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({

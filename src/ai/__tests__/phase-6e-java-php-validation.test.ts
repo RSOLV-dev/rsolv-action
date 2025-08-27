@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../adapters/claude-code-git.js';
 import { getMaxIterations } from '../git-based-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';

@@ -1,8 +1,16 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 import { SecurityAwareAnalyzer } from '../../src/ai/security-analyzer.js';
 import { IssueContext, ActionConfig } from '../../src/types/index.js';
 
 describe('SecurityAwareAnalyzer Integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   const analyzer = new SecurityAwareAnalyzer();
   
   const mockIssue: IssueContext = {

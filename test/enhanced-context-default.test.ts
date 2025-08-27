@@ -1,22 +1,24 @@
-import { describe, it, expect, beforeEach, vi, jest } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { vi as vitestVi } from 'vitest';
 
-// Mock modules before importing dependencies
-const analyzeIssueMock = vi.fn();
+// Create mock functions
 const gatherDeepContextMock = vi.fn();
 
+// Mock modules - factories must be self-contained
 vi.mock('../src/ai/analyzer', () => ({
-  analyzeIssue: analyzeIssueMock
+  analyzeIssue: vi.fn()
 }));
 
 vi.mock('../src/ai/adapters/claude-code-enhanced', () => ({
-  EnhancedClaudeCodeAdapter: class {
-    gatherDeepContext = gatherDeepContextMock;
-  }
+  EnhancedClaudeCodeAdapter: vi.fn().mockImplementation(() => ({
+    gatherDeepContext: gatherDeepContextMock
+  }))
 }));
 
 // Now import after mocks are set up
 import { processIssues } from '../src/ai/unified-processor';
 import { IssueContext, ActionConfig } from '../src/types';
+import { analyzeIssue } from '../src/ai/analyzer';
 
 describe('Enhanced Context Default Behavior', () => {
   const mockIssue: IssueContext = {
@@ -38,16 +40,13 @@ describe('Enhanced Context Default Behavior', () => {
   };
 
   const mockConfig: ActionConfig = {
-    apiKey: 'test-key',
-    configPath: '.github/rsolv.yml',
-    issueLabel: 'rsolv:automate',
-    aiProvider: {
-      provider: 'claude-code',
-      model: 'claude-3',
-      apiKey: 'test-key'
-    },
-    containerConfig: {
-      enabled: false
+    githubToken: 'test-token',
+    aiProviders: {
+      primary: {
+        name: 'anthropic',
+        model: 'claude-3-sonnet',
+        apiKey: 'test-key'
+      }
     },
     securitySettings: {},
     rsolvApiKey: 'test-rsolv-key'
@@ -57,7 +56,7 @@ describe('Enhanced Context Default Behavior', () => {
     vi.clearAllMocks();
     
     // Setup default mock behavior
-    analyzeIssueMock.mockResolvedValue({
+    vi.mocked(analyzeIssue).mockResolvedValue({
       canBeFixed: true,
       issueType: 'security',
       filesToModify: ['test.js'],
@@ -81,7 +80,7 @@ describe('Enhanced Context Default Behavior', () => {
     try {
       await processIssues([mockIssue], mockConfig);
     } catch (error) {
-      // It's okay if it fails, we just want to check if gatherDeepContext was called
+      // Expected to fail without full mocks
     }
 
     // Enhanced context should NOT be called by default

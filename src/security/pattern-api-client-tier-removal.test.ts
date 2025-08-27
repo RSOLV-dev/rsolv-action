@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'vitest';
+import { describe, test, expect, beforeEach, mock, vi } from 'vitest';
 import { PatternAPIClient } from './pattern-api-client.js';
 import type { Pattern } from './types.js';
 
@@ -38,7 +38,7 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
   ];
   
   beforeEach(() => {
-    fetchMock = mock(() => Promise.resolve({
+    fetchMock = vi.fn(() => Promise.resolve({
       ok: true,
       status: 200,
       json: async () => ({
@@ -96,7 +96,7 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
       });
       
       // Mock demo patterns response
-      fetchMock = mock(() => Promise.resolve({
+      fetchMock = vi.fn(() => Promise.resolve({
         ok: true,
         status: 200,
         json: async () => ({
@@ -144,7 +144,7 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
         // Note: No accessible_tiers or tier fields
       };
       
-      fetchMock = mock(() => Promise.resolve({
+      fetchMock = vi.fn(() => Promise.resolve({
         ok: true,
         status: 200,
         json: async () => response
@@ -164,7 +164,7 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
         fallbackToLocal: false
       });
       
-      fetchMock = mock(() => Promise.resolve({
+      fetchMock = vi.fn(() => Promise.resolve({
         ok: false,
         status: 403,
         statusText: 'Forbidden',
@@ -197,7 +197,7 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
         php: 25
       };
       
-      fetchMock = mock((url: string) => {
+      fetchMock = vi.fn((url: string) => {
         const language = new URL(url).searchParams.get('language');
         const count = languageCounts[language as keyof typeof languageCounts] || 0;
         

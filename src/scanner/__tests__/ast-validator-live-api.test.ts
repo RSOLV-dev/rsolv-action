@@ -1,11 +1,12 @@
-import { describe, it, expect, beforeAll, skipIf } from 'vitest';
+import { describe, it, expect, beforeAll, skipIf, vi } from 'vitest';
 import { ASTValidator } from '../ast-validator.js';
 import type { Vulnerability } from '../../security/types.js';
 
 // These tests require a running RSOLV-api instance
-const API_URL = process.env.RSOLV_API_URL || 'http://localhost:4001';
-const TEST_API_KEY = process.env.TEST_API_KEY || 'rsolv_test_abc123';
+const API_URL = process.env.RSOLV_API_URL || 'http://localhost:4003';
+const TEST_API_KEY = process.env.TEST_API_KEY || 'test-api-key';
 const SKIP_LIVE_TESTS = process.env.SKIP_LIVE_TESTS === 'true';
+
 
 describe('AST Validator Live API Tests', () => {
   let validator: ASTValidator;
@@ -13,19 +14,24 @@ describe('AST Validator Live API Tests', () => {
   
   beforeAll(async () => {
     // Check if API is available
-    try {
-      const response = await fetch(`${API_URL}/health`);
-      apiAvailable = response.ok;
-    } catch {
-      apiAvailable = false;
+    // Skip health check if we're using localhost (live API tests)
+    if (API_URL.includes('localhost')) {
+      apiAvailable = true;
+    } else {
+      try {
+        const response = await fetch(`${API_URL}/health`);
+        apiAvailable = response.ok;
+      } catch (error) {
+        apiAvailable = false;
+      }
     }
     
     if (!apiAvailable) {
       console.warn(`
 ⚠️  Live API tests skipped - RSOLV-api not available at ${API_URL}
 To run these tests:
-1. Start RSOLV-api: cd ../RSOLV-api && mix phx.server
-2. Run tests: bun test ast-validator-live-api.test.ts
+1. Start RSOLV-api: cd ../RSOLV-platform && mix phx.server
+2. Run tests: npx vitest run src/scanner/__tests__/ast-validator-live-api.test.ts
 `);
     }
     

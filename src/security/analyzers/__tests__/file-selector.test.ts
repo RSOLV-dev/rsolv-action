@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { FileSelector } from '../file-selector.js';
 import { FileSelectionOptions } from '../types.js';
 

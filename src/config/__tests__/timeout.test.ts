@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, jest, mock, spyOn } from 'vitest';
+import { describe, expect, test, beforeEach, afterEach, jest, mock, spyOn, vi } from 'vitest';
 import { loadConfig } from '../index';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
@@ -6,7 +6,7 @@ import * as yaml from 'js-yaml';
 // Mock the logger to avoid debug function issues
 vi.mock('../../utils/logger.js', () => ({
   logger: {
-    debug: () => {},
+    debug: vi.fn(() => {}),
     info: () => {},
     warn: () => {},
     error: () => {}

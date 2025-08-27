@@ -3,7 +3,7 @@
  * Following RFC-041 mode selection decisions
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, mock, vi } from 'vitest';
 
 // Mock module values that tests can update
 let mockArgvMode: string | undefined;
