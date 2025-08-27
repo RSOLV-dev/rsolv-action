@@ -1,6 +1,5 @@
-import { describe, expect, test, beforeEach, afterEach, jest, mock, spyOn, vi } from 'vitest';
+import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { loadConfig } from '../index';
-import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 
 // Mock the logger to avoid debug function issues
@@ -13,6 +12,20 @@ vi.mock('../../utils/logger.js', () => ({
   }
 }));
 
+// Mock fs module for both named and default exports
+vi.mock('fs', () => {
+  const mockFns = {
+    existsSync: vi.fn(),
+    readFileSync: vi.fn()
+  };
+  return {
+    default: mockFns,
+    ...mockFns
+  };
+});
+
+import fs from 'fs';
+
 // Mock environment variables
 const originalEnv = process.env;
 
@@ -23,7 +36,7 @@ describe('Config Timeout Settings', () => {
     // Set required API key
     process.env.RSOLV_API_KEY = 'test-api-key';
     // Clear any existing mocks
-    mock.restore();
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -33,7 +46,7 @@ describe('Config Timeout Settings', () => {
 
   test('should have default timeout configurations', async () => {
     // Mock fs to return no config file
-    vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+    (fs.existsSync as any).mockReturnValue(false);
     
     const config = await loadConfig();
     
@@ -49,7 +62,7 @@ describe('Config Timeout Settings', () => {
 
   test('should load timeout from environment variables', async () => {
     // Mock fs to return no config file
-    vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+    (fs.existsSync as any).mockReturnValue(false);
     
     // Set environment variables - need RSOLV_CONTAINER_ENABLED for containerConfig to be processed
     process.env.RSOLV_CONTAINER_ENABLED = 'true';
@@ -82,8 +95,8 @@ describe('Config Timeout Settings', () => {
     };
     
     // Mock fs to return config file
-    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-    vi.spyOn(fs, 'readFileSync').mockReturnValue(yaml.dump(configContent));
+    (fs.existsSync as any).mockReturnValue(true);
+    (fs.readFileSync as any).mockReturnValue(yaml.dump(configContent));
     
     const config = await loadConfig();
     
@@ -107,8 +120,8 @@ describe('Config Timeout Settings', () => {
     };
     
     // Mock fs to return config file
-    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-    vi.spyOn(fs, 'readFileSync').mockReturnValue(yaml.dump(configContent));
+    (fs.existsSync as any).mockReturnValue(true);
+    (fs.readFileSync as any).mockReturnValue(yaml.dump(configContent));
     
     // Set environment variable to override container timeout
     process.env.RSOLV_CONTAINER_ENABLED = 'true';
@@ -128,7 +141,7 @@ describe('Config Timeout Settings', () => {
 
   test('should validate timeout values are numbers', async () => {
     // Mock fs to return no config file
-    vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+    (fs.existsSync as any).mockReturnValue(false);
     
     // Set invalid timeout value
     process.env.RSOLV_CONTAINER_TIMEOUT = 'not-a-number';
@@ -153,8 +166,8 @@ describe('Config Timeout Settings', () => {
     };
     
     // Mock fs to return config file
-    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-    vi.spyOn(fs, 'readFileSync').mockReturnValue(yaml.dump(configContent));
+    (fs.existsSync as any).mockReturnValue(true);
+    (fs.readFileSync as any).mockReturnValue(yaml.dump(configContent));
     
     const config = await loadConfig();
     
@@ -166,7 +179,7 @@ describe('Config Timeout Settings', () => {
 
   test('should ensure AI provider timeout is reasonable', async () => {
     // Mock fs to return no config file
-    vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+    (fs.existsSync as any).mockReturnValue(false);
     
     const config = await loadConfig();
     
