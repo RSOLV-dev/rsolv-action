@@ -30,10 +30,11 @@ run_with_memory_check() {
   echo "Pattern: $test_pattern"
   
   # Run with increased heap and memory config
+  # Note: We pass the pattern directly without quotes to allow glob expansion
   NODE_OPTIONS="--max-old-space-size=4096 --expose-gc" \
-    npx vitest run "$test_pattern" \
+    npx vitest run $test_pattern \
     --config vitest.config.memory.ts \
-    --reporter=basic \
+    --reporter=default \
     --no-coverage 2>&1 | tee /tmp/test-output.log
   
   local exit_code=$?
