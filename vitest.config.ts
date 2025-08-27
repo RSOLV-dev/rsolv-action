@@ -48,7 +48,6 @@ export default defineConfig({
     poolOptions: {
       forks: {
         // Recycle workers more aggressively
-        memoryLimit: '512MB',
         maxForks: 2,
       }
     },

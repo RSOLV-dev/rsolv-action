@@ -65,14 +65,14 @@ describe('Enhanced Context Default Behavior', () => {
       suggestedApproach: 'Fix vulnerability'
     }));
     
-    gatherDeepContextMock.mockResolvedValue({
+    gatherDeepContextMock.mockImplementation(async () => ({
       architecture: { patterns: [], structure: '', mainComponents: [] },
       codeConventions: { namingPatterns: [], fileOrganization: '', importPatterns: [] },
       testingPatterns: { framework: '', structure: '', conventions: [] },
       dependencies: { runtime: [], dev: [], patterns: [] },
       relatedComponents: { files: [], modules: [], interfaces: [] },
       styleGuide: { formatting: '', documentation: '', errorHandling: '' }
-    });
+    }));
   });
 
   it('should NOT enable enhanced context by default', async () => {
