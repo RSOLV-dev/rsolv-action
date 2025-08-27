@@ -90,7 +90,7 @@ vi.mock('fs', () => ({
 }));
 
 // Mock the logger
-vi.mock('../../utils/logger', () => {
+vi.mock('../../../utils/logger', () => {
   return {
     Logger: class {
       info = vi.fn();
@@ -168,13 +168,10 @@ describe('Claude Code SDK Adapter', () => {
     process.env.NODE_ENV = 'test';
     
     // Clear any previous mocks
-    (mockQuery as any).mockClear();
-    (logger.info as any).mockClear();
-    (logger.warn as any).mockClear();
-    (logger.error as any).mockClear();
-    (logger.debug as any).mockClear();
+    mockQueryFunction.mockClear();
     mockWriteFileSync.mockClear();
     mockReadFileSync.mockClear();
+    vi.clearAllMocks();
     
     // Clear analytics
     mockAnalytics.length = 0;

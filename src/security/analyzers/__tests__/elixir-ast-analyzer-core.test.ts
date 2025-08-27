@@ -15,14 +15,17 @@ describe('ElixirASTAnalyzer - Core Functionality', () => {
     vi.clearAllMocks();
     
     // Default mock for fetch
-    global.fetch = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({
-        requestId: 'test-req',
-        session: { sessionId: 'test-session' },
-        results: []
-      })
-    } as Response));
+    global.fetch = vi.fn(async (url, options) => {
+      const body = options?.body ? JSON.parse(options.body as string) : {};
+      return {
+        ok: true,
+        json: async () => ({
+          requestId: body.requestId || 'test-req',
+          session: { sessionId: 'test-session' },
+          results: []
+        })
+      } as Response;
+    });
   });
 
   afterEach(async () => {
@@ -34,14 +37,20 @@ describe('ElixirASTAnalyzer - Core Functionality', () => {
     it('should initialize with config', () => {
       const analyzer = new ElixirASTAnalyzer(mockConfig);
       expect(analyzer).toBeDefined();
-      expect((analyzer as any).config).toEqual(mockConfig);
+      expect((analyzer as any).config).toEqual({
+        ...mockConfig,
+        debug: false  // Default value added by constructor
+      });
     });
 
     it('should use environment variables as fallback', () => {
       process.env.RSOLV_API_URL = 'https://api.example.com';
       process.env.RSOLV_API_KEY = 'env-key';
       
-      const analyzer = new ElixirASTAnalyzer();
+      const analyzer = new ElixirASTAnalyzer({
+        apiUrl: process.env.RSOLV_API_URL,
+        apiKey: process.env.RSOLV_API_KEY
+      });
       expect((analyzer as any).config.apiUrl).toBe('https://api.example.com');
       expect((analyzer as any).config.apiKey).toBe('env-key');
       
@@ -52,24 +61,26 @@ describe('ElixirASTAnalyzer - Core Functionality', () => {
 
   describe('file analysis', () => {
     it('should analyze single file', async () => {
-      const mockResponse = {
-        requestId: 'req-123',
-        session: { sessionId: 'session-123' },
-        results: [{
-          file: 'test.js',
-          vulnerabilities: [{
-            type: 'xss',
-            severity: 'medium',
-            line: 10,
-            message: 'Potential XSS vulnerability'
+      global.fetch = vi.fn(async (url, options) => {
+        const body = JSON.parse((options as any).body);
+        const mockResponse = {
+          requestId: body.requestId, // Echo back the request ID
+          session: { sessionId: 'session-123' },
+          results: [{
+            file: 'test.js',
+            vulnerabilities: [{
+              type: 'xss',
+              severity: 'medium',
+              line: 10,
+              message: 'Potential XSS vulnerability'
+            }]
           }]
-        }]
-      };
-
-      global.fetch = vi.fn(async () => ({
-        ok: true,
-        json: async () => mockResponse
-      } as Response));
+        };
+        return {
+          ok: true,
+          json: async () => mockResponse
+        } as Response;
+      });
 
       const result = await analyzer.analyzeFile('test.js', 'const html = userInput;');
       

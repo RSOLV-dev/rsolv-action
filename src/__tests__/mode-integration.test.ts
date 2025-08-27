@@ -4,6 +4,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, mock, vi } from 'vitest';
+import { getModeFromArgs, getExecutionMode } from '../utils/mode-selector.js';
 
 // Mock module values that tests can update
 let mockArgvMode: string | undefined;
@@ -31,9 +32,6 @@ describe('Mode Selection Integration', () => {
 
   describe('getModeFromArgs', () => {
     test('should extract mode from CLI arguments', () => {
-      // RED: This function doesn't exist yet
-      const { getModeFromArgs } = require('../utils/mode-selector');
-      
       // Test --mode flag
       process.argv = ['node', 'index.js', '--mode', 'scan'];
       expect(getModeFromArgs()).toBe('scan');
@@ -44,7 +42,7 @@ describe('Mode Selection Integration', () => {
     });
 
     test('should return undefined when no mode in args', () => {
-      const { getModeFromArgs } = require('../utils/mode-selector');
+      
       
       process.argv = ['node', 'index.js', '--other-flag'];
       expect(getModeFromArgs()).toBeUndefined();
@@ -54,7 +52,7 @@ describe('Mode Selection Integration', () => {
   describe('getExecutionMode', () => {
     test('should prioritize CLI args over environment variable', () => {
       // RED: This function doesn't exist yet
-      const { getExecutionMode } = require('../utils/mode-selector');
+      
       
       process.argv = ['node', 'index.js', '--mode', 'scan'];
       process.env.RSOLV_MODE = 'validate';
@@ -63,7 +61,7 @@ describe('Mode Selection Integration', () => {
     });
 
     test('should use environment variable when no CLI args', () => {
-      const { getExecutionMode } = require('../utils/mode-selector');
+      
       
       process.argv = ['node', 'index.js'];
       process.env.RSOLV_MODE = 'validate';
@@ -72,7 +70,7 @@ describe('Mode Selection Integration', () => {
     });
 
     test('should default to "fix" when no mode specified', () => {
-      const { getExecutionMode } = require('../utils/mode-selector');
+      
       
       process.argv = ['node', 'index.js'];
       delete process.env.RSOLV_MODE;
@@ -81,7 +79,7 @@ describe('Mode Selection Integration', () => {
     });
 
     test('should support all valid modes', () => {
-      const { getExecutionMode } = require('../utils/mode-selector');
+      
       const validModes = ['scan', 'validate', 'mitigate', 'fix', 'full'];
       
       validModes.forEach(mode => {
@@ -91,7 +89,7 @@ describe('Mode Selection Integration', () => {
     });
 
     test('should handle legacy RSOLV_SCAN_MODE for backward compatibility', () => {
-      const { getExecutionMode } = require('../utils/mode-selector');
+      
       
       process.env.RSOLV_SCAN_MODE = 'scan';
       expect(getExecutionMode()).toBe('scan');
