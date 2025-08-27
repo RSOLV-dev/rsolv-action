@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, jest, spyOn, vi } from 'vitest';
+import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { RSOLVCredentialManager } from '../manager';
 
 describe('Credential Manager Timeout Behavior', () => {

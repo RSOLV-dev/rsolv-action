@@ -82,11 +82,6 @@ async function createBranch(issue: IssueContext): Promise<string> {
     const github = getGitHubClient();
     const { owner, name: repo } = issue.repository;
     
-    // If in test mode, just return the branch name
-    if (process.env.NODE_ENV === 'test') {
-      logger.info(`Test mode: simulating branch creation for ${branchName}`);
-      return branchName;
-    }
     
     try {
       // Create branch using GitHub API
@@ -111,11 +106,6 @@ async function createBranch(issue: IssueContext): Promise<string> {
   } catch (error) {
     logger.error(`Error creating branch ${branchName}`, error);
     
-    // In development mode, simulate branch creation if it fails
-    if (process.env.NODE_ENV === 'development') {
-      logger.warn('Development mode: continuing with simulated branch');
-      return branchName;
-    }
     
     throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -157,12 +147,6 @@ async function applyChanges(
     const github = getGitHubClient();
     const { owner, name: repo } = issue.repository;
     
-    // If in test mode, just simulate changes
-    if (process.env.NODE_ENV === 'test') {
-      logger.info('Test mode: simulating file changes');
-      await new Promise(resolve => setTimeout(resolve, 100));
-      return;
-    }
     
     // Process files in batches to avoid rate limiting
     const batchSize = 5;
@@ -223,11 +207,6 @@ async function applyChanges(
   } catch (error) {
     logger.error('Error applying changes to branch', error);
     
-    // In development mode, continue even if changes fail
-    if (process.env.NODE_ENV === 'development') {
-      logger.warn('Development mode: continuing despite errors in applying changes');
-      return;
-    }
     
     throw new Error(`Failed to apply changes: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -360,21 +339,6 @@ async function createGitHubPR(
     const github = getGitHubClient();
     const { owner, name: repo } = issue.repository;
     
-    // If in test mode, simulate PR creation
-    if (process.env.NODE_ENV === 'test') {
-      logger.info('Test mode: simulating PR creation');
-      
-      // Mock PR number and URL
-      const prNumber = Math.floor(Math.random() * 1000) + 1;
-      const prUrl = `https://github.com/${issue.repository.fullName}/pull/${prNumber}`;
-      
-      return {
-        success: true,
-        message: 'Pull request created successfully (test mode)',
-        pullRequestUrl: prUrl,
-        pullRequestNumber: prNumber
-      };
-    }
     
     // Create the pull request using GitHub API
     const { data } = await github.pulls.create({
@@ -417,22 +381,7 @@ async function createGitHubPR(
   } catch (error) {
     logger.error('Error creating GitHub PR', error);
     
-    // In development mode, return a mock PR
-    if (process.env.NODE_ENV === 'development') {
-      logger.warn('Development mode: returning mock PR due to error');
-      
-      // Mock PR number and URL
-      const prNumber = Math.floor(Math.random() * 1000) + 1;
-      const prUrl = `https://github.com/${issue.repository.fullName}/pull/${prNumber}`;
-      
-      return {
-        success: true,
-        message: 'Pull request created successfully (dev fallback)',
-        pullRequestUrl: prUrl,
-        pullRequestNumber: prNumber
-      };
-    }
-    
+        
     throw new Error(`Failed to create GitHub PR: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -447,11 +396,6 @@ async function recordFixAttempt(
   config: ActionConfig
 ): Promise<void> {
   try {
-    // Skip recording in test mode
-    if (process.env.NODE_ENV === 'test') {
-      logger.info('Test mode: skipping fix attempt recording');
-      return;
-    }
 
     // Check if API URL and key are configured
     const apiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';

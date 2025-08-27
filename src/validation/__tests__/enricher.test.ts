@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, jest, spyOn, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ValidationEnricher } from '../enricher.js';
 import { IssueContext } from '../../types/index.js';
 

@@ -1,3 +1,12 @@
+// Set test environment variables - MUST be set before any imports
+process.env.NODE_ENV = 'test';
+process.env.CI = 'true';
+process.env.LOG_LEVEL = 'error';
+process.env.RSOLV_API_KEY = 'staging-master-key-123';
+process.env.RSOLV_API_URL = 'https://api.rsolv-staging.com';
+// Ensure no executable path is set in tests (allows NODE_ENV=test check to work)
+delete process.env.CLAUDE_CODE_PATH;
+
 // Global setup for Vitest tests
 import { afterEach, vi, beforeAll, afterAll } from 'vitest';
 import { setupMSW } from '../src/test/mocks/server';
@@ -11,13 +20,6 @@ setupTestEnvironment();
 
 // DO NOT mock fetch globally - let MSW handle it
 // Only mock fetch in specific tests that need it
-
-// Set test environment variables - MUST be set before any imports
-process.env.NODE_ENV = 'test';
-process.env.CI = 'true';
-process.env.LOG_LEVEL = 'error';
-// Ensure no executable path is set in tests (allows NODE_ENV=test check to work)
-delete process.env.CLAUDE_CODE_PATH;
 
 // Global cleanup after each test
 afterEach(() => {

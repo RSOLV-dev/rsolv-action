@@ -161,12 +161,12 @@ describe('ApiPatternSource', () => {
       await source.getAllPatterns();
       
       // Should be called for each supported language
-      expect(calls).toContain('patterns?language=javascript&format=enhanced');
-      expect(calls).toContain('patterns?language=python&format=enhanced');
-      expect(calls).toContain('patterns?language=ruby&format=enhanced');
-      expect(calls).toContain('patterns?language=java&format=enhanced');
-      expect(calls).toContain('patterns?language=php&format=enhanced');
-      expect(calls).toContain('patterns?language=elixir&format=enhanced');
+      expect(calls).toContain('patterns?language=javascript');
+      expect(calls).toContain('patterns?language=python');
+      expect(calls).toContain('patterns?language=ruby');
+      expect(calls).toContain('patterns?language=java');
+      expect(calls).toContain('patterns?language=php');
+      expect(calls).toContain('patterns?language=elixir');
     });
 
     it('should continue fetching even if some languages fail', async () => {

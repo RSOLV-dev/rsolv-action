@@ -5,11 +5,17 @@ import { IssueContext, ActionConfig } from '../../src/types/index.js';
 
 // Mock the logger
 vi.mock('../../src/utils/logger.js', () => ({
+  Logger: class {
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+    debug = vi.fn();
+  },
   logger: {
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    debug: () => {}
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
   }
 }));
 

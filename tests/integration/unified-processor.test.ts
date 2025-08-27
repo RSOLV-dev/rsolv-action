@@ -7,12 +7,19 @@ import * as pr from '../../src/github/pr.js';
 
 // Mock the logger module first
 vi.mock('../../src/utils/logger.js', () => ({
+  Logger: class {
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+    debug = vi.fn();
+    log = vi.fn();
+  },
   logger: {
-    info: vi.fn(() => {}),
-    warn: vi.fn(() => {}),
-    error: vi.fn(() => {}),
-    debug: vi.fn(() => {}),
-    log: vi.fn(() => {})
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    log: vi.fn()
   }
 }));
 

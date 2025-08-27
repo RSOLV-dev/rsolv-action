@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, jest, vi } from 'vitest';
+import { describe, expect, test, beforeEach, vi } from 'vitest';
 import * as configModule from '../config/index.js';
 import * as issueDetector from '../platforms/issue-detector.js';
 import * as securityModule from '../utils/security.js';
@@ -80,13 +80,13 @@ describe('Workflow Timeout Behavior', () => {
 
   test('should timeout workflow after 2 minutes', async () => {
     // Mock all dependencies
-    vi.vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
-    vi.vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
-    vi.vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
-    vi.vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue(mockIssues);
+    vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
+    vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
+    vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
+    vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue(mockIssues);
     
     // Mock processIssues to never resolve
-    vi.vi.spyOn(processorModule, 'processIssues').mockImplementation(() => {
+    vi.spyOn(processorModule, 'processIssues').mockImplementation(() => {
       return new Promise(() => {}); // Never resolves
     });
     
@@ -106,10 +106,10 @@ describe('Workflow Timeout Behavior', () => {
 
   test('should complete successfully before timeout', async () => {
     // Mock all dependencies
-    vi.vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
-    vi.vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
-    vi.vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
-    vi.vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue(mockIssues);
+    vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
+    vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
+    vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
+    vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue(mockIssues);
     
     // Mock processIssues to resolve quickly
     const mockResults = mockIssues.map(issue => ({
@@ -119,7 +119,7 @@ describe('Workflow Timeout Behavior', () => {
       message: 'Success'
     }));
     
-    vi.vi.spyOn(processorModule, 'processIssues').mockResolvedValue(mockResults);
+    vi.spyOn(processorModule, 'processIssues').mockResolvedValue(mockResults);
     
     // Create the race condition like in the actual implementation
     const WORKFLOW_TIMEOUT = 120000;
@@ -141,13 +141,13 @@ describe('Workflow Timeout Behavior', () => {
 
   test('should handle no issues gracefully without timeout', async () => {
     // Mock all dependencies
-    vi.vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
-    vi.vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
-    vi.vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
-    vi.vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue([]); // No issues
+    vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
+    vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
+    vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
+    vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue([]); // No issues
     
     // processIssues should not be called when there are no issues
-    const processIssuesSpy = vi.vi.spyOn(processorModule, 'processIssues');
+    const processIssuesSpy = vi.spyOn(processorModule, 'processIssues');
     
     // The workflow should exit early when no issues are found
     // This is handled in the index.ts file
@@ -163,13 +163,13 @@ describe('Workflow Timeout Behavior', () => {
     }));
     
     // Mock dependencies
-    vi.vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
-    vi.vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
-    vi.vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
-    vi.vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue(customIssues);
+    vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
+    vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
+    vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
+    vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue(customIssues);
     
     // Mock processIssues to never resolve
-    vi.vi.spyOn(processorModule, 'processIssues').mockImplementation(() => {
+    vi.spyOn(processorModule, 'processIssues').mockImplementation(() => {
       return new Promise(() => {}); // Never resolves
     });
     
@@ -190,12 +190,12 @@ describe('Workflow Timeout Behavior', () => {
 
   test('should use configured processing options', async () => {
     // Mock all dependencies
-    vi.vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
-    vi.vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
-    vi.vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
-    vi.vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue(mockIssues);
+    vi.spyOn(configModule, 'loadConfig').mockResolvedValue(mockConfig);
+    vi.spyOn(securityModule, 'securityCheck').mockResolvedValue();
+    vi.spyOn(containerModule, 'setupContainer').mockResolvedValue();
+    vi.spyOn(issueDetector, 'detectIssuesFromAllPlatforms').mockResolvedValue(mockIssues);
     
-    const processIssuesSpy = vi.vi.spyOn(processorModule, 'processIssues').mockResolvedValue([]);
+    const processIssuesSpy = vi.spyOn(processorModule, 'processIssues').mockResolvedValue([]);
     
     // Set DEBUG env for verbose logging
     process.env.DEBUG = 'true';

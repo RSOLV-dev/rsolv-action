@@ -7,12 +7,19 @@ import { IssueContext, ActionConfig, AnalysisData } from '../../src/types/index.
 
 // Mock the logger module first to prevent undefined function errors
 vi.mock('../../src/utils/logger.js', () => ({
+  Logger: class {
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+    debug = vi.fn();
+    log = vi.fn();
+  },
   logger: {
-    info: vi.fn(() => {}),
-    warn: vi.fn(() => {}),
-    error: vi.fn(() => {}),
-    debug: vi.fn(() => {}),
-    log: vi.fn(() => {})
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    log: vi.fn()
   }
 }));
 

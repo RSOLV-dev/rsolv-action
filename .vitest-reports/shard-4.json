@@ -1,0 +1,27 @@
+2:14:46 AM [vite] (ssr) warning: Duplicate key "debug" in object literal
+19 |      warn: () => {},
+20 |      error: () => {},
+21 |      debug: () => {}
+   |      ^
+22 |    }
+23 |  }));
+
+  Plugin: vite:esbuild
+  File: /home/dylan/dev/rsolv/RSOLV-action/src/ai/__tests__/claude-code.test.ts
+
+<--- Last few GCs --->
+
+[619433:0x441a6000]    19199 ms: Scavenge (interleaved) 4033.9 (4055.4) -> 4020.6 (4056.6) MB, pooled: 0 MB, 6.03 / 0.00 ms  (average mu = 0.287, current mu = 0.224) allocation failure; 
+[619433:0x441a6000]    20255 ms: Mark-Compact (reduce) 4028.2 (4058.4) -> 4022.7 (4029.6) MB, pooled: 0 MB, 961.82 / 0.00 ms  (+ 3.1 ms in 2 steps since start of marking, biggest step 3.1 ms, walltime since start of marking 968 ms) (average mu = 0.255, cu
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 0xf1f1cb node::OOMErrorHandler(char const*, v8::OOMDetails const&) [node (vitest 2)]
+ 2: 0x13543e0 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node (vitest 2)]
+ 3: 0x13544cf v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node (vitest 2)]
+ 4: 0x15eab45  [node (vitest 2)]
+ 5: 0x15eab72  [node (vitest 2)]
+ 6: 0x15eae6a v8::internal::Heap::RecomputeLimits(v8::internal::GarbageCollector, v8::base::TimeTicks) [node (vitest 2)]
+ 7: 0x15fb38a  [node (vitest 2)]
+ 8: 0x15ff730  [node (vitest 2)]
+ 9: 0x208fcd1  [node (vitest 2)]

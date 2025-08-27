@@ -5,11 +5,17 @@ import * as path from 'path';
 
 // Mock the logger to avoid debug function issues
 vi.mock('../../src/utils/logger.js', () => ({
+  Logger: class {
+    debug = vi.fn();
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+  },
   logger: {
-    debug: vi.fn(() => {}),
-    info: vi.fn(() => {}),
-    warn: vi.fn(() => {}),
-    error: vi.fn(() => {})
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
   }
 }));
 

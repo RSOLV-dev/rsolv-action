@@ -1,54 +1,5 @@
 [
   {
-    "startTime": 1756169251414,
-    "issueId": "test-issue-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1756169253328
-  },
-  {
-    "startTime": 1756169253517,
-    "issueId": "test-issue-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1756169255438
-  },
-  {
-    "startTime": 1756169302167,
-    "issueId": "test-issue-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1756169304029
-  },
-  {
-    "startTime": 1756169304114,
-    "issueId": "test-issue-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1756169306047
-  },
-  {
-    "startTime": 1756169306210,
-    "issueId": "test-issue-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1756169308502
-  },
-  {
-    "startTime": 1756169327317,
-    "issueId": "test-issue-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1756169329284
-  },
-  {
-    "startTime": 1756169329308,
-    "issueId": "test-issue-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1756169331480
-  },
-  {
     "startTime": 1756169331513,
     "issueId": "test-issue-1",
     "successful": false,
@@ -759,6 +710,62 @@
     "successful": false,
     "endTime": 1756261954678,
     "solutionGenerationTime": 1,
+    "errorType": "no_solution_found"
+  },
+  {
+    "startTime": 1756264096878,
+    "issueId": "123",
+    "successful": false,
+    "endTime": 1756264096879,
+    "solutionGenerationTime": 1,
+    "errorType": "no_solution_found"
+  },
+  {
+    "startTime": 1756264149144,
+    "issueId": "123",
+    "successful": false,
+    "endTime": 1756264149145,
+    "solutionGenerationTime": 1,
+    "errorType": "no_solution_found"
+  },
+  {
+    "startTime": 1756280382047,
+    "issueId": "123",
+    "successful": false,
+    "endTime": 1756280382047,
+    "solutionGenerationTime": 0,
+    "errorType": "no_solution_found"
+  },
+  {
+    "startTime": 1756281225249,
+    "issueId": "123",
+    "successful": false,
+    "endTime": 1756281225250,
+    "solutionGenerationTime": 1,
+    "errorType": "no_solution_found"
+  },
+  {
+    "startTime": 1756281351122,
+    "issueId": "123",
+    "successful": false,
+    "endTime": 1756281351122,
+    "solutionGenerationTime": 0,
+    "errorType": "no_solution_found"
+  },
+  {
+    "startTime": 1756281606429,
+    "issueId": "123",
+    "successful": false,
+    "endTime": 1756281606430,
+    "solutionGenerationTime": 1,
+    "errorType": "no_solution_found"
+  },
+  {
+    "startTime": 1756282485841,
+    "issueId": "123",
+    "successful": false,
+    "endTime": 1756282485852,
+    "solutionGenerationTime": 11,
     "errorType": "no_solution_found"
   }
 ]

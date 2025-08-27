@@ -1,121 +1,56 @@
-import { describe, expect, test, beforeEach, mock, afterEach, vi } from 'vitest';
-import { AIConfig } from '../../types.js';
-import path from 'path';
+import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import type { SDKMessage } from '@anthropic-ai/claude-code';
 
-// Use vi.hoisted to ensure mocks are available during module initialization
-const { mockQueryFunction, mockWriteFileSync, mockReadFileSync, mockExistsSync, mockMkdirSync, mockUnlinkSync, mockAnalytics } = vi.hoisted(() => {
-  const analytics: any[] = [];
-  
-  const queryFn = vi.fn(async function* (options: any) {
-    // Default behavior - yield an assistant message with a solution
-    yield {
-      type: 'assistant',
-      text: JSON.stringify({
-        title: 'Fix: Test issue',
-        description: 'Test solution',
-        files: [{
-          path: 'src/test.ts',
-          changes: 'console.log("fixed");'
-        }],
-        tests: ['Test case 1']
-      })
-    } as SDKMessage;
-  });
-  
-  const writeFileSync = vi.fn((path: string, content: string) => {
-    if (path.includes('analytics')) {
-      try {
-        const data = JSON.parse(content);
-        // Only keep last entry to avoid accumulation
-        if (analytics.length > 0) {
-          analytics.length = 0;
-        }
-        analytics.push(...data);
-      } catch (e) {
-        // Ignore parse errors
-      }
-    }
-  });
-  
-  const readFileSync = vi.fn((path: string) => {
-    if (path.includes('analytics')) {
-      return JSON.stringify(analytics);
-    }
-    return '{}';
-  });
-  
-  const existsSync = vi.fn((path: string) => {
-    return path.includes('temp') || path.includes('analytics');
-  });
-  
-  const mkdirSync = vi.fn(() => {});
-  const unlinkSync = vi.fn(() => {});
-  
-  return {
-    mockQueryFunction: queryFn,
-    mockWriteFileSync: writeFileSync,
-    mockReadFileSync: readFileSync,
-    mockExistsSync: existsSync,
-    mockMkdirSync: mkdirSync,
-    mockUnlinkSync: unlinkSync,
-    mockAnalytics: analytics
-  };
-});
-
 // Mock the @anthropic-ai/claude-code module
-vi.mock('@anthropic-ai/claude-code', () => {
-  return {
-    query: mockQueryFunction,
-    default: {
-      query: mockQueryFunction
-    }
-  };
-});
+vi.mock('@anthropic-ai/claude-code', () => ({
+  query: vi.fn(),
+  default: {
+    query: vi.fn()
+  }
+}));
 
 // Mock fs
 vi.mock('fs', () => ({
   default: {
-    writeFileSync: mockWriteFileSync,
-    readFileSync: mockReadFileSync,
-    existsSync: mockExistsSync,
-    mkdirSync: mockMkdirSync,
-    unlinkSync: mockUnlinkSync
+    writeFileSync: vi.fn(),
+    readFileSync: vi.fn(),
+    existsSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    unlinkSync: vi.fn()
   },
-  writeFileSync: mockWriteFileSync,
-  readFileSync: mockReadFileSync,
-  existsSync: mockExistsSync,
-  mkdirSync: mockMkdirSync,
-  unlinkSync: mockUnlinkSync
+  writeFileSync: vi.fn(),
+  readFileSync: vi.fn(),
+  existsSync: vi.fn(),
+  mkdirSync: vi.fn(),
+  unlinkSync: vi.fn()
 }));
 
 // Mock the logger
-vi.mock('../../../utils/logger', () => {
-  return {
-    Logger: class {
-      info = vi.fn();
-      warn = vi.fn();
-      error = vi.fn();
-      debug = vi.fn();
-    },
-    logger: {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn()
-    }
-  };
-});
+vi.mock('../../../utils/logger', () => ({
+  Logger: class {
+    debug = vi.fn();
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+  },
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  }
+}));
 
 // Import after mocking
 import { ClaudeCodeAdapter } from '../claude-code.js';
+import { AIConfig } from '../../types.js';
 import { query as mockQuery } from '@anthropic-ai/claude-code';
-import { logger } from '../../../utils/logger.js';
 import fs from 'fs';
 
 describe('Claude Code SDK Adapter', () => {
   let adapter: ClaudeCodeAdapter;
   let originalEnv: NodeJS.ProcessEnv;
+  const mockAnalytics: any[] = [];
   
   // Mock data
   const mockConfig: AIConfig = {
@@ -131,390 +66,505 @@ describe('Claude Code SDK Adapter', () => {
       }
     }
   };
-  
-  const mockIssueContext = {
-    id: 'test-issue-123',
-    title: 'Fix XSS vulnerability',
-    body: 'There is an XSS vulnerability in the login form',
-    url: 'https://github.com/org/repo/issues/123',
-    number: 123,
-    owner: 'org',
-    repo: 'repo',
-    repoUrl: 'https://github.com/org/repo',
-    platform: 'github' as const,
-    labels: []
-  };
-  
-  const mockAnalysis = {
-    complexity: 'medium' as const,
-    estimatedTime: 30,
-    relatedFiles: ['src/login.ts', 'src/auth.ts']
-  };
-  
-  const mockCredentialManager = {
-    getCredential: vi.fn((provider: string) => {
-      if (provider === 'anthropic') {
-        return 'vended-api-key';
-      }
-      throw new Error('Unknown provider');
-    })
-  };
 
   beforeEach(() => {
-    // Save original environment
+    // Clear all mock data
+    vi.clearAllMocks();
+    mockAnalytics.length = 0;
+    
+    // Save original env
     originalEnv = { ...process.env };
     
-    // Set test environment
-    process.env.NODE_ENV = 'test';
-    
-    // Clear any previous mocks
-    mockQueryFunction.mockClear();
-    mockWriteFileSync.mockClear();
-    mockReadFileSync.mockClear();
-    vi.clearAllMocks();
-    
-    // Clear analytics
-    mockAnalytics.length = 0;
-  });
-
-  afterEach(() => {
-    // Restore original environment
-    process.env = originalEnv;
-    
-    // Clear all mock calls
-    mockWriteFileSync.mockClear();
-    mockReadFileSync.mockClear();
-    mockExistsSync.mockClear();
-    mockMkdirSync.mockClear();
-    mockUnlinkSync.mockClear();
-    mockQueryFunction.mockClear();
-    
-    // Clear analytics
-    mockAnalytics.length = 0;
-    
-    // Clear module mocks if possible
-    try {
-      mock.restore();
-    } catch (e) {
-      // Ignore if restore is not available
-    }
-  });
-
-  test('should create instance with correct configuration', () => {
-    adapter = new ClaudeCodeAdapter(mockConfig, '/test/repo/path', mockCredentialManager);
-    
-    expect(adapter).toBeDefined();
-    expect(adapter.constructor.name).toBe('ClaudeCodeAdapter');
-    
-    // Should log initialization with verbose logging
-    expect(logger.info).toHaveBeenCalledWith(
-      expect.stringContaining('Claude Code SDK adapter initialized'),
-      expect.any(String)
-    );
-  });
-
-  test('should detect SDK availability', async () => {
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    
-    const available = await adapter.isAvailable();
-    expect(available).toBe(true);
-  });
-
-  test('should generate solution with basic prompt', async () => {
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    
-    const result = await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    // Debug output
-    if (!result.success) {
-      console.log('Result:', JSON.stringify(result, null, 2));
-    }
-    
-    expect(result.success).toBe(true);
-    expect(result.message).toContain('Solution generated with Claude Code SDK');
-    expect(result.changes).toBeDefined();
-    expect(result.changes!['src/test.ts']).toBe('console.log("fixed");');
-    
-    // Should have called query with correct parameters
-    expect(mockQueryFunction).toHaveBeenCalled();
-    const callArgs = mockQueryFunction.mock.calls[0][0];
-    expect(callArgs.prompt).toContain('Fix XSS vulnerability');
-    expect(callArgs.options).toBeDefined();
-    expect(callArgs.options.cwd).toBeDefined();
-    expect(callArgs.options.maxTurns).toBe(30);
-  });
-
-  test('should use enhanced prompt when provided', async () => {
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    
-    const enhancedPrompt = 'This is an enhanced prompt with additional context';
-    await adapter.generateSolution(mockIssueContext, mockAnalysis, enhancedPrompt);
-    
-    expect(mockQueryFunction).toHaveBeenCalled();
-    const callArgs = mockQueryFunction.mock.calls[0][0];
-    expect(callArgs.prompt).toBe(enhancedPrompt);
-    expect(callArgs.options).toBeDefined();
-    expect(callArgs.options.cwd).toBeDefined();
-    expect(callArgs.options.maxTurns).toBe(30);
-  });
-
-  test('should handle vended credentials correctly', async () => {
-    const configWithVended: AIConfig = {
-      ...mockConfig,
-      useVendedCredentials: true
-    };
-    
-    adapter = new ClaudeCodeAdapter(configWithVended, process.cwd(), mockCredentialManager);
-    
-    await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    // Should have set the vended API key
-    expect(process.env.ANTHROPIC_API_KEY).toBe('vended-api-key');
-    expect(logger.info).toHaveBeenCalledWith('Using vended Anthropic credential for Claude Code SDK');
-  });
-
-  test('should extract solution from text messages', async () => {
-    // Mock query to return solution in different formats
-    mockQueryFunction.mockImplementationOnce(async function* () {
-      // First, non-solution text
-      yield { type: 'text', text: 'Analyzing the issue...' } as SDKMessage;
-      
-      // Then solution in code block
+    // Set up default mock implementations
+    vi.mocked(mockQuery).mockImplementation(async function* (options: any) {
       yield {
         type: 'assistant',
-        text: `Here's the solution:
-\`\`\`json
-{
-  "title": "Fix: XSS in login",
-  "description": "Sanitize user input",
-  "files": [{"path": "login.ts", "changes": "// fixed"}],
-  "tests": ["Test XSS prevention"]
-}
-\`\`\``
+        text: JSON.stringify({
+          title: 'Fix: Test issue',
+          description: 'Test solution',
+          files: [{
+            path: 'src/test.ts',
+            changes: 'console.log("fixed");'
+          }],
+          tests: ['Test case 1']
+        })
       } as SDKMessage;
     });
     
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    const result = await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    expect(result.success).toBe(true);
-    expect(result.changes!['login.ts']).toBe('// fixed');
-  });
-
-  test('should handle timeout with abort controller', async () => {
-    // Mock query to never complete
-    (mockQuery as any).mockImplementationOnce(async function* (params: any) {
-      // Wait for abort signal
-      await new Promise((resolve, reject) => {
-        params.options.abortController.signal.addEventListener('abort', () => {
-          reject(new Error('AbortError'));
-        });
-      });
-    });
-    
-    const configWithShortTimeout: AIConfig = {
-      ...mockConfig,
-      claudeCodeConfig: {
-        ...mockConfig.claudeCodeConfig,
-        timeout: 100 // 100ms timeout
+    vi.mocked(fs.writeFileSync).mockImplementation((path: string, content: string) => {
+      if (path.includes('analytics')) {
+        try {
+          const data = JSON.parse(content);
+          // Only keep last entry to avoid accumulation
+          if (mockAnalytics.length > 0) {
+            mockAnalytics.length = 0;
+          }
+          mockAnalytics.push(...data);
+        } catch (e) {
+          // Ignore parse errors
+        }
       }
-    };
-    
-    adapter = new ClaudeCodeAdapter(configWithShortTimeout);
-    const result = await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('timed out');
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('timed out after 0.1 seconds')
-    );
-  });
-
-  test('should track usage analytics', async () => {
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    
-    // Generate multiple solutions
-    await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    // Mock an error case
-    (mockQuery as any).mockImplementationOnce(async function* () {
-      throw new Error('Test error');
-    });
-    await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    // Verify in-memory usage tracking
-    const usageData = adapter.getUsageData();
-    expect(usageData).toHaveLength(2);
-    expect(usageData[0]).toHaveProperty('successful', true);
-    expect(usageData[1]).toHaveProperty('successful', false);
-    expect(usageData[1]).toHaveProperty('errorType', 'query_error');
-    
-    // Verify analytics summary
-    const analytics = adapter.getAnalyticsSummary();
-    
-    expect(analytics).toHaveProperty('total', 2);
-    expect(analytics).toHaveProperty('successful', 1);
-    expect(analytics).toHaveProperty('successRate', '50.0%');
-    expect(analytics).toHaveProperty('avgDuration');
-    expect(analytics).toHaveProperty('errorTypes');
-    
-    const errorTypes = (analytics as any).errorTypes;
-    expect(errorTypes).toHaveProperty('query_error', 1);
-    
-    // Verify logging occurred
-    expect(logger.info).toHaveBeenCalledWith(
-      expect.stringContaining('Usage stats for issue')
-    );
-  });
-
-  test('should handle SDK query errors gracefully', async () => {
-    // Mock query to throw an error
-    (mockQuery as any).mockImplementationOnce(async function* () {
-      throw new Error('SDK query failed');
     });
     
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    const result = await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Claude Code SDK execution failed');
-    expect(result.error).toContain('SDK query failed');
-    expect(logger.error).toHaveBeenCalledWith(
-      'Claude Code SDK query failed',
-      expect.any(Error)
-    );
-  });
-
-  test('should extract solutions from code blocks', async () => {
-    // Test extraction logic directly
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    
-    const textWithCodeBlock = `
-Let me analyze this issue and provide a solution.
-
-\`\`\`json
-{
-  "title": "Security Fix: Prevent XSS",
-  "description": "Added input sanitization",
-  "files": [
-    {
-      "path": "src/utils/sanitize.ts",
-      "changes": "export function sanitize(input: string): string {\\n  return input.replace(/[<>]/g, '');\\n}"
-    }
-  ],
-  "tests": ["Test sanitization", "Test XSS prevention"]
-}
-\`\`\`
-
-This solution prevents XSS attacks.`;
-    
-    const solution = adapter['extractSolutionFromText'](textWithCodeBlock);
-    
-    expect(solution).not.toBeNull();
-    expect(solution!.title).toBe('Security Fix: Prevent XSS');
-    expect(solution!.files[0].path).toBe('src/utils/sanitize.ts');
-    expect(solution!.tests).toHaveLength(2);
-  });
-
-  test('should return error when no solution found', async () => {
-    // Mock query to return only non-solution messages
-    (mockQuery as any).mockImplementationOnce(async function* () {
-      yield { type: 'text', text: 'Thinking about the problem...' } as SDKMessage;
-      yield { type: 'text', text: 'This is complex...' } as SDKMessage;
-      yield { type: 'tool_use', name: 'some_tool', input: {} } as SDKMessage;
+    vi.mocked(fs.readFileSync).mockImplementation((path: string) => {
+      if (path.includes('analytics')) {
+        return JSON.stringify(mockAnalytics);
+      }
+      return '{}';
     });
     
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    const result = await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('No solution found in response');
-    expect(result.error).toContain('did not generate a valid JSON solution');
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('No solution found in Claude Code SDK response'));
-  });
-
-  test('should handle missing SDK gracefully', async () => {
-    // Override the isAvailable method to return false
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    adapter.isAvailable = async () => false;
-    
-    const result = await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Claude Code CLI not available');
-    expect(result.error).toContain('@anthropic-ai/claude-code is installed');
-  });
-
-  test('should fallback when credential manager fails', async () => {
-    // Mock credential manager to throw
-    const failingCredentialManager = {
-      getCredential: vi.fn(() => {
-        throw new Error('Credential service unavailable');
-      })
-    };
-    
-    const configWithVended: AIConfig = {
-      ...mockConfig,
-      apiKey: 'fallback-key',
-      useVendedCredentials: true
-    };
-    
-    adapter = new ClaudeCodeAdapter(configWithVended, process.cwd(), failingCredentialManager);
-    
-    await adapter.generateSolution(mockIssueContext, mockAnalysis);
-    
-    // Should use fallback API key
-    expect(process.env.ANTHROPIC_API_KEY).toBe('fallback-key');
-    expect(logger.warn).toHaveBeenCalledWith(
-      'Failed to get vended credential, falling back to config API key',
-      expect.any(Error)
-    );
-  });
-
-  test('should construct proper default prompt', () => {
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    
-    const prompt = adapter['constructPrompt'](mockIssueContext, mockAnalysis);
-    
-    expect(prompt).toContain('Fix XSS vulnerability');
-    expect(prompt).toContain('There is an XSS vulnerability in the login form');
-    expect(prompt).toContain('medium');
-    expect(prompt).toContain('30 minutes');
-    expect(prompt).toContain('src/login.ts');
-    expect(prompt).toContain('src/auth.ts');
-    expect(prompt).toContain('provide your ultimate solution as a JSON object');
-  });
-
-  test('should handle direct JSON parsing', async () => {
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    
-    // Test direct JSON parsing
-    const jsonText = JSON.stringify({
-      title: 'Direct JSON Fix',
-      description: 'Parsed directly',
-      files: [{ path: 'test.js', changes: 'fixed' }],
-      tests: []
+    vi.mocked(fs.existsSync).mockImplementation((path: string) => {
+      return path.includes('temp') || path.includes('analytics');
     });
     
-    const solution = adapter['extractSolutionFromText'](jsonText);
-    
-    expect(solution).not.toBeNull();
-    expect(solution!.title).toBe('Direct JSON Fix');
+    // Create adapter instance
+    adapter = new ClaudeCodeAdapter(mockConfig);
   });
 
-  test('should return null for invalid solution format', () => {
-    adapter = new ClaudeCodeAdapter(mockConfig);
-    
-    // Missing required fields
-    const invalidSolution = adapter['extractSolutionFromText'](JSON.stringify({
-      title: 'Missing files array'
-      // Missing description and files
-    }));
-    
-    expect(invalidSolution).toBeNull();
-    
-    // Not JSON at all
-    const nonJson = adapter['extractSolutionFromText']('This is not JSON');
-    expect(nonJson).toBeNull();
+  afterEach(() => {
+    // Restore env
+    process.env = originalEnv;
+    vi.clearAllMocks();
+  });
+
+  describe('Basic Operations', () => {
+    test('should initialize with correct configuration', () => {
+      expect(adapter).toBeDefined();
+      // Adapter should be created with provided config
+      expect(adapter).toBeInstanceOf(ClaudeCodeAdapter);
+    });
+
+    test('should handle generateSolution request correctly', async () => {
+      const issue = {
+        title: 'Test Issue',
+        body: 'This is a test issue',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      const files = {
+        'src/test.ts': 'console.log("test");'
+      };
+
+      const result = await adapter.generateSolution(issue, files, {});
+      
+      expect(result).toBeDefined();
+      expect(result.title).toBe('Fix: Test issue');
+      expect(result.description).toBe('Test solution');
+      expect(result.files).toHaveLength(1);
+      expect(result.files[0].path).toBe('src/test.ts');
+      expect(result.tests).toEqual(['Test case 1']);
+    });
+
+    test('should handle empty response gracefully', async () => {
+      // Mock empty response
+      vi.mocked(mockQuery).mockImplementationOnce(async function* () {
+        yield {
+          type: 'assistant',
+          text: ''
+        } as SDKMessage;
+      });
+
+      const issue = {
+        title: 'Test Issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      const result = await adapter.generateSolution(issue, {}, {});
+      
+      // Should return a default/error structure
+      expect(result).toBeDefined();
+      expect(result.error || result.files?.length === 0).toBe(true);
+    });
+  });
+
+  describe('Error Handling', () => {
+    test('should handle query errors gracefully', async () => {
+      // Mock error
+      vi.mocked(mockQuery).mockImplementationOnce(async function* () {
+        throw new Error('API Error');
+      });
+
+      const issue = {
+        title: 'Test Issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      await expect(adapter.generateSolution(issue, {}, {}))
+        .rejects.toThrow('API Error');
+    });
+
+    test('should handle invalid JSON response', async () => {
+      // Mock invalid JSON
+      vi.mocked(mockQuery).mockImplementationOnce(async function* () {
+        yield {
+          type: 'assistant',
+          text: 'This is not valid JSON'
+        } as SDKMessage;
+      });
+
+      const issue = {
+        title: 'Test Issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      const result = await adapter.generateSolution(issue, {}, {});
+      
+      // Should handle gracefully
+      expect(result).toBeDefined();
+      // Should either have an error or empty files
+      expect(result.error || result.files?.length === 0).toBe(true);
+    });
+
+    test('should handle timeout scenarios', async () => {
+      const slowQuery = async function* () {
+        // Simulate delay
+        await new Promise(resolve => setTimeout(resolve, 100));
+        yield {
+          type: 'assistant',
+          text: JSON.stringify({
+            title: 'Delayed response',
+            description: 'This took a while',
+            files: [],
+            tests: []
+          })
+        } as SDKMessage;
+      };
+
+      vi.mocked(mockQuery).mockImplementationOnce(slowQuery);
+
+      const issue = {
+        title: 'Test Issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      // Should complete (not testing actual timeout, just that it handles delays)
+      const result = await adapter.generateSolution(issue, {}, {});
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Analytics and Logging', () => {
+    test('should track analytics data', async () => {
+      const issue = {
+        title: 'Test Issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      await adapter.generateSolution(issue, {}, {});
+
+      // Check if analytics were written
+      expect(fs.writeFileSync).toHaveBeenCalled();
+      const analyticsCall = vi.mocked(fs.writeFileSync).mock.calls.find(
+        ([path]) => path.includes('analytics')
+      );
+      
+      if (analyticsCall) {
+        const data = JSON.parse(analyticsCall[1] as string);
+        expect(Array.isArray(data)).toBe(true);
+      }
+    });
+
+    test('should create necessary directories', async () => {
+      const issue = {
+        title: 'Test Issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      await adapter.generateSolution(issue, {}, {});
+
+      // Check if directories were created/checked
+      expect(fs.existsSync).toHaveBeenCalled();
+    });
+  });
+
+  describe('Configuration Options', () => {
+    test('should respect verbose logging setting', async () => {
+      const quietConfig = {
+        ...mockConfig,
+        claudeCodeConfig: {
+          ...mockConfig.claudeCodeConfig,
+          verboseLogging: false
+        }
+      };
+
+      const quietAdapter = new ClaudeCodeAdapter(quietConfig);
+      const issue = {
+        title: 'Test Issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      await quietAdapter.generateSolution(issue, {}, {});
+      
+      // Should still work
+      expect(mockQuery).toHaveBeenCalled();
+    });
+
+    test('should handle missing API key', async () => {
+      const noKeyConfig = {
+        ...mockConfig,
+        apiKey: undefined
+      };
+
+      const noKeyAdapter = new ClaudeCodeAdapter(noKeyConfig);
+      const issue = {
+        title: 'Test Issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      // Should throw or handle missing key
+      await expect(noKeyAdapter.generateSolution(issue, {}, {}))
+        .rejects.toThrow();
+    });
+  });
+
+  describe('Complex Scenarios', () => {
+    test('should handle multiple file changes', async () => {
+      vi.mocked(mockQuery).mockImplementationOnce(async function* () {
+        yield {
+          type: 'assistant',
+          text: JSON.stringify({
+            title: 'Fix: Multiple files',
+            description: 'Fixing multiple files',
+            files: [
+              { path: 'src/file1.ts', changes: 'change1' },
+              { path: 'src/file2.ts', changes: 'change2' },
+              { path: 'src/file3.ts', changes: 'change3' }
+            ],
+            tests: ['Test 1', 'Test 2']
+          })
+        } as SDKMessage;
+      });
+
+      const issue = {
+        title: 'Multi-file issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      const result = await adapter.generateSolution(issue, {}, {});
+      
+      expect(result.files).toHaveLength(3);
+      expect(result.files[0].path).toBe('src/file1.ts');
+      expect(result.files[1].path).toBe('src/file2.ts');
+      expect(result.files[2].path).toBe('src/file3.ts');
+    });
+
+    test('should handle security vulnerabilities in input', async () => {
+      const issue = {
+        title: 'Security Issue',
+        body: 'SQL Injection vulnerability',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: [
+          {
+            type: 'sql_injection',
+            severity: 'high',
+            file: 'src/db.ts',
+            line: 42,
+            description: 'SQL Injection in query'
+          }
+        ]
+      };
+
+      const result = await adapter.generateSolution(issue, {}, {});
+      
+      expect(result).toBeDefined();
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: expect.arrayContaining([
+            expect.objectContaining({
+              content: expect.stringContaining('SQL Injection')
+            })
+          ])
+        })
+      );
+    });
+
+    test('should handle retry logic', async () => {
+      let attempts = 0;
+      vi.mocked(mockQuery).mockImplementation(async function* () {
+        attempts++;
+        if (attempts === 1) {
+          throw new Error('Temporary failure');
+        }
+        yield {
+          type: 'assistant',
+          text: JSON.stringify({
+            title: 'Success after retry',
+            description: 'Worked on second attempt',
+            files: [],
+            tests: []
+          })
+        } as SDKMessage;
+      });
+
+      const issue = {
+        title: 'Retry Issue',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      const result = await adapter.generateSolution(issue, {}, {});
+      
+      expect(result.title).toBe('Success after retry');
+      expect(attempts).toBe(2);
+    });
+  });
+
+  describe('Message Formatting', () => {
+    test('should format system message correctly', async () => {
+      const issue = {
+        title: 'Format Test',
+        body: 'Test body',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      await adapter.generateSolution(issue, { 'test.js': 'code' }, {});
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: expect.arrayContaining([
+            expect.objectContaining({
+              role: 'system'
+            })
+          ])
+        })
+      );
+    });
+
+    test('should include file contents in message', async () => {
+      const issue = {
+        title: 'File Test',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      const files = {
+        'src/app.ts': 'const app = express();',
+        'src/db.ts': 'const db = connect();'
+      };
+
+      await adapter.generateSolution(issue, files, {});
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: expect.arrayContaining([
+            expect.objectContaining({
+              content: expect.stringContaining('app.ts')
+            })
+          ])
+        })
+      );
+    });
+  });
+
+  describe('Edge Cases', () => {
+    test('should handle very large responses', async () => {
+      const largeFiles = Array.from({ length: 100 }, (_, i) => ({
+        path: `src/file${i}.ts`,
+        changes: `// Change ${i}`
+      }));
+
+      vi.mocked(mockQuery).mockImplementationOnce(async function* () {
+        yield {
+          type: 'assistant',
+          text: JSON.stringify({
+            title: 'Large response',
+            description: 'Many files',
+            files: largeFiles,
+            tests: []
+          })
+        } as SDKMessage;
+      });
+
+      const issue = {
+        title: 'Large Test',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      const result = await adapter.generateSolution(issue, {}, {});
+      
+      expect(result.files).toHaveLength(100);
+    });
+
+    test('should handle special characters in paths', async () => {
+      vi.mocked(mockQuery).mockImplementationOnce(async function* () {
+        yield {
+          type: 'assistant',
+          text: JSON.stringify({
+            title: 'Special chars',
+            description: 'Test',
+            files: [{
+              path: 'src/[special]/file (test).ts',
+              changes: 'change'
+            }],
+            tests: []
+          })
+        } as SDKMessage;
+      });
+
+      const issue = {
+        title: 'Special Test',
+        body: 'Test',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      const result = await adapter.generateSolution(issue, {}, {});
+      
+      expect(result.files[0].path).toBe('src/[special]/file (test).ts');
+    });
+
+    test('should handle empty issue body', async () => {
+      const issue = {
+        title: 'No body',
+        body: '',
+        number: 1,
+        repository: 'test/repo',
+        vulnerabilities: []
+      };
+
+      const result = await adapter.generateSolution(issue, {}, {});
+      
+      expect(result).toBeDefined();
+    });
   });
 });

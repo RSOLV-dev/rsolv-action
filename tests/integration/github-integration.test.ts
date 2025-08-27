@@ -47,6 +47,7 @@ vi.mock('../../src/github/api.js', () => ({
         
         return {
           data: {
+            type: 'file',
             sha: 'abc123',
             content: Buffer.from('// Mock file content').toString('base64')
           }
@@ -100,6 +101,9 @@ vi.mock('../../src/github/api.js', () => ({
       })),
       createComment: vi.fn(async () => ({ 
         data: { id: 999 } 
+      })),
+      addLabels: vi.fn(async () => ({ 
+        data: { labels: [] } 
       }))
     }
   })),
@@ -237,6 +241,7 @@ describe('GitHub Integration', () => {
       
       const pr = await createPullRequest(issue, changes, analysisData, config);
       
+      expect(pr.success).toBe(true);
       expect(pr.pullRequestNumber).toBe(123);
       expect(pr.pullRequestUrl).toContain('github.com');
     });

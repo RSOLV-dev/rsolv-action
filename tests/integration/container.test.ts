@@ -1,6 +1,7 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { setupContainer } from '../../src/containers/setup.js';
 import { runInContainer } from '../../src/containers/run.js';
+import { MockDockerClient } from '../../src/containers/docker-client.js';
 import { ActionConfig } from '../../src/types/index.js';
 
 // Set NODE_ENV to test for testing
@@ -129,38 +130,25 @@ describe.skipIf(skipIfNoDocker)('Container Integration', () => {
   });
   
   test('runInContainer should handle container execution failure', async () => {
-    // For test environment, we need to modify the runInContainer function
-    // to handle specific test commands differently
-    const originalNodeEnv = process.env.NODE_ENV;
+    // Create a mock Docker client that simulates command failure
+    const mockDockerClient = new MockDockerClient();
     
-    // Temporarily change NODE_ENV to make the test fail as expected
-    process.env.NODE_ENV = 'production';
-    
-    // Mock exec to simulate failure for invalid-command
-    vi.doMock('child_process', () => ({
-      exec: (command: string, options: any, callback: any) => {
-        if (typeof options === 'function') {
-          callback = options;
-          options = {};
-        }
-        if (command.includes('invalid-command')) {
-          callback(new Error('Command not found'), { stdout: '', stderr: 'Command not found' });
-          return;
-        }
-        callback(null, { stdout: 'Success', stderr: '' });
+    // Configure the mock to throw an error for invalid commands
+    mockDockerClient.setRunOutput({ stdout: '', stderr: 'Command not found' });
+    const originalRunContainer = mockDockerClient.runContainer;
+    mockDockerClient.runContainer = async (command: string) => {
+      if (command.includes('invalid-command')) {
+        throw new Error('Command not found');
       }
-    }));
+      return originalRunContainer.call(mockDockerClient, command);
+    };
     
-    try {
-      const result = await runInContainer(mockConfig, {
-        command: 'invalid-command'
-      });
-      
-      expect(result.success).toBe(false);
-      expect(result.exitCode).not.toBe(0);
-    } finally {
-      // Restore the original environment
-      process.env.NODE_ENV = originalNodeEnv;
-    }
+    const result = await runInContainer(mockConfig, {
+      command: 'invalid-command'
+    }, mockDockerClient);
+    
+    expect(result.success).toBe(false);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain('Command not found');
   });
 });

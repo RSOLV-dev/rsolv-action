@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi, jest, spyOn } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createPatternSource, LocalPatternSource, ApiPatternSource, HybridPatternSource } from '../../src/security/pattern-source.js';
 import { logger } from '../../src/utils/logger.js';
 
