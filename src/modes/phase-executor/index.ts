@@ -78,7 +78,7 @@ type ValidationItem = {
   timestamp?: string;
   hasSpecificVulnerabilities?: boolean;
   vulnerabilities?: any[];
-  confidence?: string;
+  confidence?: 'low' | 'medium' | 'high';
   falsePositive?: boolean;
   reason?: string;
   [key: string]: any;
@@ -1688,7 +1688,10 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           if (!scanData) {
             const analysisData = await analyzeIssue(issue, this.config);
             scanData = {
-              analysisData,
+              analysisData: {
+                ...analysisData,
+                canBeFixed: analysisData?.canBeFixed || false
+              },
               canBeFixed: analysisData?.canBeFixed || false,
               usedPriorScan: false
             };
