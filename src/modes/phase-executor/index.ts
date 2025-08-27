@@ -1739,8 +1739,9 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           }
 
           // Check for existing tests
+          let existing: any = null;
           if (this.testDiscovery) {
-            const existing = await this.testDiscovery.findExistingTests(issue.repository);
+            existing = await this.testDiscovery.findExistingTests(issue.repository);
             if (existing.hasTests && testResults.generatedTests) {
               testResults.generatedTests.existingTests = true;
               testResults.generatedTests.testFramework = existing.framework;
@@ -1762,6 +1763,12 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             issueNumber: issue.number,
             validated: testResults.generatedTests?.success || false,
             ...testResults,
+            falsePositive: testResults.generatedTests?.falsePositive,
+            reason: testResults.generatedTests?.reason,
+            testExecutionFailed: testResults.generatedTests?.testExecutionFailed,
+            error: testResults.generatedTests?.error,
+            existingTests: existing?.hasTests,
+            testFramework: existing?.framework,
             usedPriorScan: 'usedPriorScan' in scanData ? scanData.usedPriorScan : false,
             timestamp: new Date().toISOString(),
             // Add fields for compatibility with enhanced validation

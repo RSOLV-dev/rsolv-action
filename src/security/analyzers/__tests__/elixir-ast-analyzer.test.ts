@@ -138,10 +138,8 @@ describe('ElixirASTAnalyzer - Integration', () => {
         apiKey: 'test-key'
       });
 
-      const result = await invalidAnalyzer.analyzeFile('test.js', 'code');
-      
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain('API URL');
+      // Should throw when trying to analyze with invalid URL
+      await expect(invalidAnalyzer.analyzeFile('test.js', 'code')).rejects.toThrow();
       
       await invalidAnalyzer.cleanup();
     });

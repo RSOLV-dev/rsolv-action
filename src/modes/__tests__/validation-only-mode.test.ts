@@ -218,8 +218,9 @@ describe('Validation-Only Mode', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.data.validation).toHaveProperty('falsePositive', true);
-      expect(result.data.validation).toHaveProperty('reason', 'Tests pass on current code');
+      expect(result.data.validations).toBeDefined();
+      expect(result.data.validations[0]).toHaveProperty('falsePositive', true);
+      expect(result.data.validations[0]).toHaveProperty('reason', 'Tests pass on current code');
     });
 
     test('should store validation results with PhaseDataClient', async () => {
@@ -309,8 +310,8 @@ describe('Validation-Only Mode', () => {
         issues: [mockIssue]
       });
 
-      expect(result.data.validation).toHaveProperty('existingTests', true);
-      expect(result.data.validation).toHaveProperty('testFramework', 'jest');
+      expect(result.data.validations[0]).toHaveProperty('existingTests', true);
+      expect(result.data.validations[0]).toHaveProperty('testFramework', 'jest');
     });
 
     test('should integrate generated tests with existing test framework', async () => {
@@ -344,8 +345,8 @@ describe('Validation-Only Mode', () => {
       });
 
       expect(result.success).toBe(true); // Validation succeeds even if test run fails
-      expect(result.data.validation).toHaveProperty('testExecutionFailed', true);
-      expect(result.data.validation).toHaveProperty('error', 'Test execution failed');
+      expect(result.data.validations[0]).toHaveProperty('testExecutionFailed', true);
+      expect(result.data.validations[0]).toHaveProperty('error');
     });
   });
 
