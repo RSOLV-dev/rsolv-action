@@ -34,8 +34,6 @@ export default defineConfig({
         minForks: 1,
         
         // Aggressive recycling - restart worker after each file
-        maxThreads: 1,
-        minThreads: 1,
       }
     },
     
@@ -106,7 +104,5 @@ export default defineConfig({
     target: 'node16',
     // Minimize memory usage during transformation
     keepNames: false,
-    minify: false,
-    sourcemap: false,
   },
 });
