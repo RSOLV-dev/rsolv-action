@@ -730,7 +730,7 @@ describe('Git-based processor with fix validation', () => {
       );
     });
 
-    it.skip('should log when validation is skipped', async () => {
+    it('should log when validation is skipped', async () => {
       // Arrange
       mockConfig.fixValidation = {
         enabled: false
@@ -765,25 +765,24 @@ describe('Git-based processor with fix validation', () => {
         pullRequestNumber: 1
       });
 
-      const loggerSpy = vi.fn();
-      const originalLogger = console.log;
-      console.log = loggerSpy;
+      // Import logger and spy on it directly
+      const { logger } = await import('../../utils/logger.js');
+      const loggerInfoSpy = vi.spyOn(logger, 'info');
 
       // Act  
       await processIssueWithGit(mockIssue, mockConfig);
 
-      // Assert
-      const logCalls = loggerSpy.mock.calls.map((call: any[]) => call.join(' '));
-      const hasSkipLog = logCalls.some((log: string) => 
-        log.includes('Skipping fix validation') || 
-        log.includes('DISABLE_FIX_VALIDATION')
+      // Assert - check that logger.info was called with the expected message
+      const logCalls = loggerInfoSpy.mock.calls;
+      const hasSkipLog = logCalls.some((call: any[]) => 
+        call[0]?.includes('Skipping fix validation') || 
+        call[0]?.includes('DISABLE_FIX_VALIDATION')
       );
       
-      // Note: This will fail initially as the feature isn't implemented yet
       expect(hasSkipLog).toBe(true);
 
-      // Restore logger
-      console.log = originalLogger;
+      // Restore
+      loggerInfoSpy.mockRestore();
     });
   });
 });

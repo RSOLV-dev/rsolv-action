@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { ActionConfig } from '../../src/types';
 
 // Mock the modules first with inline mock functions
@@ -6,23 +6,20 @@ vi.mock('../../src/github/issues', () => ({
   detectIssues: vi.fn(() => Promise.resolve([]))
 }));
 
-// Create mocks for other functions
+// Create mock functions that will be accessible in tests
 const mockSearchIssues = vi.fn(() => Promise.resolve([]));
 const mockSearchRsolvIssues = vi.fn(() => Promise.resolve([]));
-const mockCreate = vi.fn(() => ({
-  searchIssues: mockSearchIssues,
-  searchRsolvIssues: mockSearchRsolvIssues
-}));
+const mockCreate = vi.fn();
+const mockCreateAndAuthenticate = vi.fn();
 
-vi.mock('../../src/platforms/platform-factory', () => ({
-  PlatformFactory: {
-    create: mockCreate,
-    createAndAuthenticate: vi.fn(() => Promise.resolve({
-      searchIssues: mockSearchIssues,
-      searchRsolvIssues: mockSearchRsolvIssues
-    }))
-  }
-}));
+vi.mock('../../src/platforms/platform-factory', () => {
+  return {
+    PlatformFactory: {
+      create: (...args: any[]) => mockCreate(...args),
+      createAndAuthenticate: (...args: any[]) => mockCreateAndAuthenticate(...args)
+    }
+  };
+});
 
 // Import after mocking
 import { detectIssuesFromAllPlatforms } from '../../src/platforms/issue-detector';
@@ -48,6 +45,10 @@ describe('Multi-Platform Issue Detection', () => {
     mockSearchIssues.mockImplementation(() => Promise.resolve([]));
     mockSearchRsolvIssues.mockImplementation(() => Promise.resolve([]));
     mockCreate.mockImplementation(() => ({
+      searchIssues: mockSearchIssues,
+      searchRsolvIssues: mockSearchRsolvIssues
+    }));
+    mockCreateAndAuthenticate.mockImplementation(() => Promise.resolve({
       searchIssues: mockSearchIssues,
       searchRsolvIssues: mockSearchRsolvIssues
     }));

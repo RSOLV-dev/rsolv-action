@@ -5,7 +5,7 @@
  * 2. Make real LLM API calls with vended credentials
  * 3. Get valid code generation responses
  * 
- * Run with: VENDED_CREDENTIAL_E2E_TEST=true RSOLV_API_KEY=xxx bun test vended-credential-e2e.test.ts
+ * Run with: VENDED_CREDENTIAL_E2E_TEST=true RSOLV_API_KEY=xxx vitest vended-credential-e2e.test.ts
  */
 import { describe, test, expect, beforeAll, vi } from 'vitest';
 import { getAiClient } from '../client.js';

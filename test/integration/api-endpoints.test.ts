@@ -1,7 +1,7 @@
 /**
  * Integration tests for actual API endpoints
  * These tests verify real API behavior and should be run separately from unit tests
- * Run with: INTEGRATION_TEST=true bun test test/integration/api-endpoints.test.ts
+ * Run with: INTEGRATION_TEST=true vitest test/integration/api-endpoints.test.ts
  */
 
 import { describe, it, expect, beforeAll, skipIf, vi } from 'vitest';

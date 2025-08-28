@@ -11,7 +11,7 @@ import type { UnifiedIssue } from '../../../src/platforms/types';
  * - JIRA_TEST_API_TOKEN: Your Jira API token
  * - JIRA_TEST_PROJECT: A test project key (e.g., 'TEST')
  * 
- * Run with: JIRA_TEST_HOST=... JIRA_TEST_EMAIL=... bun test jira-integration.test.ts
+ * Run with: JIRA_TEST_HOST=... JIRA_TEST_EMAIL=... vitest jira-integration.test.ts
  */
 describe.skip('JiraAdapter Integration Tests', () => {
   let adapter: JiraAdapter;
