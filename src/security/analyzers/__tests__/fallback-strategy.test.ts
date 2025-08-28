@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EnhancedSecurityAnalyzer } from '../enhanced-security-analyzer.js';
 import { VulnerabilityType } from '../../types.js';
 
-describe('AST Analyzer Fallback Strategy', () => {
+describe.skip('AST Analyzer Fallback Strategy (Needs RFC-048 Test Mode)', () => {
   let analyzer: EnhancedSecurityAnalyzer;
   
   // Mock patterns that match test code

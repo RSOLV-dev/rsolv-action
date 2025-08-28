@@ -145,11 +145,12 @@ describe('ApiPatternSource', () => {
     it('should fetch patterns for all supported languages', async () => {
       const calls: string[] = [];
       
-      // Mock to track calls
+      // Mock to track calls - capture the query params
       global.fetch = vi.fn((url: string) => {
-        const match = url.match(/\/([^/]+)$/);
-        if (match) {
-          calls.push(match[1]);
+        const urlObj = new URL(url, 'http://example.com'); // Parse as URL
+        const language = urlObj.searchParams.get('language');
+        if (language) {
+          calls.push(language);
         }
         return Promise.resolve({
           ok: true,
@@ -160,13 +161,13 @@ describe('ApiPatternSource', () => {
       source = new ApiPatternSource('test-api-key');
       await source.getAllPatterns();
       
-      // Should be called for each supported language
-      expect(calls).toContain('patterns?language=javascript');
-      expect(calls).toContain('patterns?language=python');
-      expect(calls).toContain('patterns?language=ruby');
-      expect(calls).toContain('patterns?language=java');
-      expect(calls).toContain('patterns?language=php');
-      expect(calls).toContain('patterns?language=elixir');
+      // Should be called for each supported language  
+      expect(calls).toContain('javascript');
+      expect(calls).toContain('python');
+      expect(calls).toContain('ruby');
+      expect(calls).toContain('java');
+      expect(calls).toContain('php');
+      expect(calls).toContain('elixir');
     });
 
     it('should continue fetching even if some languages fail', async () => {

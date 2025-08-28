@@ -1,0 +1,32 @@
+{
+  "phase": "scan",
+  "data": {
+    "scan": {
+      "vulnerabilities": [],
+      "timestamp": "2025-08-28T18:57:18.269Z",
+      "commitHash": "abc123def456",
+      "canBeFixed": true,
+      "analysisData": {
+        "canBeFixed": true,
+        "issueType": "sql-injection",
+        "filesToModify": [
+          "user.js"
+        ],
+        "suggestedApproach": "Use parameterized queries",
+        "estimatedComplexity": "medium",
+        "vulnerabilityType": "SQL_INJECTION",
+        "severity": "high"
+      },
+      "gitStatus": {
+        "clean": true,
+        "modifiedFiles": []
+      }
+    }
+  },
+  "metadata": {
+    "repo": "test/repo",
+    "issueNumber": 123,
+    "commitSha": "abc123def456"
+  },
+  "timestamp": "2025-08-28T18:57:18.281Z"
+}

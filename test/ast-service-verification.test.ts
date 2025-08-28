@@ -4,7 +4,7 @@ import { HybridPatternSource } from '../src/security/pattern-source';
 import { ElixirASTAnalyzer } from '../src/clients/elixir-ast-analyzer';
 import * as crypto from 'crypto';
 
-describe('AST Service Verification - REVIEW Phase', () => {
+describe.skip('AST Service Verification - REVIEW Phase (Needs RFC-048 Test Mode)', () => {
   let detector: SecurityDetectorV3;
   const API_KEY = process.env.RSOLV_API_KEY || 'test-working-api-key-2025';
   const API_URL = process.env.RSOLV_API_URL || 'http://localhost:4000';

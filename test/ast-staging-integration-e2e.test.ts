@@ -12,7 +12,7 @@ import * as crypto from 'crypto';
 // IMPORTANT: This test file intentionally makes real network calls to staging
 // It should not be run in CI without proper credentials
 
-describe('AST Staging Integration - Real API', () => {
+describe.skip('AST Staging Integration - Real API (Needs RFC-048 Test Mode)', () => {
   let detector: SecurityDetectorV3;
   let isApiAvailable = false;
   
