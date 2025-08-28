@@ -22,8 +22,8 @@ describe('Pattern API Regex Reconstruction', () => {
       const client = new PatternAPIClient();
       
       // This test demonstrates that we need a reconstructPattern function
-      // @ts-expect-error - reconstructPattern does not exist yet
-      expect(() => client.reconstructPattern(serializedRegex)).toThrow();
+      // The method doesn't exist, so accessing it returns undefined
+      expect((client as any).reconstructPattern).toBeUndefined();
     });
 
     it('should fail to handle enhanced pattern response with serialized regex', () => {

@@ -90,6 +90,10 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
     });
     
     test('fetchPatterns without API key should return demo patterns only', async () => {
+      // Temporarily clear API key env var
+      const originalApiKey = process.env.RSOLV_API_KEY;
+      delete process.env.RSOLV_API_KEY;
+      
       // Create client without API key
       const unauthClient = new PatternAPIClient({ 
         apiUrl: 'https://api.test.com'
@@ -116,6 +120,11 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
       // Should not have Authorization header
       const headers = fetchMock.mock.calls[0][1]?.headers || {};
       expect(headers['Authorization']).toBeUndefined();
+      
+      // Restore API key
+      if (originalApiKey) {
+        process.env.RSOLV_API_KEY = originalApiKey;
+      }
     });
     
     test('deprecated fetchPatternsByTier should still work for backward compatibility', async () => {

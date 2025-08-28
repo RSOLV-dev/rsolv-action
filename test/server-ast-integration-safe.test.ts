@@ -78,7 +78,7 @@ describe('Server-Side AST Integration - Safe RED Phase Tests', () => {
       const interpreter = new ASTPatternInterpreter();
       
       // Check that scanFile would handle non-JS differently
-      const scanFileSpy = mock(() => []);
+      const scanFileSpy = vi.fn(() => []);
       (interpreter as any).regexOnlyFallback = scanFileSpy;
       
       // If we were to scan a Python file, it should use fallback

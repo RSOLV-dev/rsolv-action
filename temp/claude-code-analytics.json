@@ -1,12 +1,5 @@
 [
   {
-    "startTime": 1756173545341,
-    "issueId": "test-issue-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1756173549412
-  },
-  {
     "startTime": 1756173549477,
     "issueId": "test-issue-1",
     "successful": false,
@@ -786,5 +779,12 @@
     "endTime": 1756406463795,
     "solutionGenerationTime": 1,
     "errorType": "no_solution_found"
+  },
+  {
+    "startTime": 1756408931035,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756408938137
   }
 ]

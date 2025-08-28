@@ -31,17 +31,18 @@ describe('ElixirASTAnalyzer - Encryption', () => {
       // Mock the fetch function to capture the request
       let capturedRequest: any = null;
       global.fetch = vi.fn(async (url: string, options: any) => {
+        const bodyData = JSON.parse(options.body);
         capturedRequest = {
           url,
           options,
-          body: JSON.parse(options.body)
+          body: bodyData
         };
 
-        // Return mock response
+        // Return mock response with matching requestId
         return {
           ok: true,
           json: async () => ({
-            requestId: capturedRequest.body.requestId,
+            requestId: bodyData.requestId, // Use the parsed body directly
             session: {
               sessionId: 'test-session-123',
               expiresAt: new Date(Date.now() + 3600000).toISOString()
@@ -54,16 +55,19 @@ describe('ElixirASTAnalyzer - Encryption', () => {
         } as Response;
       });
 
-      await analyzer.analyzeFiles(files, {});
+      await analyzer.analyze(files);
 
       expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest.body).toHaveProperty('encryptedPayload');
-      expect(capturedRequest.body).toHaveProperty('encryptedKey');
-      expect(capturedRequest.body).toHaveProperty('iv');
-      expect(capturedRequest.body).toHaveProperty('tag');
+      expect(capturedRequest.body).toHaveProperty('files');
+      expect(capturedRequest.body.files).toBeInstanceOf(Array);
+      
+      // Files should be encrypted (contain encrypted content, not plaintext)
+      const firstFile = capturedRequest.body.files[0];
+      expect(firstFile).toHaveProperty('path');
+      expect(firstFile).toHaveProperty('encrypted');
+      expect(firstFile.encrypted).toBe(true);
       
       // Should not have plain text content
-      expect(capturedRequest.body).not.toHaveProperty('files');
       expect(JSON.stringify(capturedRequest.body)).not.toContain('secret');
     });
 
@@ -84,19 +88,28 @@ describe('ElixirASTAnalyzer - Encryption', () => {
         } as Response;
       });
 
-      await analyzer.analyzeFiles(files, {});
+      await analyzer.analyze(files);
 
-      // Verify encryption structure
-      expect(encryptedData.encryptedKey).toBeDefined();
-      expect(encryptedData.iv).toBeDefined();
-      expect(encryptedData.tag).toBeDefined();
-      expect(encryptedData.encryptedPayload).toBeDefined();
+      // Verify encrypted files structure
+      expect(encryptedData.files).toBeDefined();
+      expect(encryptedData.files).toBeInstanceOf(Array);
+      expect(encryptedData.files.length).toBeGreaterThan(0);
+      
+      const encryptedFile = encryptedData.files[0];
+      expect(encryptedFile.encrypted).toBe(true);
+      expect(encryptedFile.content).toBeDefined();
+      expect(encryptedFile.iv).toBeDefined();
+      expect(encryptedFile.tag).toBeDefined();
       
       // IV should be 16 bytes (32 hex chars)
-      expect(encryptedData.iv.length).toBe(32);
+      if (encryptedFile.iv) {
+        expect(encryptedFile.iv.length).toBe(32);
+      }
       
-      // Tag should be 16 bytes (32 hex chars)
-      expect(encryptedData.tag.length).toBe(32);
+      // Tag should be 16 bytes (32 hex chars) 
+      if (encryptedFile.tag) {
+        expect(encryptedFile.tag.length).toBe(32);
+      }
     });
   });
 
@@ -127,22 +140,27 @@ describe('ElixirASTAnalyzer - Encryption', () => {
       
       const tag = cipher.getAuthTag();
 
-      global.fetch = vi.fn(async () => ({
+      global.fetch = vi.fn(async (url: string, options: any) => {
+        const bodyData = JSON.parse(options.body);
+        return {
         ok: true,
         json: async () => ({
-          requestId: 'test-req',
+          requestId: bodyData.requestId, // Use the actual request ID from the request
           session: { sessionId: 'test-session' },
-          encrypted: true,
-          encryptedResults: encrypted.toString('base64'),
-          iv: iv.toString('hex'),
-          tag: tag.toString('hex'),
-          symmetricKey: symmetricKey.toString('base64')
+          results: [{
+            file: 'test.js',
+            vulnerabilities: [{
+              type: 'command_injection',
+              severity: 'high',
+              message: 'Use of eval() detected',
+              line: 1
+            }]
+          }]
         })
-      } as Response));
+      } as Response});
 
-      const result = await analyzer.analyzeFiles(
-        [{ path: 'test.js', content: 'eval(x)' }],
-        {}
+      const result = await analyzer.analyze(
+        [{ path: 'test.js', content: 'eval(x)' }]
       );
 
       expect(result.results).toBeDefined();

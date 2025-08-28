@@ -9,11 +9,14 @@ vi.mock('../src/ai/analyzer', () => ({
   analyzeIssue: vi.fn()
 }));
 
-vi.mock('../src/ai/adapters/claude-code-enhanced', () => ({
-  EnhancedClaudeCodeAdapter: vi.fn().mockImplementation(() => ({
-    gatherDeepContext: gatherDeepContextMock
-  }))
-}));
+vi.mock('../src/ai/adapters/claude-code-enhanced', () => {
+  const mockClass = vi.fn();
+  mockClass.mockImplementation(() => ({
+    gatherDeepContext: gatherDeepContextMock,
+    generateSolution: vi.fn().mockRejectedValue(new Error('Mock error'))
+  }));
+  return { EnhancedClaudeCodeAdapter: mockClass };
+});
 
 // Now import after mocks are set up
 import { processIssues } from '../src/ai/unified-processor';

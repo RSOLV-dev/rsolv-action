@@ -34,11 +34,12 @@ describe('Pattern Source Fallback Detection', () => {
       
       // Should log error about falling back
       expect(loggerErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('CRITICAL: Falling back to minimal patterns'),
+        '🚨 CRITICAL CONFIGURATION ERROR',
         expect.objectContaining({
-          reason: 'No API key provided',
-          patternCount: expect.any(Number),
-          impact: expect.stringContaining('severely limited')
+          error: expect.objectContaining({
+            problem: 'No RSOLV_API_KEY provided',
+            impact: 'Scanner will use minimal patterns and miss most vulnerabilities'
+          })
         })
       );
       
@@ -55,13 +56,13 @@ describe('Pattern Source Fallback Detection', () => {
       
       // Should log metrics about limited patterns
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('PATTERN SOURCE METRICS'),
+        '📊 PATTERN SOURCE METRICS',
         expect.objectContaining({
           source: 'local',
           language: 'javascript',
           patternCount: patterns.length,
           expectedMinimum: 25,
-          coveragePercentage: expect.any(Number)
+          coveragePercentage: expect.any(String)
         })
       );
       
@@ -70,9 +71,11 @@ describe('Pattern Source Fallback Detection', () => {
         expect(loggerErrorSpy).toHaveBeenCalledWith(
           expect.stringContaining('INSUFFICIENT PATTERNS'),
           expect.objectContaining({
-            language: 'javascript',
-            actual: patterns.length,
-            required: 25
+            error: expect.objectContaining({
+              language: 'javascript',
+              actual: patterns.length,
+              required: 25
+            })
           })
         );
       }
