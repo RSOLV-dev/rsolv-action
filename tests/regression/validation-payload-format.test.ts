@@ -190,8 +190,8 @@ db.execute(sql);`
       expect(result.enriched).toBe(true);
       
     } finally {
-      // Restore working directory
-      process.chdir(originalCwd);
+      // Restore mocked cwd
+      vi.mocked(process.cwd).mockRestore();
       
       // Clean up test files
       fs.rmSync(testDir, { recursive: true, force: true });
