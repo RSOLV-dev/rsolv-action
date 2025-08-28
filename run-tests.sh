@@ -16,6 +16,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Initialize exit code
+TEST_EXIT_CODE=0
+
 echo -e "${GREEN}🧪 RSOLV-Action Test Suite${NC}"
 echo "================================"
 
@@ -102,16 +105,50 @@ else
 fi
 
 # Build the command
-CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E $JSON_OUTPUT npx vitest run $COVERAGE $WATCH_MODE $EXTRA_ARGS"
-
-echo ""
-echo "Running command:"
-echo -e "${YELLOW}$CMD${NC}"
-echo ""
-
-# Run tests
-eval $CMD
-TEST_EXIT_CODE=$?
+if [[ -n "$MEMORY_SAFE" ]]; then
+  # Use sharding for memory-safe mode
+  echo "✓ Using sharded execution (4 shards run serially)"
+  
+  # Create temporary directory for shard reports
+  SHARD_DIR=".vitest-shards"
+  mkdir -p $SHARD_DIR
+  rm -f $SHARD_DIR/*.json
+  
+  # Run 4 shards serially
+  for i in 1 2 3 4; do
+    echo ""
+    echo -e "${YELLOW}Running shard $i/4...${NC}"
+    
+    if [[ -n "$JSON_OUTPUT" ]]; then
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/4 --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
+    else
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/4 $COVERAGE"
+    fi
+    
+    eval $SHARD_CMD
+    SHARD_EXIT_CODE=$?
+    
+    if [[ $SHARD_EXIT_CODE -ne 0 ]]; then
+      TEST_EXIT_CODE=$SHARD_EXIT_CODE
+    fi
+  done
+  
+  # Merge JSON reports if needed
+  if [[ -n "$JSON_OUTPUT" ]] && [[ -f "$SHARD_DIR/shard-1.json" ]]; then
+    echo ""
+    echo "Merging shard reports..."
+    node merge-shard-results.cjs
+  fi
+else
+  # Regular single run
+  CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E $JSON_OUTPUT npx vitest run $COVERAGE $WATCH_MODE $EXTRA_ARGS"
+  echo ""
+  echo "Running command:"
+  echo -e "${YELLOW}$CMD${NC}"
+  echo ""
+  eval $CMD
+  TEST_EXIT_CODE=$?
+fi
 
 # Report results
 echo ""

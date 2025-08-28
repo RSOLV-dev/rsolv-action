@@ -1,0 +1,23 @@
+{
+  "phase": "mitigate",
+  "data": {
+    "mitigation": {
+      "issue-123": {
+        "fixed": true,
+        "prUrl": "https://github.com/test/repo/pull/1",
+        "prNumber": 1,
+        "filesModified": [],
+        "vulnerabilitiesFixed": 1,
+        "usedValidationData": true,
+        "validationConfidence": 0.9,
+        "timestamp": "2025-08-28T19:06:19.809Z"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "test-owner/test-repo",
+    "issueNumber": 123,
+    "commitSha": "7ece9beaab73a60d965fc33705cee6784b9d8763"
+  },
+  "timestamp": "2025-08-28T19:06:19.813Z"
+}

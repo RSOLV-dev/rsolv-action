@@ -25,7 +25,7 @@
         },
         "canBeFixed": true,
         "usedPriorScan": false,
-        "timestamp": "2025-08-28T18:57:20.278Z",
+        "timestamp": "2025-08-28T19:06:25.415Z",
         "hasSpecificVulnerabilities": false,
         "vulnerabilities": [],
         "confidence": "low"
@@ -35,7 +35,7 @@
   "metadata": {
     "repo": "test/webapp",
     "issueNumber": 457,
-    "commitSha": "abc123def456"
+    "commitSha": "7ece9beaab73a60d965fc33705cee6784b9d8763"
   },
-  "timestamp": "2025-08-28T18:57:20.292Z"
+  "timestamp": "2025-08-28T19:06:25.430Z"
 }
