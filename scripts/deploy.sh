@@ -3,10 +3,21 @@ set -e
 
 # RSOLV Platform Deployment Script
 # Usage: ./deploy.sh [staging|production]
+#
+# IMPORTANT DATABASE NOTES:
+# - Production uses the existing rsolv_landing_prod database (consolidated as per RFC-037)
+# - Staging uses rsolv_staging database
+# - The empty rsolv_api_prod and rsolv_platform_prod databases can be cleaned up
+#
+# Database Configuration:
+# - Production: rsolv_landing_prod (contains all web + API data post-consolidation)
+# - Staging: rsolv_staging
+# - Database secret must be named: rsolv-platform-db-secret
 
 ENVIRONMENT=${1:-staging}
 NAMESPACE="rsolv-${ENVIRONMENT}"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+MIGRATION_TIMEOUT=${MIGRATION_TIMEOUT:-600s}  # Allow overriding timeout, default 10 minutes
 
 if [ "$ENVIRONMENT" == "production" ]; then
     IMAGE_TAG="ghcr.io/rsolv-dev/rsolv-platform:prod-${TIMESTAMP}"
@@ -70,8 +81,8 @@ EOF
 kubectl apply -f /tmp/migration-job-${TIMESTAMP}.yaml
 
 # Wait for migration to complete
-echo "⏳ Waiting for migrations to complete..."
-kubectl wait --for=condition=complete job/rsolv-migrate-${TIMESTAMP} -n ${NAMESPACE} --timeout=300s
+echo "⏳ Waiting for migrations to complete (timeout: ${MIGRATION_TIMEOUT})..."
+kubectl wait --for=condition=complete job/rsolv-migrate-${TIMESTAMP} -n ${NAMESPACE} --timeout=${MIGRATION_TIMEOUT}
 
 # Check migration logs
 echo "📋 Migration logs:"
