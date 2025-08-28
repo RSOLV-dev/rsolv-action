@@ -1,18 +1,17 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import type { ActionConfig } from '../../src/types';
 
-// Create mocks
-const mockDetectIssues = vi.fn(() => Promise.resolve([]));
+// Mock the modules first with inline mock functions
+vi.mock('../../src/github/issues', () => ({
+  detectIssues: vi.fn(() => Promise.resolve([]))
+}));
+
+// Create mocks for other functions
 const mockSearchIssues = vi.fn(() => Promise.resolve([]));
 const mockSearchRsolvIssues = vi.fn(() => Promise.resolve([]));
 const mockCreate = vi.fn(() => ({
   searchIssues: mockSearchIssues,
   searchRsolvIssues: mockSearchRsolvIssues
-}));
-
-// Mock the modules using Bun's mock system
-vi.mock('../../src/github/issues', () => ({
-  detectIssues: mockDetectIssues
 }));
 
 vi.mock('../../src/platforms/platform-factory', () => ({
@@ -45,7 +44,7 @@ describe('Multi-Platform Issue Detection', () => {
 
   beforeEach(() => {
     // Reset all mock implementations
-    mockDetectIssues.mockImplementation(() => Promise.resolve([]));
+    vi.mocked(githubIssues.detectIssues).mockImplementation(() => Promise.resolve([]));
     mockSearchIssues.mockImplementation(() => Promise.resolve([]));
     mockSearchRsolvIssues.mockImplementation(() => Promise.resolve([]));
     mockCreate.mockImplementation(() => ({
@@ -94,13 +93,13 @@ describe('Multi-Platform Issue Detection', () => {
       }
     ];
     
-    mockDetectIssues.mockImplementation(() => Promise.resolve(mockGitHubIssues as any));
+    vi.mocked(githubIssues.detectIssues).mockImplementation(() => Promise.resolve(mockGitHubIssues as any));
 
     const issues = await detectIssuesFromAllPlatforms(mockConfig);
 
     expect(issues).toHaveLength(1);
     expect(issues[0].source).toBe('github');
-    expect(mockDetectIssues).toHaveBeenCalledWith(mockConfig);
+    expect(vi.mocked(githubIssues.detectIssues)).toHaveBeenCalledWith(mockConfig);
   });
 
   test('should detect issues from both GitHub and Jira when configured', async () => {
@@ -118,7 +117,7 @@ describe('Multi-Platform Issue Detection', () => {
         source: 'github'
       }
     ];
-    mockDetectIssues.mockImplementation(() => Promise.resolve(mockGitHubIssues as any));
+    vi.mocked(githubIssues.detectIssues).mockImplementation(() => Promise.resolve(mockGitHubIssues as any));
 
     // Mock Jira adapter
     mockSearchRsolvIssues.mockImplementation(() => Promise.resolve([
@@ -158,7 +157,7 @@ describe('Multi-Platform Issue Detection', () => {
     process.env.JIRA_API_TOKEN = 'test-token';
 
     // Mock GitHub to throw error
-    mockDetectIssues.mockImplementation(() => Promise.reject(new Error('GitHub API error')));
+    vi.mocked(githubIssues.detectIssues).mockImplementation(() => Promise.reject(new Error('GitHub API error')));
 
     // Mock Jira to work normally
     mockSearchRsolvIssues.mockImplementation(() => Promise.resolve([
@@ -193,7 +192,7 @@ describe('Multi-Platform Issue Detection', () => {
     process.env.JIRA_EMAIL = 'test@example.com';
     process.env.JIRA_API_TOKEN = 'test-token';
 
-    mockDetectIssues.mockImplementation(() => Promise.resolve([]));
+    vi.mocked(githubIssues.detectIssues).mockImplementation(() => Promise.resolve([]));
 
     mockSearchRsolvIssues.mockImplementation(() => Promise.resolve([
       {

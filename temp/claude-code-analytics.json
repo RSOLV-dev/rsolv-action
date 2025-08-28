@@ -1,93 +1,5 @@
 [
   {
-    "startTime": 1756253256368,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756253256368,
-    "solutionGenerationTime": 0,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756253305228,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756253305228,
-    "solutionGenerationTime": 0,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756253339789,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756253339790,
-    "solutionGenerationTime": 1,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756253755328,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756253755328,
-    "solutionGenerationTime": 0,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756253915732,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756253915733,
-    "solutionGenerationTime": 1,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756254061588,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756254061589,
-    "solutionGenerationTime": 1,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756254156465,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756254156465,
-    "solutionGenerationTime": 0,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756254891466,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756254891466,
-    "solutionGenerationTime": 0,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756255515076,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756255515077,
-    "solutionGenerationTime": 1,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756256181565,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756256181566,
-    "solutionGenerationTime": 1,
-    "errorType": "no_solution_found"
-  },
-  {
-    "startTime": 1756256195752,
-    "issueId": "123",
-    "successful": false,
-    "endTime": 1756256195753,
-    "solutionGenerationTime": 1,
-    "errorType": "no_solution_found"
-  },
-  {
     "startTime": 1756256219525,
     "issueId": "123",
     "successful": false,
@@ -750,5 +662,82 @@
     "successful": false,
     "errorType": "query_error",
     "endTime": 1756414435374
+  },
+  {
+    "startTime": 1756414645621,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756414647451
+  },
+  {
+    "startTime": 1756414822985,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756414825062
+  },
+  {
+    "startTime": 1756414825064,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756414827139
+  },
+  {
+    "startTime": 1756414832991,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756414834796
+  },
+  {
+    "startTime": 1756414874556,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756414876429
+  },
+  {
+    "startTime": 1756414876434,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756414883452
+  },
+  {
+    "startTime": 1756414889373,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756414891476
+  },
+  {
+    "startTime": 1756414919812,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756414921827
+  },
+  {
+    "startTime": 1756415064332,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756415066147
+  },
+  {
+    "startTime": 1756415066152,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756415068019
+  },
+  {
+    "startTime": 1756415073937,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1756415075679
   }
 ]

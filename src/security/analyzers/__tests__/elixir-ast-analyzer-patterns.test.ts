@@ -231,7 +231,7 @@ os.system(f"ls {user_provided_path}")
         } as Response;
       });
 
-      const result = await analyzer.analyzeFiles(files, {});
+      const result = await analyzer.analyze(files, {});
       
       expect(result.results).toHaveLength(3);
       expect(result.results[0].vulnerabilities).toHaveLength(1);
