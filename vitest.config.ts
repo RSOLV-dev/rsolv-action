@@ -1,74 +1,123 @@
 import { defineConfig } from 'vitest/config';
-import path from 'path';
+import { resolve } from 'path';
+
+/**
+ * Unified Vitest Configuration
+ * Consolidates all test configurations with environment-based options
+ */
+
+const isCI = process.env.CI === 'true';
+const isMemoryConstrained = process.env.TEST_MEMORY_SAFE === 'true' || isCI;
+const isLiveAPI = process.env.TEST_LIVE_API === 'true';
 
 export default defineConfig({
   test: {
-    // Use jsdom for DOM/browser API mocking
+    // Use 'node' environment for all tests (not jsdom/happy-dom)
     environment: 'node',
     
-    // Global test timeout
-    testTimeout: 10000,
-    
-    // Hook timeout
-    hookTimeout: 10000,
-    
-    // Enable globals like describe, it, expect
+    // Global setup
     globals: true,
+    setupFiles: ['./test/setup.ts'],
     
-    // Setup files
-    setupFiles: ['./test/vitest-setup.ts'],
+    // Performance settings based on environment
+    pool: isMemoryConstrained ? 'forks' : 'threads',
+    poolOptions: isMemoryConstrained 
+      ? {
+          forks: {
+            singleFork: true,  // Run all tests in single process
+          }
+        }
+      : {
+          threads: {
+            maxThreads: 4,
+            minThreads: 1,
+          }
+        },
     
-    // Coverage settings
+    // Timeout settings
+    testTimeout: isLiveAPI ? 60000 : 10000,
+    hookTimeout: 5000,
+    
+    // Coverage configuration
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: [
-        'node_modules/',
-        'test/',
-        '*.config.ts',
-        '*.config.js',
-      ]
-    },
-    
-    // Mock config
-    mockReset: true,
-    clearMocks: true,
-    restoreMocks: true,
-    
-    // Ignore patterns
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-      '**/*.bun-backup',
-      '**/vulnerable-apps/**',  // Exclude demo applications
-    ],
-    
-    // Use forks for better process.chdir() support in regression tests
-    pool: 'forks',
-    poolOptions: {
-      forks: {
-        // Recycle workers more aggressively
-        maxForks: 2,
+        'node_modules/**',
+        'test/**',
+        'tests/**',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/types.ts',
+        '**/*.d.ts',
+        'vitest.*.ts',
+        'scripts/**',
+        '*.config.ts'
+      ],
+      thresholds: {
+        lines: 70,
+        functions: 70,
+        branches: 60,
+        statements: 70
       }
     },
     
-    // Log heap usage for debugging
-    logHeapUsage: true,
+    // Reporter configuration
+    reporters: process.env.TEST_REPORTER === 'json' 
+      ? ['json'] 
+      : ['default'],
+    outputFile: process.env.TEST_OUTPUT_FILE || undefined,
     
-    // Test sharding for large test suites
-    maxConcurrency: 2,
+    // Exclude patterns
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      // Skip broken/experimental tests
+      '**/*.broken.ts',
+      '**/*.skip.ts',
+      // Skip e2e tests unless explicitly running them
+      ...(process.env.RUN_E2E !== 'true' ? ['**/e2e/**', '**/*e2e*.test.ts'] : []),
+      // Skip live API tests unless explicitly enabled  
+      ...(isLiveAPI ? [] : ['**/*live-api*.test.ts', '**/*staging*.test.ts'])
+    ],
     
-    // Disable isolation for better performance (tests must be properly isolated)
-    isolate: false,
+    // Include patterns
+    include: [
+      'src/**/*.test.ts',
+      'test/**/*.test.ts', 
+      'tests/**/*.test.ts'
+    ],
     
-    // Force garbage collection between tests
-    teardownTimeout: 1000,
+    // Retry flaky tests (useful for API tests)
+    retry: isLiveAPI ? 2 : 0,
     
+    // Logging
+    logHeapUsage: isMemoryConstrained,
+    
+    // Isolation settings
+    isolate: true,
+    fileParallelism: !isMemoryConstrained,
   },
   
+  // Resolve configuration
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': resolve(__dirname, './src'),
+      '@test': resolve(__dirname, './test')
     },
+    extensions: ['.ts', '.js', '.json']
   },
+  
+  // Build optimizations
+  optimizeDeps: {
+    include: ['vitest', '@vitest/ui']
+  },
+  
+  // ESBuild for faster transforms
+  esbuild: {
+    target: 'node20',
+    format: 'esm'
+  }
 });
