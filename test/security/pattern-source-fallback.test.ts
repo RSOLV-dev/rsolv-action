@@ -2,6 +2,22 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createPatternSource, LocalPatternSource, ApiPatternSource, HybridPatternSource } from '../../src/security/pattern-source.js';
 import { logger } from '../../src/utils/logger.js';
 
+// Mock the API client at module level
+vi.mock('../../src/security/pattern-api-client.js', () => ({
+  PatternAPIClient: vi.fn().mockImplementation(() => ({
+    fetchPatterns: vi.fn().mockResolvedValue(
+      Array(30).fill(null).map((_, i) => ({
+        id: `pattern-${i}`,
+        name: `Pattern ${i}`,
+        type: 'xss',
+        severity: 'high',
+        patterns: { regex: [/test/] },
+        languages: ['javascript']
+      }))
+    )
+  }))
+}));
+
 describe('Pattern Source Fallback Detection', () => {
   const originalEnv = { ...process.env };
   let loggerErrorSpy: any;
@@ -97,34 +113,18 @@ describe('Pattern Source Fallback Detection', () => {
     it('should log success metrics when using API patterns', async () => {
       process.env.RSOLV_API_KEY = 'test-key';
       
-      // Mock successful API response
-      vi.mock('../../src/security/pattern-api-client.js', () => ({
-        PatternAPIClient: vi.fn().mockImplementation(() => ({
-          fetchPatterns: vi.fn().mockResolvedValue(
-            Array(30).fill(null).map((_, i) => ({
-              id: `pattern-${i}`,
-              name: `Pattern ${i}`,
-              type: 'xss',
-              severity: 'high',
-              patterns: { regex: [/test/] },
-              languages: ['javascript']
-            }))
-          )
-        }))
-      }));
-      
       const source = createPatternSource();
       expect(source).toBeInstanceOf(HybridPatternSource);
       
       // Fetch patterns
       const patterns = await source.getPatternsByLanguage('javascript');
       
-      // Should log success metrics
+      // Should log success metrics when fetching patterns
       expect(loggerInfoSpy).toHaveBeenCalledWith(
-        expect.stringContaining('PATTERN SOURCE SUCCESS'),
+        expect.stringContaining('PATTERN FETCH SUCCESS'),
         expect.objectContaining({
           source: 'api',
-          patternCount: 30,
+          patternCount: 30,  // Should have full pattern set
           language: 'javascript'
         })
       );
