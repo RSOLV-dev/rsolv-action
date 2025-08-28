@@ -81,9 +81,12 @@ export class SecurityAwareAnalyzer {
     for (const [filePath, content] of codebaseFiles.entries()) {
       // Determine language from file extension
       const language = this.getLanguageFromPath(filePath);
-      if (!language) continue;
-
-      const vulnerabilities = await this.securityDetector.detect(content, language);
+      if (!language) {
+        logger.debug(`Skipping file ${filePath} - unable to determine language`);
+        continue;
+      }
+      
+      const vulnerabilities = await this.securityDetector.detect(content, language, filePath);
       
       if (vulnerabilities.length > 0) {
         // Add file path to each vulnerability

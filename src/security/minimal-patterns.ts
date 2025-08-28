@@ -177,9 +177,9 @@ export function getMinimalPatterns(): SecurityPattern[] {
     description: 'SQL injection via string interpolation',
     patterns: {
       regex: [
-        /where\s*\(\s*["'].*#\{.*\}.*["']\s*\)/gi,
-        /find_by_sql\s*\(\s*["'].*#\{.*\}.*["']\s*\)/gi,
-        /execute\s*\(\s*["'].*#\{.*\}.*["']\s*\)/gi
+        /\.where\s*\(\s*["'].*#\{.*\}.*["']/gi,
+        /find_by_sql\s*\(\s*["'].*#\{.*\}.*["']/gi,
+        /execute\s*\(\s*["'].*#\{.*\}.*["']/gi
       ]
     },
     languages: ['ruby'],

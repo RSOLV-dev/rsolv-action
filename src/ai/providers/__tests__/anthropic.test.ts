@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest';
 import { AnthropicClient } from '../anthropic.js';
-import { AIConfig } from '../../types.js';
+import { AIConfig, IssueAnalysis } from '../../types.js';
 
 // Mock child_process at module level
 vi.mock('child_process', () => ({
@@ -102,10 +102,10 @@ describe('Anthropic Client', () => {
     );
     
     expect(analysis).toBeDefined();
-    expect(analysis.issueType).toBeDefined();
+    expect(analysis.summary).toBeDefined();
     expect(analysis.complexity).toBeDefined();
-    expect(analysis.estimatedEffort).toBeDefined();
-    expect(analysis.suggestedApproach).toBeDefined();
+    expect(analysis.estimatedTime).toBeDefined();
+    expect(analysis.recommendedApproach).toBeDefined();
   });
   
   test('generateSolution should return pull request solution', async () => {
@@ -115,24 +115,26 @@ describe('Anthropic Client', () => {
     };
     
     const client = new AnthropicClient(config);
-    const issue = {
-      title: 'Test Issue',
-      body: 'Test issue body',
-      number: 1,
-      repository: 'test/repo',
-      vulnerabilities: []
+    
+    const issueAnalysis: IssueAnalysis = {
+      summary: 'Test issue summary',
+      complexity: 'low',
+      estimatedTime: 30,
+      potentialFixes: ['Fix 1', 'Fix 2'],
+      recommendedApproach: 'Use Fix 1',
+      relatedFiles: ['src/test.ts']
     };
     
-    const files = {
-      'src/test.ts': 'console.log("test");'
-    };
-    
-    const solution = await client.generateSolution(issue, files, {});
+    const solution = await client.generateSolution(
+      'Test Issue',
+      'Test issue body',
+      issueAnalysis
+    );
     
     expect(solution).toBeDefined();
-    expect(solution.title).toBe('Fix: Test solution title');
-    expect(solution.description).toBe('Test solution description');
-    expect(solution.files).toHaveLength(2);
+    expect(solution.title).toBe('Fix: Test Issue');
+    expect(solution.description).toContain('fixes the test issue');
+    expect(solution.files).toHaveLength(1);
     expect(solution.tests).toHaveLength(2);
   });
 });

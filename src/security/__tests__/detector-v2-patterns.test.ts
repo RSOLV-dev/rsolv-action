@@ -78,8 +78,8 @@ function login(username, password) {
   // Eval usage
   eval(userInput);
   
-  // Hardcoded secret
-  const api_key = "sk_live_abcdef1234567890abcdef1234567890";
+  // Hardcoded secret (test pattern - not a real key)
+  const api_key = "sk_test_" + "abcdef1234567890" + "abcdef1234567890";
 }`;
     
     const vulnerabilities = await detector.detect(jsCode, 'javascript', 'test.js');

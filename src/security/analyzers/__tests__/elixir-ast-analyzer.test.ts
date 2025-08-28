@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 // Use simplified version for testing
 import { ElixirASTAnalyzer } from '../elixir-ast-analyzer-simplified.js';
+import { getTestApiConfig } from '../../../../test/test-env-config.js';
 
 /**
  * Main test file for ElixirASTAnalyzer
@@ -13,11 +14,12 @@ import { ElixirASTAnalyzer } from '../elixir-ast-analyzer-simplified.js';
  */
 describe('ElixirASTAnalyzer - Integration', () => {
   let analyzer: ElixirASTAnalyzer;
+  const testConfig = getTestApiConfig();
   
   const mockConfig = {
-    apiUrl: 'http://localhost:4000',
-    apiKey: 'test-api-key',
-    timeout: 5000
+    apiUrl: testConfig.apiUrl,
+    apiKey: testConfig.apiKey || 'test-api-key',
+    timeout: testConfig.timeout
   };
 
   beforeEach(() => {

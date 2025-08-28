@@ -545,18 +545,18 @@ describe('Git-based processor with fix validation', () => {
       // PR mock is already configured at module level
       mockCreatePullRequestFromGit.mockResolvedValue({
         success: true,
-        pullRequestUrl: 'https://github.com/test/repo/pull/1',
-        pullRequestNumber: 1
+        pullRequestUrl: 'https://github.com/test/repo/pull/456',  // Match MSW handler
+        pullRequestNumber: 456  // Match MSW handler in src/test/mocks/handlers.ts
       });
 
       // Act
       const result = await processIssueWithGit(mockIssue, mockConfig);
 
-      // Assert - the mock might not be called if the real implementation is used
-      // but nock will intercept the actual HTTP requests
+      // Assert - MSW intercepts HTTP requests and returns PR #456
+      // This is the expected behavior as defined in src/test/mocks/handlers.ts
       expect(result.success).toBe(true);
       expect(result.pullRequestUrl).toBeDefined();
-      expect(result.pullRequestUrl).toBe('https://github.com/test/repo/pull/1');
+      expect(result.pullRequestUrl).toBe('https://github.com/test/repo/pull/456');
     });
 
     it('should include test code in enhanced context', async () => {

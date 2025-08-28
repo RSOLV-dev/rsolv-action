@@ -38,9 +38,12 @@ Use parameterized queries to prevent SQL injection attacks.`;
 describe('SecurityAwareAnalyzer', () => {
   // Force the use of local patterns in tests
   const originalEnv = process.env.USE_LOCAL_PATTERNS;
+  let analyzer: SecurityAwareAnalyzer;
   
   beforeAll(() => {
     process.env.USE_LOCAL_PATTERNS = 'true';
+    // Create analyzer AFTER setting the environment variable
+    analyzer = new SecurityAwareAnalyzer();
   });
   
   afterAll(() => {
@@ -50,8 +53,6 @@ describe('SecurityAwareAnalyzer', () => {
       delete process.env.USE_LOCAL_PATTERNS;
     }
   });
-
-  const analyzer = new SecurityAwareAnalyzer();
 
   const mockIssue: IssueContext = {
     id: 'issue-123',

@@ -1,56 +1,36 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest';
 
-// Use vi.hoisted for all mock functions
-const { mockCheckGitStatus, mockAnalyzeIssue, mockCreatePullRequestFromGit, mockExecSync } = vi.hoisted(() => {
-  const checkGitStatus = vi.fn();
-  const analyzeIssue = vi.fn();
-  const createPullRequestFromGit = vi.fn();
-  const execSync = vi.fn();
-  
-  // Set default implementations
-  checkGitStatus.mockReturnValue({ clean: true, modifiedFiles: [] });
-  analyzeIssue.mockReturnValue({
-    canBeFixed: true,
-    summary: 'SQL injection vulnerability',
-    complexity: 'medium',
-    estimatedTime: 30,
-    relatedFiles: ['src/routes/users.js']
-  });
-  createPullRequestFromGit.mockReturnValue({
-    success: true,
-    pullRequestUrl: 'https://github.com/test/repo/pull/123',
-    pullRequestNumber: 123,
-    branchName: 'rsolv/fix-issue-42'
-  });
-  execSync.mockImplementation((command: string) => {
-    if (command === 'git status --porcelain') {
-      return '';
-    }
-    return '';
-  });
-  
+// Use vi.hoisted to ensure mocks are available before imports
+const { mockExecSync, mockAnalyzeIssue, mockCreatePullRequestFromGit, mockCreateEducationalPullRequest } = vi.hoisted(() => {
   return {
-    mockCheckGitStatus: checkGitStatus,
-    mockAnalyzeIssue: analyzeIssue,
-    mockCreatePullRequestFromGit: createPullRequestFromGit,
-    mockExecSync: execSync
+    mockExecSync: vi.fn(),
+    mockAnalyzeIssue: vi.fn(),
+    mockCreatePullRequestFromGit: vi.fn(),
+    mockCreateEducationalPullRequest: vi.fn()
   };
 });
 
-// Mock child_process for git commands
+// Mock child_process module
 vi.mock('child_process', () => ({
   execSync: mockExecSync
 }));
 
-// Mock the other modules
+// Mock the analyzer module
 vi.mock('../../analyzer.js', () => ({
   analyzeIssue: mockAnalyzeIssue
 }));
 
+// Mock the PR creation module
 vi.mock('../../../github/pr-git.js', () => ({
   createPullRequestFromGit: mockCreatePullRequestFromGit
 }));
 
+// Mock the educational PR creation module
+vi.mock('../../../github/pr-git-educational.js', () => ({
+  createEducationalPullRequest: mockCreateEducationalPullRequest
+}));
+
+// Mock credentials manager
 vi.mock('../../../credentials/manager.js', () => ({
   RSOLVCredentialManager: class {
     async initialize() {}
@@ -85,12 +65,40 @@ vi.mock('../claude-code-git.js', () => ({
 // Import after mocks
 import { processIssueWithGit } from '../../git-based-processor.js';
 
+// Helper function to setup git command responses
+function setupGitMocks(overrides: Record<string, string | Buffer> = {}) {
+  const defaults: Record<string, string> = {
+    'git status --porcelain': '',
+    'git rev-parse HEAD': 'abc123def456789\n',
+    'git diff': '+ fixed code\n- vulnerable code',
+    'git log': 'commit abc123\nAuthor: Test\nDate: 2024-01-01\n\nTest commit'
+  };
+
+  const responses = { ...defaults, ...overrides };
+
+  mockExecSync.mockImplementation((command: string, options?: any) => {
+    // Check if encoding is specified
+    const hasEncoding = options?.encoding === 'utf-8' || options?.encoding === 'utf8';
+    
+    // Find matching command
+    for (const [cmd, response] of Object.entries(responses)) {
+      if (command.includes(cmd) || command === cmd) {
+        return hasEncoding ? response : Buffer.from(response as string);
+      }
+    }
+    
+    // Default return
+    return hasEncoding ? '' : Buffer.from('');
+  });
+}
+
 describe('Git-based Issue Processor', () => {
   const mockIssue = {
     id: '123',
     number: 42,
     title: 'SQL injection vulnerability',
     body: 'User input is concatenated directly',
+    labels: [],  // Add labels array
     repository: {
       fullName: 'test/repo',
       defaultBranch: 'main'
@@ -109,8 +117,33 @@ describe('Git-based Issue Processor', () => {
   };
   
   beforeEach(() => {
-    mockAnalyzeIssue.mockClear();
-    mockCreatePullRequestFromGit.mockClear();
+    vi.clearAllMocks();
+    
+    // Setup default mocks
+    mockAnalyzeIssue.mockResolvedValue({
+      canBeFixed: true,
+      summary: 'SQL injection vulnerability',
+      complexity: 'medium',
+      estimatedTime: 30,
+      relatedFiles: ['src/routes/users.js']
+    });
+    
+    mockCreatePullRequestFromGit.mockResolvedValue({
+      success: true,
+      pullRequestUrl: 'https://github.com/test/repo/pull/123',
+      pullRequestNumber: 123,
+      branchName: 'rsolv/fix-issue-42'
+    });
+    
+    mockCreateEducationalPullRequest.mockResolvedValue({
+      success: true,
+      pullRequestUrl: 'https://github.com/test/repo/pull/123',
+      pullRequestNumber: 123,
+      branchName: 'rsolv/fix-issue-42'
+    });
+    
+    // Setup default git mocks
+    setupGitMocks();
   });
   
   test('should process issue successfully with git-based approach', async () => {
@@ -129,12 +162,9 @@ describe('Git-based Issue Processor', () => {
   });
   
   test('should fail if repository has uncommitted changes', async () => {
-    // Temporarily override the mock for this test only
-    mockExecSync.mockImplementationOnce((command: string) => {
-      if (command === 'git status --porcelain') {
-        return 'M src/some-file.js\n';
-      }
-      return '';
+    // Setup git mocks with uncommitted changes
+    setupGitMocks({
+      'git status --porcelain': 'M src/some-file.js\n'
     });
     
     const result = await processIssueWithGit(mockIssue as any, mockConfig as any);
@@ -144,10 +174,10 @@ describe('Git-based Issue Processor', () => {
   });
   
   test('should fail if issue cannot be fixed', async () => {
-    mockAnalyzeIssue.mockImplementationOnce(() => ({
+    mockAnalyzeIssue.mockResolvedValueOnce({
       canBeFixed: false,
       summary: 'Too complex to fix automatically'
-    }));
+    });
     
     const result = await processIssueWithGit(mockIssue as any, mockConfig as any);
     

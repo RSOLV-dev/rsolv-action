@@ -98,14 +98,14 @@ module.exports = { authenticateUser, getUserOrders };
     
     // Check standard analysis fields
     expect(result.issueType).toBe('security');
-    expect(result.filesToModify).toBeArray();
-    expect(result.estimatedComplexity).toBeOneOf(['simple', 'medium', 'complex']);
-    expect(result.suggestedApproach).toBeString();
+    expect(Array.isArray(result.filesToModify)).toBe(true);
+    expect(['simple', 'medium', 'complex']).toContain(result.estimatedComplexity);
+    expect(typeof result.suggestedApproach).toBe('string');
     
     // Check security analysis
     expect(result.securityAnalysis).toBeDefined();
     expect(result.securityAnalysis!.hasSecurityIssues).toBe(true);
-    expect(result.securityAnalysis!.vulnerabilities).toBeArray();
+    expect(Array.isArray(result.securityAnalysis!.vulnerabilities)).toBe(true);
     expect(result.securityAnalysis!.vulnerabilities.length).toBeGreaterThan(0);
     
     // Check vulnerability structure
@@ -152,7 +152,7 @@ module.exports = { greetUser };
   test('should work without codebase files', async () => {
     const result = await analyzer.analyzeWithSecurity(mockIssue, mockConfig);
     
-    expect(result.issueType).toBeString();
+    expect(typeof result.issueType).toBe('string');
     expect(result.securityAnalysis).toBeUndefined();
   });
 });
