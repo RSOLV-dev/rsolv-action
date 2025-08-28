@@ -31,21 +31,21 @@ describe('RepositoryScanner with AST Validation', () => {
 
   beforeEach(() => {
     // Clear all mocks before each test
-    mock.restore();
+    vi.restoreAllMocks();
     
     // Re-mock the modules
     vi.mock('../../src/github/api.js', () => ({
       getGitHubClient: () => ({
         git: {
-          getTree: mock(() => ({ data: { tree: [] } })),
+          getTree: vi.fn(() => ({ data: { tree: [] } })),
           getBlob: vi.fn()
         }
       })
     }));
 
     vi.mock('../../src/security/detector-v2.js', () => ({
-      SecurityDetectorV2: mock(() => ({
-        detect: mock(() => [])
+      SecurityDetectorV2: vi.fn(() => ({
+        detect: vi.fn(() => [])
       }))
     }));
 

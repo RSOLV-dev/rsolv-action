@@ -21,9 +21,10 @@ describe('Pattern API Regex Reconstruction', () => {
       // Current implementation expects string patterns
       const client = new PatternAPIClient();
       
-      // This test demonstrates that we need a reconstructPattern function
-      // The method doesn't exist, so accessing it returns undefined
-      expect((client as any).reconstructPattern).toBeUndefined();
+      // The reconstructPattern method now exists
+      // Test that it can handle serialized regex data
+      expect((client as any).reconstructPattern).toBeDefined();
+      expect(typeof (client as any).reconstructPattern).toBe('function');
     });
 
     it('should fail to handle enhanced pattern response with serialized regex', () => {

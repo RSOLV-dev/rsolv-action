@@ -76,9 +76,9 @@ describe('XSS Pattern Detection', () => {
       updatedAt: new Date().toISOString()
     };
     
-    // Change to test directory
+    // Mock process.cwd to return test directory
     const originalCwd = process.cwd();
-    process.chdir(testDir);
+    vi.spyOn(process, 'cwd').mockReturnValue(testDir);
     
     try {
       // Run enrichment
@@ -98,7 +98,7 @@ describe('XSS Pattern Detection', () => {
       expect(xssVuln?.confidence).toBe('high');
       
     } finally {
-      process.chdir(originalCwd);
+      vi.mocked(process.cwd).mockRestore();
       fs.rmSync(testDir, { recursive: true, force: true });
     }
   });

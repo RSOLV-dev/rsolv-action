@@ -9,14 +9,12 @@ vi.mock('../src/ai/analyzer', () => ({
   analyzeIssue: vi.fn()
 }));
 
-vi.mock('../src/ai/adapters/claude-code-enhanced', () => {
-  const mockClass = vi.fn();
-  mockClass.mockImplementation(() => ({
+vi.mock('../src/ai/adapters/claude-code-enhanced', () => ({
+  EnhancedClaudeCodeAdapter: vi.fn().mockImplementation(() => ({
     gatherDeepContext: gatherDeepContextMock,
     generateSolution: vi.fn().mockRejectedValue(new Error('Mock error'))
-  }));
-  return { EnhancedClaudeCodeAdapter: mockClass };
-});
+  }))
+}));
 
 // Now import after mocks are set up
 import { processIssues } from '../src/ai/unified-processor';
@@ -44,16 +42,20 @@ describe('Enhanced Context Default Behavior', () => {
 
   const mockConfig: ActionConfig = {
     githubToken: 'test-token',
-    aiProviders: {
-      primary: {
-        name: 'anthropic',
-        model: 'claude-3-sonnet',
-        apiKey: 'test-key'
-      }
+    aiProvider: {
+      provider: 'claude-code',  // Changed to claude-code for enhanced context
+      model: 'claude-3-sonnet',
+      apiKey: 'test-key'
     },
     securitySettings: {},
-    rsolvApiKey: 'test-rsolv-key'
-  };
+    rsolvApiKey: 'test-rsolv-key',
+    issueLabel: 'rsolv:automate',
+    configPath: '.rsolv/config.yaml',
+    apiKey: 'test-api-key',
+    containerConfig: {
+      useContainer: false
+    }
+  } as ActionConfig;
 
   beforeEach(() => {
     vi.clearAllMocks();

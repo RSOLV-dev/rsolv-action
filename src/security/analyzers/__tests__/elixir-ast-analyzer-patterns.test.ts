@@ -28,22 +28,25 @@ describe('ElixirASTAnalyzer - Pattern Detection', () => {
         }
       `;
 
-      global.fetch = vi.fn(async () => ({
-        ok: true,
-        json: async () => ({
-          requestId: 'test-req',
-          session: { sessionId: 'test-session' },
-          results: [{
-            file: 'test.js',
-            vulnerabilities: [{
-              type: 'eval-injection',
-              severity: 'critical',
-              line: 3,
-              message: 'Direct eval with user input'
+      global.fetch = vi.fn(async (_url: string, options: any) => {
+        const body = JSON.parse(options.body);
+        return {
+          ok: true,
+          json: async () => ({
+            requestId: body.requestId, // Return the actual request ID
+            session: { sessionId: 'test-session' },
+            results: [{
+              file: 'test.js',
+              vulnerabilities: [{
+                type: 'eval-injection',
+                severity: 'critical',
+                line: 3,
+                message: 'Direct eval with user input'
+              }]
             }]
-          }]
-        })
-      } as Response));
+          })
+        } as Response;
+      });
 
       const result = await analyzer.analyzeFile('test.js', code);
       
@@ -58,10 +61,12 @@ describe('ElixirASTAnalyzer - Pattern Detection', () => {
         db.query(query);
       `;
 
-      global.fetch = vi.fn(async () => ({
+      global.fetch = vi.fn(async (_url: string, options: any) => {
+        const body = JSON.parse(options.body);
+        return {
         ok: true,
         json: async () => ({
-          requestId: 'test-req',
+          requestId: body.requestId,
           session: { sessionId: 'test-session' },
           results: [{
             file: 'test.js',
@@ -73,7 +78,9 @@ describe('ElixirASTAnalyzer - Pattern Detection', () => {
             }]
           }]
         })
-      } as Response));
+      } as Response;
+
+      });
 
       const result = await analyzer.analyzeFile('test.js', code);
       
@@ -86,10 +93,12 @@ describe('ElixirASTAnalyzer - Pattern Detection', () => {
         document.getElementById('output').innerHTML = userInput;
       `;
 
-      global.fetch = vi.fn(async () => ({
+      global.fetch = vi.fn(async (_url: string, options: any) => {
+        const body = JSON.parse(options.body);
+        return {
         ok: true,
         json: async () => ({
-          requestId: 'test-req',
+          requestId: body.requestId,
           session: { sessionId: 'test-session' },
           results: [{
             file: 'test.js',
@@ -101,7 +110,9 @@ describe('ElixirASTAnalyzer - Pattern Detection', () => {
             }]
           }]
         })
-      } as Response));
+      } as Response;
+
+      });
 
       const result = await analyzer.analyzeFile('test.js', code);
       
@@ -118,10 +129,12 @@ def process_input(user_input):
     return result
       `;
 
-      global.fetch = vi.fn(async () => ({
+      global.fetch = vi.fn(async (_url: string, options: any) => {
+        const body = JSON.parse(options.body);
+        return {
         ok: true,
         json: async () => ({
-          requestId: 'test-req',
+          requestId: body.requestId,
           session: { sessionId: 'test-session' },
           results: [{
             file: 'test.py',
@@ -133,7 +146,9 @@ def process_input(user_input):
             }]
           }]
         })
-      } as Response));
+      } as Response;
+
+      });
 
       const result = await analyzer.analyzeFile('test.py', code);
       
@@ -147,10 +162,12 @@ import os
 os.system(f"ls {user_provided_path}")
       `;
 
-      global.fetch = vi.fn(async () => ({
+      global.fetch = vi.fn(async (_url: string, options: any) => {
+        const body = JSON.parse(options.body);
+        return {
         ok: true,
         json: async () => ({
-          requestId: 'test-req',
+          requestId: body.requestId,
           session: { sessionId: 'test-session' },
           results: [{
             file: 'test.py',
@@ -162,7 +179,9 @@ os.system(f"ls {user_provided_path}")
             }]
           }]
         })
-      } as Response));
+      } as Response;
+
+      });
 
       const result = await analyzer.analyzeFile('test.py', code);
       
@@ -179,10 +198,12 @@ os.system(f"ls {user_provided_path}")
         { path: 'query.rb', content: 'eval params[:code]' }
       ];
 
-      global.fetch = vi.fn(async () => ({
+      global.fetch = vi.fn(async (_url: string, options: any) => {
+        const body = JSON.parse(options.body);
+        return {
         ok: true,
         json: async () => ({
-          requestId: 'test-req',
+          requestId: body.requestId,
           session: { sessionId: 'test-session' },
           results: [
             {
@@ -211,9 +232,11 @@ os.system(f"ls {user_provided_path}")
             }
           ]
         })
-      } as Response));
+      } as Response;
 
-      const result = await analyzer.analyzeFiles(files, {});
+      });
+
+      const result = await analyzer.analyze(files);
       
       expect(result.results).toHaveLength(3);
       expect(result.results[0].vulnerabilities).toHaveLength(1);
@@ -229,17 +252,21 @@ os.system(f"ls {user_provided_path}")
         const evalResult = "eval is dangerous";
       `;
 
-      global.fetch = vi.fn(async () => ({
+      global.fetch = vi.fn(async (_url: string, options: any) => {
+        const body = JSON.parse(options.body);
+        return {
         ok: true,
         json: async () => ({
-          requestId: 'test-req',
+          requestId: body.requestId,
           session: { sessionId: 'test-session' },
           results: [{
             file: 'test.js',
             vulnerabilities: [] // API filters out false positives
           }]
         })
-      } as Response));
+      } as Response;
+
+      });
 
       const result = await analyzer.analyzeFile('test.js', code);
       
@@ -249,10 +276,12 @@ os.system(f"ls {user_provided_path}")
     it('should provide confidence scores', async () => {
       const code = 'eval(getUserInput())';
 
-      global.fetch = vi.fn(async () => ({
+      global.fetch = vi.fn(async (_url: string, options: any) => {
+        const body = JSON.parse(options.body);
+        return {
         ok: true,
         json: async () => ({
-          requestId: 'test-req',
+          requestId: body.requestId,
           session: { sessionId: 'test-session' },
           results: [{
             file: 'test.js',
@@ -265,7 +294,9 @@ os.system(f"ls {user_provided_path}")
             }]
           }]
         })
-      } as Response));
+      } as Response;
+
+      });
 
       const result = await analyzer.analyzeFile('test.js', code);
       
