@@ -107,22 +107,22 @@ fi
 # Build the command
 if [[ -n "$MEMORY_SAFE" ]]; then
   # Use sharding for memory-safe mode
-  echo "✓ Using sharded execution (4 shards run serially)"
+  echo "✓ Using sharded execution (8 shards run serially)"
   
   # Create temporary directory for shard reports
   SHARD_DIR=".vitest-shards"
   mkdir -p $SHARD_DIR
   rm -f $SHARD_DIR/*.json
   
-  # Run 4 shards serially
-  for i in 1 2 3 4; do
+  # Run 8 shards serially to avoid memory exhaustion
+  for i in 1 2 3 4 5 6 7 8; do
     echo ""
-    echo -e "${YELLOW}Running shard $i/4...${NC}"
+    echo -e "${YELLOW}Running shard $i/8...${NC}"
     
     if [[ -n "$JSON_OUTPUT" ]]; then
-      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/4 --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
     else
-      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/4 $COVERAGE"
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 $COVERAGE"
     fi
     
     eval $SHARD_CMD
