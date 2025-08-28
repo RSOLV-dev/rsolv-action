@@ -84,20 +84,13 @@ function login(username, password) {
     
     const vulnerabilities = await detector.detect(jsCode, 'javascript', 'test.js');
     
-    // Debug: log what was found
-    console.log('Detected vulnerabilities:', vulnerabilities.map(v => ({
-      type: v.type,
-      line: v.line,
-      message: v.message
-    })));
+    expect(vulnerabilities.length).toBeGreaterThan(2);
     
-    expect(vulnerabilities.length).toBeGreaterThanOrEqual(2);
-    
-    // Check we found different types - at least SQL and command injection
+    // Check we found different types
     const types = new Set(vulnerabilities.map(v => v.type));
     expect(types.has('sql_injection')).toBe(true);
     expect(types.has('command_injection')).toBe(true);
-    // Hardcoded secrets detection may not be available in all pattern sets
+    expect(types.has('hardcoded_secrets')).toBe(true);
   });
 
   it('should not have regex serialization issues', async () => {

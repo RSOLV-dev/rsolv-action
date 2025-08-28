@@ -138,9 +138,9 @@ const sql = \`SELECT * FROM benefits WHERE id = \${benefitId}\`;
 db.execute(sql);`
     );
     
-    // Change to test directory
+    // Mock process.cwd to return test directory
     const originalCwd = process.cwd();
-    process.chdir(testDir);
+    vi.spyOn(process, 'cwd').mockReturnValue(testDir);
     
     try {
       // Run validation
@@ -254,7 +254,7 @@ db.execute(sql);`
     );
     
     const originalCwd = process.cwd();
-    process.chdir(testDir);
+    vi.spyOn(process, 'cwd').mockReturnValue(testDir);
     
     try {
       const result = await enricher.enrichIssue(issue);
@@ -265,7 +265,7 @@ db.execute(sql);`
       expect(result.enriched).toBe(true);
       
     } finally {
-      process.chdir(originalCwd);
+      vi.mocked(process.cwd).mockRestore();
       fs.rmSync(testDir, { recursive: true, force: true });
     }
   });
