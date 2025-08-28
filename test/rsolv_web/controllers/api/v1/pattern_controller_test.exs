@@ -38,6 +38,19 @@ defmodule RsolvWeb.Api.V1.PatternControllerTest do
       refute Map.has_key?(metadata, "accessible_tiers")
     end
     
+    test "returns 401 for invalid API key", %{conn: conn} do
+      # An API key that doesn't exist in the system should return 401
+      conn = 
+        conn
+        |> put_req_header("authorization", "Bearer invalid_key_that_does_not_exist_12345")
+        |> get("/api/v1/patterns?language=javascript")
+      
+      assert json_response(conn, 401) == %{
+        "error" => "Unauthorized",
+        "message" => "Invalid API key"
+      }
+    end
+    
     test "ignores tier parameter for backward compatibility", %{conn: conn} do
       # With API key, tier parameter should be ignored
       conn_with_key = 
