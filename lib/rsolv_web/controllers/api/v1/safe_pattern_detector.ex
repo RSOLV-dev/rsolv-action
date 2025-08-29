@@ -71,18 +71,23 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
   
   def is_safe_pattern?(:xss, code, %{language: language}) do
     patterns = get_xss_safe_patterns(language)
-    safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
+    has_safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
     
-    # Check for dangerous HTML insertion
+    # Check for dangerous HTML insertion WITHOUT escaping
     unsafe_patterns = [
-      ~r/\.innerHTML\s*=/,            # innerHTML assignment
-      ~r/document\.write\(/,          # document.write
-      ~r/\.outerHTML\s*=/,            # outerHTML assignment
+      ~r/\.innerHTML\s*=\s*[^e]/,     # innerHTML without escape
+      ~r/document\.write\([^)]*user/i, # document.write with user input
+      ~r/\.outerHTML\s*=\s*[^e]/,     # outerHTML without escape
       ~r/insertAdjacentHTML\(/,       # insertAdjacentHTML
     ]
     
-    # Only safe if it has escaping AND no direct HTML insertion
-    safe && !Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    
+    # Check for explicit escaping/sanitization
+    has_escaping = Regex.match?(~r/escape|sanitize|DOMPurify|textContent|innerText|createTextNode/i, code)
+    
+    # Safe if it has safe patterns OR escaping, AND no unsafe patterns
+    (has_safe || has_escaping) && !has_unsafe
   end
   
   def is_safe_pattern?(:code_injection, code, %{language: "javascript"}) do
@@ -121,11 +126,24 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
   end
   
   def is_safe_pattern?(:path_traversal, code, %{language: _language}) do
-    # Check for definite unsafe patterns
-    unsafe_patterns = [
-      ~r/user_?[Pp]ath/,                # user path variables
-      ~r/user_?[Ff]ile/,                # user file variables  
-      ~r/user[Mm]odule/,                # userModule variable
+    # Check for safe sanitization patterns FIRST
+    safe_patterns = [
+      ~r/path\.normalize\(/,           # path.normalize is always safe
+      ~r/path\.resolve\(/,             # path.resolve is safe
+      ~r/Path\([^)]*\)\.resolve\(/,    # pathlib.Path().resolve() is safe
+      ~r/basename\(/,                  # Using basename (PHP) is safe
+      ~r/realpath\(/,                  # realpath (PHP) is safe
+    ]
+    
+    # These patterns are conditionally safe (only with constants/literals)
+    conditionally_safe_patterns = [
+      ~r/path\.join\([^,]*['"][^'"]*['"]/, # path.join with literals
+      ~r/os\.path\.join\([A-Z_]+,/,        # os.path.join with constants
+      ~r/Rails\.root\.join\(['"][^'"]*['"]/, # Rails.root.join with literals
+    ]
+    
+    # Check for definitely unsafe patterns
+    definitely_unsafe = [
       ~r/req\.\w+/,                    # request data
       ~r/params\[/,                    # params hash
       ~r/\$_GET/,                      # PHP GET params
@@ -133,43 +151,39 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
       ~r/\.\.\//,                      # Path traversal
     ]
     
-    has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
-    
-    # Check for safe sanitization patterns
-    safe_patterns = [
-      ~r/path\.join\(/,                # path.join
-      ~r/path\.resolve\(/,             # path.resolve
-      ~r/path\.normalize\(/,           # path.normalize
-      ~r/Path\([^)]*\)\.resolve\(/,    # pathlib.Path().resolve()
-      ~r/os\.path\.join\([A-Z_]+,/,    # os.path.join with constants
-      ~r/Rails\.root\.join\(/,         # Rails.root.join
-      ~r/basename\(/,                  # Using basename (PHP)
-      ~r/realpath\(/,                  # realpath (PHP)
-    ]
-    
-    has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
-    
-    # Safe if it has safe patterns AND no unsafe patterns
-    has_safe && !has_unsafe
+    # If it uses a safe sanitization method, it's safe regardless of input
+    cond do
+      Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end) ->
+        true
+      Enum.any?(definitely_unsafe, fn pattern -> Regex.match?(pattern, code) end) ->
+        false
+      true ->
+        # Check conditionally safe patterns
+        Enum.any?(conditionally_safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    end
   end
   
   def is_safe_pattern?(:ssrf, code, %{language: _language}) do
     # Check for safe URL patterns (constants, not user input)
     safe_patterns = [
-      ~r/axios\.get\(['"][^'"]+['"]\)/,        # Literal URL
-      ~r/fetch\(['"][^'"]+['"]\)/,             # Literal URL
+      ~r/axios\.get\(['"][^'"]+['"]\)/,        # Literal URL (JS)
+      ~r/fetch\(['"][^'"]+['"]\)/,             # Literal URL (JS)
+      ~r/fetch\(`\$\{[A-Z_]+\}/,               # Template with constants (JS)
       ~r/\$\{[A-Z_]+\}/,                        # Using constants like ${API_BASE}
       ~r/process\.env\.[A-Z_]+/,               # Environment variables
+      ~r/requests\.get\(f['"]\{[A-Z_]+\}/,     # Python f-string with constants
+      ~r/urlopen\(['"][^'"]+['"]\)/,           # Python literal URL
+      ~r/localhost|127\.0\.0\.1/,              # Localhost URLs
     ]
     
     # Check for unsafe patterns with user input
     unsafe_patterns = [
       ~r/req\.\w+/,                    # Request data
-      ~r/params/,                       # Parameters
+      ~r/params\[/,                     # Parameters
       ~r/body\./,                       # Body data
       ~r/query\./,                      # Query data
-      ~r/userInput/,                    # Obvious user input
-      ~r/userProvidedUrl/,              # Obvious user input
+      ~r/user[A-Z]/,                    # User input (camelCase)
+      ~r/user_/,                        # User input (snake_case)
     ]
     
     has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
