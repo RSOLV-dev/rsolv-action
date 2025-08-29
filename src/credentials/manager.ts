@@ -20,13 +20,9 @@ export interface UsageReport {
 
 export class RSOLVCredentialManager {
   private credentials: Map<string, ProviderCredential> = new Map();
-  private apiKey: string = '';
-  private rsolvApiUrl: string;
-  private refreshTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
-
-  constructor() {
-    this.rsolvApiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
-  }
+  private apiKey: string | null = null;
+  private refreshTimers: Map<string, NodeJS.Timeout> = new Map();
+  private rsolvApiUrl: string = process.env.RSOLV_API_URL || 'https://api.rsolv.ai';
 
   async initialize(apiKey: string): Promise<void> {
     this.apiKey = apiKey;
@@ -77,22 +73,19 @@ export class RSOLVCredentialManager {
         this.credentials.set(provider, credential);
       });
 
-      // Log usage info
-      if (data.usage) {
+      // Log remaining fixes if available
+      if (data.usage?.remaining_fixes !== undefined) {
         logger.info(`Credentials initialized. Remaining fixes: ${data.usage.remaining_fixes}`);
       } else {
         logger.info('Credentials initialized');
       }
-
-      // Schedule refresh for credentials
-      this.scheduleRefresh(data.credentials);
     } catch (error) {
       logger.error('Failed to initialize credentials', error);
       throw error;
     }
   }
 
-  getCredential(provider: string): string {
+  async getCredential(provider: string): Promise<string> {
     const credential = this.credentials.get(provider);
     
     logger.debug(`Getting credential for ${provider}`, {
@@ -105,10 +98,16 @@ export class RSOLVCredentialManager {
       throw new Error(`No valid credential for ${provider}`);
     }
 
-    // Check if expired
+    // Check if expired and refresh if needed
     const expiresAt = new Date(credential.expires_at);
     if (expiresAt < new Date()) {
-      throw new Error(`Credential for ${provider} has expired`);
+      logger.info(`Credential for ${provider} expired, refreshing...`);
+      await this.refreshCredentials();
+      const refreshedCredential = this.credentials.get(provider);
+      if (!refreshedCredential || !refreshedCredential.api_key) {
+        throw new Error(`Failed to refresh credential for ${provider}`);
+      }
+      return refreshedCredential.api_key;
     }
     
     if (!credential.api_key) {
@@ -116,6 +115,62 @@ export class RSOLVCredentialManager {
     }
 
     return credential.api_key;
+  }
+
+  private async refreshCredentials(): Promise<void> {
+    if (!this.apiKey) {
+      throw new Error('Cannot refresh credentials: API key not set');
+    }
+    
+    logger.info('Refreshing expired credentials');
+    
+    try {
+      const requestBody = {
+        api_key: this.apiKey,
+        providers: ['anthropic', 'openai', 'openrouter'],
+        ttl_minutes: 60
+      };
+      
+      const response = await fetch(`${this.rsolvApiUrl}/api/v1/credentials/exchange`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'X-GitHub-Job': process.env.GITHUB_JOB || '',
+          'X-GitHub-Run': process.env.GITHUB_RUN_ID || ''
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(15000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        logger.error(`Credential refresh failed - Status: ${response.status}, Body:`, error);
+        throw new Error(`Failed to refresh credentials: ${error.error || response.statusText}`);
+      }
+
+      const data: CredentialExchangeResponse = await response.json();
+      
+      if (!data || !data.credentials) {
+        logger.error('Invalid credential refresh response:', data);
+        throw new Error('Invalid response from credential refresh API');
+      }
+      
+      // Update stored credentials
+      Object.entries(data.credentials).forEach(([provider, credential]) => {
+        logger.debug(`Refreshed credential for ${provider}`, { 
+          hasApiKey: !!credential.api_key,
+          apiKeyLength: credential.api_key?.length || 0,
+          expiresAt: credential.expires_at 
+        });
+        this.credentials.set(provider, credential);
+      });
+      
+      logger.info('Successfully refreshed credentials');
+    } catch (error) {
+      logger.error('Failed to refresh credentials:', error);
+      throw error;
+    }
   }
 
   async reportUsage(provider: string, usage: UsageReport): Promise<void> {
@@ -132,93 +187,26 @@ export class RSOLVCredentialManager {
           request_count: usage.requestCount,
           job_id: process.env.GITHUB_JOB
         }),
-        signal: AbortSignal.timeout(5000) // 5 second timeout for usage reporting
+        signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Failed to report usage: ${error.error || response.statusText}`);
+        logger.warn(`Failed to report usage for ${provider}: ${response.statusText}`);
       }
     } catch (error) {
-      // Don't throw on usage reporting failures - just log
-      logger.warn('Failed to report usage', error);
+      // Don't fail the operation if usage reporting fails
+      logger.warn(`Error reporting usage for ${provider}:`, error);
     }
   }
 
   cleanup(): void {
-    // Clear credentials
-    this.credentials.clear();
-    
-    // Cancel refresh timers
+    // Clear any scheduled refreshes
     this.refreshTimers.forEach(timer => clearTimeout(timer));
     this.refreshTimers.clear();
     
+    // Clear stored credentials
+    this.credentials.clear();
+    
     logger.info('Credential manager cleaned up');
-  }
-
-  private scheduleRefresh(credentials: Record<string, ProviderCredential>): void {
-    Object.entries(credentials).forEach(([provider, credential]) => {
-      const expiresAt = new Date(credential.expires_at);
-      const now = new Date();
-      const msUntilExpiry = expiresAt.getTime() - now.getTime();
-      
-      // Refresh 5 minutes before expiry
-      const refreshTime = msUntilExpiry - (5 * 60 * 1000);
-      
-      if (refreshTime > 0) {
-        const timer = setTimeout(() => {
-          this.refreshCredentials(provider).catch(err => {
-            logger.error('Failed to refresh credentials', err);
-          });
-        }, refreshTime);
-        
-        this.refreshTimers.set(provider, timer);
-        logger.debug(`Scheduled refresh for ${provider} in ${refreshTime}ms`);
-      }
-    });
-  }
-
-  private async refreshCredentials(provider: string): Promise<void> {
-    const currentCredential = this.credentials.get(provider);
-    if (!currentCredential) {
-      logger.warn(`No credential found for ${provider} during refresh`);
-      return;
-    }
-
-    logger.info(`Refreshing credentials for ${provider}`);
-
-    try {
-      const response = await fetch(`${this.rsolvApiUrl}/api/v1/credentials/refresh`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          api_key: this.apiKey,
-          credential_id: provider // Using provider as ID for simplicity
-        }),
-        signal: AbortSignal.timeout(10000) // 10 second timeout for refresh
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Failed to refresh credentials: ${error.error || response.statusText}`);
-      }
-
-      const data = await response.json();
-      const newCredential = data.credentials[provider];
-      
-      if (newCredential) {
-        this.credentials.set(provider, newCredential);
-        logger.info(`Successfully refreshed credentials for ${provider}`);
-        
-        // Schedule next refresh
-        this.scheduleRefresh({ [provider]: newCredential });
-      }
-    } catch (error) {
-      logger.error(`Failed to refresh credentials for ${provider}`, error);
-      throw error;
-    }
   }
 }

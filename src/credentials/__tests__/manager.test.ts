@@ -85,8 +85,8 @@ describe('RSOLVCredentialManager', () => {
       expect(body.ttl_minutes).toBe(60);
 
       // Verify credentials are accessible
-      expect(manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
-      expect(manager.getCredential('openai')).toBe('temp_oai_def456');
+      expect(await manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
+      expect(await manager.getCredential('openai')).toBe('temp_oai_def456');
     });
 
     test('should throw error on failed API response', async () => {
@@ -142,7 +142,7 @@ describe('RSOLVCredentialManager', () => {
 
       // Verify refresh timer was set (internal implementation detail)
       // For now, just verify initialization succeeded
-      expect(manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
+      expect(await manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
     });
   });
 
@@ -168,7 +168,7 @@ describe('RSOLVCredentialManager', () => {
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
 
-      expect(manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
+      expect(await manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
     });
 
     test('should throw error for expired credential', async () => {
@@ -194,8 +194,16 @@ describe('RSOLVCredentialManager', () => {
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
 
-      expect(() => manager.getCredential('anthropic')).toThrow(
-        'Credential for anthropic has expired'
+      // Mock a failed refresh attempt
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: async () => ({ error: 'Invalid API key' })
+      } as Response));
+
+      await expect(manager.getCredential('anthropic')).rejects.toThrow(
+        'Failed to refresh credential'
       );
     });
 
@@ -220,7 +228,7 @@ describe('RSOLVCredentialManager', () => {
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
 
-      expect(() => manager.getCredential('invalid_provider')).toThrow(
+      await expect(manager.getCredential('invalid_provider')).rejects.toThrow(
         'No valid credential for invalid_provider'
       );
     });
@@ -326,13 +334,13 @@ describe('RSOLVCredentialManager', () => {
       await manager.initialize('test_api_key_123');
       
       // Verify credential exists
-      expect(manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
+      expect(await manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
       
       // Cleanup
       manager.cleanup();
       
       // Credential should no longer be available
-      expect(() => manager.getCredential('anthropic')).toThrow();
+      await expect(manager.getCredential('anthropic')).rejects.toThrow();
     });
   });
 });

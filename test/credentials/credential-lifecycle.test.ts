@@ -157,12 +157,12 @@ describe('Credential Lifecycle Issues', () => {
         })
       });
       
-      // Getting credential after expiration should throw an error
-      // (auto-refresh is not yet implemented)
-      await expect(manager.getCredential('anthropic')).rejects.toThrow('Credential for anthropic has expired');
+      // Getting credential after expiration should trigger auto-refresh
+      const refreshedCred = await manager.getCredential('anthropic');
+      expect(refreshedCred).toBe('vended-key-refreshed');
       
-      // The test is set up correctly for when auto-refresh is implemented
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      // Should have called exchange endpoint twice: initial + refresh
+      expect(global.fetch).toHaveBeenCalledTimes(2);
     }, 10000); // Longer timeout for the sleep
   });
 

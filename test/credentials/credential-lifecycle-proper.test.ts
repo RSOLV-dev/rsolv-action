@@ -153,8 +153,23 @@ describe('Credential Lifecycle Issues - TDD', () => {
       // Wait for expiration
       await new Promise(resolve => setTimeout(resolve, 150));
       
-      // After expiration, getCredential should throw
-      expect(() => manager.getCredential('anthropic')).toThrow('has expired');
+      // After expiration, getCredential should auto-refresh
+      // Mock the refresh response
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          credentials: {
+            anthropic: { 
+              api_key: 'vended-refreshed', 
+              expires_at: new Date(Date.now() + 3600000).toISOString()
+            }
+          },
+          usage: { remaining_fixes: 999999 }
+        })
+      });
+      
+      const refreshedCred = await manager.getCredential('anthropic');
+      expect(refreshedCred).toBe('vended-refreshed');
       
       manager.cleanup();
     });
