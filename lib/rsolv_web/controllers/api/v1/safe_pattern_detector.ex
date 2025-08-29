@@ -42,79 +42,18 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     safe && !Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
   end
   
-  defp get_timing_safe_patterns("javascript"), do: [
-    ~r/===\s+[A-Z][A-Z_]+/,              # Constant comparison
-    ~r/===\s+\w+\.[A-Z]/,                # Module constant
-    ~r/\.code\s*===\s*DOMException\./,  # DOMException constants
-    ~r/\.status\s*===\s*\d+/,           # HTTP status codes
-  ]
-  defp get_timing_safe_patterns("python"), do: [
-    ~r/==\s+[A-Z][A-Z_]+/,               # Constant comparison
-    ~r/==\s+\w+\.[A-Z]/,                 # Module constant
-    ~r/\.status_code\s*==\s*\d+/,       # HTTP status codes
-  ]
-  defp get_timing_safe_patterns("ruby"), do: [
-    ~r/==\s+[A-Z][A-Z_]+/,               # Constant comparison
-    ~r/==\s+::\w+/,                      # Module constant
-    ~r/\.status\s*==\s*\d+/,             # HTTP status codes
-  ]
-  defp get_timing_safe_patterns("php"), do: [
-    ~r/===\s+[A-Z][A-Z_]+/,              # Constant comparison
-    ~r/===\s+\w+::[A-Z]/,                # Class constant
-    ~r/->getStatusCode\(\)\s*===\s*\d+/, # HTTP status codes
-  ]
-  defp get_timing_safe_patterns(_), do: []
-
-  defp get_sql_safe_patterns("javascript"), do: [
-    ~r/\$\d+/,                            # PostgreSQL params ($1, $2)
-    ~r/\?\s*[,\)]/,                       # MySQL params (?)
-    ~r/:\w+/,                             # Named params (:id, :name)
-    ~r/\.query\([^,]+,\s*\[/,            # Parameterized query with array
-    ~r/\.prepare\(/,                      # Prepared statements
-  ]
-  defp get_sql_safe_patterns("python"), do: [
-    ~r/%s/,                               # Python DB-API params
-    ~r/\?\s*[,\)]/,                       # SQLite params
-    ~r/:\w+/,                             # Named params
-    ~r/\.execute\([^,]+,\s*[\[\(]/,      # Parameterized execute
-  ]
-  defp get_sql_safe_patterns("ruby"), do: [
-    ~r/\?\s*[,\)]/,                       # Placeholder params
-    ~r/:\w+/,                             # Named params
-    ~r/\.where\([^,]+,\s*[\[\{]/,        # Rails where with params
-  ]
-  defp get_sql_safe_patterns("php"), do: [
-    ~r/\?\s*[,\)]/,                       # PDO placeholders
-    ~r/:\w+/,                             # PDO named params
-    ~r/->prepare\(/,                      # Prepared statements
-    ~r/->bind_param\(/,                   # mysqli bind
-  ]
-  defp get_sql_safe_patterns(_), do: []
-
-  defp get_nosql_safe_patterns("javascript"), do: [
-    ~r/\.find\(\{[^$]*\}\)/,             # No $where
-    ~r/\.findOne\(\{[^$]*\}\)/,          # No $where
-    ~r/\.findById\(/,                    # Safe findById
-    ~r/\.updateOne\(\{[^$]*\}/,          # No $where in update
-  ]
-  defp get_nosql_safe_patterns("python"), do: [
-    ~r/\.find\(\{[^$]*\}\)/,             # No $where
-    ~r/\.find_one\(\{[^$]*\}\)/,         # No $where
-  ]
-  defp get_nosql_safe_patterns(_), do: []
-
   def is_safe_pattern?(:sql_injection, code, %{language: language}) do
-    patterns = get_sql_safe_patterns(language)
-    safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
+    # First check for definitely unsafe patterns
+    unsafe_patterns = get_sql_unsafe_patterns(language)
+    is_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
     
-    # Check for unsafe concatenation that overrides safe patterns
-    unsafe_patterns = [
-      ~r/\+\s*['"]?\s*\w+/,           # String concatenation
-      ~r/WHERE.*\+\s*/i,               # WHERE clause concatenation
-      ~r/VALUES.*\+\s*/i,              # VALUES concatenation
-    ]
-    
-    safe && !Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    if is_unsafe do
+      false
+    else
+      # Then check for safe patterns
+      patterns = get_sql_safe_patterns(language)
+      Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
+    end
   end
   
   def is_safe_pattern?(:nosql_injection, code, %{language: "javascript"}) do
@@ -130,30 +69,6 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
   
   def is_safe_pattern?(:nosql_injection, _code, _context), do: false
   
-  defp get_xss_safe_patterns("javascript"), do: [
-    ~r/\.textContent\s*=/,               # Safe text content
-    ~r/\.innerText\s*=/,                # Safe inner text
-    ~r/\.render\(/,                      # Template rendering (usually safe)
-    ~r/escape\(/,                        # Escaping function
-    ~r/sanitize\(/,                      # Sanitization
-  ]
-  defp get_xss_safe_patterns("python"), do: [
-    ~r/escape\(/,                        # Escaping
-    ~r/markup\.escape\(/,                # Markup escape
-    ~r/\.render\(/,                      # Template rendering
-  ]
-  defp get_xss_safe_patterns("ruby"), do: [
-    ~r/html_safe/,                       # Rails html_safe
-    ~r/escape_html\(/,                   # HTML escaping
-    ~r/h\(/,                             # Rails h() helper
-  ]
-  defp get_xss_safe_patterns("php"), do: [
-    ~r/htmlspecialchars\(/,              # PHP escaping
-    ~r/htmlentities\(/,                  # PHP entities
-    ~r/filter_var\(/,                    # Input filtering
-  ]
-  defp get_xss_safe_patterns(_), do: []
-
   def is_safe_pattern?(:xss, code, %{language: language}) do
     patterns = get_xss_safe_patterns(language)
     safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
@@ -206,16 +121,36 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
   end
   
   def is_safe_pattern?(:path_traversal, code, %{language: _language}) do
-    # Check for path sanitization
+    # Check for definite unsafe patterns
+    unsafe_patterns = [
+      ~r/user_?[Pp]ath/,                # user path variables
+      ~r/user_?[Ff]ile/,                # user file variables  
+      ~r/user[Mm]odule/,                # userModule variable
+      ~r/req\.\w+/,                    # request data
+      ~r/params\[/,                    # params hash
+      ~r/\$_GET/,                      # PHP GET params
+      ~r/\$_POST/,                     # PHP POST params
+      ~r/\.\.\//,                      # Path traversal
+    ]
+    
+    has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    
+    # Check for safe sanitization patterns
     safe_patterns = [
       ~r/path\.join\(/,                # path.join
       ~r/path\.resolve\(/,             # path.resolve
-      ~r/\.replace\(\/\.\.\//,         # Removing ../
-      ~r/basename\(/,                  # Using basename
-      ~r/normalize\(/,                 # Path normalization
+      ~r/path\.normalize\(/,           # path.normalize
+      ~r/Path\([^)]*\)\.resolve\(/,    # pathlib.Path().resolve()
+      ~r/os\.path\.join\([A-Z_]+,/,    # os.path.join with constants
+      ~r/Rails\.root\.join\(/,         # Rails.root.join
+      ~r/basename\(/,                  # Using basename (PHP)
+      ~r/realpath\(/,                  # realpath (PHP)
     ]
     
-    Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    
+    # Safe if it has safe patterns AND no unsafe patterns
+    has_safe && !has_unsafe
   end
   
   def is_safe_pattern?(:ssrf, code, %{language: _language}) do
@@ -246,6 +181,122 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
   
   # Default case - not recognized as safe
   def is_safe_pattern?(_vulnerability_type, _code, _context), do: false
+  
+  # Private helper functions
+  
+  defp get_timing_safe_patterns("javascript"), do: [
+    ~r/===\s+[A-Z][A-Z_]+/,              # Constant comparison
+    ~r/===\s+\w+\.[A-Z]/,                # Module constant
+    ~r/\.code\s*===\s*DOMException\./,  # DOMException constants
+    ~r/\.status\s*===\s*\d+/,           # HTTP status codes
+  ]
+  defp get_timing_safe_patterns("python"), do: [
+    ~r/==\s+[A-Z][A-Z_]+/,               # Constant comparison
+    ~r/==\s+\w+\.[A-Z]/,                 # Module constant
+    ~r/\.status_code\s*==\s*\d+/,       # HTTP status codes
+  ]
+  defp get_timing_safe_patterns("ruby"), do: [
+    ~r/==\s+[A-Z][A-Z_]+/,               # Constant comparison
+    ~r/==\s+::\w+/,                      # Module constant
+    ~r/\.status\s*==\s*\d+/,             # HTTP status codes
+  ]
+  defp get_timing_safe_patterns("php"), do: [
+    ~r/===\s+[A-Z][A-Z_]+/,              # Constant comparison
+    ~r/===\s+\w+::[A-Z]/,                # Class constant
+    ~r/->getStatusCode\(\)\s*===\s*\d+/, # HTTP status codes
+  ]
+  defp get_timing_safe_patterns(_), do: []
+
+  defp get_sql_unsafe_patterns("javascript"), do: [
+    ~r/SELECT.*\+\s*\w+/i,               # SELECT with concatenation
+    ~r/WHERE.*\+\s*\w+/i,                # WHERE with concatenation  
+    ~r/VALUES.*\+\s*\w+/i,               # VALUES with concatenation
+    ~r/FROM\s+['"]?\s*\+\s*/i,          # FROM with concatenation
+    ~r/query\([^,]*\+[^,]*\)/,           # query() with concatenation
+  ]
+  defp get_sql_unsafe_patterns("python"), do: [
+    ~r/SELECT.*["']\s*%\s*\w+/i,         # SELECT with % formatting (not parameterized)
+    ~r/WHERE.*["']\s*%\s*\w+/i,          # WHERE with % formatting (not parameterized)
+    ~r/VALUES.*["']\s*%\s*\w+/i,         # VALUES with % formatting (not parameterized)
+    ~r/execute\([^,]+["']\s*%\s*[^,)]+\)$/,  # execute() with % formatting without params
+    ~r/SELECT.*f["']/i,                  # f-string in SQL
+    ~r/WHERE.*f["']/i,                   # f-string in WHERE
+  ]
+  defp get_sql_unsafe_patterns("ruby"), do: [
+    ~r/SELECT.*#\{/i,                    # SELECT with interpolation
+    ~r/WHERE.*#\{/i,                     # WHERE with interpolation
+    ~r/VALUES.*#\{/i,                    # VALUES with interpolation
+    ~r/exec\([^,]*\+[^,]*\)/,            # exec() with concatenation
+  ]
+  defp get_sql_unsafe_patterns("php"), do: [
+    ~r/SELECT.*\.\s*\$/i,                # SELECT with concatenation
+    ~r/WHERE.*\.\s*\$/i,                 # WHERE with concatenation
+    ~r/VALUES.*\.\s*\$/i,                # VALUES with concatenation
+    ~r/query\([^,]*\.\s*\$/,             # query() with concatenation
+  ]
+  defp get_sql_unsafe_patterns(_), do: []
+
+  defp get_sql_safe_patterns("javascript"), do: [
+    ~r/\$\d+/,                            # PostgreSQL params ($1, $2)
+    ~r/\?\s*[,\)]/,                       # MySQL params (?)
+    ~r/:\w+/,                             # Named params (:id, :name)
+    ~r/\.query\([^,]+,\s*\[/,            # Parameterized query with array
+    ~r/\.prepare\(/,                      # Prepared statements
+  ]
+  defp get_sql_safe_patterns("python"), do: [
+    ~r/\.execute\([^,]+,\s*[\[\(]/,      # Parameterized execute with params
+    ~r/\.executemany\([^,]+,\s*[\[\(]/,  # Parameterized executemany
+    ~r/\?\s*[,\)]/,                       # SQLite params when not using %
+    ~r/:\w+/,                             # Named params
+  ]
+  defp get_sql_safe_patterns("ruby"), do: [
+    ~r/\?\s*[,\)]/,                       # Placeholder params
+    ~r/:\w+/,                             # Named params
+    ~r/\.where\([^,]+,\s*[\[\{]/,        # Rails where with params
+  ]
+  defp get_sql_safe_patterns("php"), do: [
+    ~r/\?\s*[,\)]/,                       # PDO placeholders
+    ~r/:\w+/,                             # PDO named params
+    ~r/->prepare\(/,                      # Prepared statements
+    ~r/->bind_param\(/,                   # mysqli bind
+  ]
+  defp get_sql_safe_patterns(_), do: []
+
+  defp get_nosql_safe_patterns("javascript"), do: [
+    ~r/\.find\(\{[^$]*\}\)/,             # No $where
+    ~r/\.findOne\(\{[^$]*\}\)/,          # No $where
+    ~r/\.findById\(/,                    # Safe findById
+    ~r/\.updateOne\(\{[^$]*\}/,          # No $where in update
+  ]
+  defp get_nosql_safe_patterns("python"), do: [
+    ~r/\.find\(\{[^$]*\}\)/,             # No $where
+    ~r/\.find_one\(\{[^$]*\}\)/,         # No $where
+  ]
+  defp get_nosql_safe_patterns(_), do: []
+  
+  defp get_xss_safe_patterns("javascript"), do: [
+    ~r/\.textContent\s*=/,               # Safe text content
+    ~r/\.innerText\s*=/,                # Safe inner text
+    ~r/\.render\(/,                      # Template rendering (usually safe)
+    ~r/escape\(/,                        # Escaping function
+    ~r/sanitize\(/,                      # Sanitization
+  ]
+  defp get_xss_safe_patterns("python"), do: [
+    ~r/escape\(/,                        # Escaping
+    ~r/markup\.escape\(/,                # Markup escape
+    ~r/\.render\(/,                      # Template rendering
+  ]
+  defp get_xss_safe_patterns("ruby"), do: [
+    ~r/html_safe/,                       # Rails html_safe
+    ~r/escape_html\(/,                   # HTML escaping
+    ~r/h\(/,                             # Rails h() helper
+  ]
+  defp get_xss_safe_patterns("php"), do: [
+    ~r/htmlspecialchars\(/,              # PHP escaping
+    ~r/htmlentities\(/,                  # PHP entities
+    ~r/filter_var\(/,                    # Input filtering
+  ]
+  defp get_xss_safe_patterns(_), do: []
   
   @doc """
   Explains why a pattern was considered safe or unsafe.

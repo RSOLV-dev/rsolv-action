@@ -69,11 +69,11 @@ defmodule Rsolv.Telemetry.ValidationReporter do
     |> update_in([:false_positives, :rejected], &(&1 + measurements.rejected_count))
 
     # Track which patterns are being rejected
-    pattern_state = Enum.reduce(metadata.pattern_ids || [], state.pattern_rejections, fn pattern_id, acc ->
+    pattern_state = Enum.reduce(metadata.pattern_ids || [], new_state.pattern_rejections, fn pattern_id, acc ->
       Map.update(acc, pattern_id, 1, &(&1 + 1))
     end)
 
-    {:noreply, %{state | pattern_rejections: pattern_state}}
+    {:noreply, %{new_state | pattern_rejections: pattern_state}}
   end
 
   def handle_cast(:cache_hit, state) do

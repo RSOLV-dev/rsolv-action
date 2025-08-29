@@ -5,7 +5,6 @@ defmodule RsolvWeb.Plugs.CacheFeaturePlug do
   """
   
   import Plug.Conn
-  import Phoenix.Controller
   
   alias FunWithFlags, as: Flags
   alias RsolvWeb.Api.V1.VulnerabilityValidationController

@@ -62,4 +62,15 @@ Application.ensure_all_started(:fun_with_flags)
 # Replace HTTPoison with mock during testing
 Application.put_env(:rsolv, :http_client, Rsolv.HTTPClientMock)
 
+# Configure ConvertKit/Kit.com API from environment variables
+# These are set in .envrc or K8s secrets
+convertkit_config = [
+  api_key: System.get_env("KIT_API_KEY"),
+  api_url: System.get_env("KIT_API_URL", "https://api.convertkit.com/v3"),
+  form_id: System.get_env("KIT_FORM_ID"),
+  ea_tag_id: System.get_env("KIT_EA_TAG_ID")
+]
+
+Application.put_env(:rsolv, :convertkit, convertkit_config)
+
 # No longer using AnalyticsStorage - removed

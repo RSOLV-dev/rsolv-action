@@ -398,7 +398,7 @@ defmodule Rsolv.AST.TestCase do
   def find_nodes(_, _), do: []
   
   # Helper to run parser and get AST
-  def parse_code(language, code) do
+  def parse_code(language, _code) do
     case language do
       lang when lang in ["python", "ruby"] ->
         # Direct parsing removed - use PortSupervisor.parse instead

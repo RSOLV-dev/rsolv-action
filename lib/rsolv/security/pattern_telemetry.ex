@@ -66,13 +66,14 @@ defmodule Rsolv.Security.PatternTelemetry do
     )
     
     # Update Prometheus metrics if available
-    if function_exported?(:prometheus_histogram, :observe, 2) do
-      :prometheus_histogram.observe(
-        :pattern_fetch_duration_milliseconds,
-        [metadata.language, to_string(Map.get(metadata, :tier, "all"))],
-        duration_ms
-      )
-    end
+    # Commented out as we're using telemetry-based metrics through PromEx
+    # if function_exported?(:prometheus_histogram, :observe, 2) do
+    #   :prometheus_histogram.observe(
+    #     :pattern_fetch_duration_milliseconds,
+    #     [metadata.language, to_string(Map.get(metadata, :tier, "all"))],
+    #     duration_ms
+    #   )
+    # end
   end
   
   defp handle_cache_event([:pattern, :cache, type], _measurements, metadata, _config) do
@@ -82,12 +83,13 @@ defmodule Rsolv.Security.PatternTelemetry do
     )
     
     # Increment counter
-    if function_exported?(:prometheus_counter, :inc, 2) do
-      :prometheus_counter.inc(
-        :pattern_cache_operations_total,
-        [to_string(type), metadata.language, to_string(Map.get(metadata, :tier, "all"))]
-      )
-    end
+    # Commented out as we're using telemetry-based metrics through PromEx
+    # if function_exported?(:prometheus_counter, :inc, 2) do
+    #   :prometheus_counter.inc(
+    #     :pattern_cache_operations_total,
+    #     [to_string(type), metadata.language, to_string(Map.get(metadata, :tier, "all"))]
+    #   )
+    # end
   end
   
   defp handle_compile_event(_event, measurements, metadata, _config) do
@@ -110,12 +112,13 @@ defmodule Rsolv.Security.PatternTelemetry do
     )
     
     # Track match rates
-    if function_exported?(:prometheus_counter, :inc, 2) do
-      :prometheus_counter.inc(
-        :pattern_matches_total,
-        [metadata.pattern_id, to_string(metadata.matched)]
-      )
-    end
+    # Commented out as we're using telemetry-based metrics through PromEx
+    # if function_exported?(:prometheus_counter, :inc, 2) do
+    #   :prometheus_counter.inc(
+    #     :pattern_matches_total,
+    #     [metadata.pattern_id, to_string(metadata.matched)]
+    #   )
+    # end
   end
   
   defp handle_ai_review(_event, measurements, metadata, _config) do
@@ -130,13 +133,14 @@ defmodule Rsolv.Security.PatternTelemetry do
     )
     
     # Track AI costs
-    if function_exported?(:prometheus_counter, :inc, 2) do
-      :prometheus_counter.inc(
-        :ai_review_cost_cents,
-        [metadata.provider],
-        round(metadata.cost * 100)
-      )
-    end
+    # Commented out as we're using telemetry-based metrics through PromEx
+    # if function_exported?(:prometheus_counter, :inc, 3) do
+    #   :prometheus_counter.inc(
+    #     :ai_review_cost_cents,
+    #     [metadata.provider],
+    #     round(metadata.cost * 100)
+    #   )
+    # end
   end
   
   # Metrics Reporting
