@@ -3,12 +3,13 @@
  * These tests define the expected behavior before implementation
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, vi } from 'vitest';
+import { parseIssueBody, enhanceValidationData } from '../issue-body-parser.js';
 import type { 
   IssueBodyVulnerability,
   ParsedIssueBody,
   FileVulnerabilityMapping 
-} from '../issue-body-parser';
+} from '../issue-body-parser.js';
 
 describe('IssueBodyParser', () => {
   describe('parseIssueBody', () => {
@@ -26,8 +27,6 @@ describe('IssueBodyParser', () => {
 
 ### Recommendation`;
 
-      // Import will fail until we implement it - that's TDD!
-      const { parseIssueBody } = require('../issue-body-parser');
       const result: ParsedIssueBody = parseIssueBody(issueBody);
 
       expect(result.type).toBe('Weak_cryptography');
@@ -56,7 +55,6 @@ describe('IssueBodyParser', () => {
 
 - **Line 5**: Debug mode enabled in production`;
 
-      const { parseIssueBody } = require('../issue-body-parser');
       const result: ParsedIssueBody = parseIssueBody(issueBody);
 
       expect(result.files).toHaveLength(2);
@@ -82,7 +80,6 @@ describe('IssueBodyParser', () => {
 
 ### Recommendation`;
 
-      const { parseIssueBody } = require('../issue-body-parser');
       const result: ParsedIssueBody = parseIssueBody(issueBody);
 
       expect(result.files).toHaveLength(1);
@@ -93,7 +90,6 @@ describe('IssueBodyParser', () => {
     test('should handle malformed issue body without crashing', () => {
       const issueBody = `This is not a properly formatted issue body`;
 
-      const { parseIssueBody } = require('../issue-body-parser');
       const result: ParsedIssueBody = parseIssueBody(issueBody);
 
       expect(result.type).toBeUndefined();
@@ -108,7 +104,6 @@ describe('IssueBodyParser', () => {
         { input: '**Type**: Command_injection', expected: 'Command_injection' },
       ];
 
-      const { parseIssueBody } = require('../issue-body-parser');
 
       testCases.forEach(({ input, expected }) => {
         const result = parseIssueBody(`## Report\n${input}\n### Files`);
@@ -123,7 +118,6 @@ describe('IssueBodyParser', () => {
 
 - **Line 42**: XSS vulnerability`;
 
-      const { parseIssueBody } = require('../issue-body-parser');
       const result: ParsedIssueBody = parseIssueBody(issueBody);
 
       expect(result.files[0].path).toBe('src/components/[id]/page.tsx');
@@ -157,7 +151,6 @@ describe('IssueBodyParser', () => {
         ]
       };
 
-      const { enhanceValidationData } = require('../issue-body-parser');
       const enhanced = enhanceValidationData(validationData, parsedBody);
 
       expect(enhanced.vulnerabilities[0].file).toBe('app/assets/vendor/jquery.min.js');
@@ -192,7 +185,6 @@ describe('IssueBodyParser', () => {
         ]
       };
 
-      const { enhanceValidationData } = require('../issue-body-parser');
       const enhanced = enhanceValidationData(validationData, parsedBody);
 
       // Should match vulnerabilities to correct files by line number
@@ -223,7 +215,6 @@ describe('IssueBodyParser', () => {
         ]
       };
 
-      const { enhanceValidationData } = require('../issue-body-parser');
       const enhanced = enhanceValidationData(validationData, parsedBody);
 
       // Should keep unmatched as-is

@@ -1,15 +1,21 @@
-import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
+import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { loadConfig } from '../../src/config/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
 // Mock the logger to avoid debug function issues
-mock.module('../../src/utils/logger.js', () => ({
+vi.mock('../../src/utils/logger.js', () => ({
+  Logger: class {
+    debug = vi.fn();
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+  },
   logger: {
-    debug: mock(() => {}),
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {})
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
   }
 }));
 
@@ -24,7 +30,7 @@ function clearMockFiles() {
 }
 
 // Mock file system
-mock.module('fs', () => {
+vi.mock('fs', () => {
   const actualFs = require('fs');
   
   return {

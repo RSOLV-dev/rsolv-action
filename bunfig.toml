@@ -2,11 +2,12 @@
 # Enhanced test configuration based on Bun pollution research
 # https://github.com/oven-sh/bun/issues/6040 - mock pollution
 # https://github.com/oven-sh/bun/discussions/4831 - sequential execution
-preload = ["./test-preload.ts"]
+preload = ["./test/test-setup.ts"]
 # Force sequential execution to prevent test interference
 bail = false
 # Extended timeout for integration tests with enhanced cleanup
-timeout = 30000
+# Reduced to 10 seconds - tests should be faster or split up
+timeout = 10000
 # Disable hot reloading to prevent state leakage
 hot = false
 # Enhanced module resolution

@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ASTValidator } from '../../src/scanner/ast-validator.js';
 import { RsolvApiClient } from '../../src/external/api-client.js';
 import type { Vulnerability } from '../../src/security/types.js';
 import { VulnerabilityType } from '../../src/security/types.js';
 
 // Mock the API client
-mock.module('../../src/external/api-client.js', () => {
+vi.mock('../../src/external/api-client.js', () => {
   return {
-    RsolvApiClient: mock(() => ({
-      validateVulnerabilities: mock()
+    RsolvApiClient: vi.fn(() => ({
+      validateVulnerabilities: vi.fn()
     }))
   };
 });

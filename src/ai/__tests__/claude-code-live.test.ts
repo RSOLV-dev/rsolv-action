@@ -2,14 +2,36 @@
  * Live API tests for Claude Code adapter
  * These tests make real calls to Claude Code CLI
  * 
- * Run with: CLAUDE_CODE_LIVE_TEST=true bun test claude-code-live.test.ts
+ * Run with: CLAUDE_CODE_LIVE_TEST=true vitest claude-code-live.test.ts
+ * Or automatically enabled when Claude Max is available
  */
-import { test, expect, describe } from 'bun:test';
+import { test, expect, describe, vi, beforeAll } from 'vitest';
 import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
 import { AIConfig } from '../types.js';
+import { execSync } from 'child_process';
+import { isClaudeMaxAvailable } from '../adapters/claude-code-cli-dev.js';
 
-// Skip these tests unless explicitly enabled
-const skipLiveTests = process.env.CLAUDE_CODE_LIVE_TEST !== 'true';
+// Detect Claude Max availability at module load time
+let canUseClaudeMax = false;
+let skipLiveTests = true;
+
+try {
+  // Try to detect Claude Max, but handle any errors gracefully
+  canUseClaudeMax = isClaudeMaxAvailable();
+} catch (error) {
+  canUseClaudeMax = false;
+}
+
+skipLiveTests = process.env.CLAUDE_CODE_LIVE_TEST !== 'true' && !canUseClaudeMax;
+
+// Only log when tests will actually run
+if (!skipLiveTests) {
+  if (canUseClaudeMax) {
+    console.log('🎉 Claude Max detected - enabling Claude Code live tests without API credits');
+  } else {
+    console.log('📝 Running Claude Code tests with CLAUDE_CODE_LIVE_TEST=true');
+  }
+}
 
 describe.skipIf(skipLiveTests)('Claude Code Live API Tests', () => {
   const config: AIConfig = {
@@ -60,7 +82,7 @@ describe.skipIf(skipLiveTests)('Claude Code Live API Tests', () => {
     expect(typeof available).toBe('boolean');
   });
 
-  test.skipIf(!process.env.CLAUDE_CODE_AVAILABLE)('should generate real solution using Claude Code', async () => {
+  test.skipIf(!process.env.CLAUDE_CODE_AVAILABLE && !canUseClaudeMax)('should generate real solution using Claude Code', async () => {
     const adapter = new ClaudeCodeAdapter(config);
     
     // First check if Claude Code is available
@@ -92,7 +114,7 @@ describe.skipIf(skipLiveTests)('Claude Code Live API Tests', () => {
     }
   }, 30000); // 30 second timeout for live API call
 
-  test.skipIf(!process.env.CLAUDE_CODE_AVAILABLE)('should work with enhanced prompts in live mode', async () => {
+  test.skipIf(!process.env.CLAUDE_CODE_AVAILABLE && !canUseClaudeMax)('should work with enhanced prompts in live mode', async () => {
     const adapter = new ClaudeCodeAdapter(config);
     
     const available = await adapter.isAvailable();
@@ -126,6 +148,36 @@ describe.skipIf(skipLiveTests)('Claude Code Live API Tests', () => {
 
 // Integration test with real file system
 describe.skipIf(skipLiveTests)('Claude Code File System Integration', () => {
+  // Define test data for this describe block
+  const issueContext = {
+    id: '123',
+    number: 1,
+    title: 'Fix SQL injection vulnerability in login',
+    body: 'The login function uses string concatenation for SQL queries, making it vulnerable to SQL injection attacks.',
+    labels: ['security', 'bug'],
+    assignees: [],
+    repository: {
+      owner: 'test',
+      name: 'repo',
+      fullName: 'test/repo',
+      defaultBranch: 'main',
+      language: 'JavaScript'
+    },
+    source: 'github' as const,
+    url: 'https://github.com/test/repo/issues/1',
+    createdAt: '2024-01-01',
+    updatedAt: '2024-01-01'
+  };
+
+  const issueAnalysis = {
+    summary: 'SQL injection vulnerability in authentication system',
+    complexity: 'medium' as const,
+    estimatedTime: 45,
+    potentialFixes: ['Use parameterized queries', 'Use prepared statements'],
+    recommendedApproach: 'Replace string concatenation with parameterized queries',
+    relatedFiles: ['src/auth/login.js']
+  };
+  
   test('should handle real file operations', async () => {
     const config: AIConfig = {
       provider: 'claude-code',

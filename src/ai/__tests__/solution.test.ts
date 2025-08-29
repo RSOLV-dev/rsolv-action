@@ -1,10 +1,10 @@
-import { describe, expect, test, mock } from 'bun:test';
+import { describe, expect, test, vi } from 'vitest';
 import { generateSolution } from '../solution.js';
 import { IssueContext, ActionConfig, AnalysisData } from '../../types/index.js';
 
 // Mock the AI client using require.resolve
-const clientPath = require.resolve('../client');
-mock.module(clientPath, () => {
+// Removed require.resolve
+vi.mock('../client', () => {
   return {
     getAiClient: () => ({
       complete: async () => `Here's the solution:
@@ -24,9 +24,8 @@ This fixes the error handling in the component.`
   };
 });
 
-// Mock the Claude Code adapter using require.resolve
-const claudeCodePath = require.resolve('../adapters/claude-code');
-mock.module(claudeCodePath, () => {
+// Mock the Claude Code adapter
+vi.mock('../adapters/claude-code', () => {
   return {
     ClaudeCodeAdapter: class MockClaudeCodeAdapter {
       constructor(_config: any, _repoPath: string) {}
@@ -51,8 +50,8 @@ mock.module(claudeCodePath, () => {
 });
 
 // Mock the credentials manager using require.resolve
-const credentialManagerPath = require.resolve('../../credentials/manager');
-mock.module(credentialManagerPath, () => ({
+// Removed require.resolve
+vi.mock('../../credentials/manager', () => ({
   initialize: async () => {
     throw new Error('Test mode - using mock credentials');
   },
@@ -64,8 +63,8 @@ mock.module(credentialManagerPath, () => ({
 }));
 
 // Mock the GitHub files module using require.resolve
-const githubFilesPath = require.resolve('../../github/files');
-mock.module(githubFilesPath, () => ({
+// Removed require.resolve
+vi.mock('../../github/files', () => ({
   getRepositoryFiles: async () => ({
     'src/component.ts': '// Original component code',
     'src/util.ts': '// Original util code'

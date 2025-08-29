@@ -16,16 +16,39 @@ import { execSync } from 'child_process';
  */
 export function isClaudeMaxAvailable(): boolean {
   try {
-    // Check if claude command exists and works
-    const result = execSync('echo "test" | claude --print 2>&1', { 
+    // First check if claude command exists
+    try {
+      execSync('which claude', { stdio: 'ignore' });
+    } catch {
+      return false; // Claude CLI not installed
+    }
+    
+    // Check if claude command works - try --version first as it's simpler
+    let versionWorks = false;
+    try {
+      const versionResult = execSync('claude --version 2>&1', { 
+        encoding: 'utf-8',
+        timeout: 5000
+      }).toString().trim();
+      
+      logger.debug(`Claude CLI version: ${versionResult}`);
+      versionWorks = true;
+    } catch (versionError: any) {
+      logger.debug('Claude CLI version check failed:', versionError.message);
+      return false;
+    }
+    
+    // If version works, check if authenticated by trying a simple command
+    // Use shell:true to handle pipes properly
+    const result = execSync('echo "test" | claude --print 2>&1 || echo "FAILED"', { 
       encoding: 'utf-8',
-      timeout: 10000,
-      stdio: ['pipe', 'pipe', 'pipe']
+      timeout: 30000,
+      shell: true
     }).toString().trim();
     
     // If we get any response that's not an error, it's working
+    // Note: We're being lenient here - even "Invalid API key" means CLI is installed
     const isWorking = result.length > 0 && 
-                      !result.toLowerCase().includes('error') && 
                       !result.toLowerCase().includes('authenticate') &&
                       !result.toLowerCase().includes('not found');
     
@@ -120,6 +143,23 @@ export class ClaudeCodeMaxAdapter extends RetryableClaudeCodeCLI {
     
     // Fall back to standard implementation (API key based)
     return super.generateSolution(issueContext, analysis, enhancedPrompt);
+  }
+  
+  /**
+   * Generate solution with git support (wrapper for compatibility)
+   */
+  async generateSolutionWithGit(
+    issueContext: IssueContext,
+    analysis: IssueAnalysis,
+    enhancedPrompt?: string,
+    testResults?: any,
+    validationResult?: any,
+    validationContext?: any
+  ): Promise<CLISolutionResult> {
+    // In dev mode with Claude Max, we use the simpler generateSolution
+    // The git operations are handled by Claude Code Max directly
+    logger.info('Claude Code Max: Using generateSolution (git operations handled by Claude)');
+    return this.generateSolution(issueContext, analysis, enhancedPrompt);
   }
   
   /**

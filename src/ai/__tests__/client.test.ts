@@ -1,23 +1,21 @@
 /**
  * Tests for the AI client factory
  */
-import { test, expect, mock, describe, beforeEach } from 'bun:test';
+import { test, expect, vi, describe, beforeEach, vi } from 'vitest';
 import { getAiClient } from '../client.js';
 
 // Mock the logger to avoid noisy logs
-const loggerPath = require.resolve('../../utils/logger');
-mock.module(loggerPath, () => ({
+vi.mock('../../utils/logger', () => ({
   logger: {
+    debug: vi.fn(() => {}),
     info: () => {},
     warn: () => {},
-    error: () => {},
-    debug: () => {}
+    error: () => {}
   }
 }));
 
 // Mock the credential manager
-const credentialManagerPath = require.resolve('../../credentials/manager');
-mock.module(credentialManagerPath, () => ({
+vi.mock('../../credentials/manager', () => ({
   RSOLVCredentialManager: class MockCredentialManager {
     private credentials = new Map<string, string>();
     
@@ -99,13 +97,13 @@ describe('AI Client Factory', () => {
     });
 
     test('should throw for unknown providers', async () => {
-      await expect(async () => {
-        await getAiClient({
+      await expect(
+        getAiClient({
           // @ts-expect-error - Testing with invalid provider
           provider: 'unknown-provider',
           apiKey: 'test-key'
-        });
-      }).toThrow('Unsupported AI provider: unknown-provider');
+        })
+      ).rejects.toThrow('Unsupported AI provider: unknown-provider');
     });
   });
 
@@ -124,15 +122,12 @@ describe('AI Client Factory', () => {
     test('should handle missing RSOLV_API_KEY gracefully', async () => {
       process.env.RSOLV_API_KEY = '';
       
-      // Should still create client but credential manager initialization might fail
-      const client = await getAiClient({
+      // Should throw an error when RSOLV_API_KEY is missing
+      await expect(getAiClient({
         provider: 'anthropic',
         apiKey: '',
         useVendedCredentials: true
-      });
-      
-      expect(client).toBeDefined();
-      // Actual API calls would fail later due to missing credentials
+      })).rejects.toThrow('RSOLV_API_KEY environment variable not set for vended credentials');
     });
 
     test('should not require API key when using vended credentials', async () => {
@@ -147,13 +142,13 @@ describe('AI Client Factory', () => {
     });
 
     test('should throw error when no API key and not using vended credentials', async () => {
-      await expect(async () => {
-        await getAiClient({
+      await expect(
+        getAiClient({
           provider: 'anthropic',
           apiKey: '',  // No API key
           useVendedCredentials: false
-        });
-      }).toThrow('AI provider API key is required');
+        })
+      ).rejects.toThrow('AI provider API key is required');
     });
   });
 

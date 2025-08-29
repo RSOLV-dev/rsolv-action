@@ -5,7 +5,7 @@
  * Following TDD: These tests should FAIL initially
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ModeSelector } from '../mode-selector.js';
 import { ModeConfig } from '../types.js';
 

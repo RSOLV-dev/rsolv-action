@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { LinearAdapter } from './linear-adapter';
 import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 

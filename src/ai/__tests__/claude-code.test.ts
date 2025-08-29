@@ -1,13 +1,20 @@
 /**
  * Tests for Claude Code adapter
  */
-import { test, expect, mock, describe } from 'bun:test';
+import { test, expect, vi, describe } from 'vitest';
 import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
 import { AIConfig } from '../types.js';
 
 // Mock the logger to avoid console output during tests
-mock.module('../../utils/logger', () => ({
+vi.mock('../../utils/logger', () => ({
+  Logger: class {
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+    debug = vi.fn();
+  },
   logger: {
+    debug: vi.fn(() => {}),
     info: () => {},
     warn: () => {},
     error: () => {},
@@ -17,9 +24,9 @@ mock.module('../../utils/logger', () => ({
 
 describe('Claude Code Adapter', () => {
   // Mock child_process for CLI availability check
-  mock.module('child_process', () => {
+  vi.mock('child_process', () => {
     return {
-      spawn: (command: string, args: string[], _options: any) => {
+      spawn: (command: string, args: string[], _options: unknown) => {
         const mockProcess = {
           stdout: {
             on: (event: string, callback: (data: Buffer) => void) => {
@@ -93,6 +100,7 @@ describe('Claude Code Adapter', () => {
     const enhancedPrompt = 'Enhanced prompt with feedback';
     
     // Access private method through prototype
+    // Access private method for testing
     const prompt = (adapter as any).constructPrompt(issueContext, issueAnalysis, enhancedPrompt);
     
     expect(prompt).toContain(enhancedPrompt);
@@ -102,6 +110,7 @@ describe('Claude Code Adapter', () => {
     const adapter = new ClaudeCodeAdapter(config);
     
     // Access private method through prototype
+    // Access private method for testing
     const prompt = (adapter as any).constructPrompt(issueContext, issueAnalysis);
     
     expect(prompt).toContain(issueContext.title);

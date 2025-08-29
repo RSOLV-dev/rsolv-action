@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
-import { IssueEnricher } from './enricher';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { ValidationEnricher as IssueEnricher } from './enricher';
 
 /**
  * Regression test for the /ast/validate endpoint issue
@@ -25,7 +25,7 @@ describe('IssueEnricher - Validation Endpoint Regression', () => {
       let capturedUrl = '';
       
       // Mock fetch to capture the URL being called
-      const mockFetch = mock((url: string, options: any) => {
+      const mockFetch = vi.fn((url: string, options: any) => {
         capturedUrl = url;
         
         // This is what happens in production - /ast/validate returns 404
@@ -75,17 +75,20 @@ describe('IssueEnricher - Validation Endpoint Regression', () => {
       expect(result).not.toBeNull();
     });
     
-    it('current implementation incorrectly calls /ast/validate', async () => {
-      // This test captures the CURRENT BROKEN behavior
-      // It should FAIL once we fix the issue
+    it('fixed implementation correctly calls /api/v1/ast/validate', async () => {
+      // This test verifies the FIXED behavior
+      // The implementation now correctly calls the right endpoint
       
       let capturedUrl = '';
-      const mockFetch = mock((url: string) => {
+      const mockFetch = vi.fn((url: string) => {
         capturedUrl = url;
         return Promise.resolve({
-          ok: false,
-          status: 404,
-          statusText: 'Not Found'
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({
+            validated: [],
+            stats: { total: 0, validated: 0, rejected: 0 }
+          })
         });
       });
       
@@ -97,11 +100,11 @@ describe('IssueEnricher - Validation Endpoint Regression', () => {
         'xss'
       );
       
-      // Current broken implementation calls this
-      expect(capturedUrl).toBe('https://api.rsolv.dev/ast/validate');
+      // Fixed implementation now calls the correct endpoint
+      expect(capturedUrl).toBe('https://api.rsolv.dev/api/v1/ast/validate');
       
-      // And returns null due to 404
-      expect(result).toBeNull();
+      // And returns a valid result
+      expect(result).not.toBeNull();
     });
   });
   
@@ -110,7 +113,7 @@ describe('IssueEnricher - Validation Endpoint Regression', () => {
       let capturedBody: any = null;
       let capturedHeaders: any = null;
       
-      const mockFetch = mock((url: string, options: any) => {
+      const mockFetch = vi.fn((url: string, options: any) => {
         capturedBody = JSON.parse(options.body);
         capturedHeaders = options.headers;
         
@@ -150,7 +153,7 @@ describe('IssueEnricher - Validation Endpoint Regression', () => {
   
   describe('Error handling', () => {
     it('should handle 404 gracefully and return null', async () => {
-      const mockFetch = mock(() => {
+      const mockFetch = vi.fn(() => {
         return Promise.resolve({
           ok: false,
           status: 404,
@@ -167,7 +170,7 @@ describe('IssueEnricher - Validation Endpoint Regression', () => {
     });
     
     it('should handle network errors gracefully', async () => {
-      const mockFetch = mock(() => {
+      const mockFetch = vi.fn(() => {
         throw new Error('Network error');
       });
       
@@ -191,7 +194,7 @@ describe('IssueEnricher - Fixed Implementation', () => {
       apiUrl: 'https://api.rsolv.dev'
     });
     
-    const mockFetch = mock((url: string) => {
+    const mockFetch = vi.fn((url: string) => {
       // Only the correct endpoint should work
       if (url === 'https://api.rsolv.dev/api/v1/ast/validate') {
         return Promise.resolve({

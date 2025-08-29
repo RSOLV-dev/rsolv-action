@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { 
   LocalPatternSource, 
   ApiPatternSource, 
@@ -8,11 +8,12 @@ import {
 import { VulnerabilityType } from './types.js';
 
 // Mock the logger module
-mock.module('../utils/logger.js', () => ({
+vi.mock('../utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {})
+    debug: vi.fn(() => {}),
+    info: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    error: vi.fn(() => {})
   }
 }));
 
@@ -83,7 +84,7 @@ describe('ApiPatternSource', () => {
 
   beforeEach(() => {
     // Mock global fetch
-    global.fetch = mock(() => Promise.resolve({
+    global.fetch = vi.fn(() => Promise.resolve({
       ok: true,
       json: () => Promise.resolve({ patterns: [] })
     }));
@@ -102,7 +103,7 @@ describe('ApiPatternSource', () => {
       ];
       
       // Mock with specific response
-      global.fetch = mock(() => Promise.resolve({
+      global.fetch = vi.fn(() => Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ 
           count: 2,
@@ -129,7 +130,7 @@ describe('ApiPatternSource', () => {
 
     it('should handle API errors', async () => {
       // Mock with error response
-      global.fetch = mock(() => Promise.resolve({
+      global.fetch = vi.fn(() => Promise.resolve({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error'
@@ -144,11 +145,12 @@ describe('ApiPatternSource', () => {
     it('should fetch patterns for all supported languages', async () => {
       const calls: string[] = [];
       
-      // Mock to track calls
-      global.fetch = mock((url: string) => {
-        const match = url.match(/\/([^/]+)$/);
-        if (match) {
-          calls.push(match[1]);
+      // Mock to track calls - capture the query params
+      global.fetch = vi.fn((url: string) => {
+        const urlObj = new URL(url, 'http://example.com'); // Parse as URL
+        const language = urlObj.searchParams.get('language');
+        if (language) {
+          calls.push(language);
         }
         return Promise.resolve({
           ok: true,
@@ -159,18 +161,18 @@ describe('ApiPatternSource', () => {
       source = new ApiPatternSource('test-api-key');
       await source.getAllPatterns();
       
-      // Should be called for each supported language
-      expect(calls).toContain('patterns?language=javascript&format=enhanced');
-      expect(calls).toContain('patterns?language=python&format=enhanced');
-      expect(calls).toContain('patterns?language=ruby&format=enhanced');
-      expect(calls).toContain('patterns?language=java&format=enhanced');
-      expect(calls).toContain('patterns?language=php&format=enhanced');
-      expect(calls).toContain('patterns?language=elixir&format=enhanced');
+      // Should be called for each supported language  
+      expect(calls).toContain('javascript');
+      expect(calls).toContain('python');
+      expect(calls).toContain('ruby');
+      expect(calls).toContain('java');
+      expect(calls).toContain('php');
+      expect(calls).toContain('elixir');
     });
 
     it('should continue fetching even if some languages fail', async () => {
       // Mock with mixed success/failure
-      global.fetch = mock((url: string) => {
+      global.fetch = vi.fn((url: string) => {
         if (url.includes('javascript')) {
           return Promise.resolve({
             ok: true,
@@ -229,7 +231,7 @@ describe('ApiPatternSource', () => {
 describe('HybridPatternSource', () => {
   beforeEach(() => {
     // Mock fetch for API calls
-    global.fetch = mock(() => Promise.resolve({
+    global.fetch = vi.fn(() => Promise.resolve({
       ok: true,
       json: () => Promise.resolve({ patterns: [] })
     }));
@@ -254,7 +256,7 @@ describe('HybridPatternSource', () => {
     }];
     
     // Mock successful API
-    global.fetch = mock(() => Promise.resolve({
+    global.fetch = vi.fn(() => Promise.resolve({
       ok: true,
       json: () => Promise.resolve({ patterns: apiPatterns })
     }));
@@ -268,7 +270,7 @@ describe('HybridPatternSource', () => {
 
   it('should fall back to local source on API error', async () => {
     // Mock API failure
-    global.fetch = mock(() => Promise.reject(new Error('API Error')));
+    global.fetch = vi.fn(() => Promise.reject(new Error('API Error')));
     
     const source = new HybridPatternSource('test-api-key');
     const patterns = await source.getPatternsByLanguage('javascript');

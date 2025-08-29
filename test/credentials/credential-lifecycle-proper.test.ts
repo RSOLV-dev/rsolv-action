@@ -106,43 +106,20 @@ describe('Credential Lifecycle Issues - TDD', () => {
     });
   });
 
-  describe('Testing Retry Logic', () => {
-    it('should retry on failure with exponential backoff', async () => {
-      const apiKey = 'rsolv_test_retry';
+  describe('Testing Error Handling', () => {
+    it('should throw on network errors without retry', async () => {
+      const apiKey = 'rsolv_test_network_error';
       
-      // Mock fetch to fail twice, then succeed
-      mockFetch
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            credentials: {
-              anthropic: { api_key: 'vended-retry', expires_at: new Date(Date.now() + 3600000).toISOString() }
-            },
-            usage: { remaining_fixes: 999999 }
-          })
-        });
-      
-      // Create a manager with retry logic
-      const initializeWithRetry = async (manager: RSOLVCredentialManager, apiKey: string, maxRetries = 3) => {
-        for (let i = 0; i < maxRetries; i++) {
-          try {
-            await manager.initialize(apiKey);
-            return;
-          } catch (error) {
-            if (i === maxRetries - 1) throw error;
-            // Exponential backoff: 10ms, 20ms, 40ms (faster for tests)
-            await new Promise(resolve => setTimeout(resolve, 10 * Math.pow(2, i)));
-          }
-        }
-      };
+      // Mock fetch to fail with network error
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
       
       const manager = new RSOLVCredentialManager();
-      await initializeWithRetry(manager, apiKey);
       
-      expect(mockFetch).toHaveBeenCalledTimes(3);
-      expect(await manager.getCredential('anthropic')).toBe('vended-retry');
+      // Should throw immediately without retry
+      await expect(manager.initialize(apiKey)).rejects.toThrow('Network error');
+      
+      // Should have been called exactly once (no retry)
+      expect(mockFetch).toHaveBeenCalledTimes(1);
       
       manager.cleanup();
     });
@@ -176,8 +153,23 @@ describe('Credential Lifecycle Issues - TDD', () => {
       // Wait for expiration
       await new Promise(resolve => setTimeout(resolve, 150));
       
-      // After expiration, getCredential should throw
-      await expect(manager.getCredential('anthropic')).rejects.toThrow('expired');
+      // After expiration, getCredential should auto-refresh
+      // Mock the refresh response
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          credentials: {
+            anthropic: { 
+              api_key: 'vended-refreshed', 
+              expires_at: new Date(Date.now() + 3600000).toISOString()
+            }
+          },
+          usage: { remaining_fixes: 999999 }
+        })
+      });
+      
+      const refreshedCred = await manager.getCredential('anthropic');
+      expect(refreshedCred).toBe('vended-refreshed');
       
       manager.cleanup();
     });

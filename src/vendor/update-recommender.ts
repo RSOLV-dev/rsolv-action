@@ -2,10 +2,10 @@
  * RFC-047: Update Recommendation System
  */
 
-import { Library, UpdateRecommendation, UpdateStrategy } from './types';
+import { Library, UpdateRecommendation, UpdateStrategy } from './types.js';
 
 export class UpdateRecommender {
-  async recommendUpdate(library: Library, vulnerability: any): Promise<UpdateRecommendation> {
+  async recommendUpdate(library: Library, vulnerability: { id: string; severity?: string }): Promise<UpdateRecommendation> {
     const currentVersion = library.version;
     const fixedVersions = await this.findFixedVersions(library, vulnerability);
     const minimumSafeVersion = this.getMinimumSafeVersion(library, fixedVersions);
@@ -49,7 +49,7 @@ export class UpdateRecommender {
     };
   }
   
-  private async findFixedVersions(library: Library, vulnerability: any): Promise<string[]> {
+  private async findFixedVersions(library: Library, vulnerability: { id: string; severity?: string }): Promise<string[]> {
     // In real implementation, would query npm registry or security advisories
     // Mock some known fixes
     

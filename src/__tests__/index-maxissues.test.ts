@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, vi } from 'vitest';
 import { IssueContext } from '../types/index.js';
 
 // Test the issue limiting logic directly

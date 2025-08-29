@@ -7,13 +7,22 @@ import { PhaseDataClient, PhaseData } from '../phase-data-client/index.js';
 import { ScanOrchestrator } from '../../scanner/index.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from '../../ai/test-generating-security-analyzer.js';
-import { GitBasedTestValidator } from '../../ai/git-based-test-validator.js';
+import { GitBasedTestValidator, ValidationResult as TestValidationResult } from '../../ai/git-based-test-validator.js';
 import { GitBasedClaudeCodeAdapter } from '../../ai/adapters/claude-code-git.js';
 import { createEducationalPullRequest } from '../../github/pr-git-educational.js';
 import { createPullRequestFromGit } from '../../github/pr-git.js';
 import { AIConfig, IssueAnalysis } from '../../ai/types.js';
 // import { getIssue } from '../../github/api.js'; // Not needed yet
 import type { ActionConfig, IssueContext } from '../../types/index.js';
+import type { Vulnerability } from '../../security/types.js';
+import type { ValidationResult, MitigationResult } from '../types.js';
+import type { 
+  ValidationData, 
+  ValidatedVulnerability,
+  ScanPhaseData,
+  ValidationPhaseData,
+  PhaseMetadata
+} from '../../types/vulnerability.js';
 import { logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
 
@@ -25,7 +34,7 @@ export interface ExecuteOptions {
   };
   issueNumber?: number;
   issues?: IssueContext[];
-  scanData?: any;
+  scanData?: ScanPhaseData;
   commitSha?: string;
   // Validation-specific options
   usePriorScan?: boolean;
@@ -35,7 +44,7 @@ export interface ExecuteOptions {
   format?: 'markdown' | 'json' | 'github-actions';
   
   // Mitigation-specific options
-  validationData?: any;
+  validationData?: any; // TODO: Migrate to ValidationPhaseData once type incompatibilities are resolved
   usePriorValidation?: boolean;
   generateTestsIfMissing?: boolean;
   timeout?: number;
@@ -50,11 +59,30 @@ export interface ExecuteResult {
   success: boolean;
   phase: string;
   message?: string;
-  data?: any;
+  data?: any; // TODO: Gradually migrate to typed structure
   error?: string;
   report?: string;
-  jsonReport?: any;
+  jsonReport?: Record<string, unknown>;
 }
+
+// Type for validation items from server/local processing
+type ValidationItem = {
+  issueNumber: number;
+  validated?: boolean;
+  testGenerationFailed?: boolean;
+  canBeFixed?: boolean;
+  fallbackTests?: boolean;
+  generatedTests?: any;
+  error?: string;
+  usedPriorScan?: boolean;
+  timestamp?: string;
+  hasSpecificVulnerabilities?: boolean;
+  vulnerabilities?: any[];
+  confidence?: 'low' | 'medium' | 'high';
+  falsePositive?: boolean;
+  reason?: string;
+  [key: string]: any;
+};
 
 export class PhaseExecutor {
   public phaseDataClient: PhaseDataClient;
@@ -62,8 +90,8 @@ export class PhaseExecutor {
   private config: ActionConfig;
   
   // These will be used for mocking in tests
-  public testGenerator?: any;
-  public fixer?: any;
+  public testGenerator?: TestGeneratingSecurityAnalyzer;
+  public fixer?: GitBasedClaudeCodeAdapter;
 
   constructor(config: ActionConfig) {
     this.config = config;
@@ -133,7 +161,7 @@ export class PhaseExecutor {
 
       // If we have specific issues, scan them individually
       if (options.issues && options.issues.length > 0) {
-        const scanResults: any = {
+        const scanResults: Record<string, any> = {
           canBeFixed: true,
           vulnerabilities: [],
           timestamp: new Date().toISOString(),
@@ -259,8 +287,8 @@ export class PhaseExecutor {
         timestamp: enrichmentResult.validationTimestamp.toISOString(),
         hasSpecificVulnerabilities: enrichmentResult.vulnerabilities.length > 0,
         confidence: enrichmentResult.vulnerabilities.length > 0 ? 
-          (enrichmentResult.vulnerabilities.some((v: any) => v.confidence === 'high') ? 'high' :
-           enrichmentResult.vulnerabilities.some((v: any) => v.confidence === 'medium') ? 'medium' : 'low') :
+          (enrichmentResult.vulnerabilities.some((v: Record<string, any>) => v.confidence === 'high') ? 'high' :
+           enrichmentResult.vulnerabilities.some((v: Record<string, any>) => v.confidence === 'medium') ? 'medium' : 'low') :
           'none'
       };
 
@@ -511,8 +539,11 @@ export class PhaseExecutor {
         };
       }
       
-      if (!validation) {
-        logger.warn('[MITIGATE] No validation data found for issue');
+      if (!validation || typeof validation !== 'object') {
+        logger.warn('[MITIGATE] No validation data found for issue or invalid type', {
+          validationType: typeof validation,
+          validation
+        });
         return {
           success: false,
           phase: 'mitigate',
@@ -527,16 +558,15 @@ export class PhaseExecutor {
       logger.info('[MITIGATE DEBUG] Validation data structure:', JSON.stringify(validation, null, 2));
       
       // Check if validation found specific vulnerabilities (handle both old and new formats)
-      const validationAny = validation as any;
-      const hasSpecificVulnerabilities = 'hasSpecificVulnerabilities' in validationAny ? 
-        validationAny.hasSpecificVulnerabilities : 
-        (validationAny.vulnerabilities && validationAny.vulnerabilities.length > 0);
+      const validationTyped = validation as ValidationData;
+      const hasSpecificVulnerabilities = validationTyped.hasSpecificVulnerabilities ?? 
+        (validationTyped.vulnerabilities && validationTyped.vulnerabilities.length > 0);
       
       logger.info('[MITIGATE DEBUG] Vulnerability check:', {
         hasSpecificVulnerabilities,
-        hasSpecificVulnerabilitiesField: 'hasSpecificVulnerabilities' in validationAny,
-        vulnerabilitiesLength: validationAny.vulnerabilities?.length || 0,
-        validationKeys: Object.keys(validationAny)
+        hasSpecificVulnerabilitiesField: 'hasSpecificVulnerabilities' in validationTyped,
+        vulnerabilitiesLength: validationTyped.vulnerabilities?.length || 0,
+        validationKeys: Object.keys(validationTyped)
       });
         
       if (!hasSpecificVulnerabilities) {
@@ -557,16 +587,15 @@ export class PhaseExecutor {
       }
 
       // Build enhanced context for AI with validation data
-      // TODO: Replace with proper ValidationData type once we know the actual structure
-      let vulnerabilities: any[] = validationAny.vulnerabilities || [];
-      const confidence: string = validationAny.overallConfidence || validationAny.confidence || 'medium';
+      let vulnerabilities: ValidatedVulnerability[] = validationTyped.vulnerabilities || [];
+      const confidence: string = validationTyped.overallConfidence || validationTyped.confidence || 'medium';
       
       // DEBUG: Log the actual structure of vulnerabilities to diagnose vendor detection issue
       logger.info('[MITIGATE] DEBUG: Vulnerability data structure:', {
         vulnerabilityCount: vulnerabilities.length,
         firstVulnerability: vulnerabilities[0] ? JSON.stringify(vulnerabilities[0]) : 'none',
         vulnerabilityKeys: vulnerabilities[0] ? Object.keys(vulnerabilities[0]) : [],
-        validationKeys: Object.keys(validationAny)
+        validationKeys: Object.keys(validationTyped)
       });
       
       // RFC-047 FIX: Parse issue body to get real filenames
@@ -578,14 +607,14 @@ export class PhaseExecutor {
       
       // Enhance validation data with real filenames
       if (vulnerabilities.length > 0 && parsedIssueBody.files.length > 0) {
-        const enhancedData = enhanceValidationData(validationAny, parsedIssueBody);
+        const enhancedData = enhanceValidationData(validationTyped, parsedIssueBody);
         vulnerabilities = enhancedData.vulnerabilities;
         
         logger.info('[MITIGATE] Step 4a complete: Enhanced validation data with real filenames', {
-          originalFiles: validationAny.vulnerabilities.map((v: any) => v.file),
-          enhancedFiles: vulnerabilities.map((v: any) => v.file),
-          filesFixed: vulnerabilities.filter((v: any, i: number) => 
-            v.file !== validationAny.vulnerabilities[i]?.file
+          originalFiles: validationTyped.vulnerabilities?.map((v: ValidatedVulnerability) => (v as any).filePath || (v as any).file) || [],
+          enhancedFiles: vulnerabilities.map((v: ValidatedVulnerability) => (v as any).filePath || (v as any).file),
+          filesFixed: vulnerabilities.filter((v: ValidatedVulnerability, i: number) => 
+            (v as any).file !== (validationTyped.vulnerabilities?.[i] as any)?.file
           ).length
         });
       } else {
@@ -780,7 +809,7 @@ export class PhaseExecutor {
       
       const issueKey = `issue-${options.issueNumber}`;
       let mitigationResult;
-      if (processingResults.length > 0 && processingResults[0].pullRequestUrl) {
+      if (processingResults && processingResults.length > 0 && processingResults[0].pullRequestUrl) {
         // Success - PR was created
         const result = processingResults[0];
         mitigationResult = {
@@ -795,11 +824,11 @@ export class PhaseExecutor {
         };
       } else {
         // Failed to create PR
-        const error = processingResults[0]?.error || processingResults[0]?.message || 'Unknown error during fix generation';
+        const error = processingResults?.[0]?.error || processingResults?.[0]?.message || 'Unknown error during fix generation';
         logger.error('[MITIGATE] Failed to generate fix', { 
           error,
-          result: processingResults[0],
-          hasResult: processingResults.length > 0
+          result: processingResults?.[0],
+          hasResult: processingResults?.length > 0
         });
         return {
           success: false,
@@ -933,7 +962,7 @@ export class PhaseExecutor {
   /**
    * Store phase data using PhaseDataClient
    */
-  async storePhaseData(phase: 'scan' | 'validation' | 'mitigation', data: any, metadata: any): Promise<void> {
+  async storePhaseData(phase: 'scan' | 'validation' | 'mitigation', data: any, metadata: any): Promise<void> { // TODO: Migrate to typed parameters
     const phaseData: PhaseData = {};
     
     if (phase === 'scan') {
@@ -1049,7 +1078,7 @@ export class PhaseExecutor {
    */
   async executeValidateForIssue(
     issue: IssueContext, 
-    scanData: any
+    scanData: ScanPhaseData
   ): Promise<ExecuteResult> {
     try {
       logger.info(`[VALIDATE] Generating tests for issue #${issue.number}`);
@@ -1184,8 +1213,8 @@ export class PhaseExecutor {
    */
   async executeMitigateForIssue(
     issue: IssueContext,
-    scanData: any,
-    validationData: any
+    scanData: ScanPhaseData,
+    validationData: any // TODO: Fix type incompatibility with AnalysisWithTestsResult
   ): Promise<ExecuteResult> {
     const startTime = Date.now();
     const beforeFixCommit = this.getCurrentCommitSha();
@@ -1241,8 +1270,8 @@ export class PhaseExecutor {
           complexity: analysisData.estimatedComplexity === 'simple' ? 'low' : 
                      analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
           estimatedTime: 60,
-          potentialFixes: [analysisData.suggestedApproach],
-          recommendedApproach: analysisData.suggestedApproach,
+          potentialFixes: [analysisData.suggestedApproach || ''],
+          recommendedApproach: analysisData.suggestedApproach || '',
           relatedFiles: analysisData.filesToModify
         };
         
@@ -1307,7 +1336,7 @@ export class PhaseExecutor {
               success: false,
               phase: 'mitigate',
               message: `Fix validation failed after ${maxIterations} attempts`,
-              error: this.explainTestFailure(validation)
+              error: this.explainTestFailureFromResult(validation)
             };
           }
           
@@ -1339,10 +1368,10 @@ export class PhaseExecutor {
           solution!.commitHash!,
           {
             ...solution!.summary!,
-            vulnerabilityType: analysisData.vulnerabilityType || 'security',
-            severity: analysisData.severity || 'medium',
-            cwe: analysisData.cwe,
-            isAiGenerated: analysisData.isAiGenerated
+            vulnerabilityType: scanData.analysisData.vulnerabilityType || 'security',
+            severity: scanData.analysisData.severity || 'medium',
+            cwe: scanData.analysisData.cwe,
+            isAiGenerated: scanData.analysisData.isAiGenerated
           },
           this.config,
           solution!.diffStats
@@ -1537,9 +1566,9 @@ export class PhaseExecutor {
   }
 
   /**
-   * Explain why tests failed
+   * Explain why tests failed from ValidationResult
    */
-  private explainTestFailure(validation: any): string {
+  private explainTestFailureFromResult(validation: TestValidationResult): string {
     const failures = [];
     
     if (!validation.fixedCommit.redTestPassed) {
@@ -1553,6 +1582,25 @@ export class PhaseExecutor {
     }
     
     return failures.join('\n');
+  }
+
+  /**
+   * Explain why tests failed
+   */
+  private explainTestFailure(validation: ValidationPhaseData): string {
+    const failures = [];
+    
+    if (!validation.validated) {
+      failures.push('- Validation failed');
+    }
+    if (validation.falsePositiveReason) {
+      failures.push(`- False positive: ${validation.falsePositiveReason}`);
+    }
+    if (validation.testResults && !validation.testResults.success) {
+      failures.push('- Test execution failed');
+    }
+    
+    return failures.length > 0 ? failures.join('\n') : 'Unknown validation failure';
   }
 
   /**
@@ -1621,7 +1669,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
         };
       }
 
-      const validations = [];
+      const validations: ValidationItem[] = [];
       
       for (const issue of options.issues) {
         try {
@@ -1640,7 +1688,10 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           if (!scanData) {
             const analysisData = await analyzeIssue(issue, this.config);
             scanData = {
-              analysisData,
+              analysisData: {
+                ...analysisData,
+                canBeFixed: analysisData?.canBeFixed || false
+              },
               canBeFixed: analysisData?.canBeFixed || false,
               usedPriorScan: false
             };
@@ -1669,37 +1720,40 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           
           // Run tests if requested
           let testExecution = null;
-          if (options.runTests && this.testRunner) {
+          if (options.runTests && this.testRunner && testResults.generatedTests) {
             try {
               testExecution = await this.testRunner.runTests(testResults.generatedTests);
               
               // Check for false positive
-              if (testExecution.redTestPassed) {
-                testResults.falsePositive = true;
-                testResults.reason = 'Tests pass on current code';
+              if (testExecution.redTestPassed && testResults.generatedTests) {
+                testResults.generatedTests.falsePositive = true;
+                testResults.generatedTests.reason = 'Tests pass on current code';
               }
             } catch (error) {
               logger.warn(`Test execution failed for issue #${issue.number}:`, error);
-              testResults.testExecutionFailed = true;
-              testResults.error = error instanceof Error ? error.message : String(error);
+              if (testResults.generatedTests) {
+                testResults.generatedTests.testExecutionFailed = true;
+                testResults.generatedTests.error = error instanceof Error ? error.message : String(error);
+              }
             }
           }
 
           // Check for existing tests
+          let existing: any = null;
           if (this.testDiscovery) {
-            const existing = await this.testDiscovery.findExistingTests(issue.repository);
-            if (existing.hasTests) {
-              testResults.existingTests = true;
-              testResults.testFramework = existing.framework;
+            existing = await this.testDiscovery.findExistingTests(issue.repository);
+            if (existing.hasTests && testResults.generatedTests) {
+              testResults.generatedTests.existingTests = true;
+              testResults.generatedTests.testFramework = existing.framework;
               
               // Integrate tests if requested
-              if (options.integrateTests && this.testIntegrator) {
+              if (options.integrateTests && this.testIntegrator && testResults.generatedTests) {
                 const integration = await this.testIntegrator.integrateTests(
                   testResults.generatedTests,
                   existing
                 );
-                testResults.testsIntegrated = integration.integrated;
-                testResults.testFile = integration.testFile;
+                testResults.generatedTests.testsIntegrated = integration.integrated;
+                testResults.generatedTests.testFile = integration.testFile;
               }
             }
           }
@@ -1707,7 +1761,14 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           // Store validation results
           const validationResult = {
             issueNumber: issue.number,
+            validated: testResults.generatedTests?.success || false,
             ...testResults,
+            falsePositive: testResults.generatedTests?.falsePositive,
+            reason: testResults.generatedTests?.reason,
+            testExecutionFailed: testResults.generatedTests?.testExecutionFailed,
+            error: testResults.generatedTests?.error,
+            existingTests: existing?.hasTests,
+            testFramework: existing?.framework,
             usedPriorScan: 'usedPriorScan' in scanData ? scanData.usedPriorScan : false,
             timestamp: new Date().toISOString(),
             // Add fields for compatibility with enhanced validation
@@ -1819,7 +1880,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
   /**
    * Generate validation tests for an issue
    */
-  private async generateValidationTests(issue: IssueContext, scanData: any): Promise<any> {
+  private async generateValidationTests(issue: IssueContext, scanData: ScanPhaseData | { vulnerabilities: any[]; timestamp: string; commitHash: string; analysisData?: any }): Promise<ValidationPhaseData> {
     const { analysisData } = scanData;
     
     // Use TestGeneratingSecurityAnalyzer if available
@@ -1847,6 +1908,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
       const tests = testResults.generatedTests;
       return {
         generatedTests: {
+          success: tests?.success ?? true,
           ...tests,
           redTest: tests?.tests?.[0]?.testCode || 'should fail when vulnerability exists',
           greenTest: tests?.tests?.[1]?.testCode || 'should pass when vulnerability is fixed',
@@ -1866,7 +1928,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
   /**
    * Get codebase files for test generation
    */
-  private async getCodebaseFiles(analysisData: any): Promise<Map<string, string>> {
+  private async getCodebaseFiles(analysisData: ScanPhaseData['analysisData']): Promise<Map<string, string>> {
     const codebaseFiles = new Map<string, string>();
     
     if (analysisData?.filesToModify && analysisData.filesToModify.length > 0) {
@@ -1892,10 +1954,11 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
   /**
    * Generate fallback tests when AI generation fails
    */
-  private generateFallbackTests(issue: IssueContext): any {
+  private generateFallbackTests(issue: IssueContext): ValidationPhaseData['generatedTests'] {
     return {
+      success: false,
       redTest: `// RED Test: Should fail when ${issue.title} exists`,
-      greenTest: `// GREEN Test: Should pass when ${issue.title} is fixed`,
+      greenTest: `// GREEN Test: Should pass when ${issue.title} is fixed`,  
       refactorTest: `// REFACTOR Test: Should maintain functionality after fix`
     };
   }
@@ -1903,7 +1966,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
   /**
    * Format validation results as GitHub comment
    */
-  private formatValidationComment(issue: IssueContext, validation: any): string {
+  private formatValidationComment(issue: IssueContext, validation: ValidationPhaseData): string {
     return `## Validation Results
 
 **Issue #${issue.number}**: ${issue.title}
@@ -1927,7 +1990,7 @@ ${validation.falsePositive ?
   /**
    * Generate validation report in requested format
    */
-  private generateValidationReport(validations: any[], format: string): string {
+  private generateValidationReport(validations: ValidationItem[], format: string): string {
     switch (format) {
       case 'markdown':
         return this.generateMarkdownReport(validations);
@@ -1943,7 +2006,7 @@ ${validation.falsePositive ?
   /**
    * Generate markdown validation report
    */
-  private generateMarkdownReport(validations: any[]): string {
+  private generateMarkdownReport(validations: ValidationItem[]): string {
     let report = '# Validation Report\n\n';
     
     for (const validation of validations) {
@@ -1963,7 +2026,7 @@ ${validation.falsePositive ?
   /**
    * Generate GitHub Actions report
    */
-  private generateGitHubActionsReport(validations: any[]): string {
+  private generateGitHubActionsReport(validations: ValidationPhaseData[]): string {
     return validations.map(v => 
       `::${v.falsePositive ? 'warning' : 'notice'} ::Issue #${v.issueNumber} validated`
     ).join('\n');
@@ -1972,7 +2035,7 @@ ${validation.falsePositive ?
   /**
    * Generate GitHub Actions annotations
    */
-  private generateGitHubAnnotations(validations: any[]): string[] {
+  private generateGitHubAnnotations(validations: ValidationPhaseData[]): string[] {
     return validations.map(v => 
       `::warning file=unknown,line=1::Issue #${v.issueNumber} - ${v.falsePositive ? 'Possible false positive' : 'Validation complete'}`
     );
@@ -2345,7 +2408,7 @@ ${validation.falsePositive ?
   /**
    * Generate markdown report for mitigation
    */
-  private generateMitigationMarkdownReport(mitigations: any): string {
+  private generateMitigationMarkdownReport(mitigations: any): string { // TODO: Type properly
     let report = '## Mitigation Report\n\n';
     
     for (const [key, result] of Object.entries(mitigations)) {

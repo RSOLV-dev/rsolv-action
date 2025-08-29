@@ -37,6 +37,22 @@ const SecuritySettingsSchema = z.object({
   requireCodeReview: z.boolean().optional()
 });
 
+const TestGenerationConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  generateForVulnerabilities: z.boolean().optional(),
+  includeInPR: z.boolean().optional(),
+  validateFixes: z.boolean().optional(),
+  languages: z.array(z.string()).optional(),
+  frameworks: z.record(z.string(), z.array(z.string())).optional()
+});
+
+const FixValidationConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  maxIterations: z.number().optional(),
+  maxIterationsByType: z.record(z.string(), z.number()).optional(),
+  maxIterationsByTier: z.record(z.string(), z.number()).optional()
+});
+
 const ActionConfigSchema = z.object({
   apiKey: z.string(),
   configPath: z.string(),
@@ -51,7 +67,9 @@ const ActionConfigSchema = z.object({
   rsolvApiKey: z.string().optional(), // For vended credentials
   maxIssues: z.number().min(1).optional(), // Maximum number of issues to process
   useGitBasedEditing: z.boolean().optional(), // Enable git-based in-place editing (ADR-012)
-  useStructuredPhases: z.boolean().optional() // Enable structured phased prompting (ADR-019)
+  useStructuredPhases: z.boolean().optional(), // Enable structured phased prompting (ADR-019)
+  testGeneration: TestGenerationConfigSchema.optional(),
+  fixValidation: FixValidationConfigSchema.optional()
 });
 
 /**
@@ -128,7 +146,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
     useStructuredPhases: true,  // Default to true - CLI approach works with structured phases
     aiProvider: {
       provider: 'claude-code',
-      model: 'claude-sonnet-4-20250514',  // Claude Sonnet 4
+      model: 'claude-sonnet-4-20250514',  // Claude Sonnet 4 (latest as of Aug 2025)
       temperature: 0.2,
       maxTokens: 4000,
       contextLimit: 100000,

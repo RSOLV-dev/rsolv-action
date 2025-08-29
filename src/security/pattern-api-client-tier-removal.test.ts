@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, mock, vi } from 'vitest';
 import { PatternAPIClient } from './pattern-api-client.js';
 import type { Pattern } from './types.js';
 
@@ -38,7 +38,7 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
   ];
   
   beforeEach(() => {
-    fetchMock = mock(() => Promise.resolve({
+    fetchMock = vi.fn(() => Promise.resolve({
       ok: true,
       status: 200,
       json: async () => ({
@@ -90,13 +90,17 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
     });
     
     test('fetchPatterns without API key should return demo patterns only', async () => {
+      // Temporarily clear API key env var
+      const originalApiKey = process.env.RSOLV_API_KEY;
+      delete process.env.RSOLV_API_KEY;
+      
       // Create client without API key
       const unauthClient = new PatternAPIClient({ 
         apiUrl: 'https://api.test.com'
       });
       
       // Mock demo patterns response
-      fetchMock = mock(() => Promise.resolve({
+      fetchMock = vi.fn(() => Promise.resolve({
         ok: true,
         status: 200,
         json: async () => ({
@@ -116,6 +120,11 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
       // Should not have Authorization header
       const headers = fetchMock.mock.calls[0][1]?.headers || {};
       expect(headers['Authorization']).toBeUndefined();
+      
+      // Restore API key
+      if (originalApiKey) {
+        process.env.RSOLV_API_KEY = originalApiKey;
+      }
     });
     
     test('deprecated fetchPatternsByTier should still work for backward compatibility', async () => {
@@ -144,7 +153,7 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
         // Note: No accessible_tiers or tier fields
       };
       
-      fetchMock = mock(() => Promise.resolve({
+      fetchMock = vi.fn(() => Promise.resolve({
         ok: true,
         status: 200,
         json: async () => response
@@ -164,7 +173,7 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
         fallbackToLocal: false
       });
       
-      fetchMock = mock(() => Promise.resolve({
+      fetchMock = vi.fn(() => Promise.resolve({
         ok: false,
         status: 403,
         statusText: 'Forbidden',
@@ -197,7 +206,7 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
         php: 25
       };
       
-      fetchMock = mock((url: string) => {
+      fetchMock = vi.fn((url: string) => {
         const language = new URL(url).searchParams.get('language');
         const count = languageCounts[language as keyof typeof languageCounts] || 0;
         

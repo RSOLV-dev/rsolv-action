@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, vi, vi } from 'vitest';
 import { RepositoryScanner } from '../../src/scanner/repository-scanner.js';
 import { ASTValidator } from '../../src/scanner/ast-validator.js';
 import type { ScanConfig, FileToScan } from '../../src/scanner/types.js';
@@ -6,23 +6,23 @@ import type { Vulnerability } from '../../src/security/types.js';
 import { VulnerabilityType } from '../../src/security/types.js';
 
 // Mock dependencies
-mock.module('../../src/github/api.js', () => ({
+vi.mock('../../src/github/api.js', () => ({
   getGitHubClient: () => ({
     git: {
       getTree: mock(() => ({ data: { tree: [] } })),
-      getBlob: mock()
+      getBlob: vi.fn()
     }
   })
 }));
 
-mock.module('../../src/security/detector-v2.js', () => ({
+vi.mock('../../src/security/detector-v2.js', () => ({
   SecurityDetectorV2: mock(() => ({
     detect: mock(() => [])
   }))
 }));
 
-mock.module('../../src/scanner/ast-validator.js', () => ({
-  ASTValidator: mock()
+vi.mock('../../src/scanner/ast-validator.js', () => ({
+  ASTValidator: vi.fn()
 }));
 
 describe('RepositoryScanner with AST Validation', () => {
@@ -31,31 +31,31 @@ describe('RepositoryScanner with AST Validation', () => {
 
   beforeEach(() => {
     // Clear all mocks before each test
-    mock.restore();
+    vi.restoreAllMocks();
     
     // Re-mock the modules
-    mock.module('../../src/github/api.js', () => ({
+    vi.mock('../../src/github/api.js', () => ({
       getGitHubClient: () => ({
         git: {
-          getTree: mock(() => ({ data: { tree: [] } })),
-          getBlob: mock()
+          getTree: vi.fn(() => ({ data: { tree: [] } })),
+          getBlob: vi.fn()
         }
       })
     }));
 
-    mock.module('../../src/security/detector-v2.js', () => ({
-      SecurityDetectorV2: mock(() => ({
-        detect: mock(() => [])
+    vi.mock('../../src/security/detector-v2.js', () => ({
+      SecurityDetectorV2: vi.fn(() => ({
+        detect: vi.fn(() => [])
       }))
     }));
 
-    mock.module('../../src/scanner/ast-validator.js', () => ({
-      ASTValidator: mock()
+    vi.mock('../../src/scanner/ast-validator.js', () => ({
+      ASTValidator: vi.fn()
     }));
     
     scanner = new RepositoryScanner();
     mockValidator = {
-      validateVulnerabilities: mock()
+      validateVulnerabilities: vi.fn()
     };
     (ASTValidator as any).mockImplementation(() => mockValidator);
   });

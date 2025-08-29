@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, vi } from 'vitest';
 import { getMaxIterations } from '../git-based-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 import { VulnerabilityType } from '../../security/types.js';

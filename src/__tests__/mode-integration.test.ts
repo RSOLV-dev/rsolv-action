@@ -3,7 +3,8 @@
  * Following RFC-041 mode selection decisions
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock, vi } from 'vitest';
+import { getModeFromArgs, getExecutionMode } from '../utils/mode-selector.js';
 
 // Mock module values that tests can update
 let mockArgvMode: string | undefined;
@@ -31,9 +32,6 @@ describe('Mode Selection Integration', () => {
 
   describe('getModeFromArgs', () => {
     test('should extract mode from CLI arguments', () => {
-      // RED: This function doesn't exist yet
-      const { getModeFromArgs } = require('../utils/mode-selector');
-      
       // Test --mode flag
       process.argv = ['node', 'index.js', '--mode', 'scan'];
       expect(getModeFromArgs()).toBe('scan');
@@ -44,7 +42,7 @@ describe('Mode Selection Integration', () => {
     });
 
     test('should return undefined when no mode in args', () => {
-      const { getModeFromArgs } = require('../utils/mode-selector');
+      
       
       process.argv = ['node', 'index.js', '--other-flag'];
       expect(getModeFromArgs()).toBeUndefined();
@@ -54,7 +52,7 @@ describe('Mode Selection Integration', () => {
   describe('getExecutionMode', () => {
     test('should prioritize CLI args over environment variable', () => {
       // RED: This function doesn't exist yet
-      const { getExecutionMode } = require('../utils/mode-selector');
+      
       
       process.argv = ['node', 'index.js', '--mode', 'scan'];
       process.env.RSOLV_MODE = 'validate';
@@ -63,7 +61,7 @@ describe('Mode Selection Integration', () => {
     });
 
     test('should use environment variable when no CLI args', () => {
-      const { getExecutionMode } = require('../utils/mode-selector');
+      
       
       process.argv = ['node', 'index.js'];
       process.env.RSOLV_MODE = 'validate';
@@ -71,18 +69,18 @@ describe('Mode Selection Integration', () => {
       expect(getExecutionMode()).toBe('validate');
     });
 
-    test('should default to "fix" when no mode specified', () => {
-      const { getExecutionMode } = require('../utils/mode-selector');
+    test('should default to "full" when no mode specified', () => {
+      
       
       process.argv = ['node', 'index.js'];
       delete process.env.RSOLV_MODE;
       
-      expect(getExecutionMode()).toBe('fix');
+      expect(getExecutionMode()).toBe('full');
     });
 
     test('should support all valid modes', () => {
-      const { getExecutionMode } = require('../utils/mode-selector');
-      const validModes = ['scan', 'validate', 'mitigate', 'fix', 'full'];
+      
+      const validModes = ['scan', 'validate', 'mitigate', 'full'];
       
       validModes.forEach(mode => {
         process.argv = ['node', 'index.js', '--mode', mode];
@@ -91,7 +89,7 @@ describe('Mode Selection Integration', () => {
     });
 
     test('should handle legacy RSOLV_SCAN_MODE for backward compatibility', () => {
-      const { getExecutionMode } = require('../utils/mode-selector');
+      
       
       process.env.RSOLV_SCAN_MODE = 'scan';
       expect(getExecutionMode()).toBe('scan');
@@ -107,21 +105,20 @@ describe('Mode Selection Integration', () => {
   });
 
   describe('validateMode', () => {
-    test('should validate mode is supported', () => {
-      const { validateMode } = require('../utils/mode-selector');
+    test('should validate mode is supported', async () => {
+      const { validateMode } = await import('../utils/mode-selector.js');
       
       expect(validateMode('scan')).toBe(true);
       expect(validateMode('validate')).toBe(true);
       expect(validateMode('mitigate')).toBe(true);
-      expect(validateMode('fix')).toBe(true);
       expect(validateMode('full')).toBe(true);
       expect(validateMode('invalid')).toBe(false);
     });
   });
 
   describe('getModeRequirements', () => {
-    test('should return requirements for each mode', () => {
-      const { getModeRequirements } = require('../utils/mode-selector');
+    test('should return requirements for each mode', async () => {
+      const { getModeRequirements } = await import('../utils/mode-selector.js');
       
       expect(getModeRequirements('scan')).toEqual({
         requiresIssue: false,
@@ -139,12 +136,6 @@ describe('Mode Selection Integration', () => {
         requiresIssue: true,
         requiresScanData: false,
         requiresValidation: true
-      });
-      
-      expect(getModeRequirements('fix')).toEqual({
-        requiresIssue: true,
-        requiresScanData: false,
-        requiresValidation: false // fix mode does its own validation
       });
       
       expect(getModeRequirements('full')).toEqual({

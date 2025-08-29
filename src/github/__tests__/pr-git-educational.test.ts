@@ -3,12 +3,49 @@
  * Follows RED-GREEN-REFACTOR methodology
  */
 
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, mock, vi } from 'vitest';
 import { createEducationalPullRequest } from '../pr-git-educational.js';
+
+// Track git commands globally
+let globalGitCommands: string[] = [];
+
+// Mock child_process module
+vi.mock('child_process', () => ({
+  execSync: vi.fn((cmd: string) => {
+    globalGitCommands.push(cmd);
+    return Buffer.from('');
+  })
+}));
+
+// Store PR body globally for assertion
+let globalPRBody = '';
+
+// Mock GitHub API module
+vi.mock('../api.js', () => ({
+  getGitHubClient: vi.fn(() => ({
+    pulls: {
+      create: vi.fn((params: any) => {
+        // Capture PR body for assertion
+        globalPRBody = params?.body || '';
+        // Return different URLs based on the repository
+        const repoName = params?.owner === 'RSOLV-dev' ? 'RSOLV-dev/demo' : 'user/repo';
+        return Promise.resolve({
+          data: {
+            number: 100,
+            html_url: `https://github.com/${repoName}/pull/100`
+          }
+        });
+      }),
+      list: vi.fn(() => Promise.resolve({ data: [] }))
+    }
+  }))
+}));
 
 describe('Educational PR Creation', () => {
   beforeEach(() => {
     // Reset mocks before each test
+    globalGitCommands = [];
+    globalPRBody = '';
   });
 
   describe('RED Phase - Educational Content Generation', () => {
@@ -31,25 +68,7 @@ describe('Educational PR Creation', () => {
         severity: 'high'
       };
 
-      // Mock execSync to prevent actual git operations
-      const childProcess = await import('child_process');
-      const originalExecSync = childProcess.execSync;
-      childProcess.execSync = mock(() => Buffer.from(''));
-
-      // Mock GitHub API
-      const api = await import('../api.js');
-      const originalGetClient = api.getGitHubClient;
-      api.getGitHubClient = mock(() => ({
-        pulls: {
-          create: mock(() => Promise.resolve({
-            data: {
-              number: 100,
-              html_url: 'https://github.com/user/repo/pull/100'
-            }
-          })),
-          list: mock(() => Promise.resolve({ data: [] }))
-        }
-      }));
+      // GitHub API already mocked at module level
 
       const result = await createEducationalPullRequest(
         issue,
@@ -58,9 +77,7 @@ describe('Educational PR Creation', () => {
         { rsolvApiKey: 'test' }
       );
 
-      // Restore mocks
-      childProcess.execSync = originalExecSync;
-      api.getGitHubClient = originalGetClient;
+      // Mocks are reset in beforeEach
 
       // GREEN: Educational content should be included
       expect(result.educationalContent).toBeDefined();
@@ -90,25 +107,9 @@ describe('Educational PR Creation', () => {
         isAiGenerated: true
       };
 
-      // Mock execSync
-      const childProcess = await import('child_process');
-      const originalExecSync = childProcess.execSync;
-      childProcess.execSync = mock(() => Buffer.from(''));
+      // execSync already mocked at module level
 
-      // Mock GitHub API
-      const api = await import('../api.js');
-      const originalGetClient = api.getGitHubClient;
-      api.getGitHubClient = mock(() => ({
-        pulls: {
-          create: mock(() => Promise.resolve({
-            data: {
-              number: 101,
-              html_url: 'https://github.com/user/repo/pull/101'
-            }
-          })),
-          list: mock(() => Promise.resolve({ data: [] }))
-        }
-      }));
+      // GitHub API already mocked at module level
 
       const result = await createEducationalPullRequest(
         issue,
@@ -117,9 +118,7 @@ describe('Educational PR Creation', () => {
         { rsolvApiKey: 'test' }
       );
 
-      // Restore mocks
-      childProcess.execSync = originalExecSync;
-      api.getGitHubClient = originalGetClient;
+      // Mocks are reset in beforeEach
 
       // GREEN: Should include AI-specific education
       expect(result.educationalContent).toContain('AI-Specific Vulnerability');
@@ -146,25 +145,9 @@ describe('Educational PR Creation', () => {
         severity: 'critical'
       };
 
-      // Mock execSync
-      const childProcess = await import('child_process');
-      const originalExecSync = childProcess.execSync;
-      childProcess.execSync = mock(() => Buffer.from(''));
+      // execSync already mocked at module level
 
-      // Mock GitHub API
-      const api = await import('../api.js');
-      const originalGetClient = api.getGitHubClient;
-      api.getGitHubClient = mock(() => ({
-        pulls: {
-          create: mock(() => Promise.resolve({
-            data: {
-              number: 102,
-              html_url: 'https://github.com/user/repo/pull/102'
-            }
-          })),
-          list: mock(() => Promise.resolve({ data: [] }))
-        }
-      }));
+      // GitHub API already mocked at module level
 
       const result = await createEducationalPullRequest(
         issue,
@@ -173,9 +156,7 @@ describe('Educational PR Creation', () => {
         { rsolvApiKey: 'test' }
       );
 
-      // Restore mocks
-      childProcess.execSync = originalExecSync;
-      api.getGitHubClient = originalGetClient;
+      // Mocks are reset in beforeEach
 
       // GREEN: Should include RSOLV's unique value
       expect(result.educationalContent).toContain('RSOLV');
@@ -211,35 +192,9 @@ describe('Educational PR Creation', () => {
       };
 
       // Mock execSync
-      const childProcess = await import('child_process');
-      const originalExecSync = childProcess.execSync;
-      let gitCommands: string[] = [];
-      childProcess.execSync = mock((cmd: string) => {
-        gitCommands.push(cmd);
-        if (cmd.includes('git config user.email')) {
-          throw new Error('not configured');
-        }
-        return Buffer.from('');
-      });
+      // Git commands are tracked globally
 
-      // Mock GitHub API
-      const api = await import('../api.js');
-      const originalGetClient = api.getGitHubClient;
-      let prBody = '';
-      api.getGitHubClient = mock(() => ({
-        pulls: {
-          create: mock((params: any) => {
-            prBody = params.body;
-            return Promise.resolve({
-              data: {
-                number: 100,
-                html_url: 'https://github.com/RSOLV-dev/demo/pull/100'
-              }
-            });
-          }),
-          list: mock(() => Promise.resolve({ data: [] }))
-        }
-      }));
+      // GitHub API already mocked at module level
 
       const result = await createEducationalPullRequest(
         issue,
@@ -249,9 +204,7 @@ describe('Educational PR Creation', () => {
         { insertions: 10, deletions: 5, filesChanged: 1 }
       );
 
-      // Restore mocks
-      childProcess.execSync = originalExecSync;
-      api.getGitHubClient = originalGetClient;
+      // Mocks are reset in beforeEach
 
       // REFACTOR: Complete flow should work
       expect(result.success).toBe(true);
@@ -260,18 +213,19 @@ describe('Educational PR Creation', () => {
       expect(result.branchName).toBe('rsolv/fix-issue-53');
       
       // Verify git commands were called
-      expect(gitCommands.some(cmd => cmd.includes('git config user.email'))).toBe(true);
-      expect(gitCommands.some(cmd => cmd.includes('git checkout'))).toBe(true);
-      expect(gitCommands.some(cmd => cmd.includes('git push'))).toBe(true);
+      expect(globalGitCommands.length).toBeGreaterThan(0);
+      expect(globalGitCommands.some(cmd => cmd === 'git config user.email' || cmd.includes('git config user.email'))).toBe(true);
+      expect(globalGitCommands.some(cmd => cmd.includes('git checkout'))).toBe(true);
+      expect(globalGitCommands.some(cmd => cmd.includes('git push'))).toBe(true);
       
       // Verify PR body includes educational content
-      expect(prBody).toContain('📚 Understanding This Fix');
-      expect(prBody).toContain('🛡️ What is Cross-Site Scripting');
-      expect(prBody).toContain('🔧 How This Fix Works');
-      expect(prBody).toContain('✅ Best Practices');
-      expect(prBody).toContain('🤖 About RSOLV');
-      expect(prBody).toContain('Success-based pricing');
-      expect(prBody).toContain('181+ patterns');
+      expect(globalPRBody).toContain('📚 Understanding This Fix');
+      expect(globalPRBody).toContain('🛡️ What is Cross-Site Scripting');
+      expect(globalPRBody).toContain('🔧 How This Fix Works');
+      expect(globalPRBody).toContain('✅ Best Practices');
+      expect(globalPRBody).toContain('🤖 About RSOLV');
+      expect(globalPRBody).toContain('Success-based pricing');
+      expect(globalPRBody).toContain('181+ patterns');
     });
   });
 });

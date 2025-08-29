@@ -5,7 +5,7 @@
  * These tests follow TDD - RED phase (all should fail initially)
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { TestFrameworkDetector } from '../test-framework-detector.js';
 import type { DetectionResult, FrameworkInfo } from '../test-framework-detector.js';
 
@@ -238,18 +238,18 @@ gem 'minitest-reporters'
   });
 
   describe('Configuration File Detection', () => {
-    test('should detect from jest.config.js', async () => {
-      const configFiles = ['jest.config.js', 'package.json'];
+    test('should detect from vi.config.js', async () => {
+      const configFiles = ['vitest.config.js', 'package.json'];
       
       const result = await detector.detectFromConfigFiles(configFiles);
       
       expect(result.detected).toBe(true);
       expect(result.frameworks[0]).toMatchObject({
-        name: 'jest',
+        name: 'vitest',
         version: 'unknown',
         type: 'unit',
         confidence: 0.95,
-        configFile: 'jest.config.js'
+        configFile: 'vitest.config.js'
       });
     });
 

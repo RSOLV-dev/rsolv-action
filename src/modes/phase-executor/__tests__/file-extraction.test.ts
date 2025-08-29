@@ -2,7 +2,7 @@
  * Tests for the file extraction utility
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, vi } from 'vitest';
 import { extractFilesFromVulnerabilities } from '../utils/file-extraction';
 
 describe('File Extraction from Vulnerabilities', () => {

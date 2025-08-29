@@ -3,7 +3,7 @@
  * Phase 6C: Add JUnit 5 and TestNG templates
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AdaptiveTestGenerator } from '../adaptive-test-generator.js';
 import { TestFrameworkDetector } from '../test-framework-detector.js';
 import { CoverageAnalyzer } from '../coverage-analyzer.js';

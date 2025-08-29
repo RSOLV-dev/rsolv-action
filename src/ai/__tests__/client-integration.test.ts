@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { getAiClient } from '../client';
 import { AiProviderConfig } from '../../types';
 import { setupFetchMock, mockAIResponse } from '../../../test-helpers/simple-mocks';
@@ -14,7 +14,7 @@ describe('AI Client Direct API Integration', () => {
     // Reset environment, use production to avoid fallbacks
     process.env = { ...originalEnv, NODE_ENV: 'production' };
     // Clear mocks
-    mock.restore();
+    vi.clearAllMocks();
     // Setup fetch mock
     fetchMock = setupFetchMock();
   });
@@ -25,7 +25,7 @@ describe('AI Client Direct API Integration', () => {
     // Restore fetch
     global.fetch = originalFetch;
     // Clear mocks
-    mock.restore();
+    vi.clearAllMocks();
   });
   test('should use direct API key for Anthropic when vending is disabled', async () => {
     // Mock AI response

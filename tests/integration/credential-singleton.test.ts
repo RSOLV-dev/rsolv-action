@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CredentialManagerSingleton } from '../../src/credentials/singleton.js';
 import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 
@@ -15,7 +15,7 @@ describe('CredentialManagerSingleton Integration Tests', () => {
     // Clean up any existing instances
     CredentialManagerSingleton.cleanup();
     // Reset fetch mock
-    fetchMock = mock();
+    fetchMock = vi.fn();
     global.fetch = fetchMock;
   });
   
@@ -272,12 +272,12 @@ describe('CredentialManagerSingleton Integration Tests', () => {
       const manager = await CredentialManagerSingleton.getInstance(TEST_API_KEY);
       
       // Verify credentials are stored and accessible
-      expect(manager.getCredential('anthropic')).toBe('test-anthropic-key');
-      expect(manager.getCredential('openai')).toBe('test-openai-key');
+      expect(await manager.getCredential('anthropic')).toBe('test-anthropic-key');
+      expect(await manager.getCredential('openai')).toBe('test-openai-key');
       
       // Verify the manager schedules refresh (we'll check the internal state if needed)
       // For now, just verify the credentials work
-      expect(() => manager.getCredential('anthropic')).not.toThrow();
+      await expect(manager.getCredential('anthropic')).resolves.toBe('test-anthropic-key');
     });
   });
   

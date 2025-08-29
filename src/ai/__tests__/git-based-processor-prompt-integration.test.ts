@@ -2,17 +2,17 @@
  * Integration tests for git-based-processor prompt enhancement with test context
  */
 
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { processIssueWithGit } from '../git-based-processor.js';
 import type { IssueContext, ActionConfig } from '../../types/index.js';
 
 // Mock all dependencies
-mock.module('child_process', () => ({
-  execSync: mock(() => '')
+vi.mock('child_process', () => ({
+  execSync: vi.fn(() => '')
 }));
 
-mock.module('../analyzer.js', () => ({
-  analyzeIssue: mock(() => Promise.resolve({
+vi.mock('../analyzer.js', () => ({
+  analyzeIssue: vi.fn(() => Promise.resolve({
     canBeFixed: true,
     files: ['test.js'],
     filesToModify: ['test.js'],
@@ -20,9 +20,9 @@ mock.module('../analyzer.js', () => ({
   }))
 }));
 
-mock.module('../test-generating-security-analyzer.js', () => ({
-  TestGeneratingSecurityAnalyzer: mock(() => ({
-    analyzeWithTestGeneration: mock(() => Promise.resolve({
+vi.mock('../test-generating-security-analyzer.js', () => ({
+  TestGeneratingSecurityAnalyzer: vi.fn(() => ({
+    analyzeWithTestGeneration: vi.fn(() => Promise.resolve({
       canBeFixed: true,
       files: ['test.js'],
       filesToModify: ['test.js'],
@@ -48,9 +48,9 @@ mock.module('../test-generating-security-analyzer.js', () => ({
   }))
 }));
 
-mock.module('../git-based-test-validator.js', () => ({
-  GitBasedTestValidator: mock(() => ({
-    validateFixWithTests: mock(() => Promise.resolve({
+vi.mock('../git-based-test-validator.js', () => ({
+  GitBasedTestValidator: vi.fn(() => ({
+    validateFixWithTests: vi.fn(() => Promise.resolve({
       isValidFix: false,
       success: false,
       testOutput: 'Test failed',
@@ -67,9 +67,9 @@ mock.module('../git-based-test-validator.js', () => ({
 // Track the calls to generateSolutionWithGit
 let generateSolutionWithGitCalls: any[] = [];
 
-mock.module('../adapters/claude-code-git.js', () => ({
-  GitBasedClaudeCodeAdapter: mock(() => ({
-    generateSolutionWithGit: mock((...args) => {
+vi.mock('../adapters/claude-code-git.js', () => ({
+  GitBasedClaudeCodeAdapter: vi.fn(() => ({
+    generateSolutionWithGit: vi.fn((...args) => {
       generateSolutionWithGitCalls.push(args);
       return Promise.resolve({
         success: true,
@@ -88,8 +88,8 @@ mock.module('../adapters/claude-code-git.js', () => ({
   }))
 }));
 
-mock.module('../../github/pr-git.js', () => ({
-  createPullRequestFromGit: mock(() => Promise.resolve({
+vi.mock('../../github/pr-git.js', () => ({
+  createPullRequestFromGit: vi.fn(() => Promise.resolve({
     success: true,
     message: 'PR created',
     pullRequestUrl: 'https://github.com/test/test/pull/1',
@@ -97,11 +97,12 @@ mock.module('../../github/pr-git.js', () => ({
   }))
 }));
 
-mock.module('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {})
+    debug: vi.fn(() => {}),
+    info: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    error: vi.fn(() => {})
   }
 }));
 

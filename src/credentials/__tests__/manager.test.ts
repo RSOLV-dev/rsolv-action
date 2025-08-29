@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { RSOLVCredentialManager } from '../manager';
 import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 
@@ -20,21 +20,23 @@ describe('RSOLVCredentialManager', () => {
     };
     
     // Clear mocks
-    mock.restore();
+    vi.clearAllMocks();
     // Setup fetch mock
     fetchMock = setupFetchMock();
     manager = new RSOLVCredentialManager();
   });
 
   afterEach(() => {
-    // Cleanup manager
-    manager.cleanup();
+    // Cleanup manager if initialized
+    if (manager) {
+      manager.cleanup();
+    }
     // Restore environment
     process.env = originalEnv;
     // Restore fetch
     global.fetch = originalFetch;
     // Clear mocks
-    mock.restore();
+    vi.clearAllMocks();
   });
   describe('initialize', () => {
     test('should exchange RSOLV API key for temporary credentials', async () => {
@@ -67,26 +69,24 @@ describe('RSOLVCredentialManager', () => {
 
       // Verify fetch was called correctly
       expect(fetchMock.mock.calls[0][0]).toBe(
-        'https://api.rsolv.dev/api/v1/credentials/exchange',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer test_api_key_123',
-            'Content-Type': 'application/json',
-            'X-GitHub-Job': 'test_job_123',
-            'X-GitHub-Run': 'test_run_456'
-          },
-          body: JSON.stringify({
-            api_key: 'test_api_key_123',
-            providers: ['anthropic', 'openai', 'openrouter'],
-            ttl_minutes: 60
-          })
-        }
+        'https://api.rsolv.dev/api/v1/credentials/exchange'
       );
+      
+      const fetchOptions = fetchMock.mock.calls[0][1];
+      expect(fetchOptions.method).toBe('POST');
+      expect(fetchOptions.headers['Authorization']).toBe('Bearer test_api_key_123');
+      expect(fetchOptions.headers['Content-Type']).toBe('application/json');
+      expect(fetchOptions.headers['X-GitHub-Job']).toBe('test_job_123');
+      expect(fetchOptions.headers['X-GitHub-Run']).toBe('test_run_456');
+      
+      const body = JSON.parse(fetchOptions.body);
+      expect(body.api_key).toBe('test_api_key_123');
+      expect(body.providers).toEqual(['anthropic', 'openai', 'openrouter']);
+      expect(body.ttl_minutes).toBe(60);
 
       // Verify credentials are accessible
-      expect(manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
-      expect(manager.getCredential('openai')).toBe('temp_oai_def456');
+      expect(await manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
+      expect(await manager.getCredential('openai')).toBe('temp_oai_def456');
     });
 
     test('should throw error on failed API response', async () => {
@@ -142,7 +142,7 @@ describe('RSOLVCredentialManager', () => {
 
       // Verify refresh timer was set (internal implementation detail)
       // For now, just verify initialization succeeded
-      expect(manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
+      expect(await manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
     });
   });
 
@@ -168,7 +168,7 @@ describe('RSOLVCredentialManager', () => {
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
 
-      expect(manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
+      expect(await manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
     });
 
     test('should throw error for expired credential', async () => {
@@ -194,8 +194,16 @@ describe('RSOLVCredentialManager', () => {
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
 
-      expect(() => manager.getCredential('anthropic')).toThrow(
-        'Credential for anthropic has expired'
+      // Mock a failed refresh attempt
+      fetchMock.mockImplementationOnce(() => Promise.resolve({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: async () => ({ error: 'Invalid API key' })
+      } as Response));
+
+      await expect(manager.getCredential('anthropic')).rejects.toThrow(
+        'Failed to refresh credential'
       );
     });
 
@@ -220,7 +228,7 @@ describe('RSOLVCredentialManager', () => {
       const manager = new RSOLVCredentialManager();
       await manager.initialize('test_api_key_123');
 
-      expect(() => manager.getCredential('invalid_provider')).toThrow(
+      await expect(manager.getCredential('invalid_provider')).rejects.toThrow(
         'No valid credential for invalid_provider'
       );
     });
@@ -326,13 +334,13 @@ describe('RSOLVCredentialManager', () => {
       await manager.initialize('test_api_key_123');
       
       // Verify credential exists
-      expect(manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
+      expect(await manager.getCredential('anthropic')).toBe('temp_ant_xyz789');
       
       // Cleanup
       manager.cleanup();
       
       // Credential should no longer be available
-      expect(() => manager.getCredential('anthropic')).toThrow();
+      await expect(manager.getCredential('anthropic')).rejects.toThrow();
     });
   });
 });

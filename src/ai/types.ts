@@ -8,7 +8,7 @@ export type { Vulnerability, VulnerabilityType } from '../security/types.js';
 /**
  * Supported AI providers
  */
-export type AIProvider = 'anthropic' | 'openrouter' | 'openai' | 'mistral' | 'ollama';
+export type AIProvider = 'anthropic' | 'openrouter' | 'openai' | 'mistral' | 'ollama' | 'claude-code';
 
 /**
  * Common issue analysis result

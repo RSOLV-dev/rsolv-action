@@ -6,6 +6,8 @@ import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { analyzeIssue } from './analyzer.js';
 import { GitBasedClaudeCodeAdapter } from './adapters/claude-code-git.js';
+import { ClaudeCodeMaxAdapter } from './adapters/claude-code-cli-dev.js';
+import { isClaudeMaxAvailable } from './adapters/claude-code-cli-dev.js';
 import { createPullRequestFromGit } from '../github/pr-git.js';
 import { createEducationalPullRequest } from '../github/pr-git-educational.js';
 import { AIConfig, IssueAnalysis } from './types.js';
@@ -13,6 +15,15 @@ import { execSync } from 'child_process';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from './test-generating-security-analyzer.js';
 import { GitBasedTestValidator, ValidationResult } from './git-based-test-validator.js';
 import { VulnerabilityType } from '../security/types.js';
+import type { GitSolutionResult } from './adapters/claude-code-git.js';
+import type { CLISolutionResult } from './adapters/claude-code-cli.js';
+
+/**
+ * Type guard to check if solution is GitSolutionResult
+ */
+function isGitSolutionResult(solution: CLISolutionResult | GitSolutionResult): solution is GitSolutionResult {
+  return 'commitHash' in solution;
+}
 
 /**
  * Get maximum iterations based on configuration hierarchy
@@ -272,9 +283,14 @@ export async function processIssueWithGit(
       }
     };
     
-    // Get credential manager if using vended credentials
+    // Check if we should use Claude Max in development mode
+    const isDevMode = process.env.RSOLV_DEV_MODE === 'true' && 
+                      process.env.RSOLV_USE_CLAUDE_MAX === 'true';
+    const useClaudeMax = isDevMode && isClaudeMaxAvailable();
+    
+    // Get credential manager if using vended credentials (but not in dev mode with Claude Max)
     let credentialManager;
-    if (config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
+    if (!useClaudeMax && config.aiProvider.useVendedCredentials && config.rsolvApiKey) {
       // Set RSOLV_API_KEY environment variable for AI client
       process.env.RSOLV_API_KEY = config.rsolvApiKey;
       logger.info('Set RSOLV_API_KEY environment variable for vended credentials');
@@ -292,7 +308,15 @@ export async function processIssueWithGit(
     
     while (iteration < maxIterations) {
       logger.info(`Executing Claude Code to fix vulnerabilities (attempt ${iteration + 1}/${maxIterations})...`);
-      const adapter = new GitBasedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+      
+      // Use Claude Max adapter in dev mode, otherwise use the standard adapter
+      const adapter = useClaudeMax 
+        ? new ClaudeCodeMaxAdapter(aiConfig, process.cwd(), credentialManager)
+        : new GitBasedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+      
+      if (useClaudeMax) {
+        logger.info('🚀 Using Claude Code Max (local authentication) for development');
+      }
       
       // Pass test results and validation context to adapter
       const validationContext = iteration > 0 ? {
@@ -362,7 +386,7 @@ export async function processIssueWithGit(
           const staticValidation = staticValidator.validateXSSFix(
             filePath,
             beforeFixCommit,
-            solution.commitHash!
+            isGitSolutionResult(solution) ? solution.commitHash! : 'HEAD'
           );
           
           if (staticValidation.isValidFix) {
@@ -391,7 +415,7 @@ export async function processIssueWithGit(
           
           validationResult = await validator.validateFixWithTests(
             beforeFixCommit,
-            solution.commitHash!,
+            isGitSolutionResult(solution) ? solution.commitHash! : 'HEAD',
             testResults.generatedTests.testSuite
           );
           
@@ -493,12 +517,13 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
     }
     
     // Step 5: Create PR from the git commit
-    logger.info(`Creating PR from commit ${solution!.commitHash?.substring(0, 8)}`);
+    const commitHash = isGitSolutionResult(solution!) ? solution!.commitHash : undefined;
+    logger.info(`Creating PR from commit ${commitHash?.substring(0, 8) || 'HEAD'}`);
     
     // Use educational PR creation for better user engagement
     const useEducationalPR = process.env.RSOLV_EDUCATIONAL_PR !== 'false';
     
-    const prResult = useEducationalPR 
+    const prResult = useEducationalPR && isGitSolutionResult(solution!)
       ? await createEducationalPullRequest(
           issue,
           solution!.commitHash!,
@@ -512,15 +537,15 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           config,
           solution!.diffStats
         )
-      : await createPullRequestFromGit(
+      : isGitSolutionResult(solution!) ? await createPullRequestFromGit(
           issue,
           solution!.commitHash!,
           solution!.summary!,
           config,
           solution!.diffStats
-        );
+        ) : null;
     
-    if (!prResult.success) {
+    if (!prResult || !prResult.success) {
       // Try to undo the commit if PR creation failed
       try {
         execSync('git reset --hard HEAD~1', { encoding: 'utf-8' });
@@ -532,8 +557,8 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
       return {
         issueId: issue.id,
         success: false,
-        message: prResult.message,
-        error: prResult.error
+        message: prResult?.message || 'Failed to create PR',
+        error: prResult?.error || 'Unknown error'
       };
     }
     
@@ -543,11 +568,11 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
     return {
       issueId: issue.id,
       success: true,
-      message: `Created PR #${prResult.pullRequestNumber}`,
-      pullRequestUrl: prResult.pullRequestUrl,
-      pullRequestNumber: prResult.pullRequestNumber,
-      filesModified: solution!.filesModified,
-      diffStats: solution!.diffStats
+      message: `Created PR #${prResult!.pullRequestNumber}`,
+      pullRequestUrl: prResult!.pullRequestUrl,
+      pullRequestNumber: prResult!.pullRequestNumber,
+      filesModified: isGitSolutionResult(solution!) ? solution!.filesModified : undefined,
+      diffStats: isGitSolutionResult(solution!) ? solution!.diffStats : undefined
     };
     
   } catch (error) {

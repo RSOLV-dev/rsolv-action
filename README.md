@@ -422,6 +422,7 @@ For complex vulnerabilities, RSOLV may take longer than expected:
 
 - [Bun](https://bun.sh/) (latest version)
 - Docker (for container testing)
+- RSOLV-platform running locally (see below)
 
 ### Setup
 
@@ -443,11 +444,54 @@ bun run typecheck
 bun run lint
 ```
 
+### Local Development Setup
+
+#### 1. Start RSOLV-platform (Required for Tests)
+
+```bash
+# In RSOLV-platform directory
+cd ../RSOLV-platform
+DOCKER_HOST=10.5.0.5 docker compose up -d  # Adjust DOCKER_HOST as needed
+
+# CRITICAL: Set up API key with full permissions
+DOCKER_HOST=10.5.0.5 docker exec rsolv-platform-postgres-1 psql -U postgres -d rsolv_api_dev -c "
+  INSERT INTO customers (id, name, email, inserted_at, updated_at) 
+  VALUES (3, 'Test Suite', 'test@rsolv.dev', NOW(), NOW()) 
+  ON CONFLICT (id) DO NOTHING;
+  
+  INSERT INTO api_keys (key, name, customer_id, permissions, active, inserted_at, updated_at)
+  VALUES ('rsolv_test_suite_key', 'Test Suite Key', 3, ARRAY['scan', 'fix', 'admin'], true, NOW(), NOW())
+  ON CONFLICT (key) DO UPDATE SET 
+    permissions = ARRAY['scan', 'fix', 'admin'],
+    active = true;
+"
+
+# Verify pattern access (should return 30+, not 5!)
+curl -H "Authorization: Bearer rsolv_test_suite_key" \
+  "http://localhost:4002/api/v1/patterns?language=javascript" | jq '.patterns | length'
+```
+
+#### 2. Configure Environment
+
+```bash
+# Required for tests to pass
+export RSOLV_API_URL=http://localhost:4002
+export RSOLV_API_KEY=rsolv_test_suite_key
+export GITHUB_TOKEN=your_github_token  # For integration tests
+```
+
 ### Testing
 
 ```bash
-# Run tests
+# Run all tests (some may timeout due to AST encryption issues)
 bun test
+
+# Run specific test suites
+bun test test/detector-v3-python.test.ts  # Python detection
+bun test test/ast-service-verification.test.ts  # AST service
+
+# Skip problematic tests
+bun test --skip enhanced-context-default  # Uses Vitest-specific mocks
 
 # Run tests in watch mode
 bun test --watch
@@ -458,6 +502,46 @@ bun run test:isolated
 ```
 
 **Note**: Due to Bun's test framework limitations, some tests may fail when run together but pass individually. Use `test:isolated` for accurate results.
+
+### Troubleshooting
+
+#### Tests Only Getting 5 Patterns Instead of 30+
+
+**Problem**: Pattern API returns only demo patterns (5) instead of full set (30+ for JS, 12+ for Python)
+
+**Solution**: Ensure API key has proper permissions array:
+```sql
+UPDATE api_keys SET permissions = ARRAY['scan', 'fix', 'admin'] 
+WHERE key = 'rsolv_test_suite_key';
+```
+
+**Verify**: 
+```bash
+curl -H "Authorization: Bearer rsolv_test_suite_key" \
+  "http://localhost:4002/api/v1/patterns?language=javascript" | jq '.patterns | length'
+# Should output 30+, not 5
+```
+
+#### Authentication Header Issues
+
+Different endpoints use different authentication methods:
+- **Pattern API**: `Authorization: Bearer <api_key>` (NOT x-api-key!)
+- **AST API**: `x-api-key: <api_key>` + `X-Encryption-Key: <base64_32_bytes>`
+- **Fix Attempts**: `Authorization: Bearer <api_key>`
+
+#### AST Service Returns 0 Vulnerabilities
+
+**Problem**: AST endpoint returns empty results even with vulnerable code
+
+**Common Causes**:
+
+1. **Test File Confidence**: Files with "test" in the path (e.g., `test.py`, `test_app.js`) get a 0.85x confidence multiplier
+   - This is intentional but conservative - test files often contain real vulnerabilities (hardcoded secrets, vulnerable examples)
+   - If you're not seeing detections in test files, check if confidence is just below threshold
+
+2. **Encryption key format issues**
+   - **Solution**: Generate proper 32-byte key: `openssl rand -base64 32`
+   - Use this key in X-Encryption-Key header
 
 ## License
 

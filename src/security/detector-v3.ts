@@ -78,18 +78,38 @@ export class SecurityDetectorV3 {
         const result = await this.astAnalyzer.analyzeFile(filePath, code);
         
         // Convert server results to vulnerabilities
-        if (result.patterns) {
-          for (const finding of result.patterns) {
-            const key = `${finding.location.start.line}:${finding.pattern.type}`;
+        // Server returns 'findings' field per RFC-031
+        const findings = result.findings || [];
+        if (findings.length > 0) {
+          for (const finding of findings) {
+            // Handle both old format (with nested pattern) and new format (direct properties)
+            const pattern = finding.pattern || finding;
+            const location = (finding as any).location || (pattern as any).location;
+            
+            // Handle different location formats
+            let line: number;
+            if (location?.start?.line) {
+              line = location.start.line;
+            } else if ((location as any)?.startLine) {
+              line = (location as any).startLine;
+            } else if (typeof location === 'object' && location !== null) {
+              // Try to extract line from various formats
+              line = (location as any).line || (location as any).start_line || 0;
+            } else {
+              logger.warn('SecurityDetectorV3: Skipping finding without valid location', finding);
+              continue;
+            }
+            
+            const key = `${line}:${pattern.type || (pattern as any).patternId}`;
             if (!seen.has(key)) {
               seen.add(key);
               
               vulnerabilities.push({
-                type: finding.pattern.type as VulnerabilityType,
-                severity: finding.pattern.severity as 'low' | 'medium' | 'high' | 'critical',
-                line: finding.location.start.line,
-                message: finding.pattern.message || finding.pattern.name,
-                description: finding.pattern.description || finding.pattern.message || '',
+                type: (pattern.type || (pattern as any).patternId) as VulnerabilityType,
+                severity: (pattern.severity || 'medium') as 'low' | 'medium' | 'high' | 'critical',
+                line: line,
+                message: pattern.message || (pattern as any).patternName || pattern.name || '',
+                description: pattern.description || pattern.recommendation || pattern.message || '',
                 confidence: finding.confidence || 80,
                 cweId: (finding.pattern as any).cweId || (finding.pattern as any).cwe,
                 owaspCategory: (finding.pattern as any).owaspCategory || (finding.pattern as any).owasp,

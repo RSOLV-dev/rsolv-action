@@ -2,7 +2,7 @@
  * RFC-047: Vendor Library Detection Implementation
  */
 
-import { Library } from './types';
+import { Library } from './types.js';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 

@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, mock, afterEach } from 'bun:test';
+import { describe, it, expect, beforeEach, vi, afterEach, vi } from 'vitest';
 import { RsolvApiClient } from '../api-client.js';
 
 // Mock node-fetch
-const mockFetch = mock();
-mock.module('node-fetch', () => ({
+const mockFetch = vi.fn();
+vi.mock('node-fetch', () => ({
   default: mockFetch
 }));
 
@@ -29,7 +29,7 @@ describe('PR Integration with Fix Attempt Recording', () => {
     delete process.env.RSOLV_API_URL;
     // Restore fetch
     global.fetch = originalFetch;
-    mock.restore();
+    vi.restoreAllMocks();
   });
 
   it('should record fix attempt after successful PR creation', async () => {

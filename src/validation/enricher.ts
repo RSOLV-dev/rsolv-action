@@ -40,15 +40,77 @@ export class ValidationEnricher {
   private githubToken: string;
   private rsolvApiKey?: string;
   private batchValidator?: BatchValidator;
+  private apiUrl?: string;
 
-  constructor(githubToken: string, rsolvApiKey?: string) {
-    this.githubToken = githubToken;
-    this.rsolvApiKey = rsolvApiKey;
-    if (rsolvApiKey) {
+  constructor(config: string | { githubToken?: string; rsolvApiKey?: string; apiUrl?: string }, rsolvApiKey?: string) {
+    if (typeof config === 'string') {
+      // Legacy constructor signature
+      this.githubToken = config;
+      this.rsolvApiKey = rsolvApiKey;
+      this.apiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
+    } else {
+      // New constructor signature for tests
+      this.githubToken = config.githubToken || '';
+      this.rsolvApiKey = config.rsolvApiKey;
+      this.apiUrl = config.apiUrl || process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
+    }
+    
+    if (this.rsolvApiKey) {
       logger.info(`[VALIDATE] Initializing BatchValidator with API key`);
-      this.batchValidator = new BatchValidator(rsolvApiKey, process.env.RSOLV_API_URL);
+      this.batchValidator = new BatchValidator(this.rsolvApiKey, this.apiUrl);
     } else {
       logger.info(`[VALIDATE] No RSOLV API key provided, batch validation disabled`);
+    }
+  }
+
+  /**
+   * Validate code with AST analysis
+   * Calls the correct /api/v1/ast/validate endpoint
+   */
+  async validateWithAST(filePath: string, content: string, vulnerabilityType: string): Promise<any> {
+    if (!this.rsolvApiKey) {
+      return null;
+    }
+
+    const apiUrl = this.apiUrl || process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
+    // FIX: Use the correct endpoint path
+    const endpoint = `${apiUrl}/api/v1/ast/validate`;
+    
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.rsolvApiKey}`
+        },
+        body: JSON.stringify({
+          file: filePath,
+          content: content,
+          vulnerabilityType: vulnerabilityType
+        })
+      });
+
+      if (response.status === 404) {
+        logger.warn(`[VALIDATE] AST validation endpoint not found: ${endpoint}`);
+        return null;
+      }
+
+      if (!response.ok) {
+        logger.warn(`[VALIDATE] AST validation failed: ${response.status}`);
+        return null;
+      }
+
+      const result = await response.json();
+      return {
+        validated: [{
+          file: filePath,
+          isValid: true,
+          findings: result.findings || []
+        }]
+      };
+    } catch (error) {
+      logger.error('[VALIDATE] AST validation error:', error);
+      return null;
     }
   }
 

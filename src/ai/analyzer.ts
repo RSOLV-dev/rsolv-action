@@ -14,6 +14,25 @@ export async function analyzeIssue(
 ): Promise<AnalysisData> {
   logger.info(`Analyzing issue #${issue.number} with AI`);
   
+  // Check if we're in dev mode with Claude Max
+  const isDevMode = process.env.RSOLV_DEV_MODE === 'true' && 
+                    process.env.RSOLV_USE_CLAUDE_MAX === 'true';
+  
+  // In dev mode with Claude Max, skip the AI client (we'll use Claude Max directly later)
+  // For now, return a basic analysis
+  if (isDevMode && !injectedClient) {
+    logger.info('Development mode with Claude Max - using simplified analysis');
+    return {
+      issueType: determineIssueType(issue),
+      filesToModify: extractFilesFromIssue(issue),
+      estimatedComplexity: 'medium',
+      requiredContext: [],
+      suggestedApproach: 'Fix security vulnerability using Claude Code Max',
+      confidenceScore: 0.8,
+      canBeFixed: true
+    };
+  }
+  
   // Use injected client for testing or create AI client based on configuration
   const aiClient = injectedClient || await getAiClient(config.aiProvider);
   
@@ -134,6 +153,21 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
       canBeFixed: false
     };
   }
+}
+
+/**
+ * Extract files mentioned in the issue
+ */
+function extractFilesFromIssue(issue: IssueContext): string[] {
+  const files: string[] = [];
+  const fileRegex = /####\s*`([^`]+)`/g;
+  let match;
+  
+  while ((match = fileRegex.exec(issue.body)) !== null) {
+    files.push(match[1]);
+  }
+  
+  return files;
 }
 
 /**

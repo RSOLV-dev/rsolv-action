@@ -10,7 +10,7 @@
  * 3. REFACTOR: Improve implementation while keeping tests green
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import type { IssueContext, ActionConfig } from '../../types/index.js';
 import type { Vulnerability } from '../types.js';
 
@@ -212,7 +212,7 @@ describe('VulnerabilityTestGenerator (TDD - Green Phase)', () => {
     );
     
     expect(refactorTest.testName).toContain('should maintain functionality');
-    expect(refactorTest.functionalValidation).toBeArray();
+    expect(Array.isArray(refactorTest.functionalValidation)).toBe(true);
     expect(refactorTest.functionalValidation.length).toBeGreaterThan(0);
   });
 

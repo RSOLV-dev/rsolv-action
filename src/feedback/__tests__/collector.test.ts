@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock, Mock } from 'bun:test';
+import { describe, it, expect, beforeEach, vi, Mock, vi } from 'vitest';
 import { FeedbackCollector } from '../collector.js';
 import type { FeedbackEvent } from '../types.js';
 
@@ -8,7 +8,7 @@ describe('FeedbackCollector', () => {
   
   beforeEach(() => {
     // Create a mock for storage.createFeedback
-    mockCreateFeedback = mock((data: Omit<FeedbackEvent, 'id'>) => {
+    mockCreateFeedback = vi.fn((data: Omit<FeedbackEvent, 'id'>) => {
       return Promise.resolve({
         ...data,
         id: 'mock-feedback-id',
@@ -102,7 +102,7 @@ describe('FeedbackCollector', () => {
       
       // Mock collectPRComment
       const originalCollectPRComment = collector.collectPRComment;
-      collector.collectPRComment = mock(() => {
+      collector.collectPRComment = vi.fn(() => {
         return Promise.resolve({
           id: 'mock-id',
           issueId: 'mock-issue',

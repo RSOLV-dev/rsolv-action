@@ -1,6 +1,7 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock, vi } from 'vitest';
 import { PatternAPIClient } from './pattern-api-client.js';
 import { VulnerabilityType } from './types.js';
+import { getTestApiConfig } from '../../test/test-env-config.js';
 
 describe('PatternAPIClient', () => {
   let client: PatternAPIClient;
@@ -10,7 +11,7 @@ describe('PatternAPIClient', () => {
   
   beforeEach(() => {
     // Create a fresh mock for fetch
-    fetchMock = mock(() => Promise.resolve({
+    fetchMock = vi.fn(() => Promise.resolve({
       ok: true,
       status: 200,
       json: async () => ({})
@@ -58,8 +59,13 @@ describe('PatternAPIClient', () => {
   });
 
   describe('fetchPatterns', () => {
+    const testConfig = getTestApiConfig();
+    
     beforeEach(() => {
-      client = new PatternAPIClient({ apiKey: 'test-key' });
+      client = new PatternAPIClient({ 
+        apiUrl: testConfig.apiUrl,
+        apiKey: testConfig.apiKey || 'test-key' 
+      });
     });
 
     test('should fetch patterns for a language', async () => {
@@ -101,9 +107,13 @@ describe('PatternAPIClient', () => {
       
       // Get the actual call arguments
       const [url, options] = fetchMock.mock.calls[0];
-      expect(url).toBe('https://api.rsolv.dev/api/v1/patterns?language=javascript&format=enhanced');
+      const expectedBaseUrl = testConfig.apiUrl.includes('/api/v1/patterns') 
+        ? testConfig.apiUrl 
+        : `${testConfig.apiUrl}/api/v1/patterns`;
+      expect(url).toBe(`${expectedBaseUrl}?language=javascript&format=enhanced`);
       expect(options.headers['Content-Type']).toBe('application/json');
-      expect(options.headers['Authorization']).toBe('Bearer test-key');
+      const expectedAuth = testConfig.apiKey || 'test-key';
+      expect(options.headers['Authorization']).toBe(`Bearer ${expectedAuth}`);
 
       expect(patterns).toHaveLength(1);
       expect(patterns[0].id).toBe('js-sql-injection');

@@ -1,6 +1,14 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 
 describe('GitHub Multi-Label Search', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   test('should search for both configured label and rsolv label', () => {
     // Test various label configurations
     const testCases = [

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach } from 'vitest';
 import { JiraAdapter } from '../../src/platforms/jira/jira-adapter';
 import type { UnifiedIssue } from '../../src/platforms/types';
 
@@ -6,6 +6,14 @@ import type { UnifiedIssue } from '../../src/platforms/types';
  * Integration test showing how Jira fits into the RSOLV workflow
  */
 describe('Jira Integration Workflow', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   test('demonstrates the complete workflow from Jira issue to PR', async () => {
     // Step 1: User creates a Jira issue with autofix label
     const jiraIssue: UnifiedIssue = {

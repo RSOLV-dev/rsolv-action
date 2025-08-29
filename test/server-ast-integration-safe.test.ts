@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SecurityDetectorV2 } from '../src/security/detector-v2';
 import { ElixirASTAnalyzer } from '../src/security/analyzers/elixir-ast-analyzer';
 import { ASTPatternInterpreter } from '../src/security/ast-pattern-interpreter';
@@ -78,7 +78,7 @@ describe('Server-Side AST Integration - Safe RED Phase Tests', () => {
       const interpreter = new ASTPatternInterpreter();
       
       // Check that scanFile would handle non-JS differently
-      const scanFileSpy = mock(() => []);
+      const scanFileSpy = vi.fn(() => []);
       (interpreter as any).regexOnlyFallback = scanFileSpy;
       
       // If we were to scan a Python file, it should use fallback

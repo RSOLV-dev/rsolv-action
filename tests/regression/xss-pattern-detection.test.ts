@@ -1,16 +1,24 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ValidationEnricher } from '../../src/validation/enricher';
+import { ValidationEnricher } from '../../src/validation/enricher.js';
 
 // Mock the GitHub API utilities
-import { mock } from 'bun:test';
-mock.module('../../src/github/api.js', () => ({
-  updateIssue: mock(() => Promise.resolve()),
-  addLabels: mock(() => Promise.resolve())
+import { vi } from 'vitest';
+vi.mock('../../src/github/api.js', () => ({
+  updateIssue: vi.fn(() => Promise.resolve()),
+  addLabels: vi.fn(() => Promise.resolve())
 }));
 
 describe('XSS Pattern Detection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   let enricher: ValidationEnricher;
   
   beforeEach(() => {
@@ -68,9 +76,9 @@ describe('XSS Pattern Detection', () => {
       updatedAt: new Date().toISOString()
     };
     
-    // Change to test directory
+    // Mock process.cwd to return test directory
     const originalCwd = process.cwd();
-    process.chdir(testDir);
+    vi.spyOn(process, 'cwd').mockReturnValue(testDir);
     
     try {
       // Run enrichment
@@ -90,7 +98,7 @@ describe('XSS Pattern Detection', () => {
       expect(xssVuln?.confidence).toBe('high');
       
     } finally {
-      process.chdir(originalCwd);
+      vi.mocked(process.cwd).mockRestore();
       fs.rmSync(testDir, { recursive: true, force: true });
     }
   });

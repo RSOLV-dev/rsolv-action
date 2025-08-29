@@ -1,7 +1,20 @@
-import { describe, expect, test, mock, spyOn } from 'bun:test';
+import { describe, expect, test, vi } from 'vitest';
 import { ClaudeCodeAdapter } from '../claude-code.js';
 import { execSync } from 'child_process';
-import * as fs from 'fs';
+
+// Mock fs module
+vi.mock('fs', () => ({
+  default: {
+    existsSync: vi.fn(() => true),
+    readFileSync: vi.fn(() => '{}'),
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn()
+  },
+  existsSync: vi.fn(() => true),
+  readFileSync: vi.fn(() => '{}'),
+  writeFileSync: vi.fn(),
+  mkdirSync: vi.fn()
+}));
 
 describe('Claude Code CLI Integration', () => {
   // Check if Claude CLI is available
@@ -14,15 +27,32 @@ describe('Claude Code CLI Integration', () => {
     }
   })();
 
+  // Check if Claude Max is available (local subscription)
+  const isClaudeMaxAvailable = (() => {
+    if (!isClaudeAvailable) return false;
+    try {
+      // Test if Claude CLI works without API key (indicating Max subscription)
+      const result = execSync('echo "test" | claude --print 2>&1', { 
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe']
+      }).toString().trim();
+      
+      return result.length > 0 && 
+             !result.toLowerCase().includes('error') && 
+             !result.toLowerCase().includes('authenticate');
+    } catch {
+      return false;
+    }
+  })();
+
   // Check if we have an API key
   const hasApiKey = !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY);
 
-  const skipTest = !isClaudeAvailable || !hasApiKey;
+  // Skip only if neither Claude Max nor API key is available
+  const skipTest = !isClaudeAvailable || (!isClaudeMaxAvailable && !hasApiKey);
 
   test.skipIf(skipTest)('should check if Claude CLI is available', async () => {
-    // Mock fs.existsSync to return true for the test
-    const existsSyncSpy = spyOn(fs, 'existsSync').mockReturnValue(true);
-    
     const adapter = new ClaudeCodeAdapter({
       apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || 'test-key',
       model: 'claude-3-sonnet-20240229',
@@ -31,8 +61,6 @@ describe('Claude Code CLI Integration', () => {
 
     const isAvailable = await adapter.isAvailable();
     expect(isAvailable).toBe(true);
-    
-    existsSyncSpy.mockRestore();
   });
 
   test.skipIf(skipTest)('should construct a proper prompt', () => {

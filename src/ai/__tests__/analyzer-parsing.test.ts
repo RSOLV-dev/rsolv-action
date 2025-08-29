@@ -6,7 +6,7 @@ import { IssueContext } from '../../types/index.js';
 
 // Mock the AI client
 const mockAiClient = {
-  complete: jest.fn()
+  complete: vi.fn()
 };
 
 const mockIssue: IssueContext = {
@@ -30,7 +30,7 @@ const mockIssue: IssueContext = {
 
 describe('Improved Analyzer Parsing', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('should detect files mentioned without quotes', async () => {

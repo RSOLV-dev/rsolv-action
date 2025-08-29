@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, vi } from 'vitest';
 import { SecurityDetectorV2 } from '../detector-v2.js';
 import { LocalPatternSource } from '../pattern-source.js';
 import { getMinimalPatternsByLanguage } from '../minimal-patterns.js';
@@ -34,6 +34,9 @@ describe('Ruby Vulnerability Detection', () => {
   });
 
   it('should detect Ruby SQL injection with detector', async () => {
+    // Force use of local patterns for testing
+    process.env.USE_LOCAL_PATTERNS = 'true';
+    
     const detector = new SecurityDetectorV2();
     
     // Simple single line test first
@@ -45,9 +48,15 @@ describe('Ruby Vulnerability Detection', () => {
     
     console.log('Single line vulnerabilities:', vulnerabilities);
     expect(vulnerabilities.length).toBeGreaterThan(0);
+    
+    // Cleanup
+    delete process.env.USE_LOCAL_PATTERNS;
   });
 
   it('should detect Ruby SQL injection in full code', async () => {
+    // Force use of local patterns for testing
+    process.env.USE_LOCAL_PATTERNS = 'true';
+    
     const detector = new SecurityDetectorV2();
     
     const rubyCode = `# frozen_string_literal: true
@@ -72,5 +81,8 @@ end`;
       expect(vulnerabilities[0].type).toBe('sql_injection');
       expect(vulnerabilities[0].line).toBe(6);
     }
+    
+    // Cleanup
+    delete process.env.USE_LOCAL_PATTERNS;
   });
 });

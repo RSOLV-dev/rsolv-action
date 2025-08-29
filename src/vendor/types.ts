@@ -68,8 +68,8 @@ export interface Issue {
 export type DependencyMap = Map<string, string>;
 
 // Export implementations
-export { VendorDetector } from './vendor-detector';
-export { DependencyAnalyzer } from './dependency-analyzer';
-export { VendorVulnerabilityHandler } from './vulnerability-handler';
-export { UpdateRecommender } from './update-recommender';
-export { VendorIssueCreator } from './issue-creator';
+export { VendorDetector } from './vendor-detector.js';
+export { DependencyAnalyzer } from './dependency-analyzer.js';
+export { VendorVulnerabilityHandler } from './vulnerability-handler.js';
+export { UpdateRecommender } from './update-recommender.js';
+export { VendorIssueCreator } from './issue-creator.js';

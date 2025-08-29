@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RsolvApiClient } from '../api-client.js';
 import { setupFetchMock } from '../../../test-helpers/simple-mocks';
 
@@ -18,7 +18,7 @@ describe('RsolvApiClient', () => {
   
   afterEach(() => {
     global.fetch = originalFetch;
-    mock.restore();
+    vi.restoreAllMocks();
   });
 
   describe('recordFixAttempt', () => {

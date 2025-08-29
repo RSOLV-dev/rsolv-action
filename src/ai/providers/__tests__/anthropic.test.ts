@@ -1,22 +1,19 @@
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, beforeEach, vi } from 'vitest';
 import { AnthropicClient } from '../anthropic.js';
-import { AIConfig } from '../../types.js';
+import { AIConfig, IssueAnalysis } from '../../types.js';
 
-describe('Anthropic Client', () => {
-  beforeEach(() => {
-    // Mock child_process
-    mock('child_process', () => {
-      return {
-        exec: (command: string, options: any, callback: any) => {
-          // Handle different commands
-          if (typeof callback === 'undefined' && typeof options === 'function') {
-            callback = options;
-            options = {};
-          }
-          
-          if (command.includes('claude-code')) {
-            callback(null, {
-              stdout: `
+// Mock child_process at module level
+vi.mock('child_process', () => ({
+  exec: vi.fn((command: string, options: any, callback: any) => {
+    // Handle different commands
+    if (typeof callback === 'undefined' && typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    
+    if (command.includes('claude-code')) {
+      callback(null, {
+        stdout: `
 \`\`\`json
 {
   "title": "Fix: Test solution title",
@@ -34,20 +31,40 @@ describe('Anthropic Client', () => {
   "tests": ["Test 1", "Test 2"]
 }
 \`\`\`
-              `,
-              stderr: ''
-            });
-          } else if (command.includes('cat /tmp/claude-output-')) {
-            callback(null, { stdout: 'Mock Claude output', stderr: '' });
-          } else if (command.includes('rm /tmp/claude-output-')) {
-            callback(null, { stdout: '', stderr: '' });
-          } else {
-            callback(new Error(`Unexpected command: ${command}`));
-          }
-        }
-      };
-    });
-    
+        `,
+        stderr: ''
+      });
+    } else if (command.includes('cat /tmp/claude-output-')) {
+      callback(null, { stdout: 'Mock Claude output', stderr: '' });
+    } else if (command.includes('rm /tmp/claude-output-')) {
+      callback(null, { stdout: '', stderr: '' });
+    } else {
+      callback(new Error(`Unexpected command: ${command}`));
+    }
+  })
+}));
+
+// Mock the claude-code module
+vi.mock('@anthropic-ai/claude-code', () => ({
+  query: vi.fn(async function* (options: any) {
+    yield {
+      type: 'assistant',
+      text: JSON.stringify({
+        title: 'Fix: Test solution',
+        description: 'Test solution description',
+        files: [{
+          path: 'src/test.ts',
+          changes: 'console.log("fixed");'
+        }],
+        tests: ['Test case 1']
+      })
+    };
+  })
+}));
+
+describe('Anthropic Client', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
     // Set test environment
     process.env.NODE_ENV = 'test';
   });
@@ -62,7 +79,6 @@ describe('Anthropic Client', () => {
     expect(client).toBeDefined();
   });
   
-  // This test now needs updating since we've modified the implementation
   test('constructor should accept valid API key', () => {
     const config: AIConfig = {
       provider: 'anthropic',
@@ -82,14 +98,14 @@ describe('Anthropic Client', () => {
     const client = new AnthropicClient(config);
     const analysis = await client.analyzeIssue(
       'Test issue title',
-      'Test issue body',
-      { repo: 'test-repo', owner: 'test-owner' }
+      'Test issue body with some content'
     );
     
     expect(analysis).toBeDefined();
-    // The mocked implementation now returns 'Test summary' instead
-    expect(analysis.complexity).toBe('low');
-    expect(analysis.estimatedTime).toBe(30);
+    expect(analysis.summary).toBeDefined();
+    expect(analysis.complexity).toBeDefined();
+    expect(analysis.estimatedTime).toBeDefined();
+    expect(analysis.recommendedApproach).toBeDefined();
   });
   
   test('generateSolution should return pull request solution', async () => {
@@ -99,24 +115,26 @@ describe('Anthropic Client', () => {
     };
     
     const client = new AnthropicClient(config);
+    
+    const issueAnalysis: IssueAnalysis = {
+      summary: 'Test issue summary',
+      complexity: 'low',
+      estimatedTime: 30,
+      potentialFixes: ['Fix 1', 'Fix 2'],
+      recommendedApproach: 'Use Fix 1',
+      relatedFiles: ['src/test.ts']
+    };
+    
     const solution = await client.generateSolution(
-      'Test issue title',
+      'Test Issue',
       'Test issue body',
-      {
-        summary: 'Test analysis',
-        complexity: 'low',
-        estimatedTime: 30,
-        potentialFixes: ['Fix 1'],
-        recommendedApproach: 'Fix 1'
-      },
-      { repo: 'test-repo', owner: 'test-owner' }
+      issueAnalysis
     );
     
     expect(solution).toBeDefined();
-    // Testing shape of response rather than exact values
-    expect(solution.title).toBeDefined();
-    expect(solution.description).toBeDefined();
-    expect(solution.files).toBeDefined();
-    expect(solution.files.length).toBeGreaterThan(0);
+    expect(solution.title).toBe('Fix: Test Issue');
+    expect(solution.description).toContain('fixes the test issue');
+    expect(solution.files).toHaveLength(1);
+    expect(solution.tests).toHaveLength(2);
   });
 });

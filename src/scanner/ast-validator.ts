@@ -139,7 +139,12 @@ export class ASTValidator {
   }
   
   private async callValidationAPI(request: any): Promise<ValidationResponse> {
-    return this.apiClient.validateVulnerabilities(request);
+    const response = await this.apiClient.validateVulnerabilities(request);
+    if (process.env.DEBUG_AST_VALIDATION) {
+      console.log('AST Validation Request:', JSON.stringify(request, null, 2));
+      console.log('AST Validation Response:', JSON.stringify(response, null, 2));
+    }
+    return response;
   }
   
   private processValidationResponse(
@@ -155,6 +160,7 @@ export class ASTValidator {
     const validated = vulnerabilities.filter(vuln => {
       const vulnId = `${vuln.type}-${vuln.line}-${vuln.column || 0}`;
       const validation = validationMap.get(vulnId);
+      
       if (!validation) {
         // No validation result, keep the vulnerability
         return true;

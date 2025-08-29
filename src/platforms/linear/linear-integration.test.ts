@@ -1,4 +1,4 @@
-import { describe, it, expect, mock } from 'bun:test';
+import { describe, it, expect, mock, vi } from 'vitest';
 import { LinearAdapter } from './linear-adapter';
 // import type { ActionConfig } from '../../types';
 
@@ -12,7 +12,7 @@ describe.skip('Linear Integration End-to-End - DISABLED', () => {
       });
 
       // Verify the GraphQL query structure
-      const mockFetch = mock(() => Promise.resolve({
+      const mockFetch = vi.fn(() => Promise.resolve({
         ok: true,
         json: async () => ({
           data: {
@@ -54,7 +54,7 @@ describe.skip('Linear Integration End-to-End - DISABLED', () => {
       process.env.GITHUB_TOKEN = 'gh_test';
 
       // Mock fetch for Linear
-      const mockFetch = mock();
+      const mockFetch = vi.fn();
       mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({
@@ -114,7 +114,7 @@ describe.skip('Linear Integration End-to-End - DISABLED', () => {
       });
 
       // First page
-      const mockFetch = mock();
+      const mockFetch = vi.fn();
       mockFetch.mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: async () => ({
@@ -153,7 +153,7 @@ describe.skip('Linear Integration End-to-End - DISABLED', () => {
         apiKey: 'test_key'
       });
 
-      const mockFetch = mock(() => Promise.resolve({
+      const mockFetch = vi.fn(() => Promise.resolve({
         ok: true,
         json: async () => ({
           data: {
@@ -201,7 +201,7 @@ describe.skip('Linear Integration End-to-End - DISABLED', () => {
       process.env.JIRA_API_TOKEN = 'jira_test';
 
       // Mock responses
-      const mockFetch = mock();
+      const mockFetch = vi.fn();
       mockFetch
         .mockImplementationOnce(() => Promise.resolve({
           // Linear response
@@ -235,7 +235,7 @@ describe.skip('Linear Integration End-to-End - DISABLED', () => {
         rsolvLabel: 'custom-rsolv'
       });
 
-      const mockFetch = mock(() => Promise.resolve({
+      const mockFetch = vi.fn(() => Promise.resolve({
         ok: true,
         json: async () => ({
           data: {
@@ -289,7 +289,7 @@ describe.skip('Linear Integration End-to-End - DISABLED', () => {
         teamId: 'team_123'
       });
 
-      const mockFetch = mock(() => Promise.resolve({
+      const mockFetch = vi.fn(() => Promise.resolve({
         ok: true,
         json: async () => ({ data: { issues: { nodes: [] } } })
       }));

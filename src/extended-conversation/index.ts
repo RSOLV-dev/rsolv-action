@@ -6,7 +6,27 @@
  * in a single extended conversation, producing one comprehensive PR.
  */
 
-import type { Vulnerability, FixResult } from '../types.js';
+// Define local types since they're not exported from types/index.js
+interface Vulnerability {
+  type: string;
+  severity?: string;
+  description?: string;
+  files?: string[];
+  filesToModify?: string[];
+  locations?: Array<{ file: string; line?: number }>;
+}
+
+interface FixResult {
+  success: boolean;
+  prUrl?: string;
+  message: string;
+  stats?: {
+    filesProcessed: number;
+    conversationTurns: number;
+    tokensUsed: number;
+  };
+  file?: string;
+}
 
 export interface ExtendedConversationConfig {
   maxFilesPerConversation: number;  // Default: 20 (well within Claude's limits)
@@ -14,6 +34,24 @@ export interface ExtendedConversationConfig {
   conversationStrategy: 'sequential' | 'grouped' | 'prioritized';
   includeContext: boolean;          // Include related files for better understanding
   temperature?: number;              // Temperature for AI responses
+}
+
+interface FileContext {
+  path: string;
+  content: string;
+  vulnerabilityLocations?: Array<{ file: string; line?: number }>;
+}
+
+interface Phase {
+  phase: number;
+  description: string;
+  files: string[];
+  dependencies?: string[];
+}
+
+interface ConversationPlan {
+  strategy: string;
+  phases: Phase[];
 }
 
 export class ExtendedConversationHandler {
@@ -67,7 +105,7 @@ export class ExtendedConversationHandler {
       stats: {
         filesProcessed: files.length,
         conversationTurns: conversation.turns,
-        totalTokens: conversation.totalTokens
+        tokensUsed: conversation.totalTokens || 0
       }
     };
   }
@@ -93,7 +131,7 @@ export class ExtendedConversationHandler {
       context.files.push({
         path: file,
         content,
-        vulnerabilityLocations: vulnerability.locations?.filter(l => l.file === file)
+        vulnerabilityLocations: vulnerability.locations?.filter((l: { file: string }) => l.file === file)
       });
       
       context.dependencies.set(file, dependencies);
@@ -114,10 +152,10 @@ export class ExtendedConversationHandler {
   /**
    * Create a conversation plan for fixing the vulnerability
    */
-  private createConversationPlan(vulnerability: Vulnerability, files: string[]): any {
-    const plan = {
+  private createConversationPlan(vulnerability: Vulnerability, files: string[]): ConversationPlan {
+    const plan: ConversationPlan = {
       strategy: this.config.conversationStrategy,
-      phases: [] as any[]
+      phases: [] as Phase[]
     };
     
     switch (this.config.conversationStrategy) {
@@ -249,7 +287,7 @@ export class ExtendedConversationHandler {
       title: `[RSOLV] Fix ${vulnerability.type} vulnerability across ${conversation.fixes.length} files`,
       body: prBody,
       branch: `rsolv/fix-issue-${issueNumber}`,
-      files: conversation.fixes.map(f => f.file)
+      files: conversation.fixes.map((f: FixResult) => f.file)
     });
     
     return pr;
@@ -289,16 +327,16 @@ VULNERABILITY DETAILS:
 ${vulnerability.description}
 
 AFFECTED FILES:
-${context.files.map(f => `- ${f.path}`).join('\n')}
+${context.files.map((f: FileContext) => `- ${f.path}`).join('\n')}
 
 PLAN:
 We'll fix this systematically across all files in a single PR. 
-${plan.phases.map(p => `Phase ${p.phase}: ${p.description}`).join('\n')}
+${plan.phases.map((p: Phase) => `Phase ${p.phase}: ${p.description}`).join('\n')}
 
 Let's start by understanding the vulnerability pattern across all files.
 Please analyze the following files and identify the common vulnerability pattern:
 
-${context.files.slice(0, 3).map(f => `
+${context.files.slice(0, 3).map((f: FileContext) => `
 File: ${f.path}
 \`\`\`
 ${f.content.substring(0, 1000)}
@@ -334,12 +372,12 @@ Provide a final summary of the changes.
     `;
   }
   
-  private extractFixes(content: string, files: string[]): any[] {
+  private extractFixes(content: string, files: string[]): FixResult[] {
     // Parse Claude's response to extract code fixes
     return [];
   }
   
-  private buildPRBody(conversation: any, vulnerability: Vulnerability, issueNumber: number): string {
+  private buildPRBody(conversation: { fixes: FixResult[]; turns: number }, vulnerability: Vulnerability, issueNumber: number): string {
     return `
 ## 🔒 Security Fix: ${vulnerability.type}
 
@@ -353,7 +391,7 @@ Fixes #${issueNumber}
 - **Approach**: Extended conversation with comprehensive context
 
 ### 🔧 Changes Made
-${conversation.fixes.map(f => `- ✅ ${f.file}: ${f.summary}`).join('\n')}
+${conversation.fixes.map((f: FixResult) => `- ✅ ${f.file || 'Unknown file'}: Fixed vulnerability`).join('\n')}
 
 ### 🧪 Testing
 - All changes made in a single, coherent PR
@@ -447,7 +485,7 @@ export class ExtendedConversationIntegration {
       return {
         success: false,
         action: 'failed',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: 'Extended conversation failed, may need manual intervention'
       };
     }

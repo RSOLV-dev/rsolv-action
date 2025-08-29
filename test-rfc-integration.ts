@@ -5,7 +5,7 @@
  * Tests that all three RFCs are properly wired into the phase executor
  */
 
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from 'vitest';
 import { PhaseExecutor } from './src/modes/phase-executor/index.js';
 import { ChunkingIntegration } from './src/chunking/index.js';
 import { VendorDetectionIntegration } from './src/vendor/index.js';
@@ -51,10 +51,20 @@ describe('RFC Integration Tests', () => {
 
   it('All RFC implementations can be instantiated', async () => {
     // Test that all classes can be created without errors
-    const executor = new PhaseExecutor({
+    const testConfig = {
+      apiKey: 'test-key',
       rsolvApiKey: 'test-key',
-      aiProvider: { name: 'anthropic', model: 'claude-3' }
-    });
+      configPath: './test-config',
+      issueLabel: 'rsolv:automate',
+      aiProvider: { provider: 'anthropic', model: 'claude-3' },
+      containerConfig: { useContainer: false },
+      securitySettings: { 
+        enableSecurityReview: false,
+        enablePreCommitCheck: false,
+        enableRuntimeSandbox: false
+      }
+    };
+    const executor = new PhaseExecutor(testConfig as any);
     
     const chunking = new ChunkingIntegration();
     const vendor = new VendorDetectionIntegration();

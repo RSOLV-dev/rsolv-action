@@ -1,4 +1,4 @@
-import { describe, expect, test, mock } from 'bun:test';
+import { describe, expect, test, vi } from 'vitest';
 import { analyzeIssue } from '../../src/ai/analyzer.js';
 import { generateSolution } from '../../src/ai/solution.js';
 import { processIssues } from '../../src/ai/unified-processor.js';
@@ -6,18 +6,25 @@ import { getAiClient } from '../../src/ai/client.js';
 import { IssueContext, ActionConfig, AnalysisData } from '../../src/types/index.js';
 
 // Mock the logger module first to prevent undefined function errors
-mock.module('../../src/utils/logger.js', () => ({
+vi.mock('../../src/utils/logger.js', () => ({
+  Logger: class {
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+    debug = vi.fn();
+    log = vi.fn();
+  },
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {}),
-    debug: mock(() => {}),
-    log: mock(() => {})
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    log: vi.fn()
   }
 }));
 
 // Mock the AI client
-mock.module('../../src/ai/client.js', () => {
+vi.mock('../../src/ai/client.js', () => {
   return {
     getAiClient: () => ({
       complete: async (prompt: string) => {
@@ -79,7 +86,7 @@ This solution fixes the issue by properly decoding the token before validation, 
 });
 
 // Mock the GitHub modules
-mock.module('../../src/github/files.js', () => {
+vi.mock('../../src/github/files.js', () => {
   return {
     getRepositoryFiles: async () => ({
       'src/auth/tokenValidator.js': '// Original token validator code',
@@ -88,7 +95,7 @@ mock.module('../../src/github/files.js', () => {
   };
 });
 
-mock.module('../../src/github/pr.js', () => {
+vi.mock('../../src/github/pr.js', () => {
   return {
     createPullRequest: async () => ({
       success: true,
@@ -139,6 +146,14 @@ const mockConfig: ActionConfig = {
 };
 
 describe('AI Integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   test('analyzeIssue should analyze an issue and return structured data', async () => {
     const result = await analyzeIssue(mockIssue, mockConfig);
     

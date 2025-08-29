@@ -161,10 +161,12 @@ export class ClaudeCodeCLIAdapter {
       let child: any;
       // Try different approaches to find Claude CLI
       // Use --print for non-interactive mode with acceptEdits permission
+      // Add model parameter if specified in environment
+      const modelArgs = process.env.CLAUDE_MODEL ? ['--model', process.env.CLAUDE_MODEL] : [];
       const cliCommands: [string, string[]][] = [
-        ['claude', ['--print', '--permission-mode', 'acceptEdits', '-']],  // Global install
-        ['bunx', ['@anthropic-ai/claude-code', '--print', '--permission-mode', 'acceptEdits', '-']],  // Bunx
-        ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', '--print', '--permission-mode', 'acceptEdits', '-']]  // Direct run
+        ['claude', ['--print', '--permission-mode', 'acceptEdits', ...modelArgs, '-']],  // Global install
+        ['bunx', ['@anthropic-ai/claude-code', '--print', '--permission-mode', 'acceptEdits', ...modelArgs, '-']],  // Bunx
+        ['bun', ['node_modules/@anthropic-ai/claude-code/cli.js', '--print', '--permission-mode', 'acceptEdits', ...modelArgs, '-']]  // Direct run
       ];
       
       let attemptIndex = 0;

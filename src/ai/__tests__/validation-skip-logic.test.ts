@@ -3,7 +3,7 @@
  * Tests the fix for the DISABLE_FIX_VALIDATION bug
  */
 
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('Validation Skip Logic', () => {
   
@@ -35,7 +35,8 @@ describe('Validation Skip Logic', () => {
       config.testGeneration?.validateFixes || 
       config.fixValidation?.enabled !== false;
     
-    return !skipValidation && wouldEnterValidation;
+    // The bug is that it enters validation even when skipValidation is true
+    return wouldEnterValidation;
   }
 
   describe('shouldSkipValidation (correct logic)', () => {

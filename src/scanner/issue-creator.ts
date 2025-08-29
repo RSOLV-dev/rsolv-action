@@ -42,12 +42,21 @@ export class IssueCreator {
     const title = this.generateIssueTitle(group);
     const body = this.generateIssueBody(group, config);
     
+    // Build labels array - add rsolv:automate for demo mode
+    const labels = ['rsolv:detected', 'security', group.severity, 'automated-scan'];
+    
+    // Add rsolv:automate label if in demo mode or auto-fix is enabled
+    if (process.env.RSOLV_DEMO_MODE === 'true' || process.env.RSOLV_AUTO_FIX === 'true') {
+      labels.push('rsolv:automate');
+      labels.push('demo');
+    }
+    
     const { data: issue } = await this.github.issues.create({
       owner: config.repository.owner,
       repo: config.repository.name,
       title,
       body,
-      labels: ['rsolv:detected', 'security', group.severity, 'automated-scan']
+      labels
     });
     
     return {

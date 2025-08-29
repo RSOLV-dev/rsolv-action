@@ -1,24 +1,25 @@
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { setupContainer } from '../../src/containers/setup.js';
 import { runInContainer } from '../../src/containers/run.js';
+import { MockDockerClient } from '../../src/containers/docker-client.js';
 import { ActionConfig } from '../../src/types/index.js';
 
 // Set NODE_ENV to test for testing
 process.env.NODE_ENV = 'test';
 
 // Mock the logger module first
-mock.module('../../src/utils/logger.js', () => ({
+vi.mock('../../src/utils/logger.js', () => ({
   logger: {
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {}),
-    debug: mock(() => {}),
-    log: mock(() => {})
+    info: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    error: vi.fn(() => {}),
+    debug: vi.fn(() => {}),
+    log: vi.fn(() => {})
   }
 }));
 
 // Mock child_process exec
-mock.module('child_process', () => {
+vi.mock('child_process', () => {
   return {
     exec: (command: string, options: any, callback: any) => {
       if (typeof options === 'function') {
@@ -74,9 +75,9 @@ const mockConfig: ActionConfig = {
   }
 };
 
-// Skip container tests when Docker is not available
-// Docker is available on GitHub Actions, so only skip if explicitly disabled
-const skipIfNoDocker = process.env.SKIP_DOCKER_TESTS === 'true';
+// Container tests are fully mocked and don't require Docker
+// Only skip if explicitly requested for debugging
+const skipIfNoDocker = process.env.SKIP_DOCKER_TESTS === 'true' && process.env.FORCE_SKIP_MOCKED_TESTS === 'true';
 
 describe.skipIf(skipIfNoDocker)('Container Integration', () => {
   beforeEach(() => {
@@ -129,38 +130,25 @@ describe.skipIf(skipIfNoDocker)('Container Integration', () => {
   });
   
   test('runInContainer should handle container execution failure', async () => {
-    // For test environment, we need to modify the runInContainer function
-    // to handle specific test commands differently
-    const originalNodeEnv = process.env.NODE_ENV;
+    // Create a mock Docker client that simulates command failure
+    const mockDockerClient = new MockDockerClient();
     
-    // Temporarily change NODE_ENV to make the test fail as expected
-    process.env.NODE_ENV = 'production';
+    // Configure the mock to throw an error for invalid commands
+    mockDockerClient.setRunOutput({ stdout: '', stderr: 'Command not found' });
+    const originalRunContainer = mockDockerClient.runContainer;
+    mockDockerClient.runContainer = async (command: string) => {
+      if (command.includes('invalid-command')) {
+        throw new Error('Command not found');
+      }
+      return originalRunContainer.call(mockDockerClient, command);
+    };
     
-    // Mock additional failure case
-    mock('child_process', () => {
-      return {
-        exec: (command: string, options: any, callback: any) => {
-          if (command.includes('docker run') && command.includes('invalid-command')) {
-            callback({ code: 1, stderr: 'Command not found', stdout: '' });
-            return;
-          }
-          
-          // Let other commands succeed
-          callback(null, { stdout: 'Success', stderr: '' });
-        }
-      };
-    });
+    const result = await runInContainer(mockConfig, {
+      command: 'invalid-command'
+    }, mockDockerClient);
     
-    try {
-      const result = await runInContainer(mockConfig, {
-        command: 'invalid-command'
-      });
-      
-      expect(result.success).toBe(false);
-      expect(result.exitCode).not.toBe(0);
-    } finally {
-      // Restore the original environment
-      process.env.NODE_ENV = originalNodeEnv;
-    }
+    expect(result.success).toBe(false);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain('Command not found');
   });
 });

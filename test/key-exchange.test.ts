@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, vi } from 'vitest';
 import * as crypto from 'crypto';
 
 // RED Phase: Write failing tests for proper key exchange
@@ -7,7 +7,8 @@ describe('AST Service Key Exchange', () => {
   describe('Option 1: Diffie-Hellman Key Exchange (Most Secure)', () => {
     it('should establish shared secret using DH key exchange', () => {
       // Client generates DH key pair
-      const client = crypto.createDiffieHellman(2048);
+      // Using smaller size for testing (512 bits) - DO NOT use in production!
+      const client = crypto.createDiffieHellman(512);
       const clientPublicKey = client.generateKeys();
       
       // Server generates DH key pair

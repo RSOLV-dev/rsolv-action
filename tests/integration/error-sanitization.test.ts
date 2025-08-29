@@ -1,26 +1,40 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { getAiClient } from '../../src/ai/client.js';
 import { processIssues } from '../../src/ai/unified-processor.js';
 import { IssueContext, ActionConfig } from '../../src/types/index.js';
 
 // Mock the logger
-mock.module('../../src/utils/logger.js', () => ({
+vi.mock('../../src/utils/logger.js', () => ({
+  Logger: class {
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+    debug = vi.fn();
+  },
   logger: {
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    debug: () => {}
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
   }
 }));
 
 // Mock modules to force errors
-mock.module('../../src/ai/analyzer.js', () => ({
-  analyzeIssue: mock(() => {
+vi.mock('../../src/ai/analyzer.js', () => ({
+  analyzeIssue: vi.fn(() => {
     throw new Error('Failed to connect to Anthropic API');
   })
 }));
 
 describe('Error Message Sanitization', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   let mockIssue: IssueContext;
   let mockConfig: ActionConfig;
 
@@ -125,8 +139,8 @@ describe('Error Message Sanitization', () => {
 
   test('should sanitize network errors', async () => {
     // Mock a network error
-    mock.module('../../src/ai/analyzer.js', () => ({
-      analyzeIssue: mock(() => {
+    vi.mock('../../src/ai/analyzer.js', () => ({
+      analyzeIssue: vi.fn(() => {
         const error = new Error('Network error: Failed to fetch from https://api.anthropic.com/v1/messages');
         throw error;
       })

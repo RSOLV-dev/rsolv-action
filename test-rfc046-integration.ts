@@ -4,7 +4,7 @@
  * Integration test for RFC-046: Multi-file Vulnerability Chunking
  */
 
-import { ChunkingIntegration } from './src/chunking/index';
+import { ChunkingIntegration } from './src/chunking/index.js';
 
 const DOS_VULNERABILITY = {
   type: 'DENIAL_OF_SERVICE',
@@ -45,9 +45,9 @@ async function test() {
   
   if (result.prs) {
     console.log('\n📝 PR Series:');
-    result.prs.forEach((pr, i) => {
+    result.prs.forEach((pr: { title: string; files: Array<{ path: string }> }, i: number) => {
       console.log(`  ${i + 1}. ${pr.title}`);
-      console.log(`     Files: ${pr.files.map(f => f.path).join(', ')}`);
+      console.log(`     Files: ${pr.files.map((f: { path: string }) => f.path).join(', ')}`);
     });
   }
   

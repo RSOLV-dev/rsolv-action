@@ -3,7 +3,7 @@
  * Tests the actual validation skip decision logic
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ActionConfig } from '../../types/index.js';
 
 describe('DISABLE_FIX_VALIDATION Integration', () => {

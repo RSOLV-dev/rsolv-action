@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PhaseExecutor } from '../index.js';
 import { ActionConfig } from '../../../types/index.js';
 import * as fs from 'fs/promises';
@@ -10,6 +10,9 @@ describe('PhaseExecutor - Phase Data Persistence', () => {
   const testDir = '.rsolv/phase-data';
   
   beforeEach(async () => {
+    // Force local storage for tests
+    process.env.USE_PLATFORM_STORAGE = 'false';
+    
     // Clean up test directory
     try {
       await fs.rm(testDir, { recursive: true, force: true });
@@ -42,7 +45,10 @@ describe('PhaseExecutor - Phase Data Persistence', () => {
   });
   
   afterEach(async () => {
-    // Clean up
+    // Clean up environment
+    delete process.env.USE_PLATFORM_STORAGE;
+    
+    // Clean up test directory
     try {
       await fs.rm(testDir, { recursive: true, force: true });
     } catch (e) {
@@ -86,9 +92,10 @@ describe('PhaseExecutor - Phase Data Persistence', () => {
     
     // Check the structure - this is what executeMitigate expects
     const issueKey = `issue-${issueNumber}`;
-    const validation = retrievedData?.validation?.[issueKey];
+    // PhaseDataClient remaps 'validation' to 'validate' when retrieving from platform
+    // but when stored locally it stays as 'validation'
+    const validation = retrievedData?.validate?.[issueKey] || retrievedData?.validation?.[issueKey];
     
-    // This should work but currently fails
     expect(validation).toBeDefined();
     expect(validation?.hasSpecificVulnerabilities).toBe(true);
     expect(validation?.vulnerabilities).toHaveLength(1);
@@ -134,22 +141,27 @@ describe('PhaseExecutor - Phase Data Persistence', () => {
     expect(retrievedData).toBeDefined();
     
     // Test different possible structures
-    if (retrievedData?.validation) {
-      console.log('Has validation key at top level');
-      const issueKey = `issue-${issueNumber}`;
-      if (retrievedData.validation[issueKey]) {
-        console.log('Has issue key under validation');
-        expect(retrievedData.validation[issueKey].hasSpecificVulnerabilities).toBe(true);
-      }
-    } else if (retrievedData?.data?.validation) {
-      console.log('Has data.validation structure');
-      const issueKey = `issue-${issueNumber}`;
-      if (retrievedData.data.validation[issueKey]) {
-        console.log('Has issue key under data.validation');
-        expect(retrievedData.data.validation[issueKey].hasSpecificVulnerabilities).toBe(true);
-      }
+    // PhaseDataClient remaps 'validation' to 'validate' when retrieving
+    const issueKey = `issue-${issueNumber}`;
+    if (retrievedData?.validation?.[issueKey]) {
+      console.log('Has validation[issueKey] structure');
+      expect(retrievedData.validation[issueKey].hasSpecificVulnerabilities).toBe(true);
+    } else if (retrievedData?.validate?.[issueKey]) {
+      console.log('Has validate[issueKey] structure (remapped by PhaseDataClient)');
+      expect(retrievedData.validate[issueKey].hasSpecificVulnerabilities).toBe(true);
+    } else if (retrievedData?.data?.validation?.[issueKey]) {
+      console.log('Has data.validation[issueKey] structure');
+      expect(retrievedData.data.validation[issueKey].hasSpecificVulnerabilities).toBe(true);
     } else {
-      console.log('Unknown structure:', Object.keys(retrievedData || {}));
+      console.log('Unknown structure:', {
+        keys: Object.keys(retrievedData || {}),
+        hasValidation: !!retrievedData?.validation,
+        hasValidate: !!retrievedData?.validate,
+        validationKeys: retrievedData?.validation ? Object.keys(retrievedData.validation) : [],
+        validateKeys: retrievedData?.validate ? Object.keys(retrievedData.validate) : []
+      });
+      // This should fail to help debug
+      expect(retrievedData).toHaveProperty('validate');
     }
   });
 });

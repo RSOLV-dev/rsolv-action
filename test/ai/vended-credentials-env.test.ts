@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('Vended Credentials Environment Variable', () => {
   const originalEnv = process.env.RSOLV_API_KEY;

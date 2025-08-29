@@ -1,10 +1,10 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { processIssues } from '../unified-processor';
 import { IssueContext } from '../../types';
 import { ActionConfig } from '../../config';
 
 // Mock the credential manager module
-mock.module('../../credentials/manager.js', () => ({
+vi.mock('../../credentials/manager.js', () => ({
   RSOLVCredentialManager: class {
     private apiKey: string = '';
     
@@ -26,21 +26,55 @@ mock.module('../../credentials/manager.js', () => ({
   }
 }));
 
-// Mock the enhanced claude code adapter
-let mockCredentialManagerReceived: any = null;
-mock.module('../adapters/claude-code-enhanced.js', () => ({
+// Mock the credential manager singleton
+vi.mock('../../credentials/singleton.js', () => ({
+  CredentialManagerSingleton: {
+    getInstance: vi.fn(async (apiKey: string) => {
+      console.log('CredentialManagerSingleton.getInstance called with:', apiKey);
+      const mockManager = {
+        apiKey: apiKey,
+        initialize: vi.fn(async () => Promise.resolve()),
+        getCredential: vi.fn((provider: string) => {
+          if (provider === 'anthropic') {
+            return 'vended-anthropic-key-test';
+          }
+          throw new Error(`No credential for ${provider}`);
+        }),
+        cleanup: vi.fn(),
+        reportUsage: vi.fn(async () => Promise.resolve())
+      };
+      await mockManager.initialize(apiKey);
+      return mockManager;
+    })
+  }
+}));
+
+// Mock the enhanced claude code adapter using hoisted variables
+const { mockCredentialManagerReceived } = vi.hoisted(() => {
+  let credentialManager: any = undefined;
+  return {
+    mockCredentialManagerReceived: {
+      get: () => credentialManager,
+      set: (value: any) => { credentialManager = value; }
+    }
+  };
+});
+
+vi.mock('../adapters/claude-code-enhanced.js', () => ({
   EnhancedClaudeCodeAdapter: class {
     config: any;
     repoPath: string;
     credentialManager: any;
     
     constructor(config: any, repoPath: string, credentialManager?: any) {
+      console.log('EnhancedClaudeCodeAdapter constructor called');
+      console.log('Constructor args - config:', config?.provider, 'repoPath:', repoPath, 'credentialManager:', !!credentialManager);
       this.config = config;
       this.repoPath = repoPath;
       this.credentialManager = credentialManager;
       // Capture the credential manager for testing
-      mockCredentialManagerReceived = credentialManager;
-      console.log('EnhancedClaudeCodeAdapter mock created with credentialManager:', !!credentialManager);
+      mockCredentialManagerReceived.set(credentialManager);
+      console.log('Captured credentialManager:', !!credentialManager);
     }
     
     async gatherDeepContext() {
@@ -71,7 +105,7 @@ mock.module('../adapters/claude-code-enhanced.js', () => ({
 }));
 
 // Mock other dependencies
-mock.module('../analysis.js', () => ({
+vi.mock('../analysis.js', () => ({
   analyzeIssue: async () => ({
     canBeFixed: true,
     issueType: 'bug',
@@ -82,7 +116,7 @@ mock.module('../analysis.js', () => ({
   })
 }));
 
-mock.module('../solution.js', () => ({
+vi.mock('../solution.js', () => ({
   generateSolution: async () => ({
     success: true,
     changes: {
@@ -91,7 +125,7 @@ mock.module('../solution.js', () => ({
   })
 }));
 
-mock.module('../../github/pr.js', () => ({
+vi.mock('../../github/pr.js', () => ({
   createPullRequest: async () => ({
     success: true,
     pullRequestUrl: 'https://github.com/test/repo/pull/1',
@@ -105,7 +139,7 @@ describe('Unified Processor Credential Manager Passing', () => {
   
   beforeEach(() => {
     // Reset the captured credential manager
-    mockCredentialManagerReceived = null;
+    mockCredentialManagerReceived.set(undefined);
     
     // Set NODE_ENV to test to ensure proper test behavior
     process.env.NODE_ENV = 'test';
@@ -151,6 +185,8 @@ describe('Unified Processor Credential Manager Passing', () => {
     // Clean up environment
     delete process.env.RSOLV_API_KEY;
     delete process.env.NODE_ENV;
+    // Reset mock
+    mockCredentialManagerReceived.set(undefined);
   });
   
   test('should create and pass credential manager to EnhancedClaudeCodeAdapter when using vended credentials', async () => {
@@ -162,12 +198,13 @@ describe('Unified Processor Credential Manager Passing', () => {
     const result = results[0];
     
     // The credential manager should have been created and passed
-    expect(mockCredentialManagerReceived).toBeDefined();
-    expect(mockCredentialManagerReceived).not.toBeNull();
-    expect(typeof mockCredentialManagerReceived.getCredential).toBe('function');
+    const capturedManager = mockCredentialManagerReceived.get();
+    expect(capturedManager).toBeDefined();
+    expect(capturedManager).not.toBeNull();
+    expect(typeof capturedManager.getCredential).toBe('function');
     
     // Verify the credential manager returns the expected key
-    const apiKey = mockCredentialManagerReceived.getCredential('anthropic');
+    const apiKey = capturedManager.getCredential('anthropic');
     expect(apiKey).toBe('vended-anthropic-key-test');
     
     // The result should be successful
@@ -185,7 +222,7 @@ describe('Unified Processor Credential Manager Passing', () => {
     const result = results[0];
     
     // No credential manager should be passed
-    expect(mockCredentialManagerReceived).toBeUndefined();
+    expect(mockCredentialManagerReceived.get()).toBeUndefined();
     
     // The result should still be successful
     expect(result.success).toBe(true);
@@ -200,7 +237,7 @@ describe('Unified Processor Credential Manager Passing', () => {
     const result = results[0];
     
     // No credential manager should be passed
-    expect(mockCredentialManagerReceived).toBeUndefined();
+    expect(mockCredentialManagerReceived.get()).toBeUndefined();
     
     // The result should still be successful
     expect(result.success).toBe(true);
@@ -208,7 +245,7 @@ describe('Unified Processor Credential Manager Passing', () => {
   
   test('should handle credential manager creation errors gracefully', async () => {
     // Mock a failing credential manager
-    mock.module('../../credentials/manager.js', () => ({
+    vi.mock('../../credentials/manager.js', () => ({
       RSOLVCredentialManager: class {
         async initialize() {
           throw new Error('Failed to initialize credentials');

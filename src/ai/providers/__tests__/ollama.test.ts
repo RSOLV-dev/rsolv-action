@@ -1,10 +1,11 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, mock, vi } from 'vitest';
 import { AIConfig } from '../../types.js';
 
 // Mock logger
-mock.module('../../../utils/logger', () => {
+vi.mock('../../../utils/logger', () => {
   return {
     logger: {
+    debug: vi.fn(() => {}),
       info: () => {},
       warn: () => {},
       error: () => {},
@@ -38,7 +39,7 @@ const mockSolutionData = {
 
 describe('OllamaClient', () => {
   // Create a mock fetch function
-  const mockFetch = mock(() => 
+  const mockFetch = vi.fn(() => 
     Promise.resolve({
       ok: true,
       status: 200,
@@ -90,7 +91,7 @@ describe('OllamaClient', () => {
     const client = new OllamaClient(config);
     
     // Override the private callAPI method to return our mock data
-    const mockCallAPI = mock(() => Promise.resolve(JSON.stringify(mockAnalysisData)));
+    const mockCallAPI = vi.fn(() => Promise.resolve(JSON.stringify(mockAnalysisData)));
     client['callAPI'] = mockCallAPI;
     
     const analysis = await client.analyzeIssue('Test Issue', 'This is a test issue');
@@ -111,7 +112,7 @@ describe('OllamaClient', () => {
     const client = new OllamaClient(config);
     
     // Override the private callAPI method to return our mock data
-    const mockCallAPI = mock(() => Promise.resolve(JSON.stringify(mockSolutionData)));
+    const mockCallAPI = vi.fn(() => Promise.resolve(JSON.stringify(mockSolutionData)));
     client['callAPI'] = mockCallAPI;
     
     const solution = await client.generateSolution(
@@ -142,7 +143,7 @@ describe('OllamaClient', () => {
     const client = new OllamaClient(config);
     
     // Override the private callAPI method to return our mock data in a code block
-    const mockCallAPI = mock(() => Promise.resolve('```json\n' + JSON.stringify(mockAnalysisData) + '\n```'));
+    const mockCallAPI = vi.fn(() => Promise.resolve('```json\n' + JSON.stringify(mockAnalysisData) + '\n```'));
     client['callAPI'] = mockCallAPI;
     
     const analysis = await client.analyzeIssue('Test Issue', 'This is a test issue');
@@ -162,18 +163,18 @@ describe('OllamaClient', () => {
     const client = new OllamaClient(config);
     
     // Create a mock that simulates a failed API call
-    const mockFailedFetch = mock(() => Promise.reject(new Error('API error')));
+    const mockFailedFetch = vi.fn(() => Promise.reject(new Error('API error')));
     global.fetch = mockFailedFetch;
     
     // In test mode, the client should return mock data when API fails
     process.env.NODE_ENV = 'test';
     
     // We'll need to override the internal handling to return our mock data
-    const mockCallAPI = mock(() => Promise.reject(new Error('API error')));
+    const mockCallAPI = vi.fn(() => Promise.reject(new Error('API error')));
     client['callAPI'] = mockCallAPI;
     
     // Create a mock analyze implementation for test mode
-    const mockAnalyzeIssue = mock(() => Promise.resolve(mockAnalysisData));
+    const mockAnalyzeIssue = vi.fn(() => Promise.resolve(mockAnalysisData));
     const originalAnalyzeIssue = client.analyzeIssue;
     client.analyzeIssue = mockAnalyzeIssue;
     

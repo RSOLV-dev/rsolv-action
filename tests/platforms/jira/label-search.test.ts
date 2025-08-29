@@ -1,7 +1,15 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 import { JiraAdapter } from '../../../src/platforms/jira/jira-adapter';
 
 describe('Jira Label Search', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
   test('should generate correct JQL for both rsolv and autofix labels', () => {
     const adapter = new JiraAdapter({
       host: 'test.atlassian.net',

@@ -1,4 +1,6 @@
-import { beforeEach, mock } from 'bun:test';
+import { beforeEach, vi } from 'vitest';
+
+console.log('[Vitest Setup] Test environment configured');
 
 // Set up environment variables for tests
 process.env.GITHUB_TOKEN = 'test-github-token';
@@ -8,7 +10,7 @@ process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
 // Mock external dependencies globally
 beforeEach(() => {
   // Reset all mocks before each test
-  mock.restore();
+  vi.clearAllMocks();
 });
 
 // Mock the AI client responses

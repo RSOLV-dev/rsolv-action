@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, vi } from 'vitest';
 import { PromptEnhancer } from '../enhancer.js';
 import type { IssueContext } from '../../types.js';
 import type { 
@@ -52,7 +52,7 @@ describe('PromptEnhancer', () => {
     
     // Create mock storage
     mockStorage = {
-      queryFeedback: mock((query: any = {}) => {
+      queryFeedback: vi.fn((query: any = {}) => {
         if (query.issueId) {
           return Promise.resolve(
             mockFeedback.filter(f => f.issueId === query.issueId)
@@ -196,14 +196,14 @@ describe('PromptEnhancer', () => {
       expect(context).toBeDefined();
       expect(context.issueContext).toBe(issue);
       expect(context.patterns).toBeDefined();
-      expect(context.patterns.positive).toBeArray();
-      expect(context.patterns.negative).toBeArray();
-      expect(context.similarSolutions).toBeArray();
+      expect(Array.isArray(context.patterns.positive)).toBe(true);
+      expect(Array.isArray(context.patterns.negative)).toBe(true);
+      expect(Array.isArray(context.similarSolutions)).toBe(true);
     });
     
     it('handles errors gracefully', async () => {
       // Make the storage throw an error
-      (enhancer as any)._storage.queryFeedback = mock(() => {
+      (enhancer as any)._storage.queryFeedback = vi.fn(() => {
         throw new Error('Storage error');
       });
       
@@ -224,7 +224,7 @@ describe('PromptEnhancer', () => {
       const context = await enhancer.generateEnhancementContext(issue);
       
       expect(context).toBeDefined();
-      expect(context.relevantFeedback).toBeArray();
+      expect(Array.isArray(context.relevantFeedback)).toBe(true);
       expect(context.relevantFeedback.length).toBe(0);
       expect(context.patterns.positive.length).toBe(0);
       expect(context.patterns.negative.length).toBe(0);
