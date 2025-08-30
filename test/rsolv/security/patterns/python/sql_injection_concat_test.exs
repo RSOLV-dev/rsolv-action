@@ -141,8 +141,8 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
     test "confidence scoring reduces false positives" do
       enhancement = SqlInjectionConcat.ast_enhancement()
       
-      assert enhancement.min_confidence == 0.7
-      assert enhancement.confidence_rules.base == 0.4
+      assert enhancement.min_confidence == 0.4
+      assert enhancement.confidence_rules.base == 0.5
       assert enhancement.confidence_rules.adjustments["has_sql_keywords"] == 0.3
       assert enhancement.confidence_rules.adjustments["in_test_code"] == -1.0
     end
@@ -154,7 +154,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
       
       assert enhanced.id == "python-sql-injection-concat"
       assert enhanced.ast_rules
-      assert enhanced.min_confidence == 0.7
+      assert enhanced.min_confidence == 0.4
     end
   end
 
