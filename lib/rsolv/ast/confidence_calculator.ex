@@ -25,6 +25,7 @@ defmodule Rsolv.AST.ConfidenceCalculator do
     confidence = confidence
     |> apply_object_property_bonus(pattern, node, adjustments)
     |> apply_argument_analysis_bonus(pattern, node, adjustments)
+    |> apply_user_input_detection(node, adjustments)
     |> apply_context_adjustments(context, adjustments)
     |> apply_test_file_penalty(context, adjustments)
     
@@ -74,6 +75,46 @@ defmodule Rsolv.AST.ConfidenceCalculator do
         
       _ ->
         confidence
+    end
+  end
+  
+  defp apply_user_input_detection(confidence, node, adjustments) do
+    # Check if the node involves user input variables or parameters
+    user_input_indicators = ["user_input", "request", "params", "argv", "args", "input", "data", "body", "query", "cmd", "command"]
+    
+    has_user_input = case node do
+      %{"arguments" => args} when is_list(args) ->
+        # Check arguments for user input variables
+        Enum.any?(args, fn arg ->
+          case arg do
+            %{"type" => "Name", "id" => name} ->
+              # Check if variable name suggests user input or command construction
+              Enum.any?(user_input_indicators, &String.contains?(String.downcase(name), &1))
+            %{"type" => "Identifier", "name" => name} ->
+              Enum.any?(user_input_indicators, &String.contains?(String.downcase(name), &1))
+            %{"type" => "BinOp"} ->
+              # String concatenation in argument - likely dynamic construction
+              true
+            _ -> false
+          end
+        end)
+      
+      %{"type" => "BinOp", "right" => %{"type" => "Name", "id" => name}} ->
+        # Python binary operations with user input
+        Enum.any?(user_input_indicators, &String.contains?(String.downcase(name), &1))
+        
+      %{"type" => "BinaryExpression", "right" => %{"type" => "Identifier", "name" => name}} ->
+        # JavaScript binary expressions with user input
+        Enum.any?(user_input_indicators, &String.contains?(String.downcase(name), &1))
+        
+      _ -> false
+    end
+    
+    if has_user_input do
+      boost = Map.get(adjustments, "has_user_input", 0.3)
+      confidence + boost
+    else
+      confidence
     end
   end
   
