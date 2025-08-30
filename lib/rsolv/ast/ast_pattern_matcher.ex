@@ -161,6 +161,27 @@ defmodule Rsolv.AST.ASTPatternMatcher do
       true
     end
     
+    # Check callee pattern (e.g., Math.random)
+    callee_pattern_ok = if callee_pattern = pattern["_callee_pattern"] do
+      check_callee_pattern(node, callee_pattern)
+    else
+      true
+    end
+    
+    # Check callee object.property pattern (e.g., crypto.createHash)
+    callee_object_property_ok = if pattern["_callee_object"] && pattern["_callee_property"] do
+      check_callee_object_property(node, pattern["_callee_object"], pattern["_callee_property"])
+    else
+      true
+    end
+    
+    # Check usage analysis for context-based validation
+    usage_ok = if usage_analysis = pattern["_usage_analysis"] do
+      check_usage_analysis(node, usage_analysis, context)
+    else
+      true
+    end
+    
     # Check identifier requirements for hardcoded secrets
     identifier_ok = if identifier_check = pattern["_identifier_check"] do
       check_identifier(node, identifier_check)
@@ -212,8 +233,8 @@ defmodule Rsolv.AST.ASTPatternMatcher do
     
     
     parent_ok && sql_ok && user_input_ok && db_call_ok && method_ok && callee_ok && 
-    identifier_ok && value_ok && value_type_ok && left_side_ok && arg_analysis_ok && 
-    sql_pattern_ok && string_ok
+    callee_pattern_ok && callee_object_property_ok && usage_ok && identifier_ok && value_ok && value_type_ok && 
+    left_side_ok && arg_analysis_ok && sql_pattern_ok && string_ok
   end
   
   defp check_ancestor_for_db_call(nil, _context), do: false
@@ -365,43 +386,95 @@ defmodule Rsolv.AST.ASTPatternMatcher do
     end
   end
   
-  defp check_argument_analysis(node, arg_req, context) do
+  defp check_argument_analysis(node, arg_req, _context) do
     # For CallExpression, check the arguments
     args = Map.get(node, "arguments", [])
     
-    # Check first argument contains user input
-    first_arg_ok = if arg_req["first_arg_contains_user_input"] || arg_req[:first_arg_contains_user_input] do
-      case Enum.at(args, 0) do
-        nil -> false
-        arg -> 
-          has_user_input?(arg, context)
-      end
+    # Check if arguments contain sensitive keywords
+    sensitive_keywords_ok = if arg_req["contains_sensitive_keywords"] || arg_req[:contains_sensitive_keywords] do
+      # Look for sensitive keywords in argument values
+      sensitive_patterns = ~r/password|secret|token|key|credential|auth|api[_-]?key/i
+      
+      Enum.any?(args, fn arg ->
+        case arg do
+          # Check identifiers for sensitive variable names
+          %{"type" => "Identifier", "name" => name} ->
+            Regex.match?(sensitive_patterns, name)
+            
+          # Check string literals for sensitive content
+          %{"type" => type, "value" => value} when type in ["Literal", "StringLiteral"] and is_binary(value) ->
+            Regex.match?(sensitive_patterns, value)
+            
+          # Check template literals
+          %{"type" => "TemplateLiteral", "quasis" => quasis} ->
+            Enum.any?(quasis, fn 
+              %{"value" => %{"raw" => raw}} when is_binary(raw) ->
+                Regex.match?(sensitive_patterns, raw)
+              _ -> false
+            end)
+            
+          # Check object expressions for sensitive property names
+          %{"type" => "ObjectExpression", "properties" => props} ->
+            Enum.any?(props, fn
+              %{"key" => %{"name" => name}} when is_binary(name) ->
+                Regex.match?(sensitive_patterns, name)
+              %{"key" => %{"value" => value}} when is_binary(value) ->
+                Regex.match?(sensitive_patterns, value)
+              _ -> false
+            end)
+            
+          _ -> false
+        end
+      end)
     else
       true
     end
     
-    # Check if it's a string type (not a function)
-    string_type_ok = if arg_req["is_string_type"] || arg_req[:is_string_type] do
-      case Enum.at(args, 0) do
-        %{"type" => type} when type in ["Literal", "StringLiteral", "TemplateLiteral", "Identifier"] -> true
-        _ -> false
-      end
+    # For patterns that require sensitive keywords, only match if found
+    # For other patterns, continue with additional checks
+    if arg_req["contains_sensitive_keywords"] || arg_req[:contains_sensitive_keywords] do
+      sensitive_keywords_ok
     else
-      true
-    end
-    
-    # Check it's not a static string
-    not_static_ok = if arg_req["not_static_string"] || arg_req[:not_static_string] do
-      case Enum.at(args, 0) do
-        %{"type" => "Literal"} -> false  # Static string literal
-        %{"type" => "StringLiteral"} -> false  # Static string literal
-        _ -> true
+      # Check first argument contains user input
+      first_arg_ok = if arg_req["first_arg_contains_user_input"] || arg_req[:first_arg_contains_user_input] do
+        case Enum.at(args, 0) do
+          nil -> false
+          arg -> 
+            # Simple check for identifiers that might be user input
+            case arg do
+              %{"type" => "Identifier"} -> true
+              %{"type" => "MemberExpression"} -> true
+              %{"type" => "CallExpression"} -> true
+              _ -> false
+            end
+        end
+      else
+        true
       end
-    else
-      true
+      
+      # Check if it's a string type (not a function)
+      string_type_ok = if arg_req["is_string_type"] || arg_req[:is_string_type] do
+        case Enum.at(args, 0) do
+          %{"type" => type} when type in ["Literal", "StringLiteral", "TemplateLiteral", "Identifier"] -> true
+          _ -> false
+        end
+      else
+        true
+      end
+      
+      # Check it's not a static string
+      not_static_ok = if arg_req["not_static_string"] || arg_req[:not_static_string] do
+        case Enum.at(args, 0) do
+          %{"type" => "Literal"} -> false  # Static string literal
+          %{"type" => "StringLiteral"} -> false  # Static string literal
+          _ -> true
+        end
+      else
+        true
+      end
+      
+      first_arg_ok && string_type_ok && not_static_ok && sensitive_keywords_ok
     end
-    
-    first_arg_ok && string_type_ok && not_static_ok
   end
   
   # Order matters! Regex matching must come before map matching
@@ -577,12 +650,7 @@ defmodule Rsolv.AST.ASTPatternMatcher do
   
   defp maybe_add_database_context(context, _node), do: context
   
-  @doc """
-  Validates identifier names for hardcoded secret patterns.
-  
-  Checks if a variable name matches patterns like 'api_key', 'token', etc.,
-  while excluding test/demo patterns.
-  """
+  # Validates identifier names for hardcoded secret patterns
   defp check_identifier(node, identifier_check) do
     with identifier_name when is_binary(identifier_name) <- extract_identifier_name(node),
          true <- matches_required_pattern?(identifier_name, identifier_check),
@@ -611,11 +679,7 @@ defmodule Rsolv.AST.ASTPatternMatcher do
     end
   end
   
-  @doc """
-  Analyzes value characteristics for hardcoded secret detection.
-  
-  Validates string length, entropy, and known API key formats.
-  """
+  # Analyzes value characteristics for hardcoded secret detection
   defp check_value_analysis(node, value_analysis) do
     with value_node when not is_nil(value_node) <- extract_value_node(node),
          string_value when is_binary(string_value) <- extract_string_value(value_node),
@@ -648,11 +712,7 @@ defmodule Rsolv.AST.ASTPatternMatcher do
     end
   end
   
-  @doc """
-  Validates that the value node type matches allowed types for secrets.
-  
-  Only string literals and template literals should be considered.
-  """
+  # Validates that the value node type matches allowed types for secrets
   defp check_value_types(node, allowed_types) do
     with value_node when not is_nil(value_node) <- extract_value_node(node),
          node_type when is_binary(node_type) <- value_node["type"] do
@@ -665,6 +725,94 @@ defmodule Rsolv.AST.ASTPatternMatcher do
   # Helper to get option from either atom or string key
   defp get_option(map, key, default \\ nil) do
     map[key] || map[to_string(key)] || default
+  end
+  
+  # Checks if the callee matches a specific pattern (e.g., Math.random)
+  defp check_callee_pattern(node, pattern_string) do
+    callee = node["callee"]
+    
+    case {callee, pattern_string} do
+      # Handle member expressions like Math.random
+      {%{"type" => "MemberExpression", "object" => %{"name" => obj}, "property" => %{"name" => prop}}, pattern} ->
+        actual = "#{obj}.#{prop}"
+        actual == pattern || String.downcase(actual) == String.downcase(pattern)
+        
+      # Handle simple function names
+      {%{"type" => "Identifier", "name" => name}, pattern} ->
+        name == pattern || String.downcase(name) == String.downcase(pattern)
+        
+      _ ->
+        false
+    end
+  end
+  
+  # Checks if the callee matches object.property pattern (e.g., crypto.createHash)
+  defp check_callee_object_property(node, expected_object, expected_property) do
+    callee = node["callee"]
+    
+    case callee do
+      %{"type" => "MemberExpression", "object" => %{"name" => obj}, "property" => %{"name" => prop}} ->
+        obj == expected_object && prop == expected_property
+        
+      %{"type" => "MemberExpression", "object" => %{"type" => "Identifier", "name" => obj}, "property" => %{"type" => "Identifier", "name" => prop}} ->
+        obj == expected_object && prop == expected_property
+        
+      _ ->
+        false
+    end
+  end
+  
+  # Performs usage analysis to check context-specific requirements
+  defp check_usage_analysis(_node, analysis, context) do
+    checks = []
+    
+    # Check variable name if required
+    checks = if get_option(analysis, :check_variable_name) do
+      parent = Map.get(context, :parent_node)
+      var_check = case parent do
+        %{"type" => "VariableDeclarator", "id" => %{"name" => name}} ->
+          # Check if variable name suggests security usage
+          security_patterns = ~r/token|key|secret|password|auth|session|nonce|salt|iv|uuid|guid/i
+          Regex.match?(security_patterns, name)
+        _ ->
+          false
+      end
+      [var_check | checks]
+    else
+      checks
+    end
+    
+    # Check context if required
+    checks = if get_option(analysis, :check_context) do
+      # Check if we're in a security-related context
+      in_security_context = Map.get(context, :in_security_function, false) ||
+                           Map.get(context, :near_crypto_usage, false)
+      [in_security_context | checks]
+    else
+      checks
+    end
+    
+    # Check transformations if required (e.g., toString(36))
+    checks = if get_option(analysis, :check_transformations) do
+      parent = Map.get(context, :parent_node)
+      has_transform = case parent do
+        %{"type" => "CallExpression", "callee" => %{"property" => %{"name" => method}}} ->
+          method in ["toString", "substring", "substr", "slice"]
+        _ ->
+          false
+      end
+      [has_transform | checks]
+    else
+      checks
+    end
+    
+    # If no specific checks were enabled, pass by default
+    if Enum.empty?(checks) do
+      true
+    else
+      # Require at least one check to pass for Math.random to be flagged
+      Enum.any?(checks)
+    end
   end
   
 end

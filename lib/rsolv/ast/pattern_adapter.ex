@@ -184,6 +184,8 @@ defmodule Rsolv.AST.PatternAdapter do
     |> maybe_add_rule(:method_names, rules)
     |> maybe_add_rule(:callee, rules)  # For eval pattern with alternatives
     |> maybe_add_rule(:callee_names, rules)  # For command injection patterns
+    |> maybe_add_rule(:callee_pattern, rules)  # For Math.random, etc.
+    |> maybe_add_rule(:usage_analysis, rules)  # For context-based checks
     |> maybe_add_rule(:argument_contains, rules)
     |> maybe_add_rule(:argument_analysis, rules)  # For argument checking
     
@@ -204,6 +206,12 @@ defmodule Rsolv.AST.PatternAdapter do
       {:callee, %{name: name}} ->
         # Special handling for callee with just name
         Map.put(pattern, "_callee_names", [name])
+        
+      {:callee, %{object: object, property: property}} ->
+        # Special handling for object.property pattern (e.g., crypto.createHash)
+        pattern
+        |> Map.put("_callee_object", object)
+        |> Map.put("_callee_property", property)
         
       {_, nil} ->
         # No value, return pattern unchanged
@@ -232,21 +240,31 @@ defmodule Rsolv.AST.PatternAdapter do
       # Convert pattern ID to module name
       # e.g., "python-sql-injection-concat" -> Rsolv.Security.Patterns.Python.SqlInjectionConcat
       module_name = pattern_id_to_module_name(pattern.id)
-      module = String.to_existing_atom("Elixir.#{module_name}")
       
-      if function_exported?(module, :ast_enhancement, 0) do
-        enhancement = apply(module, :ast_enhancement, [])
-        
-        # Convert to ASTPattern with ast_enhancement data
-        pattern
-        |> Map.from_struct()
-        |> Map.merge(enhancement)
-        |> then(&struct(ASTPattern, &1))
-      else
-        nil
+      # Try to load the module using Code.ensure_loaded
+      module = Module.concat(["Rsolv", "Security", "Patterns"] ++ String.split(module_name, ".") |> Enum.drop(3))
+      
+      case Code.ensure_loaded(module) do
+        {:module, ^module} ->
+          if function_exported?(module, :ast_enhancement, 0) do
+            enhancement = apply(module, :ast_enhancement, [])
+            
+            # Convert to ASTPattern with ast_enhancement data
+            pattern
+            |> Map.from_struct()
+            |> Map.merge(enhancement)
+            |> then(&struct(ASTPattern, &1))
+          else
+            Logger.debug("Module #{inspect(module)} has no ast_enhancement/0 function")
+            nil
+          end
+        {:error, reason} ->
+          Logger.debug("Could not load module for pattern #{pattern.id}: #{inspect(reason)}")
+          nil
       end
     rescue
-      _error ->
+      error ->
+        Logger.debug("Error enhancing pattern #{pattern.id}: #{Exception.message(error)}")
         nil
     end
     
