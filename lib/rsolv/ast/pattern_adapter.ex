@@ -155,6 +155,27 @@ defmodule Rsolv.AST.PatternAdapter do
       base_pattern
     end
     
+    # Add identifier check for hardcoded secrets
+    base_pattern = if identifier_check = rules[:identifier_check] do
+      Map.put(base_pattern, "_identifier_check", identifier_check)
+    else
+      base_pattern
+    end
+    
+    # Add value analysis for hardcoded secrets  
+    base_pattern = if value_analysis = rules[:value_analysis] do
+      Map.put(base_pattern, "_value_analysis", value_analysis)
+    else
+      base_pattern
+    end
+    
+    # Add value types restriction
+    base_pattern = if value_types = rules[:value_types] do
+      Map.put(base_pattern, "_value_types", value_types)
+    else
+      base_pattern
+    end
+    
     # Add other direct requirements
     base_pattern = base_pattern
     |> maybe_add_rule(:contains_sql, rules)

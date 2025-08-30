@@ -161,6 +161,27 @@ defmodule Rsolv.AST.ASTPatternMatcher do
       true
     end
     
+    # Check identifier requirements for hardcoded secrets
+    identifier_ok = if identifier_check = pattern["_identifier_check"] do
+      check_identifier(node, identifier_check)
+    else
+      true
+    end
+    
+    # Check value analysis for hardcoded secrets
+    value_ok = if value_analysis = pattern["_value_analysis"] do
+      check_value_analysis(node, value_analysis)
+    else
+      true
+    end
+    
+    # Check value type restrictions
+    value_type_ok = if value_types = pattern["_value_types"] do
+      check_value_types(node, value_types)
+    else
+      true
+    end
+    
     # Check left side requirements (for assignments like innerHTML)
     left_side_ok = if left_req = pattern["_left_side"] do
       check_left_side_requirements(node, left_req)
@@ -190,7 +211,9 @@ defmodule Rsolv.AST.ASTPatternMatcher do
     end
     
     
-    parent_ok && sql_ok && user_input_ok && db_call_ok && method_ok && callee_ok && left_side_ok && arg_analysis_ok && sql_pattern_ok && string_ok
+    parent_ok && sql_ok && user_input_ok && db_call_ok && method_ok && callee_ok && 
+    identifier_ok && value_ok && value_type_ok && left_side_ok && arg_analysis_ok && 
+    sql_pattern_ok && string_ok
   end
   
   defp check_ancestor_for_db_call(nil, _context), do: false
@@ -553,4 +576,95 @@ defmodule Rsolv.AST.ASTPatternMatcher do
   end
   
   defp maybe_add_database_context(context, _node), do: context
+  
+  @doc """
+  Validates identifier names for hardcoded secret patterns.
+  
+  Checks if a variable name matches patterns like 'api_key', 'token', etc.,
+  while excluding test/demo patterns.
+  """
+  defp check_identifier(node, identifier_check) do
+    with identifier_name when is_binary(identifier_name) <- extract_identifier_name(node),
+         true <- matches_required_pattern?(identifier_name, identifier_check),
+         true <- not_excluded_pattern?(identifier_name, identifier_check) do
+      true
+    else
+      _ -> false
+    end
+  end
+  
+  defp extract_identifier_name(%{"id" => %{"name" => name}}), do: name
+  defp extract_identifier_name(%{"name" => name}), do: name
+  defp extract_identifier_name(_), do: nil
+  
+  defp matches_required_pattern?(name, check) do
+    case get_option(check, :pattern) do
+      %Regex{} = pattern -> Regex.match?(pattern, name)
+      nil -> true
+    end
+  end
+  
+  defp not_excluded_pattern?(name, check) do
+    case get_option(check, :exclude_pattern) do
+      %Regex{} = pattern -> not Regex.match?(pattern, name)
+      nil -> true
+    end
+  end
+  
+  @doc """
+  Analyzes value characteristics for hardcoded secret detection.
+  
+  Validates string length, entropy, and known API key formats.
+  """
+  defp check_value_analysis(node, value_analysis) do
+    with value_node when not is_nil(value_node) <- extract_value_node(node),
+         string_value when is_binary(string_value) <- extract_string_value(value_node),
+         true <- valid_secret_length?(string_value, value_analysis) do
+      true
+    else
+      _ -> false
+    end
+  end
+  
+  defp extract_value_node(%{"init" => init}), do: init
+  defp extract_value_node(%{"value" => value}), do: value
+  defp extract_value_node(_), do: nil
+  
+  defp extract_string_value(%{"type" => "Literal", "value" => v}) when is_binary(v), do: v
+  defp extract_string_value(%{"type" => "TemplateLiteral", "quasis" => [%{"value" => %{"raw" => v}} | _]}), do: v
+  defp extract_string_value(_), do: nil
+  
+  defp valid_secret_length?(string, analysis) do
+    min_length = get_option(analysis, :min_length, 16)
+    max_length = get_option(analysis, :max_length, 200)
+    string_length = String.length(string)
+    
+    # Quick rejection for obviously non-secret values
+    cond do
+      string_length < 10 -> false  # Too short to be a real secret
+      string_length < min_length -> false
+      string_length > max_length -> false
+      true -> true
+    end
+  end
+  
+  @doc """
+  Validates that the value node type matches allowed types for secrets.
+  
+  Only string literals and template literals should be considered.
+  """
+  defp check_value_types(node, allowed_types) do
+    with value_node when not is_nil(value_node) <- extract_value_node(node),
+         node_type when is_binary(node_type) <- value_node["type"] do
+      node_type in allowed_types
+    else
+      _ -> false
+    end
+  end
+  
+  # Helper to get option from either atom or string key
+  defp get_option(map, key, default \\ nil) do
+    map[key] || map[to_string(key)] || default
+  end
+  
 end

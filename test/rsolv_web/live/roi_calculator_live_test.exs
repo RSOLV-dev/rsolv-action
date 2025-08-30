@@ -9,13 +9,13 @@ defmodule RsolvWeb.RoiCalculatorLiveTest do
       # Verify the ROI calculator component is rendered
       assert html =~ "ROI Calculator"
       assert html =~ "50 issues/month"
-      assert html =~ "3 hours"
-      assert html =~ "$150/hour"
+      assert html =~ "6 hours"  # Updated to match new defaults: 5.5 dev + 1.5 coordination
+      assert html =~ "$85/hour"  # Updated to match new defaults: $130K salary + overhead
       assert html =~ "80% deployed"
       
       # Verify default calculations
-      assert html =~ "40/month" # fixes deployed
-      assert html =~ "120 hours" # time saved
+      assert html =~ "40/month" # fixes deployed (50 * 0.8)
+      assert html =~ "240 hours" # time saved (40 * 6)
       assert html =~ "$600" # pay as you go cost
       assert html =~ "$499" # teams plan cost
     end
