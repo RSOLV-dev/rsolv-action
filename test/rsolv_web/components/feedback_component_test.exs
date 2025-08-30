@@ -22,7 +22,7 @@ defmodule RsolvWeb.FeedbackComponentTest do
       """)
       
       # Should use card classes helper
-      assert html =~ "bg-white dark:bg-dark-800"
+      assert html =~ "bg-white dark:bg-slate-800"
       
       # Should use text classes for labels
       assert html =~ "text-gray-700 dark:text-gray-300"

@@ -75,7 +75,7 @@ defmodule Rsolv.IntegrationCase do
     end
   end
   
-  defp cleanup_ets_tables do
+  defp _cleanup_ets_tables do
     # List of ETS tables that might need cleanup
     tables = [
       :validation_cache,

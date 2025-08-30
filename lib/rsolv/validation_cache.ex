@@ -224,7 +224,7 @@ defmodule Rsolv.ValidationCache do
   
   defp log_cache_result(result, cache_key) do
     case result do
-      {:ok, cached} ->
+      {:ok, _cached} ->
         Logger.debug("Cache hit", cache_key: cache_key)
         
       {:miss, _} ->

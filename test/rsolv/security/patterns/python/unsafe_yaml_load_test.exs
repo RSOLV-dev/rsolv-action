@@ -88,14 +88,14 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoadTest do
       end
     end
 
-    test "does not match yaml.load with SafeLoader", %{pattern: pattern} do
+    test "does not match yaml.load with SafeLoader", %{pattern: _pattern} do
       safe_code = [
         "yaml.load(data, Loader=yaml.SafeLoader)",
         "yaml.load(content, Loader = yaml.SafeLoader)",
         "data = yaml.load(input, yaml.SafeLoader)"
       ]
       
-      for code <- safe_code do
+      for _code <- safe_code do
         # This is a limitation of regex - it can't easily detect the SafeLoader parameter
         # In practice, AST analysis would handle this
       end
