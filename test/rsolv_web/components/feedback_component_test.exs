@@ -28,7 +28,7 @@ defmodule RsolvWeb.FeedbackComponentTest do
       assert html =~ "text-gray-700 dark:text-gray-300"
       
       # Should use input classes
-      assert html =~ "dark:bg-dark-700"
+      assert html =~ "dark:bg-slate-700"
       assert html =~ "dark:text-gray-200"
       assert html =~ "dark:border-gray-600"
     end
