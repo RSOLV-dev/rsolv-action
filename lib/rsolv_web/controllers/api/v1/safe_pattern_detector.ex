@@ -60,11 +60,14 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     patterns = get_nosql_safe_patterns(language)
     safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
     
-    # If it contains $where, it's definitely unsafe
+    # Check for dangerous patterns
     has_where = Regex.match?(~r/\$where/, code)
+    has_user_input = Regex.match?(~r/req\.(body|query|params)/, code) || 
+                     Regex.match?(~r/request\.(POST|GET)/, code) ||
+                     Regex.match?(~r/json\.loads/, code)  # Dynamic JSON parsing
     
-    # For other patterns, check if they're in a safe context
-    safe && !has_where
+    # Safe only if it matches safe patterns AND doesn't have dangerous inputs
+    safe && !has_where && !has_user_input
   end
   
   def is_safe_pattern?(:nosql_injection, _code, _context), do: false
@@ -74,20 +77,26 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     has_safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
     
     # Check for dangerous HTML insertion WITHOUT escaping
+    # Note: We check if escaping functions are present separately
     unsafe_patterns = [
-      ~r/\.innerHTML\s*=\s*[^e]/,     # innerHTML without escape
       ~r/document\.write\([^)]*user/i, # document.write with user input
-      ~r/\.outerHTML\s*=\s*[^e]/,     # outerHTML without escape
       ~r/insertAdjacentHTML\(/,       # insertAdjacentHTML
     ]
+    
+    # Check for potentially dangerous patterns that need escaping
+    needs_escaping = Regex.match?(~r/\.innerHTML\s*=/, code) || 
+                     Regex.match?(~r/\.outerHTML\s*=/, code)
     
     has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
     
     # Check for explicit escaping/sanitization
-    has_escaping = Regex.match?(~r/escape|sanitize|DOMPurify|textContent|innerText|createTextNode/i, code)
+    has_escaping = Regex.match?(~r/escape|sanitize|DOMPurify|textContent|innerText|createTextNode|React\.createElement/i, code)
     
-    # Safe if it has safe patterns OR escaping, AND no unsafe patterns
-    (has_safe || has_escaping) && !has_unsafe
+    # Safe if:
+    # 1. Has safe patterns OR escaping, AND
+    # 2. No definitely unsafe patterns, AND
+    # 3. If using innerHTML/outerHTML, must have escaping
+    (has_safe || has_escaping) && !has_unsafe && (!needs_escaping || has_escaping)
   end
   
   def is_safe_pattern?(:code_injection, code, %{language: "javascript"}) do
@@ -159,18 +168,23 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     
     # These patterns are conditionally safe (only with constants/literals)
     conditionally_safe_patterns = [
+      ~r/path\.join\(__dirname/,           # path.join with __dirname
       ~r/path\.join\([^,]*['"][^'"]*['"]/, # path.join with literals
-      ~r/os\.path\.join\([A-Z_]+,/,        # os.path.join with constants
+      ~r/os\.path\.join\([A-Z_]+/,         # os.path.join with constants like BASE_DIR
+      ~r/os\.path\.join\(['"][^'"]*['"]/, # os.path.join with literals only
       ~r/Rails\.root\.join\(['"][^'"]*['"]/, # Rails.root.join with literals
+      ~r/pathlib\.Path/,                   # pathlib.Path is generally safe
     ]
     
-    # Check for definitely unsafe patterns
+    # Check for definitely unsafe patterns - but exclude safe built-ins
     definitely_unsafe = [
-      ~r/req\.\w+/,                    # request data
+      ~r/req\.(query|body|params)/,    # request data
       ~r/params\[/,                    # params hash
       ~r/\$_GET/,                      # PHP GET params
       ~r/\$_POST/,                     # PHP POST params
       ~r/\.\.\//,                      # Path traversal
+      ~r/user_?[pP]ath/,                # user_path or userPath variables
+      ~r/user_?[fF]ile/,                # user_file or userFile variables
     ]
     
     # If it uses a safe sanitization method, it's safe regardless of input
@@ -225,6 +239,9 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     ~r/===\s+\w+\.[A-Z]/,                # Module constant
     ~r/\.code\s*===\s*DOMException\./,  # DOMException constants
     ~r/\.status\s*===\s*\d+/,           # HTTP status codes
+    ~r/===\s*\d+/,                       # Numeric literal comparison
+    ~r/!==\s*\d+/,                       # Numeric literal not-equal
+    ~r/\w+\s*===\s*\d+/,                 # Any variable compared to number
   ]
   defp get_timing_safe_patterns("python"), do: [
     ~r/==\s+[A-Z][A-Z_]+/,               # Constant comparison
@@ -249,6 +266,9 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     ~r/VALUES.*\+\s*\w+/i,               # VALUES with concatenation
     ~r/FROM\s+['"]?\s*\+\s*/i,          # FROM with concatenation
     ~r/query\([^,]*\+[^,]*\)/,           # query() with concatenation
+    ~r/password\s*===\s*\w+Password/,    # Timing attack vulnerability on same line
+    ~r/apiKey\s*===/,                    # API key comparison on same line
+    ~r/token\s*===/,                     # Token comparison on same line
   ]
   defp get_sql_unsafe_patterns("python"), do: [
     ~r/SELECT.*["']\s*%\s*\w+/i,         # SELECT with % formatting (not parameterized)
@@ -284,6 +304,9 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     ~r/\.executemany\([^,]+,\s*[\[\(]/,  # Parameterized executemany
     ~r/\?\s*[,\)]/,                       # SQLite params when not using %
     ~r/:\w+/,                             # Named params
+    ~r/\.objects\.filter\(/,              # Django ORM filter
+    ~r/\.objects\.get\(/,                 # Django ORM get
+    ~r/\.objects\.all\(/,                 # Django ORM all
   ]
   defp get_sql_safe_patterns("ruby"), do: [
     ~r/\?\s*[,\)]/,                       # Placeholder params
@@ -316,6 +339,9 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     ~r/\.render\(/,                      # Template rendering (usually safe)
     ~r/escape\(/,                        # Escaping function
     ~r/sanitize\(/,                      # Sanitization
+    ~r/\$\([^)]+\)\.text\(/,            # jQuery .text() method
+    ~r/createTextNode\(/,                # DOM createTextNode
+    ~r/React\.createElement\(/,          # React createElement is safe by default
   ]
   defp get_xss_safe_patterns("python"), do: [
     ~r/escape\(/,                        # Escaping
