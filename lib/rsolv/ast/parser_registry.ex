@@ -293,6 +293,34 @@ defmodule Rsolv.AST.ParserRegistry do
     {:reply, stats, state}
   end
   
+  @impl true
+  def handle_call({:cleanup_session_parser, session_id, language}, _from, state) do
+    session_key = {session_id, language}
+    
+    case Map.get(state.session_parsers, session_key) do
+      nil ->
+        # No parser for this session/language
+        {:reply, :ok, state}
+      
+      parser_id ->
+        # Stop the parser port
+        try do
+          PortSupervisor.terminate_port(nil, parser_id)
+          Logger.debug("Terminated parser #{parser_id} for session #{session_id}/#{language}")
+        rescue
+          error ->
+            Logger.warning("Failed to terminate parser #{parser_id}: #{inspect(error)}")
+        end
+        
+        # Remove from session_parsers map
+        updated_session_parsers = Map.delete(state.session_parsers, session_key)
+        updated_stats = %{state.stats | active_parsers: max(0, state.stats.active_parsers - 1)}
+        updated_state = %{state | session_parsers: updated_session_parsers, stats: updated_stats}
+        
+        {:reply, :ok, updated_state}
+    end
+  end
+  
   # Private functions
   
   defp get_or_create_parser(session_id, language, parser_config, state) do

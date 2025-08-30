@@ -132,6 +132,8 @@ defmodule Rsolv.AST.SessionManager do
   def handle_call({:delete_session, session_id, customer_id}, _from, state) do
     case get_session_from_ets(session_id) do
       %Session{customer_id: ^customer_id} ->
+        # Clean up any associated parsers before removing session
+        cleanup_session_parsers(session_id)
         remove_session_from_ets(session_id)
         {:reply, :ok, state}
       
@@ -285,6 +287,26 @@ defmodule Rsolv.AST.SessionManager do
   defp session_expired?(_other) do
     # Handle unexpected data gracefully
     true
+  end
+  
+  defp cleanup_session_parsers(session_id) do
+    # Clean up any parsers associated with this session
+    # Query ParserRegistry to find and stop parsers for this session
+    try do
+      # Get all languages that might have parsers
+      languages = ["python", "javascript", "typescript", "java", "php", "ruby", "go"]
+      
+      Enum.each(languages, fn language ->
+        # Try to stop parser for this session/language combination
+        case GenServer.call(Rsolv.AST.ParserRegistry, {:cleanup_session_parser, session_id, language}, 5000) do
+          :ok -> Logger.debug("Cleaned up #{language} parser for session #{session_id}")
+          _ -> :ok  # Parser didn't exist or already cleaned up
+        end
+      end)
+    rescue
+      error ->
+        Logger.warning("Failed to cleanup parsers for session #{session_id}: #{inspect(error)}")
+    end
   end
   
   # Safe ETS operations to prevent crashes when tables are deleted during cleanup

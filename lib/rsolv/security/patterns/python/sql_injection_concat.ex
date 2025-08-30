@@ -268,7 +268,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
         safe_patterns: ["logging", "print", "format", "message", "url", "path", "filename"]
       },
       confidence_rules: %{
-        base: 0.4,  # Lower base since we're not requiring db call context
+        base: 0.5,  # Slightly higher base for string concat SQL patterns
         adjustments: %{
           "has_sql_keywords" => 0.3,
           "in_database_method_call" => 0.3,  # Higher bonus if we do find db call
@@ -281,7 +281,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
           "has_parameterized_query_nearby" => -0.3
         }
       },
-      min_confidence: 0.7
+      min_confidence: 0.4  # Lower threshold since pattern is quite specific
     }
   end
 end
