@@ -14,19 +14,18 @@ defmodule Rsolv.AST.PortCleanupTest do
   end
   
   describe "process cleanup" do
-    @tag :skip
-    test "kills CPU-intensive processes when port is terminated" do
-      # Start a CPU-intensive parser
+    test "kills slow processes when port is terminated" do
+      # Start a slow parser (safe version without infinite loops)
       config = %{
         language: "test",
         command: "python3",
-        args: ["-u", Path.join([__DIR__, "fixtures", "cpu_intensive_parser.py"])],
+        args: ["-u", Path.join([__DIR__, "fixtures", "slow_parser.py"])],
         timeout: 5000
       }
       
       {:ok, port_id} = PortSupervisor.start_port(PortSupervisor, config)
       
-      # Get the OS PID before triggering infinite loop
+      # Get the OS PID before triggering slow operation
       port_info = PortSupervisor.get_port(PortSupervisor, port_id)
       state = :sys.get_state(port_info.pid)
       {:os_pid, os_pid} = Port.info(state.port, :os_pid)
@@ -35,10 +34,10 @@ defmodule Rsolv.AST.PortCleanupTest do
       {output, 0} = System.cmd("ps", ["-p", "#{os_pid}"])
       assert output =~ to_string(os_pid)
       
-      # Trigger infinite loop in a task so we don't block
+      # Trigger slow operation in a task
       task = Task.async(fn ->
         try do
-          PortSupervisor.call_port(PortSupervisor, port_id, "INFINITE_LOOP", 1000)
+          PortSupervisor.call_port(PortSupervisor, port_id, "SLEEP_200", 1000)
         catch
           :exit, _ -> :ok
         end

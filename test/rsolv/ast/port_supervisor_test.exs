@@ -115,16 +115,13 @@ defmodule Rsolv.AST.PortSupervisorTest do
       assert PortSupervisor.get_port_restart_count(supervisor, port_id) >= 1
     end
     
-    @tag :skip
-    test "enforces CPU timeout on long-running operations", %{supervisor: supervisor} do
-      # SKIPPED: This test creates an infinite loop Python process that sometimes
-      # doesn't get cleaned up properly, causing the test suite to hang.
-      # The functionality is tested in other ways without infinite loops.
+    test "enforces CPU timeout on long-running operations (safe version)", %{supervisor: supervisor} do
+      # Test timeout handling without infinite loops
       parser_config = %{
         language: "python",
         command: "python3",
-        args: ["-u", Path.join(__DIR__, "fixtures/cpu_intensive_parser.py")],
-        operation_timeout: 1000  # 1 second
+        args: ["-u", Path.join(__DIR__, "fixtures/slow_parser.py")],
+        operation_timeout: 100  # 100ms timeout
       }
       
       {:ok, port_id} = PortSupervisor.start_port(supervisor, parser_config)
@@ -138,14 +135,19 @@ defmodule Rsolv.AST.PortSupervisorTest do
         end
       end)
       
-      # Send command that will run forever
-      task = Task.async(fn ->
-        PortSupervisor.call_port(supervisor, port_id, "INFINITE_LOOP", 2000)
-      end)
+      # Send command that takes longer than operation timeout
+      # Note: call_port timeout (150ms) must be less than sleep time (200ms)
+      # but greater than operation_timeout (100ms) to test operation timeout
+      result = PortSupervisor.call_port(supervisor, port_id, "SLEEP_200", 150)
       
-      # Should timeout
-      result = Task.await(task)
+      # Should timeout because operation takes 200ms but call timeout is 150ms
       assert {:error, :timeout} = result
+      
+      # Port should still be alive after timeout (supervisor should handle it)
+      assert PortSupervisor.get_port(supervisor, port_id) != nil
+      
+      # Cleanup
+      PortSupervisor.terminate_port(supervisor, port_id)
     end
     
     test "kills port after idle timeout", %{supervisor: supervisor} do

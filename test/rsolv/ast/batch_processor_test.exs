@@ -4,7 +4,23 @@ defmodule Rsolv.AST.BatchProcessorTest do
   alias Rsolv.AST.BatchProcessor
   
   setup do
-    # Ensure the application is started
+    # Ensure the application and all services are started
+    Application.ensure_all_started(:rsolv)
+    
+    # Wait for AnalysisService to be available
+    max_attempts = 50
+    Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
+      case Process.whereis(Rsolv.AST.AnalysisService) do
+        nil when attempt < max_attempts ->
+          Process.sleep(10)
+          {:cont, nil}
+        nil ->
+          raise "AnalysisService not available after #{max_attempts * 10}ms"
+        _pid ->
+          {:halt, :ok}
+      end
+    end)
+    
     :ok
   end
   
