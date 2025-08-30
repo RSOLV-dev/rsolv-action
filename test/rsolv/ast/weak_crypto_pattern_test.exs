@@ -1,9 +1,18 @@
 defmodule Rsolv.AST.WeakCryptoPatternTest do
-  use ExUnit.Case, async: false
+  use Rsolv.IntegrationCase
   
   alias Rsolv.AST.{SessionManager, AnalysisService}
   
   setup do
+    # Start required services if not running
+    if Process.whereis(Rsolv.Security.PatternServer) == nil do
+      {:ok, _} = start_supervised(Rsolv.Security.PatternServer)
+    end
+    
+    if Process.whereis(Rsolv.AST.AnalysisService) == nil do
+      {:ok, _} = start_supervised(Rsolv.AST.AnalysisService)
+    end
+    
     {:ok, session} = SessionManager.create_session("test")
     # Session cleanup is handled automatically by the manager
     {:ok, session: session}

@@ -1,20 +1,11 @@
 defmodule Rsolv.AST.AuditLoggerTest do
-  use ExUnit.Case, async: false
+  use Rsolv.IntegrationCase
   
   alias Rsolv.AST.AuditLogger
   
   setup do
-    # Ensure AuditLogger is started
-    case GenServer.whereis(Rsolv.AST.AuditLogger) do
-      nil -> 
-        {:ok, _pid} = Rsolv.AST.AuditLogger.start_link()
-      pid when is_pid(pid) ->
-        # Reset state by restarting - but handle already dead process
-        if Process.alive?(pid) do
-          GenServer.stop(pid)
-        end
-        {:ok, _pid} = Rsolv.AST.AuditLogger.start_link()
-    end
+    # Start AuditLogger under supervision for proper cleanup
+    {:ok, _pid} = start_supervised(Rsolv.AST.AuditLogger)
     
     # Clean up any existing audit tables
     case :ets.whereis(:audit_log_buffer) do

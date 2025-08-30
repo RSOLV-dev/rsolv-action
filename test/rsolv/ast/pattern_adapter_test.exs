@@ -1,8 +1,16 @@
 defmodule Rsolv.AST.PatternAdapterTest do
-  use ExUnit.Case, async: true
+  use Rsolv.IntegrationCase
   
   alias Rsolv.AST.PatternAdapter
   alias Rsolv.Security.{Pattern, ASTPattern}
+  
+  setup do
+    # Ensure PatternServer is started if not running
+    if Process.whereis(Rsolv.Security.PatternServer) == nil do
+      {:ok, _pid} = start_supervised(Rsolv.Security.PatternServer)
+    end
+    :ok
+  end
   
   describe "load_patterns_for_language/1" do
     test "loads JavaScript patterns with AST enhancements" do

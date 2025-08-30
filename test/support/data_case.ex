@@ -28,27 +28,31 @@ defmodule Rsolv.DataCase do
   end
 
   setup tags do
-    # Ensure the repo is started before trying to use sandbox
-    try do
-      pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
-      on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
-      :ok
-    rescue
-      error in RuntimeError ->
-        if error.message =~ "could not lookup Ecto repo" do
-          # Log the error for debugging
-          require Logger
-          Logger.error("Repo not started in DataCase, attempting to start application: #{inspect(error)}")
-          # Try to start the application if needed
-          Application.ensure_all_started(:rsolv)
-          # Retry once
-          pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
-          on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
-          :ok
-        else
-          reraise error, __STACKTRACE__
-        end
+    # Ensure the application is started FIRST
+    Application.ensure_all_started(:rsolv)
+    
+    # Wait for Repo to be available
+    case Process.whereis(Rsolv.Repo) do
+      nil ->
+        # Repo process not found, wait for it
+        Enum.reduce_while(1..30, nil, fn attempt, _ ->
+          case Process.whereis(Rsolv.Repo) do
+            nil when attempt < 30 ->
+              Process.sleep(100)
+              {:cont, nil}
+            nil ->
+              raise "Rsolv.Repo process never started after 3 seconds"
+            _pid ->
+              {:halt, :ok}
+          end
+        end)
+      _pid ->
+        :ok
     end
+    
+    # Now start the sandbox
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
+    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 
   @doc """

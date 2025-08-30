@@ -1,8 +1,16 @@
 defmodule Rsolv.AST.PatternIntegrationTest do
-  use ExUnit.Case, async: true
+  use Rsolv.IntegrationCase
   
   alias Rsolv.AST.{ASTPatternMatcher, ConfidenceScorer, PatternAdapter}
   alias Rsolv.Security.ASTPattern
+  
+  setup do
+    # Ensure PatternServer is started if not running
+    if Process.whereis(Rsolv.Security.PatternServer) == nil do
+      {:ok, _pid} = start_supervised(Rsolv.Security.PatternServer)
+    end
+    :ok
+  end
   
   describe "end-to-end AST pattern matching" do
     test "detects SQL injection with high confidence and proper context" do

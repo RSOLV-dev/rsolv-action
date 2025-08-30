@@ -1,6 +1,17 @@
 defmodule Rsolv.Cache.ValidationCacheSupervisionTest do
-  use ExUnit.Case, async: false
+  use Rsolv.IntegrationCase
   alias Rsolv.Cache.ValidationCache
+  
+  setup do
+    # Ensure the cache is started
+    case Process.whereis(ValidationCache) do
+      nil ->
+        {:ok, _} = start_supervised(ValidationCache)
+      _pid ->
+        :ok
+    end
+    :ok
+  end
   
   describe "supervision tree integration" do
     test "ValidationCache is started by application" do

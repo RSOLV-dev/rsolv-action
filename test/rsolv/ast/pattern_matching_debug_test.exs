@@ -6,7 +6,7 @@ defmodule Rsolv.AST.PatternMatchingDebugTest do
   the AST service detects 0 vulnerabilities despite having working infrastructure.
   """
   
-  use ExUnit.Case, async: false
+  use Rsolv.IntegrationCase
   
   alias Rsolv.AST.{AnalysisService, ASTPatternMatcher, ParserRegistry, SessionManager, PatternAdapter}
   alias Rsolv.Security.{PatternRegistry}
@@ -16,9 +16,12 @@ defmodule Rsolv.AST.PatternMatchingDebugTest do
     # Ensure the application and all services are started
     Application.ensure_all_started(:rsolv)
     
-    # Wait for AnalysisService to be available if needed
+    # Start required services if not running
+    if Process.whereis(Rsolv.Security.PatternServer) == nil do
+      {:ok, _} = start_supervised(Rsolv.Security.PatternServer)
+    end
+    
     if Process.whereis(Rsolv.AST.AnalysisService) == nil do
-      # Start it if not running
       {:ok, _} = start_supervised(Rsolv.AST.AnalysisService)
     end
     

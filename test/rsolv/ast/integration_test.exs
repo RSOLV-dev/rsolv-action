@@ -1,12 +1,20 @@
 defmodule Rsolv.AST.IntegrationTest do
-  use ExUnit.Case, async: false
+  use Rsolv.IntegrationCase
   
   alias Rsolv.AST.{AnalysisService, SessionManager, PortSupervisor}
   alias Rsolv.Security.PatternRegistry
   
   setup do
-    # Services are already started by the application
-    # Just create a session
+    # Start required services if not running
+    if Process.whereis(Rsolv.Security.PatternServer) == nil do
+      {:ok, _} = start_supervised(Rsolv.Security.PatternServer)
+    end
+    
+    if Process.whereis(Rsolv.AST.AnalysisService) == nil do
+      {:ok, _} = start_supervised(Rsolv.AST.AnalysisService)
+    end
+    
+    # Create a session
     {:ok, session} = SessionManager.create_session("test-customer")
     
     {:ok, session: session}

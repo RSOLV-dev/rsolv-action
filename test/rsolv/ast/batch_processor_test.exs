@@ -1,5 +1,5 @@
 defmodule Rsolv.AST.BatchProcessorTest do
-  use ExUnit.Case, async: false
+  use Rsolv.IntegrationCase
   
   alias Rsolv.AST.BatchProcessor
   
@@ -7,19 +7,18 @@ defmodule Rsolv.AST.BatchProcessorTest do
     # Ensure the application and all services are started
     Application.ensure_all_started(:rsolv)
     
-    # Wait for AnalysisService to be available
-    max_attempts = 50
-    Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
-      case Process.whereis(Rsolv.AST.AnalysisService) do
-        nil when attempt < max_attempts ->
-          Process.sleep(10)
-          {:cont, nil}
-        nil ->
-          raise "AnalysisService not available after #{max_attempts * 10}ms"
-        _pid ->
-          {:halt, :ok}
-      end
-    end)
+    # Start required services if not running
+    if Process.whereis(Rsolv.Security.PatternServer) == nil do
+      {:ok, _} = start_supervised(Rsolv.Security.PatternServer)
+    end
+    
+    if Process.whereis(Rsolv.AST.AnalysisService) == nil do
+      {:ok, _} = start_supervised(Rsolv.AST.AnalysisService)
+    end
+    
+    # Wait for services to be ready
+    wait_for_process(Rsolv.AST.AnalysisService)
+    wait_for_process(Rsolv.Security.PatternServer)
     
     :ok
   end
