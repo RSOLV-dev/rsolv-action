@@ -56,8 +56,8 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     end
   end
   
-  def is_safe_pattern?(:nosql_injection, code, %{language: "javascript"}) do
-    patterns = get_nosql_safe_patterns("javascript")
+  def is_safe_pattern?(:nosql_injection, code, %{language: language}) when language in ["javascript", "python"] do
+    patterns = get_nosql_safe_patterns(language)
     safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
     
     # If it contains $where, it's definitely unsafe
@@ -101,21 +101,42 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
   end
   
-  def is_safe_pattern?(:command_injection, code, %{language: "javascript"}) do
+  def is_safe_pattern?(:command_injection, code, %{language: language}) do
     # Check for safe command execution patterns
-    safe_patterns = [
-      ~r/execFile\(/,                  # execFile is safer than exec
-      ~r/spawn\(['"][^'"]+['"]\s*,\s*\[/,  # spawn with array of args
-      ~r/exec\(['"][^'"$`]+['"]\)\s*$/,    # exec with literal string only (no concat)
-    ]
+    safe_patterns = case language do
+      "javascript" -> [
+        ~r/execFile\(/,                  # execFile is safer than exec
+        ~r/spawn\(['"][^'"]+['"]\s*,\s*\[/,  # spawn with array of args
+        ~r/exec\(['"][^'"$`]+['"]\)\s*$/,    # exec with literal string only (no concat)
+      ]
+      "python" -> [
+        ~r/subprocess\.run\(\[/,         # subprocess.run with list
+        ~r/subprocess\.call\(\[/,        # subprocess.call with list
+        ~r/os\.execv/,                   # os.execv (doesn't use shell)
+        ~r/check=True/,                  # Explicit check flag
+      ]
+      "ruby" -> [
+        ~r/system\(['"][^'"$`]+['"]\)/,  # system with literal string
+        ~r/Open3\./,                     # Open3 is safer
+      ]
+      "php" -> [
+        ~r/escapeshellcmd/,              # Command escaping
+        ~r/escapeshellarg/,              # Argument escaping
+        ~r/exec\(['"][^'"$`]+['"]\)/,    # exec with literal
+      ]
+      _ -> []
+    end
     
     # Check for unsafe patterns that override safe detection
     unsafe_patterns = [
-      ~r/exec\([^)]*\+/,               # exec with string concatenation
-      ~r/exec\([^)]*\$\{/,             # exec with template literals
-      ~r/exec\([^)]*req\./,            # exec with request data
-      ~r/exec\([^)]*params/,           # exec with params
+      ~r/\+\s*user/,                   # String concatenation with user variables
+      ~r/\$\{.*user/,                  # Template literals with user input
+      ~r/\$\(/,                        # Command substitution
+      ~r/`.*\$/,                       # Backticks with variables
+      ~r/req\./,                       # Request data
+      ~r/params\[/,                    # Parameters array access
       ~r/shell\s*:\s*true/,            # shell: true option
+      ~r/shell=True/,                  # Python shell=True
     ]
     
     has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)

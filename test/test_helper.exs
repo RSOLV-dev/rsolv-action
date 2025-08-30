@@ -1,3 +1,37 @@
+# Hook into ExUnit lifecycle
+defmodule TestTracer do
+  use GenServer
+
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  end
+
+  def init(_) do
+    IO.puts "TestTracer: Starting at #{DateTime.utc_now()}"
+    Process.send_after(self(), :check_14s, 14_000)
+    Process.send_after(self(), :check_15s, 15_000)
+    Process.send_after(self(), :check_16s, 16_000)
+    {:ok, %{start: System.monotonic_time(:millisecond)}}
+  end
+
+  def handle_info(:check_14s, state) do
+    IO.puts "TestTracer: 14 seconds since ExUnit start"
+    {:noreply, state}
+  end
+
+  def handle_info(:check_15s, state) do
+    IO.puts "TestTracer: 15 seconds since ExUnit start - CRITICAL POINT"
+    {:noreply, state}
+  end
+
+  def handle_info(:check_16s, state) do
+    IO.puts "TestTracer: 16 seconds - SURVIVED!"
+    {:noreply, state}
+  end
+end
+
+# Start the tracer before ExUnit
+{:ok, _pid} = TestTracer.start_link([])
 # Ensure the application is started
 {:ok, _} = Application.ensure_all_started(:rsolv)
 
