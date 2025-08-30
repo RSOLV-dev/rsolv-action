@@ -280,7 +280,7 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     ~r/\.find\(\{[^$]*\}\)/,             # No $where
     ~r/\.findOne\(\{[^$]*\}\)/,          # No $where
     ~r/\.findById\(/,                    # Safe findById
-    ~r/\.updateOne\(\{[^$]*\}/,          # No $where in update
+    ~r/\.updateOne\(\{[^$]*\}\)/,        # No $where in update
   ]
   defp get_nosql_safe_patterns("python"), do: [
     ~r/\.find\(\{[^$]*\}\)/,             # No $where
