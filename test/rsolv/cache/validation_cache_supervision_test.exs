@@ -38,18 +38,36 @@ defmodule Rsolv.Cache.ValidationCacheSupervisionTest do
       original_pid = Process.whereis(ValidationCache)
       assert original_pid != nil
       
-      # Kill the process
+      # Store a value before restart
+      test_key = :erlang.unique_integer()
+      test_value = %{"before" => "restart"}
+      assert :ok = ValidationCache.put(test_key, test_value)
+      
+      # Kill the process (brutally to trigger restart)
+      Process.flag(:trap_exit, true)
       Process.exit(original_pid, :kill)
       
       # Wait for supervisor to restart it
-      :timer.sleep(100)
+      max_attempts = 20
+      new_pid = Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
+        :timer.sleep(50)
+        case Process.whereis(ValidationCache) do
+          nil when attempt < max_attempts ->
+            {:cont, nil}
+          nil ->
+            {:halt, nil}
+          pid when pid != original_pid ->
+            {:halt, pid}
+          _same_pid ->
+            {:cont, nil}
+        end
+      end)
       
       # Should have a new process
-      new_pid = Process.whereis(ValidationCache)
-      assert new_pid != nil
-      assert new_pid != original_pid
+      assert new_pid != nil, "ValidationCache was not restarted"
+      assert new_pid != original_pid, "ValidationCache PID should be different after restart"
       
-      # ETS table should still work
+      # ETS table should still work (tables survive process death)
       key = :erlang.unique_integer()
       value = %{"test" => "data"}
       assert :ok = ValidationCache.put(key, value)

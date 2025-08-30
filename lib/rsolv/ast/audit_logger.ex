@@ -244,7 +244,7 @@ defmodule Rsolv.AST.AuditLogger do
   defp build_event(event_type, metadata, opts) do
     %{
       id: generate_event_id(),
-      timestamp: opts[:timestamp] || DateTime.utc_now(),
+      timestamp: opts[:timestamp] || Rsolv.Time.utc_now(),
       event_type: event_type,
       severity: get_severity(event_type),
       correlation_id: opts[:correlation_id] || generate_correlation_id(),

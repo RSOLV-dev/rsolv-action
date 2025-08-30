@@ -4,8 +4,18 @@ defmodule Rsolv.AST.AuditLoggerTest do
   alias Rsolv.AST.AuditLogger
   
   setup do
-    # Start AuditLogger under supervision for proper cleanup
+    # Always restart AuditLogger for test isolation
+    # First stop any existing instance
+    case Process.whereis(Rsolv.AST.AuditLogger) do
+      nil -> :ok
+      pid -> GenServer.stop(pid, :normal, 100)
+    end
+    
+    # Start fresh instance under supervision
     {:ok, _pid} = start_supervised(Rsolv.AST.AuditLogger)
+    
+    # Ensure tables are created and clean
+    :timer.sleep(10)  # Give GenServer time to initialize
     
     # Clean up any existing audit tables
     case :ets.whereis(:audit_log_buffer) do
