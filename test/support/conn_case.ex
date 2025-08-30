@@ -35,6 +35,9 @@ defmodule RsolvWeb.ConnCase do
     # Ensure the application is started
     Application.ensure_all_started(:rsolv)
     
+    # Wait for endpoint to be ready (it creates an ETS table internally)
+    ensure_endpoint_started()
+    
     # Ensure the repo is started before trying to use sandbox
     try do
       pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
@@ -56,5 +59,29 @@ defmodule RsolvWeb.ConnCase do
           reraise error, __STACKTRACE__
         end
     end
+  end
+  
+  # Helper to ensure endpoint is fully started and ready
+  defp ensure_endpoint_started do
+    # Try to access the endpoint's config which uses its ETS table
+    # If the ETS table doesn't exist, this will fail
+    max_attempts = 50
+    retry_delay = 10 # milliseconds
+    
+    Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
+      try do
+        # This will fail if the ETS table isn't created yet
+        RsolvWeb.Endpoint.config(:secret_key_base)
+        {:halt, :ok}
+      rescue
+        ArgumentError ->
+          if attempt < max_attempts do
+            Process.sleep(retry_delay)
+            {:cont, nil}
+          else
+            raise "Endpoint ETS table not available after #{max_attempts * retry_delay}ms"
+          end
+      end
+    end)
   end
 end
