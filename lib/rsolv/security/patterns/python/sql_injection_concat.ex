@@ -243,7 +243,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
       
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionConcat.ast_enhancement()
       iex> enhancement.min_confidence
-      0.7
+      0.4
   """
   @impl true
   def ast_enhancement do

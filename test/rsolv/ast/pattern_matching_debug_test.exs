@@ -14,6 +14,16 @@ defmodule Rsolv.AST.PatternMatchingDebugTest do
   
   setup do
     # Ensure the application is started
+    on_exit(fn ->
+      # Clean up any parsers created during the test
+      try do
+        # Force cleanup of all sessions which will trigger parser cleanup
+        SessionManager.cleanup_expired_sessions()
+      rescue
+        _ -> :ok
+      end
+    end)
+    
     :ok
   end
   
@@ -24,6 +34,12 @@ defmodule Rsolv.AST.PatternMatchingDebugTest do
       
       # Create a session and parse using ParserRegistry
       {:ok, session} = SessionManager.create_session("test-client")
+      
+      # Ensure cleanup on test exit
+      on_exit(fn ->
+        SessionManager.delete_session(session.id, "test-client")
+      end)
+      
       {:ok, parse_result} = ParserRegistry.parse_code(session.id, "test-client", "python", code)
       ast = parse_result.ast
       
@@ -61,6 +77,12 @@ defmodule Rsolv.AST.PatternMatchingDebugTest do
       
       # Create a session and parse using ParserRegistry
       {:ok, session} = SessionManager.create_session("test-client")
+      
+      # Ensure cleanup on test exit
+      on_exit(fn ->
+        SessionManager.delete_session(session.id, "test-client")
+      end)
+      
       {:ok, parse_result} = ParserRegistry.parse_code(session.id, "test-client", "javascript", code)
       ast = parse_result.ast
       
