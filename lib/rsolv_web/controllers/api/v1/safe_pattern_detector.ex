@@ -101,7 +101,7 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
   end
   
-  def is_safe_pattern?(:command_injection, code, %{language: language}) do
+  def is_safe_pattern?(:command_injection, code, %{language: language}) when language in ["javascript", "python", "ruby", "php"] do
     # Check for safe command execution patterns
     safe_patterns = case language do
       "javascript" -> [
@@ -124,7 +124,6 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
         ~r/escapeshellarg/,              # Argument escaping
         ~r/exec\(['"][^'"$`]+['"]\)/,    # exec with literal
       ]
-      _ -> []
     end
     
     # Check for unsafe patterns that override safe detection
@@ -145,6 +144,8 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     # Only safe if it matches safe patterns AND doesn't match unsafe patterns
     has_safe && !has_unsafe
   end
+  
+  def is_safe_pattern?(:command_injection, _code, _context), do: false
   
   def is_safe_pattern?(:path_traversal, code, %{language: _language}) do
     # Check for safe sanitization patterns FIRST
