@@ -364,12 +364,20 @@ defmodule Rsolv.AST.AnalysisService do
           in_database_call: get_in(match, [:context, :in_database_call]) || false
         }
         
-        # Calculate confidence
-        confidence = ConfidenceScorer.calculate_confidence(
-          confidence_context,
-          file.language,
-          options
-        )
+        # Use confidence from pattern matcher if available, otherwise calculate
+        match_confidence = Map.get(match, :confidence)
+        
+        confidence = if match_confidence && match_confidence > 0 do
+          # Pattern matcher already calculated confidence with pattern-specific rules
+          match_confidence
+        else
+          # Fallback to general confidence calculation
+          ConfidenceScorer.calculate_confidence(
+            confidence_context,
+            file.language,
+            options
+          )
+        end
         
         Logger.debug("Match confidence: #{confidence}, min_confidence: #{Map.get(match, :min_confidence, 0.7)}, match: #{inspect(match)}")
         

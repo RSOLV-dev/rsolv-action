@@ -386,94 +386,175 @@ defmodule Rsolv.AST.ASTPatternMatcher do
     end
   end
   
-  defp check_argument_analysis(node, arg_req, _context) do
+  @doc """
+  Checks if a node's arguments match the specified analysis requirements.
+  
+  Supports checking argument position, value patterns, and various other constraints
+  to reduce false positives in pattern matching.
+  
+  ## Examples
+  
+      iex> alias Rsolv.AST.ASTPatternMatcher
+      iex> # Test MD5 detection - should match
+      iex> node = %{"type" => "CallExpression", "arguments" => [%{"type" => "Literal", "value" => "md5"}]}
+      iex> arg_req = %{"position" => 0, "value_pattern" => ~r/^md5$/i}
+      iex> ASTPatternMatcher.check_argument_analysis(node, arg_req, %{})
+      true
+      
+      iex> alias Rsolv.AST.ASTPatternMatcher
+      iex> # Test SHA256 detection - should NOT match MD5 pattern
+      iex> node = %{"type" => "CallExpression", "arguments" => [%{"type" => "Literal", "value" => "sha256"}]}
+      iex> arg_req = %{"position" => 0, "value_pattern" => ~r/^md5$/i}
+      iex> ASTPatternMatcher.check_argument_analysis(node, arg_req, %{})
+      false
+      
+      iex> alias Rsolv.AST.ASTPatternMatcher
+      iex> # Test SHA1 detection with hyphen - should match
+      iex> node = %{"type" => "CallExpression", "arguments" => [%{"type" => "Literal", "value" => "sha-1"}]}
+      iex> arg_req = %{"position" => 0, "value_pattern" => ~r/^sha-?1$/i}
+      iex> ASTPatternMatcher.check_argument_analysis(node, arg_req, %{})
+      true
+      
+      iex> alias Rsolv.AST.ASTPatternMatcher
+      iex> # Test when no arguments at position - should fail
+      iex> node = %{"type" => "CallExpression", "arguments" => []}
+      iex> arg_req = %{"position" => 0, "value_pattern" => ~r/^md5$/i}
+      iex> ASTPatternMatcher.check_argument_analysis(node, arg_req, %{})
+      false
+  """
+  @doc false  # Internal function, but needs to be public for doctests
+  def check_argument_analysis(node, arg_req, context \\ %{}) do
     # For CallExpression, check the arguments
     args = Map.get(node, "arguments", [])
     
-    # Check if arguments contain sensitive keywords
-    sensitive_keywords_ok = if arg_req["contains_sensitive_keywords"] || arg_req[:contains_sensitive_keywords] do
-      # Look for sensitive keywords in argument values
-      sensitive_patterns = ~r/password|secret|token|key|credential|auth|api[_-]?key/i
+    # Check specific argument position and value pattern (for weak crypto patterns)
+    position_value_ok = if position = arg_req["position"] || arg_req[:position] do
+      value_pattern = arg_req["value_pattern"] || arg_req[:value_pattern]
       
-      Enum.any?(args, fn arg ->
-        case arg do
-          # Check identifiers for sensitive variable names
-          %{"type" => "Identifier", "name" => name} ->
-            Regex.match?(sensitive_patterns, name)
-            
-          # Check string literals for sensitive content
-          %{"type" => type, "value" => value} when type in ["Literal", "StringLiteral"] and is_binary(value) ->
-            Regex.match?(sensitive_patterns, value)
-            
-          # Check template literals
-          %{"type" => "TemplateLiteral", "quasis" => quasis} ->
-            Enum.any?(quasis, fn 
-              %{"value" => %{"raw" => raw}} when is_binary(raw) ->
-                Regex.match?(sensitive_patterns, raw)
-              _ -> false
-            end)
-            
-          # Check object expressions for sensitive property names
-          %{"type" => "ObjectExpression", "properties" => props} ->
-            Enum.any?(props, fn
-              %{"key" => %{"name" => name}} when is_binary(name) ->
-                Regex.match?(sensitive_patterns, name)
-              %{"key" => %{"value" => value}} when is_binary(value) ->
-                Regex.match?(sensitive_patterns, value)
-              _ -> false
-            end)
-            
-          _ -> false
-        end
-      end)
+      case Enum.at(args, position) do
+        nil -> 
+          false  # No argument at this position
+          
+        %{"type" => type, "value" => value} when type in ["Literal", "StringLiteral"] and is_binary(value) ->
+          # Check if the value matches the pattern
+          if value_pattern do
+            case value_pattern do
+              %Regex{} = regex -> Regex.match?(regex, value)
+              pattern when is_binary(pattern) -> value == pattern
+              _ -> true
+            end
+          else
+            true
+          end
+          
+        %{"type" => "TemplateLiteral", "quasis" => [%{"value" => %{"raw" => raw}} | _]} when is_binary(raw) ->
+          # Check template literal value
+          if value_pattern do
+            case value_pattern do
+              %Regex{} = regex -> Regex.match?(regex, raw)
+              pattern when is_binary(pattern) -> raw == pattern
+              _ -> true
+            end
+          else
+            true
+          end
+          
+        _ -> 
+          false  # Argument exists but isn't a string literal we can check
+      end
     else
-      true
+      true  # No position requirement
     end
     
-    # For patterns that require sensitive keywords, only match if found
-    # For other patterns, continue with additional checks
-    if arg_req["contains_sensitive_keywords"] || arg_req[:contains_sensitive_keywords] do
-      sensitive_keywords_ok
+    # Early return if position/value check failed
+    if not position_value_ok do
+      false
     else
-      # Check first argument contains user input
-      first_arg_ok = if arg_req["first_arg_contains_user_input"] || arg_req[:first_arg_contains_user_input] do
-        case Enum.at(args, 0) do
-          nil -> false
-          arg -> 
-            # Simple check for identifiers that might be user input
-            case arg do
-              %{"type" => "Identifier"} -> true
-              %{"type" => "MemberExpression"} -> true
-              %{"type" => "CallExpression"} -> true
-              _ -> false
-            end
-        end
+      # Check if arguments contain sensitive keywords
+      sensitive_keywords_ok = if arg_req["contains_sensitive_keywords"] || arg_req[:contains_sensitive_keywords] do
+        # Look for sensitive keywords in argument values
+        sensitive_patterns = ~r/password|secret|token|key|credential|auth|api[_-]?key/i
+        
+        Enum.any?(args, fn arg ->
+          case arg do
+            # Check identifiers for sensitive variable names
+            %{"type" => "Identifier", "name" => name} ->
+              Regex.match?(sensitive_patterns, name)
+              
+            # Check string literals for sensitive content
+            %{"type" => type, "value" => value} when type in ["Literal", "StringLiteral"] and is_binary(value) ->
+              Regex.match?(sensitive_patterns, value)
+              
+            # Check template literals
+            %{"type" => "TemplateLiteral", "quasis" => quasis} ->
+              Enum.any?(quasis, fn 
+                %{"value" => %{"raw" => raw}} when is_binary(raw) ->
+                  Regex.match?(sensitive_patterns, raw)
+                _ -> false
+              end)
+              
+            # Check object expressions for sensitive property names
+            %{"type" => "ObjectExpression", "properties" => props} ->
+              Enum.any?(props, fn
+                %{"key" => %{"name" => name}} when is_binary(name) ->
+                  Regex.match?(sensitive_patterns, name)
+                %{"key" => %{"value" => value}} when is_binary(value) ->
+                  Regex.match?(sensitive_patterns, value)
+                _ -> false
+              end)
+              
+            _ -> false
+          end
+        end)
       else
         true
       end
       
-      # Check if it's a string type (not a function)
-      string_type_ok = if arg_req["is_string_type"] || arg_req[:is_string_type] do
-        case Enum.at(args, 0) do
-          %{"type" => type} when type in ["Literal", "StringLiteral", "TemplateLiteral", "Identifier"] -> true
-          _ -> false
-        end
+      # For patterns that require sensitive keywords, only match if found
+      # For other patterns, continue with additional checks
+      if arg_req["contains_sensitive_keywords"] || arg_req[:contains_sensitive_keywords] do
+        sensitive_keywords_ok
       else
-        true
-      end
-      
-      # Check it's not a static string
-      not_static_ok = if arg_req["not_static_string"] || arg_req[:not_static_string] do
-        case Enum.at(args, 0) do
-          %{"type" => "Literal"} -> false  # Static string literal
-          %{"type" => "StringLiteral"} -> false  # Static string literal
-          _ -> true
+        # Check first argument contains user input
+        first_arg_ok = if arg_req["first_arg_contains_user_input"] || arg_req[:first_arg_contains_user_input] do
+          case Enum.at(args, 0) do
+            nil -> false
+            arg -> 
+              # Simple check for identifiers that might be user input
+              case arg do
+                %{"type" => "Identifier"} -> true
+                %{"type" => "MemberExpression"} -> true
+                %{"type" => "CallExpression"} -> true
+                _ -> false
+              end
+          end
+        else
+          true
         end
-      else
-        true
+        
+        # Check if it's a string type (not a function)
+        string_type_ok = if arg_req["is_string_type"] || arg_req[:is_string_type] do
+          case Enum.at(args, 0) do
+            %{"type" => type} when type in ["Literal", "StringLiteral", "TemplateLiteral", "Identifier"] -> true
+            _ -> false
+          end
+        else
+          true
+        end
+        
+        # Check it's not a static string
+        not_static_ok = if arg_req["not_static_string"] || arg_req[:not_static_string] do
+          case Enum.at(args, 0) do
+            %{"type" => "Literal"} -> false  # Static string literal
+            %{"type" => "StringLiteral"} -> false  # Static string literal
+            _ -> true
+          end
+        else
+          true
+        end
+        
+        first_arg_ok && string_type_ok && not_static_ok && sensitive_keywords_ok && position_value_ok
       end
-      
-      first_arg_ok && string_type_ok && not_static_ok && sensitive_keywords_ok
     end
   end
   
@@ -527,6 +608,7 @@ defmodule Rsolv.AST.ASTPatternMatcher do
       severity: determine_severity(pattern),
       location: extract_location(node, context),
       confidence: calculate_confidence(node, pattern, context),
+      min_confidence: Map.get(pattern, :min_confidence, 0.7),  # Pass through min_confidence
       context: build_context(node, context),
       recommendation: Map.get(pattern, :recommendation, "Review this code for potential security issues")
     }
@@ -578,14 +660,31 @@ defmodule Rsolv.AST.ASTPatternMatcher do
     end
   end
   
-  defp calculate_confidence(_node, pattern, _context) do
-    # Base confidence on pattern type
-    cond do
-      String.contains?(pattern.id, "injection") -> 0.85
-      String.contains?(pattern.id, "xss") -> 0.85
-      String.contains?(pattern.id, "secret") -> 0.9
-      String.contains?(pattern.id, "eval") -> 0.95
-      true -> 0.7
+  defp calculate_confidence(node, pattern, context) do
+    # Check if pattern has confidence rules
+    confidence_rules = Map.get(pattern, :confidence_rules, %{})
+    
+    # Check if we have the actual pattern object for more checks
+    ast_pattern = Map.get(pattern, :ast_pattern, %{})
+    
+    if map_size(confidence_rules) > 0 do
+      # Use the ConfidenceCalculator with pattern-specific rules
+      Rsolv.AST.ConfidenceCalculator.calculate_confidence(
+        ast_pattern,
+        node,
+        context,
+        confidence_rules
+      )
+    else
+      # Fallback to simple confidence based on pattern type
+      cond do
+        String.contains?(pattern.id, "injection") -> 0.85
+        String.contains?(pattern.id, "xss") -> 0.85
+        String.contains?(pattern.id, "secret") -> 0.9
+        String.contains?(pattern.id, "eval") -> 0.95
+        String.contains?(pattern.id, "crypto") -> 0.7  # Better default for crypto patterns
+        true -> 0.7
+      end
     end
   end
   

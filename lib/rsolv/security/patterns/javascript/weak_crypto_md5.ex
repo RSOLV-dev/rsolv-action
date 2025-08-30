@@ -317,7 +317,7 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
         algorithm_check: true,  # Check the algorithm argument
         argument_analysis: %{
           position: 0,  # First argument is the algorithm
-          value_pattern: ~r/^['"`]md5['"`]$/i
+          value_pattern: ~r/^md5$/i  # AST value doesn't include quotes
         }
       },
       context_rules: %{
