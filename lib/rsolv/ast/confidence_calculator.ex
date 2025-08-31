@@ -26,6 +26,7 @@ defmodule Rsolv.AST.ConfidenceCalculator do
     |> apply_object_property_bonus(pattern, node, adjustments)
     |> apply_argument_analysis_bonus(pattern, node, adjustments)
     |> apply_user_input_detection(node, adjustments)
+    |> apply_sql_keyword_bonus(node, adjustments)
     |> apply_context_adjustments(context, adjustments)
     |> apply_test_file_penalty(context, adjustments)
     
@@ -105,7 +106,12 @@ defmodule Rsolv.AST.ConfidenceCalculator do
         
       %{"type" => "BinaryExpression", "right" => %{"type" => "Identifier", "name" => name}} ->
         # JavaScript binary expressions with user input
-        Enum.any?(user_input_indicators, &String.contains?(String.downcase(name), &1))
+        # Check explicit indicators
+        has_explicit_indicator = Enum.any?(user_input_indicators, &String.contains?(String.downcase(name), &1))
+        # Also check if it looks like a user-related parameter (but be conservative)
+        # Only boost if it's in a SQL context (caller will need to verify)
+        looks_like_user_param = String.match?(String.downcase(name), ~r/(user|customer|client).*id|id.*user/)
+        has_explicit_indicator || looks_like_user_param
         
       _ -> false
     end
@@ -115,6 +121,50 @@ defmodule Rsolv.AST.ConfidenceCalculator do
       confidence + boost
     else
       confidence
+    end
+  end
+  
+  defp apply_sql_keyword_bonus(confidence, node, adjustments) do
+    # Check if SQL keywords are present in string concatenation
+    sql_keywords = ~w(SELECT INSERT UPDATE DELETE FROM WHERE JOIN ORDER GROUP BY HAVING UNION)
+    
+    has_sql_keywords = case node do
+      %{"type" => "BinaryExpression", "left" => left} ->
+        check_for_sql_keywords(left, sql_keywords)
+      %{"type" => "BinOp", "left" => left} ->
+        check_for_sql_keywords(left, sql_keywords)
+      _ ->
+        false
+    end
+    
+    if has_sql_keywords do
+      bonus = Map.get(adjustments, "has_sql_keywords", 0.2)
+      confidence + bonus
+    else
+      confidence
+    end
+  end
+  
+  defp check_for_sql_keywords(node, keywords) do
+    case node do
+      # JavaScript AST uses StringLiteral
+      %{"type" => "StringLiteral", "value" => value} when is_binary(value) ->
+        upper_value = String.upcase(value)
+        Enum.any?(keywords, &String.contains?(upper_value, &1))
+      # Some parsers use Literal
+      %{"type" => "Literal", "value" => value} when is_binary(value) ->
+        upper_value = String.upcase(value)
+        Enum.any?(keywords, &String.contains?(upper_value, &1))
+      # Python uses Constant
+      %{"type" => "Constant", "value" => value} when is_binary(value) ->
+        upper_value = String.upcase(value)
+        Enum.any?(keywords, &String.contains?(upper_value, &1))
+      # Python also uses Str
+      %{"type" => "Str", "s" => value} when is_binary(value) ->
+        upper_value = String.upcase(value)
+        Enum.any?(keywords, &String.contains?(upper_value, &1))
+      _ ->
+        false
     end
   end
   

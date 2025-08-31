@@ -234,7 +234,7 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
           "in_test_file" => -0.9              # Test code
         }
       },
-      min_confidence: 0.7  # Lowered threshold slightly
+      min_confidence: 0.5  # Adjusted to catch more SQL injection cases while pattern matching provides the filtering
     }
   end
 end
