@@ -1,5 +1,5 @@
 defmodule Rsolv.AST.ParserRegistryTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false  # Uses SessionManager singleton
   
   alias Rsolv.AST.ParserRegistry
   alias Rsolv.AST.SessionManager

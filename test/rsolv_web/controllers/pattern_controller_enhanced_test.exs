@@ -17,7 +17,7 @@ defmodule RsolvWeb.Api.V1.PatternControllerEnhancedTest do
       assert enhancement.ast_rules
       assert enhancement.context_rules
       assert enhancement.confidence_rules
-      assert enhancement.min_confidence == 0.8
+      assert enhancement.min_confidence == 0.7
       
       # Test JSON serialization
       enhanced_data = %{

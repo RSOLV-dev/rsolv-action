@@ -162,7 +162,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtmlTest do
       assert enhancement.confidence_rules.adjustments["uses_sanitize_function"] == -0.8
       assert enhancement.confidence_rules.adjustments["static_html_only"] == -1.0
       assert enhancement.confidence_rules.adjustments["direct_user_input_to_innerhtml"] == 0.5
-      assert enhancement.min_confidence == 0.8
+      assert enhancement.min_confidence == 0.6  # Adjusted to catch legitimate innerHTML vulnerabilities
     end
   end
 

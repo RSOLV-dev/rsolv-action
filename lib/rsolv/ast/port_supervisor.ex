@@ -15,7 +15,9 @@ defmodule Rsolv.AST.PortSupervisor do
   require Logger
   
   def start_link(init_arg) do
-    DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
+    # Support configurable name for testing - defaults to module name for production
+    name = Keyword.get(init_arg, :name, __MODULE__)
+    DynamicSupervisor.start_link(__MODULE__, init_arg, name: name)
   end
   
   @impl true
@@ -78,7 +80,17 @@ defmodule Rsolv.AST.PortSupervisor do
   def stop_port(supervisor, port_id) do
     case :ets.lookup(:port_registry, port_id) do
       [{^port_id, pid, _config, _started_at}] ->
-        DynamicSupervisor.terminate_child(supervisor, pid)
+        # Always resolve to a PID first, then terminate if valid
+        sup_pid = resolve_supervisor(supervisor)
+        
+        if sup_pid && Process.alive?(sup_pid) do
+          try do
+            DynamicSupervisor.terminate_child(sup_pid, pid)
+          rescue
+            _ -> :ok
+          end
+        end
+        
         safe_ets_delete(:port_registry, port_id)
         safe_ets_delete(:port_stats, port_id)
         :ok
@@ -87,6 +99,12 @@ defmodule Rsolv.AST.PortSupervisor do
         :ok
     end
   end
+  
+  # Resolve supervisor to a PID consistently
+  defp resolve_supervisor(nil), do: nil
+  defp resolve_supervisor(pid) when is_pid(pid), do: pid
+  defp resolve_supervisor(name) when is_atom(name), do: Process.whereis(name)
+  defp resolve_supervisor(_), do: nil
   
   @doc """
   Gets port information.

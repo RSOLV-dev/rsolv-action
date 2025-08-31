@@ -244,7 +244,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
       
       iex> enhancement = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.ast_enhancement()
       iex> enhancement.min_confidence
-      0.8
+      0.6
   """
   @impl true
   def ast_enhancement do
@@ -278,7 +278,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
           "in_utility_script" => -0.2
         }
       },
-      min_confidence: 0.8
+      min_confidence: 0.6
     }
   end
 end

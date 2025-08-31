@@ -110,6 +110,13 @@ defmodule Rsolv.AST.AuditLogger do
   end
   
   @doc """
+  Clear the buffer (for testing).
+  """
+  def clear_buffer do
+    GenServer.call(__MODULE__, :clear_buffer)
+  end
+  
+  @doc """
   Query events by criteria.
   """
   def query_events(criteria) do
@@ -202,6 +209,12 @@ defmodule Rsolv.AST.AuditLogger do
   @impl true
   def handle_call({:set_storage_backend, backend}, _from, state) do
     {:reply, :ok, %{state | storage_backend: backend}}
+  end
+  
+  @impl true
+  def handle_call(:clear_buffer, _from, state) do
+    # Clear the in-memory buffer
+    {:reply, :ok, %{state | buffer: []}}
   end
   
   @impl true

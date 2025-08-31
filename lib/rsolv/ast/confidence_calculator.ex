@@ -81,7 +81,7 @@ defmodule Rsolv.AST.ConfidenceCalculator do
   
   defp apply_user_input_detection(confidence, node, adjustments) do
     # Check if the node involves user input variables or parameters
-    user_input_indicators = ["user_input", "request", "params", "argv", "args", "input", "data", "body", "query", "cmd", "command"]
+    user_input_indicators = ["user_input", "userinput", "user", "request", "params", "argv", "args", "input", "data", "body", "query", "cmd", "command"]
     
     has_user_input = case node do
       %{"arguments" => args} when is_list(args) ->
@@ -113,11 +113,15 @@ defmodule Rsolv.AST.ConfidenceCalculator do
         looks_like_user_param = String.match?(String.downcase(name), ~r/(user|customer|client).*id|id.*user/)
         has_explicit_indicator || looks_like_user_param
         
+      %{"type" => "AssignmentExpression", "right" => %{"type" => "Identifier", "name" => name}} ->
+        # JavaScript assignment with user input (e.g., innerHTML = userInput)
+        Enum.any?(user_input_indicators, &String.contains?(String.downcase(name), &1))
+        
       _ -> false
     end
     
     if has_user_input do
-      boost = Map.get(adjustments, "has_user_input", 0.3)
+      boost = Map.get(adjustments, "has_user_input", 0.2)
       confidence + boost
     else
       confidence
@@ -138,7 +142,7 @@ defmodule Rsolv.AST.ConfidenceCalculator do
     end
     
     if has_sql_keywords do
-      bonus = Map.get(adjustments, "has_sql_keywords", 0.2)
+      bonus = Map.get(adjustments, "has_sql_keywords", 0.3)
       confidence + bonus
     else
       confidence

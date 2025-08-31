@@ -1,5 +1,5 @@
 defmodule Rsolv.AST.SessionManagerTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false  # SessionManager is a singleton GenServer
   
   alias Rsolv.AST.SessionManager
   alias Rsolv.AST.Encryption

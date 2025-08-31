@@ -21,6 +21,14 @@ defmodule Rsolv.AST.PatternMatchingDebugTest do
       {:ok, _} = start_supervised(Rsolv.Security.PatternServer)
     end
     
+    if Process.whereis(Rsolv.AST.SessionManager) == nil do
+      {:ok, _} = start_supervised(Rsolv.AST.SessionManager)
+    end
+    
+    if Process.whereis(Rsolv.AST.ParserRegistry) == nil do
+      {:ok, _} = start_supervised(Rsolv.AST.ParserRegistry)
+    end
+    
     if Process.whereis(Rsolv.AST.AnalysisService) == nil do
       {:ok, _} = start_supervised(Rsolv.AST.AnalysisService)
     end
@@ -48,7 +56,11 @@ defmodule Rsolv.AST.PatternMatchingDebugTest do
       
       # Ensure cleanup on test exit
       on_exit(fn ->
-        SessionManager.delete_session(session.id, "test-client")
+        try do
+          SessionManager.delete_session(session.id, "test-client")
+        rescue
+          _ -> :ok
+        end
       end)
       
       {:ok, parse_result} = ParserRegistry.parse_code(session.id, "test-client", "python", code)
@@ -91,7 +103,11 @@ defmodule Rsolv.AST.PatternMatchingDebugTest do
       
       # Ensure cleanup on test exit
       on_exit(fn ->
-        SessionManager.delete_session(session.id, "test-client")
+        try do
+          SessionManager.delete_session(session.id, "test-client")
+        rescue
+          _ -> :ok
+        end
       end)
       
       {:ok, parse_result} = ParserRegistry.parse_code(session.id, "test-client", "javascript", code)

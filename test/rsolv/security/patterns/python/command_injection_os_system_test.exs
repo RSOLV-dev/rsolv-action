@@ -171,7 +171,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
     test "confidence scoring reduces false positives" do
       enhancement = CommandInjectionOsSystem.ast_enhancement()
       
-      assert enhancement.min_confidence == 0.8
+      assert enhancement.min_confidence == 0.6
       assert enhancement.confidence_rules.base == 0.6
       assert enhancement.confidence_rules.adjustments["has_user_input"] == 0.3
       assert enhancement.confidence_rules.adjustments["in_test_code"] == -1.0
@@ -184,7 +184,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
       
       assert enhanced.id == "python-command-injection-os-system"
       assert enhanced.ast_rules
-      assert enhanced.min_confidence == 0.8
+      assert enhanced.min_confidence == 0.6
     end
   end
 

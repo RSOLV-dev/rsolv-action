@@ -1,20 +1,35 @@
 defmodule Rsolv.AST.PortSupervisorTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: false  # PortSupervisor is a named singleton
   
   alias Rsolv.AST.PortSupervisor
   alias Rsolv.AST.PortWorker
   
   setup do
-    # Use the existing PortSupervisor from the application
-    # Clear any existing state first
-    if Process.whereis(PortSupervisor) do
-      # Clean up any existing ports
-      :ets.delete_all_objects(:port_registry)
-      :ets.delete_all_objects(:port_stats)
-      :ets.delete_all_objects(:port_pools)
-    end
+    # Start a test-specific supervisor instance with a unique name
+    # This ensures complete isolation between tests
+    supervisor_name = :"test_port_supervisor_#{System.unique_integer([:positive])}"
+    {:ok, supervisor} = start_supervised({Rsolv.AST.PortSupervisor, [name: supervisor_name]})
     
-    {:ok, supervisor: PortSupervisor}
+    # No cleanup needed - start_supervised handles it
+    
+    ensure_ets_tables()
+    
+    {:ok, supervisor: supervisor}
+  end
+  
+  # Cleanup function no longer needed - start_supervised handles cleanup
+  # Each test has its own supervisor instance
+  
+  defp ensure_ets_tables do
+    [:port_registry, :port_stats, :port_pools]
+    |> Enum.each(fn table ->
+      case :ets.whereis(table) do
+        :undefined ->
+          :ets.new(table, [:set, :public, :named_table])
+        _ ->
+          :ok
+      end
+    end)
   end
   
   describe "port lifecycle management" do
@@ -56,14 +71,25 @@ defmodule Rsolv.AST.PortSupervisorTest do
       {:ok, port_id} = PortSupervisor.start_port(supervisor, parser_config)
       original_pid = PortSupervisor.get_port_pid(supervisor, port_id)
       
+      # Monitor the original process
+      ref = Process.monitor(original_pid)
+      
       # Simulate crash by sending invalid data
       PortSupervisor.send_to_port(supervisor, port_id, "CRASH_NOW")
       
-      # Wait for port to die
-      Process.sleep(100)
+      # Wait for the process to actually die using monitor
+      receive do
+        {:DOWN, ^ref, :process, ^original_pid, _reason} ->
+          :ok
+      after
+        5000 ->
+          flunk("Port process did not crash within timeout")
+      end
       
-      # Port should be gone after crash
-      assert PortSupervisor.get_port_pid(supervisor, port_id) == nil
+      # Wait for port to be cleaned up
+      assert wait_for_condition(fn -> 
+        PortSupervisor.get_port_pid(supervisor, port_id) == nil
+      end, 1000, "Port was not cleaned up after crash")
       
       # For now, manually restart to test recovery
       {:ok, new_port_id} = PortSupervisor.start_port(supervisor, parser_config)
@@ -173,12 +199,17 @@ defmodule Rsolv.AST.PortSupervisorTest do
   
   describe "port pooling" do
     test "reuses idle ports for same language", %{supervisor: supervisor} do
+      # Use a unique language name to avoid conflicts with other tests
+      unique_lang = "python_pool_test_#{System.unique_integer([:positive])}"
       parser_config = %{
-        language: "python",
+        language: unique_lang,
         command: "python3",
         args: ["-u", Path.join(__DIR__, "fixtures/mock_parser.py")],
         pooled: true
       }
+      
+      # Clean the pool for this language first
+      :ets.delete(:port_pools, unique_lang)
       
       # Start first port
       {:ok, port_id1} = PortSupervisor.start_port(supervisor, parser_config)
@@ -186,6 +217,9 @@ defmodule Rsolv.AST.PortSupervisorTest do
       
       # Return to pool
       PortSupervisor.release_port(supervisor, port_id1)
+      
+      # Small delay to ensure pool update completes
+      Process.sleep(10)
       
       # Request another port for same language
       {:ok, port_id2} = PortSupervisor.start_port(supervisor, parser_config)
@@ -196,13 +230,18 @@ defmodule Rsolv.AST.PortSupervisorTest do
     end
     
     test "limits pool size per language", %{supervisor: supervisor} do
+      # Use a unique language to avoid conflicts
+      unique_lang = "python_limit_test_#{System.unique_integer([:positive])}"
       parser_config = %{
-        language: "python",
+        language: unique_lang,
         command: "python3",
         args: ["-u", Path.join(__DIR__, "fixtures/mock_parser.py")],
         pooled: true,
         max_pool_size: 2
       }
+      
+      # Clean the pool for this language first
+      :ets.delete(:port_pools, unique_lang)
       
       # Start max ports
       ports = for _ <- 1..2 do
@@ -407,6 +446,25 @@ defmodule Rsolv.AST.PortSupervisorTest do
       pg2 = PortSupervisor.get_port_process_group(supervisor, port2)
       
       assert pg1 != pg2
+    end
+  end
+  
+  # Helper function for waiting on conditions
+  defp wait_for_condition(condition_fn, timeout, message \\ "Condition not met") do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    do_wait_for_condition(condition_fn, deadline, message)
+  end
+  
+  defp do_wait_for_condition(condition_fn, deadline, message) do
+    if System.monotonic_time(:millisecond) >= deadline do
+      flunk(message)
+    end
+    
+    if condition_fn.() do
+      true
+    else
+      Process.sleep(10)
+      do_wait_for_condition(condition_fn, deadline, message)
     end
   end
 end

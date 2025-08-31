@@ -188,7 +188,7 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInputTest do
       assert enhancement.confidence_rules.adjustments["json_parse_pattern"] == -0.7
       assert enhancement.confidence_rules.adjustments["static_math_expression"] == -0.9
       assert enhancement.confidence_rules.adjustments["webpack_generated"] == -1.0
-      assert enhancement.min_confidence == 0.8
+      assert enhancement.min_confidence == 0.7  # Lowered to catch eval(input) - critical vulnerability
     end
   end
   

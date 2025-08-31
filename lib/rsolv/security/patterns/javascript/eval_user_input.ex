@@ -388,7 +388,7 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       
       iex> enhancement = Rsolv.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
       iex> enhancement.min_confidence
-      0.8
+      0.7
       
       iex> enhancement = Rsolv.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
       iex> "direct_req_body_to_eval" in Map.keys(enhancement.confidence_rules.adjustments)
@@ -432,7 +432,7 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
           "webpack_generated" => -1.0
         }
       },
-      min_confidence: 0.8
+      min_confidence: 0.7  # Lowered to catch eval(userInput) - extremely dangerous pattern
     }
   end
   

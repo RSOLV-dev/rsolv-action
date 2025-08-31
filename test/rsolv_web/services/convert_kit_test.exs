@@ -1,5 +1,5 @@
 defmodule RsolvWeb.Services.ConvertKitTest do
-  use Rsolv.DataCase, async: true
+  use Rsolv.DataCase, async: false  # Tests modify global Application config
   import Mox
   alias RsolvWeb.Services.ConvertKit
   alias Rsolv.HTTPClientMock

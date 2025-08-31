@@ -270,7 +270,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
       
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
       iex> enhancement.min_confidence
-      0.8
+      0.6
       
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
       iex> "uses_dom_purify" in Map.keys(enhancement.confidence_rules.adjustments)
@@ -311,7 +311,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
           "in_framework_template" => -0.6    # React/Vue handle this
         }
       },
-      min_confidence: 0.8
+      min_confidence: 0.6  # Lowered from 0.8 - innerHTML with user input is high risk
     }
   end
 end

@@ -442,7 +442,17 @@ defmodule Rsolv.AST.ContextAnalyzer do
   
   # Cache helpers
   
+  defp ensure_cache_table do
+    case :ets.whereis(@cache_table) do
+      :undefined ->
+        :ets.new(@cache_table, [:set, :public, :named_table, {:read_concurrency, true}])
+      _tid ->
+        @cache_table
+    end
+  end
+  
   defp lookup_cache(key) do
+    ensure_cache_table()
     case :ets.lookup(@cache_table, key) do
       [{^key, {result, expiry}}] ->
         if expiry > System.monotonic_time(:millisecond) do
@@ -454,11 +464,16 @@ defmodule Rsolv.AST.ContextAnalyzer do
       _ ->
         :miss
     end
+  rescue
+    ArgumentError -> :miss
   end
   
   defp cache_result(key, result) do
+    ensure_cache_table()
     expiry = System.monotonic_time(:millisecond) + @cache_ttl
     :ets.insert(@cache_table, {key, {result, expiry}})
     :ok
+  rescue
+    ArgumentError -> :ok
   end
 end

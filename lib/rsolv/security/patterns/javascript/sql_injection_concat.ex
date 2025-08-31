@@ -225,8 +225,8 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
         adjustments: %{
           "direct_req_param_concat" => 0.4,   # req.params.id directly concatenated
           "within_db_query_call" => 0.3,      # Bonus if inside db.query() call
-          "has_sql_keywords" => 0.2,          # Contains SELECT/INSERT/etc
-          "has_user_input" => 0.1,            # Clear user input present
+          "has_sql_keywords" => 0.3,          # Contains SELECT/INSERT/etc - increased for better detection
+          "has_user_input" => 0.2,            # Clear user input present - increased for better detection
           "uses_parameterized_query" => -0.9, # Has ?, $1, :param placeholders
           "uses_orm_query_builder" => -0.8,   # Using Knex, Sequelize builders
           "is_console_log" => -1.0,           # Just logging, not querying
@@ -234,7 +234,7 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
           "in_test_file" => -0.9              # Test code
         }
       },
-      min_confidence: 0.5  # Adjusted to catch more SQL injection cases while pattern matching provides the filtering
+      min_confidence: 0.7
     }
   end
 end

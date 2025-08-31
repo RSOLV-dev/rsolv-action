@@ -26,10 +26,10 @@ defmodule Rsolv.AST.ParserPoolTest do
       
       # Wait for parsers to warm up if pre_warm is true
       if config.pre_warm do
-        Process.sleep(500)
-        status = ParserPool.get_pool_status(pool)
-        assert status["javascript"].available == 3
-        assert status["python"].available == 3
+        assert wait_for_condition(fn ->
+          status = ParserPool.get_pool_status(pool)
+          status["javascript"].available == 3 && status["python"].available == 3
+        end, 5000, "Parsers did not become available")
       end
     end
     
@@ -43,8 +43,8 @@ defmodule Rsolv.AST.ParserPoolTest do
       
       pool = start_supervised!({ParserPool, config})
       
-      # Give parsers time to warm up
-      Process.sleep(200)
+      # Wait for all parsers to warm up (with timeout)
+      assert wait_for_parsers_warmed(pool, "javascript", 2, 5_000)
       
       # All parsers should be warmed (health check passed)
       status = ParserPool.get_parser_status(pool, "javascript")
@@ -77,7 +77,8 @@ defmodule Rsolv.AST.ParserPoolTest do
       }
       
       pool = start_supervised!({ParserPool, config})
-      Process.sleep(300) # Let parsers warm up
+      # Wait for parsers to warm up
+      wait_for_parsers_warmed(pool, "javascript", 2, 5_000)
       
       {:ok, pool: pool}
     end
@@ -127,9 +128,10 @@ defmodule Rsolv.AST.ParserPoolTest do
       ParserPool.report_crash(pool, "javascript", parser_id)
       
       # Pool should spawn replacement
-      Process.sleep(100)
-      status = ParserPool.get_pool_status(pool)
-      assert status["javascript"].total == 2
+      assert wait_for_condition(fn ->
+        status = ParserPool.get_pool_status(pool)
+        status["javascript"].total == 2
+      end, 2000, "Pool did not spawn replacement parser")
     end
   end
   
@@ -145,7 +147,8 @@ defmodule Rsolv.AST.ParserPoolTest do
       
       pool = start_supervised!({ParserPool, config})
       # Wait for parsers to warm up
-      Process.sleep(300)
+      wait_for_parsers_warmed(pool, "javascript", 2, 5_000)
+      wait_for_parsers_warmed(pool, "python", 1, 5_000)
       
       {:ok, pool: pool}
     end
@@ -154,7 +157,8 @@ defmodule Rsolv.AST.ParserPoolTest do
       # Perform some checkouts
       {:ok, p1} = ParserPool.checkout(pool, "javascript", timeout: 5000)
       {:ok, p2} = ParserPool.checkout(pool, "javascript", timeout: 5000)
-      Process.sleep(50)
+      # Small delay to ensure metrics are updated
+      :timer.sleep(50)
       ParserPool.checkin(pool, "javascript", p1)
       
       metrics = ParserPool.get_metrics(pool)
@@ -192,8 +196,8 @@ defmodule Rsolv.AST.ParserPoolTest do
       }
       
       pool = start_supervised!({ParserPool, config})
-      # Wait for parsers to warm up
-      Process.sleep(300)
+      # Wait for parsers to warm up using our helper
+      assert wait_for_parsers_warmed(pool, "javascript", 2, 5_000)
       
       # Create high demand by checking out all parsers and holding them
       {:ok, p1} = ParserPool.checkout(pool, "javascript", timeout: 5000)
@@ -211,11 +215,15 @@ defmodule Rsolv.AST.ParserPoolTest do
       
       # Trigger autoscaler manually
       ParserPool.trigger_scaling(pool)
-      Process.sleep(100)
       
-      # Pool should have scaled up
+      # Wait for pool to scale up
+      assert wait_for_condition(fn ->
+        status = ParserPool.get_pool_status(pool)
+        status["javascript"].total > 2
+      end, 2000, "Pool did not scale up")
+      
+      # Verify it didn't scale beyond max
       status = ParserPool.get_pool_status(pool)
-      assert status["javascript"].total > 2
       assert status["javascript"].total <= 5
       
       # Cleanup
@@ -246,19 +254,66 @@ defmodule Rsolv.AST.ParserPoolTest do
       }
       
       pool = start_supervised!({ParserPool, config})
-      Process.sleep(500)  # Let parsers warm up
+      # Wait for initial parsers to warm up
+      wait_for_parsers_warmed(pool, "javascript", 2, 5_000)
       
-      # Simulate parsers being idle by setting their last_used_at to past
-      # This is a bit hacky but needed for testing
-      Process.sleep(200)  # Wait for the scale_down_after_ms period
+      # Wait a bit for scale_down_after_ms to pass
+      :timer.sleep(200)
       
       # Trigger scaling check
       ParserPool.trigger_scaling(pool)
       
-      # Pool should have scaled down
+      # Wait for pool to scale down
+      assert wait_for_condition(fn ->
+        status = ParserPool.get_pool_status(pool)
+        status["javascript"].total < 5
+      end, 2000, "Pool did not scale down")
+      
+      # Verify minimum is maintained
       status = ParserPool.get_pool_status(pool)
-      assert status["javascript"].total < 5
       assert status["javascript"].total >= 2
+    end
+  end
+  
+  # Helper function to wait for parsers to be warmed
+  defp wait_for_parsers_warmed(pool, language, expected_count, timeout) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    
+    wait_for_parsers_warmed_loop(pool, language, expected_count, deadline)
+  end
+  
+  defp wait_for_parsers_warmed_loop(pool, language, expected_count, deadline) do
+    if System.monotonic_time(:millisecond) >= deadline do
+      false
+    else
+      status = ParserPool.get_parser_status(pool, language)
+      warmed_count = Enum.count(status, fn {_id, info} -> info.warmed == true end)
+      
+      if warmed_count >= expected_count do
+        true
+      else
+        Process.sleep(50)
+        wait_for_parsers_warmed_loop(pool, language, expected_count, deadline)
+      end
+    end
+  end
+  
+  # Generic helper to wait for any condition
+  defp wait_for_condition(condition_fn, timeout, message \\ "Condition not met") do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    do_wait_for_condition(condition_fn, deadline, message)
+  end
+  
+  defp do_wait_for_condition(condition_fn, deadline, message) do
+    if System.monotonic_time(:millisecond) >= deadline do
+      flunk(message)
+    end
+    
+    if condition_fn.() do
+      true
+    else
+      Process.sleep(10)
+      do_wait_for_condition(condition_fn, deadline, message)
     end
   end
 end
