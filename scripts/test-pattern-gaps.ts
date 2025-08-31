@@ -94,11 +94,11 @@ console.log('🧪 Testing Specific Pattern Improvements:\n');
 const improvedPatterns = {
   php: [
     // Current patterns
-    'Current: ["\\'](?:SELECT|DELETE|UPDATE|INSERT).*["\\']\\s*\\.\\s*\\$_(GET|POST|REQUEST|COOKIE)',
+    'Current: ["\\\'](?:SELECT|DELETE|UPDATE|INSERT).*["\\\']\\s*\\.\\s*\\$_(GET|POST|REQUEST|COOKIE)',
     // Proposed improvements
-    'Improved 1: \\$\\w+\\s*=\\s*\\$_(GET|POST|REQUEST|COOKIE).*["\\'](?:SELECT|UPDATE|DELETE|INSERT)[^"\\\']*\\$\\w+',
-    'Improved 2: ["\\'](?:SELECT|UPDATE|DELETE|INSERT)[^"\\\']*\\$\\w+[^"\\\']*["\\']',
-    'Improved 3: ["\\'](?:SELECT|UPDATE|DELETE|INSERT)[^"\\\']*\\{\\$_(GET|POST|REQUEST|COOKIE)'
+    'Improved 1: \\$\\w+\\s*=\\s*\\$_(GET|POST|REQUEST|COOKIE).*["\\\'](?:SELECT|UPDATE|DELETE|INSERT)[^"\\\\\']*\\$\\w+',
+    'Improved 2: ["\\\'](?:SELECT|UPDATE|DELETE|INSERT)[^"\\\\\']*\\$\\w+[^"\\\\\']*["\\\']',
+    'Improved 3: ["\\\'](?:SELECT|UPDATE|DELETE|INSERT)[^"\\\\\']*\\{\\$_(GET|POST|REQUEST|COOKIE)'
   ],
   java: [
     // Current patterns  

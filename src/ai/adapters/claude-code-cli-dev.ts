@@ -39,11 +39,11 @@ export function isClaudeMaxAvailable(): boolean {
     }
     
     // If version works, check if authenticated by trying a simple command
-    // Use shell:true to handle pipes properly
+    // Use shell to handle pipes properly
     const result = execSync('echo "test" | claude --print 2>&1 || echo "FAILED"', { 
       encoding: 'utf-8',
       timeout: 30000,
-      shell: true
+      shell: '/bin/sh'
     }).toString().trim();
     
     // If we get any response that's not an error, it's working

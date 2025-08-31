@@ -126,7 +126,7 @@ class OpenAiClient implements AiClient {
       
       try {
         apiKey = this.config.useVendedCredentials 
-          ? this.credentialManager?.getCredential('openai')
+          ? await this.credentialManager?.getCredential('openai')
           : this.config.apiKey;
       } catch (error) {
         throw new Error('Failed to retrieve API key');
@@ -261,7 +261,7 @@ class AnthropicClient implements AiClient {
           if (!this.credentialManager) {
             throw new Error('Credential manager not initialized for vended credentials');
           }
-          apiKey = this.credentialManager.getCredential('anthropic');
+          apiKey = await this.credentialManager.getCredential('anthropic');
         } else {
           apiKey = this.config.apiKey;
         }
