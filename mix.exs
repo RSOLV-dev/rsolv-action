@@ -51,6 +51,7 @@ defmodule Rsolv.MixProject do
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_view, "~> 1.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:tidewave, "~> 0.4", only: :dev},
       {:fun_with_flags, "~> 1.11"},
       {:fun_with_flags_ui, "~> 1.0"},
       {:mdex, "~> 0.7"},

@@ -64,3 +64,15 @@ config :phoenix, :stacktrace_depth, 20
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
+
+# Configure LiveView for development with debug annotations
+config :phoenix_live_view,
+  debug_heex_annotations: true,
+  debug_attributes: true
+
+# Configure Tidewave for development
+# Allow access from local network (10.0.0.0/8)
+config :tidewave,
+  allowed_origins: ["http://localhost:4000", "http://10.*:4000"],
+  allow_remote_access: true,
+  inspect_opts: [limit: 10_000]

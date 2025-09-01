@@ -31,6 +31,14 @@ defmodule RsolvWeb.Endpoint do
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
+    
+    # Tidewave integration for development
+    if Code.ensure_loaded?(Tidewave) do
+      plug Tidewave,
+        allow_remote_access: true,
+        allowed_origins: ["http://localhost:4000", "http://10.*:4000"],
+        inspect_opts: [limit: 10_000]
+    end
   end
 
   plug Plug.RequestId

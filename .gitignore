@@ -56,4 +56,5 @@ tags
 
 # Temporary files
 *.tmp
-*.bak
+*.bak.env.dev
+.env.local
