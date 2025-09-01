@@ -12,11 +12,12 @@ defmodule RsolvWeb.Components.ThemeToggle do
   """
   def theme_toggle(assigns) do
     assigns = assign_new(assigns, :class, fn -> "" end)
+    assigns = assign_new(assigns, :id, fn -> nil end)
     
     ~H"""
     <button
       type="button"
-      id="theme-toggle"
+      id={@id}
       data-theme-toggle
       class={[
         @class,
@@ -30,8 +31,7 @@ defmodule RsolvWeb.Components.ThemeToggle do
     >
       <!-- Sun icon (visible in dark mode) -->
       <svg
-        id="theme-toggle-light-icon"
-        class="hidden dark:block w-5 h-5 text-yellow-400"
+        class="theme-toggle-light-icon hidden dark:block w-5 h-5 text-yellow-400"
         fill="currentColor"
         viewBox="0 0 24 24"
         stroke="none"
@@ -48,8 +48,7 @@ defmodule RsolvWeb.Components.ThemeToggle do
       
       <!-- Moon icon (visible in light mode) -->
       <svg
-        id="theme-toggle-dark-icon"
-        class="block dark:hidden w-5 h-5 text-gray-600 dark:text-gray-400"
+        class="theme-toggle-dark-icon block dark:hidden w-5 h-5 text-gray-600 dark:text-gray-400"
         fill="currentColor"
         viewBox="0 0 24 24"
         stroke="none"

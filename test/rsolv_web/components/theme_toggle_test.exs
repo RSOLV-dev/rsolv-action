@@ -15,13 +15,15 @@ defmodule RsolvWeb.Components.ThemeToggleTest do
         """)
       
       # Check button attributes
-      assert html =~ ~s(id="theme-toggle")
+      # ID is now optional, check for data attribute instead
+      assert html =~ ~s(data-theme-toggle)
       assert html =~ ~s(data-theme-toggle)
       assert html =~ ~s(aria-label="Toggle dark mode")
       
       # Check both icons are present
-      assert html =~ ~s(id="theme-toggle-light-icon")
-      assert html =~ ~s(id="theme-toggle-dark-icon")
+      # Icons now use classes instead of IDs
+      assert html =~ ~s(class="theme-toggle-light-icon)
+      assert html =~ ~s(class="theme-toggle-dark-icon)
     end
 
     test "renders sun icon with correct classes for dark mode visibility" do
@@ -33,7 +35,8 @@ defmodule RsolvWeb.Components.ThemeToggleTest do
         """)
       
       # Sun icon should have classes: hidden dark:block
-      assert html =~ ~r/id="theme-toggle-light-icon"[^>]*class="[^"]*hidden[^"]*dark:block/
+      # Sun icon should have classes: hidden dark:block
+      assert html =~ ~r/class="theme-toggle-light-icon[^"]*hidden[^"]*dark:block/
     end
 
     test "renders moon icon with correct classes for light mode visibility" do
@@ -45,7 +48,8 @@ defmodule RsolvWeb.Components.ThemeToggleTest do
         """)
       
       # Moon icon should have classes: block dark:hidden
-      assert html =~ ~r/id="theme-toggle-dark-icon"[^>]*class="[^"]*block[^"]*dark:hidden/
+      # Moon icon should have classes: block dark:hidden
+      assert html =~ ~r/class="theme-toggle-dark-icon[^"]*block[^"]*dark:hidden/
     end
 
     test "accepts and applies additional classes" do

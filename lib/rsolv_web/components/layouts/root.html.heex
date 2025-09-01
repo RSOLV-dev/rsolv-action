@@ -146,14 +146,16 @@
           localStorage.setItem('theme', newTheme);
           document.documentElement.classList.toggle('dark', newTheme === 'dark');
           
-          // Update icons
-          const lightIcon = document.getElementById('theme-toggle-light-icon');
-          const darkIcon = document.getElementById('theme-toggle-dark-icon');
+          // Update icons using class selectors
+          const lightIcons = document.querySelectorAll('.theme-toggle-light-icon');
+          const darkIcons = document.querySelectorAll('.theme-toggle-dark-icon');
           
-          if (lightIcon && darkIcon) {
-            lightIcon.classList.toggle('hidden', newTheme === 'light');
-            darkIcon.classList.toggle('hidden', newTheme === 'dark');
-          }
+          lightIcons.forEach(icon => {
+            icon.classList.toggle('hidden', newTheme === 'light');
+          });
+          darkIcons.forEach(icon => {
+            icon.classList.toggle('hidden', newTheme === 'dark');
+          });
         }
       });
       

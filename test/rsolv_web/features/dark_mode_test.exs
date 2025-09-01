@@ -25,10 +25,11 @@ defmodule RsolvWeb.Features.DarkModeTest do
       response = html_response(conn, 200)
       
       # Check for theme toggle button
-      assert response =~ ~s(id="theme-toggle")
+      # Check for theme toggle button with data attribute
       assert response =~ ~s(data-theme-toggle)
-      assert response =~ ~s(id="theme-toggle-light-icon")
-      assert response =~ ~s(id="theme-toggle-dark-icon")
+      # Icons now use classes instead of IDs
+      assert response =~ ~s(class="theme-toggle-light-icon)
+      assert response =~ ~s(class="theme-toggle-dark-icon)
     end
 
     test "theme toggle handler is present in layout", %{conn: conn} do
@@ -57,7 +58,8 @@ defmodule RsolvWeb.Features.DarkModeTest do
       response = html_response(conn, 200)
       
       # Check header has theme toggle
-      assert response =~ ~r/<header[^>]*>.*id="theme-toggle".*<\/header>/s
+      # Check header has theme toggle with data attribute
+      assert response =~ ~r/<header[^>]*>.*data-theme-toggle.*<\/header>/s
     end
   end
 
