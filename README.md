@@ -38,6 +38,36 @@ mix ecto.setup
 mix phx.server
 ```
 
+### 🤖 AI-Assisted Development with Tidewave
+
+We've integrated [Tidewave](https://tidewave.ai) for AI-powered development assistance. Tidewave provides real-time AI support directly in your browser while developing.
+
+#### Quick Start
+```bash
+# Instant start with our convenience script
+./start-tidewave.sh
+```
+
+#### Access Points
+- **Local Development**: http://localhost:4000/tidewave
+- **Docker Development**: http://localhost:4001/tidewave
+- **Network Access**: Available from 10.x.x.x addresses
+
+#### Features
+- 🔍 AST debugging and pattern analysis
+- 🛡️ Vulnerability detection testing
+- 🔧 Code generation and refactoring
+- 📚 Phoenix/Elixir development support
+- 🔄 Hot code reloading
+- 🐳 Docker Compose support
+
+#### Documentation
+- [Quick Start Guide](TIDEWAVE-QUICKSTART.md) - Get started in seconds
+- [Docker Setup](TIDEWAVE-DOCKER.md) - Container-based development
+- [Security Guide](TIDEWAVE-SECURITY.md) - Security considerations
+
+**Note**: Tidewave is configured for development only and will never deploy to staging/production.
+
 ## API Documentation
 
 ### 📋 Pattern API
