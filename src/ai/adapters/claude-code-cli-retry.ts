@@ -75,6 +75,10 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
         };
       }
       
+      // CRITICAL: Set the API key in process.env for Claude CLI to use
+      // This ensures the CLI can authenticate properly
+      process.env.ANTHROPIC_API_KEY = apiKey;
+      
       logger.info(`Using ${isDev ? 'Claude Code Max (dev)' : 'production'} API`);
       
       // Create prompt
