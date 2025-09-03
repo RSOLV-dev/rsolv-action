@@ -16,6 +16,19 @@ This API service handles:
 
 The RSOLV API is built with Phoenix/Elixir for reliability and scalability. It provides the central coordination point between GitHub Actions, expert reviewers, and customer dashboards.
 
+### Architecture Documentation
+
+We maintain comprehensive architecture documentation using:
+
+- **[RFCs (Request for Comments)](RFCs/RFC-INDEX.md)**: Proposals for new features and architectural changes (53+ RFCs)
+- **[ADRs (Architecture Decision Records)](ADRs/ADR-INDEX.md)**: Documented decisions that have been implemented (24+ ADRs)
+
+Key architectural decisions include:
+- Credential vending architecture for secure API key management
+- Three-phase security architecture (SCAN → VALIDATE → MITIGATE)
+- AST-based validation reducing false positives by 70-90%
+- Service consolidation for 50% infrastructure cost reduction
+
 ## Security
 
 The API is designed with security as a top priority, ensuring:
