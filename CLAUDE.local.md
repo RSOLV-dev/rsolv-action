@@ -1,0 +1,2 @@
+- When adding a timestamp to a document always check the output of the `date` command
+- Always run `npx tsc --noEmit` after modifying TypeScript files to catch type errors early
