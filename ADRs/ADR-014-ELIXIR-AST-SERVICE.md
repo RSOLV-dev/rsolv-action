@@ -121,5 +121,6 @@ Port.command(port, request <> "\n")
 ## References
 
 - Original RFC: RFC-031-ELIXIR-AST-ANALYSIS-SERVICE.md
+- Implementation methodology: [AST-IMPLEMENTATION-METHODOLOGY.md](../RSOLV-docs/AST-IMPLEMENTATION-METHODOLOGY.md)
 - Implementation tracking: RFC-031-ELIXIR-AST-SERVICE-METHODOLOGY.md
 - Pattern API enhancement: RFC-032-PATTERN-API-JSON-MIGRATION.md

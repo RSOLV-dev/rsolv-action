@@ -176,6 +176,7 @@ The 70-90% false positive reduction directly improves user experience and produc
 ## Related Documents
 
 - [RFC-036: Server-Side AST Validation](../RFCs/RFC-036-SERVER-SIDE-AST-VALIDATION.md)
+- [AST Implementation Methodology](../RSOLV-docs/AST-IMPLEMENTATION-METHODOLOGY.md) - TDD implementation tracking
 - [AST Validation Implementation Guide](../AST-VALIDATION-ENABLED-BY-DEFAULT.md)
 - [Pattern Storage Architecture](./ADR-007-PATTERN-STORAGE-ARCHITECTURE.md)
 - [Pattern Serving API](./ADR-008-PATTERN-SERVING-API.md)
