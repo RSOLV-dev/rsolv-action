@@ -18,7 +18,7 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
     
     # Set up ConvertKit config for testing with all required fields
     Application.put_env(:rsolv, :convertkit, [
-      subscription_plan: "trial",
+      api_key: "test_api_key",
       form_id: "test_form_id",
       api_base_url: "https://api.convertkit.com/v3",
       early_access_tag_id: "7700607"

@@ -1,32 +1,50 @@
 defmodule RsolvWeb.CredentialControllerTest do
   use RsolvWeb.ConnCase, async: false
 
-  import Rsolv.Factory
-
   alias Rsolv.Accounts
   alias Rsolv.Credentials
+  alias Rsolv.Customers
+  alias Rsolv.Customers.Customer
+  alias Rsolv.Repo
 
   setup %{conn: conn} do
     # Reset all test storage between tests
     Rsolv.RateLimiter.reset()
-    Rsolv.LegacyAccounts.reset_test_customers()
     Rsolv.Credentials.reset_credentials()
     
-    # Create a test customer with valid subscription
-    customer = build(:customer, %{
-      api_key: "rsolv_test_abc123",
-      subscription_tier: "standard",
+    # Create a real customer with database records
+    unique_id = System.unique_integer([:positive])
+    
+    # Create user first
+    user = %Rsolv.Accounts.User{}
+    |> Rsolv.Accounts.User.registration_changeset(%{
+      email: "test#{unique_id}@example.com",
+      password: "password123456"
+    })
+    |> Repo.insert!()
+    
+    # Create customer
+    {:ok, customer} = Customers.create_customer(user, %{
+      name: "Test Customer #{unique_id}",
+      email: "test#{unique_id}@example.com",
+      subscription_plan: "standard",
       monthly_limit: 100,
       current_usage: 15
     })
+    
+    # Create API key
+    {:ok, api_key} = Customers.create_api_key(customer, %{
+      name: "Test Key",
+      permissions: ["full_access"]
+    })
 
-    {:ok, conn: put_req_header(conn, "accept", "application/json"), customer: customer}
+    {:ok, conn: put_req_header(conn, "accept", "application/json"), customer: customer, api_key: api_key.key}
   end
 
   describe "POST /api/v1/credentials/exchange" do
-    test "exchanges valid API key for temporary credentials", %{conn: conn, customer: customer} do
+    test "exchanges valid API key for temporary credentials", %{conn: conn, customer: customer, api_key: api_key} do
       conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic", "openai"],
         "ttl_minutes" => 60
       })
@@ -76,12 +94,12 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert %{"error" => "Invalid API key"} = json_response(conn, 401)
     end
 
-    test "returns 403 when usage limit exceeded", %{conn: conn, customer: customer} do
+    test "returns 403 when usage limit exceeded", %{conn: conn, customer: customer, api_key: api_key} do
       # Update customer to have exceeded usage
       {:ok, _} = Accounts.update_customer(customer, %{current_usage: 100})
 
       conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -90,13 +108,13 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert %{"error" => "Monthly usage limit exceeded"} = json_response(conn, 403)
     end
 
-    test "rate limiter is configured and working", %{conn: conn, customer: customer} do
+    test "rate limiter is configured and working", %{conn: conn, customer: customer, api_key: api_key} do
       # Test that rate limiter is active by checking it exists
       # The actual rate limit (100/minute) is too high to reliably test in unit tests
       
       # Make a successful request first
       conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -119,9 +137,9 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert %{"error" => "Missing required parameters"} = json_response(conn, 400)
     end
 
-    test "limits TTL to maximum value", %{conn: conn, customer: customer} do
+    test "limits TTL to maximum value", %{conn: conn, customer: customer, api_key: api_key} do
       conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic"],
         "ttl_minutes" => 1440  # 24 hours
       })
@@ -135,11 +153,11 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert diff_hours <= 4.1
     end
 
-    test "tracks credential generation in database", %{conn: conn, customer: customer} do
+    test "tracks credential generation in database", %{conn: conn, customer: customer, api_key: api_key} do
       assert {:ok, initial_count} = Credentials.count_active_credentials(customer.id)
 
       post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -148,12 +166,12 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert new_count == initial_count + 1
     end
 
-    test "includes GitHub job metadata when provided", %{conn: conn, customer: customer} do
+    test "includes GitHub job metadata when provided", %{conn: conn, customer: customer, api_key: api_key} do
       conn = conn
       |> put_req_header("x-github-job", "job_123")
       |> put_req_header("x-github-run", "run_456")
       |> post(~p"/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -180,11 +198,11 @@ defmodule RsolvWeb.CredentialControllerTest do
       {:ok, credential: credential}
     end
 
-    test "refreshes expiring credential", %{conn: conn, customer: customer, credential: credential} do
+    test "refreshes expiring credential", %{conn: conn, customer: customer, api_key: api_key, credential: credential} do
       # First exchange to get a credential
       exchange_response = conn
       |> post(~p"/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic"],
         "ttl_minutes" => 5  # Short TTL to make it eligible for refresh
       })
@@ -199,7 +217,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       # Now try to refresh - using the credential id from our setup
       refresh_conn = build_conn()
       |> post(~p"/api/v1/credentials/refresh", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "credential_id" => to_string(credential.id)
       })
       
@@ -235,9 +253,9 @@ defmodule RsolvWeb.CredentialControllerTest do
       end
     end
 
-    test "returns 404 for non-existent credential", %{conn: conn, customer: customer} do
+    test "returns 404 for non-existent credential", %{conn: conn, customer: customer, api_key: api_key} do
       conn = post(conn, ~p"/api/v1/credentials/refresh", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "credential_id" => "nonexistent"
       })
 
@@ -245,8 +263,21 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert %{"error" => "Credential not found"} = json_response(conn, 404)
     end
 
-    test "returns 403 for credential owned by another customer", %{conn: conn} do
-      other_customer = build(:customer, %{id: "other_customer_id", api_key: "other_api_key"})
+    test "returns 403 for credential owned by another customer", %{conn: conn, api_key: api_key} do
+      # Create another customer
+      unique_id = System.unique_integer([:positive])
+      other_user = %Rsolv.Accounts.User{}
+      |> Rsolv.Accounts.User.registration_changeset(%{
+        email: "other#{unique_id}@example.com",
+        password: "password123456"
+      })
+      |> Repo.insert!()
+      
+      {:ok, other_customer} = Customers.create_customer(other_user, %{
+        name: "Other Customer #{unique_id}",
+        email: "other#{unique_id}@example.com"
+      })
+      
       {:ok, credential} = Credentials.create_temporary_credential(%{
         customer_id: other_customer.id,
         provider: "anthropic",
@@ -254,7 +285,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       })
 
       conn = post(conn, ~p"/api/v1/credentials/refresh", %{
-        "api_key" => "rsolv_test_abc123",  # Using main customer's API key to try to access other customer's credential
+        "api_key" => api_key,  # Using main customer's API key to try to access other customer's credential
         "credential_id" => credential.id
       })
 
@@ -264,9 +295,9 @@ defmodule RsolvWeb.CredentialControllerTest do
   end
 
   describe "POST /api/v1/usage/report" do
-    test "records usage metrics", %{conn: conn, customer: customer} do
+    test "records usage metrics", %{conn: conn, customer: customer, api_key: api_key} do
       conn = post(conn, ~p"/api/v1/usage/report", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "provider" => "anthropic",
         "tokens_used" => 1500,
         "request_count" => 3,
@@ -282,18 +313,20 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert usage.total_requests >= 3
     end
 
-    test "updates customer's current usage", %{conn: conn, customer: customer} do
-      initial_usage = customer.current_usage
+    test "updates customer's current usage", %{conn: conn, customer: customer, api_key: api_key} do
+      # Fetch fresh customer from DB to get accurate initial usage
+      fresh_customer = Customers.get_customer!(customer.id)
+      initial_usage = fresh_customer.current_usage
 
       post(conn, ~p"/api/v1/usage/report", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "provider" => "anthropic",
         "tokens_used" => 2000,
         "request_count" => 1,
         "job_id" => "gh_job_123"
       })
 
-      updated_customer = Accounts.get_customer!(customer.id)
+      updated_customer = Customers.get_customer!(customer.id)
       # Assuming 1 fix per ~2000 tokens
       assert updated_customer.current_usage == initial_usage + 1
     end

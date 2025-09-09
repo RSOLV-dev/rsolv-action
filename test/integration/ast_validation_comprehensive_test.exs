@@ -455,7 +455,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
     
     conn = 
       conn
-      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
+      |> put_req_header("x-api-key", customer.api_key)
       |> put_req_header("content-type", "application/json")
       |> post("/api/v1/vulnerabilities/validate", request_data)
     

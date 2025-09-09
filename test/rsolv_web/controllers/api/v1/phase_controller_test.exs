@@ -1,6 +1,6 @@
 defmodule RsolvWeb.Api.V1.PhaseControllerTest do
   use RsolvWeb.ConnCase
-  alias Rsolv.Phases.Repository
+  alias Rsolv.Phases.{Repository, ScanExecution, ValidationExecution}
   alias Rsolv.Customers.ForgeAccount
   alias Rsolv.Customers.{Customer, ApiKey}
   alias Rsolv.Accounts.User

@@ -3,31 +3,46 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
   
   alias Rsolv.Credentials
   alias Rsolv.Accounts
+  alias Rsolv.Customers
+  alias Rsolv.Customers.Customer
+  alias Rsolv.Customers.ApiKey
+  alias Rsolv.Repo
   
   require Logger
   
-  @demo_customer %{
-    id: "test_customer_1",
-    name: "Test Customer",
-    email: "test@example.com",
-    api_key: "rsolv_test_abc123",
-    monthly_limit: 100,
-    current_usage: 15,
-    active: true,
-    trial: true,
-    subscription_tier: "standard",
-    created_at: DateTime.utc_now(),
-    updated_at: DateTime.utc_now()
-  }
-  
   describe "credential vending full flow" do
     setup do
-      # The demo customer is already available via the API key "rsolv_test_abc123"
-      # as configured in LegacyAccounts
-      {:ok, customer: @demo_customer}
+      # Create a real customer with database records
+      unique_id = System.unique_integer([:positive])
+      
+      # Create user first
+      user = %Rsolv.Accounts.User{}
+      |> Rsolv.Accounts.User.registration_changeset(%{
+        email: "test#{unique_id}@example.com",
+        password: "password123456"
+      })
+      |> Repo.insert!()
+      
+      # Create customer
+      {:ok, customer} = Customers.create_customer(user, %{
+        name: "Test Customer #{unique_id}",
+        email: "test#{unique_id}@example.com",
+        monthly_limit: 100,
+        current_usage: 15,
+        trial: true,
+        subscription_plan: "standard"
+      })
+      
+      # Create API key
+      {:ok, api_key} = Customers.create_api_key(customer, %{
+        name: "Test Key",
+        permissions: ["full_access"]
+      })
+      
+      {:ok, customer: customer, api_key: api_key.key}
     end
     
-    test "should return real API keys when environment variables are set", %{conn: conn, customer: customer} do
+    test "should return real API keys when environment variables are set", %{conn: conn, customer: _customer, api_key: api_key} do
       # Test that environment variables are properly loaded
       anthropic_key = System.get_env("ANTHROPIC_API_KEY")
       assert anthropic_key != nil, "ANTHROPIC_API_KEY environment variable must be set"
@@ -35,7 +50,7 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       
       # Test credential exchange endpoint
       conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -55,7 +70,7 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       assert vended_key == anthropic_key, "Vended key should match environment variable"
     end
     
-    test "credentials module should return real API keys", %{customer: customer} do
+    test "credentials module should return real API keys", %{customer: customer, api_key: _api_key} do
       # Test direct credential creation
       {:ok, credential} = Credentials.create_temporary_credential(%{
         customer_id: customer.id,
@@ -72,7 +87,7 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       assert credential.api_key == expected_key, "API key should match environment variable"
     end
     
-    test "format_credentials should properly extract API keys", %{customer: customer} do
+    test "format_credentials should properly extract API keys", %{customer: customer, api_key: _api_key} do
       # Create a credential
       {:ok, credential} = Credentials.create_temporary_credential(%{
         customer_id: customer.id,
@@ -88,13 +103,13 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       refute String.contains?(formatted["anthropic"]["api_key"], "mock")
     end
     
-    test "should handle multiple providers", %{conn: conn, customer: customer} do
+    test "should handle multiple providers", %{conn: conn, customer: _customer, api_key: api_key} do
       # Set up environment variables for multiple providers
       System.put_env("OPENAI_API_KEY", "sk-test-openai-key")
       System.put_env("OPENROUTER_API_KEY", "sk-or-test-key")
       
       conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic", "openai", "openrouter"],
         "ttl_minutes" => 60
       })
@@ -114,12 +129,12 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       end
     end
     
-    test "should include GitHub metadata when headers are present", %{conn: conn, customer: customer} do
+    test "should include GitHub metadata when headers are present", %{conn: conn, customer: customer, api_key: api_key} do
       conn = conn
       |> put_req_header("x-github-job", "test-job-123")
       |> put_req_header("x-github-run", "test-run-456")
       |> post("/api/v1/credentials/exchange", %{
-        "api_key" => "test_" <> Ecto.UUID.generate(),
+        "api_key" => api_key,
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })

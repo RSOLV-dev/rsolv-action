@@ -11,22 +11,48 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       :ets.delete_all_objects(:rsolv_rate_limiter)
     end
     
-    # Use a predefined test API key from Accounts module
+    # Create a real customer with database records
+    unique_id = System.unique_integer([:positive])
+    
+    # Create user first (required for customer)
+    user = %Rsolv.Accounts.User{}
+    |> Rsolv.Accounts.User.registration_changeset(%{
+      email: "test#{unique_id}@example.com",
+      password: "password123456"
+    })
+    |> Rsolv.Repo.insert!()
+    
+    # Create customer
+    {:ok, customer_record} = Rsolv.Customers.create_customer(user, %{
+      name: "Test Customer #{unique_id}",
+      email: "test#{unique_id}@example.com",
+      monthly_limit: 100,
+      current_usage: 15
+    })
+    
+    # Create an API key for this customer
+    {:ok, api_key} = Rsolv.Customers.create_api_key(customer_record, %{
+      name: "Test Key",
+      permissions: ["full_access"]
+    })
+    
+    # Build a customer map with the API key for backward compatibility
+    # This allows tests to use customer.api_key syntax
     customer = %{
-      id: "test_customer_1",
-      name: "Test Customer",
-      email: "test@example.com",
-      api_key: "rsolv_test_abc123",
+      id: customer_record.id,
+      name: customer_record.name,
+      email: customer_record.email,
+      api_key: api_key.key,
       tier: "enterprise",
       flags: ["ai_access", "enterprise_access"],
-      monthly_limit: 100,
-      current_usage: 15,
+      monthly_limit: customer_record.monthly_limit,
+      current_usage: customer_record.current_usage,
       active: true,
       trial: true,
-      created_at: DateTime.utc_now()
+      created_at: customer_record.inserted_at
     }
     
-    {:ok, customer: customer}
+    {:ok, customer: customer, api_key: api_key.key}
   end
   
   describe "analyze/2" do
@@ -55,7 +81,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       encryption_key = :crypto.strong_rand_bytes(32)
       
       conn = conn
-      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
+      |> put_req_header("x-api-key", customer.api_key)
       |> put_req_header("x-encryption-key", Base.encode64(encryption_key))
       |> post("/api/v1/ast/analyze", %{})
       
@@ -108,7 +134,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       }
       
       conn = conn
-      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
+      |> put_req_header("x-api-key", customer.api_key)
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       
@@ -207,7 +233,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       }
       
       conn = conn
-      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
+      |> put_req_header("x-api-key", customer.api_key)
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       
@@ -265,7 +291,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       }
       
       conn = conn
-      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
+      |> put_req_header("x-api-key", customer.api_key)
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       
@@ -312,7 +338,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       :ets.insert(:rsolv_rate_limiter, {{customer.id, "ast_analysis"}, 100, System.system_time(:second)})
       
       conn = conn
-      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
+      |> put_req_header("x-api-key", customer.api_key)
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       
@@ -358,7 +384,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       }
       
       conn = conn
-      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
+      |> put_req_header("x-api-key", customer.api_key)
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       

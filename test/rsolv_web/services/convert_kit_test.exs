@@ -11,7 +11,7 @@ defmodule RsolvWeb.Services.ConvertKitTest do
   setup do
     # Set ConvertKit test config
     Application.put_env(:rsolv, :convertkit, [
-      subscription_plan: "trial",
+      api_key: "test_api_key",
       form_id: "test_form_id",
       early_access_tag_id: "test_tag_id",
       api_base_url: "https://api.convertkit.com/v3"
@@ -68,7 +68,7 @@ defmodule RsolvWeb.Services.ConvertKitTest do
     test "handles network errors", %{fixtures: fixtures, test_email: email} do
       # Set up ConvertKit config with API key to ensure HTTP calls are made
       Application.put_env(:rsolv, :convertkit, 
-        subscription_plan: "trial",
+        api_key: "test_api_key",
         form_id: "test_form_id",
         api_base_url: "https://api.convertkit.com/v3"
       )
