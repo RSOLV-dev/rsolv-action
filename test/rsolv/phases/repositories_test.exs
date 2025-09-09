@@ -1,7 +1,8 @@
 defmodule Rsolv.Phases.RepositoriesTest do
   use Rsolv.DataCase
   alias Rsolv.Phases.Repositories
-  alias Rsolv.Phases.{Repository, ForgeAccount}
+  alias Rsolv.Phases.Repository
+  alias Rsolv.Customers.ForgeAccount
   alias Rsolv.Customers.{Customer, ApiKey}
   alias Rsolv.Accounts.User
   alias Rsolv.Repo

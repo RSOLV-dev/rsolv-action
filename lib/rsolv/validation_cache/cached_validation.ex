@@ -28,7 +28,7 @@ defmodule Rsolv.ValidationCache.CachedValidation do
     field :invalidated_at, :utc_datetime_usec
     field :invalidation_reason, :string
     
-    belongs_to :forge_account, Rsolv.Phases.ForgeAccount
+    belongs_to :forge_account, Rsolv.Customers.ForgeAccount
     
     timestamps(type: :utc_datetime_usec)
   end

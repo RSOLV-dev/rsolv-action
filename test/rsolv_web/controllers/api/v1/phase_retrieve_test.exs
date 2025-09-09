@@ -1,8 +1,8 @@
 defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
   use RsolvWeb.ConnCase
   alias Rsolv.Phases
-  alias Rsolv.Phases.{Repository, ForgeAccount}
-  alias Rsolv.Customers.{Customer, ApiKey}
+  alias Rsolv.Phases.Repository
+  alias Rsolv.Customers.{Customer, ApiKey, ForgeAccount}
   alias Rsolv.Accounts.User
   alias Rsolv.Repo
 

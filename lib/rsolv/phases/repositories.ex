@@ -5,8 +5,8 @@ defmodule Rsolv.Phases.Repositories do
   
   import Ecto.Query
   alias Rsolv.Repo
-  alias Rsolv.Phases.{Repository, ForgeAccount}
-  alias Rsolv.Customers.Customer
+  alias Rsolv.Phases.Repository
+  alias Rsolv.Customers.{Customer, ForgeAccount}
   
   @doc """
   Finds or creates a repository, ensuring the customer has access to the namespace.

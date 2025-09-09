@@ -2,7 +2,7 @@ defmodule Rsolv.ValidationCacheIntegrationTest do
   use Rsolv.DataCase
   
   alias Rsolv.ValidationCache
-  alias Rsolv.Phases.ForgeAccount
+  alias Rsolv.Customers.ForgeAccount
   alias Rsolv.Customers.Customer
   
   import Rsolv.ValidationCacheHelpers
@@ -22,8 +22,6 @@ defmodule Rsolv.ValidationCacheIntegrationTest do
     customer = %Customer{
       name: "Test Customer #{unique_id}", 
       email: "test#{unique_id}@example.com",
-      api_key: "test_api_key_#{unique_id}",
-      plan: "standard",
       user_id: user.id
     }
     |> Repo.insert!()

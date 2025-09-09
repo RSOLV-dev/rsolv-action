@@ -5,8 +5,8 @@ defmodule Rsolv.Phases do
   """
   
   alias Rsolv.Repo
-  alias Rsolv.Phases.{Repository, ForgeAccount, Repositories, ScanExecution, ValidationExecution, MitigationExecution}
-  alias Rsolv.Customers.{Customer, ApiKey}
+  alias Rsolv.Phases.{Repository, Repositories, ScanExecution, ValidationExecution, MitigationExecution}
+  alias Rsolv.Customers.{Customer, ApiKey, ForgeAccount}
   
   @doc """
   Stores scan phase execution data.

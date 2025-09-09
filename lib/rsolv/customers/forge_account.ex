@@ -1,4 +1,4 @@
-defmodule Rsolv.Phases.ForgeAccount do
+defmodule Rsolv.Customers.ForgeAccount do
   use Ecto.Schema
   import Ecto.Changeset
 

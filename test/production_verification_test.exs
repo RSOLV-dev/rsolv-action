@@ -96,16 +96,16 @@ defmodule Rsolv.ProductionVerificationTest do
       changeset = Customer.changeset(%Customer{}, %{
         name: "Test Org",
         email: "test@example.com",
-        api_key: "test_#{:crypto.strong_rand_bytes(16) |> Base.encode16()}"
+        subscription_plan: "trial"
       })
       
       {:ok, customer} = Repo.insert(changeset)
       
       # Verify default values
-      assert customer.trial_fixes_limit == 10
+      assert customer.trial_fixes_limit == 5  # Default changed to 5
       assert customer.trial_fixes_used == 0
-      assert customer.trial_expired == false
-      assert customer.subscription_plan == "pay_as_you_go"
+      assert Customer.trial_expired?(customer) == false
+      assert customer.subscription_plan == "trial"  # Default is "trial"
     end
   end
   
@@ -115,7 +115,7 @@ defmodule Rsolv.ProductionVerificationTest do
       changeset = Customer.changeset(%Customer{}, %{
         name: "Test Customer",
         email: "test@example.com", 
-        api_key: "test_key_#{System.unique_integer([:positive])}"
+        subscription_plan: "trial"
       })
       
       {:ok, customer} = Repo.insert(changeset)

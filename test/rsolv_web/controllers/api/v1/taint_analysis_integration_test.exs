@@ -15,7 +15,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
       id: "test_customer_1",
       name: "Test Customer",
       email: "test@example.com",
-      api_key: "test_api_key_123",
+      subscription_plan: "trial",
       tier: "enterprise",
       flags: ["ai_access", "enterprise_access"],
       monthly_limit: 100,

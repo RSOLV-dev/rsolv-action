@@ -186,16 +186,103 @@ defmodule Rsolv.ConsolidationSchemaTest do
         name: "Usage Test Customer",
         email: "usage-customer@example.com",
         monthly_limit: 100,
-        plan: "starter"
+        subscription_plan: "starter"
       })
       
       assert customer.monthly_limit == 100
       assert customer.current_usage == 0
-      assert customer.plan == "starter"
+      assert customer.subscription_plan == "starter"
       
       # Track usage
       {:ok, updated_customer} = Rsolv.Customers.increment_usage(customer, 1)
       assert updated_customer.current_usage == 1
+    end
+  end
+  
+  describe "consolidated customer schema" do
+    alias Rsolv.Customers.Customer
+    
+    test "has all required billing fields" do
+      customer = %Customer{}
+      
+      # These will FAIL initially - proving the problem
+      assert Map.has_key?(customer, :trial_fixes_used)
+      assert Map.has_key?(customer, :trial_fixes_limit)
+      assert Map.has_key?(customer, :stripe_customer_id)
+      assert Map.has_key?(customer, :subscription_plan)
+      assert Map.has_key?(customer, :subscription_status)
+      assert Map.has_key?(customer, :rollover_fixes)
+      assert Map.has_key?(customer, :payment_method_added_at)
+      assert Map.has_key?(customer, :trial_expired_at)
+    end
+    
+    test "does NOT have dropped fields" do
+      customer = %Customer{}
+      
+      # These fields should not exist in schema
+      refute Map.has_key?(customer, :plan)
+      refute Map.has_key?(customer, :payment_method_added)
+      refute Map.has_key?(customer, :trial_expired)
+      refute Map.has_key?(customer, :monthly_fix_quota)
+      refute Map.has_key?(customer, :api_key)  # Use api_keys relationship instead
+      refute Map.has_key?(customer, :github_org)  # Use forge_accounts relationship instead
+    end
+    
+    test "has proper relationships" do
+      # Should have these relationships
+      assert %Ecto.Association.Has{} = Customer.__schema__(:association, :api_keys)
+      assert %Ecto.Association.Has{} = Customer.__schema__(:association, :forge_accounts)
+      assert %Ecto.Association.Has{} = Customer.__schema__(:association, :fix_attempts)
+    end
+    
+    test "derives trial_expired from trial_expired_at" do
+      # Not expired - no date set
+      customer1 = %Customer{trial_expired_at: nil}
+      refute Customer.trial_expired?(customer1)
+      
+      # Not expired - future date
+      future = DateTime.add(DateTime.utc_now(), 3600, :second)
+      customer2 = %Customer{trial_expired_at: future}
+      refute Customer.trial_expired?(customer2)
+      
+      # Expired - past date
+      past = DateTime.add(DateTime.utc_now(), -3600, :second)
+      customer3 = %Customer{trial_expired_at: past}
+      assert Customer.trial_expired?(customer3)
+    end
+    
+    test "changeset handles billing fields" do
+      attrs = %{
+        name: "Test",
+        email: "test@example.com",
+        user_id: 1,  # Required until RFC-049
+        stripe_customer_id: "cus_123",
+        subscription_plan: "pro",
+        trial_fixes_used: 5
+      }
+      
+      changeset = Customer.changeset(%Customer{}, attrs)
+      
+      # Will FAIL initially - changeset doesn't know these fields
+      assert changeset.changes.stripe_customer_id == "cus_123"
+      assert changeset.changes.subscription_plan == "pro"
+      assert changeset.changes.trial_fixes_used == 5
+    end
+    
+    test "changeset rejects dropped fields" do
+      attrs = %{
+        name: "Test",
+        email: "test@example.com",
+        user_id: 1,
+        plan: "old_plan",  # Dropped field
+        payment_method_added: true  # Dropped field
+      }
+      
+      changeset = Customer.changeset(%Customer{}, attrs)
+      
+      # These fields should be ignored, not in changes
+      refute Map.has_key?(changeset.changes, :plan)
+      refute Map.has_key?(changeset.changes, :payment_method_added)
     end
   end
 end

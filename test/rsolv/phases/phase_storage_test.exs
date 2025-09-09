@@ -1,7 +1,8 @@
 defmodule Rsolv.Phases.PhaseStorageTest do
   use Rsolv.DataCase
   alias Rsolv.Phases
-  alias Rsolv.Phases.{Repository, ForgeAccount, ScanExecution, ValidationExecution, MitigationExecution}
+  alias Rsolv.Phases.{Repository, ScanExecution, ValidationExecution, MitigationExecution}
+  alias Rsolv.Customers.ForgeAccount
   alias Rsolv.Customers.{Customer, ApiKey}
   alias Rsolv.Accounts.User
   alias Rsolv.Repo
@@ -216,6 +217,26 @@ defmodule Rsolv.Phases.PhaseStorageTest do
       
       assert DateTime.compare(scan.started_at, ~U[2025-08-15 10:00:00Z]) == :eq
       assert DateTime.compare(scan.completed_at, ~U[2025-08-15 10:05:00Z]) == :eq
+    end
+  end
+  
+  describe "ForgeAccount in correct context" do
+    test "ForgeAccount is in Customers context not Phases" do
+      # This will FAIL initially - ForgeAccount is in wrong context
+      assert Code.ensure_loaded?(Rsolv.Customers.ForgeAccount)
+      
+      # Should NOT be in Phases context after refactor
+      refute Code.ensure_loaded?(Rsolv.Phases.ForgeAccount)
+    end
+    
+    test "ForgeAccount belongs to Customer" do
+      # Ensure the relationship is properly defined
+      assert %Ecto.Association.BelongsTo{} = 
+        Rsolv.Customers.ForgeAccount.__schema__(:association, :customer)
+      
+      # Ensure it points to the right schema
+      assoc = Rsolv.Customers.ForgeAccount.__schema__(:association, :customer)
+      assert assoc.related == Rsolv.Customers.Customer
     end
   end
 end

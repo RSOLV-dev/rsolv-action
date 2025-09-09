@@ -19,7 +19,7 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
     
     # Set up ConvertKit config for testing with all required fields
     Application.put_env(:rsolv, :convertkit, [
-      api_key: "test_api_key",
+      subscription_plan: "trial",
       form_id: "test_form_id",
       api_base_url: "https://api.convertkit.com/v3",
       early_access_tag_id: "7700607"
