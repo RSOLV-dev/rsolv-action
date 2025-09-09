@@ -14,11 +14,21 @@ Migrate our existing ETS-based rate limiter with manual cluster synchronization 
 
 We have an existing rate limiter (`lib/rsolv/rate_limiter.ex`) that:
 - Uses local ETS tables with periodic sync (every 5 seconds)
-- Implements 60-second sliding windows with 100 request limits
+- Implements 60-second sliding windows with 100 request limits (hardcoded)
 - Has race conditions during sync intervals
 - Uses complex merge logic to reconcile divergent counts
 - Already has telemetry integration
-- Has existing tests in `test/rsolv_web/controllers/api/v1/vulnerability_validation_cache_test.exs`
+- Has existing tests in `test/rsolv/rate_limiter_test.exs`
+
+### Current Usage
+- **CredentialController**: `credential_exchange` action (API key exchange)
+- **AstController**: `ast_analysis` action (AST vulnerability analysis)
+- Both are **authenticated** endpoints (require API key)
+
+### Configuration Issue to Fix
+- Config defines limits: `credential_exchange: {10, :minute}`
+- But code ignores config and uses hardcoded 100/60s
+- **TODO during migration**: Make it actually use config
 
 ## Problem Statement
 
@@ -61,6 +71,7 @@ Simple, direct migration from ETS to Mnesia:
 3. Get immediate consistency across nodes
 4. Keep telemetry unchanged
 5. All existing tests must still pass
+6. **Fix config usage** - actually read from config instead of hardcoded values
 
 ### What Changes (and What Doesn't)
 
@@ -98,6 +109,34 @@ With Distributed Rate Limiting (Mnesia):
 
 Result: 5 attempts/minute (correct limit!)
 ```
+
+## Rate Limit Configuration
+
+### Current Configuration (in `config/runtime.exs`)
+```elixir
+config :rsolv, :rate_limits,
+  credential_exchange: {10, :minute},  # API key exchange endpoint
+  usage_report: {100, :minute},        # Usage reporting endpoint
+  ast_analysis: {50, :minute}          # AST analysis endpoint (should add)
+```
+
+### How Rate Limits Work
+- **Per customer**: Each customer ID has separate counters
+- **Per action**: Different endpoints have different limits
+- **Authenticated only**: All rate-limited endpoints require API key
+- **Sliding window**: 60-second window that slides with time
+- **Configurable**: Can adjust per endpoint in config
+
+### What Gets Rate Limited
+| Endpoint | Action | Current Limit | Authenticated |
+|----------|--------|--------------|---------------|
+| `/api/v1/credentials/exchange` | credential_exchange | 10/min (config) | Yes |
+| `/api/v1/ast/analyze` | ast_analysis | 100/min (hardcoded) | Yes |
+
+### Notes on Test Examples
+- The "5 requests/minute" in examples is for **testing only**
+- Production limits are defined in config
+- Can temporarily lower limits for testing
 
 ## How It Works
 
@@ -687,6 +726,19 @@ end
 - Tables replicate automatically when nodes join
 - If all nodes restart, rate limit data resets (that's OK)
 
+### Infrastructure Changes Required
+- **None!** Mnesia is built into Erlang/Elixir
+- No new dependencies, no new services
+- Works with existing Kubernetes deployment
+- No changes to RSOLV-infrastructure needed
+
+### Operational Documentation (for ADR)
+After implementation, document:
+- Current rate limits per endpoint
+- How to adjust limits in config
+- Monitoring rate limit metrics
+- Debugging rate limit issues
+
 ### Cluster Formation Timeline
 
 ```
@@ -780,6 +832,7 @@ Rate Limiter Metrics:
 - [ ] Keep `check_rate_limit/2` API exactly the same
 - [ ] Delete all sync-related code (merge logic, sync process)
 - [ ] Keep cleanup process (just change from ETS to Mnesia)
+- [ ] **Fix config usage**: Read from `Application.get_env(:rsolv, :rate_limits)`
 - [ ] Run tests - make them pass
 
 ### Phase 2: Refactor - Clean Up
