@@ -20,8 +20,14 @@ defmodule Rsolv.Phase3IntegrationTest do
         email: "api@example.com"
       })
       
+      # Create an API key for the customer
+      {:ok, api_key} = Rsolv.Customers.create_api_key(customer, %{
+        name: "Test Key"
+      })
+      
       # Test that customer can be found by API key
-      found_customer = Rsolv.Customers.get_customer_by_api_key(customer.api_key)
+      found_customer = Rsolv.Customers.get_customer_by_api_key(api_key.key)
+      assert found_customer != nil
       assert found_customer.id == customer.id
       assert found_customer.name == "API Test Customer"
       assert found_customer.user_id == user.id
@@ -48,11 +54,9 @@ defmodule Rsolv.Phase3IntegrationTest do
       })
       
       # Test that customer can be found by any API key
-      found_by_customer_key = Rsolv.Customers.get_customer_by_api_key(customer.api_key)
       found_by_prod_key = Rsolv.Customers.get_customer_by_api_key(prod_key.key)
       found_by_dev_key = Rsolv.Customers.get_customer_by_api_key(dev_key.key)
       
-      assert found_by_customer_key.id == customer.id
       assert found_by_prod_key.id == customer.id  
       assert found_by_dev_key.id == customer.id
     end

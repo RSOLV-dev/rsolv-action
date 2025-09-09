@@ -35,7 +35,7 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       
       # Test credential exchange endpoint
       conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -94,7 +94,7 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       System.put_env("OPENROUTER_API_KEY", "sk-or-test-key")
       
       conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic", "openai", "openrouter"],
         "ttl_minutes" => 60
       })
@@ -119,7 +119,7 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       |> put_req_header("x-github-job", "test-job-123")
       |> put_req_header("x-github-run", "test-run-456")
       |> post("/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })

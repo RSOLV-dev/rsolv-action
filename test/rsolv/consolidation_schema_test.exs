@@ -34,17 +34,15 @@ defmodule Rsolv.ConsolidationSchemaTest do
       # Then create a customer linked to that user
       customer_attrs = %{
         name: "Test Customer",
-        email: "customer@example.com",
-        github_org: "test-org"
+        email: "customer@example.com"
       }
       
       {:ok, customer} = Rsolv.Customers.create_customer(user, customer_attrs)
       
       assert customer.user_id == user.id
       assert customer.name == "Test Customer"
-      assert customer.github_org == "test-org"
-      assert customer.api_key != nil
-      assert String.starts_with?(customer.api_key, "rsolv_")
+      # github_org field was removed in consolidation
+      # API keys are now managed through api_keys table
     end
     
     test "api_keys table for multiple keys per customer" do

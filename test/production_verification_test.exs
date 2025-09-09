@@ -6,7 +6,7 @@ defmodule Rsolv.ProductionVerificationTest do
   import Ecto.Query
   
   alias Rsolv.Repo
-  alias Rsolv.Billing.Customer
+  alias Rsolv.Customers.Customer
   alias Rsolv.Billing.FixAttempt
   
   @moduletag :integration
@@ -134,7 +134,7 @@ defmodule Rsolv.ProductionVerificationTest do
         billing_status: "not_billed",
         pr_title: "Fix security vulnerability",
         issue_title: "SQL injection in login",
-        api_key_used: customer.api_key
+        api_key_used: "test_" <> Ecto.UUID.generate()
       })
       
       {:ok, attempt} = Repo.insert(changeset)

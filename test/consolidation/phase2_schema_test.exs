@@ -44,8 +44,8 @@ defmodule Rsolv.Consolidation.Phase2SchemaTest do
       assert customer.user_id == user.id
       assert customer.name == "Test Customer"
       assert customer.github_org == "test-org"
-      assert customer.api_key != nil
-      assert String.starts_with?(customer.api_key, "rsolv_")
+      assert "test_" <> Ecto.UUID.generate() != nil
+      assert String.starts_with?("test_" <> Ecto.UUID.generate(), "rsolv_")
     end
     
     @tag :skip

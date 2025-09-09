@@ -55,7 +55,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       encryption_key = :crypto.strong_rand_bytes(32)
       
       conn = conn
-      |> put_req_header("x-api-key", customer.api_key)
+      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
       |> put_req_header("x-encryption-key", Base.encode64(encryption_key))
       |> post("/api/v1/ast/analyze", %{})
       
@@ -108,7 +108,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       }
       
       conn = conn
-      |> put_req_header("x-api-key", customer.api_key)
+      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       
@@ -207,7 +207,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       }
       
       conn = conn
-      |> put_req_header("x-api-key", customer.api_key)
+      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       
@@ -265,7 +265,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       }
       
       conn = conn
-      |> put_req_header("x-api-key", customer.api_key)
+      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       
@@ -312,7 +312,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       :ets.insert(:rsolv_rate_limiter, {{customer.id, "ast_analysis"}, 100, System.system_time(:second)})
       
       conn = conn
-      |> put_req_header("x-api-key", customer.api_key)
+      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       
@@ -358,7 +358,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       }
       
       conn = conn
-      |> put_req_header("x-api-key", customer.api_key)
+      |> put_req_header("x-api-key", "test_" <> Ecto.UUID.generate())
       |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
       |> post("/api/v1/ast/analyze", request)
       

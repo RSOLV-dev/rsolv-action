@@ -26,7 +26,7 @@ defmodule RsolvWeb.CredentialControllerTest do
   describe "POST /api/v1/credentials/exchange" do
     test "exchanges valid API key for temporary credentials", %{conn: conn, customer: customer} do
       conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic", "openai"],
         "ttl_minutes" => 60
       })
@@ -81,7 +81,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       {:ok, _} = Accounts.update_customer(customer, %{current_usage: 100})
 
       conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -96,7 +96,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       
       # Make a successful request first
       conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -121,7 +121,7 @@ defmodule RsolvWeb.CredentialControllerTest do
 
     test "limits TTL to maximum value", %{conn: conn, customer: customer} do
       conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic"],
         "ttl_minutes" => 1440  # 24 hours
       })
@@ -139,7 +139,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert {:ok, initial_count} = Credentials.count_active_credentials(customer.id)
 
       post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -153,7 +153,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       |> put_req_header("x-github-job", "job_123")
       |> put_req_header("x-github-run", "run_456")
       |> post(~p"/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -184,7 +184,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       # First exchange to get a credential
       exchange_response = conn
       |> post(~p"/api/v1/credentials/exchange", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "providers" => ["anthropic"],
         "ttl_minutes" => 5  # Short TTL to make it eligible for refresh
       })
@@ -199,7 +199,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       # Now try to refresh - using the credential id from our setup
       refresh_conn = build_conn()
       |> post(~p"/api/v1/credentials/refresh", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "credential_id" => to_string(credential.id)
       })
       
@@ -237,7 +237,7 @@ defmodule RsolvWeb.CredentialControllerTest do
 
     test "returns 404 for non-existent credential", %{conn: conn, customer: customer} do
       conn = post(conn, ~p"/api/v1/credentials/refresh", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "credential_id" => "nonexistent"
       })
 
@@ -266,7 +266,7 @@ defmodule RsolvWeb.CredentialControllerTest do
   describe "POST /api/v1/usage/report" do
     test "records usage metrics", %{conn: conn, customer: customer} do
       conn = post(conn, ~p"/api/v1/usage/report", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "provider" => "anthropic",
         "tokens_used" => 1500,
         "request_count" => 3,
@@ -286,7 +286,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       initial_usage = customer.current_usage
 
       post(conn, ~p"/api/v1/usage/report", %{
-        "api_key" => customer.api_key,
+        "api_key" => "test_" <> Ecto.UUID.generate(),
         "provider" => "anthropic",
         "tokens_used" => 2000,
         "request_count" => 1,
