@@ -55,12 +55,12 @@ Result: Can get 300 requests before sync!
 
 ## Proposed Solution
 
-Migrate the existing rate limiter to use Mnesia (built into Erlang/Elixir) while:
-1. Maintaining the exact same public API (`check_rate_limit/2`)
-2. Removing all manual sync code (~100 lines)
-3. Providing immediate consistency across nodes
-4. Preserving existing telemetry integration
-5. Adapting existing tests rather than writing new ones
+Simple, direct migration from ETS to Mnesia:
+1. Keep exact same public API (`check_rate_limit/2`)
+2. Delete all manual sync code (~100 lines)
+3. Get immediate consistency across nodes
+4. Keep telemetry unchanged
+5. All existing tests must still pass
 
 ### Solution Architecture
 
@@ -144,14 +144,14 @@ Count = 5 (limit reached)
 Next attempt: {:deny, 5}
 ```
 
-## Pre-Migration Testing Requirements
+## TDD Red-Green-Refactor Approach
 
-### Critical: Ensure All Existing Functionality Is Tested
+### Phase 0: Red - Verify Current Tests Pass
 
-Before beginning the migration, we MUST ensure comprehensive test coverage of the existing ETS-based rate limiter to:
-1. Verify all current functionality works as expected
-2. Monitor continued functionality during migration
-3. Ensure no regression after migration is complete
+Before touching any code:
+1. Run all existing tests - they MUST pass
+2. Document any quirks or race conditions we see
+3. This is our baseline - if these break, we've failed
 
 ### Existing Usage Points
 
@@ -177,9 +177,9 @@ The rate limiter is currently used in:
 - ✅ Rate limiter is configured and working
 - ⚠️  Full rate limit test skipped (100 requests too high for unit test)
 
-### Pre-Migration Test Enhancement Checklist
+### Additional Tests to Write First (Red Phase)
 
-- [ ] **Add comprehensive integration test for rate limiting**
+- [ ] **Integration test that actually hits the rate limit**
   ```elixir
   test "enforces rate limit after exceeding threshold", %{conn: conn, customer: customer, api_key: api_key} do
     # Temporarily lower rate limit for testing
@@ -744,48 +744,23 @@ Rate Limiter Metrics:
 3. **Monitoring**: Add metrics for rate limit hits/misses
 4. **Cleanup**: Adjust interval based on traffic volume
 
-## Implementation Checklist (TDD Migration Approach)
+## Implementation Checklist (Simple TDD)
 
-### Phase 0: Pre-Migration Testing (CRITICAL - DO FIRST)
-- [ ] Run existing test suite and verify all pass:
+### Phase 0: Red - Run Existing Tests
+- [ ] Run tests - they pass (our baseline):
   ```bash
   mix test test/rsolv/rate_limiter_test.exs
   mix test test/rsolv_web/controllers/credential_controller_test.exs
   ```
-- [ ] Add comprehensive rate limit integration test
-- [ ] Add performance benchmark test
-- [ ] Document current behavior and quirks
-- [ ] Save baseline metrics for comparison
+- [ ] Add one integration test that actually hits the limit
+- [ ] Verify all tests pass with current ETS implementation
 
-### Phase 1: Red - Adapt Existing Tests
-- [ ] Keep all existing tests unchanged initially
-- [ ] Add feature flag toggle tests
-- [ ] Write single node tests:
-  - [ ] Test allows requests under limit
-  - [ ] Test denies requests over limit  
-  - [ ] Test sliding window behavior
-  - [ ] Test different keys tracked separately
-  - [ ] Test cleanup of old entries
-- [ ] Create distributed test file `test/rsolv/rate_limiter_distributed_test.exs`
-- [ ] Write distributed tests:
-  - [ ] Test rate limits shared across nodes
-  - [ ] Test new nodes get existing data
-  - [ ] Test survives node failure
-- [ ] Verify all tests fail (Red phase complete)
-
-### Phase 2: Green - Parallel Implementation
-- [ ] Create `lib/rsolv/rate_limiter/mnesia.ex` (parallel to existing)
-- [ ] Add feature flag in config:
-  ```elixir
-  config :rsolv, :rate_limiter_backend, :ets  # or :mnesia
-  ```
-- [ ] Modify `RateLimiter.check_rate_limit/2` to dispatch based on flag
-- [ ] Implement Mnesia version with identical API
-- [ ] Run all existing tests with BOTH backends:
-  ```bash
-  RATE_LIMITER_BACKEND=ets mix test
-  RATE_LIMITER_BACKEND=mnesia mix test
-  ```
+### Phase 1: Green - Direct Replacement
+- [ ] Backup current `lib/rsolv/rate_limiter.ex` 
+- [ ] Replace ETS calls with Mnesia transactions
+- [ ] Delete all sync-related code
+- [ ] Run tests - make them pass
+- [ ] No feature flags, no parallel implementation - just replace it
 - [ ] Setup Mnesia:
   - [ ] Create schema
   - [ ] Create rate_limiter table
@@ -799,28 +774,17 @@ Rate Limiter Metrics:
   - [ ] Remove entries older than 1 hour
 - [ ] Run tests - all should pass (Green phase complete)
 
-### Phase 3: Refactor - Improve Code Quality
-- [ ] Extract configuration to application env
-- [ ] Add telemetry events
-- [ ] Add logging for debugging
-- [ ] Optimize transaction performance
-- [ ] Add documentation and typespecs
+### Phase 2: Refactor - Clean Up
+- [ ] Remove dead sync code
+- [ ] Simplify now that we don't need merge logic
+- [ ] Keep same configuration
 - [ ] Run tests - ensure still passing
 
-### Phase 4: Integration & Verification
-- [ ] Test with feature flag on staging (ETS mode first)
-- [ ] Enable Mnesia mode on one staging node
-- [ ] Compare metrics between ETS and Mnesia nodes
-- [ ] Full staging test with Mnesia on all nodes
-- [ ] Performance comparison report
-- [ ] Verify all original tests still pass
-
-### Phase 5: Production Rollout
-- [ ] Deploy with feature flag disabled (ETS mode)
-- [ ] Enable Mnesia on canary node
-- [ ] Monitor metrics and error rates
-- [ ] Gradual rollout to all nodes
-- [ ] Remove ETS implementation after 1 week stable
+### Phase 3: Deploy
+- [ ] Deploy to staging
+- [ ] Monitor for 24 hours
+- [ ] Deploy to production
+- [ ] Done
 
 ## Success Criteria
 
@@ -838,43 +802,31 @@ Rate Limiter Metrics:
 - [ ] No race conditions in distributed tests
 - [ ] Zero downtime migration completed
 
-## Implementation Timeline
+## Implementation Timeline (3 Days Total)
 
 ```
-Week 1: Pre-Migration & Foundation
-══════════════════════════════════
-Mon: Run existing tests, add missing integration tests
-Tue: Document current behavior, save baselines
-Wed: Implement parallel Mnesia module with feature flag
-Thu: Make all tests pass with both backends
-Fri: Performance testing and comparison
+Day 1: Red-Green
+════════════════
+AM: Run existing tests, add integration test
+PM: Replace ETS with Mnesia, make tests pass
 
-Week 2: Staging & Production
-═════════════════════════════
-Mon: Deploy to staging with ETS (verify no regression)
-Tue: Enable Mnesia on staging, monitor
-Wed: Production canary deployment
-Thu: Gradual production rollout
-Fri: Complete migration, remove ETS code
+Day 2: Refactor & Stage
+═══════════════════════
+AM: Clean up code, verify tests
+PM: Deploy to staging
+
+Day 3: Production
+═════════════════
+Deploy and monitor
 ```
 
-## Migration Path
+## Migration Path (Simple & Direct)
 
-### Step 1: Parallel Implementation
-1. Create `Rsolv.RateLimiter.Mnesia` module alongside existing `Rsolv.RateLimiter`
-2. Implement Mnesia version with same public API
-3. Add feature flag to switch between implementations
+1. **Test** - Ensure all current tests pass
+2. **Replace** - Swap ETS for Mnesia in place
+3. **Deploy** - Ship it
 
-### Step 2: Gradual Rollout
-1. Deploy with feature flag disabled (use existing ETS)
-2. Enable on staging, monitor for issues
-3. Enable on one production node
-4. Roll out to all nodes
-
-### Step 3: Cleanup
-1. Remove ETS implementation
-2. Rename Mnesia module to RateLimiter
-3. Remove feature flag code
+No feature flags. No parallel implementations. Just a straightforward replacement that maintains the exact same API.
 
 ## Alternatives Considered
 
@@ -911,11 +863,11 @@ The migration MUST maintain 100% backward compatibility:
 
 **Golden Rule**: If any existing test fails after migration, the migration has failed.
 
-The migration will use a parallel implementation strategy:
-1. Both ETS and Mnesia implementations exist simultaneously
-2. Feature flag controls which is used
-3. Can instantly rollback by flipping the flag
-4. Only remove ETS after Mnesia proven stable in production
+The migration is a direct replacement:
+1. Replace ETS with Mnesia in the same file
+2. Delete sync code
+3. Deploy it
+4. If it breaks, rollback the deployment (not a feature flag)
 
 ## References
 
