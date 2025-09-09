@@ -20,7 +20,7 @@ defmodule Rsolv.Integration.PhpPatternAstTest do
       # Test WITH API key to get enhanced patterns
       conn = 
         conn
-        |> put_req_header("authorization", "Bearer test_#{Ecto.UUID.generate()}")
+        |> put_req_header("authorization", "Bearer #{test_customer.api_key}")
         |> get("/api/v1/patterns?language=php&format=enhanced")
       
       assert response = json_response(conn, 200)
