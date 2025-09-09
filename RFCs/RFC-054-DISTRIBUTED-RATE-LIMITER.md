@@ -679,7 +679,13 @@ end
 - **Clustering**: Already configured via `libcluster` with Kubernetes.DNS strategy
 - **Node naming**: Handled by existing setup (`rsolv@POD_IP`)
 - **Cluster module**: `Rsolv.Cluster` manages node connections
-- **Mnesia**: Not currently used in codebase (greenfield implementation)
+- **Mnesia**: Not currently used in codebase (greenfield for us)
+
+### Mnesia Setup Notes
+- Mnesia will auto-sync with our existing cluster
+- RAM-only tables = no disk persistence needed
+- Tables replicate automatically when nodes join
+- If all nodes restart, rate limit data resets (that's OK)
 
 ### Cluster Formation Timeline
 
@@ -769,22 +775,12 @@ Rate Limiter Metrics:
 
 ### Phase 1: Green - Direct Replacement
 - [ ] Backup current `lib/rsolv/rate_limiter.ex` 
+- [ ] Setup Mnesia (schema, table, ram_copies)
 - [ ] Replace ETS calls with Mnesia transactions
-- [ ] Delete all sync-related code
+- [ ] Keep `check_rate_limit/2` API exactly the same
+- [ ] Delete all sync-related code (merge logic, sync process)
+- [ ] Keep cleanup process (just change from ETS to Mnesia)
 - [ ] Run tests - make them pass
-- [ ] No feature flags, no parallel implementation - just replace it
-- [ ] Setup Mnesia:
-  - [ ] Create schema
-  - [ ] Create rate_limiter table
-  - [ ] Configure ram_copies
-- [ ] Implement `check_rate/3` function:
-  - [ ] Sliding window logic
-  - [ ] Atomic transactions
-  - [ ] Error handling
-- [ ] Implement cleanup:
-  - [ ] Schedule periodic cleanup
-  - [ ] Remove entries older than 1 hour
-- [ ] Run tests - all should pass (Green phase complete)
 
 ### Phase 2: Refactor - Clean Up
 - [ ] Remove dead sync code
@@ -797,6 +793,12 @@ Rate Limiter Metrics:
 - [ ] Monitor for 24 hours
 - [ ] Deploy to production
 - [ ] Done
+
+### Rollback Plan
+If anything goes wrong:
+1. Git revert the commit
+2. Deploy the reverted version
+3. That's it - no feature flags to manage
 
 ## Success Criteria
 
