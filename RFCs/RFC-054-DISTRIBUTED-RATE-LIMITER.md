@@ -1,48 +1,66 @@
-# RFC-054: Distributed Rate Limiter for Authentication
+# RFC-054: Distributed Rate Limiter Migration from ETS to Mnesia
 
 **Status**: Draft  
 **Created**: 2025-09-05  
+**Last Updated**: 2025-09-09
 **Author**: Infrastructure Team  
 **Related**: RFC-049 (Customer Management), clustering infrastructure
 
 ## Summary
 
-Implement a distributed rate limiter using Mnesia to protect authentication endpoints across clustered BEAM nodes. This RFC focuses on a test-driven development approach to ensure the rate limiter works correctly in both single-node and multi-node scenarios.
+Migrate our existing ETS-based rate limiter with manual cluster synchronization to a Mnesia-based solution for true distributed rate limiting across clustered BEAM nodes. The current implementation (`lib/rsolv/rate_limiter.ex`) has race conditions due to its 5-second sync intervals. This migration will provide immediate consistency while maintaining the same API.
+
+## Current State
+
+We have an existing rate limiter (`lib/rsolv/rate_limiter.ex`) that:
+- Uses local ETS tables with periodic sync (every 5 seconds)
+- Implements 60-second sliding windows with 100 request limits
+- Has race conditions during sync intervals
+- Uses complex merge logic to reconcile divergent counts
+- Already has telemetry integration
+- Has existing tests in `test/rsolv_web/controllers/api/v1/vulnerability_validation_cache_test.exs`
 
 ## Problem Statement
 
-Authentication endpoints need rate limiting to prevent brute force attacks. With our clustered BEAM deployment:
-- Local ETS rate limiting would allow attackers to hit each node separately
-- Adding Redis just for rate limiting introduces unnecessary infrastructure complexity
-- We need a solution that works across all nodes in our cluster
+The current ETS+sync approach has several issues:
+- **Race conditions**: Requests between sync intervals can exceed limits
+- **Split-brain**: Nodes can diverge during network partitions
+- **Complexity**: Manual sync and merge logic is error-prone
+- **Eventual consistency**: Not suitable for security-critical rate limiting
 
 ### Current Problem Visualization
 
 ```
-Without Distributed Rate Limiting:
-═══════════════════════════════════
+Current: ETS with Periodic Sync (RACE CONDITIONS!)
+═══════════════════════════════════════════════════
 
-    Attacker
+    Attacker makes 100 requests in 1 second
        │
     ┌──┼──────────────┐
     │  │              │
     ▼  ▼              ▼
 ┌──────┐         ┌──────┐         ┌──────┐
 │Node A│         │Node B│         │Node C│
-│5/min │         │5/min │         │5/min │
-└──────┘         └──────┘         └──────┘
-   ETS             ETS             ETS
-   
-Result: 15 attempts/minute (3x intended limit!)
+│ ETS  │         │ ETS  │         │ ETS  │
+│100/60│         │100/60│         │100/60│
+└──┬───┘         └──┬───┘         └──┬───┘
+   │                │                │
+   └────────┬───────┴───────┬────────┘
+            │               │
+         5 second      5 second
+         sync delay    sync delay
+            
+Result: Can get 300 requests before sync!
 ```
 
 ## Proposed Solution
 
-Use Mnesia (built into Erlang/Elixir) to create a distributed rate limiter that:
-1. Works across all clustered nodes
-2. Requires no additional infrastructure
-3. Has a simple API similar to popular rate limiting libraries
-4. Can be tested thoroughly in isolation
+Migrate the existing rate limiter to use Mnesia (built into Erlang/Elixir) while:
+1. Maintaining the exact same public API (`check_rate_limit/2`)
+2. Removing all manual sync code (~100 lines)
+3. Providing immediate consistency across nodes
+4. Preserving existing telemetry integration
+5. Adapting existing tests rather than writing new ones
 
 ### Solution Architecture
 
@@ -126,13 +144,109 @@ Count = 5 (limit reached)
 Next attempt: {:deny, 5}
 ```
 
-## TDD Implementation Plan
+## Pre-Migration Testing Requirements
 
-### Phase 1: Red - Write Failing Tests
+### Critical: Ensure All Existing Functionality Is Tested
 
-#### 1.1 Single Node Tests
+Before beginning the migration, we MUST ensure comprehensive test coverage of the existing ETS-based rate limiter to:
+1. Verify all current functionality works as expected
+2. Monitor continued functionality during migration
+3. Ensure no regression after migration is complete
+
+### Existing Usage Points
+
+The rate limiter is currently used in:
+- **CredentialController** (`lib/rsolv_web/controllers/credential_controller.ex`)
+  - `check_rate_limit/1` called during credential exchange
+  - Returns `:ok` or `{:error, :rate_limited}`
+  - HTTP 429 response with "retry-after" header on rate limit
+
+### Existing Test Coverage
+
+#### Unit Tests (`test/rsolv/rate_limiter_test.exs`)
+- ✅ Allows requests under the rate limit (100 per 60s)
+- ✅ Blocks requests over the rate limit
+- ✅ Uses separate counters per customer
+- ✅ Uses separate counters per action
+- ✅ Resets counter after 60 seconds
+- ✅ Emits telemetry events
+- ✅ Reset functionality
+- ⚠️  Distributed sync test (manual, not multi-node)
+
+#### Integration Tests (`test/rsolv_web/controllers/credential_controller_test.exs`)
+- ✅ Rate limiter is configured and working
+- ⚠️  Full rate limit test skipped (100 requests too high for unit test)
+
+### Pre-Migration Test Enhancement Checklist
+
+- [ ] **Add comprehensive integration test for rate limiting**
+  ```elixir
+  test "enforces rate limit after exceeding threshold", %{conn: conn, customer: customer, api_key: api_key} do
+    # Temporarily lower rate limit for testing
+    original_limit = Application.get_env(:rsolv, :rate_limit_per_minute, 100)
+    Application.put_env(:rsolv, :rate_limit_per_minute, 5)
+    
+    # Make 5 successful requests
+    for i <- 1..5 do
+      conn = post(conn, ~p"/api/v1/credentials/exchange", %{
+        "api_key" => api_key,
+        "providers" => ["anthropic"],
+        "ttl_minutes" => 60
+      })
+      assert json_response(conn, 200)
+    end
+    
+    # 6th request should be rate limited
+    conn = post(conn, ~p"/api/v1/credentials/exchange", %{
+      "api_key" => api_key,
+      "providers" => ["anthropic"],
+      "ttl_minutes" => 60
+    })
+    
+    assert json_response(conn, 429)
+    assert %{"error" => "Rate limit exceeded"} = json_response(conn, 429)
+    assert conn |> get_resp_header("retry-after") == ["60"]
+    
+    # Restore original limit
+    Application.put_env(:rsolv, :rate_limit_per_minute, original_limit)
+  end
+  ```
+
+- [ ] **Add performance benchmark test**
+  ```elixir
+  test "handles concurrent requests efficiently" do
+    # Benchmark current ETS implementation
+    # Save results for comparison after migration
+  end
+  ```
+
+- [ ] **Add telemetry monitoring test**
+  ```elixir
+  test "telemetry events are consistent during high load" do
+    # Verify telemetry accuracy under load
+  end
+  ```
+
+- [ ] **Document current behavior quirks**
+  - 5-second sync delay allows temporary over-limit
+  - Race conditions between nodes
+  - Manual sync complexity
+
+## TDD Migration Plan
+
+### Phase 0: Pre-Migration (NEW - MUST DO FIRST)
+
+#### Run and Enhance Existing Tests
+- [ ] Run full test suite, ensure all pass
+- [ ] Add missing integration tests listed above
+- [ ] Document current performance baseline
+- [ ] Save test results for comparison
+
+### Phase 1: Red - Adapt Existing Tests
+
+#### 1.1 Modify Existing Rate Limiter Tests
 ```elixir
-# test/rsolv/rate_limiter_test.exs
+# test/rsolv/rate_limiter_test.exs (adapt existing file)
 defmodule Rsolv.RateLimiterTest do
   use ExUnit.Case, async: false
   
@@ -549,6 +663,12 @@ end
 
 ## Deployment Considerations
 
+### Prerequisites
+- **Clustering**: Already configured via `libcluster` with Kubernetes.DNS strategy
+- **Node naming**: Handled by existing setup (`rsolv@POD_IP`)
+- **Cluster module**: `Rsolv.Cluster` manages node connections
+- **Mnesia**: Not currently used in codebase (greenfield implementation)
+
 ### Cluster Formation Timeline
 
 ```
@@ -624,47 +744,183 @@ Rate Limiter Metrics:
 3. **Monitoring**: Add metrics for rate limit hits/misses
 4. **Cleanup**: Adjust interval based on traffic volume
 
+## Implementation Checklist (TDD Migration Approach)
+
+### Phase 0: Pre-Migration Testing (CRITICAL - DO FIRST)
+- [ ] Run existing test suite and verify all pass:
+  ```bash
+  mix test test/rsolv/rate_limiter_test.exs
+  mix test test/rsolv_web/controllers/credential_controller_test.exs
+  ```
+- [ ] Add comprehensive rate limit integration test
+- [ ] Add performance benchmark test
+- [ ] Document current behavior and quirks
+- [ ] Save baseline metrics for comparison
+
+### Phase 1: Red - Adapt Existing Tests
+- [ ] Keep all existing tests unchanged initially
+- [ ] Add feature flag toggle tests
+- [ ] Write single node tests:
+  - [ ] Test allows requests under limit
+  - [ ] Test denies requests over limit  
+  - [ ] Test sliding window behavior
+  - [ ] Test different keys tracked separately
+  - [ ] Test cleanup of old entries
+- [ ] Create distributed test file `test/rsolv/rate_limiter_distributed_test.exs`
+- [ ] Write distributed tests:
+  - [ ] Test rate limits shared across nodes
+  - [ ] Test new nodes get existing data
+  - [ ] Test survives node failure
+- [ ] Verify all tests fail (Red phase complete)
+
+### Phase 2: Green - Parallel Implementation
+- [ ] Create `lib/rsolv/rate_limiter/mnesia.ex` (parallel to existing)
+- [ ] Add feature flag in config:
+  ```elixir
+  config :rsolv, :rate_limiter_backend, :ets  # or :mnesia
+  ```
+- [ ] Modify `RateLimiter.check_rate_limit/2` to dispatch based on flag
+- [ ] Implement Mnesia version with identical API
+- [ ] Run all existing tests with BOTH backends:
+  ```bash
+  RATE_LIMITER_BACKEND=ets mix test
+  RATE_LIMITER_BACKEND=mnesia mix test
+  ```
+- [ ] Setup Mnesia:
+  - [ ] Create schema
+  - [ ] Create rate_limiter table
+  - [ ] Configure ram_copies
+- [ ] Implement `check_rate/3` function:
+  - [ ] Sliding window logic
+  - [ ] Atomic transactions
+  - [ ] Error handling
+- [ ] Implement cleanup:
+  - [ ] Schedule periodic cleanup
+  - [ ] Remove entries older than 1 hour
+- [ ] Run tests - all should pass (Green phase complete)
+
+### Phase 3: Refactor - Improve Code Quality
+- [ ] Extract configuration to application env
+- [ ] Add telemetry events
+- [ ] Add logging for debugging
+- [ ] Optimize transaction performance
+- [ ] Add documentation and typespecs
+- [ ] Run tests - ensure still passing
+
+### Phase 4: Integration & Verification
+- [ ] Test with feature flag on staging (ETS mode first)
+- [ ] Enable Mnesia mode on one staging node
+- [ ] Compare metrics between ETS and Mnesia nodes
+- [ ] Full staging test with Mnesia on all nodes
+- [ ] Performance comparison report
+- [ ] Verify all original tests still pass
+
+### Phase 5: Production Rollout
+- [ ] Deploy with feature flag disabled (ETS mode)
+- [ ] Enable Mnesia on canary node
+- [ ] Monitor metrics and error rates
+- [ ] Gradual rollout to all nodes
+- [ ] Remove ETS implementation after 1 week stable
+
 ## Success Criteria
 
-- [ ] All tests pass on single node
-- [ ] All tests pass on multiple nodes
-- [ ] No performance regression in auth endpoints
-- [ ] Cleanup prevents unbounded memory growth
-- [ ] Works with existing libcluster setup
+### Pre-Migration
+- [ ] All existing tests pass with current ETS implementation
+- [ ] New integration tests added and passing
+- [ ] Performance baseline documented
+
+### Post-Migration
+- [ ] All original tests pass with Mnesia implementation
+- [ ] No breaking changes to public API
+- [ ] Rate limiting still returns 429 with retry-after header
+- [ ] Telemetry events unchanged
+- [ ] Performance equal or better than ETS baseline
+- [ ] No race conditions in distributed tests
+- [ ] Zero downtime migration completed
 
 ## Implementation Timeline
 
 ```
-Week 1: Foundation
-══════════════════
-Mon: Write failing unit tests (Red)
-Tue: Implement basic rate limiter (Green)
-Wed: Write distributed tests (Red)
-Thu: Make distributed tests pass (Green)
-Fri: Refactor and optimize
+Week 1: Pre-Migration & Foundation
+══════════════════════════════════
+Mon: Run existing tests, add missing integration tests
+Tue: Document current behavior, save baselines
+Wed: Implement parallel Mnesia module with feature flag
+Thu: Make all tests pass with both backends
+Fri: Performance testing and comparison
 
-Week 2: Integration
-═══════════════════
-Mon: Integrate with admin auth
-Tue: Add monitoring/metrics
-Wed: Performance testing
-Thu: Documentation
-Fri: Deploy to staging
+Week 2: Staging & Production
+═════════════════════════════
+Mon: Deploy to staging with ETS (verify no regression)
+Tue: Enable Mnesia on staging, monitor
+Wed: Production canary deployment
+Thu: Gradual production rollout
+Fri: Complete migration, remove ETS code
 ```
 
 ## Migration Path
 
-This is a new component with no existing system to migrate from. Can be deployed immediately once tests pass.
+### Step 1: Parallel Implementation
+1. Create `Rsolv.RateLimiter.Mnesia` module alongside existing `Rsolv.RateLimiter`
+2. Implement Mnesia version with same public API
+3. Add feature flag to switch between implementations
+
+### Step 2: Gradual Rollout
+1. Deploy with feature flag disabled (use existing ETS)
+2. Enable on staging, monitor for issues
+3. Enable on one production node
+4. Roll out to all nodes
+
+### Step 3: Cleanup
+1. Remove ETS implementation
+2. Rename Mnesia module to RateLimiter
+3. Remove feature flag code
 
 ## Alternatives Considered
 
-1. **Hammer with Redis**: Rejected - adds infrastructure complexity
-2. **Local ETS only**: Rejected - doesn't work across nodes
+1. **Keep ETS with improved sync**: Rejected - fundamental race condition remains
+2. **Hammer with Redis**: Rejected - adds infrastructure complexity
 3. **Process Registry (pg)**: Rejected - more complex than Mnesia
 4. **External service**: Rejected - unnecessary dependency
+5. **Fix sync interval**: Rejected - reducing interval increases network traffic
+
+## Critical Migration Constraints
+
+### API Compatibility Requirements
+
+The migration MUST maintain 100% backward compatibility:
+
+1. **Public API** - `RateLimiter.check_rate_limit/2` signature unchanged
+   - Input: `(customer_id, action)`
+   - Output: `:ok` or `{:error, :rate_limited}`
+
+2. **HTTP Behavior** - CredentialController responses unchanged
+   - Success: 200 OK with credentials
+   - Rate limited: 429 Too Many Requests
+   - Headers: "retry-after: 60" on rate limit
+
+3. **Telemetry Events** - Same events with same metadata
+   - `[:rsolv, :rate_limiter, :request_allowed]`
+   - `[:rsolv, :rate_limiter, :limit_exceeded]`
+
+4. **Configuration** - Same environment variables
+   - Rate limit: 100 requests per 60 seconds (configurable)
+   - Actions tracked separately
+
+### Testing Strategy
+
+**Golden Rule**: If any existing test fails after migration, the migration has failed.
+
+The migration will use a parallel implementation strategy:
+1. Both ETS and Mnesia implementations exist simultaneously
+2. Feature flag controls which is used
+3. Can instantly rollback by flipping the flag
+4. Only remove ETS after Mnesia proven stable in production
 
 ## References
 
 - [Mnesia Documentation](https://www.erlang.org/doc/man/mnesia.html)
 - [Testing Distributed Elixir](https://elixir-lang.org/getting-started/mix-otp/distributed-tasks.html)
 - RFC-049: Customer Management Consolidation
+- Existing Implementation: `lib/rsolv/rate_limiter.ex`
+- Existing Tests: `test/rsolv/rate_limiter_test.exs`

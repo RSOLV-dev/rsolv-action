@@ -104,13 +104,13 @@ graph LR
     style A4 fill:#90EE90
 ```
 
-### Phase 0: CRITICAL - Consolidate Duplicate Schemas (MUST DO FIRST)
+### Phase 0: ✅ COMPLETED - Consolidate Duplicate Schemas (RFC-055)
 
-**Problem**: We have two Customer schemas pointing to the same table but with different fields:
-- `Rsolv.Customers.Customer` - Has relationships but missing billing fields
-- `Rsolv.Billing.Customer` - Has billing fields but missing relationships
+**Problem**: We had two Customer schemas pointing to the same table but with different fields:
+- `Rsolv.Customers.Customer` - Had relationships but missing billing fields
+- `Rsolv.Billing.Customer` - Had billing fields but missing relationships
 
-**Solution**: Merge both schemas into one complete schema
+**Solution**: ✅ **COMPLETED in RFC-055** - Merged both schemas into one complete schema
 
 ```elixir
 # lib/rsolv/customers/customer.ex - CONSOLIDATED VERSION
