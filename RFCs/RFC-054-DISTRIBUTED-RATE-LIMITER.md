@@ -62,6 +62,18 @@ Simple, direct migration from ETS to Mnesia:
 4. Keep telemetry unchanged
 5. All existing tests must still pass
 
+### What Changes (and What Doesn't)
+
+```
+BEFORE:                          AFTER:
+═══════                          ══════
+RateLimiter → ETS + Sync    →    RateLimiter → Mnesia
+ValidationCache → ETS       →    ValidationCache → ETS (unchanged!)
+AST caches → ETS           →    AST caches → ETS (unchanged!)
+PatternServer → ETS        →    PatternServer → ETS (unchanged!)
+FunWithFlags → ETS         →    FunWithFlags → ETS (unchanged!)
+```
+
 ### Solution Architecture
 
 ```
@@ -823,10 +835,17 @@ Deploy and monitor
 ## Migration Path (Simple & Direct)
 
 1. **Test** - Ensure all current tests pass
-2. **Replace** - Swap ETS for Mnesia in place
+2. **Replace** - Swap ETS for Mnesia in RateLimiter ONLY
 3. **Deploy** - Ship it
 
 No feature flags. No parallel implementations. Just a straightforward replacement that maintains the exact same API.
+
+**CRITICAL**: We are NOT removing ETS from the system! Only replacing it in RateLimiter.
+- ValidationCache - stays on ETS
+- AST subsystem caches - stay on ETS  
+- PatternServer - stays on ETS
+- FunWithFlags cache - stays on ETS
+- **Only RateLimiter moves to Mnesia**
 
 ## Alternatives Considered
 
