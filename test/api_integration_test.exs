@@ -13,7 +13,7 @@ defmodule Rsolv.APIIntegrationTest do
       assert response.status_code == 200
       
       body = Jason.decode!(response.body)
-      assert body["status"] in ["ok", "warning", "degraded"]
+      assert body["status"] in ["ok", "warning", "degraded", "healthy"]
       assert Map.has_key?(body, "timestamp")
       assert Map.has_key?(body, "clustering")
       

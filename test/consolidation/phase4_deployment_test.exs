@@ -10,7 +10,7 @@ defmodule Rsolv.Phase4DeploymentTest do
     @tag :staging_deployment
     test "unified Kubernetes manifests are valid" do
       # Test that the unified K8s manifests can be validated
-      {result, exit_code} = System.cmd("kubectl", ["apply", "--dry-run=client", "-k", "../RSOLV-infrastructure/services/unified/overlays/staging/"])
+      {result, exit_code} = System.cmd("kubectl", ["apply", "--dry-run=client", "-k", "RSOLV-infrastructure/services/unified/overlays/staging/"])
       assert exit_code == 0, "Kubernetes manifests should be valid: #{result}"
     end
     
