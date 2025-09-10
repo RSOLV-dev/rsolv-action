@@ -25,10 +25,11 @@ We have an existing rate limiter (`lib/rsolv/rate_limiter.ex`) that:
 - **AstController**: `ast_analysis` action (AST vulnerability analysis)
 - Both are **authenticated** endpoints (require API key)
 
-### Configuration Issue to Fix
-- Config defines limits: `credential_exchange: {10, :minute}`
-- But code ignores config and uses hardcoded 100/60s
-- **TODO during migration**: Make it actually use config
+### Configuration Issue to Fix (BUG)
+- **BUG**: Config defines limits: `credential_exchange: {10, :minute}`
+- **BUG**: But code ignores config and uses hardcoded 100/60s
+- **MUST FIX during migration**: Make it actually use config
+- This means production is currently allowing 10x more requests than configured!
 
 ## Problem Statement
 
@@ -380,81 +381,83 @@ defmodule Rsolv.RateLimiterTest do
 end
 ```
 
-#### 1.2 Distributed Tests
+#### 1.2 Distributed Tests (Using LocalCluster)
 ```elixir
 # test/rsolv/rate_limiter_distributed_test.exs
 defmodule Rsolv.RateLimiterDistributedTest do
   use ExUnit.Case, async: false
   
-  @node1 :"node1@127.0.0.1"
-  @node2 :"node2@127.0.0.1"
+  # Use LocalCluster library for cleaner distributed testing
+  # Add {:local_cluster, "~> 2.0", only: :test} to mix.exs
   
   setup do
-    # Start two nodes for testing
-    {:ok, _node1} = :net_kernel.start([@node1, :shortnames])
-    :erlang.set_cookie(@node1, :test_cookie)
+    # Start cluster with 2 additional nodes
+    nodes = LocalCluster.start_nodes("rate-limiter", 2)
     
-    {:ok, node2} = :slave.start_link('127.0.0.1', :node2, '-setcookie test_cookie')
-    
-    # Start rate limiter on both nodes
-    :rpc.call(@node1, Rsolv.RateLimiter, :start_link, [[]])
-    :rpc.call(node2, Rsolv.RateLimiter, :start_link, [[]])
+    # Start rate limiter on all nodes
+    for node <- nodes do
+      :rpc.call(node, Rsolv.RateLimiter, :start_link, [[]])
+    end
     
     on_exit(fn ->
-      :slave.stop(node2)
-      :net_kernel.stop()
+      LocalCluster.stop()
     end)
     
-    {:ok, %{node2: node2}}
+    {:ok, %{nodes: nodes}}
   end
   
   describe "distributed rate limiting" do
-    test "rate limits are shared across nodes", %{node2: node2} do
-      # Make 3 requests from node1
+    test "rate limits are shared across nodes", %{nodes: [node1, node2]} do
+      # Make 3 requests from first node
       for i <- 1..3 do
-        assert {:allow, ^i} = Rsolv.RateLimiter.check_rate("shared_key", 60_000, 5)
+        assert {:allow, ^i} = :rpc.call(node1, Rsolv.RateLimiter, :check_rate,
+                                        ["shared_key", 60_000, 5])
       end
       
-      # Make 2 requests from node2 - should continue counting
+      # Make 2 requests from second node - should continue counting
       assert {:allow, 4} = :rpc.call(node2, Rsolv.RateLimiter, :check_rate, 
                                       ["shared_key", 60_000, 5])
       assert {:allow, 5} = :rpc.call(node2, Rsolv.RateLimiter, :check_rate, 
                                       ["shared_key", 60_000, 5])
       
       # 6th request from either node should be denied
-      assert {:deny, 5} = Rsolv.RateLimiter.check_rate("shared_key", 60_000, 5)
+      assert {:deny, 5} = :rpc.call(node1, Rsolv.RateLimiter, :check_rate,
+                                     ["shared_key", 60_000, 5])
       assert {:deny, 5} = :rpc.call(node2, Rsolv.RateLimiter, :check_rate, 
                                      ["shared_key", 60_000, 5])
     end
     
-    test "new nodes get existing rate limit data", %{node2: node2} do
-      # Create rate limit data on node1
+    test "new nodes get existing rate limit data", %{nodes: nodes} do
+      [node1, _node2] = nodes
+      
+      # Create rate limit data on first node
       for i <- 1..3 do
-        assert {:allow, ^i} = Rsolv.RateLimiter.check_rate("test_key", 60_000, 5)
+        assert {:allow, ^i} = :rpc.call(node1, Rsolv.RateLimiter, :check_rate,
+                                        ["test_key", 60_000, 5])
       end
       
-      # Start a third node
-      {:ok, node3} = :slave.start_link('127.0.0.1', :node3, '-setcookie test_cookie')
+      # Start a third node dynamically
+      [node3] = LocalCluster.start_nodes("rate-limiter-extra", 1)
       :rpc.call(node3, Rsolv.RateLimiter, :start_link, [[]])
       
       # Node3 should see the existing count
       assert {:allow, 4} = :rpc.call(node3, Rsolv.RateLimiter, :check_rate, 
                                       ["test_key", 60_000, 5])
-      
-      :slave.stop(node3)
     end
     
-    test "survives node failure", %{node2: node2} do
-      # Create data on node1
+    test "survives node failure", %{nodes: [node1, node2]} do
+      # Create data on first node
       for i <- 1..3 do
-        assert {:allow, ^i} = Rsolv.RateLimiter.check_rate("survivor", 60_000, 5)
+        assert {:allow, ^i} = :rpc.call(node1, Rsolv.RateLimiter, :check_rate,
+                                        ["survivor", 60_000, 5])
       end
       
-      # Stop node2
-      :slave.stop(node2)
+      # Stop second node
+      LocalCluster.stop_nodes([node2])
       
-      # Node1 should still have the data and continue counting
-      assert {:allow, 4} = Rsolv.RateLimiter.check_rate("survivor", 60_000, 5)
+      # First node should still have the data and continue counting
+      assert {:allow, 4} = :rpc.call(node1, Rsolv.RateLimiter, :check_rate,
+                                      ["survivor", 60_000, 5])
     end
   end
 end
@@ -668,6 +671,25 @@ end
 
 ## Testing Strategy
 
+### Testing Best Practices (Following BetterSpecs & Elixir Community)
+
+1. **Use LocalCluster library** for distributed testing instead of `:slave` module
+   - Cleaner API, automatic cleanup
+   - Add `{:local_cluster, "~> 2.0", only: :test}` to dependencies
+
+2. **Test Structure** (adapted from BetterSpecs):
+   - Use `describe` blocks to group related tests
+   - Keep test descriptions short and clear
+   - Test edge cases and failure scenarios
+   - Use `async: false` for distributed tests
+
+3. **Avoid Timing Issues**:
+   - Use `assert_receive` for async messages
+   - Consider retry strategies for distributed operations
+   - Test both success and timeout scenarios
+
+4. **Terminology**: Use "node1/node2" or "primary/secondary" instead of deprecated terms
+
 ### Test Coverage Pyramid
 
 ```
@@ -817,12 +839,14 @@ Rate Limiter Metrics:
 ## Implementation Checklist (Simple TDD)
 
 ### Phase 0: Red - Run Existing Tests
+- [ ] Add `{:local_cluster, "~> 2.0", only: :test}` to mix.exs dependencies
 - [ ] Run tests - they pass (our baseline):
   ```bash
   mix test test/rsolv/rate_limiter_test.exs
   mix test test/rsolv_web/controllers/credential_controller_test.exs
   ```
 - [ ] Add one integration test that actually hits the limit
+- [ ] Write distributed tests using LocalCluster (not :slave module)
 - [ ] Verify all tests pass with current ETS implementation
 
 ### Phase 1: Green - Direct Replacement
