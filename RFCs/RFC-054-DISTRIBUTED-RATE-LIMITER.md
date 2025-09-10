@@ -664,6 +664,12 @@ Rate Limiter Metrics:
 - [ ] Look at the working code and identify what's messy
 - [ ] Extract repeated patterns
 - [ ] Improve readability based on what we learned
+- [ ] **Fix PromEx plugin metric name format** and enable in `lib/rsolv/prom_ex.ex`
+- [ ] **Add Mnesia-specific metrics** (table size, sync status, cleanup efficiency)
+- [ ] **Create Grafana dashboard** for rate limiting metrics
+- [ ] **Verify telemetry events** still work with Mnesia implementation
+- [ ] **Extract configuration** to runtime.exs (cleanup interval, etc.)
+- [ ] **Add operational tooling** (inspect/reset customer limits)
 - [ ] Run tests after each refactor - ensure still passing
 - [ ] **Note**: We'll discover what needs refactoring AFTER we make it work!
 
@@ -691,7 +697,9 @@ If anything goes wrong:
 - [ ] No breaking changes to public API
 - [ ] Rate limiting still returns 429 with retry-after header
 - [ ] Telemetry events unchanged
-- [ ] Performance equal or better than ETS baseline
+- [ ] PromEx plugin enabled and metrics flowing to Prometheus
+- [ ] Grafana dashboard created and showing rate limit metrics
+- [ ] LiveDashboard still shows rate limiter telemetry
 - [ ] No race conditions in distributed tests
 - [ ] Zero downtime migration completed
 
