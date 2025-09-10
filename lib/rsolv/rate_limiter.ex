@@ -42,9 +42,9 @@ defmodule Rsolv.RateLimiter do
     end
     
     # Create rate limiter table
-    # In production/staging, use disc_copies for persistence
-    # No need to check env - just always use disc_copies
-    storage_type = :disc_copies
+    # Use ram_copies for all environments - rate limits are ephemeral
+    # and don't need to survive restarts (60-second windows)
+    storage_type = :ram_copies
     
     table_opts = [
       {:attributes, [:key, :count, :window_start]},
