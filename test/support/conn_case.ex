@@ -43,8 +43,7 @@ defmodule RsolvWeb.ConnCase do
       pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
       on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
       
-      # Reset test customer state to ensure clean isolation between tests
-      Rsolv.LegacyAccounts.reset_test_customers()
+      # No longer need to reset test customers since LegacyAccounts is removed
       
       {:ok, conn: Phoenix.ConnTest.build_conn()}
     rescue

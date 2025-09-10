@@ -15,16 +15,8 @@ defmodule RsolvWeb.CredentialControllerTest do
     # Create a real customer with database records
     unique_id = System.unique_integer([:positive])
     
-    # Create user first
-    user = %Rsolv.Accounts.User{}
-    |> Rsolv.Accounts.User.registration_changeset(%{
-      email: "test#{unique_id}@example.com",
-      password: "password123456"
-    })
-    |> Repo.insert!()
-    
-    # Create customer
-    {:ok, customer} = Customers.create_customer(user, %{
+    # Create customer directly
+    {:ok, customer} = Customers.create_customer(%{
       name: "Test Customer #{unique_id}",
       email: "test#{unique_id}@example.com",
       subscription_plan: "standard",
@@ -282,14 +274,8 @@ defmodule RsolvWeb.CredentialControllerTest do
     test "returns 403 for credential owned by another customer", %{conn: conn, api_key: api_key} do
       # Create another customer
       unique_id = System.unique_integer([:positive])
-      other_user = %Rsolv.Accounts.User{}
-      |> Rsolv.Accounts.User.registration_changeset(%{
-        email: "other#{unique_id}@example.com",
-        password: "password123456"
-      })
-      |> Repo.insert!()
       
-      {:ok, other_customer} = Customers.create_customer(other_user, %{
+      {:ok, other_customer} = Customers.create_customer(%{
         name: "Other Customer #{unique_id}",
         email: "other#{unique_id}@example.com"
       })

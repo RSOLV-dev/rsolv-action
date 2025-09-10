@@ -14,16 +14,8 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
     # Create a real customer with database records
     unique_id = System.unique_integer([:positive])
     
-    # Create user first (required for customer)
-    user = %Rsolv.Accounts.User{}
-    |> Rsolv.Accounts.User.registration_changeset(%{
-      email: "test#{unique_id}@example.com",
-      password: "password123456"
-    })
-    |> Rsolv.Repo.insert!()
-    
-    # Create customer
-    {:ok, customer_record} = Rsolv.Customers.create_customer(user, %{
+    # Create customer directly
+    {:ok, customer_record} = Rsolv.Customers.create_customer(%{
       name: "Test Customer #{unique_id}",
       email: "test#{unique_id}@example.com",
       monthly_limit: 100,

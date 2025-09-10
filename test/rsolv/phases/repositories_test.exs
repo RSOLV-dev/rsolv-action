@@ -73,16 +73,8 @@ defmodule Rsolv.Phases.RepositoriesTest do
 
     test "enforces namespace ownership - customer can only access their namespaces", %{customer: customer} do
       # Create another customer with different namespace
-      other_user = %User{}
-      |> User.registration_changeset(%{
-        email: "other@example.com", 
-        password: "password123456"
-      })
-      |> Repo.insert!()
-      
       other_customer = %Customer{}
       |> Customer.changeset(%{
-        user_id: other_user.id,
         name: "Other Corp",
         email: "other@example.com",
         active: true

@@ -8,18 +8,10 @@ defmodule Rsolv.ValidationCache.KeyGeneratorTest do
   defp create_forge_account do
     unique_id = System.unique_integer([:positive])
     
-    # Create a user first (required for customer)
-    user = %Rsolv.Accounts.User{
-      email: "test#{unique_id}@example.com",
-      hashed_password: "dummy_hash"
-    }
-    |> Repo.insert!()
-    
-    # Create a customer  
+    # Create a customer directly
     customer = %Customer{
       name: "Test Customer #{unique_id}", 
-      email: "test#{unique_id}@example.com",
-      user_id: user.id
+      email: "test#{unique_id}@example.com"
     }
     |> Repo.insert!()
     

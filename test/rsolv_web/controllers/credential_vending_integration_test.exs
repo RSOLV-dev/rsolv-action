@@ -15,16 +15,8 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       # Create a real customer with database records
       unique_id = System.unique_integer([:positive])
       
-      # Create user first
-      user = %Rsolv.Accounts.User{}
-      |> Rsolv.Accounts.User.registration_changeset(%{
-        email: "test#{unique_id}@example.com",
-        password: "password123456"
-      })
-      |> Repo.insert!()
-      
-      # Create customer
-      {:ok, customer} = Customers.create_customer(user, %{
+      # Create customer directly
+      {:ok, customer} = Customers.create_customer(%{
         name: "Test Customer #{unique_id}",
         email: "test#{unique_id}@example.com",
         monthly_limit: 100,

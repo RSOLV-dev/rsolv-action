@@ -4,23 +4,13 @@ defmodule Rsolv.Phases.PhaseStorageTest do
   alias Rsolv.Phases.{Repository, ScanExecution, ValidationExecution, MitigationExecution}
   alias Rsolv.Customers.ForgeAccount
   alias Rsolv.Customers.{Customer, ApiKey}
-  alias Rsolv.Accounts.User
   alias Rsolv.Repo
 
   describe "phase storage" do
     setup do
-      # Create a user first (required for customer)
-      user = %User{}
-      |> User.registration_changeset(%{
-        email: "test@example.com",
-        password: "password123456"
-      })
-      |> Repo.insert!()
-      
-      # Create a customer
+      # Create a customer directly
       customer = %Customer{}
       |> Customer.changeset(%{
-        user_id: user.id,
         name: "Test Corp",
         email: "test@example.com",
         active: true
@@ -135,16 +125,8 @@ defmodule Rsolv.Phases.PhaseStorageTest do
 
     test "enforces namespace access control for phase storage", %{customer: customer} do
       # Create another customer with different namespace
-      other_user = %User{}
-      |> User.registration_changeset(%{
-        email: "other@example.com",
-        password: "password123456"
-      })
-      |> Repo.insert!()
-      
       other_customer = %Customer{}
       |> Customer.changeset(%{
-        user_id: other_user.id,
         name: "Other Corp",
         email: "other@example.com",
         active: true

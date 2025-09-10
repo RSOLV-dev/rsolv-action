@@ -3,23 +3,13 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
   alias Rsolv.Phases.{Repository, ScanExecution, ValidationExecution}
   alias Rsolv.Customers.ForgeAccount
   alias Rsolv.Customers.{Customer, ApiKey}
-  alias Rsolv.Accounts.User
   alias Rsolv.Repo
 
   describe "POST /api/v1/phases/store" do
     setup do
-      # Create a user first (required for customer)
-      user = %User{}
-      |> User.registration_changeset(%{
-        email: "test@example.com",
-        password: "password123456"
-      })
-      |> Repo.insert!()
-      
-      # Create a customer
+      # Create a customer directly
       customer = %Customer{}
       |> Customer.changeset(%{
-        user_id: user.id,
         name: "Test Corp",
         email: "test@example.com",
         active: true
