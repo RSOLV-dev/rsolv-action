@@ -274,7 +274,22 @@ The existing test file (`test/rsolv/rate_limiter_test.exs`) will guide our migra
 - **Telemetry**: Events emitted correctly
 - **Configuration**: Actually uses config values (fix the bug!)
 
-These tests will initially fail when we switch to Mnesia - that's the "Red" phase. The implementation details will emerge as we make them pass.
+**Test structure example** (key assertions, not full implementation):
+```elixir
+describe "single node rate limiting" do
+  test "allows requests under the limit" do
+    # Should allow up to the limit
+    assert {:allow, _} = RateLimiter.check_rate(key, window, limit)
+  end
+  
+  test "denies requests over the limit" do
+    # After limit reached, should deny
+    assert {:deny, _} = RateLimiter.check_rate(key, window, limit)
+  end
+end
+```
+
+These tests will initially fail when we switch to Mnesia - that's the "Red" phase.
 
 #### 1.2 Write Distributed Tests
 
@@ -286,12 +301,30 @@ Create new distributed tests using LocalCluster library (not the deprecated `:sl
 - System survives node failures gracefully
 - No race conditions between nodes
 
+**Test structure skeleton**:
+```elixir
+defmodule Rsolv.RateLimiterDistributedTest do
+  use ExUnit.Case, async: false
+  
+  setup do
+    # Start cluster nodes with LocalCluster
+    nodes = LocalCluster.start_nodes("rate-limiter", 2)
+    # Start rate limiter on all nodes
+    # Return nodes for test use
+  end
+  
+  describe "distributed rate limiting" do
+    test "rate limits are shared across nodes", %{nodes: nodes} do
+      # Make requests from different nodes
+      # Verify shared counter
+    end
+  end
+end
+```
+
 **Setup**:
 - Add `{:local_cluster, "~> 2.0", only: :test}` to mix.exs
 - Use `async: false` for distributed tests
-- Start multiple nodes and verify synchronization
-
-The test structure will define what distributed behavior we need. The actual test code will be written during implementation, not pre-planned here.
 
 ### Phase 2: Green - Make Tests Pass
 
@@ -303,7 +336,31 @@ This is where we implement the minimal code to make our tests pass:
 4. **Fix the config bug** - tests will ensure we read from config
 5. **Replace ETS with Mnesia** - tests will guide the implementation
 
-**Key Point**: The implementation emerges from making tests pass, not from upfront design!
+**Architectural approach**:
+```elixir
+# Key Mnesia setup considerations
+def init(_) do
+  # Create Mnesia schema if needed
+  # Create table with ram_copies on all nodes
+  # Table structure: {key, timestamps_list}
+end
+
+def check_rate_limit(customer_id, action) do
+  # Read config (FIX THE BUG!)
+  config = Application.get_env(:rsolv, :rate_limits)
+  {limit, :minute} = config[action] || {100, :minute}
+  
+  # Use Mnesia transaction
+  # Apply sliding window logic
+  # Return :ok or {:error, :rate_limited}
+end
+```
+
+**Key implementation points**:
+- Mnesia transactions for consistency
+- RAM-only tables (no disk persistence)
+- Sliding window timestamp management
+- Config-driven limits (fixing hardcoded bug)
 
 ### Phase 3: Refactor - Improve Design
 
@@ -328,6 +385,27 @@ After the Mnesia migration, we'll need to:
    - Returns 429 with retry-after header when limits exceeded
    - Uses appropriate keys (IP + path or customer ID)
 
+**Plug structure**:
+```elixir
+defmodule RsolvWeb.Plugs.RateLimit do
+  import Plug.Conn
+  
+  def init(opts), do: opts
+  
+  def call(conn, opts) do
+    case RateLimiter.check_rate(key, window, limit) do
+      {:allow, _} -> conn
+      {:deny, _} -> 
+        conn
+        |> put_status(429)
+        |> put_resp_header("retry-after", "60")
+        |> json(%{error: "Too many requests"})
+        |> halt()
+    end
+  end
+end
+```
+
 2. **Apply to sensitive endpoints**:
    - Admin login attempts
    - API credential exchanges
@@ -337,8 +415,6 @@ After the Mnesia migration, we'll need to:
    - Same HTTP status codes (429)
    - Same retry-after header format
    - Same telemetry events
-
-**Note**: The actual implementation will emerge during the Green phase when we make tests pass.
 
 ## Testing Strategy
 
