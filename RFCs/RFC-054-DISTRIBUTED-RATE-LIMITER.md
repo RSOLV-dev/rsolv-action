@@ -366,13 +366,43 @@ end
 
 After tests are green, we look at what we built and improve it:
 
-- **Extract duplication** - DRY up repeated code
-- **Improve naming** - Make intent clearer
-- **Add telemetry** - If needed for monitoring
-- **Optimize performance** - If tests show it's needed
-- **Improve error handling** - Based on edge cases we discovered
+**Code Quality Goals**:
+- **Improve readability and idiomaticity** - Make code more Elixir-like
+- **Extract configuration** - Move hardcoded values to config
+- **DRY up repeated code** - Extract common patterns
+- **Improve naming** - Make intent clearer based on what we learned
 
-**Remember**: Refactoring happens AFTER we have working code with passing tests!
+**Integration Goals**:
+- **Add telemetry and observability** - Metrics for monitoring
+  - Rate limit hit/miss ratios
+  - Performance metrics (response times)
+  - Cleanup efficiency metrics
+- **Integrate with admin authentication** - If not already handled
+  - Apply rate limiting to admin login attempts
+  - Protect sensitive endpoints
+- **Extract common modules** - Share rate limiting logic
+  - Create reusable plug for HTTP endpoints
+  - Abstract sliding window logic if needed
+
+**Operational Goals**:
+- **Optimize performance** - Based on benchmark results
+- **Improve error handling** - Based on edge cases discovered
+- **Add operational tooling** - Admin commands for debugging
+  - View current rate limits for a customer
+  - Manually reset rate limits if needed
+  - Export metrics for dashboards
+
+**Configuration Extraction**:
+```elixir
+# Move to config/runtime.exs
+config :rsolv, :rate_limiter,
+  cleanup_interval: :timer.minutes(10),
+  default_window: :timer.seconds(60),
+  table_type: :ram_copies,
+  telemetry_enabled: true
+```
+
+**Remember**: These are goals to consider during refactoring. The actual improvements will depend on what we discover while making tests pass!
 
 ## Integration Points
 
