@@ -103,7 +103,8 @@ config :rsolv, :ai_providers,
 # Configure rate limiting
 config :rsolv, :rate_limits,
   credential_exchange: {10, :minute},  # 10 requests per minute
-  usage_report: {100, :minute}         # 100 reports per minute
+  usage_report: {100, :minute},        # 100 reports per minute
+  auth_attempt: {5, :minute}            # 5 login attempts per minute
 
 # Configure credential TTL
 config :rsolv, :credentials,

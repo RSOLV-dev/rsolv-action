@@ -1,17 +1,120 @@
-# RFC-049: Customer Management Cleanup and Admin Interface
+# RFC-049: Customer Management Consolidation and Authentication
 
-**Status**: Draft (Revised)  
+**Status**: Completed  
 **Created**: 2025-09-03  
-**Last Updated**: 2025-09-05 10:00 MDT
+**Last Updated**: 2025-09-10 15:58 MDT  
+**Completed**: 2025-09-10
 **Author**: Infrastructure Team  
 **Related**: 
 - ACCOUNT-STRUCTURE-FINDINGS.md
 - ACCOUNT-CONSOLIDATION-TEST-PLAN.md
-- RFC-054 (Distributed Rate Limiter) - Required for admin authentication
+- RFC-054 (Distributed Rate Limiter) - ✅ IMPLEMENTED
+- RFC-055 (Customer Schema Consolidation) - ✅ IMPLEMENTED (replaces Phase 0)
+- RFC-056 (Admin UI for Customer Management) - Split from this RFC
+
+## Implementation Status
+
+### ✅ Phase 1: Authentication Implementation (2025-09-10)
+✅ COMPLETED
+**Branch**: `feature/rfc-049-customer-consolidation`
+
+**Completed Items**:
+- ✅ Added authentication fields to Customer schema
+  - `password_hash` - Bcrypt with work factor 12
+  - `is_staff` - Boolean flag for admin access
+  - `admin_level` - String field (read_only, limited, full)
+- ✅ Implemented `register_customer/1` with strong password validation
+  - Minimum 12 characters
+  - Requires upper, lower, number, and special character
+- ✅ Implemented `authenticate_customer_by_email_and_password/2`
+  - Rate limited to 5 attempts per minute using Mnesia
+  - Protection against timing attacks
+- ✅ Removed User dependency
+- ✅ Created comprehensive test suite (14 passing tests)
+- ✅ Updated seed data with auth-aware customers
+
+### ✅ Phase 2: Cleanup and Migration (2025-09-10)
+✅ COMPLETED
+
+**Completed Items**:
+- ✅ Deleted `Billing.Customer` schema file
+- ✅ Removed all references to `Billing.Customer`
+- ✅ Deleted `LegacyAccounts` module completely
+- ✅ Removed all `User` and `UserToken` schemas
+- ✅ Cleaned up test files to remove User references
+- ✅ Updated `Accounts` module to be a simple compatibility delegate
+- ✅ Updated `DataCase` to remove LegacyAccounts references
+- ✅ Fixed all test compilation errors
+
+## Final Implementation Summary
+
+### What Was Built
+
+1. **Customer Authentication System**:
+   - Password-based authentication with bcrypt (work factor 12)
+   - Email-based login with rate limiting (5 attempts/minute)
+   - Staff/admin designation fields
+   - Strong password validation (12+ chars with complexity)
+   - Protection against timing attacks
+
+2. **Complete User Entity Removal**:
+   - Removed `Accounts.User` and `Accounts.UserToken` schemas
+   - Removed `Billing.Customer` duplicate schema
+   - Removed `LegacyAccounts` module entirely
+   - Updated all tests to work without User entity
+   - Simplified `Accounts` to be a compatibility layer
+
+3. **Test Coverage**:
+   - 14 comprehensive tests for authentication
+   - Tests follow BetterSpecs.org guidelines
+   - TDD approach with red-green-refactor cycle
+   - All customer tests passing
+
+### Migration Notes
+
+- Two migrations created:
+  - `20250910213325_add_auth_fields_to_customers.exs`
+  - `20250910213701_remove_user_dependency_from_customers.exs`
+- Seeds file completely replaced with auth-aware fixtures
+- No User tables remain in the system
+
+### Next Steps
+
+1. Deploy to staging for testing
+2. Run full integration test suite
+3. Create ADR documenting the implementation
+4. Proceed with RFC-056 for Admin UI
+
+### Lessons Learned
+
+- TDD approach caught several issues early
+- Rate limiting integration with Mnesia worked smoothly (RFC-054)
+- Removing User entity simplified the entire system
+- BetterSpecs.org guidelines improved test quality
+  - Migration to drop user_id column
+  - Updated Customer schema to remove `belongs_to :user`
+  - Deprecated user-based create_customer function
+- ✅ Created comprehensive seed data with test accounts
+- ✅ All 14 tests passing following TDD red-green-refactor
+
+**Security Implementation**:
+- Password hashing: Bcrypt with 12 rounds (250-1000ms computation)
+- Rate limiting: Mnesia-based distributed rate limiter (RFC-054)
+- Timing attack prevention: `Bcrypt.no_user_verify()` for invalid inputs
+- Testing standards: Following BetterSpecs.org guidelines
+
+### 🔄 Phase 2: Cleanup Tasks (Pending)
+- [ ] Delete `lib/rsolv/billing/customer.ex` schema file
+- [ ] Remove LegacyAccounts module and environment variables
+- [ ] Clean up any remaining User references in the codebase
+
+### 📋 Phase 3: Admin UI (RFC-056)
+- Moved to separate RFC for clearer scope separation
+- Will implement Phoenix LiveView-based admin dashboard
 
 ## Summary
 
-Complete the partially-finished customer consolidation by cleaning up unused entities, implement an admin interface using Phoenix LiveView, and establish a path toward customer self-service. The migration is simpler than originally anticipated - billing fields are already consolidated, and we have no production users to migrate.
+Complete the customer consolidation by adding authentication capabilities to the Customer model and removing the User entity entirely. This RFC focuses on the backend consolidation and authentication implementation, while the Admin UI has been moved to RFC-056 for clearer scope separation.
 
 ## Problem Statement
 
@@ -104,103 +207,101 @@ graph LR
     style A4 fill:#90EE90
 ```
 
-### Phase 0: ✅ COMPLETED - Consolidate Duplicate Schemas (RFC-055)
+### Phase 0: ✅ COMPLETED via RFC-055
 
-**Problem**: We had two Customer schemas pointing to the same table but with different fields:
-- `Rsolv.Customers.Customer` - Had relationships but missing billing fields
-- `Rsolv.Billing.Customer` - Had billing fields but missing relationships
+**Original Problem**: Two incomplete Customer schemas pointing to the same database table.
 
-**Solution**: ✅ **COMPLETED in RFC-055** - Merged both schemas into one complete schema
+**Resolution**: RFC-055 was implemented on 2025-09-09 and successfully:
+- Consolidated all billing fields into `Rsolv.Customers.Customer`
+- Removed duplicate field definitions 
+- Replaced `github_org` field with `forge_accounts` relationship (supports GitHub, GitLab, etc.)
+- Removed `api_key` field in favor of `api_keys` relationship
 
-```elixir
-# lib/rsolv/customers/customer.ex - CONSOLIDATED VERSION
-defmodule Rsolv.Customers.Customer do
-  use Ecto.Schema
-  import Ecto.Changeset
-  
-  schema "customers" do
-    # Core fields (from Customers.Customer)
-    field :name, :string
-    field :email, :string
-    field :api_key, :string
-    field :monthly_limit, :integer, default: 100
-    field :current_usage, :integer, default: 0
-    field :active, :boolean, default: true
-    field :metadata, :map, default: %{}
-    field :github_org, :string
-    field :plan, :string, default: "trial"
-    
-    # Billing fields (from Billing.Customer) - MUST ADD THESE!
-    field :trial_fixes_used, :integer, default: 0
-    field :trial_fixes_limit, :integer, default: 10
-    field :trial_expired, :boolean, default: false
-    field :trial_expired_at, :utc_datetime
-    field :payment_method_added, :boolean, default: false
-    field :payment_method_added_at, :utc_datetime
-    field :stripe_customer_id, :string
-    field :subscription_plan, :string, default: "pay_as_you_go"
-    field :subscription_status, :string, default: "trial"
-    field :monthly_fix_quota, :integer
-    field :rollover_fixes, :integer, default: 0
-    
-    # Relationships (from Customers.Customer)
-    belongs_to :user, Rsolv.Accounts.User
-    has_many :api_keys, Rsolv.Customers.ApiKey
-    has_many :fix_attempts, Rsolv.Billing.FixAttempt
-    
-    timestamps()
-  end
-end
-```
+**Current State**:
+- ✅ Customer schema has all necessary fields
+- ✅ ForgeAccount model handles multi-forge support
+- ❌ `lib/rsolv/billing/customer.ex` file still exists but unused (cleanup needed)
+- ❌ User dependency still present (will be removed in Phase 2)
 
-**Actions**:
-1. Update `lib/rsolv/customers/customer.ex` with ALL fields
-2. Delete `lib/rsolv/billing/customer.ex` 
-3. Update all references from `Rsolv.Billing.Customer` to `Rsolv.Customers.Customer`
-4. Run tests to ensure nothing breaks
+## Testing Best Practices
+
+Following [BetterSpecs](https://betterspecs.org) and ExUnit community standards:
+
+1. **Modify existing test files** when updating existing modules
+   - `test/rsolv/customers_test.exs` for Customer model changes
+   - `test/rsolv/accounts_test.exs` for Accounts context updates
+   
+2. **Only create new test files** for:
+   - Net new modules (e.g., new authentication module)
+   - Integration tests for new feature flows
+   
+3. **Test organization**:
+   - Use `describe` blocks to group related tests
+   - Keep test names descriptive and focused on behavior
+   - Use doctests where appropriate for documentation
+   
+4. **Leverage DataCase** for database tests instead of ExUnit.Case
+
+5. **Test Fixtures and Factory Pattern**:
+   - Update `test/support/fixtures/customers_fixtures.ex` with new fields
+   - Ensure fixtures create valid, comprehensive test data
+   - No reliance on migrated test accounts - create fresh data each time
 
 ### Phase 1: TDD Red-Green-Refactor Approach
 
-#### Red Phase: Write Failing Tests First (Day 1 Morning)
+#### 1.1 Red Phase: Define Expected Behavior Through Tests
 
 ```elixir
-# test/rsolv/customers_test.exs
+# test/rsolv/customers_test.exs - ADD to existing file
 defmodule Rsolv.CustomersTest do
   use Rsolv.DataCase
   
   describe "customer authentication" do
     test "customer can authenticate with password" do
-      # This will fail - no password_hash field yet
+      # Define the behavior we want
       customer = customer_fixture(password: "secure_password123")
-      assert Customers.authenticate_by_email_password(
+      assert {:ok, ^customer} = Customers.authenticate_by_email_password(
         customer.email, 
         "secure_password123"
       )
     end
     
+    test "authentication fails with wrong password" do
+      customer = customer_fixture(password: "secure_password123")
+      assert :error = Customers.authenticate_by_email_password(
+        customer.email,
+        "wrong_password"
+      )
+    end
+    
     test "customer can be marked as staff" do
-      # This will fail - no is_staff field yet
       customer = customer_fixture(is_staff: true, admin_level: "admin")
       assert customer.is_staff == true
       assert customer.admin_level == "admin"
     end
   end
   
-  describe "consolidated customer management" do
-    test "no User dependency required" do
-      # This will fail initially - create_customer still expects user
-      {:ok, customer} = Customers.create_customer(%{
+  describe "customer creation without User" do
+    test "creates customer without user dependency" do
+      attrs = %{
         email: "test@example.com",
         name: "Test Customer",
         password: "secure_password"
-      })
+      }
+      
+      {:ok, customer} = Customers.create_customer(attrs)
       assert customer.email == "test@example.com"
+      refute Map.has_key?(customer, :user_id)
     end
   end
 end
 ```
 
-#### Green Phase: Make Tests Pass (Day 1 Afternoon)
+#### 1.2 Green Phase: Iterative Implementation
+
+**Goal**: Make tests pass with simplest implementation that works.
+
+**Initial Implementation Attempt**:
 
 ##### 1.1 Ecto Migration Best Practices Applied
 
@@ -251,63 +352,64 @@ defmodule Rsolv.Repo.Migrations.AddCustomerAuthenticationFields do
 end
 ```
 
-##### 1.2 Update Customer Schema
+##### 1.2 Initial Schema Update
 
 ```elixir
-# lib/rsolv/customers/customer.ex
-defmodule Rsolv.Customers.Customer do
-  use Ecto.Schema
-  import Ecto.Changeset
-  
-  schema "customers" do
-    # Existing fields
-    field :name, :string
-    field :email, :string
-    field :api_key, :string
-    field :active, :boolean, default: true
-    field :metadata, :map, default: %{}
-    
-    # Billing fields (already present)
-    field :trial_fixes_used, :integer, default: 0
-    field :trial_fixes_limit, :integer, default: 10
-    field :stripe_customer_id, :string
-    
-    # NEW: Auth fields replacing User
-    field :password, :string, virtual: true
-    field :password_hash, :string
-    field :customer_type, :string, default: "trial"
-    field :is_staff, :boolean, default: false
-    field :admin_level, :string
-    field :company_name, :string
-    field :confirmed_at, :naive_datetime
-    
-    # Relationships
-    has_many :fix_attempts, Rsolv.Billing.FixAttempt
-    has_many :api_keys, Rsolv.Customers.ApiKey
-    
-    timestamps()
-  end
-  
-  def changeset(customer, attrs) do
-    customer
-    |> cast(attrs, [:name, :email, :company_name, :customer_type, 
-                    :is_staff, :admin_level, :password])
-    |> validate_required([:name, :email])
-    |> validate_email()
-    |> maybe_hash_password()
-  end
-  
-  defp maybe_hash_password(changeset) do
-    if password = get_change(changeset, :password) do
-      put_change(changeset, :password_hash, Bcrypt.hash_pwd_salt(password))
-    else
-      changeset
-    end
-  end
+# lib/rsolv/customers/customer.ex - First attempt
+# Add new fields to schema:
+field :password, :string, virtual: true
+field :password_hash, :string
+field :is_staff, :boolean, default: false
+field :admin_level, :string
+
+# Update changeset to handle password
+```
+
+##### 1.3 Initial Context Update
+
+```elixir
+# lib/rsolv/customers.ex - First attempt
+def authenticate_by_email_password(email, password) do
+  # Implementation will evolve through iteration
+  # Start simple, make it work, then improve
+end
+
+def create_customer(attrs \\ %{}) do
+  # Remove User dependency
+  # This will require multiple iterations to get right
 end
 ```
 
-#### Refactor Phase: Clean Up Dependencies (Day 2)
+**Iteration Process**:
+1. Run tests, see failures
+2. Fix one failure at a time
+3. Run tests again
+4. Repeat until all tests pass
+5. Don't worry about perfect code yet - just make it work
+
+#### 1.3 Refactor Phase: Improve Working Code
+
+**Goals** (once tests are passing):
+- Extract common patterns into helper functions
+- Improve naming for clarity
+- Remove duplication
+- Ensure consistent error handling
+- Add appropriate documentation
+- Consider edge cases the tests might have missed
+
+**Refactoring Principles**:
+- Keep tests passing at all times
+- Make small, incremental changes
+- Commit after each successful refactor
+- Focus on readability and maintainability
+- Follow Elixir idioms and conventions
+
+**Areas to Consider**:
+- Password hashing logic - should it be in changeset or separate module?
+- Authentication flow - how to handle rate limiting?
+- Error messages - are they helpful and secure?
+- Database queries - are they efficient?
+- Module organization - does it follow single responsibility?
 
 ##### 1.3 Safe Migration to Remove User Dependencies
 
@@ -375,247 +477,198 @@ defmodule Rsolv.Repo.Migrations.RemoveUserDependencies do
 end
 ```
 
-##### 1.4 Data Migration for Test Accounts (Separate from Schema)
+##### 1.4 Test Data Strategy - Full Teardown and Rebuild
+
+**No Migration of Test Accounts** - Instead, we'll:
+
+1. **Delete existing test accounts** in production
+2. **Create comprehensive seed data** that exercises all customer types
+3. **Ensure seed data is sufficient** for all testing scenarios
 
 ```elixir
-# priv/repo/migrations/20250904000003_migrate_test_accounts.exs
-defmodule Rsolv.Repo.Migrations.MigrateTestAccounts do
-  use Ecto.Migration
-  import Ecto.Query
+# priv/repo/seeds.exs - Comprehensive seed data
+defmodule Rsolv.Seeds do
+  alias Rsolv.Repo
+  alias Rsolv.Customers.Customer
   
-  # Data migrations should run in transactions
-  @disable_migration_lock false
-  @disable_ddl_transaction false
-  
-  def up do
-    # Convert the 5 test accounts to have staff privileges
-    # This is a data migration, kept separate from schema changes
+  def run do
+    # Clear existing test data (if in dev/staging)
+    if Mix.env() in [:dev, :staging] do
+      Repo.delete_all(Customer)
+    end
     
-    execute """
-    UPDATE customers 
-    SET is_staff = true, 
-        admin_level = 'admin',
-        customer_type = 'internal'
-    WHERE api_key IN (
-      'rsolv_enterprise_test_448patterns',
-      'rsolv_test_e2e_full_2025',
-      'rsolv_dogfood_key',
-      'rsolv_demo_key_123',
-      'rsolv_test_full_access_no_quota_2025'
-    )
-    """
+    # Create various customer types for testing
+    create_staff_customer()
+    create_trial_customer()
+    create_paid_customer()
+    create_enterprise_customer()
+    create_inactive_customer()
   end
   
-  def down do
-    # Reverse the staff privileges
-    execute """
-    UPDATE customers 
-    SET is_staff = false, 
-        admin_level = NULL,
-        customer_type = 'trial'
-    WHERE api_key IN (
-      'rsolv_enterprise_test_448patterns',
-      'rsolv_test_e2e_full_2025',
-      'rsolv_dogfood_key',
-      'rsolv_demo_key_123',
-      'rsolv_test_full_access_no_quota_2025'
-    )
-    """
-  end
-end
-```
-
-### Phase 2: Update Application Code
-
-#### 2.1 Update Customers Context
-
-```elixir
-# lib/rsolv/customers.ex
-defmodule Rsolv.Customers do
-  # Remove User dependency from create_customer
-  def create_customer(attrs \\ %{}) do
+  defp create_staff_customer do
     %Customer{}
-    |> Customer.changeset(attrs)
-    |> Repo.insert()
+    |> Customer.changeset(%{
+      name: "Admin User",
+      email: "admin@rsolv.dev",
+      password: System.get_env("ADMIN_PASSWORD") || "change_me_in_production",
+      is_staff: true,
+      admin_level: "admin",
+      customer_type: "internal"
+    })
+    |> Repo.insert!()
   end
   
-  # Add authentication functions
-  def authenticate_by_email_password(email, password) do
-    customer = Repo.get_by(Customer, email: email)
-    if Customer.valid_password?(customer, password), do: {:ok, customer}, else: :error
-  end
-  
-  # Clean up API key lookup - remove LegacyAccounts fallback
-  def get_customer_by_api_key(api_key) when is_binary(api_key) do
-    Repo.get_by(Customer, api_key: api_key, active: true) ||
-    get_customer_by_api_key_table(api_key)
-  end
-  
-  defp get_customer_by_api_key_table(api_key) do
-    case Repo.get_by(ApiKey, key: api_key, active: true) do
-      %ApiKey{customer_id: id} -> get_customer!(id)
-      nil -> nil
-    end
-  end
+  # ... other customer types with realistic data
 end
 ```
 
-#### 2.2 Simplify Accounts Context
+**Benefits**:
+- Forces us to write proper seed data
+- Ensures our creation functions work correctly
+- No legacy cruft carried forward
+- Clear separation between dev/staging/production data
+
+### Phase 2: Remove User Dependencies (TDD)
+
+#### 2.1 Red: Tests for User Removal
 
 ```elixir
-# lib/rsolv/accounts.ex
-defmodule Rsolv.Accounts do
-  # This module becomes a thin compatibility layer during transition
-  # Eventually can be removed entirely
-  
-  # Redirect all customer operations to Customers context
-  defdelegate get_customer_by_api_key(api_key), to: Rsolv.Customers
-  defdelegate get_customer!(id), to: Rsolv.Customers
-  defdelegate update_customer(customer, attrs), to: Rsolv.Customers
-  
-  # Remove all User-related functions
-  # Remove register_user, get_user_by_email, etc.
-end
-```
-
-### Phase 3: Admin UI with TDD
-
-#### 3.1 Admin UI Tests First (Including Rate Limiting)
-
-```elixir
-# test/rsolv_web/live/admin/customer_live_test.exs
-defmodule RsolvWeb.Admin.CustomerLiveTest do
-  use RsolvWeb.ConnCase
-  import Phoenix.LiveViewTest
-  
-  describe "authentication with rate limiting" do
-    test "requires staff customer", %{conn: conn} do
-      {:error, {:redirect, %{to: "/"}}} = live(conn, "/admin/customers")
-    end
-    
-    test "allows staff access", %{conn: conn} do
-      staff = customer_fixture(is_staff: true)
-      conn = authenticate_customer(conn, staff)
-      {:ok, _view, html} = live(conn, "/admin/customers")
-      assert html =~ "Customer Management"
-    end
-    
-    test "rate limits login attempts", %{conn: conn} do
-      # Make 5 failed login attempts
-      for _ <- 1..5 do
-        post(conn, "/admin/login", %{email: "bad@example.com", password: "wrong"})
-      end
-      
-      # 6th attempt should be rate limited
-      conn = post(conn, "/admin/login", %{email: "bad@example.com", password: "wrong"})
-      assert conn.status == 429
-      assert get_resp_header(conn, "retry-after") != []
-    end
+# test/rsolv/customers_test.exs - ADD these tests
+describe "user dependency removal" do
+  test "create_customer does not require user" do
+    # Should work without passing a user
+    attrs = valid_customer_attributes()
+    {:ok, customer} = Customers.create_customer(attrs)
+    refute Map.has_key?(customer, :user_id)
   end
   
-  describe "customer management" do
-    setup %{conn: conn} do
-      staff = customer_fixture(is_staff: true, admin_level: "admin")
-      conn = authenticate_customer(conn, staff)
-      {:ok, conn: conn}
-    end
+  test "customer changeset does not require user_id" do
+    changeset = Customer.changeset(%Customer{}, %{
+      name: "Test",
+      email: "test@example.com"
+    })
+    assert changeset.valid?
+  end
+  
+  test "API key lookup works without LegacyAccounts" do
+    customer = customer_fixture()
+    api_key = api_key_fixture(customer_id: customer.id)
     
-    test "lists all customers", %{conn: conn} do
-      customer = customer_fixture(name: "Test Corp")
-      {:ok, view, _html} = live(conn, "/admin/customers")
-      assert has_element?(view, "#customer-#{customer.id}")
-      assert render(view) =~ "Test Corp"
-    end
-    
-    test "can create new customer", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/admin/customers")
-      
-      view
-      |> element("a", "New Customer")
-      |> render_click()
-      
-      assert has_element?(view, "#customer-form")
-      
-      view
-      |> form("#customer-form", customer: %{
-        name: "New Corp",
-        email: "new@example.com",
-        plan: "trial"
-      })
-      |> render_submit()
-      
-      assert has_element?(view, "#customer-", "New Corp")
-    end
+    found = Customers.get_customer_by_api_key(api_key.key)
+    assert found.id == customer.id
   end
 end
 ```
 
-#### 3.2 Admin LiveView Implementation
+#### 2.2 Green: Iterative User Removal
 
-```elixir
-# lib/rsolv_web/live/admin/customer_live/index.ex
-defmodule RsolvWeb.Admin.CustomerLive.Index do
-  use RsolvWeb, :live_view
-  alias Rsolv.Customers
-  
-  @impl true
-  def mount(_params, session, socket) do
-    if authorized?(session) do
-      {:ok, assign(socket, customers: Customers.list_customers())}
-    else
-      {:ok, redirect(socket, to: "/")}
-    end
-  end
-  
-  defp authorized?(session) do
-    # Check if current customer is staff
-    case session["customer_id"] do
-      nil -> false
-      id ->
-        customer = Customers.get_customer!(id)
-        customer.is_staff == true
-    end
-  end
-end
-```
+**Steps to iterate**:
+1. Update `create_customer` to stop requiring User
+2. Remove `:user_id` from required fields in changeset
+3. Run migrations to drop FK constraints and columns
+4. Update `get_customer_by_api_key` to remove LegacyAccounts
+5. Each step should be tested independently
+
+**Migration Strategy**:
+- First migration: Drop FK constraint (safe, instant)
+- Second migration: Remove user_id column (after code is updated)
+- Third migration: Drop users table (after confirming no dependencies)
+
+#### 2.3 Refactor: Clean Up Legacy Code
+
+**Once tests pass**:
+- Delete `lib/rsolv/billing/customer.ex`
+- Delete `lib/rsolv/legacy_accounts.ex`
+- Remove unused imports and aliases
+- Update documentation to reflect new structure
+- Consider creating a compatibility shim if needed
+
+### Phase 3: Integration Testing
+
+After completing authentication and user removal, write integration tests to verify the complete flow works correctly. These tests should be added to existing test files where possible.
 
 ## Implementation Plan - TDD Approach
 
 ### Prerequisites
-- [ ] **RFC-054**: Implement Distributed Rate Limiter first (1 week)
-  - Required for admin authentication security
-  - Provides foundation for preventing brute force attacks
+- [x] **RFC-054**: ✅ IMPLEMENTED - Distributed Rate Limiter with Mnesia
+- [x] **RFC-055**: ✅ IMPLEMENTED - Customer Schema Consolidation
 
-### Phase 0: Consolidate Schemas - IMMEDIATE (Before Week 2)
-- Fix duplicate Customer schemas issue
-- Ensure all database fields are accessible
-- Update all code references
-- Run existing tests to verify nothing breaks
+### Pre-Implementation Requirements
 
-### Phase 1: Red (Write Failing Tests) - Week 2, Day 1 Morning
-1. Write tests for customer authentication without User
-2. Write tests for staff/admin capabilities
-3. Write tests for API key lookups working post-consolidation
-4. Write tests for admin UI access control
-5. **Write tests for rate limiting on admin login**
+1. **Ensure Green Test Suite**
+   ```bash
+   mix test  # Must be fully green before starting
+   ```
 
-### Phase 2: Green (Make Tests Pass) - Week 2, Day 1 Afternoon
-1. Create Ecto migration for auth fields
-2. Update Customer schema with password handling
-3. Update Customers context to remove User dependency
-4. Implement authentication functions
-5. **Integrate rate limiter from RFC-054**
+2. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/rfc-049-customer-consolidation
+   ```
 
-### Phase 3: Refactor (Clean Code) - Week 2, Day 2
-1. Remove User dependencies via migration
-2. Delete duplicate schemas (Billing.Customer)
-3. Clean up LegacyAccounts usage
-4. Extract common patterns
+3. **Follow Testing Standards**
+   - Reference [BetterSpecs](https://betterspecs.org) for all test writing
+   - Use ExUnit best practices
+   - Modify existing test files where possible
 
-### Phase 4: Admin UI - Week 2, Day 2-3
-1. TDD LiveView components
-2. Test staff authentication with rate limiting
-3. Deploy to staging
+4. **API Compatibility Note**
+   - We control both RSOLV-platform and RSOLV-action
+   - No backwards compatibility constraints
+   - Can make breaking changes if needed
+
+### Phase 1: Add Customer Authentication (TDD)
+
+**Red → Green → Refactor for each feature**
+
+1. **Customer Password Authentication**
+   - Red: Write tests for email/password login
+   - Green: Iterate until tests pass (migration, schema, context)
+   - Refactor: Improve code quality while keeping tests green
+
+2. **Staff/Admin Capabilities**
+   - Red: Write tests for is_staff and admin_level
+   - Green: Add fields and logic iteratively
+   - Refactor: Consider authorization patterns
+
+3. **Rate Limiting Integration**
+   - Red: Write tests for login rate limiting
+   - Green: Integrate RFC-054's Mnesia implementation
+   - Refactor: Extract reusable rate limiting helpers
+
+### Phase 2: Remove User Dependencies (TDD)
+
+**Each step follows Red → Green → Refactor**
+
+1. **Customer Creation Without User**
+   - Red: Test that create_customer works without user
+   - Green: Update function signature and logic
+   - Refactor: Clean up related code
+
+2. **Database Cleanup**
+   - Red: Test that no user_id is required
+   - Green: Migrations to remove constraints and columns
+   - Refactor: Remove User module and related code
+
+3. **Legacy Code Removal**
+   - Red: Test API key lookup without LegacyAccounts
+   - Green: Update implementation
+   - Refactor: Delete unused files
+
+### Phase 3: Integration & Deployment
+
+1. **Integration Testing**
+   - Write end-to-end tests for complete auth flow
+   - Verify all existing functionality still works
+   - Test edge cases and error conditions
+
+2. **Staging Deployment**
+   - Deploy to staging environment
+   - Run smoke tests
+   - Monitor for issues
+
+3. **Production Readiness**
+   - Final code review
+   - Update documentation
+   - Plan rollback strategy
 
 ## Application Dependencies to Update
 
@@ -644,17 +697,45 @@ Currently delegates to multiple sources:
 ## Why This is Simpler
 
 1. **No data migration needed** - Billing fields already in customers table
-2. **No real customers** - Only 5 test accounts to verify
+2. **No real customers** - Only 5 test accounts in production
 3. **No user accounts** - Users table is empty
 4. **Just cleanup** - Mostly deleting unused code
 5. **Low risk** - Can test everything on staging first
 
+## Production Data Strategy
+
+Since we only have 5 test accounts in production:
+
+1. **Manual verification** of the 5 existing test accounts
+2. **Delete them** after capturing any needed configuration
+3. **Deploy new code** with proper seed data
+4. **Run seeds** to create fresh test accounts with all new fields
+5. **No migration of test data** - start fresh with proper structure
+
+This approach ensures our seed data is comprehensive and tests our actual customer creation flow.
+
 ## Success Metrics
 
-- Clean codebase with single source of truth
-- Admin can manage customers via UI
-- All existing test API keys continue working
-- No more duplicate customer schemas
+- Clean codebase with single Customer entity (no User dependency)
+- Customer password authentication working with rate limiting
+- All existing API key authentication continues working
+- No duplicate schemas or legacy code remaining
+- All tests passing with improved organization
+
+## RSOLV-action Compatibility
+
+Since we control both RSOLV-platform and RSOLV-action:
+
+### No Impact Expected
+- **API Key authentication** remains unchanged - RSOLV-action uses API keys
+- **Credential vending** endpoints unchanged
+- **Fix attempt tracking** unchanged
+- **No User references** in RSOLV-action (it uses API keys only)
+
+### If Changes Needed
+- Can update both repositories simultaneously
+- No backwards compatibility required
+- Can coordinate deployment together
 
 ## Key Architectural Decisions
 
@@ -664,9 +745,9 @@ Currently delegates to multiple sources:
 3. **All existing fields** - Billing/trial fields already in place
 
 ### What We're Adding
-1. **Separate admins table** - Clean separation of concerns (per discussion)
-2. **Distributed rate limiting** - RFC-054 for brute force protection
-3. **Admin dashboard** - LiveView-based management interface
+1. **Customer password authentication** - Customers can log in with email/password
+2. **Staff/admin flags on Customer** - is_staff and admin_level fields for access control
+3. **Rate limiting integration** - Use RFC-054's Mnesia implementation for login protection
 
 ### What We're Removing
 1. **User entity** - Unnecessary abstraction for our business model

@@ -64,30 +64,35 @@ defmodule Rsolv.Customers do
       %ApiKey{customer_id: customer_id} ->
         get_customer!(customer_id)
       nil ->
-        # Fall back to LegacyAccounts for test and demo keys
-        # (api_key field removed from customers table in RFC-055)
-        Rsolv.LegacyAccounts.get_customer_by_api_key(api_key)
+        # No customer found with this API key
+        nil
     end
   end
 
   @doc """
-  Creates a customer for a user.
+  Creates a customer.
+  
+  DEPRECATED: This function requiring a user is deprecated.
+  Use register_customer/1 for new customers with passwords.
 
   ## Examples
 
-      iex> create_customer(user, %{field: value})
+      iex> create_customer(%{name: "Test", email: "test@example.com"})
       {:ok, %Customer{}}
 
-      iex> create_customer(user, %{field: bad_value})
+      iex> create_customer(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_customer(user, attrs \\ %{}) do
-    attrs = Map.put(attrs, :user_id, user.id)
-    
+  def create_customer(attrs) when is_map(attrs) do
     %Customer{}
     |> Customer.changeset(attrs)
     |> Repo.insert()
+  end
+  
+  # Legacy support for user-based creation (deprecated)
+  def create_customer(user, attrs) when is_struct(user) do
+    create_customer(attrs)
   end
 
   @doc """
@@ -108,9 +113,9 @@ defmodule Rsolv.Customers do
     |> Repo.update()
   end
   
-  # Handle legacy customers (plain maps) during transition
-  def update_customer(customer, attrs) when is_map(customer) and not is_struct(customer) do
-    Rsolv.LegacyAccounts.update_customer(customer, attrs)
+  # Legacy support removed - all customers must be structs
+  def update_customer(customer, _attrs) when is_map(customer) and not is_struct(customer) do
+    {:error, "Legacy customer format no longer supported"}
   end
 
   @doc """
@@ -203,5 +208,78 @@ defmodule Rsolv.Customers do
   def reset_all_usage do
     from(c in Customer, update: [set: [current_usage: 0]])
     |> Repo.update_all([])
+  end
+  
+  ## Authentication Functions
+  
+  @doc """
+  Registers a new customer with email and password.
+  
+  ## Examples
+  
+      iex> register_customer(%{email: "test@example.com", password: "SecureP@ss123!", name: "Test"})
+      {:ok, %Customer{}}
+      
+      iex> register_customer(%{email: "bad", password: "weak"})
+      {:error, %Ecto.Changeset{}}
+  """
+  def register_customer(attrs) do
+    %Customer{}
+    |> Customer.registration_changeset(attrs)
+    |> Repo.insert()
+  end
+  
+  @doc """
+  Gets a customer by email.
+  """
+  def get_customer_by_email(email) when is_binary(email) do
+    Repo.get_by(Customer, email: email)
+  end
+  
+  @doc """
+  Authenticates a customer by email and password.
+  
+  Uses the Mnesia-based rate limiter to prevent brute force attacks.
+  
+  ## Examples
+  
+      iex> authenticate_customer_by_email_and_password("test@example.com", "correct_password")
+      {:ok, %Customer{}}
+      
+      iex> authenticate_customer_by_email_and_password("test@example.com", "wrong_password")
+      {:error, :invalid_credentials}
+      
+      iex> # After too many attempts
+      iex> authenticate_customer_by_email_and_password("test@example.com", "any_password")
+      {:error, :too_many_attempts}
+  """
+  def authenticate_customer_by_email_and_password(email, password)
+      when is_binary(email) and is_binary(password) do
+    # Use email hash as a pseudo customer_id for rate limiting
+    # This prevents email enumeration while still rate limiting per email
+    pseudo_id = :crypto.hash(:sha256, email) |> Base.encode16()
+    
+    case Rsolv.RateLimiter.check_rate_limit(pseudo_id, :auth_attempt) do
+      :ok ->
+        # Proceed with authentication
+        customer = get_customer_by_email(email)
+        
+        if Customer.valid_password?(customer, password) do
+          # Successful authentication - no way to reset individual keys in current RateLimiter
+          {:ok, customer}
+        else
+          # Failed authentication
+          {:error, :invalid_credentials}
+        end
+        
+      {:error, :rate_limited} ->
+        {:error, :too_many_attempts}
+    end
+  end
+  
+  def authenticate_customer_by_email_and_password(_, _) do
+    # Prevent timing attacks even with nil inputs
+    Bcrypt.no_user_verify()
+    {:error, :invalid_credentials}
   end
 end

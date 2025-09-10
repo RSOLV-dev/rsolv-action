@@ -1,59 +1,178 @@
 # Script for populating the database. You can run it as:
 #
 #     mix run priv/repo/seeds.exs
+#
+# This seeds file creates test customers with the new authentication system (RFC-049)
 
 alias Rsolv.Repo
-alias Rsolv.Billing.Customer
+alias Rsolv.Customers
+alias Rsolv.Customers.{Customer, ApiKey}
 
-# Create test customer for dogfooding
-dogfood_customer = %Customer{
-  name: "RSOLV Internal",
-  email: "team@rsolv.dev",
-  api_key: "rsolv_dogfood_key",
-  active: true,
+IO.puts("Creating seed customers with authentication...")
+
+# Create admin/staff customer
+{:ok, admin} = Customers.register_customer(%{
+  name: "RSOLV Admin",
+  email: "admin@rsolv.dev",
+  password: "AdminP@ssw0rd2025!",
+  is_staff: true,
+  admin_level: "full",
   metadata: %{
     "type" => "internal",
-    "purpose" => "dogfooding"
+    "purpose" => "administration"
   }
-}
+})
 
-Repo.insert!(dogfood_customer, on_conflict: :nothing, conflict_target: :api_key)
+# Create API key for admin
+{:ok, admin_key} = Customers.create_api_key(admin, %{
+  name: "Admin API Key",
+  key: "rsolv_admin_key_" <> Base.encode16(:crypto.strong_rand_bytes(16)),
+  active: true
+})
 
-# Create demo customer
-demo_customer = %Customer{
-  name: "Demo Customer",
-  email: "demo@example.com",
-  api_key: "rsolv_demo_key_123",
-  active: true,
+IO.puts("  ✓ Admin customer created: admin@rsolv.dev (password: AdminP@ssw0rd2025!)")
+IO.puts("    API Key: #{admin_key.key}")
+
+# Create staff member with limited admin
+{:ok, staff} = Customers.register_customer(%{
+  name: "RSOLV Staff",
+  email: "staff@rsolv.dev",
+  password: "StaffP@ssw0rd2025!",
+  is_staff: true,
+  admin_level: "limited",
   metadata: %{
-    "type" => "demo"
+    "type" => "internal",
+    "purpose" => "support"
   }
-}
+})
 
-Repo.insert!(demo_customer, on_conflict: :nothing, conflict_target: :api_key)
+{:ok, staff_key} = Customers.create_api_key(staff, %{
+  name: "Staff API Key",
+  key: "rsolv_staff_key_" <> Base.encode16(:crypto.strong_rand_bytes(16)),
+  active: true
+})
 
-# Create test customer with full access and no quota limits
-test_full_access_customer = %Customer{
-  name: "Test Full Access",
-  email: "test-full-access@rsolv.dev",
-  api_key: "rsolv_test_full_access_no_quota_2025",
-  active: true,
-  trial_fixes_used: 0,
-  trial_fixes_limit: 999999,  # Effectively unlimited
-  trial_expired: false,
-  subscription_plan: "enterprise",
+IO.puts("  ✓ Staff customer created: staff@rsolv.dev (password: StaffP@ssw0rd2025!)")
+IO.puts("    API Key: #{staff_key.key}")
+
+# Create regular customer for testing
+{:ok, test_customer} = Customers.register_customer(%{
+  name: "Test Customer",
+  email: "test@example.com",
+  password: "TestP@ssw0rd2025!",
+  trial_fixes_limit: 100,
+  subscription_plan: "trial",
   metadata: %{
     "type" => "test",
-    "purpose" => "integration_testing",
-    "access_level" => "full",
+    "purpose" => "integration_testing"
+  }
+})
+
+{:ok, test_key} = Customers.create_api_key(test_customer, %{
+  name: "Test API Key",
+  key: "rsolv_test_key_123",
+  active: true
+})
+
+IO.puts("  ✓ Test customer created: test@example.com (password: TestP@ssw0rd2025!)")
+IO.puts("    API Key: #{test_key.key}")
+
+# Create demo customer
+{:ok, demo_customer} = Customers.register_customer(%{
+  name: "Demo Customer",
+  email: "demo@example.com",
+  password: "DemoP@ssw0rd2025!",
+  trial_fixes_limit: 50,
+  subscription_plan: "trial",
+  metadata: %{
+    "type" => "demo",
+    "purpose" => "demonstrations"
+  }
+})
+
+{:ok, demo_key} = Customers.create_api_key(demo_customer, %{
+  name: "Demo API Key",
+  key: "rsolv_demo_key_456",
+  active: true
+})
+
+IO.puts("  ✓ Demo customer created: demo@example.com (password: DemoP@ssw0rd2025!)")
+IO.puts("    API Key: #{demo_key.key}")
+
+# Create enterprise customer with no limits
+{:ok, enterprise} = Customers.register_customer(%{
+  name: "Enterprise Customer",
+  email: "enterprise@bigcorp.com",
+  password: "EnterpriseP@ssw0rd2025!",
+  trial_fixes_limit: 999999,  # Effectively unlimited
+  subscription_plan: "enterprise",
+  has_payment_method: true,
+  metadata: %{
+    "type" => "production",
+    "purpose" => "enterprise_customer",
     "quota_exempt" => true
   }
-}
+})
 
-Repo.insert!(test_full_access_customer, on_conflict: :nothing, conflict_target: :api_key)
+{:ok, enterprise_key} = Customers.create_api_key(enterprise, %{
+  name: "Enterprise API Key",
+  key: "rsolv_enterprise_key_" <> Base.encode16(:crypto.strong_rand_bytes(16)),
+  active: true
+})
 
-IO.puts("Seeds complete!")
-IO.puts("Created customers with API keys:")
-IO.puts("  - rsolv_dogfood_key (internal use)")
-IO.puts("  - rsolv_demo_key_123 (demos)")
-IO.puts("  - rsolv_test_full_access_no_quota_2025 (full access testing)")
+IO.puts("  ✓ Enterprise customer created: enterprise@bigcorp.com (password: EnterpriseP@ssw0rd2025!)")
+IO.puts("    API Key: #{enterprise_key.key}")
+
+# Create a customer with expired trial
+{:ok, expired} = Customers.register_customer(%{
+  name: "Expired Trial Customer",
+  email: "expired@example.com",
+  password: "ExpiredP@ssw0rd2025!",
+  trial_fixes_used: 5,
+  trial_fixes_limit: 5,
+  trial_expired_at: DateTime.add(DateTime.utc_now(), -86400, :second), # Expired yesterday
+  subscription_plan: "trial",
+  metadata: %{
+    "type" => "test",
+    "purpose" => "expired_trial_testing"
+  }
+})
+
+{:ok, expired_key} = Customers.create_api_key(expired, %{
+  name: "Expired Trial API Key",
+  key: "rsolv_expired_key_789",
+  active: true
+})
+
+IO.puts("  ✓ Expired trial customer created: expired@example.com (password: ExpiredP@ssw0rd2025!)")
+IO.puts("    API Key: #{expired_key.key}")
+
+# Create inactive customer for testing
+{:ok, inactive} = Customers.register_customer(%{
+  name: "Inactive Customer",
+  email: "inactive@example.com",
+  password: "InactiveP@ssw0rd2025!",
+  active: false,
+  metadata: %{
+    "type" => "test",
+    "purpose" => "inactive_testing"
+  }
+})
+
+{:ok, inactive_key} = Customers.create_api_key(inactive, %{
+  name: "Inactive API Key",
+  key: "rsolv_inactive_key_000",
+  active: false  # Also inactive
+})
+
+IO.puts("  ✓ Inactive customer created: inactive@example.com (password: InactiveP@ssw0rd2025!)")
+IO.puts("    API Key (inactive): #{inactive_key.key}")
+
+IO.puts("\n✅ Seeds complete!")
+IO.puts("\nQuick reference:")
+IO.puts("  Admin:      admin@rsolv.dev / AdminP@ssw0rd2025!")
+IO.puts("  Staff:      staff@rsolv.dev / StaffP@ssw0rd2025!")
+IO.puts("  Test:       test@example.com / TestP@ssw0rd2025!")
+IO.puts("  Demo:       demo@example.com / DemoP@ssw0rd2025!")
+IO.puts("  Enterprise: enterprise@bigcorp.com / EnterpriseP@ssw0rd2025!")
+IO.puts("\nNote: All passwords follow RFC-049 security requirements")

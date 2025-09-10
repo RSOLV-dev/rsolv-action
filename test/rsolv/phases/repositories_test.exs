@@ -4,23 +4,13 @@ defmodule Rsolv.Phases.RepositoriesTest do
   alias Rsolv.Phases.Repository
   alias Rsolv.Customers.ForgeAccount
   alias Rsolv.Customers.{Customer, ApiKey}
-  alias Rsolv.Accounts.User
   alias Rsolv.Repo
 
   describe "find_or_create/2" do
     setup do
-      # Create a user first (required for customer)
-      user = %User{}
-      |> User.registration_changeset(%{
-        email: "test@example.com",
-        password: "password123456"
-      })
-      |> Repo.insert!()
-      
       # Create a customer
       customer = %Customer{}
       |> Customer.changeset(%{
-        user_id: user.id,
         name: "Test Corp",
         email: "test@example.com",
         active: true
