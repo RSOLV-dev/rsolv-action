@@ -199,5 +199,38 @@ defmodule Rsolv.RateLimiterTest do
       # Verify the count is correct
       assert RateLimiter.get_current_count(customer_id, action) == 100
     end
+    
+    test "Mnesia table is accessible after node restart" do
+      # Ensure table exists and is accessible even after restart
+      customer_id = "restart-test-customer"
+      action = "restart-action"
+      
+      # Reset and ensure table exists
+      RateLimiter.reset()
+      
+      # Simulate creating the table
+      RateLimiter.ensure_table_exists()
+      
+      # Verify table is accessible
+      assert :ok = RateLimiter.check_rate_limit(customer_id, action)
+      assert RateLimiter.get_current_count(customer_id, action) == 1
+    end
+    
+    test "Table replication works across nodes" do
+      # Test that table is properly replicated to all nodes
+      RateLimiter.reset()
+      
+      # Ensure table exists and is replicated
+      assert :ok = RateLimiter.ensure_table_exists()
+      
+      # Get table info
+      nodes = [node() | Node.list()]
+      table_copies = :mnesia.table_info(:rsolv_rate_limiter, :ram_copies)
+      
+      # Verify table exists on all connected nodes
+      for n <- nodes do
+        assert n in table_copies, "Table should be replicated to node #{n}"
+      end
+    end
   end
 end

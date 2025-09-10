@@ -17,6 +17,9 @@ defmodule Rsolv.RateLimiter do
   end
   
   def init(_opts) do
+    # Subscribe to node events
+    :net_kernel.monitor_nodes(true)
+    
     # Setup Mnesia schema and table
     setup_mnesia()
     
@@ -41,11 +44,53 @@ defmodule Rsolv.RateLimiter do
         Logger.warning("Failed to create Mnesia schema: #{inspect(error)}")
     end
     
-    # Create rate limiter table
+    # Ensure table exists with retry logic
+    ensure_table_exists()
+  end
+  
+  @doc """
+  Ensures the rate limiter table exists and is properly replicated.
+  This can be called manually or automatically on node join.
+  """
+  def ensure_table_exists do
+    nodes = [node() | Node.list()]
+    
     # Use ram_copies for all environments - rate limits are ephemeral
     # and don't need to survive restarts (60-second windows)
     storage_type = :ram_copies
     
+    case check_and_create_table(nodes, storage_type) do
+      :ok -> 
+        # Ensure table is replicated to all nodes
+        ensure_replication(nodes, storage_type)
+        :ok
+      error -> 
+        Logger.error("Failed to ensure table exists: #{inspect(error)}")
+        error
+    end
+  end
+  
+  defp check_and_create_table(nodes, storage_type) do
+    # Check if table exists
+    tables = :mnesia.system_info(:tables)
+    
+    if @table_name in tables do
+      # Table exists, ensure it's loaded
+      case :mnesia.wait_for_tables([@table_name], 5000) do
+        :ok -> :ok
+        {:timeout, _} -> 
+          # Try to force load
+          :mnesia.force_load_table(@table_name)
+          :ok
+        error -> error
+      end
+    else
+      # Table doesn't exist, create it
+      create_table_with_retry(nodes, storage_type, 3)
+    end
+  end
+  
+  defp create_table_with_retry(nodes, storage_type, retries) when retries > 0 do
     table_opts = [
       {:attributes, [:key, :count, :window_start]},
       {storage_type, nodes},
@@ -54,15 +99,52 @@ defmodule Rsolv.RateLimiter do
     
     case :mnesia.create_table(@table_name, table_opts) do
       {:atomic, :ok} -> 
-        Logger.info("Created Mnesia rate limiter table")
-      {:aborted, {:already_exists, @table_name}} -> 
+        Logger.info("Created Mnesia rate limiter table on nodes: #{inspect(nodes)}")
         :ok
+      {:aborted, {:already_exists, @table_name}} -> 
+        Logger.debug("Table already exists")
+        :ok
+      {:aborted, {:not_active, @table_name, node}} -> 
+        Logger.warning("Node #{inspect(node)} not active, retrying with active nodes only...")
+        # Retry with only active nodes
+        active_nodes = Enum.filter(nodes, fn n ->
+          n == node() or :net_adm.ping(n) == :pong
+        end)
+        create_table_with_retry(active_nodes, storage_type, retries - 1)
       error -> 
-        Logger.error("Failed to create Mnesia table: #{inspect(error)}")
+        Logger.error("Failed to create Mnesia table: #{inspect(error)}, retrying...")
+        Process.sleep(1000)
+        create_table_with_retry(nodes, storage_type, retries - 1)
     end
-    
-    # Wait for table to be ready
-    :mnesia.wait_for_tables([@table_name], 5000)
+  end
+  
+  defp create_table_with_retry(_nodes, _storage_type, 0) do
+    {:error, :max_retries_exceeded}
+  end
+  
+  defp ensure_replication(nodes, storage_type) do
+    # Check current replicas
+    case :mnesia.table_info(@table_name, storage_type) do
+      current_nodes ->
+        # Add replicas for nodes that don't have them
+        missing_nodes = nodes -- current_nodes
+        
+        Enum.each(missing_nodes, fn node ->
+          if node != node() do
+            case :mnesia.add_table_copy(@table_name, node, storage_type) do
+              {:atomic, :ok} ->
+                Logger.info("Added table replica to node #{inspect(node)}")
+              {:aborted, {:already_exists, @table_name, ^node}} ->
+                Logger.debug("Table replica already exists on #{inspect(node)}")
+              error ->
+                Logger.warning("Could not add table replica to #{inspect(node)}: #{inspect(error)}")
+            end
+          end
+        end)
+    end
+  catch
+    _, _ ->
+      Logger.warning("Could not check table replication status")
   end
   
   @doc """
@@ -210,20 +292,35 @@ defmodule Rsolv.RateLimiter do
     )
   end
   
-  # GenServer callbacks - no sync needed with Mnesia
+  # GenServer callbacks
+  
+  def handle_info({:nodeup, node}, state) do
+    Logger.info("Node joined cluster: #{inspect(node)}, ensuring table replication...")
+    # When a new node joins, ensure the table is replicated there
+    Task.start(fn ->
+      Process.sleep(2000)  # Give the node time to fully initialize
+      ensure_table_exists()
+    end)
+    {:noreply, state}
+  end
+  
+  def handle_info({:nodedown, node}, state) do
+    Logger.info("Node left cluster: #{inspect(node)}")
+    {:noreply, state}
+  end
   
   def handle_info(:sync_with_cluster, state) do
-    # No-op - Mnesia handles distribution automatically
+    # Legacy compatibility - no longer needed with Mnesia
     {:noreply, state}
   end
   
   def handle_info({:sync_data, _from_node, _data}, state) do
-    # No-op - Mnesia handles distribution automatically
+    # Legacy compatibility - no longer needed with Mnesia
     {:noreply, state}
   end
   
   def handle_cast({:sync_data, _from_node, _data}, state) do
-    # No-op - Mnesia handles distribution automatically
+    # Legacy compatibility - no longer needed with Mnesia
     {:noreply, state}
   end
 end
