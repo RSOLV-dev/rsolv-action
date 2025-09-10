@@ -27,6 +27,9 @@ defmodule Rsolv.RateLimiter do
   end
   
   defp setup_mnesia do
+    # Check if we have a broken Mnesia setup (nonode@nohost issue)
+    fix_broken_mnesia_setup()
+    
     # Ensure Mnesia is started
     case :mnesia.system_info(:is_running) do
       :no -> :mnesia.start()
@@ -46,6 +49,34 @@ defmodule Rsolv.RateLimiter do
     
     # Ensure table exists with retry logic
     ensure_table_exists()
+  end
+  
+  defp fix_broken_mnesia_setup do
+    # Check if Mnesia is configured with nonode@nohost (broken setup)
+    db_nodes = try do
+      :mnesia.system_info(:db_nodes)
+    rescue
+      _ -> []
+    end
+    
+    if db_nodes == [:nonode@nohost] and node() != :nonode@nohost do
+      Logger.warning("Detected broken Mnesia setup with nonode@nohost, fixing...")
+      
+      # Stop Mnesia
+      :mnesia.stop()
+      
+      # Delete the broken schema directory
+      schema_dir = "/app/Mnesia.nonode@nohost"
+      if File.exists?(schema_dir) do
+        Logger.info("Removing broken Mnesia directory: #{schema_dir}")
+        File.rm_rf!(schema_dir)
+      end
+      
+      # Wait a moment for cleanup
+      Process.sleep(1000)
+      
+      Logger.info("Mnesia cleanup complete, will recreate with proper node names")
+    end
   end
   
   @doc """

@@ -27,15 +27,22 @@ defmodule RsolvWeb.PageController do
     {mnesia_status, mnesia_info} = check_mnesia_health()
     
     # Check database health
-    {db_status, db_message} = check_database_health()
+    db_result = check_database_health()
+    {db_status, db_message, db_info} = case db_result do
+      {status, message, info} -> {status, message, info}
+      {status, message} -> {status, message, %{}}
+    end
     
     # Check analytics readiness (partition exists for current month)
     {analytics_status, analytics_message} = check_analytics_health()
     
+    # Check Phoenix configuration (secrets, salts, etc.)
+    {config_status, config_info} = check_phoenix_configuration()
+    
     # Determine overall health status
     overall_status = cond do
-      db_status == "error" || analytics_status == "error" -> "unhealthy"
-      db_status == "warning" || analytics_status == "warning" || mnesia_status == "warning" -> "degraded"
+      db_status == "error" || analytics_status == "error" || config_status == "error" -> "unhealthy"
+      db_status == "warning" || analytics_status == "warning" || mnesia_status == "warning" || config_status == "warning" -> "degraded"
       cluster_status == "single_node" -> "warning"
       true -> "ok"
     end
@@ -52,14 +59,17 @@ defmodule RsolvWeb.PageController do
         node_count: node_count
       },
       mnesia: mnesia_info,
-      database: %{
+      database: Map.merge(%{
         status: db_status,
         message: db_message
-      },
+      }, db_info || %{}),
       analytics: %{
         status: analytics_status,
         message: analytics_message
-      }
+      },
+      phoenix_config: Map.merge(%{
+        status: config_status
+      }, config_info || %{})
     }
     
     # Return appropriate status code based on health
@@ -80,11 +90,38 @@ defmodule RsolvWeb.PageController do
     try do
       # Simple query to test database connection
       Rsolv.Repo.query!("SELECT 1")
-      {"ok", "Database connection successful"}
+      
+      # Get additional database metadata for troubleshooting
+      db_info = get_database_info()
+      {"ok", "Database connection successful", db_info}
     rescue
       error ->
         Logger.error("Health check: Database error", error: inspect(error))
-        {"error", "Database connection failed: #{inspect(error)}"}
+        {"error", "Database connection failed: #{inspect(error)}", %{}}
+    end
+  end
+  
+  defp get_database_info do
+    try do
+      # Get current database name
+      %{rows: [[database]]} = Rsolv.Repo.query!("SELECT current_database()")
+      
+      # Get database host from connection config
+      config = Rsolv.Repo.config()
+      hostname = config[:hostname] || "unknown"
+      port = config[:port] || "unknown"
+      username = config[:username] || "unknown"
+      
+      %{
+        database: database,
+        hostname: hostname,
+        port: port,
+        username: username
+      }
+    rescue
+      error ->
+        Logger.warning("Could not get database info: #{inspect(error)}")
+        %{error: "Could not retrieve database metadata"}
     end
   end
   
@@ -140,10 +177,15 @@ defmodule RsolvWeb.PageController do
         end
         
         # Determine Mnesia health status
+        # Each node shows itself as running_db_node, so we need to count total cluster nodes
+        total_cluster_nodes = 1 + length(Node.list()) # Current node + connected nodes
+        expected_db_nodes = length(db_nodes)
+        
         status = cond do
           not table_exists -> "warning"
-          length(running_db_nodes) < length(db_nodes) -> "degraded"
-          length(running_db_nodes) == 1 && length(Node.list()) > 0 -> "warning"
+          length(running_db_nodes) < length(db_nodes) -> "degraded"  
+          # Only warn if we have fewer nodes than expected in cluster
+          total_cluster_nodes < expected_db_nodes -> "warning"
           true -> "ok"
         end
         
@@ -204,6 +246,73 @@ defmodule RsolvWeb.PageController do
       error ->
         Logger.error("Health check: Analytics error", error: inspect(error))
         {"error", "Analytics health check failed: #{inspect(error)}"}
+    end
+  end
+  
+  # Check critical Phoenix configuration that caused the production outages
+  defp check_phoenix_configuration do
+    try do
+      issues = []
+      warnings = []
+      config_info = %{}
+      
+      # Check secret key base
+      secret_key_base = Application.get_env(:rsolv, RsolvWeb.Endpoint)[:secret_key_base]
+      {issues, config_info} = case secret_key_base do
+        nil -> 
+          {issues ++ ["secret_key_base is not configured"], Map.put(config_info, :secret_key_configured, false)}
+        key when byte_size(key) < 64 -> 
+          {issues ++ ["secret_key_base is too short (#{byte_size(key)} bytes, need 64+)"], 
+           Map.merge(config_info, %{secret_key_configured: true, secret_key_base_length: byte_size(key)})}
+        key -> 
+          {issues, Map.merge(config_info, %{secret_key_base_length: byte_size(key), secret_key_configured: true})}
+      end
+      
+      # Check LiveView signing salt
+      live_view_config = Application.get_env(:rsolv, RsolvWeb.Endpoint)[:live_view] || []
+      signing_salt = live_view_config[:signing_salt]
+      {issues, warnings, config_info} = case signing_salt do
+        nil -> 
+          {issues ++ ["live_view signing_salt is not configured"], warnings, Map.put(config_info, :live_view_salt_configured, false)}
+        salt when byte_size(salt) < 8 ->
+          {issues, warnings ++ ["live_view signing_salt is short (#{byte_size(salt)} bytes, recommend 8+)"],
+           Map.merge(config_info, %{live_view_salt_length: byte_size(salt), live_view_salt_configured: true})}
+        salt ->
+          {issues, warnings, Map.merge(config_info, %{live_view_salt_length: byte_size(salt), live_view_salt_configured: true})}
+      end
+      
+      # Check if Phoenix can start properly (basic endpoint config)
+      endpoint_configured = case Application.get_env(:rsolv, RsolvWeb.Endpoint) do
+        nil -> false
+        config when is_list(config) -> 
+          Keyword.has_key?(config, :url) and Keyword.has_key?(config, :render_errors)
+        _ -> false
+      end
+      
+      config_info = Map.put(config_info, :endpoint_configured, endpoint_configured)
+      
+      # Determine status
+      status = cond do
+        length(issues) > 0 -> "error"
+        length(warnings) > 0 -> "warning"
+        true -> "ok"
+      end
+      
+      # Add issues and warnings to response
+      final_info = config_info
+      |> Map.put(:issues, issues)
+      |> Map.put(:warnings, warnings)
+      |> Map.put(:message, case status do
+        "error" -> "Critical Phoenix configuration issues detected"
+        "warning" -> "Phoenix configuration warnings detected"
+        "ok" -> "Phoenix configuration is healthy"
+      end)
+      
+      {status, final_info}
+    rescue
+      error ->
+        Logger.error("Health check: Phoenix config error", error: inspect(error))
+        {"error", %{message: "Phoenix configuration check failed: #{inspect(error)}"}}
     end
   end
 
