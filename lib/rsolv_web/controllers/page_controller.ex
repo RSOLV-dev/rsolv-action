@@ -23,6 +23,9 @@ defmodule RsolvWeb.PageController do
       true -> "single_node"
     end
     
+    # Check Mnesia status for rate limiting
+    {mnesia_status, mnesia_info} = check_mnesia_health()
+    
     # Check database health
     {db_status, db_message} = check_database_health()
     
@@ -32,7 +35,7 @@ defmodule RsolvWeb.PageController do
     # Determine overall health status
     overall_status = cond do
       db_status == "error" || analytics_status == "error" -> "unhealthy"
-      db_status == "warning" || analytics_status == "warning" -> "degraded"
+      db_status == "warning" || analytics_status == "warning" || mnesia_status == "warning" -> "degraded"
       cluster_status == "single_node" -> "warning"
       true -> "ok"
     end
@@ -48,6 +51,7 @@ defmodule RsolvWeb.PageController do
         connected_nodes: Enum.map(connected_nodes, &to_string/1),
         node_count: node_count
       },
+      mnesia: mnesia_info,
       database: %{
         status: db_status,
         message: db_message
@@ -81,6 +85,90 @@ defmodule RsolvWeb.PageController do
       error ->
         Logger.error("Health check: Database error", error: inspect(error))
         {"error", "Database connection failed: #{inspect(error)}"}
+    end
+  end
+  
+  # Check Mnesia health and clustering status
+  defp check_mnesia_health do
+    try do
+      # Check if Mnesia is running
+      mnesia_running = :mnesia.system_info(:is_running) == :yes
+      
+      # Get Mnesia-specific information
+      if mnesia_running do
+        # Get Mnesia nodes
+        running_db_nodes = :mnesia.system_info(:running_db_nodes)
+        db_nodes = :mnesia.system_info(:db_nodes)
+        
+        # Check rate limiter table
+        tables = :mnesia.system_info(:tables)
+        rate_limiter_table = :rsolv_rate_limiter
+        table_exists = rate_limiter_table in tables
+        
+        table_info = if table_exists do
+          # Get table replicas
+          ram_copies = try do
+            :mnesia.table_info(rate_limiter_table, :ram_copies)
+          rescue
+            _ -> []
+          end
+          
+          disc_copies = try do
+            :mnesia.table_info(rate_limiter_table, :disc_copies)
+          rescue
+            _ -> []
+          end
+          
+          # Get table size
+          table_size = try do
+            :mnesia.table_info(rate_limiter_table, :size)
+          rescue
+            _ -> 0
+          end
+          
+          %{
+            exists: true,
+            ram_copies: Enum.map(ram_copies, &to_string/1),
+            disc_copies: Enum.map(disc_copies, &to_string/1),
+            size: table_size
+          }
+        else
+          %{
+            exists: false,
+            message: "Rate limiter table not found"
+          }
+        end
+        
+        # Determine Mnesia health status
+        status = cond do
+          not table_exists -> "warning"
+          length(running_db_nodes) < length(db_nodes) -> "degraded"
+          length(running_db_nodes) == 1 && length(Node.list()) > 0 -> "warning"
+          true -> "ok"
+        end
+        
+        {status, %{
+          status: status,
+          running: true,
+          running_db_nodes: Enum.map(running_db_nodes, &to_string/1),
+          configured_db_nodes: Enum.map(db_nodes, &to_string/1),
+          tables: Enum.map(tables, &to_string/1),
+          rate_limiter_table: table_info
+        }}
+      else
+        {"error", %{
+          status: "error",
+          running: false,
+          message: "Mnesia is not running"
+        }}
+      end
+    rescue
+      error ->
+        Logger.error("Health check: Mnesia error", error: inspect(error))
+        {"error", %{
+          status: "error",
+          message: "Failed to check Mnesia: #{inspect(error)}"
+        }}
     end
   end
   

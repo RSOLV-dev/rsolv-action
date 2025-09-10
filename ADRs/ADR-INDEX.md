@@ -38,6 +38,7 @@ Each ADR follows this structure:
 | [ADR-022](ADR-022-credential-auto-refresh-implementation.md) | Credential Auto-Refresh Implementation | Implemented | 2025-08-28 | Medium - Zero-downtime credential management |
 | [ADR-023](ADR-023-claude-cli-credential-passing.md) | Claude CLI Credential Passing | Implemented | 2025-09-02 | High - Fixes credential vending integration |
 | [ADR-024](ADR-024-AST-FALSE-POSITIVE-REDUCTION.md) | AST False Positive Reduction Strategy | Proposed | 2025-08-14 | High - Further reduces false positives |
+| [ADR-025](ADR-025-DISTRIBUTED-RATE-LIMITING-WITH-MNESIA.md) | Distributed Rate Limiting with Mnesia | Implemented | 2025-09-10 | High - Eliminates race conditions in rate limiting |
 
 ## Related Documentation
 

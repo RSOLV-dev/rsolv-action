@@ -1,8 +1,9 @@
 # RFC-054: Distributed Rate Limiter Migration from ETS to Mnesia
 
-**Status**: Draft  
+**Status**: Implemented  
 **Created**: 2025-09-05  
-**Last Updated**: 2025-09-09
+**Last Updated**: 2025-09-10  
+**Implementation**: ADR-025
 **Author**: Infrastructure Team  
 **Related**: RFC-049 (Customer Management), clustering infrastructure
 
