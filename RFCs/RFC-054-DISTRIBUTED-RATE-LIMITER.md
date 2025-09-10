@@ -769,6 +769,73 @@ The migration is a direct replacement:
 3. Deploy it
 4. If it breaks, rollback the deployment (not a feature flag)
 
+## Open Questions & Additional Context
+
+### Non-Goals
+
+1. **In-flight data preservation**
+   - Rate limit data is transient (60-second windows)
+   - Losing counters during deployment is acceptable
+   - Simplifies migration significantly
+
+2. **Performance optimization**
+   - Not a primary concern for this migration
+   - Focus on correctness and distributed consistency
+   - Any reasonable latency is acceptable
+
+### Deployment & Migration Questions
+
+1. **Staging validation criteria**
+   - **Q**: What specific tests before production deployment?
+   - **A**: Must validate:
+     - [ ] Rate limits properly enforced across multiple pods
+     - [ ] Config values actually being used (not hardcoded)
+     - [ ] Telemetry events flowing correctly
+     - [ ] No memory leaks after 24 hours
+     - [ ] Distributed tests pass across nodes
+
+### Integration Questions
+
+2. **Impact on RSOLV-action**
+   - **Q**: Does the GitHub Action need any changes?
+   - **A**: No changes needed - it only calls the API endpoints which maintain same behavior
+
+3. **Documentation updates needed**
+   - **Q**: What documentation needs updating?
+   - **A**: 
+     - [ ] Update operational runbook with new debugging commands
+     - [ ] Document Mnesia table inspection for support
+     - [ ] Update API docs if adding admin endpoints
+
+4. **Network partition handling**
+   - **Q**: How do we handle split-brain scenarios?
+   - **A**: Basic approach (not a blocker):
+     - Mnesia will handle most cases automatically
+     - RAM-only tables mean data loss is acceptable (just resets limits)
+     - Consider proper handling in future iteration
+
+### Operational Questions
+
+5. **Production debugging**
+   - **Q**: How do we troubleshoot rate limiting issues in production?
+   - **A**: Add admin tools (in refactor phase):
+     - Inspect current rate for a customer
+     - Manually reset if needed
+     - Export metrics for analysis
+
+6. **Rollback procedure**
+   - **Q**: How do we rollback if issues arise?
+   - **A**: Simple git revert and redeploy. No data migration needed since rate limit data is transient.
+
+### Security Considerations
+
+7. **New attack vectors**
+   - **Q**: Does Mnesia introduce new security risks?
+   - **A**: Minimal new risk:
+     - Mnesia uses Erlang distribution (already secured via libcluster)
+     - RAM-only tables = no disk persistence concerns
+     - Same authentication/authorization as before
+
 ## References
 
 - [Mnesia Documentation](https://www.erlang.org/doc/man/mnesia.html)
