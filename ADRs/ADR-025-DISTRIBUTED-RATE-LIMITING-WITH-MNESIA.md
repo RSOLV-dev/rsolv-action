@@ -62,11 +62,19 @@ Migrated from ETS-based rate limiting to Mnesia distributed database for the fol
 1. **Mix.env() Runtime Error**: Removed compile-time environment checks that broke in releases
 2. **Filesystem Permissions**: Switched from disc_copies to ram_copies for Kubernetes compatibility
 3. **Table Creation Failures**: Added retry logic for handling temporarily inactive nodes
+4. **Critical Configuration Issues** (2025-09-10): 
+   - **Phoenix SECRET_KEY_BASE Missing**: Production deployment failed due to 0-byte secret key
+   - **LiveView Signing Salt Missing**: Missing configuration caused 500 errors
+   - **Mnesia Node Name Issues**: Resolved `:nonode@nohost` initialization problems with cleanup logic
+5. **Health Check False Positives** (2025-09-10):
+   - **Fixed Mnesia Status Logic**: Corrected false "warning" status in healthy 2-node clusters
+   - **Enhanced Configuration Validation**: Added comprehensive Phoenix configuration checks to prevent future outages
 
 ### Health Check Enhancements
-Added comprehensive Mnesia status to `/health` endpoint:
+Added comprehensive Mnesia status and Phoenix configuration validation to `/health` endpoint:
 ```json
 {
+  "status": "ok",
   "mnesia": {
     "status": "ok",
     "running": true,
@@ -79,9 +87,22 @@ Added comprehensive Mnesia status to `/health` endpoint:
       "disc_copies": [],
       "size": 0
     }
+  },
+  "phoenix_config": {
+    "status": "ok",
+    "secret_key_configured": true,
+    "secret_key_base_length": 64,
+    "live_view_salt_configured": true,
+    "live_view_salt_length": 16,
+    "endpoint_configured": true,
+    "issues": [],
+    "warnings": [],
+    "message": "Phoenix configuration is healthy"
   }
 }
 ```
+
+This enhanced monitoring immediately surfaces critical configuration issues that could cause production outages, preventing the SECRET_KEY_BASE and LiveView salt issues we encountered.
 
 ## Testing
 
