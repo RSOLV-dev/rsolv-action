@@ -827,9 +827,30 @@ The migration is a direct replacement:
    - **Q**: How do we rollback if issues arise?
    - **A**: Simple git revert and redeploy. No data migration needed since rate limit data is transient.
 
+### Monitoring & Observability Integration
+
+7. **Existing monitoring infrastructure**
+   - **Q**: How does this integrate with LiveDashboard, Prometheus, and Grafana?
+   - **A**: Already partially integrated:
+     - **Telemetry events**: Already emitting `[:rsolv, :rate_limiter, :request_allowed]` and `[:rsolv, :rate_limiter, :limit_exceeded]`
+     - **PromEx plugin**: Already exists at `lib/rsolv/prom_ex/rate_limiter_plugin.ex` but commented out (TODO: fix metric name format)
+     - **LiveDashboard**: Already integrated at `/live/dashboard` with `RsolvWeb.Telemetry`
+     - **Prometheus**: Infrastructure exists in `RSOLV-infrastructure/shared/monitoring/`
+     - **Migration tasks**:
+       - [ ] Fix PromEx plugin metric name format and enable it
+       - [ ] Add Mnesia-specific metrics (table size, sync status)
+       - [ ] Create Grafana dashboard for rate limiting
+       - [ ] Ensure telemetry events continue working with Mnesia
+
+8. **New metrics to add during refactor**
+   - Mnesia table size (memory usage)
+   - Node sync latency (if any)
+   - Cleanup process efficiency
+   - Per-customer rate limit usage patterns
+
 ### Security Considerations
 
-7. **New attack vectors**
+9. **New attack vectors**
    - **Q**: Does Mnesia introduce new security risks?
    - **A**: Minimal new risk:
      - Mnesia uses Erlang distribution (already secured via libcluster)
