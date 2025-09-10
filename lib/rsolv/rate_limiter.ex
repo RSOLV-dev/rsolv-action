@@ -41,8 +41,10 @@ defmodule Rsolv.RateLimiter do
         Logger.warning("Failed to create Mnesia schema: #{inspect(error)}")
     end
     
-    # Create rate limiter table (use ram_copies in test environment)
-    storage_type = if Mix.env() == :test, do: :ram_copies, else: :disc_copies
+    # Create rate limiter table
+    # In production/staging, use disc_copies for persistence
+    # No need to check env - just always use disc_copies
+    storage_type = :disc_copies
     
     table_opts = [
       {:attributes, [:key, :count, :window_start]},
