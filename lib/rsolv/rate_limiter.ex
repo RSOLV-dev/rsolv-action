@@ -1,70 +1,145 @@
 defmodule Rsolv.RateLimiter do
   @moduledoc """
-  Rate limiting for API requests using distributed ETS.
+  Rate limiting for API requests using distributed Mnesia.
+  
+  Uses Mnesia for strong consistency across all nodes in the cluster,
+  eliminating race conditions that existed with the ETS + sync approach.
   """
   
   use GenServer
   require Logger
   
   @table_name :rsolv_rate_limiter
-  @sync_interval 5_000  # Sync every 5 seconds
+  @window_seconds 60
   
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
   
   def init(_opts) do
-    # Create ETS table for rate limiting
-    :ets.new(@table_name, [:set, :public, :named_table, read_concurrency: true])
-    
-    # Schedule periodic sync with other nodes
-    Process.send_after(self(), :sync_with_cluster, @sync_interval)
+    # Setup Mnesia schema and table
+    setup_mnesia()
     
     {:ok, %{}}
   end
   
+  defp setup_mnesia do
+    # Ensure Mnesia is started
+    case :mnesia.system_info(:is_running) do
+      :no -> :mnesia.start()
+      _ -> :ok
+    end
+    
+    # Create schema if needed (for all connected nodes)
+    nodes = [node() | Node.list()]
+    case :mnesia.create_schema(nodes) do
+      :ok -> 
+        Logger.info("Created Mnesia schema on nodes: #{inspect(nodes)}")
+      {:error, {_, {:already_exists, _}}} -> 
+        :ok
+      error -> 
+        Logger.warning("Failed to create Mnesia schema: #{inspect(error)}")
+    end
+    
+    # Create rate limiter table (use ram_copies in test environment)
+    storage_type = if Mix.env() == :test, do: :ram_copies, else: :disc_copies
+    
+    table_opts = [
+      {:attributes, [:key, :count, :window_start]},
+      {storage_type, nodes},
+      {:type, :set}
+    ]
+    
+    case :mnesia.create_table(@table_name, table_opts) do
+      {:atomic, :ok} -> 
+        Logger.info("Created Mnesia rate limiter table")
+      {:aborted, {:already_exists, @table_name}} -> 
+        :ok
+      error -> 
+        Logger.error("Failed to create Mnesia table: #{inspect(error)}")
+    end
+    
+    # Wait for table to be ready
+    :mnesia.wait_for_tables([@table_name], 5000)
+  end
+  
   @doc """
   Checks if a customer has exceeded their rate limit.
+  Uses Mnesia transactions for distributed consistency.
   """
-  def check_rate_limit(customer_id, action \\ "credential_exchange") do
-    # Get current count and window
-    key = {customer_id, action}
+  def check_rate_limit(customer_id, action \\ :credential_exchange) do
+    # Normalize action for both key and config lookup
+    action_normalized = normalize_action(action)
+    key = {customer_id, action_normalized}
     current_time = System.system_time(:second)
     
-    # Get or initialize counter
-    try do
-      case :ets.lookup(@table_name, key) do
-      [{^key, count, window_start}] ->
-        # If more than 60 seconds have passed, reset the counter
-        if current_time - window_start > 60 do
-          :ets.insert(@table_name, {key, 1, current_time})
-          emit_allowed_telemetry(customer_id, action, 1)
-          :ok
-        else
-          # Check against rate limit
-          if count >= 100 do
-            emit_exceeded_telemetry(customer_id, action, count)
-            Logger.warning("Rate limit exceeded for customer #{customer_id}, action: #{action}, count: #{count}")
-            {:error, :rate_limited}
-          else
-            # Increment counter
-            :ets.update_counter(@table_name, key, {2, 1})
-            emit_allowed_telemetry(customer_id, action, count + 1)
+    # Get rate limit from config
+    {limit, _period} = get_rate_limit_config(action_normalized)
+    
+    # Use Mnesia transaction for consistency
+    result = :mnesia.transaction(fn ->
+      case :mnesia.read(@table_name, key) do
+        [{@table_name, ^key, count, window_start}] ->
+          # If more than 60 seconds have passed, reset the counter
+          if current_time - window_start > @window_seconds do
+            :mnesia.write({@table_name, key, 1, current_time})
+            emit_allowed_telemetry(customer_id, action, 1, limit)
             :ok
+          else
+            # Check against rate limit
+            if count >= limit do
+              emit_exceeded_telemetry(customer_id, action, count, limit)
+              Logger.warning("Rate limit exceeded for customer #{customer_id}, action: #{action}, count: #{count}, limit: #{limit}")
+              {:error, :rate_limited}
+            else
+              # Increment counter
+              :mnesia.write({@table_name, key, count + 1, window_start})
+              emit_allowed_telemetry(customer_id, action, count + 1, limit)
+              :ok
+            end
           end
-        end
-      [] ->
-        # First request, initialize counter
-        :ets.insert(@table_name, {key, 1, current_time})
-        emit_allowed_telemetry(customer_id, action, 1)
-        :ok
+        [] ->
+          # First request, initialize counter
+          :mnesia.write({@table_name, key, 1, current_time})
+          emit_allowed_telemetry(customer_id, action, 1, limit)
+          :ok
       end
-    catch
-      :error, :badarg ->
-        # Table doesn't exist, allow the request
-        emit_allowed_telemetry(customer_id, action, 1)
+    end)
+    
+    case result do
+      {:atomic, :ok} -> :ok
+      {:atomic, {:error, :rate_limited}} -> {:error, :rate_limited}
+      _ -> 
+        Logger.error("Mnesia transaction failed: #{inspect(result)}")
+        # On transaction failure, allow the request (fail open)
         :ok
     end
+  end
+  
+  @doc """
+  Gets the current count for a customer/action pair.
+  Useful for testing and monitoring.
+  """
+  def get_current_count(customer_id, action \\ :credential_exchange) do
+    action_normalized = normalize_action(action)
+    key = {customer_id, action_normalized}
+    current_time = System.system_time(:second)
+    
+    {:atomic, count} = :mnesia.transaction(fn ->
+      case :mnesia.read(@table_name, key) do
+        [{@table_name, ^key, count, window_start}] ->
+          # Check if window is still valid
+          if current_time - window_start > @window_seconds do
+            0
+          else
+            count
+          end
+        [] ->
+          0
+      end
+    end)
+    
+    count
   end
   
   @doc """
@@ -79,53 +154,48 @@ defmodule Rsolv.RateLimiter do
   Reset all counters (for testing).
   """
   def reset() do
-    case :ets.whereis(@table_name) do
-      :undefined ->
-        # Table doesn't exist yet, that's fine for reset
+    case :mnesia.system_info(:is_running) do
+      :yes ->
+        :mnesia.clear_table(@table_name)
         :ok
       _ ->
-        :ets.delete_all_objects(@table_name)
         :ok
     end
   end
   
-  # GenServer callbacks
-  
-  def handle_info(:sync_with_cluster, state) do
-    sync_with_nodes()
-    Process.send_after(self(), :sync_with_cluster, @sync_interval)
-    {:noreply, state}
-  end
-  
-  def handle_info({:sync_data, from_node, data}, state) do
-    # Merge data from other node
-    merge_rate_limit_data(data)
-    Logger.debug("Received sync data from #{from_node} with #{length(data)} entries")
-    {:noreply, state}
-  end
-  
-  def handle_cast({:sync_data, from_node, data}, state) do
-    # Merge data from other node
-    merge_rate_limit_data(data)
-    Logger.debug("Received sync data from #{from_node} with #{length(data)} entries")
-    {:noreply, state}
-  end
-  
   # Private functions
   
-  defp emit_allowed_telemetry(customer_id, action, count) do
+  defp normalize_action(action) when is_binary(action), do: action
+  defp normalize_action(action) when is_atom(action), do: Atom.to_string(action)
+  
+  defp get_rate_limit_config(action) when is_binary(action) do
+    config = Application.get_env(:rsolv, :rate_limits, [])
+    
+    # Try to find config with action as atom key
+    action_atom = String.to_atom(action)
+    
+    case Keyword.get(config, action_atom) do
+      {limit, period} -> {limit, period}
+      nil -> 
+        # Default fallback
+        Logger.debug("No rate limit config for action #{action}, using default: 100/minute")
+        {100, :minute}
+    end
+  end
+  
+  defp emit_allowed_telemetry(customer_id, action, count, limit) do
     :telemetry.execute(
       [:rsolv, :rate_limiter, :request_allowed],
       %{count: 1, current_count: count},
       %{
         customer_id: customer_id,
         action: action,
-        limit: 100
+        limit: limit
       }
     )
   end
   
-  defp emit_exceeded_telemetry(customer_id, action, count) do
+  defp emit_exceeded_telemetry(customer_id, action, count, limit) do
     :telemetry.execute(
       [:rsolv, :rate_limiter, :limit_exceeded],
       %{count: 1},
@@ -133,62 +203,25 @@ defmodule Rsolv.RateLimiter do
         customer_id: customer_id,
         action: action,
         current_count: count,
-        limit: 100
+        limit: limit
       }
     )
   end
   
-  defp sync_with_nodes() do
-    # Get all connected nodes
-    nodes = Node.list()
-    
-    if length(nodes) > 0 do
-      # Get current data
-      current_time = System.system_time(:second)
-      data = :ets.tab2list(@table_name)
-      |> Enum.filter(fn {_key, _count, window_start} ->
-        # Only sync entries from the last 60 seconds
-        current_time - window_start <= 60
-      end)
-      
-      # Send to all nodes
-      for node <- nodes do
-        GenServer.cast({__MODULE__, node}, {:sync_data, node(), data})
-      end
-    end
+  # GenServer callbacks - no sync needed with Mnesia
+  
+  def handle_info(:sync_with_cluster, state) do
+    # No-op - Mnesia handles distribution automatically
+    {:noreply, state}
   end
   
-  defp merge_rate_limit_data(remote_data) do
-    current_time = System.system_time(:second)
-    
-    Enum.each(remote_data, fn {key, remote_count, remote_window} ->
-      case :ets.lookup(@table_name, key) do
-        [{^key, local_count, local_window}] ->
-          # Merge logic: use the entry with the most recent window start
-          # or if windows are the same, use the higher count
-          cond do
-            current_time - remote_window > 60 ->
-              # Remote data is expired, ignore
-              :ok
-            current_time - local_window > 60 ->
-              # Local data is expired, use remote
-              :ets.insert(@table_name, {key, remote_count, remote_window})
-            remote_window > local_window ->
-              # Remote window is newer, use it
-              :ets.insert(@table_name, {key, remote_count, remote_window})
-            remote_window == local_window and remote_count > local_count ->
-              # Same window, but remote has higher count
-              :ets.insert(@table_name, {key, remote_count, remote_window})
-            true ->
-              # Keep local data
-              :ok
-          end
-        [] ->
-          # No local data, use remote if not expired
-          if current_time - remote_window <= 60 do
-            :ets.insert(@table_name, {key, remote_count, remote_window})
-          end
-      end
-    end)
+  def handle_info({:sync_data, _from_node, _data}, state) do
+    # No-op - Mnesia handles distribution automatically
+    {:noreply, state}
+  end
+  
+  def handle_cast({:sync_data, _from_node, _data}, state) do
+    # No-op - Mnesia handles distribution automatically
+    {:noreply, state}
   end
 end

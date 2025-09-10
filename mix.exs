@@ -16,7 +16,7 @@ defmodule Rsolv.MixProject do
   def application do
     [
       mod: {Rsolv.Application, []},
-      extra_applications: [:logger, :runtime_tools, :telemetry, :os_mon]
+      extra_applications: [:logger, :runtime_tools, :telemetry, :os_mon, :mnesia]
     ]
   end
 
@@ -59,6 +59,7 @@ defmodule Rsolv.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:floki, ">= 0.30.0", only: :test},
       {:lazy_html, "~> 0.1", only: :test},
+      {:local_cluster, "~> 2.0", only: :test},
       {:oban, "~> 2.17"},
       {:number, "~> 1.0"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},

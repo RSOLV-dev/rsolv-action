@@ -82,10 +82,13 @@ defmodule Rsolv.RateLimiterTest do
       end
       assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id, action)
       
-      # Mock time passage by directly manipulating ETS
+      # Mock time passage by directly manipulating Mnesia
       # This is a bit hacky but avoids sleeping for 60 seconds
-      [{key, _count, _window}] = :ets.lookup(:rsolv_rate_limiter, {customer_id, action})
-      :ets.insert(:rsolv_rate_limiter, {key, 100, System.system_time(:second) - 61})
+      key = {customer_id, action}
+      :mnesia.transaction(fn ->
+        [{:rsolv_rate_limiter, ^key, count, _window}] = :mnesia.read(:rsolv_rate_limiter, key)
+        :mnesia.write({:rsolv_rate_limiter, key, count, System.system_time(:second) - 61})
+      end)
       
       # Should be allowed again
       assert :ok = RateLimiter.check_rate_limit(customer_id, action)
@@ -151,51 +154,50 @@ defmodule Rsolv.RateLimiterTest do
   
   describe "reset/0" do
     test "clears all rate limit data" do
-      # Add some data
-      for i <- 1..50 do
-        RateLimiter.check_rate_limit("customer-#{i}", "action")
+      customer_id = "reset-test-customer"
+      action = "action"
+      
+      # Add requests up to the limit
+      for _ <- 1..50 do
+        RateLimiter.check_rate_limit(customer_id, action)
       end
       
-      # Verify data exists
-      assert length(:ets.tab2list(:rsolv_rate_limiter)) == 50
+      # Verify we have some count
+      assert RateLimiter.get_current_count(customer_id, action) > 0
       
       # Reset
       RateLimiter.reset()
       
-      # Verify data is cleared
-      assert :ets.tab2list(:rsolv_rate_limiter) == []
+      # Verify data is cleared - count should be 0
+      assert RateLimiter.get_current_count(customer_id, action) == 0
+      
+      # Verify we can make requests again
+      assert :ok = RateLimiter.check_rate_limit(customer_id, action)
     end
   end
   
   describe "distributed rate limiting" do
     @tag :distributed
-    test "syncs rate limit data between nodes" do
-      # This test would require setting up multiple nodes
-      # For now, we'll test the sync mechanism locally
+    test "Mnesia provides consistent rate limiting" do
+      # With Mnesia, rate limiting is automatically consistent across nodes
+      # This test verifies the Mnesia-based implementation works correctly
       
-      customer_id = "sync-test-customer"
-      action = "sync-action"
+      customer_id = "dist-test-customer"
+      action = "dist-action"
       
-      # Add some data
-      for _ <- 1..50 do
-        RateLimiter.check_rate_limit(customer_id, action)
-      end
+      # Reset to ensure clean state
+      RateLimiter.reset()
       
-      # Simulate receiving sync data from another node
-      remote_data = [{{customer_id, action}, 75, System.system_time(:second)}]
-      send(RateLimiter, {:sync_data, :remote_node@host, remote_data})
-      
-      # Give it a moment to process
-      Process.sleep(100)
-      
-      # Check that the higher count was kept
-      # We had 50, remote had 75, so after sync we should see 75
-      for _ <- 1..25 do
+      # Add 100 requests (the default limit)
+      for _ <- 1..100 do
         assert :ok = RateLimiter.check_rate_limit(customer_id, action)
       end
       
-      # Should now be at limit (75 + 25 = 100)
+      # The 101st request should be rate limited
       assert {:error, :rate_limited} = RateLimiter.check_rate_limit(customer_id, action)
+      
+      # Verify the count is correct
+      assert RateLimiter.get_current_count(customer_id, action) == 100
     end
   end
 end
