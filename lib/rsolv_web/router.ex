@@ -94,6 +94,7 @@ defmodule RsolvWeb.Router do
     delete "/logout", DashboardController, :logout
     
     live "/customers", CustomerLive.Index, :index
+    live "/customers/:id", CustomerLive.Show, :show
   end
   
   # Dashboard routes with authentication and feature flags
