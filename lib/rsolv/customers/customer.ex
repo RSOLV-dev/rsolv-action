@@ -51,6 +51,7 @@ defmodule Rsolv.Customers.Customer do
     |> validate_required([:name, :email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
     |> unique_constraint(:email)
+    |> validate_number(:monthly_limit, greater_than_or_equal_to: 0)
     |> validate_admin_level()
   end
   
