@@ -69,6 +69,13 @@ defmodule RsolvWeb.Router do
     # SEO routes
     get "/sitemap.xml", SitemapController, :index
   end
+
+  # Admin routes (public login, protected admin area to be added)
+  scope "/admin", RsolvWeb.Admin do
+    pipe_through :browser
+    
+    get "/login", SessionController, :new
+  end
   
   # Dashboard routes with authentication and feature flags
   scope "/dashboard", RsolvWeb do
