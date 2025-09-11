@@ -104,12 +104,12 @@ defmodule RsolvWeb.Admin.SessionControllerTest do
       end
     end
     
-    test "blocks after 5 failed attempts", %{conn: conn} do
+    test "blocks after 10 failed attempts", %{conn: conn} do
       # Reset rate limiter
       Rsolv.RateLimiter.reset()
       
-      # Make 5 failed attempts
-      for i <- 1..5 do
+      # Make 10 failed attempts (per RFC-056)
+      for i <- 1..10 do
         post(conn, ~p"/admin/login", %{
           "session" => %{
             "email" => "rate-limit-test2@example.com",
@@ -118,11 +118,11 @@ defmodule RsolvWeb.Admin.SessionControllerTest do
         })
       end
       
-      # 6th attempt should be blocked
+      # 11th attempt should be blocked
       conn = post(conn, ~p"/admin/login", %{
         "session" => %{
           "email" => "rate-limit-test2@example.com",
-          "password" => "wrong6"
+          "password" => "wrong11"
         }
       })
       
