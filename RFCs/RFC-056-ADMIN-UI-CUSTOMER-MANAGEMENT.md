@@ -439,6 +439,29 @@ All dependencies are now satisfied:
 - ✅ Existing Phoenix LiveView setup - Already in place
 - ✅ Tailwind CSS configuration - Already configured
 
+## Implementation Gaps to Address
+
+Based on codebase review (2025-09-10), the following need to be implemented:
+
+1. **Session Management**: 
+   - Add `generate_customer_session_token/1` to Customers context
+   - Add `get_customer_by_session_token/1` for session validation
+   - Implement token expiration and cleanup
+
+2. **Router Pipelines**:
+   - Create `:require_customer_auth` pipeline for authentication
+   - Create `:require_staff` pipeline for staff authorization
+   - Add logout route and controller action
+
+3. **LiveView Hooks**:
+   - Implement `:ensure_staff` hook in LiveHooks module
+   - Add staff check on mount for admin LiveViews
+
+4. **Session Controller**:
+   - Create `Admin.SessionController` for login/logout
+   - Implement rate limiting integration
+   - Add CSRF protection
+
 ## Risks
 
 1. **Security**: Admin interface is high-value target
