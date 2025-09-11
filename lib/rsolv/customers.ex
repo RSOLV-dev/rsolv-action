@@ -288,4 +288,44 @@ defmodule Rsolv.Customers do
     Bcrypt.no_user_verify()
     {:error, :invalid_credentials}
   end
+  
+  ## Session token management
+  
+  # Simple in-memory session storage for now
+  # In production, this should use a proper session store
+  @session_validity_in_days 60
+  
+  @doc """
+  Generates a session token for a customer.
+  """
+  def generate_customer_session_token(customer) do
+    token = :crypto.strong_rand_bytes(32) |> Base.url_encode64()
+    
+    # Store in ETS table for now (created in application startup)
+    :ets.insert(:customer_sessions, {token, customer.id, DateTime.utc_now()})
+    
+    token
+  end
+  
+  @doc """
+  Gets a customer by session token.
+  """
+  def get_customer_by_session_token(token) do
+    case :ets.lookup(:customer_sessions, token) do
+      [{^token, customer_id, _inserted_at}] ->
+        get_customer!(customer_id)
+      [] ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+  
+  @doc """
+  Deletes a session token.
+  """
+  def delete_session_token(token) do
+    :ets.delete(:customer_sessions, token)
+    :ok
+  end
 end

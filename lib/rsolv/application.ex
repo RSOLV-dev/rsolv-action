@@ -11,6 +11,9 @@ defmodule Rsolv.Application do
     # Ensure Hackney is started (required for HTTP requests)
     {:ok, _} = Application.ensure_all_started(:hackney)
     
+    # Create ETS table for customer sessions
+    :ets.new(:customer_sessions, [:set, :public, :named_table])
+    
     # Ensure required directories exist
     create_required_directories()
 

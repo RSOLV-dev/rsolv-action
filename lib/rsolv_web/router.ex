@@ -20,6 +20,14 @@ defmodule RsolvWeb.Router do
     plug RsolvWeb.Plugs.PrometheusExPlug
   end
   
+  pipeline :fetch_current_customer do
+    plug RsolvWeb.CustomerAuth, :fetch_current_customer
+  end
+  
+  pipeline :require_staff_customer do
+    plug RsolvWeb.CustomerAuth, :require_staff_customer
+  end
+  
   # Feature flag pipelines
   pipeline :require_admin_dashboard do
     plug FeatureFlagPlug, feature: :admin_dashboard, fallback_url: "/", 
@@ -70,11 +78,20 @@ defmodule RsolvWeb.Router do
     get "/sitemap.xml", SitemapController, :index
   end
 
-  # Admin routes (public login, protected admin area to be added)
+  # Admin routes (public login, protected admin area)
   scope "/admin", RsolvWeb.Admin do
     pipe_through :browser
     
     get "/login", SessionController, :new
+    post "/login", SessionController, :create
+  end
+  
+  # Protected admin routes
+  scope "/admin", RsolvWeb.Admin do
+    pipe_through [:browser, :fetch_current_customer, :require_staff_customer]
+    
+    get "/dashboard", DashboardController, :index
+    delete "/logout", DashboardController, :logout
   end
   
   # Dashboard routes with authentication and feature flags
