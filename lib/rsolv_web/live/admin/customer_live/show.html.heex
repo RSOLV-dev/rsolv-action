@@ -20,10 +20,16 @@
   </div>
 
   <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
-    <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+    <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
       <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
         Customer Information
       </h3>
+      <button
+        phx-click="open_edit_modal"
+        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+      >
+        Edit
+      </button>
     </div>
     
     <div class="px-4 py-5 sm:p-6">
@@ -119,4 +125,63 @@
       <% end %>
     </div>
   </div>
+  
+  <%= if @show_edit_modal do %>
+    <div class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" phx-click="close_edit_modal"></div>
+        
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 mb-4">
+              Edit Customer
+            </h3>
+            
+            <.form
+              for={@form}
+              id="customer-form"
+              phx-submit="save_customer"
+              phx-change="validate_customer"
+            >
+              <div class="space-y-4">
+                <div>
+                  <.input field={@form[:name]} type="text" label="Name" />
+                </div>
+                
+                <div>
+                  <.input field={@form[:email]} type="email" label="Email" />
+                </div>
+                
+                <div>
+                  <.input field={@form[:monthly_limit]} type="number" label="Monthly Limit" />
+                </div>
+                
+                <div>
+                  <.input field={@form[:active]} type="checkbox" label="Active" />
+                </div>
+              </div>
+              
+              <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                <button
+                  type="submit"
+                  class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  phx-click="close_edit_modal"
+                  class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </.form>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
 </div>
