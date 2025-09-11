@@ -105,8 +105,12 @@
     </table>
   </div>
   
-  <%= if @total_pages > 1 do %>
-    <div class="mt-4 flex justify-center">
+  <div class="mt-4 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+    <div class="flex justify-between items-center">
+      <div class="text-sm text-gray-700 dark:text-gray-300">
+        Showing <%= (@current_page - 1) * @per_page + 1 %> to <%= min(@current_page * @per_page, @total_count) %> of <%= @total_count %>
+      </div>
+      <%= if @total_pages > 1 do %>
       <nav class="flex items-center space-x-2">
         <%= if @current_page > 1 do %>
           <.link
@@ -141,6 +145,7 @@
           </.link>
         <% end %>
       </nav>
+      <% end %>
     </div>
-  <% end %>
+  </div>
 </div>

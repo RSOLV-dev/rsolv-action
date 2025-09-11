@@ -92,13 +92,24 @@ defmodule RsolvWeb.CustomerAuth do
   def require_staff_customer(conn, _opts) do
     customer = conn.assigns[:current_customer]
     
-    if customer && customer.is_staff do
-      conn
-    else
-      conn
-      |> put_flash(:error, "You are not authorized to access this page.")
-      |> redirect(to: "/")
-      |> halt()
+    cond do
+      # No customer logged in - redirect to admin login
+      is_nil(customer) ->
+        conn
+        |> put_flash(:error, "You must be logged in to access this page.")
+        |> redirect(to: "/admin/login")
+        |> halt()
+      
+      # Customer logged in but not staff - redirect to home
+      not customer.is_staff ->
+        conn
+        |> put_flash(:error, "You are not authorized to access this page.")
+        |> redirect(to: "/")
+        |> halt()
+      
+      # Staff customer - allow access
+      true ->
+        conn
     end
   end
 end
