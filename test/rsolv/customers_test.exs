@@ -58,8 +58,8 @@ defmodule Rsolv.CustomersTest do
       # Reset rate limiter to ensure clean state
       Rsolv.RateLimiter.reset()
       
-      # Make 5 failed attempts
-      for _ <- 1..5 do
+      # Make 10 failed attempts (per RFC-056 configuration)
+      for _ <- 1..10 do
         assert {:error, :invalid_credentials} = 
           Customers.authenticate_customer_by_email_and_password(
             "test@example.com",
@@ -67,7 +67,7 @@ defmodule Rsolv.CustomersTest do
           )
       end
 
-      # 6th attempt should be rate limited
+      # 11th attempt should be rate limited
       assert {:error, :too_many_attempts} = 
         Customers.authenticate_customer_by_email_and_password(
           "test@example.com",

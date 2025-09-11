@@ -11,8 +11,8 @@ defmodule Rsolv.Application do
     # Ensure Hackney is started (required for HTTP requests)
     {:ok, _} = Application.ensure_all_started(:hackney)
     
-    # Create ETS table for customer sessions
-    :ets.new(:customer_sessions, [:set, :public, :named_table])
+    # Note: Customer sessions now use Mnesia for distributed storage
+    # See Rsolv.CustomerSessions module
     
     # Ensure required directories exist
     create_required_directories()
@@ -36,6 +36,8 @@ defmodule Rsolv.Application do
       Rsolv.Security.PatternServer,
       # Start rate limiting
       Rsolv.RateLimiter,
+      # Start distributed customer sessions
+      Rsolv.CustomerSessions,
       # Start cache services
       Rsolv.Cache.ValidationCache,
       # Start telemetry reporter for validation metrics

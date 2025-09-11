@@ -14,7 +14,7 @@ if config_env() == :prod do
   pod_namespace = System.get_env("POD_NAMESPACE") || "default"
   
   # Service name should match the headless service in Kubernetes
-  service_name = System.get_env("CLUSTER_SERVICE_NAME") || "staging-rsolv-headless"
+  service_name = System.get_env("CLUSTER_SERVICE_NAME") || "staging-rsolv-platform-headless"
   
   config :rsolv,
     enable_clustering: true,

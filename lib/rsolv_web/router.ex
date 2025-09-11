@@ -90,11 +90,14 @@ defmodule RsolvWeb.Router do
   scope "/admin", RsolvWeb.Admin do
     pipe_through [:browser, :fetch_current_customer, :require_staff_customer]
     
+    get "/", DashboardController, :index  # Add index route that redirects to dashboard
     get "/dashboard", DashboardController, :index
     delete "/logout", DashboardController, :logout
     
     live "/customers", CustomerLive.Index, :index
+    live "/customers/new", CustomerLive.Index, :new
     live "/customers/:id", CustomerLive.Show, :show
+    live "/customers/:id/edit", CustomerLive.Index, :edit
   end
   
   # Dashboard routes with authentication and feature flags
