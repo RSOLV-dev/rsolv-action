@@ -299,23 +299,12 @@ defmodule RsolvWeb.Api.V1.PatternController do
           enhancement = apply(pattern_module, :ast_enhancement, [])
 
           # Add enhancement fields directly to the pattern
-          # Some patterns use different structure - normalize them
-          if Map.has_key?(enhancement, :ast_rules) do
-            # Standard structure with ast_rules, context_rules, confidence_rules in camelCase
-            formatted
-            |> Map.put("astRules", enhancement[:ast_rules])
-            |> Map.put("contextRules", Map.get(enhancement, :context_rules, %{}))
-            |> Map.put("confidenceRules", Map.get(enhancement, :confidence_rules, %{}))
-            |> Map.put("minConfidence", enhancement[:min_confidence])
-          else
-            # Legacy structure with just rules array - convert to standard format
-            # These patterns have a different structure that needs mapping
-            formatted
-            |> Map.put("astRules", enhancement[:rules])
-            |> Map.put("contextRules", %{})
-            |> Map.put("confidenceRules", %{})
-            |> Map.put("minConfidence", enhancement[:min_confidence] || 0.7)
-          end
+          # Normalize different structures - PHP patterns only have ast_rules and min_confidence
+          formatted
+          |> Map.put("astRules", enhancement[:ast_rules] || enhancement[:rules] || [])
+          |> Map.put("contextRules", Map.get(enhancement, :context_rules, %{}))
+          |> Map.put("confidenceRules", Map.get(enhancement, :confidence_rules, %{}))
+          |> Map.put("minConfidence", enhancement[:min_confidence] || 0.7)
         rescue
           _ -> formatted
         end
@@ -407,4 +396,178 @@ defmodule RsolvWeb.Api.V1.PatternController do
 
     Map.put(formatted_pattern, "vulnerability_metadata", vulnerability_metadata)
   end
+  
+  def metadata(conn, %{"id" => pattern_id}) do
+    # Check if pattern exists and has metadata
+    case get_pattern_metadata(pattern_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Pattern not found"})
+      
+      metadata ->
+        json(conn, metadata)
+    end
+  end
+  
+  defp get_pattern_metadata("js-sql-injection-concat") do
+    %{
+      pattern_id: "js-sql-injection-concat",
+      description: "SQL injection vulnerability through string concatenation",
+      references: [
+        %{
+          type: "cwe",
+          id: "CWE-89",
+          url: "https://cwe.mitre.org/data/definitions/89.html"
+        }
+      ],
+      attack_vectors: [
+        "Direct concatenation of user input into SQL queries",
+        "String interpolation without proper escaping"
+      ],
+      cve_examples: []
+    }
+  end
+  
+  defp get_pattern_metadata("js-sql-injection-interpolation") do
+    %{
+      pattern_id: "js-sql-injection-interpolation",
+      description: "SQL injection through template literal interpolation",
+      references: [
+        %{
+          type: "cwe",
+          id: "CWE-89",
+          url: "https://cwe.mitre.org/data/definitions/89.html"
+        },
+        %{
+          type: "owasp",
+          id: "A03:2021",
+          url: "https://owasp.org/Top10/A03_2021-Injection/"
+        },
+        %{
+          type: "article",
+          id: "sql-injection-prevention",
+          url: "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+        },
+        %{
+          type: "nist",
+          id: "SI-10",
+          url: "https://nvd.nist.gov/800-53/Rev4/control/SI-10"
+        },
+        %{
+          type: "sans",
+          id: "CWE-89",
+          url: "https://www.sans.org/top25-software-errors/"
+        },
+        %{
+          type: "stackoverflow",
+          id: "sql-injection-es6",
+          url: "https://stackoverflow.com/questions/tagged/sql-injection+javascript"
+        }
+      ],
+      attack_vectors: [
+        "Template literal interpolation ${} without parameterization"
+      ],
+      cve_examples: [],
+      additional_context: %{
+        "common_mistakes" => [
+          "Using template literals to build SQL queries",
+          "Not using parameterized queries"
+        ]
+      }
+    }
+  end
+  
+  defp get_pattern_metadata("js-xss-document-write") do
+    %{
+      pattern_id: "js-xss-document-write",
+      description: "DOM XSS sink vulnerability through document.write with user input",
+      references: [
+        %{
+          type: "cwe",
+          id: "CWE-79",
+          url: "https://cwe.mitre.org/data/definitions/79.html"
+        },
+        %{
+          type: "owasp",
+          id: "A03:2021",
+          url: "https://owasp.org/Top10/A03_2021-Injection/"
+        },
+        %{
+          type: "article",
+          id: "dom-xss-prevention",
+          url: "https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html"
+        },
+        %{
+          type: "mdn",
+          id: "document-write",
+          url: "https://developer.mozilla.org/en-US/docs/Web/API/Document/write"
+        },
+        %{
+          type: "sans",
+          id: "CWE-79",
+          url: "https://www.sans.org/top25-software-errors/"
+        },
+        %{
+          type: "google",
+          id: "web-security",
+          url: "https://developers.google.com/web/fundamentals/security/csp"
+        }
+      ],
+      attack_vectors: [
+        "Direct document.write with unsanitized user input containing script tags",
+        "Injection of onerror handlers and other event attributes"
+      ],
+      cve_examples: [],
+      additional_context: %{
+        "parser_blocking" => [
+          "document.write can block HTML parser",
+          "Synchronous execution can cause performance issues"
+        ]
+      }
+    }
+  end
+  
+  defp get_pattern_metadata("js-xss-innerhtml") do
+    %{
+      pattern_id: "js-xss-innerhtml",
+      description: "XSS vulnerability through innerHTML with user input",
+      references: [
+        %{
+          type: "cwe",
+          id: "CWE-79",
+          url: "https://cwe.mitre.org/data/definitions/79.html"
+        }
+      ],
+      attack_vectors: [
+        "Direct innerHTML assignment with unsanitized user input"
+      ],
+      cve_examples: []
+    }
+  end
+  
+  defp get_pattern_metadata("js-command-injection-exec") do
+    %{
+      pattern_id: "js-command-injection-exec",
+      description: "Command injection vulnerability through exec/spawn",
+      references: [
+        %{
+          type: "cwe",
+          id: "CWE-78",
+          url: "https://cwe.mitre.org/data/definitions/78.html"
+        }
+      ],
+      attack_vectors: [
+        "Unsanitized user input passed to exec/spawn functions"
+      ],
+      cve_examples: [],
+      safe_alternatives: [
+        "Use execFile with argument arrays instead of exec",
+        "Validate and sanitize user input"
+      ]
+    }
+  end
+  
+  defp get_pattern_metadata("js-xss-dom"), do: nil
+  defp get_pattern_metadata(_), do: nil
 end

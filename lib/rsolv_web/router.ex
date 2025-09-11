@@ -115,8 +115,7 @@ defmodule RsolvWeb.Router do
     post "/credentials/refresh", CredentialController, :refresh
     post "/usage/report", CredentialController, :report_usage
     
-    # Pattern metadata endpoint (uses non-versioned controller)
-    get "/patterns/:id/metadata", PatternController, :metadata
+    # Pattern metadata endpoint moved to Api.V1.PatternController
     
     # Fix attempts
     resources "/fix-attempts", FixAttemptController, except: [:new, :edit]
@@ -133,6 +132,7 @@ defmodule RsolvWeb.Router do
     get "/patterns/stats", PatternController, :stats
     get "/patterns/by-language/:language", PatternController, :by_language
     get "/patterns/v2", PatternController, :index_v2
+    get "/patterns/:id/metadata", PatternController, :metadata
     
     # AST analysis endpoint
     post "/ast/analyze", ASTController, :analyze
@@ -149,21 +149,8 @@ defmodule RsolvWeb.Router do
     get "/phases/retrieve", PhaseController, :retrieve
   end
   
-  # Legacy pattern endpoints (non-versioned API)
   scope "/api", RsolvWeb do
     pipe_through :api
-    
-    # Pattern endpoints
-    get "/patterns", PatternController, :index
-    get "/patterns/public/:language", PatternController, :public
-    get "/patterns/protected/:language", PatternController, :protected
-    get "/patterns/ai/:language", PatternController, :ai
-    get "/patterns/enterprise/:language", PatternController, :enterprise
-    get "/patterns/by-language/:language", PatternController, :by_language
-    get "/patterns/all/public", PatternController, :all_public
-    get "/patterns/all/protected", PatternController, :all_protected
-    get "/patterns/all/ai", PatternController, :all_ai
-    get "/patterns/all/enterprise", PatternController, :all_enterprise
     
     # Health check
     get "/health", HealthController, :index

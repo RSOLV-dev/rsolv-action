@@ -1,13 +1,15 @@
 defmodule RsolvWeb.CredentialVendingTest do
   use RsolvWeb.ConnCase
+  import Rsolv.APITestHelpers
 
-  @internal_key "rsolv_test_abc123"  # Use existing test API key
-  @invalid_key "invalid_key_12345"
+  describe "credential vending" do
+    setup do
+      setup_api_auth()
+    end
 
-  describe "credential vending with environment-based keys" do
-    test "exchanges valid internal API key for anthropic credentials", %{conn: conn} do
+    test "exchanges valid API key for anthropic credentials", %{conn: conn, api_key: api_key} do
       conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => @internal_key,
+        "api_key" => api_key.key,
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -22,7 +24,7 @@ defmodule RsolvWeb.CredentialVendingTest do
 
     test "returns 401 for invalid API key", %{conn: conn} do
       conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => @invalid_key,
+        "api_key" => "invalid_key_12345",
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -31,9 +33,9 @@ defmodule RsolvWeb.CredentialVendingTest do
       assert %{"error" => "Invalid API key"} = json_response(conn, 401)
     end
 
-    test "validates providers parameter is present", %{conn: conn} do
+    test "validates providers parameter is present", %{conn: conn, api_key: api_key} do
       conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => @internal_key
+        "api_key" => api_key.key
         # Missing providers
       })
 

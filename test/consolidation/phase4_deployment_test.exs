@@ -1,6 +1,8 @@
 defmodule Rsolv.Phase4DeploymentTest do
   use ExUnit.Case
   
+  @moduletag :skip  # Skip deployment tests - require kubectl and staging environment
+  
   @moduledoc """
   Phase 4 deployment tests to verify staging deployment and end-to-end functionality.
   These tests define the expected behavior after deploying to staging environment.

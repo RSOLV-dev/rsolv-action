@@ -1,12 +1,17 @@
 defmodule RsolvWeb.Api.V1.ASTPatternSerializationTest do
   use RsolvWeb.ConnCase
+  import Rsolv.APITestHelpers
   
   describe "GET /api/v1/patterns with format=enhanced - AST Serialization" do
-    test "returns AST enhancement fields when format=enhanced with API key", %{conn: conn} do
+    setup do
+      setup_api_auth()
+    end
+
+    test "returns AST enhancement fields when format=enhanced with API key", %{conn: conn, api_key: api_key} do
       # RED: This test should fail initially because AST fields are not being serialized
       conn = 
         conn
-        |> put_req_header("authorization", "Bearer rsolv_test_abc123")
+        |> put_req_header("authorization", "Bearer #{api_key.key}")
         |> get("/api/v1/patterns?language=javascript&format=enhanced")
       
       assert %{
@@ -59,10 +64,10 @@ defmodule RsolvWeb.Api.V1.ASTPatternSerializationTest do
       assert length(sql_injection_pattern["regexPatterns"]) > 0
     end
     
-    test "returns standard format without AST fields when format=standard", %{conn: conn} do
+    test "returns standard format without AST fields when format=standard", %{conn: conn, api_key: api_key} do
       conn = 
         conn
-        |> put_req_header("authorization", "Bearer rsolv_test_abc123")
+        |> put_req_header("authorization", "Bearer #{api_key.key}")
         |> get("/api/v1/patterns?language=javascript&format=standard")
       
       assert %{
@@ -110,10 +115,10 @@ defmodule RsolvWeb.Api.V1.ASTPatternSerializationTest do
       end)
     end
     
-    test "all enhanced patterns have properly formatted regex", %{conn: conn} do
+    test "all enhanced patterns have properly formatted regex", %{conn: conn, api_key: api_key} do
       conn = 
         conn
-        |> put_req_header("authorization", "Bearer rsolv_test_abc123")
+        |> put_req_header("authorization", "Bearer #{api_key.key}")
         |> get("/api/v1/patterns?language=javascript&format=enhanced")
       
       %{"patterns" => patterns} = json_response(conn, 200)
@@ -131,10 +136,10 @@ defmodule RsolvWeb.Api.V1.ASTPatternSerializationTest do
       end)
     end
     
-    test "enhanced patterns include all standard fields plus AST fields", %{conn: conn} do
+    test "enhanced patterns include all standard fields plus AST fields", %{conn: conn, api_key: api_key} do
       conn = 
         conn
-        |> put_req_header("authorization", "Bearer rsolv_test_abc123")
+        |> put_req_header("authorization", "Bearer #{api_key.key}")
         |> get("/api/v1/patterns?language=javascript&format=enhanced")
       
       %{"patterns" => patterns} = json_response(conn, 200)

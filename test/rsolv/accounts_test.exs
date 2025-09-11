@@ -2,55 +2,63 @@ defmodule Rsolv.AccountsTest do
   use Rsolv.DataCase
   
   alias Rsolv.Accounts
+  alias Rsolv.Customers
 
   describe "get_customer_by_api_key/1" do
-    test "returns nil for hardcoded keys when not in allowed list" do
-      # These should NOT work because they're hardcoded
-      assert Accounts.get_customer_by_api_key("rsolv_internal_a08e4f8ffb58ba44b2cb4d3b30f28e99") == nil
-      assert Accounts.get_customer_by_api_key("rsolv_internal_1cbadb7c6436697f3cf0411576abe323") == nil
-      assert Accounts.get_customer_by_api_key("rsolv_prod_demo_key") == nil
-      assert Accounts.get_customer_by_api_key("rsolv_master_key_984c92f8c96d95167a2cf9bc8de288bb") == nil
-    end
-
-    test "returns customer for keys that match environment variables" do
-      # Set up test environment variables
-      System.put_env("INTERNAL_API_KEY", "test_internal_key_123")
-      System.put_env("DEMO_API_KEY", "test_demo_key_456")
-      
-      # These should work because they match env vars
-      internal = Accounts.get_customer_by_api_key("test_internal_key_123")
-      assert internal != nil
-      assert internal.id == "internal"
-      assert internal.name == "Internal Testing"
-      
-      demo = Accounts.get_customer_by_api_key("test_demo_key_456")
-      assert demo != nil
-      assert demo.id == "demo"
-      assert demo.name == "Demo Account"
-      
-      # Clean up
-      System.delete_env("INTERNAL_API_KEY")
-      System.delete_env("DEMO_API_KEY")
-    end
-
     test "returns nil for non-existent keys" do
       assert Accounts.get_customer_by_api_key("random_key_xyz") == nil
       assert Accounts.get_customer_by_api_key("") == nil
       assert Accounts.get_customer_by_api_key(nil) == nil
     end
-    
-    test "test customer has enterprise tier and flags" do
-      customer = Accounts.get_customer_by_api_key("rsolv_test_abc123")
+
+    test "returns customer for valid database API key" do
+      # Create a customer with an API key
+      {:ok, customer} = Customers.create_customer(%{
+        name: "Test Customer",
+        email: "test@example.com",
+        subscription_plan: "enterprise",
+        metadata: %{"flags" => ["ai_access", "enterprise_access"]},
+        monthly_limit: 100,
+        active: true
+      })
       
-      assert customer != nil
-      assert customer.id == "test_customer_1"
-      assert customer.name == "Test Customer"
-      assert customer.email == "test@example.com"
-      assert customer.tier == "enterprise"
-      assert customer.flags == ["ai_access", "enterprise_access"]
-      assert customer.monthly_limit == 100
-      assert customer.active == true
-      assert customer.trial == true
+      {:ok, api_key} = Customers.create_api_key(customer, %{
+        name: "Test API Key",
+        permissions: ["full_access"]
+      })
+      
+      # Should return the customer when using the valid key
+      found_customer = Accounts.get_customer_by_api_key(api_key.key)
+      assert found_customer != nil
+      assert found_customer.id == customer.id
+      assert found_customer.name == "Test Customer"
+      assert found_customer.email == "test@example.com"
+      assert found_customer.subscription_plan == "enterprise"
+      assert found_customer.metadata["flags"] == ["ai_access", "enterprise_access"]
+      assert found_customer.monthly_limit == 100
+      assert found_customer.active == true
+    end
+
+    @tag :skip  # revoke_api_key function not implemented yet
+    test "returns nil for revoked API key" do
+      # Skip - revoke_api_key function not implemented yet
+    end
+
+    test "returns nil for inactive customer" do
+      # Create an inactive customer
+      {:ok, customer} = Customers.create_customer(%{
+        name: "Inactive Customer",
+        email: "inactive@example.com",
+        active: false
+      })
+      
+      {:ok, api_key} = Customers.create_api_key(customer, %{
+        name: "Test API Key",
+        permissions: ["full_access"]
+      })
+      
+      # Should return nil for inactive customer
+      assert Accounts.get_customer_by_api_key(api_key.key) == nil
     end
   end
 end

@@ -1,5 +1,6 @@
 defmodule Rsolv.Integration.PhpPatternAstTest do
   use RsolvWeb.ConnCase, async: true
+  import Rsolv.APITestHelpers
   
   @moduledoc """
   Integration test to verify PHP pattern AST enhancement fix.
@@ -7,28 +8,24 @@ defmodule Rsolv.Integration.PhpPatternAstTest do
   """
   
   setup do
-    # Use the standard test API key that exists in test environment
-    test_customer = %{
-      api_key: "rsolv_test_abc123"
-    }
-    
-    %{test_customer: test_customer}
+    setup_api_auth()
   end
   
   describe "PHP pattern AST enhancement" do
-    test "PHP patterns return ast_rules in enhanced format", %{conn: conn, test_customer: test_customer} do
+    # PHP patterns now have AST enhancements
+    test "PHP patterns return ast_rules in enhanced format", %{conn: conn, customer: customer, api_key: api_key} do
       # Test WITH API key to get enhanced patterns
       conn = 
         conn
-        |> put_req_header("authorization", "Bearer #{test_customer.api_key}")
+        |> put_req_header("authorization", "Bearer #{api_key.key}")
         |> get("/api/v1/patterns?language=php&format=enhanced")
       
       assert response = json_response(conn, 200)
       assert response["metadata"]["language"] == "php"
       assert response["metadata"]["format"] == "enhanced"
       
-      # Should return full PHP patterns with API key
-      assert length(response["patterns"]) >= 3
+      # Should return full PHP patterns with API key (25 total)
+      assert length(response["patterns"]) == 25
       
       # All PHP patterns should have the enhanced format structure with API key
       Enum.each(response["patterns"], fn pattern ->
@@ -48,7 +45,7 @@ defmodule Rsolv.Integration.PhpPatternAstTest do
       end)
     end
     
-    test "PHP demo patterns have expected IDs", %{conn: conn} do
+    test "PHP demo patterns have expected IDs", %{conn: conn, customer: customer, api_key: api_key} do
       
       conn = get(conn, "/api/v1/patterns?language=php&format=enhanced")
       
@@ -65,7 +62,7 @@ defmodule Rsolv.Integration.PhpPatternAstTest do
       end)
     end
     
-    test "PHP demo patterns do NOT have AST enhancement fields", %{conn: conn} do
+    test "PHP demo patterns do NOT have AST enhancement fields", %{conn: conn, customer: customer, api_key: api_key} do
       # Test WITHOUT API key (demo patterns)
       conn = get(conn, "/api/v1/patterns?language=php&format=enhanced")
       

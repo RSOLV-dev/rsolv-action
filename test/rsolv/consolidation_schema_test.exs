@@ -4,7 +4,12 @@ defmodule Rsolv.ConsolidationSchemaTest do
   @moduledoc """
   TDD tests for Phase 2: Database Schema Consolidation.
   These tests define the expected unified schema structure.
+  
+  NOTE: These tests are outdated after RFC-049 implementation.
+  RFC-049 removed the User entity entirely in favor of direct Customer authentication.
   """
+  
+  @moduletag :skip  # Skip all tests in this module
   
   describe "unified user and customer relationship" do
     test "users table exists with auth fields" do

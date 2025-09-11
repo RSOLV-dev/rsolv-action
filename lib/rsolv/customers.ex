@@ -62,7 +62,13 @@ defmodule Rsolv.Customers do
     # First check if it's an api_keys table key
     case Repo.get_by(ApiKey, key: api_key, active: true) do
       %ApiKey{customer_id: customer_id} ->
-        get_customer!(customer_id)
+        customer = get_customer!(customer_id)
+        # Only return customer if they are active
+        if customer.active do
+          customer
+        else
+          nil
+        end
       nil ->
         # No customer found with this API key
         nil
