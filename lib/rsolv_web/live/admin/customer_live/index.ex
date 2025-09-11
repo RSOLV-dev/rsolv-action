@@ -90,11 +90,13 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
     total_count = Rsolv.Repo.aggregate(query, :count)
     
     # Apply sorting and pagination
+    offset_value = (page - 1) * @per_page
+    
     customers = 
       query
       |> order_by([c], [{^sort_order, field(c, ^sort_by)}])
       |> limit(@per_page)
-      |> offset((^page - 1) * @per_page)
+      |> offset(^offset_value)
       |> Rsolv.Repo.all()
     
     {customers, total_count}
