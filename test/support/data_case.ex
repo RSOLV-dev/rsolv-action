@@ -50,6 +50,20 @@ defmodule Rsolv.DataCase do
         :ok
     end
     
+    # Clear Mnesia tables to prevent flaky tests from data persistence
+    # These tables are not transactional like SQL, so they persist between tests
+    try do
+      :mnesia.clear_table(:rate_limiter)
+    rescue
+      _ -> :ok
+    end
+    
+    try do
+      :mnesia.clear_table(:customer_sessions_mnesia)
+    rescue
+      _ -> :ok
+    end
+    
     # Now start the sandbox
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)

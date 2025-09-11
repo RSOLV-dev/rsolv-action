@@ -30,6 +30,17 @@ defmodule RsolvWeb.ConnCase do
       import RsolvWeb.ConnCase
     end
   end
+  
+  @doc """
+  Logs in a customer for testing.
+  """
+  def log_in_customer(conn, customer) do
+    token = Rsolv.Customers.generate_customer_session_token(customer)
+    
+    conn
+    |> Phoenix.ConnTest.init_test_session(%{})
+    |> Plug.Conn.put_session(:customer_token, token)
+  end
 
   setup tags do
     # Ensure the application is started
@@ -37,6 +48,13 @@ defmodule RsolvWeb.ConnCase do
     
     # Wait for endpoint to be ready (it creates an ETS table internally)
     ensure_endpoint_started()
+    
+    # Clear Mnesia customer sessions table to prevent test interference
+    try do
+      :mnesia.clear_table(:customer_sessions_mnesia)
+    rescue
+      _ -> :ok
+    end
     
     # Ensure the repo is started before trying to use sandbox
     try do

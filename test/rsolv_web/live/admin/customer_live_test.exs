@@ -148,12 +148,4 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
     end
   end
   
-  # Helper to log in a customer
-  defp log_in_customer(conn, customer) do
-    token = Rsolv.Customers.generate_customer_session_token(customer)
-    
-    conn
-    |> Phoenix.ConnTest.init_test_session(%{})
-    |> Plug.Conn.put_session(:customer_token, token)
-  end
 end
