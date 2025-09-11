@@ -14,6 +14,13 @@ defmodule RsolvWeb.CustomerAuth do
   # Token name stored in the session
   @session_token_key :customer_token
   
+  # Plug callbacks
+  def init(opts), do: opts
+  
+  def call(conn, opts) do
+    apply(__MODULE__, opts, [conn, []])
+  end
+  
   @doc """
   Logs the customer in.
   
