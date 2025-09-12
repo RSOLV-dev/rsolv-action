@@ -86,7 +86,7 @@ defmodule RsolvWeb.Admin.LoginLive do
           socket = 
             socket
             |> put_flash(:info, "Welcome back!")
-            |> redirect(external: "/admin/auth?token=#{token}")
+            |> redirect(to: "/admin/auth?token=#{token}")
           
           Logger.info("[Admin LoginLive] Redirect issued to /admin/auth")
           
