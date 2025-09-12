@@ -92,9 +92,15 @@ defmodule Rsolv.Customers do
 
   """
   def create_customer(attrs) when is_map(attrs) do
-    %Customer{}
-    |> Customer.changeset(attrs)
-    |> Repo.insert()
+    changeset = if Map.has_key?(attrs, :password) or Map.has_key?(attrs, "password") do
+      # Use registration changeset when password is provided
+      Customer.registration_changeset(%Customer{}, attrs)
+    else
+      # Use regular changeset for customers without passwords (e.g., API-only customers)
+      Customer.changeset(%Customer{}, attrs)
+    end
+    
+    Repo.insert(changeset)
   end
   
   # Legacy support for user-based creation (deprecated)
