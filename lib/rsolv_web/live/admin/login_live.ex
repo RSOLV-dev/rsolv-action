@@ -152,7 +152,7 @@ defmodule RsolvWeb.Admin.LoginLive do
         </div>
       <% end %>
       
-      <form phx-change="validate" phx-submit="submit" class="space-y-4" onsubmit="return false;">
+      <form phx-change="validate" phx-submit="submit" class="space-y-4">
         <div>
           <label for="email" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
           <input 
