@@ -24,9 +24,15 @@ const Hooks = {
   // Hook for handling redirects from LiveView to non-LiveView routes
   Redirect: {
     mounted() {
+      console.log('[Redirect Hook] Mounted on element:', this.el);
       this.handleEvent("redirect", ({to}) => {
+        console.log('[Redirect Hook] Received redirect event to:', to);
+        console.log('[Redirect Hook] Current location:', window.location.href);
         window.location.href = to;
       });
+    },
+    destroyed() {
+      console.log('[Redirect Hook] Destroyed');
     }
   },
   

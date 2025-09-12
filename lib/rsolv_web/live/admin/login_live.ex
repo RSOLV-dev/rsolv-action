@@ -6,9 +6,12 @@ defmodule RsolvWeb.Admin.LoginLive do
   
   @impl true
   def mount(params, session, socket) do
+    Logger.info("[Admin LoginLive] ====== MOUNT CALLED ======")
     Logger.info("[Admin LoginLive] Mount - Rendering login form")
     Logger.debug("[Admin LoginLive] Mount params: #{inspect(params)}")
     Logger.debug("[Admin LoginLive] Mount session: #{inspect(Map.keys(session))}")
+    Logger.debug("[Admin LoginLive] Socket ID: #{inspect(socket.id)}")
+    Logger.debug("[Admin LoginLive] Connected?: #{connected?(socket)}")
     
     socket = 
       socket
@@ -17,6 +20,7 @@ defmodule RsolvWeb.Admin.LoginLive do
       |> assign(:error_message, nil)
       |> assign(:processing, false)
     
+    Logger.info("[Admin LoginLive] Mount complete, socket assigns: #{inspect(Map.keys(socket.assigns))}")
     {:ok, socket}
   end
   
@@ -142,6 +146,10 @@ defmodule RsolvWeb.Admin.LoginLive do
   def render(assigns) do
     ~H"""
     <div class="bg-canvas pb-24 lg:pb-32" id="admin-login" phx-hook="Redirect">
+      <script>
+        console.log('[Admin Login] Page loaded at', new Date().toISOString());
+        console.log('[Admin Login] LiveView socket state:', window.liveSocket ? 'connected' : 'not connected');
+      </script>
       <div class="sm:px-8 mt-24 sm:mt-32">
         <div class="mx-auto w-full max-w-7xl lg:px-8">
           <div class="relative px-4 sm:px-8 lg:px-12">
@@ -154,7 +162,20 @@ defmodule RsolvWeb.Admin.LoginLive do
         </div>
       <% end %>
       
-      <form phx-change="validate" phx-submit="submit" class="space-y-4">
+      <form phx-change="validate" phx-submit="submit" class="space-y-4" 
+            onsubmit="console.log('[Admin Login] Form submit event triggered');">
+        <script>
+          // Add event listeners to track form interactions
+          document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form[phx-submit="submit"]');
+            if (form) {
+              console.log('[Admin Login] Form found, adding listeners');
+              form.addEventListener('submit', function(e) {
+                console.log('[Admin Login] Submit listener fired, prevented:', e.defaultPrevented);
+              });
+            }
+          });
+        </script>
         <div>
           <label for="email" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
           <input 
