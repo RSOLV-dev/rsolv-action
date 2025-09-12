@@ -78,12 +78,15 @@ defmodule RsolvWeb.Router do
     get "/sitemap.xml", SitemapController, :index
   end
 
-  # Admin routes (public login, protected admin area)
+  # Admin routes (public login via LiveView, protected admin area)
   scope "/admin", RsolvWeb.Admin do
     pipe_through :browser
     
-    get "/login", SessionController, :new
-    post "/login", SessionController, :create
+    # LiveView login
+    live "/login", LoginLive, :index
+    
+    # Auth callback for session creation
+    get "/auth", AuthController, :authenticate
   end
   
   # Protected admin routes
