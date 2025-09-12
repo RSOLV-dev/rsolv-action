@@ -11,6 +11,15 @@ defmodule RsolvWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
+  
+  # Pipeline for admin auth callback - no CSRF protection needed for token-based auth
+  pipeline :admin_auth do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_flash
+    plug :put_root_layout, html: {RsolvWeb.Layouts, :root}
+    plug :put_secure_browser_headers
+  end
 
   pipeline :api do
     plug :accepts, ["json"]
@@ -84,8 +93,13 @@ defmodule RsolvWeb.Router do
     
     # LiveView login
     live "/login", LoginLive, :index
+  end
+  
+  # Admin auth callback - uses separate pipeline without CSRF protection
+  scope "/admin", RsolvWeb.Admin do
+    pipe_through :admin_auth
     
-    # Auth callback for session creation
+    # Auth callback for session creation (token-based auth doesn't need CSRF)
     get "/auth", AuthController, :authenticate
   end
   

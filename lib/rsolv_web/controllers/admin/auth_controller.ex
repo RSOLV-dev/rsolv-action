@@ -21,6 +21,7 @@ defmodule RsolvWeb.Admin.AuthController do
           Logger.info("[Admin AuthController] Valid staff token for customer #{customer.id}")
           
           conn
+          |> put_flash(:info, "Welcome back!")
           |> CustomerAuth.log_in_customer(customer, %{"remember_me" => "true"})
         else
           Logger.warning("[Admin AuthController] Non-staff customer attempted admin access: #{customer.id}")

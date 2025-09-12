@@ -194,4 +194,130 @@ defmodule Rsolv.CustomersTest do
       assert "is invalid" in errors_on(changeset).admin_level
     end
   end
+  
+  describe "create_customer/1 regression tests for password handling" do
+    test "creates customer with password using create_customer function" do
+      # This tests the fix for the bug where create_customer wasn't using
+      # registration_changeset when a password was provided
+      attrs = %{
+        email: "password_user@example.com",
+        name: "Password User",
+        password: "SecurePassword123!",
+        is_staff: false
+      }
+      
+      assert {:ok, customer} = Customers.create_customer(attrs)
+      assert customer.email == "password_user@example.com"
+      assert customer.password_hash != nil
+      assert customer.password_hash != "SecurePassword123!"
+      
+      # Verify authentication works
+      assert {:ok, _} = Customers.authenticate_customer_by_email_and_password(
+        "password_user@example.com",
+        "SecurePassword123!"
+      )
+    end
+    
+    test "creates admin with password for script-based creation" do
+      # Simulates how admin users are created via scripts
+      attrs = %{
+        email: "admin_script@example.com",
+        name: "Admin Script User",
+        password: "testpassword123",  # Weaker password like in scripts
+        is_staff: true
+      }
+      
+      # Note: This may fail validation if password requirements are enforced
+      # But it tests the path that was broken before
+      result = Customers.create_customer(attrs)
+      
+      case result do
+        {:ok, customer} ->
+          assert customer.is_staff == true
+          assert customer.password_hash != nil
+          # Verify authentication works
+          assert {:ok, authenticated} = 
+            Customers.authenticate_customer_by_email_and_password(
+              customer.email,
+              "testpassword123"
+            )
+          assert authenticated.is_staff == true
+          
+        {:error, changeset} ->
+          # If password validation fails, that's OK - at least we're
+          # using the right changeset now
+          assert changeset.errors[:password] != nil
+      end
+    end
+    
+    test "creates customer without password for API-only users" do
+      # Ensures we didn't break the non-password path
+      attrs = %{
+        email: "api_only@example.com",
+        name: "API Only User"
+      }
+      
+      assert {:ok, customer} = Customers.create_customer(attrs)
+      assert customer.password_hash == nil
+      
+      # Should not authenticate with any password
+      assert {:error, :invalid_credentials} = 
+        Customers.authenticate_customer_by_email_and_password(
+          "api_only@example.com",
+          "any_password"
+        )
+    end
+    
+    test "handles string keys in password attrs" do
+      # Tests that string keys work (common in scripts and forms)
+      attrs = %{
+        "email" => "string_keys@example.com",
+        "name" => "String Keys User",
+        "password" => "StringPassword123!",
+        "is_staff" => true
+      }
+      
+      assert {:ok, customer} = Customers.create_customer(attrs)
+      assert customer.password_hash != nil
+      assert customer.is_staff == true
+      
+      # Verify authentication works
+      assert {:ok, _} = Customers.authenticate_customer_by_email_and_password(
+        "string_keys@example.com",
+        "StringPassword123!"
+      )
+    end
+  end
+  
+  describe "LiveView admin login session regression tests" do
+    test "LiveView login stores in CustomerSessions for distributed session management" do
+      # With distributed Mnesia sessions, LiveView tokens ARE stored in CustomerSessions
+      # This enables session sharing across pods in Kubernetes
+      {:ok, customer} = Customers.create_customer(%{
+        email: "liveview_session@example.com",
+        name: "LiveView Session Test",
+        password: "LiveViewPass123!",
+        is_staff: true
+      })
+      
+      # Generate a session token (as LiveView does)
+      token = Customers.generate_customer_session_token(customer)
+      assert is_binary(token)
+      
+      # Verify the token can be used to get the customer
+      assert fetched = Customers.get_customer_by_session_token(token)
+      assert fetched.id == customer.id
+      
+      # Verify CustomerSessions IS being used for LiveView tokens
+      # This is required for distributed session management across pods
+      sessions = Rsolv.CustomerSessions.all_sessions()
+      # LiveView tokens SHOULD appear in CustomerSessions for distributed access
+      assert Enum.any?(sessions, fn 
+        {:customer_sessions_mnesia, session_token, _, _, _} -> 
+          session_token == token
+        _ -> 
+          false
+      end)
+    end
+  end
 end

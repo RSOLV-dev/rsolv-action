@@ -48,6 +48,14 @@ defmodule RsolvWeb.Admin.LoginLive do
   @impl true
   def handle_info({:authenticate, email, password}, socket) do
     Logger.info("[Admin LoginLive] Authenticating email: #{email}")
+    Logger.debug("[Admin LoginLive] Password length: #{String.length(password)}")
+    
+    # First check if customer exists
+    customer_check = Customers.get_customer_by_email(email)
+    Logger.info("[Admin LoginLive] Customer lookup result: #{inspect(customer_check != nil)}")
+    if customer_check do
+      Logger.info("[Admin LoginLive] Customer found - ID: #{customer_check.id}, has_password: #{customer_check.password_hash != nil}")
+    end
     
     case Customers.authenticate_customer_by_email_and_password(email, password) do
       {:ok, customer} ->
@@ -81,6 +89,7 @@ defmodule RsolvWeb.Admin.LoginLive do
       
       {:error, :invalid_credentials} ->
         Logger.warning("[Admin LoginLive] Invalid credentials for #{email}")
+        Logger.debug("[Admin LoginLive] Auth failed - customer exists: #{customer_check != nil}, has_password: #{customer_check && customer_check.password_hash != nil}")
         
         socket = 
           socket
@@ -101,6 +110,7 @@ defmodule RsolvWeb.Admin.LoginLive do
       
       error ->
         Logger.error("[Admin LoginLive] Unexpected authentication error for #{email}: #{inspect(error)}")
+        Logger.debug("[Admin LoginLive] Full error details: #{inspect(error, pretty: true)}")
         
         socket = 
           socket
@@ -114,18 +124,22 @@ defmodule RsolvWeb.Admin.LoginLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
-      <h1 class="text-2xl font-bold text-center mb-8">Admin Login</h1>
+    <div class="bg-canvas pb-24 lg:pb-32">
+      <div class="sm:px-8 mt-24 sm:mt-32">
+        <div class="mx-auto w-full max-w-7xl lg:px-8">
+          <div class="relative px-4 sm:px-8 lg:px-12">
+            <div class="mx-auto max-w-sm">
+              <h1 class="text-2xl font-bold text-center mb-8 text-gray-900 dark:text-gray-100">Admin Login</h1>
       
       <%= if @error_message do %>
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
           <%= @error_message %>
         </div>
       <% end %>
       
       <form phx-change="validate" phx-submit="submit" class="space-y-4">
         <div>
-          <label for="email" class="block text-sm font-medium mb-2">Email</label>
+          <label for="email" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
           <input 
             type="email" 
             name="email" 
@@ -133,12 +147,12 @@ defmodule RsolvWeb.Admin.LoginLive do
             value={@email}
             required 
             disabled={@processing}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50" 
+            class="w-full px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50" 
           />
         </div>
         
         <div>
-          <label for="password" class="block text-sm font-medium mb-2">Password</label>
+          <label for="password" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Password</label>
           <input 
             type="password" 
             name="password" 
@@ -146,7 +160,7 @@ defmodule RsolvWeb.Admin.LoginLive do
             value={@password}
             required
             disabled={@processing}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50" 
+            class="w-full px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50" 
           />
         </div>
         
@@ -162,6 +176,10 @@ defmodule RsolvWeb.Admin.LoginLive do
           <% end %>
         </button>
       </form>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     """
   end

@@ -7,6 +7,7 @@ defmodule Rsolv.APIIntegrationTest do
   @api_base_url "https://api.rsolv.dev"
   
   describe "Health Endpoint" do
+    @tag :skip # Skip in test env to avoid hitting production
     test "returns healthy status with clustering info" do
       response = HTTPoison.get!("#{@api_base_url}/health")
       
