@@ -5,8 +5,10 @@ defmodule RsolvWeb.Admin.LoginLive do
   alias Rsolv.Customers
   
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, session, socket) do
     Logger.info("[Admin LoginLive] Mount - Rendering login form")
+    Logger.debug("[Admin LoginLive] Mount params: #{inspect(params)}")
+    Logger.debug("[Admin LoginLive] Mount session: #{inspect(Map.keys(session))}")
     
     socket = 
       socket
@@ -19,8 +21,13 @@ defmodule RsolvWeb.Admin.LoginLive do
   end
   
   @impl true
-  def handle_event("validate", %{"email" => email, "password" => password}, socket) do
-    Logger.debug("[Admin LoginLive] Validate - Email: #{email}")
+  def handle_event("validate", params, socket) do
+    Logger.info("[Admin LoginLive] Validate event received")
+    Logger.debug("[Admin LoginLive] Validate params: #{inspect(params)}")
+    
+    email = params["email"] || ""
+    password = params["password"] || ""
+    Logger.debug("[Admin LoginLive] Validate - Email: #{email}, Password length: #{String.length(password)}")
     
     socket = 
       socket
@@ -31,7 +38,12 @@ defmodule RsolvWeb.Admin.LoginLive do
   end
   
   @impl true
-  def handle_event("submit", %{"email" => email, "password" => password}, socket) do
+  def handle_event("submit", params, socket) do
+    Logger.info("[Admin LoginLive] Submit event received!")
+    Logger.debug("[Admin LoginLive] Submit params: #{inspect(params)}")
+    
+    email = params["email"] || ""
+    password = params["password"] || ""
     Logger.info("[Admin LoginLive] Submit - Login attempt for email: #{email}")
     
     socket = 
@@ -59,13 +71,14 @@ defmodule RsolvWeb.Admin.LoginLive do
     
     case Customers.authenticate_customer_by_email_and_password(email, password) do
       {:ok, customer} ->
-        Logger.info("[Admin LoginLive] Authentication successful for #{email}, is_staff: #{customer.is_staff}")
+        Logger.info("[Admin LoginLive] ✓ Authentication successful for #{email}, is_staff: #{customer.is_staff}")
         
         if customer.is_staff do
-          Logger.info("[Admin LoginLive] Staff user confirmed, logging in #{email}")
+          Logger.info("[Admin LoginLive] ✓ Staff user confirmed, generating token for #{email}")
           
           # Generate a session token using the Customers module
           token = Customers.generate_customer_session_token(customer)
+          Logger.debug("[Admin LoginLive] Token generated, redirecting to /admin/auth")
           
           # Note: We don't store in CustomerSessions here because the AuthController
           # will handle session establishment via CustomerAuth.log_in_customer
@@ -74,6 +87,8 @@ defmodule RsolvWeb.Admin.LoginLive do
             socket
             |> put_flash(:info, "Welcome back!")
             |> redirect(external: "/admin/auth?token=#{token}")
+          
+          Logger.info("[Admin LoginLive] Redirect issued to /admin/auth")
           
           {:noreply, socket}
         else
@@ -88,7 +103,7 @@ defmodule RsolvWeb.Admin.LoginLive do
         end
       
       {:error, :invalid_credentials} ->
-        Logger.warning("[Admin LoginLive] Invalid credentials for #{email}")
+        Logger.warning("[Admin LoginLive] ✗ Invalid credentials for #{email}")
         Logger.debug("[Admin LoginLive] Auth failed - customer exists: #{customer_check != nil}, has_password: #{customer_check && customer_check.password_hash != nil}")
         
         socket = 
