@@ -73,7 +73,7 @@ defmodule RsolvWeb.Admin.LoginLive do
           socket = 
             socket
             |> put_flash(:info, "Welcome back!")
-            |> redirect(to: ~p"/admin/auth?token=#{token}")
+            |> redirect(external: "/admin/auth?token=#{token}")
           
           {:noreply, socket}
         else
@@ -137,7 +137,7 @@ defmodule RsolvWeb.Admin.LoginLive do
         </div>
       <% end %>
       
-      <form phx-change="validate" phx-submit="submit" class="space-y-4">
+      <form phx-change="validate" phx-submit="submit" class="space-y-4" onsubmit="return false;">
         <div>
           <label for="email" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
           <input 
