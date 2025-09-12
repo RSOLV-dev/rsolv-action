@@ -88,11 +88,11 @@ defmodule RsolvWeb.Admin.LoginLive do
           # will handle session establishment via CustomerAuth.log_in_customer
           
           # For non-LiveView routes, we need to do a full page navigation
-          # Using push_event to trigger JavaScript navigation
+          # Using push_navigate with replace: true for better reliability
           socket = 
             socket
             |> put_flash(:info, "Welcome back!")
-            |> push_event("redirect", %{to: "/admin/auth?token=#{token}"})
+            |> push_navigate(to: "/admin/auth?token=#{token}", replace: true)
           
           Logger.info("[Admin LoginLive] Redirect issued to /admin/auth")
           
@@ -145,7 +145,7 @@ defmodule RsolvWeb.Admin.LoginLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="bg-canvas pb-24 lg:pb-32" id="admin-login" phx-hook="Redirect">
+    <div class="bg-canvas pb-24 lg:pb-32" id="admin-login">
       <script>
         console.log('[Admin Login] Page loaded at', new Date().toISOString());
         console.log('[Admin Login] LiveView socket state:', window.liveSocket ? 'connected' : 'not connected');
