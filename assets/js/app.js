@@ -21,6 +21,14 @@ const Hooks = {
   ...DashboardHooks,
   ...ResponsiveChartHooks,
   
+  // Hook for handling redirects from LiveView to non-LiveView routes
+  Redirect: {
+    mounted() {
+      this.handleEvent("redirect", ({to}) => {
+        window.location.href = to;
+      });
+    }
+  },
   
   FocusInput: {
     mounted() {
