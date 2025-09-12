@@ -23,7 +23,10 @@ export default class LiveSocket {
     uploaders: any;
     loaderTimeout: any;
     disconnectedTimeout: any;
-    reloadWithJitterTimer: NodeJS.Timeout;
+    /**
+     * @type {ReturnType<typeof setTimeout> | null}
+     */
+    reloadWithJitterTimer: ReturnType<typeof setTimeout> | null;
     maxReloads: any;
     reloadJitterMin: any;
     reloadJitterMax: any;
