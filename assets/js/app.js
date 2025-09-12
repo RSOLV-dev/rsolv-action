@@ -88,12 +88,21 @@ const Hooks = {
   }
 };
 
+// Debug LiveSocket initialization
+console.log('[LiveSocket] Initializing with path: /live');
+console.log('[LiveSocket] CSRF Token:', csrfToken ? 'present' : 'missing');
+console.log('[LiveSocket] WebSocket available:', typeof WebSocket !== 'undefined');
+
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 10000,
   params: {_csrf_token: csrfToken},
   hooks: Hooks,
-  transport: WebSocket
+  // Remove explicit transport to let LiveView handle it
+  // transport: WebSocket
 })
+
+// Enable debug mode for better error visibility
+liveSocket.enableDebug()
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
@@ -101,7 +110,9 @@ window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // connect if there are any LiveViews on the page
+console.log('[LiveSocket] Attempting to connect...');
 liveSocket.connect()
+console.log('[LiveSocket] Connect called, isConnected:', liveSocket.isConnected());
 
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
