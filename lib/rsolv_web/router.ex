@@ -91,8 +91,10 @@ defmodule RsolvWeb.Router do
   scope "/admin", RsolvWeb.Admin do
     pipe_through :browser
     
-    # LiveView login
-    live "/login", LoginLive, :index
+    # LiveView login with proper session setup
+    live_session :admin_login do
+      live "/login", LoginLive, :index
+    end
   end
   
   # Admin auth callback - uses separate pipeline without CSRF protection

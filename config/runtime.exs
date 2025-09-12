@@ -83,14 +83,23 @@ config :fun_with_flags, :cache_bust_notifications,
 
 # Configure the endpoint
 if config_env() != :test do
+  # Get the host for origin checking
+  phx_host = System.get_env("PHX_HOST") || "localhost"
+  
   config :rsolv, RsolvWeb.Endpoint,
-    url: [host: System.get_env("PHX_HOST") || "localhost", port: 443, scheme: "https"],
+    url: [host: phx_host, port: 443, scheme: "https"],
     http: [
       ip: {0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4000")
     ],
     secret_key_base: System.get_env("SECRET_KEY_BASE"),
-    server: true
+    server: true,
+    check_origin: [
+      "https://#{phx_host}",
+      "https://api.#{phx_host}",
+      "http://localhost:4000",
+      "http://localhost:4001"
+    ]
 end
 
 # Configure AI provider keys
