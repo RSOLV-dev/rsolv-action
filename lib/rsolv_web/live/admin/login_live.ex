@@ -117,12 +117,12 @@ defmodule RsolvWeb.Admin.LoginLive do
           Rsolv.CustomerSessions.put_session(token, customer.id)
           Logger.info("[Admin LoginLive] Session stored in CustomerSessions for customer #{customer.id}")
           
-          # Use push_redirect to navigate to a non-LiveView route
-          # This is the correct way to navigate from LiveView to regular Phoenix routes
+          # Use push_navigate to navigate to a non-LiveView route
+          # This is the correct way to navigate from LiveView to regular Phoenix routes in LiveView 1.0+
           socket = 
             socket
             |> put_flash(:info, "Welcome back!")
-            |> push_redirect(to: "/admin/auth?token=#{token}")
+            |> push_navigate(to: "/admin/auth?token=#{token}")
           
           Logger.info("[Admin LoginLive] Push redirect issued to /admin/auth")
           
