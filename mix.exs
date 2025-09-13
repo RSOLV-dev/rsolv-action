@@ -63,13 +63,7 @@ defmodule Rsolv.MixProject do
       {:oban, "~> 2.17"},
       {:number, "~> 1.0"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
-      
-      # Enhanced debugging and error tracking
-      {:recon, "~> 2.5"},  # Production-safe Erlang VM diagnostics
-      {:observer_cli, "~> 1.7", only: [:dev, :test]},  # Observer for terminal
-      {:error_tracker, "~> 0.6"},  # Native Elixir error tracking
-      {:sentry, "~> 10.0", runtime: false}  # Sentry integration (optional)
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev}
     ]
   end
 
