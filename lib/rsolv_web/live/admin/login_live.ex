@@ -108,22 +108,23 @@ defmodule RsolvWeb.Admin.LoginLive do
         Logger.info("[Admin LoginLive] ✓ Authentication successful for #{email}, is_staff: #{customer.is_staff}")
         
         if customer.is_staff do
-          Logger.info("[Admin LoginLive] ✓ Staff user confirmed, generating token for #{email}")
+          Logger.info("[Admin LoginLive] ✓ Staff user confirmed, logging in #{email}")
           
-          # Generate a session token using the Customers module
+          # Generate a session token and store it
           token = Customers.generate_customer_session_token(customer)
-          Logger.debug("[Admin LoginLive] Token generated, redirecting to /admin/auth")
           
-          # Note: We don't store in CustomerSessions here because the AuthController
-          # will handle session establishment via CustomerAuth.log_in_customer
+          # Store the session in CustomerSessions for distributed access
+          Rsolv.CustomerSessions.put_session(token, customer.id)
+          Logger.info("[Admin LoginLive] Session stored in CustomerSessions for customer #{customer.id}")
           
-          # Redirect to non-LiveView route using redirect(to:)
+          # Use push_redirect to navigate to a non-LiveView route
+          # This is the correct way to navigate from LiveView to regular Phoenix routes
           socket = 
             socket
             |> put_flash(:info, "Welcome back!")
-            |> redirect(to: "/admin/auth?token=#{token}")
+            |> push_redirect(to: "/admin/auth?token=#{token}")
           
-          Logger.info("[Admin LoginLive] Redirect issued to /admin/auth")
+          Logger.info("[Admin LoginLive] Push redirect issued to /admin/auth")
           
           {:noreply, socket}
         else
