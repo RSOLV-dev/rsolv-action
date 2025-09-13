@@ -192,7 +192,7 @@ defmodule RsolvWeb.Admin.LoginLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="bg-canvas pb-24 lg:pb-32" id="admin-login">
+    <div class="bg-canvas pb-24 lg:pb-32" id="admin-login" phx-hook="Redirect">
         <div class="sm:px-8 mt-24 sm:mt-32">
           <div class="mx-auto w-full max-w-7xl lg:px-8">
             <div class="relative px-4 sm:px-8 lg:px-12">
