@@ -96,75 +96,94 @@ defmodule RsolvWeb.Admin.LoginLive do
     Logger.info("[Admin LoginLive] Authenticating email: #{email}")
     Logger.debug("[Admin LoginLive] Password length: #{String.length(password)}")
     
-    # First check if customer exists
-    customer_check = Customers.get_customer_by_email(email)
-    Logger.info("[Admin LoginLive] Customer lookup result: #{inspect(customer_check != nil)}")
-    if customer_check do
-      Logger.info("[Admin LoginLive] Customer found - ID: #{customer_check.id}, has_password: #{customer_check.password_hash != nil}")
-    end
-    
-    case Customers.authenticate_customer_by_email_and_password(email, password) do
-      {:ok, customer} ->
-        Logger.info("[Admin LoginLive] ✓ Authentication successful for #{email}, is_staff: #{customer.is_staff}")
+    try do
+      # First check if customer exists
+      customer_check = Customers.get_customer_by_email(email)
+      Logger.info("[Admin LoginLive] Customer lookup result: #{inspect(customer_check != nil)}")
+      if customer_check do
+        Logger.info("[Admin LoginLive] Customer found - ID: #{customer_check.id}, has_password: #{customer_check.password_hash != nil}")
+      end
+      
+      case Customers.authenticate_customer_by_email_and_password(email, password) do
+        {:ok, customer} ->
+          Logger.info("[Admin LoginLive] ✓ Authentication successful for #{email}, is_staff: #{customer.is_staff}")
+          
+          if customer.is_staff do
+            Logger.info("[Admin LoginLive] ✓ Staff user confirmed, logging in #{email}")
+            
+            # Generate and store session token for distributed access
+            token = Customers.generate_customer_session_token(customer)
+            Rsolv.CustomerSessions.put_session(token, customer.id)
+            Logger.info("[Admin LoginLive] Session stored in CustomerSessions for customer #{customer.id}")
+            
+            # Use push_event to trigger JavaScript-based redirect
+            # This avoids the LiveView crash issue with redirect/2
+            redirect_url = "/admin/auth?token=#{token}"
+            Logger.info("[Admin LoginLive] Triggering JavaScript redirect to: #{redirect_url}")
+            
+            socket = 
+              socket
+              |> put_flash(:info, "Welcome back!")
+              |> push_event("redirect", %{to: redirect_url})
+            
+            Logger.info("[Admin LoginLive] JavaScript redirect event pushed")
+            
+            {:noreply, socket}
+          else
+            Logger.warning("[Admin LoginLive] Non-staff user attempted admin login: #{email}")
+            
+            socket = 
+              socket
+              |> assign(:processing, false)
+              |> assign(:error_message, "You are not authorized to access the admin area.")
+            
+            {:noreply, socket}
+          end
         
-        if customer.is_staff do
-          Logger.info("[Admin LoginLive] ✓ Staff user confirmed, logging in #{email}")
-          
-          # Generate and store session token for distributed access
-          token = Customers.generate_customer_session_token(customer)
-          Rsolv.CustomerSessions.put_session(token, customer.id)
-          Logger.info("[Admin LoginLive] Session stored in CustomerSessions for customer #{customer.id}")
-          
-          # Store the session in Mnesia and redirect to auth endpoint
-          # The auth endpoint will establish the HTTP session
-          socket = 
-            socket
-            |> put_flash(:info, "Welcome back!")
-            |> redirect(to: "/admin/auth?token=#{token}")
-          
-          Logger.info("[Admin LoginLive] Session established, navigating to admin dashboard")
-          
-          {:noreply, socket}
-        else
-          Logger.warning("[Admin LoginLive] Non-staff user attempted admin login: #{email}")
+        {:error, :invalid_credentials} ->
+          Logger.warning("[Admin LoginLive] ✗ Invalid credentials for #{email}")
+          Logger.debug("[Admin LoginLive] Auth failed - customer exists: #{customer_check != nil}, has_password: #{customer_check && customer_check.password_hash != nil}")
           
           socket = 
             socket
             |> assign(:processing, false)
-            |> assign(:error_message, "You are not authorized to access the admin area.")
+            |> assign(:error_message, "Invalid email or password")
           
           {:noreply, socket}
-        end
-      
-      {:error, :invalid_credentials} ->
-        Logger.warning("[Admin LoginLive] ✗ Invalid credentials for #{email}")
-        Logger.debug("[Admin LoginLive] Auth failed - customer exists: #{customer_check != nil}, has_password: #{customer_check && customer_check.password_hash != nil}")
         
-        socket = 
-          socket
-          |> assign(:processing, false)
-          |> assign(:error_message, "Invalid email or password")
+        {:error, :too_many_attempts} ->
+          Logger.warning("[Admin LoginLive] Too many login attempts for #{email}")
+          
+          socket = 
+            socket
+            |> assign(:processing, false)
+            |> assign(:error_message, "Too many login attempts. Please try again later.")
+          
+          {:noreply, socket}
         
-        {:noreply, socket}
-      
-      {:error, :too_many_attempts} ->
-        Logger.warning("[Admin LoginLive] Too many login attempts for #{email}")
-        
-        socket = 
-          socket
-          |> assign(:processing, false)
-          |> assign(:error_message, "Too many login attempts. Please try again later.")
-        
-        {:noreply, socket}
-      
+        error ->
+          Logger.error("[Admin LoginLive] Unexpected authentication error for #{email}: #{inspect(error)}")
+          Logger.debug("[Admin LoginLive] Full error details: #{inspect(error, pretty: true)}")
+          
+          socket = 
+            socket
+            |> assign(:processing, false)
+            |> assign(:error_message, "An error occurred during login")
+          
+          {:noreply, socket}
+      end
+    rescue
       error ->
-        Logger.error("[Admin LoginLive] Unexpected authentication error for #{email}: #{inspect(error)}")
-        Logger.debug("[Admin LoginLive] Full error details: #{inspect(error, pretty: true)}")
+        Logger.error("[Admin LoginLive] CRASH in authentication handler!")
+        Logger.error("[Admin LoginLive] Error type: #{inspect(error.__struct__)}")
+        Logger.error("[Admin LoginLive] Error message: #{inspect(Exception.message(error))}")
+        Logger.error("[Admin LoginLive] Stack trace: #{inspect(__STACKTRACE__)}")
         
+        # Attempt to recover gracefully
         socket = 
           socket
           |> assign(:processing, false)
-          |> assign(:error_message, "An error occurred during login")
+          |> assign(:error_message, "An unexpected error occurred. Please try again.")
         
         {:noreply, socket}
     end
