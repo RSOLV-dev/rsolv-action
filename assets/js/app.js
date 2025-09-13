@@ -16,10 +16,14 @@ import { initRoiCalculator } from "./roi_calculator"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
-// Define LiveView hooks
+// Log what we're importing for debugging
+console.log('[Hooks] DashboardHooks:', typeof DashboardHooks, DashboardHooks ? 'defined' : 'undefined');
+console.log('[Hooks] ResponsiveChartHooks:', typeof ResponsiveChartHooks, ResponsiveChartHooks ? 'defined' : 'undefined');
+
+// Define LiveView hooks with defensive checks
 const Hooks = {
-  ...DashboardHooks,
-  ...ResponsiveChartHooks,
+  ...(DashboardHooks || {}),
+  ...(ResponsiveChartHooks || {}),
   
   // Hook for handling redirects from LiveView to non-LiveView routes
   Redirect: {
@@ -88,6 +92,11 @@ const Hooks = {
   }
 };
 
+// Debug hook configuration
+console.log('[Hooks] Final Hooks object:', Hooks);
+console.log('[Hooks] Hooks keys:', Object.keys(Hooks));
+console.log('[Hooks] Redirect hook present:', 'Redirect' in Hooks);
+
 // Debug LiveSocket initialization
 console.log('[LiveSocket] Initializing with path: /live');
 console.log('[LiveSocket] CSRF Token:', csrfToken ? 'present' : 'missing');
@@ -104,6 +113,73 @@ let liveSocket = new LiveSocket("/live", Socket, {
 // Enable debug mode for better error visibility
 liveSocket.enableDebug()
 
+// Add comprehensive error handlers
+window.addEventListener("phx:live_reload:attached", ({detail}) => {
+  console.log('[LiveSocket] Live reload attached:', detail)
+})
+
+window.addEventListener("error", (e) => {
+  console.error('[LiveSocket] Global error caught:', e.message, e.error)
+  if (e.error && e.error.stack) {
+    console.error('[LiveSocket] Stack trace:', e.error.stack)
+  }
+})
+
+// Intercept LiveView errors with more detail
+const originalOnError = liveSocket.onError
+liveSocket.onError = function(e) {
+  console.error('[LiveSocket] LiveView error:', e)
+  console.error('[LiveSocket] Error type:', typeof e)
+  console.error('[LiveSocket] Error constructor:', e?.constructor?.name)
+  
+  // Try to extract more details about the error
+  if (e === undefined) {
+    console.error('[LiveSocket] Error is undefined - this often indicates a missing or incorrectly referenced element')
+    console.trace('[LiveSocket] Stack trace for undefined error:')
+  } else if (e && e.stack) {
+    console.error('[LiveSocket] Error stack:', e.stack)
+  }
+  
+  // Log the current view state
+  if (this.main) {
+    console.error('[LiveSocket] Current view ID:', this.main.id)
+    console.error('[LiveSocket] Current view el:', this.main.el)
+  }
+  
+  if (originalOnError) {
+    originalOnError.call(this, e)
+  }
+}
+
+// Intercept view updates to catch errors
+const originalOnViewError = liveSocket.onViewError
+liveSocket.onViewError = function(view) {
+  console.error('[LiveSocket] View error in view:', view?.id)
+  console.error('[LiveSocket] View element:', view?.el)
+  console.error('[LiveSocket] View isDead:', view?.isDead)
+  
+  if (originalOnViewError) {
+    originalOnViewError.call(this, view)
+  }
+}
+
+// Monitor view lifecycle
+window.addEventListener("phx:mount", (e) => {
+  console.log('[LiveSocket] View mounted:', e.detail)
+})
+
+window.addEventListener("phx:update", (e) => {
+  console.log('[LiveSocket] View update:', e.detail)
+})
+
+window.addEventListener("phx:disconnect", (e) => {
+  console.warn('[LiveSocket] Disconnected:', e.detail)
+})
+
+window.addEventListener("phx:error", (e) => {
+  console.error('[LiveSocket] Phoenix error event:', e.detail)
+})
+
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
@@ -113,6 +189,30 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 console.log('[LiveSocket] Attempting to connect...');
 liveSocket.connect()
 console.log('[LiveSocket] Connect called, isConnected:', liveSocket.isConnected());
+
+// Add debugging for form submissions on admin login
+if (window.location.pathname === '/admin/login') {
+  console.log('[Admin Login] Debug mode activated')
+  
+  // Monitor form events
+  document.addEventListener('submit', (e) => {
+    console.log('[Admin Login] Form submit event captured:', e.target)
+    console.log('[Admin Login] Form data:', new FormData(e.target))
+  }, true)
+  
+  document.addEventListener('click', (e) => {
+    if (e.target.type === 'submit' || e.target.tagName === 'BUTTON') {
+      console.log('[Admin Login] Button clicked:', e.target)
+    }
+  }, true)
+  
+  // Monitor input changes
+  document.addEventListener('input', (e) => {
+    if (e.target.name === 'email' || e.target.name === 'password') {
+      console.log('[Admin Login] Input changed:', e.target.name, 'value length:', e.target.value.length)
+    }
+  }, true)
+}
 
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()

@@ -6,58 +6,88 @@ defmodule RsolvWeb.Admin.LoginLive do
   
   @impl true
   def mount(params, session, socket) do
-    Logger.info("[Admin LoginLive] ====== MOUNT CALLED ======")
-    Logger.info("[Admin LoginLive] Mount - Rendering login form")
-    Logger.debug("[Admin LoginLive] Mount params: #{inspect(params)}")
-    Logger.debug("[Admin LoginLive] Mount session: #{inspect(Map.keys(session))}")
-    Logger.debug("[Admin LoginLive] Socket ID: #{inspect(socket.id)}")
-    Logger.debug("[Admin LoginLive] Connected?: #{connected?(socket)}")
-    
-    socket = 
-      socket
-      |> assign(:email, "")
-      |> assign(:password, "")
-      |> assign(:error_message, nil)
-      |> assign(:processing, false)
-    
-    Logger.info("[Admin LoginLive] Mount complete, socket assigns: #{inspect(Map.keys(socket.assigns))}")
-    {:ok, socket}
+    try do
+      Logger.info("[Admin LoginLive] ====== MOUNT CALLED ======")
+      Logger.info("[Admin LoginLive] Mount - Rendering login form")
+      Logger.debug("[Admin LoginLive] Mount params: #{inspect(params)}")
+      Logger.debug("[Admin LoginLive] Mount session: #{inspect(Map.keys(session))}")
+      Logger.debug("[Admin LoginLive] Socket ID: #{inspect(socket.id)}")
+      Logger.debug("[Admin LoginLive] Connected?: #{connected?(socket)}")
+      
+      socket = 
+        socket
+        |> assign(:email, "")
+        |> assign(:password, "")
+        |> assign(:error_message, nil)
+        |> assign(:processing, false)
+      
+      Logger.info("[Admin LoginLive] Mount complete, socket assigns: #{inspect(Map.keys(socket.assigns))}")
+      {:ok, socket}
+    rescue
+      error ->
+        Logger.error("[Admin LoginLive] Mount error: #{inspect(error)}")
+        Logger.error("[Admin LoginLive] Stack trace: #{inspect(__STACKTRACE__)}")
+        {:ok, assign(socket, :error_message, "An error occurred loading the page")}
+    end
   end
   
   @impl true
   def handle_event("validate", params, socket) do
-    Logger.info("[Admin LoginLive] Validate event received")
-    Logger.debug("[Admin LoginLive] Validate params: #{inspect(params)}")
-    
-    email = params["email"] || ""
-    password = params["password"] || ""
-    Logger.debug("[Admin LoginLive] Validate - Email: #{email}, Password length: #{String.length(password)}")
-    
-    socket = 
-      socket
-      |> assign(:email, email)
-      |> assign(:password, password)
-    
-    {:noreply, socket}
+    try do
+      Logger.info("[Admin LoginLive] Validate event received")
+      Logger.debug("[Admin LoginLive] Validate params: #{inspect(params)}")
+      Logger.debug("[Admin LoginLive] Validate socket assigns: #{inspect(Map.keys(socket.assigns))}")
+      
+      email = Map.get(params, "email", "")
+      password = Map.get(params, "password", "")
+      Logger.debug("[Admin LoginLive] Validate - Email: #{email}, Password length: #{String.length(password)}")
+      
+      socket = 
+        socket
+        |> assign(:email, email)
+        |> assign(:password, password)
+      
+      {:noreply, socket}
+    rescue
+      error ->
+        Logger.error("[Admin LoginLive] Validate error: #{inspect(error)}")
+        Logger.error("[Admin LoginLive] Stack trace: #{inspect(__STACKTRACE__)}")
+        {:noreply, assign(socket, :error_message, "Validation error occurred")}
+    end
   end
   
   @impl true
   def handle_event("submit", params, socket) do
-    Logger.info("[Admin LoginLive] Submit event received!")
-    Logger.debug("[Admin LoginLive] Submit params: #{inspect(params)}")
-    
-    email = params["email"] || ""
-    password = params["password"] || ""
-    Logger.info("[Admin LoginLive] Submit - Login attempt for email: #{email}")
-    
-    socket = 
-      socket
-      |> assign(:processing, true)
-      |> assign(:error_message, nil)
-    
-    # Send ourselves a message to handle authentication asynchronously
-    send(self(), {:authenticate, email, password})
-    
+    try do
+      Logger.info("[Admin LoginLive] Submit event received!")
+      Logger.debug("[Admin LoginLive] Submit params: #{inspect(params)}")
+      Logger.debug("[Admin LoginLive] Submit socket assigns: #{inspect(Map.keys(socket.assigns))}")
+      
+      email = Map.get(params, "email", "")
+      password = Map.get(params, "password", "")
+      Logger.info("[Admin LoginLive] Submit - Login attempt for email: #{email}")
+      
+      socket = 
+        socket
+        |> assign(:processing, true)
+        |> assign(:error_message, nil)
+      
+      # Send ourselves a message to handle authentication asynchronously
+      send(self(), {:authenticate, email, password})
+      
+      {:noreply, socket}
+    rescue
+      error ->
+        Logger.error("[Admin LoginLive] Submit error: #{inspect(error)}")
+        Logger.error("[Admin LoginLive] Stack trace: #{inspect(__STACKTRACE__)}")
+        {:noreply, assign(socket, :error_message, "An error occurred during submission")}
+    end
+  end
+  
+  @impl true
+  def handle_event(event, params, socket) do
+    Logger.warning("[Admin LoginLive] Unhandled event: #{event}")
+    Logger.debug("[Admin LoginLive] Event params: #{inspect(params)}")
     {:noreply, socket}
   end
   
@@ -87,12 +117,11 @@ defmodule RsolvWeb.Admin.LoginLive do
           # Note: We don't store in CustomerSessions here because the AuthController
           # will handle session establishment via CustomerAuth.log_in_customer
           
-          # For non-LiveView routes, we need to do a full page navigation
-          # Using push_navigate with replace: true for better reliability
+          # Redirect to non-LiveView route using redirect(to:)
           socket = 
             socket
             |> put_flash(:info, "Welcome back!")
-            |> push_navigate(to: "/admin/auth?token=#{token}", replace: true)
+            |> redirect(to: "/admin/auth?token=#{token}")
           
           Logger.info("[Admin LoginLive] Redirect issued to /admin/auth")
           
@@ -146,36 +175,19 @@ defmodule RsolvWeb.Admin.LoginLive do
   def render(assigns) do
     ~H"""
     <div class="bg-canvas pb-24 lg:pb-32" id="admin-login">
-      <script>
-        console.log('[Admin Login] Page loaded at', new Date().toISOString());
-        console.log('[Admin Login] LiveView socket state:', window.liveSocket ? 'connected' : 'not connected');
-      </script>
-      <div class="sm:px-8 mt-24 sm:mt-32">
-        <div class="mx-auto w-full max-w-7xl lg:px-8">
-          <div class="relative px-4 sm:px-8 lg:px-12">
-            <div class="mx-auto max-w-sm">
-              <h1 class="text-2xl font-bold text-center mb-8 text-gray-900 dark:text-gray-100">Admin Login</h1>
+        <div class="sm:px-8 mt-24 sm:mt-32">
+          <div class="mx-auto w-full max-w-7xl lg:px-8">
+            <div class="relative px-4 sm:px-8 lg:px-12">
+              <div class="mx-auto max-w-sm">
+                <h1 class="text-2xl font-bold text-center mb-8 text-gray-900 dark:text-gray-100">Admin Login</h1>
+        
+        <%= if @error_message do %>
+          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
+            <%= @error_message %>
+          </div>
+        <% end %>
       
-      <%= if @error_message do %>
-        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
-          <%= @error_message %>
-        </div>
-      <% end %>
-      
-      <form phx-change="validate" phx-submit="submit" class="space-y-4" 
-            onsubmit="console.log('[Admin Login] Form submit event triggered');">
-        <script>
-          // Add event listeners to track form interactions
-          document.addEventListener('DOMContentLoaded', function() {
-            const form = document.querySelector('form[phx-submit="submit"]');
-            if (form) {
-              console.log('[Admin Login] Form found, adding listeners');
-              form.addEventListener('submit', function(e) {
-                console.log('[Admin Login] Submit listener fired, prevented:', e.defaultPrevented);
-              });
-            }
-          });
-        </script>
+      <form phx-change="validate" phx-submit="submit" class="space-y-4">
         <div>
           <label for="email" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
           <input 

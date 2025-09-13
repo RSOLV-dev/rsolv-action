@@ -89,6 +89,14 @@ defmodule RsolvWeb.Admin.LoginLiveTest do
       assert path =~ "/admin/auth?token="
     end
     
+    test "root element has ID to prevent LiveView issues", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/admin/login")
+      
+      # Elements should have IDs for proper LiveView DOM tracking
+      assert element(view, "#admin-login")
+      assert html =~ ~s(id="admin-login")
+    end
+    
     test "disables form while processing", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/admin/login")
       
