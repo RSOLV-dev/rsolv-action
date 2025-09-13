@@ -40,6 +40,17 @@ const Hooks = {
     }
   },
   
+  // Hook specifically for login page redirects
+  LoginRedirect: {
+    mounted() {
+      console.log('[LoginRedirect Hook] Mounted for admin login');
+      this.handleEvent("redirect", ({to}) => {
+        console.log('[LoginRedirect Hook] Redirecting to:', to);
+        window.location.href = to;
+      });
+    }
+  },
+  
   FocusInput: {
     mounted() {
       // Create a completely unmanaged input that lives separately from Phoenix LiveView

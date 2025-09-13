@@ -110,21 +110,19 @@ defmodule RsolvWeb.Admin.LoginLive do
         if customer.is_staff do
           Logger.info("[Admin LoginLive] ✓ Staff user confirmed, logging in #{email}")
           
-          # Generate a session token and store it
+          # Generate and store session token for distributed access
           token = Customers.generate_customer_session_token(customer)
-          
-          # Store the session in CustomerSessions for distributed access
           Rsolv.CustomerSessions.put_session(token, customer.id)
           Logger.info("[Admin LoginLive] Session stored in CustomerSessions for customer #{customer.id}")
           
-          # Use redirect for navigating from LiveView to non-LiveView routes
-          # This causes a full page reload, which is correct for crossing boundaries
+          # Store the session in Mnesia and redirect to auth endpoint
+          # The auth endpoint will establish the HTTP session
           socket = 
             socket
             |> put_flash(:info, "Welcome back!")
             |> redirect(to: "/admin/auth?token=#{token}")
           
-          Logger.info("[Admin LoginLive] Redirect issued to /admin/auth")
+          Logger.info("[Admin LoginLive] Session established, navigating to admin dashboard")
           
           {:noreply, socket}
         else
