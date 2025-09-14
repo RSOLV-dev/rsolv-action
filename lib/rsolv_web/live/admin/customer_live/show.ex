@@ -15,12 +15,14 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
   def handle_params(%{"id" => id}, _, socket) do
     customer = Customers.get_customer!(id)
     api_keys = Customers.list_api_keys(customer)
-    
+    usage_percentage = calculate_usage_percentage(customer)
+
     {:noreply,
      socket
      |> assign(:page_title, customer.name)
      |> assign(:customer, customer)
-     |> assign(:api_keys, api_keys)}
+     |> assign(:api_keys, api_keys)
+     |> assign(:usage_percentage, usage_percentage)}
   end
   
   @impl true
@@ -56,17 +58,48 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
     case Customers.update_customer(socket.assigns.customer, customer_params) do
       {:ok, customer} ->
         api_keys = Customers.list_api_keys(customer)
-        
+        usage_percentage = calculate_usage_percentage(customer)
+
         {:noreply,
          socket
          |> put_flash(:info, "Customer updated successfully")
          |> assign(:customer, customer)
          |> assign(:api_keys, api_keys)
+         |> assign(:usage_percentage, usage_percentage)
          |> assign(:show_edit_modal, false)
          |> assign(:form, nil)}
-      
+
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
+    end
+  end
+
+  @impl true
+  def handle_event("generate-api-key", _, socket) do
+    case Customers.create_api_key(socket.assigns.customer, %{name: "API Key"}) do
+      {:ok, _api_key} ->
+        api_keys = Customers.list_api_keys(socket.assigns.customer)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "API key generated successfully")
+         |> assign(:api_keys, api_keys)}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to generate API key")}
+    end
+  end
+
+  defp calculate_usage_percentage(customer) do
+    if customer.monthly_limit > 0 do
+      percentage = customer.current_usage / customer.monthly_limit * 100
+      if percentage == trunc(percentage) do
+        trunc(percentage)
+      else
+        Float.round(percentage, 1)
+      end
+    else
+      0
     end
   end
 end
