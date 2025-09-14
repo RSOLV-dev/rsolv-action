@@ -4,39 +4,11 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
   alias Rsolv.Customers
   
   @impl true
-  def mount(_params, session, socket) do
-    # Check for staff authentication
-    case session do
-      %{"customer_token" => token} when is_binary(token) ->
-        customer = Rsolv.Customers.get_customer_by_session_token(token)
-        
-        cond do
-          is_nil(customer) ->
-            {:ok,
-             socket
-             |> Phoenix.LiveView.put_flash(:error, "You must be logged in to access this page.")
-             |> Phoenix.LiveView.redirect(to: "/admin/login")}
-          
-          not customer.is_staff ->
-            {:ok,
-             socket
-             |> Phoenix.LiveView.put_flash(:error, "You are not authorized to access this page.")
-             |> Phoenix.LiveView.redirect(to: "/")}
-          
-          true ->
-            {:ok, 
-             socket
-             |> assign(:current_customer, customer)
-             |> assign(:show_edit_modal, false)
-             |> assign(:form, nil)}
-        end
-      
-      _ ->
-        {:ok,
-         socket
-         |> Phoenix.LiveView.put_flash(:error, "You must be logged in to access this page.")
-         |> Phoenix.LiveView.redirect(to: "/admin/login")}
-    end
+  def mount(_params, _session, socket) do
+    {:ok, 
+     socket
+     |> assign(:show_edit_modal, false)
+     |> assign(:form, nil)}
   end
   
   @impl true

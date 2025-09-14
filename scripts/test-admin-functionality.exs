@@ -1,13 +1,13 @@
 #!/usr/bin/env elixir
 
 # Script to programmatically test all admin functionality from RFCs 049, 055, and 056
-# Run with: mix run scripts/test-admin-functionality.exs
+# Run with: elixir scripts/test-admin-functionality.exs
 
 Mix.install([
   {:httpoison, "~> 2.0"},
   {:jason, "~> 1.4"},
   {:floki, "~> 0.35"}
-])
+], force: true)
 
 defmodule AdminFunctionalityTest do
   @moduledoc """

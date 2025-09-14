@@ -7,35 +7,8 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
   @per_page 20
   
   @impl true
-  def mount(_params, session, socket) do
-    # Check for staff authentication
-    case session do
-      %{"customer_token" => token} when is_binary(token) ->
-        customer = Rsolv.Customers.get_customer_by_session_token(token)
-        
-        cond do
-          is_nil(customer) ->
-            {:ok,
-             socket
-             |> Phoenix.LiveView.put_flash(:error, "You must be logged in to access this page.")
-             |> Phoenix.LiveView.redirect(to: "/admin/login")}
-          
-          not customer.is_staff ->
-            {:ok,
-             socket
-             |> Phoenix.LiveView.put_flash(:error, "You are not authorized to access this page.")
-             |> Phoenix.LiveView.redirect(to: "/")}
-          
-          true ->
-            {:ok, assign(socket, :current_customer, customer)}
-        end
-      
-      _ ->
-        {:ok,
-         socket
-         |> Phoenix.LiveView.put_flash(:error, "You must be logged in to access this page.")
-         |> Phoenix.LiveView.redirect(to: "/admin/login")}
-    end
+  def mount(_params, _session, socket) do
+    {:ok, socket}
   end
   
   @impl true
