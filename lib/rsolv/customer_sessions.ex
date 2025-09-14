@@ -227,19 +227,25 @@ defmodule Rsolv.CustomerSessions do
   
   defp ensure_table_exists do
     # Check if table already exists on any node
-    case :mnesia.table_info(@table_name, :attributes) do
-      [:token, :customer_id, :created_at, :expires_at] ->
-        Logger.info("customer_sessions table already exists, ensuring replication")
-        ensure_table_replicated()
-        :ok
-      _ ->
-        # Table doesn't exist or has wrong attributes, try to create it
+    try do
+      case :mnesia.table_info(@table_name, :attributes) do
+        [:token, :customer_id, :created_at, :expires_at] ->
+          Logger.info("customer_sessions table already exists, ensuring replication")
+          ensure_table_replicated()
+          :ok
+        _ ->
+          # Table doesn't exist or has wrong attributes, try to create it
+          create_new_table()
+      end
+    rescue
+      ArgumentError ->
+        # Table doesn't exist, create it
+        create_new_table()
+    catch
+      :exit, {:aborted, {:no_exists, @table_name, :attributes}} ->
+        # Table doesn't exist, create it
         create_new_table()
     end
-  rescue
-    _ ->
-      # Table doesn't exist, create it
-      create_new_table()
   end
   
   defp create_new_table do
