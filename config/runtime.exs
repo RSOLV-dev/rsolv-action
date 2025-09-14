@@ -148,7 +148,7 @@ config :logger, :console,
 # Configure Phoenix LiveDashboard
 if config_env() != :test do
   config :rsolv, RsolvWeb.Endpoint,
-    live_view: [signing_salt: System.get_env("LIVE_VIEW_SALT")]
+    live_view: [signing_salt: System.get_env("LIVE_VIEW_SALT") || "GGUv7IyC34psVAUL2345"]
 end
 
 # Sentry error tracking

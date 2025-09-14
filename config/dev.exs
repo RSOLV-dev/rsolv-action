@@ -76,3 +76,7 @@ config :tidewave,
   allowed_origins: ["http://localhost:4000", "http://10.*:4000"],
   allow_remote_access: true,
   inspect_opts: [limit: 10_000]
+
+# Configure LiveView signing salt for development
+config :rsolv, RsolvWeb.Endpoint,
+  live_view: [signing_salt: "GGUv7IyC34psVAUL2345_development_salt_extension"]
