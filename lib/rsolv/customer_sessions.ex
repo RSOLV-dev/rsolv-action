@@ -252,13 +252,9 @@ defmodule Rsolv.CustomerSessions do
     # Get all connected nodes for replication
     nodes = [node() | Node.list()]
     
-    # Use disc_copies in production, ram_copies in tests/dev
-    # Check if we're in a real distributed environment
-    storage_type = if Node.alive?() and length(Node.list()) > 0 do
-      :disc_copies
-    else
-      :ram_copies
-    end
+    # Use ram_copies for all environments per RFC-054
+    # Session data is transient and doesn't need disk persistence
+    storage_type = :ram_copies
     
     table_opts = [
       attributes: [:token, :customer_id, :created_at, :expires_at],
