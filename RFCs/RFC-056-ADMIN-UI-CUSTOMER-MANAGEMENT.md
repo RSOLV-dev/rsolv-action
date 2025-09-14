@@ -521,12 +521,49 @@ Based on codebase review (2025-09-10), the following need to be implemented:
 - [ ] Customer edit form with validation
 - [ ] Staff dashboard with system metrics
 
+## Lessons Learned
+
+### 1. Mnesia Table Type Consistency is Critical
+**Issue**: Staging deployment failed with session creation errors due to Mnesia table type mismatch
+**Root Cause**: Code used environment-dependent logic (`disc_copies` for production, `ram_copies` for dev)
+**Solution**: Always use consistent table types across all environments
+**Key Learning**: For transient data like sessions, `:ram_copies` is sufficient and avoids clustering complexity
+
+### 2. TDD Methodology Validation
+**Success**: Following RED-GREEN-REFACTOR helped catch issues early
+**9/10 tests passing**: The one failing test revealed the Mnesia clustering issue
+**Benefit**: Tests provided safety net during critical infrastructure changes
+
+### 3. LiveView to Controller Navigation
+**Challenge**: LiveView doesn't naturally redirect to non-LiveView routes
+**Solution**: JavaScript hook with `phx-hook="Redirect"` for client-side navigation
+**Learning**: Sometimes browser-based solutions are simpler than server-side complexity
+
+### 4. Configuration Management
+**Issue**: LiveView signing salt missing caused ArgumentError
+**Solution**: Added proper configuration to `config/dev.exs`
+**Learning**: Always verify LiveView configuration when setting up authentication
+
+### 5. Debugging Distributed Systems
+**Challenge**: Mnesia errors only appeared in clustered environments (staging)
+**Diagnostic Approach**:
+  - Check pod logs across all nodes
+  - Use `rpc` command for live debugging
+  - Verify table info with `:mnesia.table_info/2`
+**Learning**: Local testing doesn't catch all distributed system issues
+
+### 6. Documentation as Code
+**Success**: Maintaining context documents (`ADMIN_LOGIN_TESTING_CONTEXT.md`) helped track progress across sessions
+**Benefit**: Complex multi-step processes need persistent documentation
+**Practice**: Update documentation in real-time, not after completion
+
 ### Next Steps
 
-1. **Staging Deployment**: Deploy and test login functionality on staging environment
-2. **Seeds Integration**: Ensure admin user exists in staging database
+1. ✅ **Staging Deployment**: Successfully deployed and tested - FULLY OPERATIONAL
+2. ✅ **Seeds Integration**: Admin user exists and working in staging
 3. **Customer UI**: Continue with increments 4-6 following TDD methodology
-4. **Documentation**: Create ADR for completed admin login implementation
+4. **Documentation**: Create ADR-027 for admin login implementation
+5. **Production Deployment**: Ready when approved - staging verified
 
 ## References
 
