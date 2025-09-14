@@ -306,7 +306,7 @@ defmodule Rsolv.Customers do
     
     # Store in distributed Mnesia table for cluster-wide access
     case Rsolv.CustomerSessions.put_session(token, customer.id) do
-      {:atomic, :ok} -> 
+      {:atomic, _result} -> 
         token
       error ->
         Logger.error("Failed to store session: #{inspect(error)}")
