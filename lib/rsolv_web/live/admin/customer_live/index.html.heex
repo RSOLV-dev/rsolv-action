@@ -4,15 +4,21 @@
   </div>
   
   <div class="mb-4 flex items-center justify-between">
-    <form id="filter-form" phx-change="filter" class="flex items-center space-x-4">
-      <label for="status" class="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</label>
-      <select name="status" id="status" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-        <option value="all" selected={@status_filter == "all"}>All</option>
-        <option value="active" selected={@status_filter == "active"}>Active</option>
-        <option value="inactive" selected={@status_filter == "inactive"}>Inactive</option>
-      </select>
-    </form>
-    
+    <div class="flex items-center space-x-4">
+      <form id="filter-form" phx-change="filter" class="flex items-center space-x-4">
+        <label for="status" class="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</label>
+        <select name="status" id="status" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+          <option value="all" selected={@status_filter == "all"}>All</option>
+          <option value="active" selected={@status_filter == "active"}>Active</option>
+          <option value="inactive" selected={@status_filter == "inactive"}>Inactive</option>
+        </select>
+      </form>
+
+      <button phx-click="new" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+        New Customer
+      </button>
+    </div>
+
     <div class="text-sm text-gray-700 dark:text-gray-300">
       Showing <%= (@current_page - 1) * @per_page + 1 %> to <%= min(@current_page * @per_page, @total_count) %> of <%= @total_count %> customers
     </div>
@@ -68,6 +74,9 @@
               <% end %>
             <% end %>
           </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+            Actions
+          </th>
         </tr>
       </thead>
       <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -98,6 +107,16 @@
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
               <%= Calendar.strftime(customer.inserted_at, "%b %d, %Y") %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <div class="flex items-center space-x-2">
+                <a phx-click="edit" phx-value-id={customer.id} class="text-blue-600 hover:text-blue-800 cursor-pointer">
+                  Edit
+                </a>
+                <button phx-click="delete" phx-value-id={customer.id} class="text-red-600 hover:text-red-800">
+                  Delete
+                </button>
+              </div>
             </td>
           </tr>
         <% end %>
@@ -149,3 +168,154 @@
     </div>
   </div>
 </div>
+
+<%= if @modal_open do %>
+  <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-40"></div>
+  <div class="fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+        <%= if @modal_action == :delete do %>
+          <div>
+            <div class="mt-3 text-center sm:mt-5">
+              <h3 class="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100">
+                Delete Customer
+              </h3>
+              <div class="mt-2">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Are you sure you want to delete <strong><%= @customer.name %></strong>?
+                  This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+              <button
+                phx-click="confirm-delete"
+                phx-value-id={@customer.id}
+                class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:col-start-2"
+              >
+                Delete
+              </button>
+              <button
+                phx-click="cancel"
+                class="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 sm:col-start-1 sm:mt-0"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        <% else %>
+          <div>
+            <h3 class="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100 mb-4">
+              <%= if @modal_action == :new, do: "New Customer", else: "Edit Customer" %>
+            </h3>
+            <form id="customer-form" phx-submit="save">
+              <div class="space-y-4">
+                <div>
+                  <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    name="customer[name]"
+                    id="name"
+                    value={@customer.name}
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="customer[email]"
+                    id="email"
+                    value={@customer.email}
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm"
+                    required
+                  />
+                </div>
+
+                <%= if @modal_action == :new do %>
+                  <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      name="customer[password]"
+                      id="password"
+                      class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm"
+                      required
+                    />
+                  </div>
+                <% end %>
+
+                <div>
+                  <label for="subscription_plan" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Plan
+                  </label>
+                  <select
+                    name="customer[subscription_plan]"
+                    id="subscription_plan"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm"
+                  >
+                    <option value="trial" selected={@customer.subscription_plan == "trial"}>Trial</option>
+                    <option value="pro" selected={@customer.subscription_plan == "pro"}>Pro</option>
+                    <option value="pay_as_you_go" selected={@customer.subscription_plan == "pay_as_you_go"}>Pay As You Go</option>
+                    <option value="enterprise" selected={@customer.subscription_plan == "enterprise"}>Enterprise</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="monthly_limit" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Monthly Limit
+                  </label>
+                  <input
+                    type="number"
+                    name="customer[monthly_limit]"
+                    id="monthly_limit"
+                    value={@customer.monthly_limit || 100}
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm"
+                    required
+                  />
+                </div>
+
+                <div class="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="customer[active]"
+                    id="active"
+                    checked={@customer.active}
+                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+                  />
+                  <label for="active" class="ml-2 block text-sm text-gray-900 dark:text-gray-100">
+                    Active
+                  </label>
+                </div>
+              </div>
+
+              <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                <button
+                  type="submit"
+                  class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:col-start-2"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  phx-click="cancel"
+                  class="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 sm:col-start-1 sm:mt-0"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>

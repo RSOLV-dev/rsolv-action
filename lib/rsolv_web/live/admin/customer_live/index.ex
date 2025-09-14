@@ -1,6 +1,6 @@
 defmodule RsolvWeb.Admin.CustomerLive.Index do
   use RsolvWeb, :live_view
-  
+
   alias Rsolv.Customers
   alias Rsolv.Customers.Customer
   
@@ -8,7 +8,11 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
   
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok,
+     socket
+     |> assign(:modal_open, false)
+     |> assign(:modal_action, nil)
+     |> assign(:customer, %Customer{})}
   end
   
   @impl true
@@ -35,6 +39,9 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
     |> assign(:sort_by, sort_by)
     |> assign(:sort_order, sort_order)
     |> assign(:per_page, @per_page)
+    |> assign(:modal_open, false)
+    |> assign(:modal_action, nil)
+    |> assign(:customer, %Customer{})
   end
   
   @impl true
@@ -71,6 +78,115 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
          sort_order: socket.assigns.sort_order
        ]}"
      )}
+  end
+
+  @impl true
+  def handle_event("new", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:modal_open, true)
+     |> assign(:modal_action, :new)
+     |> assign(:customer, %Customer{})}
+  end
+
+  @impl true
+  def handle_event("edit", %{"id" => id}, socket) do
+    customer = Customers.get_customer!(id)
+    {:noreply,
+     socket
+     |> assign(:modal_open, true)
+     |> assign(:modal_action, :edit)
+     |> assign(:customer, customer)}
+  end
+
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    customer = Customers.get_customer!(id)
+    {:noreply,
+     socket
+     |> assign(:modal_open, true)
+     |> assign(:modal_action, :delete)
+     |> assign(:customer, customer)}
+  end
+
+  @impl true
+  def handle_event("confirm-delete", %{"id" => id}, socket) do
+    customer = Customers.get_customer!(id)
+    {:ok, _} = Customers.delete_customer(customer)
+
+    {customers, total_count} = list_customers(
+      socket.assigns.status_filter,
+      socket.assigns.sort_by,
+      socket.assigns.sort_order,
+      socket.assigns.current_page
+    )
+
+    {:noreply,
+     socket
+     |> assign(:customers, customers)
+     |> assign(:total_count, total_count)
+     |> assign(:modal_open, false)
+     |> assign(:modal_action, nil)
+     |> put_flash(:info, "Customer deleted successfully")}
+  end
+
+  @impl true
+  def handle_event("cancel", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:modal_open, false)
+     |> assign(:modal_action, nil)}
+  end
+
+  @impl true
+  def handle_event("save", %{"customer" => customer_params}, socket) do
+    save_customer(socket, socket.assigns.modal_action, customer_params)
+  end
+
+  defp save_customer(socket, :edit, customer_params) do
+    case Customers.update_customer(socket.assigns.customer, customer_params) do
+      {:ok, _customer} ->
+        {customers, total_count} = list_customers(
+          socket.assigns.status_filter,
+          socket.assigns.sort_by,
+          socket.assigns.sort_order,
+          socket.assigns.current_page
+        )
+
+        {:noreply,
+         socket
+         |> assign(:customers, customers)
+         |> assign(:total_count, total_count)
+         |> assign(:modal_open, false)
+         |> assign(:modal_action, nil)
+         |> put_flash(:info, "Customer updated successfully")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :changeset, changeset)}
+    end
+  end
+
+  defp save_customer(socket, :new, customer_params) do
+    case Customers.create_customer(customer_params) do
+      {:ok, _customer} ->
+        {customers, total_count} = list_customers(
+          socket.assigns.status_filter,
+          socket.assigns.sort_by,
+          socket.assigns.sort_order,
+          socket.assigns.current_page
+        )
+
+        {:noreply,
+         socket
+         |> assign(:customers, customers)
+         |> assign(:total_count, total_count)
+         |> assign(:modal_open, false)
+         |> assign(:modal_action, nil)
+         |> put_flash(:info, "Customer created successfully")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :changeset, changeset)}
+    end
   end
   
   defp list_customers(status, sort_by, sort_order, page) do

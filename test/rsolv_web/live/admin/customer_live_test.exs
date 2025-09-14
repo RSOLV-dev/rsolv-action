@@ -136,16 +136,182 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
     
     test "requires staff authentication", %{conn: conn} do
       regular_customer = customer_fixture(is_staff: false)
-      
+
       # Try to access without login
-      assert {:error, {:redirect, %{to: "/admin/login"}}} = 
+      assert {:error, {:redirect, %{to: "/admin/login"}}} =
         live(conn, "/admin/customers")
-      
+
       # Try to access as non-staff customer
       conn = log_in_customer(conn, regular_customer)
-      assert {:error, {:redirect, %{to: "/"}}} = 
+      assert {:error, {:redirect, %{to: "/"}}} =
         live(conn, "/admin/customers")
     end
+
+    test "shows edit button for each customer", %{conn: conn, staff: staff} do
+      customer = customer_fixture(email: "edit@example.com", name: "Edit Me")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, html} = live(conn, "/admin/customers")
+
+      # Check for edit button in actions column
+      assert html =~ "Edit"
+      assert view |> element("a[phx-click=edit][phx-value-id=#{customer.id}]") |> has_element?()
+    end
+
+    test "opens edit modal when edit button clicked", %{conn: conn, staff: staff} do
+      customer = customer_fixture(email: "edit@example.com", name: "Edit Me")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, html} = live(conn, "/admin/customers")
+
+      # Click edit button
+      view
+      |> element("a[phx-click=edit][phx-value-id=#{customer.id}]")
+      |> render_click()
+
+      html = render(view)
+
+      # Check modal opened with customer data
+      assert html =~ "Edit Customer"
+      assert html =~ "edit@example.com"
+      assert html =~ "Edit Me"
+    end
+
+    test "updates customer when edit form submitted", %{conn: conn, staff: staff} do
+      customer = customer_fixture(email: "old@example.com", name: "Old Name")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers")
+
+      # Open edit modal
+      view
+      |> element("a[phx-click=edit][phx-value-id=#{customer.id}]")
+      |> render_click()
+
+      # Submit updated data
+      view
+      |> form("#customer-form", customer: %{
+        name: "New Name",
+        email: "new@example.com",
+        active: false
+      })
+      |> render_submit()
+
+      html = render(view)
+
+      # Check customer was updated in the list
+      assert html =~ "New Name"
+      assert html =~ "new@example.com"
+      refute html =~ "Old Name"
+      refute html =~ "old@example.com"
+    end
+
+    test "shows new customer button", %{conn: conn, staff: staff} do
+      conn = log_in_customer(conn, staff)
+      {:ok, view, html} = live(conn, "/admin/customers")
+
+      # Check for new customer button
+      assert html =~ "New Customer"
+      assert view |> element("button[phx-click=new]") |> has_element?()
+    end
+
+    test "opens new customer modal when button clicked", %{conn: conn, staff: staff} do
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers")
+
+      # Click new customer button
+      view
+      |> element("button[phx-click=new]")
+      |> render_click()
+
+      html = render(view)
+
+      # Check modal opened with empty form
+      assert html =~ "New Customer"
+      assert view |> element("#customer-form") |> has_element?()
+    end
+
+    test "creates new customer when form submitted", %{conn: conn, staff: staff} do
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers")
+
+      # Open new customer modal
+      view
+      |> element("button[phx-click=new]")
+      |> render_click()
+
+      # Submit new customer data
+      view
+      |> form("#customer-form", customer: %{
+        name: "Brand New Customer",
+        email: "brand.new@example.com",
+        password: "SecurePassword123!",
+        active: true,
+        subscription_plan: "Pro",
+        monthly_limit: 5000
+      })
+      |> render_submit()
+
+      html = render(view)
+
+      # Check new customer appears in the list
+      assert html =~ "Brand New Customer"
+      assert html =~ "brand.new@example.com"
+      assert html =~ "Pro"
+    end
+
+    test "shows delete button for each customer", %{conn: conn, staff: staff} do
+      customer = customer_fixture(email: "delete@example.com", name: "Delete Me")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, html} = live(conn, "/admin/customers")
+
+      # Check for delete button in actions column
+      assert html =~ "Delete"
+      assert view |> element("button[phx-click=delete][phx-value-id=#{customer.id}]") |> has_element?()
+    end
+
+    test "shows confirmation dialog when delete clicked", %{conn: conn, staff: staff} do
+      customer = customer_fixture(email: "delete@example.com", name: "Delete Me")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers")
+
+      # Click delete button
+      view
+      |> element("button[phx-click=\"delete\"][phx-value-id=\"#{customer.id}\"]")
+      |> render_click()
+
+      html = render(view)
+
+      # Check confirmation dialog appeared
+      assert html =~ "Are you sure"
+      assert html =~ "Delete Me"
+      assert html =~ "This action cannot be undone"
+    end
+
+    test "deletes customer when confirmed", %{conn: conn, staff: staff} do
+      customer = customer_fixture(email: "delete@example.com", name: "Delete Me")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers")
+
+      # Click delete button
+      view
+      |> element("button[phx-click=\"delete\"][phx-value-id=\"#{customer.id}\"]")
+      |> render_click()
+
+      # Confirm deletion
+      view
+      |> element("button[phx-click=confirm-delete][phx-value-id=#{customer.id}]")
+      |> render_click()
+
+      html = render(view)
+
+      # Check customer was removed from the list
+      refute html =~ "Delete Me"
+      refute html =~ "delete@example.com"
+    end
   end
-  
+
 end
