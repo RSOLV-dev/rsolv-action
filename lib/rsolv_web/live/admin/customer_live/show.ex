@@ -5,10 +5,11 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
   
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, 
+    {:ok,
      socket
      |> assign(:show_edit_modal, false)
-     |> assign(:form, nil)}
+     |> assign(:form, nil)
+     |> assign(:new_api_key, nil)}
   end
   
   @impl true
@@ -77,17 +78,23 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
   @impl true
   def handle_event("generate-api-key", _, socket) do
     case Customers.create_api_key(socket.assigns.customer, %{name: "API Key"}) do
-      {:ok, _api_key} ->
+      {:ok, api_key} ->
         api_keys = Customers.list_api_keys(socket.assigns.customer)
 
         {:noreply,
          socket
-         |> put_flash(:info, "API key generated successfully")
-         |> assign(:api_keys, api_keys)}
+         |> put_flash(:info, "API key generated successfully. Copy it now - it won't be shown again!")
+         |> assign(:api_keys, api_keys)
+         |> assign(:new_api_key, api_key.key)}
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Failed to generate API key")}
     end
+  end
+
+  @impl true
+  def handle_event("close-api-key-modal", _, socket) do
+    {:noreply, assign(socket, :new_api_key, nil)}
   end
 
   defp calculate_usage_percentage(customer) do

@@ -63,7 +63,7 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
       assert html =~ String.slice(api_key2.key, 0, 8)
     end
 
-    test "generates new API key", %{conn: conn, staff: staff, customer: customer} do
+    test "generates new API key and displays full key in modal", %{conn: conn, staff: staff, customer: customer} do
       conn = log_in_customer(conn, staff)
       {:ok, view, _html} = live(conn, "/admin/customers/#{customer.id}")
 
@@ -74,9 +74,45 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
 
       html = render(view)
 
-      # Check new key was generated
+      # Check new key was generated with success message
       assert html =~ "API key generated successfully"
+      assert html =~ "Copy it now - it won&#39;t be shown again!"
+
+      # Check modal is displayed with full key
+      assert html =~ "API Key Generated Successfully"
+      assert html =~ "Copy this API key now"
       assert html =~ "rsolv_"
+
+      # Check for copy button
+      assert html =~ "Copy"
+      assert html =~ "api-key-input"
+
+      # Check for Done button
+      assert view |> element("button[phx-click=\"close-api-key-modal\"]") |> has_element?()
+    end
+
+    test "closes API key modal when Done is clicked", %{conn: conn, staff: staff, customer: customer} do
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers/#{customer.id}")
+
+      # Generate a new key
+      view
+      |> element("button[phx-click=\"generate-api-key\"]")
+      |> render_click()
+
+      # Modal should be visible
+      html = render(view)
+      assert html =~ "API Key Generated Successfully"
+
+      # Click Done to close modal
+      view
+      |> element("button[phx-click=\"close-api-key-modal\"]")
+      |> render_click()
+
+      # Modal should be closed
+      html = render(view)
+      refute html =~ "API Key Generated Successfully"
+      refute html =~ "Copy this API key now"
     end
 
     test "shows back to customers link", %{conn: conn, staff: staff, customer: customer} do

@@ -117,6 +117,9 @@ defmodule RsolvWeb.Router do
     live "/customers/new", CustomerLive.Index, :new
     live "/customers/:id", CustomerLive.Show, :show
     live "/customers/:id/edit", CustomerLive.Index, :edit
+
+    live "/api-keys", ApiKeyLive.Index, :index
+    live "/api-keys/:id/edit", ApiKeyLive.Index, :edit
   end
   
   # Dashboard routes with authentication and feature flags
