@@ -178,14 +178,16 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
   end
 
   @impl true
-  def handle_event("bulk-action", %{"value" => ""}, socket) do
+  def handle_event("bulk-action", %{"bulk-actions" => ""}, socket) do
     # No action selected
     {:noreply, socket}
   end
 
   @impl true
-  def handle_event("bulk-action", %{"value" => action}, socket) do
+  def handle_event("bulk-action", %{"bulk-actions" => action}, socket) do
+    require Logger
     selected_ids = MapSet.to_list(socket.assigns.selected_ids)
+    Logger.info("Bulk action triggered: #{action} for #{length(selected_ids)} customers")
 
     case action do
       "activate" ->
