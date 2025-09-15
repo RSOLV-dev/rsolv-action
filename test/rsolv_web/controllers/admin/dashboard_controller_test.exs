@@ -52,7 +52,6 @@ defmodule RsolvWeb.Admin.DashboardControllerTest do
       html = html_response(conn, 200)
       assert html =~ "System Health"
       assert html =~ "Database"
-      assert html =~ "Redis"
       assert html =~ "Operational"
     end
 

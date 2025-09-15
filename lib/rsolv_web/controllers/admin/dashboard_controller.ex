@@ -35,7 +35,6 @@ defmodule RsolvWeb.Admin.DashboardController do
   defp check_system_health do
     %{
       database: check_database_health(),
-      redis: check_redis_health(),
       overall_status: "Operational"
     }
   end
@@ -49,10 +48,6 @@ defmodule RsolvWeb.Admin.DashboardController do
     end
   end
 
-  defp check_redis_health do
-    # For now, return operational since Redis isn't required
-    "Operational"
-  end
 
   defp get_recent_activity do
     # Get recent API key creations with preloaded customer

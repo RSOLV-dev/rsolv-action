@@ -52,17 +52,11 @@
             <p class="text-xl font-bold text-green-600 mt-2">
               <%= @metrics.system_health.overall_status %>
             </p>
-            <div class="mt-2 space-y-1">
+            <div class="mt-2">
               <div class="flex items-center text-sm">
                 <span class="text-gray-600 dark:text-gray-400">Database:</span>
                 <span class={"ml-2 #{health_color(@metrics.system_health.database)}"}>
                   <%= @metrics.system_health.database %>
-                </span>
-              </div>
-              <div class="flex items-center text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Redis:</span>
-                <span class={"ml-2 #{health_color(@metrics.system_health.redis)}"}>
-                  <%= @metrics.system_health.redis %>
                 </span>
               </div>
             </div>
