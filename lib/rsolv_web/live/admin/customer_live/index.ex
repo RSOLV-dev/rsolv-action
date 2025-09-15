@@ -13,7 +13,8 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
      |> assign(:modal_open, false)
      |> assign(:modal_action, nil)
      |> assign(:customer, %Customer{})
-     |> assign(:selected_ids, MapSet.new())}
+     |> assign(:selected_ids, MapSet.new())
+     |> assign(:bulk_action, "")}
   end
   
   @impl true
@@ -44,6 +45,7 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
     |> assign(:modal_action, nil)
     |> assign(:customer, %Customer{})
     |> assign(:selected_ids, MapSet.new())
+    |> assign(:bulk_action, "")
   end
   
   @impl true
@@ -200,6 +202,7 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
          socket
          |> refresh_customers()
          |> assign(:selected_ids, MapSet.new())
+         |> assign(:bulk_action, "")
          |> put_flash(:info, "#{length(selected_ids)} customers activated")}
 
       "deactivate" ->
@@ -212,6 +215,7 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
          socket
          |> refresh_customers()
          |> assign(:selected_ids, MapSet.new())
+         |> assign(:bulk_action, "")
          |> put_flash(:info, "#{length(selected_ids)} customers deactivated")}
 
       "delete" ->
@@ -242,6 +246,7 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
      |> assign(:selected_ids, MapSet.new())
      |> assign(:modal_open, false)
      |> assign(:modal_action, nil)
+     |> assign(:bulk_action, "")
      |> put_flash(:info, "#{length(selected_ids)} customers deleted")}
   end
 
