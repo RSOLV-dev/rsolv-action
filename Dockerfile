@@ -23,9 +23,14 @@ COPY config config
 RUN mix deps.get --only prod && \
     mix deps.compile
 
-# Copy assets
+# Copy assets and non-static priv files
 COPY assets assets
-COPY priv priv
+# Copy priv directories but exclude static to avoid overwriting generated assets
+COPY priv/repo priv/repo
+COPY priv/parsers priv/parsers
+COPY priv/benchmarks priv/benchmarks
+COPY priv/blog priv/blog
+COPY priv/grafana_dashboards priv/grafana_dashboards
 
 # Build assets (esbuild is handled by mix)
 RUN mix assets.deploy
