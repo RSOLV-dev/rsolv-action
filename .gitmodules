@@ -1,0 +1,6 @@
+[submodule "RSOLV-action"]
+	path = RSOLV-action
+	url = https://github.com/RSOLV-dev/rsolv-action.git
+[submodule "RSOLV-infrastructure"]
+	path = RSOLV-infrastructure
+	url = https://github.com/RSOLV-dev/RSOLV-infrastructure.git

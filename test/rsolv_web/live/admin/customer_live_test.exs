@@ -314,4 +314,87 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
     end
   end
 
+  describe "Bulk Operations" do
+    test "shows checkbox for each customer row", %{conn: conn, staff: staff} do
+      customer1 = customer_fixture(email: "bulk1@example.com", name: "Bulk Customer 1")
+      customer2 = customer_fixture(email: "bulk2@example.com", name: "Bulk Customer 2")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, html} = live(conn, "/admin/customers")
+
+      # Check that checkboxes exist for each customer
+      assert view |> element("input[type=checkbox][phx-value-id=\"#{customer1.id}\"]") |> has_element?()
+      assert view |> element("input[type=checkbox][phx-value-id=\"#{customer2.id}\"]") |> has_element?()
+    end
+
+    test "toggles individual customer selection", %{conn: conn, staff: staff} do
+      customer = customer_fixture(email: "toggle@example.com", name: "Toggle Customer")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers")
+
+      # Click to select the customer
+      view
+      |> element("input[type=checkbox][phx-value-id=\"#{customer.id}\"]")
+      |> render_click()
+
+      # Verify checkbox is checked
+      html = render(view)
+      assert html =~ ~s(checked)
+
+      # Click again to deselect
+      view
+      |> element("input[type=checkbox][phx-value-id=\"#{customer.id}\"]")
+      |> render_click()
+
+      # Verify checkbox is unchecked
+      html = render(view)
+      refute html =~ ~s(checked)
+    end
+
+    test "select all checkbox toggles all customers on current page", %{conn: conn, staff: staff} do
+      customer1 = customer_fixture(email: "all1@example.com", name: "All Customer 1")
+      customer2 = customer_fixture(email: "all2@example.com", name: "All Customer 2")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers")
+
+      # Click select all
+      view
+      |> element("input[type=checkbox][phx-click=\"toggle-all\"]")
+      |> render_click()
+
+      html = render(view)
+
+      # Both customers should be selected
+      assert html =~ ~s(input type="checkbox" phx-click="toggle-select" phx-value-id="#{customer1.id}" checked)
+      assert html =~ ~s(input type="checkbox" phx-click="toggle-select" phx-value-id="#{customer2.id}" checked)
+    end
+
+    test "shows bulk actions dropdown when customers are selected", %{conn: conn, staff: staff} do
+      customer = customer_fixture(email: "bulk@example.com", name: "Bulk Customer")
+
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers")
+
+      # Initially, bulk actions should not be visible
+      refute view |> element("#bulk-actions") |> has_element?()
+
+      # Select a customer
+      view
+      |> element("input[type=checkbox][phx-value-id=\"#{customer.id}\"]")
+      |> render_click()
+
+      # Now bulk actions should be visible
+      assert view |> element("#bulk-actions") |> has_element?()
+      assert view |> element("select#bulk-actions") |> has_element?()
+
+      html = render(view)
+      assert html =~ "Bulk Actions"
+      assert html =~ "Activate"
+      assert html =~ "Deactivate"
+      assert html =~ "Delete"
+    end
+  end
+
 end

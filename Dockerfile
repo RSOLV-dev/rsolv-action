@@ -1,8 +1,9 @@
-# Use official Elixir image
-FROM elixir:1.18-alpine AS base
+# Multi-stage build for RSOLV Platform
+# Stage 1: Build stage
+FROM elixir:1.18-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache build-base git postgresql-client
+RUN apk add --no-cache build-base git nodejs npm python3 bash
 
 # Set working directory
 WORKDIR /app
@@ -11,129 +12,59 @@ WORKDIR /app
 RUN mix local.hex --force && \
     mix local.rebar --force
 
+# Set build environment
+ENV MIX_ENV=prod
+
 # Copy mix files
 COPY mix.exs mix.lock ./
 COPY config config
 
-# Development stage - includes full Elixir/mix environment
-FROM base AS development
+# Install dependencies
+RUN mix deps.get --only prod && \
+    mix deps.compile
 
-# Install curl for healthchecks and parser languages for development
-RUN apk add --no-cache curl \
-    # Parser runtimes needed for development AST analysis
-    python3 \
-    ruby ruby-dev \
-    php82 php82-json php82-tokenizer \
-    # Required for JavaScript parser and shell scripts
-    nodejs npm bash
+# Copy assets
+COPY assets assets
+COPY priv priv
 
-# Install Ruby bundler and parser gem (make it optional to not block build)
-RUN gem install bundler --no-document || true && \
-    gem install parser --no-document || true && \
-    rm -rf /root/.gem /usr/lib/ruby/gems/*/cache/* || true
-
-# Install additional PHP extensions that parsers might need
-RUN apk add --no-cache php82-dom php82-mbstring
-
-# Install all dependencies (dev, test, prod)
-RUN mix deps.get
-
-# Copy all source code
-COPY . .
-
-# Compile dependencies
-RUN mix deps.compile
-
-# CRITICAL: Compile the application including patterns
-# This ensures pattern modules are available even with volume mounts
-RUN mix compile
-
-# Preserve compiled pattern beams for volume mount scenario
-# Copy them to a location that won't be overridden by volume mounts
-RUN mkdir -p /pattern-beams && \
-    cp -r _build/dev/lib/rsolv_api/ebin/*pattern*.beam /pattern-beams/ 2>/dev/null || true && \
-    cp -r _build/dev/lib/rsolv_api/ebin/*Pattern*.beam /pattern-beams/ 2>/dev/null || true
-
-# Copy entrypoint script
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
-# Use entrypoint to ensure compilation
-ENTRYPOINT ["/docker-entrypoint.sh"]
-
-# Default command for development
-CMD ["mix", "phx.server"]
-
-# Production dependencies stage
-FROM base AS prod-deps
-
-# Install only prod dependencies
-RUN mix deps.get --only prod
-RUN mix deps.compile
-
-# Builder stage for production
-FROM prod-deps AS builder
-
-# Install Node.js and Bun for asset compilation
-RUN apk add --no-cache nodejs npm && \
-    npm install -g bun
+# Build assets (esbuild is handled by mix)
+RUN mix assets.deploy
 
 # Copy source code
 COPY lib lib
-COPY priv priv
-COPY rel rel
-COPY package.json package-lock.json ./
-COPY assets assets
 
-# Install npm dependencies using bun for better performance
-RUN bun install
+# Compile the application
+RUN mix compile
 
-# Build assets using Mix tasks (handles both esbuild and tailwind)
-RUN MIX_ENV=prod mix assets.deploy
+# Build release
+RUN mix release
 
-# Use parallel compilation
-ENV ERL_FLAGS="+JPperf true"
-ENV ELIXIR_MAKE_CACHE_DIR=/app/.make_cache
+# Copy custom env.sh
+COPY rel/env.sh _build/prod/rel/rsolv/releases/0.1.0/env.sh
 
-# Compile the application with optimizations
-RUN MIX_ENV=prod mix compile
+# Stage 2: Runtime stage
+FROM alpine:3.22
 
-# Build release with optimizations
-RUN MIX_ENV=prod mix release --overwrite
-
-# Final production stage - minimal runtime image
-# Using Alpine 3.22 to match the elixir:1.18-alpine base image OpenSSL version
-FROM alpine:3.22 AS production
-
-# Install runtime dependencies including parser languages
-# Note: Keeping image relatively small by only including essential runtimes
+# Install runtime dependencies including parser runtimes
 RUN apk add --no-cache \
-    # Elixir/Erlang runtime dependencies
     openssl ncurses-libs libstdc++ libgcc \
-    # Health check and debugging
     curl \
-    # Parser runtimes - only the most commonly used initially
     python3 \
     ruby ruby-dev \
     php82 php82-json php82-tokenizer \
-    # Required for JavaScript parser and shell scripts
     nodejs npm bash
 
-# Install Ruby bundler and parser gem
-# Need build tools temporarily for native extensions
+# Install Ruby parser gem
 RUN apk add --no-cache --virtual .build-deps build-base && \
     gem install bundler parser --no-document && \
     apk del .build-deps && \
     rm -rf /root/.gem /usr/lib/ruby/gems/*/cache/*
 
-# Install additional PHP extensions that parsers might need
+# Install PHP dependencies for parser
 RUN apk add --no-cache php82-dom php82-mbstring
 
 # Create app user
 RUN adduser -D -h /app app
-
-# Copy release from builder
-COPY --from=builder --chown=app:app /app/_build/prod/rel/rsolv /app
 
 # Set environment
 ENV HOME=/app
@@ -148,6 +79,9 @@ USER app
 
 # Set working directory
 WORKDIR /app
+
+# Copy release from builder
+COPY --from=builder --chown=app:app /app/_build/prod/rel/rsolv /app
 
 # Start the application
 CMD ["bin/rsolv", "start"]
