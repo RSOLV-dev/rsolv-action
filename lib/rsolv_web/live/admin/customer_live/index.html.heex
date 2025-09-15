@@ -19,18 +19,19 @@
           <span class="text-sm text-gray-600 dark:text-gray-400">
             <%= MapSet.size(@selected_ids) %> selected
           </span>
-          <select
-            id="bulk-actions"
-            name="bulk-actions"
-            value={@bulk_action}
-            phx-change="bulk-action"
-            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
-          >
-            <option value="">Bulk Actions</option>
-            <option value="activate">Activate</option>
-            <option value="deactivate">Deactivate</option>
-            <option value="delete">Delete</option>
-          </select>
+          <form phx-change="bulk-action">
+            <select
+              id="bulk-actions"
+              name="bulk-actions"
+              value={@bulk_action}
+              class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+            >
+              <option value="">Bulk Actions</option>
+              <option value="activate">Activate</option>
+              <option value="deactivate">Deactivate</option>
+              <option value="delete">Delete</option>
+            </select>
+          </form>
         </div>
       <% end %>
 
