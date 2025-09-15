@@ -575,10 +575,29 @@ Based on codebase review (2025-09-10), the following need to be implemented:
 - `lib/rsolv_web/live/admin/customer_live/show.html.heex` - Complete UI overhaul
 - `test/rsolv_web/live/admin/customer_live/show_test.exs` - Comprehensive test coverage
 
+#### Staff Dashboard with System Metrics (Increment 8 Complete) ✅
+
+**Completed**: 2025-01-14
+**Tag**: v0.8.0-dashboard-metrics
+
+Implemented comprehensive system metrics dashboard with:
+- **Total customer count** - Real-time count of all customers
+- **Active API keys** - Total number of API keys in system
+- **System health indicators** - Database and Redis status checks
+- **Request volume metrics** - Placeholders for daily/weekly/monthly stats
+- **Recent activity feed** - Last 10 activities (customer registrations, API key creations)
+- **Responsive design** - Works on mobile and desktop with dark mode support
+
+**Files Modified:**
+- `lib/rsolv_web/controllers/admin/dashboard_controller.ex` - Added metrics gathering
+- `lib/rsolv_web/controllers/admin/dashboard_html.ex` - Helper functions for formatting
+- `lib/rsolv_web/controllers/admin/dashboard_html/index.html.heex` - Complete UI redesign
+- `test/rsolv_web/controllers/admin/dashboard_controller_test.exs` - Full test coverage (8/8 passing)
+
 ### Pending Features 📋
 
 #### Advanced Admin Features (Future Increments)
-- [ ] Staff dashboard with system metrics (Increment 8)
+- [x] Staff dashboard with system metrics (Increment 8) - **Completed 2025-01-14**
 - [ ] Bulk operations for customer management (Increment 9)
 - [ ] Export customer data to CSV/JSON
 - [ ] Activity logs and audit trail
