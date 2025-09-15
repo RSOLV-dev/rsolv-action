@@ -33,10 +33,14 @@ COPY priv/blog priv/blog
 COPY priv/grafana_dashboards priv/grafana_dashboards
 
 # Build assets (esbuild is handled by mix)
-RUN mix assets.deploy
+# Clean any existing static files first to ensure fresh build
+RUN rm -rf priv/static && mix assets.deploy
 
 # Copy source code
 COPY lib lib
+
+# Copy the correct static files with proper CSS
+COPY priv/static priv/static
 
 # Compile the application
 RUN mix compile
