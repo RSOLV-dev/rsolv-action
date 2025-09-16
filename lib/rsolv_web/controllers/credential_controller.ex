@@ -11,8 +11,8 @@ defmodule RsolvWeb.CredentialController do
 
   def exchange(conn, params) do
     Logger.info("[CredentialController] Starting exchange with params: #{inspect(params)}")
-    
-    with {:ok, api_key} <- validate_api_key(params),
+
+    with {:ok, api_key} <- get_api_key(conn, params),
          {:ok, customer} <- authenticate_customer(api_key),
          :ok <- check_rate_limit(customer),
          :ok <- check_usage_limits(customer),
@@ -82,7 +82,7 @@ defmodule RsolvWeb.CredentialController do
   end
 
   def refresh(conn, params) do
-    with {:ok, api_key} <- validate_api_key(params),
+    with {:ok, api_key} <- get_api_key(conn, params),
          {:ok, customer} <- authenticate_customer(api_key),
          {:ok, credential_id} <- validate_credential_id(params),
          {:ok, credential} <- get_customer_credential(customer, credential_id),
@@ -124,7 +124,7 @@ defmodule RsolvWeb.CredentialController do
   end
 
   def report_usage(conn, params) do
-    with {:ok, api_key} <- validate_api_key(params),
+    with {:ok, api_key} <- get_api_key(conn, params),
          {:ok, customer} <- authenticate_customer(api_key),
          {:ok, usage_data} <- validate_usage_data(params),
          :ok <- record_usage(customer, usage_data),
@@ -148,6 +148,25 @@ defmodule RsolvWeb.CredentialController do
   end
 
   # Private functions
+
+  defp get_api_key(conn, params) do
+    # Check header first (preferred method, matching other controllers)
+    case get_req_header(conn, "x-api-key") do
+      [api_key | _] ->
+        Logger.info("[CredentialController] Found API key in header")
+        {:ok, api_key}
+      [] ->
+        # Fall back to checking params for backward compatibility
+        case params do
+          %{"api_key" => api_key} when is_binary(api_key) ->
+            Logger.info("[CredentialController] Found API key in params")
+            {:ok, api_key}
+          _ ->
+            Logger.error("[CredentialController] No API key found in header or params")
+            {:error, :missing_parameters}
+        end
+    end
+  end
 
   defp validate_api_key(%{"api_key" => api_key}) when is_binary(api_key), do: {:ok, api_key}
   defp validate_api_key(_), do: {:error, :missing_parameters}

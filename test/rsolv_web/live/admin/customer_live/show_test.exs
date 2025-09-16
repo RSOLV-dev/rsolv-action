@@ -115,6 +115,28 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
       refute html =~ "Copy this API key now"
     end
 
+    test "modal has proper fixed positioning classes", %{conn: conn, staff: staff, customer: customer} do
+      conn = log_in_customer(conn, staff)
+      {:ok, view, _html} = live(conn, "/admin/customers/#{customer.id}")
+
+      # Generate a new key
+      view
+      |> element("button[phx-click=\"generate-api-key\"]")
+      |> render_click()
+
+      html = render(view)
+
+      # Check for modal component with proper id
+      assert html =~ "id=\"api-key-modal\""
+      assert html =~ "relative z-50"
+
+      # Check for backdrop with dark mode support
+      assert html =~ "bg-zinc-50/90 dark:bg-gray-900/90 fixed inset-0"
+
+      # Check for centering classes in LiveView modal component
+      assert html =~ "flex min-h-full items-center justify-center"
+    end
+
     test "shows back to customers link", %{conn: conn, staff: staff, customer: customer} do
       conn = log_in_customer(conn, staff)
       {:ok, view, html} = live(conn, "/admin/customers/#{customer.id}")

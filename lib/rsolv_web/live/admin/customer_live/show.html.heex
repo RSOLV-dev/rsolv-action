@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-32 pb-20">
   <%= if live_flash(@flash, :info) do %>
     <div class="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 px-4 py-3 rounded-md">
       <%= live_flash(@flash, :info) %>
@@ -180,119 +180,96 @@
     </div>
   </div>
   
-  <%= if @show_edit_modal do %>
-    <div class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" phx-click="close_edit_modal"></div>
+  <.modal :if={@show_edit_modal} id="edit-customer-modal" show on_cancel={JS.push("close_edit_modal")}>
+    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 mb-4">
+      Edit Customer
+    </h3>
 
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+    <.form
+      for={@form}
+      id="customer-form"
+      phx-submit="save_customer"
+      phx-change="validate_customer"
+    >
+      <div class="space-y-4">
+        <div>
+          <.input field={@form[:name]} type="text" label="Name" />
+        </div>
 
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 mb-4">
-              Edit Customer
-            </h3>
+        <div>
+          <.input field={@form[:email]} type="email" label="Email" />
+        </div>
 
-            <.form
-              for={@form}
-              id="customer-form"
-              phx-submit="save_customer"
-              phx-change="validate_customer"
-            >
-              <div class="space-y-4">
-                <div>
-                  <.input field={@form[:name]} type="text" label="Name" />
-                </div>
+        <div>
+          <.input field={@form[:monthly_limit]} type="number" label="Monthly Limit" />
+        </div>
 
-                <div>
-                  <.input field={@form[:email]} type="email" label="Email" />
-                </div>
-
-                <div>
-                  <.input field={@form[:monthly_limit]} type="number" label="Monthly Limit" />
-                </div>
-
-                <div>
-                  <.input field={@form[:active]} type="checkbox" label="Active" />
-                </div>
-              </div>
-
-              <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                <button
-                  type="submit"
-                  class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm"
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  phx-click="close_edit_modal"
-                  class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            </.form>
-          </div>
+        <div>
+          <.input field={@form[:active]} type="checkbox" label="Active" />
         </div>
       </div>
-    </div>
-  <% end %>
 
-  <%= if @new_api_key do %>
-    <div class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="api-key-modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-          <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="sm:flex sm:items-start">
-              <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
-                <svg class="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100" id="api-key-modal-title">
-                  API Key Generated Successfully
-                </h3>
-                <div class="mt-4">
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                    Copy this API key now. For security reasons, it won't be shown again.
-                  </p>
-                  <div class="relative">
-                    <input
-                      type="text"
-                      readonly
-                      value={@new_api_key}
-                      id="api-key-input"
-                      class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    <button
-                      type="button"
-                      onclick="navigator.clipboard.writeText(document.getElementById('api-key-input').value).then(() => { this.textContent = 'Copied!'; setTimeout(() => { this.textContent = 'Copy'; }, 2000); })"
-                      class="absolute inset-y-0 right-0 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-r-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="button"
-              phx-click="close-api-key-modal"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
-            >
-              Done
-            </button>
-          </div>
-        </div>
+      <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+        <button
+          type="submit"
+          class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          phx-click="close_edit_modal"
+          class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600"
+        >
+          Cancel
+        </button>
       </div>
-    </div>
-  <% end %>
+    </.form>
+  </.modal>
+
 </div>
+
+<.modal :if={@new_api_key} id="api-key-modal" show on_cancel={JS.push("close-api-key-modal")}>
+  <div class="sm:flex sm:items-start">
+    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
+      <svg class="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+      <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
+        API Key Generated Successfully
+      </h3>
+      <div class="mt-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+          Copy this API key now. For security reasons, it won't be shown again.
+        </p>
+        <div class="relative">
+          <input
+            type="text"
+            readonly
+            value={@new_api_key}
+            id="api-key-input"
+            class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          />
+          <button
+            type="button"
+            onclick="navigator.clipboard.writeText(document.getElementById('api-key-input').value).then(() => { this.textContent = 'Copied!'; setTimeout(() => { this.textContent = 'Copy'; }, 2000); })"
+            class="absolute inset-y-0 right-0 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-r-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
+    <button
+      type="button"
+      phx-click="close-api-key-modal"
+      class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+    >
+      Done
+    </button>
+  </div>
+</.modal>

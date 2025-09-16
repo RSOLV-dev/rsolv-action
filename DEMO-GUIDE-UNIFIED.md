@@ -1,14 +1,17 @@
 # RSOLV Customer Demo Guide (Unified)
 
-**Updated**: 2025-09-02  
-**Status**: Ready for recording with credential vending fix applied  
-**Duration**: 12-15 minutes total  
+**Updated**: 2025-01-15
+**Status**: Enhanced with admin provisioning capabilities
+**Duration**: 15-18 minutes total (includes admin provisioning)
 
 ## Quick Start
 
 ```bash
 # Pre-flight check (1 minute)
 ./demo-scripts/demo-pre-flight-check.sh
+
+# Admin login check (NEW)
+open https://rsolv.dev/admin/login
 
 # Run demo
 ./demo-scripts/demo-master.sh
@@ -17,7 +20,7 @@
 ## Key Messaging Points
 
 ### 🎯 Core Value Proposition
-"**You stay in control** - RSOLV finds and validates vulnerabilities, but you decide what to fix and when."
+"**Enterprise control meets automation** - RSOLV provides complete administrative oversight while automating security fixes. You maintain full control over customer provisioning, API access, and usage limits."
 
 ### 💰 ROI Message
 "With typical vulnerabilities costing $7,000+ to fix manually, RSOLV delivers **296,000% ROI** by automating the fix process in minutes instead of days."
@@ -25,7 +28,35 @@
 ### 🎓 Educational Impact
 "Every fix comes with tests and educational context, helping your team learn and prevent similar issues in the future."
 
-## Three-Phase Architecture
+### 🔐 NEW: Enterprise Security
+"Complete administrative control with instant API key revocation, usage monitoring, and full audit trails for compliance."
+
+## Four-Phase Demo Architecture (Enhanced)
+
+### Phase 0: PROVISION (NEW - 2-3 minutes)
+**Purpose**: Demonstrate enterprise-grade customer management
+
+```bash
+# Navigate to admin dashboard
+# Create new customer account
+# Generate and configure API key
+```
+
+**Demo Script**:
+1. Open https://rsolv.dev/admin/login
+2. Navigate to Customers section
+3. Click "New Customer" button
+4. Create "Acme Corp Demo" account with:
+   - Email: demo@acmecorp.com
+   - Monthly Limit: 1000 fixes
+   - Subscription: Professional
+5. Navigate to customer detail page
+6. Click "Generate New Key"
+7. Copy API key (show security features)
+8. Configure in GitHub repository settings
+
+**Talk Track**:
+"Let me show you how quickly we can provision a new enterprise customer. Our admin dashboard provides complete control over customer accounts, API access, and usage limits. Notice the security features - API keys can be instantly revoked, and all actions are fully audited for compliance."
 
 ### Phase 1: SCAN (2-3 minutes)
 **Purpose**: Detect vulnerabilities without disrupting your workflow
@@ -86,6 +117,30 @@
 **Talk Track**:
 "When you're ready to fix an issue, simply add the automate label. RSOLV uses advanced AI with credential vending to generate a complete solution. Look at this PR - it's not just a fix, but includes tests and educational context. This is production-ready code that your team would be proud to write."
 
+### Phase 4: MONITOR (NEW - 2 minutes)
+**Purpose**: Show administrative oversight and control
+
+```bash
+# Return to admin dashboard
+# Show customer usage statistics
+# Demonstrate API key management
+```
+
+**Demo Script**:
+1. Return to https://rsolv.dev/admin/customers
+2. Click on "Acme Corp Demo" customer
+3. Show usage statistics:
+   - Current usage: 1/1000 fixes
+   - Usage graph showing trend
+4. Show API keys section:
+   - Active keys with last used timestamps
+   - Ability to deactivate instantly
+5. Navigate to admin dashboard
+6. Show recent activity feed
+
+**Talk Track**:
+"From the administrative dashboard, you have complete visibility into customer usage and system health. You can see that Acme Corp has used 1 of their 1000 monthly fixes. We can track patterns, adjust limits, and even instantly revoke access if needed. This level of control is essential for enterprise deployments."
+
 ## Technical Architecture (Optional Deep Dive)
 
 ### Credential Vending System
@@ -116,29 +171,42 @@
 - **Credential Vending**: Fixed in ADR-023
 - **No GitHub secrets needed**: Uses vended credentials
 
-### Timing Guidelines
-| Phase | Target | Maximum | Actual (Recent) |
-|-------|--------|---------|-----------------|
-| SCAN | 2-3 min | 3 min | 56 seconds ✅ |
-| VALIDATE | 1-2 min | 2 min | 45 seconds ✅ |
-| MITIGATE | 3-8 min | 8 min | 48 seconds ✅ |
+### Timing Guidelines (Updated)
+| Phase | Target | Maximum | Notes |
+|-------|--------|---------|-------|
+| PROVISION | 2-3 min | 3 min | NEW: Live customer creation |
+| SCAN | 2-3 min | 3 min | 56 seconds typical ✅ |
+| VALIDATE | 1-2 min | 2 min | Optional, 45 seconds typical ✅ |
+| MITIGATE | 3-8 min | 8 min | 48 seconds typical ✅ |
+| MONITOR | 2 min | 2 min | NEW: Admin dashboard review |
+| **TOTAL** | **11-17 min** | **18 min** | Complete enterprise demo |
 
-## Fallback Scenarios
+## Fallback Scenarios (Enhanced)
 
 ### If Live Demo Fails
-1. **Use Existing Artifacts**
+1. **Admin Dashboard Saves the Day** (NEW)
+   - Generate new API key on the spot
+   - Adjust customer limits if needed
+   - Show existing customer with usage history
+   - Use pre-created "Demo Customer" account
+
+2. **Use Existing Artifacts**
    - Issue #42: Complete vulnerability analysis
    - PR #43: Production-ready fix with tests
+   - Existing customers in admin dashboard
    - These are real, working examples
 
-2. **Focus on Business Value**
+3. **Focus on Enterprise Value**
+   - Administrative control and oversight
+   - Multi-tenant customer management
+   - Usage tracking and billing integration
    - Cost savings: $7,000+ per vulnerability
    - Time savings: Minutes vs days
-   - Education value: Team upskilling
 
-3. **Show Architecture Diagrams**
-   - Three-phase flow diagram
-   - Security model visualization
+4. **Show Architecture Diagrams**
+   - Four-phase flow diagram (with provisioning)
+   - Admin dashboard architecture
+   - Security model with API key management
    - ROI calculation breakdown
 
 ## Pre-Recording Checklist
