@@ -166,8 +166,10 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                   <%= api_key.name %>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500 dark:text-gray-400">
-                  <%= String.slice(api_key.key, 0, 8) %>...
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="text-sm font-mono text-gray-700 dark:text-gray-300 tracking-wider">
+                    <%= String.slice(api_key.key, 0, 12) %>...
+                  </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   <%= Calendar.strftime(api_key.inserted_at, "%B %d, %Y") %>
@@ -250,7 +252,8 @@
             readonly
             value={@new_api_key}
             id="api-key-input"
-            class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-base font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 tracking-wider select-all focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            style="font-family: 'Iosevka', 'ui-monospace', 'SFMono-Regular', monospace; letter-spacing: 0.05em;"
           />
           <button
             type="button"

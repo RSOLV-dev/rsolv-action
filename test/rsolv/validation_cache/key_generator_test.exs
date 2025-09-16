@@ -113,22 +113,36 @@ defmodule Rsolv.ValidationCache.KeyGeneratorTest do
       forge1 = create_forge_account()
       forge2 = create_forge_account()
       locations = [%{file_path: "app.js", line: 42}]
-      
+
       key1 = KeyGenerator.generate_key(
         forge1.id,
         "org/repo",
         locations,
         "xss"
       )
-      
+
       key2 = KeyGenerator.generate_key(
         forge2.id,
         "org/repo",
         locations,
         "xss"
       )
-      
+
       assert key1 != key2
+    end
+
+    test "handles string forge_account_id for test accounts" do
+      # This can happen when using test forge accounts
+      locations = [%{file_path: "app.js", line: 6}]
+
+      key = KeyGenerator.generate_key(
+        "test-forge-14",
+        "unknown/repo",
+        locations,
+        "sql_injection"
+      )
+
+      assert key == "test-forge-14/unknown/repo/[app.js:6]:sql_injection"
     end
   end
 end
