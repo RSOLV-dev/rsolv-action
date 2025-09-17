@@ -199,4 +199,43 @@ This change was deployed to production on 2025-09-17 with zero downtime:
 3. **Verification**: Confirmed authentication recognition working in production
 4. **Monitoring**: Enhanced logging provides real-time authentication monitoring
 
-The authentication recognition issue has been resolved and the platform now provides consistent, reliable API authentication across all endpoints.
+## RSOLV-Action Integration Update (2025-09-17)
+
+### Issue Discovered
+
+The RSOLV-action GitHub Action was using `Authorization: Bearer` headers instead of `x-api-key` headers, causing 401 Unauthorized errors when attempting to fetch security patterns from the RSOLV API.
+
+### Resolution
+
+Updated all RSOLV API client implementations in RSOLV-action to use `x-api-key` headers:
+
+#### Files Updated
+- `src/security/pattern-api-client.ts` - Pattern fetching
+- `src/external/api-client.ts` - Fix attempt recording and vulnerability validation
+- `src/validation/batch-validator.ts` - Batch validation requests
+- `src/credentials/manager.ts` - Credential exchange and usage reporting
+- `src/security/analyzers/elixir-ast-analyzer.ts` - AST analysis requests
+- `src/security/analyzers/elixir-ast-analyzer-simplified.ts` - Simplified AST analysis
+
+#### Test Coverage Added
+Comprehensive regression tests added to prevent future authentication issues:
+- `src/security/__tests__/pattern-api-auth.test.ts` - Pattern API authentication tests
+- `src/external/__tests__/api-client-auth.test.ts` - External API client authentication tests
+
+These tests verify:
+- All RSOLV API calls use `x-api-key` headers
+- No `Authorization: Bearer` headers are used for RSOLV API
+- Proper query parameter format for pattern endpoints
+- Consistent authentication across all endpoints
+
+### Verification
+
+Successfully tested in production with the demo repository:
+- Pattern fetching works correctly (5 JavaScript patterns retrieved)
+- Vulnerability detection functions (2 vulnerabilities detected)
+- GitHub issue creation works (2 issues created with proper labels)
+- Full workflow execution completes without authentication errors
+
+**Demo Repository**: https://github.com/arubis/rsolv-demo-vulnerable
+
+The authentication recognition issue has been fully resolved and the platform now provides consistent, reliable API authentication across all endpoints and integrations.
