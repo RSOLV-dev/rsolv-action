@@ -12,13 +12,14 @@ defmodule RsolvWeb.Api.V1.ASTController do
   """
   
   use RsolvWeb, :controller
-  
+
   alias Rsolv.AST.AnalysisService
   alias Rsolv.AST.SessionManager
-  alias Rsolv.Accounts
   alias Rsolv.RateLimiter
-  
+
   require Logger
+
+  plug RsolvWeb.Plugs.ApiAuthentication
   
   @max_files 10
   @max_file_size 10 * 1024 * 1024  # 10MB
@@ -28,10 +29,9 @@ defmodule RsolvWeb.Api.V1.ASTController do
   def analyze(conn, params) do
     start_time = System.monotonic_time(:millisecond)
     request_id = params["requestId"] || generate_request_id()
-    
-    with {:ok, api_key} <- get_api_key(conn),
-         {:ok, customer} <- validate_api_key(api_key),
-         :ok <- check_rate_limit(customer),
+    customer = conn.assigns.customer
+
+    with :ok <- check_rate_limit(customer),
          {:ok, encryption_key} <- get_encryption_key(conn),
          {:ok, request} <- validate_request(params),
          {:ok, session} <- get_or_create_session(request, customer, encryption_key),
@@ -55,28 +55,6 @@ defmodule RsolvWeb.Api.V1.ASTController do
         timing: build_timing_detailed(total_time, decryption_time, analysis_time, results)
       })
     else
-      {:error, :auth_required} ->
-        conn
-        |> put_status(401)
-        |> json(%{
-          error: %{
-            code: "AUTH_REQUIRED",
-            message: "Authentication required"
-          },
-          requestId: request_id
-        })
-        
-      {:error, :invalid_api_key} ->
-        conn
-        |> put_status(401)
-        |> json(%{
-          error: %{
-            code: "INVALID_API_KEY",
-            message: "Invalid or expired API key"
-          },
-          requestId: request_id
-        })
-        
       {:error, :missing_encryption_key} ->
         conn
         |> put_status(400)
@@ -161,12 +139,6 @@ defmodule RsolvWeb.Api.V1.ASTController do
   
   # Private functions
   
-  defp get_api_key(conn) do
-    case get_req_header(conn, "x-api-key") do
-      [api_key | _] -> {:ok, api_key}
-      [] -> {:error, :auth_required}
-    end
-  end
   
   defp get_encryption_key(conn) do
     case get_req_header(conn, "x-encryption-key") do
@@ -184,12 +156,6 @@ defmodule RsolvWeb.Api.V1.ASTController do
     end
   end
   
-  defp validate_api_key(api_key) do
-    case Accounts.get_customer_by_api_key(api_key) do
-      nil -> {:error, :invalid_api_key}
-      customer -> {:ok, customer}
-    end
-  end
   
   defp check_rate_limit(customer) do
     RateLimiter.check_rate_limit(customer.id, "ast_analysis")

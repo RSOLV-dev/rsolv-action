@@ -1,6 +1,130 @@
 defmodule RsolvWeb.Api.V1.SafePatternDetectorTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
+
   alias RsolvWeb.Api.V1.SafePatternDetector
+
+  describe "hardcoded_secret detection" do
+    test "detects environment variable usage as safe across all languages" do
+      safe_patterns = [
+        # JavaScript/TypeScript
+        {"const API_KEY = process.env.API_KEY;", "javascript"},
+        {"const SECRET = process.env.SECRET_TOKEN;", "javascript"},
+        {"const KEY = import.meta.env.VITE_API_KEY;", "javascript"},
+
+        # Python
+        {"api_key = os.environ['API_KEY']", "python"},
+        {"api_key = os.getenv('API_KEY')", "python"},
+        {"key = environ.get('SECRET')", "python"},
+
+        # Ruby
+        {"api_key = ENV['API_KEY']", "ruby"},
+        {"api_key = ENV.fetch('API_KEY')", "ruby"},
+
+        # PHP
+        {"$apiKey = $_ENV['API_KEY'];", "php"},
+        {"$apiKey = getenv('API_KEY');", "php"},
+
+        # Go
+        {"apiKey := os.Getenv(\"API_KEY\")", "go"},
+        {"key, ok := os.LookupEnv(\"SECRET\")", "go"},
+
+        # Java
+        {"String apiKey = System.getenv(\"API_KEY\");", "java"},
+        {"String prop = System.getProperty(\"api.key\");", "java"},
+
+        # Rust
+        {"let key = env::var(\"API_KEY\").unwrap();", "rust"},
+        {"let key = std::env::var(\"API_KEY\")?;", "rust"},
+
+        # Elixir
+        {"api_key = System.get_env(\"API_KEY\")", "elixir"},
+        {"api_key = System.fetch_env!(\"API_KEY\")", "elixir"}
+      ]
+
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:hardcoded_secret, code, %{language: language}),
+               "Pattern should be safe for #{language}: #{code}"
+      end
+    end
+
+    test "detects hardcoded secrets as unsafe" do
+      unsafe_patterns = [
+        {"const API_KEY = 'sk-1234567890abcdef';", "javascript"},
+        {"const SECRET = 'hardcoded_secret_value';", "javascript"},
+        {"api_key = 'AKIA1234567890ABCDEF'", "python"},
+        {"password = 'admin123'", "python"},
+        {"token = 'ghp_1234567890abcdef1234567890abcdef123456'", "javascript"}
+      ]
+
+      for {code, language} <- unsafe_patterns do
+        refute SafePatternDetector.is_safe_pattern?(:hardcoded_secret, code, %{language: language}),
+               "Pattern should be unsafe: #{code}"
+      end
+    end
+
+    test "detects config file usage as safe across frameworks" do
+      safe_patterns = [
+        # JavaScript/TypeScript
+        {"const API_KEY = config.get('api_key');", "javascript"},
+        {"const key = process.env[configKey];", "javascript"},
+
+        # Python
+        {"SECRET_KEY = settings.SECRET_KEY", "python"},
+        {"api_key = config['api_key']", "python"},
+
+        # Ruby
+        {"api_key = Rails.application.credentials.api_key", "ruby"},
+        {"secret = Rails.application.secrets.secret_key", "ruby"},
+
+        # PHP
+        {"$apiKey = config('app.key');", "php"},
+        {"$key = Config::get('api.key');", "php"},
+
+        # Go
+        {"apiKey := viper.GetString(\"api.key\")", "go"},
+
+        # Java
+        {"@Value(\"${api.key}\") String apiKey;", "java"},
+        {"Properties props = new Properties();", "java"},
+
+        # Rust
+        {"let config = Config::builder().build()?;", "rust"},
+
+        # Elixir
+        {"secret = Application.get_env(:my_app, :api_key)", "elixir"},
+        {"key = Application.fetch_env!(:my_app, :secret)", "elixir"}
+      ]
+
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:hardcoded_secret, code, %{language: language}),
+               "Pattern should be safe for #{language}: #{code}"
+      end
+    end
+
+    test "detects key vault/secret manager usage as safe" do
+      safe_patterns = [
+        {"const secret = await secretsManager.getSecretValue('api-key').promise();", "javascript"},
+        {"api_key = key_vault.get_secret('api-key')", "python"},
+        {"const apiKey = await vault.read('secret/data/api')", "javascript"}
+      ]
+
+      for {code, language} <- safe_patterns do
+        assert SafePatternDetector.is_safe_pattern?(:hardcoded_secret, code, %{language: language}),
+               "Pattern should be safe: #{code}"
+      end
+    end
+
+    test "provides appropriate explanations for hardcoded secrets" do
+      safe_code = "const API_KEY = process.env.API_KEY;"
+      unsafe_code = "const API_KEY = 'sk-1234567890abcdef';"
+
+      safe_explanation = SafePatternDetector.explain_safety(:hardcoded_secret, safe_code, %{language: "javascript"})
+      unsafe_explanation = SafePatternDetector.explain_safety(:hardcoded_secret, unsafe_code, %{language: "javascript"})
+
+      assert safe_explanation =~ "environment" or safe_explanation =~ "config" or safe_explanation =~ "safe"
+      assert unsafe_explanation =~ "hardcoded" or unsafe_explanation =~ "secret"
+    end
+  end
   
   describe "SQL Injection Detection" do
     test "detects unsafe string concatenation with user input" do

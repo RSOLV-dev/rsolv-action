@@ -42,11 +42,14 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     safe && !Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
   end
   
+  def is_safe_pattern?(:sql_injection, nil, %{language: _language}), do: false
+  def is_safe_pattern?(:sql_injection, "", %{language: _language}), do: false
+
   def is_safe_pattern?(:sql_injection, code, %{language: language}) do
     # First check for definitely unsafe patterns
     unsafe_patterns = get_sql_unsafe_patterns(language)
     is_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
-    
+
     if is_unsafe do
       false
     else
@@ -56,22 +59,28 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     end
   end
   
+  def is_safe_pattern?(:nosql_injection, nil, %{language: language}) when language in ["javascript", "python"], do: false
+  def is_safe_pattern?(:nosql_injection, "", %{language: language}) when language in ["javascript", "python"], do: false
+
   def is_safe_pattern?(:nosql_injection, code, %{language: language}) when language in ["javascript", "python"] do
     patterns = get_nosql_safe_patterns(language)
     safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
-    
+
     # Check for dangerous patterns
     has_where = Regex.match?(~r/\$where/, code)
-    has_user_input = Regex.match?(~r/req\.(body|query|params)/, code) || 
+    has_user_input = Regex.match?(~r/req\.(body|query|params)/, code) ||
                      Regex.match?(~r/request\.(POST|GET)/, code) ||
                      Regex.match?(~r/json\.loads/, code)  # Dynamic JSON parsing
-    
+
     # Safe only if it matches safe patterns AND doesn't have dangerous inputs
     safe && !has_where && !has_user_input
   end
   
   def is_safe_pattern?(:nosql_injection, _code, _context), do: false
   
+  def is_safe_pattern?(:xss, nil, %{language: _language}), do: false
+  def is_safe_pattern?(:xss, "", %{language: _language}), do: false
+
   def is_safe_pattern?(:xss, code, %{language: language}) do
     patterns = get_xss_safe_patterns(language)
     has_safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
@@ -156,6 +165,9 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
   
   def is_safe_pattern?(:command_injection, _code, _context), do: false
   
+  def is_safe_pattern?(:path_traversal, nil, %{language: _language}), do: false
+  def is_safe_pattern?(:path_traversal, "", %{language: _language}), do: false
+
   def is_safe_pattern?(:path_traversal, code, %{language: _language}) do
     # Check for safe sanitization patterns FIRST
     safe_patterns = [
@@ -211,7 +223,7 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
       ~r/urlopen\(['"][^'"]+['"]\)/,           # Python literal URL
       ~r/localhost|127\.0\.0\.1/,              # Localhost URLs
     ]
-    
+
     # Check for unsafe patterns with user input
     unsafe_patterns = [
       ~r/req\.\w+/,                    # Request data
@@ -221,14 +233,142 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
       ~r/user[A-Z]/,                    # User input (camelCase)
       ~r/user_/,                        # User input (snake_case)
     ]
-    
+
     has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
     has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
-    
+
     # Only safe if it doesn't have user input
     has_safe && !has_unsafe
   end
-  
+
+  def is_safe_pattern?(:hardcoded_secret, nil, %{language: _language}), do: false
+  def is_safe_pattern?(:hardcoded_secret, "", %{language: _language}), do: false
+
+  def is_safe_pattern?(:hardcoded_secret, code, %{language: _language}) do
+    # Check for safe patterns - using environment variables, config, or secret managers
+    safe_patterns = [
+      # Environment variables - JavaScript/TypeScript
+      ~r/process\.env\.[A-Z_]+/,               # process.env.API_KEY
+      ~r/import\.meta\.env\.[A-Z_]+/,          # Vite: import.meta.env.VITE_API_KEY
+
+      # Environment variables - Python
+      ~r/os\.environ\[/,                       # os.environ['KEY']
+      ~r/os\.getenv\(/,                        # os.getenv('KEY')
+      ~r/environ\.get\(/,                      # environ.get('KEY')
+
+      # Environment variables - Ruby
+      ~r/ENV\[/,                               # ENV['KEY']
+      ~r/ENV\.fetch\(/,                        # ENV.fetch('KEY')
+
+      # Environment variables - PHP
+      ~r/\$_ENV\[/,                            # $_ENV['KEY']
+      ~r/getenv\(/,                            # getenv('KEY')
+      ~r/\$_SERVER\[['"].*KEY/,                # $_SERVER['API_KEY']
+
+      # Environment variables - Go
+      ~r/os\.Getenv\(/,                        # os.Getenv("KEY")
+      ~r/os\.LookupEnv\(/,                     # os.LookupEnv("KEY")
+
+      # Environment variables - Java
+      ~r/System\.getenv\(/,                    # System.getenv("KEY")
+      ~r/System\.getProperty\(/,               # System.getProperty("key")
+
+      # Environment variables - Rust
+      ~r/env::var\(/,                          # env::var("KEY")
+      ~r/std::env::var\(/,                     # std::env::var("KEY")
+
+      # Environment variables - Elixir
+      ~r/System\.get_env\(/,                   # System.get_env("KEY")
+      ~r/System\.fetch_env!\(/,                # System.fetch_env!("KEY")
+
+      # Config files - JavaScript/TypeScript
+      ~r/config\.get\(/,                       # config.get('key')
+      ~r/process\.env\[/,                      # process.env[key]
+      ~r/require\(['"]config['"]\)/,           # require('config')
+
+      # Config files - Python
+      ~r/settings\.[A-Z_]+/,                   # Django: settings.SECRET_KEY
+      ~r/config\[/,                            # config['key']
+      ~r/ConfigParser/,                        # ConfigParser usage
+
+      # Config files - Ruby
+      ~r/Rails\.application\.credentials/,     # Rails credentials
+      ~r/Rails\.application\.secrets/,         # Rails secrets
+      ~r/Config\./,                            # Config gem
+
+      # Config files - PHP
+      ~r/config\(/,                           # Laravel: config('app.key')
+      ~r/Config::get\(/,                       # Config::get('key')
+
+      # Config files - Go
+      ~r/viper\./,                             # Viper config
+      ~r/godotenv/,                            # godotenv usage
+
+      # Config files - Java
+      ~r/Properties\(\)/,                      # Properties file
+      ~r/@Value\(/,                            # Spring @Value
+      ~r/application\.properties/,             # Spring properties
+
+      # Config files - Rust
+      ~r/Config::builder\(/,                   # config crate
+      ~r/dotenv\(\)/,                          # dotenv usage
+
+      # Config files - Elixir
+      ~r/Application\.get_env\(/,              # Application.get_env()
+      ~r/Application\.fetch_env!\(/,           # Application.fetch_env!()
+      ~r/config :[\w]+,/,                      # config :app, key: value
+
+      # Secret managers
+      ~r/secretsManager\./,                    # AWS Secrets Manager
+      ~r/SecretsManager/,                      # AWS SDK
+      ~r/key_vault\./,                         # Azure Key Vault
+      ~r/KeyVault/,                            # Azure SDK
+      ~r/vault\./,                             # HashiCorp Vault
+      ~r/SecretManager\./,                     # Google Secret Manager
+      ~r/KMS\./,                               # AWS KMS
+      ~r/ParameterStore/,                      # AWS Parameter Store
+
+      # Framework-specific secure patterns
+      ~r/Rails\.application\.secrets/,         # Rails secrets
+      ~r/Keyring\./,                           # Python keyring
+      ~r/keychain\./,                          # macOS Keychain
+      ~r/credential_process/,                  # AWS credential process
+
+      # Config loaders
+      ~r/dotenv/,                              # dotenv library
+      ~r/decouple/,                            # python-decouple
+      ~r/environs/,                            # environs library
+    ]
+
+    # Check for unsafe patterns - hardcoded secrets
+    unsafe_patterns = [
+      # Common secret patterns
+      ~r/['"][a-zA-Z0-9]{32,}['"]/,           # Long alphanumeric strings
+      ~r/sk[-_][a-zA-Z0-9]+/,                 # Stripe-like keys
+      ~r/AKIA[A-Z0-9]+/,                      # AWS access keys
+      ~r/ghp_[a-zA-Z0-9]+/,                   # GitHub personal tokens
+      ~r/glpat-[a-zA-Z0-9]+/,                 # GitLab tokens
+      ~r/['"]Bearer\s+[a-zA-Z0-9\-._]+['"]/,  # Bearer tokens
+
+      # Password patterns
+      ~r/password\s*[:=]\s*['"][^'"]+['"]/,   # password = "something"
+      ~r/passwd\s*[:=]\s*['"][^'"]+['"]/,     # passwd = "something"
+      ~r/pwd\s*[:=]\s*['"][^'"]+['"]/,        # pwd = "something"
+
+      # API key patterns
+      ~r/api_?key\s*[:=]\s*['"][^'"]+['"]/i,  # api_key = "something"
+      ~r/apikey\s*[:=]\s*['"][^'"]+['"]/i,    # apikey = "something"
+      ~r/token\s*[:=]\s*['"][^'"]+['"]/,      # token = "something"
+      ~r/secret\s*[:=]\s*['"][^'"]+['"]/,     # secret = "something"
+    ]
+
+    has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+    has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
+
+    # It's safe if it uses safe patterns and doesn't have hardcoded values
+    has_safe && !has_unsafe
+  end
+
   # Default case - not recognized as safe
   def is_safe_pattern?(_vulnerability_type, _code, _context), do: false
   
@@ -374,6 +514,7 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
         :command_injection -> "Safe command execution pattern"
         :path_traversal -> "Path is properly sanitized"
         :ssrf -> "Using constant URL - not user-controlled"
+        :hardcoded_secret -> "Using environment variable or config - not hardcoded"
         _ -> "Pattern recognized as safe"
       end
     else
@@ -386,6 +527,7 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
         :command_injection -> "Potential command injection - use safe execution methods"
         :path_traversal -> "Potential path traversal - sanitize file paths"
         :ssrf -> "Potential SSRF - validate and whitelist URLs"
+        :hardcoded_secret -> "Potential hardcoded secret - use environment variables"
         _ -> "Pattern may be vulnerable"
       end
     end

@@ -1,0 +1,17 @@
+{
+  "forge_account_id": "test-forge-account",
+  "repository": "test-repo",
+  "vulnerability": {
+    "type": "COMMAND_INJECTION",
+    "severity": "HIGH",
+    "location": {
+      "file": "test.js",
+      "line": 10,
+      "column": 5
+    }
+  },
+  "fix": {
+    "content": "const userInput = req.query.name; console.log(userInput);",
+    "description": "Replaced eval with safe console.log"
+  }
+}

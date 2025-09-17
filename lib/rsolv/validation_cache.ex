@@ -66,16 +66,24 @@ defmodule Rsolv.ValidationCache do
       {:ok, %CachedValidation{...}}
   """
   def store(attrs) do
+    # Ensure forge_account_id is a string (support both integer and string IDs)
+    attrs = ensure_forge_account_id_string(attrs)
+
     cache_key = generate_cache_key(attrs)
-    
+
     attrs_with_metadata = attrs
     |> add_cache_key(cache_key)
     |> add_timestamps()
-    
+
     insert_or_update_cache(attrs_with_metadata)
   end
-  
+
   # Private functions
+
+  defp ensure_forge_account_id_string(%{forge_account_id: id} = attrs) when is_integer(id) do
+    Map.put(attrs, :forge_account_id, to_string(id))
+  end
+  defp ensure_forge_account_id_string(attrs), do: attrs
   
   defp generate_cache_key(attrs) do
     KeyGenerator.generate_key(

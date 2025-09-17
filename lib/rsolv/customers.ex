@@ -60,18 +60,29 @@ defmodule Rsolv.Customers do
   """
   def get_customer_by_api_key(nil), do: nil
   def get_customer_by_api_key(api_key) when is_binary(api_key) do
+    Logger.info("🔍 [API Auth Debug] Looking up API key: #{String.slice(api_key, 0..15)}...")
+
     # First check if it's an api_keys table key
     case Repo.get_by(ApiKey, key: api_key, active: true) do
       %ApiKey{customer_id: customer_id} ->
+        Logger.info("✅ [API Auth Debug] Found API key record for customer_id: #{customer_id}")
         customer = get_customer!(customer_id)
         # Only return customer if they are active
         if customer.active do
+          Logger.info("✅ [API Auth Debug] Customer #{customer_id} is active - auth successful")
           customer
         else
+          Logger.warning("⚠️ [API Auth Debug] Customer #{customer_id} is inactive - auth failed")
           nil
         end
       nil ->
-        # No customer found with this API key
+        # Check if key exists but is inactive
+        case Repo.get_by(ApiKey, key: api_key) do
+          %ApiKey{active: false} ->
+            Logger.warning("⚠️ [API Auth Debug] API key exists but is inactive")
+          nil ->
+            Logger.warning("❌ [API Auth Debug] API key not found in database")
+        end
         nil
     end
   end
