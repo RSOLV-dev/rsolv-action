@@ -63,7 +63,7 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
       const isDev = isDevelopmentMode();
       
       // Get appropriate API key
-      const apiKey = this.getApiKey(isDev);
+      const apiKey = await this.getApiKey(isDev);
       
       if (!apiKey) {
         return {
@@ -229,7 +229,7 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
   /**
    * Get appropriate API key based on mode
    */
-  private getApiKey(isDev: boolean): string | undefined {
+  private async getApiKey(isDev: boolean): Promise<string | undefined> {
     if (isDev) {
       // In dev mode, prefer Claude Code Max API key
       const maxKey = process.env.CLAUDE_CODE_MAX_API_KEY;
@@ -253,14 +253,18 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
 
     // Try vended credentials first if available
     if (this.credentialManager) {
+      logger.info('Credential manager available, attempting to get Anthropic credentials');
       try {
-        apiKey = this.credentialManager.getCredential('anthropic');
+        apiKey = await this.credentialManager.getCredential('anthropic');
+        logger.info(`Got credential from manager: ${apiKey ? 'API key received (length: ' + apiKey.length + ')' : 'No API key returned'}`);
         if (apiKey) {
-          logger.debug('Using vended credentials for production mode');
+          logger.info('Using vended credentials for production mode');
         }
       } catch (error) {
         logger.warn('Failed to get vended credentials:', error);
       }
+    } else {
+      logger.info('No credential manager available');
     }
 
     // Fall back to environment variable if no vended credentials
