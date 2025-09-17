@@ -248,10 +248,11 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
       return undefined;
     }
     
-    // Production mode: use standard flow
-    let apiKey = process.env.ANTHROPIC_API_KEY;
-    
-    if (!apiKey && this.credentialManager) {
+    // Production mode: prioritize vended credentials over environment
+    let apiKey: string | undefined;
+
+    // Try vended credentials first if available
+    if (this.credentialManager) {
       try {
         apiKey = this.credentialManager.getCredential('anthropic');
         if (apiKey) {
@@ -259,6 +260,14 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
         }
       } catch (error) {
         logger.warn('Failed to get vended credentials:', error);
+      }
+    }
+
+    // Fall back to environment variable if no vended credentials
+    if (!apiKey) {
+      apiKey = process.env.ANTHROPIC_API_KEY;
+      if (apiKey) {
+        logger.debug('Using environment ANTHROPIC_API_KEY');
       }
     }
     
