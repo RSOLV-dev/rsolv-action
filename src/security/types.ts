@@ -29,7 +29,9 @@ export enum VulnerabilityType {
   NOSQL_INJECTION = 'nosql_injection',
   INFORMATION_DISCLOSURE = 'information_disclosure',
   IMPROPER_INPUT_VALIDATION = 'improper_input_validation',
-  TEMPLATE_INJECTION = 'template_injection'
+  TEMPLATE_INJECTION = 'template_injection',
+  LOG_INJECTION = 'log_injection',
+  CRLF_INJECTION = 'crlf_injection'
 }
 
 export interface Vulnerability {

@@ -128,9 +128,10 @@ export class PatternAPIClient {
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      
+
       if (this.apiKey) {
-        headers['Authorization'] = `Bearer ${this.apiKey}`;
+        // Use x-api-key header as per unified API authentication (ADR-027)
+        headers['x-api-key'] = this.apiKey;
       }
 
       // Use the new tier-less endpoint with enhanced format

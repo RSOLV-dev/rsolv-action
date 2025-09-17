@@ -502,6 +502,70 @@ export function getMinimalPatterns(): SecurityPattern[] {
     owaspCategory: 'A08:2021',
     remediation: 'Update Log4j to version 2.17.0 or later',
     examples: { vulnerable: '', secure: '' }
+  },
+
+  // Log Injection
+  {
+    id: 'log-injection-console',
+    name: 'Log Injection via User Input',
+    type: VulnerabilityType.LOG_INJECTION,
+    severity: 'medium',
+    description: 'User input is logged without sanitization, potentially allowing log forging attacks',
+    patterns: {
+      regex: [
+        // console.log/error/warn with concatenation or template literal containing req/request
+        /console\.(log|error|warn|info)\s*\([^)]*[\+`][^)]*\b(req|request|params|query|body|headers)\b/i,
+        // logger methods with user input
+        /logger\.(info|error|warn|debug|trace)\s*\([^)]*[\+`][^)]*\b(req|request|params|query|body|headers)\b/i,
+        // winston logging with user input
+        /winston\.(log|info|error|warn)\s*\([^)]*[\+`][^)]*\b(req|request|params|query|body|headers)\b/i,
+        // process.stdout/stderr.write with user input
+        /process\.(stdout|stderr)\.write\s*\([^)]*[\+`][^)]*\b(req|request|params|query|body|headers)\b/i,
+        // fs.appendFile for logging with user input
+        /fs\.(appendFile|appendFileSync)\s*\([^,]*log[^,]*,[^)]*[\+`][^)]*\b(req|request|params|query|body|headers)\b/i
+      ]
+    },
+    languages: ['javascript', 'typescript'],
+    cweId: 'CWE-117',
+    owaspCategory: 'A09:2021',
+    remediation: 'Sanitize user input before logging. Remove or encode newline characters and control sequences.',
+    examples: {
+      vulnerable: 'console.log("User: " + req.query.username)',
+      secure: 'console.log("User:", sanitizeForLog(req.query.username))'
+    }
+  },
+
+  // CRLF Injection
+  {
+    id: 'crlf-injection-headers',
+    name: 'CRLF Injection in HTTP Headers',
+    type: VulnerabilityType.CRLF_INJECTION,
+    severity: 'high',
+    description: 'User input is used in HTTP headers without sanitization, potentially allowing header injection',
+    patterns: {
+      regex: [
+        // setHeader with user input
+        /\.setHeader\s*\([^,]+,[^)]*\b(req|request|params|query|body|headers)\b/i,
+        // writeHead with user input
+        /\.writeHead\s*\([^,]+,\s*\{[^}]*\b(req|request|params|query|body|headers)\b/i,
+        // Express res.set/header with user input
+        /res\.(set|header)\s*\([^,]+,[^)]*\b(req|request|params|query|body|headers)\b/i,
+        // res.write with user input (potential for header injection if headers not sent)
+        /res\.write\s*\([^)]*[\+`][^)]*\b(req|request|params|query|body|headers)\b/i,
+        // Cookie setting with user input
+        /Set-Cookie['"]\s*,[^)]*[\+`][^)]*\b(req|request|params|query|body)\b/i,
+        // decodeURIComponent on user input used in headers (can decode %0d%0a)
+        /\.setHeader\s*\([^,]+,[^)]*decodeURIComponent\s*\([^)]*\b(req|request|params|query)\b/i
+      ]
+    },
+    languages: ['javascript', 'typescript'],
+    cweId: 'CWE-93',
+    owaspCategory: 'A03:2021',
+    remediation: 'Validate and sanitize all user input used in HTTP headers. Remove or encode CR (\\r) and LF (\\n) characters.',
+    examples: {
+      vulnerable: 'res.setHeader("X-User", req.query.username)',
+      secure: 'res.setHeader("X-User", sanitizeHeaderValue(req.query.username))'
+    }
   }
   ];
 }

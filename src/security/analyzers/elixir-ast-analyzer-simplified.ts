@@ -207,7 +207,7 @@ export class ElixirASTAnalyzer {
       const response = await fetch(`${this.config.apiUrl}/api/v1/ast/analyze`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`,
+          'x-api-key': this.config.apiKey,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

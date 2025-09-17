@@ -155,7 +155,7 @@ export class ElixirASTAnalyzer {
     try {
       const response = await fetch(`${this.config.apiUrl}/health`, {
         headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`
+          'x-api-key': this.config.apiKey
         },
         signal: AbortSignal.timeout(5000)
       });
@@ -176,7 +176,7 @@ export class ElixirASTAnalyzer {
         await fetch(`${this.config.apiUrl}/api/v1/ast/sessions/${this.sessionId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${this.config.apiKey}`
+            'x-api-key': this.config.apiKey
           }
         });
       } catch (error) {

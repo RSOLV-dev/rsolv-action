@@ -40,7 +40,7 @@ export class RSOLVCredentialManager {
       const response = await fetch(`${this.rsolvApiUrl}/api/v1/credentials/exchange`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'x-api-key': apiKey,
           'Content-Type': 'application/json',
           'X-GitHub-Job': process.env.GITHUB_JOB || '',
           'X-GitHub-Run': process.env.GITHUB_RUN_ID || ''
@@ -134,7 +134,7 @@ export class RSOLVCredentialManager {
       const response = await fetch(`${this.rsolvApiUrl}/api/v1/credentials/exchange`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'x-api-key': this.apiKey,
           'Content-Type': 'application/json',
           'X-GitHub-Job': process.env.GITHUB_JOB || '',
           'X-GitHub-Run': process.env.GITHUB_RUN_ID || ''
@@ -178,7 +178,7 @@ export class RSOLVCredentialManager {
       const response = await fetch(`${this.rsolvApiUrl}/api/v1/usage/report`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'x-api-key': this.apiKey || '',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
