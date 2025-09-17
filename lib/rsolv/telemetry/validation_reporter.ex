@@ -6,6 +6,8 @@ defmodule Rsolv.Telemetry.ValidationReporter do
   use GenServer
   require Logger
 
+  alias Rsolv.Utils.MathHelpers
+
   @metrics_interval :timer.seconds(60)  # Report metrics every 60 seconds
 
   def start_link(opts) do
@@ -112,8 +114,8 @@ defmodule Rsolv.Telemetry.ValidationReporter do
       =====================================
       Requests: #{state.requests.total} (Success: #{state.requests.success}, Error: #{state.requests.error})
       Response Times: p50=#{p50}ms, p95=#{p95}ms, p99=#{p99}ms
-      False Positive Rate: #{Float.round(false_positive_rate, 2)}% (#{state.false_positives.rejected}/#{state.false_positives.total})
-      Cache Hit Rate: #{Float.round(cache_hit_rate, 2)}% (#{state.cache.hits} hits, #{state.cache.misses} misses)
+      False Positive Rate: #{MathHelpers.safe_round(false_positive_rate, 2)}% (#{state.false_positives.rejected}/#{state.false_positives.total})
+      Cache Hit Rate: #{MathHelpers.safe_round(cache_hit_rate, 2)}% (#{state.cache.hits} hits, #{state.cache.misses} misses)
       """)
 
       # Log top rejected patterns
