@@ -53,37 +53,29 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
     end
   end
 
-  # Extract API key from various sources in order of preference
+  # Extract API key from x-api-key header only
   defp extract_api_key(conn) do
-    # Check x-api-key header first (preferred)
     case get_req_header(conn, "x-api-key") do
-      [api_key | _] ->
-        Logger.debug("[ApiAuthentication] Found API key in x-api-key header")
+      [api_key | _] when is_binary(api_key) and api_key != "" ->
+        Logger.info("[ApiAuthentication] Found API key: #{String.slice(api_key, 0..15)}...")
         {:ok, api_key}
-
-      [] ->
-        # Fall back to Authorization Bearer token for backward compatibility
-        case get_req_header(conn, "authorization") do
-          ["Bearer " <> api_key] ->
-            Logger.debug("[ApiAuthentication] Found API key in Authorization header")
-            {:ok, api_key}
-
-          _ ->
-            Logger.debug("[ApiAuthentication] No API key found in headers")
-            :no_key
-        end
+      _ ->
+        Logger.info("[ApiAuthentication] No API key found in x-api-key header")
+        :no_key
     end
   end
 
   # Authenticate with the provided API key
   defp authenticate_with_key(conn, api_key, optional?) do
+    Logger.info("[ApiAuthentication] Validating API key: #{String.slice(api_key, 0..15)}...")
+
     case Accounts.get_customer_by_api_key(api_key) do
       nil ->
-        Logger.warning("[ApiAuthentication] Invalid API key provided: #{String.slice(api_key, 0..15)}...")
+        Logger.warning("[ApiAuthentication] Invalid API key: #{String.slice(api_key, 0..15)}...")
         handle_invalid_key(conn, optional?)
 
       customer ->
-        Logger.debug("[ApiAuthentication] Authenticated customer: #{customer.name} (ID: #{customer.id})")
+        Logger.info("[ApiAuthentication] ✅ Authenticated customer: #{customer.name} (ID: #{customer.id})")
         assign(conn, :customer, customer)
     end
   end
@@ -100,7 +92,7 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
     |> Phoenix.Controller.put_view(json: RsolvWeb.ErrorJSON)
     |> Phoenix.Controller.render("401.json", %{
       error: "Authentication required",
-      message: "API key must be provided in x-api-key header or Authorization: Bearer header"
+      message: "API key must be provided in x-api-key header"
     })
     |> halt()
   end

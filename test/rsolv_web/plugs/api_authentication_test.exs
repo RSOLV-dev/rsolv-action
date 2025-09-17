@@ -35,23 +35,25 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       refute conn.halted
     end
 
-    test "authenticates successfully with Authorization Bearer header", %{conn: conn, customer: customer, api_key: api_key} do
+    test "rejects Authorization Bearer header (x-api-key only)", %{conn: conn} do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer #{api_key}")
+        |> put_req_header("authorization", "Bearer some_api_key")
         |> ApiAuthentication.call(false)
 
-      assert conn.assigns.customer.id == customer.id
-      refute conn.halted
+      assert conn.status == 401
+      assert conn.halted
+
+      resp = json_response(conn, 401)
+      assert resp["error"] == "Authentication required"
+      assert resp["message"] =~ "x-api-key header"
     end
 
-    test "prefers x-api-key over Authorization header when both present", %{conn: conn, customer: customer, api_key: api_key} do
-      invalid_key = "invalid_key_123"
-
+    test "ignores Authorization header when x-api-key is present", %{conn: conn, customer: customer, api_key: api_key} do
       conn =
         conn
         |> put_req_header("x-api-key", api_key)
-        |> put_req_header("authorization", "Bearer #{invalid_key}")
+        |> put_req_header("authorization", "Bearer some_other_key")
         |> ApiAuthentication.call(false)
 
       assert conn.assigns.customer.id == customer.id
@@ -83,17 +85,18 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       assert resp["message"] =~ "invalid or expired"
     end
 
-    test "returns 401 when invalid API key provided in Authorization header", %{conn: conn} do
+    test "returns 401 when only Authorization header provided (x-api-key required)", %{conn: conn} do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer invalid_key_123")
+        |> put_req_header("authorization", "Bearer valid_key_123")
         |> ApiAuthentication.call(false)
 
       assert conn.status == 401
       assert conn.halted
 
       resp = json_response(conn, 401)
-      assert resp["error"] == "Invalid API key"
+      assert resp["error"] == "Authentication required"
+      assert resp["message"] =~ "x-api-key header"
     end
   end
 
