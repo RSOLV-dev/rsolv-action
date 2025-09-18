@@ -119,6 +119,7 @@ export class ASTValidator {
     // Convert vulnerabilities to API format
     const vulnsForApi = vulnerabilities.map(v => ({
       id: `${v.type}-${v.line}-${v.column || 0}`, // Generate ID from available fields
+      type: v.type, // Include type field for API
       patternId: v.type, // Use type as pattern ID
       filePath: v.filePath || '',
       line: v.line,
@@ -126,12 +127,12 @@ export class ASTValidator {
       severity: v.severity
     }));
     
-    // Build files object from map
-    const files: Record<string, string> = {};
+    // Build files object from map with proper structure
+    const files: Record<string, { content: string }> = {};
     for (const [path, content] of fileContents) {
-      files[path] = content;
+      files[path] = { content };
     }
-    
+
     return {
       vulnerabilities: vulnsForApi,
       files
