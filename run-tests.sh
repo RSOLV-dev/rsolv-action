@@ -64,6 +64,24 @@ while [[ $# -gt 0 ]]; do
       echo "✓ Watch mode enabled"
       shift
       ;;
+    --shard=*)
+      SHARD_SPEC="${1#*=}"
+      EXTRA_ARGS="$EXTRA_ARGS --shard=$SHARD_SPEC"
+      echo "✓ Running shard $SHARD_SPEC"
+      shift
+      ;;
+    --reporter=*)
+      REPORTER="${1#*=}"
+      EXTRA_ARGS="$EXTRA_ARGS --reporter=$REPORTER"
+      echo "✓ Using reporter: $REPORTER"
+      shift
+      ;;
+    --outputFile=*)
+      OUTPUT_FILE="${1#*=}"
+      EXTRA_ARGS="$EXTRA_ARGS --outputFile=$OUTPUT_FILE"
+      echo "✓ Output file: $OUTPUT_FILE"
+      shift
+      ;;
     *)
       echo -e "${YELLOW}Unknown option: $1${NC}"
       shift
