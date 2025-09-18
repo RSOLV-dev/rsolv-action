@@ -267,7 +267,9 @@ export function createPatternSource(): PatternSource {
     logger.info('PATTERN SOURCE SUCCESS', {
       source: 'api',
       mode: 'hybrid',
-      fallbackAvailable: true
+      fallbackAvailable: true,
+      apiKeyLength: apiKey.length,
+      apiKeyPrefix: apiKey.substring(0, 10) + '...'
     });
     return new HybridPatternSource(apiKey, apiUrl);
   }

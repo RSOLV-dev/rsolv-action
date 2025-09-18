@@ -104,9 +104,16 @@ export class PatternAPIClient {
     this.apiKey = config.apiKey || process.env.RSOLV_API_KEY;
     this.cacheTTL = (config.cacheTTL || 3600) * 1000; // Convert to milliseconds
     this.fallbackToLocal = config.fallbackToLocal ?? true;
-    
+
     if (!this.apiKey) {
       logger.warn('No RSOLV API key provided - only demo patterns available');
+    } else {
+      logger.debug('PatternAPIClient initialized with API key', {
+        keyLength: this.apiKey.length,
+        keyPrefix: this.apiKey.substring(0, 10) + '...',
+        keyFromConfig: !!config.apiKey,
+        keyFromEnv: !config.apiKey && !!process.env.RSOLV_API_KEY
+      });
     }
   }
 
