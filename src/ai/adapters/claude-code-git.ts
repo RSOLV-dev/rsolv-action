@@ -12,6 +12,7 @@ import { execSync } from 'child_process';
 import path from 'path';
 import type { AnalysisWithTestsResult } from '../test-generating-security-analyzer.js';
 import type { ValidationResult } from '../git-based-test-validator.js';
+import { TestAwareEnhancement, TestAwareOptions } from '../test-discovery/test-aware-enhancement.js';
 
 /**
  * Result from git-based solution generation
@@ -50,10 +51,12 @@ interface PhaseStatus {
 
 export class GitBasedClaudeCodeAdapter extends ClaudeCodeAdapter {
   private cliAdapter: RetryableClaudeCodeCLI;
-  
+  private testAwareEnhancement: TestAwareEnhancement;
+
   constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
     super(config, repoPath, credentialManager);
     this.cliAdapter = new RetryableClaudeCodeCLI(config, repoPath, credentialManager);
+    this.testAwareEnhancement = new TestAwareEnhancement();
   }
 
   /**
@@ -373,13 +376,13 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
   /**
    * Construct prompt with test validation context
    */
-  protected constructPromptWithTestContext(
+  protected async constructPromptWithTestContext(
     issueContext: IssueContext,
     analysis: IssueAnalysis,
     testResults?: AnalysisWithTestsResult,
     validationResult?: ValidationResult,
     iteration?: { current: number; max: number }
-  ): string {
+  ): Promise<string> {
     // Debug logging for prompt construction
     logger.info('[DEBUG] constructPromptWithTestContext called');
     logger.info('[DEBUG] Issue context:', {
@@ -388,7 +391,7 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
       hasSpecificVulnerabilities: !!issueContext.specificVulnerabilities,
       vulnerabilityCount: issueContext.specificVulnerabilities?.length || 0
     });
-    
+
     // Start with enhanced prompt including constraints
     let prompt = `You are an expert security engineer fixing vulnerabilities.
 
@@ -413,14 +416,14 @@ You can run tests to verify your fix works:
 # Run all tests
 npm test
 
-# Run specific test file  
+# Run specific test file
 npm test -- path/to/test.js
 
 # Check if your changes fixed the vulnerability
 npm test -- --grep "security"
 \`\`\`
 
-**IMPORTANT**: 
+**IMPORTANT**:
 - Use the Bash tool to run tests
 - If tests fail, read the error output
 - Adjust your fix based on test feedback
@@ -430,7 +433,35 @@ npm test -- --grep "security"
 ${this.getVulnerabilitySpecificGuidance(issueContext)}
 
 `;
-    
+
+    // Add test-aware enhancement if enabled
+    try {
+      const testAwareContext = await this.testAwareEnhancement.enhanceContext(
+        issueContext,
+        analysis,
+        this.repoPath,
+        {
+          enabled: true,
+          vulnerableFilePath: analysis.relatedFiles?.[0],
+          testDiscoveryRoot: this.repoPath,
+          discoveryTimeout: 30000,
+          includeTestContent: true,
+          verbose: process.env.RSOLV_DEBUG_CONVERSATION === 'true'
+        }
+      );
+
+      if (testAwareContext) {
+        const testAwarePromptEnhancement = this.testAwareEnhancement.generatePromptEnhancement(testAwareContext);
+        prompt += testAwarePromptEnhancement;
+        logger.info('[TestAware] Successfully added test-aware context to prompt');
+      } else {
+        logger.info('[TestAware] No test-aware context available, continuing without enhancement');
+      }
+    } catch (error) {
+      logger.warn('[TestAware] Failed to enhance prompt with test awareness:', error);
+      // Continue without test enhancement
+    }
+
     // Add the rest of the original prompt
     prompt += this.constructPrompt(issueContext, analysis);
     
@@ -591,8 +622,8 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
       });
       
       // Use enhanced prompt with test context if available
-      const promptToUse = (testResults || validationResult || iteration) 
-        ? this.constructPromptWithTestContext(issueContext, analysis, testResults, validationResult, iteration)
+      const promptToUse = (testResults || validationResult || iteration)
+        ? await this.constructPromptWithTestContext(issueContext, analysis, testResults, validationResult, iteration)
         : enhancedPrompt;
       
       // Log the prompt being used (first 500 chars)
