@@ -48,9 +48,27 @@ async function run(): Promise<ActionStatus> {
       });
       
       // Set outputs for GitHub Actions
-      if (process.env.GITHUB_OUTPUT && result.data) {
+      if (process.env.GITHUB_OUTPUT) {
         const fs = await import('fs');
-        fs.appendFileSync(process.env.GITHUB_OUTPUT, `phase_results=${JSON.stringify(result)}\n`);
+        const outputFile = process.env.GITHUB_OUTPUT;
+
+        // Set generic phase_results output
+        if (result.data) {
+          fs.appendFileSync(outputFile, `phase_results=${JSON.stringify(result)}\n`);
+        }
+
+        // Set specific outputs based on mode
+        if (mode === 'scan' && result.data) {
+          const scanData = result.data as any;
+          if (scanData.createdIssues) {
+            fs.appendFileSync(outputFile, `created_issues=${JSON.stringify(scanData.createdIssues)}\n`);
+            fs.appendFileSync(outputFile, `issues_created=${scanData.createdIssues.length}\n`);
+          }
+          if (scanData.vulnerabilities) {
+            fs.appendFileSync(outputFile, `scan_results=${JSON.stringify(scanData.vulnerabilities)}\n`);
+            fs.appendFileSync(outputFile, `security_findings=${JSON.stringify(scanData.vulnerabilities)}\n`);
+          }
+        }
       }
       
       return {
