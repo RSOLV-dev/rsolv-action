@@ -605,8 +605,11 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
         }
       }
       
-      // Use CLI adapter if configured, otherwise use SDK
-      const useCLI = process.env.RSOLV_USE_CLI === 'true' || this.claudeConfig?.useStructuredPhases;
+      // Use CLI adapter if configured, with vended credentials, or in structured phases
+      // Per ADR-023: When vended credentials are used, always use Claude CLI
+      const useCLI = process.env.RSOLV_USE_CLI === 'true' ||
+                     this.claudeConfig?.useStructuredPhases ||
+                     this.config.useVendedCredentials;
       let result;
       
       if (useCLI) {
