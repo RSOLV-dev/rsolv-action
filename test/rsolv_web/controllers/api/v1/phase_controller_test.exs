@@ -179,12 +179,12 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
 
     test "auto-creates repository on first use", %{conn: conn, api_key: api_key} do
       # Verify repo doesn't exist
-      assert nil == Repo.get_by(Repository, 
+      assert nil == Repo.get_by(Repository,
         forge_type: :github,
         namespace: "RSOLV-dev",
         name: "new-repo"
       )
-      
+
       conn =
         conn
         |> put_req_header("x-api-key", api_key.key)
@@ -195,18 +195,81 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
           commitSha: "abc123",
           data: %{scan: %{vulnerabilities: []}}
         })
-      
+
       assert %{"success" => true} = json_response(conn, 200)
-      
+
       # Verify repo was created
       repo = Repo.get_by(Repository,
         forge_type: :github,
         namespace: "RSOLV-dev",
         name: "new-repo"
       )
-      
+
       assert repo != nil
       assert repo.full_path == "RSOLV-dev/new-repo"
+    end
+
+    test "uses the specific API key from authentication, not just any key for customer", %{customer: customer, forge_account: _forge_account} do
+      # Create multiple API keys for the same customer
+      api_key_1 = %ApiKey{}
+      |> ApiKey.changeset(%{
+        customer_id: customer.id,
+        name: "First Key",
+        key: "first_key_" <> Ecto.UUID.generate(),
+        active: true
+      })
+      |> Repo.insert!()
+
+      api_key_2 = %ApiKey{}
+      |> ApiKey.changeset(%{
+        customer_id: customer.id,
+        name: "Second Key",
+        key: "second_key_" <> Ecto.UUID.generate(),
+        active: true
+      })
+      |> Repo.insert!()
+
+      # Both keys share the same customer, so they share the forge account
+
+      # Test with first API key
+      conn =
+        build_conn()
+        |> put_req_header("x-api-key", api_key_1.key)
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/v1/phases/store", %{
+          phase: "scan",
+          repo: "RSOLV-dev/specific-key-test",
+          commitSha: "abc123",
+          data: %{scan: %{vulnerabilities: []}}
+        })
+
+      assert %{"success" => true, "id" => scan_id_1} = json_response(conn, 200)
+
+      # Verify the correct API key was used for storage
+      scan_1 = Repo.get!(ScanExecution, scan_id_1)
+      assert scan_1.api_key_id == api_key_1.id
+
+      # Test with second API key
+      conn =
+        build_conn()
+        |> put_req_header("x-api-key", api_key_2.key)
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/v1/phases/store", %{
+          phase: "scan",
+          repo: "RSOLV-dev/specific-key-test-2",
+          commitSha: "def456",
+          data: %{scan: %{vulnerabilities: []}}
+        })
+
+      assert %{"success" => true, "id" => scan_id_2} = json_response(conn, 200)
+
+      # Verify the correct API key was used for storage
+      scan_2 = Repo.get!(ScanExecution, scan_id_2)
+      assert scan_2.api_key_id == api_key_2.id
+
+      # The key point: even though both API keys belong to the same customer,
+      # the phase storage should use the specific API key that was used for authentication
+      assert scan_1.api_key_id != scan_2.api_key_id
     end
   end
 end

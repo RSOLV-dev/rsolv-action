@@ -35,6 +35,23 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       refute conn.halted
     end
 
+    test "stores both customer and api_key record on successful authentication", %{conn: conn, customer: customer, api_key: api_key, api_key_record: api_key_record} do
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> ApiAuthentication.call(false)
+
+      # Verify customer is assigned
+      assert conn.assigns.customer.id == customer.id
+
+      # Verify API key record is also assigned
+      assert conn.assigns.api_key.id == api_key_record.id
+      assert conn.assigns.api_key.key == api_key
+      assert conn.assigns.api_key.customer_id == customer.id
+
+      refute conn.halted
+    end
+
     test "rejects Authorization Bearer header (x-api-key only)", %{conn: conn} do
       conn =
         conn

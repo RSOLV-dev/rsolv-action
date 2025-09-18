@@ -76,7 +76,11 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
 
       customer ->
         Logger.info("[ApiAuthentication] ✅ Authenticated customer: #{customer.name} (ID: #{customer.id})")
-        assign(conn, :customer, customer)
+        # Also get the full API key record for phase storage access control
+        api_key_record = Rsolv.Customers.get_api_key_by_key(api_key)
+        conn
+        |> assign(:customer, customer)
+        |> assign(:api_key, api_key_record)
     end
   end
 

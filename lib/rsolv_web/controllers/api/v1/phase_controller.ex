@@ -20,7 +20,8 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   """
   def store(conn, params) do
     customer = conn.assigns.customer
-    api_key = get_customer_api_key(customer)
+    # Use the actual API key that was used for authentication
+    api_key = conn.assigns.api_key || get_customer_api_key(customer)
 
     with {:ok, normalized_params} <- normalize_params(params),
          {:ok, result} <- store_phase_data(normalized_params, api_key) do
@@ -172,7 +173,8 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   """
   def retrieve(conn, params) do
     customer = conn.assigns.customer
-    api_key = get_customer_api_key(customer)
+    # Use the actual API key that was used for authentication
+    api_key = conn.assigns.api_key || get_customer_api_key(customer)
 
     with {:ok, validated_params} <- validate_retrieve_params(params),
          {:ok, phase_data} <- Phases.retrieve(
