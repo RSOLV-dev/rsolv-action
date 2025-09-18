@@ -200,16 +200,86 @@ export class ValidationMode {
   }
   
   /**
+   * RFC-058: Create validation branch for test persistence
+   */
+  async createValidationBranch(issue: IssueContext): Promise<string> {
+    const branchName = `rsolv/validate/issue-${issue.number}`;
+
+    try {
+      // Create and checkout branch
+      execSync(`git checkout -b ${branchName}`, { cwd: process.cwd() });
+      logger.info(`Created validation branch: ${branchName}`);
+
+      return branchName;
+    } catch (error) {
+      logger.error(`Failed to create validation branch ${branchName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * RFC-058: Commit generated tests to validation branch
+   */
+  async commitTestsToBranch(testContent: string, branchName: string): Promise<void> {
+    try {
+      // Create test directory structure
+      const testDir = path.join(process.cwd(), '.rsolv', 'tests');
+      fs.mkdirSync(testDir, { recursive: true });
+
+      // Write test file
+      const testPath = path.join(testDir, 'validation.test.js');
+      fs.writeFileSync(testPath, testContent);
+
+      // Commit to branch
+      execSync('git add .rsolv/tests/', { cwd: process.cwd() });
+      execSync(`git commit -m "Add validation tests for issue"`, { cwd: process.cwd() });
+
+      logger.info(`Committed tests to branch ${branchName}`);
+    } catch (error) {
+      logger.error(`Failed to commit tests to branch ${branchName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * RFC-058: Store validation result with branch reference
+   */
+  async storeValidationResultWithBranch(
+    issue: IssueContext,
+    testResults: any,
+    validationResult: any,
+    branchName: string
+  ): Promise<void> {
+    const storageDir = path.join(process.cwd(), '.rsolv', 'validation');
+    fs.mkdirSync(storageDir, { recursive: true });
+
+    const filePath = path.join(storageDir, `issue-${issue.number}.json`);
+    const data = {
+      issueId: issue.number,
+      issueTitle: issue.title,
+      branchName: branchName,  // NEW: Store branch reference
+      validated: true,
+      testResults: testResults,
+      validationResult: validationResult,
+      timestamp: new Date().toISOString(),
+      commitHash: this.getCurrentCommitHash()
+    };
+
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    logger.info(`Validation result with branch stored at ${filePath}`);
+  }
+
+  /**
    * Store validation result for mitigation phase
    */
   private async storeValidationResult(
-    issue: IssueContext, 
+    issue: IssueContext,
     testResults: any,
     validationResult: any
   ): Promise<void> {
     const storageDir = path.join(process.cwd(), '.rsolv', 'validation');
     fs.mkdirSync(storageDir, { recursive: true });
-    
+
     const filePath = path.join(storageDir, `issue-${issue.number}.json`);
     const data = {
       issueId: issue.number,
@@ -220,7 +290,7 @@ export class ValidationMode {
       timestamp: new Date().toISOString(),
       commitHash: this.getCurrentCommitHash()
     };
-    
+
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
     logger.info(`Validation result stored at ${filePath}`);
   }
