@@ -1,0 +1,15 @@
+[0;34m================================================[0m
+[0;34m    RSOLV Three-Phase Security Demo Workflow    [0m
+[0;34m================================================[0m
+
+[1;33m[SETUP] Obtaining AI provider credentials...[0m
+[0;32m✓ Obtained temporary AI credentials[0m
+
+[0;34m================================================[0m
+[0;34m       PHASE 1: VULNERABILITY SCANNING          [0m
+[0;34m================================================[0m
+
+[1;33m[SCAN] Analyzing demo-vulnerable-app.js for security issues...[0m
+[1;33m[SCAN] Sending code to RSOLV for analysis...[0m
+[0;32m[SCAN] Vulnerabilities detected:[0m
+jq: parse error: Invalid numeric literal at line 1, column 4

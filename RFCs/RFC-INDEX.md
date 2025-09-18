@@ -78,6 +78,8 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 | 054 | [Distributed Rate Limiter](RFC-054-DISTRIBUTED-RATE-LIMITER.md) | Draft | 2025-09-05 | N/A |
 | 055 | [Customer Schema Consolidation](RFC-055-CUSTOMER-SCHEMA-CONSOLIDATION.md) | **Implemented** | 2025-09-09 | N/A |
 | 056 | [Admin UI for Customer Management](RFC-056-ADMIN-UI-CUSTOMER-MANAGEMENT.md) | **Approved** | 2025-09-10 | N/A |
+| 057 | [Fix Credential Vending](RFC-057-FIX-CREDENTIAL-VENDING.md) | Draft | 2025-09-18 | N/A |
+| 058 | [Validation Branch Persistence](RFC-058-VALIDATION-BRANCH-PERSISTENCE.md) | Implemented → [ADR-025](../ADRs/ADR-025-VALIDATION-BRANCH-PERSISTENCE.md) | 2025-09-18 | N/A |
 
 ## RFC Implementation Tracking
 
