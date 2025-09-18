@@ -21,6 +21,7 @@ export interface ModeConfig {
 export interface ValidationResult {
   issueId: number;
   validated: boolean;
+  branchName?: string;
   redTests?: any; // VulnerabilityTestSuite
   testResults?: any; // TestResults
   falsePositiveReason?: string;
