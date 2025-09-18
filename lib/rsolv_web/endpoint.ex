@@ -22,7 +22,7 @@ defmodule RsolvWeb.Endpoint do
   plug Plug.Static,
     at: "/",
     from: :rsolv,
-    gzip: true,
+    gzip: false,
     only: RsolvWeb.static_paths()
 
   # Code reloading can be explicitly enabled under the

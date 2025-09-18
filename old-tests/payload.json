@@ -1,0 +1,1 @@
+{"vulnerabilities":[{"filePath":"test.js","type":"xss","severity":"medium","line":42,"column":10,"message":"XSS","pattern":"xss_html","code":"const safe = escapeHtml(userInput);"}],"files":{"test.js":{"content":"const safe = escapeHtml(userInput);"}},"repository":"test-org/test-repo"}

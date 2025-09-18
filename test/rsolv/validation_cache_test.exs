@@ -52,7 +52,7 @@ defmodule Rsolv.ValidationCacheTest do
       assert cached.ttl_expires_at
       assert cached.is_false_positive == true
       assert cached.confidence == Decimal.new("0.95")
-      assert cached.forge_account_id == forge_account.id
+      assert cached.forge_account_id == to_string(forge_account.id)
     end
     
     test "generates cache key automatically" do

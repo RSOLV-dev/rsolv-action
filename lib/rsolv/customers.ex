@@ -60,18 +60,29 @@ defmodule Rsolv.Customers do
   """
   def get_customer_by_api_key(nil), do: nil
   def get_customer_by_api_key(api_key) when is_binary(api_key) do
+    Logger.info("🔍 [API Auth Debug] Looking up API key: #{String.slice(api_key, 0..15)}...")
+
     # First check if it's an api_keys table key
     case Repo.get_by(ApiKey, key: api_key, active: true) do
       %ApiKey{customer_id: customer_id} ->
+        Logger.info("✅ [API Auth Debug] Found API key record for customer_id: #{customer_id}")
         customer = get_customer!(customer_id)
         # Only return customer if they are active
         if customer.active do
+          Logger.info("✅ [API Auth Debug] Customer #{customer_id} is active - auth successful")
           customer
         else
+          Logger.warning("⚠️ [API Auth Debug] Customer #{customer_id} is inactive - auth failed")
           nil
         end
       nil ->
-        # No customer found with this API key
+        # Check if key exists but is inactive
+        case Repo.get_by(ApiKey, key: api_key) do
+          %ApiKey{active: false} ->
+            Logger.warning("⚠️ [API Auth Debug] API key exists but is inactive")
+          nil ->
+            Logger.warning("❌ [API Auth Debug] API key not found in database")
+        end
         nil
     end
   end
@@ -197,6 +208,57 @@ defmodule Rsolv.Customers do
   end
 
   @doc """
+  Lists all API keys across all customers.
+  """
+  def list_all_api_keys do
+    ApiKey
+    |> preload(:customer)
+    |> order_by([k], desc: k.inserted_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets a single API key by ID.
+  """
+  def get_api_key!(id) do
+    ApiKey
+    |> preload(:customer)
+    |> Repo.get!(id)
+  end
+
+  @doc """
+  Updates an API key.
+  """
+  def update_api_key(%ApiKey{} = api_key, attrs) do
+    api_key
+    |> ApiKey.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes an API key.
+  """
+  def delete_api_key(%ApiKey{} = api_key) do
+    Repo.delete(api_key)
+  end
+
+  @doc """
+  Searches API keys by name.
+  """
+  def search_api_keys(query) when is_binary(query) do
+    search_term = "%#{query}%"
+
+    ApiKey
+    |> where([k], ilike(k.name, ^search_term))
+    |> or_where([k], fragment("? ILIKE ?", k.key, ^search_term))
+    |> preload(:customer)
+    |> order_by([k], desc: k.inserted_at)
+    |> Repo.all()
+  end
+
+  def search_api_keys(_), do: []
+
+  @doc """
   Increments usage for a customer.
 
   ## Examples
@@ -306,7 +368,7 @@ defmodule Rsolv.Customers do
     
     # Store in distributed Mnesia table for cluster-wide access
     case Rsolv.CustomerSessions.put_session(token, customer.id) do
-      {:atomic, :ok} -> 
+      {:atomic, _result} -> 
         token
       error ->
         Logger.error("Failed to store session: #{inspect(error)}")

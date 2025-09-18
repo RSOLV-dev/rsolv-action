@@ -12,6 +12,14 @@ defmodule RsolvWeb.ErrorJSON do
   #   %{errors: %{detail: "Internal Server Error"}}
   # end
 
+  # Handle 401 authentication errors with custom format
+  def render("401.json", %{error: error, message: message}) do
+    %{
+      error: error,
+      message: message
+    }
+  end
+
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.json" becomes
   # "Not Found".

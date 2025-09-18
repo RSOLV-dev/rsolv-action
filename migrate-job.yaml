@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-20250918-metadata
+  namespace: rsolv-production
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: migrate
+        image: ghcr.io/rsolv-dev/rsolv-platform:production
+        command: ["/app/bin/rsolv", "eval", "Rsolv.ReleaseTasks.migrate()"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: rsolv-secrets
+              key: database-url
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: phoenix-secrets
+              key: SECRET_KEY_BASE
+        - name: POOL_SIZE
+          value: "1"
+        - name: DATABASE_SSL
+          value: "false"

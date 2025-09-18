@@ -226,15 +226,35 @@ defmodule Rsolv.CustomerSessions do
   end
   
   defp ensure_table_exists do
+    # Check if table already exists on any node
+    try do
+      case :mnesia.table_info(@table_name, :attributes) do
+        [:token, :customer_id, :created_at, :expires_at] ->
+          Logger.info("customer_sessions table already exists, ensuring replication")
+          ensure_table_replicated()
+          :ok
+        _ ->
+          # Table doesn't exist or has wrong attributes, try to create it
+          create_new_table()
+      end
+    rescue
+      ArgumentError ->
+        # Table doesn't exist, create it
+        create_new_table()
+    catch
+      :exit, {:aborted, {:no_exists, @table_name, :attributes}} ->
+        # Table doesn't exist, create it
+        create_new_table()
+    end
+  end
+  
+  defp create_new_table do
     # Get all connected nodes for replication
     nodes = [node() | Node.list()]
     
-    # Use disc_copies in production, ram_copies in tests/dev
-    storage_type = if Node.alive?() and node() != :nonode@nohost do
-      :disc_copies
-    else
-      :ram_copies
-    end
+    # Use ram_copies for all environments per RFC-054
+    # Session data is transient and doesn't need disk persistence
+    storage_type = :ram_copies
     
     table_opts = [
       attributes: [:token, :customer_id, :created_at, :expires_at],
@@ -244,14 +264,22 @@ defmodule Rsolv.CustomerSessions do
     
     case :mnesia.create_table(@table_name, table_opts) do
       {:atomic, :ok} ->
-        Logger.info("Created customer_sessions Mnesia table")
+        Logger.info("Created customer_sessions Mnesia table with #{storage_type}")
         :ok
       
       {:aborted, {:already_exists, @table_name}} ->
         # Table exists, ensure it's replicated to this node
+        Logger.info("Table already exists, ensuring replication")
         ensure_table_replicated()
         :ok
       
+      {:aborted, {:bad_type, @table_name, type, other_node}} ->
+        # Table exists on another node with different storage type
+        Logger.warning("Table exists on #{inspect(other_node)} with type #{inspect(type)}, adapting...")
+        # Try to add a copy with whatever type the existing table has
+        adapt_to_existing_table()
+        :ok
+        
       {:aborted, reason} ->
         Logger.error("Failed to create customer_sessions table: #{inspect(reason)}")
         # Fall back to waiting and retrying
@@ -260,26 +288,53 @@ defmodule Rsolv.CustomerSessions do
     end
   end
   
-  defp ensure_table_replicated do
-    storage_type = if Node.alive?() and node() != :nonode@nohost do
-      :disc_copies
-    else
-      :ram_copies
+  defp adapt_to_existing_table do
+    # Try to detect what storage type the existing table has
+    try do
+      disc_nodes = :mnesia.table_info(@table_name, :disc_copies)
+      ram_nodes = :mnesia.table_info(@table_name, :ram_copies)
+      disc_only_nodes = :mnesia.table_info(@table_name, :disc_only_copies)
+      
+      cond do
+        length(disc_nodes) > 0 ->
+          # Table uses disc_copies, add ourselves as disc_copies
+          add_table_copy_safe(:disc_copies)
+        length(ram_nodes) > 0 ->
+          # Table uses ram_copies, add ourselves as ram_copies  
+          add_table_copy_safe(:ram_copies)
+        length(disc_only_nodes) > 0 ->
+          # Table uses disc_only_copies, add ourselves as disc_only_copies
+          add_table_copy_safe(:disc_only_copies)
+        true ->
+          Logger.error("Could not determine storage type of existing table")
+          # Default to ram_copies as safest option
+          add_table_copy_safe(:ram_copies)
+      end
+    rescue
+      error ->
+        Logger.error("Error adapting to existing table: #{inspect(error)}")
+        # Default to ram_copies as safest option
+        add_table_copy_safe(:ram_copies)
     end
-    
+  end
+  
+  defp add_table_copy_safe(storage_type) do
     case :mnesia.add_table_copy(@table_name, node(), storage_type) do
       {:atomic, :ok} ->
-        Logger.info("Added customer_sessions table copy to node #{node()}")
+        Logger.info("Added #{storage_type} table copy to node #{node()}")
         :ok
-      
       {:aborted, {:already_exists, @table_name, _}} ->
-        Logger.debug("Table already replicated on node #{node()}")
+        Logger.debug("Table copy already exists on node #{node()}")
         :ok
-      
       {:aborted, reason} ->
-        Logger.warning("Could not replicate table: #{inspect(reason)}")
+        Logger.warning("Could not add table copy: #{inspect(reason)}")
         :ok
     end
+  end
+  
+  defp ensure_table_replicated do
+    # Adapt to whatever storage type the table is already using
+    adapt_to_existing_table()
   end
   
   defp schedule_cleanup do

@@ -6,7 +6,8 @@ defmodule RsolvWeb.Api.V1.PatternController do
   alias Rsolv.Security.Pattern
   alias Rsolv.Security.DemoPatterns
   alias Rsolv.Security.Patterns.JSONSerializer
-  alias Rsolv.Accounts
+
+  plug RsolvWeb.Plugs.ApiAuthentication, optional: true
 
   @doc """
   Get security patterns for a language.
@@ -64,35 +65,20 @@ defmodule RsolvWeb.Api.V1.PatternController do
 
       Logger.info("Language: #{language}, Format: #{format}")
 
-      # Check API key status
-      api_key_status = check_api_key_status(conn)
-      Logger.info("API key status: #{inspect(api_key_status)}")
+      # Check if customer is authenticated (via our plug)
+      customer = Map.get(conn.assigns, :customer, nil)
 
-      # Handle invalid API key immediately
-      if api_key_status == :invalid do
-        Logger.warning("Invalid API key provided")
-
-        conn
-        |> put_status(:unauthorized)
-        |> json(%{
-          error: "Unauthorized",
-          message: "Invalid API key"
-        })
-        |> halt()
-      else
-        # Get patterns based on authentication status
-        {patterns, is_demo} =
-          case api_key_status do
-            :valid ->
-              # Return all patterns for the language
-              Logger.info("Getting enhanced patterns for #{language}")
-              {ASTPattern.get_all_patterns_for_language(language, format), false}
-
-            :none ->
-              # No API key provided - return demo patterns
-              Logger.info("Getting demo patterns for #{language}")
-              {DemoPatterns.get_demo_patterns(language), true}
-          end
+      # Get patterns based on authentication status
+      {patterns, is_demo} =
+        if customer do
+          # Return all patterns for the language
+          Logger.info("Getting enhanced patterns for #{language}")
+          {ASTPattern.get_all_patterns_for_language(language, format), false}
+        else
+          # No API key provided - return demo patterns
+          Logger.info("Getting demo patterns for #{language}")
+          {DemoPatterns.get_demo_patterns(language), true}
+        end
 
         Logger.info("Retrieved #{length(patterns)} patterns")
 
@@ -119,7 +105,7 @@ defmodule RsolvWeb.Api.V1.PatternController do
           format: to_string(format),
           count: length(formatted_patterns),
           enhanced: format == :enhanced,
-          access_level: if(api_key_status == :valid, do: "full", else: "demo")
+          access_level: if(customer, do: "full", else: "demo")
         }
 
         # Prepare the response data for JSON encoding
@@ -141,7 +127,6 @@ defmodule RsolvWeb.Api.V1.PatternController do
         |> put_resp_header("x-pattern-version", "2.0")
         |> put_resp_header("content-type", "application/json")
         |> send_resp(200, json_data)
-      end
     rescue
       e ->
         # Log the error for debugging
@@ -220,24 +205,6 @@ defmodule RsolvWeb.Api.V1.PatternController do
     index(conn, enhanced_params)
   end
 
-  # Check the status of the API key provided in the request.
-  # Returns :valid, :invalid, or :none
-  defp check_api_key_status(conn) do
-    case get_req_header(conn, "authorization") do
-      ["Bearer " <> api_key] ->
-        # API key was provided - check if it's valid
-        case Accounts.get_customer_by_api_key(api_key) do
-          # API key provided but doesn't exist
-          nil -> :invalid
-          # API key exists and is valid
-          _customer -> :valid
-        end
-
-      _ ->
-        # No API key provided at all
-        :none
-    end
-  end
 
   # Handle ASTPattern structs (returned by enhanced format)
   defp format_pattern_without_tier(%Rsolv.Security.ASTPattern{} = ast_pattern, :enhanced) do

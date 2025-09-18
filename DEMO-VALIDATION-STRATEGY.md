@@ -1,7 +1,8 @@
 # RSOLV Demo Validation Strategy
 
-**Created**: 2025-09-02  
-**Purpose**: Ensure customer demo video recording succeeds without issues
+**Created**: 2025-09-02
+**Updated**: 2025-01-15
+**Purpose**: Ensure customer demo video recording succeeds without issues, including admin provisioning
 
 ## Executive Summary
 
@@ -10,9 +11,9 @@ This document outlines a comprehensive programmatic validation approach for the 
 ## Three-Layer Validation Approach
 
 ### Layer 1: Pre-Flight Check (Non-Destructive)
-**Script**: `demo-scripts/demo-pre-flight-check.sh`  
-**When**: Before each recording attempt  
-**Duration**: ~1 minute  
+**Script**: `demo-scripts/demo-pre-flight-check.sh`
+**When**: Before each recording attempt
+**Duration**: ~1 minute
 
 Validates:
 - ✅ Environment (GitHub CLI, auth, tools)
@@ -21,16 +22,20 @@ Validates:
 - ✅ GitHub Actions enabled and accessible
 - ✅ API connectivity (simulated)
 - ✅ Expected timings documented
+- ✅ Admin dashboard access (NEW)
+- ✅ Customer provisioning permissions (NEW)
 
 **Key Feature**: Non-destructive - only reads state, doesn't modify anything
 
 ### Layer 2: Rehearsal Mode (Full Run-Through)
-**Script**: `demo-scripts/demo-rehearsal.sh`  
-**When**: Before first recording, after major changes  
-**Duration**: 15-20 minutes  
+**Script**: `demo-scripts/demo-rehearsal.sh`
+**When**: Before first recording, after major changes
+**Duration**: 18-22 minutes
 
 Executes:
+- 🆕 PROVISION → Creates test customer account (NEW)
 - 🔄 Complete SCAN → VALIDATE → MITIGATE flow
+- 📊 MONITOR → Reviews usage metrics (NEW)
 - ⏱️ Measures actual phase timings
 - 📊 Validates outputs at each step
 - 🎯 Tests issue creation, labeling, PR generation
@@ -56,9 +61,11 @@ Shows:
 ### 1. Timing Requirements
 | Phase | Target Time | Maximum Time | Action if Exceeded |
 |-------|------------|--------------|-------------------|
+| PROVISION | 2-3 min | 3 min | Use existing customer (NEW) |
 | SCAN | 2-3 min | 3 min | Show pre-recorded or edit |
 | VALIDATE | 1-2 min | 2 min | Skip in demo (optional) |
 | MITIGATE | 3-8 min | 8 min | Speed up in editing |
+| MONITOR | 2 min | 2 min | Show dashboard only (NEW) |
 
 ### 2. Label Management
 **Critical**: Issues must be created with `rsolv:detected` NOT `rsolv:automate`
@@ -72,6 +79,8 @@ If live demo fails:
 - **Option B**: Show recording of successful rehearsal
 - **Option C**: Trigger fix on different vulnerability
 - **Option D**: Focus on business value discussion
+- **Option E**: Generate new API key from admin dashboard (NEW)
+- **Option F**: Show existing customer with usage history (NEW)
 
 ## Validation Checklist
 
@@ -80,10 +89,14 @@ If live demo fails:
 # 1. Run pre-flight check
 ./demo-scripts/demo-pre-flight-check.sh
 
-# 2. If first recording or after changes
+# 2. Admin login check (NEW)
+open https://rsolv.dev/admin/login
+# Verify access to admin dashboard
+
+# 3. If first recording or after changes
 ./demo-scripts/demo-rehearsal.sh
 
-# 3. Clean repository state
+# 4. Clean repository state
 gh issue list --repo RSOLV-dev/nodegoat-vulnerability-demo --state open
 # Should show 0 open issues (except examples)
 ```
@@ -106,6 +119,13 @@ gh issue list --repo RSOLV-dev/nodegoat-vulnerability-demo | grep REHEARSAL
 
 ## Key Validation Points
 
+### Phase 0: PROVISION (NEW)
+✅ **MUST**: Access admin dashboard at /admin/customers
+✅ **MUST**: Create new customer with email and limits
+✅ **MUST**: Generate API key successfully
+✅ **MUST**: Complete within 3 minutes
+❌ **MUST NOT**: Show any production customer data
+
 ### Phase 1: SCAN
 ✅ **MUST**: Create issues with `rsolv:detected` label  
 ✅ **MUST**: Complete within 3 minutes  
@@ -119,11 +139,18 @@ gh issue list --repo RSOLV-dev/nodegoat-vulnerability-demo | grep REHEARSAL
 ✅ **SHOULD**: Include line numbers and snippets  
 
 ### Phase 3: MITIGATE
-✅ **MUST**: Accept `rsolv:automate` label  
-✅ **MUST**: Auto-validate if not already validated  
-✅ **MUST**: Generate PR within 8 minutes  
-✅ **MUST**: Include fix, tests, and education  
-✅ **MUST**: Show correct before/after code  
+✅ **MUST**: Accept `rsolv:automate` label
+✅ **MUST**: Auto-validate if not already validated
+✅ **MUST**: Generate PR within 8 minutes
+✅ **MUST**: Include fix, tests, and education
+✅ **MUST**: Show correct before/after code
+
+### Phase 4: MONITOR (NEW)
+✅ **MUST**: Return to admin dashboard
+✅ **MUST**: Show customer usage statistics
+✅ **MUST**: Demonstrate API key management
+✅ **SHOULD**: Show usage graph and trends
+✅ **SHOULD**: Highlight instant revocation capability  
 
 ## Emergency Procedures
 
@@ -191,19 +218,27 @@ jobs:
 - ✅ No errors during demo flow
 - ✅ Correct labels applied
 - ✅ PR generated with proper content
+- ✅ Customer provisioned successfully (NEW)
+- ✅ API key generated and configured (NEW)
+- ✅ Usage metrics displayed correctly (NEW)
 
 ### Business Success
 - ✅ Clear value proposition communicated
 - ✅ ROI message delivered (296,000%)
 - ✅ User control emphasized
 - ✅ Educational aspect highlighted
+- ✅ Enterprise control demonstrated (NEW)
+- ✅ Multi-tenant capability shown (NEW)
+- ✅ Instant administrative actions showcased (NEW)
 
 ## Conclusion
 
-This three-layer validation strategy ensures:
+This enhanced validation strategy ensures:
 1. **Reliability**: Multiple validation checkpoints
 2. **Speed**: Quick pre-flight checks
 3. **Confidence**: Full rehearsal capability
 4. **Recovery**: Clear fallback options
+5. **Enterprise Ready**: Admin provisioning validation (NEW)
+6. **Complete Control**: Customer management verification (NEW)
 
-Run `./demo-scripts/demo-pre-flight-check.sh` before every recording to ensure success.
+Run `./demo-scripts/demo-pre-flight-check.sh` before every recording to ensure success, including admin dashboard access verification.

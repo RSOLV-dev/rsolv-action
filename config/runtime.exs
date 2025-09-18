@@ -96,7 +96,12 @@ if config_env() != :test do
     server: true,
     check_origin: [
       "https://#{phx_host}",
+      "https://www.#{phx_host}",
       "https://api.#{phx_host}",
+      "https://rsolv.ai",
+      "https://www.rsolv.ai",
+      "https://rsolv.dev",
+      "https://www.rsolv.dev",
       "http://localhost:4000",
       "http://localhost:4001"
     ]
@@ -148,7 +153,7 @@ config :logger, :console,
 # Configure Phoenix LiveDashboard
 if config_env() != :test do
   config :rsolv, RsolvWeb.Endpoint,
-    live_view: [signing_salt: System.get_env("LIVE_VIEW_SALT")]
+    live_view: [signing_salt: System.get_env("LIVE_VIEW_SALT") || "GGUv7IyC34psVAUL2345"]
 end
 
 # Sentry error tracking

@@ -28,7 +28,8 @@ defmodule Rsolv.ValidationCache.CachedValidation do
     field :invalidated_at, :utc_datetime_usec
     field :invalidation_reason, :string
     
-    belongs_to :forge_account, Rsolv.Customers.ForgeAccount
+    # Changed from belongs_to to support both integer and string IDs (for test accounts)
+    field :forge_account_id, :string
     
     timestamps(type: :utc_datetime_usec)
   end
@@ -48,6 +49,5 @@ defmodule Rsolv.ValidationCache.CachedValidation do
     |> validate_number(:confidence, greater_than_or_equal_to: 0, less_than_or_equal_to: 1)
     |> validate_inclusion(:invalidation_reason, ["file_change", "ttl_expired", "manual"])
     |> unique_constraint(:cache_key)
-    |> foreign_key_constraint(:forge_account_id)
   end
 end

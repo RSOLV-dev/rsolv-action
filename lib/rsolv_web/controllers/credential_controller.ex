@@ -1,20 +1,20 @@
 defmodule RsolvWeb.CredentialController do
   use RsolvWeb, :controller
 
-  alias Rsolv.Accounts
   alias Rsolv.Credentials
   alias Rsolv.RateLimiter
 
   require Logger
 
+  plug RsolvWeb.Plugs.ApiAuthentication
+
   @max_ttl_minutes 240  # 4 hours max
 
   def exchange(conn, params) do
     Logger.info("[CredentialController] Starting exchange with params: #{inspect(params)}")
-    
-    with {:ok, api_key} <- validate_api_key(params),
-         {:ok, customer} <- authenticate_customer(api_key),
-         :ok <- check_rate_limit(customer),
+    customer = conn.assigns.customer
+
+    with :ok <- check_rate_limit(customer),
          :ok <- check_usage_limits(customer),
          {:ok, providers} <- validate_providers(params),
          {:ok, ttl_minutes} <- validate_ttl(params) do
@@ -52,11 +52,6 @@ defmodule RsolvWeb.CredentialController do
           |> json(%{error: "Failed to generate credentials"})
       end
     else
-      {:error, :invalid_api_key} ->
-        conn
-        |> put_status(:unauthorized)
-        |> json(%{error: "Invalid API key"})
-      
       {:error, :rate_limited} ->
         conn
         |> put_status(:too_many_requests)
@@ -68,10 +63,10 @@ defmodule RsolvWeb.CredentialController do
         |> put_status(:forbidden)
         |> json(%{error: "Monthly usage limit exceeded"})
       
-      {:error, :missing_parameters} ->
+      {:error, :missing_providers} ->
         conn
         |> put_status(:bad_request)
-        |> json(%{error: "Missing required parameters"})
+        |> json(%{error: "Missing required providers parameter"})
       
       error ->
         Logger.error("Credential exchange error: #{inspect(error)}")
@@ -82,9 +77,9 @@ defmodule RsolvWeb.CredentialController do
   end
 
   def refresh(conn, params) do
-    with {:ok, api_key} <- validate_api_key(params),
-         {:ok, customer} <- authenticate_customer(api_key),
-         {:ok, credential_id} <- validate_credential_id(params),
+    customer = conn.assigns.customer
+
+    with {:ok, credential_id} <- validate_credential_id(params),
          {:ok, credential} <- get_customer_credential(customer, credential_id),
          :ok <- check_refresh_eligibility(credential),
          {:ok, new_credential} <- refresh_credential(credential) do
@@ -124,9 +119,9 @@ defmodule RsolvWeb.CredentialController do
   end
 
   def report_usage(conn, params) do
-    with {:ok, api_key} <- validate_api_key(params),
-         {:ok, customer} <- authenticate_customer(api_key),
-         {:ok, usage_data} <- validate_usage_data(params),
+    customer = conn.assigns.customer
+
+    with {:ok, usage_data} <- validate_usage_data(params),
          :ok <- record_usage(customer, usage_data),
          :ok <- update_customer_usage(customer, usage_data) do
       
@@ -134,11 +129,6 @@ defmodule RsolvWeb.CredentialController do
       |> put_status(:ok)
       |> json(%{status: "recorded"})
     else
-      {:error, :invalid_api_key} ->
-        conn
-        |> put_status(:unauthorized)
-        |> json(%{error: "Invalid API key"})
-      
       error ->
         Logger.error("Usage reporting error: #{inspect(error)}")
         conn
@@ -148,22 +138,6 @@ defmodule RsolvWeb.CredentialController do
   end
 
   # Private functions
-
-  defp validate_api_key(%{"api_key" => api_key}) when is_binary(api_key), do: {:ok, api_key}
-  defp validate_api_key(_), do: {:error, :missing_parameters}
-
-  defp authenticate_customer(api_key) do
-    Logger.info("[CredentialController] Authenticating API key: #{api_key}")
-    
-    case Accounts.get_customer_by_api_key(api_key) do
-      nil -> 
-        Logger.error("[CredentialController] No customer found for API key: #{api_key}")
-        {:error, :invalid_api_key}
-      customer -> 
-        Logger.info("[CredentialController] Found customer: #{customer.name} (ID: #{customer.id})")
-        {:ok, customer}
-    end
-  end
 
   defp check_rate_limit(customer) do
     case RateLimiter.check_rate_limit(customer.id, :credential_exchange) do
@@ -333,7 +307,7 @@ defmodule RsolvWeb.CredentialController do
   defp validate_requests(_), do: {:error, :missing_requests}
 
   defp record_usage(customer, usage_data) do
-    case Accounts.record_usage(%{
+    case Rsolv.Accounts.record_usage(%{
       customer_id: customer.id,
       provider: usage_data.provider,
       tokens_used: usage_data.tokens_used,
@@ -350,7 +324,7 @@ defmodule RsolvWeb.CredentialController do
     fixes_used = div(usage_data.tokens_used, 2000)
     new_usage = customer.current_usage + fixes_used
     
-    case Accounts.update_customer(customer, %{current_usage: new_usage}) do
+    case Rsolv.Accounts.update_customer(customer, %{current_usage: new_usage}) do
       {:ok, _} -> :ok
       error -> error
     end

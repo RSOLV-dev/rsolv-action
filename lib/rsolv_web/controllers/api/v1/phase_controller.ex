@@ -2,7 +2,9 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   use RsolvWeb, :controller
   alias Rsolv.Phases
   alias Rsolv.Customers
-  
+
+  plug RsolvWeb.Plugs.ApiAuthentication
+
   action_fallback RsolvWeb.FallbackController
 
   @doc """
@@ -17,8 +19,10 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   - branch: Optional, for scan phase
   """
   def store(conn, params) do
-    with {:ok, api_key} <- authenticate(conn),
-         {:ok, normalized_params} <- normalize_params(params),
+    customer = conn.assigns.customer
+    api_key = get_customer_api_key(customer)
+
+    with {:ok, normalized_params} <- normalize_params(params),
          {:ok, result} <- store_phase_data(normalized_params, api_key) do
       json(conn, %{
         success: true,
@@ -27,19 +31,20 @@ defmodule RsolvWeb.Api.V1.PhaseController do
       })
     end
   end
-  
-  defp authenticate(conn) do
-    case get_req_header(conn, "x-api-key") do
-      [key | _] ->
-        case Customers.get_api_key_by_key(key) do
-          nil -> {:error, :invalid_api_key}
-          api_key -> {:ok, api_key}
-        end
-      _ ->
-        {:error, :missing_api_key}
-    end
+
+  defp get_customer_api_key(customer) do
+    # Get the API key that was used for authentication
+    # We need to look it up again to get the full ApiKey struct for phase storage
+    # This is a temporary workaround - ideally the plug should store the full api_key struct
+    import Ecto.Query
+
+    query = from a in Rsolv.Customers.ApiKey,
+      where: a.customer_id == ^customer.id,
+      limit: 1
+
+    Rsolv.Repo.one(query)
   end
-  
+
   defp normalize_params(params) do
     phase = params["phase"] || params[:phase]
     repo = params["repo"] || params[:repo]
@@ -166,8 +171,10 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   Returns accumulated phase data from all three phases.
   """
   def retrieve(conn, params) do
-    with {:ok, api_key} <- authenticate(conn),
-         {:ok, validated_params} <- validate_retrieve_params(params),
+    customer = conn.assigns.customer
+    api_key = get_customer_api_key(customer)
+
+    with {:ok, validated_params} <- validate_retrieve_params(params),
          {:ok, phase_data} <- Phases.retrieve(
            validated_params.repo,
            validated_params.issue,

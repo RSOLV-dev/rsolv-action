@@ -40,6 +40,8 @@ Each ADR follows this structure:
 | [ADR-024](ADR-024-AST-FALSE-POSITIVE-REDUCTION.md) | AST False Positive Reduction Strategy | Proposed | 2025-08-14 | High - Further reduces false positives |
 | [ADR-025](ADR-025-DISTRIBUTED-RATE-LIMITING-WITH-MNESIA.md) | Distributed Rate Limiting with Mnesia | Implemented | 2025-09-10 | High - Eliminates race conditions in rate limiting |
 | [ADR-026](ADR-026-CUSTOMER-MANAGEMENT-CONSOLIDATION.md) | Customer Management Consolidation | Implemented | 2025-09-11 | Critical - Unified authentication & -1,049 lines of code |
+| [ADR-027](ADR-027-CENTRALIZED-API-AUTHENTICATION.md) | Centralized API Authentication | Implemented | 2025-09-17 | Critical - Fixes authentication recognition & standardizes API auth |
+| [ADR-028](ADR-028-PRODUCTION-MIGRATION-FIX.md) | Production Database Migration Synchronization | Implemented | 2025-09-18 | Critical - Fixed production database schema issues |
 
 ## Related Documentation
 
