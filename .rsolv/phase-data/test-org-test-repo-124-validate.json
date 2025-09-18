@@ -1,0 +1,26 @@
+{
+  "phase": "validate",
+  "data": {
+    "validation": {
+      "issue-124": {
+        "issueNumber": 124,
+        "validated": true,
+        "branchName": "rsolv/validate/issue-123",
+        "redTests": "test content",
+        "falsePositive": false,
+        "usedPriorScan": false,
+        "timestamp": "2025-09-18T23:43:00.224Z",
+        "commitHash": "abc123",
+        "hasSpecificVulnerabilities": true,
+        "vulnerabilities": [],
+        "confidence": "high"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "test-org/test-repo",
+    "issueNumber": 124,
+    "commitSha": "a48ae49a929a9e14914406b913a74f040be42163"
+  },
+  "timestamp": "2025-09-18T23:43:00.235Z"
+}

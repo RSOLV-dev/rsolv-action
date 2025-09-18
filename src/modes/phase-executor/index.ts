@@ -236,12 +236,12 @@ export class PhaseExecutor {
   }
 
   /**
-   * Execute validation phase - Enhanced with issue enrichment
+   * Execute validation phase - RFC-058 with ValidationMode integration
    */
   async executeValidate(options: ExecuteOptions): Promise<ExecuteResult> {
     try {
-      logger.info('[VALIDATE] Starting enhanced validation phase');
-      
+      logger.info('[VALIDATE] Starting RFC-058 validation phase with ValidationMode');
+
       // Check if we have an issue to validate
       if (!options.issueNumber || !options.repository) {
         return {
@@ -267,32 +267,89 @@ export class PhaseExecutor {
         };
       }
 
-      // Use EnhancedValidationEnricher for RFC-045 confidence scoring
-      const { EnhancedValidationEnricher } = await import('../../validation/enricher.js');
-      const enricher = new EnhancedValidationEnricher(
-        process.env.GITHUB_TOKEN || '',
-        this.config.rsolvApiKey
-      );
-
-      const enrichmentResult = await enricher.enrichIssue(issue);
-      
-      logger.info(`[VALIDATE] Enriched issue #${options.issueNumber} with ${enrichmentResult.vulnerabilities.length} specific vulnerabilities`);
-
-      // Store validation results in PhaseDataClient
-      const validationData = {
-        issueNumber: enrichmentResult.issueNumber,
-        validated: true,
-        enriched: true,
-        vulnerabilities: enrichmentResult.vulnerabilities,
-        timestamp: enrichmentResult.validationTimestamp.toISOString(),
-        hasSpecificVulnerabilities: enrichmentResult.vulnerabilities.length > 0,
-        confidence: enrichmentResult.vulnerabilities.length > 0 ? 
-          (enrichmentResult.vulnerabilities.some((v: Record<string, any>) => v.confidence === 'high') ? 'high' :
-           enrichmentResult.vulnerabilities.some((v: Record<string, any>) => v.confidence === 'medium') ? 'medium' : 'low') :
-          'none'
+      // Convert GitHub issue to IssueContext format
+      const issueContext = {
+        id: `issue-${issue.number}`,
+        number: issue.number,
+        title: issue.title,
+        body: issue.body || '',
+        labels: issue.labels?.map((label: any) => typeof label === 'string' ? label : label.name) || [],
+        assignees: issue.assignees?.map((assignee: any) => assignee.login) || [],
+        repository: {
+          owner: options.repository.owner,
+          name: options.repository.name,
+          fullName: `${options.repository.owner}/${options.repository.name}`,
+          defaultBranch: options.repository.defaultBranch || 'main'
+        },
+        source: 'github' as const,
+        createdAt: issue.created_at || new Date().toISOString(),
+        updatedAt: issue.updated_at || new Date().toISOString(),
+        metadata: {}
       };
 
+      // RFC-058: Use ValidationMode for validation with branch persistence
+      const { ValidationMode } = await import('../validation-mode.js');
+      const validationMode = new ValidationMode(this.config, process.cwd());
+
+      logger.info(`[VALIDATE] Using ValidationMode for RFC-058 validation of issue #${options.issueNumber}`);
+      const validationResult = await validationMode.validateVulnerability(issueContext);
+
+      if (!validationResult.validated) {
+        logger.info(`[VALIDATE] Issue #${options.issueNumber} failed validation: ${validationResult.falsePositiveReason}`);
+
+        // Store validation results even for false positives
+        const commitSha = options.commitSha || this.getCurrentCommitSha();
+        await this.storePhaseData('validation', {
+          [`issue-${options.issueNumber}`]: {
+            issueNumber: validationResult.issueId,
+            validated: false,
+            falsePositiveReason: validationResult.falsePositiveReason,
+            timestamp: validationResult.timestamp,
+            commitHash: validationResult.commitHash
+          }
+        }, {
+          repo: `${options.repository.owner}/${options.repository.name}`,
+          issueNumber: options.issueNumber,
+          commitSha
+        });
+
+        return {
+          success: true,
+          phase: 'validate',
+          message: `Issue #${options.issueNumber} identified as false positive: ${validationResult.falsePositiveReason}`,
+          data: {
+            validation: {
+              issueNumber: validationResult.issueId,
+              validated: false,
+              falsePositiveReason: validationResult.falsePositiveReason,
+              timestamp: validationResult.timestamp
+            }
+          }
+        };
+      }
+
+      // Success - vulnerability validated with RFC-058 features
+      logger.info(`[VALIDATE] ✅ Issue #${options.issueNumber} validated successfully with ValidationMode`);
+      if (validationResult.branchName) {
+        logger.info(`[VALIDATE] ✅ RFC-058: Tests committed to validation branch: ${validationResult.branchName}`);
+      }
+
+      // Store validation results with RFC-058 branch reference
       const commitSha = options.commitSha || this.getCurrentCommitSha();
+      const validationData = {
+        issueNumber: validationResult.issueId,
+        validated: true,
+        branchName: validationResult.branchName, // RFC-058 feature
+        redTests: validationResult.redTests,
+        testResults: validationResult.testResults,
+        timestamp: validationResult.timestamp,
+        commitHash: validationResult.commitHash,
+        // Enhanced validation fields for compatibility
+        hasSpecificVulnerabilities: true,
+        vulnerabilities: [], // Will be enhanced by enrichment if needed
+        confidence: 'high' as const
+      };
+
       await this.storePhaseData('validation', {
         [`issue-${options.issueNumber}`]: validationData
       }, {
@@ -301,20 +358,18 @@ export class PhaseExecutor {
         commitSha
       });
 
-      // Return success with enrichment details
-      const result = {
+      return {
         success: true,
         phase: 'validate',
-        message: enrichmentResult.vulnerabilities.length > 0 ?
-          `Validated issue #${options.issueNumber} with ${enrichmentResult.vulnerabilities.length} specific vulnerabilities` :
-          `Issue #${options.issueNumber} validated but no specific vulnerabilities found (possible false positive)`,
-        data: { 
+        message: validationResult.branchName ?
+          `Validated issue #${options.issueNumber} with RFC-058 branch persistence: ${validationResult.branchName}` :
+          `Validated issue #${options.issueNumber} with RED tests`,
+        data: {
           validation: validationData,
-          enrichmentResult
+          rfc058Enabled: !!validationResult.branchName
         }
       };
-      
-      return result;
+
     } catch (error) {
       logger.error('Validation phase failed', error);
       return {
@@ -1715,26 +1770,21 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             continue;
           }
 
-          // Generate validation tests
-          const testResults = await this.generateValidationTests(issue, scanData);
-          
-          // Run tests if requested
+          // RFC-058: Use ValidationMode for batch validation too
+          const { ValidationMode } = await import('../validation-mode.js');
+          const validationMode = new ValidationMode(this.config, process.cwd());
+
+          logger.info(`[VALIDATE-STANDALONE] Using ValidationMode for issue #${issue.number}`);
+          const vmValidationResult = await validationMode.validateVulnerability(issue);
+
+          // Run additional tests if requested and we have generated tests
           let testExecution = null;
-          if (options.runTests && this.testRunner && testResults.generatedTests) {
+          if (options.runTests && this.testRunner && vmValidationResult.redTests) {
             try {
-              testExecution = await this.testRunner.runTests(testResults.generatedTests);
-              
-              // Check for false positive
-              if (testExecution.redTestPassed && testResults.generatedTests) {
-                testResults.generatedTests.falsePositive = true;
-                testResults.generatedTests.reason = 'Tests pass on current code';
-              }
+              testExecution = await this.testRunner.runTests(vmValidationResult.redTests);
+              logger.info(`Test execution result: ${testExecution.redTestPassed ? 'PASSED' : 'FAILED'}`);
             } catch (error) {
               logger.warn(`Test execution failed for issue #${issue.number}:`, error);
-              if (testResults.generatedTests) {
-                testResults.generatedTests.testExecutionFailed = true;
-                testResults.generatedTests.error = error instanceof Error ? error.message : String(error);
-              }
             }
           }
 
@@ -1742,46 +1792,49 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           let existing: any = null;
           if (this.testDiscovery) {
             existing = await this.testDiscovery.findExistingTests(issue.repository);
-            if (existing.hasTests && testResults.generatedTests) {
-              testResults.generatedTests.existingTests = true;
-              testResults.generatedTests.testFramework = existing.framework;
-              
+            if (existing.hasTests && vmValidationResult.redTests) {
+              logger.info(`Found existing test framework: ${existing.framework}`);
+
               // Integrate tests if requested
-              if (options.integrateTests && this.testIntegrator && testResults.generatedTests) {
-                const integration = await this.testIntegrator.integrateTests(
-                  testResults.generatedTests,
-                  existing
-                );
-                testResults.generatedTests.testsIntegrated = integration.integrated;
-                testResults.generatedTests.testFile = integration.testFile;
+              if (options.integrateTests && this.testIntegrator) {
+                try {
+                  const integration = await this.testIntegrator.integrateTests(
+                    vmValidationResult.redTests,
+                    existing
+                  );
+                  logger.info(`Test integration result: ${integration.integrated}`);
+                } catch (error) {
+                  logger.warn(`Test integration failed: ${error}`);
+                }
               }
             }
           }
 
-          // Store validation results
-          const validationResult = {
+          // Store validation results with RFC-058 data
+          const validationData = {
             issueNumber: issue.number,
-            validated: testResults.generatedTests?.success || false,
-            ...testResults,
-            falsePositive: testResults.generatedTests?.falsePositive,
-            reason: testResults.generatedTests?.reason,
-            testExecutionFailed: testResults.generatedTests?.testExecutionFailed,
-            error: testResults.generatedTests?.error,
+            validated: vmValidationResult.validated,
+            branchName: vmValidationResult.branchName, // RFC-058 feature
+            redTests: vmValidationResult.redTests,
+            testResults: vmValidationResult.testResults,
+            falsePositive: !vmValidationResult.validated,
+            falsePositiveReason: vmValidationResult.falsePositiveReason,
             existingTests: existing?.hasTests,
             testFramework: existing?.framework,
             usedPriorScan: 'usedPriorScan' in scanData ? scanData.usedPriorScan : false,
-            timestamp: new Date().toISOString(),
-            // Add fields for compatibility with enhanced validation
-            hasSpecificVulnerabilities: false,
+            timestamp: vmValidationResult.timestamp,
+            commitHash: vmValidationResult.commitHash,
+            // RFC-058 enhanced fields
+            hasSpecificVulnerabilities: vmValidationResult.validated,
             vulnerabilities: [],
-            confidence: 'low' as const
+            confidence: vmValidationResult.validated ? 'high' as const : 'low' as const
           };
 
           await this.phaseDataClient.storePhaseResults(
             'validate',
-            { 
+            {
               validation: {
-                [`issue-${issue.number}`]: validationResult
+                [`issue-${issue.number}`]: validationData
               }
             },
             {
@@ -1793,7 +1846,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
 
           // Post GitHub comment if requested
           if (options.postComment && this.githubClient) {
-            const comment = this.formatValidationComment(issue, validationResult);
+            const comment = this.formatValidationComment(issue, validationData);
             await this.githubClient.createIssueComment(
               issue.repository.owner,
               issue.repository.name,
@@ -1802,7 +1855,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             );
           }
 
-          validations.push(validationResult);
+          validations.push(validationData);
           
         } catch (error) {
           logger.error(`Failed to validate issue #${issue.number}:`, error);
