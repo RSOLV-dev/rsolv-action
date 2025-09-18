@@ -270,6 +270,10 @@ describe('Vulnerability Test', () => {
       const testPath = path.join(testDir, 'validation.test.js');
       fs.writeFileSync(testPath, testString, 'utf8');
 
+      // Configure git identity for commits
+      execSync('git config user.email "rsolv-validation@rsolv.dev"', { cwd: this.repoPath });
+      execSync('git config user.name "RSOLV Validation Bot"', { cwd: this.repoPath });
+
       // Commit to branch
       execSync('git add .rsolv/tests/', { cwd: this.repoPath });
       execSync(`git commit -m "Add validation tests for issue"`, { cwd: this.repoPath });
