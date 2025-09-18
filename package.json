@@ -36,6 +36,7 @@
     "@babel/types": "^7.27.6",
     "@octokit/rest": "^21.1.1",
     "@types/uuid": "^10.0.0",
+    "glob": "^11.0.3",
     "js-yaml": "^4.1.0",
     "uuid": "^11.1.0",
     "zod": "^3.25.26"
@@ -51,7 +52,6 @@
     "@vitest/ui": "^3.2.4",
     "bun-types": "latest",
     "eslint": "^8.57.1",
-    "glob": "^11.0.3",
     "happy-dom": "^18.0.1",
     "msw": "^2.10.5",
     "nock": "^14.0.5",
