@@ -331,8 +331,8 @@ export class PhaseExecutor {
   async executeMitigate(options: ExecuteOptions): Promise<ExecuteResult> {
     const startTime = Date.now();
     // Increase timeout for multi-file vulnerabilities
-    // Default 5 minutes, but can be extended based on file count
-    let timeout = 300000; // 5 minute base timeout
+    // Default 30 minutes, but can be extended based on file count
+    let timeout = 1800000; // 30 minute base timeout
     
     // Override timeout from environment for testing
     if (process.env.AI_TIMEOUT_OVERRIDE) {
@@ -2194,7 +2194,7 @@ ${validation.falsePositive ?
             options
           );
           
-          const timeout = options.timeout || 300000; // 5 minutes default
+          const timeout = options.timeout || 1800000; // 30 minutes default
           const result = await Promise.race([
             mitigationPromise,
             new Promise((_, reject) => 

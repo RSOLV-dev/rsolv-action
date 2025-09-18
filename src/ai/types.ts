@@ -125,7 +125,7 @@ export interface ClaudeCodeConfig {
   };
   
   /**
-   * Timeout in milliseconds (defaults to 300000 - 5 minutes)
+   * Timeout in milliseconds (defaults to 1800000 - 30 minutes)
    */
   timeout?: number;
   
