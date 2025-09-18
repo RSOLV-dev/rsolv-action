@@ -3,7 +3,9 @@
 # This workflow demonstrates the complete RSOLV security automation pipeline:
 # 1. SCAN: Detect vulnerabilities and create GitHub issues (one per vulnerability type)
 # 2. VALIDATE: Enrich issues with AST analysis and reduce false positives
+#    - RFC-058: Creates validation branches with RED tests (when fully integrated)
 # 3. MITIGATE: Generate targeted security fixes via AI and create focused PRs
+#    - RFC-058: Uses tests from validation branch for test-aware fix generation
 #
 # Usage:
 #   1. Add this file to .github/workflows/ in your repository
@@ -12,8 +14,14 @@
 #
 # Requirements:
 #   - RSOLV_API_KEY secret (get yours at https://rsolv.dev)
-#   - Repository write permissions for GitHub Actions
+#   - Contents: write permission (REQUIRED for RFC-058 validation branch creation)
+#   - Issues: write and Pull-requests: write permissions for GitHub Actions
 #   - "Allow GitHub Actions to create and approve pull requests" enabled
+#
+# RFC-058 Status (September 2025):
+#   - ValidationMode class implemented with branch persistence
+#   - Integration with PhaseExecutor pending
+#   - See rsolv-validate-with-branch-persistence.yml for RFC-058 specific workflow
 
 name: RSOLV Three-Phase Security Workflow
 
