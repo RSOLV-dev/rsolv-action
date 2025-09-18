@@ -17,9 +17,11 @@ import * as path from 'path';
 export class ValidationMode {
   private config: ActionConfig;
   private falsePositiveCache: Set<string>;
-  
-  constructor(config: ActionConfig) {
+  private repoPath: string;
+
+  constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
+    this.repoPath = repoPath || process.cwd();
     this.falsePositiveCache = new Set();
     this.loadFalsePositiveCache();
   }
@@ -77,7 +79,20 @@ export class ValidationMode {
         };
       }
       
-      // Step 5: Run tests to verify they fail (proving vulnerability exists)
+      // Step 5: RFC-058 - Create validation branch and commit tests
+      logger.info(`Creating validation branch for test persistence`);
+      let branchName: string | null = null;
+
+      try {
+        branchName = await this.createValidationBranch(issue);
+        await this.commitTestsToBranch(testResults.generatedTests.testSuite, branchName);
+        logger.info(`✅ Tests committed to validation branch: ${branchName}`);
+      } catch (error) {
+        logger.warn(`Could not create validation branch: ${error}`);
+        // Continue with standard validation if branch creation fails
+      }
+
+      // Step 6: Run tests to verify they fail (proving vulnerability exists)
       logger.info(`Running RED tests to prove vulnerability exists`);
       const validator = new GitBasedTestValidator();
       const validationResult = await validator.validateFixWithTests(
@@ -85,14 +100,14 @@ export class ValidationMode {
         'HEAD',
         testResults.generatedTests.testSuite
       );
-      
-      // Step 6: Determine validation status
+
+      // Step 7: Determine validation status
       // RED tests should FAIL on vulnerable code to prove vulnerability exists
       if (validationResult.success) {
         // Tests passed = no vulnerability = false positive
         logger.info(`Tests passed on vulnerable code - marking as false positive`);
         this.addToFalsePositiveCache(issue);
-        
+
         return {
           issueId: issue.number,
           validated: false,
@@ -104,13 +119,20 @@ export class ValidationMode {
       } else {
         // Tests failed = vulnerability exists = validated
         logger.info(`✅ Vulnerability validated! RED tests failed as expected`);
-        
-        // Store the validation result for mitigation phase
-        await this.storeValidationResult(issue, testResults, validationResult);
-        
+
+        // RFC-058: Store validation result with branch reference
+        if (branchName) {
+          await this.storeValidationResultWithBranch(issue, testResults, validationResult, branchName);
+          logger.info(`Validation result stored with branch reference: ${branchName}`);
+        } else {
+          // Fallback to standard storage
+          await this.storeValidationResult(issue, testResults, validationResult);
+        }
+
         return {
           issueId: issue.number,
           validated: true,
+          branchName: branchName || undefined,
           redTests: testResults.generatedTests.testSuite,
           testResults: validationResult,
           timestamp: new Date().toISOString(),
@@ -179,7 +201,7 @@ export class ValidationMode {
     if (analysisData.filesToModify && analysisData.filesToModify.length > 0) {
       for (const filePath of analysisData.filesToModify) {
         try {
-          const fullPath = path.resolve(process.cwd(), filePath);
+          const fullPath = path.resolve(this.repoPath, filePath);
           if (fs.existsSync(fullPath)) {
             const content = fs.readFileSync(fullPath, 'utf8');
             codebaseFiles.set(filePath, content);
@@ -207,7 +229,7 @@ export class ValidationMode {
 
     try {
       // Create and checkout branch
-      execSync(`git checkout -b ${branchName}`, { cwd: process.cwd() });
+      execSync(`git checkout -b ${branchName}`, { cwd: this.repoPath });
       logger.info(`Created validation branch: ${branchName}`);
 
       return branchName;
@@ -223,7 +245,7 @@ export class ValidationMode {
   async commitTestsToBranch(testContent: string, branchName: string): Promise<void> {
     try {
       // Create test directory structure
-      const testDir = path.join(process.cwd(), '.rsolv', 'tests');
+      const testDir = path.join(this.repoPath, '.rsolv', 'tests');
       fs.mkdirSync(testDir, { recursive: true });
 
       // Write test file
@@ -231,8 +253,8 @@ export class ValidationMode {
       fs.writeFileSync(testPath, testContent);
 
       // Commit to branch
-      execSync('git add .rsolv/tests/', { cwd: process.cwd() });
-      execSync(`git commit -m "Add validation tests for issue"`, { cwd: process.cwd() });
+      execSync('git add .rsolv/tests/', { cwd: this.repoPath });
+      execSync(`git commit -m "Add validation tests for issue"`, { cwd: this.repoPath });
 
       logger.info(`Committed tests to branch ${branchName}`);
     } catch (error) {
@@ -250,7 +272,7 @@ export class ValidationMode {
     validationResult: any,
     branchName: string
   ): Promise<void> {
-    const storageDir = path.join(process.cwd(), '.rsolv', 'validation');
+    const storageDir = path.join(this.repoPath, '.rsolv', 'validation');
     fs.mkdirSync(storageDir, { recursive: true });
 
     const filePath = path.join(storageDir, `issue-${issue.number}.json`);
@@ -277,7 +299,7 @@ export class ValidationMode {
     testResults: any,
     validationResult: any
   ): Promise<void> {
-    const storageDir = path.join(process.cwd(), '.rsolv', 'validation');
+    const storageDir = path.join(this.repoPath, '.rsolv', 'validation');
     fs.mkdirSync(storageDir, { recursive: true });
 
     const filePath = path.join(storageDir, `issue-${issue.number}.json`);
@@ -300,7 +322,7 @@ export class ValidationMode {
    */
   private loadFalsePositiveCache(): void {
     try {
-      const cachePath = path.join(process.cwd(), '.rsolv', 'false-positives.json');
+      const cachePath = path.join(this.repoPath, '.rsolv', 'false-positives.json');
       if (fs.existsSync(cachePath)) {
         const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
         data.entries?.forEach((entry: any) => {
@@ -325,7 +347,7 @@ export class ValidationMode {
     this.falsePositiveCache.add(cacheKey);
     
     // Persist to disk
-    const cachePath = path.join(process.cwd(), '.rsolv', 'false-positives.json');
+    const cachePath = path.join(this.repoPath, '.rsolv', 'false-positives.json');
     const cacheDir = path.dirname(cachePath);
     fs.mkdirSync(cacheDir, { recursive: true });
     
