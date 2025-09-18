@@ -11,7 +11,7 @@
  * 4. The failure occurs because AI had no awareness of test requirements
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../../ai/adapters/claude-code-git.js';
 import { AIConfig } from '../../ai/types.js';
 import { IssueContext } from '../../types/index.js';
@@ -171,7 +171,7 @@ describe('Nodegoat Validation Failure Reproduction', () => {
       const adapter = new GitBasedClaudeCodeAdapter(mockConfig, process.cwd());
 
       // Mock the CLI adapter to return the AI-generated "comprehensive" fix
-      const cliGenerateSolutionSpy = jest.spyOn(adapter.cliAdapter, 'generateSolution');
+      const cliGenerateSolutionSpy = vi.spyOn(adapter.cliAdapter, 'generateSolution');
       cliGenerateSolutionSpy.mockResolvedValue({
         success: true,
         message: 'Generated comprehensive security fix for command injection',
