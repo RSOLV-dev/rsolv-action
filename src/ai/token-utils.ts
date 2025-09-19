@@ -51,8 +51,11 @@ export function resolveMaxTokens(
 
   // Priority 3: Model-specific limits
   const model = config?.model?.toLowerCase();
-  if (model?.includes('sonnet')) {
-    // Claude Sonnet models have 8192 max output tokens
+  if (model?.includes('sonnet-4')) {
+    // Claude Sonnet 4 has 64K output tokens - no need to cap!
+    return DEFAULT_TOKEN_LIMITS[useCase];
+  } else if (model?.includes('sonnet')) {
+    // Claude 3.5 Sonnet and earlier have 8192 max output tokens
     // Use appropriate limit based on use case but cap at 8192
     const defaultLimit = DEFAULT_TOKEN_LIMITS[useCase];
     return Math.min(defaultLimit, 8000); // Use 8000 to be safe
@@ -86,8 +89,13 @@ export function getTestGenerationTokenLimit(
 ): number {
   // Check model-specific limits first
   const model = config?.model?.toLowerCase();
-  if (model?.includes('sonnet')) {
-    // Claude Sonnet models have 8192 max output tokens
+  if (model?.includes('sonnet-4')) {
+    // Claude Sonnet 4 has 64K output tokens - use full test generation limit!
+    const tokens = resolveMaxTokens(options, config, 'TEST_GENERATION');
+    validateTokenLimit(tokens);
+    return tokens;
+  } else if (model?.includes('sonnet')) {
+    // Claude 3.5 Sonnet and earlier have 8192 max output tokens
     // Use slightly less to be safe
     return 8000;
   }
