@@ -53,7 +53,10 @@ export class AITestGenerator {
 
       const prompt = this.constructTestGenerationPrompt(vulnerability, options, fileContent);
       const client = await this.getClient();
-      const response = await client.complete(prompt);
+      // Pass maxTokens explicitly to override client default of 2000
+      const response = await client.complete(prompt, {
+        maxTokens: Math.max(this.aiConfig.maxTokens || 4000, 10000)
+      });
 
       // Parse the AI response to extract test suite
       const testSuite = this.parseTestSuite(response);

@@ -93,13 +93,22 @@ describe('AITestGenerator - maxTokens fix', () => {
 
       generator = new AITestGenerator(lowTokensConfig);
 
-      // Call generateTests to trigger getClient()
+      // Call generateTests to trigger both getClient() and complete()
       await generator.generateTests(mockVulnerability, mockOptions);
 
       // Verify that getAiClient was called with at least 10000 maxTokens
       expect(mockGetAiClient).toHaveBeenCalledWith(
         expect.objectContaining({
           maxTokens: 10000  // Should be upgraded to 10000
+        })
+      );
+
+      // Verify that complete() was called with maxTokens option
+      const mockClient = await mockGetAiClient();
+      expect(mockClient.complete).toHaveBeenCalledWith(
+        expect.any(String), // prompt
+        expect.objectContaining({
+          maxTokens: 10000  // Should pass maxTokens to complete()
         })
       );
     });
