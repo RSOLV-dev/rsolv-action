@@ -219,10 +219,33 @@ Return ONLY the JSON, no explanations.`;
         jsonString += '}'.repeat(openBraces - closeBraces);
       }
 
-      // If the JSON appears truncated (ends mid-string), try to close it
+      // If the JSON appears truncated (ends mid-string), try to close it properly
       if (jsonString.match(/"[^"]*$/) && !jsonString.endsWith('"}')) {
         logger.warn('JSON appears truncated mid-string, attempting to close');
-        jsonString += '"}}}';
+
+        // Count how many structures need closing
+        const needsStringClose = jsonString.match(/"[^"]*$/);
+        const openSquareBrackets = (jsonString.match(/\[/g) || []).length;
+        const closeSquareBrackets = (jsonString.match(/\]/g) || []).length;
+
+        // Close the truncated string first
+        if (needsStringClose) {
+          jsonString += '"';
+        }
+
+        // Close any open arrays
+        if (openSquareBrackets > closeSquareBrackets) {
+          jsonString += ']'.repeat(openSquareBrackets - closeSquareBrackets);
+        }
+
+        // Count open braces again after adding string close
+        openBraces = (jsonString.match(/\{/g) || []).length;
+        closeBraces = (jsonString.match(/\}/g) || []).length;
+
+        // Close any remaining objects
+        if (openBraces > closeBraces) {
+          jsonString += '}'.repeat(openBraces - closeBraces);
+        }
       }
 
       let parsed;
@@ -234,30 +257,53 @@ Return ONLY the JSON, no explanations.`;
         return null;
       }
       
-      // Validate the structure
-      if (!parsed.red || !parsed.green || !parsed.refactor) {
-        logger.error('Invalid test suite structure. Keys found:', Object.keys(parsed));
+      // Validate and reconstruct the structure with fallbacks
+      if (!parsed.red && !parsed.green && !parsed.refactor) {
+        logger.error('Invalid test suite structure. No valid test phases found. Keys:', Object.keys(parsed));
         return null;
       }
 
+      // Log which phases we successfully parsed
+      const phases = [];
+      if (parsed.red) phases.push('red');
+      if (parsed.green) phases.push('green');
+      if (parsed.refactor) phases.push('refactor');
+      logger.info(`Successfully parsed test phases: ${phases.join(', ')}`);
+
+      // Build result with available phases, using placeholders for missing ones
       return {
-        red: {
-          testName: parsed.red.testName,
-          testCode: parsed.red.testCode,
-          attackVector: parsed.red.attackVector,
-          expectedBehavior: parsed.red.expectedBehavior
+        red: parsed.red ? {
+          testName: parsed.red.testName || 'Vulnerability Test',
+          testCode: parsed.red.testCode || '// Test code truncated',
+          attackVector: parsed.red.attackVector || 'Unknown',
+          expectedBehavior: parsed.red.expectedBehavior || 'Should detect vulnerability'
+        } : {
+          testName: 'Vulnerability Test (Generated)',
+          testCode: '// Failed to generate red phase test',
+          attackVector: 'Test generation failed',
+          expectedBehavior: 'Should detect vulnerability'
         },
-        green: {
-          testName: parsed.green.testName,
-          testCode: parsed.green.testCode,
-          validInput: parsed.green.validInput,
-          expectedBehavior: parsed.green.expectedBehavior
+        green: parsed.green ? {
+          testName: parsed.green.testName || 'Valid Input Test',
+          testCode: parsed.green.testCode || '// Test code truncated',
+          validInput: parsed.green.validInput || 'Unknown',
+          expectedBehavior: parsed.green.expectedBehavior || 'Should handle valid input'
+        } : {
+          testName: 'Valid Input Test (Generated)',
+          testCode: '// Failed to generate green phase test',
+          validInput: 'Test generation failed',
+          expectedBehavior: 'Should handle valid input'
         },
-        refactor: {
-          testName: parsed.refactor.testName,
-          testCode: parsed.refactor.testCode,
+        refactor: parsed.refactor ? {
+          testName: parsed.refactor.testName || 'Refactor Test',
+          testCode: parsed.refactor.testCode || '// Test code truncated',
           functionalValidation: parsed.refactor.testCases || [],
-          expectedBehavior: parsed.refactor.expectedBehavior
+          expectedBehavior: parsed.refactor.expectedBehavior || 'Should maintain functionality'
+        } : {
+          testName: 'Refactor Test (Generated)',
+          testCode: '// Failed to generate refactor phase test',
+          functionalValidation: [],
+          expectedBehavior: 'Should maintain functionality'
         }
       };
     } catch (error) {
