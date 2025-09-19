@@ -227,18 +227,15 @@ Return ONLY the JSON, no explanations.`;
       }
 
       // If the JSON appears truncated (ends mid-string), try to close it properly
-      if (!isValidJson && jsonString.match(/"[^"]*$/) && !jsonString.endsWith('"}')) {
+      if (!isValidJson && this.isActuallyTruncatedString(jsonString)) {
         logger.warn('JSON appears truncated mid-string, attempting to close');
 
         // Count how many structures need closing
-        const needsStringClose = jsonString.match(/"[^"]*$/);
         const openSquareBrackets = (jsonString.match(/\[/g) || []).length;
         const closeSquareBrackets = (jsonString.match(/\]/g) || []).length;
 
         // Close the truncated string first
-        if (needsStringClose) {
-          jsonString += '"';
-        }
+        jsonString += '"';
 
         // Close any open arrays
         if (openSquareBrackets > closeSquareBrackets) {
@@ -430,6 +427,38 @@ defmodule SecurityVulnerabilityTest do
   # REFACTOR Test - Ensures functionality
   ${testSuite.refactor.testCode}
 end`;
+  }
+
+  /**
+   * Detects if a JSON string is actually truncated (ends mid-string) vs just contains escaped quotes.
+   * This is more accurate than the regex /\"[^\"]*$/ which doesn't handle escaped quotes.
+   */
+  private isActuallyTruncatedString(jsonString: string): boolean {
+    // Simple heuristic: check if we're in an unterminated string by counting quote states
+    let inString = false;
+    let escape = false;
+
+    for (let i = 0; i < jsonString.length; i++) {
+      const char = jsonString[i];
+
+      if (escape) {
+        escape = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        escape = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+      }
+    }
+
+    // If we end while in a string state, and the string doesn't end with "},
+    // then it's likely actually truncated
+    return inString && !jsonString.trim().endsWith('"}');
   }
 
   /**
