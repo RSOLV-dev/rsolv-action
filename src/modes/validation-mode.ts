@@ -30,8 +30,13 @@ export class ValidationMode {
    * Validate a single vulnerability
    */
   async validateVulnerability(issue: IssueContext): Promise<ValidationResult> {
+    const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
+
     logger.info(`[VALIDATION MODE] Starting validation for issue #${issue.number}`);
-    
+    if (isTestingMode) {
+      logger.info(`[VALIDATION MODE] 🧪 TESTING MODE ENABLED - Will not filter based on test results`);
+    }
+
     try {
       // Step 1: Ensure clean git state
       this.ensureCleanGitState();
@@ -103,19 +108,37 @@ export class ValidationMode {
 
       // Step 7: Determine validation status
       // RED tests should FAIL on vulnerable code to prove vulnerability exists
-      if (validationResult.success) {
-        // Tests passed = no vulnerability = false positive
-        logger.info(`Tests passed on vulnerable code - marking as false positive`);
-        this.addToFalsePositiveCache(issue);
+      const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
 
-        return {
-          issueId: issue.number,
-          validated: false,
-          falsePositiveReason: 'Tests passed on allegedly vulnerable code',
-          testResults: validationResult,
-          timestamp: new Date().toISOString(),
-          commitHash: this.getCurrentCommitHash()
-        };
+      if (validationResult.success) {
+        // Tests passed = no vulnerability = false positive (unless in testing mode)
+        if (isTestingMode) {
+          logger.info(`[TESTING MODE] Tests passed but proceeding anyway for known vulnerable repo`);
+          // In testing mode, still mark as validated to allow full workflow testing
+          return {
+            issueId: issue.number,
+            validated: true,
+            branchName: branchName || undefined,
+            redTests: testResults.generatedTests.testSuite,
+            testResults: validationResult,
+            testingMode: true,
+            testingModeNote: 'Tests passed but proceeding due to RSOLV_TESTING_MODE',
+            timestamp: new Date().toISOString(),
+            commitHash: this.getCurrentCommitHash()
+          };
+        } else {
+          logger.info(`Tests passed on vulnerable code - marking as false positive`);
+          this.addToFalsePositiveCache(issue);
+
+          return {
+            issueId: issue.number,
+            validated: false,
+            falsePositiveReason: 'Tests passed on allegedly vulnerable code',
+            testResults: validationResult,
+            timestamp: new Date().toISOString(),
+            commitHash: this.getCurrentCommitHash()
+          };
+        }
       } else {
         // Tests failed = vulnerability exists = validated
         logger.info(`✅ Vulnerability validated! RED tests failed as expected`);

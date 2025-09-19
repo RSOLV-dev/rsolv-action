@@ -25,6 +25,8 @@ export interface ValidationResult {
   redTests?: any; // VulnerabilityTestSuite
   testResults?: any; // TestResults
   falsePositiveReason?: string;
+  testingMode?: boolean; // RFC-059: Indicates testing mode is enabled
+  testingModeNote?: string; // RFC-059: Explanation when testing mode overrides validation
   timestamp: string;
   commitHash: string;
 }
