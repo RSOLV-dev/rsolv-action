@@ -43,7 +43,7 @@ export async function analyzeIssue(
     // Send request to AI provider
     const response = await aiClient.complete(prompt, {
       temperature: config.aiProvider.temperature || 0.2,
-      maxTokens: config.aiProvider.maxTokens || 2000,
+      maxTokens: config.aiProvider.maxTokens, // Let client use resolveMaxTokens internally
       model: config.aiProvider.model
     });
     

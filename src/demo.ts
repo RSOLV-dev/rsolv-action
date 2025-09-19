@@ -138,7 +138,7 @@ async function main() {
         apiKey,
         model: modelName,
         temperature: 0.2,
-        maxTokens: 4000,
+        // maxTokens omitted - resolved by token-utils
         contextLimit: 100000,
         timeout: 60000,
         useVendedCredentials: !!process.env.RSOLV_API_KEY

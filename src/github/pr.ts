@@ -232,10 +232,10 @@ async function generatePrDescription(
     // Build PR description prompt
     const prompt = buildPrDescriptionPrompt(issue, analysisData, changes);
     
-    // Generate PR description
+    // Generate PR description (using STANDARD token limit for concise descriptions)
     const response = await aiClient.complete(prompt, {
       temperature: 0.3,
-      maxTokens: 1000,
+      // maxTokens omitted - resolves to STANDARD (4000) for PR descriptions
       model: config.aiProvider.model
     });
     

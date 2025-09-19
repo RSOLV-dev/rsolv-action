@@ -103,7 +103,7 @@ class OpenAiClient implements AiClient {
       const baseUrl = this.config.baseUrl || 'https://api.openai.com/v1';
       const model = options.model || this.config.model || 'gpt-4';
       const temperature = options.temperature ?? this.config.temperature ?? 0.2;
-      const maxTokens = options.maxTokens ?? this.config.maxTokens ?? 2000;
+      const maxTokens = resolveMaxTokens(options, this.config, 'STANDARD');
       
       // If in test mode, fall back to mock response
       if (process.env.NODE_ENV === 'test' && !process.env.FORCE_REAL_AI) {

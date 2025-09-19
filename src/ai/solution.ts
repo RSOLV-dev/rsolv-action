@@ -154,7 +154,7 @@ Please ensure your solution addresses these security issues as a priority.`;
     logger.info('Prompt preview (last 500 chars):', prompt.substring(prompt.length - 500));
     const response = await aiClient.complete(prompt, {
       temperature: 0.2,
-      maxTokens: 4000,
+      // maxTokens omitted - let client use resolveMaxTokens with FIX_GENERATION use case
       model: config.aiProvider.model || 'claude-3-sonnet-20240229'
     });
     

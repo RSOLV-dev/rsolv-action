@@ -148,7 +148,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
       provider: 'claude-code',
       model: 'claude-sonnet-4-20250514',  // Claude Sonnet 4 (latest as of Aug 2025)
       temperature: 0.2,
-      maxTokens: 4000,
+      // maxTokens intentionally omitted - resolved by token-utils based on use case
       contextLimit: 100000,
       timeout: 3600000, // 60 minutes for complex analysis, multi-LLM orchestration, and sequential thinking
       useVendedCredentials: true  // Default to using RSOLV vended credentials

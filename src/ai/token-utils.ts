@@ -6,9 +6,14 @@ import { CompletionOptions } from './client.js';
 import { AiProviderConfig } from '../types/index.js';
 
 /**
+ * Token limit use cases
+ */
+export type TokenUseCase = 'STANDARD' | 'TEST_GENERATION' | 'CODE_ANALYSIS' | 'FIX_GENERATION';
+
+/**
  * Default token limits by use case
  */
-export const DEFAULT_TOKEN_LIMITS = {
+export const DEFAULT_TOKEN_LIMITS: Record<TokenUseCase, number> = {
   // For simple completions - sufficient for most API responses
   STANDARD: 4000,
 
@@ -32,7 +37,7 @@ export const DEFAULT_TOKEN_LIMITS = {
 export function resolveMaxTokens(
   options: CompletionOptions,
   config: AiProviderConfig,
-  useCase: keyof typeof DEFAULT_TOKEN_LIMITS = 'STANDARD'
+  useCase: TokenUseCase = 'STANDARD'
 ): number {
   // Priority 1: Explicit override from caller
   if (options.maxTokens !== undefined) {
@@ -44,18 +49,13 @@ export function resolveMaxTokens(
     return config.maxTokens;
   }
 
-  // Priority 3: Use case appropriate default
-  const useCaseDefault = DEFAULT_TOKEN_LIMITS[useCase];
-  if (useCaseDefault !== undefined) {
-    return useCaseDefault;
-  }
-
-  // Priority 4: Safe fallback
-  return DEFAULT_TOKEN_LIMITS.STANDARD;
+  // Priority 3: Use case appropriate default (guaranteed to exist due to types)
+  return DEFAULT_TOKEN_LIMITS[useCase];
 }
 
 /**
  * Validates that a token limit is reasonable
+ * @throws {Error} if token limit is invalid
  */
 export function validateTokenLimit(tokens: number): void {
   if (tokens <= 0) {
