@@ -49,7 +49,16 @@ export function resolveMaxTokens(
     return config.maxTokens;
   }
 
-  // Priority 3: Use case appropriate default (guaranteed to exist due to types)
+  // Priority 3: Model-specific limits
+  const model = config?.model?.toLowerCase();
+  if (model?.includes('sonnet')) {
+    // Claude Sonnet models have 8192 max output tokens
+    // Use appropriate limit based on use case but cap at 8192
+    const defaultLimit = DEFAULT_TOKEN_LIMITS[useCase];
+    return Math.min(defaultLimit, 8000); // Use 8000 to be safe
+  }
+
+  // Priority 4: Use case appropriate default (guaranteed to exist due to types)
   return DEFAULT_TOKEN_LIMITS[useCase];
 }
 
@@ -75,6 +84,14 @@ export function getTestGenerationTokenLimit(
   options: CompletionOptions,
   config: AiProviderConfig
 ): number {
+  // Check model-specific limits first
+  const model = config?.model?.toLowerCase();
+  if (model?.includes('sonnet')) {
+    // Claude Sonnet models have 8192 max output tokens
+    // Use slightly less to be safe
+    return 8000;
+  }
+
   const tokens = resolveMaxTokens(options, config, 'TEST_GENERATION');
   validateTokenLimit(tokens);
   return tokens;
