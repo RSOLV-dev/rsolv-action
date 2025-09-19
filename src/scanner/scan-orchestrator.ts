@@ -41,8 +41,11 @@ export class ScanOrchestrator {
                     (maxIssues && scanResult.groupedVulnerabilities.length > maxIssues ?
                      ` (limited by max_issues: ${maxIssues})` : ''));
 
+        // Slice the groups to respect max_issues limit
+        const groupsToCreate = scanResult.groupedVulnerabilities.slice(0, groupsToProcess);
+
         const createdIssues = await this.issueCreator.createIssuesFromGroups(
-          scanResult.groupedVulnerabilities,
+          groupsToCreate,
           config
         );
 

@@ -35,8 +35,8 @@ describe('ScanOrchestrator - max_issues bug', () => {
     orchestrator = new ScanOrchestrator();
   });
 
-  describe('RED - Shows the bug (should fail after fix)', () => {
-    it('BEFORE FIX: should log incorrect number of groups when max_issues is set', async () => {
+  describe('RED - Shows the bug existed before fix', () => {
+    it.skip('BEFORE FIX: would pass all groups to createIssuesFromGroups ignoring max_issues', async () => {
       const config: ScanConfig = {
         repository: {
           owner: 'test',
@@ -79,28 +79,29 @@ describe('ScanOrchestrator - max_issues bug', () => {
         }
       });
 
+      // Spy on createIssuesFromGroups to see what it's called with
+      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
+        .mockResolvedValue([
+          { number: 1, title: 'Issue 1', url: 'url1' },
+          { number: 2, title: 'Issue 2', url: 'url2' }
+        ]);
+
       await orchestrator.performScan(config);
 
-      // BUG: The orchestrator logs "Creating issues for 8 vulnerability groups"
-      // even though max_issues is 2
-      const createLogCall = mockLogger.info.mock.calls.find(
-        call => call[0].includes('Creating issues for')
+      // BUG: createIssuesFromGroups is called with ALL 8 groups, not just 2
+      expect(createIssuesSpy).toHaveBeenCalledWith(
+        expect.anything(), // This will be all 8 groups - BUG!
+        config
       );
 
-      // This test will PASS showing the bug exists
-      expect(createLogCall).toBeDefined();
-      expect(createLogCall![0]).toContain('8 vulnerability groups');
-
-      // The actual issue creation should only create 2
-      const createdLogCall = mockLogger.info.mock.calls.find(
-        call => call[0].includes('Created') && call[0].includes('issues')
-      );
-      expect(createdLogCall![0]).toContain('2 issues');
+      // This test PASSES showing the bug - it gets all 8 groups
+      const passedGroups = createIssuesSpy.mock.calls[0][0];
+      expect(passedGroups).toHaveLength(8); // Bug: should be 2!
     });
   });
 
   describe('GREEN - After the fix', () => {
-    it('should respect max_issues in all log messages', async () => {
+    it('should only pass limited groups to createIssuesFromGroups', async () => {
       const config: ScanConfig = {
         repository: {
           owner: 'test',
@@ -142,23 +143,23 @@ describe('ScanOrchestrator - max_issues bug', () => {
         }
       });
 
+      // Spy on createIssuesFromGroups to verify it's called with limited groups
+      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
+        .mockResolvedValue([
+          { number: 1, title: 'Issue 1', url: 'url1' },
+          { number: 2, title: 'Issue 2', url: 'url2' }
+        ]);
+
       await orchestrator.performScan(config);
 
-      // After fix: No log should mention "8 vulnerability groups" for creation
-      const allLogCalls = mockLogger.info.mock.calls.map(call => call[0]);
+      // After fix: createIssuesFromGroups should only get 2 groups
+      expect(createIssuesSpy).toHaveBeenCalledTimes(1);
+      const passedGroups = createIssuesSpy.mock.calls[0][0];
+      expect(passedGroups).toHaveLength(2); // Should only get 2 groups!
 
-      // Should NOT find any log saying "Creating issues for 8"
-      const incorrectLog = allLogCalls.find(
-        log => log.includes('Creating issues for 8')
-      );
-      expect(incorrectLog).toBeUndefined();
-
-      // Should find a log that respects max_issues
-      const correctLog = allLogCalls.find(
-        log => log.includes('Creating issues for 2') ||
-               log.includes('Creating issues for') && log.includes('(limited')
-      );
-      expect(correctLog).toBeDefined();
+      // Verify the first 2 groups were passed (not random ones)
+      expect(passedGroups[0].type).toBe('vuln-type-0');
+      expect(passedGroups[1].type).toBe('vuln-type-1');
     });
 
     it('should only create number of issues specified by max_issues', async () => {
