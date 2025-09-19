@@ -1,6 +1,9 @@
 # Base stage with common dependencies
 FROM oven/bun:latest AS base
 
+# Cache-busting argument - use current timestamp or commit SHA to force rebuilds
+ARG CACHE_BUST=1
+
 WORKDIR /app
 
 # Install system dependencies
