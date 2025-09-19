@@ -53,12 +53,19 @@ export class AITestGenerator {
       const prompt = this.constructTestGenerationPrompt(vulnerability, options, fileContent);
       const client = await this.getClient();
       const response = await client.complete(prompt);
-      
+
       // Parse the AI response to extract test suite
       const testSuite = this.parseTestSuite(response);
-      
+
       if (!testSuite) {
-        throw new Error('Failed to parse test suite from AI response');
+        // Don't throw - return failure gracefully to avoid retries
+        logger.warn('Failed to parse test suite from AI response, returning failure');
+        return {
+          success: false,
+          testCode: '',
+          framework: options.testFramework || 'jest',
+          error: 'Failed to parse AI response - response may be truncated'
+        };
       }
 
       // Generate complete test code
@@ -198,7 +205,14 @@ Return ONLY the JSON, no explanations.`;
         jsonString += '"}}}';
       }
 
-      const parsed = JSON.parse(jsonString);
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonString);
+      } catch (parseError) {
+        logger.error('Failed to parse JSON after cleanup attempts:', parseError);
+        logger.debug('Attempted to parse:', jsonString.substring(0, 500));
+        return null;
+      }
       
       // Validate the structure
       if (!parsed.red || !parsed.green || !parsed.refactor) {
