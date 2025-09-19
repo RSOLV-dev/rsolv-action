@@ -225,7 +225,8 @@ export class PhaseExecutor {
         batchSimilar: true,
         issueLabel: this.config.issueLabel || 'rsolv:automate',
         enableASTValidation: process.env.RSOLV_ENABLE_AST_VALIDATION !== 'false',
-        rsolvApiKey: this.config.apiKey
+        rsolvApiKey: this.config.apiKey,
+        maxIssues: this.config.maxIssues
       });
 
       // Store scan results
