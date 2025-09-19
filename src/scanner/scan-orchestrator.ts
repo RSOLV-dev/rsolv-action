@@ -31,13 +31,21 @@ export class ScanOrchestrator {
       
       // Create issues if configured and vulnerabilities found
       if (config.createIssues && scanResult.groupedVulnerabilities.length > 0) {
-        logger.info(`Creating issues for ${scanResult.groupedVulnerabilities.length} vulnerability groups`);
-        
+        // Respect max_issues limit in logging
+        const maxIssues = config.maxIssues;
+        const groupsToProcess = maxIssues ?
+          Math.min(maxIssues, scanResult.groupedVulnerabilities.length) :
+          scanResult.groupedVulnerabilities.length;
+
+        logger.info(`Creating issues for ${groupsToProcess} vulnerability groups` +
+                    (maxIssues && scanResult.groupedVulnerabilities.length > maxIssues ?
+                     ` (limited by max_issues: ${maxIssues})` : ''));
+
         const createdIssues = await this.issueCreator.createIssuesFromGroups(
           scanResult.groupedVulnerabilities,
           config
         );
-        
+
         scanResult.createdIssues = createdIssues;
         logger.info(`Created ${createdIssues.length} issues`);
       }
