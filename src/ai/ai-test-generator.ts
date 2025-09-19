@@ -64,6 +64,12 @@ export class AITestGenerator {
       const maxTokens = getTestGenerationTokenLimit({}, providerConfig);
       const response = await client.complete(prompt, { maxTokens });
 
+      // Log response details for debugging truncation
+      logger.info(`AI response length: ${response.length} characters, maxTokens: ${maxTokens}`);
+      if (response.length > 1000) {
+        logger.debug('Response tail (last 200 chars):', response.substring(response.length - 200));
+      }
+
       // Parse the AI response to extract test suite
       const testSuite = this.parseTestSuite(response);
 
@@ -192,6 +198,9 @@ Return ONLY the JSON, no explanations.`;
         logger.error('No JSON found in AI response. Response preview:', aiResponse.substring(0, 200));
         return null;
       }
+
+      // Log extracted JSON length for debugging
+      logger.debug(`Extracted JSON string length: ${jsonString.length} characters`);
 
       // Clean up common issues
       jsonString = jsonString
