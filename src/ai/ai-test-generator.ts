@@ -8,6 +8,7 @@ import { logger } from '../utils/logger.js';
 import { AiClient, getAiClient } from './client.js';
 import { AIConfig } from './types.js';
 import { AiProviderConfig } from '../types/index.js';
+import { getTestGenerationTokenLimit } from './token-utils.js';
 
 export interface AITestGenerationResult {
   success: boolean;
@@ -34,7 +35,7 @@ export class AITestGenerator {
         apiKey: this.aiConfig.apiKey || '',
         model: this.aiConfig.model || 'claude-3-sonnet',
         temperature: this.aiConfig.temperature,
-        maxTokens: Math.max(this.aiConfig.maxTokens || 4000, 10000), // Ensure at least 10k tokens for test generation
+        maxTokens: this.aiConfig.maxTokens, // Will be resolved by token-utils during completion
         useVendedCredentials: this.aiConfig.useVendedCredentials
       };
 
@@ -53,10 +54,15 @@ export class AITestGenerator {
 
       const prompt = this.constructTestGenerationPrompt(vulnerability, options, fileContent);
       const client = await this.getClient();
-      // Pass maxTokens explicitly to override client default of 2000
-      const response = await client.complete(prompt, {
-        maxTokens: Math.max(this.aiConfig.maxTokens || 4000, 10000)
-      });
+      // Use DRY token resolution specifically for test generation
+      const providerConfig: AiProviderConfig = {
+        provider: this.aiConfig.provider || 'anthropic',
+        apiKey: this.aiConfig.apiKey || '',
+        model: this.aiConfig.model || 'claude-3-sonnet',
+        maxTokens: this.aiConfig.maxTokens
+      };
+      const maxTokens = getTestGenerationTokenLimit({}, providerConfig);
+      const response = await client.complete(prompt, { maxTokens });
 
       // Parse the AI response to extract test suite
       const testSuite = this.parseTestSuite(response);
