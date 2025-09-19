@@ -181,7 +181,7 @@ export async function processIssueWithGit(
 ): Promise<GitProcessingResult> {
   const startTime = Date.now();
   const beforeFixCommit = getLastCommitBeforeFix();
-  
+
   try {
     logger.info(`Processing issue #${issue.number} with git-based approach`);
     logger.info('[DEBUG] Issue has specificVulnerabilities:', !!issue.specificVulnerabilities);
@@ -189,7 +189,26 @@ export async function processIssueWithGit(
       logger.info('[DEBUG] Vulnerability count:', issue.specificVulnerabilities.length);
       logger.info('[DEBUG] First vulnerability:', JSON.stringify(issue.specificVulnerabilities[0], null, 2));
     }
-    
+
+    // RFC-058: Check for test context from validation branch
+    if ((issue as any).testContext) {
+      const testContext = (issue as any).testContext;
+      logger.info('[RFC-058] Test context available from validation branch:', {
+        branchCheckedOut: testContext.branchCheckedOut,
+        testFilesFound: testContext.testFilesFound,
+        hasEnhancedPrompt: !!testContext.enhancedPrompt
+      });
+
+      // Add test context to issue body for AI to use
+      if (testContext.enhancedPrompt) {
+        issue = {
+          ...issue,
+          body: testContext.enhancedPrompt
+        };
+        logger.info('[RFC-058] Enhanced issue with test-aware prompt from validation branch');
+      }
+    }
+
     // Step 1: Ensure clean git state
     const gitStatus = checkGitStatus();
     if (!gitStatus.clean) {

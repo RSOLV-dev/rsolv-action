@@ -279,6 +279,15 @@ describe('Vulnerability Test', () => {
       execSync(`git commit -m "Add validation tests for issue"`, { cwd: this.repoPath });
 
       logger.info(`Committed tests to branch ${branchName}`);
+
+      // RFC-058: Push validation branch to remote for mitigation phase
+      try {
+        execSync(`git push origin ${branchName}`, { cwd: this.repoPath });
+        logger.info(`Pushed validation branch ${branchName} to remote`);
+      } catch (pushError) {
+        logger.warn(`Could not push validation branch to remote: ${pushError}`);
+        // Continue anyway - branch exists locally for immediate use
+      }
     } catch (error) {
       logger.error(`Failed to commit tests to branch ${branchName}:`, error);
       throw error;

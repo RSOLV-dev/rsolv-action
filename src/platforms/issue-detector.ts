@@ -9,44 +9,74 @@ import type { PlatformConfig, UnifiedIssue } from './types.js';
  */
 export async function detectIssuesFromAllPlatforms(config: ActionConfig): Promise<IssueContext[]> {
   const allIssues: IssueContext[] = [];
-  
+  const maxIssues = config.maxIssues;
+
   // Always check GitHub (default behavior)
   try {
     const githubIssues = await detectGitHubIssues(config);
     allIssues.push(...githubIssues);
     logger.info(`Found ${githubIssues.length} GitHub issues`);
+
+    // If we already have enough issues, return early
+    if (maxIssues && allIssues.length >= maxIssues) {
+      logger.info(`Limiting to first ${maxIssues} issues (max_issues: ${maxIssues})`);
+      return allIssues.slice(0, maxIssues);
+    }
   } catch (error) {
     logger.error('Error detecting GitHub issues', error);
   }
-  
-  // Check Jira if configured
+
+  // Check Jira if configured (only if we need more issues)
   if (process.env.JIRA_HOST && process.env.JIRA_EMAIL && process.env.JIRA_API_TOKEN) {
-    try {
-      const jiraIssues = await detectJiraIssues(config);
-      allIssues.push(...jiraIssues);
-      logger.info(`Found ${jiraIssues.length} Jira issues`);
-    } catch (error) {
-      logger.error('Error detecting Jira issues', error);
+    if (!maxIssues || allIssues.length < maxIssues) {
+      try {
+        const jiraIssues = await detectJiraIssues(config);
+        allIssues.push(...jiraIssues);
+        logger.info(`Found ${jiraIssues.length} Jira issues`);
+
+        // Check again if we have enough issues
+        if (maxIssues && allIssues.length >= maxIssues) {
+          logger.info(`Limiting to first ${maxIssues} issues (max_issues: ${maxIssues})`);
+          return allIssues.slice(0, maxIssues);
+        }
+      } catch (error) {
+        logger.error('Error detecting Jira issues', error);
+      }
     }
   }
-  
-  // Check Linear if configured
+
+  // Check Linear if configured (only if we need more issues)
   if (process.env.LINEAR_API_KEY) {
-    try {
-      const linearIssues = await detectLinearIssues(config);
-      allIssues.push(...linearIssues);
-      logger.info(`Found ${linearIssues.length} Linear issues`);
-    } catch (error) {
-      logger.error('Error detecting Linear issues', error);
+    if (!maxIssues || allIssues.length < maxIssues) {
+      try {
+        const linearIssues = await detectLinearIssues(config);
+        allIssues.push(...linearIssues);
+        logger.info(`Found ${linearIssues.length} Linear issues`);
+
+        // Check again if we have enough issues
+        if (maxIssues && allIssues.length >= maxIssues) {
+          logger.info(`Limiting to first ${maxIssues} issues (max_issues: ${maxIssues})`);
+          return allIssues.slice(0, maxIssues);
+        }
+      } catch (error) {
+        logger.error('Error detecting Linear issues', error);
+      }
     }
   }
-  
+
   // Check GitLab if configured (future)
   if (process.env.GITLAB_TOKEN) {
     logger.info('GitLab integration not yet implemented');
   }
-  
+
   logger.info(`Total issues found across all platforms: ${allIssues.length}`);
+
+  // Final limiting if needed
+  if (maxIssues && allIssues.length > maxIssues) {
+    logger.info(`Limiting to first ${maxIssues} issues (max_issues: ${maxIssues})`);
+    return allIssues.slice(0, maxIssues);
+  }
+
   return allIssues;
 }
 

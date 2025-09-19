@@ -110,46 +110,46 @@ ${vulnerability.remediation ? `- Remediation: ${vulnerability.remediation}` : ''
 ${fileContent ? `## Vulnerable Code:\n\`\`\`${options.language}\n${fileContent}\n\`\`\`` : ''}
 
 ## Response Format:
-IMPORTANT: Return ONLY valid JSON without any markdown formatting, code blocks, or explanations.
-Do NOT wrap the JSON in backticks or any other formatting.
+IMPORTANT: Return ONLY valid JSON. Keep test code CONCISE (max 10-15 lines per test).
+Focus on the core vulnerability check, not elaborate setup.
 
-Return a raw JSON object with exactly this structure:
+Return EXACTLY this JSON structure (no markdown, no backticks):
 {
   "red": {
-    "testName": "descriptive test name",
-    "testCode": "complete executable test code",
-    "attackVector": "actual malicious input used",
-    "expectedBehavior": "what should happen"
+    "testName": "short descriptive name",
+    "testCode": "concise test code (10-15 lines max)",
+    "attackVector": "malicious input",
+    "expectedBehavior": "brief description"
   },
   "green": {
-    "testName": "descriptive test name", 
-    "testCode": "complete executable test code",
-    "validInput": "safe input example",
-    "expectedBehavior": "what should happen"
+    "testName": "short descriptive name",
+    "testCode": "concise test code (10-15 lines max)",
+    "validInput": "safe input",
+    "expectedBehavior": "brief description"
   },
   "refactor": {
-    "testName": "descriptive test name",
-    "testCode": "complete executable test code",
-    "testCases": ["list of functional scenarios to test"],
-    "expectedBehavior": "what should happen"
+    "testName": "short descriptive name",
+    "testCode": "concise test code (10-15 lines max)",
+    "testCases": ["scenario1", "scenario2"],
+    "expectedBehavior": "brief description"
   }
 }
 
-The testCode field must contain complete, executable test code that can be run immediately.
-Return ONLY the JSON object, nothing else.`;
+Keep ALL strings properly escaped. Avoid long test code.
+Return ONLY the JSON, no explanations.`;
   }
 
   private parseTestSuite(aiResponse: string): VulnerabilityTestSuite | null {
     try {
       let jsonString: string | null = null;
-      
+
       // Try multiple extraction strategies
       // 1. Check for markdown code blocks with json
       const markdownJsonMatch = aiResponse.match(/```json\s*([\s\S]*?)```/);
       if (markdownJsonMatch) {
         jsonString = markdownJsonMatch[1].trim();
       }
-      
+
       // 2. Check for any markdown code blocks
       if (!jsonString) {
         const markdownMatch = aiResponse.match(/```[\s\S]*?\n([\s\S]*?)```/);
@@ -157,7 +157,7 @@ Return ONLY the JSON object, nothing else.`;
           jsonString = markdownMatch[1].trim();
         }
       }
-      
+
       // 3. Try to extract raw JSON object
       if (!jsonString) {
         const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
@@ -165,12 +165,12 @@ Return ONLY the JSON object, nothing else.`;
           jsonString = jsonMatch[0];
         }
       }
-      
+
       // 4. If response looks like pure JSON, use it directly
       if (!jsonString && aiResponse.trim().startsWith('{')) {
         jsonString = aiResponse.trim();
       }
-      
+
       if (!jsonString) {
         logger.error('No JSON found in AI response. Response preview:', aiResponse.substring(0, 200));
         return null;
@@ -181,6 +181,22 @@ Return ONLY the JSON object, nothing else.`;
         .replace(/^\s*```\s*json?\s*/gm, '') // Remove stray markdown markers
         .replace(/\s*```\s*$/gm, '')
         .trim();
+
+      // Attempt to fix common JSON issues before parsing
+      // Handle truncated responses by closing unclosed structures
+      let openBraces = (jsonString.match(/\{/g) || []).length;
+      let closeBraces = (jsonString.match(/\}/g) || []).length;
+      if (openBraces > closeBraces) {
+        logger.warn(`Fixing unclosed JSON structure: ${openBraces} open, ${closeBraces} closed`);
+        // Add missing closing braces
+        jsonString += '}'.repeat(openBraces - closeBraces);
+      }
+
+      // If the JSON appears truncated (ends mid-string), try to close it
+      if (jsonString.match(/"[^"]*$/) && !jsonString.endsWith('"}')) {
+        logger.warn('JSON appears truncated mid-string, attempting to close');
+        jsonString += '"}}}';
+      }
 
       const parsed = JSON.parse(jsonString);
       

@@ -40,10 +40,31 @@ export class MitigationMode {
       }
 
       try {
-        // Checkout the validation branch
-        execSync(`git checkout ${validationData.branchName}`, { cwd: this.repoPath });
-        logger.info(`Checked out validation branch: ${validationData.branchName}`);
-        return true;
+        // First try to fetch the branch from remote
+        try {
+          execSync(`git fetch origin ${validationData.branchName}`, { cwd: this.repoPath });
+          logger.info(`Fetched validation branch from remote: ${validationData.branchName}`);
+        } catch (fetchError) {
+          logger.warn(`Could not fetch validation branch from remote: ${fetchError}`);
+        }
+
+        // Try to checkout the branch (local or remote)
+        try {
+          // First try local branch
+          execSync(`git checkout ${validationData.branchName}`, { cwd: this.repoPath });
+          logger.info(`Checked out local validation branch: ${validationData.branchName}`);
+          return true;
+        } catch {
+          // If local doesn't exist, try remote
+          try {
+            execSync(`git checkout -b ${validationData.branchName} origin/${validationData.branchName}`, { cwd: this.repoPath });
+            logger.info(`Checked out remote validation branch: origin/${validationData.branchName}`);
+            return true;
+          } catch (remoteError) {
+            logger.warn(`Failed to checkout validation branch from remote: ${remoteError}`);
+            return false;
+          }
+        }
       } catch (error) {
         logger.warn(`Failed to checkout validation branch: ${error}`);
         return false;

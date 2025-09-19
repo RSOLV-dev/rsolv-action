@@ -130,14 +130,20 @@ export class PhaseExecutor {
         } else {
           // Auto-detect issues by label when no specific issues provided
           logger.info('[VALIDATE] No specific issues provided, detecting issues by label');
+
+          // Pass max_issues to detection layer to avoid fetching too many
+          const maxIssues = this.config.maxIssues || 5;
+          logger.info(`[VALIDATE] Detecting up to ${maxIssues} issues with label '${this.config.issueLabel}'`);
+
           const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
-          const detectedIssues = await detectIssuesFromAllPlatforms(this.config);
+          const detectedIssues = await detectIssuesFromAllPlatforms({ ...this.config, maxIssues });
 
           if (detectedIssues.length === 0) {
             throw new Error(`No issues found with label '${this.config.issueLabel}'`);
           }
 
-          logger.info(`[VALIDATE] Found ${detectedIssues.length} issues to validate`);
+          logger.info(`[VALIDATE] Found ${detectedIssues.length} issues to validate (limited by max_issues: ${maxIssues})`);
+
           return this.executeValidateStandalone({ ...options, issues: detectedIssues });
         }
       
@@ -809,9 +815,56 @@ export class PhaseExecutor {
         }
       }
       
+      // RFC-058: Check for validation branch and use test-aware mitigation
+      logger.info(`[MITIGATE] Step 4: Checking for RFC-058 validation branch...`);
+      const { MitigationMode } = await import('../mitigation-mode.js');
+      const mitigationMode = new MitigationMode(this.config);
+
+      // Try to use test-aware fix generation first
+      let useTestAwareFix = false;
+      try {
+        // Fetch remote branches to ensure we can access validation branches
+        logger.info('[MITIGATE] Fetching remote branches for RFC-058 validation branches...');
+        const { execSync } = await import('child_process');
+        try {
+          execSync('git fetch origin', { cwd: process.cwd(), encoding: 'utf8' });
+          logger.info('[MITIGATE] Remote branches fetched successfully');
+        } catch (fetchError) {
+          logger.warn('[MITIGATE] Could not fetch remote branches:', fetchError);
+        }
+
+        // Check if validation branch exists
+        const branchName = `rsolv/validate/issue-${options.issueNumber}`;
+        try {
+          execSync(`git rev-parse --verify origin/${branchName}`, { cwd: process.cwd() });
+          useTestAwareFix = true;
+          logger.info(`[MITIGATE] RFC-058: Validation branch found: origin/${branchName}`);
+        } catch {
+          logger.info('[MITIGATE] No validation branch found, using standard mitigation');
+        }
+      } catch (error) {
+        logger.warn('[MITIGATE] Error checking for validation branch:', error);
+      }
+
+      if (useTestAwareFix) {
+        // RFC-058: Use test-aware fix generation
+        logger.info('[MITIGATE] RFC-058: Using test-aware fix generation with validation tests');
+        const testAwareContext = await mitigationMode.generateTestAwareFix(issue);
+        logger.info('[MITIGATE] Test-aware context generated:', {
+          branchCheckedOut: testAwareContext.branchCheckedOut,
+          testFilesFound: testAwareContext.testFilesFound
+        });
+
+        // Add test context to enhanced issue for AI processor
+        enhancedIssue.testContext = testAwareContext;
+        enhancedIssue.hasValidationTests = testAwareContext.testFilesFound > 0;
+        enhancedIssue.validationBranch = testAwareContext.branchCheckedOut ?
+          mitigationMode.getCurrentBranch() : undefined;
+      }
+
       // Use the actual AI processor to generate fixes
       logger.info(`[MITIGATE] Generating fix for ${vulnerabilities.length} validated vulnerabilities`);
-      
+
       // Check for required credentials before proceeding
       if (this.config.aiProvider?.useVendedCredentials && !this.config.rsolvApiKey) {
         logger.error('[MITIGATE] Vended credentials enabled but RSOLV_API_KEY is missing');
@@ -822,7 +875,7 @@ export class PhaseExecutor {
           data: { credentialError: true }
         };
       }
-      
+
       // Import the processor
       logger.info('[MITIGATE] Step 4: Importing AI processor...');
       const { processIssues } = await import('../../ai/unified-processor.js');

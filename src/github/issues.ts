@@ -65,18 +65,38 @@ export async function detectIssues(config: ActionConfig): Promise<IssueContext[]
     if (!config.issueLabel.includes('rsolv')) {
       labels.push('rsolv');
     }
-    
+
     const allIssues: GitHubIssue[] = [];
     const seenIds = new Set<number>();
-    
+    const maxIssues = config.maxIssues;
+
     // Search for each label
     for (const label of labels) {
-      const issues = await getIssuesWithLabel(owner, repo, label);
+      // Calculate remaining issues needed
+      const remainingIssues = maxIssues ? maxIssues - allIssues.length : undefined;
+
+      // If we already have enough issues, skip this label
+      if (remainingIssues === 0) {
+        break;
+      }
+
+      const issues = await getIssuesWithLabel(owner, repo, label, remainingIssues);
       for (const issue of issues) {
         if (!seenIds.has(issue.id)) {
           seenIds.add(issue.id);
           allIssues.push(issue);
+
+          // Stop if we've reached max_issues
+          if (maxIssues && allIssues.length >= maxIssues) {
+            break;
+          }
         }
+      }
+
+      // Stop if we've reached max_issues
+      if (maxIssues && allIssues.length >= maxIssues) {
+        logger.info(`Reached max_issues limit of ${maxIssues}, stopping issue detection`);
+        break;
       }
     }
     
@@ -143,23 +163,32 @@ interface GitHubIssue {
 async function getIssuesWithLabel(
   owner: string,
   repo: string,
-  label: string
+  label: string,
+  maxIssues?: number
 ): Promise<GitHubIssue[]> {
   try {
     const client = getGitHubClient();
-    
+
+    // Limit per_page to max_issues if specified to avoid fetching too many
+    const perPage = maxIssues ? Math.min(maxIssues, 100) : 100;
+
     // Get open issues with the specified label
     const { data } = await client.issues.listForRepo({
       owner,
       repo,
       labels: label,
       state: 'open',
-      per_page: 100,
+      per_page: perPage,
     });
-    
+
     // Filter out pull requests (GitHub API returns both issues and PRs)
     const issues = data.filter((issue: any) => !issue.pull_request) as GitHubIssue[];
-    
+
+    // Apply max_issues limit if specified
+    if (maxIssues && issues.length > maxIssues) {
+      return issues.slice(0, maxIssues);
+    }
+
     return issues;
   } catch (error) {
     logger.error(`Error getting issues with label ${label}`, error);
