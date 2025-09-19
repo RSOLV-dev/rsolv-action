@@ -235,7 +235,7 @@ class AnthropicClient implements AiClient {
       const baseUrl = this.config.baseUrl || 'https://api.anthropic.com';
       const model = options.model || this.config.model || 'claude-3-sonnet-20240229';
       const temperature = options.temperature ?? this.config.temperature ?? 0.2;
-      const maxTokens = options.maxTokens ?? this.config.maxTokens ?? 2000;
+      const maxTokens = options.maxTokens ?? this.config.maxTokens ?? 10000; // Increased from 2000 to handle AI test generation JSON
       
       // If in test mode, fall back to mock response
       if (process.env.NODE_ENV === 'test' && !process.env.FORCE_REAL_AI) {
