@@ -28,15 +28,16 @@ export class AITestGenerator {
   private async getClient(): Promise<AiClient> {
     if (!this.aiClient) {
       // Convert AIConfig to AiProviderConfig
+      // Override maxTokens for test generation to handle complex JSON responses
       const providerConfig: AiProviderConfig = {
         provider: this.aiConfig.provider || 'anthropic',
         apiKey: this.aiConfig.apiKey || '',
         model: this.aiConfig.model || 'claude-3-sonnet',
         temperature: this.aiConfig.temperature,
-        maxTokens: this.aiConfig.maxTokens,
+        maxTokens: Math.max(this.aiConfig.maxTokens || 4000, 10000), // Ensure at least 10k tokens for test generation
         useVendedCredentials: this.aiConfig.useVendedCredentials
       };
-      
+
       this.aiClient = await getAiClient(providerConfig);
     }
     return this.aiClient;
