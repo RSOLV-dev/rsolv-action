@@ -128,7 +128,17 @@ export class PhaseExecutor {
           // Original validation mode
           return this.executeValidate(options);
         } else {
-          throw new Error('Validation requires issues, --issue, or prior scan');
+          // Auto-detect issues by label when no specific issues provided
+          logger.info('[VALIDATE] No specific issues provided, detecting issues by label');
+          const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
+          const detectedIssues = await detectIssuesFromAllPlatforms(this.config);
+
+          if (detectedIssues.length === 0) {
+            throw new Error(`No issues found with label '${this.config.issueLabel}'`);
+          }
+
+          logger.info(`[VALIDATE] Found ${detectedIssues.length} issues to validate`);
+          return this.executeValidateStandalone({ ...options, issues: detectedIssues });
         }
       
       case 'mitigate':
