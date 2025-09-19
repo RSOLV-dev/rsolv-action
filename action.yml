@@ -90,7 +90,7 @@ runs:
   using: 'docker'
   image: 'Dockerfile'
   env:
-    RSOLV_API_KEY: ${{ inputs.api_key }}
+    RSOLV_API_KEY: ${{ inputs.rsolvApiKey || inputs.api_key }}
     RSOLV_API_URL: ${{ inputs.api_url }}
     RSOLV_CONFIG_PATH: ${{ inputs.config_path }}
     RSOLV_ISSUE_LABEL: ${{ inputs.issue_label }}
