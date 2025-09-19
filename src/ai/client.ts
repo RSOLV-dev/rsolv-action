@@ -252,6 +252,12 @@ class AnthropicClient implements AiClient {
         max_tokens: maxTokens,
         top_p: options.topP ?? 1
       };
+
+      // Log request details for debugging
+      logger.info(`[API Request Debug] Model: ${model}, Temperature: ${temperature}, MaxTokens: ${maxTokens}`);
+      logger.info(`[API Request Debug] Prompt length: ${prompt.length} characters`);
+      logger.debug(`[API Request Debug] Prompt preview (first 500 chars): ${prompt.substring(0, 500)}`);
+      logger.debug(`[API Request Debug] Using vended credentials: ${this.config.useVendedCredentials}`);
       
       // Get API key (vended or direct)
       let apiKey: string | undefined;
@@ -298,10 +304,27 @@ class AnthropicClient implements AiClient {
       
       // Parse the response
       const data = await response.json();
-      
+
       // Extract the completion text
       const result = data.content?.[0]?.text || '';
-      
+
+      // Enhanced debugging for truncation investigation
+      logger.info(`[API Response Debug] Status: ${response.status}, Model: ${model}`);
+      logger.info(`[API Response Debug] Requested maxTokens: ${maxTokens}`);
+      logger.info(`[API Response Debug] Response usage - input: ${data.usage?.input_tokens}, output: ${data.usage?.output_tokens}, total: ${data.usage?.total_tokens}`);
+      logger.info(`[API Response Debug] Response length: ${result.length} characters`);
+      logger.info(`[API Response Debug] Stop reason: ${data.stop_reason}`);
+
+      // Check if response was truncated by the model
+      if (data.stop_reason === 'max_tokens') {
+        logger.warn(`[API Response Debug] Response truncated at max_tokens limit! Output tokens: ${data.usage?.output_tokens}`);
+      }
+
+      // Log the tail of the response to see truncation point
+      if (result.length > 200) {
+        logger.debug(`[API Response Debug] Response tail: ${result.substring(result.length - 200)}`);
+      }
+
       // Report usage if using vended credentials
       if (this.config.useVendedCredentials && this.credentialManager) {
         const tokensUsed = data.usage?.total_tokens || 0;
@@ -310,7 +333,7 @@ class AnthropicClient implements AiClient {
           requestCount: 1
         });
       }
-      
+
       return result;
     } catch (error) {
       logger.error('Error calling AI provider API', error);
