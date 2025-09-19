@@ -1936,6 +1936,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
         }
       }
 
+
       // Generate report if requested
       let report = null;
       if (options.format) {
