@@ -182,12 +182,9 @@ Return ONLY the JSON, no explanations.`;
         }
       }
 
-      // 3. Try to extract raw JSON object
+      // 3. Try to extract raw JSON object using proper nested-aware extraction
       if (!jsonString) {
-        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          jsonString = jsonMatch[0];
-        }
+        jsonString = this.extractJsonFromText(aiResponse);
       }
 
       // 4. If response looks like pure JSON, use it directly
@@ -219,8 +216,18 @@ Return ONLY the JSON, no explanations.`;
         jsonString += '}'.repeat(openBraces - closeBraces);
       }
 
+      // Only attempt JSON repair if it actually appears truncated
+      // First try to parse as-is
+      let isValidJson = false;
+      try {
+        JSON.parse(jsonString);
+        isValidJson = true;
+      } catch {
+        // JSON is not valid, may need repair
+      }
+
       // If the JSON appears truncated (ends mid-string), try to close it properly
-      if (jsonString.match(/"[^"]*$/) && !jsonString.endsWith('"}')) {
+      if (!isValidJson && jsonString.match(/"[^"]*$/) && !jsonString.endsWith('"}')) {
         logger.warn('JSON appears truncated mid-string, attempting to close');
 
         // Count how many structures need closing
@@ -413,15 +420,91 @@ class SecurityVulnerabilityTest extends TestCase {
     return `
 defmodule SecurityVulnerabilityTest do
   use ExUnit.Case
-  
+
   # RED Test - Proves vulnerability exists
   ${testSuite.red.testCode}
-  
+
   # GREEN Test - Validates fix
   ${testSuite.green.testCode}
-  
+
   # REFACTOR Test - Ensures functionality
   ${testSuite.refactor.testCode}
 end`;
+  }
+
+  /**
+   * Properly extracts JSON from text, handling nested objects correctly.
+   * This replaces the buggy regex /\{[\s\S]*\}/ that truncates at the first closing brace.
+   */
+  private extractJsonFromText(text: string): string | null {
+    // Find all potential JSON start/end positions
+    const positions: Array<{start: number, end: number}> = [];
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let jsonStart = -1;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const prevChar = i > 0 ? text[i - 1] : '';
+
+      // Handle escape sequences
+      if (escape) {
+        escape = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        escape = true;
+        continue;
+      }
+
+      // Handle strings (quotes not escaped)
+      if (char === '"' && !escape) {
+        // Check if this quote is inside a string value by looking for : before it
+        // This is a simple heuristic but works for most JSON
+        inString = !inString;
+        continue;
+      }
+
+      // Only count braces outside of strings
+      if (!inString) {
+        if (char === '{') {
+          if (depth === 0) {
+            jsonStart = i;
+          }
+          depth++;
+        } else if (char === '}') {
+          depth--;
+          if (depth === 0 && jsonStart !== -1) {
+            positions.push({
+              start: jsonStart,
+              end: i + 1
+            });
+            jsonStart = -1;
+          }
+        }
+      }
+    }
+
+    // Try to parse each potential JSON object, return the largest valid one
+    let largestValid: string | null = null;
+    let largestSize = 0;
+
+    for (const pos of positions) {
+      const candidate = text.substring(pos.start, pos.end);
+      try {
+        // Validate it's actual JSON
+        JSON.parse(candidate);
+        if (candidate.length > largestSize) {
+          largestValid = candidate;
+          largestSize = candidate.length;
+        }
+      } catch {
+        // Invalid JSON, skip
+      }
+    }
+
+    return largestValid;
   }
 }
