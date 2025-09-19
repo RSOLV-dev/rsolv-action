@@ -146,7 +146,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
     useStructuredPhases: true,  // Default to true - CLI approach works with structured phases
     aiProvider: {
       provider: 'claude-code',
-      model: 'claude-3-5-sonnet-20241022',  // Claude 3.5 Sonnet (latest stable)
+      model: 'claude-3-5-sonnet-20241022',  // Claude 3.5 Sonnet - cost-effective and performant
       temperature: 0.2,
       // maxTokens intentionally omitted - resolved by token-utils based on use case
       contextLimit: 100000,

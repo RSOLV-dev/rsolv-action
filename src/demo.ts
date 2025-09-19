@@ -112,7 +112,7 @@ async function main() {
     switch (provider) {
     case 'anthropic':
       apiKey = process.env.ANTHROPIC_API_KEY || '';
-      modelName = 'claude-3-opus-20240229';
+      modelName = 'claude-3-5-sonnet-20241022';
       break;
     case 'openrouter':
       apiKey = process.env.OPENROUTER_API_KEY || '';
@@ -124,7 +124,7 @@ async function main() {
       break;
     default:
       apiKey = process.env.ANTHROPIC_API_KEY || '';
-      modelName = 'claude-3-opus-20240229';
+      modelName = 'claude-3-5-sonnet-20241022';
     }
     
     // Create proper ActionConfig
