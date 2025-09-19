@@ -15,6 +15,7 @@ export interface ScanConfig {
   enableASTValidation?: boolean;
   astValidationBatchSize?: number;
   rsolvApiKey?: string; // Needed for validation API
+  maxIssues?: number; // Limit number of issues to create
 }
 
 export interface ScanResult {

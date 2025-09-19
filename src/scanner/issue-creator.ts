@@ -14,15 +14,24 @@ export class IssueCreator {
     config: ScanConfig
   ): Promise<CreatedIssue[]> {
     const createdIssues: CreatedIssue[] = [];
-    
+
     if (!config.createIssues) {
       logger.info('Issue creation disabled, skipping');
       return createdIssues;
     }
-    
-    logger.info(`Creating issues for ${groups.length} vulnerability groups`);
-    
-    for (const group of groups) {
+
+    // Apply max_issues limit if specified
+    const maxIssues = config.maxIssues;
+    const groupsToProcess = maxIssues ? groups.slice(0, maxIssues) : groups;
+
+    logger.info(`Creating issues for ${groupsToProcess.length} vulnerability groups` +
+                (maxIssues ? ` (limited by max_issues: ${maxIssues})` : ''));
+
+    if (maxIssues && groups.length > maxIssues) {
+      logger.info(`Note: ${groups.length - maxIssues} vulnerability groups will be skipped due to max_issues limit`);
+    }
+
+    for (const group of groupsToProcess) {
       try {
         const issue = await this.createIssueForGroup(group, config);
         createdIssues.push(issue);
@@ -31,7 +40,7 @@ export class IssueCreator {
         logger.error(`Failed to create issue for ${group.type}:`, error);
       }
     }
-    
+
     return createdIssues;
   }
 
