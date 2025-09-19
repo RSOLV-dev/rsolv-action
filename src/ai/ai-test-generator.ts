@@ -55,11 +55,12 @@ export class AITestGenerator {
       const prompt = this.constructTestGenerationPrompt(vulnerability, options, fileContent);
       const client = await this.getClient();
       // Use DRY token resolution specifically for test generation
+      // Don't pass maxTokens from config - let getTestGenerationTokenLimit use its use-case default
       const providerConfig: AiProviderConfig = {
         provider: this.aiConfig.provider || 'anthropic',
         apiKey: this.aiConfig.apiKey || '',
-        model: this.aiConfig.model || 'claude-3-sonnet',
-        maxTokens: this.aiConfig.maxTokens
+        model: this.aiConfig.model || 'claude-3-sonnet'
+        // Deliberately omitting maxTokens so TEST_GENERATION default (10000) is used
       };
       const maxTokens = getTestGenerationTokenLimit({}, providerConfig);
       const response = await client.complete(prompt, { maxTokens });
