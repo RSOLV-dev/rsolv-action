@@ -641,6 +641,15 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
       const useCLI = process.env.RSOLV_USE_CLI === 'true' ||
                      this.claudeConfig?.useStructuredPhases ||
                      this.config.useVendedCredentials;
+
+      // Debug logging for adapter selection logic
+      logger.info('=== ADAPTER SELECTION DEBUG ===');
+      logger.info(`RSOLV_USE_CLI: ${process.env.RSOLV_USE_CLI}`);
+      logger.info(`useStructuredPhases: ${this.claudeConfig?.useStructuredPhases}`);
+      logger.info(`config.useVendedCredentials: ${this.config.useVendedCredentials}`);
+      logger.info(`useCLI: ${useCLI}`);
+      logger.info('===============================');
+
       let result;
       
       if (useCLI) {

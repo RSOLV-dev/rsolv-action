@@ -1419,6 +1419,12 @@ export class PhaseExecutor {
       while (iteration < maxIterations) {
         logger.info(`[MITIGATE] Fix attempt ${iteration + 1}/${maxIterations}`);
         
+        logger.info('=== MITIGATION ADAPTER CREATION DEBUG ===');
+        logger.info(`useVendedCredentials in aiConfig: ${aiConfig.useVendedCredentials}`);
+        logger.info(`this.config.aiProvider.useVendedCredentials: ${this.config.aiProvider.useVendedCredentials}`);
+        logger.info(`credentialManager exists: ${!!credentialManager}`);
+        logger.info('==========================================');
+
         const adapter = new GitBasedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
         
         // Convert AnalysisData to IssueAnalysis

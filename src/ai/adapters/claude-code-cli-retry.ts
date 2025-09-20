@@ -341,8 +341,8 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
     }
 
     // Anthropic API keys typically start with "sk-ant-api03-"
-    // and are followed by base64-encoded data
-    const anthropicPattern = /^sk-ant-api03-[A-Za-z0-9+/]+=*$/;
+    // and are followed by base64-encoded data (but in practice may include hyphens and other chars)
+    const anthropicPattern = /^sk-ant-api03-[A-Za-z0-9+/\-_]+=*$/;
     return anthropicPattern.test(apiKey);
   }
 
