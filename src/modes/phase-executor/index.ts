@@ -148,8 +148,46 @@ export class PhaseExecutor {
         }
       
       case 'mitigate':
-        // Use the enhanced mitigation that fetches the issue
-        return this.executeMitigate(options);
+        // Support multiple mitigation modes (similar to validation)
+        if (options.issues && options.issues.length > 0) {
+          // Standalone mitigation with issues
+          return this.executeMitigateStandalone(options);
+        } else if (options.issueNumber) {
+          // Single issue mitigation
+          return this.executeMitigate(options);
+        } else {
+          // Auto-detect issues by label when no specific issues provided
+          logger.info('[MITIGATE] No specific issues provided, detecting issues by label');
+
+          // Use the configured label (should be 'rsolv:validated' for mitigation)
+          const labelToUse = this.config.issueLabel || 'rsolv:validated';
+          const maxIssues = this.config.maxIssues || 5;
+          logger.info(`[MITIGATE] Detecting up to ${maxIssues} issues with label '${labelToUse}'`);
+
+          const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
+          const detectedIssues = await detectIssuesFromAllPlatforms({
+            ...this.config,
+            issueLabel: labelToUse,
+            maxIssues
+          });
+
+          if (detectedIssues.length === 0) {
+            logger.warn(`[MITIGATE] No issues found with label '${labelToUse}'`);
+            return {
+              success: false,
+              phase: 'mitigate',
+              error: `No validated issues found with label '${labelToUse}'. Please run validation phase first.`
+            };
+          }
+
+          logger.info(`[MITIGATE] Found ${detectedIssues.length} validated issues to mitigate`);
+
+          return this.executeMitigateStandalone({
+            ...options,
+            issues: detectedIssues,
+            usePriorValidation: true
+          });
+        }
       
       case 'full':
         // Run all phases
