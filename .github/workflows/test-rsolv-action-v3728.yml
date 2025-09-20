@@ -1,0 +1,27 @@
+name: Test RSOLV Action v3.7.28 with Debug Logging
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/test-aware-fix-validation
+
+jobs:
+  test-action-v3728:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Test RSOLV Action v3.7.28 with Debug Logging
+        uses: RSOLV-dev/rsolv-action@v3.7.28
+        with:
+          api-key: ${{ secrets.RSOLV_API_KEY }}
+          ai-provider: claude-code
+          use-vended-credentials: true
+          debug: true
+          # Additional debug environment variables
+        env:
+          RSOLV_DEBUG_CONVERSATION: "true"
+          RSOLV_DEBUG: "true"
