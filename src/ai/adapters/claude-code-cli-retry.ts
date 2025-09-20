@@ -165,6 +165,12 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
         // Check if error is retryable
         if (!this.isRetryableError(result.error, config.retryableErrors)) {
           logger.warn(`Non-retryable error: ${result.error}`);
+
+          // Log additional debugging info for authentication failures
+          if (this.isAuthenticationError(result.error)) {
+            this.logAuthenticationFailureDebugInfo();
+          }
+
           return {
             success: false,
             message: result.error || 'Operation failed',
@@ -235,21 +241,24 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
       const maxKey = process.env.CLAUDE_CODE_MAX_API_KEY;
       if (maxKey) {
         logger.debug('Using Claude Code Max API key from CLAUDE_CODE_MAX_API_KEY');
+        this.validateAndLogCredentialFormat(maxKey, 'CLAUDE_CODE_MAX_API_KEY');
         return maxKey;
       }
-      
+
       // Fall back to regular API key
       const regularKey = process.env.ANTHROPIC_API_KEY;
       if (regularKey) {
         logger.debug('Using regular API key in dev mode (CLAUDE_CODE_MAX_API_KEY not set)');
+        this.validateAndLogCredentialFormat(regularKey, 'ANTHROPIC_API_KEY');
         return regularKey;
       }
-      
+
       return undefined;
     }
-    
+
     // Production mode: prioritize vended credentials over environment
     let apiKey: string | undefined;
+    let credentialSource = 'unknown';
 
     // Try vended credentials first if available
     if (this.credentialManager) {
@@ -259,6 +268,7 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
         logger.info(`Got credential from manager: ${apiKey ? 'API key received (length: ' + apiKey.length + ')' : 'No API key returned'}`);
         if (apiKey) {
           logger.info('Using vended credentials for production mode');
+          credentialSource = 'vended';
         }
       } catch (error) {
         logger.warn('Failed to get vended credentials:', error);
@@ -272,10 +282,111 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
       apiKey = process.env.ANTHROPIC_API_KEY;
       if (apiKey) {
         logger.debug('Using environment ANTHROPIC_API_KEY');
+        credentialSource = 'environment';
       }
     }
-    
+
+    // Validate and log credential format details
+    if (apiKey) {
+      this.validateAndLogCredentialFormat(apiKey, credentialSource);
+    }
+
     return apiKey;
+  }
+
+  /**
+   * Validate credential format and log debugging information
+   * Addresses the "invalid x-api-key" authentication error discovered in workflow 17873531908
+   */
+  private validateAndLogCredentialFormat(apiKey: string, source: string): void {
+    logger.debug('Credential format validation starting...');
+
+    // Log credential metadata (but not the actual key)
+    logger.debug(`API key length: ${apiKey.length}`);
+    logger.debug(`API key prefix: ${apiKey.substring(0, Math.min(8, apiKey.length))}...`);
+    logger.debug(`Credential source: ${source}`);
+
+    // Validate Anthropic API key format
+    const isValidAnthropicFormat = this.isValidAnthropicApiKeyFormat(apiKey);
+
+    if (isValidAnthropicFormat) {
+      logger.debug('Credential format validation: PASSED - Valid Anthropic API key format detected');
+    } else {
+      logger.warn('Credential format validation: FAILED - credential format may be incompatible with Claude CLI');
+      logger.warn(`Expected format: sk-ant-api03-... but got prefix: ${apiKey.substring(0, Math.min(12, apiKey.length))}...`);
+
+      // Log additional debugging info for troubleshooting
+      if (apiKey.startsWith('rsolv_')) {
+        logger.warn('Credential validation: RSOLV vended format detected - may need conversion for Claude CLI compatibility');
+      } else if (apiKey.length < 20) {
+        logger.warn('Credential validation: API key appears too short for Anthropic format');
+      } else {
+        logger.warn('Credential validation: Unknown API key format - proceeding but authentication may fail');
+      }
+    }
+
+    // Log environment variable confirmation for debugging
+    logger.debug(`ANTHROPIC_API_KEY environment variable set: ${!!process.env.ANTHROPIC_API_KEY}`);
+    if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== apiKey) {
+      logger.debug('Note: Using different credential than ANTHROPIC_API_KEY environment variable');
+    }
+  }
+
+  /**
+   * Check if API key matches expected Anthropic format
+   */
+  private isValidAnthropicApiKeyFormat(apiKey: string): boolean {
+    if (!apiKey || typeof apiKey !== 'string') {
+      return false;
+    }
+
+    // Anthropic API keys typically start with "sk-ant-api03-"
+    // and are followed by base64-encoded data
+    const anthropicPattern = /^sk-ant-api03-[A-Za-z0-9+/]+=*$/;
+    return anthropicPattern.test(apiKey);
+  }
+
+  /**
+   * Check if error indicates authentication failure
+   */
+  private isAuthenticationError(error: string | undefined): boolean {
+    if (!error) return false;
+
+    const errorLower = error.toLowerCase();
+    return errorLower.includes('invalid x-api-key') ||
+           errorLower.includes('authentication_error') ||
+           errorLower.includes('401') ||
+           errorLower.includes('unauthorized') ||
+           errorLower.includes('invalid api key');
+  }
+
+  /**
+   * Log comprehensive debugging information when authentication fails
+   * Addresses the "invalid x-api-key" authentication error discovered in workflow 17873531908
+   */
+  private logAuthenticationFailureDebugInfo(): void {
+    logger.debug('Authentication failed - credential debugging info:');
+
+    // Log credential source
+    const isDev = isDevelopmentMode();
+    if (isDev) {
+      logger.debug('Credential source: development mode');
+      logger.debug(`CLAUDE_CODE_MAX_API_KEY set: ${!!process.env.CLAUDE_CODE_MAX_API_KEY}`);
+      logger.debug(`ANTHROPIC_API_KEY set: ${!!process.env.ANTHROPIC_API_KEY}`);
+    } else {
+      logger.debug('Credential source: vended');
+      logger.debug(`Credential manager available: ${!!this.credentialManager}`);
+    }
+
+    // Log environment variable confirmation
+    logger.debug(`ANTHROPIC_API_KEY environment variable set: ${!!process.env.ANTHROPIC_API_KEY}`);
+
+    // Log general debugging context
+    logger.debug(`Working directory: ${this.repoPath}`);
+    logger.debug(`Development mode: ${isDev}`);
+
+    // Note about Claude CLI vs SDK differences
+    logger.debug('Note: Claude CLI authentication differs from SDK - format validation may reveal incompatibilities');
   }
 
 }
