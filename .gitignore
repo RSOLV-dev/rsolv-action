@@ -97,3 +97,4 @@ test-ollama-output*.json
 .projectile
 TAGS
 tags.rsolv/
+nodegoat-demo/
