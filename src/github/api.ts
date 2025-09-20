@@ -288,8 +288,29 @@ export async function addLabels(
     },
     body: JSON.stringify({ labels })
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to add labels: ${response.statusText}`);
+  }
+}
+
+export async function removeLabel(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  label: string
+): Promise<void> {
+  const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/labels/${encodeURIComponent(label)}`;
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github.v3+json'
+    }
+  });
+
+  if (!response.ok && response.status !== 404) {
+    // 404 is ok - label was already removed
+    throw new Error(`Failed to remove label: ${response.statusText}`);
   }
 }

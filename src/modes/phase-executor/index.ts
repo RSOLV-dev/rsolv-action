@@ -1919,6 +1919,56 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             );
           }
 
+          // Update GitHub labels based on validation result
+          try {
+            const { addLabels, removeLabel } = await import('../../github/api.js');
+
+            if (validationData.validated) {
+              // Add 'rsolv:validated' label for validated vulnerabilities
+              logger.info(`[VALIDATE] Adding 'rsolv:validated' label to issue #${issue.number}`);
+              await addLabels(
+                issue.repository.owner,
+                issue.repository.name,
+                issue.number,
+                ['rsolv:validated']
+              );
+
+              // Remove 'rsolv:detected' label if present
+              if (issue.labels && issue.labels.includes('rsolv:detected')) {
+                logger.info(`[VALIDATE] Removing 'rsolv:detected' label from issue #${issue.number}`);
+                await removeLabel(
+                  issue.repository.owner,
+                  issue.repository.name,
+                  issue.number,
+                  'rsolv:detected'
+                );
+              }
+            } else if (validationData.falsePositive) {
+              // Add 'rsolv:false-positive' label for false positives
+              logger.info(`[VALIDATE] Adding 'rsolv:false-positive' label to issue #${issue.number}`);
+              await addLabels(
+                issue.repository.owner,
+                issue.repository.name,
+                issue.number,
+                ['rsolv:false-positive']
+              );
+
+              // Remove 'rsolv:detected' label if present
+              if (issue.labels && issue.labels.includes('rsolv:detected')) {
+                logger.info(`[VALIDATE] Removing 'rsolv:detected' label from issue #${issue.number}`);
+                await removeLabel(
+                  issue.repository.owner,
+                  issue.repository.name,
+                  issue.number,
+                  'rsolv:detected'
+                );
+              }
+            }
+          } catch (labelError) {
+            logger.warn(`[VALIDATE] Failed to update labels for issue #${issue.number}:`, labelError);
+            // Don't fail the validation if label update fails
+          }
+
           validations.push(validationData);
           
         } catch (error) {
