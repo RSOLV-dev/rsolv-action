@@ -1,0 +1,31 @@
+name: Test RSOLV on Nodegoat (Limited Issues)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/test-aware-fix-validation
+
+jobs:
+  test-rsolv-limited:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Test RSOLV Action v3.7.28 on Nodegoat (Limited to 2 Issues)
+        uses: RSOLV-dev/rsolv-action@v3.7.28
+        with:
+          api-key: ${{ secrets.RSOLV_API_KEY }}
+          ai-provider: claude-code
+          use-vended-credentials: true
+          debug: true
+          # Limit to 2 issues to avoid long runs
+          max-issues: 2
+          repository: RSOLV-dev/nodegoat-vulnerability-demo
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          RSOLV_DEBUG_CONVERSATION: "true"
+          RSOLV_DEBUG: "true"
+          RSOLV_TESTING_MODE: "true"
