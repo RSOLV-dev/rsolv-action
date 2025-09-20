@@ -2,7 +2,7 @@
  * Git-based Claude Code adapter that makes direct file edits
  * and commits them to create clean, reviewable PRs
  */
-import { ClaudeCodeAdapter } from './claude-code.js';
+// SDK adapter removed - using CLI only
 import { RetryableClaudeCodeCLI } from './claude-code-cli-retry.js';
 import { IssueContext } from '../../types/index.js';
 import { AIConfig } from '../types.js';
@@ -49,12 +49,17 @@ interface PhaseStatus {
   success: boolean;
 }
 
-export class GitBasedClaudeCodeAdapter extends ClaudeCodeAdapter {
+export class GitBasedClaudeCodeAdapter {
   private cliAdapter: RetryableClaudeCodeCLI;
   private testAwareEnhancement: TestAwareEnhancement;
+  protected config: AIConfig;
+  protected repoPath: string;
+  protected claudeConfig: any;
 
   constructor(config: AIConfig, repoPath: string = process.cwd(), credentialManager?: any) {
-    super(config, repoPath, credentialManager);
+    this.config = config;
+    this.repoPath = repoPath;
+    this.claudeConfig = config.claudeCodeConfig || config.useStructuredPhases ? { useStructuredPhases: config.useStructuredPhases } : undefined;
     this.cliAdapter = new RetryableClaudeCodeCLI(config, repoPath, credentialManager);
     this.testAwareEnhancement = new TestAwareEnhancement();
   }
@@ -532,7 +537,7 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
   /**
    * Parse phase completion status from Claude's messages
    */
-  private parsePhaseCompletion(messages: any[]): PhaseStatus {
+  private parsePhaseCompletion(messages: any[] = []): PhaseStatus {
     let phase1Complete = false;
     let filesEdited = false;
     let jsonProvided = false;
@@ -636,29 +641,10 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
         }
       }
       
-      // Use CLI adapter if configured, with vended credentials, or in structured phases
-      // Per ADR-023: When vended credentials are used, always use Claude CLI
-      const useCLI = process.env.RSOLV_USE_CLI === 'true' ||
-                     this.claudeConfig?.useStructuredPhases ||
-                     this.config.useVendedCredentials;
-
-      // Debug logging for adapter selection logic
-      logger.info('=== ADAPTER SELECTION DEBUG ===');
-      logger.info(`RSOLV_USE_CLI: ${process.env.RSOLV_USE_CLI}`);
-      logger.info(`useStructuredPhases: ${this.claudeConfig?.useStructuredPhases}`);
-      logger.info(`config.useVendedCredentials: ${this.config.useVendedCredentials}`);
-      logger.info(`useCLI: ${useCLI}`);
-      logger.info('===============================');
-
-      let result;
-      
-      if (useCLI) {
-        logger.info('Using Claude Code CLI adapter for file editing...');
-        result = await this.cliAdapter.generateSolution(issueContext, analysis, promptToUse);
-      } else {
-        logger.info('Using Claude Code SDK adapter for file editing...');
-        result = await super.generateSolution(issueContext, analysis, promptToUse);
-      }
+      // Always use CLI adapter - simplified per SDK removal
+      // Per ADR-023 and RFC-012: CLI is the primary mechanism for vended credentials
+      logger.info('Using Claude Code CLI adapter for file editing...');
+      const result = await this.cliAdapter.generateSolution(issueContext, analysis, promptToUse);
       
       // Debug logging for conversation (only when explicitly enabled for security)
       if (process.env.RSOLV_DEBUG_CONVERSATION === 'true') {
@@ -695,9 +681,8 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
         };
       }
       
-      // If using structured phases with SDK (not CLI), validate phase completion
-      // CLI adapter handles file editing differently and doesn't use Edit/MultiEdit tools
-      if (this.claudeConfig?.useStructuredPhases && result.messages && !useCLI) {
+      // Structured phases validation no longer needed - CLI always used
+      if (false) { // Keeping for reference, will be removed
         const phaseStatus = this.parsePhaseCompletion(result.messages);
         
         if (!phaseStatus.filesEdited) {
