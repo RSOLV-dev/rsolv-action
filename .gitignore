@@ -58,3 +58,4 @@ tags
 *.tmp
 *.bak.env.dev
 .env.local
+nodegoat-demo/
