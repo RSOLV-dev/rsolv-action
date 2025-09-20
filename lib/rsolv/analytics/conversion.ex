@@ -12,14 +12,14 @@ defmodule Rsolv.Analytics.Conversion do
     field :session_id, :string
     field :value, :decimal  # For tracking monetary value of conversions
     
-    belongs_to :user, Rsolv.Accounts.User
+    belongs_to :customer, Rsolv.Customers.Customer
     
     timestamps(type: :utc_datetime)
   end
   
   def changeset(conversion, attrs) do
     conversion
-    |> cast(attrs, [:event_name, :properties, :user_id, :session_id, :value])
+    |> cast(attrs, [:event_name, :properties, :customer_id, :session_id, :value])
     |> validate_required([:event_name])
     |> validate_length(:event_name, max: 255)
     |> validate_length(:session_id, max: 255)

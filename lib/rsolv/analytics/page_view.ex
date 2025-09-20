@@ -18,7 +18,7 @@ defmodule Rsolv.Analytics.PageView do
     field :user_agent, :string
     field :referrer, :string
     
-    belongs_to :user, Rsolv.Accounts.User
+    belongs_to :customer, Rsolv.Customers.Customer
     
     timestamps(type: :utc_datetime)
   end
@@ -27,7 +27,7 @@ defmodule Rsolv.Analytics.PageView do
     page_view
     |> cast(attrs, [
       :path, :user_ip, :utm_source, :utm_medium, :utm_campaign,
-      :utm_term, :utm_content, :user_id, :session_id, :user_agent, :referrer
+      :utm_term, :utm_content, :customer_id, :session_id, :user_agent, :referrer
     ])
     |> validate_required([:path])
     |> validate_length(:path, max: 2048)
