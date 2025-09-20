@@ -285,14 +285,18 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
     envConfig.aiProvider = {
       provider: process.env.RSOLV_AI_PROVIDER,
       apiKey: process.env.RSOLV_AI_API_KEY,
-      model: process.env.RSOLV_AI_MODEL || 'claude-3-sonnet-20240229',
-      baseUrl: process.env.RSOLV_AI_BASE_URL
+      model: process.env.RSOLV_AI_MODEL || 'claude-3-5-sonnet-20241022',
+      baseUrl: process.env.RSOLV_AI_BASE_URL,
+      // CRITICAL: Preserve useVendedCredentials flag - default to true per RFC-012
+      useVendedCredentials: process.env.RSOLV_USE_VENDED_CREDENTIALS !== undefined ?
+        process.env.RSOLV_USE_VENDED_CREDENTIALS === 'true' :
+        true  // Default to true - vended credentials are the standard approach
     };
-    
+
     if (process.env.RSOLV_AI_TEMPERATURE) {
       envConfig.aiProvider.temperature = parseFloat(process.env.RSOLV_AI_TEMPERATURE);
     }
-    
+
     if (process.env.RSOLV_AI_MAX_TOKENS) {
       envConfig.aiProvider.maxTokens = parseInt(process.env.RSOLV_AI_MAX_TOKENS, 10);
     }
