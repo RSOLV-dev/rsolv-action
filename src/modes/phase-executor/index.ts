@@ -1144,7 +1144,11 @@ export class PhaseExecutor {
               redTests: validationData.redTests,
               testResults: validationData.testResults,
               timestamp: validationData.timestamp,
-              commitHash: validationData.commitHash
+              commitHash: validationData.commitHash,
+              // Add vulnerability indicators for mitigation phase
+              hasSpecificVulnerabilities: validationData.validated,
+              vulnerabilities: issue.specificVulnerabilities || [],
+              confidence: 'high' as const
             }
           }, {
             repo: `${options.repository!.owner}/${options.repository!.name}`,
