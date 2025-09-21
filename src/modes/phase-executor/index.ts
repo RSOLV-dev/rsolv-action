@@ -1133,6 +1133,25 @@ export class PhaseExecutor {
           logger.info(`Validating issue #${issue.number}`);
           const validationData = await validationMode.validateVulnerability(issue);
 
+          // Store validation results to platform for cross-phase data persistence
+          const commitSha = this.getCurrentCommitSha();
+          await this.storePhaseData('validation', {
+            [`issue-${issue.number}`]: {
+              issueNumber: validationData.issueId,
+              validated: validationData.validated,
+              falsePositiveReason: validationData.falsePositiveReason,
+              branchName: validationData.branchName,
+              redTests: validationData.redTests,
+              testResults: validationData.testResults,
+              timestamp: validationData.timestamp,
+              commitHash: validationData.commitHash
+            }
+          }, {
+            repo: `${options.repository!.owner}/${options.repository!.name}`,
+            issueNumber: issue.number,
+            commitSha
+          });
+
           const validateResult: ExecuteResult = {
             success: true,
             phase: 'validate',
@@ -1169,8 +1188,8 @@ export class PhaseExecutor {
             logger.info(`Mitigating issue #${validation.issue.number}`);
             const mitigateResult = await this.executeMitigate({
               ...options,
-              issueNumber: validation.issue.number,
-              validationData: validation.result.data
+              issueNumber: validation.issue.number
+              // Don't pass validationData - executeMitigate will fetch it from the backend
             });
             mitigationResults.push(mitigateResult);
           } catch (error) {
