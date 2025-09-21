@@ -151,18 +151,38 @@ async function pushCommitToBranch(
   config: ActionConfig
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Configure git authentication if token is available
+    const token = config.repoToken || process.env.GITHUB_TOKEN || process.env.GH_PAT;
+    if (token) {
+      const repoUrl = process.env.GITHUB_REPOSITORY;
+      if (repoUrl) {
+        const [owner, repo] = repoUrl.split('/');
+        const authenticatedUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
+
+        // Set the authenticated remote URL
+        try {
+          execSync(`git remote set-url origin ${authenticatedUrl}`, {
+            encoding: 'utf-8'
+          });
+          logger.debug('Configured git authentication for push');
+        } catch (configError) {
+          logger.warn('Failed to configure git authentication, will try with default settings');
+        }
+      }
+    }
+
     // Create branch from commit
     execSync(`git checkout -b ${branchName} ${commitHash}`, {
       encoding: 'utf-8'
     });
-    
+
     logger.info(`Created branch ${branchName} from commit ${commitHash.substring(0, 8)}`);
-    
+
     // Push the branch
     execSync(`git push origin ${branchName}`, {
       encoding: 'utf-8'
     });
-    
+
     logger.info(`Pushed branch ${branchName} to origin`);
     
     // Switch back to main branch

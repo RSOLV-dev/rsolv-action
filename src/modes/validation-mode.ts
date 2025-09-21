@@ -305,6 +305,18 @@ describe('Vulnerability Test', () => {
 
       // RFC-058: Push validation branch to remote for mitigation phase
       try {
+        // Configure git authentication if token is available
+        const token = process.env.GITHUB_TOKEN || process.env.GH_PAT;
+        if (token && process.env.GITHUB_REPOSITORY) {
+          const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+          const authenticatedUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
+          try {
+            execSync(`git remote set-url origin ${authenticatedUrl}`, { cwd: this.repoPath });
+          } catch (configError) {
+            logger.debug('Could not configure authenticated remote');
+          }
+        }
+
         execSync(`git push origin ${branchName}`, { cwd: this.repoPath });
         logger.info(`Pushed validation branch ${branchName} to remote`);
       } catch (pushError) {

@@ -107,6 +107,19 @@ export async function createEducationalPullRequest(
       logger.info(`Switched to existing branch: ${branchName}`);
     }
     
+    // Configure git authentication if token is available
+    const token = process.env.GITHUB_TOKEN || process.env.GH_PAT;
+    if (token && process.env.GITHUB_REPOSITORY) {
+      const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+      const authenticatedUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
+      try {
+        execSync(`git remote set-url origin ${authenticatedUrl}`, { cwd: process.cwd() });
+        logger.debug('Configured git authentication for push');
+      } catch (configError) {
+        logger.debug('Could not configure authenticated remote');
+      }
+    }
+
     // Push the branch
     try {
       execSync(`git push -u origin ${branchName}`, { cwd: process.cwd() });
