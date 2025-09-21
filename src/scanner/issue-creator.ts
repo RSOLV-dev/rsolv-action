@@ -24,7 +24,7 @@ export class IssueCreator {
     const maxIssues = config.maxIssues;
     const groupsToProcess = maxIssues ? groups.slice(0, maxIssues) : groups;
 
-    logger.info(`Creating issues for ${groupsToProcess.length} vulnerability groups` +
+    logger.info(`Processing ${groupsToProcess.length} vulnerability groups` +
                 (maxIssues ? ` (limited by max_issues: ${maxIssues})` : ''));
 
     if (maxIssues && groups.length > maxIssues) {
@@ -33,15 +33,89 @@ export class IssueCreator {
 
     for (const group of groupsToProcess) {
       try {
-        const issue = await this.createIssueForGroup(group, config);
-        createdIssues.push(issue);
-        logger.info(`Created issue #${issue.number} for ${group.type} vulnerabilities`);
+        // Check for existing issue with duplicate detection enabled
+        const existingIssue = await this.findExistingIssue(group, config);
+
+        if (existingIssue) {
+          logger.info(`Found existing issue #${existingIssue.number} for ${group.type} vulnerabilities`);
+          const updatedIssue = await this.updateExistingIssue(existingIssue, group, config);
+          createdIssues.push(updatedIssue);
+        } else {
+          const issue = await this.createIssueForGroup(group, config);
+          createdIssues.push(issue);
+          logger.info(`Created new issue #${issue.number} for ${group.type} vulnerabilities`);
+        }
       } catch (error) {
-        logger.error(`Failed to create issue for ${group.type}:`, error);
+        logger.error(`Failed to process issue for ${group.type}:`, error);
       }
     }
 
     return createdIssues;
+  }
+
+  private async findExistingIssue(
+    group: VulnerabilityGroup,
+    config: ScanConfig
+  ): Promise<any> {
+    try {
+      // Search for open issues with the vulnerability type label
+      const typeLabel = `rsolv:vuln-${group.type}`;
+      const { data: issues } = await this.github.issues.listForRepo({
+        owner: config.repository.owner,
+        repo: config.repository.name,
+        labels: typeLabel,
+        state: 'open'
+      });
+
+      // Return the first matching issue (there should only be one per type)
+      return issues.length > 0 ? issues[0] : null;
+    } catch (error) {
+      logger.warn(`Failed to check for existing issues: ${error}`);
+      return null;
+    }
+  }
+
+  private async updateExistingIssue(
+    existingIssue: any,
+    group: VulnerabilityGroup,
+    config: ScanConfig
+  ): Promise<CreatedIssue> {
+    const title = this.generateIssueTitle(group);
+    const body = this.generateIssueBody(group, config);
+
+    // Update the issue with new information
+    await this.github.issues.update({
+      owner: config.repository.owner,
+      repo: config.repository.name,
+      issue_number: existingIssue.number,
+      title,
+      body
+    });
+
+    // Add a comment showing the delta
+    const comment = this.generateUpdateComment(group, existingIssue);
+    await this.github.issues.createComment({
+      owner: config.repository.owner,
+      repo: config.repository.name,
+      issue_number: existingIssue.number,
+      body: comment
+    });
+
+    return {
+      number: existingIssue.number,
+      title,
+      url: existingIssue.html_url,
+      vulnerabilityType: group.type,
+      fileCount: group.files.length
+    };
+  }
+
+  private generateUpdateComment(group: VulnerabilityGroup, existingIssue: any): string {
+    const timestamp = new Date().toISOString();
+    return `## 📊 Scan Update - ${timestamp}\n\n` +
+           `**Updated vulnerability count**: ${group.count} instances in ${group.files.length} files\n\n` +
+           `This issue has been updated with the latest scan results. ` +
+           `The vulnerability details above reflect the current state of the codebase.`;
   }
 
   private async createIssueForGroup(
@@ -50,16 +124,22 @@ export class IssueCreator {
   ): Promise<CreatedIssue> {
     const title = this.generateIssueTitle(group);
     const body = this.generateIssueBody(group, config);
-    
-    // Build labels array - add rsolv:automate for demo mode
-    const labels = ['rsolv:detected', 'security', group.severity, 'automated-scan'];
-    
+
+    // Build labels array - add type-specific label for duplicate detection
+    const labels = [
+      'rsolv:detected',
+      `rsolv:vuln-${group.type}`,  // Type-specific label for duplicate detection
+      'security',
+      group.severity,
+      'automated-scan'
+    ];
+
     // Add rsolv:automate label if in demo mode or auto-fix is enabled
     if (process.env.RSOLV_DEMO_MODE === 'true' || process.env.RSOLV_AUTO_FIX === 'true') {
       labels.push('rsolv:automate');
       labels.push('demo');
     }
-    
+
     const { data: issue } = await this.github.issues.create({
       owner: config.repository.owner,
       repo: config.repository.name,
@@ -67,7 +147,7 @@ export class IssueCreator {
       body,
       labels
     });
-    
+
     return {
       number: issue.number,
       title: issue.title,
