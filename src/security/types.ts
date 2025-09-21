@@ -47,6 +47,7 @@ export interface Vulnerability {
   confidence: number; // 0-100
   filePath?: string;
   snippet?: string;
+  isVendor?: boolean; // True if vulnerability is in vendor/third-party code
 }
 
 export interface SecurityScanResult {

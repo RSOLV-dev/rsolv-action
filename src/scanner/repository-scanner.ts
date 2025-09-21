@@ -5,14 +5,17 @@ import type { FileToScan, ScanConfig, ScanResult, VulnerabilityGroup } from './t
 import type { Vulnerability } from '../security/types.js';
 import { createPatternSource } from '../security/pattern-source.js';
 import { ASTValidator } from './ast-validator.js';
+import { VendorDetector } from '../vendor/vendor-detector.js';
 
 export class RepositoryScanner {
   private detector: SecurityDetectorV2;
   private github: ReturnType<typeof getGitHubClient>;
+  private vendorDetector: VendorDetector;
 
   constructor() {
     this.detector = new SecurityDetectorV2(createPatternSource());
     this.github = getGitHubClient();
+    this.vendorDetector = new VendorDetector();
   }
 
   async scan(config: ScanConfig): Promise<ScanResult> {
@@ -37,17 +40,26 @@ export class RepositoryScanner {
       
       if (file.language && this.isSupportedLanguage(file.language)) {
         try {
+          // Check if this is a vendor file
+          const isVendorFile = await this.vendorDetector.isVendorFile(file.path);
+
+          if (isVendorFile) {
+            logger.info(`Detected vendor file: ${file.path}`);
+          }
+
           const fileVulnerabilities = await this.detector.detect(file.content, file.language);
-          
-          // Add file path to each vulnerability
+
+          // Add file path and vendor flag to each vulnerability
           fileVulnerabilities.forEach(vuln => {
             vuln.filePath = file.path;
+            vuln.isVendor = isVendorFile;
           });
-          
+
           vulnerabilities.push(...fileVulnerabilities);
-          
+
           if (fileVulnerabilities.length > 0) {
-            logger.info(`Found ${fileVulnerabilities.length} vulnerabilities in ${file.path}`);
+            const vendorNote = isVendorFile ? ' (vendor file)' : '';
+            logger.info(`Found ${fileVulnerabilities.length} vulnerabilities in ${file.path}${vendorNote}`);
           }
         } catch (error) {
           logger.error(`Error scanning file ${file.path}:`, error);
@@ -75,9 +87,14 @@ export class RepositoryScanner {
       logger.warn('AST validation is enabled but skipped - missing RSOLV API key');
     }
     
+    // Log vendor vs application vulnerability breakdown
+    const vendorVulns = vulnerabilities.filter(v => v.isVendor);
+    const appVulns = vulnerabilities.filter(v => !v.isVendor);
+    logger.info(`Vulnerability breakdown: ${appVulns.length} in application code, ${vendorVulns.length} in vendor files`);
+
     // Group vulnerabilities by type
     const groupedVulnerabilities = this.groupVulnerabilities(vulnerabilities);
-    
+
     const scanTime = Date.now() - startTime;
     logger.info(`Scan completed in ${scanTime}ms. Found ${vulnerabilities.length} vulnerabilities`);
     
@@ -200,24 +217,27 @@ export class RepositoryScanner {
 
   private groupVulnerabilities(vulnerabilities: Vulnerability[]): VulnerabilityGroup[] {
     const groups = new Map<string, VulnerabilityGroup>();
-    
+
     for (const vuln of vulnerabilities) {
-      const key = `${vuln.type}-${vuln.severity}`;
-      
+      // Group vendor and application vulnerabilities separately
+      const vendorSuffix = vuln.isVendor ? '-vendor' : '-app';
+      const key = `${vuln.type}-${vuln.severity}${vendorSuffix}`;
+
       if (!groups.has(key)) {
         groups.set(key, {
           type: vuln.type,
           severity: vuln.severity,
           count: 0,
           files: [],
-          vulnerabilities: []
+          vulnerabilities: [],
+          isVendor: vuln.isVendor || false
         });
       }
-      
+
       const group = groups.get(key)!;
       group.count++;
       group.vulnerabilities.push(vuln);
-      
+
       if (vuln.filePath && !group.files.includes(vuln.filePath)) {
         group.files.push(vuln.filePath);
       }

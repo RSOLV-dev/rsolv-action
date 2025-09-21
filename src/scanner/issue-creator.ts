@@ -20,15 +20,33 @@ export class IssueCreator {
       return createdIssues;
     }
 
+    // Separate vendor and application vulnerability groups
+    const vendorGroups = groups.filter(g => g.isVendor);
+    const appGroups = groups.filter(g => !g.isVendor);
+
+    logger.info(`Found ${appGroups.length} application vulnerability groups and ${vendorGroups.length} vendor vulnerability groups`);
+
+    // Only create issues for application vulnerabilities by default
+    // Vendor vulnerabilities should be handled differently (library updates, not patches)
+    const groupsToCreateIssues = appGroups;
+
     // Apply max_issues limit if specified
     const maxIssues = config.maxIssues;
-    const groupsToProcess = maxIssues ? groups.slice(0, maxIssues) : groups;
+    const groupsToProcess = maxIssues ? groupsToCreateIssues.slice(0, maxIssues) : groupsToCreateIssues;
 
-    logger.info(`Processing ${groupsToProcess.length} vulnerability groups` +
+    logger.info(`Processing ${groupsToProcess.length} application vulnerability groups` +
                 (maxIssues ? ` (limited by max_issues: ${maxIssues})` : ''));
 
-    if (maxIssues && groups.length > maxIssues) {
-      logger.info(`Note: ${groups.length - maxIssues} vulnerability groups will be skipped due to max_issues limit`);
+    if (maxIssues && groupsToCreateIssues.length > maxIssues) {
+      logger.info(`Note: ${groupsToCreateIssues.length - maxIssues} vulnerability groups will be skipped due to max_issues limit`);
+    }
+
+    // Log vendor vulnerabilities that won't be processed
+    if (vendorGroups.length > 0) {
+      logger.info(`Skipping ${vendorGroups.length} vendor vulnerability groups (require library updates, not code patches)`);
+      for (const vendorGroup of vendorGroups) {
+        logger.info(`  - ${vendorGroup.type} in ${vendorGroup.files.length} vendor files (${vendorGroup.count} instances)`);
+      }
     }
 
     for (const group of groupsToProcess) {

@@ -35,6 +35,7 @@ export interface VulnerabilityGroup {
   count: number;
   files: string[];
   vulnerabilities: Vulnerability[];
+  isVendor?: boolean; // True if all vulnerabilities in group are from vendor files
 }
 
 export interface CreatedIssue {
