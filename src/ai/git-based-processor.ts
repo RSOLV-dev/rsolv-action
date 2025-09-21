@@ -451,18 +451,42 @@ export async function processIssueWithGit(
         if (validationPassed) {
           break; // Exit loop, fix is good
         }
-        
+
         // Step 5b: Fix failed validation, prepare for retry
         iteration++;
         if (iteration >= maxIterations) {
-          // Rollback all attempts
+          const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
+
+          // In test mode, create PR even with failed validation
+          if (isTestingMode) {
+            logger.warn(`[TEST MODE] Fix validation failed after ${maxIterations} attempts, but creating PR anyway for inspection`);
+
+            const errorMessage = validationPassed === false && vulnerabilityType === 'XSS' && filePath.includes('config/')
+              ? 'Static analysis shows vulnerable patterns still present (document.write with location.host)'
+              : 'Fix validation failed - tests did not pass';
+
+            // Don't rollback in test mode - keep the attempted fix
+            logger.info(`[TEST MODE] Keeping attempted fix for PR creation`);
+
+            // Store test mode information in solution for PR creation
+            if (solution) {
+              (solution as any).isTestMode = true;
+              (solution as any).validationFailed = true;
+              (solution as any).testModeNote = `Validation failed: ${errorMessage}`;
+            }
+
+            // Break out of loop to proceed to PR creation
+            break;
+          }
+
+          // Normal mode: rollback and fail
           logger.warn(`Fix validation failed after ${maxIterations} attempts, rolling back`);
           execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
-          
-          const errorMessage = validationPassed === false && vulnerabilityType === 'XSS' && filePath.includes('config/') 
+
+          const errorMessage = validationPassed === false && vulnerabilityType === 'XSS' && filePath.includes('config/')
             ? 'Static analysis shows vulnerable patterns still present (document.write with location.host)'
             : 'Fix validation failed - tests did not pass';
-          
+
           return {
             issueId: issue.id,
             success: false,
@@ -541,7 +565,14 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
     
     // Use educational PR creation for better user engagement
     const useEducationalPR = process.env.RSOLV_EDUCATIONAL_PR !== 'false';
-    
+
+    // Extract test mode flags from solution if present
+    const testModeFlags = (solution as any)?.isTestMode ? {
+      isTestMode: (solution as any).isTestMode,
+      validationFailed: (solution as any).validationFailed,
+      testModeNote: (solution as any).testModeNote
+    } : {};
+
     const prResult = useEducationalPR && isGitSolutionResult(solution!)
       ? await createEducationalPullRequest(
           issue,
@@ -551,7 +582,8 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             vulnerabilityType: analysisData.vulnerabilityType || 'security',
             severity: analysisData.severity || 'medium',
             cwe: analysisData.cwe,
-            isAiGenerated: analysisData.isAiGenerated
+            isAiGenerated: analysisData.isAiGenerated,
+            ...testModeFlags
           },
           config,
           solution!.diffStats
@@ -559,7 +591,10 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
       : isGitSolutionResult(solution!) ? await createPullRequestFromGit(
           issue,
           solution!.commitHash!,
-          solution!.summary!,
+          {
+            ...solution!.summary!,
+            ...testModeFlags
+          },
           config,
           solution!.diffStats
         ) : null;

@@ -32,6 +32,9 @@ export async function createPullRequestFromGit(
     description: string;
     securityImpact?: string;
     tests?: string[];
+    isTestMode?: boolean;
+    validationFailed?: boolean;
+    testModeNote?: string;
   },
   config: ActionConfig,
   diffStats?: {
@@ -63,10 +66,11 @@ export async function createPullRequestFromGit(
     const [owner, repo] = issue.repository.fullName.split('/');
     
     try {
+      const prTitlePrefix = summary.isTestMode && summary.validationFailed ? '[TEST MODE] ' : '';
       const { data: pullRequest } = await github.pulls.create({
         owner,
         repo,
-        title: `[RSOLV] ${summary.title} (fixes #${issue.number})`,
+        title: `${prTitlePrefix}[RSOLV] ${summary.title} (fixes #${issue.number})`,
         body: prBody,
         head: branchName,
         base: issue.repository.defaultBranch || 'main',
@@ -224,6 +228,9 @@ function generateGitPrDescription(
       severity: string;
       cwe?: string;
     };
+    isTestMode?: boolean;
+    validationFailed?: boolean;
+    testModeNote?: string;
   },
   diffStats?: {
     insertions: number;
@@ -234,7 +241,20 @@ function generateGitPrDescription(
   const sections: string[] = [];
   
   // Header
-  sections.push(`# ${summary.title}\n`);
+  const titlePrefix = summary.isTestMode && summary.validationFailed ? '[TEST MODE] ' : '';
+  sections.push(`# ${titlePrefix}${summary.title}\n`);
+
+  // Test mode warning if validation failed
+  if (summary.isTestMode && summary.validationFailed) {
+    sections.push('> ⚠️ **TEST MODE**: This PR was created despite validation failures to allow inspection of the attempted fix.\n');
+    sections.push('> \n');
+    if (summary.testModeNote) {
+      sections.push(`> **Validation Issue:** ${summary.testModeNote}\n`);
+    }
+    sections.push('\n');
+    sections.push('---\n\n');
+  }
+
   sections.push(`**Fixes:** #${issue.number}\n`);
   
   // Summary

@@ -1566,12 +1566,19 @@ export class PhaseExecutor {
         );
         
         if (!solution.success) {
-          return {
-            success: false,
-            phase: 'mitigate',
-            message: solution.message,
-            error: solution.error
-          };
+          // Check if this is a test mode validation failure that we should proceed with
+          const isTestMode = process.env.RSOLV_TESTING_MODE === 'true';
+          if (isTestMode && solution.isTestMode && solution.validationFailed) {
+            logger.info('[TEST MODE] Solution failed validation but proceeding to create PR for inspection');
+            // Continue to PR creation with the test mode flag
+          } else {
+            return {
+              success: false,
+              phase: 'mitigate',
+              message: solution.message,
+              error: solution.error
+            };
+          }
         }
         
         // Validate fix if tests were generated
@@ -1606,8 +1613,19 @@ export class PhaseExecutor {
           // Fix failed, prepare for retry
           iteration++;
           if (iteration >= maxIterations) {
+            const isTestMode = process.env.RSOLV_TESTING_MODE === 'true';
+
+            if (isTestMode) {
+              logger.warn(`[TEST MODE] Fix validation failed after ${maxIterations} attempts, but creating PR anyway for inspection`);
+              // Keep the fix (don't rollback) and proceed to PR creation
+              solution.isTestMode = true;
+              solution.validationFailed = true;
+              solution.testModeNote = `Validation failed after ${maxIterations} attempts: ${this.explainTestFailureFromResult(validation)}`;
+              break; // Exit loop and proceed to PR creation
+            }
+
             execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
-            
+
             return {
               success: false,
               phase: 'mitigate',

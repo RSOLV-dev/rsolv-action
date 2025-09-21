@@ -76,6 +76,9 @@ export async function createEducationalPullRequest(
     cwe?: string;
     tests?: string[];
     isAiGenerated?: boolean;
+    isTestMode?: boolean;
+    validationFailed?: boolean;
+    testModeNote?: string;
   },
   config: ActionConfig,
   diffStats?: {
@@ -139,10 +142,11 @@ export async function createEducationalPullRequest(
     const [owner, repo] = issue.repository.fullName.split('/');
     
     try {
+      const prTitlePrefix = summary.isTestMode && summary.validationFailed ? '[TEST MODE] ' : '';
       const { data: pullRequest } = await github.pulls.create({
         owner,
         repo,
-        title: `[RSOLV] ${summary.title} (fixes #${issue.number})`,
+        title: `${prTitlePrefix}[RSOLV] ${summary.title} (fixes #${issue.number})`,
         body: prBody,
         head: branchName,
         base: issue.repository.defaultBranch || 'main',
@@ -303,8 +307,22 @@ function generateEducationalPrBody(
   const sections: string[] = [];
   
   // Header
-  sections.push(`# ${summary.title}`);
+  const titlePrefix = summary.isTestMode && summary.validationFailed ? '[TEST MODE] ' : '';
+  sections.push(`# ${titlePrefix}${summary.title}`);
   sections.push('');
+
+  // Test mode warning if validation failed
+  if (summary.isTestMode && summary.validationFailed) {
+    sections.push('> ⚠️ **TEST MODE**: This PR was created despite validation failures to allow inspection of the attempted fix.');
+    sections.push('> ');
+    if (summary.testModeNote) {
+      sections.push(`> **Validation Issue:** ${summary.testModeNote}`);
+    }
+    sections.push('');
+    sections.push('---');
+    sections.push('');
+  }
+
   sections.push(`**Fixes:** #${issue.number}`);
   sections.push(`**Severity:** ${summary.severity || 'Medium'}`);
   if (summary.cwe) {
