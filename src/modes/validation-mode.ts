@@ -317,8 +317,8 @@ describe('Vulnerability Test', () => {
           }
         }
 
-        execSync(`git push origin ${branchName}`, { cwd: this.repoPath });
-        logger.info(`Pushed validation branch ${branchName} to remote`);
+        execSync(`git push -f origin ${branchName}`, { cwd: this.repoPath });
+        logger.info(`Pushed validation branch ${branchName} to remote (force push to ensure clean state)`);
       } catch (pushError) {
         logger.warn(`Could not push validation branch to remote: ${pushError}`);
         // Continue anyway - branch exists locally for immediate use

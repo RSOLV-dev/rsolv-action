@@ -123,12 +123,30 @@ export async function createEducationalPullRequest(
       }
     }
 
-    // Push the branch
+    // Push the branch with better error handling
     try {
       execSync(`git push -u origin ${branchName}`, { cwd: process.cwd() });
       logger.info(`Pushed branch: ${branchName}`);
-    } catch (error) {
-      logger.warn('Failed to push branch, may already exist', error);
+    } catch (error: any) {
+      const errorMessage = error.message || String(error);
+
+      // If branch already exists or updates rejected, try force push
+      if (errorMessage.includes('Updates were rejected') ||
+          errorMessage.includes('already exists') ||
+          errorMessage.includes('non-fast-forward')) {
+        logger.info('Branch exists on remote, attempting force push');
+        try {
+          execSync(`git push -f origin ${branchName}`, { cwd: process.cwd() });
+          logger.info(`Force pushed branch: ${branchName}`);
+        } catch (forcePushError) {
+          logger.error('Force push also failed', forcePushError);
+          throw forcePushError;
+        }
+      } else {
+        // Log full error for debugging
+        logger.error('Failed to push branch', { error: errorMessage, branch: branchName });
+        throw error;
+      }
     }
     
     // Generate educational content
