@@ -170,6 +170,9 @@ export interface GitProcessingResult {
     filesChanged: number;
   };
   error?: string;
+  isTestMode?: boolean;
+  validationFailed?: boolean;
+  testModeNote?: string;
 }
 
 /**

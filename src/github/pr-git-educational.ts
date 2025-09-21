@@ -296,6 +296,9 @@ function generateEducationalPrBody(
     severity?: string;
     cwe?: string;
     tests?: string[];
+    isTestMode?: boolean;
+    validationFailed?: boolean;
+    testModeNote?: string;
   },
   educationalContent: string,
   diffStats?: {

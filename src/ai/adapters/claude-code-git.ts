@@ -34,6 +34,9 @@ export interface GitSolutionResult {
     tests: string[];
   };
   error?: string;
+  isTestMode?: boolean;
+  validationFailed?: boolean;
+  testModeNote?: string;
 }
 
 /**
