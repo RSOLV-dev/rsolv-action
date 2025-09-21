@@ -119,8 +119,9 @@ export class PhaseExecutor {
     switch (mode) {
       case 'scan':
         return this.executeScan(options);
-      
+
       case 'validate':
+      case 'validate-only':
         // Support multiple validation modes
         if (options.issues && options.issues.length > 0) {
           // Standalone validation with issues
@@ -147,8 +148,9 @@ export class PhaseExecutor {
 
           return this.executeValidateStandalone({ ...options, issues: detectedIssues });
         }
-      
+
       case 'mitigate':
+      case 'fix-only':
         // Support multiple mitigation modes (similar to validation)
         if (options.issues && options.issues.length > 0) {
           // Standalone mitigation with issues
@@ -190,10 +192,82 @@ export class PhaseExecutor {
           });
         }
       
+      case 'validate-and-fix':
+        // Run validate and mitigate for specific issues
+        // This mode is used when issue_number is provided with the selective workflow
+        if (options.issueNumber) {
+          // Fetch the specific issue
+          logger.info(`[VALIDATE-AND-FIX] Processing specific issue #${options.issueNumber}`);
+          const { getIssue } = await import('../../github/api.js');
+          const [owner, name] = process.env.GITHUB_REPOSITORY!.split('/');
+          const issue = await getIssue(owner, name, options.issueNumber);
+
+          if (!issue) {
+            throw new Error(`Issue #${options.issueNumber} not found`);
+          }
+
+          // First validate
+          const validateResult = await this.executeValidateStandalone({
+            ...options,
+            issues: [issue]
+          });
+
+          if (!validateResult.success) {
+            return validateResult;
+          }
+
+          // Then mitigate if validation succeeded
+          const mitigateResult = await this.executeMitigateStandalone({
+            ...options,
+            issues: [issue],
+            usePriorValidation: true
+          });
+
+          return {
+            success: mitigateResult.success,
+            phase: 'validate-and-fix',
+            message: `Processed issue #${options.issueNumber}: validation ${validateResult.success ? 'succeeded' : 'failed'}, mitigation ${mitigateResult.success ? 'succeeded' : 'failed'}`,
+            data: {
+              validation: validateResult.data,
+              mitigation: mitigateResult.data
+            }
+          };
+        } else {
+          // Auto-detect issues if no specific issue provided
+          logger.info('[VALIDATE-AND-FIX] No specific issue provided, detecting issues by label');
+          const maxIssues = this.config.maxIssues || 5;
+          const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
+          const detectedIssues = await detectIssuesFromAllPlatforms({ ...this.config, maxIssues });
+
+          if (detectedIssues.length === 0) {
+            throw new Error(`No issues found with label '${this.config.issueLabel}'`);
+          }
+
+          // Validate all
+          const validateResult = await this.executeValidateStandalone({ ...options, issues: detectedIssues });
+
+          // Mitigate validated ones
+          const mitigateResult = await this.executeMitigateStandalone({
+            ...options,
+            issues: detectedIssues,
+            usePriorValidation: true
+          });
+
+          return {
+            success: validateResult.success && mitigateResult.success,
+            phase: 'validate-and-fix',
+            message: `Processed ${detectedIssues.length} issues`,
+            data: {
+              validation: validateResult.data,
+              mitigation: mitigateResult.data
+            }
+          };
+        }
+
       case 'full':
         // Run all phases
         return this.executeAllPhases(options);
-      
+
       default:
         throw new Error(`Unknown mode: ${mode}`);
     }

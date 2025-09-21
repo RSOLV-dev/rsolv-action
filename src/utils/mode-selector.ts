@@ -3,9 +3,9 @@
  * Implements RFC-041 mode selection decisions
  */
 
-export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'full';
+export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'full' | 'validate-only' | 'validate-and-fix' | 'fix-only';
 
-const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'full'];
+const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'full', 'validate-only', 'validate-and-fix', 'fix-only'];
 
 export interface ModeRequirements {
   requiresIssue: boolean;
@@ -85,29 +85,37 @@ export function getModeRequirements(mode: ExecutionMode): ModeRequirements {
         requiresScanData: false,
         requiresValidation: false
       };
-    
+
     case 'validate':
+    case 'validate-only':
       return {
         requiresIssue: true, // Or scan data
         requiresScanData: false, // Either/or with issue
         requiresValidation: false
       };
-    
+
     case 'mitigate':
+    case 'fix-only':
       return {
         requiresIssue: true,
         requiresScanData: false,
         requiresValidation: true
       };
-    
-    
+
+    case 'validate-and-fix':
+      return {
+        requiresIssue: true,
+        requiresScanData: false,
+        requiresValidation: false // Will run validation then mitigation
+      };
+
     case 'full':
       return {
         requiresIssue: false, // Full mode does everything
         requiresScanData: false,
         requiresValidation: false
       };
-    
+
     default:
       throw new Error(`Unknown mode: ${mode}`);
   }
@@ -121,9 +129,13 @@ export function getModeDescription(mode: ExecutionMode): string {
     case 'scan':
       return 'Scan for vulnerabilities and create issues';
     case 'validate':
+    case 'validate-only':
       return 'Validate vulnerabilities with failing tests';
     case 'mitigate':
+    case 'fix-only':
       return 'Fix validated vulnerabilities';
+    case 'validate-and-fix':
+      return 'Validate and fix vulnerabilities for specific issues';
     case 'full':
       return 'Run all phases: scan, validate, and mitigate';
     default:
