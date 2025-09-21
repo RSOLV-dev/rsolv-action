@@ -215,12 +215,23 @@ export async function processIssueWithGit(
     // Step 1: Ensure clean git state
     const gitStatus = checkGitStatus();
     if (!gitStatus.clean) {
-      return {
-        issueId: issue.id,
-        success: false,
-        message: 'Repository has uncommitted changes',
-        error: `Uncommitted changes in: ${gitStatus.modifiedFiles.join(', ')}`
-      };
+      logger.warn(`Repository has uncommitted changes: ${gitStatus.modifiedFiles.join(', ')}`);
+
+      // Try to clean the repository state
+      ensureCleanGitState();
+
+      // Check again after cleanup
+      const statusAfterClean = checkGitStatus();
+      if (!statusAfterClean.clean) {
+        return {
+          issueId: issue.id,
+          success: false,
+          message: 'Repository has uncommitted changes that could not be cleaned',
+          error: `Uncommitted changes in: ${statusAfterClean.modifiedFiles.join(', ')}`
+        };
+      }
+
+      logger.info('Repository cleaned successfully, proceeding with issue processing');
     }
     
     // Step 2: Analyze the issue
@@ -659,27 +670,54 @@ function checkGitStatus(): { clean: boolean; modifiedFiles: string[] } {
     const status = execSync('git status --porcelain', {
       encoding: 'utf-8'
     }).trim();
-    
+
     if (!status) {
       return { clean: true, modifiedFiles: [] };
     }
-    
+
     const modifiedFiles = status
       .split('\n')
       .map(line => line.substring(2).trim()) // Git status has 2-char prefix
       .filter(file => file.length > 0)
       .filter(file => !file.startsWith('.rsolv/')); // Ignore .rsolv directory
-    
+
     // If only .rsolv files were modified, consider it clean
     if (modifiedFiles.length === 0) {
       return { clean: true, modifiedFiles: [] };
     }
-    
+
     return { clean: false, modifiedFiles };
-    
+
   } catch (error) {
     logger.error('Failed to check git status', error);
     return { clean: false, modifiedFiles: ['unknown'] };
+  }
+}
+
+/**
+ * Ensure git repository is in clean state (no modified or untracked files)
+ */
+function ensureCleanGitState(): void {
+  try {
+    // First, check for modified files
+    const status = execSync('git status --porcelain', {
+      encoding: 'utf-8'
+    }).trim();
+
+    if (status) {
+      logger.info('Cleaning up uncommitted changes and untracked files');
+
+      // Reset any modified files
+      execSync('git reset --hard HEAD', { encoding: 'utf-8' });
+
+      // Clean untracked files (including .backup files)
+      // -f: force, -d: remove directories, -x: include ignored files
+      execSync('git clean -fd', { encoding: 'utf-8' });
+
+      logger.info('Git state cleaned');
+    }
+  } catch (error) {
+    logger.error('Failed to clean git state', error);
   }
 }
 
