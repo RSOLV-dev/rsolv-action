@@ -88,10 +88,11 @@ export class PhaseExecutor {
   public phaseDataClient: PhaseDataClient;
   public scanner?: ScanOrchestrator;
   private config: ActionConfig;
-  
+
   // These will be used for mocking in tests
   public testGenerator?: TestGeneratingSecurityAnalyzer;
   public fixer?: GitBasedClaudeCodeAdapter;
+  public validationMode?: any; // ValidationMode instance for testing
 
   constructor(config: ActionConfig) {
     this.config = config;
@@ -1059,50 +1060,139 @@ export class PhaseExecutor {
   }
 
   /**
-   * Execute all phases
+   * Execute all phases with proper orchestration
+   * SCAN (creates issues) -> VALIDATE (tests them) -> MITIGATE (fixes them)
    */
   async executeAllPhases(options: ExecuteOptions): Promise<ExecuteResult> {
     try {
       logger.info('Executing all phases: scan, validate, mitigate');
 
-      // Phase 1: Scan
+      // Phase 1: SCAN - Creates GitHub issues
       const scanResult = await this.executeScan(options);
       if (!scanResult.success) {
         return scanResult;
       }
 
-      // Phase 2: Validate each vulnerability
-      const vulnerabilities = scanResult.data?.scan?.vulnerabilities || [];
-      const validationResults = [];
-      
-      for (const vuln of vulnerabilities) {
-        // TODO: Convert vulnerability to issue for validation
-        const validateResult = await this.executeValidate({
-          ...options,
-          scanData: vuln
-        });
-        validationResults.push(validateResult);
+      // Extract created issues from scan results
+      const createdIssues = scanResult.data?.scan?.createdIssues || [];
+      logger.info(`Scan created ${createdIssues.length} issues (limited by max_issues: ${this.config.maxIssues})`);
+
+      if (createdIssues.length === 0) {
+        logger.info('No issues created by scan, skipping validation and mitigation');
+        return {
+          success: true,
+          phase: 'full',
+          message: 'No vulnerabilities found to process',
+          data: {
+            scan: scanResult.data,
+            validations: [],
+            mitigations: []
+          }
+        };
       }
 
-      // Phase 3: Mitigate validated vulnerabilities
-      const mitigationResults = [];
-      for (const validation of validationResults) {
-        if (validation.success && validation.data?.validation?.validated) {
-          const mitigateResult = await this.executeMitigate({
-            ...options,
-            // TODO: Extract issue number from validation
-          });
-          mitigationResults.push(mitigateResult);
+      // Import GitHub API for fetching issue details
+      const { getIssue } = await import('../../github/api.js');
+
+      // Fetch full issue details for each created issue
+      const issues: IssueContext[] = [];
+      for (const createdIssue of createdIssues) {
+        try {
+          logger.info(`Fetching details for issue #${createdIssue.number}`);
+          const issue = await getIssue(
+            options.repository!.owner,
+            options.repository!.name,
+            createdIssue.number
+          );
+          issues.push(issue);
+        } catch (error) {
+          logger.error(`Failed to fetch issue #${createdIssue.number}:`, error);
+          // Continue with other issues even if one fails
         }
       }
+
+      if (issues.length === 0) {
+        logger.warn('Failed to fetch any issue details, cannot proceed');
+        return {
+          success: false,
+          phase: 'full',
+          error: 'Failed to fetch issue details after scan'
+        };
+      }
+
+      // Phase 2: VALIDATE - Test each issue for false positives
+      logger.info(`Validating ${issues.length} issues`);
+      const validationResults: Array<{issue: IssueContext, result: ExecuteResult}> = [];
+
+      // Use ValidationMode for batch validation
+      const { ValidationMode } = await import('../validation-mode.js');
+      const validationMode = this.validationMode || new ValidationMode(this.config, process.cwd());
+
+      for (const issue of issues) {
+        try {
+          logger.info(`Validating issue #${issue.number}`);
+          const validationData = await validationMode.validateVulnerability(issue);
+
+          const validateResult: ExecuteResult = {
+            success: true,
+            phase: 'validate',
+            data: {
+              validation: validationData
+            }
+          };
+
+          validationResults.push({ issue, result: validateResult });
+        } catch (error) {
+          logger.error(`Validation failed for issue #${issue.number}:`, error);
+          validationResults.push({
+            issue,
+            result: {
+              success: false,
+              phase: 'validate',
+              error: error instanceof Error ? error.message : String(error)
+            }
+          });
+        }
+      }
+
+      // Count validated issues
+      const validatedIssues = validationResults.filter(
+        v => v.result.success && v.result.data?.validation?.validated
+      );
+      logger.info(`${validatedIssues.length} of ${issues.length} issues validated`);
+
+      // Phase 3: MITIGATE - Fix validated vulnerabilities
+      const mitigationResults = [];
+      for (const validation of validationResults) {
+        if (validation.result.success && validation.result.data?.validation?.validated) {
+          try {
+            logger.info(`Mitigating issue #${validation.issue.number}`);
+            const mitigateResult = await this.executeMitigate({
+              ...options,
+              issues: [validation.issue],
+              validationData: validation.result.data
+            });
+            mitigationResults.push(mitigateResult);
+          } catch (error) {
+            logger.error(`Mitigation failed for issue #${validation.issue.number}:`, error);
+            mitigationResults.push({
+              success: false,
+              phase: 'mitigate',
+              error: error instanceof Error ? error.message : String(error)
+            });
+          }
+        }
+      }
+
+      const successfulMitigations = mitigationResults.filter(m => m.success).length;
 
       return {
         success: true,
         phase: 'full',
-        message: `Completed all phases: ${vulnerabilities.length} scanned, ${validationResults.length} validated, ${mitigationResults.length} mitigated`,
+        message: `Completed all phases: ${createdIssues.length} issues processed, ${validatedIssues.length} validated, ${successfulMitigations} mitigated`,
         data: {
           scan: scanResult.data,
-          validations: validationResults,
+          validations: validationResults.map(v => v.result),
           mitigations: mitigationResults
         }
       };
