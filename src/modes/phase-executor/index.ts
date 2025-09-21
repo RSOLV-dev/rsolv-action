@@ -1169,7 +1169,7 @@ export class PhaseExecutor {
             logger.info(`Mitigating issue #${validation.issue.number}`);
             const mitigateResult = await this.executeMitigate({
               ...options,
-              issues: [validation.issue],
+              issueNumber: validation.issue.number,
               validationData: validation.result.data
             });
             mitigationResults.push(mitigateResult);
