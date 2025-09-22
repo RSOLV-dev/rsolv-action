@@ -114,3 +114,8 @@ export interface ComplianceDocumentationTemplate {
   evidenceTemplate: string;
   remediationSteps: string[];
 }
+
+export interface Library {
+  name: string;
+  version: string;
+}

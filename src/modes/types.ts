@@ -21,6 +21,8 @@ export interface ModeConfig {
 export interface ValidationResult {
   issueId: number;
   validated: boolean;
+  vendoredFile?: boolean; // True if vulnerability is in vendor/third-party code
+  affectedVendorFiles?: string[]; // List of vendor files affected
   branchName?: string;
   redTests?: any; // VulnerabilityTestSuite
   testResults?: any; // TestResults

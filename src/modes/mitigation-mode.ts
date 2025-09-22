@@ -6,6 +6,7 @@
 
 import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
+import { vendorFilterUtils } from './vendor-utils.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -101,6 +102,19 @@ export class MitigationMode {
    */
   async generateTestAwareFix(issue: IssueContext): Promise<any> {
     try {
+      // Step 0: Check if this is a vendor file vulnerability
+      const vendorCheckResult = vendorFilterUtils.checkVendorStatusFromValidation(this.repoPath, issue.number);
+      if (vendorCheckResult.isVendor) {
+        return {
+          skipReason: 'vendor_file',
+          message: 'Cannot patch vendor library - update required',
+          vendorFiles: vendorCheckResult.files,
+          branchCheckedOut: false,
+          testFilesFound: 0,
+          enhancedPrompt: undefined
+        };
+      }
+
       // Step 1: Checkout validation branch
       const branchCheckedOut = await this.checkoutValidationBranch(issue);
 
@@ -139,6 +153,7 @@ export class MitigationMode {
       throw error;
     }
   }
+
 
   /**
    * RFC-058: Build enhanced Claude Code prompt with test specifications

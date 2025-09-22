@@ -6,6 +6,7 @@
 import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { ValidationResult } from './types.js';
+import { vendorFilterUtils } from './vendor-utils.js';
 import { TestGeneratingSecurityAnalyzer } from '../ai/test-generating-security-analyzer.js';
 import { GitBasedTestValidator } from '../ai/git-based-test-validator.js';
 import { analyzeIssue } from '../ai/analyzer.js';
@@ -54,10 +55,25 @@ export class ValidationMode {
         };
       }
       
-      // Step 3: Analyze the issue
+      // Step 3: Check for vendor files
+      const vendorFiles = await vendorFilterUtils.checkForVendorFiles(issue);
+      if (vendorFiles.isVendor) {
+        logger.info(`Issue #${issue.number} affects vendor files - marking as VENDORED`);
+        return {
+          issueId: issue.number,
+          validated: false,
+          vendoredFile: true,
+          falsePositiveReason: 'Vulnerability in vendor file - requires library update',
+          affectedVendorFiles: vendorFiles.files,
+          timestamp: new Date().toISOString(),
+          commitHash: this.getCurrentCommitHash()
+        };
+      }
+
+      // Step 4: Analyze the issue
       logger.info(`Analyzing issue #${issue.number} for validation`);
       const analysisData = await analyzeIssue(issue, this.config);
-      
+
       if (!analysisData.canBeFixed) {
         logger.warn(`Issue #${issue.number} cannot be validated: ${analysisData.cannotFixReason}`);
         return {
@@ -69,7 +85,7 @@ export class ValidationMode {
         };
       }
       
-      // Step 4: Generate RED tests
+      // Step 5: Generate RED tests
       logger.info(`Generating RED tests for issue #${issue.number}`);
       const testResults = await this.generateRedTests(issue, analysisData);
       
@@ -84,7 +100,7 @@ export class ValidationMode {
         };
       }
       
-      // Step 5: RFC-058 - Create validation branch and commit tests
+      // Step 6: RFC-058 - Create validation branch and commit tests
       logger.info(`Creating validation branch for test persistence`);
       let branchName: string | null = null;
 
@@ -97,7 +113,7 @@ export class ValidationMode {
         // Continue with standard validation if branch creation fails
       }
 
-      // Step 6: Run tests to verify they fail (proving vulnerability exists)
+      // Step 7: Run tests to verify they fail (proving vulnerability exists)
       logger.info(`Running RED tests to prove vulnerability exists`);
       const validator = new GitBasedTestValidator();
       const validationResult = await validator.validateFixWithTests(
@@ -106,7 +122,7 @@ export class ValidationMode {
         testResults.generatedTests.testSuite
       );
 
-      // Step 7: Determine validation status
+      // Step 8: Determine validation status
       // RED tests should FAIL on vulnerable code to prove vulnerability exists
       const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
 
@@ -449,6 +465,7 @@ describe('Vulnerability Test', () => {
     }
   }
   
+
   /**
    * Get current git commit hash
    */
