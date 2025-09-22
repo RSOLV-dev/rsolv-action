@@ -41,21 +41,8 @@ export class ValidationMode {
     try {
       // Step 1: Ensure clean git state
       this.ensureCleanGitState();
-      
-      // Step 2: Check false positive cache
-      const cacheKey = this.getCacheKey(issue);
-      if (this.falsePositiveCache.has(cacheKey) && !process.env.RSOLV_SKIP_CACHE) {
-        logger.info(`Issue #${issue.number} is in false positive cache, skipping`);
-        return {
-          issueId: issue.number,
-          validated: false,
-          falsePositiveReason: 'Previously identified as false positive',
-          timestamp: new Date().toISOString(),
-          commitHash: this.getCurrentCommitHash()
-        };
-      }
-      
-      // Step 3: Check for vendor files
+
+      // Step 2: Check for vendor files FIRST (most token-efficient filter)
       const vendorFiles = await vendorFilterUtils.checkForVendorFiles(issue);
       if (vendorFiles.isVendor) {
         logger.info(`Issue #${issue.number} affects vendor files - marking as VENDORED`);
@@ -65,6 +52,19 @@ export class ValidationMode {
           vendoredFile: true,
           falsePositiveReason: 'Vulnerability in vendor file - requires library update',
           affectedVendorFiles: vendorFiles.files,
+          timestamp: new Date().toISOString(),
+          commitHash: this.getCurrentCommitHash()
+        };
+      }
+
+      // Step 3: Check false positive cache (second filter)
+      const cacheKey = this.getCacheKey(issue);
+      if (this.falsePositiveCache.has(cacheKey) && !process.env.RSOLV_SKIP_CACHE) {
+        logger.info(`Issue #${issue.number} is in false positive cache, skipping`);
+        return {
+          issueId: issue.number,
+          validated: false,
+          falsePositiveReason: 'Previously identified as false positive',
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
