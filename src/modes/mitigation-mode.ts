@@ -18,6 +18,16 @@ export class MitigationMode {
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
     this.repoPath = repoPath || process.cwd();
+
+    // Apply environment variables from config
+    if (config.environmentVariables && typeof config.environmentVariables === 'object') {
+      Object.entries(config.environmentVariables).forEach(([key, value]) => {
+        if (typeof value === 'string') {
+          process.env[key] = value;
+          logger.debug(`Applied environment variable: ${key}`);
+        }
+      });
+    }
   }
 
   /**
