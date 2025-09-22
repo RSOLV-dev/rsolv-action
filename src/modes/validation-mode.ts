@@ -141,6 +141,16 @@ export class ValidationMode {
         // Tests passed = no vulnerability = false positive (unless in testing mode)
         if (isTestingMode) {
           logger.info(`[TESTING MODE] Tests passed but proceeding anyway for known vulnerable repo`);
+
+          // RFC-058: Store validation result with branch reference even in test mode
+          if (branchName) {
+            await this.storeValidationResultWithBranch(issue, testResults, validationResult, branchName);
+            logger.info(`Test mode validation result stored with branch reference: ${branchName}`);
+          } else {
+            // Fallback to standard storage
+            await this.storeValidationResult(issue, testResults, validationResult);
+          }
+
           // In testing mode, still mark as validated to allow full workflow testing
           return {
             issueId: issue.number,
