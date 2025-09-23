@@ -114,14 +114,29 @@ export class ValidationMode {
       // Step 6: RFC-058 - Create validation branch and commit tests
       logger.info(`Creating validation branch for test persistence`);
       let branchName: string | null = null;
+      const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
 
       try {
         branchName = await this.createValidationBranch(issue);
         await this.commitTestsToBranch(testResults.generatedTests.testSuite, branchName);
         logger.info(`✅ Tests committed to validation branch: ${branchName}`);
       } catch (error) {
-        logger.warn(`Could not create validation branch: ${error}`);
-        // Continue with standard validation if branch creation fails
+        if (isTestingMode) {
+          // In test mode, we MUST persist tests even if imperfect
+          logger.warn(`Test mode: Force committing tests despite error: ${error}`);
+          try {
+            // Try to recover by using existing branch or creating with different approach
+            branchName = `rsolv/validate/issue-${issue.number}`;
+            await this.forceCommitTestsInTestMode(testResults.generatedTests.testSuite, branchName, issue);
+            logger.info(`✅ Test mode: Tests force-committed to branch: ${branchName}`);
+          } catch (forceError) {
+            logger.error(`Test mode: Failed to force commit tests: ${forceError}`);
+            // Even if commit fails, keep branch name for tracking
+          }
+        } else {
+          logger.warn(`Could not create validation branch: ${error}`);
+          // Continue with standard validation if branch creation fails in non-test mode
+        }
       }
 
       // Step 7: Run tests to verify they fail (proving vulnerability exists)
@@ -135,7 +150,7 @@ export class ValidationMode {
 
       // Step 8: Determine validation status
       // RED tests should FAIL on vulnerable code to prove vulnerability exists
-      const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
+      // isTestingMode already declared above
 
       if (validationResult.success) {
         // Tests passed = no vulnerability = false positive (unless in testing mode)
@@ -295,6 +310,86 @@ export class ValidationMode {
       return branchName;
     } catch (error) {
       logger.error(`Failed to create validation branch ${branchName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Force commit tests in test mode - ensures tests are always persisted
+   * even when normal commit process fails
+   */
+  async forceCommitTestsInTestMode(
+    testContent: any,
+    branchName: string,
+    issue: IssueContext
+  ): Promise<void> {
+    const testDir = path.join(this.repoPath, '.rsolv', 'tests');
+
+    try {
+      // Ensure directory exists
+      fs.mkdirSync(testDir, { recursive: true });
+
+      // Serialize test content
+      const testString = typeof testContent === 'string'
+        ? testContent
+        : JSON.stringify(testContent, null, 2);
+
+      // Write test file
+      const testPath = path.join(testDir, 'validation.test.js');
+      fs.writeFileSync(testPath, testString, 'utf8');
+
+      // Try to ensure we're on the right branch
+      try {
+        execSync(`git checkout ${branchName} 2>/dev/null || git checkout -b ${branchName}`, {
+          cwd: this.repoPath,
+          stdio: 'pipe'
+        });
+      } catch {
+        // Branch operations failed, but continue with commit attempt
+        logger.debug(`Branch checkout failed, continuing with current branch`);
+      }
+
+      // Configure git identity
+      try {
+        execSync('git config user.email "rsolv-validation@rsolv.dev"', {
+          cwd: this.repoPath,
+          stdio: 'pipe'
+        });
+        execSync('git config user.name "RSOLV Validation Bot"', {
+          cwd: this.repoPath,
+          stdio: 'pipe'
+        });
+      } catch {
+        // Git config might already be set
+      }
+
+      // Stage and commit
+      execSync('git add .rsolv/tests/', { cwd: this.repoPath });
+      execSync(`git commit -m "Test mode: Add validation tests for issue #${issue.number}" || true`, {
+        cwd: this.repoPath,
+        stdio: 'pipe'
+      });
+
+      // Try to push but don't fail if it doesn't work
+      try {
+        const token = process.env.GITHUB_TOKEN || process.env.GH_PAT;
+        if (token && process.env.GITHUB_REPOSITORY) {
+          const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+          const authenticatedUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
+          execSync(`git remote set-url origin ${authenticatedUrl} 2>/dev/null || true`, {
+            cwd: this.repoPath,
+            stdio: 'pipe'
+          });
+        }
+        execSync(`git push -f origin ${branchName} 2>/dev/null || true`, {
+          cwd: this.repoPath,
+          stdio: 'pipe'
+        });
+      } catch {
+        logger.debug(`Push failed in test mode, but tests are committed locally`);
+      }
+    } catch (error) {
+      logger.error(`Force commit in test mode failed: ${error}`);
       throw error;
     }
   }

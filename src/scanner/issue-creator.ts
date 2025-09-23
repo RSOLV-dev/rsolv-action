@@ -76,6 +76,12 @@ export class IssueCreator {
     config: ScanConfig
   ): Promise<any> {
     try {
+      // In test mode with fresh issues flag, always create new issues
+      if (process.env.RSOLV_TESTING_MODE === 'true' && process.env.RSOLV_FORCE_FRESH_ISSUES === 'true') {
+        logger.info('Test mode: Force fresh issues enabled, skipping existing issue check');
+        return null;
+      }
+
       // Search for open issues with the vulnerability type label
       const typeLabel = `rsolv:vuln-${group.type}`;
       const { data: issues } = await this.github.issues.listForRepo({
