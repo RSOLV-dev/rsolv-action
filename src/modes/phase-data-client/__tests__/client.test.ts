@@ -222,7 +222,7 @@ describe('PhaseDataClient', () => {
     test('should validate allowed phase transitions', async () => {
       // Arrange
       client = new PhaseDataClient(mockApiKey);
-      
+
       // Mock git command to return current commit
       // Mock child_process is already at module level, just change its return value
       const childProcess = await import('child_process');
@@ -237,7 +237,7 @@ describe('PhaseDataClient', () => {
     test('should reject transition if commit has changed', async () => {
       // Arrange
       client = new PhaseDataClient(mockApiKey);
-      
+
       // Mock git to return different commit
       // Mock child_process is already at module level, just change its return value
       const childProcess = await import('child_process');
@@ -248,6 +248,45 @@ describe('PhaseDataClient', () => {
 
       // Assert
       expect(result).toBe(false);
+    });
+
+    test('should use GITHUB_SHA when git is not available (act/Docker scenario)', async () => {
+      // Arrange - This test demonstrates the fix for act Docker-in-Docker issue
+      process.env.GITHUB_SHA = 'github-sha-123';
+      client = new PhaseDataClient(mockApiKey);
+
+      // Mock git command to fail (as it does in act Docker containers)
+      const childProcess = await import('child_process');
+      vi.mocked(childProcess.execSync).mockImplementation(() => {
+        throw new Error('fatal: not a git repository (or any of the parent directories): .git');
+      });
+
+      // Act
+      const result = await client.validatePhaseTransition('scan', 'validate', 'github-sha-123');
+
+      // Assert - Should still work using GITHUB_SHA
+      expect(result).toBe(true);
+
+      // Clean up
+      delete process.env.GITHUB_SHA;
+    });
+
+    test('should fallback to dummy SHA when neither git nor GITHUB_SHA available', async () => {
+      // Arrange
+      delete process.env.GITHUB_SHA;
+      client = new PhaseDataClient(mockApiKey);
+
+      // Mock git command to fail
+      const childProcess = await import('child_process');
+      vi.mocked(childProcess.execSync).mockImplementation(() => {
+        throw new Error('fatal: not a git repository');
+      });
+
+      // Act - Should not throw, but use a fallback
+      const result = await client.validatePhaseTransition('scan', 'validate', 'no-git-available');
+
+      // Assert - Should work with the fallback value
+      expect(result).toBe(true);
     });
   });
 });
