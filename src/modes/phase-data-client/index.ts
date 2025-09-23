@@ -269,7 +269,20 @@ export class PhaseDataClient {
   }
   
   private async getCurrentCommitSha(): Promise<string> {
-    const { execSync } = await import('child_process');
-    return execSync('git rev-parse HEAD').toString().trim();
+    // First, check if GITHUB_SHA is available (provided by GitHub Actions and act)
+    if (process.env.GITHUB_SHA) {
+      return process.env.GITHUB_SHA.trim();
+    }
+
+    // Fall back to git command if available
+    try {
+      const { execSync } = await import('child_process');
+      return execSync('git rev-parse HEAD').toString().trim();
+    } catch (error) {
+      // In act Docker containers, git may not be available
+      // Use a fallback value to allow the action to continue
+      console.warn('[PhaseDataClient] Git not available, using fallback commit SHA');
+      return 'no-git-available';
+    }
   }
 }
