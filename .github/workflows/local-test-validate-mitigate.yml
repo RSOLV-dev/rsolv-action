@@ -1,0 +1,57 @@
+name: Local Test - Validate and Mitigate
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_numbers:
+        description: 'Comma-separated list of issue numbers to validate and mitigate'
+        required: true
+        default: '1036,1037'
+
+jobs:
+  validate-and-mitigate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install RSOLV Action dependencies
+        run: |
+          cd RSOLV-action
+          npm install
+
+      - name: Validate Issues
+        uses: ./RSOLV-action
+        with:
+          mode: 'validate'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          environment_variables: |
+            {
+              "RSOLV_TESTING_MODE": "true",
+              "CLAUDE_CODE_API_KEY": "${{ secrets.CLAUDE_CODE_API_KEY }}",
+              "ANTHROPIC_API_KEY": "${{ secrets.ANTHROPIC_API_KEY }}"
+            }
+          specific_issues: ${{ github.event.inputs.issue_numbers }}
+
+      - name: Mitigate Issues
+        uses: ./RSOLV-action
+        with:
+          mode: 'mitigate'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          environment_variables: |
+            {
+              "RSOLV_TESTING_MODE": "true",
+              "CLAUDE_CODE_API_KEY": "${{ secrets.CLAUDE_CODE_API_KEY }}",
+              "ANTHROPIC_API_KEY": "${{ secrets.ANTHROPIC_API_KEY }}"
+            }
+          specific_issues: ${{ github.event.inputs.issue_numbers }}
