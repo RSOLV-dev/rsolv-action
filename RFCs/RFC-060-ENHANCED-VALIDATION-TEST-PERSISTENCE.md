@@ -2,9 +2,9 @@
 
 **Status:** Under Review
 **Created:** 2025-09-24
-**Updated:** 2025-09-30
+**Updated:** 2025-10-01
 **Author:** RSOLV Team
-**Reviewers:** Dylan (2025-09-30)
+**Reviewers:** Dylan (2025-09-30, 2025-10-01)
 
 ## Abstract
 
