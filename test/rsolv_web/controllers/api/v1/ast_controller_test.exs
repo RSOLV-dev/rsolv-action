@@ -50,10 +50,10 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
   describe "analyze/2" do
     test "requires API key authentication", %{conn: conn} do
       conn = post(conn, "/api/v1/ast/analyze", %{})
-      
+
       response = json_response(conn, 401)
       assert response["error"]["code"] == "AUTH_REQUIRED"
-      assert response["error"]["message"] == "Authentication required"
+      assert response["error"]["message"] == "API key must be provided in x-api-key header"
       assert response["requestId"]
     end
     

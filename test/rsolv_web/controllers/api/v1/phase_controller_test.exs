@@ -144,7 +144,10 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
           data: %{}
         })
       
-      assert %{"error" => "Invalid API key"} = json_response(conn, 401)
+      resp = json_response(conn, 401)
+      assert resp["error"]["code"] == "INVALID_API_KEY"
+      assert resp["error"]["message"] == "Invalid or expired API key"
+      assert resp["requestId"]
     end
 
     test "rejects access to unauthorized namespace", %{conn: conn, api_key: api_key} do
