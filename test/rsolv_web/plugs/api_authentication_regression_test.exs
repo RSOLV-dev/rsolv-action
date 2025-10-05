@@ -131,7 +131,9 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationRegressionTest do
         assert conn.halted
 
         resp = json_response(conn, 401)
-        assert resp["error"] == "Invalid API key"
+        assert resp["error"]["code"] == "INVALID_API_KEY"
+        assert resp["error"]["message"] == "Invalid or expired API key"
+        assert resp["requestId"]
       end
 
       # Test empty string separately (gets treated as no key)
@@ -144,7 +146,9 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationRegressionTest do
       assert conn.halted
 
       resp = json_response(conn, 401)
-      assert resp["error"] == "Authentication required"
+      assert resp["error"]["code"] == "AUTH_REQUIRED"
+      assert resp["error"]["message"] =~ "API key must be provided"
+      assert resp["requestId"]
     end
   end
 
@@ -160,8 +164,9 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationRegressionTest do
       assert conn.halted
 
       resp = json_response(conn, 401)
-      assert resp["error"] == "Authentication required"
-      assert resp["message"] =~ "x-api-key header"
+      assert resp["error"]["code"] == "AUTH_REQUIRED"
+      assert resp["error"]["message"] =~ "x-api-key header"
+      assert resp["requestId"]
     end
 
     test "prevents regression: only x-api-key header is used", %{

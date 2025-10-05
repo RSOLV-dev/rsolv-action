@@ -62,8 +62,9 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       assert conn.halted
 
       resp = json_response(conn, 401)
-      assert resp["error"] == "Authentication required"
-      assert resp["message"] =~ "x-api-key header"
+      assert resp["error"]["code"] == "AUTH_REQUIRED"
+      assert resp["error"]["message"] =~ "x-api-key header"
+      assert resp["requestId"]
     end
 
     test "ignores Authorization header when x-api-key is present", %{conn: conn, customer: customer, api_key: api_key} do
@@ -84,8 +85,9 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       assert conn.halted
 
       resp = json_response(conn, 401)
-      assert resp["error"] == "Authentication required"
-      assert resp["message"] =~ "API key must be provided"
+      assert resp["error"]["code"] == "AUTH_REQUIRED"
+      assert resp["error"]["message"] =~ "API key must be provided"
+      assert resp["requestId"]
     end
 
     test "returns 401 when invalid API key provided in x-api-key header", %{conn: conn} do
@@ -98,8 +100,9 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       assert conn.halted
 
       resp = json_response(conn, 401)
-      assert resp["error"] == "Invalid API key"
-      assert resp["message"] =~ "invalid or expired"
+      assert resp["error"]["code"] == "INVALID_API_KEY"
+      assert resp["error"]["message"] == "Invalid or expired API key"
+      assert resp["requestId"]
     end
 
     test "returns 401 when only Authorization header provided (x-api-key required)", %{conn: conn} do
@@ -112,8 +115,9 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       assert conn.halted
 
       resp = json_response(conn, 401)
-      assert resp["error"] == "Authentication required"
-      assert resp["message"] =~ "x-api-key header"
+      assert resp["error"]["code"] == "AUTH_REQUIRED"
+      assert resp["error"]["message"] =~ "x-api-key header"
+      assert resp["requestId"]
     end
   end
 
@@ -147,7 +151,9 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       assert conn.halted
 
       resp = json_response(conn, 401)
-      assert resp["error"] == "Invalid API key"
+      assert resp["error"]["code"] == "INVALID_API_KEY"
+      assert resp["error"]["message"] == "Invalid or expired API key"
+      assert resp["requestId"]
     end
   end
 

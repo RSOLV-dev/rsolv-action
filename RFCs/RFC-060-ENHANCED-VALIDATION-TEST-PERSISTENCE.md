@@ -2,13 +2,287 @@
 
 **Status:** Under Review
 **Created:** 2025-09-24
-**Updated:** 2025-10-01
+**Updated:** 2025-10-05
 **Author:** RSOLV Team
-**Reviewers:** Dylan (2025-09-30, 2025-10-01)
+**Reviewers:** Dylan (2025-09-30, 2025-10-01, 2025-10-05)
 
 ## Abstract
 
-This RFC proposes a fundamental shift from JSON-based test definitions to directly executable test files that integrate with existing test frameworks. Building on RFC-058 (Validation Branch Persistence), this approach generates RED tests that prove vulnerabilities exist, integrates them into existing test suites, and validates that they actually fail before proceeding to mitigation.
+This RFC returns the VALIDATE phase to the originally intended architecture documented in ADR-025, correcting deviations from branch-based test persistence and backend API metadata storage. Instead of temporary in-tree JSON files that get deleted, this approach generates directly executable RED tests that prove vulnerabilities exist, persists them in validation branches, stores metadata via PhaseDataClient API, and validates that tests actually fail before proceeding to mitigation.
+
+## Implementation Todo List
+
+**Status Legend**: [ ] Not started | [🔄] In progress | [✅] Completed | [❌] Blocked
+
+### Phase 0: Pre-work Verification & Critical Blockers (Day 1)
+
+#### 0.1 Environment Setup
+- [✅] Create feature branch: `rfc-060-executable-validation-tests`
+- [🔄] Run existing RSOLV-action test suite: `cd RSOLV-action && npm test`
+  - [🔄] Running in background with proper API key
+- [ ] Run existing RSOLV-platform test suite: `mix test`
+  - [ ] HALT if tests are not green - fix issues first
+- [✅] Verify test API keys available in `.envrc`
+  - [✅] Created test API key: `rsolv_6Z4WFMcYad0MsCCbYkEn-XMI4rgSMgkWqqPEpTZyk8A`
+  - [✅] Added to `.envrc` and reloaded
+- [ ] Set up test database for PhaseDataClient isolation
+
+#### 0.2 Fix Blocker 1: mitigation-mode.ts PhaseDataClient Integration
+- [ ] Write failing test: `mitigation-mode.test.ts` - verify NO local file reading (1hr)
+  - Acceptance: Test fails showing local file dependency
+- [ ] Remove local file reading code from `mitigation-mode.ts` lines 36-46 (30min)
+- [ ] Implement PhaseDataClient.retrievePhaseResults() call (1hr)
+- [ ] Update error handling for missing metadata (30min)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] Manual test with act: `act workflow_dispatch -W .github/workflows/rsolv-test.yml`
+
+#### 0.3 Fix Blocker 2: ai-test-generator.ts RED-only Tests
+- [ ] Write failing test: verify prompt generates only RED tests (1hr)
+  - Acceptance: Test fails showing RED+GREEN+REFACTOR generation
+- [ ] Update prompt in `ai-test-generator.ts` lines 133-136 (1hr)
+  - Replace three-test requirement with RED-only tests
+  - Add multi-test support for complex vulnerabilities
+- [ ] Update response parsing to handle multiple RED tests (1hr)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] Verify with sample vulnerability that only RED tests generated
+
+### Phase 1: Framework Detection & Test Generation (Days 2-3)
+
+#### 1.1 Step 1: Test Framework Auto-Discovery
+- [ ] Write RED tests for TestFrameworkDetector (1hr)
+  - Test: Detects Jest in JavaScript project
+  - Test: Handles missing framework gracefully
+  - Test: Supports minitest in Rails context
+  - Test: Selects primary framework from multiple
+- [ ] Run tests - verify they FAIL
+- [ ] Implement framework detection enhancements (2hr)
+  - Add Rails-specific minitest detection
+  - Implement confidence scoring
+  - Add selectPrimaryFramework logic
+- [ ] Run test suite: `npm test` - must be green
+- [ ] REFACTOR: Extract framework patterns to config (1hr)
+- [ ] Remove unused detection code
+- [ ] Run test suite: `npm test` - must be green
+
+#### 1.2 Step 2: Executable Test Generation
+- [ ] Write RED tests for ExecutableTestGenerator (1hr)
+  - Test: Generates .test.js not JSON
+  - Test: Creates correct Jest syntax
+  - Test: Creates correct RSpec syntax
+  - Test: Creates correct pytest syntax
+- [ ] Run tests - verify they FAIL
+- [ ] Create ExecutableTestGenerator class (2hr)
+- [ ] Implement Jest template (1hr)
+- [ ] Implement RSpec template (1hr)
+- [ ] Implement pytest template (1hr)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] REFACTOR: DRY up template generation (30min)
+- [ ] Run test suite: `npm test` - must be green
+
+#### 1.3 Step 3: Backend Persistence Integration
+- [ ] Write RED tests for validation metadata storage (1hr)
+  - Test: Stores via PhaseDataClient
+  - Test: Includes framework, files, commands
+  - Test: Handles API errors gracefully
+- [ ] Run tests - verify they FAIL
+- [ ] Integrate PhaseDataClient in validation-mode.ts (2hr)
+- [ ] Implement comprehensive metadata structure (1hr)
+- [ ] Add error handling for API failures (30min)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] REFACTOR: Remove old JSON persistence code (1hr)
+- [ ] Run test suite: `npm test` - must be green
+
+### Phase 2: Test Execution & Validation (Day 4)
+
+#### 2.1 Step 1: Test Runner Integration
+- [ ] Write RED tests for TestRunner (1hr)
+  - Test: Executes Jest command correctly
+  - Test: Returns failure for vulnerable code
+  - Test: Enforces 30-second timeout
+- [ ] Run tests - verify they FAIL
+- [ ] Create TestRunner class (2hr)
+- [ ] Implement framework-specific commands (1hr)
+- [ ] Add timeout handling (30min)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] REFACTOR: Extract command patterns (30min)
+- [ ] Run test suite: `npm test` - must be green
+
+#### 2.2 Step 2: Test Validation & Metadata Storage
+- [ ] Write RED tests for test validation (1hr)
+  - Test: Marks invalid if RED test passes
+  - Test: Stores results in phase data
+  - Test: Labels issues appropriately
+- [ ] Run tests - verify they FAIL
+- [ ] Implement test validation logic (2hr)
+- [ ] Add GitHub issue labeling (1hr)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] REFACTOR: Remove legacy validation code (30min)
+- [ ] Run test suite: `npm test` - must be green
+
+### Phase 3: MITIGATE Phase Integration (Day 5)
+
+#### 3.1 Step 1: API-Based Metadata Retrieval
+- [ ] Write RED tests for mitigation retrieval (1hr)
+  - Test: Retrieves from PhaseDataClient only
+  - Test: No local file reading
+  - Test: Handles missing metadata
+- [ ] Run tests - verify they FAIL
+- [ ] Remove ALL local file reading code (1hr)
+- [ ] Implement API retrieval exclusively (1hr)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] REFACTOR: Consolidate error handling (30min)
+- [ ] Run test suite: `npm test` - must be green
+
+#### 3.2 Step 2: Test-Aware Fix Generation
+- [ ] Write RED tests for test-aware fixes (1hr)
+  - Test: Includes test content in prompt
+  - Test: Runs test before fix
+  - Test: Stores results back to API
+  - Test: Calculates trust score correctly
+- [ ] Run tests - verify they FAIL
+- [ ] Enhance Claude prompt with test context (2hr)
+- [ ] Implement pre/post verification (1hr)
+- [ ] Add trust score calculation (30min)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] REFACTOR: Extract prompt templates (30min)
+- [ ] Run test suite: `npm test` - must be green
+
+### Phase 4: Integration Testing (Days 6-7)
+
+#### 4.1 Step 1: End-to-End Workflow
+- [ ] Write RED integration tests (2hr)
+  - Test: SCAN creates issues
+  - Test: VALIDATE generates tests
+  - Test: MITIGATE retrieves metadata
+  - Test: Full workflow completes
+- [ ] Run tests - verify they FAIL
+- [ ] Set up nodegoat test environment (1hr)
+- [ ] Run full workflow with nodegoat (2hr)
+- [ ] Fix any integration issues (2hr)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] Document any environment-specific setup
+
+#### 4.2 Step 2: Multi-Language Testing
+- [ ] Test with JavaScript/Jest (nodegoat) (2hr)
+  - [ ] Run SCAN phase
+  - [ ] Run VALIDATE phase - verify test generation
+  - [ ] Run MITIGATE phase - verify fix
+  - [ ] Check trust score calculation
+- [ ] Test with Ruby/RSpec (RailsGoat) (2hr)
+  - [ ] Clone and set up RailsGoat
+  - [ ] Run full three-phase workflow
+  - [ ] Verify RSpec test generation
+- [ ] Test with Python/pytest (flask-vulnerable-app) (2hr)
+  - [ ] Clone and set up flask-vulnerable-app
+  - [ ] Run full three-phase workflow
+  - [ ] Verify pytest generation
+- [ ] Document language-specific issues found
+
+#### 4.3 Step 3: Observability & Debugging
+- [ ] Write tests for observability features (1hr)
+  - Test: Failure details stored
+  - Test: Retry attempts logged
+  - Test: Trust scores recorded
+- [ ] Run tests - verify they FAIL
+- [ ] Implement comprehensive logging (1hr)
+- [ ] Add SQL queries for phase data access (30min)
+- [ ] Test manual debugging with PostgreSQL (30min)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] Document debugging procedures
+
+### Phase 5: Deployment & Monitoring (Days 8-9)
+
+#### 5.1 Feature Flag & Configuration
+- [ ] Implement RSOLV_EXECUTABLE_TESTS feature flag (1hr)
+- [ ] Add configuration for claude_max_turns (30min)
+- [ ] Test feature flag ON behavior (30min)
+- [ ] Test feature flag OFF (legacy) behavior (30min)
+- [ ] Run test suite: `npm test` - must be green
+- [ ] Update GitHub Action configuration docs
+
+#### 5.2 Observability Implementation
+- [ ] Create `lib/rsolv/prom_ex/validation_plugin.ex` (2hr)
+- [ ] Add telemetry events to phases.ex (1hr)
+- [ ] Create Grafana dashboard (6 panels) (2hr)
+- [ ] Set up Prometheus alerts (3 minimum) (1hr)
+- [ ] Test metrics collection locally
+- [ ] Deploy to staging environment
+
+#### 5.3 Production Deployment
+- [ ] Create release PR with all changes
+- [ ] Run final test suite on CI
+- [ ] Deploy to production with flag enabled
+- [ ] Run smoke test with nodegoat
+- [ ] Monitor initial metrics for 24 hours
+- [ ] Document any immediate issues
+
+### Phase 6: Post-Deployment Monitoring (Days 10-24)
+
+#### 6.1 Week 1 Monitoring
+- [ ] Daily: Check trust score metrics via SQL
+- [ ] Daily: Review any failure logs
+- [ ] Create weekly test workflow for RailsGoat
+- [ ] Document observed issues in tracking issue
+- [ ] Calculate initial success rates
+
+#### 6.2 Week 2 Evaluation
+- [ ] Analyze trust score patterns
+- [ ] Review mitigation success rates
+- [ ] Identify common failure modes
+- [ ] Prepare trust score report
+- [ ] Decision point: Need RFC-061 Phase 2?
+
+### Phase 7: Follow-up & Human Evaluation (Day 24+)
+
+#### 7.1 Trust Score Evaluation (HUMAN REQUIRED)
+- [ ] **HUMAN**: Review 2-week trust score data
+- [ ] **HUMAN**: Make decision based on thresholds:
+  - >80%: Continue Phase 1 monitoring
+  - 70-80%: Implement RFC-061 Phase 2
+  - <70%: Implement RFC-061 Phase 3
+- [ ] **HUMAN**: Approve next steps
+
+#### 7.2 Documentation & Knowledge Transfer
+- [ ] Create troubleshooting guide for common failures
+- [ ] Document language-specific test patterns
+- [ ] Create integration guide for new frameworks
+- [ ] Update main RSOLV documentation
+- [ ] **HUMAN**: Review and approve docs
+
+#### 7.3 Future Work Planning (HUMAN REQUIRED)
+- [ ] **HUMAN**: Prioritize follow-up items:
+  - [ ] Test-framework-detector backend migration?
+  - [ ] Enhanced retry logic for VALIDATE?
+  - [ ] Additional language support?
+  - [ ] Performance optimizations?
+- [ ] **HUMAN**: Create RFCs for approved items
+- [ ] **HUMAN**: Update product roadmap
+
+### Critical Success Metrics
+
+Track throughout implementation:
+- [ ] Test suite remains green after each phase
+- [ ] Test generation success rate >85%
+- [ ] Mitigation success rate >70%
+- [ ] Trust score >80% after 2 weeks
+- [ ] Zero data loss between phases
+- [ ] All three languages generate valid tests
+
+### Risk Mitigation
+
+Monitor and address if they occur:
+- [ ] API rate limiting issues → Implement backoff
+- [ ] Test timeout problems → Adjust timeout values
+- [ ] Language detection failures → Add manual override
+- [ ] Trust score below 70% → Prepare RFC-061 Phase 2
+
+### Notes
+
+- Run `npm test` after EVERY code change
+- Commit after each completed section
+- Use `act` for local testing before pushing
+- Keep feature flag OFF until Phase 5
+- Document all deviations from plan
 
 ## 1. Background
 
@@ -32,12 +306,12 @@ The VALIDATE phase currently:
 
 ### 2.1 Core Principles
 
-- **No JSON**: Generate directly executable test files only
-- **RED Tests Only**: Focus on proving vulnerability exists (VALIDATE phase)
+- **No In-Tree Metadata**: All test metadata persisted via PhaseDataClient API, not stored in repository
+- **RED Tests Only**: Focus on proving vulnerability exists (VALIDATE phase generates RED tests; MITIGATE phase makes them pass)
 - **Framework Integration**: Tests integrate into existing test suites
 - **Auto-Discovery**: Detect test framework automatically before any test generation
-- **Test Validation**: Run tests to ensure they actually fail
-- **Backend Persistence**: Use PhaseDataClient API for all metadata storage and retrieval
+- **Test Validation**: Run tests to ensure they actually fail (proving vulnerability exists)
+- **Backend Persistence**: Use PhaseDataClient API for all metadata storage and retrieval across phases
 
 ### 2.2 Test Framework Discovery
 
@@ -57,26 +331,50 @@ The VALIDATE phase currently:
 | **Django** | ✅ 18+ patterns | ✅ pytest-django, unittest (Python frameworks) |
 
 ```typescript
-// Leverages existing src/ai/test-framework-detector.ts
+// Leverages existing src/ai/adaptive-test-generator.ts
 import { TestFrameworkDetector } from '../ai/test-framework-detector';
 
 export class ValidationMode {
   private detector: TestFrameworkDetector;
 
   async processIssue(issue: IssueContext): Promise<void> {
-    // Use existing detector that covers all AST-supported languages
+    // Detect all frameworks in repository
     const frameworks = await this.detector.detectFrameworks(this.repoPath);
-    const primaryFramework = frameworks[0]; // Already sorted by confidence
+
+    // Select framework based on vulnerable file extension
+    const primaryFramework = this.selectPrimaryFramework(
+      frameworks,
+      issue.vulnerableFile // Uses file extension (.js, .py, .rb) to pick appropriate framework
+    );
 
     if (!primaryFramework) {
       await this.labelNoFramework(issue);
       return;
     }
 
-    // Continue with test generation...
+    // Continue with test generation using file-specific framework...
+  }
+
+  // From adaptive-test-generator.ts - selects framework by file extension
+  private selectPrimaryFramework(frameworks: DetectedFramework[], vulnerableFile: string | undefined) {
+    if (frameworks.length === 1) return frameworks[0];
+
+    // For multi-framework repos, choose based on vulnerable file location
+    const fileExt = vulnerableFile?.split('.').pop()?.toLowerCase();
+    const extensionPreferences = {
+      'js': ['jest', 'vitest', 'mocha'],
+      'py': ['pytest', 'unittest'],
+      'rb': ['rspec', 'minitest'],
+      // ... see adaptive-test-generator.ts:324-331 for full mapping
+    };
+
+    const preferred = extensionPreferences[fileExt];
+    return frameworks.find(f => preferred?.includes(f.name)) || frameworks[0];
   }
 }
 ```
+
+**Note**: Future work should migrate test-framework-detector logic to backend for security and reusability (see Section 10).
 
 ### 2.3 Backend Persistence for Test Metadata
 
@@ -96,14 +394,21 @@ export class ValidationMode {
       redTests: {
         files: testFiles, // Support multiple tests per vulnerability
         framework: this.detectedFramework,
-        commands: testFiles.map(f => this.getTestCommand(f)),
+        commands: testFiles.map(f => {
+          try {
+            return this.getTestCommand(f);
+          } catch (error) {
+            logger.error(`Failed to get test command for ${f}:`, error);
+            throw new Error(`Cannot determine test command for ${f}`);
+          }
+        }),
         branch: `rsolv/validate/issue-${issue.number}`
       },
       testResults: {
         allFailed: true, // All RED tests must fail
         executionTime: this.testDuration
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString() // UTC timestamp (ISO 8601)
     };
 
     // Uses POST /api/v1/phases/store endpoint
@@ -216,12 +521,13 @@ sequenceDiagram
     participant B as Validation Branch
     participant M as MITIGATE Phase
     participant CC as Claude Code CLI
-    participant GH as GitHub
+    participant GF as Git Forge (GitHub)
 
     Note over V: Generate RED test(s)
     V->>B: Commit test(s) to branch<br/>rsolv/validate/issue-{N}
-    V->>V: Run tests (verify they fail)
+    V->>V: Run tests (MUST fail - proving vulnerability)
     V->>API: Store test metadata<br/>(files[], framework, commands[], branch)
+    V->>GF: Enhance issue with educational content<br/>(vulnerability explanation, remediation guidance)
 
     Note over M: Start mitigation
     M->>API: Retrieve test metadata (customer-scoped)
@@ -229,16 +535,16 @@ sequenceDiagram
     M->>B: Checkout validation branch
     B-->>M: Access test files
 
-    M->>M: Run test(s) - should fail
+    M->>M: Pre-verification: Run test(s)<br/>MUST fail (proving vulnerability exists)
 
-    Note over M,CC: Retry loop if tests don't pass
-    loop Until tests pass or max retries (3)
+    Note over M,CC: Fix iteration loop (POST-fix retry)
+    loop Until tests PASS or max retries (3)
         M->>CC: Apply fix with test context
         CC-->>M: Fix applied
-        M->>M: Run test(s)
+        M->>M: Post-verification: Run test(s)<br/>(should NOW pass)
         alt Tests pass
-            M->>GH: Create PR (tests + fix)
-            M->>API: Store success results
+            M->>GF: Create PR (tests + fix)
+            M->>API: Store success results + trust score
             Note over M: Done!
         else Tests still fail
             M->>CC: Retry with failure output
@@ -247,8 +553,8 @@ sequenceDiagram
     end
 
     alt All retries exhausted
-        M->>API: Store failure + debug info
-        M->>GH: Comment on issue with failure details
+        M->>API: Store failure + debug info + trust score
+        M->>GF: Comment on issue with failure details
         Note over M: Manual intervention needed
     end
 ```
@@ -560,6 +866,42 @@ async checkoutValidationBranch(issue: IssueContext): Promise<boolean> {
 
 This blocker must be resolved before implementing executable tests, as it breaks the backend persistence model.
 
+### Blocker 2: Test Generator Produces Wrong Test Types
+
+**Current Issue**: The ai-test-generator.ts currently generates RED+GREEN+REFACTOR tests, contradicting RFC-060's "RED Tests Only" principle for the VALIDATE phase:
+
+```typescript
+// CURRENT PROBLEMATIC CODE (ai-test-generator.ts lines 133-136)
+## Test Requirements:
+1. Generate THREE test cases following TDD red-green-refactor:
+   - RED test: Proves the vulnerability exists (should FAIL on vulnerable code, PASS on fixed code)
+   - GREEN test: Validates the fix works (should FAIL on vulnerable code, PASS on fixed code)
+   - REFACTOR test: Ensures functionality is preserved (should PASS on both)
+```
+
+**Problem**: This violates the architectural principle established in Section 2.1:
+- VALIDATE phase should generate **RED tests only** (proving vulnerability exists)
+- MITIGATE phase makes those RED tests pass (not separate GREEN tests)
+- This prompt generates 3 different test types when we need 1+ RED tests
+
+**Required Fix**:
+```typescript
+// ✅ SOLUTION: Update prompt to generate only RED tests
+## Test Requirements:
+1. Generate one or more RED tests that prove the vulnerability exists:
+   - Each test should FAIL on the current vulnerable code
+   - Each test should PASS once the vulnerability is fixed
+   - Tests should use ${options.testFramework || 'jest'} framework
+   - Follow framework-specific best practices and idioms
+
+2. Support multiple RED tests for complex vulnerabilities:
+   - Multi-vector attacks (e.g., SQL injection via multiple inputs)
+   - Different exploit techniques for same vulnerability type
+   - Edge cases that must all be addressed
+```
+
+**Impact**: This blocker must be resolved before implementing RFC-060, as the current test generation contradicts the core architectural principle of RED-only tests in VALIDATE phase.
+
 ## 5. Implementation Strategy
 
 **Note**: Much of the infrastructure already exists. This RFC focuses on evolving from JSON to executable tests after fixing critical blockers.
@@ -586,8 +928,8 @@ This blocker must be resolved before implementing executable tests, as it breaks
 - TDD approach throughout development
 - Test targets:
   - **JavaScript**: nodegoat-vulnerability-demo (Jest, deliberately vulnerable)
-  - **Ruby**: discourse (RSpec, large Rails app) or gitlab-foss (RSpec-Rails)
-  - **Python**: django-DefectDojo (pytest-django) or flask-vulnerable-app (pytest)
+  - **Ruby**: RailsGoat (RSpec, deliberately vulnerable Rails app) or WebGoat-Ruby
+  - **Python**: django-DefectDojo (pytest-django) or flask-vulnerable-app (pytest, deliberately vulnerable)
 - Feature flag: `RSOLV_EXECUTABLE_TESTS=true`
 - Monitor success rate and adjust templates
 
@@ -595,9 +937,11 @@ This blocker must be resolved before implementing executable tests, as it breaks
 
 **Development Methodology**: Test-Driven Development (TDD) with RED-GREEN-REFACTOR cycle
 
-### Phase 1: Framework Detection & Test Generation [Week 1]
+**Note**: Timeline labels (Phase, Step) indicate sequence only, not calendar duration. Focus on completing each step with passing tests before moving to the next.
 
-#### Day 1-2: Test Framework Auto-Discovery
+### Phase 1: Framework Detection & Test Generation
+
+#### Step 1: Test Framework Auto-Discovery
 **RED Tests** (write failing tests first):
 ```typescript
 // __tests__/framework-detection.test.ts
@@ -636,8 +980,9 @@ describe('TestFrameworkDetector', () => {
 **REFACTOR**:
 - Extract framework patterns to configuration
 - Optimize detection performance
+- Remove any unused framework detection code
 
-#### Day 3-4: Executable Test Generation
+#### Step 2: Executable Test Generation
 **RED Tests**:
 ```typescript
 describe('ExecutableTestGenerator', () => {
@@ -668,7 +1013,7 @@ describe('ExecutableTestGenerator', () => {
 - Implement framework-specific templates
 - Generate tests that integrate with existing suites
 
-#### Day 5: Backend Persistence Integration
+#### Step 3: Backend Persistence Integration
 **RED Tests**:
 ```typescript
 describe('ValidationPhaseDataPersistence', () => {
@@ -695,10 +1040,11 @@ describe('ValidationPhaseDataPersistence', () => {
 - Integrate PhaseDataClient in validation-mode.ts
 - Store comprehensive test metadata
 - Implement error handling
+- Remove old JSON-based persistence code
 
-### Phase 2: Test Execution & Validation [Week 2]
+### Phase 2: Test Execution & Validation
 
-#### Day 1-2: Test Runner Integration
+#### Step 1: Test Runner Integration
 **RED Tests**:
 ```typescript
 describe('TestRunner', () => {
@@ -727,7 +1073,7 @@ describe('TestRunner', () => {
 - Implement timeout handling (default 30s)
 - Capture and parse test output
 
-#### Day 3-4: Test Validation & Metadata Storage
+#### Step 2: Test Validation & Metadata Storage
 **RED Tests**:
 ```typescript
 describe('TestValidation', () => {
@@ -755,10 +1101,11 @@ describe('TestValidation', () => {
 - Validate RED tests fail as expected
 - Store comprehensive test results via API
 - Label issues appropriately based on results
+- Remove any legacy test validation code that's no longer needed
 
-### Phase 3: Mitigation Phase Enhancement [Week 3]
+### Phase 3: MITIGATE Phase Integration
 
-#### Day 1-2: API-Based Metadata Retrieval
+#### Step 1: API-Based Metadata Retrieval
 **RED Tests**:
 ```typescript
 describe('MitigationMetadataRetrieval', () => {
@@ -789,7 +1136,7 @@ describe('MitigationMetadataRetrieval', () => {
 - Use PhaseDataClient.retrievePhaseResults exclusively
 - Implement proper error handling
 
-#### Day 3-4: Test-Aware Fix Generation
+#### Step 2: Test-Aware Fix Generation
 **RED Tests**:
 ```typescript
 describe('TestAwareFix', () => {
@@ -817,15 +1164,14 @@ describe('TestAwareFix', () => {
 - Implement before/after test execution
 - Store mitigation phase data via API
 
-#### Day 5: Dead Code Removal & DRY
 **REFACTOR**:
 - Remove duplicate phase handling code
 - Extract common patterns to shared utilities
-- Ensure consistent PhaseDataClient usage
+- Clean up any dead code from previous test persistence approaches
 
-### Phase 4: Integration Testing [Week 4]
+### Phase 4: Integration Testing
 
-#### Day 1-2: End-to-End Workflow
+#### Step 1: End-to-End Workflow
 **RED Tests**:
 ```typescript
 describe('ThreePhaseIntegration', () => {
@@ -853,7 +1199,7 @@ describe('ThreePhaseIntegration', () => {
 - Verify data flow through all phases
 - Ensure no data loss between phases
 
-#### Day 3-4: Multi-Language Testing
+#### Step 2: Multi-Language Testing
 **RED Tests**:
 ```typescript
 describe('MultiLanguageSupport', () => {
@@ -882,7 +1228,7 @@ describe('MultiLanguageSupport', () => {
 - Verify framework detection accuracy
 - Validate test generation quality
 
-#### Day 5: Observability & Debugging
+#### Step 3: Observability & Debugging
 **RED Tests**:
 ```typescript
 describe('Observability', () => {
@@ -906,6 +1252,35 @@ describe('Observability', () => {
 - Store failure reasons in phase data for debugging
 - Log test execution details
 - Track retry attempts and outcomes
+
+**Interim Data Access** (until observability UI built in Phase 9):
+```sql
+-- Query phase data directly from PostgreSQL
+SELECT
+  api_key_id,
+  repo_name,
+  issue_number,
+  commit_sha,
+  phase_data->>'validate' as validation_data,
+  phase_data->>'mitigate' as mitigation_data,
+  created_at,
+  updated_at
+FROM phase_results
+WHERE repo_name = 'owner/repo'
+  AND issue_number = 123
+ORDER BY updated_at DESC
+LIMIT 1;
+
+-- Check trust scores
+SELECT
+  repo_name,
+  issue_number,
+  phase_data->'mitigate'->'trustScore' as trust_score,
+  phase_data->'mitigate'->'success' as success
+FROM phase_results
+WHERE phase_data ? 'mitigate'
+ORDER BY updated_at DESC;
+```
 
 ### Success Criteria
 
@@ -1008,6 +1383,15 @@ export class ValidationMode {
 - Test execution runs in GitHub Actions environment (already sandboxed)
 - Attack vectors in RED tests are safe demonstrations (e.g., `' OR '1'='1` for SQL injection)
 - Tests prove vulnerability exists without causing actual damage
+
+### Test API Infrastructure
+**Question for implementation**: Do we have reliable test access mechanism for integration tests?
+- Test API keys with sandbox environment
+- Isolated test database for phase data storage
+- Mock/test mode for PhaseDataClient to avoid hitting production API during unit tests
+- Feature flag to use test backend vs production backend
+
+**Recommendation**: Create test-specific API keys with clear naming (e.g., `test_*` prefix) and ensure integration tests clean up phase data after execution.
 
 ## 9. Observability & Monitoring
 
@@ -1118,11 +1502,18 @@ groups:
 ### Trust Score Monitoring (Required)
 
 **Monitor for 2 weeks post-deployment**:
-- Track `rsolv_mitigation_trust_score` metric
+- Track `rsolv_mitigation_trust_score` metric via PostgreSQL queries (see Section 6, Step 3)
 - Calculate % agreement between Claude's claims and verification
 - Review mitigation failure patterns in PostgreSQL
 
-**Decision Points**:
+**Low-Traffic Monitoring Approach**:
+- Current customer traffic is minimal to nonexistent
+- Use deliberately vulnerable test repos (nodegoat, RailsGoat) for baseline data
+- Run periodic test workflows (weekly) to generate trust score samples
+- Focus on qualitative analysis of failures rather than statistical significance
+- Defer production thresholds until real customer traffic exists
+
+**Decision Points** (when sufficient data available):
 - **Trust Score >80%**: Phase 1 sufficient, continue monitoring
 - **Trust Score 70-80%**: Implement RFC-061 Phase 2 (Observability Hooks)
 - **Trust Score <70%**: Implement RFC-061 Phase 3 (Full External Orchestration)
@@ -1135,29 +1526,36 @@ groups:
 3. Prometheus alerts (3 minimum: success rate, test generation, trust score)
 4. Telemetry events in `lib/rsolv/phases.ex`
 
-**Success Metrics**:
-- Test generation success rate >85%
-- Mitigation success rate >70%
-- Trust score >80%
-- P95 mitigation duration <5 minutes
+**Success Metrics** (prioritized):
+1. **Functionality first**: Test generation and execution works correctly
+2. **Accuracy second**: Mitigation success rate >70%, trust score >80%
+3. **Performance later**: Wall clock performance optimization deferred until functionality and accuracy validated
 
 ### Potential Follow-up Work
 
 **If trust scores indicate issues**:
 - [ ] Implement RFC-061 Phase 2: Add `.claude/hooks/post-tool-use.sh` for tool observability
 - [ ] Implement RFC-061 Phase 3: External retry orchestration (fallback)
-- [ ] Enhanced prompt engineering based on failure patterns
+- [ ] Enhanced prompt and context engineering based on failure patterns
 - [ ] Framework-specific retry strategies
 
 **For scale/performance**:
 - [ ] Optimize test execution (parallel test runs)
-- [ ] Cache test framework detection results
+- [ ] Note: False positive detection caching already exists (see RFCs/ADRs on caching, feature flags to enable/bypass)
+- [ ] Cache test framework detection results (new work)
 - [ ] Batch mitigation operations
 
 **Documentation needs**:
 - [ ] Troubleshooting guide for common test failures
 - [ ] Best practices for writing RED tests per framework
 - [ ] Integration guide for new test frameworks
+
+**Architecture evolution**:
+- [ ] Migrate test-framework-detector.ts to backend API
+  - Currently runs client-side in RSOLV-action (filesystem access)
+  - Should run backend-side during SCAN phase (AST analysis integration)
+  - Benefits: Centralized detection, version consistency, reuse across phases
+  - Note: Requires new RFC or lightweight ADR for migration plan
 
 ## 11. Key Architectural Decisions
 
@@ -1185,6 +1583,30 @@ Based on investigation and review:
    - Label issue as `rsolv:no-test-framework` if framework missing
    - Continue with manual fix if test generation fails
    - Log warnings but don't block workflow
+
+5. **Validated Flag vs Test Results**:
+   - Current phase data includes both `validated: boolean` and `testResults: { success: boolean }`
+   - **Decision**: Keep both fields for different semantic purposes:
+     - `validated`: High-level phase completion status (did VALIDATE phase complete?)
+     - `testResults.success`: Specific test execution outcome (did the RED test fail as expected?)
+   - **Rationale**:
+     - Supports edge cases (test framework missing, test generation fails)
+     - Allows VALIDATE phase to complete successfully even if test generation fails
+     - Provides granular observability for metrics and debugging
+   - **Alternative Considered**: Single composite validation status
+     - Rejected: Loses distinction between "phase completed" vs "test executed and failed"
+     - Would complicate error handling and observability
+
+6. **VALIDATE Phase Retry Logic**:
+   - **Question**: Should VALIDATE phase have retry logic similar to MITIGATE phase (RFC-061)?
+   - **Current Design**: VALIDATE generates RED test once, no retry if test generation produces poor-quality tests
+   - **Consideration**: Similar to how MITIGATE retries fixes until tests pass, VALIDATE could retry test generation until tests properly demonstrate the vulnerability
+   - **Decision Deferred**: Start without retry logic in V1, monitor test quality metrics
+   - **Future Enhancement**: If test generation success rate <85%, consider adding:
+     - Retry with enhanced prompts if generated test doesn't fail as expected
+     - Provide vulnerability context from backend API for better test generation
+     - Use trust score approach (compare generated test quality to expectations)
+   - **Note**: This aligns with RFC-061's incremental reliability approach - start simple, add complexity based on measured need
 
 ## 12. References
 
@@ -1215,9 +1637,9 @@ Following comprehensive review, this RFC has been updated to:
 6. **Dead Code Removal**: Identified that mitigation-mode.ts still uses local JSON files (lines 36-46) instead of PhaseDataClient - this needs fixing.
 
 7. **Specific Test Targets**: Added concrete repository targets for Phase 4 testing:
-   - nodegoat-vulnerability-demo (JavaScript/Jest)
-   - discourse or gitlab-foss (Ruby/RSpec)
-   - django-DefectDojo or flask-vulnerable-app (Python/pytest)
+   - nodegoat-vulnerability-demo (JavaScript/Jest, deliberately vulnerable)
+   - RailsGoat or WebGoat-Ruby (Ruby/RSpec, deliberately vulnerable)
+   - django-DefectDojo or flask-vulnerable-app (Python/pytest, deliberately vulnerable)
 
 8. **TDD Roadmap**: Added comprehensive 4-week implementation plan with specific RED-GREEN-REFACTOR cycles for each component.
 
@@ -1244,6 +1666,52 @@ Following comprehensive review, this RFC has been updated to:
 13. **Observability Focus**: Changed "Performance & Monitoring" to "Observability & Debugging" focused on failure diagnosis, not premature optimization
 
 14. **Concrete TDD Examples**: Replaced high-level test descriptions with actual TypeScript test code containing real expect() statements
+
+### Review Session 2025-10-05
+
+15. **Abstract Accuracy**: Changed from "fundamental shift" to accurately reflect this RFC returns to ADR-025's original architecture, correcting deviations.
+
+16. **Core Principles Terminology**: Updated "No JSON" to more accurate "No In-Tree Metadata" principle, clarifying that backend API persistence is used instead.
+
+17. **Framework Selection Logic**: Replaced misleading `frameworks[0]` example with actual `selectPrimaryFramework()` implementation showing file extension-based selection (adaptive-test-generator.ts:311-331).
+
+18. **Error Handling & Timestamps**:
+    - Added try/catch error handling for `getTestCommand()` calls
+    - Added UTC timestamp clarification (ISO 8601 via Date.toISOString())
+
+19. **Enhanced Sequence Diagram**:
+    - Changed "GitHub" to "Git Forge (GitHub)" for future compatibility
+    - Added issue enhancement step during VALIDATE phase
+    - Clarified pre-verification (MUST fail) vs post-verification (should NOW pass) timing
+    - Distinguished retry timing clarity in MITIGATE phase
+
+20. **Critical Blocker Discovered**: Documented that ai-test-generator.ts currently generates RED+GREEN+REFACTOR tests (lines 133-136), contradicting RFC-060's "RED Tests Only" principle. Must be fixed before implementation.
+
+21. **Follow-up Work**: Added test-framework-detector backend migration as future architectural evolution item (Section 10).
+
+22. **Validated Flag Decision**: Documented architectural decision to keep both `validated` and `testResults.success` fields for different semantic purposes (Section 11).
+
+### Review Session 2025-10-05 (Second Pass)
+
+23. **VALIDATE Retry Logic Consideration**: Added architectural decision (#6 in Section 11) to defer retry logic for V1, monitor test quality, and add retry if needed based on metrics (<85% success rate).
+
+24. **Deliberately Vulnerable Ruby Repos**: Updated test targets to include RailsGoat and WebGoat-Ruby (deliberately vulnerable) instead of production apps like discourse.
+
+25. **Timeline Simplification**: Removed week/day calendar labels from TDD roadmap (Section 6), replaced with Phase/Step sequence labels with explicit note that these indicate sequence, not duration.
+
+26. **DRY Work Distribution**: Interspersed dead code removal and DRY refactoring into each phase's REFACTOR step instead of single "Day 5" cleanup. Removed standalone DRY section.
+
+27. **Interim Data Access**: Added SQL query examples (Section 6, Step 3) for accessing phase data before observability UI built, enabling early debugging and trust score monitoring.
+
+28. **Low-Traffic Monitoring Approach**: Updated trust score monitoring (Section 10) to use test repos for baseline data, weekly test workflows, and qualitative analysis until real customer traffic exists.
+
+29. **Success Metrics Prioritization**: Reordered metrics to focus on functionality first, accuracy second, performance later - removed P95 duration concern from initial success criteria.
+
+30. **Test API Infrastructure**: Added question and recommendations (Section 8) about test API keys, sandbox environment, and mock/test mode for PhaseDataClient.
+
+31. **Prompt Engineering Enhancement**: Updated follow-up work to reference "prompt and context engineering" (not just prompts) for addressing trust score issues.
+
+32. **False Positive Caching Reference**: Added note in follow-up work (Section 10) acknowledging existing false positive detection caching infrastructure with RFCs/ADRs and feature flags.
 
 ## Conclusion
 

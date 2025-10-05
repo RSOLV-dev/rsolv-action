@@ -3,10 +3,9 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
   Centralized API authentication plug for consistent authentication across all API endpoints.
 
   This plug provides a uniform authentication mechanism that:
-  1. Checks x-api-key header first (preferred)
-  2. Falls back to Authorization: Bearer token for backward compatibility
-  3. Validates the API key against the database
-  4. Assigns the authenticated customer to the connection
+  1. Checks x-api-key header for authentication
+  2. Validates the API key against the database
+  3. Assigns the authenticated customer to the connection
 
   ## Usage
 
@@ -23,6 +22,7 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
 
   import Plug.Conn
   alias Rsolv.Accounts
+  alias RsolvWeb.ApiErrorCodes
   require Logger
 
   @doc """
@@ -91,12 +91,15 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
   end
 
   defp handle_no_key(conn, false = _optional?) do
+    request_id = conn.assigns[:request_id] || Logger.metadata()[:request_id] || "unknown"
+
     conn
     |> put_status(401)
     |> Phoenix.Controller.put_view(json: RsolvWeb.ErrorJSON)
     |> Phoenix.Controller.render("401.json", %{
-      error: "Authentication required",
-      message: "API key must be provided in x-api-key header"
+      error_code: ApiErrorCodes.auth_required(),
+      message: "API key must be provided in x-api-key header",
+      request_id: request_id
     })
     |> halt()
   end
@@ -105,23 +108,29 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
   defp handle_invalid_key(conn, true = _optional?) do
     # For optional authentication with invalid key, we still reject
     # This prevents using invalid keys accidentally
+    request_id = conn.assigns[:request_id] || Logger.metadata()[:request_id] || "unknown"
+
     conn
     |> put_status(401)
     |> Phoenix.Controller.put_view(json: RsolvWeb.ErrorJSON)
     |> Phoenix.Controller.render("401.json", %{
-      error: "Invalid API key",
-      message: "The provided API key is invalid or expired"
+      error_code: ApiErrorCodes.invalid_api_key(),
+      message: "Invalid or expired API key",
+      request_id: request_id
     })
     |> halt()
   end
 
   defp handle_invalid_key(conn, false = _optional?) do
+    request_id = conn.assigns[:request_id] || Logger.metadata()[:request_id] || "unknown"
+
     conn
     |> put_status(401)
     |> Phoenix.Controller.put_view(json: RsolvWeb.ErrorJSON)
     |> Phoenix.Controller.render("401.json", %{
-      error: "Invalid API key",
-      message: "The provided API key is invalid or expired"
+      error_code: ApiErrorCodes.invalid_api_key(),
+      message: "Invalid or expired API key",
+      request_id: request_id
     })
     |> halt()
   end

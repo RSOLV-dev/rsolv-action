@@ -76,6 +76,78 @@ Common issues caught by TypeScript:
 - We have the tool `actionint` as a static checker of github actions workflow files
 - Use `npx tsc --noEmit` for TypeScript type checking before running code
 
+### Local Testing with Act (GitHub Actions Simulator)
+
+We use `act` to test GitHub Actions locally without consuming API tokens. This utilizes your local Claude Code Max account.
+
+#### Setup (one-time)
+```bash
+# Install act
+curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+
+# Download full environment (47.2GB - provides complete GitHub Actions compatibility)
+docker pull catthehacker/ubuntu:full-latest
+
+# Configure act to use full environment
+mkdir -p ~/.config/act
+echo "-P ubuntu-latest=catthehacker/ubuntu:full-latest" > ~/.config/act/actrc
+```
+
+#### Running RSOLV Workflows Locally
+
+1. **Prepare test environment:**
+```bash
+# Clone target repository
+cd /tmp
+git clone https://github.com/RSOLV-dev/nodegoat-vulnerability-demo.git
+cd nodegoat-vulnerability-demo
+
+# Get GitHub PAT for issue/PR operations
+export GITHUB_TOKEN=$(gh auth token)
+
+# Export Claude Code environment variables
+export CLAUDE_CODE_API_KEY=$(cat ~/.claude/claude_code_api_key 2>/dev/null || echo "")
+export ANTHROPIC_API_KEY=$(cat ~/.claude/anthropic_api_key 2>/dev/null || echo "")
+
+# Create secrets file
+cat > .secrets << EOF
+GITHUB_TOKEN=$GITHUB_TOKEN
+RSOLV_API_KEY=your-rsolv-api-key
+ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+CLAUDE_CODE_API_KEY=$CLAUDE_CODE_API_KEY
+EOF
+```
+
+2. **Run full three-phase test with act (uses Claude Code Max, no API tokens):**
+```bash
+act workflow_dispatch \
+  -W .github/workflows/rsolv-test.yml \
+  --secret-file .secrets \
+  --bind \
+  --pull=false \
+  --container-options="-v $HOME/.claude:/root/.claude:ro" \
+  --env CLAUDE_CODE_API_KEY=$CLAUDE_CODE_API_KEY \
+  --env ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+  2>&1 | tee act-test.log
+```
+
+#### What to Expect
+1. **SCAN Phase**: Finds vulnerabilities, creates GitHub issues
+2. **VALIDATE Phase**: Generates RED/GREEN/REFACTOR tests, commits to branch
+3. **MITIGATE Phase**: Applies fixes, creates PR with changes
+
+#### Troubleshooting
+- **Git repository errors**: Fixed in RSOLV-action v3.7.46+ (uses GITHUB_SHA env var)
+- **Slow setup-node**: Normal, can take 30+ minutes. Use `--pull=false` after first run
+- **API auth failures**: Check .secrets file format and API key validity
+
+#### Key Points
+- **No API tokens consumed** - Uses local Claude Code Max account
+- **Docker fixes included** - v3.7.46+ handles act's Docker-in-Docker environment
+- **Test mode support** - Works with known vulnerable repos using `test-mode: 'true'`
+- **Complete workflow** - All three phases (SCAN/VALIDATE/MITIGATE) work locally
+- **See RFC-059** for complete documentation and advanced usage
+
 ## Architecture and Code Exploration
 
 ### Understanding System Capabilities
