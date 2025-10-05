@@ -9,9 +9,9 @@ defmodule RsolvWeb.Api.V1.PatternControllerTest do
 
     test "returns all 132 patterns with valid API key", %{conn: conn, api_key: api_key} do
       # Simulate request with API key
-      conn = 
+      conn =
         conn
-        |> put_req_header("authorization", "Bearer #{api_key.key}")
+        |> put_req_header("x-api-key", api_key.key)
         |> get("/api/v1/patterns?language=javascript")
       
       assert %{
@@ -45,15 +45,15 @@ defmodule RsolvWeb.Api.V1.PatternControllerTest do
     
     test "returns 401 for invalid API key", %{conn: conn} do
       # An API key that doesn't exist in the system should return 401
-      conn = 
+      conn =
         conn
-        |> put_req_header("authorization", "Bearer invalid_key_that_does_not_exist_12345")
+        |> put_req_header("x-api-key", "invalid_key_that_does_not_exist_12345")
         |> get("/api/v1/patterns?language=javascript")
-      
-      assert json_response(conn, 401) == %{
-        "error" => "Unauthorized",
-        "message" => "Invalid API key"
-      }
+
+      resp = json_response(conn, 401)
+      assert resp["error"]["code"] == "INVALID_API_KEY"
+      assert resp["error"]["message"] == "Invalid or expired API key"
+      assert resp["requestId"]
     end
     
     
@@ -63,8 +63,8 @@ defmodule RsolvWeb.Api.V1.PatternControllerTest do
       total_patterns = 
         languages
         |> Enum.map(fn lang ->
-          conn
-          |> put_req_header("authorization", "Bearer #{api_key.key}")
+          build_conn()
+          |> put_req_header("x-api-key", api_key.key)
           |> get("/api/v1/patterns?language=#{lang}")
           |> json_response(200)
           |> Map.get("patterns")
