@@ -81,7 +81,7 @@ defmodule Rsolv.ValidationCacheRetrievalTest do
       
       # Manually update the TTL to be expired
       from(c in Rsolv.ValidationCache.CachedValidation,
-        where: c.forge_account_id == ^forge_account.id
+        where: c.forge_account_id == ^Integer.to_string(forge_account.id)
       )
       |> Repo.update_all(set: [ttl_expires_at: past_time])
       

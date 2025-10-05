@@ -27,7 +27,11 @@ defmodule Rsolv.ValidationCache do
   require Logger
   
   @ttl_days 90
-  
+
+  # Normalize forge_account_id to string (field is :string type)
+  defp normalize_forge_account_id(id) when is_integer(id), do: Integer.to_string(id)
+  defp normalize_forge_account_id(id) when is_binary(id), do: id
+
   @doc """
   Stores a validation result in the cache.
   
@@ -388,8 +392,10 @@ defmodule Rsolv.ValidationCache do
   end
   
   defp build_file_invalidation_query(forge_account_id, repository, file_path) do
+    forge_account_id_str = normalize_forge_account_id(forge_account_id)
+
     from c in CachedValidation,
-      where: c.forge_account_id == ^forge_account_id,
+      where: c.forge_account_id == ^forge_account_id_str,
       where: c.repository == ^repository,
       where: is_nil(c.invalidated_at),
       where: fragment(
@@ -400,8 +406,10 @@ defmodule Rsolv.ValidationCache do
   end
   
   defp build_repository_invalidation_query(forge_account_id, repository) do
+    forge_account_id_str = normalize_forge_account_id(forge_account_id)
+
     from c in CachedValidation,
-      where: c.forge_account_id == ^forge_account_id,
+      where: c.forge_account_id == ^forge_account_id_str,
       where: c.repository == ^repository,
       where: is_nil(c.invalidated_at)
   end
