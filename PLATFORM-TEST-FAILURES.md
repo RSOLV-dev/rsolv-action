@@ -1,12 +1,25 @@
 # Platform Test Failures - Work in Progress
 
-**Status**: 42 failures remaining (down from 53)
-**Last Run**: 2025-10-05 19:50:33
+**Status**: 43 failures remaining (Phase 1 completed)
+**Last Run**: 2025-10-05 20:11:37
 **Branch**: rfc-060-executable-validation-tests
 
 ## Progress Summary
 
-### ✅ Fixed (11 failures)
+### ✅ Phase 1 Completed: API Error Response Format (2025-10-05)
+**Impact**: Migrated to structured error format, fixed 24 ApiAuthentication tests
+**Remaining**: 9 controller tests need updating to new format
+
+**Changes Made**:
+1. Created `RsolvWeb.ApiErrorCodes` module with standard error codes
+2. Updated `ErrorJSON` to support structured format: `{error: {code, message}, requestId}`
+3. Updated `ApiAuthentication` plug to use new error format with request IDs
+4. Fixed all 24 ApiAuthentication plug tests (api_authentication_test.exs, api_authentication_regression_test.exs)
+5. Maintained backward compatibility with legacy error format
+
+**Commit**: `abc3b48` - "Phase 1: Implement structured API error responses with error codes and request IDs"
+
+### ✅ Previously Fixed (11 failures)
 1. **forge_account_id type casting** - Fixed validation cache queries to convert integers to strings
 2. **API error message text** - Updated test expectation from "Missing API key" to "Authentication required"
 
