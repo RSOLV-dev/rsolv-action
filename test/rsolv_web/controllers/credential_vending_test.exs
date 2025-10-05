@@ -8,11 +8,13 @@ defmodule RsolvWeb.CredentialVendingTest do
     end
 
     test "exchanges valid API key for anthropic credentials", %{conn: conn, api_key: api_key} do
-      conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => api_key.key,
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 60
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key.key)
+        |> post("/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 60
+        })
 
       # This should pass with proper implementation
       assert response = json_response(conn, 200)
@@ -23,21 +25,28 @@ defmodule RsolvWeb.CredentialVendingTest do
     end
 
     test "returns 401 for invalid API key", %{conn: conn} do
-      conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => "invalid_key_12345",
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 60
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", "invalid_key_12345")
+        |> post("/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 60
+        })
 
       assert json_response(conn, 401)
-      assert %{"error" => "Invalid API key"} = json_response(conn, 401)
+      resp = json_response(conn, 401)
+      assert resp["error"]["code"] == "INVALID_API_KEY"
+      assert resp["error"]["message"] == "Invalid or expired API key"
+      assert resp["requestId"]
     end
 
     test "validates providers parameter is present", %{conn: conn, api_key: api_key} do
-      conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => api_key.key
-        # Missing providers
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key.key)
+        |> post("/api/v1/credentials/exchange", %{
+          # Missing providers
+        })
 
       assert json_response(conn, 400)
     end

@@ -41,11 +41,13 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       refute String.contains?(anthropic_key, "mock"), "ANTHROPIC_API_KEY should not be a mock key"
       
       # Test credential exchange endpoint
-      conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 60
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post("/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 60
+        })
       
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -100,11 +102,13 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       System.put_env("OPENAI_API_KEY", "sk-test-openai-key")
       System.put_env("OPENROUTER_API_KEY", "sk-or-test-key")
       
-      conn = post(conn, "/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
-        "providers" => ["anthropic", "openai", "openrouter"],
-        "ttl_minutes" => 60
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post("/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic", "openai", "openrouter"],
+          "ttl_minutes" => 60
+        })
       
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -122,14 +126,15 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
     end
     
     test "should include GitHub metadata when headers are present", %{conn: conn, customer: customer, api_key: api_key} do
-      conn = conn
-      |> put_req_header("x-github-job", "test-job-123")
-      |> put_req_header("x-github-run", "test-run-456")
-      |> post("/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 60
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("x-github-job", "test-job-123")
+        |> put_req_header("x-github-run", "test-run-456")
+        |> post("/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 60
+        })
       
       assert json_response(conn, 200)
       
