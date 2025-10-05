@@ -67,7 +67,12 @@ defmodule RsolvWeb.CredentialController do
         conn
         |> put_status(:bad_request)
         |> json(%{error: "Missing required providers parameter"})
-      
+
+      {:error, :missing_parameters} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "Missing required parameters"})
+
       error ->
         Logger.error("Credential exchange error: #{inspect(error)}")
         conn

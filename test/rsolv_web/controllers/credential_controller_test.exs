@@ -35,11 +35,13 @@ defmodule RsolvWeb.CredentialControllerTest do
 
   describe "POST /api/v1/credentials/exchange" do
     test "exchanges valid API key for temporary credentials", %{conn: conn, customer: customer, api_key: api_key} do
-      conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
-        "providers" => ["anthropic", "openai"],
-        "ttl_minutes" => 60
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post(~p"/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic", "openai"],
+          "ttl_minutes" => 60
+        })
 
       assert json_response(conn, 200)
       assert %{
@@ -76,25 +78,32 @@ defmodule RsolvWeb.CredentialControllerTest do
     end
 
     test "returns 401 for invalid API key", %{conn: conn} do
-      conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => "invalid_key",
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 60
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", "invalid_key")
+        |> post(~p"/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 60
+        })
 
       assert json_response(conn, 401)
-      assert %{"error" => "Invalid API key"} = json_response(conn, 401)
+      resp = json_response(conn, 401)
+      assert resp["error"]["code"] == "INVALID_API_KEY"
+      assert resp["error"]["message"] == "Invalid or expired API key"
+      assert resp["requestId"]
     end
 
     test "returns 403 when usage limit exceeded", %{conn: conn, customer: customer, api_key: api_key} do
       # Update customer to have exceeded usage
       {:ok, _} = Accounts.update_customer(customer, %{current_usage: 100})
 
-      conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 60
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post(~p"/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 60
+        })
 
       assert json_response(conn, 403)
       assert %{"error" => "Monthly usage limit exceeded"} = json_response(conn, 403)
@@ -103,14 +112,16 @@ defmodule RsolvWeb.CredentialControllerTest do
     test "rate limiter is configured and working", %{conn: conn, customer: customer, api_key: api_key} do
       # Test that rate limiter is active by checking it exists
       # The actual rate limit (100/minute) is too high to reliably test in unit tests
-      
+
       # Make a successful request first
-      conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 60
-      })
-      
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post(~p"/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 60
+        })
+
       assert json_response(conn, 200)
       
       # Verify rate limiter module exists and check_rate_limit function works
@@ -137,19 +148,24 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert result == {:error, :rate_limited}
     end
 
-    test "validates required parameters", %{conn: conn} do
-      conn = post(conn, ~p"/api/v1/credentials/exchange", %{})
+    test "validates required parameters", %{conn: conn, api_key: api_key} do
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post(~p"/api/v1/credentials/exchange", %{})
 
       assert json_response(conn, 400)
       assert %{"error" => "Missing required parameters"} = json_response(conn, 400)
     end
 
     test "limits TTL to maximum value", %{conn: conn, customer: customer, api_key: api_key} do
-      conn = post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 1440  # 24 hours
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post(~p"/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 1440  # 24 hours
+        })
 
       assert json_response(conn, 200)
       credentials = json_response(conn, 200)["credentials"]
@@ -163,8 +179,9 @@ defmodule RsolvWeb.CredentialControllerTest do
     test "tracks credential generation in database", %{conn: conn, customer: customer, api_key: api_key} do
       assert {:ok, initial_count} = Credentials.count_active_credentials(customer.id)
 
-      post(conn, ~p"/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
+      conn
+      |> put_req_header("x-api-key", api_key)
+      |> post(~p"/api/v1/credentials/exchange", %{
         "providers" => ["anthropic"],
         "ttl_minutes" => 60
       })
@@ -174,14 +191,15 @@ defmodule RsolvWeb.CredentialControllerTest do
     end
 
     test "includes GitHub job metadata when provided", %{conn: conn, customer: customer, api_key: api_key} do
-      conn = conn
-      |> put_req_header("x-github-job", "job_123")
-      |> put_req_header("x-github-run", "run_456")
-      |> post(~p"/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 60
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("x-github-job", "job_123")
+        |> put_req_header("x-github-run", "run_456")
+        |> post(~p"/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 60
+        })
 
       assert json_response(conn, 200)
       
@@ -207,13 +225,14 @@ defmodule RsolvWeb.CredentialControllerTest do
 
     test "refreshes expiring credential", %{conn: conn, customer: customer, api_key: api_key, credential: credential} do
       # First exchange to get a credential
-      exchange_response = conn
-      |> post(~p"/api/v1/credentials/exchange", %{
-        "api_key" => api_key,
-        "providers" => ["anthropic"],
-        "ttl_minutes" => 5  # Short TTL to make it eligible for refresh
-      })
-      |> json_response(200)
+      exchange_response =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post(~p"/api/v1/credentials/exchange", %{
+          "providers" => ["anthropic"],
+          "ttl_minutes" => 5  # Short TTL to make it eligible for refresh
+        })
+        |> json_response(200)
       
       # Extract credential info
       %{"api_key" => original_key} = exchange_response["credentials"]["anthropic"]
@@ -222,11 +241,12 @@ defmodule RsolvWeb.CredentialControllerTest do
       Process.sleep(100)
       
       # Now try to refresh - using the credential id from our setup
-      refresh_conn = build_conn()
-      |> post(~p"/api/v1/credentials/refresh", %{
-        "api_key" => api_key,
-        "credential_id" => to_string(credential.id)
-      })
+      refresh_conn =
+        build_conn()
+        |> put_req_header("x-api-key", api_key)
+        |> post(~p"/api/v1/credentials/refresh", %{
+          "credential_id" => to_string(credential.id)
+        })
       
       case refresh_conn.status do
         200 ->
@@ -261,10 +281,12 @@ defmodule RsolvWeb.CredentialControllerTest do
     end
 
     test "returns 404 for non-existent credential", %{conn: conn, customer: customer, api_key: api_key} do
-      conn = post(conn, ~p"/api/v1/credentials/refresh", %{
-        "api_key" => api_key,
-        "credential_id" => "nonexistent"
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post(~p"/api/v1/credentials/refresh", %{
+          "credential_id" => "nonexistent"
+        })
 
       assert json_response(conn, 404)
       assert %{"error" => "Credential not found"} = json_response(conn, 404)
@@ -285,10 +307,12 @@ defmodule RsolvWeb.CredentialControllerTest do
         expires_at: DateTime.add(DateTime.utc_now(), 250)  # Eligible for refresh like main test
       })
 
-      conn = post(conn, ~p"/api/v1/credentials/refresh", %{
-        "api_key" => api_key,  # Using main customer's API key to try to access other customer's credential
-        "credential_id" => credential.id
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)  # Using main customer's API key to try to access other customer's credential
+        |> post(~p"/api/v1/credentials/refresh", %{
+          "credential_id" => credential.id
+        })
 
       assert json_response(conn, 403)
       assert %{"error" => "Access denied"} = json_response(conn, 403)
@@ -298,13 +322,15 @@ defmodule RsolvWeb.CredentialControllerTest do
   describe "POST /api/v1/usage/report" do
     @tag :skip  # get_customer_usage function not implemented yet
     test "records usage metrics", %{conn: conn, customer: customer, api_key: api_key} do
-      conn = post(conn, ~p"/api/v1/usage/report", %{
-        "api_key" => api_key,
-        "provider" => "anthropic",
-        "tokens_used" => 1500,
-        "request_count" => 3,
-        "job_id" => "gh_job_123"
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", api_key)
+        |> post(~p"/api/v1/usage/report", %{
+          "provider" => "anthropic",
+          "tokens_used" => 1500,
+          "request_count" => 3,
+          "job_id" => "gh_job_123"
+        })
 
       assert json_response(conn, 200)
       assert %{"status" => "recorded"} = json_response(conn, 200)
@@ -320,8 +346,9 @@ defmodule RsolvWeb.CredentialControllerTest do
       fresh_customer = Customers.get_customer!(customer.id)
       initial_usage = fresh_customer.current_usage
 
-      post(conn, ~p"/api/v1/usage/report", %{
-        "api_key" => api_key,
+      conn
+      |> put_req_header("x-api-key", api_key)
+      |> post(~p"/api/v1/usage/report", %{
         "provider" => "anthropic",
         "tokens_used" => 2000,
         "request_count" => 1,
@@ -334,15 +361,20 @@ defmodule RsolvWeb.CredentialControllerTest do
     end
 
     test "returns error for invalid API key", %{conn: conn} do
-      conn = post(conn, ~p"/api/v1/usage/report", %{
-        "api_key" => "invalid",
-        "provider" => "anthropic",
-        "tokens_used" => 1500,
-        "request_count" => 1
-      })
+      conn =
+        conn
+        |> put_req_header("x-api-key", "invalid")
+        |> post(~p"/api/v1/usage/report", %{
+          "provider" => "anthropic",
+          "tokens_used" => 1500,
+          "request_count" => 1
+        })
 
       assert json_response(conn, 401)
-      assert %{"error" => "Invalid API key"} = json_response(conn, 401)
+      resp = json_response(conn, 401)
+      assert resp["error"]["code"] == "INVALID_API_KEY"
+      assert resp["error"]["message"] == "Invalid or expired API key"
+      assert resp["requestId"]
     end
   end
 end

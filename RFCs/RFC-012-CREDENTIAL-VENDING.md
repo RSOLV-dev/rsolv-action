@@ -74,12 +74,12 @@ export class RSOLVCredentialManager {
     const response = await fetch(`${this.rsolvApiUrl}/api/v1/credentials/refresh`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${this.rsolvApiKey}`,
+        'x-api-key': this.rsolvApiKey,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ provider })
     });
-    
+
     return this.handleResponse(response);
   }
 }
