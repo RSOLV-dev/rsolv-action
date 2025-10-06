@@ -2,6 +2,7 @@
  * Mitigation Mode Implementation
  * RFC-041: Generate fixes for validated vulnerabilities
  * RFC-058: Support validation branch checkout for test-aware fix generation
+ * RFC-060: Use PhaseDataClient API instead of local file reads
  */
 
 import { IssueContext, ActionConfig } from '../types/index.js';
@@ -9,41 +10,82 @@ import { logger } from '../utils/logger.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PhaseDataClient } from './phase-data-client/index.js';
 
 export class MitigationMode {
   private config: ActionConfig;
   private repoPath: string;
+  private phaseClient: PhaseDataClient;
+  private commitSha: string;
 
-  constructor(config: ActionConfig, repoPath?: string) {
+  constructor(config: ActionConfig, repoPath?: string, phaseClient?: PhaseDataClient) {
     this.config = config;
     this.repoPath = repoPath || process.cwd();
+
+    // RFC-060: Use PhaseDataClient for validation metadata retrieval
+    this.phaseClient = phaseClient || new PhaseDataClient(
+      config.apiKey,
+      process.env.RSOLV_API_URL
+    );
+
+    // Get current commit SHA for phase data retrieval
+    this.commitSha = this.getCurrentCommitSha();
   }
 
   /**
-   * RFC-058: Checkout validation branch for mitigation phase
+   * Get current commit SHA
+   */
+  private getCurrentCommitSha(): string {
+    try {
+      return execSync('git rev-parse HEAD', {
+        cwd: this.repoPath,
+        encoding: 'utf8'
+      }).trim();
+    } catch (error) {
+      logger.warn(`Could not get current commit SHA: ${error}`);
+      return 'unknown';
+    }
+  }
+
+  /**
+   * RFC-058/RFC-060: Checkout validation branch for mitigation phase
+   * Uses PhaseDataClient API instead of local file reads
    */
   async checkoutValidationBranch(issue: IssueContext): Promise<boolean> {
     try {
-      // Read validation results
-      const validationPath = path.join(this.repoPath, '.rsolv', 'validation', `issue-${issue.number}.json`);
+      // RFC-060: Retrieve validation results from PhaseDataClient API
+      const phaseData = await this.phaseClient.retrievePhaseResults(
+        this.config.repo,
+        issue.number,
+        this.commitSha
+      );
 
-      if (!fs.existsSync(validationPath)) {
-        logger.info('No validation results found, staying on current branch');
+      if (!phaseData?.validate) {
+        logger.info('No validation results found in API, staying on current branch');
         return false;
       }
 
-      const validationData = JSON.parse(fs.readFileSync(validationPath, 'utf-8'));
+      // Extract validation data for this issue
+      const issueKey = `issue-${issue.number}`;
+      const validationData = phaseData.validate[issueKey];
 
-      if (!validationData.branchName) {
-        logger.info('No validation branch found, staying on current branch');
+      if (!validationData) {
+        logger.info(`No validation data found for ${issueKey}, staying on current branch`);
+        return false;
+      }
+
+      // Check if validation produced a branch
+      const branchName = validationData.branchName;
+      if (!branchName) {
+        logger.info('No validation branch found in API metadata, staying on current branch');
         return false;
       }
 
       try {
         // First try to fetch the branch from remote
         try {
-          execSync(`git fetch origin ${validationData.branchName}`, { cwd: this.repoPath });
-          logger.info(`Fetched validation branch from remote: ${validationData.branchName}`);
+          execSync(`git fetch origin ${branchName}`, { cwd: this.repoPath });
+          logger.info(`Fetched validation branch from remote: ${branchName}`);
         } catch (fetchError) {
           logger.warn(`Could not fetch validation branch from remote: ${fetchError}`);
         }
@@ -51,14 +93,14 @@ export class MitigationMode {
         // Try to checkout the branch (local or remote)
         try {
           // First try local branch
-          execSync(`git checkout ${validationData.branchName}`, { cwd: this.repoPath });
-          logger.info(`Checked out local validation branch: ${validationData.branchName}`);
+          execSync(`git checkout ${branchName}`, { cwd: this.repoPath });
+          logger.info(`Checked out local validation branch: ${branchName}`);
           return true;
         } catch {
           // If local doesn't exist, try remote
           try {
-            execSync(`git checkout -b ${validationData.branchName} origin/${validationData.branchName}`, { cwd: this.repoPath });
-            logger.info(`Checked out remote validation branch: origin/${validationData.branchName}`);
+            execSync(`git checkout -b ${branchName} origin/${branchName}`, { cwd: this.repoPath });
+            logger.info(`Checked out remote validation branch: origin/${branchName}`);
             return true;
           } catch (remoteError) {
             logger.warn(`Failed to checkout validation branch from remote: ${remoteError}`);
@@ -76,52 +118,80 @@ export class MitigationMode {
   }
 
   /**
-   * RFC-058: Get validation tests from current branch
+   * RFC-058/RFC-060: Get validation tests from PhaseDataClient
+   * Returns test content from validation metadata instead of reading local files
    */
-  async getValidationTests(issue: IssueContext): Promise<string[]> {
-    const testDir = path.join(this.repoPath, '.rsolv', 'tests');
-
-    if (!fs.existsSync(testDir)) {
-      return [];
-    }
-
-    // Return all test files in the validation branch
+  async getValidationTests(issue: IssueContext): Promise<Array<{path: string, content: string}>> {
     try {
-      return fs.readdirSync(testDir)
-        .filter(file => file.endsWith('.test.js'))
-        .map(file => path.join(testDir, file));
+      // RFC-060: Retrieve validation results from PhaseDataClient API
+      const phaseData = await this.phaseClient.retrievePhaseResults(
+        this.config.repo,
+        issue.number,
+        this.commitSha
+      );
+
+      if (!phaseData?.validate) {
+        logger.info('No validation results found in API');
+        return [];
+      }
+
+      // Extract validation data for this issue
+      const issueKey = `issue-${issue.number}`;
+      const validationData = phaseData.validate[issueKey];
+
+      if (!validationData?.testResults?.generatedTests) {
+        logger.info('No generated tests found in validation metadata');
+        return [];
+      }
+
+      // Extract RED test content from validation metadata
+      const tests = [];
+      const generatedTests = validationData.testResults.generatedTests;
+
+      if (generatedTests.red) {
+        tests.push({
+          path: `.rsolv/tests/validation-${issue.number}-red.test.js`,
+          content: generatedTests.red.testCode || ''
+        });
+      }
+
+      if (generatedTests.green) {
+        tests.push({
+          path: `.rsolv/tests/validation-${issue.number}-green.test.js`,
+          content: generatedTests.green.testCode || ''
+        });
+      }
+
+      if (generatedTests.refactor) {
+        tests.push({
+          path: `.rsolv/tests/validation-${issue.number}-refactor.test.js`,
+          content: generatedTests.refactor.testCode || ''
+        });
+      }
+
+      logger.info(`Retrieved ${tests.length} validation tests from API metadata`);
+      return tests;
+
     } catch (error) {
-      logger.warn(`Could not read test directory: ${error}`);
+      logger.warn(`Could not retrieve validation tests from API: ${error}`);
       return [];
     }
   }
 
   /**
-   * RFC-058: Generate test-aware mitigation with enhanced Claude Code prompt
+   * RFC-058/RFC-060: Generate test-aware mitigation with enhanced Claude Code prompt
+   * Uses PhaseDataClient API for test retrieval
    */
   async generateTestAwareFix(issue: IssueContext): Promise<any> {
     try {
       // Step 1: Checkout validation branch
       const branchCheckedOut = await this.checkoutValidationBranch(issue);
 
-      // Step 2: Get validation tests
-      const testFiles = await this.getValidationTests(issue);
+      // Step 2: Get validation tests from API (no file reading needed)
+      const testContents = await this.getValidationTests(issue);
 
-      // Step 3: Read test content
-      const testContents = testFiles.map(file => {
-        try {
-          return {
-            path: file,
-            content: fs.readFileSync(file, 'utf-8')
-          };
-        } catch (error) {
-          logger.warn(`Could not read test file ${file}:`, error);
-          return null;
-        }
-      }).filter(Boolean);
-
-      // Step 4: Generate enhanced prompt with test context
-      const enhancedPrompt = this.buildTestAwarePrompt(issue, testContents as Array<{path: string, content: string}>);
+      // Step 3: Generate enhanced prompt with test context
+      const enhancedPrompt = this.buildTestAwarePrompt(issue, testContents);
 
       logger.info(`Generated test-aware mitigation prompt for issue #${issue.number}`);
       logger.info(`- Validation branch: ${branchCheckedOut ? 'checked out' : 'not available'}`);
