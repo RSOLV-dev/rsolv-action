@@ -62,6 +62,54 @@ Common issues caught by TypeScript:
 - Refactor, changing only one of the implementation or tests at a time
 - Optimize for readability and idiomaticity
 
+### Test Suite Maintenance
+**Key Lessons for Running Green Test Suites:**
+
+1. **Jest vs Vitest**: RSOLV-action uses Vitest, not Jest
+   - When converting tests: `@jest/globals` → `vitest`
+   - Mock functions: `jest.fn()` → `vi.fn()`, `jest.mock()` → `vi.mock()`
+   - Clear mocks: `jest.clearAllMocks()` → `vi.clearAllMocks()`
+   - Module-level `vi.mock()` calls must come before imports they mock
+
+2. **Async/Await Discipline**:
+   - Methods returning `Promise<T>` MUST be awaited in tests
+   - Add `async` to test functions when calling async methods
+   - Missing `await` causes confusing assertion failures
+
+3. **Mock Configuration Completeness**:
+   - Mocks must include ALL properties accessed by code under test
+   - Check for nested property access (e.g., `this.config.aiProvider.apiKey`)
+   - Use proper TypeScript types or `as ActionConfig` to ensure completeness
+
+4. **Test Isolation in Elixir**:
+   - `async: false` means tests share state (cache, database, etc.)
+   - Don't assert exact values that depend on test execution order
+   - Instead, record initial state and verify relative changes
+
+5. **String Assertions**:
+   - Check for markdown formatting: `**bold**` vs `bold`
+   - Use `expect.stringContaining()` for flexible matching
+   - Verify actual output format before writing assertions
+
+6. **API Signature Changes**:
+   - When refactoring APIs, grep for all usages across test files
+   - Common pattern: method renamed or parameters changed
+   - Example: `detectInFile(code, file)` → `detect(code, language, file)`
+
+7. **Test Philosophy and RFC Intent**:
+   - Cross-reference test expectations with RFC documentation
+   - RFC-059 example: `RSOLV_TESTING_MODE=true` means "don't filter" not "still validate strictly"
+   - Test behavior should match documented intent, not assumptions
+
+8. **Memory Issues**:
+   - Use `npm run test:memory` for memory-safe test runs
+   - Split test suites when hitting heap limits
+   - Individual test file runs: `npx vitest run path/to/test.ts`
+
+9. **Current Test Status** (as of 2025-10-06):
+   - RSOLV-platform: ✅ 100% passing (4097 tests, 529 doctests)
+   - RSOLV-action: 142 files passing, 37 integration/E2E tests need infrastructure setup
+
 ### Elixir Testing
 - We have several Elixir apps in this project 
 - Elixir and ExUnit support doctests, and I heartily encourage their use whenever practical
