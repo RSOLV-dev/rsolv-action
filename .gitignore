@@ -98,3 +98,4 @@ test-ollama-output*.json
 TAGS
 tags.rsolv/
 nodegoat-demo/
+.rsolv/phase-data/
