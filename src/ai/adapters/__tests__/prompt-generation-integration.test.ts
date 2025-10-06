@@ -20,7 +20,7 @@ describe('Prompt Generation Integration Tests', () => {
   });
 
   describe('End-to-end prompt generation with specificVulnerabilities', () => {
-    it('should generate complete prompt with all vulnerability details', () => {
+    it('should generate complete prompt with all vulnerability details', async () => {
       // Arrange: Real-world issue structure from MITIGATE phase
       const issueFromMitigate: IssueContext = {
         number: 301,
@@ -70,7 +70,7 @@ Unsafe use of eval() function detected in multiple locations.
       };
 
       // Act: Generate the actual prompt
-      const prompt = (adapter as any).constructPromptWithTestContext(
+      const prompt = await (adapter as any).constructPromptWithTestContext(
         issueFromMitigate,
         analysis
       );
@@ -113,7 +113,7 @@ Unsafe use of eval() function detected in multiple locations.
       expect(prompt).toContain('Focus ONLY on the vulnerabilities listed above');
     });
 
-    it('should handle missing specificVulnerabilities gracefully', () => {
+    it('should handle missing specificVulnerabilities gracefully', async () => {
       const issueWithoutVulns: IssueContext = {
         number: 302,
         title: 'Generic security issue',
@@ -130,7 +130,7 @@ Unsafe use of eval() function detected in multiple locations.
       };
 
       // Should not throw
-      const prompt = (adapter as any).constructPromptWithTestContext(
+      const prompt = await (adapter as any).constructPromptWithTestContext(
         issueWithoutVulns,
         analysis
       );
@@ -143,7 +143,7 @@ Unsafe use of eval() function detected in multiple locations.
       expect(prompt).not.toContain('SPECIFIC VULNERABILITIES TO FIX');
     });
 
-    it('should preserve vulnerabilities through validation iterations', () => {
+    it('should preserve vulnerabilities through validation iterations', async () => {
       const issueWithVulns: IssueContext = {
         number: 303,
         title: 'XSS vulnerability',
@@ -186,7 +186,7 @@ Unsafe use of eval() function detected in multiple locations.
       const iteration = { current: 2, max: 3 };
 
       // Generate prompt with validation failure context
-      const prompt = (adapter as any).constructPromptWithTestContext(
+      const prompt = await (adapter as any).constructPromptWithTestContext(
         issueWithVulns,
         analysis,
         undefined,
@@ -207,7 +207,7 @@ Unsafe use of eval() function detected in multiple locations.
   });
 
   describe('Prompt structure validation', () => {
-    it('should order prompt sections correctly', () => {
+    it('should order prompt sections correctly', async () => {
       const issue: IssueContext = {
         number: 304,
         title: 'Test ordering',
@@ -233,7 +233,7 @@ Unsafe use of eval() function detected in multiple locations.
         suggestedApproach: 'Fix'
       };
 
-      const prompt = (adapter as any).constructPromptWithTestContext(issue, analysis);
+      const prompt = await (adapter as any).constructPromptWithTestContext(issue, analysis);
 
       // Check order of major sections
       const constraintsIndex = prompt.indexOf('CRITICAL CONSTRAINTS');
