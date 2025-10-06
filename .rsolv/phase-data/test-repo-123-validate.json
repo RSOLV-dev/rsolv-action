@@ -139,7 +139,7 @@
             ]
           }
         },
-        "timestamp": "2025-10-06T20:00:35.107Z",
+        "timestamp": "2025-10-06T21:16:06.059Z",
         "hasSpecificVulnerabilities": false,
         "vulnerabilities": [],
         "confidence": "low"
@@ -151,5 +151,5 @@
     "issueNumber": 123,
     "commitSha": "abc123def456"
   },
-  "timestamp": "2025-10-06T20:00:35.111Z"
+  "timestamp": "2025-10-06T21:16:06.067Z"
 }

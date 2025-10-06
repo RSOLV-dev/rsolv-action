@@ -3,7 +3,7 @@
   "data": {
     "scan": {
       "vulnerabilities": [],
-      "timestamp": "2025-10-06T20:00:35.103Z",
+      "timestamp": "2025-10-06T21:16:06.054Z",
       "commitHash": "abc123def456",
       "canBeFixed": true,
       "analysisData": {
@@ -28,5 +28,5 @@
     "issueNumber": 123,
     "commitSha": "abc123def456"
   },
-  "timestamp": "2025-10-06T20:00:35.106Z"
+  "timestamp": "2025-10-06T21:16:06.057Z"
 }
