@@ -108,7 +108,15 @@ Common issues caught by TypeScript:
 
 9. **Current Test Status** (as of 2025-10-06):
    - RSOLV-platform: ✅ 100% passing (4097 tests, 529 doctests)
-   - RSOLV-action: 142 files passing, 37 integration/E2E tests need infrastructure setup
+   - RSOLV-action Unit Tests: ✅ ~960 tests passing (87.7%), 113 test files passing
+   - RSOLV-action Integration Tests: 40+ test files excluded (need CI infrastructure per RFC-062)
+
+10. **Integration Test Setup**:
+   - Integration tests excluded from default run via `vitest.config.ts`
+   - Run with: `RUN_INTEGRATION=true npm test`
+   - Require: Live RSOLV platform API, credentials, Git repos
+   - See RFC-062 for CI setup details
+   - Fresh production API key created: `rsolv_GD5KyzSXvKzaztds23HijV5HFnD7ZZs8cbF1UX5ks_8`
 
 ### Elixir Testing
 - We have several Elixir apps in this project 
