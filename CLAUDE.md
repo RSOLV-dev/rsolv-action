@@ -107,11 +107,31 @@ Common issues caught by TypeScript:
    - Individual test file runs: `npx vitest run path/to/test.ts`
 
 9. **Current Test Status** (as of 2025-10-06):
-   - RSOLV-platform: ✅ 100% passing (4097 tests, 529 doctests)
-   - RSOLV-action Unit Tests: ✅ ~960 tests passing (87.7%), 113 test files passing
-   - RSOLV-action Integration Tests: 40+ test files excluded (need CI infrastructure per RFC-062)
+   - RSOLV-action: ✅ **100% GREEN** (19/19 test files, 153 passed, 2 skipped)
+   - RSOLV-platform: ⚠️ **1 failure** (4096/4097 passed, 529 doctests)
+   - Known platform failure: Admin customer pagination test (non-critical UI)
 
-10. **Integration Test Setup**:
+10. **How to Run Tests**:
+
+   **RSOLV-action** (in `/home/dylan/dev/rsolv/RSOLV-action/RSOLV-action`):
+   ```bash
+   npm run test:memory  # REQUIRED - memory-safe with sharding
+   ```
+   - **DO NOT** use `npm test` - causes OOM errors
+   - Uses 8 shards run serially with 4GB heap limit
+   - Fast execution: 2-3s per shard vs 60s for full suite
+   - Test artifacts auto-generated in `.rsolv/` and `temp/` (gitignored)
+
+   **RSOLV-platform** (in `/home/dylan/dev/rsolv`):
+   ```bash
+   cd ~/dev/rsolv && mix test
+   ```
+   - Platform code lives in rsolv root directory (no separate RSOLV-platform dir)
+   - Uses PostgreSQL test database with FunWithFlags feature flags
+   - Duration: ~64 seconds
+   - Many tests use async/DataCase for database isolation
+
+11. **Integration Test Setup**:
    - Integration tests excluded from default run via `vitest.config.ts`
    - Run with: `RUN_INTEGRATION=true npm test`
    - Require: Live RSOLV platform API, credentials, Git repos
