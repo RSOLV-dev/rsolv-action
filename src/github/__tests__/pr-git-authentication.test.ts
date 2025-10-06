@@ -1,19 +1,19 @@
-import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createEducationalPullRequest } from '../pr-git-educational';
 import { execSync } from 'child_process';
 
 // Mock child_process
-jest.mock('child_process');
-jest.mock('../../utils/logger');
-jest.mock('../api');
+vi.mock('child_process');
+vi.mock('../../utils/logger');
+vi.mock('../api');
 
-const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
+const mockExecSync = execSync as any;
 
 describe('PR Git Authentication', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env = { ...originalEnv };
   });
 

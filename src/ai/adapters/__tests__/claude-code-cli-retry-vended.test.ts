@@ -20,7 +20,7 @@ describe('RetryableClaudeCodeCLI - Vended Credentials', () => {
     
     // Mock credential manager
     mockCredentialManager = {
-      getCredential: jest.fn().mockReturnValue('vended-api-key-123')
+      getCredential: vi.fn().mockReturnValue('vended-api-key-123')
     };
   });
   
@@ -55,7 +55,7 @@ describe('RetryableClaudeCodeCLI - Vended Credentials', () => {
       
       // Mock the executeCLI to capture the environment
       let capturedEnv: any;
-      (adapter as any).executeCLI = jest.fn().mockImplementation((prompt: string, options: any) => {
+      (adapter as any).executeCLI = vi.fn().mockImplementation((prompt: string, options: any) => {
         capturedEnv = options.env;
         return Promise.resolve({
           success: false,
@@ -64,7 +64,7 @@ describe('RetryableClaudeCodeCLI - Vended Credentials', () => {
       });
       
       // Mock getModifiedFiles
-      (adapter as any).getModifiedFiles = jest.fn().mockReturnValue([]);
+      (adapter as any).getModifiedFiles = vi.fn().mockReturnValue([]);
       
       await adapter.generateSolution(issueContext, analysis);
       
@@ -107,7 +107,7 @@ describe('RetryableClaudeCodeCLI - Vended Credentials', () => {
       
       // Mock the executeWithRetry method to check the environment
       let apiKeyUsed: string | undefined;
-      (adapter as any).executeWithRetry = jest.fn().mockImplementation((prompt: string, options: any) => {
+      (adapter as any).executeWithRetry = vi.fn().mockImplementation((prompt: string, options: any) => {
         apiKeyUsed = options.env.ANTHROPIC_API_KEY;
         return Promise.resolve({
           success: false,
@@ -116,7 +116,7 @@ describe('RetryableClaudeCodeCLI - Vended Credentials', () => {
       });
       
       // Mock getModifiedFiles
-      (adapter as any).getModifiedFiles = jest.fn().mockReturnValue([]);
+      (adapter as any).getModifiedFiles = vi.fn().mockReturnValue([]);
       
       await adapter.generateSolution(issueContext, analysis);
       
@@ -155,7 +155,7 @@ describe('RetryableClaudeCodeCLI - Vended Credentials', () => {
       
       // Mock the executeWithRetry method
       let apiKeyUsed: string | undefined;
-      (adapter as any).executeWithRetry = jest.fn().mockImplementation((prompt: string, options: any) => {
+      (adapter as any).executeWithRetry = vi.fn().mockImplementation((prompt: string, options: any) => {
         apiKeyUsed = options.env.ANTHROPIC_API_KEY;
         return Promise.resolve({
           success: false,
@@ -164,7 +164,7 @@ describe('RetryableClaudeCodeCLI - Vended Credentials', () => {
       });
       
       // Mock getModifiedFiles
-      (adapter as any).getModifiedFiles = jest.fn().mockReturnValue([]);
+      (adapter as any).getModifiedFiles = vi.fn().mockReturnValue([]);
       
       await adapter.generateSolution(issueContext, analysis);
       

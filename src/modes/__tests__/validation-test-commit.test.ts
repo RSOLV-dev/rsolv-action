@@ -3,8 +3,8 @@ import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-jest.mock('child_process');
-jest.mock('fs');
+vi.mock('child_process');
+vi.mock('fs');
 
 describe('ValidationMode - Test Commit in Test Mode', () => {
   let validationMode: ValidationMode;
@@ -16,7 +16,7 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env.RSOLV_TESTING_MODE = 'true';
     validationMode = new ValidationMode({
       github: {} as any,
@@ -40,7 +40,7 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
       };
 
       // Mock branch creation to fail initially
-      const execSyncMock = execSync as jest.MockedFunction<typeof execSync>;
+      const execSyncMock = execSync as any;
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('git checkout -b')) {
           throw new Error('Branch already exists');
@@ -49,8 +49,8 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
       });
 
       // Mock fs operations
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (fs.mkdirSync as any).mockReturnValue(undefined);
+      (fs.writeFileSync as any).mockReturnValue(undefined);
 
       // Call the method
       await validationMode.commitTestsToBranch(testContent, 'rsolv/validate/issue-123');
@@ -74,11 +74,11 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
         incomplete: 'This is an incomplete test'
       };
 
-      const execSyncMock = execSync as jest.MockedFunction<typeof execSync>;
+      const execSyncMock = execSync as any;
       execSyncMock.mockReturnValue(Buffer.from(''));
 
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (fs.mkdirSync as any).mockReturnValue(undefined);
+      (fs.writeFileSync as any).mockReturnValue(undefined);
 
       // Should not throw even with imperfect content
       await expect(
@@ -96,7 +96,7 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
     it('should handle test commit even when git push fails', async () => {
       const testContent = { test: 'content' };
 
-      const execSyncMock = execSync as jest.MockedFunction<typeof execSync>;
+      const execSyncMock = execSync as any;
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('git push')) {
           throw new Error('Authentication failed');
@@ -104,8 +104,8 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
         return Buffer.from('');
       });
 
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (fs.mkdirSync as any).mockReturnValue(undefined);
+      (fs.writeFileSync as any).mockReturnValue(undefined);
 
       // Should not throw even if push fails
       await expect(
@@ -126,13 +126,13 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
       process.env.RSOLV_TESTING_MODE = 'true';
 
       // Mock the necessary methods
-      const createBranchSpy = jest.spyOn(validationMode as any, 'createValidationBranch')
+      const createBranchSpy = vi.spyOn(validationMode as any, 'createValidationBranch')
         .mockResolvedValue('rsolv/validate/issue-123');
 
-      const commitTestsSpy = jest.spyOn(validationMode as any, 'commitTestsToBranch')
+      const commitTestsSpy = vi.spyOn(validationMode as any, 'commitTestsToBranch')
         .mockResolvedValue(undefined);
 
-      const generateTestsSpy = jest.spyOn(validationMode as any, 'generateRedTests')
+      const generateTestsSpy = vi.spyOn(validationMode as any, 'generateRedTests')
         .mockResolvedValue({
           generatedTests: {
             testSuite: { red: { testCode: 'test' } }
@@ -140,12 +140,12 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
         });
 
       // Mock other required methods
-      jest.spyOn(validationMode as any, 'analyzeCodebase').mockResolvedValue({});
-      jest.spyOn(validationMode as any, 'storeValidationResultWithBranch').mockResolvedValue(undefined);
+      vi.spyOn(validationMode as any, 'analyzeCodebase').mockResolvedValue({});
+      vi.spyOn(validationMode as any, 'storeValidationResultWithBranch').mockResolvedValue(undefined);
 
       // Mock the test validator
-      const GitBasedTestValidator = jest.fn().mockImplementation(() => ({
-        validateFixWithTests: jest.fn().mockResolvedValue({ success: true })
+      const GitBasedTestValidator = vi.fn().mockImplementation(() => ({
+        validateFixWithTests: vi.fn().mockResolvedValue({ success: true })
       }));
       (validationMode as any).GitBasedTestValidator = GitBasedTestValidator;
 

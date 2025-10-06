@@ -51,7 +51,7 @@ describe('Claude CLI Usage in Mitigation', () => {
     const adapter = new GitBasedClaudeCodeAdapter(mockConfig, process.cwd());
 
     // Create spy on the CLI adapter's generateSolution method
-    const cliGenerateSolutionSpy = jest.spyOn(
+    const cliGenerateSolutionSpy = vi.spyOn(
       adapter.cliAdapter,
       'generateSolution'
     );
@@ -64,7 +64,7 @@ describe('Claude CLI Usage in Mitigation', () => {
     });
 
     // Create spy on the parent (SDK) generateSolution method
-    const sdkGenerateSolutionSpy = jest.spyOn(
+    const sdkGenerateSolutionSpy = vi.spyOn(
       GitBasedClaudeCodeAdapter.prototype,
       'generateSolution'
     );
@@ -104,7 +104,7 @@ describe('Claude CLI Usage in Mitigation', () => {
       process.cwd()
     );
 
-    const cliGenerateSolutionSpy = jest.spyOn(
+    const cliGenerateSolutionSpy = vi.spyOn(
       adapter.cliAdapter,
       'generateSolution'
     );
@@ -139,7 +139,7 @@ describe('Claude CLI Usage in Mitigation', () => {
       process.cwd()
     );
 
-    const cliGenerateSolutionSpy = jest.spyOn(
+    const cliGenerateSolutionSpy = vi.spyOn(
       adapter.cliAdapter,
       'generateSolution'
     );
@@ -162,7 +162,7 @@ describe('Claude CLI Usage in Mitigation', () => {
   it('should NOT fall back to SDK when vended credentials are enabled and CLI fails', async () => {
     const adapter = new GitBasedClaudeCodeAdapter(mockConfig, process.cwd());
 
-    const cliGenerateSolutionSpy = jest.spyOn(
+    const cliGenerateSolutionSpy = vi.spyOn(
       adapter.cliAdapter,
       'generateSolution'
     );
@@ -172,7 +172,7 @@ describe('Claude CLI Usage in Mitigation', () => {
       new Error('Claude CLI not available')
     );
 
-    const sdkGenerateSolutionSpy = jest.spyOn(
+    const sdkGenerateSolutionSpy = vi.spyOn(
       GitBasedClaudeCodeAdapter.prototype,
       'generateSolution'
     );

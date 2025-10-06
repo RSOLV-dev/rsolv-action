@@ -3,6 +3,7 @@
  * Tests that validation proceeds regardless of test results when in testing mode
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ValidationMode } from '../validation-mode';
 import { IssueContext, ActionConfig } from '../../types/index';
 import * as analyzer from '../../ai/analyzer';
@@ -13,11 +14,11 @@ import * as path from 'path';
 import { execSync } from 'child_process';
 
 // Mock dependencies
-jest.mock('../../ai/analyzer');
-jest.mock('../../ai/test-generating-security-analyzer');
-jest.mock('../../ai/git-based-test-validator');
-jest.mock('child_process');
-jest.mock('fs');
+vi.mock('../../ai/analyzer');
+vi.mock('../../ai/test-generating-security-analyzer');
+vi.mock('../../ai/git-based-test-validator');
+vi.mock('child_process');
+vi.mock('fs');
 
 describe('ValidationMode - RSOLV_TESTING_MODE', () => {
   let validationMode: ValidationMode;
@@ -59,12 +60,12 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
     validationMode = new ValidationMode(mockConfig);
 
     // Mock file system operations
-    (fs.existsSync as jest.Mock).mockReturnValue(false);
-    (fs.readFileSync as jest.Mock).mockReturnValue('{}');
-    (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+    (fs.existsSync as any).mockReturnValue(false);
+    (fs.readFileSync as any).mockReturnValue('{}');
+    (fs.writeFileSync as any).mockImplementation(() => {});
 
     // Mock git operations
-    (execSync as jest.Mock).mockImplementation((cmd: string) => {
+    (execSync as any).mockImplementation((cmd: string) => {
       if (cmd.includes('git status')) return 'nothing to commit, working tree clean';
       if (cmd.includes('git rev-parse HEAD')) return 'abc123def456';
       if (cmd.includes('git checkout -b')) return '';
@@ -77,19 +78,19 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
   afterEach(() => {
     // Restore original env
     process.env = originalEnv;
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Normal mode (RSOLV_TESTING_MODE not set)', () => {
     it('should mark as false positive when tests pass', async () => {
       // Setup: tests pass (no vulnerability)
-      (analyzer.analyzeIssue as jest.Mock).mockResolvedValue({
+      (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: true,
         isSecurityIssue: true
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: jest.fn().mockResolvedValue({
+        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
@@ -99,7 +100,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
         mockTestGenerator.generateTestsWithAnalysis;
 
       const mockValidator = {
-        validateFixWithTests: jest.fn().mockResolvedValue({
+        validateFixWithTests: vi.fn().mockResolvedValue({
           success: true, // Tests pass = no vulnerability
           output: 'All tests passed'
         })
@@ -116,13 +117,13 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
     it('should mark as validated when tests fail', async () => {
       // Setup: tests fail (vulnerability exists)
-      (analyzer.analyzeIssue as jest.Mock).mockResolvedValue({
+      (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: true,
         isSecurityIssue: true
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: jest.fn().mockResolvedValue({
+        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
@@ -132,7 +133,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
         mockTestGenerator.generateTestsWithAnalysis;
 
       const mockValidator = {
-        validateFixWithTests: jest.fn().mockResolvedValue({
+        validateFixWithTests: vi.fn().mockResolvedValue({
           success: false, // Tests fail = vulnerability exists
           output: 'Test failed: XSS vulnerability detected'
         })
@@ -155,13 +156,13 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
     it('should mark as validated even when tests pass', async () => {
       // Setup: tests pass (would normally be false positive)
-      (analyzer.analyzeIssue as jest.Mock).mockResolvedValue({
+      (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: true,
         isSecurityIssue: true
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: jest.fn().mockResolvedValue({
+        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
@@ -171,7 +172,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
         mockTestGenerator.generateTestsWithAnalysis;
 
       const mockValidator = {
-        validateFixWithTests: jest.fn().mockResolvedValue({
+        validateFixWithTests: vi.fn().mockResolvedValue({
           success: true, // Tests pass - would normally be false positive
           output: 'All tests passed'
         })
@@ -190,13 +191,13 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
     it('should still mark as validated when tests fail', async () => {
       // Setup: tests fail (vulnerability exists)
-      (analyzer.analyzeIssue as jest.Mock).mockResolvedValue({
+      (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: true,
         isSecurityIssue: true
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: jest.fn().mockResolvedValue({
+        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
@@ -206,7 +207,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
         mockTestGenerator.generateTestsWithAnalysis;
 
       const mockValidator = {
-        validateFixWithTests: jest.fn().mockResolvedValue({
+        validateFixWithTests: vi.fn().mockResolvedValue({
           success: false, // Tests fail = vulnerability exists
           output: 'Test failed: XSS vulnerability detected'
         })
@@ -224,13 +225,13 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
     it('should include testing mode info in validation branch operations', async () => {
       // Setup for testing branch creation
-      (analyzer.analyzeIssue as jest.Mock).mockResolvedValue({
+      (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: true,
         isSecurityIssue: true
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: jest.fn().mockResolvedValue({
+        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
@@ -240,7 +241,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
         mockTestGenerator.generateTestsWithAnalysis;
 
       const mockValidator = {
-        validateFixWithTests: jest.fn().mockResolvedValue({
+        validateFixWithTests: vi.fn().mockResolvedValue({
           success: true, // Tests pass
           output: 'All tests passed'
         })
@@ -267,13 +268,13 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       process.env.RSOLV_TESTING_MODE = 'false';
 
       // Setup: tests pass
-      (analyzer.analyzeIssue as jest.Mock).mockResolvedValue({
+      (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: true,
         isSecurityIssue: true
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: jest.fn().mockResolvedValue({
+        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
@@ -283,7 +284,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
         mockTestGenerator.generateTestsWithAnalysis;
 
       const mockValidator = {
-        validateFixWithTests: jest.fn().mockResolvedValue({
+        validateFixWithTests: vi.fn().mockResolvedValue({
           success: true, // Tests pass
           output: 'All tests passed'
         })
@@ -303,13 +304,13 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       process.env.RSOLV_TESTING_MODE = 'true';
 
       // Setup: test generation fails
-      (analyzer.analyzeIssue as jest.Mock).mockResolvedValue({
+      (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: true,
         isSecurityIssue: true
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: jest.fn().mockResolvedValue({
+        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
           generatedTests: null // Test generation failed
         })
       };
@@ -328,7 +329,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       process.env.RSOLV_TESTING_MODE = 'true';
 
       // Setup: analysis determines it can't be fixed
-      (analyzer.analyzeIssue as jest.Mock).mockResolvedValue({
+      (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: false,
         cannotFixReason: 'Not a real security issue',
         isSecurityIssue: false

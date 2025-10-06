@@ -34,7 +34,7 @@ describe('Credential Vending E2E Integration', () => {
       );
       
       // Mock the API exchange to avoid real API calls in tests
-      const mockExchange = jest.spyOn(credentialManager as any, 'exchangeCredentials')
+      const mockExchange = vi.spyOn(credentialManager as any, 'exchangeCredentials')
         .mockResolvedValue({
           credentials: {
             anthropic: {
@@ -84,14 +84,14 @@ describe('Credential Vending E2E Integration', () => {
       };
       
       // Mock the CLI execution to avoid real CLI calls
-      const mockExecute = jest.spyOn(adapter as any, 'executeWithRetry')
+      const mockExecute = vi.spyOn(adapter as any, 'executeWithRetry')
         .mockResolvedValue({
           success: true,
           output: 'Fixed successfully'
         });
       
       // Mock file modifications check
-      jest.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue(['test.js']);
+      vi.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue(['test.js']);
       
       // Step 5: Execute solution generation
       const result = await adapter.generateSolution(issueContext, analysis);
@@ -122,7 +122,7 @@ describe('Credential Vending E2E Integration', () => {
       );
       
       // Mock initial exchange with short TTL
-      const mockExchange = jest.spyOn(credentialManager as any, 'exchangeCredentials')
+      const mockExchange = vi.spyOn(credentialManager as any, 'exchangeCredentials')
         .mockResolvedValueOnce({
           credentials: {
             anthropic: {
@@ -178,7 +178,7 @@ describe('Credential Vending E2E Integration', () => {
       );
       
       // Mock exchange failure
-      jest.spyOn(credentialManager as any, 'exchangeCredentials')
+      vi.spyOn(credentialManager as any, 'exchangeCredentials')
         .mockRejectedValue(new Error('Invalid API key'));
       
       // Initialize should fail but not throw
@@ -217,13 +217,13 @@ describe('Credential Vending E2E Integration', () => {
       };
       
       // Mock the CLI execution
-      jest.spyOn(adapter as any, 'executeWithRetry')
+      vi.spyOn(adapter as any, 'executeWithRetry')
         .mockResolvedValue({
           success: true,
           output: 'Fixed successfully'
         });
       
-      jest.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue(['test.js']);
+      vi.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue(['test.js']);
       
       const result = await adapter.generateSolution(issueContext, analysis);
       
@@ -243,7 +243,7 @@ describe('Credential Vending E2E Integration', () => {
       );
       
       // Mock network failure
-      jest.spyOn(credentialManager as any, 'exchangeCredentials')
+      vi.spyOn(credentialManager as any, 'exchangeCredentials')
         .mockRejectedValue(new Error('Network timeout'));
       
       await expect(credentialManager.initialize()).rejects.toThrow('Network timeout');
@@ -285,7 +285,7 @@ describe('Credential Vending E2E Integration', () => {
     it('REGRESSION: must set process.env.ANTHROPIC_API_KEY for CLI', async () => {
       // This is the specific bug we fixed
       const credentialManager = {
-        getCredential: jest.fn().mockReturnValue('must-be-in-env-123')
+        getCredential: vi.fn().mockReturnValue('must-be-in-env-123')
       };
       
       const config: AIConfig = {
@@ -301,7 +301,7 @@ describe('Credential Vending E2E Integration', () => {
       );
       
       // Spy on process.env setter
-      const envSpy = jest.spyOn(process, 'env', 'set');
+      const envSpy = vi.spyOn(process, 'env', 'set');
       
       const issueContext: IssueContext = {
         title: 'Test',
@@ -319,11 +319,11 @@ describe('Credential Vending E2E Integration', () => {
       };
       
       // Mock execution methods
-      jest.spyOn(adapter as any, 'executeWithRetry').mockResolvedValue({
+      vi.spyOn(adapter as any, 'executeWithRetry').mockResolvedValue({
         success: false,
         output: ''
       });
-      jest.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue([]);
+      vi.spyOn(adapter as any, 'getModifiedFiles').mockReturnValue([]);
       
       await adapter.generateSolution(issueContext, analysis);
       

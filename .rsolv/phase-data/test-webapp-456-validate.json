@@ -8,8 +8,8 @@
         "falsePositive": true,
         "falsePositiveReason": "Unable to generate validation tests",
         "usedPriorScan": false,
-        "timestamp": "2025-10-06T20:00:23.850Z",
-        "commitHash": "fed826108f54cfbb23deae0e0002b651818f86e7",
+        "timestamp": "2025-10-06T21:15:50.015Z",
+        "commitHash": "7dcca8829fa72cf812c9a3d145408c13f86be885",
         "hasSpecificVulnerabilities": false,
         "vulnerabilities": [],
         "confidence": "low"
@@ -19,7 +19,7 @@
   "metadata": {
     "repo": "test/webapp",
     "issueNumber": 456,
-    "commitSha": "fed826108f54cfbb23deae0e0002b651818f86e7"
+    "commitSha": "7dcca8829fa72cf812c9a3d145408c13f86be885"
   },
-  "timestamp": "2025-10-06T20:00:23.861Z"
+  "timestamp": "2025-10-06T21:15:50.027Z"
 }

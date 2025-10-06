@@ -8,10 +8,10 @@ import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-jest.mock('child_process');
-jest.mock('fs');
-jest.mock('../claude/sdk');
-jest.mock('../../utils/logger');
+vi.mock('child_process');
+vi.mock('fs');
+vi.mock('../claude/sdk');
+vi.mock('../../utils/logger');
 
 describe('GitBasedProcessor - Test Mode', () => {
   let processor: GitBasedProcessor;
@@ -40,11 +40,11 @@ describe('GitBasedProcessor - Test Mode', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     processor = new GitBasedProcessor(mockConfig as any);
 
     // Mock git operations
-    (execSync as jest.Mock).mockImplementation((cmd: string) => {
+    (execSync as any).mockImplementation((cmd: string) => {
       if (cmd.includes('git diff')) {
         return 'diff --git a/file.js b/file.js\n+fixed code';
       }
@@ -75,7 +75,7 @@ describe('GitBasedProcessor - Test Mode', () => {
       };
 
       // Mock Claude SDK to return a fix
-      jest.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
+      vi.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
         files: {
           'file.js': {
             original: 'vulnerable code',
@@ -86,7 +86,7 @@ describe('GitBasedProcessor - Test Mode', () => {
       });
 
       // Mock validation to fail
-      jest.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
+      vi.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
 
       const result = await processor.processIssue(mockIssue as any, mockConfig as any);
 
@@ -105,7 +105,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         failedTests: ['test1', 'test2']
       };
 
-      jest.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
+      vi.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
         files: {
           'file.js': {
             original: 'vulnerable code',
@@ -115,7 +115,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         }
       });
 
-      jest.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
+      vi.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
 
       const result = await processor.processIssue(mockIssue as any, mockConfig as any);
 
@@ -131,7 +131,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         error: 'Tests failed'
       };
 
-      jest.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
+      vi.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
         files: {
           'file.js': {
             original: 'vulnerable code',
@@ -141,7 +141,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         }
       });
 
-      jest.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
+      vi.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
 
       await processor.processIssue(mockIssue as any, mockConfig as any);
 
@@ -158,7 +158,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         error: 'Tests failed'
       };
 
-      jest.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
+      vi.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
         files: {
           'file.js': {
             original: 'vulnerable code',
@@ -168,7 +168,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         }
       });
 
-      jest.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
+      vi.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
 
       const result = await processor.processIssue(mockIssue as any, mockConfig as any);
 
@@ -187,7 +187,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         error: 'Tests failed'
       };
 
-      jest.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
+      vi.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
         files: {
           'file.js': {
             original: 'vulnerable code',
@@ -197,7 +197,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         }
       });
 
-      jest.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
+      vi.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
 
       const result = await processor.processIssue(mockIssue as any, mockConfig as any);
 
@@ -212,7 +212,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         error: 'Tests failed'
       };
 
-      jest.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
+      vi.spyOn(processor as any, 'generateFixWithClaude').mockResolvedValue({
         files: {
           'file.js': {
             original: 'vulnerable code',
@@ -222,7 +222,7 @@ describe('GitBasedProcessor - Test Mode', () => {
         }
       });
 
-      jest.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
+      vi.spyOn(processor as any, 'validateFixWithTests').mockResolvedValue(mockValidationResult);
 
       await processor.processIssue(mockIssue as any, mockConfig as any);
 

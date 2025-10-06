@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from '@jest/globals';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { PatternAPIClient } from '../../src/security/pattern-api-client.js';
 import { config } from 'dotenv';
 import { join } from 'path';
