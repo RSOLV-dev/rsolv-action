@@ -122,14 +122,15 @@ export class AITestGenerator {
 ${vulnerability.remediation ? `- Remediation: ${vulnerability.remediation}` : ''}
 
 ## Test Requirements:
-1. Generate THREE test cases following TDD red-green-refactor:
-   - RED test: Proves the vulnerability exists (should FAIL on vulnerable code, PASS on fixed code)
-   - GREEN test: Validates the fix works (should FAIL on vulnerable code, PASS on fixed code)
-   - REFACTOR test: Ensures functionality is preserved (should PASS on both)
+1. Generate one or more RED tests that prove the vulnerability exists:
+   - Each RED test should FAIL on the current vulnerable code
+   - Each RED test should PASS once the vulnerability is fixed
+   - Use actual attack vectors to demonstrate the vulnerability
+   - Support multiple RED tests for complex vulnerabilities (e.g., multiple injection points, different exploit techniques)
 
 2. Use ${options.language || 'javascript'} with ${options.testFramework || 'jest'} framework
-3. Tests must be executable and use actual attack vectors
-4. Include proper assertions to validate security
+3. Tests must be executable and use framework-specific best practices
+4. Include proper assertions to validate security fixes
 
 ${fileContent ? `## Vulnerable Code:\n\`\`\`${options.language}\n${fileContent}\n\`\`\`` : ''}
 
@@ -143,20 +144,26 @@ Return EXACTLY this JSON structure (no markdown, no backticks):
     "testName": "short descriptive name",
     "testCode": "concise test code (10-15 lines max)",
     "attackVector": "malicious input",
-    "expectedBehavior": "brief description"
-  },
-  "green": {
-    "testName": "short descriptive name",
-    "testCode": "concise test code (10-15 lines max)",
-    "validInput": "safe input",
-    "expectedBehavior": "brief description"
-  },
-  "refactor": {
-    "testName": "short descriptive name",
-    "testCode": "concise test code (10-15 lines max)",
-    "testCases": ["scenario1", "scenario2"],
-    "expectedBehavior": "brief description"
+    "expectedBehavior": "should fail on vulnerable code, pass on fixed code"
   }
+}
+
+For multiple RED tests (complex vulnerabilities), use this format:
+{
+  "redTests": [
+    {
+      "testName": "test for attack vector 1",
+      "testCode": "concise test code (10-15 lines max)",
+      "attackVector": "malicious input 1",
+      "expectedBehavior": "brief description"
+    },
+    {
+      "testName": "test for attack vector 2",
+      "testCode": "concise test code (10-15 lines max)",
+      "attackVector": "malicious input 2",
+      "expectedBehavior": "brief description"
+    }
+  ]
 }
 
 Keep ALL strings properly escaped. Avoid long test code.
