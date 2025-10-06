@@ -82,7 +82,7 @@ describe('Config Timeout Settings', () => {
     const configContent = {
       aiProvider: {
         provider: 'claude-code',
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         timeout: 45000 // 45 seconds
       },
       containerConfig: {
@@ -110,7 +110,7 @@ describe('Config Timeout Settings', () => {
     const configContent = {
       aiProvider: {
         provider: 'claude-code',
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         timeout: 45000 // Will be used
       },
       containerConfig: {
@@ -156,7 +156,7 @@ describe('Config Timeout Settings', () => {
     const configContent = {
       aiProvider: {
         provider: 'claude-code',
-        model: 'claude-sonnet-4-20250514'
+        model: 'claude-sonnet-4-5-20250929'
         // No timeout specified
       },
       containerConfig: {

@@ -146,7 +146,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
     useStructuredPhases: true,  // Default to true - CLI approach works with structured phases
     aiProvider: {
       provider: 'claude-code',
-      model: 'claude-sonnet-4-20250514',  // Claude Sonnet 4 - 64K output tokens, no truncation issues
+      model: 'claude-sonnet-4-5-20250929',  // Claude Sonnet 4.5 - Latest model
       temperature: 0.2,
       // maxTokens intentionally omitted - resolved by token-utils based on use case
       contextLimit: 100000,
@@ -285,7 +285,7 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
     envConfig.aiProvider = {
       provider: process.env.RSOLV_AI_PROVIDER,
       apiKey: process.env.RSOLV_AI_API_KEY,
-      model: process.env.RSOLV_AI_MODEL || 'claude-3-5-sonnet-20241022',
+      model: process.env.RSOLV_AI_MODEL || 'claude-sonnet-4-5-20250929',  // Default to Sonnet 4.5
       baseUrl: process.env.RSOLV_AI_BASE_URL,
       // CRITICAL: Preserve useVendedCredentials flag - default to true per RFC-012
       useVendedCredentials: process.env.RSOLV_USE_VENDED_CREDENTIALS !== undefined ?

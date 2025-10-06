@@ -49,7 +49,7 @@ describe('Model Configuration', () => {
       const config = await loadConfig();
 
       // THEN: Should use Claude 4 Sonnet
-      expect(config.aiProvider.model).toBe('claude-sonnet-4-20250514');
+      expect(config.aiProvider.model).toBe('claude-sonnet-4-5-20250929');
     });
 
     it('should use Claude 4 Sonnet even when provider is set via env', async () => {
@@ -61,7 +61,7 @@ describe('Model Configuration', () => {
       const config = await loadConfig();
 
       // THEN: Should still default to Claude 4 Sonnet
-      expect(config.aiProvider.model).toBe('claude-sonnet-4-20250514');
+      expect(config.aiProvider.model).toBe('claude-sonnet-4-5-20250929');
     });
 
     it('should preserve useVendedCredentials when env vars are set', async () => {
@@ -95,7 +95,7 @@ describe('Model Configuration', () => {
 
       // THEN: Should have Claude 4 Sonnet with proper settings
       expect(config.aiProvider).toMatchObject({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         provider: 'claude-code',
         contextLimit: 100000,
         timeout: 3600000, // 60 minutes for complex operations
@@ -119,7 +119,7 @@ describe('Model Configuration', () => {
       // THEN: Should merge properly
       expect(config.aiProvider.provider).toBe('claude-code');
       expect(config.aiProvider.temperature).toBe(0.7);
-      expect(config.aiProvider.model).toBe('claude-sonnet-4-20250514'); // Default preserved
+      expect(config.aiProvider.model).toBe('claude-sonnet-4-5-20250929'); // Default preserved
       expect(config.aiProvider.useVendedCredentials).toBe(true); // Default preserved
     });
   });
