@@ -37,34 +37,6 @@ Here's the test suite:
       expect(result!.red.testName).toBe('Test for vulnerability');
     });
 
-    it.skip('should handle nested JSON objects correctly', () => {
-      const response = `
-\`\`\`json
-{
-  "red": {
-    "testName": "Nested test",
-    "testCode": "function test() { return { nested: true }; }",
-    "metadata": {
-      "level1": {
-        "level2": {
-          "level3": "deeply nested"
-        }
-      }
-    }
-  },
-  "green": {
-    "testName": "Another test",
-    "testCode": "const x = { obj: { inner: 'value' } };"
-  }
-}
-\`\`\`
-`;
-      const result = parseTestSuite(response);
-      expect(result).toBeDefined();
-      expect(result.red.metadata.level1.level2.level3).toBe('deeply nested');
-      expect(result.green.testName).toBe('Another test');
-    });
-
     it('should extract JSON with curly braces in string values', () => {
       const response = `
 {
@@ -120,23 +92,6 @@ Another small one: {"another": "small"}
       expect(result.red).toBeDefined();
       expect(result.green).toBeDefined();
       expect(result.red.testName).toBe('Main test');
-    });
-
-    it.skip('should handle multiline code strings with proper escaping', () => {
-      const response = `
-\`\`\`json
-{
-  "red": {
-    "testName": "Multiline test",
-    "testCode": "const { expect } = require('chai');\\n\\nfunction vulnerableCompare(secret1, secret2) {\\n  return secret1 === secret2;\\n}\\n\\nit('should detect timing attack', function() {\\n  const result = vulnerableCompare('a', 'b');\\n  expect(result).to.be.false;\\n});"
-  }
-}
-\`\`\`
-`;
-      const result = parseTestSuite(response);
-      expect(result).toBeDefined();
-      expect(result.red.testCode).toContain('vulnerableCompare');
-      expect(result.red.testCode).toContain('\\n');
     });
 
     it('should handle incomplete JSON by attempting recovery', () => {
