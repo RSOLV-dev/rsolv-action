@@ -1,5 +1,5 @@
 defmodule RsolvWeb.Admin.LoginLiveIntegrationTest do
-  use RsolvWeb.ConnCase
+  use RsolvWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
   alias Rsolv.Customers
   
@@ -26,58 +26,65 @@ defmodule RsolvWeb.Admin.LoginLiveIntegrationTest do
     
     test "successful staff login redirects to auth endpoint", %{conn: conn, staff_user: _staff_user} do
       {:ok, view, _html} = live(conn, "/admin/login")
-      
+
       # Fill in the form
       assert view
              |> element("form")
              |> render_change(%{email: "admin@rsolv.com", password: "TestPassword123!"})
-      
+
       # Submit the form
-      result = view
-               |> element("form")
-               |> render_submit(%{email: "admin@rsolv.com", password: "TestPassword123!"})
-      
-      # The view should redirect to /admin/auth with a token
-      assert result =~ "redirect"
-      
-      # Follow the redirect
-      assert_redirect(view, ~r"/admin/auth\?token=.+")
+      view
+      |> element("form")
+      |> render_submit(%{email: "admin@rsolv.com", password: "TestPassword123!"})
+
+      # Render after async authentication completes
+      _html = render(view)
+
+      # Check that a redirect event was pushed (JS-based redirect)
+      assert_push_event(view, "redirect", %{to: redirect_url})
+      assert redirect_url =~ ~r"/admin/auth\?token=.+"
     end
     
     test "non-staff user login shows error", %{conn: conn, regular_user: _regular_user} do
       {:ok, view, _html} = live(conn, "/admin/login")
-      
+
       # Fill in and submit the form
       view
       |> element("form")
       |> render_change(%{email: "user@example.com", password: "UserPassword123!"})
-      
-      html = view
-             |> element("form")
-             |> render_submit(%{email: "user@example.com", password: "UserPassword123!"})
-      
+
+      view
+      |> element("form")
+      |> render_submit(%{email: "user@example.com", password: "UserPassword123!"})
+
+      # Render after async authentication completes
+      html = render(view)
+
       # Should show authorization error
       assert html =~ "You are not authorized to access the admin area"
-      
+
       # Should stay on login page
       assert view |> element("#admin-login")
     end
     
     test "invalid credentials shows error", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/admin/login")
-      
+
       # Fill in and submit with wrong password
       view
       |> element("form")
       |> render_change(%{email: "admin@rsolv.com", password: "WrongPassword"})
-      
-      html = view
-             |> element("form")
-             |> render_submit(%{email: "admin@rsolv.com", password: "WrongPassword"})
-      
+
+      view
+      |> element("form")
+      |> render_submit(%{email: "admin@rsolv.com", password: "WrongPassword"})
+
+      # Render after async authentication completes
+      html = render(view)
+
       # Should show invalid credentials error
       assert html =~ "Invalid email or password"
-      
+
       # Should stay on login page
       assert view |> element("#admin-login")
     end

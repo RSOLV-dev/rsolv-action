@@ -1,5 +1,5 @@
 defmodule RsolvWeb.Admin.DashboardControllerTest do
-  use RsolvWeb.ConnCase, async: true
+  use RsolvWeb.ConnCase, async: false
   import Rsolv.CustomersFixtures
 
   setup do

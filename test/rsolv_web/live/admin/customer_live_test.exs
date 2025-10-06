@@ -155,7 +155,7 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Check for edit button in actions column
       assert html =~ "Edit"
-      assert view |> element("a[phx-click=edit][phx-value-id=#{customer.id}]") |> has_element?()
+      assert view |> element("a[phx-click=\"edit\"][phx-value-id=\"#{customer.id}\"]") |> has_element?()
     end
 
     test "opens edit modal when edit button clicked", %{conn: conn, staff: staff} do
@@ -166,7 +166,7 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Click edit button
       view
-      |> element("a[phx-click=edit][phx-value-id=#{customer.id}]")
+      |> element("a[phx-click=\"edit\"][phx-value-id=\"#{customer.id}\"]")
       |> render_click()
 
       html = render(view)
@@ -185,15 +185,14 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Open edit modal
       view
-      |> element("a[phx-click=edit][phx-value-id=#{customer.id}]")
+      |> element("a[phx-click=\"edit\"][phx-value-id=\"#{customer.id}\"]")
       |> render_click()
 
-      # Submit updated data
+      # Submit updated data (omit active to uncheck checkbox)
       view
       |> form("#customer-form", customer: %{
         name: "New Name",
-        email: "new@example.com",
-        active: false
+        email: "new@example.com"
       })
       |> render_submit()
 
@@ -212,7 +211,7 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Check for new customer button
       assert html =~ "New Customer"
-      assert view |> element("button[phx-click=new]") |> has_element?()
+      assert view |> element("button[phx-click=\"new\"]") |> has_element?()
     end
 
     test "opens new customer modal when button clicked", %{conn: conn, staff: staff} do
@@ -221,7 +220,7 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Click new customer button
       view
-      |> element("button[phx-click=new]")
+      |> element("button[phx-click=\"new\"]")
       |> render_click()
 
       html = render(view)
@@ -237,7 +236,7 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Open new customer modal
       view
-      |> element("button[phx-click=new]")
+      |> element("button[phx-click=\"new\"]")
       |> render_click()
 
       # Submit new customer data
@@ -246,8 +245,8 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
         name: "Brand New Customer",
         email: "brand.new@example.com",
         password: "SecurePassword123!",
-        active: true,
-        subscription_plan: "Pro",
+        active: "on",
+        subscription_plan: "pro",
         monthly_limit: 5000
       })
       |> render_submit()
@@ -257,7 +256,7 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
       # Check new customer appears in the list
       assert html =~ "Brand New Customer"
       assert html =~ "brand.new@example.com"
-      assert html =~ "Pro"
+      assert html =~ "pro"
     end
 
     test "shows delete button for each customer", %{conn: conn, staff: staff} do
@@ -268,7 +267,7 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Check for delete button in actions column
       assert html =~ "Delete"
-      assert view |> element("button[phx-click=delete][phx-value-id=#{customer.id}]") |> has_element?()
+      assert view |> element("button[phx-click=\"delete\"][phx-value-id=\"#{customer.id}\"]") |> has_element?()
     end
 
     test "shows confirmation dialog when delete clicked", %{conn: conn, staff: staff} do
@@ -303,7 +302,7 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Confirm deletion
       view
-      |> element("button[phx-click=confirm-delete][phx-value-id=#{customer.id}]")
+      |> element("button[phx-click=\"confirm-delete\"][phx-value-id=\"#{customer.id}\"]")
       |> render_click()
 
       html = render(view)

@@ -1,5 +1,5 @@
 defmodule RsolvWeb.Admin.LoginLiveTest do
-  use RsolvWeb.ConnCase
+  use RsolvWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
   
   alias Rsolv.Customers

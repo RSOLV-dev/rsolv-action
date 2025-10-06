@@ -1,5 +1,5 @@
 defmodule RsolvWeb.Admin.CustomerLive.EditTest do
-  use RsolvWeb.ConnCase, async: true
+  use RsolvWeb.ConnCase, async: false
   
   import Phoenix.LiveViewTest
   import Rsolv.CustomersFixtures

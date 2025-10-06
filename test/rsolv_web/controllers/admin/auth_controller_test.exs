@@ -1,5 +1,5 @@
 defmodule RsolvWeb.Admin.AuthControllerTest do
-  use RsolvWeb.ConnCase, async: true
+  use RsolvWeb.ConnCase, async: false
   
   alias Rsolv.Customers
   

@@ -15,9 +15,9 @@ defmodule Rsolv.Integration.PhpPatternAstTest do
     # PHP patterns now have AST enhancements
     test "PHP patterns return ast_rules in enhanced format", %{conn: conn, customer: customer, api_key: api_key} do
       # Test WITH API key to get enhanced patterns
-      conn = 
+      conn =
         conn
-        |> put_req_header("authorization", "Bearer #{api_key.key}")
+        |> put_req_header("x-api-key", api_key.key)
         |> get("/api/v1/patterns?language=php&format=enhanced")
       
       assert response = json_response(conn, 200)

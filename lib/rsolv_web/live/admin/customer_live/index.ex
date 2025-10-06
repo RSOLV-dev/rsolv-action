@@ -144,7 +144,9 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
 
   @impl true
   def handle_event("save", %{"customer" => customer_params}, socket) do
-    save_customer(socket, socket.assigns.modal_action, customer_params)
+    # Normalize checkbox value: "on" -> true, missing -> false
+    normalized_params = normalize_checkbox_params(customer_params)
+    save_customer(socket, socket.assigns.modal_action, normalized_params)
   end
 
   @impl true
@@ -337,5 +339,15 @@ defmodule RsolvWeb.Admin.CustomerLive.Index do
     |> assign(:customers, customers)
     |> assign(:total_count, total_count)
     |> assign(:total_pages, ceil(total_count / @per_page))
+  end
+
+  # Normalize HTML form checkbox values ("on" -> true, missing -> false)
+  defp normalize_checkbox_params(params) do
+    params
+    |> Map.update("active", false, fn
+      "on" -> true
+      true -> true
+      _ -> false
+    end)
   end
 end

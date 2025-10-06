@@ -26,7 +26,8 @@ defmodule Rsolv.Analytics.Event do
     |> cast(attrs, [
       :event_type, :visitor_id, :session_id, :page_path, :referrer,
       :user_agent, :ip_address, :utm_source, :utm_medium, :utm_campaign,
-      :utm_term, :utm_content, :metadata
+      :utm_term, :utm_content, :metadata,
+      :inserted_at, :updated_at
     ])
     |> validate_required([:event_type])
     |> validate_length(:event_type, max: 50)
