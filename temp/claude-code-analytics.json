@@ -1,47 +1,5 @@
 [
   {
-    "startTime": 1758334184224,
-    "issueId": "123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1758334188447
-  },
-  {
-    "startTime": 1758334547131,
-    "issueId": "test-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1758334551310
-  },
-  {
-    "startTime": 1758334551313,
-    "issueId": "test-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1758334555220
-  },
-  {
-    "startTime": 1758334551661,
-    "issueId": "123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1758334558104
-  },
-  {
-    "startTime": 1758334555635,
-    "issueId": "123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1758334559438
-  },
-  {
-    "startTime": 1758334558106,
-    "issueId": "123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1758334561724
-  },
-  {
     "startTime": 1758380912460,
     "issueId": "test-1",
     "successful": false,
@@ -698,5 +656,47 @@
     "successful": false,
     "errorType": "query_error",
     "endTime": 1759785619355
+  },
+  {
+    "startTime": 1759785992221,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759785994177
+  },
+  {
+    "startTime": 1759785994178,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759785996024
+  },
+  {
+    "startTime": 1759786003935,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759786005920
+  },
+  {
+    "startTime": 1759786005922,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759786007740
+  },
+  {
+    "startTime": 1759786139966,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759786142028
+  },
+  {
+    "startTime": 1759786142029,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759786143966
   }
 ]
