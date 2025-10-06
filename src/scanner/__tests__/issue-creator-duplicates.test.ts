@@ -135,7 +135,7 @@ describe('IssueCreator - Duplicate Detection', () => {
         repo: 'repo',
         issue_number: 123,
         title: '🔒 Cross-Site Scripting (XSS) vulnerabilities found in 3 files',
-        body: expect.stringContaining('Total Instances: 3')
+        body: expect.stringContaining('**Total Instances**: 3')
       });
 
       expect(mockGitHub.issues.createComment).toHaveBeenCalledWith({

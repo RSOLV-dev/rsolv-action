@@ -35,7 +35,12 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       apiKey: 'test-key',
       rsolvApiKey: 'test-rsolv-key',
       githubToken: 'test-token',
-      mode: 'validate'
+      mode: 'validate',
+      aiProvider: {
+        apiKey: 'test-ai-key',
+        model: 'claude-sonnet-4-5-20250929',
+        provider: 'anthropic'
+      }
     } as ActionConfig;
 
     mockIssue = {
@@ -90,14 +95,14 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
+        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
         })
       };
-      TestGeneratingSecurityAnalyzer.prototype.generateTestsWithAnalysis =
-        mockTestGenerator.generateTestsWithAnalysis;
+      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
+        mockTestGenerator.analyzeWithTestGeneration;
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
@@ -123,14 +128,14 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
+        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
         })
       };
-      TestGeneratingSecurityAnalyzer.prototype.generateTestsWithAnalysis =
-        mockTestGenerator.generateTestsWithAnalysis;
+      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
+        mockTestGenerator.analyzeWithTestGeneration;
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
@@ -162,14 +167,14 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
+        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
         })
       };
-      TestGeneratingSecurityAnalyzer.prototype.generateTestsWithAnalysis =
-        mockTestGenerator.generateTestsWithAnalysis;
+      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
+        mockTestGenerator.analyzeWithTestGeneration;
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
@@ -197,14 +202,14 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
+        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
         })
       };
-      TestGeneratingSecurityAnalyzer.prototype.generateTestsWithAnalysis =
-        mockTestGenerator.generateTestsWithAnalysis;
+      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
+        mockTestGenerator.analyzeWithTestGeneration;
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
@@ -231,14 +236,14 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
+        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
         })
       };
-      TestGeneratingSecurityAnalyzer.prototype.generateTestsWithAnalysis =
-        mockTestGenerator.generateTestsWithAnalysis;
+      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
+        mockTestGenerator.analyzeWithTestGeneration;
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
@@ -274,14 +279,14 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
+        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
           generatedTests: {
             testSuite: 'test code here'
           }
         })
       };
-      TestGeneratingSecurityAnalyzer.prototype.generateTestsWithAnalysis =
-        mockTestGenerator.generateTestsWithAnalysis;
+      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
+        mockTestGenerator.analyzeWithTestGeneration;
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
@@ -310,12 +315,12 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       });
 
       const mockTestGenerator = {
-        generateTestsWithAnalysis: vi.fn().mockResolvedValue({
+        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
           generatedTests: null // Test generation failed
         })
       };
-      TestGeneratingSecurityAnalyzer.prototype.generateTestsWithAnalysis =
-        mockTestGenerator.generateTestsWithAnalysis;
+      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
+        mockTestGenerator.analyzeWithTestGeneration;
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
