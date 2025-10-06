@@ -1,0 +1,25 @@
+{
+  "phase": "validate",
+  "data": {
+    "validation": {
+      "issue-457": {
+        "issueNumber": 457,
+        "validated": false,
+        "falsePositive": true,
+        "falsePositiveReason": "Unable to generate validation tests",
+        "usedPriorScan": false,
+        "timestamp": "2025-10-06T20:00:23.316Z",
+        "commitHash": "fed826108f54cfbb23deae0e0002b651818f86e7",
+        "hasSpecificVulnerabilities": false,
+        "vulnerabilities": [],
+        "confidence": "low"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "test/webapp",
+    "issueNumber": 457,
+    "commitSha": "fed826108f54cfbb23deae0e0002b651818f86e7"
+  },
+  "timestamp": "2025-10-06T20:00:23.327Z"
+}

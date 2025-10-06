@@ -1,0 +1,19 @@
+{
+  "phase": "mitigate",
+  "data": {
+    "mitigation": {
+      "issue-123": {
+        "fixed": true,
+        "prUrl": "https://github.com/test/repo/pull/1",
+        "fixCommit": "fix-commit-123",
+        "timestamp": "2025-10-06T20:00:35.112Z"
+      }
+    }
+  },
+  "metadata": {
+    "repo": "test/repo",
+    "issueNumber": 123,
+    "commitSha": "fix-commit-123"
+  },
+  "timestamp": "2025-10-06T20:00:35.115Z"
+}

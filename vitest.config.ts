@@ -79,8 +79,20 @@ export default defineConfig({
       '**/*.skip.ts',
       // Skip e2e tests unless explicitly running them
       ...(process.env.RUN_E2E !== 'true' ? ['**/e2e/**', '**/*e2e*.test.ts'] : []),
-      // Skip live API tests unless explicitly enabled  
-      ...(isLiveAPI ? [] : ['**/*live-api*.test.ts', '**/*staging*.test.ts'])
+      // Skip live API tests unless explicitly enabled
+      ...(isLiveAPI ? [] : ['**/*live-api*.test.ts', '**/*staging*.test.ts']),
+      // Skip integration tests unless explicitly enabled (RFC-062)
+      ...(process.env.RUN_INTEGRATION !== 'true' ? [
+        '**/tests/integration/**',
+        '**/__tests__/test-aware-fix-validation/**',
+        '**/__tests__/modes/phase-executor-validation-integration.test.ts',
+        '**/credentials/__tests__/manager.test.ts',
+        '**/external/__tests__/*.test.ts',
+        '**/modes/phase-executor/__tests__/execute-all-phases-integration.test.ts',
+        '**/modes/phase-executor/__tests__/mitigate-validation-flow.test.ts',
+        '**/modes/phase-executor/__tests__/validation-label-update.test.ts',
+        '**/modes/__tests__/integration-all-modes.test.ts'
+      ] : [])
     ],
     
     // Include patterns
