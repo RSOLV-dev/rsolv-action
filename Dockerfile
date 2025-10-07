@@ -1,4 +1,4 @@
-# Multi-stage build for RSOLV Platform
+# Multi-stage build for RSOLV Platform (Alpine-based)
 # Stage 1: Build stage
 FROM elixir:1.18-alpine AS builder
 
@@ -25,21 +25,19 @@ RUN mix deps.get --only prod && \
 
 # Copy assets and non-static priv files
 COPY assets assets
-# Copy priv directories but exclude static to avoid overwriting generated assets
 COPY priv/repo priv/repo
 COPY priv/parsers priv/parsers
 COPY priv/benchmarks priv/benchmarks
 COPY priv/blog priv/blog
 COPY priv/grafana_dashboards priv/grafana_dashboards
 
-# Build assets (esbuild is handled by mix)
-# Clean any existing static files first to ensure fresh build
+# Build assets
 RUN rm -rf priv/static && mix assets.deploy
 
 # Copy source code
 COPY lib lib
 
-# Copy the correct static files with proper CSS
+# Copy the correct static files
 COPY priv/static priv/static
 
 # Compile the application
@@ -58,19 +56,11 @@ FROM alpine:3.22
 RUN apk add --no-cache \
     openssl ncurses-libs libstdc++ libgcc \
     curl \
+    ca-certificates \
     python3 \
     ruby ruby-dev \
     php82 php82-json php82-tokenizer \
     nodejs npm bash
-
-# Install Ruby parser gem
-RUN apk add --no-cache --virtual .build-deps build-base && \
-    gem install bundler parser --no-document && \
-    apk del .build-deps && \
-    rm -rf /root/.gem /usr/lib/ruby/gems/*/cache/*
-
-# Install PHP dependencies for parser
-RUN apk add --no-cache php82-dom php82-mbstring
 
 # Create app user
 RUN adduser -D -h /app app

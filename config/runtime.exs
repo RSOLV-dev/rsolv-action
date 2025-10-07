@@ -1,8 +1,9 @@
 import Config
 
-# Fix DNS resolution on Alpine Linux (musl libc)
-# This must be done before any network operations
+# Configure DNS resolution for Kubernetes
+# Even on Debian, we need to configure inet to use DNS for .cluster.local resolution
 if config_env() == :prod do
+  # Use DNS resolution (not just /etc/hosts)
   :inet_db.set_lookup([:dns])
 end
 
