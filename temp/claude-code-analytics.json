@@ -1,40 +1,5 @@
 [
   {
-    "startTime": 1759780643398,
-    "issueId": "123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1759780645281
-  },
-  {
-    "startTime": 1759780647560,
-    "issueId": "123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1759780649592
-  },
-  {
-    "startTime": 1759780649593,
-    "issueId": "123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1759780656628
-  },
-  {
-    "startTime": 1759780762376,
-    "issueId": "test-1",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1759780764785
-  },
-  {
-    "startTime": 1759780764547,
-    "issueId": "123",
-    "successful": false,
-    "errorType": "query_error",
-    "endTime": 1759780766600
-  },
-  {
     "startTime": 1759780764786,
     "issueId": "test-1",
     "successful": false,
@@ -698,5 +663,40 @@
     "successful": false,
     "errorType": "query_error",
     "endTime": 1759801495071
+  },
+  {
+    "startTime": 1759801560101,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759801562128
+  },
+  {
+    "startTime": 1759801562130,
+    "issueId": "test-1",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759801564172
+  },
+  {
+    "startTime": 1759801562454,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759801564434
+  },
+  {
+    "startTime": 1759801564435,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759801566342
+  },
+  {
+    "startTime": 1759801566515,
+    "issueId": "123",
+    "successful": false,
+    "errorType": "query_error",
+    "endTime": 1759801568544
   }
 ]
