@@ -110,7 +110,7 @@ export class AITestGenerator {
     options: TestGenerationOptions,
     fileContent?: string
   ): string {
-    return `You are an expert security test engineer. Generate comprehensive tests for a security vulnerability using Test-Driven Development (TDD) methodology.
+    return `You are an expert security test engineer. Generate RED tests for a security vulnerability to prove it exists.
 
 ## Vulnerability Details:
 - Type: ${vulnerability.type}
@@ -121,15 +121,24 @@ export class AITestGenerator {
 - Message: ${vulnerability.message}
 ${vulnerability.remediation ? `- Remediation: ${vulnerability.remediation}` : ''}
 
-## Test Requirements:
-1. Generate THREE test cases following TDD red-green-refactor:
-   - RED test: Proves the vulnerability exists (should FAIL on vulnerable code, PASS on fixed code)
-   - GREEN test: Validates the fix works (should FAIL on vulnerable code, PASS on fixed code)
-   - REFACTOR test: Ensures functionality is preserved (should PASS on both)
+## Test Requirements (RFC-060):
+1. Generate RED tests that prove the vulnerability exists:
+   - Each test should FAIL on the current vulnerable code
+   - Each test should PASS once the vulnerability is fixed
+   - Tests must use ${options.testFramework || 'jest'} framework
+   - Follow framework-specific best practices and idioms
 
-2. Use ${options.language || 'javascript'} with ${options.testFramework || 'jest'} framework
-3. Tests must be executable and use actual attack vectors
-4. Include proper assertions to validate security
+2. Determine how many RED tests are needed based on the vulnerability:
+   - Simple vulnerabilities: Generate 1 RED test
+   - Complex vulnerabilities: Generate multiple RED tests (2-5 recommended, up to 10 max)
+   - Examples of when multiple tests are needed:
+     * Multi-vector attacks (e.g., SQL injection via multiple inputs)
+     * Different exploit techniques for same vulnerability type
+     * Edge cases that must all be addressed to fully fix the vulnerability
+
+3. Use ${options.language || 'javascript'} language
+4. Tests must be executable and use actual attack vectors
+5. Include proper assertions to validate security
 
 ${fileContent ? `## Vulnerable Code:\n\`\`\`${options.language}\n${fileContent}\n\`\`\`` : ''}
 
@@ -137,26 +146,32 @@ ${fileContent ? `## Vulnerable Code:\n\`\`\`${options.language}\n${fileContent}\
 IMPORTANT: Return ONLY valid JSON. Keep test code CONCISE (max 10-15 lines per test).
 Focus on the core vulnerability check, not elaborate setup.
 
-Return EXACTLY this JSON structure (no markdown, no backticks):
+For a single RED test, return:
 {
   "red": {
     "testName": "short descriptive name",
     "testCode": "concise test code (10-15 lines max)",
     "attackVector": "malicious input",
-    "expectedBehavior": "brief description"
-  },
-  "green": {
-    "testName": "short descriptive name",
-    "testCode": "concise test code (10-15 lines max)",
-    "validInput": "safe input",
-    "expectedBehavior": "brief description"
-  },
-  "refactor": {
-    "testName": "short descriptive name",
-    "testCode": "concise test code (10-15 lines max)",
-    "testCases": ["scenario1", "scenario2"],
-    "expectedBehavior": "brief description"
+    "expectedBehavior": "should_fail_on_vulnerable_code"
   }
+}
+
+For multiple RED tests (complex vulnerabilities), return:
+{
+  "redTests": [
+    {
+      "testName": "first attack vector name",
+      "testCode": "test code",
+      "attackVector": "first malicious input",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    },
+    {
+      "testName": "second attack vector name",
+      "testCode": "test code",
+      "attackVector": "second malicious input",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    }
+  ]
 }
 
 Keep ALL strings properly escaped. Avoid long test code.
@@ -261,55 +276,47 @@ Return ONLY the JSON, no explanations.`;
         return null;
       }
       
-      // Validate and reconstruct the structure with fallbacks
-      if (!parsed.red && !parsed.green && !parsed.refactor) {
-        logger.error('Invalid test suite structure. No valid test phases found. Keys:', Object.keys(parsed));
+      // RFC-060: Validate RED-only test suite structure
+      // Accept either single RED test or array of RED tests
+      if (!parsed.red && !parsed.redTests) {
+        logger.error('Invalid test suite structure. No RED test(s) found. Keys:', Object.keys(parsed));
         return null;
       }
 
-      // Log which phases we successfully parsed
-      const phases = [];
-      if (parsed.red) phases.push('red');
-      if (parsed.green) phases.push('green');
-      if (parsed.refactor) phases.push('refactor');
-      logger.info(`Successfully parsed test phases: ${phases.join(', ')}`);
+      // Log what we parsed
+      if (parsed.redTests) {
+        logger.info(`Successfully parsed ${parsed.redTests.length} RED tests for complex vulnerability`);
+      } else if (parsed.red) {
+        logger.info('Successfully parsed single RED test');
+      }
 
-      // Build result with available phases, using placeholders for missing ones
-      return {
-        red: parsed.red ? {
+      // Warn if GREEN/REFACTOR tests are present (should not be in VALIDATE phase)
+      if (parsed.green || parsed.refactor) {
+        logger.warn('Response contained GREEN/REFACTOR tests - stripping per RFC-060 (VALIDATE phase is RED-only)');
+      }
+
+      // Build RED-only result - either single or multiple
+      const result: VulnerabilityTestSuite = {};
+
+      if (parsed.redTests && Array.isArray(parsed.redTests)) {
+        // Multiple RED tests for complex vulnerability
+        result.redTests = parsed.redTests.map((test: any) => ({
+          testName: test.testName || 'RED Test',
+          testCode: test.testCode || '// Test code truncated',
+          attackVector: test.attackVector || 'Unknown',
+          expectedBehavior: 'should_fail_on_vulnerable_code' as const
+        }));
+      } else if (parsed.red) {
+        // Single RED test
+        result.red = {
           testName: parsed.red.testName || 'Vulnerability Test',
           testCode: parsed.red.testCode || '// Test code truncated',
           attackVector: parsed.red.attackVector || 'Unknown',
-          expectedBehavior: parsed.red.expectedBehavior || 'Should detect vulnerability'
-        } : {
-          testName: 'Vulnerability Test (Generated)',
-          testCode: '// Failed to generate red phase test',
-          attackVector: 'Test generation failed',
-          expectedBehavior: 'Should detect vulnerability'
-        },
-        green: parsed.green ? {
-          testName: parsed.green.testName || 'Valid Input Test',
-          testCode: parsed.green.testCode || '// Test code truncated',
-          validInput: parsed.green.validInput || 'Unknown',
-          expectedBehavior: parsed.green.expectedBehavior || 'Should handle valid input'
-        } : {
-          testName: 'Valid Input Test (Generated)',
-          testCode: '// Failed to generate green phase test',
-          validInput: 'Test generation failed',
-          expectedBehavior: 'Should handle valid input'
-        },
-        refactor: parsed.refactor ? {
-          testName: parsed.refactor.testName || 'Refactor Test',
-          testCode: parsed.refactor.testCode || '// Test code truncated',
-          functionalValidation: parsed.refactor.testCases || [],
-          expectedBehavior: parsed.refactor.expectedBehavior || 'Should maintain functionality'
-        } : {
-          testName: 'Refactor Test (Generated)',
-          testCode: '// Failed to generate refactor phase test',
-          functionalValidation: [],
-          expectedBehavior: 'Should maintain functionality'
-        }
-      };
+          expectedBehavior: 'should_fail_on_vulnerable_code' as const
+        };
+      }
+
+      return result;
     } catch (error) {
       logger.error('Failed to parse AI response:', error);
       logger.debug('Response that failed to parse:', aiResponse.substring(0, 500));

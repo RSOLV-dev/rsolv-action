@@ -1,8 +1,9 @@
 /**
  * Vulnerability Test Generation Framework
- * 
- * Generates red-green-refactor test suites for security vulnerabilities
- * to validate that fixes actually work and don't break functionality.
+ * RFC-060: Generates RED-only tests for VALIDATE phase
+ *
+ * RED tests prove vulnerability exists (fail on vulnerable code, pass when fixed)
+ * GREEN/REFACTOR tests are generated in MITIGATE phase by Claude Code
  */
 
 import type { Vulnerability } from './types.js';
@@ -10,25 +11,37 @@ import { logger } from '../utils/logger.js';
 
 // === CORE TYPES ===
 
+/**
+ * Test suite structure supporting RED, GREEN, and REFACTOR phases
+ * RFC-060: In VALIDATE phase, only RED tests are generated
+ */
 export interface VulnerabilityTestSuite {
-  /** Test that demonstrates the vulnerability exists (should FAIL on vulnerable code) */
-  red: {
+  /** RED test(s) that demonstrate the vulnerability exists */
+  red?: {
     testName: string;
     testCode: string;
     attackVector: string;
     expectedBehavior: 'should_fail_on_vulnerable_code';
   };
-  
-  /** Test that proves the vulnerability is fixed (should PASS on fixed code) */
-  green: {
+
+  /** Multiple RED tests for complex vulnerabilities (RFC-060) */
+  redTests?: Array<{
+    testName: string;
+    testCode: string;
+    attackVector: string;
+    expectedBehavior: 'should_fail_on_vulnerable_code';
+  }>;
+
+  /** GREEN test validates the fix works (not generated in VALIDATE phase per RFC-060) */
+  green?: {
     testName: string;
     testCode: string;
     validInput: string;
     expectedBehavior: 'should_pass_on_fixed_code';
   };
-  
-  /** Tests that ensure fix doesn't break functionality */
-  refactor: {
+
+  /** REFACTOR test ensures functionality is preserved (not generated in VALIDATE phase per RFC-060) */
+  refactor?: {
     testName: string;
     testCode: string;
     functionalValidation: string[];
