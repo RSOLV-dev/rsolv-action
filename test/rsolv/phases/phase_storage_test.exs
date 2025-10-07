@@ -13,7 +13,7 @@ defmodule Rsolv.Phases.PhaseStorageTest do
       customer = %Customer{}
       |> Customer.changeset(%{
         name: "Test Corp",
-        email: "test@example.com",
+        email: unique_email(),
         active: true
       })
       |> Repo.insert!()

@@ -71,7 +71,7 @@ defmodule Rsolv.EmailManagementTest do
       }
 
       assert {:ok, failed_email} = EmailManagement.create_failed_email(valid_attrs)
-      assert failed_email.to_email == "test@example.com"
+      assert failed_email.to_email == valid_attrs.to_email
       assert failed_email.subject == "Test Subject"
       assert failed_email.attempts == 1
     end

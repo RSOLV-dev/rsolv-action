@@ -1,5 +1,6 @@
 defmodule Rsolv.AST.PatternAdapterTest do
   use Rsolv.IntegrationCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   
   alias Rsolv.AST.PatternAdapter
   alias Rsolv.Security.{Pattern, ASTPattern}

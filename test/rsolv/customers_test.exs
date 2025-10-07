@@ -19,14 +19,14 @@ defmodule Rsolv.CustomersTest do
     end
 
     test "returns customer with correct email and password", %{customer: customer} do
-      assert {:ok, authenticated_customer} = 
+      assert {:ok, authenticated_customer} =
         Customers.authenticate_customer_by_email_and_password(
-          "test@example.com",
+          customer.email,
           "ValidP@ssw0rd123!"
         )
-      
+
       assert authenticated_customer.id == customer.id
-      assert authenticated_customer.email == "test@example.com"
+      assert authenticated_customer.email == customer.email
     end
 
     test "returns error with invalid password", %{customer: _customer} do

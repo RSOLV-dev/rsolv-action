@@ -1,5 +1,6 @@
 defmodule Rsolv.Analytics.PageViewTest do
   use Rsolv.DataCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   alias Rsolv.Analytics.PageView
   alias Rsolv.Customers.Customer
   alias Rsolv.Repo
@@ -9,7 +10,7 @@ defmodule Rsolv.Analytics.PageViewTest do
       # Create a customer
       {:ok, customer} = Repo.insert(%Customer{
         name: "Test Company",
-        email: "test@example.com"
+        email: unique_email()
       })
 
       # Create a page view associated with the customer

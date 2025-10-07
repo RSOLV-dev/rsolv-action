@@ -8,7 +8,7 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
   setup do
     staff = staff_customer_fixture()
     customer = customer_fixture(
-      email: "test@example.com",
+      email: unique_email(),
       name: "Test Customer",
       subscription_plan: "pro",
       monthly_limit: 1000,
@@ -24,7 +24,7 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
       {:ok, _view, html} = live(conn, "/admin/customers/#{customer.id}")
 
       assert html =~ "Test Customer"
-      assert html =~ "test@example.com"
+      assert html =~ customer.email
       assert html =~ "1000"
       assert html =~ "Active"
       assert html =~ "pro"

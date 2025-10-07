@@ -1,8 +1,9 @@
 defmodule RsolvWeb.Admin.CustomerLiveTest do
   use RsolvWeb.ConnCase, async: false
-  
+
   import Phoenix.LiveViewTest
   import Rsolv.CustomersFixtures
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   
   setup do
     staff = staff_customer_fixture()
@@ -66,13 +67,13 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
     
     test "filters by status", %{conn: conn, staff: staff} do
       active_customer = customer_fixture(
-        email: "active@example.com",
+        email: unique_email("active"),
         name: "Active Customer",
         active: true
       )
-      
+
       inactive_customer = customer_fixture(
-        email: "inactive@example.com",
+        email: unique_email("inactive"),
         name: "Inactive Customer",
         active: false
       )

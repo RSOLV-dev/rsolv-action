@@ -67,36 +67,40 @@ defmodule Rsolv.FeedbackTest do
       # Insert directly with specific timestamps to ensure ordering
       old_timestamp = ~N[2023-01-01 10:00:00]
       new_timestamp = ~N[2023-01-02 10:00:00]
-      
+
+      old_email = unique_email("old")
+      new_email = unique_email("new")
+
       {:ok, _old_entry} = %Rsolv.Feedback.Entry{}
-        |> Rsolv.Feedback.Entry.changeset(@valid_attrs)
+        |> Rsolv.Feedback.Entry.changeset(%{@valid_attrs | email: old_email})
         |> Ecto.Changeset.put_change(:inserted_at, old_timestamp)
         |> Ecto.Changeset.put_change(:updated_at, old_timestamp)
         |> Rsolv.Repo.insert()
-      
+
       {:ok, _new_entry} = %Rsolv.Feedback.Entry{}
-        |> Rsolv.Feedback.Entry.changeset(%{@valid_attrs | email: "new@example.com"})
+        |> Rsolv.Feedback.Entry.changeset(%{@valid_attrs | email: new_email})
         |> Ecto.Changeset.put_change(:inserted_at, new_timestamp)
         |> Ecto.Changeset.put_change(:updated_at, new_timestamp)
         |> Rsolv.Repo.insert()
-      
+
       recent = Feedback.list_recent_entries(10)
       assert length(recent) == 2
       # The newer entry should be first
-      assert List.first(recent).email == "new@example.com"
-      assert List.last(recent).email == "test@example.com"
+      assert List.first(recent).email == new_email
+      assert List.last(recent).email == old_email
     end
 
     test "export_to_csv/0 returns CSV string of all entries" do
-      {:ok, _} = Feedback.create_entry(@valid_attrs)
+      test_email = unique_email()
+      {:ok, _} = Feedback.create_entry(%{@valid_attrs | email: test_email})
       {:ok, _} = Feedback.create_entry(%{@valid_attrs | email: "another@example.com", tags: []})
-      
+
       csv = Feedback.export_to_csv()
       lines = String.split(csv, "\n", trim: true)
-      
+
       assert length(lines) == 3 # header + 2 entries
       assert String.contains?(List.first(lines), "email,message,rating,tags,inserted_at")
-      assert String.contains?(csv, "test@example.com")
+      assert String.contains?(csv, test_email)
       assert String.contains?(csv, "another@example.com")
     end
   end

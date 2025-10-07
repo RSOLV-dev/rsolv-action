@@ -4,7 +4,7 @@ defmodule RsolvWeb.Admin.DashboardControllerTest do
   import Rsolv.CustomersFixtures
 
   setup do
-    staff = customer_fixture(%{email: "staff@rsolv.dev", is_staff: true})
+    staff = customer_fixture(%{email: unique_email("staff"), is_staff: true})
     %{staff: staff}
   end
 
@@ -21,8 +21,8 @@ defmodule RsolvWeb.Admin.DashboardControllerTest do
     end
 
     test "shows customer count", %{conn: conn, staff: staff} do
-      customer_fixture(%{email: "customer1@example.com"})
-      customer_fixture(%{email: "customer2@example.com"})
+      customer_fixture(%{email: unique_email("customer1")})
+      customer_fixture(%{email: unique_email("customer2")})
 
       conn = log_in_customer(conn, staff)
       conn = get(conn, ~p"/admin/dashboard")
@@ -34,7 +34,7 @@ defmodule RsolvWeb.Admin.DashboardControllerTest do
     end
 
     test "shows API key statistics", %{conn: conn, staff: staff} do
-      customer = customer_fixture(%{email: "customer@example.com"})
+      customer = customer_fixture(%{email: unique_email("customer")})
       {:ok, _key1} = Rsolv.Customers.create_api_key(customer, %{name: "Key 1"})
       {:ok, _key2} = Rsolv.Customers.create_api_key(customer, %{name: "Key 2"})
 
@@ -57,7 +57,7 @@ defmodule RsolvWeb.Admin.DashboardControllerTest do
     end
 
     test "shows recent customer activity", %{conn: conn, staff: staff} do
-      customer = customer_fixture(%{email: "recent@example.com"})
+      customer = customer_fixture(%{email: unique_email("recent")})
       {:ok, _key} = Rsolv.Customers.create_api_key(customer, %{name: "Recent Key"})
 
       conn = log_in_customer(conn, staff)
@@ -65,7 +65,7 @@ defmodule RsolvWeb.Admin.DashboardControllerTest do
 
       html = html_response(conn, 200)
       assert html =~ "Recent Activity"
-      assert html =~ "recent@example.com"
+      assert html =~ customer.email
       assert html =~ "created API key"
     end
 
@@ -86,7 +86,7 @@ defmodule RsolvWeb.Admin.DashboardControllerTest do
     end
 
     test "non-staff customers cannot access", %{conn: conn} do
-      regular_customer = customer_fixture(%{email: "regular@example.com", is_staff: false})
+      regular_customer = customer_fixture(%{email: unique_email("regular"), is_staff: false})
       conn = log_in_customer(conn, regular_customer)
 
       conn = get(conn, ~p"/admin/dashboard")
