@@ -17,7 +17,7 @@ defmodule Rsolv.ConsolidationSchemaTest do
       # from phx.gen.auth
       
       user_attrs = %{
-        email: "test@example.com",
+        email: unique_email(),
         password: "password123456"
       }
       
@@ -257,7 +257,7 @@ defmodule Rsolv.ConsolidationSchemaTest do
     test "changeset handles billing fields" do
       attrs = %{
         name: "Test",
-        email: "test@example.com",
+        email: unique_email(),
         user_id: 1,  # Required until RFC-049
         stripe_customer_id: "cus_123",
         subscription_plan: "pro",
@@ -275,7 +275,7 @@ defmodule Rsolv.ConsolidationSchemaTest do
     test "changeset rejects dropped fields" do
       attrs = %{
         name: "Test",
-        email: "test@example.com",
+        email: unique_email(),
         user_id: 1,
         plan: "old_plan",  # Dropped field
         payment_method_added: true  # Dropped field

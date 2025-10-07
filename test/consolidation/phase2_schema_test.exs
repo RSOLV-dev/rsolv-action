@@ -1,6 +1,7 @@
 defmodule Rsolv.Consolidation.Phase2SchemaTest do
   use Rsolv.DataCase
-  
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
+
   @moduledoc """
   TDD tests for Phase 2: Database Schema Consolidation.
   These tests define the expected unified schema structure.
@@ -13,7 +14,7 @@ defmodule Rsolv.Consolidation.Phase2SchemaTest do
       # from phx.gen.auth
       
       user_attrs = %{
-        email: "test@example.com",
+        email: unique_email(),
         password: "password123456"
       }
       

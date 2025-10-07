@@ -24,7 +24,7 @@ defmodule Rsolv.AnalyticsTest do
     
     test "tracks conversion events" do
       # Track a conversion using WebAnalytics
-      WebAnalytics.track_conversion("early_access_signup", %{email: "test@example.com"})
+      WebAnalytics.track_conversion("early_access_signup", %{email: unique_email()})
       
       # Verify it was tracked in the database
       Process.sleep(100) # Give async task time to complete
@@ -191,7 +191,7 @@ defmodule Rsolv.AnalyticsTest do
     test "accepts valid conversion data" do
       attrs = %{
         event_name: "early_access_signup",
-        properties: %{email: "test@example.com"},
+        properties: %{email: unique_email()},
         session_id: "session_789",
         value: Decimal.new("29.99")
       }

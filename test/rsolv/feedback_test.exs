@@ -5,7 +5,7 @@ defmodule Rsolv.FeedbackTest do
 
   describe "feedback entries" do
     @valid_attrs %{
-      email: "test@example.com",
+      email: unique_email(),
       message: "Great product!",
       rating: 5,
       tags: ["ui", "performance"],

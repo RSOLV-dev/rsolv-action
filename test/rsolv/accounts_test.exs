@@ -1,5 +1,6 @@
 defmodule Rsolv.AccountsTest do
   use Rsolv.DataCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   
   alias Rsolv.Accounts
   alias Rsolv.Customers
@@ -15,7 +16,7 @@ defmodule Rsolv.AccountsTest do
       # Create a customer with an API key
       {:ok, customer} = Customers.create_customer(%{
         name: "Test Customer",
-        email: "test@example.com",
+        email: unique_email(),
         subscription_plan: "enterprise",
         metadata: %{"flags" => ["ai_access", "enterprise_access"]},
         monthly_limit: 100,
@@ -32,7 +33,7 @@ defmodule Rsolv.AccountsTest do
       assert found_customer != nil
       assert found_customer.id == customer.id
       assert found_customer.name == "Test Customer"
-      assert found_customer.email == "test@example.com"
+      assert found_customer.email == customer.email  # Use actual email from created customer
       assert found_customer.subscription_plan == "enterprise"
       assert found_customer.metadata["flags"] == ["ai_access", "enterprise_access"]
       assert found_customer.monthly_limit == 100
@@ -48,7 +49,7 @@ defmodule Rsolv.AccountsTest do
       # Create an inactive customer
       {:ok, customer} = Customers.create_customer(%{
         name: "Inactive Customer",
-        email: "inactive@example.com",
+        email: unique_email("inactive"),
         active: false
       })
       

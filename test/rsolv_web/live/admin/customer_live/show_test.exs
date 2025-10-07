@@ -1,5 +1,6 @@
 defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
   use RsolvWeb.ConnCase, async: false
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
 
   import Phoenix.LiveViewTest
   import Rsolv.CustomersFixtures

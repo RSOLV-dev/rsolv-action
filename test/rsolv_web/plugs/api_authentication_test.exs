@@ -7,9 +7,12 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
 
   setup do
     # Create a test customer with API key
+    # Use unique email for async tests to avoid conflicts
+    unique_email = "test-#{:rand.uniform(1_000_000)}@example.com"
+
     {:ok, customer} = Customers.create_customer(%{
       name: "Test Customer",
-      email: "test@example.com",
+      email: unique_email,
       monthly_limit: 100,
       current_usage: 0
     })

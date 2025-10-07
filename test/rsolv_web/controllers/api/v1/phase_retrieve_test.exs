@@ -1,5 +1,6 @@
 defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
   use RsolvWeb.ConnCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   alias Rsolv.Phases
   alias Rsolv.Phases.Repository
   alias Rsolv.Customers.{Customer, ApiKey, ForgeAccount}

@@ -1,6 +1,7 @@
 defmodule Rsolv.Integration.DatabaseOperationsTest do
   use Rsolv.DataCase
-  
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
+
   alias Rsolv.{Analytics, EarlyAccess, EmailManagement, Feedback}
   
   describe "Analytics operations" do
@@ -51,7 +52,7 @@ defmodule Rsolv.Integration.DatabaseOperationsTest do
   describe "Early Access operations" do
     test "creates and retrieves signups" do
       attrs = %{
-        email: "test@example.com",
+        email: unique_email(),
         first_name: "Test",
         source: "landing_page",
         metadata: %{interested_in: "automation"}

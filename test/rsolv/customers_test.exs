@@ -1,5 +1,6 @@
 defmodule Rsolv.CustomersTest do
   use Rsolv.DataCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
 
   alias Rsolv.Customers
 
@@ -9,7 +10,7 @@ defmodule Rsolv.CustomersTest do
       Rsolv.RateLimiter.reset()
       # Create a customer with a password
       {:ok, customer} = Customers.register_customer(%{
-        email: "test@example.com",
+        email: unique_email(),
         password: "ValidP@ssw0rd123!",
         name: "Test Customer"
       })
@@ -106,7 +107,7 @@ defmodule Rsolv.CustomersTest do
 
     test "returns error changeset with weak password" do
       invalid_attrs = %{
-        email: "test@example.com",
+        email: unique_email(),
         password: "weak",
         name: "Test"
       }

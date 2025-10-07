@@ -2,7 +2,14 @@ defmodule Rsolv.TestHelpers do
   @moduledoc """
   Helper functions for tests
   """
-  
+
+  @doc """
+  Generates a unique email address for testing to avoid conflicts in async tests
+  """
+  def unique_email(prefix \\ "test") do
+    "#{prefix}-#{System.unique_integer([:positive])}@example.com"
+  end
+
   @doc """
   Delivers an email and handles the {:ok, email} tuple that our Mailer returns in test env
   """

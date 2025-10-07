@@ -1,5 +1,6 @@
 defmodule Rsolv.Phases.PhaseStorageTest do
   use Rsolv.DataCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   alias Rsolv.Phases
   alias Rsolv.Phases.{Repository, ScanExecution, ValidationExecution, MitigationExecution}
   alias Rsolv.Customers.ForgeAccount

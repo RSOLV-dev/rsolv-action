@@ -6,7 +6,7 @@ defmodule Rsolv.EmailManagementTest do
   describe "unsubscribes" do
     test "create_unsubscribe/1 with valid data creates an unsubscribe" do
       valid_attrs = %{
-        email: "test@example.com",
+        email: unique_email(),
         reason: "User request via unsubscribe page"
       }
 
@@ -30,7 +30,7 @@ defmodule Rsolv.EmailManagementTest do
     end
 
     test "get_unsubscribe_by_email/1 returns the unsubscribe" do
-      EmailManagement.create_unsubscribe(%{email: "test@example.com"})
+      EmailManagement.create_unsubscribe(%{email: unique_email()})
       unsubscribe = EmailManagement.get_unsubscribe_by_email("test@example.com")
       assert unsubscribe.email == "test@example.com"
     end
@@ -61,7 +61,7 @@ defmodule Rsolv.EmailManagementTest do
   describe "failed_emails" do
     test "create_failed_email/1 with valid data creates a failed email record" do
       valid_attrs = %{
-        to_email: "test@example.com",
+        to_email: unique_email(),
         subject: "Test Subject",
         template: "welcome",
         error_message: "Connection timeout",
@@ -88,7 +88,7 @@ defmodule Rsolv.EmailManagementTest do
 
     test "increment_failed_email_attempts/1 increments the attempt count" do
       {:ok, failed_email} = EmailManagement.create_failed_email(%{
-        to_email: "test@example.com",
+        to_email: unique_email(),
         error_message: "Initial error"
       })
 
