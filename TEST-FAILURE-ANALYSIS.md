@@ -56,3 +56,50 @@ After rollback to commit 617426e and API key fix:
 5. Fix phase executor test failures
 6. Verify all tests green before RFC-060 work
 
+
+## Root Cause Analysis (2025-10-06 20:18)
+
+### Primary Issue: Code Refactoring Without Test Updates
+
+The codebase underwent significant refactoring where:
+1. **GitBasedProcessor class** → refactored to functional exports (`processIssueWithGit`, `processIssuesWithGit`)
+2. Tests still import the old class: `import { GitBasedProcessor } from '../git-based-processor'`
+3. Result: "GitBasedProcessor is not a constructor" errors
+
+### Affected Test Files:
+- `src/ai/__tests__/git-based-processor-test-mode.test.ts` (6 tests failing)
+- `src/ai/__tests__/phase-6e-integration.test.ts`
+
+### Additional Test Failures Pattern:
+Many tests appear to be **characterization tests** that validated old API signatures/behaviors that no longer exist after refactoring. These tests need to be:
+1. Updated to match current API
+2. Or marked as skipped if functionality was intentionally removed
+3. Or rewritten to test new equivalent functionality
+
+### Recommended Approach:
+
+**Option 1: Quick Fix (Pragmatic)**
+- Skip/comment out outdated characterization tests
+- Focus on getting core functionality tests passing
+- Create tech debt tickets for proper test updates
+
+**Option 2: Proper Fix (Time-Intensive)**
+- Update all 22 failing test suites to match current API
+- Rewrite characterization tests for new functional architecture
+- Estimated effort: 4-6 hours
+
+**Option 3: Hybrid Approach**
+- Fix critical path tests (phase executor, pattern API)
+- Skip non-critical characterization tests with TODOs
+- Estimated effort: 2-3 hours
+
+### Immediate Blockers for RFC-060:
+1. Tests need to be green before implementing RFC-060 blockers
+2. Current 88.83% pass rate is not acceptable for production
+3. Many failures are due to stale tests, not broken functionality
+
+### Next Session Actions:
+1. Decide on approach (Quick/Proper/Hybrid)
+2. If Quick: Skip failing characterization tests, fix critical API tests
+3. If Proper: Systematically update each test suite
+4. Get to 100% green before resuming RFC-060 work
