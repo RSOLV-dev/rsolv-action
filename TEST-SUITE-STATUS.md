@@ -97,8 +97,8 @@ Tests for features not yet fully implemented:
 
 ```bash
 # Memory-safe (REQUIRED - prevents OOM)
-# Use PRODUCTION API key for full pattern access
-export RSOLV_API_KEY="rsolv_-1U3PpIl2T3wo3Nw5v9wB1EM-riNnBcloKtq_gveimc"
+# API key automatically loaded from parent ~/dev/rsolv/.envrc
+cd ~/dev/rsolv/RSOLV-action
 npm run test:memory
 
 # With JSON output
@@ -109,6 +109,19 @@ npx vitest run path/to/test.ts
 ```
 
 **⚠️ IMPORTANT**: Tests require the **production API key** (`RSOLV_PRODUCTION_API_KEY`) to access all 170+ security patterns. Test/demo keys only provide 5 patterns per language and will cause pattern availability tests to fail.
+
+**Environment Configuration** (in `~/dev/rsolv/.envrc`):
+
+**API Keys**:
+- Production: `rsolv_-1U3PpIl2T3wo3Nw5v9wB1EM-riNnBcloKtq_gveimc` (170+ patterns)
+- Test/Demo: `rsolv_6Z4WFMcYad0MsCCbYkEn-XMI4rgSMgkWqqPEpTZyk8A` (5 patterns per language)
+- Default `RSOLV_API_KEY` set to production for full coverage
+
+**Test Database** (for PhaseDataClient integration tests):
+- Database: `rsolv_api_test` (PostgreSQL)
+- Connection: `postgresql://postgres:postgres@localhost:5432/rsolv_api_test`
+- Tables: `scan_executions`, `validation_executions`, `mitigation_executions`
+- Reset: `cd ~/dev/rsolv && MIX_ENV=test mix ecto.reset`
 
 ## Key Learnings
 

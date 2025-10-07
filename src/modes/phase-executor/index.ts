@@ -929,10 +929,10 @@ export class PhaseExecutor {
         }
       }
       
-      // RFC-058: Check for validation branch and use test-aware mitigation
-      logger.info(`[MITIGATE] Step 4: Checking for RFC-058 validation branch...`);
+      // RFC-058/RFC-060: Check for validation branch and use test-aware mitigation
+      logger.info(`[MITIGATE] Step 4: Checking for RFC-058/RFC-060 validation branch...`);
       const { MitigationMode } = await import('../mitigation-mode.js');
-      const mitigationMode = new MitigationMode(this.config);
+      const mitigationMode = new MitigationMode(this.config, process.cwd(), this.phaseDataClient);
 
       // Try to use test-aware fix generation first
       let useTestAwareFix = false;
