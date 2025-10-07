@@ -62,6 +62,13 @@ Common issues caught by TypeScript:
 - Refactor, changing only one of the implementation or tests at a time
 - Optimize for readability and idiomaticity
 
+### Test Suite Status
+For complete test suite information, see:
+- **RSOLV-action**: [RSOLV-action/TEST-SUITE-STATUS.md](RSOLV-action/TEST-SUITE-STATUS.md)
+  - Current status, how to run tests, environment configuration
+  - API keys, test database setup, troubleshooting
+  - Test categorization and skip reasons
+
 ### Test Suite Maintenance
 **Key Lessons for Running Green Test Suites:**
 
