@@ -108,24 +108,26 @@ For complete test suite information, see:
    - RFC-059 example: `RSOLV_TESTING_MODE=true` means "don't filter" not "still validate strictly"
    - Test behavior should match documented intent, not assumptions
 
-8. **Memory Issues**:
+8. **Memory Issues and Parallel Execution**:
    - Use `npm run test:memory` for memory-safe test runs
-   - Split test suites when hitting heap limits
+   - Tests run in 2 batches of 4 parallel shards (semi-parallel)
+   - This balances speed with manageable load on external services
    - Individual test file runs: `npx vitest run path/to/test.ts`
 
-9. **Current Test Status** (as of 2025-10-06):
-   - RSOLV-action: ✅ **100% GREEN** (19/19 test files, 153 passed, 2 skipped)
+9. **Current Test Status** (as of 2025-10-07):
+   - RSOLV-action: ✅ **100% GREEN** (19/19 test files, 115 passed, 2 skipped)
    - RSOLV-platform: ✅ **100% GREEN** (4097/4097 passed, 529 doctests, 83 excluded, 61 skipped)
 
 10. **How to Run Tests**:
 
    **RSOLV-action** (in `/home/dylan/dev/rsolv/RSOLV-action/RSOLV-action`):
    ```bash
-   npm run test:memory  # REQUIRED - memory-safe with sharding
+   npm run test:memory  # REQUIRED - memory-safe with semi-parallel sharding
    ```
    - **DO NOT** use `npm test` - causes OOM errors
-   - Uses 8 shards run serially with 4GB heap limit
-   - Fast execution: 2-3s per shard vs 60s for full suite
+   - Uses 8 shards in 2 batches (4 parallel at a time) with 4GB heap limit
+   - Fast execution: ~3-4s per shard, ~30s total vs 60s for full suite
+   - Semi-parallel approach prevents overwhelming external APIs
    - Test artifacts auto-generated in `.rsolv/` and `temp/` (gitignored)
 
    **RSOLV-platform** (in `/home/dylan/dev/rsolv`):
