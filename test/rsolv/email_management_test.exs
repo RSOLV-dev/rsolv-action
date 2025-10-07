@@ -1,5 +1,6 @@
 defmodule Rsolv.EmailManagementTest do
   use Rsolv.DataCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
 
   alias Rsolv.EmailManagement
 
@@ -11,7 +12,7 @@ defmodule Rsolv.EmailManagementTest do
       }
 
       assert {:ok, unsubscribe} = EmailManagement.create_unsubscribe(valid_attrs)
-      assert unsubscribe.email == "test@example.com"
+      assert unsubscribe.email == valid_attrs.email
       assert unsubscribe.reason == "User request via unsubscribe page"
     end
 
@@ -30,9 +31,10 @@ defmodule Rsolv.EmailManagementTest do
     end
 
     test "get_unsubscribe_by_email/1 returns the unsubscribe" do
-      EmailManagement.create_unsubscribe(%{email: unique_email()})
-      unsubscribe = EmailManagement.get_unsubscribe_by_email("test@example.com")
-      assert unsubscribe.email == "test@example.com"
+      test_email = unique_email()
+      EmailManagement.create_unsubscribe(%{email: test_email})
+      unsubscribe = EmailManagement.get_unsubscribe_by_email(test_email)
+      assert unsubscribe.email == test_email
     end
 
     test "list_unsubscribes/0 returns all unsubscribes" do

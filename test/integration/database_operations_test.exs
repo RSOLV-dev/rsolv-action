@@ -59,10 +59,10 @@ defmodule Rsolv.Integration.DatabaseOperationsTest do
       }
       
       assert {:ok, signup} = EarlyAccess.create_signup(attrs)
-      assert signup.email == "test@example.com"
+      assert signup.email == attrs.email
       
       # Check if email exists
-      assert EarlyAccess.email_exists?("test@example.com")
+      assert EarlyAccess.email_exists?(attrs.email)
       refute EarlyAccess.email_exists?("nonexistent@example.com")
       
       # List signups

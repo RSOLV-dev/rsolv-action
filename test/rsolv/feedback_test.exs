@@ -1,5 +1,6 @@
 defmodule Rsolv.FeedbackTest do
   use Rsolv.DataCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   alias Rsolv.Feedback
   alias Rsolv.Feedback.Entry
 
@@ -14,7 +15,7 @@ defmodule Rsolv.FeedbackTest do
 
     test "create_entry/1 with valid data creates a feedback entry" do
       assert {:ok, %Entry{} = entry} = Feedback.create_entry(@valid_attrs)
-      assert entry.email == "test@example.com"
+      assert entry.email == @valid_attrs.email
       assert entry.message == "Great product!"
       assert entry.rating == 5
       assert entry.tags == ["ui", "performance"]

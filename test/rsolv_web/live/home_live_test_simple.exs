@@ -31,7 +31,7 @@ defmodule RsolvWeb.HomeLiveTestSimple do
       
       # Submit valid email
       html = view
-             |> form("form", signup: %{email: "test@example.com", company: "Test Co"})
+             |> form("form", signup: %{company: "Test Co"})
              |> render_submit()
       
       # Should show success message
@@ -103,7 +103,7 @@ defmodule RsolvWeb.HomeLiveTestSimple do
       
       # Submit with just email
       html = view
-             |> form("form", signup: %{email: "test@example.com", company: ""})
+             |> form("form", signup: %{company: ""})
              |> render_submit()
       
       # Should succeed

@@ -1,5 +1,6 @@
 defmodule Rsolv.ConsolidationSchemaTest do
   use Rsolv.DataCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   
   @moduledoc """
   TDD tests for Phase 2: Database Schema Consolidation.

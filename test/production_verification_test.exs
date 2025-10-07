@@ -3,6 +3,7 @@ defmodule Rsolv.ProductionVerificationTest do
   Comprehensive test suite to verify production API functionality
   """
   use Rsolv.DataCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   import Ecto.Query
   
   alias Rsolv.Repo
@@ -114,12 +115,12 @@ defmodule Rsolv.ProductionVerificationTest do
       # Create test customer using changeset
       changeset = Customer.changeset(%Customer{}, %{
         name: "Test Customer",
-        email: "test@example.com", 
+        email: unique_email(),
         subscription_plan: "trial"
       })
-      
+
       {:ok, customer} = Repo.insert(changeset)
-      
+
       {:ok, customer: customer}
     end
     

@@ -10,7 +10,7 @@ defmodule RsolvWeb.Admin.CustomerLiveApiKeyTest do
 
   setup do
     staff = staff_customer_fixture()
-    customer = customer_fixture(email: "test@example.com", name: "Test Customer")
+    customer = customer_fixture(name: "Test Customer")
 
     %{staff: staff, customer: customer}
   end

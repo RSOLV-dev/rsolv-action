@@ -1,5 +1,6 @@
 defmodule Rsolv.AnalyticsTest do
   use Rsolv.DataCase
+  import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
   
   alias Rsolv.Analytics
   alias Rsolv.Analytics.{PageView, Event, Conversion}
@@ -24,23 +25,24 @@ defmodule Rsolv.AnalyticsTest do
     
     test "tracks conversion events" do
       # Track a conversion using WebAnalytics
-      WebAnalytics.track_conversion("early_access_signup", %{email: unique_email()})
-      
+      test_email = unique_email()
+      WebAnalytics.track_conversion("early_access_signup", %{email: test_email})
+
       # Verify it was tracked in the database
       Process.sleep(100) # Give async task time to complete
       events = Analytics.list_events_by_type("conversion")
       assert length(events) >= 1
-      
+
       # Verify it's persisted to analytics_events table as conversion type
       # Give it a moment for the async task to complete
       Process.sleep(100)
-      
+
       conversion_events = Analytics.list_events_by_type("conversion")
       assert length(conversion_events) >= 1
-      
+
       conversion = List.first(conversion_events)
       assert conversion.event_type == "conversion"
-      assert conversion.metadata["email"] == "test@example.com"
+      assert conversion.metadata["email"] == test_email
       assert conversion.metadata["conversion_type"] == "early_access_signup"
     end
     

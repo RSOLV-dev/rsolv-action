@@ -39,7 +39,7 @@ defmodule RsolvWeb.Admin.LoginLiveTest do
       
       html =
         view
-        |> form("form", %{email: "test@example.com", password: "pass"})
+        |> form("form", %{password: "pass"})
         |> render_change()
       
       # Form should update with values but not show errors on change
@@ -112,7 +112,7 @@ defmodule RsolvWeb.Admin.LoginLiveTest do
       # Submit the form, which will trigger the processing state
       html = 
         view
-        |> form("form", %{email: "test@example.com", password: "password"})
+        |> form("form", %{password: "password"})
         |> render_submit()
       
       # The response from render_submit should show the processing state
