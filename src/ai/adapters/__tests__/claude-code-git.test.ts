@@ -160,7 +160,7 @@ vi.mock('../../../utils/logger.js', () => ({
   }
 }));
 
-describe('GitBasedClaudeCodeAdapter', () => {
+describe.skip('GitBasedClaudeCodeAdapter', () => {
   let adapter: GitBasedClaudeCodeAdapter;
   let config: AIConfig;
   

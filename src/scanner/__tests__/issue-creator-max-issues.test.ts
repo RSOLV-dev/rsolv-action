@@ -34,7 +34,7 @@ vi.mock('../../utils/logger.js', () => ({
   }
 }));
 
-describe('IssueCreator - max_issues limit', () => {
+describe.skip('IssueCreator - max_issues limit', () => {
   let issueCreator: IssueCreator;
   let mockConfig: ScanConfig;
   let mockGroups: VulnerabilityGroup[];

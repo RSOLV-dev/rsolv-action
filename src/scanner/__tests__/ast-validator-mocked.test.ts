@@ -74,13 +74,16 @@ console.log('safe code');`]
             filePath: 'example.js',
             line: 2,
             code: '// eval(userInput)',
-            severity: 'critical'
+            severity: 'critical',
+            type: 'js-eval-injection'  // API now includes type field
           }
         ],
         files: {
-          'example.js': `// Security warning
+          'example.js': {
+            content: `// Security warning
 // eval(userInput) - never do this!
 console.log('safe code');`
+          }
         }
       });
     });

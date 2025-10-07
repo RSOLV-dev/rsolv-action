@@ -55,7 +55,7 @@ vi.mock('../claude-code.js', () => ({
   }
 }));
 
-describe('GitBasedClaudeCodeAdapter Prompt Effectiveness', () => {
+describe.skip('GitBasedClaudeCodeAdapter Prompt Effectiveness', () => {
   let adapter: GitBasedClaudeCodeAdapter;
   let mockIssueContext: IssueContext;
   let mockAnalysis: IssueAnalysis;

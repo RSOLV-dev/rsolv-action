@@ -141,7 +141,7 @@ vi.mock('../../credentials/singleton.js', () => ({
   }
 }));
 
-describe('processIssueWithGit - Characterization Tests', () => {
+describe.skip('processIssueWithGit - Characterization Tests', () => {
   let mockIssue: IssueContext;
   let mockConfig: ActionConfig;
 

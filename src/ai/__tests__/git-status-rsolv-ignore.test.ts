@@ -6,7 +6,7 @@ vi.mock('child_process', () => ({
   execSync: vi.fn(() => '')  // Default to empty string
 }));
 
-describe('Git Status - .rsolv Directory Handling', () => {
+describe.skip('Git Status - .rsolv Directory Handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

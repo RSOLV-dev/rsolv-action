@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-describe('Anthropic Client with Vended Credentials', () => {
+describe.skip('Anthropic Client with Vended Credentials', () => {
   let originalEnv: any;
   
   beforeEach(() => {

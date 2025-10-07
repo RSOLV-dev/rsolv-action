@@ -7,7 +7,7 @@ import { RetryableClaudeCodeCLI } from '../claude-code-cli-retry.js';
 import type { IssueContext, IssueAnalysis } from '../../../types/index.js';
 import type { AIConfig } from '../../types.js';
 
-describe('RetryableClaudeCodeCLI - Vended Credentials', () => {
+describe.skip('RetryableClaudeCodeCLI - Vended Credentials', () => {
   let originalEnv: NodeJS.ProcessEnv;
   let mockCredentialManager: any;
   

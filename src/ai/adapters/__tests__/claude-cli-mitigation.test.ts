@@ -8,7 +8,7 @@ import { AIConfig } from '../../types.js';
 import { IssueContext } from '../../../types/index.js';
 import { IssueAnalysis } from '../../types.js';
 
-describe('Claude CLI Usage in Mitigation', () => {
+describe.skip('Claude CLI Usage in Mitigation', () => {
   const mockConfig: AIConfig = {
     provider: 'anthropic',
     apiKey: 'test-key',

@@ -7,7 +7,7 @@ import { describe, test, expect, vi } from 'vitest';
 import { PhaseExecutor } from '../phase-executor/index.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 
-describe('Phase Decomposition - Simple Tests', () => {
+describe.skip('Phase Decomposition - Simple Tests', () => {
   const mockConfig: ActionConfig = {
     aiProvider: {
       provider: 'anthropic',

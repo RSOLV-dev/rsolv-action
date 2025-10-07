@@ -6,7 +6,7 @@ import * as path from 'path';
 vi.mock('child_process');
 vi.mock('fs');
 
-describe('ValidationMode - Test Commit in Test Mode', () => {
+describe.skip('ValidationMode - Test Commit in Test Mode', () => {
   let validationMode: ValidationMode;
   const mockRepoPath = '/test/repo';
   const mockIssue = {

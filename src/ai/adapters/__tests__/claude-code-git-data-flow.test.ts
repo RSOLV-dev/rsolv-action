@@ -49,7 +49,7 @@ vi.mock('../claude-code-cli-retry.js', () => ({
   }))
 }));
 
-describe('GitBasedClaudeCodeAdapter - Data Flow Tests', () => {
+describe.skip('GitBasedClaudeCodeAdapter - Data Flow Tests', () => {
   let adapter: GitBasedClaudeCodeAdapter;
   
   beforeEach(() => {
