@@ -90,7 +90,8 @@ Another small one: {"another": "small"}
       const result = parseTestSuite(response);
       expect(result).toBeDefined();
       expect(result.red).toBeDefined();
-      expect(result.green).toBeDefined();
+      // RFC-060: VALIDATE phase is RED-only, so green/refactor are intentionally stripped
+      expect(result.green).toBeUndefined();
       expect(result.red.testName).toBe('Main test');
     });
 
@@ -140,8 +141,9 @@ These tests ensure comprehensive coverage.
       const result = parseTestSuite(response);
       expect(result).toBeDefined();
       expect(result.red.attackVector).toBe('SQL injection via user input');
-      expect(result.green.expectedBehavior).toBe('Parameterized queries prevent injection');
-      expect(result.refactor).toBeDefined();
+      // RFC-060: VALIDATE phase is RED-only, so green/refactor are intentionally stripped
+      expect(result.green).toBeUndefined();
+      expect(result.refactor).toBeUndefined();
     });
   });
 
