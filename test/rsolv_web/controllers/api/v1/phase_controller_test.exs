@@ -7,11 +7,13 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
 
   describe "POST /api/v1/phases/store" do
     setup do
-      # Create a customer directly
+      # Create a customer with unique email for test isolation
+      unique_email = "test-#{System.unique_integer([:positive])}@example.com"
+
       customer = %Customer{}
       |> Customer.changeset(%{
         name: "Test Corp",
-        email: "test@example.com",
+        email: unique_email,
         active: true
       })
       |> Repo.insert!()
@@ -39,7 +41,7 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       %{api_key: api_key, customer: customer, forge_account: forge_account}
     end
 
-    test "stores scan phase data", %{conn: conn, api_key: api_key} do
+    test "stores scan phase data with unwrapped format", %{conn: conn, api_key: api_key} do
       conn =
         conn
         |> put_req_header("x-api-key", api_key.key)
@@ -50,30 +52,30 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
           commitSha: "abc123",
           branch: "main",
           data: %{
-            scan: %{
-              vulnerabilities: [
-                %{
-                  type: "xss",
-                  file: "app.js",
-                  line: 42,
-                  severity: "high"
-                }
-              ],
-              timestamp: DateTime.utc_now()
-            }
+            vulnerabilities: [
+              %{
+                type: "xss",
+                file: "app.js",
+                line: 42,
+                severity: "high"
+              }
+            ],
+            timestamp: DateTime.utc_now()
           }
         })
-      
+
       assert %{"success" => true, "id" => scan_id} = json_response(conn, 200)
-      
-      # Verify scan was stored
+
+      # Verify scan was stored with correct data
       scan = Repo.get!(ScanExecution, scan_id)
       assert scan.commit_sha == "abc123"
       assert scan.branch == "main"
       assert scan.vulnerabilities_count == 1
+      assert length(scan.data["vulnerabilities"]) == 1
+      assert scan.data["vulnerabilities"] |> hd() |> Map.get("type") == "xss"
     end
 
-    test "stores validation phase data", %{conn: conn, api_key: api_key} do
+    test "stores validation phase data with unwrapped format", %{conn: conn, api_key: api_key} do
       conn =
         conn
         |> put_req_header("x-api-key", api_key.key)
@@ -84,25 +86,35 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
           issueNumber: 123,
           commitSha: "abc123",
           data: %{
-            validation: %{
-              "issue-123" => %{
-                validated: true,
-                vulnerabilities: [],
-                confidence: 0.95
+            branchName: "rsolv/validate/issue-123",
+            validated: true,
+            generatedTests: %{
+              success: true,
+              testSuite: %{
+                red: %{
+                  testName: "should detect vulnerability",
+                  testCode: "test('vulnerability', () => { expect(1).toBe(1); })",
+                  attackVector: "'; DROP TABLE users; --",
+                  expectedBehavior: "should_fail_on_vulnerable_code"
+                }
               }
             }
           }
         })
-      
+
       assert %{"success" => true, "id" => validation_id} = json_response(conn, 200)
       
-      # Verify validation was stored
+      # Verify validation was stored with complete data
       validation = Repo.get!(ValidationExecution, validation_id)
       assert validation.issue_number == 123
       assert validation.validated == true
+      assert validation.commit_sha == "abc123"
+      assert validation.data["branchName"] == "rsolv/validate/issue-123"
+      assert validation.data["generatedTests"]["success"] == true
+      assert validation.data["generatedTests"]["testSuite"]["red"]["testName"] == "should detect vulnerability"
     end
 
-    test "stores mitigation phase data", %{conn: conn, api_key: api_key} do
+    test "stores mitigation phase data with unwrapped format", %{conn: conn, api_key: api_key} do
       conn =
         conn
         |> put_req_header("x-api-key", api_key.key)
@@ -113,23 +125,27 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
           issueNumber: 123,
           commitSha: "def456",
           data: %{
-            mitigation: %{
-              "issue-123" => %{
-                prUrl: "https://github.com/RSOLV-dev/nodegoat-demo/pull/456",
-                fixes: [
-                  %{
-                    file: "app.js",
-                    vulnerability: "xss",
-                    fixed: true
-                  }
-                ],
-                commitHash: "def456"
+            prUrl: "https://github.com/RSOLV-dev/nodegoat-demo/pull/456",
+            fixes: [
+              %{
+                file: "app.js",
+                vulnerability: "xss",
+                fixed: true
               }
-            }
+            ],
+            commitHash: "def456"
           }
         })
-      
-      assert %{"success" => true, "id" => _mitigation_id} = json_response(conn, 200)
+
+      assert %{"success" => true, "id" => mitigation_id} = json_response(conn, 200)
+
+      # Verify mitigation was stored with correct data
+      mitigation = Repo.get!(Rsolv.Phases.MitigationExecution, mitigation_id)
+      assert mitigation.issue_number == 123
+      assert mitigation.commit_sha == "def456"
+      assert mitigation.data["pr_url"] == "https://github.com/RSOLV-dev/nodegoat-demo/pull/456"
+      assert mitigation.data["pr_number"] == 456
+      assert mitigation.data["files_changed"] == 1
     end
 
     test "rejects invalid API key", %{conn: conn} do

@@ -76,34 +76,9 @@ defmodule RsolvWeb.Api.V1.PhaseController do
     end
   end
   
-  defp extract_phase_data("scan", data) do
-    # PhaseDataClient sends data.scan for scan phase
-    data["scan"] || data[:scan] || data
-  end
-  
-  defp extract_phase_data("validation", data) do
-    # PhaseDataClient sends data.validation["issue-#{number}"] for validation phase
-    validation_data = data["validation"] || data[:validation] || %{}
-    
-    # Extract the first issue's validation data (there should only be one)
-    case Map.values(validation_data) do
-      [issue_data | _] -> issue_data
-      [] -> validation_data
-    end
-  end
-  
-  defp extract_phase_data("mitigation", data) do
-    # PhaseDataClient sends data.mitigation["issue-#{number}"] for mitigation phase
-    mitigation_data = data["mitigation"] || data[:mitigation] || %{}
-    
-    # Extract the first issue's mitigation data (there should only be one)
-    case Map.values(mitigation_data) do
-      [issue_data | _] -> issue_data
-      [] -> mitigation_data
-    end
-  end
-  
-  defp extract_phase_data(_, data), do: data
+  # All phases now use the same simple format: data is sent directly, not wrapped
+  # Example: {phase: "validation", data: {branchName: "...", validated: true}, ...}
+  defp extract_phase_data(_phase, data), do: data
   
   defp store_phase_data(%{phase: "scan"} = params, api_key) do
     Phases.store_scan(%{
