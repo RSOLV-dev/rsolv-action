@@ -113,7 +113,8 @@ describe('PatternAPIClient', () => {
       expect(url).toBe(`${expectedBaseUrl}?language=javascript&format=enhanced`);
       expect(options.headers['Content-Type']).toBe('application/json');
       const expectedAuth = testConfig.apiKey || 'test-key';
-      expect(options.headers['Authorization']).toBe(`Bearer ${expectedAuth}`);
+      // ADR-027: Using x-api-key header for unified API authentication
+      expect(options.headers['x-api-key']).toBe(expectedAuth);
 
       expect(patterns).toHaveLength(1);
       expect(patterns[0].id).toBe('js-sql-injection');

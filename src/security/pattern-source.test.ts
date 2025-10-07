@@ -69,7 +69,7 @@ describe('LocalPatternSource', () => {
   describe('getAllPatterns', () => {
     it('should return minimal fallback patterns', async () => {
       const patterns = await source.getAllPatterns();
-      expect(patterns.length).toBeLessThan(25); // Updated for expanded minimal patterns
+      expect(patterns.length).toBeLessThan(30); // Updated for expanded minimal patterns
       
       // Check that we have basic patterns for common languages
       const languages = new Set(patterns.flatMap(p => p.languages));
