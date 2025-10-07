@@ -125,30 +125,50 @@ fi
 # Build the command
 if [[ -n "$MEMORY_SAFE" ]]; then
   # Use sharding for memory-safe mode
-  echo "✓ Using sharded execution (8 shards run serially)"
-  
+  echo "✓ Using sharded execution (8 shards, 4 parallel at a time)"
+
   # Create temporary directory for shard reports
   SHARD_DIR=".vitest-shards"
   mkdir -p $SHARD_DIR
   rm -f $SHARD_DIR/*.json
-  
-  # Run 8 shards serially to avoid memory exhaustion
-  for i in 1 2 3 4 5 6 7 8; do
+
+  # Run 8 shards in 2 batches of 4 parallel shards
+  # This balances parallelization with not overwhelming external services
+  for batch in 1 2; do
     echo ""
-    echo -e "${YELLOW}Running shard $i/8...${NC}"
-    
-    if [[ -n "$JSON_OUTPUT" ]]; then
-      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
-    else
-      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 $COVERAGE"
-    fi
-    
-    eval $SHARD_CMD
-    SHARD_EXIT_CODE=$?
-    
-    if [[ $SHARD_EXIT_CODE -ne 0 ]]; then
-      TEST_EXIT_CODE=$SHARD_EXIT_CODE
-    fi
+    echo -e "${GREEN}Running batch $batch/2 (4 shards in parallel)...${NC}"
+
+    # Start 4 shards in parallel
+    declare -a PIDS=()
+    for offset in 0 1 2 3; do
+      i=$((($batch - 1) * 4 + $offset + 1))
+
+      echo -e "${YELLOW}  Starting shard $i/8...${NC}"
+
+      if [[ -n "$JSON_OUTPUT" ]]; then
+        SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
+      else
+        SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 $COVERAGE"
+      fi
+
+      # Run in background and capture PID
+      eval $SHARD_CMD &
+      PIDS+=($!)
+    done
+
+    # Wait for all shards in this batch to complete
+    echo ""
+    echo "Waiting for batch $batch to complete..."
+    for pid in "${PIDS[@]}"; do
+      wait $pid
+      SHARD_EXIT_CODE=$?
+
+      if [[ $SHARD_EXIT_CODE -ne 0 ]]; then
+        TEST_EXIT_CODE=$SHARD_EXIT_CODE
+      fi
+    done
+
+    echo -e "${GREEN}✓ Batch $batch complete${NC}"
   done
   
   # Merge JSON reports if needed
