@@ -35,11 +35,11 @@ describe('AITestGenerator - Escaped Quote Edge Cases', () => {
       const result = parseTestSuite(response);
       expect(result).toBeDefined();
       expect(result).not.toBeNull();
+      // RFC-060: Parser now strips GREEN/REFACTOR tests and only returns RED tests
       expect(result!.red).toBeDefined();
-      expect(result!.green).toBeDefined();
-      expect(result!.refactor).toBeDefined();
+      expect(result!.green).toBeUndefined();
+      expect(result!.refactor).toBeUndefined();
       expect(result!.red.testCode).toContain('Math.random');
-      expect(result!.green.testCode).toContain('crypto.randomBytes');
     });
 
     it('should handle JSON truncated mid-string with escaped quotes properly', () => {
