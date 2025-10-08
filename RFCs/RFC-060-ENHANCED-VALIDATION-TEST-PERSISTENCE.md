@@ -294,13 +294,26 @@ Phases 2-5 have been analyzed for parallelization opportunities. While the major
 
 ### Task Management
 
-All phases have been broken into vibe-kanban tasks for tracking:
-- **Total tasks created**: 11 (covering Phases 2-5)
-- **Task naming**: `[RFC-060] Phase X.Y: Description`
-- **Dependencies**: Clearly marked in each task
-- **Parallel opportunities**: Explicitly called out
+All phases have been broken into vibe-kanban tasks for tracking across two projects:
 
-**View tasks**: Query vibe-kanban for project "Rsolv", filter by `[RFC-060]`
+**RSOLV-action Project** (submodule/worktree):
+- **Phase 0.2-0.3**: Blocker fixes (✅ Complete)
+- **Phase 1.1-1.3**: Framework Detection & Test Generation (✅ Complete)
+- **Phase 2-4**: Tasks #1-#8 (Core implementation, MITIGATE integration, E2E testing)
+- **Phase 5.1**: Task #9 (Feature flags)
+- **Total**: 14 tasks (5 complete, 9 in progress)
+
+**RSOLV (main) Project**:
+- **Phase 5.2**: Task #10 (Observability - Elixir backend)
+- **Phase 5.3**: Task #11 (Production Deployment - both repos)
+- **Phase 6**: Task #12 (Post-Deployment Monitoring)
+- **Phase 7**: Task #13 (Human Evaluation & Follow-up)
+- **Pointer cards**: 2 cards indicating when to work in RSOLV-action
+- **Total**: 6 tasks (4 implementation + 2 pointers)
+
+**Task naming**: `[RFC-060] Phase X.Y: Description` or `[RFC-060] #N - Phase X.Y: Description`
+**Dependencies**: Clearly marked in each task
+**Parallel opportunities**: Explicitly called out with ⭐ markers
 
 ### Timeline Optimization
 
@@ -388,9 +401,10 @@ Each phase below includes:
 **Workstream**: Sequential (Core Implementation)
 **Total Time**: 9 hours (4.5 hrs + 4.5 hrs)
 **Parallelization**: None (2.2 depends on 2.1)
+**Vibe-kanban Project**: RSOLV-action
 **Vibe-kanban Tasks**:
-- `[RFC-060] Phase 2.1: TestRunner Implementation`
-- `[RFC-060] Phase 2.2: ValidationMode Test Execution Integration`
+- `[RFC-060] #1 - Phase 2.1: TestRunner Implementation`
+- `[RFC-060] #2 - Phase 2.2: ValidationMode Test Execution Integration`
 
 #### 2.1 Step 1: Test Runner Integration
 - [ ] Write RED tests for TestRunner (1hr)
@@ -422,9 +436,10 @@ Each phase below includes:
 **Workstream**: Sequential (MITIGATE Integration)
 **Total Time**: 8.5 hours (3.5 hrs + 5 hrs)
 **Parallelization**: None (3.2 depends on 3.1)
+**Vibe-kanban Project**: RSOLV-action
 **Vibe-kanban Tasks**:
-- `[RFC-060] Phase 3.1: API-Based Metadata Retrieval`
-- `[RFC-060] Phase 3.2: Test-Aware Fix Generation`
+- `[RFC-060] #3 - Phase 3.1: API-Based Metadata Retrieval`
+- `[RFC-060] #4 - Phase 3.2: Test-Aware Fix Generation`
 
 #### 3.1 Step 1: API-Based Metadata Retrieval
 - [ ] Write RED tests for mitigation retrieval (1hr)
@@ -458,11 +473,12 @@ Each phase below includes:
 **Total Time**: 9 hours (optimized from 13 hrs)
 **Execution Order**: 4.1 → 4.3 → 4.2-PREP → 4.2 (REORDERED for better debugging)
 **Parallelization**: 4.2 via CI/CD matrix (3 language tests run simultaneously)
+**Vibe-kanban Project**: RSOLV-action
 **Vibe-kanban Tasks**:
-- `[RFC-060] Phase 4.1: End-to-End Workflow Testing`
-- `[RFC-060] Phase 4.3: Observability & Debugging Tools` (REORDERED BEFORE 4.2)
-- `[RFC-060] Phase 4.2-PREP: CI/CD Multi-Language Test Setup`
-- `[RFC-060] Phase 4.2: Multi-Language Testing (CI/CD Automated)`
+- `[RFC-060] #5 - Phase 4.1: End-to-End Workflow Testing`
+- `[RFC-060] #6 - Phase 4.3: Observability & Debugging Tools` (REORDERED BEFORE 4.2)
+- `[RFC-060] #7 - Phase 4.2-PREP: CI/CD Multi-Language Test Setup`
+- `[RFC-060] #8 - Phase 4.2: Multi-Language Testing (CI/CD Automated)`
 
 **Key Optimization**: Phase 4.3 (observability) moved BEFORE 4.2 (multi-language testing) so logging/debugging tools are available during language-specific testing.
 
@@ -512,15 +528,17 @@ Each phase below includes:
 **Workstream**: Parallel (5.1 + 5.2) then Sequential (5.3)
 **Total Time**: 6 hours parallel + 4 hours deployment = 10 hours (vs 13 hrs sequential)
 **Parallelization**: ⭐ **5.1 and 5.2 CAN RUN IN PARALLEL** ⭐
+**Vibe-kanban Projects**: Split across RSOLV-action and RSOLV (main)
 **Vibe-kanban Tasks**:
-- `[RFC-060] Phase 5.1: Feature Flags & Configuration` (RSOLV-action, can run parallel)
-- `[RFC-060] Phase 5.2: Observability Implementation (Backend)` (RSOLV-platform, can run parallel)
-- `[RFC-060] Phase 5.3: Production Deployment` (requires both 5.1 AND 5.2 complete)
+- `[RFC-060] #9 - Phase 5.1: Feature Flags & Configuration` (📍 RSOLV-action, can run parallel)
+- `[RFC-060] #10 - Phase 5.2: Observability Implementation (Backend)` (📍 RSOLV main, can run parallel)
+- `[RFC-060] #11 - Phase 5.3: Production Deployment` (📍 RSOLV main, requires both 5.1 AND 5.2 complete)
 
 **Key Optimization**: Phases 5.1 (TypeScript/RSOLV-action) and 5.2 (Elixir/RSOLV-platform) work on different repositories and can be done simultaneously. This saves 3 hours if you have 2 developers or use async work pattern.
 
 #### 5.1 Feature Flag & Configuration
 **Repository**: RSOLV-action (TypeScript)
+**Vibe-kanban Project**: RSOLV-action
 **Can run parallel with**: Phase 5.2
 - [ ] Implement RSOLV_EXECUTABLE_TESTS feature flag (1hr)
 - [ ] Add configuration for claude_max_turns (30min)
@@ -531,6 +549,7 @@ Each phase below includes:
 
 #### 5.2 Observability Implementation
 **Repository**: RSOLV-platform (Elixir)
+**Vibe-kanban Project**: RSOLV (main)
 **Can run parallel with**: Phase 5.1
 - [ ] Create `lib/rsolv/prom_ex/validation_plugin.ex` (2hr)
 - [ ] Add telemetry events to phases.ex (1hr)
@@ -540,6 +559,7 @@ Each phase below includes:
 - [ ] Deploy to staging environment
 
 #### 5.3 Production Deployment
+**Vibe-kanban Project**: RSOLV (main)
 **Dependencies**: BOTH 5.1 AND 5.2 must be complete
 **Cannot parallelize**: Must wait for all previous work
 - [ ] Create release PR with all changes
