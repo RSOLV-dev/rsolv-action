@@ -114,11 +114,20 @@ For complete test suite information, see:
    - This balances speed with manageable load on external services
    - Individual test file runs: `npx vitest run path/to/test.ts`
 
-9. **Current Test Status** (as of 2025-10-07):
-   - RSOLV-action: ✅ **100% GREEN** (19/19 test files, 115 passed, 2 skipped)
+9. **AI Provider API Constraints** (as of 2025-10-08):
+   - **Critical**: Anthropic API does NOT allow both `temperature` AND `top_p` parameters
+   - Error: `"temperature and top_p cannot both be specified for this model"`
+   - **Solution**: Use only `temperature` (preferred) for consistency across all providers
+   - **Fixed**: `src/ai/client.ts` lines 120, 253 - removed `top_p` parameter
+   - **Test Coverage**: `src/ai/__tests__/client-api-parameters.test.ts` (5 tests) prevents regression
+   - **OpenAI**: While OpenAI allows both, we use only `temperature` for consistency
+   - **Default**: `temperature: 0.2` unless explicitly overridden
+
+10. **Current Test Status** (as of 2025-10-08):
+   - RSOLV-action: ✅ **100% GREEN** (20/20 test files, 120 passed, 2 skipped)
    - RSOLV-platform: ✅ **100% GREEN** (4097/4097 passed, 529 doctests, 83 excluded, 61 skipped)
 
-10. **How to Run Tests**:
+11. **How to Run Tests**:
 
    **RSOLV-action** (in `/home/dylan/dev/rsolv/RSOLV-action/RSOLV-action`):
    ```bash
@@ -139,7 +148,7 @@ For complete test suite information, see:
    - Duration: ~64 seconds
    - Many tests use async/DataCase for database isolation
 
-11. **Integration Test Setup**:
+12. **Integration Test Setup**:
    - Integration tests excluded from default run via `vitest.config.ts`
    - Run with: `RUN_INTEGRATION=true npm test`
    - Require: Live RSOLV platform API, credentials, Git repos
