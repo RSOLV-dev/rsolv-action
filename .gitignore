@@ -39,6 +39,7 @@ rsolv_api-*.tar
 .env
 .env.*
 !.env.example
+.envrc
 
 # Editor and OS files
 .DS_Store
