@@ -258,7 +258,139 @@ This RFC returns the VALIDATE phase to the originally intended architecture docu
 - 45 tests added/fixed (34 RFC-060 + 6 blocker + 3 existing + 2 validation-mode verified)
 - All passing ✓
 
+---
+
+## Parallelization Strategy & Workstreams
+
+**Updated:** 2025-10-08
+
+### Overview
+
+Phases 2-5 have been analyzed for parallelization opportunities. While the major phases are inherently sequential due to TDD methodology and component dependencies, we've identified **3 key optimizations**:
+
+1. **CI/CD Matrix for Multi-Language Testing** (Phase 4.2) - 4 hour savings
+2. **Parallel Workstreams for Deployment** (Phase 5.1 + 5.2) - 3 hour savings
+3. **Strategic Reordering** (Phase 4: 4.1 → 4.3 → 4.2) - Better debugging
+
+**Net Timeline Improvement**: 7 hours (14% faster: 47 hrs → 40 hrs)
+
+### Workstream Structure
+
+**Sequential Workstreams** (must be done in order):
+- **Phase 2**: Test Execution & Validation (9 hrs)
+  - 2.1 → 2.2 (TestRunner must exist before ValidationMode uses it)
+- **Phase 3**: MITIGATE Integration (8.5 hrs)
+  - 3.1 → 3.2 (API retrieval must exist before test-aware fixes)
+- **Phase 4**: Integration Testing (13 hrs → 9 hrs with optimization)
+  - 4.1: E2E Workflow (7 hrs) - MUST COMPLETE FIRST
+  - 4.3: Observability (3.5 hrs) - REORDERED BEFORE 4.2
+  - 4.2: Multi-Language (2 hrs) - CI/CD automated parallelization
+
+**Parallel Workstreams** (can be done simultaneously):
+- **Phase 5A + 5B** (6 hrs total with parallelization vs 9 hrs sequential)
+  - 5.1: Feature Flags (RSOLV-action, 3 hrs)
+  - 5.2: Observability (RSOLV-platform, 6 hrs)
+  - Both needed before 5.3 deployment
+
+### Task Management
+
+All phases have been broken into vibe-kanban tasks for tracking:
+- **Total tasks created**: 11 (covering Phases 2-5)
+- **Task naming**: `[RFC-060] Phase X.Y: Description`
+- **Dependencies**: Clearly marked in each task
+- **Parallel opportunities**: Explicitly called out
+
+**View tasks**: Query vibe-kanban for project "Rsolv", filter by `[RFC-060]`
+
+### Timeline Optimization
+
+**Original Sequential Estimate**: 47 hours
+```
+Phase 2: 9 hrs   ████████████
+Phase 3: 8.5 hrs ███████████
+Phase 4.1: 7 hrs █████████
+Phase 4.2: 6 hrs ████████
+Phase 4.3: 3.5 hrs ████
+Phase 5.1: 3 hrs ████
+Phase 5.2: 6 hrs ████████
+```
+
+**Optimized with Parallelization**: 40 hours
+```
+Phase 2: 9 hrs   ████████████
+Phase 3: 8.5 hrs ███████████
+Phase 4.1: 7 hrs █████████
+Phase 4.3: 3.5 hrs ████ (reordered before 4.2)
+Phase 4.2: 2 hrs ██ (CI/CD parallel)
+Phase 5.1+5.2: 6 hrs ████████ (parallel if 2 devs)
+Setup: 2 hrs ██ (CI/CD infrastructure)
+```
+
+### Key Optimizations Explained
+
+#### 1. CI/CD Matrix for Phase 4.2 (4 hour savings)
+
+**What**: Run JavaScript/Jest, Ruby/RSpec, Python/pytest tests in parallel using GitHub Actions matrix.
+
+**Why**: These tests are completely independent - different repos, languages, frameworks.
+
+**Implementation**:
+- Setup Phase 4.2-PREP creates `.github/workflows/rfc-060-multi-language-test.yml`
+- Matrix strategy runs all 3 simultaneously
+- Human monitors results (2 hrs) vs running sequentially (6 hrs)
+
+**Trade-off**: 2 hours setup cost vs 4 hours savings = net 2 hour gain
+
+#### 2. Parallel Workstreams for Phase 5 (3 hour savings)
+
+**What**: Work on RSOLV-action feature flags (5.1) and RSOLV-platform observability (5.2) at the same time.
+
+**Why**: Different repositories, different languages, truly independent concerns.
+
+**Implementation**:
+- Requires 2 developers OR solo dev + async work pattern
+- Both must complete before Phase 5.3 deployment
+- No merge conflicts (different repos)
+
+**Trade-off**: Coordination overhead vs time savings (beneficial if 2+ people)
+
+#### 3. Strategic Reordering of Phase 4 (better debugging)
+
+**What**: Do 4.1 → 4.3 → 4.2 instead of 4.1 → 4.2 → 4.3
+
+**Why**: Having observability (4.3) in place before multi-language testing (4.2) makes debugging easier.
+
+**Benefit**: Not time savings, but quality/efficiency improvement
+
+### Risk Mitigation
+
+**Low Risk Parallelization** (recommended):
+- ✅ CI/CD matrix for 4.2 - automated, no human coordination
+- ✅ Phase 5.1 + 5.2 - different repos, different languages
+
+**High Risk Parallelization** (NOT recommended):
+- ❌ Writing tests for dependent components in parallel
+- ❌ Parallelizing within TDD cycles
+- ❌ Multiple people on same file
+
+### Phase 2-5 Execution Notes
+
+Each phase below includes:
+- Vibe-kanban task reference
+- Dependencies clearly marked
+- Parallelization opportunities noted
+- Estimated times (sequential vs parallel)
+
+---
+
 ### Phase 2: Test Execution & Validation (Day 4)
+
+**Workstream**: Sequential (Core Implementation)
+**Total Time**: 9 hours (4.5 hrs + 4.5 hrs)
+**Parallelization**: None (2.2 depends on 2.1)
+**Vibe-kanban Tasks**:
+- `[RFC-060] Phase 2.1: TestRunner Implementation`
+- `[RFC-060] Phase 2.2: ValidationMode Test Execution Integration`
 
 #### 2.1 Step 1: Test Runner Integration
 - [ ] Write RED tests for TestRunner (1hr)
@@ -287,6 +419,13 @@ This RFC returns the VALIDATE phase to the originally intended architecture docu
 
 ### Phase 3: MITIGATE Phase Integration (Day 5)
 
+**Workstream**: Sequential (MITIGATE Integration)
+**Total Time**: 8.5 hours (3.5 hrs + 5 hrs)
+**Parallelization**: None (3.2 depends on 3.1)
+**Vibe-kanban Tasks**:
+- `[RFC-060] Phase 3.1: API-Based Metadata Retrieval`
+- `[RFC-060] Phase 3.2: Test-Aware Fix Generation`
+
 #### 3.1 Step 1: API-Based Metadata Retrieval
 - [ ] Write RED tests for mitigation retrieval (1hr)
   - Test: Retrieves from PhaseDataClient only
@@ -314,6 +453,18 @@ This RFC returns the VALIDATE phase to the originally intended architecture docu
 - [ ] Run test suite: `npm test` - must be green
 
 ### Phase 4: Integration Testing (Days 6-7)
+
+**Workstream**: Sequential with CI/CD Optimization
+**Total Time**: 9 hours (optimized from 13 hrs)
+**Execution Order**: 4.1 → 4.3 → 4.2-PREP → 4.2 (REORDERED for better debugging)
+**Parallelization**: 4.2 via CI/CD matrix (3 language tests run simultaneously)
+**Vibe-kanban Tasks**:
+- `[RFC-060] Phase 4.1: End-to-End Workflow Testing`
+- `[RFC-060] Phase 4.3: Observability & Debugging Tools` (REORDERED BEFORE 4.2)
+- `[RFC-060] Phase 4.2-PREP: CI/CD Multi-Language Test Setup`
+- `[RFC-060] Phase 4.2: Multi-Language Testing (CI/CD Automated)`
+
+**Key Optimization**: Phase 4.3 (observability) moved BEFORE 4.2 (multi-language testing) so logging/debugging tools are available during language-specific testing.
 
 #### 4.1 Step 1: End-to-End Workflow
 - [ ] Write RED integration tests (2hr)
@@ -358,7 +509,19 @@ This RFC returns the VALIDATE phase to the originally intended architecture docu
 
 ### Phase 5: Deployment & Monitoring (Days 8-9)
 
+**Workstream**: Parallel (5.1 + 5.2) then Sequential (5.3)
+**Total Time**: 6 hours parallel + 4 hours deployment = 10 hours (vs 13 hrs sequential)
+**Parallelization**: ⭐ **5.1 and 5.2 CAN RUN IN PARALLEL** ⭐
+**Vibe-kanban Tasks**:
+- `[RFC-060] Phase 5.1: Feature Flags & Configuration` (RSOLV-action, can run parallel)
+- `[RFC-060] Phase 5.2: Observability Implementation (Backend)` (RSOLV-platform, can run parallel)
+- `[RFC-060] Phase 5.3: Production Deployment` (requires both 5.1 AND 5.2 complete)
+
+**Key Optimization**: Phases 5.1 (TypeScript/RSOLV-action) and 5.2 (Elixir/RSOLV-platform) work on different repositories and can be done simultaneously. This saves 3 hours if you have 2 developers or use async work pattern.
+
 #### 5.1 Feature Flag & Configuration
+**Repository**: RSOLV-action (TypeScript)
+**Can run parallel with**: Phase 5.2
 - [ ] Implement RSOLV_EXECUTABLE_TESTS feature flag (1hr)
 - [ ] Add configuration for claude_max_turns (30min)
 - [ ] Test feature flag ON behavior (30min)
@@ -367,6 +530,8 @@ This RFC returns the VALIDATE phase to the originally intended architecture docu
 - [ ] Update GitHub Action configuration docs
 
 #### 5.2 Observability Implementation
+**Repository**: RSOLV-platform (Elixir)
+**Can run parallel with**: Phase 5.1
 - [ ] Create `lib/rsolv/prom_ex/validation_plugin.ex` (2hr)
 - [ ] Add telemetry events to phases.ex (1hr)
 - [ ] Create Grafana dashboard (6 panels) (2hr)
@@ -375,6 +540,8 @@ This RFC returns the VALIDATE phase to the originally intended architecture docu
 - [ ] Deploy to staging environment
 
 #### 5.3 Production Deployment
+**Dependencies**: BOTH 5.1 AND 5.2 must be complete
+**Cannot parallelize**: Must wait for all previous work
 - [ ] Create release PR with all changes
 - [ ] Run final test suite on CI
 - [ ] Deploy to production with flag enabled
