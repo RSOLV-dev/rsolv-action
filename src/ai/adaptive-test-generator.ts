@@ -20,6 +20,9 @@ interface VulnerabilityWithFile extends Vulnerability {
   file?: string;
 }
 
+// Type for test suite with all required properties for template generation
+type CompleteTestSuite = Required<Pick<VulnerabilityTestSuite, 'red' | 'green' | 'refactor'>> & VulnerabilityTestSuite;
+
 export interface AdaptiveTestResult {
   success: boolean;
   framework: string;
@@ -574,29 +577,32 @@ export class AdaptiveTestGenerator {
     vulnerability: VulnerabilityWithFile,
     frameworkInfo?: DetectedFramework
   ): string {
+    // Ensure testSuite has required properties for template generation
+    const completeTestSuite = testSuite as CompleteTestSuite;
+
     switch (framework) {
       case 'vitest':
-        return this.generateVitestTests(testSuite, conventions, vulnerability);
+        return this.generateVitestTests(completeTestSuite, conventions, vulnerability);
       case 'mocha':
-        return this.generateMochaTests(testSuite, conventions, vulnerability);
+        return this.generateMochaTests(completeTestSuite, conventions, vulnerability);
       case 'pytest':
-        return this.generatePytestTests(testSuite, conventions, vulnerability);
+        return this.generatePytestTests(completeTestSuite, conventions, vulnerability);
       case 'rspec':
-        return this.generateRSpecTests(testSuite, conventions, vulnerability);
+        return this.generateRSpecTests(completeTestSuite, conventions, vulnerability);
       case 'minitest':
-        return this.generateMinitestTests(testSuite, conventions, vulnerability);
+        return this.generateMinitestTests(completeTestSuite, conventions, vulnerability);
       case 'exunit':
-        return this.generateExUnitTests(testSuite, conventions, vulnerability);
+        return this.generateExUnitTests(completeTestSuite, conventions, vulnerability);
       case 'phpunit':
-        return this.generatePHPUnitTests(testSuite, conventions, vulnerability, frameworkInfo);
+        return this.generatePHPUnitTests(completeTestSuite, conventions, vulnerability, frameworkInfo);
       case 'pest':
-        return this.generatePestTests(testSuite, conventions, vulnerability, frameworkInfo);
+        return this.generatePestTests(completeTestSuite, conventions, vulnerability, frameworkInfo);
       case 'jest':
-        return this.generateJestTests(testSuite, conventions, vulnerability);
+        return this.generateJestTests(completeTestSuite, conventions, vulnerability);
       case 'junit5':
-        return this.generateJUnit5Tests(testSuite, conventions, vulnerability);
+        return this.generateJUnit5Tests(completeTestSuite, conventions, vulnerability);
       case 'testng':
-        return this.generateTestNGTests(testSuite, conventions, vulnerability);
+        return this.generateTestNGTests(completeTestSuite, conventions, vulnerability);
       default:
         return this.generateGenericTestCode(testSuite, vulnerability);
     }
@@ -606,7 +612,7 @@ export class AdaptiveTestGenerator {
    * Generate Vitest-specific tests
    */
   private generateVitestTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -656,7 +662,7 @@ describe("${componentName} ${vulnerability.type} vulnerability tests", () => {
    * Generate Mocha + Chai tests
    */
   private generateMochaTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -707,7 +713,7 @@ describe("${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} ${vulnerab
    * Generate pytest tests
    */
   private generatePytestTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -749,7 +755,7 @@ class Test${className}${vulnerability.type.replace(/_/g, '')}:
    * Generate Minitest tests
    */
   private generateMinitestTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -796,7 +802,7 @@ end`;
    * Generate RSpec tests
    */
   private generateRSpecTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -870,7 +876,7 @@ end`;
    * Generate ExUnit tests
    */
   private generateExUnitTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -914,7 +920,7 @@ end`;
    * Generate PHPUnit tests
    */
   private generatePHPUnitTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile,
     framework?: DetectedFramework
@@ -1034,7 +1040,7 @@ class ${className}${vulnerability.type.replace(/_/g, '')}Test extends TestCase
    * Generate Jest tests (default for JavaScript)
    */
   private generateJestTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -1075,7 +1081,7 @@ ${testWrapper ? '});' : ''}`;
    * Generate JUnit 5 tests
    */
   private generateJUnit5Tests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -1204,7 +1210,7 @@ ${testClass}
    * Generate TestNG tests
    */
   private generateTestNGTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -1303,7 +1309,7 @@ public class ${className}${vulnerability.type.replace(/_/g, '')}Test {
     testSuite: VulnerabilityTestSuite | null,
     vulnerability: VulnerabilityWithFile
   ): string {
-    if (!testSuite) {
+    if (!testSuite || !testSuite.red || !testSuite.green || !testSuite.refactor) {
       return `// Generic test template - adapt to your test framework
 // File: ${vulnerability.file}
 // Vulnerability: ${vulnerability.type}
@@ -1717,7 +1723,7 @@ function testFunctionalityMaintained() {
    * Generate Laravel-specific PHPUnit tests
    */
   private generateLaravelPHPUnitTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile,
     className: string,
@@ -1801,7 +1807,7 @@ class ${className}${vulnerability.type.replace(/_/g, '')}Test extends TestCase
    * Generate Symfony-specific PHPUnit tests
    */
   private generateSymfonyPHPUnitTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile,
     className: string
@@ -1871,7 +1877,7 @@ class ${className}${vulnerability.type.replace(/_/g, '')}Test extends WebTestCas
    * Generate Pest framework tests
    */
   private generatePestTests(
-    testSuite: VulnerabilityTestSuite,
+    testSuite: CompleteTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile,
     framework?: DetectedFramework

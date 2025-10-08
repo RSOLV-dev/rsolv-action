@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { SecurityDetector } from '../detector-v2';
-import { VulnerabilityType } from '../types';
+import { SecurityDetector } from '../detector-v2.js';
+import { VulnerabilityType, type Vulnerability } from '../types.js';
 
 describe('Log Injection Detection', () => {
   let detector: SecurityDetector;
@@ -86,7 +86,7 @@ describe('Log Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const logInjectionVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.LOG_INJECTION);
+      const logInjectionVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.LOG_INJECTION);
       expect(logInjectionVulns).toHaveLength(0);
     });
 
@@ -97,7 +97,7 @@ describe('Log Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const logInjectionVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.LOG_INJECTION);
+      const logInjectionVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.LOG_INJECTION);
       expect(logInjectionVulns).toHaveLength(0);
     });
 
@@ -108,7 +108,7 @@ describe('Log Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const logInjectionVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.LOG_INJECTION);
+      const logInjectionVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.LOG_INJECTION);
       expect(logInjectionVulns).toHaveLength(0);
     });
 
@@ -119,7 +119,7 @@ describe('Log Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const logInjectionVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.LOG_INJECTION);
+      const logInjectionVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.LOG_INJECTION);
       expect(logInjectionVulns).toHaveLength(0);
     });
   });
@@ -139,7 +139,7 @@ describe('Log Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const logInjectionVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.LOG_INJECTION);
+      const logInjectionVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.LOG_INJECTION);
       expect(logInjectionVulns).toHaveLength(2);
     });
 
@@ -153,7 +153,7 @@ describe('Log Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      expect(vulnerabilities.some(v => v.type === VulnerabilityType.LOG_INJECTION)).toBeTruthy();
+      expect(vulnerabilities.some((v: Vulnerability) => v.type === VulnerabilityType.LOG_INJECTION)).toBeTruthy();
     });
   });
 });

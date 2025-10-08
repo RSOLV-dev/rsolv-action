@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { SecurityDetector } from '../detector-v2';
-import { VulnerabilityType } from '../types';
+import { SecurityDetector } from '../detector-v2.js';
+import { VulnerabilityType, type Vulnerability } from '../types.js';
 
 describe('CRLF Injection Detection', () => {
   let detector: SecurityDetector;
@@ -77,7 +77,7 @@ describe('CRLF Injection Detection', () => {
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
       // This might be detected as OPEN_REDIRECT instead/also
       expect(vulnerabilities.length).toBeGreaterThan(0);
-      const crlfVuln = vulnerabilities.find(v => v.type === VulnerabilityType.CRLF_INJECTION);
+      const crlfVuln = vulnerabilities.find((v: Vulnerability) => v.type === VulnerabilityType.CRLF_INJECTION);
       if (crlfVuln) {
         expect(crlfVuln).toBeDefined();
       }
@@ -103,7 +103,7 @@ describe('CRLF Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const crlfVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.CRLF_INJECTION);
+      const crlfVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.CRLF_INJECTION);
       expect(crlfVulns).toHaveLength(0);
     });
 
@@ -114,7 +114,7 @@ describe('CRLF Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const crlfVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.CRLF_INJECTION);
+      const crlfVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.CRLF_INJECTION);
       expect(crlfVulns).toHaveLength(0);
     });
 
@@ -125,7 +125,7 @@ describe('CRLF Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const crlfVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.CRLF_INJECTION);
+      const crlfVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.CRLF_INJECTION);
       expect(crlfVulns).toHaveLength(0);
     });
 
@@ -136,7 +136,7 @@ describe('CRLF Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const crlfVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.CRLF_INJECTION);
+      const crlfVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.CRLF_INJECTION);
       expect(crlfVulns).toHaveLength(0);
     });
   });
@@ -156,7 +156,7 @@ describe('CRLF Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      const crlfVulns = vulnerabilities.filter(v => v.type === VulnerabilityType.CRLF_INJECTION);
+      const crlfVulns = vulnerabilities.filter((v: Vulnerability) => v.type === VulnerabilityType.CRLF_INJECTION);
       expect(crlfVulns).toHaveLength(2);
     });
 
@@ -167,7 +167,7 @@ describe('CRLF Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      expect(vulnerabilities.some(v => v.type === VulnerabilityType.CRLF_INJECTION)).toBeTruthy();
+      expect(vulnerabilities.some((v: Vulnerability) => v.type === VulnerabilityType.CRLF_INJECTION)).toBeTruthy();
     });
 
     it('should detect CRLF with URL encoded payloads', async () => {
@@ -178,7 +178,7 @@ describe('CRLF Injection Detection', () => {
       `;
 
       const vulnerabilities = await detector.detectInFile(code, 'test.js');
-      expect(vulnerabilities.some(v => v.type === VulnerabilityType.CRLF_INJECTION)).toBeTruthy();
+      expect(vulnerabilities.some((v: Vulnerability) => v.type === VulnerabilityType.CRLF_INJECTION)).toBeTruthy();
     });
   });
 });

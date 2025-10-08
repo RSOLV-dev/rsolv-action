@@ -12,6 +12,9 @@ import { tmpdir } from 'os';
 import { VulnerabilityTestSuite } from './test-generator.js';
 import { logger } from '../utils/logger.js';
 
+// Type for test suite with all required properties for template generation
+type CompleteTestSuite = Required<Pick<VulnerabilityTestSuite, 'red' | 'green' | 'refactor'>> & VulnerabilityTestSuite;
+
 export interface ValidationResult {
   success: boolean;
   vulnerableCommit: {
@@ -47,7 +50,7 @@ export class GitBasedTestValidator {
       logger.info(`Validating fix: ${vulnerableCommit} -> ${fixedCommit}`);
 
       // Create temporary test file
-      const testFile = this.createTestFile(testSuite);
+      const testFile = this.createTestFile(testSuite as CompleteTestSuite);
       const testPath = join(this.workDir, 'validation.test.js');
       
       // Ensure directory exists
@@ -238,7 +241,7 @@ export class GitBasedTestValidator {
   /**
    * Create a test file from the test suite
    */
-  private createTestFile(testSuite: VulnerabilityTestSuite): string {
+  private createTestFile(testSuite: CompleteTestSuite): string {
     // Escape backticks in test code to prevent template literal issues
     const escapeTestCode = (code: string) => code.replace(/`/g, '\\`').replace(/\$/g, '\\$');
     

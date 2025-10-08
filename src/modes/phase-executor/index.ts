@@ -3,7 +3,7 @@
  * Implements RFC-041 three-phase architecture
  */
 
-import { PhaseDataClient, PhaseData } from '../phase-data-client/index.js';
+import { PhaseDataClient, PhaseData, ValidationPhaseData as PhaseDataClientValidationPhaseData } from '../phase-data-client/index.js';
 import { ScanOrchestrator } from '../../scanner/index.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from '../../ai/test-generating-security-analyzer.js';
@@ -1507,17 +1507,12 @@ export class PhaseExecutor {
       }
       
       const issueKey = `issue-${issue.number}`;
-      const validationResult = {
+      const validationResult: { [issueId: string]: PhaseDataClientValidationPhaseData } = {
         [issueKey]: {
           validated: testResults?.generatedTests?.success || false,
-          redTests: testResults?.generatedTests || null,
-          testResults: testResults || null,
+          redTests: testResults?.generatedTests?.testSuite,
           falsePositiveReason: undefined,
-          timestamp: new Date().toISOString(),
-          // Add empty fields for compatibility with enhanced validation
-          hasSpecificVulnerabilities: false,
-          vulnerabilities: [],
-          confidence: 'low' as const
+          timestamp: new Date().toISOString()
         }
       };
       

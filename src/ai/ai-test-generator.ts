@@ -10,6 +10,9 @@ import { AIConfig } from './types.js';
 import { AiProviderConfig } from '../types/index.js';
 import { getTestGenerationTokenLimit } from './token-utils.js';
 
+// Type for test suite with all required properties for template generation
+type CompleteTestSuite = Required<Pick<VulnerabilityTestSuite, 'red' | 'green' | 'refactor'>> & VulnerabilityTestSuite;
+
 export interface AITestGenerationResult {
   success: boolean;
   testSuite?: VulnerabilityTestSuite;
@@ -328,23 +331,26 @@ Return ONLY the JSON, no explanations.`;
     const framework = options.testFramework || 'jest';
     const language = options.language || 'javascript';
 
+    // Assert testSuite has required properties
+    const completeTestSuite = testSuite as CompleteTestSuite;
+
     if (language === 'javascript' || language === 'typescript') {
-      return this.generateJavaScriptTests(testSuite, framework);
+      return this.generateJavaScriptTests(completeTestSuite, framework);
     } else if (language === 'python') {
-      return this.generatePythonTests(testSuite);
+      return this.generatePythonTests(completeTestSuite);
     } else if (language === 'ruby') {
-      return this.generateRubyTests(testSuite);
+      return this.generateRubyTests(completeTestSuite);
     } else if (language === 'php') {
-      return this.generatePHPTests(testSuite);
+      return this.generatePHPTests(completeTestSuite);
     } else if (language === 'elixir') {
-      return this.generateElixirTests(testSuite);
+      return this.generateElixirTests(completeTestSuite);
     }
 
     // Default to JavaScript
-    return this.generateJavaScriptTests(testSuite, framework);
+    return this.generateJavaScriptTests(completeTestSuite, framework);
   }
 
-  private generateJavaScriptTests(testSuite: VulnerabilityTestSuite, framework: string): string {
+  private generateJavaScriptTests(testSuite: CompleteTestSuite, framework: string): string {
     if (framework === 'jest' || framework === 'mocha' || framework === 'vitest') {
       return `
 const { expect } = require('chai');
@@ -369,7 +375,7 @@ ${testSuite.green.testCode}
 ${testSuite.refactor.testCode}`;
   }
 
-  private generatePythonTests(testSuite: VulnerabilityTestSuite): string {
+  private generatePythonTests(testSuite: CompleteTestSuite): string {
     return `
 import unittest
 
@@ -387,7 +393,7 @@ if __name__ == '__main__':
     unittest.main()`;
   }
 
-  private generateRubyTests(testSuite: VulnerabilityTestSuite): string {
+  private generateRubyTests(testSuite: CompleteTestSuite): string {
     return `
 require 'rspec'
 
@@ -403,7 +409,7 @@ RSpec.describe 'Security Vulnerability Tests' do
 end`;
   }
 
-  private generatePHPTests(testSuite: VulnerabilityTestSuite): string {
+  private generatePHPTests(testSuite: CompleteTestSuite): string {
     return `
 <?php
 use PHPUnit\\Framework\\TestCase;
@@ -420,7 +426,7 @@ class SecurityVulnerabilityTest extends TestCase {
 }`;
   }
 
-  private generateElixirTests(testSuite: VulnerabilityTestSuite): string {
+  private generateElixirTests(testSuite: CompleteTestSuite): string {
     return `
 defmodule SecurityVulnerabilityTest do
   use ExUnit.Case

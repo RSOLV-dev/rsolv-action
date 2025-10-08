@@ -49,6 +49,9 @@ export interface VulnerabilityTestSuite {
   };
 }
 
+// Type for test suite with all required properties for template generation
+type CompleteTestSuite = Required<Pick<VulnerabilityTestSuite, 'red' | 'green' | 'refactor'>> & VulnerabilityTestSuite;
+
 export interface TestGenerationOptions {
   vulnerabilityType: string;
   language: 'javascript' | 'typescript' | 'python' | 'java' | 'ruby' | 'php' | 'elixir';
@@ -708,7 +711,7 @@ export class VulnerabilityTestGenerator {
       }> = [
         {
           path: `test/${options.vulnerabilityType.toLowerCase()}-vulnerability.test.${options.language === 'typescript' ? 'ts' : 'js'}`,
-          content: this.generateTestFile(testSuite, options),
+          content: this.generateTestFile(testSuite as CompleteTestSuite, options),
           type: 'unit'
         }
       ];
@@ -952,7 +955,7 @@ export class VulnerabilityTestGenerator {
     return 'processUserInput';
   }
   
-  private generateTestFile(testSuite: VulnerabilityTestSuite, options: TestGenerationOptions): string {
+  private generateTestFile(testSuite: CompleteTestSuite, options: TestGenerationOptions): string {
     switch (options.language) {
       case 'python':
         return `import unittest
@@ -1087,9 +1090,9 @@ describe('Vulnerability Test Suite - ${options.vulnerabilityType}', () => {
     cy.visit('/login');
   });
 
-  ${testSuite.red.testCode.replace(/page\./g, 'cy.')}
+  ${testSuite.red?.testCode.replace(/page\./g, 'cy.') || ''}
 
-  ${testSuite.green.testCode.replace(/page\./g, 'cy.')}
+  ${testSuite.green?.testCode.replace(/page\./g, 'cy.') || ''}
 });`;
   }
 }
