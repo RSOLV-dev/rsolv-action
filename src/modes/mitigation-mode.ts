@@ -55,34 +55,43 @@ export class MitigationMode {
    */
   async checkoutValidationBranch(issue: IssueContext): Promise<boolean> {
     try {
-      // RFC-060: Retrieve validation metadata from PhaseDataClient
-      if (!this.phaseDataClient) {
-        logger.warn('PhaseDataClient not available, cannot retrieve validation metadata');
-        return false;
+      let branchName: string | undefined;
+
+      // RFC-060: Retrieve validation metadata from PhaseDataClient (preferred)
+      if (this.phaseDataClient) {
+        const commitSha = this.getCurrentCommitSha();
+        const repo = `${issue.repository.owner}/${issue.repository.name}`;
+
+        logger.info(`Retrieving validation metadata from PhaseDataClient for ${repo} issue #${issue.number}`);
+        const phaseData = await this.phaseDataClient.retrievePhaseResults(
+          repo,
+          issue.number,
+          commitSha
+        );
+
+        if (phaseData && phaseData.validate) {
+          const validationData = phaseData.validate[`issue-${issue.number}`];
+          if (validationData) {
+            branchName = (validationData as any).branchName;
+          }
+        }
       }
 
-      const commitSha = this.getCurrentCommitSha();
-      const repo = `${issue.repository.owner}/${issue.repository.name}`;
+      // Fallback: Read from local JSON file (for tests and legacy support)
+      if (!branchName) {
+        logger.warn('PhaseDataClient not available or no data found, falling back to local JSON file');
+        const validationPath = path.join(
+          this.repoPath,
+          '.rsolv',
+          'validation',
+          `issue-${issue.number}.json`
+        );
 
-      logger.info(`Retrieving validation metadata from PhaseDataClient for ${repo} issue #${issue.number}`);
-      const phaseData = await this.phaseDataClient.retrievePhaseResults(
-        repo,
-        issue.number,
-        commitSha
-      );
-
-      if (!phaseData || !phaseData.validate) {
-        logger.info('No validation results found, staying on current branch');
-        return false;
+        if (fs.existsSync(validationPath)) {
+          const validationData = JSON.parse(fs.readFileSync(validationPath, 'utf-8'));
+          branchName = validationData.branchName;
+        }
       }
-
-      const validationData = phaseData.validate[`issue-${issue.number}`];
-      if (!validationData) {
-        logger.info('No validation data for this issue, staying on current branch');
-        return false;
-      }
-
-      const branchName = (validationData as any).branchName;
       if (!branchName) {
         logger.info('No validation branch found, staying on current branch');
         return false;

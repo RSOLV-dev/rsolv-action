@@ -75,6 +75,7 @@ describe('ASTValidator', () => {
       expect(mockApiClient.validateVulnerabilities).toHaveBeenCalledWith({
         vulnerabilities: [{
           id: 'command_injection-10-5',
+          type: VulnerabilityType.COMMAND_INJECTION,
           patternId: 'command_injection',
           filePath: 'src/app.js',
           line: 10,
@@ -82,7 +83,9 @@ describe('ASTValidator', () => {
           severity: 'critical'
         }],
         files: {
-          'src/app.js': 'function process(userInput) { eval(userInput); }'
+          'src/app.js': {
+            content: 'function process(userInput) { eval(userInput); }'
+          }
         }
       });
     });
@@ -292,8 +295,12 @@ describe('ASTValidator', () => {
           expect.objectContaining({ id: 'command_injection-5-10' })
         ]),
         files: {
-          'file1.js': 'eval(x);\neval(y);',
-          'file2.js': 'eval(z);'
+          'file1.js': {
+            content: 'eval(x);\neval(y);'
+          },
+          'file2.js': {
+            content: 'eval(z);'
+          }
         }
       });
     });

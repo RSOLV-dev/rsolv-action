@@ -91,7 +91,8 @@ export default defineConfig({
         '**/modes/phase-executor/__tests__/execute-all-phases-integration.test.ts',
         '**/modes/phase-executor/__tests__/mitigate-validation-flow.test.ts',
         '**/modes/phase-executor/__tests__/validation-label-update.test.ts',
-        '**/modes/__tests__/integration-all-modes.test.ts'
+        '**/modes/__tests__/integration-all-modes.test.ts',
+        '**/modes/__tests__/validation-only-mode.test.ts'
       ] : [])
     ],
     

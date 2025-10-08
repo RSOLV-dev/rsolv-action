@@ -8,11 +8,11 @@
 Successfully resolved all test issues including **parallel execution failures** that were causing 24 test failures.
 
 ### Test Results
-- **Total Tests**: 117 (2 skipped, many excluded from default run)
-- **Passing**: 115 (**100%** of active tests)
+- **Total Tests**: 167 (2 skipped, many excluded from default run)
+- **Passing**: 165 (**100%** of active tests)
 - **Failing**: 0
 - **Skipped**: 2 (intentionally skipped tests)
-- **Test Files**: 19 passing (19)
+- **Test Files**: 21 passing (21)
 
 ### What Was Fixed
 
@@ -70,14 +70,16 @@ Tests for features not yet fully implemented:
 
 **Reason**: Complex mocking needed after functional refactoring
 
-### Pattern Availability Test Fix (2025-10-07)
+### Pattern Availability Test Updates (2025-10-07)
 
 **test/regression/pattern-availability.test.ts**
 - Fixed test isolation issue by adding `afterAll()` hooks to restore `USE_LOCAL_PATTERNS`
 - Restored production-level pattern expectations (25+ for JS/TS, 100+ unique IDs)
-- Tests now require production API key to pass: `RSOLV_PRODUCTION_API_KEY`
+- Removed `.skipIf(!process.env.TEST_LOAD)` - these are normal regression tests, not "stress tests"
+- Tests now run by default with production API key
+- Backend uses caching, so 35+ API calls don't overwhelm the service
 
-**Status**: ✅ **All tests passing with production API key**
+**Status**: ✅ **All 6 tests passing with production API key**
 
 ## Conclusion
 
@@ -114,7 +116,8 @@ npx vitest run path/to/test.ts
 **Environment Configuration** (in `~/dev/rsolv/.envrc`):
 
 **API Keys**:
-- Production: `rsolv_-1U3PpIl2T3wo3Nw5v9wB1EM-riNnBcloKtq_gveimc` (170+ patterns)
+- Production: `rsolv_GD5KyzSXvKzaztds23HijV5HFnD7ZZs8cbF1UX5ks_8` (162+ patterns - fresh key created 2025-10-07)
+- Old production: `rsolv_-1U3PpIl2T3wo3Nw5v9wB1EM-riNnBcloKtq_gveimc` (deprecated)
 - Test/Demo: `rsolv_6Z4WFMcYad0MsCCbYkEn-XMI4rgSMgkWqqPEpTZyk8A` (5 patterns per language)
 - Default `RSOLV_API_KEY` set to production for full coverage
 
@@ -154,19 +157,20 @@ This balances parallelization benefits with manageable load on external services
 **Implementation**: See `/run-tests.sh` lines 135-172
 
 **Results**:
-- ✅ **19/19 test files passing** (was 24 failures)
-- ✅ **115 tests passing** (was ~91 passing)
+- ✅ **21/21 test files passing** (was 24 failures)
+- ✅ **165 tests passing, 2 skipped** (was ~91 passing)
 - ✅ No more JSON parsing errors
 - ✅ No more 401 Unauthorized failures
+- ✅ Pattern availability tests run by default (no longer marked as stress tests)
 - ✅ Still fast: ~3-4s per shard, total ~30s
 
 ### Historical Notes
 
 **Investigation Results** (before fix):
 1. ✅ API works correctly - manual curl returns 30+ patterns
-2. ✅ API key is valid - `rsolv_GD5KyzSXvKzaztds23HijV5HFnD7ZZs8cbF1UX5ks_8`
+2. ✅ API key is valid - Production key with 162+ patterns
 3. ✅ **Single test passes** - `npx vitest run test/regression/pattern-availability.test.ts` = 6/6 PASS
-4. ⚠️ **8 parallel shards fail** - Too much load on external services
+4. ⚠️ **8 parallel shards fail** - Too much load on external services (before semi-parallel fix)
 
 **Affected Tests** (before fix):
 - `pattern-availability.test.ts` (3) - API rate limiting

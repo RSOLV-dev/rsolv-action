@@ -46,7 +46,7 @@ describe('Pattern Availability Regression Test', () => {
         // Skip if no API key
         return;
       }
-      
+
       const source = createPatternSource();
       const criticalTypes = [
         VulnerabilityType.SQL_INJECTION,
@@ -55,7 +55,7 @@ describe('Pattern Availability Regression Test', () => {
         VulnerabilityType.PATH_TRAVERSAL,
         VulnerabilityType.INSECURE_DESERIALIZATION
       ];
-      
+
       for (const type of criticalTypes) {
         const patterns = await source.getPatternsByType(type);
         expect(patterns.length, `${type} should have patterns`).toBeGreaterThan(0);

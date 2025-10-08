@@ -16,6 +16,12 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Load .env file if it exists
+if [ -f .env ]; then
+  export $(cat .env | grep -v '^#' | xargs)
+  echo "✓ Loaded environment variables from .env"
+fi
+
 # Initialize exit code
 TEST_EXIT_CODE=0
 
@@ -115,8 +121,8 @@ fi
 
 # Set Node.js memory limit based on mode
 if [[ -n "$MEMORY_SAFE" ]]; then
-  export NODE_OPTIONS="--max-old-space-size=4096"
-  echo "✓ Node.js memory limit set to 4GB"
+  export NODE_OPTIONS="--max-old-space-size=8192"
+  echo "✓ Node.js memory limit set to 8GB"
 else
   export NODE_OPTIONS="--max-old-space-size=8192"
   echo "✓ Node.js memory limit set to 8GB"
@@ -132,43 +138,27 @@ if [[ -n "$MEMORY_SAFE" ]]; then
   mkdir -p $SHARD_DIR
   rm -f $SHARD_DIR/*.json
 
-  # Run 8 shards in 2 batches of 4 parallel shards
-  # This balances parallelization with not overwhelming external services
-  for batch in 1 2; do
+  # Run 8 shards sequentially (1 at a time)
+  # This prevents memory accumulation issues
+  for i in 1 2 3 4 5 6 7 8; do
     echo ""
-    echo -e "${GREEN}Running batch $batch/2 (4 shards in parallel)...${NC}"
+    echo -e "${GREEN}Running shard $i/8...${NC}"
 
-    # Start 4 shards in parallel
-    declare -a PIDS=()
-    for offset in 0 1 2 3; do
-      i=$((($batch - 1) * 4 + $offset + 1))
+    if [[ -n "$JSON_OUTPUT" ]]; then
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
+    else
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 $COVERAGE"
+    fi
 
-      echo -e "${YELLOW}  Starting shard $i/8...${NC}"
+    # Run shard and check exit code
+    eval $SHARD_CMD
+    SHARD_EXIT_CODE=$?
 
-      if [[ -n "$JSON_OUTPUT" ]]; then
-        SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
-      else
-        SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E npx vitest run --shard=$i/8 $COVERAGE"
-      fi
+    if [[ $SHARD_EXIT_CODE -ne 0 ]]; then
+      TEST_EXIT_CODE=$SHARD_EXIT_CODE
+    fi
 
-      # Run in background and capture PID
-      eval $SHARD_CMD &
-      PIDS+=($!)
-    done
-
-    # Wait for all shards in this batch to complete
-    echo ""
-    echo "Waiting for batch $batch to complete..."
-    for pid in "${PIDS[@]}"; do
-      wait $pid
-      SHARD_EXIT_CODE=$?
-
-      if [[ $SHARD_EXIT_CODE -ne 0 ]]; then
-        TEST_EXIT_CODE=$SHARD_EXIT_CODE
-      fi
-    done
-
-    echo -e "${GREEN}✓ Batch $batch complete${NC}"
+    echo -e "${GREEN}✓ Shard $i/8 complete${NC}"
   done
   
   # Merge JSON reports if needed
