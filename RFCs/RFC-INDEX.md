@@ -44,7 +44,7 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 | 020 | [Additional Rails Patterns](RFC-020-ADDITIONAL-RAILS-PATTERNS.md) | Draft | 2025-06-10 | N/A |
 | 021 | [CakePHP Framework Coverage](RFC-021-CAKEPHP-FRAMEWORK-COVERAGE.md) | Draft | 2025-06-10 | N/A |
 | 022 | [Pattern Categorization Strategy](RFC-022-PATTERN-CATEGORIZATION-STRATEGY.md) | Implemented | 2025-06-15 | High |
-| 023 | [Blog Implementation Strategy Variant](RFC-023-BLOG-IMPLEMENTATION-STRATEGY.md) | Analysis | 2025-06-07 | N/A |
+| 023 | Blog Implementation Strategy Variant (Analysis document - no separate file, see RFC-018) | Analysis | 2025-06-07 | N/A |
 | 024 | [Strategic Comparison](RFC-024-STRATEGIC-COMPARISON.md) | Analysis | 2025-06-05 | N/A |
 | 025 | [Slopsquatting Detection](RFC-025-SLOPSQUATTING-DETECTION.md) | Draft | 2025-01-10 | N/A |
 | 026 | [CrowdSec Endpoint Protection](RFC-026-CROWDSEC-ENDPOINT-PROTECTION.md) | Draft | 2025-01-22 | TBD |
@@ -68,20 +68,20 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 | 044 | [Phase Data Persistence Implementation](RFC-044-PHASE-DATA-PERSISTENCE.md) | In Development → [ADR-020](../ADRs/ADR-020-PHASE-DATA-PERSISTENCE.md) | 2025-08-15 | N/A |
 | 045 | [False Positive Caching](RFC-045-FALSE-POSITIVE-CACHING.md) | Implemented → [ADR-021](../ADRs/ADR-021-FALSE-POSITIVE-CACHING.md) | 2025-08-20 | N/A |
 | 046 | [False Positive Caching TDD](RFC-046-FALSE-POSITIVE-CACHING-TDD.md) | Implemented | 2025-08-22 | N/A |
-| 047 | [Vendor Library Detection](RFC-047-vendor-library-detection.md) | Draft | 2025-08-25 | N/A |
+| 047 | [Vendor Library Detection](RFC-047-vendor-library-detection.md) | Implemented (Deployed) | 2025-08-25 | N/A |
 | 048 | [API Test Mode](RFC-048-API-TEST-MODE.md) | Draft | 2025-08-28 | N/A |
-| 049 | [Customer Management Consolidation](RFC-049-CUSTOMER-MANAGEMENT-CONSOLIDATION.md) | Draft | 2025-09-03 | N/A |
+| 049 | [Customer Management Consolidation](RFC-049-CUSTOMER-MANAGEMENT-CONSOLIDATION.md) | Implemented (needs ADR) | 2025-09-03 | N/A |
 | 050 | [Self-Improving Security Platform](RFC-050-SELF-IMPROVING-SECURITY-PLATFORM.md) | Draft (RFC-014 variant) | 2025-06-06 | [FITZ-188](https://linear.app/fitzgerald/issue/FITZ-188) |
 | 051 | [Strategic Deep Analysis](RFC-051-STRATEGIC-DEEP-ANALYSIS.md) | Analysis (RFC-014 variant) | 2025-06-06 | N/A |
 | 052 | [Analysis: Parallel AI Execution](RFC-052-ANALYSIS-PARALLEL-AI-EXECUTION.md) | Analysis (RFC-014 variant) | 2025-06-06 | N/A |
 | 053 | [Urgent IP Protection](RFC-053-URGENT-IP-PROTECTION.md) | Implemented via RFC-008 (RFC-018 variant) | 2025-06-07 | [FITZ-195](https://linear.app/fitzgerald/issue/FITZ-195) |
-| 054 | [Distributed Rate Limiter](RFC-054-DISTRIBUTED-RATE-LIMITER.md) | Draft | 2025-09-05 | N/A |
-| 055 | [Customer Schema Consolidation](RFC-055-CUSTOMER-SCHEMA-CONSOLIDATION.md) | **Implemented** | 2025-09-09 | N/A |
-| 056 | [Admin UI for Customer Management](RFC-056-ADMIN-UI-CUSTOMER-MANAGEMENT.md) | **Approved** | 2025-09-10 | N/A |
+| 054 | [Distributed Rate Limiter](RFC-054-DISTRIBUTED-RATE-LIMITER.md) | Implemented (needs ADR) | 2025-09-05 | N/A |
+| 055 | [Customer Schema Consolidation](RFC-055-CUSTOMER-SCHEMA-CONSOLIDATION.md) | Implemented (needs ADR) | 2025-09-09 | N/A |
+| 056 | [Admin UI for Customer Management](RFC-056-ADMIN-UI-CUSTOMER-MANAGEMENT.md) | Implemented (needs ADR) | 2025-09-10 | N/A |
 | 057 | [Fix Credential Vending](RFC-057-FIX-CREDENTIAL-VENDING.md) | Draft | 2025-09-18 | N/A |
 | 058 | [Validation Branch Persistence](RFC-058-VALIDATION-BRANCH-PERSISTENCE.md) | Implemented → [ADR-025](../ADRs/ADR-025-VALIDATION-BRANCH-PERSISTENCE.md) | 2025-09-18 | N/A |
-| 059 | [Local Testing with Act](RFC-059-act-local-testing.md) | **Approved** | 2025-01-24 | N/A |
-| 060 | [Executable Validation Test Integration](RFC-060-ENHANCED-VALIDATION-TEST-PERSISTENCE.md) | **Approved** | 2025-09-30 | N/A |
+| 059 | [Local Testing with Act](RFC-059-act-local-testing.md) | Approved (Note: RFC-059-VALIDATION-TESTING-STRATEGY.md also exists) | 2025-01-24 | N/A |
+| 060 | [Executable Validation Test Integration](RFC-060-ENHANCED-VALIDATION-TEST-PERSISTENCE.md) | Approved (Note: RFC-060-BACKUP-1759329597.md backup exists) | 2025-09-30 | N/A |
 | 061 | [Claude CLI Retry Reliability](RFC-061-CLAUDE-RETRY-RELIABILITY.md) | Draft | 2025-09-30 | N/A |
 | 062 | [CI Integration Testing Infrastructure](RFC-062-CI-INTEGRATION-TESTING.md) | Draft | 2025-10-06 | N/A |
 | 063 | [API Key Caching with Mnesia](RFC-063-API-KEY-CACHING.md) | Draft | 2025-10-07 | N/A |
@@ -92,7 +92,6 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 Many RFCs have additional tracking documents:
 - **RFC-031**: Multiple phases documented (API-CONTRACT, CHECKPOINT-PHASE-2, CHECKPOINT-PHASE-3, PHASE-1-2-PROGRESS, PHASE-1-PROGRESS, PHASE4-REVIEW, TECHNICAL-REVIEW)
 - **RFC-032**: Implementation tracking (IMPLEMENTATION-SUMMARY, PHASE-1-3-RESULTS)
-- **RFC-033**: Audit log exposure variant
 - **RFC-036**: Implementation status tracking (IMPLEMENTATION-STATUS)
 - **RFC-037**: Final status and implementation tracking (FINAL-STATUS-SUMMARY, IMPLEMENTATION-STATUS)
 
@@ -172,8 +171,34 @@ All RFCs should be:
 - Have corresponding Linear issue/project (where applicable)
 - Follow the standard template
 
+## Known Issues and Recommendations (Updated 2025-10-08)
+
+### Cleanup Completed (2025-10-08)
+
+✅ **Removed duplicate files:**
+- Deleted `RFC-032-DISTRIBUTED-CACHING-MNESIA.md` (duplicate of RFC-038)
+- Deleted `RFC-033-AUDIT-LOG-EXPOSURE.md` (duplicate of RFC-039)
+
+### Remaining Actions Required
+
+1. **Missing ADRs for Implemented RFCs**
+   - RFC-022 (Pattern Categorization) - needs ADR
+   - RFC-029 (Multi-Language AST) - verify if covered by ADR-014 or create new ADR
+   - RFC-047 (Vendor Library Detection) - needs ADR
+   - RFC-049 (Customer Management) - needs ADR
+   - RFC-054 (Distributed Rate Limiter) - needs ADR
+   - RFC-055 (Customer Schema Consolidation) - needs ADR
+   - RFC-056 (Admin UI Customer Management) - needs ADR
+
+### Documentation Notes
+
+- **RFC-023**: Was a duplicate of RFC-018 (deleted in commit 9c1e141), index entry retained for historical tracking
+- **RFC-059**: Has two valid files (act-local-testing and validation-testing-strategy) covering related topics
+- **RFC-060**: Has backup file RFC-060-BACKUP-1759329597.md
+
 ## Notes
 
 - RFC numbering conflicts resolved by renumbering variants (RFC-050 through RFC-053)
 - Multiple supporting documents for RFC-031, RFC-032, RFC-033, RFC-036, RFC-037 represent different phases or aspects
-- Total of 60 unique RFCs plus supporting documentation
+- Total of 63 unique RFCs plus supporting documentation
+- Last validated: 2025-10-08
