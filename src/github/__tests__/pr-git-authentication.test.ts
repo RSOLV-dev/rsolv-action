@@ -22,7 +22,7 @@ describe('PR Git Authentication', () => {
   });
 
   describe('Branch Push Authentication', () => {
-    it('should use GITHUB_TOKEN for authentication when available', () => {
+    it('should use GITHUB_TOKEN for authentication when available', async () => {
       // Arrange
       process.env.GITHUB_TOKEN = 'ghp_testtoken123';
       process.env.GITHUB_REPOSITORY = 'owner/repo';
@@ -30,19 +30,10 @@ describe('PR Git Authentication', () => {
       const expectedAuthUrl = 'https://x-access-token:ghp_testtoken123@github.com/owner/repo.git';
 
       mockExecSync.mockImplementation((command: string) => {
-        if (command.includes('git config user.email')) {
-          throw new Error('Not configured');
-        }
-        if (command === `git remote set-url origin ${expectedAuthUrl}`) {
-          return '';
-        }
-        if (command.includes('git push')) {
-          return '';
-        }
-        return '';
+        // Return empty string or Buffer for all git commands
+        return Buffer.from('');
       });
 
-      // Act
       const issue = {
         id: '1',
         number: 123,
@@ -53,10 +44,25 @@ describe('PR Git Authentication', () => {
         }
       };
 
+      const config = {
+        githubToken: 'ghp_testtoken123'
+      } as any;
+
+      // Act
+      await createEducationalPullRequest(
+        issue as any,
+        'abc123',
+        {
+          title: 'Fix XSS vulnerability',
+          description: 'Test description'
+        },
+        config
+      );
+
       // Assert
       expect(mockExecSync).toHaveBeenCalledWith(
         `git remote set-url origin ${expectedAuthUrl}`,
-        expect.any(Object)
+        expect.objectContaining({ cwd: expect.any(String) })
       );
     });
 
@@ -146,6 +152,9 @@ describe('PR Git Authentication', () => {
 
     it('should recommend PAT for cross-repo operations', () => {
       // Arrange
+      process.env.GITHUB_TOKEN = 'ghs_defaulttoken123'; // Default GitHub Actions token
+      process.env.GH_PAT = undefined;
+
       const recommendations = [];
 
       if (!process.env.GH_PAT && process.env.GITHUB_TOKEN?.startsWith('ghs_')) {
