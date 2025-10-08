@@ -73,6 +73,7 @@ web_modules/
 # Claude Code temp files
 temp/prompt-*.txt
 temp/solution-*.json
+temp/claude-code-analytics.json
 e2e-tests/test-repos/
 e2e-tests/results/
 
