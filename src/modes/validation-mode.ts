@@ -5,7 +5,7 @@
 
 import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
-import { ValidationResult } from './types.js';
+import { ValidationResult, TestExecutionResult } from './types.js';
 import { vendorFilterUtils } from './vendor-utils.js';
 import { TestGeneratingSecurityAnalyzer } from '../ai/test-generating-security-analyzer.js';
 import { GitBasedTestValidator } from '../ai/git-based-test-validator.js';
@@ -14,16 +14,24 @@ import { AIConfig } from '../ai/types.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getGitHubClient } from '../github/api.js';
+import { PhaseDataClient } from './phase-data-client/index.js';
 
 export class ValidationMode {
   private config: ActionConfig;
   private falsePositiveCache: Set<string>;
   private repoPath: string;
+  private phaseDataClient: PhaseDataClient | null;
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
     this.repoPath = repoPath || process.cwd();
     this.falsePositiveCache = new Set();
+
+    // Initialize PhaseDataClient if API key is available
+    this.phaseDataClient = config.rsolvApiKey
+      ? new PhaseDataClient(config.rsolvApiKey)
+      : null;
 
     // Apply environment variables from config
     if (config.environmentVariables && typeof config.environmentVariables === 'object') {
@@ -152,6 +160,34 @@ export class ValidationMode {
       // RED tests should FAIL on vulnerable code to prove vulnerability exists
       // isTestingMode already declared above
 
+      // RFC-060 Phase 2.2: Extract test execution metadata
+      const testExecutionResult: TestExecutionResult = {
+        passed: validationResult.success || false,
+        output: JSON.stringify(validationResult, null, 2), // Store full validation result as output
+        stderr: '',
+        timedOut: false,
+        exitCode: validationResult.success ? 0 : 1,
+        error: validationResult.error,
+        framework: testResults.generatedTests.framework,
+        testFile: testResults.generatedTests.testFile
+      };
+
+      // RFC-060 Phase 2.2: Handle errors as validation error
+      if (validationResult.error) {
+        logger.warn(`Test execution error for issue #${issue.number}: ${validationResult.error}`);
+        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false);
+
+        return {
+          issueId: issue.number,
+          validated: false,
+          falsePositiveReason: `Test execution error: ${validationResult.error}`,
+          testResults: validationResult,
+          testExecutionResult,
+          timestamp: new Date().toISOString(),
+          commitHash: this.getCurrentCommitHash()
+        };
+      }
+
       if (validationResult.success) {
         // Tests passed = no vulnerability = false positive (unless in testing mode)
         if (isTestingMode) {
@@ -166,6 +202,9 @@ export class ValidationMode {
             await this.storeValidationResult(issue, testResults, validationResult);
           }
 
+          // RFC-060 Phase 2.2: Store via PhaseDataClient
+          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true);
+
           // In testing mode, still mark as validated to allow full workflow testing
           return {
             issueId: issue.number,
@@ -173,6 +212,7 @@ export class ValidationMode {
             branchName: branchName || undefined,
             redTests: testResults.generatedTests.testSuite,
             testResults: validationResult,
+            testExecutionResult,
             testingMode: true,
             testingModeNote: 'Tests passed but proceeding due to RSOLV_TESTING_MODE',
             timestamp: new Date().toISOString(),
@@ -182,11 +222,18 @@ export class ValidationMode {
           logger.info(`Tests passed on vulnerable code - marking as false positive`);
           this.addToFalsePositiveCache(issue);
 
+          // RFC-060 Phase 2.2: Add false-positive label
+          await this.addGitHubLabel(issue, 'rsolv:false-positive');
+
+          // RFC-060 Phase 2.2: Store via PhaseDataClient
+          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false);
+
           return {
             issueId: issue.number,
             validated: false,
             falsePositiveReason: 'Tests passed on allegedly vulnerable code',
             testResults: validationResult,
+            testExecutionResult,
             timestamp: new Date().toISOString(),
             commitHash: this.getCurrentCommitHash()
           };
@@ -204,12 +251,19 @@ export class ValidationMode {
           await this.storeValidationResult(issue, testResults, validationResult);
         }
 
+        // RFC-060 Phase 2.2: Add validated label
+        await this.addGitHubLabel(issue, 'rsolv:validated');
+
+        // RFC-060 Phase 2.2: Store via PhaseDataClient
+        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true);
+
         return {
           issueId: issue.number,
           validated: true,
           branchName: branchName || undefined,
           redTests: testResults.generatedTests.testSuite,
           testResults: validationResult,
+          testExecutionResult,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
@@ -590,6 +644,61 @@ describe('Vulnerability Test', () => {
       return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
     } catch {
       return 'unknown';
+    }
+  }
+
+  /**
+   * RFC-060 Phase 2.2: Add GitHub label to issue
+   */
+  private async addGitHubLabel(issue: IssueContext, label: string): Promise<void> {
+    try {
+      const githubClient = getGitHubClient(this.config);
+      await githubClient.issues.addLabels({
+        owner: issue.repository.owner,
+        repo: issue.repository.name,
+        issue_number: issue.number,
+        labels: [label]
+      });
+      logger.info(`Added label '${label}' to issue #${issue.number}`);
+    } catch (error) {
+      logger.warn(`Failed to add label '${label}' to issue #${issue.number}:`, error);
+    }
+  }
+
+  /**
+   * RFC-060 Phase 2.2: Store test execution results in PhaseDataClient
+   */
+  private async storeTestExecutionInPhaseData(
+    issue: IssueContext,
+    testExecution: TestExecutionResult,
+    validated: boolean
+  ): Promise<void> {
+    if (!this.phaseDataClient) {
+      logger.debug('PhaseDataClient not available, skipping phase data storage');
+      return;
+    }
+
+    try {
+      await this.phaseDataClient.storePhaseResults(
+        'validate',
+        {
+          validate: {
+            [issue.number]: {
+              validated,
+              testExecutionResult: testExecution,
+              timestamp: new Date().toISOString()
+            }
+          }
+        },
+        {
+          repo: issue.repository.fullName,
+          issueNumber: issue.number,
+          commitSha: this.getCurrentCommitHash()
+        }
+      );
+      logger.info(`Stored test execution results in PhaseDataClient for issue #${issue.number}`);
+    } catch (error) {
+      logger.warn(`Failed to store test execution in PhaseDataClient:`, error);
     }
   }
 }

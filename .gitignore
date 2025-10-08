@@ -99,4 +99,6 @@ test-ollama-output*.json
 TAGS
 tags.rsolv/
 nodegoat-demo/
-.rsolv/phase-data/
+
+# RSOLV runtime data (generated during action execution)
+.rsolv/

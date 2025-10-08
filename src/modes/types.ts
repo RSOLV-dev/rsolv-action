@@ -26,11 +26,26 @@ export interface ValidationResult {
   branchName?: string;
   redTests?: any; // VulnerabilityTestSuite
   testResults?: any; // TestResults
+  testExecutionResult?: TestExecutionResult; // RFC-060 Phase 2.2: Test execution metadata
   falsePositiveReason?: string;
   testingMode?: boolean; // RFC-059: Indicates testing mode is enabled
   testingModeNote?: string; // RFC-059: Explanation when testing mode overrides validation
   timestamp: string;
   commitHash: string;
+}
+
+/**
+ * RFC-060 Phase 2.2: Test execution result metadata
+ */
+export interface TestExecutionResult {
+  passed: boolean;
+  output: string;
+  stderr: string;
+  timedOut: boolean;
+  exitCode?: number;
+  error?: string;
+  framework?: string;
+  testFile?: string;
 }
 
 export interface MitigationResult {

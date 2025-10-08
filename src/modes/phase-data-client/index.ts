@@ -3,6 +3,10 @@
  * Implements RFC-041 Phase Data Storage specification
  */
 
+import type { TestExecutionResult } from '../types.js';
+import type { VulnerabilityTestSuite } from '../../ai/test-generator.js';
+import type { ValidationResult as GitValidationResult } from '../../ai/git-based-test-validator.js';
+
 export interface StoreResult {
   success: boolean;
   id?: string;
@@ -11,57 +15,65 @@ export interface StoreResult {
   warning?: string;
 }
 
+/**
+ * Vulnerability data for scan phase
+ */
+export interface ScanVulnerability {
+  type: string;
+  file: string;
+  line: number;
+  severity?: string;
+  description?: string;
+  cwe?: string;
+  [key: string]: unknown; // Allow additional properties
+}
+
+/**
+ * Validation phase data for a single issue
+ */
+export interface ValidationPhaseData {
+  validated: boolean;
+  redTests?: VulnerabilityTestSuite;
+  testResults?: GitValidationResult;
+  testExecutionResult?: TestExecutionResult;
+  falsePositiveReason?: string;
+  timestamp: string;
+}
+
+/**
+ * Mitigation phase data for a single issue
+ */
+export interface MitigationPhaseData {
+  fixed: boolean;
+  prUrl?: string;
+  fixCommit?: string;
+  timestamp: string;
+}
+
 export interface PhaseData {
   scan?: {
-    vulnerabilities: Array<{
-      type: string;
-      file: string;
-      line: number;
-      [key: string]: any;
-    }>;
+    vulnerabilities: ScanVulnerability[];
     timestamp: string;
     commitHash: string;
   };
-  
-  // Platform returns 'validation', client uses 'validate' 
+
+  // Platform returns 'validation', client uses 'validate'
   validation?: {
-    [issueId: string]: {
-      validated: boolean;
-      redTests?: any;
-      testResults?: any;
-      falsePositiveReason?: string;
-      timestamp: string;
-    };
+    [issueId: string]: ValidationPhaseData;
   };
-  
+
   // Alias for validation (after remapping)
   validate?: {
-    [issueId: string]: {
-      validated: boolean;
-      redTests?: any;
-      testResults?: any;
-      falsePositiveReason?: string;
-      timestamp: string;
-    };
+    [issueId: string]: ValidationPhaseData;
   };
-  
+
   mitigation?: {
-    [issueId: string]: {
-      fixed: boolean;
-      prUrl?: string;
-      fixCommit?: string;
-      timestamp: string;
-    };
+    [issueId: string]: MitigationPhaseData;
   };
-  
+
   // Alias for mitigation (after remapping)
   mitigate?: {
-    [issueId: string]: {
-      fixed: boolean;
-      prUrl?: string;
-      fixCommit?: string;
-      timestamp: string;
-    };
+    [issueId: string]: MitigationPhaseData;
   };
 }
 
