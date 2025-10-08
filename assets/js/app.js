@@ -14,6 +14,14 @@ import ResponsiveChartHooks from "./responsive_charts"
 import FeedbackModule from "./feedback"
 import { initRoiCalculator } from "./roi_calculator"
 
+// Import React and vibe-kanban-web-companion (development only)
+let VibeKanbanWebCompanion, React, createRoot;
+if (process.env.NODE_ENV !== 'production') {
+  React = require('react');
+  createRoot = require('react-dom/client').createRoot;
+  VibeKanbanWebCompanion = require('vibe-kanban-web-companion').VibeKanbanWebCompanion;
+}
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
 // Log what we're importing for debugging
@@ -235,12 +243,21 @@ window.liveSocket = liveSocket
 document.addEventListener("DOMContentLoaded", function() {
   // Initialize analytics system
   Analytics.init();
-  
+
   // Initialize feedback module
   FeedbackModule.init();
-  
+
   // Initialize ROI calculator if present
   initRoiCalculator();
+
+  // Initialize Vibe Kanban Web Companion (development only)
+  if (process.env.NODE_ENV !== 'production') {
+    const vibeKanbanRoot = document.getElementById('vibe-kanban-root');
+    if (vibeKanbanRoot && VibeKanbanWebCompanion) {
+      const root = createRoot(vibeKanbanRoot);
+      root.render(React.createElement(VibeKanbanWebCompanion));
+    }
+  }
   
   // Mobile menu - handle non-LiveView pages
   const mobileMenuButton = document.getElementById('mobile-menu-button');

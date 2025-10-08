@@ -50,6 +50,7 @@
     </script>
   </head>
   <body class="h-full bg-canvas antialiased transition-colors">
+    <div id="vibe-kanban-root"></div>
     <div class="flash-messages">
       <%= if flash = Phoenix.Flash.get(@flash, :info) do %>
         <div class="bg-brand-green bg-opacity-90 text-white py-4 px-6 flex justify-between items-center" role="alert" phx-click="lv:clear-flash" phx-value-key="info">
@@ -59,7 +60,7 @@
           </button>
         </div>
       <% end %>
-      
+
       <%= if flash = Phoenix.Flash.get(@flash, :error) do %>
         <div class="bg-red-500 bg-opacity-90 text-white py-4 px-6 flex justify-between items-center" role="alert" phx-click="lv:clear-flash" phx-value-key="error">
           <p><%= flash %></p>
@@ -69,7 +70,7 @@
         </div>
       <% end %>
     </div>
-    
+
     <%= @inner_content %>
     <footer class="bg-subtle border-t border-DEFAULT text-DEFAULT py-12">
       <div class="container mx-auto px-4">
