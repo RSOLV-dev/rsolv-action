@@ -11,6 +11,7 @@ describe('AITestGenerator - Escaped Quote Edge Cases', () => {
 
     it('should handle JSON with escaped quotes that appears truncated but is actually valid', () => {
       // This simulates the exact failure from production logs
+      // NOTE: Per RFC-060, GREEN/REFACTOR tests are stripped in VALIDATE phase (RED-only)
       const response = `{
   "red": {
     "testName": "Math.random() predictability test",
@@ -35,11 +36,11 @@ describe('AITestGenerator - Escaped Quote Edge Cases', () => {
       const result = parseTestSuite(response);
       expect(result).toBeDefined();
       expect(result).not.toBeNull();
+      // Per RFC-060: Only RED test should be present, GREEN/REFACTOR are stripped
       expect(result!.red).toBeDefined();
-      expect(result!.green).toBeDefined();
-      expect(result!.refactor).toBeDefined();
+      expect(result!.green).toBeUndefined();
+      expect(result!.refactor).toBeUndefined();
       expect(result!.red.testCode).toContain('Math.random');
-      expect(result!.green.testCode).toContain('crypto.randomBytes');
     });
 
     it('should handle JSON truncated mid-string with escaped quotes properly', () => {
