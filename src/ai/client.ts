@@ -117,7 +117,7 @@ class OpenAiClient implements AiClient {
         messages: [{ role: 'user', content: prompt }],
         temperature,
         max_tokens: maxTokens,
-        top_p: options.topP ?? 1,
+        // Note: top_p removed - OpenAI allows both but we use temperature for consistency
         frequency_penalty: options.frequencyPenalty ?? 0,
         presence_penalty: options.presencePenalty ?? 0
       };
@@ -249,8 +249,8 @@ class AnthropicClient implements AiClient {
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature,
-        max_tokens: maxTokens,
-        top_p: options.topP ?? 1
+        max_tokens: maxTokens
+        // Note: top_p removed - Anthropic API doesn't allow both temperature AND top_p
       };
 
       // Log request details for debugging
