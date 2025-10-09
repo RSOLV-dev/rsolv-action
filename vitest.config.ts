@@ -21,10 +21,11 @@ export default defineConfig({
     
     // Performance settings based on environment
     pool: isMemoryConstrained ? 'forks' : 'threads',
-    poolOptions: isMemoryConstrained 
+    poolOptions: isMemoryConstrained
       ? {
           forks: {
             singleFork: true,  // Run all tests in single process
+            execArgv: ['--expose-gc'],  // Allow manual garbage collection
           }
         }
       : {

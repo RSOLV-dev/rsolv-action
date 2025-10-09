@@ -1,4 +1,4 @@
-import { beforeEach, vi } from 'vitest';
+import { beforeEach, afterEach, vi } from 'vitest';
 
 console.log('[Vitest Setup] Test environment configured');
 
@@ -12,6 +12,14 @@ beforeEach(() => {
   // Reset all mocks before each test
   vi.clearAllMocks();
 });
+
+// Aggressive garbage collection in memory-safe mode
+if (process.env.TEST_MEMORY_SAFE === 'true' && global.gc) {
+  afterEach(() => {
+    // Force garbage collection after each test to prevent memory accumulation
+    global.gc();
+  });
+}
 
 // Mock the AI client responses
 export const mockAIResponses = {
