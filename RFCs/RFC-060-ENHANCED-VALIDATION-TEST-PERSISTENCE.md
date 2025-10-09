@@ -10,6 +10,210 @@
 
 This RFC returns the VALIDATE phase to the originally intended architecture documented in ADR-025, correcting deviations from branch-based test persistence and backend API metadata storage. Instead of temporary in-tree JSON files that get deleted, this approach generates directly executable RED tests that prove vulnerabilities exist, persists them in validation branches, stores metadata via PhaseDataClient API, and validates that tests actually fail before proceeding to mitigation.
 
+## Implementation Sequence & Parallelization Map
+
+```
+RFC-060 Implementation Sequence & Parallelization Map
+======================================================
+
+PHASE 0-1: ✅ COMPLETE
+┌─────────────────────────────────────────────────────────┐
+│ Phase 0.2, 0.3, 1.1, 1.2, 1.3 - All Done                │
+└─────────────────────────────────────────────────────────┘
+
+PHASE 2: Core Implementation (SEQUENTIAL)
+┌─────────────────────────────────────────────────────────┐
+│ #1: TestRunner Implementation (4.5 hrs)                  │
+│     └─→ BLOCKS #2                                        │
+└─────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ #2: ValidationMode Test Execution (4.5 hrs)              │
+│     └─→ BLOCKS #3                                        │
+└─────────────────────────────────────────────────────────┘
+
+PHASE 3: MITIGATE Integration (SEQUENTIAL)
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ #3: API-Based Metadata Retrieval (3.5 hrs)               │
+│     └─→ BLOCKS #4                                        │
+└─────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ #4: Test-Aware Fix Generation (5 hrs)                    │
+│     └─→ BLOCKS #5                                        │
+└─────────────────────────────────────────────────────────┘
+
+PHASE 4: Integration Testing (MIXED)
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ #5: E2E Workflow Testing (7 hrs)                         │
+│     └─→ BLOCKS #6, #7                                    │
+└─────────────────────────────────────────────────────────┘
+                           ↓
+              ┌────────────┴────────────┐
+              ↓                         ↓
+┌──────────────────────────┐  ┌──────────────────────────┐
+│ #6: Observability (3.5h) │  │ #7: CI/CD Setup (2 hrs)  │
+│ (Logging & SQL queries)  │  │ (GitHub Actions)         │
+└──────────────────────────┘  └──────────────────────────┘
+              ↓                         ↓
+              └────────────┬────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ #8: Multi-Language Testing (2 hrs)                       │
+│     ⚡ JS/Ruby/Python tests run PARALLEL via CI/CD      │
+│     └─→ BLOCKS #9, #10                                  │
+└─────────────────────────────────────────────────────────┘
+
+PHASE 5: Deployment Prep (PARALLEL → SEQUENTIAL)
+                           ↓
+              ┌────────────┴────────────┐
+              ↓                         ↓
+┌──────────────────────────┐  ┌──────────────────────────┐
+│ #9: Feature Flags (3h)   │  │ #10: Observability (6h)  │
+│ RSOLV-action (TypeScript)│  │ RSOLV-platform (Elixir)  │
+└──────────────────────────┘  └──────────────────────────┘
+              ↓                         ↓
+              └────────────┬────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ #11: Production Deployment (4 hrs)                       │
+│      └─→ BLOCKS #12                                     │
+└─────────────────────────────────────────────────────────┘
+
+PHASE 6-7: Monitoring & Evaluation (SEQUENTIAL)
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ #12: Post-Deployment Monitoring (2 weeks)                │
+│      └─→ BLOCKS #13                                     │
+└─────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ #13: Human Evaluation & Follow-up (6 hrs)                │
+│      👤 Human decision points                           │
+│      🎉 RFC-060 COMPLETE                                │
+└─────────────────────────────────────────────────────────┘
+
+
+PARALLELIZATION OPPORTUNITIES (Save 10 hours total)
+====================================================
+
+🔀 Parallel Pair #1: Tasks #6 & #7
+   ├─ Different concerns (logging vs CI/CD)
+   └─ Time savings: 2 hours (3.5h + 2h → 3.5h wall-clock)
+
+🔀 Parallel Pair #2: Tasks #9 & #10
+   ├─ Different repositories (TypeScript vs Elixir)
+   └─ Time savings: 3 hours (3h + 6h → 6h wall-clock)
+
+⚡ Auto-Parallel: Task #8 (Multi-Language Tests)
+   ├─ 3 language tests run simultaneously via CI matrix
+   └─ Time savings: 4 hours (6h sequential → 2h wall-clock)
+
+
+TIMELINE SUMMARY
+================
+
+Sequential path:      17.5 hrs → 5 hrs → 9 hrs → 9 hrs → 4 hrs = 44.5 hrs
+                      Phase 2   Phase 3  Phase 4  Phase 5  Deploy
+
+With parallelization: 17.5 hrs → 5 hrs → 9 hrs → 9 hrs → 4 hrs = 34.5 hrs
+                                         (saves    (saves
+                                          2h)       3h)
+
+Total savings: ~10 hours of wall-clock time
+Plus 2 weeks monitoring + 6 hrs evaluation = COMPLETE
+```
+
+**Execution Strategy:**
+- **Solo developer**: Do tasks #6-#7 and #9-#10 sequentially (longer task first)
+- **Two developers**: Split #6↔#7 and #9↔#10 for maximum parallelization
+- **CI/CD bonus**: Task #8 auto-parallelizes regardless (3 language tests run simultaneously)
+
+**Next Step**: Start Task #1 (TestRunner Implementation) in RSOLV-action project.
+
+### Mermaid Flow Diagram
+
+```mermaid
+graph TD
+    Start["✅ PHASE 0-1 COMPLETE<br/>Phase 0.2, 0.3, 1.1, 1.2, 1.3"]
+
+    T1["#1: TestRunner Implementation<br/>4.5 hrs<br/>SEQUENTIAL"]
+    T2["#2: ValidationMode Test Execution<br/>4.5 hrs<br/>SEQUENTIAL"]
+    T3["#3: API-Based Metadata Retrieval<br/>3.5 hrs<br/>SEQUENTIAL"]
+    T4["#4: Test-Aware Fix Generation<br/>5 hrs<br/>SEQUENTIAL"]
+    T5["#5: E2E Workflow Testing<br/>7 hrs<br/>SEQUENTIAL"]
+
+    T6["#6: Observability<br/>3.5 hrs<br/>🔀 PARALLEL"]
+    T7["#7: CI/CD Setup<br/>2 hrs<br/>🔀 PARALLEL"]
+
+    T8["#8: Multi-Language Testing<br/>2 hrs<br/>⚡ AUTO-PARALLEL<br/>(JS/Ruby/Python)"]
+
+    T9["#9: Feature Flags<br/>3 hrs RSOLV-action<br/>🔀 PARALLEL"]
+    T10["#10: Observability Backend<br/>6 hrs RSOLV-platform<br/>🔀 PARALLEL"]
+
+    T11["#11: Production Deployment<br/>4 hrs<br/>SEQUENTIAL"]
+    T12["#12: Post-Deployment Monitoring<br/>2 weeks<br/>SEQUENTIAL"]
+    T13["#13: Human Evaluation<br/>6 hrs<br/>👤 HUMAN REQUIRED"]
+
+    Sync1{{"⏱️ Wait for<br/>BOTH #6 & #7"}}
+    Sync2{{"⏱️ Wait for<br/>BOTH #9 & #10"}}
+    Complete["🎉 RFC-060 COMPLETE"]
+
+    Start --> T1
+    T1 --> T2
+    T2 --> T3
+    T3 --> T4
+    T4 --> T5
+
+    T5 --> T6
+    T5 --> T7
+
+    T6 --> Sync1
+    T7 --> Sync1
+
+    Sync1 --> T8
+
+    T8 --> T9
+    T8 --> T10
+
+    T9 --> Sync2
+    T10 --> Sync2
+
+    Sync2 --> T11
+    T11 --> T12
+    T12 --> T13
+    T13 --> Complete
+
+    classDef complete fill:#90EE90,stroke:#228B22,stroke-width:2px
+    classDef parallel fill:#FFE4B5,stroke:#FFA500,stroke-width:2px
+    classDef sequential fill:#E0E0E0,stroke:#666,stroke-width:2px
+    classDef sync fill:#ADD8E6,stroke:#4169E1,stroke-width:2px
+    classDef human fill:#FFB6C1,stroke:#C71585,stroke-width:2px
+
+    class Start complete
+    class T6,T7,T9,T10 parallel
+    class T1,T2,T3,T4,T5,T11,T12 sequential
+    class Sync1,Sync2 sync
+    class T8 parallel
+    class T13 human
+    class Complete complete
+```
+
+**Legend:**
+- 🔀 **PARALLEL**: Can run simultaneously with paired task
+- ⚡ **AUTO-PARALLEL**: Automatic CI/CD parallelization (3 languages)
+- ⏱️ **SYNC POINTS**: Must wait for both parallel branches to complete
+- 👤 **HUMAN REQUIRED**: Requires human decision-making
+- ✅ **COMPLETE**: Already finished
+
+**Parallelization Savings:**
+- Tasks #6 & #7: Save 2 hours (3.5h + 2h → 3.5h wall-clock)
+- Tasks #9 & #10: Save 3 hours (3h + 6h → 6h wall-clock)
+- Task #8: Save 4 hours (6h sequential → 2h via CI matrix)
+- **Total**: ~10 hours wall-clock time saved
+
 ## Implementation Todo List
 
 **Status Legend**: [ ] Not started | [🔄] In progress | [✅] Completed | [❌] Blocked
@@ -511,6 +715,8 @@ Each phase below includes:
   - [ ] Verify pytest generation
 - [ ] Document language-specific issues found
 
+**Note**: While this phase tests JS/Ruby/Python, the system also supports TypeScript, PHP, Java, Go (parser available but commented out), and Elixir. See language support table in Section 1.1.
+
 #### 4.3 Step 3: Observability & Debugging
 - [ ] Write tests for observability features (1hr)
   - Test: Failure details stored
@@ -606,7 +812,7 @@ Each phase below includes:
 - [ ] **HUMAN**: Prioritize follow-up items:
   - [ ] Test-framework-detector backend migration?
   - [ ] Enhanced retry logic for VALIDATE?
-  - [ ] Additional language support?
+  - [ ] Additional language support (beyond JS, TS, Python, Ruby, PHP, Java, Go*, Elixir)? *Go parser exists but commented out
   - [ ] Performance optimizations?
 - [ ] **HUMAN**: Create RFCs for approved items
 - [ ] **HUMAN**: Update product roadmap
@@ -666,6 +872,39 @@ The VALIDATE phase currently:
 - **Test Validation**: Run tests to ensure they actually fail (proving vulnerability exists)
 - **Backend Persistence**: Use PhaseDataClient API for all metadata storage and retrieval across phases
 
+#### 2.1.1 Test File Locations (Architecture Clarification)
+
+**Tests are committed to git in proper test directories:**
+
+| Language | Test Location | Example |
+|----------|--------------|---------|
+| **JavaScript/TypeScript** | `__tests__/security/` | `__tests__/security/rsolv-issue-1036.test.js` |
+| **Ruby** | `spec/security/` | `spec/security/rsolv_issue_1037_spec.rb` |
+| **Python** | `tests/security/` | `tests/security/test_rsolv_issue_1038.py` |
+| **PHP** | `tests/Security/` | `tests/Security/RsolvIssue1039Test.php` |
+| **Java** | `src/test/java/security/` | `src/test/java/security/RsolvIssue1040Test.java` |
+| **Go** | Same directory as code | `validator_rsolv_issue_1041_test.go` |
+| **Elixir** | `test/security/` | `test/security/rsolv_issue_1042_test.exs` |
+
+**Why these locations?**
+1. **Integration**: Tests run with normal test commands (`npm test`, `bundle exec rspec`, `pytest`)
+2. **Persistence**: Tests committed to validation branches, become part of security regression suite
+3. **Discoverability**: Developers see security tests in standard locations
+4. **No cleanup needed**: Tests are permanent security documentation
+
+**What's stored in PhaseDataClient API (NOT in git):**
+- `branchName`: `rsolv/validate/issue-{number}`
+- `testPath`: Relative path to test file
+- `framework`: Detected framework (jest, rspec, pytest, etc.)
+- `command`: Command to run test
+- `validated`: Boolean indicating if vulnerability confirmed
+- `testResults`: Execution output and timing
+- `timestamp`: When validation occurred
+
+**What's NOT used anymore:**
+- ❌ `.rsolv/tests/validation.test.js` (old JSON format)
+- ❌ `.rsolv/validation/issue-{number}.json` (old metadata format)
+
 ### 2.2 Test Framework Discovery
 
 **Existing Implementation**: We already have a comprehensive `test-framework-detector.ts` in RSOLV-action that detects frameworks across multiple languages.
@@ -674,13 +913,15 @@ The VALIDATE phase currently:
 
 | Language | AST Pattern Support | Test Framework Support |
 |----------|-------------------|----------------------|
-| **JavaScript** | ✅ 40+ patterns | ✅ Jest, Mocha, Jasmine, Vitest, Karma, Cypress, Playwright, AVA, Tape, QUnit, Bun |
+| **JavaScript** | ✅ 40+ patterns | ✅ Jest, Mocha, Jasmine, Vitest, Karma, Cypress, Playwright, AVA, Tape, QUnit, Bun, @testing-library |
+| **TypeScript** | ✅ 40+ patterns | ✅ Jest, Vitest, Mocha, Playwright (TypeScript-aware test generation) |
 | **Python** | ✅ 15+ patterns | ✅ pytest, unittest, nose2, doctest, hypothesis |
 | **Ruby** | ✅ 23+ patterns | ✅ RSpec, Minitest, Test::Unit, Cucumber, Capybara |
 | **Rails** | ✅ 20+ patterns | ✅ RSpec-Rails (variant), Minitest (Rails integration) |
 | **PHP** | ✅ 25+ patterns | ✅ PHPUnit, Pest, Codeception, PHPSpec, Behat |
 | **Java** | ✅ 16+ patterns | ✅ JUnit, TestNG, Mockito, Spock |
-| **Elixir** | ✅ 26+ patterns | ✅ ExUnit, ESpec |
+| **Go** | ✅ Parser available (commented out in registry) | ✅ testing (builtin), testify, ginkgo, gomega |
+| **Elixir** | ✅ 26+ patterns | ✅ ExUnit (builtin), ESpec |
 | **Django** | ✅ 18+ patterns | ✅ pytest-django, unittest (Python frameworks) |
 
 ```typescript
@@ -716,9 +957,16 @@ export class ValidationMode {
     const fileExt = vulnerableFile?.split('.').pop()?.toLowerCase();
     const extensionPreferences = {
       'js': ['jest', 'vitest', 'mocha'],
+      'jsx': ['jest', 'vitest', 'mocha'],
+      'ts': ['jest', 'vitest', 'mocha'],
+      'tsx': ['jest', 'vitest', 'mocha'],
       'py': ['pytest', 'unittest'],
       'rb': ['rspec', 'minitest'],
-      // ... see adaptive-test-generator.ts:324-331 for full mapping
+      'php': ['phpunit', 'pest'],
+      'java': ['junit', 'testng'],
+      'go': ['testing', 'testify', 'ginkgo'],
+      'ex': ['exunit', 'espec'],
+      'exs': ['exunit', 'espec']
     };
 
     const preferred = extensionPreferences[fileExt];

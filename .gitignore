@@ -66,3 +66,6 @@ nodegoat-demo/
 nodegoat-demo-*/
 nodegoat-vulnerability-demo/
 rsolv-demo-vulnerable/
+
+# RSOLV phase data artifacts
+.rsolv/
