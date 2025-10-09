@@ -3,7 +3,7 @@
  * This class provides a wrapper around the Claude Code TypeScript SDK
  * for enhanced context-gathering in repository analysis and solution generation.
  */
-import { query, type SDKMessage } from '@anthropic-ai/claude-code';
+import type { SDKMessage } from '@anthropic-ai/claude-code';
 import path from 'path';
 import fs from 'fs';
 import { logger } from '../../utils/logger.js';
@@ -219,7 +219,7 @@ Installation instructions:
         // For structured phases, we need core Edit/MultiEdit tools, not MCP tools
         // MCP tools like TodoWrite don't actually edit files and interfere with structured phases
         const useStructuredPhases = this.claudeConfig?.useStructuredPhases;
-        
+
         if (useStructuredPhases) {
           // Explicitly disable MCP for structured phases to ensure core tools are used
           queryOptions.mcpConfig = null;
@@ -229,7 +229,10 @@ Installation instructions:
           queryOptions.mcpConfig = mcpConfigPath;
           logger.info('Using MCP configuration from mcp-config.json, including sequential thinking');
         }
-        
+
+        // Dynamically import query function to avoid loading SDK at module level
+        const { query } = await import('@anthropic-ai/claude-code');
+
         for await (const message of query({
           prompt,
           options: queryOptions,
