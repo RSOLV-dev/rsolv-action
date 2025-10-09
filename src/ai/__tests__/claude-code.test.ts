@@ -5,6 +5,24 @@ import { test, expect, vi, describe } from 'vitest';
 import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
 import { AIConfig } from '../types.js';
 
+// Mock the Claude Code SDK to prevent loading the large library during tests
+// This significantly reduces memory usage and prevents OOM errors in CI
+vi.mock('@anthropic-ai/claude-code', () => ({
+  query: vi.fn(),
+  SDKMessage: {}
+}));
+
+// Mock the conversation logger to avoid file operations during tests
+vi.mock('../conversation-logger', () => ({
+  ConversationLogger: {
+    getInstance: () => ({
+      initialize: vi.fn().mockResolvedValue(undefined),
+      logConversation: vi.fn().mockResolvedValue(undefined),
+      logSummary: vi.fn().mockResolvedValue(undefined)
+    })
+  }
+}));
+
 // Mock the logger to avoid console output during tests
 vi.mock('../../utils/logger', () => ({
   Logger: class {

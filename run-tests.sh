@@ -133,9 +133,8 @@ fi
 # Build the command
 if [[ -n "$MEMORY_SAFE" ]]; then
   # Use sharding for memory-safe mode
-  # Increased to 32 shards to reduce memory per shard (for GitHub Actions 7GB limit)
-  # This splits the workload into ~36 tests per shard to avoid OOM in memory-intensive tests
-  TOTAL_SHARDS=32
+  # 16 shards provides good balance between execution time and memory usage
+  TOTAL_SHARDS=16
   echo "✓ Using sharded execution ($TOTAL_SHARDS shards)"
 
   # Create temporary directory for shard reports
