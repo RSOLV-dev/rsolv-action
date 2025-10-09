@@ -181,4 +181,30 @@ describe('MitigationMode - PhaseDataClient Integration', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('RFC-060 Phase 3.1: No Local File Fallback', () => {
+    test('should retrieve branchName exclusively from PhaseDataClient API', async () => {
+      // Arrange
+      mockRetrievePhaseResults.mockResolvedValue({
+        validate: {
+          'issue-789': {
+            validated: true,
+            branchName: 'rsolv/validate/issue-789',
+            testPath: '__tests__/security/issue-789.test.js'
+          }
+        }
+      });
+
+      // Act
+      const result = await mitigationMode.checkoutValidationBranch(mockIssue);
+
+      // Assert - PhaseDataClient was called (proves we're using API, not local files)
+      expect(mockRetrievePhaseResults).toHaveBeenCalledWith(
+        'test/webapp',
+        789,
+        'abc123def456'
+      );
+      expect(result).toBe(true);
+    });
+  });
 });

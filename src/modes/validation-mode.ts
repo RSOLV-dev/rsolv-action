@@ -175,7 +175,7 @@ export class ValidationMode {
       // RFC-060 Phase 2.2: Handle errors as validation error
       if (validationResult.error) {
         logger.warn(`Test execution error for issue #${issue.number}: ${validationResult.error}`);
-        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false);
+        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false, branchName || undefined);
 
         return {
           issueId: issue.number,
@@ -202,8 +202,8 @@ export class ValidationMode {
             await this.storeValidationResult(issue, testResults, validationResult);
           }
 
-          // RFC-060 Phase 2.2: Store via PhaseDataClient
-          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true);
+          // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
+          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined);
 
           // In testing mode, still mark as validated to allow full workflow testing
           return {
@@ -225,8 +225,8 @@ export class ValidationMode {
           // RFC-060 Phase 2.2: Add false-positive label
           await this.addGitHubLabel(issue, 'rsolv:false-positive');
 
-          // RFC-060 Phase 2.2: Store via PhaseDataClient
-          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false);
+          // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
+          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false, branchName || undefined);
 
           return {
             issueId: issue.number,
@@ -254,8 +254,8 @@ export class ValidationMode {
         // RFC-060 Phase 2.2: Add validated label
         await this.addGitHubLabel(issue, 'rsolv:validated');
 
-        // RFC-060 Phase 2.2: Store via PhaseDataClient
-        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true);
+        // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
+        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined);
 
         return {
           issueId: issue.number,
@@ -666,12 +666,13 @@ describe('Vulnerability Test', () => {
   }
 
   /**
-   * RFC-060 Phase 2.2: Store test execution results in PhaseDataClient
+   * RFC-060 Phase 2.2 & 3.1: Store test execution results in PhaseDataClient
    */
   private async storeTestExecutionInPhaseData(
     issue: IssueContext,
     testExecution: TestExecutionResult,
-    validated: boolean
+    validated: boolean,
+    branchName?: string
   ): Promise<void> {
     if (!this.phaseDataClient) {
       logger.debug('PhaseDataClient not available, skipping phase data storage');
@@ -685,6 +686,8 @@ describe('Vulnerability Test', () => {
           validate: {
             [issue.number]: {
               validated,
+              branchName,
+              testPath: testExecution.testFile,
               testExecutionResult: testExecution,
               timestamp: new Date().toISOString()
             }

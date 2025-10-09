@@ -33,6 +33,8 @@ export interface ScanVulnerability {
  */
 export interface ValidationPhaseData {
   validated: boolean;
+  branchName?: string;
+  testPath?: string;
   redTests?: VulnerabilityTestSuite;
   testResults?: GitValidationResult;
   testExecutionResult?: TestExecutionResult;

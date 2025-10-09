@@ -325,4 +325,35 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
       expect(result.falsePositiveReason).toContain('error');
     });
   });
+
+  describe('RFC-060 Phase 3.1: PhaseDataClient Metadata Storage', () => {
+    test('should store branchName and testPath in PhaseDataClient', async () => {
+      // Set up phaseDataClient
+      const mockPhaseDataClient = {
+        storePhaseResults: mockStorePhaseResults
+      } as any;
+      (validationMode as any).phaseDataClient = mockPhaseDataClient;
+
+      // Mock test failure (RED test fails = vulnerability exists)
+      mockValidateFixWithTests.mockResolvedValue({
+        success: false,
+        output: 'Test failed',
+        passed: false
+      });
+
+      mockStorePhaseResults.mockResolvedValue({ success: true });
+
+      await validationMode.validateVulnerability(mockIssue);
+
+      expect(mockStorePhaseResults).toHaveBeenCalled();
+      const storeCall = mockStorePhaseResults.mock.calls[0];
+
+      // Verify branchName and testPath are included in the stored data
+      expect(storeCall[0]).toBe('validate');
+      expect(storeCall[1].validate[123]).toHaveProperty('branchName');
+      expect(storeCall[1].validate[123]).toHaveProperty('testPath');
+      expect(storeCall[1].validate[123]).toHaveProperty('validated');
+      expect(storeCall[1].validate[123]).toHaveProperty('testExecutionResult');
+    });
+  });
 });

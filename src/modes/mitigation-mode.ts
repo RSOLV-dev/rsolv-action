@@ -50,82 +50,72 @@ export class MitigationMode {
   }
 
   /**
+   * RFC-060: Retrieve validation branch name from PhaseDataClient
+   */
+  private async getValidationBranchName(issue: IssueContext): Promise<string | undefined> {
+    if (!this.phaseDataClient) {
+      return undefined;
+    }
+
+    try {
+      const commitSha = this.getCurrentCommitSha();
+      const repo = `${issue.repository.owner}/${issue.repository.name}`;
+
+      logger.info(`Retrieving validation metadata from PhaseDataClient for ${repo} issue #${issue.number}`);
+      const phaseData = await this.phaseDataClient.retrievePhaseResults(
+        repo,
+        issue.number,
+        commitSha
+      );
+
+      if (!phaseData?.validate) {
+        return undefined;
+      }
+
+      const validationData = phaseData.validate[`issue-${issue.number}`];
+      return validationData?.branchName;
+    } catch (error) {
+      logger.warn(`Failed to retrieve validation metadata: ${error}`);
+      return undefined;
+    }
+  }
+
+  /**
    * RFC-058/RFC-060: Checkout validation branch for mitigation phase
    * Uses PhaseDataClient to retrieve validation metadata (no local file reads)
    */
   async checkoutValidationBranch(issue: IssueContext): Promise<boolean> {
     try {
-      let branchName: string | undefined;
+      const branchName = await this.getValidationBranchName(issue);
 
-      // RFC-060: Retrieve validation metadata from PhaseDataClient (preferred)
-      if (this.phaseDataClient) {
-        const commitSha = this.getCurrentCommitSha();
-        const repo = `${issue.repository.owner}/${issue.repository.name}`;
-
-        logger.info(`Retrieving validation metadata from PhaseDataClient for ${repo} issue #${issue.number}`);
-        const phaseData = await this.phaseDataClient.retrievePhaseResults(
-          repo,
-          issue.number,
-          commitSha
-        );
-
-        if (phaseData && phaseData.validate) {
-          const validationData = phaseData.validate[`issue-${issue.number}`];
-          if (validationData) {
-            branchName = (validationData as any).branchName;
-          }
-        }
-      }
-
-      // Fallback: Read from local JSON file (for tests and legacy support)
-      if (!branchName) {
-        logger.warn('PhaseDataClient not available or no data found, falling back to local JSON file');
-        const validationPath = path.join(
-          this.repoPath,
-          '.rsolv',
-          'validation',
-          `issue-${issue.number}.json`
-        );
-
-        if (fs.existsSync(validationPath)) {
-          const validationData = JSON.parse(fs.readFileSync(validationPath, 'utf-8'));
-          branchName = validationData.branchName;
-        }
-      }
       if (!branchName) {
         logger.info('No validation branch found, staying on current branch');
         return false;
       }
 
+      // Fetch the branch from remote (best effort)
       try {
-        // First try to fetch the branch from remote
-        try {
-          execSync(`git fetch origin ${branchName}`, { cwd: this.repoPath });
-          logger.info(`Fetched validation branch from remote: ${branchName}`);
-        } catch (fetchError) {
-          logger.warn(`Could not fetch validation branch from remote: ${fetchError}`);
-        }
+        execSync(`git fetch origin ${branchName}`, { cwd: this.repoPath });
+        logger.info(`Fetched validation branch from remote: ${branchName}`);
+      } catch (fetchError) {
+        logger.warn(`Could not fetch validation branch from remote: ${fetchError}`);
+      }
 
-        // Try to checkout the branch (local or remote)
+      // Try to checkout local branch first
+      try {
+        execSync(`git checkout ${branchName}`, { cwd: this.repoPath });
+        logger.info(`Checked out local validation branch: ${branchName}`);
+        return true;
+      } catch {
+        // If local doesn't exist, try remote
         try {
-          // First try local branch
-          execSync(`git checkout ${branchName}`, { cwd: this.repoPath });
-          logger.info(`Checked out local validation branch: ${branchName}`);
+          execSync(`git checkout -b ${branchName} origin/${branchName}`, { cwd: this.repoPath });
+          logger.info(`Checked out remote validation branch: origin/${branchName}`);
           return true;
-        } catch {
-          // If local doesn't exist, try remote
-          try {
-            execSync(`git checkout -b ${branchName} origin/${branchName}`, { cwd: this.repoPath });
-            logger.info(`Checked out remote validation branch: origin/${branchName}`);
-            return true;
-          } catch (remoteError) {
-            logger.warn(`Failed to checkout validation branch from remote: ${remoteError}`);
-            return false;
-          }
+        } catch (remoteError) {
+          logger.warn(`Failed to checkout validation branch from remote: ${remoteError}`);
+          return false;
         }
-      } catch (error) {
-        logger.warn(`Failed to checkout validation branch: ${error}`);
-        return false;
       }
     } catch (error) {
       logger.error(`Error checking out validation branch for issue #${issue.number}:`, error);
