@@ -26,6 +26,16 @@ jobs:
           CI: true
           NODE_OPTIONS: '--max-old-space-size=8192'
 
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: |
+            test-report.json
+            .vitest-shards/*.json
+          retention-days: 30
+
       - name: Run type check
         run: bun run typecheck
 
