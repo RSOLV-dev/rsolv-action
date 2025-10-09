@@ -121,9 +121,10 @@ fi
 
 # Set Node.js memory limit based on mode
 if [[ -n "$MEMORY_SAFE" ]]; then
-  # Use 4GB for memory-safe mode (GitHub Actions has 7GB total)
-  export NODE_OPTIONS="--max-old-space-size=4096"
-  echo "✓ Node.js memory limit set to 4GB (memory-safe mode)"
+  # Use 5GB for memory-safe mode (GitHub Actions has 7GB total)
+  # Vitest worker processes have significant overhead during initialization
+  export NODE_OPTIONS="--max-old-space-size=5120"
+  echo "✓ Node.js memory limit set to 5GB (memory-safe mode)"
 else
   export NODE_OPTIONS="--max-old-space-size=8192"
   echo "✓ Node.js memory limit set to 8GB"
@@ -132,8 +133,8 @@ fi
 # Build the command
 if [[ -n "$MEMORY_SAFE" ]]; then
   # Use sharding for memory-safe mode
-  # 32 shards to keep memory usage low per shard
-  TOTAL_SHARDS=32
+  # 16 shards - balance between execution time and memory isolation
+  TOTAL_SHARDS=16
   echo "✓ Using sharded execution ($TOTAL_SHARDS shards)"
 
   # Create temporary directory for shard reports
