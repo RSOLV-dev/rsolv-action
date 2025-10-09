@@ -51,6 +51,7 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+.envrc
 
 # Act secrets file (NEVER commit)
 .secrets.act
