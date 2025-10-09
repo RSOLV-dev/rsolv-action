@@ -116,6 +116,10 @@ describe('Pattern Availability Regression Test', () => {
       // Ensure we're NOT using local patterns for quality checks
       // (we want to check the API patterns)
       delete process.env.USE_LOCAL_PATTERNS;
+
+      if (!process.env.RSOLV_API_KEY) {
+        console.warn('⚠️ RSOLV_API_KEY not set - skipping pattern quality tests');
+      }
     });
 
     afterAll(() => {
@@ -128,29 +132,39 @@ describe('Pattern Availability Regression Test', () => {
     });
 
     it('should have valid regex patterns', async () => {
+      if (!process.env.RSOLV_API_KEY) {
+        // Skip if no API key
+        return;
+      }
+
       const source = createPatternSource();
       const patterns = await source.getAllPatterns();
-      
+
       for (const pattern of patterns) {
         // Check pattern has required fields
         expect(pattern.id, 'Pattern should have id').toBeDefined();
         expect(pattern.name, 'Pattern should have name').toBeDefined();
         expect(pattern.type, 'Pattern should have type').toBeDefined();
         expect(pattern.severity, 'Pattern should have severity').toBeDefined();
-        
+
         // Check regex patterns are valid
         if (pattern.patterns?.regex) {
           for (const regex of pattern.patterns.regex) {
             expect(regex).toBeInstanceOf(RegExp);
-            
+
             // Test regex doesn't throw
             expect(() => 'test'.match(regex)).not.toThrow();
           }
         }
       }
     });
-    
+
     it('should have unique pattern IDs', async () => {
+      if (!process.env.RSOLV_API_KEY) {
+        // Skip if no API key
+        return;
+      }
+
       const source = createPatternSource();
       const patterns = await source.getAllPatterns();
 

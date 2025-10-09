@@ -32,16 +32,16 @@ jobs:
       - name: Run pattern regression tests
         run: |
           echo "🔍 Running pattern availability regression tests..."
-          bun test test/regression/pattern-availability.test.ts
+          bun x vitest run test/regression/pattern-availability.test.ts
         env:
           # Don't use API key for minimal pattern baseline tests
           USE_LOCAL_PATTERNS: 'false'
-          
+
       - name: Check with API patterns (if available)
         if: github.event_name != 'pull_request'
         run: |
           echo "🌐 Testing with API patterns..."
-          bun test test/regression/pattern-availability.test.ts
+          bun x vitest run test/regression/pattern-availability.test.ts
         env:
           RSOLV_API_KEY: ${{ secrets.RSOLV_API_KEY }}
           
