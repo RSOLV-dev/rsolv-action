@@ -121,10 +121,10 @@ fi
 
 # Set Node.js memory limit based on mode
 if [[ -n "$MEMORY_SAFE" ]]; then
-  # Use 4GB for memory-safe mode (GitHub Actions has 7GB total)
-  # Single fork mode reduces worker overhead
-  export NODE_OPTIONS="--max-old-space-size=4096"
-  echo "✓ Node.js memory limit set to 4GB (memory-safe mode)"
+  # Use 6GB for memory-safe mode (GitHub Actions has 7GB total)
+  # Shard 14 consistently needs >5GB due to vitest overhead
+  export NODE_OPTIONS="--max-old-space-size=6144"
+  echo "✓ Node.js memory limit set to 6GB (memory-safe mode)"
 else
   export NODE_OPTIONS="--max-old-space-size=8192"
   echo "✓ Node.js memory limit set to 8GB"
