@@ -20,20 +20,14 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     
     // Performance settings based on environment
-    pool: isMemoryConstrained ? 'forks' : 'threads',
-    poolOptions: isMemoryConstrained
-      ? {
-          forks: {
-            singleFork: true,  // Run all tests in single process
-            execArgv: ['--expose-gc'],  // Allow manual garbage collection
-          }
-        }
-      : {
-          threads: {
-            maxThreads: 4,
-            minThreads: 1,
-          }
-        },
+    // Use forks with single process to avoid worker overhead memory issues
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,  // Run all tests in single process to avoid worker memory overhead
+        execArgv: isMemoryConstrained ? ['--expose-gc'] : [],  // Allow manual GC in CI
+      }
+    },
     
     // Timeout settings
     testTimeout: isLiveAPI ? 60000 : 10000,
