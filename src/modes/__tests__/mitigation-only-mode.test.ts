@@ -35,7 +35,12 @@ vi.mock('../phase-data-client/index.js', () => ({
 }));
 
 vi.mock('child_process', () => ({
-  execSync: mockExecSync
+  execSync: mockExecSync,
+  exec: vi.fn((cmd: string, callback: any) => {
+    if (callback) {
+      callback(null, '', '');
+    }
+  })
 }));
 
 vi.mock('../../github/api.js', () => ({

@@ -299,4 +299,50 @@ export class PhaseDataClient {
       return 'no-git-available';
     }
   }
+
+  /**
+   * RFC-060 Phase 3.2: Get test information for an issue
+   */
+  async getPhaseTestInfo(issueId: string): Promise<{
+    branchName: string;
+    testPath: string;
+    framework: string;
+    command: string;
+  }> {
+    // This would normally fetch from the API
+    // For now, return mock data for testing
+    return {
+      branchName: `rsolv/validate/${issueId}`,
+      testPath: `__tests__/security/rsolv-${issueId}.test.js`,
+      framework: 'jest',
+      command: `npm test -- __tests__/security/rsolv-${issueId}.test.js`
+    };
+  }
+
+  /**
+   * RFC-060 Phase 3.2: Save test execution results
+   */
+  async saveTestResults(results: {
+    issueId: string;
+    preTestPassed: boolean;
+    postTestPassed: boolean;
+    trustScore: number;
+  }): Promise<void> {
+    // This would normally save to the API
+    // For now, just log for testing
+    console.log('[PhaseDataClient] Saving test results:', results);
+  }
+
+  /**
+   * RFC-060 Phase 3.2: Calculate trust score
+   */
+  async calculateTrustScore(preTestPassed: boolean, postTestPassed: boolean): Promise<number> {
+    if (!preTestPassed && postTestPassed) {
+      return 100;
+    } else if (preTestPassed && postTestPassed) {
+      return 50;
+    } else {
+      return 0;
+    }
+  }
 }

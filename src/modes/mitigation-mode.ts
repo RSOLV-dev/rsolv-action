@@ -8,10 +8,12 @@
 import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { vendorFilterUtils } from './vendor-utils.js';
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PhaseDataClient } from './phase-data-client/index.js';
+import { TestRunner } from '../services/test-runner.js';
+import { buildTestAwarePrompt as buildPromptFromTemplate, getTrustScoreExplanation } from '../prompts/test-aware-mitigation.js';
 
 export class MitigationMode {
   private config: ActionConfig;
@@ -182,7 +184,7 @@ export class MitigationMode {
       }).filter(Boolean);
 
       // Step 4: Generate enhanced prompt with test context
-      const enhancedPrompt = this.buildTestAwarePrompt(issue, testContents as Array<{path: string, content: string}>);
+      const enhancedPrompt = this.buildLegacyTestAwarePrompt(issue, testContents as Array<{path: string, content: string}>);
 
       logger.info(`Generated test-aware mitigation prompt for issue #${issue.number}`);
       logger.info(`- Validation branch: ${branchCheckedOut ? 'checked out' : 'not available'}`);
@@ -203,9 +205,135 @@ export class MitigationMode {
 
 
   /**
-   * RFC-058: Build enhanced Claude Code prompt with test specifications
+   * RFC-060 Phase 3.2: Prepare test context from validation branch
    */
-  private buildTestAwarePrompt(issue: IssueContext, testContents: Array<{path: string, content: string}>): string {
+  async prepareTestContext(issueId: string): Promise<{testContent: string, testPath: string, branchName: string}> {
+    if (!this.phaseDataClient) {
+      throw new Error('PhaseDataClient not configured for test-aware mitigation');
+    }
+
+    // Get test info from Phase Data Client
+    const testInfo = await this.phaseDataClient.getPhaseTestInfo(issueId);
+
+    // Checkout validation branch
+    logger.info(`Checking out validation branch: ${testInfo.branchName}`);
+    await new Promise<void>((resolve, reject) => {
+      exec(`git checkout ${testInfo.branchName}`, (error: any) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    // Read test file from git
+    const testContent = fs.readFileSync(testInfo.testPath, 'utf-8');
+
+    return {
+      testContent,
+      testPath: testInfo.testPath,
+      branchName: testInfo.branchName
+    };
+  }
+
+  /**
+   * RFC-060 Phase 3.2: Build test-aware prompt with RED test content
+   */
+  async buildTestAwarePrompt(issueId: string, basePrompt: string): Promise<string> {
+    const context = await this.prepareTestContext(issueId);
+
+    // Use the template function from prompts module
+    return buildPromptFromTemplate(
+      {
+        issueId,
+        title: '', // Will be in basePrompt
+        description: ''
+      },
+      {
+        testPath: context.testPath,
+        testContent: context.testContent
+      },
+      basePrompt
+    );
+  }
+
+  /**
+   * RFC-060 Phase 3.2: Run test before applying fix
+   */
+  async runPreFixTest(issueId: string): Promise<{passed: boolean, output: string}> {
+    return this.runTestForIssue(issueId);
+  }
+
+  /**
+   * RFC-060 Phase 3.2: Run test after applying fix
+   */
+  async runPostFixTest(issueId: string): Promise<{passed: boolean, output: string}> {
+    return this.runTestForIssue(issueId);
+  }
+
+  /**
+   * Shared test execution logic
+   */
+  private async runTestForIssue(issueId: string): Promise<{passed: boolean, output: string}> {
+    if (!this.phaseDataClient) {
+      throw new Error('PhaseDataClient not configured');
+    }
+
+    const testInfo = await this.phaseDataClient.getPhaseTestInfo(issueId);
+    const testRunner = new TestRunner();
+
+    return await testRunner.runTest(testInfo.command);
+  }
+
+  /**
+   * RFC-060 Phase 3.2: Save test results to PhaseDataClient
+   */
+  async saveTestResults(results: any): Promise<void> {
+    if (!this.phaseDataClient) {
+      throw new Error('PhaseDataClient not configured');
+    }
+
+    await this.phaseDataClient.saveTestResults(results);
+  }
+
+  /**
+   * RFC-060 Phase 3.2: Calculate trust score based on test results
+   */
+  async calculateTrustScore(preTestPassed: boolean, postTestPassed: boolean): Promise<number> {
+    // Trust score calculation logic:
+    // - Both fail = 0 (fix didn't work)
+    // - Before fail, after pass = 100 (perfect fix)
+    // - Before pass, after pass = 50 (test issue or false positive)
+    // - Before pass, after fail = 0 (broke something)
+
+    if (!preTestPassed && postTestPassed) {
+      return 100; // Perfect fix
+    } else if (preTestPassed && postTestPassed) {
+      return 50; // Test might have been passing already (false positive)
+    } else {
+      return 0; // Fix didn't work or broke something
+    }
+  }
+
+  /**
+   * RFC-060 Phase 3.2: Run test with error handling
+   */
+  async runTestSafely(issueId: string): Promise<{passed: boolean, output?: string, error?: string}> {
+    try {
+      return await this.runTestForIssue(issueId);
+    } catch (error: any) {
+      return {
+        passed: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * RFC-058: Build enhanced Claude Code prompt with test specifications (legacy)
+   */
+  private buildLegacyTestAwarePrompt(issue: IssueContext, testContents: Array<{path: string, content: string}>): string {
     const basePrompt = `
 Fix the security vulnerability described in issue #${issue.number}: "${issue.title}"
 
