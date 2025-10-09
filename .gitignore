@@ -32,6 +32,10 @@ coverage/
 *.lcov
 .nyc_output
 
+# Test artifacts
+.vitest-shards/
+test-report.json
+
 # IDE and editor files
 .idea/
 .vscode/
