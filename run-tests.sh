@@ -121,8 +121,9 @@ fi
 
 # Set Node.js memory limit based on mode
 if [[ -n "$MEMORY_SAFE" ]]; then
-  export NODE_OPTIONS="--max-old-space-size=8192"
-  echo "✓ Node.js memory limit set to 8GB"
+  # Use 4GB for memory-safe mode (GitHub Actions has 7GB total)
+  export NODE_OPTIONS="--max-old-space-size=4096"
+  echo "✓ Node.js memory limit set to 4GB (memory-safe mode)"
 else
   export NODE_OPTIONS="--max-old-space-size=8192"
   echo "✓ Node.js memory limit set to 8GB"
@@ -131,23 +132,25 @@ fi
 # Build the command
 if [[ -n "$MEMORY_SAFE" ]]; then
   # Use sharding for memory-safe mode
-  echo "✓ Using sharded execution (8 shards, 4 parallel at a time)"
+  # Increased to 16 shards to reduce memory per shard (for GitHub Actions 7GB limit)
+  TOTAL_SHARDS=16
+  echo "✓ Using sharded execution ($TOTAL_SHARDS shards)"
 
   # Create temporary directory for shard reports
   SHARD_DIR=".vitest-shards"
   mkdir -p $SHARD_DIR
   rm -f $SHARD_DIR/*.json
 
-  # Run 8 shards sequentially (1 at a time)
+  # Run shards sequentially (1 at a time)
   # This prevents memory accumulation issues
-  for i in 1 2 3 4 5 6 7 8; do
+  for i in $(seq 1 $TOTAL_SHARDS); do
     echo ""
-    echo -e "${GREEN}Running shard $i/8...${NC}"
+    echo -e "${GREEN}Running shard $i/$TOTAL_SHARDS...${NC}"
 
     if [[ -n "$JSON_OUTPUT" ]]; then
-      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E bun x vitest run --shard=$i/8 --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E bun x vitest run --shard=$i/$TOTAL_SHARDS --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
     else
-      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E bun x vitest run --shard=$i/8 $COVERAGE"
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E bun x vitest run --shard=$i/$TOTAL_SHARDS $COVERAGE"
     fi
 
     # Run shard and check exit code
@@ -158,7 +161,7 @@ if [[ -n "$MEMORY_SAFE" ]]; then
       TEST_EXIT_CODE=$SHARD_EXIT_CODE
     fi
 
-    echo -e "${GREEN}✓ Shard $i/8 complete${NC}"
+    echo -e "${GREEN}✓ Shard $i/$TOTAL_SHARDS complete${NC}"
   done
   
   # Merge JSON reports if needed
