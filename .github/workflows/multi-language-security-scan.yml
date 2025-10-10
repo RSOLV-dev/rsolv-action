@@ -2,24 +2,15 @@ name: Multi-Language Security Scan
 
 on:
   workflow_dispatch:
-    inputs:
-      test_mode:
-        description: 'Test mode to run (scan, validate, mitigate, or full)'
-        required: false
-        default: 'full'
-        type: choice
-        options:
-          - full
-          - scan
-          - validate
-          - mitigate
   push:
-    branches:
-      - 'main'
-      - 'feature/**'
+    branches: [main, 'feature/**']
+
+env:
+  DOCKER_IMAGE: rsolv/action:test
+  WORKSPACE_PATH: /workspace
 
 jobs:
-  multi-language-test:
+  security-scan:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -28,228 +19,123 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test:
+        include:
           - lang: javascript
             repo: RSOLV-dev/nodegoat-vulnerability-demo
             framework: jest
-            branch: main
           - lang: ruby
             repo: RSOLV-dev/railsgoat
             framework: rspec
-            branch: main
           - lang: python
             repo: somevendor/flask-vulnerable-app
             framework: pytest
-            branch: main
 
     steps:
-      - name: Checkout RSOLV-action
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           path: rsolv-action
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
 
-      - name: Install RSOLV-action dependencies
+      - name: Build action
         working-directory: rsolv-action
-        run: bun install
-
-      - name: Build RSOLV-action Docker image
-        working-directory: rsolv-action
-        run: docker build -t rsolv/action:test .
-
-      - name: Clone test repository (${{ matrix.test.lang }})
         run: |
-          git clone https://github.com/${{ matrix.test.repo }}.git test-repo
-          cd test-repo
-          git checkout ${{ matrix.test.branch }}
+          bun install
+          docker build -t $DOCKER_IMAGE .
 
-      - name: Run SCAN phase (${{ matrix.test.lang }})
-        id: scan
+      - name: Clone test repo
+        run: git clone --depth=1 https://github.com/${{ matrix.repo }}.git test-repo
+
+      - name: Run security phases
+        id: phases
         working-directory: test-repo
         run: |
-          docker run \
-            -v $(pwd):/workspace \
-            -w /workspace \
-            -e RSOLV_MODE=scan \
-            -e RSOLV_SCAN_MODE=scan \
-            -e RSOLV_ENABLE_SECURITY_ANALYSIS=true \
-            -e GITHUB_WORKSPACE=/workspace \
-            -e GITHUB_OUTPUT=/tmp/github_output \
-            -e INPUT_MODE=scan \
-            rsolv/action:test
+          run_phase() {
+            local phase=$1
+            local extra_env=$2
 
-          # Extract scan results if available
-          if [ -f scan-results.json ]; then
-            echo "scan_results=$(cat scan-results.json | jq -c .)" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
+            docker run --rm \
+              -v $(pwd):$WORKSPACE_PATH \
+              -w $WORKSPACE_PATH \
+              -e RSOLV_MODE=$phase \
+              -e INPUT_MODE=$phase \
+              -e GITHUB_WORKSPACE=$WORKSPACE_PATH \
+              -e GITHUB_OUTPUT=/tmp/github_output \
+              $extra_env \
+              $DOCKER_IMAGE
 
-      - name: Run VALIDATE phase (${{ matrix.test.lang }})
-        id: validate
-        if: steps.scan.outcome == 'success'
-        working-directory: test-repo
-        run: |
-          docker run \
-            -v $(pwd):/workspace \
-            -w /workspace \
-            -e RSOLV_MODE=validate \
-            -e RSOLV_ENABLE_AST_VALIDATION=true \
-            -e GITHUB_WORKSPACE=/workspace \
-            -e GITHUB_OUTPUT=/tmp/github_output \
-            -e INPUT_MODE=validate \
-            rsolv/action:test
+            return $?
+          }
 
-          # Extract validation results if available
-          if [ -f validation-results.json ]; then
-            echo "validation_results=$(cat validation-results.json | jq -c .)" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
+          # Run each phase and track results
+          run_phase scan "-e RSOLV_SCAN_MODE=scan -e RSOLV_ENABLE_SECURITY_ANALYSIS=true" && \
+            echo "scan=success" >> $GITHUB_OUTPUT || echo "scan=failure" >> $GITHUB_OUTPUT
 
-      - name: Run MITIGATE phase (${{ matrix.test.lang }})
-        id: mitigate
-        if: steps.validate.outcome == 'success'
-        working-directory: test-repo
-        run: |
-          docker run \
-            -v $(pwd):/workspace \
-            -w /workspace \
-            -e RSOLV_MODE=mitigate \
-            -e RSOLV_USE_GIT_BASED_EDITING=true \
-            -e GITHUB_WORKSPACE=/workspace \
-            -e GITHUB_OUTPUT=/tmp/github_output \
-            -e INPUT_MODE=mitigate \
-            -e ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }} \
-            rsolv/action:test
-        continue-on-error: true
+          run_phase validate "-e RSOLV_ENABLE_AST_VALIDATION=true" && \
+            echo "validate=success" >> $GITHUB_OUTPUT || echo "validate=failure" >> $GITHUB_OUTPUT
 
-      - name: Verify results (${{ matrix.test.lang }})
-        working-directory: test-repo
-        run: |
-          echo "=== Test Results for ${{ matrix.test.lang }} ==="
-          echo "SCAN: ${{ steps.scan.outcome }}"
-          echo "VALIDATE: ${{ steps.validate.outcome }}"
-          echo "MITIGATE: ${{ steps.mitigate.outcome }}"
+          run_phase mitigate "-e RSOLV_USE_GIT_BASED_EDITING=true -e ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" && \
+            echo "mitigate=success" >> $GITHUB_OUTPUT || echo "mitigate=failure" >> $GITHUB_OUTPUT
 
-          # Check for expected output files
-          echo ""
-          echo "=== Generated Files ==="
-          ls -la *.json 2>/dev/null || echo "No JSON result files found"
+          # Verify changes were made
+          modified=$(git status --short | wc -l)
+          echo "modified=$modified" >> $GITHUB_OUTPUT
 
-          # Show git status to see any changes
-          echo ""
-          echo "=== Git Status (MITIGATE changes) ==="
-          git status --short
-
-          # Count files modified
-          MODIFIED_COUNT=$(git status --short | wc -l)
-          echo ""
-          echo "Modified files: $MODIFIED_COUNT"
-
-          # Fail if no files were modified in MITIGATE phase
-          if [ "${{ steps.mitigate.outcome }}" == "success" ] && [ "$MODIFIED_COUNT" -eq 0 ]; then
-            echo "ERROR: MITIGATE phase succeeded but no files were modified"
+          if [ "$modified" -eq 0 ]; then
+            echo "⚠️ No files modified by MITIGATE phase"
             exit 1
           fi
 
-      - name: Upload test results
+      - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.test.lang }}
-          path: |
-            test-repo/*.json
-            test-repo/scan-results.json
-            test-repo/validation-results.json
-            test-repo/mitigation-results.json
+          name: ${{ matrix.lang }}-results
+          path: test-repo/**/*.{json,log}
           retention-days: 30
 
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-logs-${{ matrix.test.lang }}
-          path: |
-            test-repo/*.log
-            test-repo/.rsolv/
-          retention-days: 7
-
-      - name: Comment on failure
-        if: failure()
+      - name: Comment on PR failure
+        if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const lang = '${{ matrix.test.lang }}';
-            const scanResult = '${{ steps.scan.outcome }}';
-            const validateResult = '${{ steps.validate.outcome }}';
-            const mitigateResult = '${{ steps.mitigate.outcome }}';
+            await github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ❌ Security scan failed: ${{ matrix.lang }}
 
-            const body = `## ❌ Multi-Language Test Failed: ${lang}
+              **Results:** SCAN: ${{ steps.phases.outputs.scan }} | VALIDATE: ${{ steps.phases.outputs.validate }} | MITIGATE: ${{ steps.phases.outputs.mitigate }}
+              **Modified files:** ${{ steps.phases.outputs.modified }}
 
-            **Phase Results:**
-            - SCAN: ${scanResult}
-            - VALIDATE: ${validateResult}
-            - MITIGATE: ${mitigateResult}
-
-            **Repository:** ${{ matrix.test.repo }}
-            **Framework:** ${{ matrix.test.framework }}
-
-            Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.`;
-
-            // Only comment on PR if this is a PR
-            if (context.payload.pull_request) {
-              github.rest.issues.createComment({
-                issue_number: context.payload.pull_request.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: body
-              });
-            }
+              [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            });
 
   summary:
     runs-on: ubuntu-latest
-    needs: multi-language-test
+    needs: security-scan
     if: always()
     steps:
-      - name: Check all tests passed
-        run: |
-          echo "=== Multi-Language Test Summary ==="
-          echo "All matrix jobs completed"
-
-          # This job will succeed even if individual tests failed
-          # Check the individual job results in the matrix
-          exit 0
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: all-results
+          path: results
 
-      - name: Generate summary report
+      - name: Generate summary
         run: |
-          echo "# Multi-Language Security Scan Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Test Configuration" >> $GITHUB_STEP_SUMMARY
-          echo "- **Workflow Run**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          cat >> $GITHUB_STEP_SUMMARY <<'EOF'
+          # Multi-Language Security Scan Results
 
-          echo "## Tested Languages" >> $GITHUB_STEP_SUMMARY
-          echo "- JavaScript (Jest)" >> $GITHUB_STEP_SUMMARY
-          echo "- Ruby (RSpec)" >> $GITHUB_STEP_SUMMARY
-          echo "- Python (Pytest)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          **Run:** ${{ github.run_id }}
+          **Branch:** ${{ github.ref_name }}
+          **Trigger:** ${{ github.event_name }}
 
-          echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "Test results and logs have been uploaded as artifacts." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          ## Languages Tested
+          - JavaScript (Jest)
+          - Ruby (RSpec)
+          - Python (Pytest)
 
-          # List all artifacts
-          if [ -d "all-results" ]; then
-            echo "### Available Artifacts" >> $GITHUB_STEP_SUMMARY
-            ls -R all-results >> $GITHUB_STEP_SUMMARY
-          fi
+          ## Artifacts
+          Results available in workflow artifacts.
+          EOF
