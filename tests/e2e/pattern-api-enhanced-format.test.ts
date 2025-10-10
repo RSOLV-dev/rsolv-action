@@ -38,10 +38,11 @@ describe('Pattern API Enhanced Format E2E', () => {
         return;
       }
 
-      const patterns = await client.fetchPatterns('javascript');
-      
+      const result = await client.fetchPatterns('javascript');
+
       // Should have patterns
-      expect(patterns.length).toBeGreaterThan(0);
+      expect(result.patterns.length).toBeGreaterThan(0);
+      const patterns = result.patterns;
       
       // Find a pattern that should have enhanced features
       const evalPattern = patterns.find(p => p.id === 'js-eval-usage' || p.name.includes('eval'));
@@ -99,8 +100,9 @@ describe('Pattern API Enhanced Format E2E', () => {
         return;
       }
 
-      const patterns = await client.fetchPatterns('javascript');
-      
+      const result = await client.fetchPatterns('javascript');
+      const patterns = result.patterns;
+
       // Look for patterns with various flag combinations
       const patternsWithFlags = patterns.filter(p => 
         p.patterns.regex.some(r => r.flags.length > 0)
@@ -139,8 +141,9 @@ describe('Pattern API Enhanced Format E2E', () => {
         cacheEnabled: false
       });
 
-      const patterns = await standardClient.fetchPatterns('javascript');
-      
+      const result = await standardClient.fetchPatterns('javascript');
+      const patterns = result.patterns;
+
       // Should still work with standard format
       expect(patterns.length).toBeGreaterThan(0);
       
@@ -169,8 +172,9 @@ describe('Pattern API Enhanced Format E2E', () => {
         cacheEnabled: false
       });
 
-      const patterns = await demoClient.fetchPatterns('javascript');
-      
+      const result = await demoClient.fetchPatterns('javascript');
+      const patterns = result.patterns;
+
       // Should get demo patterns
       expect(patterns.length).toBeGreaterThan(0);
       
@@ -202,10 +206,10 @@ describe('Pattern API Enhanced Format E2E', () => {
         cacheEnabled: false
       });
 
-      const patterns = await fallbackClient.fetchPatterns('javascript');
-      
+      const result = await fallbackClient.fetchPatterns('javascript');
+
       // Should return empty array (or local patterns if implemented)
-      expect(Array.isArray(patterns)).toBe(true);
+      expect(Array.isArray(result.patterns)).toBe(true);
     });
   });
 });

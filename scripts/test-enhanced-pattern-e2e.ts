@@ -37,7 +37,7 @@ async function testEnhancedPatternE2E() {
 
     // Fetch JavaScript patterns with enhanced format
     console.log('\n📦 Fetching JavaScript patterns (enhanced format)...');
-    const patterns = await client.fetchPatterns('javascript');
+    const { patterns } = await client.fetchPatterns('javascript');
     console.log(`   Found ${patterns.length} patterns`);
 
     // Show sample patterns

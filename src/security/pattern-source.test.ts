@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { 
-  LocalPatternSource, 
-  ApiPatternSource, 
+import {
+  LocalPatternSource,
+  ApiPatternSource,
   HybridPatternSource,
-  createPatternSource 
+  createPatternSource
 } from './pattern-source.js';
 import { VulnerabilityType } from './types.js';
 
@@ -16,6 +16,9 @@ vi.mock('../utils/logger.js', () => ({
     error: vi.fn(() => {})
   }
 }));
+
+// Import mock after setting up the mock
+import { logger as mockLogger } from '../utils/logger.js';
 
 // Save original fetch
 const originalFetch = global.fetch;
@@ -135,9 +138,94 @@ describe('ApiPatternSource', () => {
         status: 500,
         statusText: 'Internal Server Error'
       }));
-      
+
       source = new ApiPatternSource('test-api-key');
       await expect(source.getPatternsByLanguage('python')).rejects.toThrow('Failed to fetch patterns: 500 Internal Server Error');
+    });
+
+    it('should log "Retrieved from API" when patterns fetched from API', async () => {
+      const mockPatterns = [{
+        id: 'test-1',
+        type: 'xss',
+        severity: 'high',
+        patterns: ['test.*pattern'],
+        description: 'Test pattern',
+        recommendation: 'Fix it',
+        cwe_id: 'CWE-79',
+        owasp_category: 'A03:2021',
+        languages: ['javascript'],
+        test_cases: { vulnerable: [], safe: [] }
+      }];
+
+      global.fetch = vi.fn(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          count: 1,
+          patterns: mockPatterns
+        })
+      }));
+
+      source = new ApiPatternSource('test-api-key');
+
+      // Clear previous calls
+      mockLogger.info.mockClear();
+
+      await source.getPatternsByLanguage('javascript');
+
+      // Check that log messages indicate API fetch
+      const logCalls = mockLogger.info.mock.calls;
+      const relevantLog = logCalls.find((call: any[]) =>
+        typeof call[0] === 'string' && call[0].includes('Retrieved') && call[0].includes('from API')
+      );
+
+      expect(relevantLog).toBeDefined();
+      expect(relevantLog?.[0]).toContain('from API');
+    });
+
+    it('should log "Retrieved from cache" when patterns served from cache', async () => {
+      const mockPatterns = [{
+        id: 'test-1',
+        type: 'xss',
+        severity: 'high',
+        patterns: ['test.*pattern'],
+        description: 'Test pattern',
+        recommendation: 'Fix it',
+        cwe_id: 'CWE-79',
+        owasp_category: 'A03:2021',
+        languages: ['javascript'],
+        test_cases: { vulnerable: [], safe: [] }
+      }];
+
+      global.fetch = vi.fn(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          count: 1,
+          patterns: mockPatterns
+        })
+      }));
+
+      source = new ApiPatternSource('test-api-key');
+
+      // First call - should fetch from API
+      await source.getPatternsByLanguage('javascript');
+
+      // Clear logs
+      mockLogger.info.mockClear();
+
+      // Second call - should use cache
+      await source.getPatternsByLanguage('javascript');
+
+      // Check that log messages indicate cache hit
+      const logCalls = mockLogger.info.mock.calls;
+      const relevantLog = logCalls.find((call: any[]) =>
+        typeof call[0] === 'string' && call[0].includes('Retrieved') && call[0].includes('from cache')
+      );
+
+      expect(relevantLog).toBeDefined();
+      expect(relevantLog?.[0]).toContain('from cache');
+
+      // Verify fetch was only called once (not called on second request)
+      expect(global.fetch).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -72,8 +72,9 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
     });
     
     test('fetchPatterns response should not contain tier fields', async () => {
-      const patterns = await client.fetchPatterns('javascript');
-      
+      const result = await client.fetchPatterns('javascript');
+      const patterns = result.patterns;
+
       // Patterns should not have tier field
       patterns.forEach(pattern => {
         expect(pattern).not.toHaveProperty('tier');
@@ -82,8 +83,9 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
     });
     
     test('fetchPatterns should return all patterns with valid API key', async () => {
-      const patterns = await client.fetchPatterns('javascript');
-      
+      const result = await client.fetchPatterns('javascript');
+      const patterns = result.patterns;
+
       expect(patterns).toHaveLength(2);
       expect(patterns[0].id).toBe('js-sql-injection');
       expect(patterns[1].id).toBe('js-xss');
@@ -114,8 +116,9 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
       }));
       global.fetch = fetchMock;
       
-      const patterns = await unauthClient.fetchPatterns('javascript');
-      
+      const result = await unauthClient.fetchPatterns('javascript');
+      const patterns = result.patterns;
+
       expect(patterns).toHaveLength(1);
       // Should not have Authorization header
       const headers = fetchMock.mock.calls[0][1]?.headers || {};
@@ -125,18 +128,6 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
       if (originalApiKey) {
         process.env.RSOLV_API_KEY = originalApiKey;
       }
-    });
-    
-    test('deprecated fetchPatternsByTier should still work for backward compatibility', async () => {
-      const patterns = await client.fetchPatternsByTier('javascript', 'public');
-      
-      // Should call fetchPatterns internally
-      expect(patterns).toHaveLength(2);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      
-      // Should not pass tier to API
-      const [url] = fetchMock.mock.calls[0];
-      expect(url).not.toContain('tier=public');
     });
     
     test('PatternResponse type should not require tier fields', async () => {
@@ -160,7 +151,8 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
       }));
       global.fetch = fetchMock;
       
-      const patterns = await client.fetchPatterns('javascript');
+      const result = await client.fetchPatterns('javascript');
+      const patterns = result.patterns;
       expect(patterns).toBeDefined();
       expect(patterns).toHaveLength(2);
     });
@@ -228,8 +220,8 @@ describe('PatternAPIClient - Tier Removal (TDD)', () => {
       // Fetch patterns for all languages
       let totalCount = 0;
       for (const lang of Object.keys(languageCounts)) {
-        const patterns = await client.fetchPatterns(lang);
-        totalCount += patterns.length;
+        const result = await client.fetchPatterns(lang);
+        totalCount += result.patterns.length;
       }
       
       // Should be around 132 language patterns (not including framework patterns)

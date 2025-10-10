@@ -100,15 +100,15 @@ describe('PatternAPIClient', () => {
         json: async () => mockResponse
       });
 
-      const patterns = await client.fetchPatterns('javascript');
+      const result = await client.fetchPatterns('javascript');
 
       // Check that fetch was called
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      
+
       // Get the actual call arguments
       const [url, options] = fetchMock.mock.calls[0];
-      const expectedBaseUrl = testConfig.apiUrl.includes('/api/v1/patterns') 
-        ? testConfig.apiUrl 
+      const expectedBaseUrl = testConfig.apiUrl.includes('/api/v1/patterns')
+        ? testConfig.apiUrl
         : `${testConfig.apiUrl}/api/v1/patterns`;
       expect(url).toBe(`${expectedBaseUrl}?language=javascript&format=enhanced`);
       expect(options.headers['Content-Type']).toBe('application/json');
@@ -116,11 +116,12 @@ describe('PatternAPIClient', () => {
       // ADR-027: Using x-api-key header for unified API authentication
       expect(options.headers['x-api-key']).toBe(expectedAuth);
 
-      expect(patterns).toHaveLength(1);
-      expect(patterns[0].id).toBe('js-sql-injection');
-      expect(patterns[0].type).toBe(VulnerabilityType.SQL_INJECTION);
-      expect(patterns[0].patterns.regex).toHaveLength(2);
-      expect(patterns[0].patterns.regex[0]).toBeInstanceOf(RegExp);
+      expect(result.patterns).toHaveLength(1);
+      expect(result.patterns[0].id).toBe('js-sql-injection');
+      expect(result.patterns[0].type).toBe(VulnerabilityType.SQL_INJECTION);
+      expect(result.patterns[0].patterns.regex).toHaveLength(2);
+      expect(result.patterns[0].patterns.regex[0]).toBeInstanceOf(RegExp);
+      expect(result.fromCache).toBe(false);
     });
 
     test('should handle API errors gracefully', async () => {
@@ -173,6 +174,77 @@ describe('PatternAPIClient', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1); // Still only 1 call
     });
 
+    test('should return fromCache: false on initial API fetch', async () => {
+      const mockResponse = {
+        count: 1,
+        language: 'ruby',
+        patterns: [
+          {
+            id: 'ruby-eval',
+            name: 'Eval Usage',
+            type: 'rce',
+            description: 'Eval can execute arbitrary code',
+            severity: 'critical',
+            patterns: ['eval\\('],
+            languages: ['ruby'],
+            recommendation: 'Avoid eval',
+            cwe_id: 'CWE-94',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
+          }
+        ]
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      // First call - should fetch from API
+      const result = await client.fetchPatterns('ruby');
+      expect(result.fromCache).toBe(false);
+      expect(result.patterns).toHaveLength(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    test('should return fromCache: true when using cached patterns', async () => {
+      const mockResponse = {
+        count: 1,
+        language: 'php',
+        patterns: [
+          {
+            id: 'php-eval',
+            name: 'Eval Usage',
+            type: 'rce',
+            description: 'Eval can execute arbitrary code',
+            severity: 'critical',
+            patterns: ['eval\\('],
+            languages: ['php'],
+            recommendation: 'Avoid eval',
+            cwe_id: 'CWE-94',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
+          }
+        ]
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      // First call - should fetch from API
+      const firstResult = await client.fetchPatterns('php');
+      expect(firstResult.fromCache).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Second call - should use cache
+      const secondResult = await client.fetchPatterns('php');
+      expect(secondResult.fromCache).toBe(true);
+      expect(secondResult.patterns).toHaveLength(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1); // Still only 1 API call
+    });
+
     test('should handle patterns without API key (public only)', async () => {
       client = new PatternAPIClient({ fallbackToLocal: false });
       
@@ -201,13 +273,14 @@ describe('PatternAPIClient', () => {
         json: async () => mockResponse
       });
 
-      const patterns = await client.fetchPatterns('javascript');
-      
+      const result = await client.fetchPatterns('javascript');
+
       // Should not send Authorization header
       const [, options] = fetchMock.mock.calls[0];
       expect(options.headers['Authorization']).toBeUndefined();
-      
-      expect(patterns).toHaveLength(1);
+
+      expect(result.patterns).toHaveLength(1);
+      expect(result.fromCache).toBe(false);
     });
   });
 
@@ -264,13 +337,14 @@ describe('PatternAPIClient', () => {
         json: async () => mockResponse
       });
 
-      const patterns = await client.fetchPatterns('javascript');
-      
-      expect(patterns).toHaveLength(1);
-      expect(patterns[0].patterns.ast).toBeDefined();
-      expect(patterns[0].patterns.ast).toHaveLength(1);
-      expect(patterns[0].contextRules).toBeDefined();
-      expect(patterns[0].confidenceRules).toBeDefined();
+      const result = await client.fetchPatterns('javascript');
+
+      expect(result.patterns).toHaveLength(1);
+      expect(result.patterns[0].patterns.ast).toBeDefined();
+      expect(result.patterns[0].patterns.ast).toHaveLength(1);
+      expect(result.patterns[0].contextRules).toBeDefined();
+      expect(result.patterns[0].confidenceRules).toBeDefined();
+      expect(result.fromCache).toBe(false);
     });
 
     test('should handle patterns without enhanced features', async () => {
@@ -302,12 +376,13 @@ describe('PatternAPIClient', () => {
         json: async () => mockResponse
       });
 
-      const patterns = await client.fetchPatterns('python');
-      
-      expect(patterns).toHaveLength(1);
-      expect(patterns[0].patterns.ast).toBeUndefined();
-      expect(patterns[0].patterns.context).toBeUndefined();
-      expect(patterns[0].confidence).toBeUndefined();
+      const result = await client.fetchPatterns('python');
+
+      expect(result.patterns).toHaveLength(1);
+      expect(result.patterns[0].patterns.ast).toBeUndefined();
+      expect(result.patterns[0].patterns.context).toBeUndefined();
+      expect(result.patterns[0].confidence).toBeUndefined();
+      expect(result.fromCache).toBe(false);
     });
   });
 });

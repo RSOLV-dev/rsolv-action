@@ -29,7 +29,7 @@ async function verifyPhpPatternFix() {
   try {
     // Fetch PHP patterns
     console.log('\n1️⃣ Fetching PHP patterns...');
-    const patterns = await client.fetchPatterns('php');
+    const { patterns } = await client.fetchPatterns('php');
     console.log(`✅ Received ${patterns.length} PHP patterns`);
     
     // Check for patterns with AST rules

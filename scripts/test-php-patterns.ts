@@ -13,7 +13,7 @@ async function testPHPPatterns() {
 
   try {
     console.log('Fetching PHP patterns...');
-    const patterns = await client.fetchPatterns('php');
+    const { patterns } = await client.fetchPatterns('php');
     
     console.log(`\nReceived ${patterns.length} PHP patterns`);
     

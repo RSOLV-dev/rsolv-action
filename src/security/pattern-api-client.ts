@@ -83,6 +83,11 @@ export interface PatternAPIConfig {
   fallbackToLocal?: boolean;
 }
 
+export interface PatternFetchResult {
+  patterns: SecurityPattern[];
+  fromCache: boolean;
+}
+
 /**
  * Client for fetching security patterns from RSOLV-api
  * Implements RFC-008 Pattern Serving API
@@ -120,15 +125,16 @@ export class PatternAPIClient {
   /**
    * Fetch patterns for a specific language
    * Returns all patterns with API key, or demo patterns without
+   * Returns metadata indicating whether patterns were served from cache
    */
-  async fetchPatterns(language: string): Promise<SecurityPattern[]> {
+  async fetchPatterns(language: string): Promise<PatternFetchResult> {
     const cacheKey = `${language}-${this.apiKey || 'demo'}`;
-    
+
     // Check cache first
     const cached = this.cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
       logger.info(`Using cached patterns for ${language} (${cached.patterns.length} patterns)`);
-      return cached.patterns;
+      return { patterns: cached.patterns, fromCache: true };
     }
 
     try {
@@ -143,7 +149,7 @@ export class PatternAPIClient {
 
       // Use the new tier-less endpoint with enhanced format
       const response = await fetch(`${this.apiUrl}?language=${language}&format=enhanced`, { headers });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch patterns: ${response.status} ${response.statusText}`);
       }
@@ -151,50 +157,27 @@ export class PatternAPIClient {
       const data: PatternResponse = await response.json();
       const count = data.metadata?.count || data.count || data.patterns.length;
       logger.info(`Fetched ${count} ${language} patterns from API`);
-      
+
       // Convert API patterns to SecurityPattern format
       const patterns = data.patterns.map(p => this.convertToSecurityPattern(p));
-      
+
       // Cache the results
       this.cache.set(cacheKey, { patterns, timestamp: Date.now() });
-      
-      return patterns;
+
+      return { patterns, fromCache: false };
     } catch (error) {
       logger.error(`Failed to fetch ${language} patterns from API:`, error);
-      
+
       if (this.fallbackToLocal) {
         logger.warn(`Falling back to local patterns for ${language}`);
         // TODO: Return basic local patterns as fallback
-        return [];
+        return { patterns: [], fromCache: false };
       }
-      
+
       throw error;
     }
   }
 
-  /**
-   * @deprecated Tier system has been removed. Use fetchPatterns() instead.
-   * All patterns are now available with a valid API key.
-   * This method is kept for backward compatibility only.
-   */
-  async fetchPatternsByTier(tier: 'public' | 'protected' | 'ai' | 'enterprise', language?: string): Promise<SecurityPattern[]> {
-    logger.warn(`fetchPatternsByTier is deprecated. Tier '${tier}' is ignored. Use fetchPatterns() instead.`);
-    
-    // For backward compatibility, just call fetchPatterns
-    if (language) {
-      return this.fetchPatterns(language);
-    }
-
-    try {
-      // Without language, we can't fetch patterns in the new API
-      // Return empty array for backward compatibility
-      logger.warn('fetchPatternsByTier called without language parameter. Returning empty array.');
-      return [];
-    } catch (error) {
-      logger.error('Failed to fetch patterns from API:', error);
-      throw error;
-    }
-  }
 
 
   /**

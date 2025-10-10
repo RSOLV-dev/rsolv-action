@@ -136,17 +136,20 @@ export class ApiPatternSource implements PatternSource {
 
   async getPatternsByLanguage(language: string): Promise<SecurityPattern[]> {
     try {
-      const patterns = await this.client.fetchPatterns(language.toLowerCase());
-      
-      // Log success with detailed metrics
-      logger.info(`✅ ApiPatternSource: Fetched ${patterns.length} ${language} patterns from API`);
+      const result = await this.client.fetchPatterns(language.toLowerCase());
+      const { patterns, fromCache } = result;
+
+      // Log success with accurate source indication
+      const source = fromCache ? 'cache' : 'API';
+      logger.info(`✅ ApiPatternSource: Retrieved ${patterns.length} ${language} patterns from ${source}`);
       logger.info('PATTERN FETCH SUCCESS', {
-        source: 'api',
+        source: fromCache ? 'cache' : 'api',
         language,
         patternCount: patterns.length,
-        coverageLevel: patterns.length >= 25 ? 'full' : 'partial'
+        coverageLevel: patterns.length >= 25 ? 'full' : 'partial',
+        cached: fromCache
       });
-      
+
       return patterns;
     } catch (error) {
       logger.error(`❌ ApiPatternSource: Failed to fetch ${language} patterns`, error);
@@ -171,18 +174,25 @@ export class ApiPatternSource implements PatternSource {
 
   async getAllPatterns(): Promise<SecurityPattern[]> {
     const allPatterns: SecurityPattern[] = [];
-    
+    let cacheHits = 0;
+    let apiFetches = 0;
+
     // Fetch patterns for all supported languages
     for (const language of this.supportedLanguages) {
       try {
-        const patterns = await this.client.fetchPatterns(language);
-        allPatterns.push(...patterns);
+        const result = await this.client.fetchPatterns(language);
+        allPatterns.push(...result.patterns);
+        if (result.fromCache) {
+          cacheHits++;
+        } else {
+          apiFetches++;
+        }
       } catch (error) {
         logger.warn(`Failed to fetch ${language} patterns, continuing...`, error);
       }
     }
-    
-    logger.info(`ApiPatternSource: Fetched ${allPatterns.length} total patterns from API`);
+
+    logger.info(`ApiPatternSource: Retrieved ${allPatterns.length} total patterns (${cacheHits} from cache, ${apiFetches} from API)`);
     return allPatterns;
   }
 }
