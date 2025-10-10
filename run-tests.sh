@@ -121,9 +121,10 @@ fi
 
 # Set Node.js memory limit based on mode
 if [[ -n "$MEMORY_SAFE" ]]; then
-  # Test with 4GB after disabling isolation
-  export NODE_OPTIONS="--max-old-space-size=4096"
-  echo "✓ Node.js memory limit set to 4GB (memory-safe mode)"
+  # Use 6.5GB - isolation:false didn't reduce memory enough
+  # Shard 14 still hits 4061MB with 4GB heap
+  export NODE_OPTIONS="--max-old-space-size=6656"
+  echo "✓ Node.js memory limit set to 6.5GB (memory-safe mode)"
 else
   export NODE_OPTIONS="--max-old-space-size=8192"
   echo "✓ Node.js memory limit set to 8GB"
