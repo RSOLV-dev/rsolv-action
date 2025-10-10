@@ -63,6 +63,7 @@ jobs:
               -e INPUT_MODE=$phase \
               -e GITHUB_WORKSPACE=$WORKSPACE_PATH \
               -e GITHUB_OUTPUT=/tmp/github_output \
+              -e RSOLV_API_KEY=${{ secrets.RSOLV_API_KEY }} \
               $extra_env \
               $DOCKER_IMAGE
 
@@ -76,7 +77,7 @@ jobs:
           run_phase validate "-e RSOLV_ENABLE_AST_VALIDATION=true" && \
             echo "validate=success" >> $GITHUB_OUTPUT || echo "validate=failure" >> $GITHUB_OUTPUT
 
-          run_phase mitigate "-e RSOLV_USE_GIT_BASED_EDITING=true -e ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" && \
+          run_phase mitigate "-e RSOLV_USE_GIT_BASED_EDITING=true" && \
             echo "mitigate=success" >> $GITHUB_OUTPUT || echo "mitigate=failure" >> $GITHUB_OUTPUT
 
           # Verify changes were made
