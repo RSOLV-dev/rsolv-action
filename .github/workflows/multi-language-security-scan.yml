@@ -24,10 +24,10 @@ jobs:
             repo: RSOLV-dev/nodegoat-vulnerability-demo
             framework: jest
           - lang: ruby
-            repo: RSOLV-dev/railsgoat
+            repo: OWASP/railsgoat
             framework: rspec
           - lang: python
-            repo: somevendor/flask-vulnerable-app
+            repo: we45/Vulnerable-Flask-App
             framework: pytest
 
     steps:
