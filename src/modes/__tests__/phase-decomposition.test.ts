@@ -31,17 +31,25 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
     }));
     
     // Mock git status to be clean by default
-    vi.mock('child_process', () => ({
-      execSync: vi.fn((cmd: string) => {
-        if (cmd.includes('git status')) {
-          return ''; // Clean status
-        }
-        if (cmd.includes('git rev-parse HEAD')) {
-          return 'abc123def456';
-        }
-        return '';
-      })
-    }));
+    vi.mock('child_process', async (importOriginal) => {
+      const actual = await importOriginal();
+      return {
+        ...actual,
+        execSync: vi.fn((cmd: string) => {
+          if (cmd.includes('git status')) {
+            return ''; // Clean status
+          }
+          if (cmd.includes('git rev-parse HEAD')) {
+            return 'abc123def456';
+          }
+          return '';
+        }),
+        exec: vi.fn((cmd: string, callback: any) => {
+          // Mock exec for TestRunner
+          callback(null, { stdout: '', stderr: '' });
+        })
+      };
+    });
     
     mockConfig = {
       aiProvider: {

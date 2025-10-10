@@ -12,6 +12,7 @@ import { GitBasedClaudeCodeAdapter } from '../../ai/adapters/claude-code-git.js'
 import { createEducationalPullRequest } from '../../github/pr-git-educational.js';
 import { createPullRequestFromGit } from '../../github/pr-git.js';
 import { AIConfig, IssueAnalysis } from '../../ai/types.js';
+import { TestRunner, TestRunResult } from '../../ai/test-runner.js';
 // import { getIssue } from '../../github/api.js'; // Not needed yet
 import type { ActionConfig, IssueContext } from '../../types/index.js';
 import type { Vulnerability } from '../../security/types.js';
@@ -1507,15 +1508,38 @@ export class PhaseExecutor {
       }
       
       const issueKey = `issue-${issue.number}`;
+
+      // RFC-060 Phase 2.2: Execute generated RED tests
+      let testExecutionResult: TestRunResult | undefined;
+      if (testResults?.generatedTests?.success && testResults.generatedTests.tests?.[0]) {
+        const testRunner = new TestRunner();
+        const testInfo = testResults.generatedTests.tests[0];
+        const testFile = testInfo.suggestedFileName || '__tests__/security/vulnerability-test.js';
+
+        try {
+          testExecutionResult = await testRunner.runTests({
+            framework: testInfo.framework as any,
+            testFile: testFile,
+            workingDir: process.cwd(),
+            timeout: 30000
+          });
+
+          logger.info(`[VALIDATE] Test execution result: ${testExecutionResult.passed ? 'PASSED' : 'FAILED'}`);
+        } catch (error) {
+          logger.warn(`[VALIDATE] Could not execute test:`, error);
+        }
+      }
+
       const validationResult: { [issueId: string]: PhaseDataClientValidationPhaseData } = {
         [issueKey]: {
           validated: testResults?.generatedTests?.success || false,
           redTests: testResults?.generatedTests?.testSuite,
+          testResults: testExecutionResult as any,
           falsePositiveReason: undefined,
           timestamp: new Date().toISOString()
         }
       };
-      
+
       // Store validation results
       const commitSha = this.getCurrentCommitSha();
       await this.phaseDataClient.storePhaseResults(
