@@ -486,21 +486,50 @@ Validation Metadata:
 
     mockGetIssue.mockResolvedValue(mockIssues[0]);
 
-    // Mock validation
-    const mockValidateVulnerability = vi.fn().mockResolvedValue({
-      issueId: 101,
-      validated: true,
-      testResults: {
-        success: false, // RED test
-        testsRun: 1,
-        testsFailed: 1
-      },
-      validationMetadata: {
-        patternMatchScore: 0.95,
-        astValidationScore: 0.88,
-        contextualScore: 0.92
-      },
-      timestamp: new Date().toISOString()
+    // Set up RFC-060 component mocks
+    mockGenerateExecutableTests.mockResolvedValue({
+      success: true,
+      testCode: 'test code for XSS',
+      framework: 'vitest',
+      testFile: '/tmp/test-file.test.ts'
+    });
+
+    mockRunTests.mockResolvedValue({
+      success: false, // RED test
+      testsRun: 1,
+      testsFailed: 1,
+      testsPassed: 0
+    });
+
+    // Mock validation - calls RFC-060 components
+    const mockValidateVulnerability = vi.fn().mockImplementation(async (issue) => {
+      // Simulate RFC-060 component calls
+      await mockGenerateExecutableTests({
+        type: 'XSS',
+        filePath: 'app/views/tutorial/a1.ejs',
+        line: 42
+      });
+
+      await mockRunTests({
+        framework: 'vitest',
+        testFile: '/tmp/test-file.test.ts'
+      });
+
+      return {
+        issueId: 101,
+        validated: true,
+        testResults: {
+          success: false, // RED test
+          testsRun: 1,
+          testsFailed: 1
+        },
+        validationMetadata: {
+          patternMatchScore: 0.95,
+          astValidationScore: 0.88,
+          contextualScore: 0.92
+        },
+        timestamp: new Date().toISOString()
+      };
     });
 
     // Mock mitigation
@@ -546,5 +575,24 @@ Validation Metadata:
     expect(result.message).toContain('1 issues processed');
     expect(result.message).toContain('1 validated');
     expect(result.message).toContain('1 mitigated');
+
+    // Verify RFC-060 components were called
+    expect(mockGenerateExecutableTests).toHaveBeenCalled();
+    expect(mockRunTests).toHaveBeenCalled();
+
+    // Verify call details
+    expect(mockGenerateExecutableTests).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'XSS',
+        filePath: 'app/views/tutorial/a1.ejs'
+      })
+    );
+
+    expect(mockRunTests).toHaveBeenCalledWith(
+      expect.objectContaining({
+        framework: 'vitest',
+        testFile: expect.any(String)
+      })
+    );
   });
 });
