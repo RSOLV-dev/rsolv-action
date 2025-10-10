@@ -1,4 +1,4 @@
-name: RFC-060 Multi-Language Test
+name: Multi-Language Security Scan
 
 on:
   workflow_dispatch:
@@ -15,8 +15,8 @@ on:
           - mitigate
   push:
     branches:
-      - 'rfc-060/**'
-      - 'vk/cefc-rfc-060-*'
+      - 'main'
+      - 'feature/**'
 
 jobs:
   multi-language-test:
@@ -230,7 +230,7 @@ jobs:
 
       - name: Generate summary report
         run: |
-          echo "# RFC-060 Multi-Language Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "# Multi-Language Security Scan Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Test Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Workflow Run**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
