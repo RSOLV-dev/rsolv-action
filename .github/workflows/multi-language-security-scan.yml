@@ -64,7 +64,7 @@ jobs:
               -e GITHUB_WORKSPACE=$WORKSPACE_PATH \
               -e GITHUB_OUTPUT=/tmp/github_output \
               -e GITHUB_REPOSITORY=${{ matrix.repo }} \
-              -e GITHUB_TOKEN=${{ github.token }} \
+              -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
               -e RSOLV_API_KEY=${{ secrets.RSOLV_API_KEY }} \
               -e RSOLV_API_URL=${{ secrets.RSOLV_API_URL }} \
               $extra_env \
