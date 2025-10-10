@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: RSOLV Scan
-        uses: RSOLV-dev/rsolv-action@v3.7.45  # Use latest version
+        uses: RSOLV-dev/rsolv-action@v3.7.47  # IMPORTANT: Use v3.7.47+ (v3.6.x has bugs)
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'
@@ -118,7 +118,10 @@ jobs:
 - More complex workflow
 - Manual version management
 
-**Template:** See `TEMPLATE-rsolv-security-scan.yml`
+**Templates Available:**
+- `TEMPLATE-rsolv-simple-scan.yml` - Simple scan workflow (52 second runtime)  ✅ RECOMMENDED
+- `TEMPLATE-rsolv-full-pipeline.yml` - Full 3-phase pipeline (scan/validate/mitigate)
+- `TEMPLATE-rsolv-security-scan.yml` - Docker-based approach (for development)
 
 ## Demo Repository Examples
 
@@ -131,10 +134,11 @@ jobs:
 - `rsolv-three-phase-demo.yml` - Full SCAN → VALIDATE → MITIGATE demo
 - `rsolv-automate-orchestrator.yml` - Automated continuous security
 
-**Typical scan:**
-- ~25 JavaScript files scanned
-- Runtime: 5-10 minutes
-- Issues created in nodegoat repo
+**Proven Performance (v3.7.47):**
+- 53 JavaScript files scanned
+- Runtime: 52 seconds total
+- 28 vulnerabilities detected
+- Scan phase: 7.9 seconds
 
 ### railsgoat (Ruby)
 
@@ -159,8 +163,13 @@ jobs:
 
 3. **Copy template workflow:**
    ```bash
-   cp /path/to/RSOLV-action/.github/workflows/TEMPLATE-rsolv-security-scan.yml \
+   # For simple scan (recommended - 52 second runtime):
+   cp /path/to/RSOLV-action/.github/workflows/TEMPLATE-rsolv-simple-scan.yml \
       .github/workflows/rsolv-security-scan.yml
+
+   # OR for full pipeline:
+   cp /path/to/RSOLV-action/.github/workflows/TEMPLATE-rsolv-full-pipeline.yml \
+      .github/workflows/rsolv-full-pipeline.yml
    ```
 
 4. **Configure secrets in GitHub:**
@@ -249,7 +258,7 @@ This workflow attempted to run multi-language testing FROM the RSOLV-action repo
 
 1. **One workflow per repository**: Each demo/target repository should have its own workflow
 2. **Use GitHub Action method**: Prefer `uses: RSOLV-dev/rsolv-action@VERSION` over Docker
-3. **Version pinning**: Pin to specific versions (e.g., `@v3.7.45`) for reproducibility
+3. **Version pinning**: Use v3.7.47 or later (v3.6.x has infinite loop bugs)
 4. **Secret management**: Store API keys in GitHub Secrets, never commit them
 5. **Limit scope**: Use `max_issues` parameter in demos to keep runtime reasonable
 6. **Monitor execution**: Set up notifications for workflow failures
