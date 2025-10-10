@@ -1,0 +1,141 @@
+name: Multi-Language Security Scan
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'feature/**']
+
+env:
+  DOCKER_IMAGE: rsolv/action:test
+  WORKSPACE_PATH: /workspace
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lang: javascript
+            repo: RSOLV-dev/nodegoat-vulnerability-demo
+            framework: jest
+          - lang: ruby
+            repo: RSOLV-dev/railsgoat
+            framework: rspec
+          - lang: python
+            repo: somevendor/flask-vulnerable-app
+            framework: pytest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: rsolv-action
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Build action
+        working-directory: rsolv-action
+        run: |
+          bun install
+          docker build -t $DOCKER_IMAGE .
+
+      - name: Clone test repo
+        run: git clone --depth=1 https://github.com/${{ matrix.repo }}.git test-repo
+
+      - name: Run security phases
+        id: phases
+        working-directory: test-repo
+        run: |
+          run_phase() {
+            local phase=$1
+            local extra_env=$2
+
+            docker run --rm \
+              -v $(pwd):$WORKSPACE_PATH \
+              -w $WORKSPACE_PATH \
+              -e RSOLV_MODE=$phase \
+              -e INPUT_MODE=$phase \
+              -e GITHUB_WORKSPACE=$WORKSPACE_PATH \
+              -e GITHUB_OUTPUT=/tmp/github_output \
+              $extra_env \
+              $DOCKER_IMAGE
+
+            return $?
+          }
+
+          # Run each phase and track results
+          run_phase scan "-e RSOLV_SCAN_MODE=scan -e RSOLV_ENABLE_SECURITY_ANALYSIS=true" && \
+            echo "scan=success" >> $GITHUB_OUTPUT || echo "scan=failure" >> $GITHUB_OUTPUT
+
+          run_phase validate "-e RSOLV_ENABLE_AST_VALIDATION=true" && \
+            echo "validate=success" >> $GITHUB_OUTPUT || echo "validate=failure" >> $GITHUB_OUTPUT
+
+          run_phase mitigate "-e RSOLV_USE_GIT_BASED_EDITING=true -e ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" && \
+            echo "mitigate=success" >> $GITHUB_OUTPUT || echo "mitigate=failure" >> $GITHUB_OUTPUT
+
+          # Verify changes were made
+          modified=$(git status --short | wc -l)
+          echo "modified=$modified" >> $GITHUB_OUTPUT
+
+          if [ "$modified" -eq 0 ]; then
+            echo "⚠️ No files modified by MITIGATE phase"
+            exit 1
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.lang }}-results
+          path: test-repo/**/*.{json,log}
+          retention-days: 30
+
+      - name: Comment on PR failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ❌ Security scan failed: ${{ matrix.lang }}
+
+              **Results:** SCAN: ${{ steps.phases.outputs.scan }} | VALIDATE: ${{ steps.phases.outputs.validate }} | MITIGATE: ${{ steps.phases.outputs.mitigate }}
+              **Modified files:** ${{ steps.phases.outputs.modified }}
+
+              [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            });
+
+  summary:
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: results
+
+      - name: Generate summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<'EOF'
+          # Multi-Language Security Scan Results
+
+          **Run:** ${{ github.run_id }}
+          **Branch:** ${{ github.ref_name }}
+          **Trigger:** ${{ github.event_name }}
+
+          ## Languages Tested
+          - JavaScript (Jest)
+          - Ruby (RSpec)
+          - Python (Pytest)
+
+          ## Artifacts
+          Results available in workflow artifacts.
+          EOF
