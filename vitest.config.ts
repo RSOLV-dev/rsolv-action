@@ -26,6 +26,7 @@ export default defineConfig({
       forks: {
         singleFork: true,  // Run all tests in single process to avoid worker memory overhead
         execArgv: isMemoryConstrained ? ['--expose-gc'] : [],  // Allow manual GC in CI
+        isolate: false,  // Disable isolation to reduce memory overhead
       }
     },
     
