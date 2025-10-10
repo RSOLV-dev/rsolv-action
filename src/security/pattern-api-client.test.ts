@@ -60,11 +60,11 @@ describe('PatternAPIClient', () => {
 
   describe('fetchPatterns', () => {
     const testConfig = getTestApiConfig();
-    
+
     beforeEach(() => {
-      client = new PatternAPIClient({ 
+      client = new PatternAPIClient({
         apiUrl: testConfig.apiUrl,
-        apiKey: testConfig.apiKey || 'test-key' 
+        apiKey: testConfig.apiKey || 'test-key'
       });
     });
 
@@ -245,9 +245,89 @@ describe('PatternAPIClient', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1); // Still only 1 API call
     });
 
+    describe('when checking cache behavior', () => {
+      let mockPattern: any;
+
+      beforeEach(() => {
+        mockPattern = {
+          id: 'cache-test',
+          name: 'Cache Test',
+          type: 'xss',
+          description: 'Test pattern',
+          severity: 'high',
+          patterns: ['test'],
+          languages: ['javascript'],
+          recommendation: 'Fix it',
+          cwe_id: 'CWE-79',
+          owasp_category: 'A03:2021',
+          test_cases: { vulnerable: [], safe: [] }
+        };
+      });
+
+      test('refetches after TTL expires', async () => {
+        const testClient = new PatternAPIClient({
+          apiKey: 'test-key',
+          cacheTTL: 0.001 // 1ms
+        });
+
+        fetchMock.mockResolvedValue({
+          ok: true,
+          json: async () => ({ count: 1, patterns: [mockPattern] })
+        });
+
+        await testClient.fetchPatterns('javascript');
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        await testClient.fetchPatterns('javascript');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      });
+
+      test('maintains separate cache per language', async () => {
+        fetchMock.mockImplementation((url: string) => {
+          const lang = url.includes('python') ? 'python' : 'javascript';
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              count: 1,
+              patterns: [{ ...mockPattern, id: `${lang}-pattern`, languages: [lang] }]
+            })
+          });
+        });
+
+        await client.fetchPatterns('javascript');
+        await client.fetchPatterns('python');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        await client.fetchPatterns('javascript');
+        await client.fetchPatterns('python');
+        expect(fetchMock).toHaveBeenCalledTimes(2); // No new calls
+      });
+
+      test('maintains separate cache per API key', async () => {
+        let callCount = 0;
+        fetchMock.mockImplementation(() => {
+          callCount++;
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ count: 1, patterns: [mockPattern] })
+          });
+        });
+
+        const demoClient = new PatternAPIClient();
+        await demoClient.fetchPatterns('javascript');
+
+        const fullClient = new PatternAPIClient({ apiKey: 'test-key' });
+        await fullClient.fetchPatterns('javascript');
+
+        expect(callCount).toBe(2);
+      });
+    });
+
     test('should handle patterns without API key (public only)', async () => {
       client = new PatternAPIClient({ fallbackToLocal: false });
-      
+
       const mockResponse = {
         count: 1,
         language: 'javascript',
@@ -281,6 +361,86 @@ describe('PatternAPIClient', () => {
 
       expect(result.patterns).toHaveLength(1);
       expect(result.fromCache).toBe(false);
+    });
+  });
+
+  describe('clearCache', () => {
+    test('forces refetch on next call', async () => {
+      const testClient = new PatternAPIClient({ apiKey: 'test-key' });
+      let callCount = 0;
+      fetchMock.mockImplementation(() => {
+        callCount++;
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            count: 1,
+            patterns: [{
+              id: 'test',
+              name: 'Test',
+              type: 'xss',
+              description: 'Test',
+              severity: 'high',
+              patterns: ['test'],
+              languages: ['javascript'],
+              recommendation: 'Fix it',
+              cwe_id: 'CWE-79',
+              owasp_category: 'A03:2021',
+              test_cases: { vulnerable: [], safe: [] }
+            }]
+          })
+        });
+      });
+
+      await testClient.fetchPatterns('javascript');
+      await testClient.fetchPatterns('javascript');
+      expect(callCount).toBe(1);
+
+      testClient.clearCache();
+
+      await testClient.fetchPatterns('javascript');
+      expect(callCount).toBe(2);
+    });
+
+    test('clears all languages', async () => {
+      const testClient = new PatternAPIClient({ apiKey: 'test-key' });
+      let callCount = 0;
+      fetchMock.mockImplementation((url: string) => {
+        callCount++;
+        const lang = url.includes('python') ? 'python' : 'javascript';
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            count: 1,
+            patterns: [{
+              id: `${lang}-pattern`,
+              name: 'Test',
+              type: 'xss',
+              description: 'Test',
+              severity: 'high',
+              patterns: ['test'],
+              languages: [lang],
+              recommendation: 'Fix it',
+              cwe_id: 'CWE-79',
+              owasp_category: 'A03:2021',
+              test_cases: { vulnerable: [], safe: [] }
+            }]
+          })
+        });
+      });
+
+      await testClient.fetchPatterns('javascript');
+      await testClient.fetchPatterns('python');
+      expect(callCount).toBe(2);
+
+      await testClient.fetchPatterns('javascript');
+      await testClient.fetchPatterns('python');
+      expect(callCount).toBe(2); // Still 2 - using cache
+
+      testClient.clearCache();
+
+      await testClient.fetchPatterns('javascript');
+      await testClient.fetchPatterns('python');
+      expect(callCount).toBe(4); // Now 4 - refetched
     });
   });
 
