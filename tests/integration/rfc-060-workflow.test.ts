@@ -38,6 +38,14 @@ vi.mock('../../src/ai/executable-test-generator.js', () => ({
   }))
 }));
 
+// Mock TestGeneratingSecurityAnalyzer
+const mockAnalyzeWithTestGeneration = vi.fn();
+vi.mock('../../src/ai/test-generating-security-analyzer.js', () => ({
+  TestGeneratingSecurityAnalyzer: vi.fn().mockImplementation(() => ({
+    analyzeWithTestGeneration: mockAnalyzeWithTestGeneration
+  }))
+}));
+
 // Mock GitHub API
 vi.mock('../../src/github/api.js', () => ({
   getIssue: vi.fn(),
@@ -202,18 +210,26 @@ describe('RFC-060 E2E Workflow Integration', () => {
 
     mockGetIssue.mockResolvedValue(testIssue);
 
-    // Mock test generation
-    const mockTestGenerator = {
-      generateTests: vi.fn().mockResolvedValue({
+    // Mock TestGeneratingSecurityAnalyzer to return test generation result
+    mockAnalyzeWithTestGeneration.mockResolvedValueOnce({
+      canBeFixed: true,
+      issueType: 'XSS',
+      filesToModify: ['app/views/tutorial/a1.ejs'],
+      generatedTests: {
         success: true,
-        testCode: `describe('XSS Vulnerability Test', () => {
+        tests: [
+          {
+            framework: 'vitest',
+            testCode: `describe('XSS Vulnerability Test', () => {
   test('should prevent XSS injection', async () => {
     const maliciousInput = '<script>alert("XSS")</script>';
     const result = await renderTemplate(maliciousInput);
     expect(result).not.toContain('<script>');
   });
 });`,
-        framework: 'vitest',
+            suggestedFileName: '__tests__/security/xss-test.js'
+          }
+        ],
         testSuite: {
           red: [
             {
@@ -223,23 +239,20 @@ describe('RFC-060 E2E Workflow Integration', () => {
             }
           ]
         }
-      })
-    };
-
-    // Act - Mock validation mode
-    const validationResult = await mockTestGenerator.generateTests({
-      type: 'XSS',
-      filePath: 'app/views/tutorial/a1.ejs',
-      line: 42
+      }
     });
 
-    // Assert
-    expect(validationResult.success).toBe(true);
-    expect(validationResult.testCode).toContain('XSS');
-    expect(validationResult.testCode).toContain('should prevent XSS injection');
-    expect(validationResult.testSuite?.red).toBeDefined();
-    expect(validationResult.testSuite?.red).toHaveLength(1);
-    expect(validationResult.testSuite?.red[0].expectedToFail).toBe(true);
+    // Act - Call PhaseExecutor instead of standalone mock
+    const result = await executor.executeValidateForIssue(testIssue, {
+      analysisData: { canBeFixed: true, issueType: 'XSS' }
+    });
+
+    // Assert - Verify PhaseExecutor integration
+    expect(result.success).toBe(true);
+    expect(mockAnalyzeWithTestGeneration).toHaveBeenCalled();
+    expect(result.data?.validation).toBeDefined();
+    expect(result.data.validation['issue-101']).toBeDefined();
+    expect(result.data.validation['issue-101'].validated).toBe(true);
   });
 
   test('VALIDATE phase executes tests and stores results', async () => {
