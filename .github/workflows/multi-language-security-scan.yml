@@ -3,7 +3,7 @@ name: Multi-Language Security Scan
 on:
   workflow_dispatch:
   push:
-    branches: [main, 'feature/**']
+    branches: [main, 'feature/**', 'vk/**']
 
 env:
   DOCKER_IMAGE: rsolv/action:test
