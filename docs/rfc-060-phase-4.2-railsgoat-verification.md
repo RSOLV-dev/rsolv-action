@@ -199,33 +199,151 @@ Applied successfully to RailsGoat:
 5. ✅ Verify file count is reasonable
 6. ✅ Use proven template (TEMPLATE-rsolv-simple-scan.yml)
 
+## Critical Bug Discovered ❌
+
+### Second Workflow Run (With API Key)
+- **Run ID:** 18419769069
+- **Run URL:** https://github.com/RSOLV-dev/railsgoat/actions/runs/18419769069
+- **API Key:** ✅ Configured successfully (rsolv_GD5K...)
+- **Start Time:** 22:22:20 UTC
+- **Cancel Time:** 22:45:21 UTC (after 23 minutes)
+- **Status:** ❌ Hung/Timeout - Manually canceled
+
+### Hang Analysis
+
+The workflow hung while scanning minified vendor files:
+
+```
+[22:22:53] Started scanning 146 files
+[22:22:53] Found vulnerabilities in JavaScript vendor files:
+  - app/assets/images/fonts/lte-ie7.js (1 vuln)
+  - app/assets/javascripts/alertify.min.js (2 vulns, vendor)
+  - app/assets/javascripts/bootstrap-colorpicker.js (2 vulns)
+
+[22:22:53] Processing app/assets/javascripts/bootstrap-editable.min.js (vendor)
+[22:22:53] Using cached patterns for javascript (30 patterns)
+[22:22:53] SecurityDetectorV2: Analyzing javascript code with 30 patterns
+
+>>> HUNG HERE FOR 23 MINUTES <<<
+
+[22:45:21] ##[error]The operation was canceled
+```
+
+### Root Cause Analysis
+
+**Probable cause:** The scanner appears to **hang indefinitely** when processing:
+- Minified vendor JavaScript files (`.min.js`)
+- Specifically: `bootstrap-editable.min.js`
+- Pattern matching on minified code may cause exponential backtracking (catastrophic backtracking)
+
+**Evidence:**
+1. ✅ Scan progressed normally through first 5 JavaScript files
+2. ✅ API connection working (fetched 30 JavaScript patterns)
+3. ✅ Pattern caching working correctly
+4. ❌ **Hung on 6th file** (`bootstrap-editable.min.js`)
+5. ❌ **Never reached Ruby files** (scan stuck on JavaScript phase)
+6. ❌ **No timeout mechanism** - ran for 23 minutes until manually canceled
+
+### Impact Assessment
+
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| Architecture | ✅ CORRECT | Workflow in target repo, no contamination |
+| API Key | ✅ WORKING | Successfully fetched 30 JS patterns |
+| File Fetching | ✅ WORKING | Fetched all 146 files |
+| JavaScript Scanning | ⚠️ PARTIAL | Scanned 5 files, hung on 6th (minified vendor file) |
+| Ruby Scanning | ❌ BLOCKED | Never reached Ruby files due to JS hang |
+| Performance | ❌ CRITICAL BUG | 23+ minute hang (expected: 1-2 minutes) |
+
 ## Conclusion
 
 ### Architecture Verification: ✅ PASSED
 RailsGoat follows the **correct** deployment pattern:
 - Workflow deployed IN target repository ✅
-- Uses published GitHub Action (not Docker clone) ✅
+- Uses published GitHub Action v3.7.47 (not Docker clone) ✅
 - No repository contamination ✅
-- Reasonable file count (116 Ruby files) ✅
+- Reasonable file count (146 files total: 116 Ruby + 30 JS/other) ✅
 - Clean repository setup ✅
+- API key configured and working ✅
 
-### Deployment Status: ⏳ PENDING SECRET CONFIGURATION
-The workflow is correctly deployed but cannot run successfully until:
-- RSOLV_API_KEY secret is configured in repository settings
-- Follow same pattern as nodegoat-vulnerability-demo
+### Scanner Verification: ❌ CRITICAL BUG FOUND
+**The v3.7.47 scanner hangs on minified vendor JavaScript files.**
 
-### Ready for Full Testing: ⏳ AFTER SECRET SETUP
-Once RSOLV_API_KEY is configured, workflow will:
-- Scan 116 Ruby files (not 1000+)
-- Complete in 1-2 minutes (not 50+ minutes)
-- Create legitimate Rails vulnerability issues
-- Demonstrate multi-language support (Ruby + JavaScript)
+**Bug Details:**
+- **File:** `app/assets/javascripts/bootstrap-editable.min.js`
+- **Pattern:** Minified vendor files cause infinite/very slow pattern matching
+- **Runtime:** 23+ minutes (hung until canceled)
+- **Expected:** 1-2 minutes total scan time
+- **Impact:** Blocks scanning of Ruby files (never reached)
 
-### Overall Assessment: ✅ SUCCESS
-**RailsGoat workflow deployment architecture is verified as CORRECT.**
+### Comparison with nodegoat
 
-The workflow follows the proven pattern established in Phase 4.2 subtask #1 (nodegoat). Only missing component is the RSOLV_API_KEY secret, which is an expected configuration step.
+| Aspect | nodegoat (JS) | railsgoat (Ruby+JS) |
+|--------|---------------|---------------------|
+| Repository | ✅ Working | ✅ Working |
+| Workflow | ✅ Working | ✅ Working |
+| API Key | ✅ Working | ✅ Working |
+| File Count | 53 JS files | 146 files (116 Ruby + 30 JS) |
+| Scan Result | ✅ 52 seconds | ❌ 23+ min hang |
+| Minified Files | Few/none | Many vendor .min.js files |
+| **Root Difference** | No problematic vendor files | **Vendor files cause hang** |
+
+### Overall Assessment: ⚠️ ARCHITECTURE VERIFIED, SCANNER BUG FOUND
+
+**✅ RailsGoat workflow deployment architecture is CORRECT**
+**❌ RSOLV scanner v3.7.47 has critical performance bug with minified files**
 
 ---
 
-**Next Task:** Configure RSOLV_API_KEY and run full verification scan to validate Rails vulnerability detection.
+## Recommended Next Steps
+
+### Immediate Actions
+
+1. **File Bug Report** for v3.7.47 scanner:
+   ```
+   Title: Scanner hangs on minified vendor JavaScript files
+   File: app/assets/javascripts/bootstrap-editable.min.js in railsgoat
+   Runtime: 23+ minutes without completion
+   Expected: Skip vendor files or timeout gracefully
+   ```
+
+2. **Vendor File Exclusion Workaround**:
+   Add `.github/rsolv.yml` configuration:
+   ```yaml
+   scan:
+     exclude:
+       - "**/*.min.js"          # Exclude all minified JavaScript
+       - "**/vendor/**"          # Exclude vendor directories
+       - "**/node_modules/**"    # Exclude dependencies
+       - "**/assets/javascripts/bootstrap*.js"  # Specific problematic files
+   ```
+
+3. **Add Timeout Protection**:
+   Update workflow to include job timeout:
+   ```yaml
+   jobs:
+     security-scan:
+       timeout-minutes: 10  # Kill job after 10 minutes
+   ```
+
+### Long-term Scanner Fixes
+
+1. **Pattern Matching Optimization**:
+   - Implement per-file timeout protection (e.g., 30 seconds max per file)
+   - Add regex catastrophic backtracking detection
+   - Add fast-fail checks for minified code detection
+
+2. **Vendor File Handling**:
+   - Auto-detect and skip vendor/minified files
+   - Add file size limits for pattern matching (e.g., skip files >100KB)
+   - Implement smart sampling for large files
+
+3. **Multi-Language Testing**:
+   - Test Python/Java repos with minified assets
+   - Document known file patterns that cause hangs
+   - Create test suite with problematic files
+
+---
+
+**Verification Status:** ✅ Architecture verified, ❌ Scanner bug blocks Ruby testing
+**Next Task:** Fix scanner bug or implement workaround to complete Ruby vulnerability detection testing
