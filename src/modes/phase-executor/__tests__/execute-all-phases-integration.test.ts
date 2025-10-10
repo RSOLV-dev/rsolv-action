@@ -155,8 +155,10 @@ describe('PhaseExecutor - executeAllPhases Integration', () => {
       });
 
     // Inject mocks for validation and mitigation
-    executor['getScanner'] = () => mockScanOrchestrator;
-    executor['validationMode'] = { validateVulnerability: mockValidateVulnerability };
+    executor._setTestDependencies({
+      scanner: mockScanOrchestrator,
+      validationMode: { validateVulnerability: mockValidateVulnerability }
+    });
     executor.executeMitigate = mockExecuteMitigate;
 
     // Act: Execute all phases
@@ -269,8 +271,10 @@ describe('PhaseExecutor - executeAllPhases Integration', () => {
         data: { mitigation: { 'issue-201': { fixed: true } } }
       });
 
-    executor['getScanner'] = () => mockScanOrchestrator;
-    executor['validationMode'] = { validateVulnerability: mockValidateVulnerability };
+    executor._setTestDependencies({
+      scanner: mockScanOrchestrator,
+      validationMode: { validateVulnerability: mockValidateVulnerability }
+    });
     executor.executeMitigate = mockExecuteMitigate;
 
     // Act
@@ -301,7 +305,7 @@ describe('PhaseExecutor - executeAllPhases Integration', () => {
       summary: '10 vulnerabilities found, 2 issues created (limited by max_issues)'
     });
 
-    executor['getScanner'] = () => mockScanOrchestrator;
+    executor._setTestDependencies({ scanner: mockScanOrchestrator });
 
     // Act
     await executor.executeAllPhases({
@@ -321,7 +325,7 @@ describe('PhaseExecutor - executeAllPhases Integration', () => {
   test('should handle scan phase failure gracefully', async () => {
     // Arrange
     mockScanOrchestrator.performScan.mockRejectedValue(new Error('Scan failed'));
-    executor['getScanner'] = () => mockScanOrchestrator;
+    executor._setTestDependencies({ scanner: mockScanOrchestrator });
 
     // Act
     const result = await executor.executeAllPhases({

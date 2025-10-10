@@ -165,7 +165,7 @@ describe('RFC-060 E2E Workflow Integration', () => {
     mockCreateIssue.mockResolvedValueOnce({ number: 101, html_url: 'https://github.com/RSOLV-dev/nodegoat/issues/101' })
       .mockResolvedValueOnce({ number: 102, html_url: 'https://github.com/RSOLV-dev/nodegoat/issues/102' });
 
-    executor['getScanner'] = () => mockScanOrchestrator;
+    executor._setTestDependencies({ scanner: mockScanOrchestrator });
 
     // Act
     const result = await executor.executeScan({ repository: mockConfig.repository });
@@ -518,8 +518,10 @@ Validation Metadata:
       }
     });
 
-    executor['getScanner'] = () => mockScanOrchestrator;
-    executor['validationMode'] = { validateVulnerability: mockValidateVulnerability };
+    executor._setTestDependencies({
+      scanner: mockScanOrchestrator,
+      validationMode: { validateVulnerability: mockValidateVulnerability }
+    });
     executor.executeMitigate = mockExecuteMitigate;
 
     // Act

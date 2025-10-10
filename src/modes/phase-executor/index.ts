@@ -2868,4 +2868,24 @@ ${validation.falsePositive ?
     
     return report;
   }
+
+  /**
+   * Test helper: Inject dependencies for testing
+   * @internal Only use in tests
+   */
+  _setTestDependencies(deps: {
+    scanner?: ScanOrchestrator;
+    validationMode?: any;
+  }): void {
+    if (process.env.NODE_ENV !== 'test' && process.env.RSOLV_TESTING_MODE !== 'true') {
+      throw new Error('_setTestDependencies can only be called in test environment');
+    }
+
+    if (deps.scanner) {
+      this.scanner = deps.scanner;
+    }
+    if (deps.validationMode) {
+      this.validationMode = deps.validationMode;
+    }
+  }
 }
