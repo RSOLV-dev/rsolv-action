@@ -1,6 +1,6 @@
 # RFC-060: Executable Validation Test Integration
 
-**Status:** In Progress (Phases 1-2 Complete)
+**Status:** In Progress (Phases 0-4.1 Complete)
 **Created:** 2025-09-24
 **Updated:** 2025-10-10
 **Author:** RSOLV Team
@@ -692,6 +692,148 @@ Each phase below includes:
 - 10+ TestRunner tests passing
 - 12/12 phase-decomposition tests passing
 - All tests GREEN ✓
+
+---
+
+### Phase 3: MITIGATE Phase Integration ✅ COMPLETE
+
+**Status**: ✅ ALL COMPLETE
+**Completion Date**: 2025-10-09
+
+**Achievements**:
+- ✅ API-based metadata retrieval implemented
+- ✅ Test-aware fix generation with pre/post verification
+- ✅ Trust score calculation integrated
+- ✅ Validation branch checkout and test reading from git
+- ✅ PhaseDataClient used exclusively (no local file fallback)
+- ✅ 16+ Phase 3 tests passing
+- ✅ Clean TypeScript compilation
+- ✅ Zero regressions
+
+#### 3.1 API-Based Metadata Retrieval ✅
+- [✅] Write RED tests for API retrieval (1hr)
+  - Created `src/modes/__tests__/rfc-060-phase-3.1-api-retrieval.test.ts`
+  - Tests for PhaseDataClient storage/retrieval, no local files
+- [✅] Run tests - verified RED phase
+- [✅] Update ValidationPhaseData interface
+  - Added `branchName`, `testPath` fields
+- [✅] Remove `.rsolv/validation/` local file reading (1hr)
+  - Updated MitigationMode to use PhaseDataClient exclusively
+  - No more `fs.readFileSync` calls to `.rsolv/validation/`
+- [✅] Run test suite: All Phase 3.1 tests GREEN ✅
+- [✅] REFACTOR: Consolidated error handling
+- [✅] TypeScript compilation: Clean
+- **Completion Date**: 2025-10-09
+
+#### 3.2 Test-Aware Fix Generation ✅
+- [✅] Write RED tests for test-aware fixes (1hr)
+  - Created `src/modes/__tests__/rfc-060-phase-3.2-test-aware-fixes.test.ts`
+  - Tests for validation branch checkout, test reading, prompt inclusion
+- [✅] Run tests - verified RED phase
+- [✅] Implement validation branch checkout (30min)
+  - Uses `branchName` from PhaseDataClient
+  - Checks out validation branch containing RED tests
+- [✅] Read test files from git (30min)
+  - Uses `testPath` from PhaseDataClient metadata
+  - Reads from checked out validation branch
+- [✅] Enhance Claude prompt with test context (1hr)
+  - Includes RED test content in mitigation prompt
+  - Explains expected behavior
+- [✅] Implement pre/post test verification (1hr)
+  - Runs RED test before fix (should fail)
+  - Runs RED test after fix (should pass)
+  - Records both results
+- [✅] Add trust score calculation (30min)
+  - Before fail + after pass = 100 (perfect fix)
+  - Before pass + after pass = 50 (test issue)
+  - Both fail = 0 (fix didn't work)
+  - Stores in PhaseDataClient
+- [✅] Run test suite: All Phase 3.2 tests GREEN ✅
+- [✅] REFACTOR: Extracted prompt templates
+- [✅] TypeScript compilation: Clean
+- **Completion Date**: 2025-10-09
+
+#### Phase 3 Code Impact
+**Files Created**:
+- `src/modes/__tests__/rfc-060-phase-3.1-api-retrieval.test.ts`
+- `src/modes/__tests__/rfc-060-phase-3.2-test-aware-fixes.test.ts`
+
+**Files Modified**:
+- `src/modes/phase-data-client/index.ts` (added branchName, testPath)
+- `src/modes/validation-mode.ts` (stores branchName in PhaseDataClient)
+- `src/modes/mitigation-mode.ts` (removed local file fallback, uses API)
+
+**Test Coverage**:
+- 8 Phase 3.1 tests passing
+- 8 Phase 3.2 tests passing
+- All tests GREEN ✓
+
+**Architecture Achievement**:
+- ✅ Complete migration from local file storage to PhaseDataClient API
+- ✅ Test files live in git branches, metadata in API
+- ✅ End-to-end data flow: SCAN → VALIDATE → MITIGATE
+
+---
+
+### Phase 4.1: End-to-End Workflow Testing ✅ COMPLETE
+
+**Status**: ✅ COMPLETE
+**Completion Date**: 2025-10-10
+
+**Achievements**:
+- ✅ 6 E2E integration tests passing
+- ✅ PhaseDataClient API mocked and verified
+- ✅ TestRunner and ExecutableTestGenerator mocked and verified
+- ✅ Full SCAN → VALIDATE → MITIGATE workflow tested
+- ✅ Documentation complete
+- ✅ Clean TypeScript compilation
+- ✅ Zero regressions
+
+#### 4.1 End-to-End Workflow Testing ✅
+- [✅] Write 6 RED integration tests (2hr)
+  - Created `tests/integration/rfc-060-workflow.test.ts` (421 lines)
+  - Test: SCAN phase creates GitHub issues
+  - Test: VALIDATE phase generates RED tests
+  - Test: VALIDATE phase executes tests and stores results
+  - Test: MITIGATE phase retrieves validation metadata
+  - Test: MITIGATE phase includes test in prompt
+  - Test: Full workflow completes successfully
+- [✅] Run tests - verified RED phase
+- [✅] Mock all RFC-060 components
+  - PhaseDataClient: `storePhaseResults`, `retrievePhaseResults`
+  - TestRunner: `runTests`
+  - ExecutableTestGenerator: `generateExecutableTests`
+  - GitHub API, ScanOrchestrator
+- [✅] Verify PhaseDataClient API usage
+  - Tests verify `storePhaseResults` called with correct data
+  - Tests verify `retrievePhaseResults` called during mitigation
+  - No local file storage used (removed `USE_PLATFORM_STORAGE=false`)
+- [✅] Run test suite: All 6 tests GREEN ✅
+- [✅] Document setup and architecture
+  - Created `docs/rfc-060-phase-4.1-e2e-testing.md` (264 lines)
+  - Scope clarification: Phase 4.1 uses mocks, 4.3 uses real nodegoat
+  - Running instructions, troubleshooting, test architecture
+- [✅] TypeScript compilation: Clean
+- **Completion Date**: 2025-10-10
+
+#### Phase 4.1 Code Impact
+**Files Created**:
+- `tests/integration/rfc-060-workflow.test.ts` (421 lines, 6 tests)
+- `docs/rfc-060-phase-4.1-e2e-testing.md` (264 lines)
+
+**Test Coverage**:
+- 6/6 E2E integration tests passing
+- All RFC-060 components properly mocked and verified
+- Full workflow orchestration validated
+
+**Quality Follow-ups Created**:
+- Task: Verify TestRunner/ExecutableTestGenerator in full workflow
+- Task: Fix "VALIDATE phase generates RED tests" to use PhaseExecutor
+- Task: Add test helper methods to PhaseExecutor
+
+**Scope Clarification**:
+- Phase 4.1: Integration tests with mocks (validates orchestration)
+- Phase 4.3: Real nodegoat testing (validates actual vulnerability fixing)
 
 ---
 
