@@ -136,6 +136,62 @@ class Logger {
   getMinLevel(): LogLevel {
     return this.minLevel;
   }
+
+  /**
+   * RFC-060 Phase 4.3: Log phase execution with structured metadata
+   */
+  logPhaseExecution(phase: string, issueNumber: number, metadata: {
+    status: 'start' | 'success' | 'failure';
+    timestamp: string;
+    durationMs?: number;
+    error?: string;
+    [key: string]: any;
+  }): void {
+    const message = `[PHASE:${phase.toUpperCase()}] Issue #${issueNumber} - ${metadata.status}`;
+    const logMetadata = {
+      phase,
+      issueNumber,
+      ...metadata
+    };
+
+    if (metadata.status === 'failure') {
+      this.error(message, logMetadata);
+    } else {
+      this.info(message, logMetadata);
+    }
+  }
+
+  /**
+   * RFC-060 Phase 4.3: Log test execution with structured metadata
+   */
+  logTestExecution(issueNumber: number, metadata: {
+    phase: 'validate' | 'mitigate';
+    testFile: string;
+    framework?: string;
+    passed: boolean;
+    executionTime?: number;
+    output?: string;
+    error?: string;
+    [key: string]: any;
+  }): void {
+    const message = `[TEST] Issue #${issueNumber} - ${metadata.phase} - ${metadata.passed ? 'PASSED' : 'FAILED'}`;
+    this.info(message, metadata);
+  }
+
+  /**
+   * RFC-060 Phase 4.3: Log trust score calculation
+   */
+  logTrustScore(issueNumber: number, metadata: {
+    preTestPassed: boolean;
+    postTestPassed: boolean;
+    trustScore: number;
+    explanation: string;
+    timestamp: string;
+    [key: string]: any;
+  }): void {
+    const message = `[TRUST-SCORE] Issue #${issueNumber} - Score: ${metadata.trustScore}`;
+    this.info(message, metadata);
+  }
 }
 
 // Create and export a singleton instance

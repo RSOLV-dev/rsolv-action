@@ -324,6 +324,125 @@ await executor.executeThreePhaseForIssue(issue);
 - **Timeout configuration**: Adjust based on repository size
 - **Parallel execution**: Process independent issues concurrently
 
+## Observability & Debugging
+
+### Observability Data Storage
+
+Phase execution automatically stores observability data in `.rsolv/observability/`:
+
+```bash
+.rsolv/observability/
+├── failures/      # Validation/mitigation failures with metadata
+├── retries/       # Retry attempt logs with error details
+├── trust-scores/  # Trust score calculations and metadata
+└── timelines/     # Execution timelines with phase transitions
+```
+
+### Trust Score Interpretation
+
+Trust scores indicate fix confidence:
+
+- **100**: Perfect fix (pre-test failed → post-test passed)
+- **50**: Test issue or false positive (both tests passed)
+- **0**: Fix failed or broke functionality (post-test failed)
+
+### Quick Debugging
+
+Check recent phase activity:
+```bash
+# View observability data
+ls -lh .rsolv/observability/*/
+
+# Check trust scores
+find .rsolv/observability/trust-scores -name "*.json" -exec jq '{issue: .issueNumber, score: .trustScore}' {} \;
+
+# View execution timelines
+find .rsolv/observability/timelines -name "*.json" -exec jq '.totalDurationMs' {} \;
+```
+
+### Common Troubleshooting
+
+**Phase data not stored?**
+```bash
+# Check if platform storage is disabled
+echo $USE_PLATFORM_STORAGE  # Should be 'false' for local storage
+
+# Verify observability directories exist
+ls -la .rsolv/observability/
+```
+
+**Tests pass on vulnerable code?**
+```bash
+# Check validation results
+cat .rsolv/validation/issue-*.json | jq '.validated'
+
+# Review false positive reason
+cat .rsolv/phase-data/*-validation.json | jq '.data.validate | to_entries[] | .value.falsePositiveReason'
+```
+
+**Validation branch missing?**
+```bash
+# List validation branches
+git branch -a | grep rsolv/validate
+
+# Check phase data for branch name
+cat .rsolv/phase-data/*-validation.json | jq '.data.validate | to_entries[] | .value.branchName'
+```
+
+### SQL Queries (Platform Storage)
+
+When using platform storage (PostgreSQL), query phase data:
+
+```sql
+-- Get all validations for a repository
+SELECT issue_number, data->'validate' as validation_data, timestamp
+FROM phase_data
+WHERE repo = 'owner/repo' AND phase = 'validation'
+ORDER BY timestamp DESC;
+
+-- Find failed validations
+SELECT repo, issue_number, data->'validate'->issue_number::text->>'falsePositiveReason'
+FROM phase_data
+WHERE phase = 'validation'
+  AND (data->'validate'->issue_number::text->>'validated')::boolean = false;
+
+-- Calculate trust score statistics
+SELECT repo, AVG((data->'validate'->issue_number::text->'testExecutionResult'->>'passed')::int * 100)
+FROM phase_data
+WHERE phase = 'validation'
+GROUP BY repo;
+```
+
+### Structured Logging
+
+Logs include structured metadata for filtering:
+
+```bash
+# View phase execution logs
+grep "\[PHASE:" logs/rsolv-action.log
+
+# View test execution
+grep "\[TEST\]" logs/rsolv-action.log
+
+# View trust scores
+grep "\[TRUST-SCORE\]" logs/rsolv-action.log
+
+# Filter by issue
+grep "Issue #123" logs/rsolv-action.log
+```
+
+### Performance Analysis
+
+Identify bottlenecks:
+```bash
+# Find slowest phases
+find .rsolv/observability/timelines -name "*.json" -exec jq '.phases | max_by(.durationMs)' {} \;
+
+# Calculate average execution time
+find .rsolv/observability/timelines -name "*.json" -exec jq '.totalDurationMs' {} \; | \
+  awk '{sum+=$1; count++} END {print "Avg: " sum/count "ms"}'
+```
+
 ## Future Enhancements
 
 - Platform API integration for centralized storage

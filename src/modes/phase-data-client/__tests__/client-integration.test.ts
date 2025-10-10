@@ -159,3 +159,117 @@ describeOrSkip('PhaseDataClient - Live API Integration', () => {
     expect(retrievedData).toBeDefined();
   }, 30000);
 });
+
+/**
+ * Observability features - local filesystem storage tests
+ * These tests verify observability data storage (failures, retries, trust scores, timelines)
+ */
+describe('PhaseDataClient - Observability Features', () => {
+  let client: PhaseDataClient;
+  const testRepo = 'testorg/testrepo';
+  const testIssueNumber = 9001;
+
+  beforeAll(async () => {
+    process.env.USE_PLATFORM_STORAGE = 'false';
+    client = new PhaseDataClient('test-api-key');
+  });
+
+  const verifyStoredData = async (subdir: string, filename: string, expectations: Record<string, any>) => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const dir = path.join(process.cwd(), '.rsolv', 'observability', subdir);
+    const filepath = path.join(dir, filename);
+
+    expect(fs.existsSync(filepath)).toBe(true);
+    const data = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+
+    Object.entries(expectations).forEach(([key, value]) => {
+      expect(data[key]).toBe(value);
+    });
+
+    return data;
+  };
+
+  test('should store failure details with metadata', async () => {
+    const failureDetails = {
+      phase: 'validate',
+      issueNumber: testIssueNumber,
+      error: 'Test generation failed',
+      timestamp: new Date().toISOString(),
+      retryCount: 0,
+      metadata: { aiProvider: 'anthropic', model: 'claude-3-opus' }
+    };
+
+    await client.storeFailureDetails(testRepo, testIssueNumber, failureDetails);
+
+    const fs = await import('fs');
+    const path = await import('path');
+    const failureDir = path.join(process.cwd(), '.rsolv', 'observability', 'failures');
+    const files = fs.readdirSync(failureDir);
+    const failureFile = files.find(f =>
+      f.includes(testRepo.replace('/', '-')) && f.includes(String(testIssueNumber))
+    );
+
+    expect(failureFile).toBeDefined();
+    await verifyStoredData('failures', failureFile!, {
+      error: 'Test generation failed',
+      phase: 'validate'
+    });
+  });
+
+  test('should store retry attempts with structured metadata', async () => {
+    await client.storeRetryAttempt(testRepo, testIssueNumber, {
+      phase: 'validate',
+      issueNumber: testIssueNumber,
+      attemptNumber: 2,
+      maxRetries: 3,
+      error: 'Network timeout',
+      timestamp: new Date().toISOString(),
+      metadata: { timeoutMs: 30000, endpoint: 'https://api.anthropic.com' }
+    });
+
+    await verifyStoredData('retries', `${testRepo.replace('/', '-')}-${testIssueNumber}-retry-2.json`, {
+      attemptNumber: 2,
+      maxRetries: 3
+    });
+  });
+
+  test('should record trust scores with calculation metadata', async () => {
+    await client.storeTrustScore(testRepo, testIssueNumber, {
+      issueNumber: testIssueNumber,
+      preTestPassed: false,
+      postTestPassed: true,
+      trustScore: 100,
+      timestamp: new Date().toISOString(),
+      metadata: { testFramework: 'jest', testFile: '__tests__/security/test.js', executionTime: 1234 }
+    });
+
+    const data = await verifyStoredData('trust-scores', `${testRepo.replace('/', '-')}-${testIssueNumber}-trust-score.json`, {
+      trustScore: 100,
+      preTestPassed: false,
+      postTestPassed: true
+    });
+
+    expect(data.metadata.testFramework).toBe('jest');
+  });
+
+  test('should capture execution timeline with phase transitions', async () => {
+    await client.storeExecutionTimeline(testRepo, testIssueNumber, {
+      issueNumber: testIssueNumber,
+      phases: [
+        { phase: 'validate', startTime: '2025-10-10T10:00:00Z', endTime: '2025-10-10T10:02:30Z', durationMs: 150000, success: true },
+        { phase: 'mitigate', startTime: '2025-10-10T10:03:00Z', endTime: '2025-10-10T10:08:00Z', durationMs: 300000, success: true }
+      ],
+      totalDurationMs: 450000,
+      metadata: { testFramework: 'jest' }
+    });
+
+    const data = await verifyStoredData('timelines', `${testRepo.replace('/', '-')}-${testIssueNumber}-timeline.json`, {
+      totalDurationMs: 450000
+    });
+
+    expect(data.phases).toHaveLength(2);
+    expect(data.phases[0].phase).toBe('validate');
+    expect(data.phases[1].phase).toBe('mitigate');
+  });
+});

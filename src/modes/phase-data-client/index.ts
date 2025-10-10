@@ -345,4 +345,127 @@ export class PhaseDataClient {
       return 0;
     }
   }
+
+  /**
+   * RFC-060 Phase 4.3: Store failure details with metadata
+   */
+  async storeFailureDetails(
+    repo: string,
+    issueNumber: number,
+    failureDetails: {
+      phase: string;
+      issueNumber: number;
+      error: string;
+      timestamp: string;
+      retryCount: number;
+      metadata?: Record<string, any>;
+    }
+  ): Promise<void> {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+
+    const dir = '.rsolv/observability/failures';
+    await fs.mkdir(dir, { recursive: true });
+
+    const filename = `${repo.replace('/', '-')}-${issueNumber}-failure-${Date.now()}.json`;
+    const filepath = path.join(dir, filename);
+
+    await fs.writeFile(filepath, JSON.stringify(failureDetails, null, 2));
+    console.log(`[PhaseDataClient] Stored failure details: ${filepath}`);
+  }
+
+  /**
+   * RFC-060 Phase 4.3: Store retry attempt with metadata
+   */
+  async storeRetryAttempt(
+    repo: string,
+    issueNumber: number,
+    retryAttempt: {
+      phase: string;
+      issueNumber: number;
+      attemptNumber: number;
+      maxRetries: number;
+      error: string;
+      timestamp: string;
+      metadata?: Record<string, any>;
+    }
+  ): Promise<void> {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+
+    const dir = '.rsolv/observability/retries';
+    await fs.mkdir(dir, { recursive: true });
+
+    const filename = `${repo.replace('/', '-')}-${issueNumber}-retry-${retryAttempt.attemptNumber}.json`;
+    const filepath = path.join(dir, filename);
+
+    await fs.writeFile(filepath, JSON.stringify(retryAttempt, null, 2));
+    console.log(`[PhaseDataClient] Stored retry attempt ${retryAttempt.attemptNumber}/${retryAttempt.maxRetries}: ${filepath}`);
+  }
+
+  /**
+   * RFC-060 Phase 4.3: Store trust score with calculation metadata
+   */
+  async storeTrustScore(
+    repo: string,
+    issueNumber: number,
+    trustScoreData: {
+      issueNumber: number;
+      preTestPassed: boolean;
+      postTestPassed: boolean;
+      trustScore: number;
+      timestamp: string;
+      metadata?: {
+        testFramework?: string;
+        testFile?: string;
+        executionTime?: number;
+        [key: string]: any;
+      };
+    }
+  ): Promise<void> {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+
+    const dir = '.rsolv/observability/trust-scores';
+    await fs.mkdir(dir, { recursive: true });
+
+    const filename = `${repo.replace('/', '-')}-${issueNumber}-trust-score.json`;
+    const filepath = path.join(dir, filename);
+
+    await fs.writeFile(filepath, JSON.stringify(trustScoreData, null, 2));
+    console.log(`[PhaseDataClient] Stored trust score (${trustScoreData.trustScore}): ${filepath}`);
+  }
+
+  /**
+   * RFC-060 Phase 4.3: Store execution timeline with phase transitions
+   */
+  async storeExecutionTimeline(
+    repo: string,
+    issueNumber: number,
+    timeline: {
+      issueNumber: number;
+      phases: Array<{
+        phase: string;
+        startTime: string;
+        endTime: string;
+        durationMs: number;
+        success: boolean;
+        metadata?: Record<string, any>;
+      }>;
+      totalDurationMs: number;
+      metadata?: Record<string, any>;
+    }
+  ): Promise<void> {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+
+    const dir = '.rsolv/observability/timelines';
+    await fs.mkdir(dir, { recursive: true });
+
+    const filename = `${repo.replace('/', '-')}-${issueNumber}-timeline.json`;
+    const filepath = path.join(dir, filename);
+
+    await fs.writeFile(filepath, JSON.stringify(timeline, null, 2));
+    console.log(`[PhaseDataClient] Stored execution timeline (${timeline.totalDurationMs}ms): ${filepath}`);
+  }
 }
