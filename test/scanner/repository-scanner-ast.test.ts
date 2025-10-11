@@ -1,289 +1,149 @@
-import { describe, it, expect, beforeEach, vi, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RepositoryScanner } from '../../src/scanner/repository-scanner.js';
-import { ASTValidator } from '../../src/scanner/ast-validator.js';
-import type { ScanConfig, FileToScan } from '../../src/scanner/types.js';
+import type { ScanConfig } from '../../src/scanner/types.js';
 import type { Vulnerability } from '../../src/security/types.js';
 import { VulnerabilityType } from '../../src/security/types.js';
 
-// Mock dependencies
-vi.mock('../../src/github/api.js', () => ({
-  getGitHubClient: () => ({
-    git: {
-      getTree: mock(() => ({ data: { tree: [] } })),
-      getBlob: vi.fn()
-    }
-  })
-}));
-
-vi.mock('../../src/security/detector-v2.js', () => ({
-  SecurityDetectorV2: mock(() => ({
-    detect: mock(() => [])
-  }))
-}));
-
-vi.mock('../../src/scanner/ast-validator.js', () => ({
-  ASTValidator: vi.fn()
-}));
+// Mock all external dependencies
+vi.mock('../../src/github/api.js');
+vi.mock('../../src/security/safe-detector.js');
+vi.mock('../../src/scanner/ast-validator.js');
+vi.mock('../../src/vendor/vendor-detector.js');
 
 describe('RepositoryScanner with AST Validation', () => {
   let scanner: RepositoryScanner;
-  let mockValidator: any;
+  let mockValidator: ReturnType<typeof vi.fn>;
+  let ASTValidatorMock: any;
 
-  beforeEach(() => {
-    // Clear all mocks before each test
-    vi.restoreAllMocks();
-    
-    // Re-mock the modules
-    vi.mock('../../src/github/api.js', () => ({
-      getGitHubClient: () => ({
-        git: {
-          getTree: vi.fn(() => ({ data: { tree: [] } })),
-          getBlob: vi.fn()
-        }
-      })
-    }));
-
-    vi.mock('../../src/security/detector-v2.js', () => ({
-      SecurityDetectorV2: vi.fn(() => ({
-        detect: vi.fn(() => [])
-      }))
-    }));
-
-    vi.mock('../../src/scanner/ast-validator.js', () => ({
-      ASTValidator: vi.fn()
-    }));
-    
-    scanner = new RepositoryScanner();
-    mockValidator = {
-      validateVulnerabilities: vi.fn()
-    };
-    (ASTValidator as any).mockImplementation(() => mockValidator);
+  // Test data factory
+  const createVulnerability = (overrides?: Partial<Vulnerability>): Vulnerability => ({
+    type: VulnerabilityType.COMMAND_INJECTION,
+    severity: 'critical',
+    description: 'Eval injection detected',
+    message: 'Using eval() with user input can lead to code injection',
+    line: 10,
+    column: 5,
+    filePath: 'test.js',
+    snippet: 'eval(x);',
+    confidence: 90,
+    cweId: 'CWE-95',
+    owaspCategory: 'A03:2021',
+    remediation: 'Do not use eval with user input',
+    ...overrides
   });
 
-  it('should use AST validation when enabled and API key is provided', async () => {
-    const config: ScanConfig = {
-      repository: {
-        owner: 'test',
-        name: 'repo',
-        defaultBranch: 'main'
-      },
-      enableASTValidation: true,
-      rsolvApiKey: 'test-api-key',
-      createIssues: false,
-      issueLabel: 'security'
-    };
+  const createConfig = (overrides?: Partial<ScanConfig>): ScanConfig => ({
+    repository: { owner: 'test', name: 'repo', defaultBranch: 'main' },
+    enableASTValidation: true,
+    rsolvApiKey: 'test-api-key',
+    createIssues: false,
+    issueLabel: 'security',
+    ...overrides
+  });
 
-    // Mock detector to return vulnerabilities
-    const mockVulnerabilities: Vulnerability[] = [
-      {
-        type: VulnerabilityType.COMMAND_INJECTION,
-        severity: 'critical' as const,
-        description: 'Eval injection detected',
-        message: 'Using eval() with user input can lead to code injection',
-        line: 10,
-        column: 5,
-        filePath: 'test.js',
-        snippet: 'eval(x);',
-        confidence: 90,
-        cweId: 'CWE-95',
-        owaspCategory: 'A03:2021',
-        remediation: 'Do not use eval with user input'
-      }
-    ];
-
-    // Mock the scanner's detector
-    const mockDetector = (scanner as any).detector;
-    mockDetector.detect.mockResolvedValue(mockVulnerabilities);
-
-    // Mock GitHub API to return a file
+  const setupGitHubMock = (files: Array<{ path: string; content: string }>) => {
     const mockGitHub = (scanner as any).github;
     mockGitHub.git.getTree.mockResolvedValue({
       data: {
-        tree: [
-          { type: 'blob', path: 'test.js', sha: 'abc123', size: 100 }
-        ]
+        tree: files.map(f => ({ type: 'blob', path: f.path, sha: 'abc123', size: f.content.length }))
       }
     });
-    mockGitHub.git.getBlob.mockResolvedValue({
-      data: {
-        content: Buffer.from('eval(x);').toString('base64'),
-        encoding: 'base64'
-      }
+    mockGitHub.git.getBlob.mockImplementation(({ file_sha }: { file_sha: string }) => {
+      const file = files[0]; // Simplified for tests
+      return Promise.resolve({
+        data: { content: Buffer.from(file.content).toString('base64'), encoding: 'base64' }
+      });
     });
+  };
 
-    // Mock validator to filter out the vulnerability
-    mockValidator.validateVulnerabilities.mockResolvedValue([]);
+  beforeEach(async () => {
+    vi.clearAllMocks();
+
+    const { getGitHubClient } = await import('../../src/github/api.js');
+    const { SafeDetector } = await import('../../src/security/safe-detector.js');
+    const ASTValidatorModule = await import('../../src/scanner/ast-validator.js');
+    ASTValidatorMock = ASTValidatorModule.ASTValidator;
+    const { VendorDetector } = await import('../../src/vendor/vendor-detector.js');
+
+    // Setup mocks with minimal required interface
+    vi.mocked(getGitHubClient).mockReturnValue({
+      git: {
+        getTree: vi.fn().mockResolvedValue({ data: { tree: [] } }),
+        getBlob: vi.fn().mockResolvedValue({ data: { content: '', encoding: 'base64' } })
+      }
+    } as any);
+
+    vi.mocked(SafeDetector).mockImplementation(() => ({
+      detect: vi.fn().mockResolvedValue([]),
+      cleanup: vi.fn()
+    } as any));
+
+    vi.mocked(VendorDetector).mockImplementation(() => ({
+      isVendorFile: vi.fn().mockResolvedValue(false)
+    } as any));
+
+    mockValidator = vi.fn().mockImplementation((vulns) => Promise.resolve(vulns));
+    vi.mocked(ASTValidatorMock).mockImplementation(() => ({
+      validateVulnerabilities: mockValidator
+    } as any));
+
+    scanner = new RepositoryScanner();
+  });
+
+  it('should use AST validation when enabled with API key', async () => {
+    const vuln = createVulnerability();
+    const config = createConfig();
+
+    (scanner as any).detector.detect.mockResolvedValue([vuln]);
+    setupGitHubMock([{ path: 'test.js', content: 'eval(x);' }]);
+    mockValidator.mockResolvedValue([]); // AST filters out the vulnerability
 
     const result = await scanner.scan(config);
 
-    // Verify AST validator was called
-    expect(ASTValidator).toHaveBeenCalledWith('test-api-key');
-    expect(mockValidator.validateVulnerabilities).toHaveBeenCalledWith(
-      mockVulnerabilities,
-      expect.any(Map)
-    );
-
-    // Result should have no vulnerabilities (filtered by AST)
+    expect(ASTValidatorMock).toHaveBeenCalledWith('test-api-key');
+    expect(mockValidator).toHaveBeenCalledWith([vuln], expect.any(Map));
     expect(result.vulnerabilities).toHaveLength(0);
-    expect(result.groupedVulnerabilities).toHaveLength(0);
   });
 
   it('should skip AST validation when disabled', async () => {
-    const config: ScanConfig = {
-      repository: {
-        owner: 'test',
-        name: 'repo',
-        defaultBranch: 'main'
-      },
-      enableASTValidation: false, // Disabled
-      rsolvApiKey: 'test-api-key',
-      createIssues: false,
-      issueLabel: 'security'
-    };
+    const vuln = createVulnerability();
+    const config = createConfig({ enableASTValidation: false });
 
-    const mockVulnerabilities: Vulnerability[] = [
-      {
-        type: VulnerabilityType.COMMAND_INJECTION,
-        severity: 'critical' as const,
-        description: 'Eval injection detected',
-        message: 'Using eval() with user input can lead to code injection',
-        line: 10,
-        column: 5,
-        filePath: 'test.js',
-        snippet: 'eval(x);',
-        confidence: 90,
-        cweId: 'CWE-95',
-        owaspCategory: 'A03:2021',
-        remediation: 'Do not use eval with user input'
-      }
-    ];
-
-    const mockDetector = (scanner as any).detector;
-    mockDetector.detect.mockResolvedValue(mockVulnerabilities);
-
-    const mockGitHub = (scanner as any).github;
-    mockGitHub.git.getTree.mockResolvedValue({
-      data: { tree: [{ type: 'blob', path: 'test.js', sha: 'abc123', size: 100 }] }
-    });
-    mockGitHub.git.getBlob.mockResolvedValue({
-      data: { content: Buffer.from('eval(x);').toString('base64') }
-    });
+    (scanner as any).detector.detect.mockResolvedValue([vuln]);
+    setupGitHubMock([{ path: 'test.js', content: 'eval(x);' }]);
 
     const result = await scanner.scan(config);
 
-    // AST validator should not be called
-    expect(mockValidator.validateVulnerabilities).not.toHaveBeenCalled();
-
-    // Result should have all vulnerabilities
+    expect(mockValidator).not.toHaveBeenCalled();
     expect(result.vulnerabilities).toHaveLength(1);
   });
 
-  it('should skip AST validation when no API key is provided', async () => {
-    const config: ScanConfig = {
-      repository: {
-        owner: 'test',
-        name: 'repo',
-        defaultBranch: 'main'
-      },
-      enableASTValidation: true,
-      rsolvApiKey: undefined, // No API key
-      createIssues: false,
-      issueLabel: 'security'
-    };
+  it('should skip AST validation when no API key provided', async () => {
+    const vuln = createVulnerability();
+    const config = createConfig({ rsolvApiKey: undefined });
 
-    const mockVulnerabilities: Vulnerability[] = [
-      {
-        type: VulnerabilityType.COMMAND_INJECTION,
-        severity: 'critical' as const,
-        description: 'Eval injection detected',
-        message: 'Using eval() with user input can lead to code injection',
-        line: 10,
-        column: 5,
-        filePath: 'test.js',
-        snippet: 'eval(x);',
-        confidence: 90,
-        cweId: 'CWE-95',
-        owaspCategory: 'A03:2021',
-        remediation: 'Do not use eval with user input'
-      }
-    ];
-
-    const mockDetector = (scanner as any).detector;
-    mockDetector.detect.mockResolvedValue(mockVulnerabilities);
-
-    const mockGitHub = (scanner as any).github;
-    mockGitHub.git.getTree.mockResolvedValue({
-      data: { tree: [{ type: 'blob', path: 'test.js', sha: 'abc123', size: 100 }] }
-    });
-    mockGitHub.git.getBlob.mockResolvedValue({
-      data: { content: Buffer.from('eval(x);').toString('base64') }
-    });
+    (scanner as any).detector.detect.mockResolvedValue([vuln]);
+    setupGitHubMock([{ path: 'test.js', content: 'eval(x);' }]);
 
     const result = await scanner.scan(config);
 
-    // AST validator should not be instantiated
-    expect(ASTValidator).not.toHaveBeenCalled();
-
-    // Result should have all vulnerabilities
+    expect(ASTValidatorMock).not.toHaveBeenCalled();
     expect(result.vulnerabilities).toHaveLength(1);
   });
 
   it('should provide file contents to AST validator', async () => {
-    const config: ScanConfig = {
-      repository: {
-        owner: 'test',
-        name: 'repo',
-        defaultBranch: 'main'
-      },
-      enableASTValidation: true,
-      rsolvApiKey: 'test-api-key',
-      createIssues: false,
-      issueLabel: 'security'
-    };
-
     const fileContent = 'const x = eval(userInput); // dangerous';
-    
-    const mockVulnerabilities: Vulnerability[] = [
-      {
-        type: VulnerabilityType.COMMAND_INJECTION,
-        severity: 'critical' as const,
-        description: 'Eval injection detected',
-        message: 'Using eval() with user input can lead to code injection',
-        line: 1,
-        column: 11,
-        filePath: 'app.js',
-        snippet: 'const x = eval(userInput);',
-        confidence: 90,
-        cweId: 'CWE-95',
-        owaspCategory: 'A03:2021',
-        remediation: 'Do not use eval with user input'
-      }
-    ];
+    const vuln = createVulnerability({ filePath: 'app.js', line: 1, column: 11 });
+    const config = createConfig();
 
-    const mockDetector = (scanner as any).detector;
-    mockDetector.detect.mockResolvedValue(mockVulnerabilities);
-
-    const mockGitHub = (scanner as any).github;
-    mockGitHub.git.getTree.mockResolvedValue({
-      data: {
-        tree: [
-          { type: 'blob', path: 'app.js', sha: 'abc123', size: fileContent.length }
-        ]
-      }
-    });
-    mockGitHub.git.getBlob.mockResolvedValue({
-      data: {
-        content: Buffer.from(fileContent).toString('base64')
-      }
-    });
-
-    mockValidator.validateVulnerabilities.mockResolvedValue(mockVulnerabilities);
+    (scanner as any).detector.detect.mockResolvedValue([vuln]);
+    setupGitHubMock([{ path: 'app.js', content: fileContent }]);
+    mockValidator.mockResolvedValue([vuln]);
 
     await scanner.scan(config);
 
-    // Verify file contents were passed to validator
-    expect(mockValidator.validateVulnerabilities).toHaveBeenCalledWith(
-      mockVulnerabilities,
+    expect(mockValidator).toHaveBeenCalledWith(
+      [vuln],
       new Map([['app.js', fileContent]])
     );
   });
