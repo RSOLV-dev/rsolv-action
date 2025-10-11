@@ -52,7 +52,25 @@ export class RepositoryScanner {
             continue;
           }
 
-          const fileVulnerabilities = await this.detector.detect(file.content, file.language);
+          // Add timeout protection to prevent indefinite hangs on problematic files
+          const FILE_TIMEOUT_MS = 30000; // 30 seconds per file
+          const scanPromise = this.detector.detect(file.content, file.language);
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => {
+              reject(new Error(`File scan timeout after ${FILE_TIMEOUT_MS}ms`));
+            }, FILE_TIMEOUT_MS);
+          });
+
+          let fileVulnerabilities;
+          try {
+            fileVulnerabilities = await Promise.race([scanPromise, timeoutPromise]);
+          } catch (timeoutError: any) {
+            if (timeoutError.message && timeoutError.message.includes('timeout')) {
+              logger.warn(`⚠️  File ${file.path} scan timed out after ${FILE_TIMEOUT_MS}ms - skipping (file size: ${file.content.length} bytes)`);
+              continue; // Skip this file and move to next
+            }
+            throw timeoutError; // Re-throw if it's not a timeout error
+          }
 
           // Add file path to each vulnerability
           fileVulnerabilities.forEach(vuln => {
