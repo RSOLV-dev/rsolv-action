@@ -1,4 +1,4 @@
-import { SecurityDetectorV2 } from '../security/detector-v2.js';
+import { SafeDetector } from '../security/safe-detector.js';
 import { getGitHubClient } from '../github/api.js';
 import { logger } from '../utils/logger.js';
 import type { FileToScan, ScanConfig, ScanResult, VulnerabilityGroup } from './types.js';
@@ -8,12 +8,13 @@ import { ASTValidator } from './ast-validator.js';
 import { VendorDetector } from '../vendor/vendor-detector.js';
 
 export class RepositoryScanner {
-  private detector: SecurityDetectorV2;
+  private detector: SafeDetector;
   private github: ReturnType<typeof getGitHubClient>;
   private vendorDetector: VendorDetector;
 
   constructor() {
-    this.detector = new SecurityDetectorV2(createPatternSource());
+    // Use SafeDetector instead of SecurityDetectorV2 to prevent hangs
+    this.detector = new SafeDetector(createPatternSource());
     this.github = getGitHubClient();
     this.vendorDetector = new VendorDetector();
   }
@@ -44,22 +45,27 @@ export class RepositoryScanner {
           const isVendorFile = await this.vendorDetector.isVendorFile(file.path);
 
           if (isVendorFile) {
-            logger.info(`Detected vendor file: ${file.path}`);
+            logger.info(`Skipping vendor/minified file: ${file.path}`);
+            // Skip scanning vendor files to avoid:
+            // 1. False positives from third-party library code
+            // 2. Performance issues (catastrophic regex backtracking on minified code)
+            // 3. Irrelevant security findings (vendor vulns should be tracked separately)
+            continue;
           }
 
-          const fileVulnerabilities = await this.detector.detect(file.content, file.language);
+          // SafeDetector handles timeout protection internally using worker threads
+          const fileVulnerabilities = await this.detector.detect(file.content, file.language, file.path);
 
-          // Add file path and vendor flag to each vulnerability
+          // Add file path to each vulnerability
           fileVulnerabilities.forEach(vuln => {
             vuln.filePath = file.path;
-            vuln.isVendor = isVendorFile;
+            vuln.isVendor = false; // We already filtered out vendor files above
           });
 
           vulnerabilities.push(...fileVulnerabilities);
 
           if (fileVulnerabilities.length > 0) {
-            const vendorNote = isVendorFile ? ' (vendor file)' : '';
-            logger.info(`Found ${fileVulnerabilities.length} vulnerabilities in ${file.path}${vendorNote}`);
+            logger.info(`Found ${fileVulnerabilities.length} vulnerabilities in ${file.path}`);
           }
         } catch (error) {
           logger.error(`Error scanning file ${file.path}:`, error);
@@ -87,17 +93,18 @@ export class RepositoryScanner {
       logger.warn('AST validation is enabled but skipped - missing RSOLV API key');
     }
     
-    // Log vendor vs application vulnerability breakdown
-    const vendorVulns = vulnerabilities.filter(v => v.isVendor);
-    const appVulns = vulnerabilities.filter(v => !v.isVendor);
-    logger.info(`Vulnerability breakdown: ${appVulns.length} in application code, ${vendorVulns.length} in vendor files`);
+    // Log that we only scanned application code (vendor files were skipped)
+    logger.info(`Scanned application code only (vendor/minified files automatically excluded)`);
 
     // Group vulnerabilities by type
     const groupedVulnerabilities = this.groupVulnerabilities(vulnerabilities);
 
     const scanTime = Date.now() - startTime;
     logger.info(`Scan completed in ${scanTime}ms. Found ${vulnerabilities.length} vulnerabilities`);
-    
+
+    // Clean up any remaining worker threads
+    this.detector.cleanup();
+
     return {
       repository: `${config.repository.owner}/${config.repository.name}`,
       branch: config.repository.defaultBranch,
@@ -219,9 +226,8 @@ export class RepositoryScanner {
     const groups = new Map<string, VulnerabilityGroup>();
 
     for (const vuln of vulnerabilities) {
-      // Group vendor and application vulnerabilities separately
-      const vendorSuffix = vuln.isVendor ? '-vendor' : '-app';
-      const key = `${vuln.type}-${vuln.severity}${vendorSuffix}`;
+      // Group by type and severity (no vendor grouping since we skip vendor files)
+      const key = `${vuln.type}-${vuln.severity}`;
 
       if (!groups.has(key)) {
         groups.set(key, {
@@ -230,7 +236,7 @@ export class RepositoryScanner {
           count: 0,
           files: [],
           vulnerabilities: [],
-          isVendor: vuln.isVendor || false
+          isVendor: false // All vulnerabilities are in application code
         });
       }
 
@@ -242,13 +248,13 @@ export class RepositoryScanner {
         group.files.push(vuln.filePath);
       }
     }
-    
+
     // Sort groups by severity and count
     return Array.from(groups.values()).sort((a, b) => {
       const severityOrder = { high: 0, medium: 1, low: 2 };
-      const severityDiff = severityOrder[a.severity as keyof typeof severityOrder] - 
+      const severityDiff = severityOrder[a.severity as keyof typeof severityOrder] -
                            severityOrder[b.severity as keyof typeof severityOrder];
-      
+
       return severityDiff !== 0 ? severityDiff : b.count - a.count;
     });
   }
