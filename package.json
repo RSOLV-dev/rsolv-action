@@ -20,7 +20,7 @@
     "test:validation": "vitest run src/validation",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/index.ts --outdir dist --minify --target node",
+    "build": "bun build src/index.ts --outdir dist --minify --target node && cp src/security/detector-worker.js dist/detector-worker.js",
     "publish": "gh release create v0.1.0 --title 'Initial Release' --notes 'First public release of RSOLV GitHub Action'",
     "dev-debug": "bun run dev-debug-environment.ts",
     "test:e2e": "bun run e2e-real-vended.ts",
