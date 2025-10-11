@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SafeDetector } from './safe-detector.js';
-import type { Vulnerability } from './types.js';
 
 describe('SafeDetector', () => {
   let detector: SafeDetector;
@@ -9,187 +8,141 @@ describe('SafeDetector', () => {
     detector = new SafeDetector();
   });
 
+  afterEach(() => {
+    detector.cleanup();
+  });
+
+  // Helper to create test patterns
+  const createPattern = (id: string, regex: RegExp, type = 'test', severity = 'high') => ({
+    id,
+    name: `${id} pattern`,
+    type,
+    severity,
+    patterns: { regex: [regex] }
+  });
+
+  // Known catastrophic backtracking pattern: (a+)+b with string of a's but no b
+  const CATASTROPHIC_PATTERN = /(a+)+b/;
+  const CATASTROPHIC_INPUT = (length: number) => 'a'.repeat(length) + 'X';
+
   describe('timeout handling', () => {
-    it('should complete quickly for normal regex patterns', async () => {
-      const code = `
-        const password = "secretpass123";
-        console.log(password);
-      `;
-
+    it('completes quickly for normal patterns', async () => {
+      const code = 'const password = "secretpass123";';
       const start = Date.now();
+
       const result = await detector.detect(code, 'javascript');
-      const duration = Date.now() - start;
 
-      expect(duration).toBeLessThan(1000); // Should complete in under 1 second
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
+      expect(Date.now() - start).toBeLessThan(1000);
+      expect(result).toBeInstanceOf(Array);
     });
 
-    it('should timeout and return empty array for catastrophic backtracking regex', async () => {
-      // This regex is known to cause catastrophic backtracking
-      const problematicCode = 'a'.repeat(50) + 'X';
-      const problematicPattern = {
-        id: 'test-catastrophic',
-        name: 'Catastrophic Pattern',
-        type: 'test',
-        severity: 'high',
-        patterns: {
-          regex: [/(a+)+b/] // This will cause exponential backtracking
-        }
-      };
-
+    it('times out and returns empty array for catastrophic backtracking', async () => {
+      const pattern = createPattern('catastrophic', CATASTROPHIC_PATTERN);
       const start = Date.now();
-      const result = await detector.detectWithPattern(problematicCode, 'javascript', problematicPattern, 1000);
+
+      const result = await detector.detectWithPattern(
+        CATASTROPHIC_INPUT(50),
+        'javascript',
+        pattern,
+        1000
+      );
       const duration = Date.now() - start;
 
-      expect(duration).toBeLessThan(2000); // Should timeout at ~1 second
-      expect(duration).toBeGreaterThan(900); // Should take close to timeout
-      expect(result).toEqual([]); // Should return empty array on timeout
+      expect(result).toEqual([]);
+      expect(duration).toBeGreaterThan(900);
+      expect(duration).toBeLessThan(2000);
     });
 
-    it('should handle infinite loop in pattern matching', async () => {
-      // Simulate the user.rb hang scenario
-      const userRbContent = `
-        class User < ApplicationRecord
-          def authenticate(email, password)
-            if user.password == Digest::MD5.hexdigest(password)
-              auth = user
-            end
-          end
-        end
-      `;
+    it('handles catastrophic backtracking with longer input', async () => {
+      const pattern = createPattern('infinite-loop', CATASTROPHIC_PATTERN);
 
-      // This simulates a pattern that causes infinite loop
-      const infiniteLoopPattern = {
-        id: 'infinite-loop-pattern',
-        name: 'Infinite Loop Pattern',
-        type: 'test',
-        severity: 'high',
-        patterns: {
-          regex: [/(?:.*){1,1000}(?:.*){1,1000}/] // Nested quantifiers
-        }
-      };
+      const result = await detector.detectWithPattern(
+        CATASTROPHIC_INPUT(30),
+        'ruby',
+        pattern,
+        2000
+      );
 
-      const result = await detector.detectWithPattern(userRbContent, 'ruby', infiniteLoopPattern, 2000);
-
-      expect(result).toEqual([]); // Should return empty on timeout
+      expect(result).toEqual([]);
     });
 
-    it('should properly terminate worker thread on timeout', async () => {
-      const code = 'test code';
-      const hangingPattern = {
-        id: 'hanging',
-        name: 'Hanging Pattern',
-        type: 'test',
-        severity: 'high',
-        patterns: {
-          regex: [/(a+)+b/]
-        }
-      };
+    it('terminates worker thread on timeout', async () => {
+      const pattern = createPattern('hanging', CATASTROPHIC_PATTERN);
 
-      // Spy on worker termination
-      const terminateSpy = vi.fn();
+      await detector.detectWithPattern(
+        CATASTROPHIC_INPUT(100),
+        'javascript',
+        pattern,
+        500
+      );
 
-      await detector.detectWithPattern('a'.repeat(100), 'javascript', hangingPattern, 500);
-
-      // Worker should have been terminated
-      // Note: We'll need to expose this for testing
       expect(detector.getLastWorkerTerminated()).toBe(true);
     });
   });
 
   describe('safe-regex pre-filtering', () => {
-    it('should skip patterns identified as unsafe by safe-regex', async () => {
-      const code = 'some code';
+    it('skips unsafe patterns', async () => {
+      const pattern = createPattern('unsafe', CATASTROPHIC_PATTERN);
 
-      // This pattern is known to be unsafe
-      const unsafePattern = {
-        id: 'unsafe',
-        name: 'Unsafe Pattern',
-        type: 'test',
-        severity: 'high',
-        patterns: {
-          regex: [/(a+)+b/] // Nested quantifiers - unsafe
-        }
-      };
+      const result = await detector.detectWithPattern('some code', 'javascript', pattern);
 
-      const result = await detector.detectWithPattern(code, 'javascript', unsafePattern);
-
-      // Should skip the unsafe pattern and return empty
       expect(result).toEqual([]);
       expect(detector.getSkippedPatterns()).toContain('unsafe');
     });
 
-    it('should process patterns identified as safe by safe-regex', async () => {
-      const code = 'const password = "secret123"';
+    it('processes safe patterns', async () => {
+      const pattern = createPattern(
+        'safe-password',
+        /password\s*=\s*["'][^"']+["']/,
+        'hardcoded-secret'
+      );
 
-      // Simple, safe pattern
-      const safePattern = {
-        id: 'safe-password',
-        name: 'Safe Password Pattern',
-        type: 'hardcoded-secret',
-        severity: 'high',
-        patterns: {
-          regex: [/password\s*=\s*["'][^"']+["']/] // Simple, linear pattern
-        }
-      };
+      const result = await detector.detectWithPattern(
+        'const password = "secret123"',
+        'javascript',
+        pattern
+      );
 
-      const result = await detector.detectWithPattern(code, 'javascript', safePattern);
-
-      // Should find the vulnerability
       expect(result.length).toBeGreaterThan(0);
       expect(result[0].type).toBe('hardcoded-secret');
     });
   });
 
   describe('worker thread management', () => {
-    it('should create worker for each detection request', async () => {
-      const code = 'test';
+    it('cleans up workers after use', async () => {
+      await detector.detect('test', 'javascript');
 
-      await detector.detect(code, 'javascript');
-
-      expect(detector.getWorkerCount()).toBe(0); // Worker should be cleaned up after use
+      expect(detector.getWorkerCount()).toBe(0);
     });
 
-    it('should handle worker errors gracefully', async () => {
-      const code = null as any; // This will cause an error in the worker
+    it('handles worker errors gracefully', async () => {
+      const result = await detector.detect(null as any, 'javascript');
 
-      const result = await detector.detect(code, 'javascript');
-
-      expect(result).toEqual([]); // Should return empty array on error
+      expect(result).toEqual([]);
       expect(detector.getLastError()).toBeDefined();
     });
 
-    it('should handle multiple concurrent detections', async () => {
-      const detections = [
+    it('handles concurrent detections', async () => {
+      const results = await Promise.all([
         detector.detect('code1', 'javascript'),
         detector.detect('code2', 'python'),
         detector.detect('code3', 'ruby')
-      ];
-
-      const results = await Promise.all(detections);
+      ]);
 
       expect(results).toHaveLength(3);
-      results.forEach(result => {
-        expect(Array.isArray(result)).toBe(true);
-      });
+      results.forEach(result => expect(result).toBeInstanceOf(Array));
     });
   });
 
   describe('backwards compatibility', () => {
-    it('should maintain compatibility with existing SecurityDetectorV2 interface', async () => {
-      const code = 'console.log("test")';
+    it('maintains SecurityDetectorV2 interface', async () => {
+      const result = await detector.detect('console.log("test")', 'javascript');
 
-      // Should work with the same interface as SecurityDetectorV2
-      const result = await detector.detect(code, 'javascript');
-
-      expect(Array.isArray(result)).toBe(true);
+      expect(result).toBeInstanceOf(Array);
     });
 
-    it('should return vulnerability objects with correct structure', async () => {
-      const code = 'eval(userInput)';
-
-      const result = await detector.detect(code, 'javascript');
+    it('returns correctly structured vulnerability objects', async () => {
+      const result = await detector.detect('eval(userInput)', 'javascript');
 
       if (result.length > 0) {
         const vuln = result[0];
@@ -200,10 +153,5 @@ describe('SafeDetector', () => {
         expect(vuln).toHaveProperty('description');
       }
     });
-  });
-
-  afterEach(() => {
-    // Clean up any remaining workers
-    detector.cleanup();
   });
 });
