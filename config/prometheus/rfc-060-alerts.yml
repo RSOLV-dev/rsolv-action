@@ -1,0 +1,263 @@
+---
+# RFC-060 Validation & Mitigation Prometheus Alert Rules
+# These alerts monitor the health and performance of the validation and mitigation phases
+
+groups:
+  - name: rfc_060_validation_alerts
+    interval: 30s
+    rules:
+      # Alert 1: Validation success rate drops below 50% (WARNING)
+      - alert: ValidationSuccessRateLow
+        expr: avg(rsolv_validation_success_rate_percent) < 50
+        for: 15m
+        labels:
+          severity: warning
+          component: validation
+          rfc: "060"
+        annotations:
+          summary: "Validation success rate is critically low"
+          description: |
+            The validation success rate has dropped to {{ $value | humanizePercentage }}.
+            This indicates that less than half of validation executions are succeeding.
+
+            **Current value**: {{ $value | humanizePercentage }}
+            **Threshold**: 50%
+            **Impact**: Medium - May indicate issues with test generation or execution
+            **Action**: Review validation logs and check for common failure patterns
+          dashboard: "https://grafana.rsolv.dev/d/rfc-060-validation"
+
+      # Alert 2: Validation success rate drops below 25% (CRITICAL)
+      - alert: ValidationSuccessRateCritical
+        expr: avg(rsolv_validation_success_rate_percent) < 25
+        for: 10m
+        labels:
+          severity: critical
+          component: validation
+          rfc: "060"
+        annotations:
+          summary: "Validation success rate is critically low - URGENT"
+          description: |
+            The validation success rate has dropped to {{ $value | humanizePercentage }}.
+            This is a critical failure rate requiring immediate attention.
+
+            **Current value**: {{ $value | humanizePercentage }}
+            **Threshold**: 25%
+            **Impact**: High - Validation phase is largely non-functional
+            **Action**:
+              1. Check for recent deployments or configuration changes
+              2. Review error logs in validation executions
+              3. Verify external dependencies (AI provider, test runners)
+              4. Consider rolling back recent changes
+          dashboard: "https://grafana.rsolv.dev/d/rfc-060-validation"
+          runbook: "https://docs.rsolv.dev/runbooks/rfc-060-validation-failure"
+
+      # Alert 3: Average trust score below 60 for 24 hours (WARNING)
+      - alert: MitigationTrustScoreLow
+        expr: avg(rsolv_mitigation_trust_score_latest) < 60
+        for: 24h
+        labels:
+          severity: warning
+          component: mitigation
+          rfc: "060"
+        annotations:
+          summary: "Mitigation trust scores are consistently low"
+          description: |
+            The average trust score for mitigations has been below 60 for 24 hours.
+            Current average: {{ $value | printf "%.2f" }}
+
+            **Current value**: {{ $value | printf "%.2f" }}
+            **Threshold**: 60
+            **Duration**: 24 hours
+            **Impact**: Medium - Generated fixes may be less reliable
+            **Action**:
+              1. Review recent mitigation PRs for quality
+              2. Check if specific languages/frameworks are problematic
+              3. Verify AI provider response quality
+              4. Consider adjusting mitigation prompts or validation criteria
+          dashboard: "https://grafana.rsolv.dev/d/rfc-060-validation"
+
+      # Alert 4: No validation executions in the last hour (INFO/WARNING)
+      - alert: ValidationExecutionsStalled
+        expr: rate(rsolv_validation_executions_total[1h]) == 0
+        for: 1h
+        labels:
+          severity: info
+          component: validation
+          rfc: "060"
+        annotations:
+          summary: "No validation executions detected"
+          description: |
+            There have been no validation executions in the last hour.
+            This may be normal during low activity periods, but could indicate a problem.
+
+            **Expected**: > 0 executions/hour during normal operation
+            **Actual**: 0 executions/hour
+            **Action**:
+              1. Check if this is expected (e.g., maintenance window)
+              2. Verify GitHub Actions workflow is triggering
+              3. Check for API authentication issues
+              4. Review rate limiting or quota constraints
+
+      # Alert 5: Test generation duration is too high (p95 > 30 seconds)
+      - alert: TestGenerationDurationHigh
+        expr: histogram_quantile(0.95, rate(rsolv_validation_test_generation_duration_milliseconds_bucket[5m])) > 30000
+        for: 20m
+        labels:
+          severity: warning
+          component: validation
+          rfc: "060"
+        annotations:
+          summary: "Test generation is taking too long"
+          description: |
+            The 95th percentile of test generation duration is {{ $value | humanizeDuration }}.
+            This indicates performance degradation in the validation phase.
+
+            **Current p95**: {{ $value | humanizeDuration }}
+            **Threshold**: 30 seconds
+            **Impact**: Medium - Slower validation cycles
+            **Action**:
+              1. Check AI provider API latency
+              2. Review test generation prompts for complexity
+              3. Verify network connectivity to external services
+              4. Consider optimizing test generation logic
+          dashboard: "https://grafana.rsolv.dev/d/rfc-060-validation"
+
+      # Alert 6: Test execution duration is too high (p95 > 60 seconds)
+      - alert: TestExecutionDurationHigh
+        expr: histogram_quantile(0.95, rate(rsolv_validation_test_execution_duration_milliseconds_bucket[5m])) > 60000
+        for: 20m
+        labels:
+          severity: warning
+          component: validation
+          rfc: "060"
+        annotations:
+          summary: "Test execution is taking too long"
+          description: |
+            The 95th percentile of test execution duration is {{ $value | humanizeDuration }}.
+            This indicates performance issues with test execution infrastructure.
+
+            **Current p95**: {{ $value | humanizeDuration }}
+            **Threshold**: 60 seconds
+            **Impact**: Medium - Slower validation feedback loops
+            **Action**:
+              1. Check test runner resource availability
+              2. Review test complexity and dependencies
+              3. Verify CI/CD runner performance
+              4. Consider optimizing test execution environment
+          dashboard: "https://grafana.rsolv.dev/d/rfc-060-validation"
+
+      # Alert 7: High rate of failed validations by repository
+      - alert: HighValidationFailureRateByRepo
+        expr: |
+          (
+            sum by (repo) (rate(rsolv_validation_executions_total{status="failed"}[1h]))
+            /
+            sum by (repo) (rate(rsolv_validation_executions_total[1h]))
+          ) > 0.5
+        for: 30m
+        labels:
+          severity: warning
+          component: validation
+          rfc: "060"
+        annotations:
+          summary: "High validation failure rate for repository {{ $labels.repo }}"
+          description: |
+            Repository {{ $labels.repo }} has a validation failure rate of {{ $value | humanizePercentage }}.
+
+            **Repository**: {{ $labels.repo }}
+            **Failure rate**: {{ $value | humanizePercentage }}
+            **Threshold**: 50%
+            **Action**:
+              1. Review recent changes to this repository
+              2. Check if specific vulnerability types are causing issues
+              3. Verify repository-specific test frameworks are working
+              4. Consider repository-specific debugging
+          dashboard: "https://grafana.rsolv.dev/d/rfc-060-validation"
+
+  - name: rfc_060_mitigation_alerts
+    interval: 30s
+    rules:
+      # Alert 8: Mitigation duration too high (p95 > 5 minutes)
+      - alert: MitigationDurationHigh
+        expr: histogram_quantile(0.95, rate(rsolv_mitigation_total_duration_milliseconds_bucket[5m])) > 300000
+        for: 30m
+        labels:
+          severity: warning
+          component: mitigation
+          rfc: "060"
+        annotations:
+          summary: "Mitigation phase is taking too long"
+          description: |
+            The 95th percentile of mitigation duration is {{ $value | humanizeDuration }}.
+            This indicates performance issues with fix generation and PR creation.
+
+            **Current p95**: {{ $value | humanizeDuration }}
+            **Threshold**: 5 minutes
+            **Impact**: Medium - Slower time to fix
+            **Action**:
+              1. Check AI provider API latency for fix generation
+              2. Review fix generation prompt complexity
+              3. Verify GitHub API performance
+              4. Check for rate limiting issues
+          dashboard: "https://grafana.rsolv.dev/d/rfc-060-validation"
+
+      # Alert 9: No PRs created in 24 hours (during active period)
+      - alert: NoPRsCreated
+        expr: increase(rsolv_mitigation_pr_created_total[24h]) == 0 and increase(rsolv_validation_executions_total[24h]) > 0
+        for: 30m
+        labels:
+          severity: warning
+          component: mitigation
+          rfc: "060"
+        annotations:
+          summary: "No mitigation PRs created despite active validations"
+          description: |
+            No mitigation PRs have been created in the last 24 hours, but validations are running.
+            This suggests an issue with the mitigation phase.
+
+            **Validations in 24h**: {{ query "increase(rsolv_validation_executions_total[24h])" | first | value }}
+            **PRs created**: 0
+            **Action**:
+              1. Check mitigation phase logs for errors
+              2. Verify GitHub API authentication and permissions
+              3. Review trust score thresholds (may be too high)
+              4. Check if all validations are failing before mitigation
+          dashboard: "https://grafana.rsolv.dev/d/rfc-060-validation"
+
+# Alert routing rules
+# These should be configured in Alertmanager (alertmanager.yml)
+---
+# Example Alertmanager configuration (not part of this file, for reference):
+#
+# route:
+#   group_by: ['rfc', 'component']
+#   group_wait: 30s
+#   group_interval: 5m
+#   repeat_interval: 4h
+#   receiver: 'rfc-060-team'
+#   routes:
+#     - match:
+#         severity: critical
+#       receiver: 'rfc-060-oncall-pagerduty'
+#     - match:
+#         severity: warning
+#       receiver: 'rfc-060-team-slack'
+#     - match:
+#         severity: info
+#       receiver: 'rfc-060-team-email'
+#
+# receivers:
+#   - name: 'rfc-060-team'
+#     slack_configs:
+#       - channel: '#rfc-060-alerts'
+#         api_url: 'https://hooks.slack.com/services/...'
+#   - name: 'rfc-060-oncall-pagerduty'
+#     pagerduty_configs:
+#       - service_key: '<pagerduty-integration-key>'
+#   - name: 'rfc-060-team-slack'
+#     slack_configs:
+#       - channel: '#rfc-060-warnings'
+#         api_url: 'https://hooks.slack.com/services/...'
+#   - name: 'rfc-060-team-email'
+#     email_configs:
+#       - to: 'team@rsolv.dev'

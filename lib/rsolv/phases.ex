@@ -44,10 +44,16 @@ defmodule Rsolv.Phases do
     - {:error, :unauthorized} if customer doesn't have access to namespace
   """
   def store_validation(attrs, %ApiKey{} = api_key) do
+    start_time = System.monotonic_time(:millisecond)
+
     with {:ok, customer} <- get_customer_from_api_key(api_key),
          {:ok, repo_attrs} <- parse_repo_string(attrs[:repo] || attrs["repo"]),
          {:ok, repository} <- Repositories.find_or_create(repo_attrs, customer),
          {:ok, validation} <- create_validation_execution(attrs, repository, api_key) do
+
+      # Emit telemetry event for validation completion
+      emit_validation_telemetry(validation, attrs, start_time)
+
       {:ok, Repo.preload(validation, :repository)}
     end
   end
@@ -65,10 +71,16 @@ defmodule Rsolv.Phases do
     - {:error, :unauthorized} if customer doesn't have access to namespace
   """
   def store_mitigation(attrs, %ApiKey{} = api_key) do
+    start_time = System.monotonic_time(:millisecond)
+
     with {:ok, customer} <- get_customer_from_api_key(api_key),
          {:ok, repo_attrs} <- parse_repo_string(attrs[:repo] || attrs["repo"]),
          {:ok, repository} <- Repositories.find_or_create(repo_attrs, customer),
          {:ok, mitigation} <- create_mitigation_execution(attrs, repository, api_key) do
+
+      # Emit telemetry event for mitigation completion
+      emit_mitigation_telemetry(mitigation, attrs, start_time)
+
       {:ok, Repo.preload(mitigation, :repository)}
     end
   end
@@ -287,11 +299,129 @@ defmodule Rsolv.Phases do
   defp get_mitigation_execution(repository_id, issue_number) do
     # Get the most recent mitigation for this issue
     import Ecto.Query
-    
+
     MitigationExecution
     |> where([m], m.repository_id == ^repository_id and m.issue_number == ^issue_number)
     |> order_by([m], desc: m.inserted_at)
     |> limit(1)
     |> Repo.one()
+  end
+
+  # Telemetry emission functions
+
+  defp emit_validation_telemetry(validation, attrs, start_time) do
+    data = attrs[:data] || attrs["data"] || %{}
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    # Extract metrics from validation data
+    tests_generated = get_in(data, ["tests_generated"]) || 0
+    tests_passed = get_in(data, ["tests_passed"]) || 0
+    tests_failed = get_in(data, ["tests_failed"]) || 0
+    total_tests = tests_generated
+    success_rate = if total_tests > 0, do: (tests_passed / total_tests) * 100, else: 0.0
+
+    # Extract metadata
+    repo = attrs[:repo] || attrs["repo"] || "unknown"
+    language = get_in(data, ["language"]) || "unknown"
+    framework = get_in(data, ["framework"]) || "none"
+
+    # Emit validation completion event
+    :telemetry.execute(
+      [:rsolv, :validation, :complete],
+      %{
+        duration: duration,
+        tests_generated: tests_generated,
+        tests_passed: tests_passed,
+        tests_failed: tests_failed,
+        success_rate: success_rate
+      },
+      %{
+        repo: repo,
+        language: language,
+        framework: framework,
+        status: validation.status,
+        validated: validation.validated
+      }
+    )
+
+    # Emit test generation events if test details are available
+    if test_details = get_in(data, ["test_details"]) do
+      Enum.each(test_details, fn test ->
+        if test["generation_duration"] do
+          :telemetry.execute(
+            [:rsolv, :validation, :test_generated],
+            %{duration: test["generation_duration"]},
+            %{
+              repo: repo,
+              language: language,
+              framework: framework,
+              test_type: test["type"] || "unit"
+            }
+          )
+        end
+
+        if test["execution_duration"] do
+          :telemetry.execute(
+            [:rsolv, :validation, :test_executed],
+            %{duration: test["execution_duration"]},
+            %{
+              repo: repo,
+              language: language,
+              framework: framework,
+              result: test["result"] || "unknown"
+            }
+          )
+        end
+      end)
+    end
+  end
+
+  defp emit_mitigation_telemetry(mitigation, attrs, start_time) do
+    data = attrs[:data] || attrs["data"] || %{}
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    # Extract metadata
+    repo = attrs[:repo] || attrs["repo"] || "unknown"
+    language = get_in(data, ["language"]) || "unknown"
+    framework = get_in(data, ["framework"]) || "none"
+
+    # Emit mitigation completion event
+    :telemetry.execute(
+      [:rsolv, :mitigation, :complete],
+      %{duration: duration},
+      %{
+        repo: repo,
+        language: language,
+        framework: framework,
+        status: mitigation.status,
+        pr_created: !is_nil(mitigation.pr_url)
+      }
+    )
+
+    # Emit PR created event if applicable
+    if mitigation.pr_url do
+      :telemetry.execute(
+        [:rsolv, :mitigation, :pr_created],
+        %{count: 1},
+        %{
+          repo: repo,
+          language: language,
+          framework: framework
+        }
+      )
+    end
+
+    # Emit trust score event if available
+    if trust_score = get_in(data, ["trust_score"]) do
+      :telemetry.execute(
+        [:rsolv, :mitigation, :trust_score],
+        %{trust_score: trust_score},
+        %{
+          repo: repo,
+          language: language,
+          framework: framework
+        }
+      )
+    end
   end
 end
