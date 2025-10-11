@@ -52,31 +52,59 @@ export class MitigationMode {
   }
 
   /**
-   * RFC-060: Retrieve validation branch name from PhaseDataClient
+   * RFC-060: Retrieve validation branch name
+   *
+   * Explicit modes:
+   * - WITH PhaseDataClient: API-only (production) - returns undefined if API fails
+   * - WITHOUT PhaseDataClient: Local file only (testing) - reads .rsolv/validation/
+   *
+   * No silent fallback between modes - fail fast in production
    */
   private async getValidationBranchName(issue: IssueContext): Promise<string | undefined> {
-    if (!this.phaseDataClient) {
-      logger.warn('PhaseDataClient not configured - cannot retrieve validation branch');
-      return undefined;
-    }
+    return this.phaseDataClient
+      ? this.getFromApi(issue)
+      : this.getFromLocalFile(issue);
+  }
 
+  private async getFromApi(issue: IssueContext): Promise<string | undefined> {
     try {
       const repo = `${issue.repository.owner}/${issue.repository.name}`;
-      const commitSha = this.getCurrentCommitSha();
+      const phaseData = await this.phaseDataClient!.retrievePhaseResults(
+        repo,
+        issue.number,
+        this.getCurrentCommitSha()
+      );
 
-      logger.info(`Retrieving validation metadata from PhaseDataClient for ${repo} issue #${issue.number}`);
-      const phaseData = await this.phaseDataClient.retrievePhaseResults(repo, issue.number, commitSha);
-
-      return phaseData?.validate?.[`issue-${issue.number}`]?.branchName;
+      const branchName = phaseData?.validate?.[`issue-${issue.number}`]?.branchName;
+      if (branchName) {
+        logger.info(`Found validation branch via API: ${branchName}`);
+      }
+      return branchName;
     } catch (error) {
-      logger.warn(`Failed to retrieve validation metadata from PhaseDataClient: ${error}`);
+      logger.error(`API retrieval failed (production mode): ${error}`);
+      return undefined;
+    }
+  }
+
+  private getFromLocalFile(issue: IssueContext): string | undefined {
+    try {
+      const filePath = path.join(this.repoPath, '.rsolv', 'validation', `issue-${issue.number}.json`);
+      if (!fs.existsSync(filePath)) return undefined;
+
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (data.branchName) {
+        logger.info(`Found validation branch in local file (testing mode): ${data.branchName}`);
+      }
+      return data.branchName;
+    } catch (error) {
+      logger.warn(`Local file read failed (testing mode): ${error}`);
       return undefined;
     }
   }
 
   /**
    * RFC-058/RFC-060: Checkout validation branch for mitigation phase
-   * Uses PhaseDataClient to retrieve validation metadata
+   * Uses API (production) or local files (testing) based on PhaseDataClient presence
    */
   async checkoutValidationBranch(issue: IssueContext): Promise<boolean> {
     try {
