@@ -96,6 +96,12 @@ vi.mock('../../ai/git-based-test-validator.js', () => ({
 }));
 
 vi.mock('child_process', () => ({
+  exec: vi.fn((_cmd, _options, callback) => {
+    // Support both exec(cmd, callback) and exec(cmd, options, callback) signatures
+    const cb = typeof _options === 'function' ? _options : callback;
+    if (cb) process.nextTick(() => cb(null, '', ''));
+    return {} as any;
+  }),
   execSync: vi.fn((cmd: string) => {
     if (cmd.includes('git status --porcelain')) return '';
     if (cmd.includes('git rev-parse HEAD')) return 'abc123def456';
