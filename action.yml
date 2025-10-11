@@ -86,6 +86,14 @@ inputs:
     description: 'Enable educational PR descriptions with security explanations'
     required: false
     default: 'true'
+  executable_tests:
+    description: 'RFC-060: Enable executable test generation in VALIDATE phase'
+    required: false
+    default: 'true'
+  claude_max_turns:
+    description: 'RFC-060: Maximum Claude iterations for test generation (1-20)'
+    required: false
+    default: '5'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -112,6 +120,8 @@ runs:
     RSOLV_ENABLE_AST_VALIDATION: ${{ inputs.enable_ast_validation }}
     RSOLV_USE_STRUCTURED_PHASES: ${{ inputs.use_structured_phases }}
     RSOLV_EDUCATIONAL_PR: ${{ inputs.enable_educational_pr }}
+    RSOLV_EXECUTABLE_TESTS: ${{ inputs.executable_tests }}
+    RSOLV_CLAUDE_MAX_TURNS: ${{ inputs.claude_max_turns }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'

@@ -19,6 +19,8 @@ export interface ActionConfig {
   useGitBasedEditing?: boolean; // Enable git-based in-place editing (ADR-012)
   useStructuredPhases?: boolean; // Enable structured phased prompting for Claude Code
   claudeCodeConfig?: any; // Claude Code specific configuration
+  executableTests?: boolean; // RFC-060 Phase 5.1: Enable executable test flow (RSOLV_EXECUTABLE_TESTS)
+  claudeMaxTurns?: number; // RFC-060 Phase 5.1: Maximum Claude iterations for test generation (default: 5)
 }
 
 export interface FixValidationConfig {

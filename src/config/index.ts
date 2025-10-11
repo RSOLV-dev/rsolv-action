@@ -69,7 +69,9 @@ const ActionConfigSchema = z.object({
   useGitBasedEditing: z.boolean().optional(), // Enable git-based in-place editing (ADR-012)
   useStructuredPhases: z.boolean().optional(), // Enable structured phased prompting (ADR-019)
   testGeneration: TestGenerationConfigSchema.optional(),
-  fixValidation: FixValidationConfigSchema.optional()
+  fixValidation: FixValidationConfigSchema.optional(),
+  executableTests: z.boolean().optional(), // RFC-060 Phase 5.1: Enable executable test flow
+  claudeMaxTurns: z.number().min(1).max(20).optional() // RFC-060 Phase 5.1: Maximum Claude iterations (1-20)
 });
 
 /**
@@ -195,7 +197,10 @@ function getDefaultConfig(): Partial<ActionConfig> {
       maxIterations: 3,
       maxIterationsByType: {},
       maxIterationsByTier: {}
-    }
+    },
+    // RFC-060 Phase 5.1: Executable test generation (enabled by default)
+    executableTests: process.env.RSOLV_EXECUTABLE_TESTS !== 'false', // Default true
+    claudeMaxTurns: 5 // Default to 5 turns for Claude iterations
   };
 }
 
@@ -270,7 +275,22 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
   } else {
     envConfig.useStructuredPhases = true; // Default to true - CLI approach works with structured phases
   }
-  
+
+  // RFC-060 Phase 5.1: Handle executableTests feature flag
+  if (process.env.RSOLV_EXECUTABLE_TESTS !== undefined) {
+    envConfig.executableTests = process.env.RSOLV_EXECUTABLE_TESTS === 'true';
+  }
+
+  // RFC-060 Phase 5.1: Handle claudeMaxTurns configuration
+  if (process.env.RSOLV_CLAUDE_MAX_TURNS) {
+    const parsed = parseInt(process.env.RSOLV_CLAUDE_MAX_TURNS, 10);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 20) {
+      envConfig.claudeMaxTurns = parsed;
+    } else {
+      logger.warn(`Invalid RSOLV_CLAUDE_MAX_TURNS value: ${process.env.RSOLV_CLAUDE_MAX_TURNS}. Must be between 1 and 20. Using default: 5`);
+    }
+  }
+
   // Parse environment variables JSON string if available
   if (process.env.RSOLV_ENVIRONMENT_VARIABLES) {
     try {

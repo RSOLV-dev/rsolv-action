@@ -145,6 +145,59 @@ RSOLV now uses a modular three-phase architecture for processing issues:
 
 See [Three-Phase Architecture Documentation](docs/THREE-PHASE-ARCHITECTURE.md) for detailed usage examples and configuration options.
 
+### RFC-060: Executable Test Generation
+
+RSOLV generates executable tests during the VALIDATE phase to prove vulnerabilities exist:
+
+```yaml
+- uses: RSOLV-dev/rsolv-action@v2
+  with:
+    api_key: ${{ secrets.RSOLV_API_KEY }}
+    executable_tests: 'true'      # Default: enabled
+    claude_max_turns: 5           # Max Claude iterations (1-20)
+```
+
+**Key Features:**
+- **Executable Tests**: Generates RED tests that actually run to prove vulnerabilities exist
+- **Framework Detection**: Automatically detects test frameworks (Jest, pytest, RSpec, etc.)
+- **Multi-Language Support**: JavaScript, TypeScript, Python, Ruby, PHP, Java, and more
+- **Test Persistence**: Tests are committed to validation branches for mitigation phase
+
+**Configuration:**
+
+| Input | Description | Default | Values |
+|-------|-------------|---------|--------|
+| `executable_tests` | Enable executable test generation | `true` | `true`, `false` |
+| `claude_max_turns` | Maximum Claude iterations for test generation | `5` | `1-20` |
+
+**Environment Variables:**
+- `RSOLV_EXECUTABLE_TESTS`: Set to `false` to disable (default: enabled)
+- `RSOLV_CLAUDE_MAX_TURNS`: Maximum Claude iterations (1-20)
+
+**Example:**
+
+```yaml
+name: RSOLV Validation with Executable Tests
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: RSOLV-dev/rsolv-action@v2
+        with:
+          api_key: ${{ secrets.RSOLV_API_KEY }}
+          mode: validate
+          issue_number: ${{ github.event.issue.number }}
+          claude_max_turns: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
 ## Configuration
 
 RSOLV can be configured using a `.github/rsolv.yml` file in your repository:

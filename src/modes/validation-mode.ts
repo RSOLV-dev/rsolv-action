@@ -51,10 +51,22 @@ export class ValidationMode {
    */
   async validateVulnerability(issue: IssueContext): Promise<ValidationResult> {
     const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
+    const executableTestsEnabled = this.config.executableTests ?? true; // RFC-060 Phase 5.1: Default enabled
 
     logger.info(`[VALIDATION MODE] Starting validation for issue #${issue.number}`);
     if (isTestingMode) {
       logger.info(`[VALIDATION MODE] 🧪 TESTING MODE ENABLED - Will not filter based on test results`);
+    }
+
+    // RFC-060 Phase 5.1: Feature flag check - skip validation if disabled
+    if (!executableTestsEnabled) {
+      logger.info(`[VALIDATION MODE] Executable tests disabled - skipping validation`);
+      return {
+        issueId: issue.number,
+        validated: true, // Mark as validated to allow mitigation phase to proceed
+        timestamp: new Date().toISOString(),
+        commitHash: this.getCurrentCommitHash()
+      };
     }
 
     try {
@@ -280,7 +292,7 @@ export class ValidationMode {
       };
     }
   }
-  
+
   /**
    * Validate multiple vulnerabilities in batch
    */

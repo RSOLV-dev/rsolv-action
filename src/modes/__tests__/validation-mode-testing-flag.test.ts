@@ -36,6 +36,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       rsolvApiKey: 'test-rsolv-key',
       githubToken: 'test-token',
       mode: 'validate',
+      executableTests: true, // RFC-060 Phase 5.1: Enable executable tests for these tests
       aiProvider: {
         apiKey: 'test-ai-key',
         model: 'claude-sonnet-4-5-20250929',
