@@ -44,6 +44,9 @@ test-report.json
 *.swo
 .tern-port
 
+# Claude Code local settings
+.claude/*.local.json
+
 # OS files
 .DS_Store
 Thumbs.db
