@@ -347,3 +347,143 @@ RailsGoat follows the **correct** deployment pattern:
 
 **Verification Status:** ✅ Architecture verified, ❌ Scanner bug blocks Ruby testing
 **Next Task:** Fix scanner bug or implement workaround to complete Ruby vulnerability detection testing
+**Next Task:** Fix scanner bug or implement workaround to complete Ruby vulnerability detection testing
+
+---
+
+## Bug Resolution: Vendor Skip Fix Implemented ✅
+
+**Date:** 2025-10-10 (continued)
+**Fix Commits:** 13a711f, bf2e6b2
+**Test Added:** test/scanner/repository-scanner-vendor-skip.test.ts
+
+### Root Cause Identified
+
+The VendorDetector was working correctly, but the RepositoryScanner had a critical bug:
+
+**repository-scanner.ts:44-56 (BEFORE FIX):**
+```typescript
+const isVendorFile = await this.vendorDetector.isVendorFile(file.path);
+
+if (isVendorFile) {
+  logger.info(`Detected vendor file: ${file.path}`);  // ✅ Logged
+}
+
+const fileVulnerabilities = await this.detector.detect(file.content, file.language);  // ❌ STILL SCANNED IT!
+```
+
+**Problem:** Scanner was DETECTING vendor files but NOT SKIPPING them.
+
+### The Fix
+
+**repository-scanner.ts:44-53 (AFTER FIX):**
+```typescript
+const isVendorFile = await this.vendorDetector.isVendorFile(file.path);
+
+if (isVendorFile) {
+  logger.info(`Skipping vendor/minified file: ${file.path}`);
+  continue;  // ✅ Actually skip the file!
+}
+
+const fileVulnerabilities = await this.detector.detect(file.content, file.language);
+```
+
+### Verification - Fix Works! ✅
+
+**Workflow Run 18420500109 Logs:**
+```
+[23:11:09] Skipping vendor/minified file: app/assets/javascripts/alertify.min.js
+[23:11:09] Skipping vendor/minified file: app/assets/javascripts/bootstrap-editable.min.js  ← THE PROBLEMATIC FILE!
+[23:11:09] Skipping vendor/minified file: app/assets/javascripts/bootstrap.js
+[23:11:09] Skipping vendor/minified file: app/assets/javascripts/fullcalendar.min.js
+... (11 total vendor files skipped)
+
+[23:11:09] Found 1 vulnerabilities in app/models/benefits.rb  ← Ruby scanning works!
+[23:11:09] Scanning progress: 70/146 files (app/models/performance.rb)
+```
+
+**Results:**
+- ✅ All 11 minified vendor files skipped (including bootstrap-editable.min.js)
+- ✅ Ruby files scanned successfully
+- ✅ Vulnerabilities detected in Rails code
+- ✅ No 23-minute hang on minified files
+
+### Regression Tests Added (TDD Approach)
+
+Created `test/scanner/repository-scanner-vendor-skip.test.ts`:
+
+**Test 1: Vendor files should be SKIPPED (not just flagged)**
+```typescript
+it('should SKIP scanning vendor/minified files (not just flag them)', async () => {
+  // Setup: Rails repo with both app code and vendor files
+  // Assert: detector.detect() NOT called for .min.js files
+  expect(mockDetector.detect).toHaveBeenCalledTimes(2); // Only Ruby files
+});
+```
+
+**Test Results:**
+```
+✓ 4/4 tests pass
+✓ 10 expect() calls
+✓ Runtime: 102ms
+```
+
+**This is exactly what we should have had with TDD:**
+1. RED: Write test expecting vendor files to be skipped
+2. Test FAILS (exposing the bug)
+3. GREEN: Add `continue` statement to fix
+4. Test PASSES
+5. Bug never reaches production
+
+### Remaining Issue ⚠️
+
+While the minified file hang is fixed, testing revealed another bottleneck:
+
+**Workflow Run 18420723804:**
+- Vendor files skipped successfully ✅
+- Ruby scanning started ✅
+- **Hung at file 71/146** (after ~51 minutes)
+- Not a minified file - different cause
+
+**Hypothesis:** Another file is causing catastrophic regex backtracking, or there's a different performance bottleneck.
+
+### Final Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Architecture | ✅ VERIFIED | Workflow correctly deployed in target repo |
+| Vendor Detection | ✅ FIXED | Minified files now skipped |
+| Regression Tests | ✅ ADDED | 4 tests prevent future regressions |
+| Minified File Hang | ✅ RESOLVED | No more 23-min hang on .min.js |
+| Ruby Scanning | ⚠️ PARTIAL | Works but hangs on unknown file |
+| Full Workflow | ❌ INCOMPLETE | Still times out after ~51 minutes |
+
+### Commits
+
+1. **13a711f** - Fix: Actually skip vendor/minified files to prevent scan hangs
+2. **bf2e6b2** - Force Docker rebuild for vendor skip fix testing  
+3. **Test file** - Regression tests for vendor skipping
+
+### Conclusion
+
+**Vendor Skip Fix: ✅ SUCCESS**
+- The critical bug (not skipping vendor files) is fixed
+- Minified JavaScript files no longer cause 23-minute hangs
+- Regression tests ensure this won't regress
+- Fix verified in GitHub Actions logs
+
+**Multi-Language Testing: ⚠️ INCOMPLETE**
+- Ruby scanning works but there's another performance issue
+- Workflow still times out (different root cause)
+- Additional investigation needed for file 71+ hang
+
+**Lessons Learned:**
+1. ✅ TDD would have caught this immediately
+2. ✅ "Detect but don't skip" is a subtle but critical bug
+3. ✅ Regression tests are essential
+4. ⚠️ Multiple performance bottlenecks may exist
+
+---
+
+**Updated:** 2025-10-10 23:47 UTC
+**Status:** Vendor skip fix verified and tested ✅, additional performance investigation needed ⚠️
