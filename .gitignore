@@ -58,6 +58,9 @@ tags
 *.swp
 *.swo
 
+# Claude Code local settings
+.claude/*.local.json
+
 # Temporary files
 *.tmp
 *.bak.env.dev
