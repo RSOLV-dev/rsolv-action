@@ -960,12 +960,16 @@ Each phase below includes:
 - **Repository**: https://github.com/RSOLV-dev/nodegoat-vulnerability-demo
 
 **Subtask #1b: Ruby/RailsGoat (COMPLETED)**
-- ✅ Verified railsgoat workflow deployment
-- ✅ No repository contamination found
+- ✅ Discovered and fixed vendor detection bug (missing `continue` statement)
+- ✅ Discovered and fixed catastrophic regex backtracking (see ADR-030)
+- ✅ Implemented SafeDetector with worker thread isolation
 - ✅ Workflow uses correct pattern (`uses: RSOLV-dev/rsolv-action@VERSION`)
-- **Files**: [verification complete]
-- **Runtime**: [verification complete]
+- **Files**: 146 Ruby files scanned
+- **Runtime**: 23.6 seconds (was: 19+ minutes infinite hang)
+- **Vulnerabilities**: 35 detected (MD5 password hashing, etc.)
+- **Key Achievement**: 50x speedup via worker thread isolation
 - **Repository**: https://github.com/OWASP/railsgoat
+- **Workflow Runs**: 18421691756 (hang), 18422064557 (success)
 
 **Subtask #1c: Python/Vulnerable-Flask-App (COMPLETED)**
 - ✅ Forked we45/Vulnerable-Flask-App to RSOLV-dev
@@ -984,6 +988,12 @@ Each phase below includes:
 - Deleted: `.github/workflows/multi-language-security-scan.yml` (incorrect pattern)
 - Added: `.github/workflows/TEMPLATE-rsolv-security-scan.yml` (Docker-based template)
 - Added: `.github/workflows/README-WORKFLOW-DEPLOYMENT.md` (comprehensive guide)
+- Added: `src/security/safe-detector.ts` (257 lines - worker thread isolation)
+- Added: `src/security/detector-worker.js` (99 lines - worker execution)
+- Added: `src/security/safe-detector.test.ts` (209 lines - 11 tests)
+- Modified: `src/scanner/repository-scanner.ts` (vendor skip fix, SafeDetector integration)
+- Added: `docs/troubleshooting/regex-hang-debugging.md` (debugging guide)
+- Added: `docs/rfcs/RFC-060-phase-4-implementation.md` (implementation report)
 
 **Files Modified** (nodegoat-vulnerability-demo):
 - Deleted: `RSOLV-action/` directory (1375 files, 262,783 deletions!)
@@ -998,7 +1008,7 @@ Each phase below includes:
 | Language | Repository | Files | Runtime | Vulnerabilities | Pattern Coverage |
 |----------|-----------|-------|---------|-----------------|------------------|
 | JavaScript | nodegoat | 53 | 52s | 28 | Full (30 patterns) |
-| Ruby | railsgoat | - | - | - | - |
+| Ruby | railsgoat | 146 | 23.6s | 35 | Full (20 patterns) |
 | Python | Flask-App | 3 | 48s | 3 | Partial (12 patterns) |
 
 #### Key Findings
@@ -1020,6 +1030,19 @@ Each phase below includes:
   - Weak MD5 hashing (`app/app.py:141`)
   - Unsafe YAML loading (`app/app.py:329`)
 - **Recommendation**: Expand Python pattern library for comprehensive coverage
+
+**🛡️ Worker Thread Isolation (ADR-030)**:
+- Ruby regex pattern caused catastrophic backtracking, infinite hang on `app/models/user.rb`
+- **Problem**: Promise.race timeout cannot interrupt synchronous regex execution
+- **Solution**: SafeDetector with worker threads + forceful termination via `worker.terminate()`
+- **Results**:
+  - RailsGoat: 19+ minutes (hung) → 23.6 seconds ✅
+  - user.rb: Infinite hang → ~70ms ✅
+  - 50x speedup, 146/146 files scanned successfully
+- **Architecture**: All regex patterns execute in isolated worker threads with 30-second timeout
+- **Trade-off**: ~5-10ms overhead per file (acceptable for reliability)
+- **Precedent**: Establishes pattern for all untrusted code execution
+- **Reference**: ADR-030 Worker Thread Isolation for Untrusted Regex Patterns
 
 **📋 Architecture Documentation**:
 - Complete deployment guide created

@@ -43,6 +43,7 @@ Each ADR follows this structure:
 | [ADR-027](ADR-027-CENTRALIZED-API-AUTHENTICATION.md) | Centralized API Authentication | Implemented | 2025-09-17 | Critical - Fixes authentication recognition & standardizes API auth |
 | [ADR-028](ADR-028-PRODUCTION-MIGRATION-FIX.md) | Production Database Migration Synchronization | Implemented | 2025-09-18 | Critical - Fixed production database schema issues |
 | [ADR-029](ADR-029-TESTING-MODE-FOR-KNOWN-VULNERABLE-REPOS.md) | Testing Mode for Known Vulnerable Repositories | Implemented | 2025-09-19 | Medium - Enables testing with deliberately vulnerable apps |
+| [ADR-030](ADR-030-WORKER-THREAD-PATTERN-ISOLATION.md) | Worker Thread Isolation for Untrusted Regex Patterns | Implemented | 2025-10-11 | High - Prevents infinite hangs from pattern API regex |
 
 ## Related Documentation
 
@@ -90,8 +91,10 @@ Superseded ADRs are moved to the `archived/` subdirectory but preserved for hist
 - Security-first integration approach (ADR-003)
 - Multi-model AI provider support (ADR-004)
 - Claude Code SDK integration (ADR-011)
+- Worker thread isolation for untrusted code (ADR-030)
 
 ### Patterns & Validation
 - Pattern storage and serving API (ADR-007, ADR-008)
 - AST-based validation and false positive reduction (ADR-012, ADR-016, ADR-021)
 - Structured phased prompting (ADR-019)
+- Worker thread pattern execution safety (ADR-030)

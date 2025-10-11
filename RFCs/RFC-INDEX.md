@@ -81,7 +81,7 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 | 057 | [Fix Credential Vending](RFC-057-FIX-CREDENTIAL-VENDING.md) | Draft | 2025-09-18 | N/A |
 | 058 | [Validation Branch Persistence](RFC-058-VALIDATION-BRANCH-PERSISTENCE.md) | Implemented → [ADR-025](../ADRs/ADR-025-VALIDATION-BRANCH-PERSISTENCE.md) | 2025-09-18 | N/A |
 | 059 | [Local Testing with Act](RFC-059-act-local-testing.md) | Approved (Note: RFC-059-VALIDATION-TESTING-STRATEGY.md also exists) | 2025-01-24 | N/A |
-| 060 | [Executable Validation Test Integration](RFC-060-ENHANCED-VALIDATION-TEST-PERSISTENCE.md) | Approved (Note: RFC-060-BACKUP-1759329597.md backup exists) | 2025-09-30 | N/A |
+| 060 | [Executable Validation Test Integration](RFC-060-ENHANCED-VALIDATION-TEST-PERSISTENCE.md) | In Progress (75% - Phases 0-4 Complete, ADR-030 created) | 2025-09-30 | N/A |
 | 061 | [Claude CLI Retry Reliability](RFC-061-CLAUDE-RETRY-RELIABILITY.md) | Draft | 2025-09-30 | N/A |
 | 062 | [CI Integration Testing Infrastructure](RFC-062-CI-INTEGRATION-TESTING.md) | Draft | 2025-10-06 | N/A |
 | 063 | [API Key Caching with Mnesia](RFC-063-API-KEY-CACHING.md) | Draft | 2025-10-07 | N/A |
