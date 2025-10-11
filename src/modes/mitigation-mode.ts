@@ -56,35 +56,27 @@ export class MitigationMode {
    */
   private async getValidationBranchName(issue: IssueContext): Promise<string | undefined> {
     if (!this.phaseDataClient) {
+      logger.warn('PhaseDataClient not configured - cannot retrieve validation branch');
       return undefined;
     }
 
     try {
-      const commitSha = this.getCurrentCommitSha();
       const repo = `${issue.repository.owner}/${issue.repository.name}`;
+      const commitSha = this.getCurrentCommitSha();
 
       logger.info(`Retrieving validation metadata from PhaseDataClient for ${repo} issue #${issue.number}`);
-      const phaseData = await this.phaseDataClient.retrievePhaseResults(
-        repo,
-        issue.number,
-        commitSha
-      );
+      const phaseData = await this.phaseDataClient.retrievePhaseResults(repo, issue.number, commitSha);
 
-      if (!phaseData?.validate) {
-        return undefined;
-      }
-
-      const validationData = phaseData.validate[`issue-${issue.number}`];
-      return validationData?.branchName;
+      return phaseData?.validate?.[`issue-${issue.number}`]?.branchName;
     } catch (error) {
-      logger.warn(`Failed to retrieve validation metadata: ${error}`);
+      logger.warn(`Failed to retrieve validation metadata from PhaseDataClient: ${error}`);
       return undefined;
     }
   }
 
   /**
    * RFC-058/RFC-060: Checkout validation branch for mitigation phase
-   * Uses PhaseDataClient to retrieve validation metadata (no local file reads)
+   * Uses PhaseDataClient to retrieve validation metadata
    */
   async checkoutValidationBranch(issue: IssueContext): Promise<boolean> {
     try {

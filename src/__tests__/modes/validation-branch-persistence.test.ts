@@ -12,15 +12,51 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ValidationMode } from '../../modes/validation-mode.js';
 import { MitigationMode } from '../../modes/mitigation-mode.js';
 import { IssueContext } from '../../types/index.js';
+import { PhaseDataClient, PhaseData } from '../../modes/phase-data-client/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
+
+// Mock PhaseDataClient for testing
+class MockPhaseDataClient extends PhaseDataClient {
+  private storage = new Map<string, PhaseData>();
+
+  constructor() {
+    super('test-key', 'http://localhost');
+  }
+
+  async retrievePhaseResults(repo: string, issueNumber: number, commitSha: string): Promise<PhaseData | null> {
+    const key = `${repo}-${issueNumber}-${commitSha}`;
+    return this.storage.get(key) || null;
+  }
+
+  async storePhaseResults(phase: string, data: PhaseData, metadata: { repo: string; issueNumber?: number; commitSha: string }) {
+    const key = `${metadata.repo}-${metadata.issueNumber}-${metadata.commitSha}`;
+    const existing = this.storage.get(key) || {};
+    this.storage.set(key, { ...existing, ...data });
+    return { success: true, storage: 'local' as const };
+  }
+
+  setValidationData(repo: string, issueNumber: number, commitSha: string, branchName: string) {
+    const key = `${repo}-${issueNumber}-${commitSha}`;
+    this.storage.set(key, {
+      validate: {
+        [`issue-${issueNumber}`]: {
+          validated: true,
+          branchName,
+          timestamp: new Date().toISOString()
+        }
+      }
+    });
+  }
+}
 
 describe('Validation Branch Persistence', () => {
   let validationMode: ValidationMode;
   let mitigationMode: MitigationMode;
   let mockIssue: IssueContext;
   let testRepoPath: string;
+  let mockPhaseDataClient: MockPhaseDataClient;
 
   beforeEach(() => {
     // Create a temporary test repository
@@ -62,12 +98,14 @@ describe('Validation Branch Persistence', () => {
       useVendedCredentials: false
     }, testRepoPath);
 
+    mockPhaseDataClient = new MockPhaseDataClient();
+
     mitigationMode = new MitigationMode({
       provider: 'anthropic',
       apiKey: 'test-key',
       model: 'claude-3-5-sonnet-20241022',
       useVendedCredentials: false
-    }, testRepoPath);
+    }, testRepoPath, mockPhaseDataClient);
   });
 
   afterEach(() => {
@@ -155,22 +193,15 @@ describe('Validation Branch Persistence', () => {
       execSync('git add .', { cwd: testRepoPath });
       execSync('git commit -m "Add validation tests"', { cwd: testRepoPath });
 
-      // Switch back to main
+      // Switch back to main (this is where mitigation will run from)
       execSync('git checkout main', { cwd: testRepoPath });
 
-      // Store validation result with branch name
-      const validationData = {
-        issueId: mockIssue.number,
-        branchName: branchName,
-        validated: true,
-        timestamp: new Date().toISOString()
-      };
-      const storageDir = path.join(testRepoPath, '.rsolv', 'validation');
-      fs.mkdirSync(storageDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(storageDir, `issue-${mockIssue.number}.json`),
-        JSON.stringify(validationData, null, 2)
-      );
+      // Get the commit SHA from main branch (where mitigation runs)
+      const commitSha = execSync('git rev-parse HEAD', { cwd: testRepoPath }).toString().trim();
+
+      // Store validation data in PhaseDataClient with main's commit SHA
+      const repo = `${mockIssue.repository.owner}/${mockIssue.repository.name}`;
+      mockPhaseDataClient.setValidationData(repo, mockIssue.number, commitSha, branchName);
 
       // Run mitigation - should checkout validation branch
       await mitigationMode.checkoutValidationBranch(mockIssue);
@@ -236,6 +267,13 @@ describe('Validation Branch Persistence', () => {
 
       // Switch back to main to simulate phase transition
       execSync('git checkout main', { cwd: testRepoPath });
+
+      // Get commit SHA from main (where mitigation runs)
+      const commitSha = execSync('git rev-parse HEAD', { cwd: testRepoPath }).toString().trim();
+
+      // Store validation data in PhaseDataClient with main's commit SHA
+      const repo = `${mockIssue.repository.owner}/${mockIssue.repository.name}`;
+      mockPhaseDataClient.setValidationData(repo, mockIssue.number, commitSha, branchName);
 
       // Mitigation phase: checkout branch and verify tests exist
       await mitigationMode.checkoutValidationBranch(mockIssue);
