@@ -1,4 +1,4 @@
-import { SecurityDetectorV2 } from '../security/detector-v2.js';
+import { SafeDetector } from '../security/safe-detector.js';
 import { getGitHubClient } from '../github/api.js';
 import { logger } from '../utils/logger.js';
 import type { FileToScan, ScanConfig, ScanResult, VulnerabilityGroup } from './types.js';
@@ -8,12 +8,13 @@ import { ASTValidator } from './ast-validator.js';
 import { VendorDetector } from '../vendor/vendor-detector.js';
 
 export class RepositoryScanner {
-  private detector: SecurityDetectorV2;
+  private detector: SafeDetector;
   private github: ReturnType<typeof getGitHubClient>;
   private vendorDetector: VendorDetector;
 
   constructor() {
-    this.detector = new SecurityDetectorV2(createPatternSource());
+    // Use SafeDetector instead of SecurityDetectorV2 to prevent hangs
+    this.detector = new SafeDetector(createPatternSource());
     this.github = getGitHubClient();
     this.vendorDetector = new VendorDetector();
   }
@@ -52,25 +53,8 @@ export class RepositoryScanner {
             continue;
           }
 
-          // Add timeout protection to prevent indefinite hangs on problematic files
-          const FILE_TIMEOUT_MS = 30000; // 30 seconds per file
-          const scanPromise = this.detector.detect(file.content, file.language);
-          const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => {
-              reject(new Error(`File scan timeout after ${FILE_TIMEOUT_MS}ms`));
-            }, FILE_TIMEOUT_MS);
-          });
-
-          let fileVulnerabilities;
-          try {
-            fileVulnerabilities = await Promise.race([scanPromise, timeoutPromise]);
-          } catch (timeoutError: any) {
-            if (timeoutError.message && timeoutError.message.includes('timeout')) {
-              logger.warn(`⚠️  File ${file.path} scan timed out after ${FILE_TIMEOUT_MS}ms - skipping (file size: ${file.content.length} bytes)`);
-              continue; // Skip this file and move to next
-            }
-            throw timeoutError; // Re-throw if it's not a timeout error
-          }
+          // SafeDetector handles timeout protection internally using worker threads
+          const fileVulnerabilities = await this.detector.detect(file.content, file.language, file.path);
 
           // Add file path to each vulnerability
           fileVulnerabilities.forEach(vuln => {
@@ -117,7 +101,10 @@ export class RepositoryScanner {
 
     const scanTime = Date.now() - startTime;
     logger.info(`Scan completed in ${scanTime}ms. Found ${vulnerabilities.length} vulnerabilities`);
-    
+
+    // Clean up any remaining worker threads
+    this.detector.cleanup();
+
     return {
       repository: `${config.repository.owner}/${config.repository.name}`,
       branch: config.repository.defaultBranch,
