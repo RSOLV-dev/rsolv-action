@@ -102,11 +102,12 @@ vi.mock('../phase-data-client/index.js', () => ({
 }));
 
 vi.mock('child_process', () => ({
-  execSync: vi.fn((cmd: string) => {
-    if (cmd.includes('git rev-parse HEAD')) {
-      return 'abc123def456';
-    }
-    return '';
+  execSync: vi.fn((cmd: string) =>
+    cmd.includes('git rev-parse HEAD') ? 'abc123def456' : ''
+  ),
+  exec: vi.fn((_cmd: string, _options: any, callback: any) => {
+    callback?.(null, 'test output', '');
+    return {} as any;
   })
 }));
 
