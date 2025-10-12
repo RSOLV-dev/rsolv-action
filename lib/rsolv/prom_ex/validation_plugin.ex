@@ -44,22 +44,19 @@ defmodule Rsolv.PromEx.ValidationPlugin do
       counter("rsolv.validation.executions.total",
         event_name: [:rsolv, :validation, :complete],
         description: "Total number of validation phase executions",
-        tags: [:repo, :language, :framework, :status],
-        tag_values: &validation_tags/1
+        tags: [:repo, :language, :framework, :status]
       ),
 
       counter("rsolv.validation.test_generated.total",
         event_name: [:rsolv, :validation, :test_generated],
         description: "Total number of validation tests generated",
-        tags: [:repo, :language, :framework, :test_type],
-        tag_values: &validation_test_tags/1
+        tags: [:repo, :language, :framework, :test_type]
       ),
 
       counter("rsolv.validation.test_executed.total",
         event_name: [:rsolv, :validation, :test_executed],
         description: "Total number of validation tests executed",
-        tags: [:repo, :language, :framework, :result],
-        tag_values: &validation_test_execution_tags/1
+        tags: [:repo, :language, :framework, :result]
       )
     ]
   end
@@ -72,7 +69,6 @@ defmodule Rsolv.PromEx.ValidationPlugin do
         measurement: :duration,
         description: "Duration of validation test generation in milliseconds",
         tags: [:repo, :language, :framework],
-        tag_values: &validation_test_tags/1,
         unit: {:native, :millisecond},
         reporter_options: [
           buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000]
@@ -84,7 +80,6 @@ defmodule Rsolv.PromEx.ValidationPlugin do
         measurement: :duration,
         description: "Duration of validation test execution in milliseconds",
         tags: [:repo, :language, :framework],
-        tag_values: &validation_test_execution_tags/1,
         unit: {:native, :millisecond},
         reporter_options: [
           buckets: [100, 500, 1000, 2500, 5000, 10000, 30000, 60000]
@@ -96,7 +91,6 @@ defmodule Rsolv.PromEx.ValidationPlugin do
         measurement: :duration,
         description: "Total duration of validation phase in milliseconds",
         tags: [:repo, :language, :framework],
-        tag_values: &validation_tags/1,
         unit: {:native, :millisecond},
         reporter_options: [
           buckets: [1000, 5000, 10000, 30000, 60000, 120000, 300000]
@@ -112,32 +106,28 @@ defmodule Rsolv.PromEx.ValidationPlugin do
         event_name: [:rsolv, :validation, :complete],
         measurement: :success_rate,
         description: "Success rate of validation phase executions (0-100)",
-        tags: [:repo, :language, :framework],
-        tag_values: &validation_tags/1
+        tags: [:repo, :language, :framework]
       ),
 
       last_value("rsolv.validation.tests_generated.count",
         event_name: [:rsolv, :validation, :complete],
         measurement: :tests_generated,
         description: "Number of tests generated in validation phase",
-        tags: [:repo, :language, :framework],
-        tag_values: &validation_tags/1
+        tags: [:repo, :language, :framework]
       ),
 
       last_value("rsolv.validation.tests_passed.count",
         event_name: [:rsolv, :validation, :complete],
         measurement: :tests_passed,
         description: "Number of tests that passed in validation phase",
-        tags: [:repo, :language, :framework],
-        tag_values: &validation_tags/1
+        tags: [:repo, :language, :framework]
       ),
 
       last_value("rsolv.validation.tests_failed.count",
         event_name: [:rsolv, :validation, :complete],
         measurement: :tests_failed,
         description: "Number of tests that failed in validation phase",
-        tags: [:repo, :language, :framework],
-        tag_values: &validation_tags/1
+        tags: [:repo, :language, :framework]
       )
     ]
   end
@@ -148,15 +138,13 @@ defmodule Rsolv.PromEx.ValidationPlugin do
       counter("rsolv.mitigation.executions.total",
         event_name: [:rsolv, :mitigation, :complete],
         description: "Total number of mitigation phase executions",
-        tags: [:repo, :language, :framework, :status],
-        tag_values: &mitigation_tags/1
+        tags: [:repo, :language, :framework, :status]
       ),
 
       counter("rsolv.mitigation.pr_created.total",
         event_name: [:rsolv, :mitigation, :pr_created],
         description: "Total number of mitigation PRs created",
-        tags: [:repo, :language, :framework],
-        tag_values: &mitigation_tags/1
+        tags: [:repo, :language, :framework]
       )
     ]
   end
@@ -169,7 +157,6 @@ defmodule Rsolv.PromEx.ValidationPlugin do
         measurement: :duration,
         description: "Total duration of mitigation phase in milliseconds",
         tags: [:repo, :language, :framework],
-        tag_values: &mitigation_tags/1,
         unit: {:native, :millisecond},
         reporter_options: [
           buckets: [1000, 5000, 10000, 30000, 60000, 120000, 300000, 600000]
@@ -186,7 +173,6 @@ defmodule Rsolv.PromEx.ValidationPlugin do
         measurement: :trust_score,
         description: "Trust score for mitigation (0-100)",
         tags: [:repo, :language, :framework],
-        tag_values: &mitigation_trust_score_tags/1,
         reporter_options: [
           buckets: [0, 25, 50, 60, 70, 80, 90, 95, 100]
         ]
@@ -196,8 +182,7 @@ defmodule Rsolv.PromEx.ValidationPlugin do
         event_name: [:rsolv, :mitigation, :trust_score],
         measurement: :trust_score,
         description: "Latest trust score for mitigation (0-100)",
-        tags: [:repo, :language, :framework],
-        tag_values: &mitigation_trust_score_tags/1
+        tags: [:repo, :language, :framework]
       )
     ]
   end

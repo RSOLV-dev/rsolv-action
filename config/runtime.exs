@@ -168,3 +168,8 @@ if System.get_env("SENTRY_DSN") do
       env: System.get_env("SENTRY_ENV") || "production"
     }
 end
+
+# Configure Prometheus/PromEx monitoring (RFC-060 Phase 5.2)
+# Enable metrics collection for observability
+config :rsolv, :monitoring,
+  enabled: System.get_env("ENABLE_PROMETHEUS_METRICS", "true") == "true"

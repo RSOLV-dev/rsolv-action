@@ -28,6 +28,8 @@ defmodule Rsolv.Application do
       RsolvWeb.Telemetry,
       # Start the PubSub system
       {Phoenix.PubSub, name: Rsolv.PubSub},
+      # Start PromEx metrics collection (RFC-060 Phase 5.2)
+      Rsolv.PromEx,
       # Start Oban
       {Oban, Application.fetch_env!(:rsolv, Oban)},
       # Start the cluster manager (for distributed cache invalidation)
