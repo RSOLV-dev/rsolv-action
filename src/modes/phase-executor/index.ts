@@ -2172,8 +2172,8 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           await this.phaseDataClient.storePhaseResults(
             'validate',
             {
-              validation: {
-                [`issue-${issue.number}`]: validationData
+              validate: {
+                [issue.number]: validationData
               }
             },
             {
