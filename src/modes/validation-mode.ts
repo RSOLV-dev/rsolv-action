@@ -169,39 +169,59 @@ export class ValidationMode {
       );
 
       // Step 8: Determine validation status
-      // RED tests should FAIL on vulnerable code to prove vulnerability exists
+      // RFC-060: In VALIDATE mode, we only check if RED tests FAIL on vulnerable code
+      // We pass HEAD for both commits, so we only care about vulnerableCommit results
       // isTestingMode already declared above
 
       // RFC-060 Phase 2.2: Extract test execution metadata
       const testExecutionResult: TestExecutionResult = {
-        passed: validationResult.success || false,
+        passed: validationResult.vulnerableCommit.allPassed || false, // In VALIDATE mode, tests should FAIL (allPassed=false)
         output: JSON.stringify(validationResult, null, 2), // Store full validation result as output
         stderr: '',
         timedOut: false,
-        exitCode: validationResult.success ? 0 : 1,
-        error: validationResult.error,
+        exitCode: validationResult.vulnerableCommit.allPassed ? 0 : 1, // Exit code 1 means tests failed = vulnerability exists
+        error: validationResult.error && validationResult.error !== 'Fix validation failed - tests do not confirm vulnerability was fixed'
+          ? validationResult.error
+          : undefined, // Ignore "fix validation failed" error in VALIDATE mode since we're not validating a fix
         framework: testResults.generatedTests.framework,
         testFile: testResults.generatedTests.testFile
       };
 
-      // RFC-060 Phase 2.2: Handle errors as validation error
-      if (validationResult.error) {
-        logger.warn(`Test execution error for issue #${issue.number}: ${validationResult.error}`);
-        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false, branchName || undefined);
+      // RFC-060: Check if RED tests failed on vulnerable code (proving vulnerability exists)
+      // In VALIDATE mode with HEAD==HEAD, we only check vulnerableCommit results
+      const testsFailedOnVulnerableCode = !validationResult.vulnerableCommit.allPassed;
+
+      if (testsFailedOnVulnerableCode) {
+        // RFC-060: Tests FAILED on vulnerable code = vulnerability EXISTS = validated!
+        logger.info(`✅ Vulnerability validated! RED tests failed as expected`);
+
+        // RFC-058: Store validation result with branch reference
+        if (branchName) {
+          await this.storeValidationResultWithBranch(issue, testResults, validationResult, branchName);
+          logger.info(`Validation result stored with branch reference: ${branchName}`);
+        } else {
+          // Fallback to standard storage
+          await this.storeValidationResult(issue, testResults, validationResult);
+        }
+
+        // RFC-060 Phase 2.2: Add validated label
+        await this.addGitHubLabel(issue, 'rsolv:validated');
+
+        // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
+        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined);
 
         return {
           issueId: issue.number,
-          validated: false,
-          falsePositiveReason: `Test execution error: ${validationResult.error}`,
+          validated: true,
+          branchName: branchName || undefined,
+          redTests: testResults.generatedTests.testSuite,
           testResults: validationResult,
           testExecutionResult,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
-      }
-
-      if (validationResult.success) {
-        // Tests passed = no vulnerability = false positive (unless in testing mode)
+      } else {
+        // RFC-060: Tests PASSED on vulnerable code = no vulnerability = false positive (unless testing mode)
         if (isTestingMode) {
           logger.info(`[TESTING MODE] Tests passed but proceeding anyway for known vulnerable repo`);
 
@@ -250,35 +270,6 @@ export class ValidationMode {
             commitHash: this.getCurrentCommitHash()
           };
         }
-      } else {
-        // Tests failed = vulnerability exists = validated
-        logger.info(`✅ Vulnerability validated! RED tests failed as expected`);
-
-        // RFC-058: Store validation result with branch reference
-        if (branchName) {
-          await this.storeValidationResultWithBranch(issue, testResults, validationResult, branchName);
-          logger.info(`Validation result stored with branch reference: ${branchName}`);
-        } else {
-          // Fallback to standard storage
-          await this.storeValidationResult(issue, testResults, validationResult);
-        }
-
-        // RFC-060 Phase 2.2: Add validated label
-        await this.addGitHubLabel(issue, 'rsolv:validated');
-
-        // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
-        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined);
-
-        return {
-          issueId: issue.number,
-          validated: true,
-          branchName: branchName || undefined,
-          redTests: testResults.generatedTests.testSuite,
-          testResults: validationResult,
-          testExecutionResult,
-          timestamp: new Date().toISOString(),
-          commitHash: this.getCurrentCommitHash()
-        };
       }
       
     } catch (error) {
