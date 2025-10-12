@@ -1,6 +1,6 @@
 # RFC-060: Executable Validation Test Integration
 
-**Status:** In Progress (Phases 0-5.5 Complete, Metrics Bug Fixed - 92% done)
+**Status:** In Progress (Phases 0-5.6 Complete, Phase 6 Monitoring Active - 95% done)
 **Created:** 2025-09-24
 **Updated:** 2025-10-12
 **Author:** RSOLV Team
@@ -1357,14 +1357,64 @@ Each phase below includes:
 - `rsolv_mitigation_executions_total{status="completed"} 2`
 - `rsolv_mitigation_trust_score_value_sum 177`
 
+#### 5.6 Dashboard & Monitoring Automation ✅ COMPLETE (2025-10-12)
+**Commit**: 8517bea (nodegoat-vulnerability-demo) + Grafana ConfigMap updates
+**Issue**: GitHub Actions permissions + Grafana dashboard queries
+**Resolution**: Fixed permissions, updated dashboard, created automation
+
+**Problems Discovered**:
+1. **GitHub Actions Permissions**: Workflow lacked `issues: write` and `pull-requests: write`
+   - Symptom: SCAN phase returned 403 when creating issues
+   - Impact: VALIDATE/MITIGATE skipped, no metrics collected
+
+2. **Grafana Dashboard**: Queries expected metrics that didn't exist or had wrong labels
+   - Expected: `rsolv_validation_success_rate_percent` (calculated metric)
+   - Actual: `rsolv_validation_executions_total{status="completed|failed"}`
+   - Labels: `language="unknown"`, `framework="none"` (not detected)
+
+**Solutions Implemented**:
+- [✅] Added permissions block to production workflow:
+  ```yaml
+  permissions:
+    contents: read
+    issues: write
+    pull-requests: write
+  ```
+- [✅] Fixed Grafana dashboard queries to use actual metrics
+- [✅] Updated queries to calculate success rates from execution totals
+- [✅] Deployed fixed dashboard via Kubernetes ConfigMap
+- [✅] Created automation scripts:
+  - `scripts/rfc-060-check-metrics.sh` - Daily monitoring
+  - `scripts/rfc-060-weekly-report.sh` - Weekly summary
+- [✅] Verified production workflow creates issues successfully
+- [✅] Confirmed metrics appearing at https://rsolv.dev/metrics
+
+**Production Validation**:
+```
+Run #18446198425 (2025-10-12 15:55-16:02 UTC):
+✓ Created issues #1074, #1075
+✓ SCAN phase completed
+✓ VALIDATE phase processed both issues
+✓ MITIGATE phase completed
+✓ Metrics confirmed: rsolv_validation_executions_total{status="completed"} 4
+```
+
+**Documentation**:
+- RFC-060-GRAFANA-VERIFICATION-FINDINGS.md - Investigation details
+- RFC-060-PHASE-6-VERIFICATION-COMPLETE.md - Complete results
+- RFC-060-PHASE-6-KICKOFF.md - Phase 6 plan
+
 ### Phase 6: Post-Deployment Monitoring (Days 10-24)
 
+**Started**: 2025-10-12
+**Status**: ✅ Active - Metrics collecting, automation in place
+
 #### 6.1 Week 1 Monitoring
-- [ ] Daily: Check trust score metrics via SQL
+- [✅] Daily: Check trust score metrics via automation (`scripts/rfc-060-check-metrics.sh`)
 - [ ] Daily: Review any failure logs
-- [ ] Create weekly test workflow for RailsGoat
+- [ ] Run weekly monitoring workflow
 - [ ] Document observed issues in tracking issue
-- [ ] Calculate initial success rates
+- [ ] Calculate initial success rates (end of week)
 
 #### 6.2 Week 2 Evaluation
 - [ ] Analyze trust score patterns
