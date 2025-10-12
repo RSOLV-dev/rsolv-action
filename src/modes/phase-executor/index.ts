@@ -2601,9 +2601,9 @@ ${validation.falsePositive ?
       const mitigationResults: any = {};
       let allSuccess = true;
       let partialSuccess = false;
-      
+
       for (const issue of options.issues) {
-        const issueKey = `issue-${issue.number}`;
+        const issueKey = issue.number; // RFC-060: Use numeric keys for PhaseDataClient compatibility
         
         // Handle both single issue and multi-issue validation data structures
         // Also handle both 'validation' and 'validate' (PhaseDataClient remaps validation->validate)
@@ -2611,8 +2611,11 @@ ${validation.falsePositive ?
         const validationObj = validationData.validation || validationData.validate;
         if (validationObj) {
           // Check if it's a single validation object or a map
+          // RFC-060: Support both numeric keys and legacy "issue-N" keys
           if (validationObj[issueKey]) {
             validation = validationObj[issueKey];
+          } else if (validationObj[`issue-${issue.number}`]) {
+            validation = validationObj[`issue-${issue.number}`]; // Legacy key format
           } else if (validationObj.issueNumber === issue.number) {
             // Single issue validation structure
             validation = validationObj;
@@ -2680,9 +2683,10 @@ ${validation.falsePositive ?
       // Store results
       await this.phaseDataClient.storePhaseResults(
         'mitigate',
-        { mitigation: mitigationResults },
+        { mitigate: mitigationResults },
         {
           repo: options.issues[0].repository.fullName,
+          issueNumber: options.issues.length === 1 ? options.issues[0].number : undefined,
           commitSha: await this.getCurrentCommitSha()
         }
       );
