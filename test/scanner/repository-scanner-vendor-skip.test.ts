@@ -24,7 +24,11 @@ describe('RepositoryScanner - Vendor File Skipping (Regression Test)', () => {
     // Create mock detector that tracks detect() calls
     mockDetector = {
       detect: vi.fn().mockResolvedValue([]),
+<<<<<<< HEAD
       cleanup: vi.fn()
+=======
+      cleanup: vi.fn() // Add cleanup method to mock
+>>>>>>> 1547f9aff618fd1c305a9cad12b4c4bec2006507
     };
 
     // Create mock vendor detector
