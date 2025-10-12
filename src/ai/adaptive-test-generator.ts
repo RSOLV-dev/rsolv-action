@@ -20,8 +20,14 @@ interface VulnerabilityWithFile extends Vulnerability {
   file?: string;
 }
 
-// Type for test suite with all required properties for template generation
-type CompleteTestSuite = Required<Pick<VulnerabilityTestSuite, 'red' | 'green' | 'refactor'>> & VulnerabilityTestSuite;
+// RFC-060: Test suite contains only RED tests (single or multiple)
+// Helper type for extracted RED tests
+interface RedTestInfo {
+  testName: string;
+  testCode: string;
+  attackVector: string;
+  expectedBehavior?: string;
+}
 
 export interface AdaptiveTestResult {
   success: boolean;
@@ -53,6 +59,28 @@ export class AdaptiveTestGenerator {
     if (this.useAIGeneration && aiConfig) {
       this.aiGenerator = new AITestGenerator(aiConfig);
     }
+  }
+
+  /**
+   * RFC-060: Extract RED tests from test suite
+   * Handles both single RED test {red: {...}} and multiple RED tests {redTests: [{...}, {...}]}
+   */
+  private extractRedTests(testSuite: VulnerabilityTestSuite): RedTestInfo[] {
+    const redTests: RedTestInfo[] = [];
+
+    if (testSuite.redTests && Array.isArray(testSuite.redTests)) {
+      // Multiple RED tests for complex vulnerability
+      redTests.push(...testSuite.redTests);
+    } else if (testSuite.red) {
+      // Single RED test
+      redTests.push(testSuite.red);
+    }
+
+    if (redTests.length === 0) {
+      logger.warn('No RED tests found in test suite');
+    }
+
+    return redTests;
   }
 
   /**
@@ -569,6 +597,7 @@ export class AdaptiveTestGenerator {
 
   /**
    * Transform base test suite to framework-specific syntax
+   * RFC-060: All templates now generate RED-only tests
    */
   private transformToFrameworkSyntax(
     testSuite: VulnerabilityTestSuite,
@@ -577,104 +606,106 @@ export class AdaptiveTestGenerator {
     vulnerability: VulnerabilityWithFile,
     frameworkInfo?: DetectedFramework
   ): string {
-    // Ensure testSuite has required properties for template generation
-    const completeTestSuite = testSuite as CompleteTestSuite;
-
     switch (framework) {
       case 'vitest':
-        return this.generateVitestTests(completeTestSuite, conventions, vulnerability);
+        return this.generateVitestTests(testSuite, conventions, vulnerability);
       case 'mocha':
-        return this.generateMochaTests(completeTestSuite, conventions, vulnerability);
+        return this.generateMochaTests(testSuite, conventions, vulnerability);
       case 'pytest':
-        return this.generatePytestTests(completeTestSuite, conventions, vulnerability);
+        return this.generatePytestTests(testSuite, conventions, vulnerability);
       case 'rspec':
-        return this.generateRSpecTests(completeTestSuite, conventions, vulnerability);
+        return this.generateRSpecTests(testSuite, conventions, vulnerability);
       case 'minitest':
-        return this.generateMinitestTests(completeTestSuite, conventions, vulnerability);
+        return this.generateMinitestTests(testSuite, conventions, vulnerability);
       case 'exunit':
-        return this.generateExUnitTests(completeTestSuite, conventions, vulnerability);
+        return this.generateExUnitTests(testSuite, conventions, vulnerability);
       case 'phpunit':
-        return this.generatePHPUnitTests(completeTestSuite, conventions, vulnerability, frameworkInfo);
+        return this.generatePHPUnitTests(testSuite, conventions, vulnerability, frameworkInfo);
       case 'pest':
-        return this.generatePestTests(completeTestSuite, conventions, vulnerability, frameworkInfo);
+        return this.generatePestTests(testSuite, conventions, vulnerability, frameworkInfo);
       case 'jest':
-        return this.generateJestTests(completeTestSuite, conventions, vulnerability);
+        return this.generateJestTests(testSuite, conventions, vulnerability);
       case 'junit5':
-        return this.generateJUnit5Tests(completeTestSuite, conventions, vulnerability);
+        return this.generateJUnit5Tests(testSuite, conventions, vulnerability);
       case 'testng':
-        return this.generateTestNGTests(completeTestSuite, conventions, vulnerability);
+        return this.generateTestNGTests(testSuite, conventions, vulnerability);
       default:
         return this.generateGenericTestCode(testSuite, vulnerability);
     }
   }
 
   /**
-   * Generate Vitest-specific tests
+   * Generate Vitest-specific tests (RFC-060: RED-only)
    */
   private generateVitestTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
     const componentName = vulnerability.file?.split('/').pop()?.replace(/\.(tsx?|jsx?)$/, '') || 'Component';
     const isReact = vulnerability.file?.endsWith('.tsx') || vulnerability.file?.endsWith('.jsx') || false;
-    
+
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `// ERROR: No RED tests found in test suite`;
+    }
+
     // Extract just the test body from the testCode (remove the test wrapper)
     const extractTestBody = (testCode: string) => {
       // Remove the test() wrapper if present
       const match = testCode.match(/test\([^{]+\{([\s\S]*)\}\);?$/);
       return match ? match[1].trim() : testCode;
     };
-    
-    const imports = isReact 
+
+    const imports = isReact
       ? `import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ${componentName} } from "${this.getRelativeImportPath(vulnerability.file || '')}";`
       : `import { describe, test, expect } from "vitest";
 import { ${componentName} } from "${this.getRelativeImportPath(vulnerability.file || '')}";`;
 
+    // Generate test blocks for each RED test
+    const testBlocks = redTests.map(redTest => `
+  test("${redTest.testName}", async () => {
+    // RED: Demonstrate vulnerability exists
+    const maliciousInput = "${redTest.attackVector}";
+    ${extractTestBody(redTest.testCode)}
+  });`).join('\n');
+
     return `${imports}
 
 describe("${componentName} ${vulnerability.type} vulnerability tests", () => {
   ${conventions.helpers.length > 0 ? conventions.helpers.join('\n  ') : ''}
-
-  test("${testSuite.red.testName}", async () => {
-    // RED: Demonstrate vulnerability exists
-    const maliciousInput = "${testSuite.red.attackVector}";
-    ${extractTestBody(testSuite.red.testCode)}
-  });
-
-  test("${testSuite.green.testName}", async () => {
-    // GREEN: Verify fix prevents vulnerability  
-    const maliciousInput = "${testSuite.red.attackVector}";
-    const safeInput = "${testSuite.green.validInput}";
-    ${extractTestBody(testSuite.green.testCode)}
-  });
-
-  test("${testSuite.refactor.testName}", async () => {
-    // REFACTOR: Ensure functionality is maintained
-    ${extractTestBody(testSuite.refactor.testCode)}
-  });
+${testBlocks}
 });`;
   }
 
   /**
-   * Generate Mocha + Chai tests
+   * Generate Mocha + Chai tests (RFC-060: RED-only)
    */
   private generateMochaTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
     const moduleName = vulnerability.file?.split('/').pop()?.replace(/\.js$/, '') || 'module';
     const assertionLib = conventions.assertionStyle === 'assert' ? 'assert' : 'chai';
-    
-    const imports = assertionLib === 'chai' 
+
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `// ERROR: No RED tests found in test suite`;
+    }
+
+    const imports = assertionLib === 'chai'
       ? 'const { expect } = require("chai");'
       : 'const assert = require("assert");';
 
     const assertion = assertionLib === 'chai'
-      ? (positive: boolean, actual: string, expected: string) => 
+      ? (positive: boolean, actual: string, expected: string) =>
           positive ? `expect(${actual}).to.include(${expected})` : `expect(${actual}).to.not.include(${expected})`
       : (positive: boolean, actual: string, expected: string) =>
           positive ? `assert(${actual}.includes(${expected}))` : `assert(!${actual}.includes(${expected}))`;
@@ -682,43 +713,49 @@ describe("${componentName} ${vulnerability.type} vulnerability tests", () => {
     // Mocha typically uses 'it' for BDD style
     const testFn = 'it';
 
+    // Generate test blocks for each RED test
+    const testBlocks = redTests.map(redTest => `
+  ${testFn}("${redTest.testName}", async () => {
+    // RED: Demonstrate vulnerability exists
+    const maliciousInput = "${redTest.attackVector}";
+    const result = await ${moduleName}(maliciousInput);
+    ${assertion(false, 'result', '"syntax error"')};
+  });`).join('\n');
+
     return `${imports}
 const { ${moduleName} } = require("${this.getRelativeRequirePath(vulnerability.file || '')}");
 
-describe("${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} ${vulnerability.type === VulnerabilityType.SQL_INJECTION ? 'SQL injection' : vulnerability.type.replace(/_/g, ' ').toLowerCase()} tests", () => {
-  ${testFn}("should be vulnerable to ${vulnerability.type === VulnerabilityType.SQL_INJECTION ? 'SQL injection' : vulnerability.type.replace(/_/g, ' ').toLowerCase()} (RED)", async () => {
-    // RED: Demonstrate vulnerability exists
-    const maliciousInput = "${testSuite.red.attackVector}";
-    const result = await ${moduleName}(maliciousInput);
-    ${assertion(false, 'result', '"syntax error"')};
-  });
-
-  ${testFn}("should prevent ${vulnerability.type === VulnerabilityType.SQL_INJECTION ? 'SQL injection' : vulnerability.type.replace(/_/g, ' ').toLowerCase()} (GREEN)", async () => {
-    // GREEN: Verify fix prevents vulnerability
-    const maliciousInput = "${testSuite.red.attackVector}";
-    const result = await ${moduleName}(maliciousInput);
-    ${assertion(false, 'result', '"table"')};
-  });
-
-  ${testFn}("${testSuite.refactor.testName}", async () => {
-    // REFACTOR: Ensure functionality is maintained
-    const validInput = "${testSuite.green.validInput}";
-    const result = await ${moduleName}(validInput);
-    ${assertion(true, 'result', '"success"')};
-  });
+describe("${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} ${vulnerability.type === VulnerabilityType.SQL_INJECTION ? 'SQL injection' : vulnerability.type.replace(/_/g, ' ').toLowerCase()} tests", () => {${testBlocks}
 });`;
   }
 
   /**
-   * Generate pytest tests
+   * Generate pytest tests (RFC-060: RED-only)
    */
   private generatePytestTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
     const moduleName = vulnerability.file?.split('/').pop()?.replace(/\.py$/, '') || 'module';
     const className = moduleName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `# ERROR: No RED tests found in test suite`;
+    }
+
+    // Generate test methods for each RED test
+    const testMethods = redTests.map((redTest, index) => `
+    def test_${vulnerability.type.toLowerCase()}_vulnerability_${index + 1}(self):
+        """${redTest.testName}"""
+        # RED: Demonstrate vulnerability exists
+        malicious_input = "${redTest.attackVector}"
+        result = ${moduleName}(malicious_input)
+        assert "root" not in result
+        assert "permission denied" not in result.lower()`).join('\n');
 
     return `import pytest
 from ${vulnerability.file?.replace(/\.py$/, '').replace(/\//g, '.') || 'module'} import *
@@ -726,36 +763,14 @@ from ${vulnerability.file?.replace(/\.py$/, '').replace(/\//g, '.') || 'module'}
 @pytest.mark.security
 class Test${className}${vulnerability.type.replace(/_/g, '')}:
     """Tests for ${vulnerability.type} vulnerability in ${moduleName}"""
-
-    def test_${vulnerability.type.toLowerCase()}_vulnerability_red(self):
-        """${testSuite.red.testName}"""
-        # RED: Demonstrate vulnerability exists
-        malicious_input = "${testSuite.red.attackVector}"
-        result = ${moduleName}(malicious_input)
-        assert "root" not in result
-        assert "permission denied" not in result.lower()
-
-    def test_${vulnerability.type.toLowerCase()}_vulnerability_green(self):
-        """${testSuite.green.testName}"""
-        # GREEN: Verify fix prevents vulnerability
-        malicious_input = "${testSuite.red.attackVector}"
-        with pytest.raises(ValueError):
-            ${moduleName}(malicious_input)
-
-    def test_${vulnerability.type.toLowerCase()}_functionality_maintained(self):
-        """${testSuite.refactor.testName}"""
-        # REFACTOR: Ensure functionality is maintained
-        valid_input = "${testSuite.green.validInput}"
-        result = ${moduleName}(valid_input)
-        assert result is not None
-        assert "error" not in str(result).lower()`;
+${testMethods}`;
   }
 
   /**
-   * Generate Minitest tests
+   * Generate Minitest tests (RFC-060: RED-only)
    */
   private generateMinitestTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -767,42 +782,38 @@ class Test${className}${vulnerability.type.replace(/_/g, '')}:
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join('') || 'Module';
 
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `# ERROR: No RED tests found in test suite`;
+    }
+
+    // Generate test blocks for each RED test
+    const testBlocks = redTests.map((redTest, index) => `
+    it "${redTest.testName}" do
+      # RED: Demonstrate vulnerability exists
+      malicious_input = "${redTest.attackVector}"
+      result = ${className}.new.process(malicious_input)
+      _(result).wont_include "Permission denied"
+      _(result).wont_include "syntax error"
+    end`).join('\n');
+
     return `require "minitest/autorun"
 require "minitest/spec"
 require_relative "${this.getRelativeRequirePath(vulnerability.file || '')}"
 
 describe ${className} do
-  describe "${vulnerability.type} vulnerability tests" do
-    it "must be vulnerable to ${vulnerability.type.toLowerCase()} (RED)" do
-      # RED: Demonstrate vulnerability exists
-      malicious_input = "${testSuite.red.attackVector}"
-      result = ${className}.new.process(malicious_input)
-      _(result).wont_include "Permission denied"
-      _(result).wont_include "syntax error"
-    end
-
-    it "must prevent ${vulnerability.type.toLowerCase()} (GREEN)" do
-      # GREEN: Verify fix prevents vulnerability
-      malicious_input = "${testSuite.red.attackVector}"
-      _ { ${className}.new.process(malicious_input) }.must_raise SecurityError
-    end
-
-    it "must maintain functionality (REFACTOR)" do
-      # REFACTOR: Ensure functionality is maintained
-      valid_input = "${testSuite.green.validInput}"
-      result = ${className}.new.process(valid_input)
-      _(result).must_be_kind_of String
-      _(result).wont_be_empty
-    end
+  describe "${vulnerability.type} vulnerability tests" do${testBlocks}
   end
 end`;
   }
 
   /**
-   * Generate RSpec tests
+   * Generate RSpec tests (RFC-060: RED-only)
    */
   private generateRSpecTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -815,68 +826,47 @@ end`;
       .join('') || 'Module';
 
     const controllerName = vulnerability.file?.includes('controller') ? className : `${className}Controller`;
-    
-    return `require 'rails_helper'
 
-RSpec.describe ${controllerName}, type: :controller do
-  describe "${vulnerability.type} vulnerability tests" do
-    context "when vulnerable to ${vulnerability.type.toLowerCase()} (RED)" do
-      it "should be exploitable with malicious input" do
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `# ERROR: No RED tests found in test suite`;
+    }
+
+    // Generate test contexts for each RED test
+    const testContexts = redTests.map((redTest, index) => `
+    context "when vulnerable to ${vulnerability.type.toLowerCase()} - Test ${index + 1} (RED)" do
+      it "${redTest.testName}" do
         # RED: Demonstrate vulnerability exists
-        malicious_input = "${testSuite.red.attackVector}"
-        
+        malicious_input = "${redTest.attackVector}"
+
         # For SQL injection in Rails controller
         params = { user: { id: malicious_input } }
-        
+
         # This test should pass BEFORE the fix
         expect {
           post :update, params: params
         }.not_to raise_error
-        
-        # The vulnerability allows SQL injection
+
+        # The vulnerability allows the attack
         expect(response).to have_http_status(:ok)
       end
-    end
+    end`).join('\n');
 
-    context "when protected against ${vulnerability.type.toLowerCase()} (GREEN)" do
-      it "should prevent exploitation attempts" do
-        # GREEN: Verify fix prevents vulnerability
-        malicious_input = "${testSuite.red.attackVector}"
-        
-        # For SQL injection in Rails controller
-        params = { user: { id: malicious_input } }
-        
-        # After fix, this should raise an error or sanitize input
-        post :update, params: params
-        
-        # Either it should return an error or sanitize the input
-        expect(response).to have_http_status(:bad_request).or have_http_status(:unprocessable_entity)
-      end
-    end
+    return `require 'rails_helper'
 
-    context "when handling valid input (REFACTOR)" do
-      it "should maintain normal functionality" do
-        # REFACTOR: Ensure functionality is maintained
-        valid_input = "${testSuite.green.validInput}"
-        
-        # For normal user update
-        params = { user: { id: valid_input } }
-        
-        post :update, params: params
-        
-        expect(response).to have_http_status(:ok)
-        expect(assigns(:user)).not_to be_nil
-      end
-    end
+RSpec.describe ${controllerName}, type: :controller do
+  describe "${vulnerability.type} vulnerability tests" do${testContexts}
   end
 end`;
   }
 
   /**
-   * Generate ExUnit tests
+   * Generate ExUnit tests (RFC-060: RED-only)
    */
   private generateExUnitTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -888,39 +878,36 @@ end`;
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join('') || 'Module';
 
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `# ERROR: No RED tests found in test suite`;
+    }
+
+    // Generate test blocks for each RED test
+    const testBlocks = redTests.map((redTest, index) => `
+    test "${redTest.testName}" do
+      # RED: Demonstrate vulnerability exists
+      malicious_input = "${redTest.attackVector}"
+      assert {:ok, result} = ${moduleName}.process(malicious_input)
+      refute String.contains?(result, "error")
+    end`).join('\n');
+
     return `defmodule ${moduleName}Test do
   use ExUnit.Case
   alias ${moduleName}
 
-  describe "${vulnerability.type.toLowerCase()} vulnerability" do
-    test "vulnerable to malicious payload (RED)" do
-      # RED: Demonstrate vulnerability exists
-      malicious_input = "${testSuite.red.attackVector}"
-      assert {:ok, result} = ${moduleName}.process(malicious_input)
-      refute String.contains?(result, "error")
-    end
-
-    test "prevents ${vulnerability.type.toLowerCase()} attack (GREEN)" do
-      # GREEN: Verify fix prevents vulnerability
-      malicious_input = "${testSuite.red.attackVector}"
-      assert {:error, _} = ${moduleName}.process(malicious_input)
-    end
-
-    test "maintains normal functionality (REFACTOR)" do
-      # REFACTOR: Ensure functionality is maintained
-      valid_input = "${testSuite.green.validInput}"
-      assert {:ok, result} = ${moduleName}.process(valid_input)
-      assert is_binary(result)
-    end
+  describe "${vulnerability.type.toLowerCase()} vulnerability" do${testBlocks}
   end
 end`;
   }
 
   /**
-   * Generate PHPUnit tests
+   * Generate PHPUnit tests (RFC-060: RED-only)
    */
   private generatePHPUnitTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile,
     framework?: DetectedFramework
@@ -936,15 +923,15 @@ end`;
     const versionMatch = version.match(/(\d+)\./);
     const majorVersion = versionMatch ? parseInt(versionMatch[1]) : 8;
     const useAttributes = majorVersion >= 9;
-    
+
     // Determine namespace from file path
     const namespace = this.extractNamespaceFromPath(vulnerability.file || '');
     const fullClassName = namespace ? `${namespace}\\${className}` : className;
-    
+
     // Check for Laravel companion
     const isLaravel = framework?.companions?.includes('laravel');
     const isSymfony = framework?.companions?.includes('symfony');
-    
+
     logger.info('PHPUnit generation context', {
       version,
       majorVersion,
@@ -957,9 +944,16 @@ end`;
     if (isLaravel) {
       return this.generateLaravelPHPUnitTests(testSuite, conventions, vulnerability, className, framework);
     }
-    
+
     if (isSymfony) {
       return this.generateSymfonyPHPUnitTests(testSuite, conventions, vulnerability, className);
+    }
+
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `<?php\n// ERROR: No RED tests found in test suite`;
     }
 
     // Standard PHPUnit with modern features
@@ -970,7 +964,20 @@ use PHPUnit\\Framework\\Attributes\\Group;
 
     const groupAttribute = useAttributes ? '#[Group(\'security\')]' : '/**\n * @group security\n */';
     const testAttribute = useAttributes ? '#[Test]' : '';
-    const dataProviderAttribute = useAttributes ? '#[DataProvider(\'sqlInjectionPayloads\')]' : '/**\n     * @dataProvider sqlInjectionPayloads\n     */';
+
+    // Generate test methods for each RED test
+    const testMethods = redTests.map((redTest, index) => `
+    ${testAttribute}
+    public function test${vulnerability.type.replace(/_/g, '')}Vulnerability${index + 1}(): void
+    {
+        // RED: ${redTest.testName}
+        $maliciousInput = '${redTest.attackVector}';
+        $result = $this->instance->process($maliciousInput);
+
+        // Vulnerability should allow the attack to succeed
+        $this->assertStringNotContainsString('Permission denied', $result);
+        $this->assertStringNotContainsString('Invalid input', $result);
+    }`).join('\n');
 
     return `<?php
 ${namespace ? `namespace Tests\\${namespace};
@@ -988,100 +995,53 @@ class ${className}${vulnerability.type.replace(/_/g, '')}Test extends TestCase
     {
         $this->instance = new ${className}();
     }
-
-    ${testAttribute}
-    public function test${vulnerability.type.replace(/_/g, '')}VulnerabilityRed(): void
-    {
-        // RED: Demonstrate vulnerability exists
-        $maliciousInput = '${testSuite.red.attackVector}';
-        $result = $this->instance->process($maliciousInput);
-        
-        // Vulnerability should allow the attack to succeed
-        $this->assertStringNotContainsString('Permission denied', $result);
-        $this->assertStringNotContainsString('Invalid input', $result);
-    }
-
-    ${testAttribute}
-    ${dataProviderAttribute}
-    public function test${vulnerability.type.replace(/_/g, '')}VulnerabilityGreen(string $payload): void
-    {
-        // GREEN: Verify fix prevents vulnerability
-        $this->expectException(SecurityException::class);
-        $this->expectExceptionMessage('Potential security threat detected');
-        
-        $this->instance->process($payload);
-    }
-
-    public static function sqlInjectionPayloads(): array
-    {
-        return [
-            'union select' => ["' UNION SELECT * FROM users--"],
-            'drop table' => ["'; DROP TABLE users; --"],
-            'or true' => ["' OR '1'='1"],
-            'exec xp_cmdshell' => ["'; EXEC xp_cmdshell('dir'); --"],
-        ];
-    }
-
-    ${testAttribute}
-    public function test${vulnerability.type.replace(/_/g, '')}FunctionalityMaintained(): void
-    {
-        // REFACTOR: Ensure functionality is maintained
-        $validInput = '${testSuite.green.validInput}';
-        $result = $this->instance->process($validInput);
-        
-        $this->assertNotEmpty($result);
-        $this->assertIsString($result);
-        $this->assertStringNotContainsString('error', strtolower($result));
-    }
+${testMethods}
 }`;
   }
 
   /**
-   * Generate Jest tests (default for JavaScript)
+   * Generate Jest tests (default for JavaScript) (RFC-060: RED-only)
    */
   private generateJestTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
     const moduleName = vulnerability.file?.split('/').pop()?.replace(/\.[jt]sx?$/, '') || 'module';
-    
+
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `// ERROR: No RED tests found in test suite`;
+    }
+
     const testWrapper = conventions.style === 'bdd' ? 'describe' : '';
     const testKeyword = conventions.style === 'bdd' ? 'it' : 'test';
 
     const imports = `const { ${moduleName} } = require('${this.getRelativeRequirePath(vulnerability.file || '')}');`;
 
-    const tests = `
-${testWrapper ? `describe('${moduleName} ${vulnerability.type} tests', () => {` : ''}
-  ${testKeyword}('${testSuite.red.testName}', async () => {
+    // Generate test blocks for each RED test
+    const testBlocks = redTests.map(redTest => `
+  ${testKeyword}('${redTest.testName}', async () => {
     // RED: Demonstrate vulnerability exists
-    const maliciousInput = '${testSuite.red.attackVector}';
+    const maliciousInput = '${redTest.attackVector}';
     const result = await ${moduleName}(maliciousInput);
     expect(result).not.toContain('error');
-  });
+  });`).join('\n');
 
-  ${testKeyword}('${testSuite.green.testName}', async () => {
-    // GREEN: Verify fix prevents vulnerability
-    const maliciousInput = '${testSuite.red.attackVector}';
-    await expect(${moduleName}(maliciousInput)).rejects.toThrow();
-  });
-
-  ${testKeyword}('${testSuite.refactor.testName}', async () => {
-    // REFACTOR: Ensure functionality is maintained
-    const validInput = '${testSuite.green.validInput}';
-    const result = await ${moduleName}(validInput);
-    expect(result).toBeTruthy();
-  });
+    const tests = `
+${testWrapper ? `describe('${moduleName} ${vulnerability.type} tests', () => {` : ''}${testBlocks}
 ${testWrapper ? '});' : ''}`;
 
     return imports + '\n' + tests;
   }
 
   /**
-   * Generate JUnit 5 tests
+   * Generate JUnit 5 tests (RFC-060: RED-only)
    */
   private generateJUnit5Tests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -1092,14 +1052,19 @@ ${testWrapper ? '});' : ''}`;
     
     const packageName = this.extractPackageName(vulnerability.file || '');
     const isSpringBoot = conventions.companions?.includes('spring-boot');
-    
+
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `// ERROR: No RED tests found in test suite`;
+    }
+
     const imports = `package ${packageName};
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 ${isSpringBoot ? `
 import org.springframework.boot.test.context.SpringBootTest;
@@ -1108,7 +1073,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 ` : ''}`;
     const testClass = isSpringBoot ? `
 @SpringBootTest
@@ -1116,101 +1080,52 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class ${className}${vulnerability.type.replace(/_/g, '')}Test {
     @Autowired
     private MockMvc mockMvc;
-    
+
     private ${className} instance;
-    
+
     @BeforeEach
     void setUp() {
         instance = new ${className}();
     }` : `
 public class ${className}${vulnerability.type.replace(/_/g, '')}Test {
     private ${className} instance;
-    
+
     @BeforeEach
     void setUp() {
         instance = new ${className}();
     }`;
 
-    return `${imports}
-
-${testClass}
-    
+    // Generate test methods for each RED test
+    const testMethods = redTests.map((redTest, index) => `
     @Test
-    @DisplayName("${testSuite.red.testName}")
-    void testSqlInjectionVulnerability() {
+    @DisplayName("${redTest.testName}")
+    void testVulnerability${index + 1}() {
         // RED: Demonstrate vulnerability exists
-        String maliciousInput = "${testSuite.red.attackVector}";
-        
+        String maliciousInput = "${redTest.attackVector}";
+
         ${isSpringBoot ? `// Test via Spring MVC
         assertDoesNotThrow(() -> {
-            mockMvc.perform(get("/users")
-                    .param("id", maliciousInput))
+            mockMvc.perform(get("/api/endpoint")
+                    .param("input", maliciousInput))
                     .andExpect(status().isOk());
         });` : `// Direct method test
         assertDoesNotThrow(() -> {
-            instance.executeQuery(maliciousInput);
+            instance.process(maliciousInput);
         });`}
-    }
-    
-    @ParameterizedTest
-    @ValueSource(strings = {
-        "'; DROP TABLE users; --",
-        "' OR '1'='1",
-        "1; DELETE FROM products WHERE 1=1--",
-        "' UNION SELECT * FROM passwords--"
-    })
-    @DisplayName("Test multiple SQL injection payloads")
-    void testSqlInjectionWithMultiplePayloads(String payload) {
-        // Test various SQL injection attack vectors
-        ${isSpringBoot ? `assertDoesNotThrow(() -> {
-            mockMvc.perform(get("/users")
-                    .param("id", payload))
-                    .andExpect(status().isOk());
-        });` : `assertDoesNotThrow(() -> {
-            instance.executeQuery(payload);
-        });`}
-    }
-    
-    @Test
-    @DisplayName("${testSuite.green.testName}")
-    void testSqlInjectionPrevention() {
-        // GREEN: Verify fix prevents vulnerability
-        String maliciousInput = "${testSuite.red.attackVector}";
-        
-        ${isSpringBoot ? `assertThrows(Exception.class, () -> {
-            mockMvc.perform(get("/users")
-                    .param("id", maliciousInput))
-                    .andExpect(status().isBadRequest());
-        });` : `assertThrows(SecurityException.class, () -> {
-            instance.executeQuery(maliciousInput);
-        });`}
-    }
-    
-    @Test
-    @DisplayName("${testSuite.refactor.testName}")
-    void testNormalFunctionalityMaintained() {
-        // REFACTOR: Ensure functionality is maintained
-        String validInput = "${testSuite.green.validInput}";
-        
-        ${isSpringBoot ? `assertDoesNotThrow(() -> {
-            mockMvc.perform(get("/users")
-                    .param("id", validInput))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id").value(validInput));
-        });` : `assertDoesNotThrow(() -> {
-            var result = instance.executeQuery(validInput);
-            assertNotNull(result);
-            assertFalse(result.isEmpty());
-        });`}
-    }
+    }`).join('\n');
+
+    return `${imports}
+
+${testClass}
+${testMethods}
 }`;
   }
 
   /**
-   * Generate TestNG tests
+   * Generate TestNG tests (RFC-060: RED-only)
    */
   private generateTestNGTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile
   ): string {
@@ -1218,9 +1133,59 @@ ${testClass}
       ?.split('/')
       .pop()
       ?.replace(/\.java$/, '') || 'Class';
-    
+
     const packageName = this.extractPackageName(vulnerability.file || '');
-    
+
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `// ERROR: No RED tests found in test suite`;
+    }
+
+    // Generate test methods for each RED test
+    const testMethods = redTests.map((redTest, index) => `
+    @Test(description = "${redTest.testName}")
+    public void testVulnerability${index + 1}() {
+        // RED: Demonstrate vulnerability exists
+        String maliciousInput = "${redTest.attackVector}";
+
+        // This should succeed with vulnerable code
+        try {
+            String result = instance.process(maliciousInput);
+            assertNotNull(result);
+            ${vulnerability.type === VulnerabilityType.XML_EXTERNAL_ENTITIES ?
+            `// If XXE, might contain system file content
+            assertFalse(result.contains("root:"));` :
+            `// Verify the vulnerability is exploitable
+            assertTrue(result != null);`}
+        } catch (Exception e) {
+            fail("Should not throw exception with vulnerable code");
+        }
+    }`).join('\n');
+
+    // Optional: Add DataProvider for path traversal attacks
+    const dataProvider = vulnerability.type === VulnerabilityType.PATH_TRAVERSAL ? `
+
+    @DataProvider(name = "maliciousFilePaths")
+    public Object[][] maliciousFilePaths() {
+        return new Object[][] {
+            {"../../../etc/passwd"},
+            {"..\\\\..\\\\..\\\\windows\\\\system32\\\\config\\\\sam"},
+            {"%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd"},
+            {"....//....//....//etc/passwd"}
+        };
+    }
+
+    @Test(dataProvider = "maliciousFilePaths",
+          description = "Test path traversal with multiple payloads")
+    public void testPathTraversal(String maliciousPath) {
+        // Test with various path traversal payloads
+        assertThrows(SecurityException.class, () -> {
+            instance.readFile(maliciousPath);
+        });
+    }` : '';
+
     return `package ${packageName};
 
 import org.testng.annotations.Test;
@@ -1234,82 +1199,23 @@ import static org.testng.Assert.*;
 @Test(groups = {"security"})
 public class ${className}${vulnerability.type.replace(/_/g, '')}Test {
     private ${className} instance;
-    
+
     @BeforeMethod
     public void setUp() {
         instance = new ${className}();
     }
-    
-    @Test(description = "${testSuite.red.testName}")
-    public void test${vulnerability.type.replace(/_/g, '')}Vulnerability() {
-        // RED: Demonstrate vulnerability exists
-        String maliciousInput = "${testSuite.red.attackVector}";
-        
-        // This should succeed with vulnerable code
-        try {
-            String result = instance.process(maliciousInput);
-            assertNotNull(result);
-            ${vulnerability.type === VulnerabilityType.XML_EXTERNAL_ENTITIES ? 
-            `// If XXE, might contain system file content
-            assertFalse(result.contains("root:"));` :
-            `// Verify the vulnerability is exploitable
-            assertTrue(result != null);`}
-        } catch (Exception e) {
-            fail("Should not throw exception with vulnerable code");
-        }
-    }
-    
-    @Test(description = "${testSuite.green.testName}")
-    public void test${vulnerability.type.replace(/_/g, '')}Prevention() {
-        // GREEN: Verify fix prevents vulnerability
-        String maliciousInput = "${testSuite.red.attackVector}";
-        
-        // Should throw exception or return safe result
-        assertThrows(SecurityException.class, () -> {
-            instance.process(maliciousInput);
-        });
-    }
-    
-    ${vulnerability.type === VulnerabilityType.PATH_TRAVERSAL ? `
-    @DataProvider(name = "maliciousFilePaths")
-    public Object[][] maliciousFilePaths() {
-        return new Object[][] {
-            {"../../../etc/passwd"},
-            {"..\\\\..\\\\..\\\\windows\\\\system32\\\\config\\\\sam"},
-            {"%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd"},
-            {"....//....//....//etc/passwd"}
-        };
-    }
-    
-    @Test(dataProvider = "maliciousFilePaths", 
-          description = "Test path traversal with multiple payloads")
-    public void testPathTraversal(String maliciousPath) {
-        // Test with various path traversal payloads
-        assertThrows(SecurityException.class, () -> {
-            instance.readFile(maliciousPath);
-        });
-    }` : ''}
-    
-    @Test(description = "${testSuite.refactor.testName}")
-    public void testNormalFunctionality() {
-        // REFACTOR: Ensure functionality is maintained
-        String validInput = "${testSuite.green.validInput}";
-        
-        String result = instance.parseXml(validInput);
-        assertNotNull(result);
-        assertEquals(result.contains("error"), false);
-    }
+${testMethods}${dataProvider}
 }`;
   }
 
   /**
-   * Generate generic test code when framework is unknown
+   * Generate generic test code when framework is unknown (RFC-060: RED-only)
    */
   private generateGenericTestCode(
     testSuite: VulnerabilityTestSuite | null,
     vulnerability: VulnerabilityWithFile
   ): string {
-    if (!testSuite || !testSuite.red || !testSuite.green || !testSuite.refactor) {
+    if (!testSuite) {
       return `// Generic test template - adapt to your test framework
 // File: ${vulnerability.file}
 // Vulnerability: ${vulnerability.type}
@@ -1319,42 +1225,40 @@ function testVulnerabilityExists() {
   // TODO: Call vulnerable function with malicious input
   // Example: const result = vulnerableFunction(maliciousInput);
   // Assert that vulnerability is exploitable
-}
-
-// GREEN Test: Test vulnerability is fixed
-function testVulnerabilityFixed() {
-  // TODO: Call fixed function with same input
-  // Assert that vulnerability is no longer exploitable
 }`;
     }
+
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `// Generic test template - adapt to your test framework
+// File: ${vulnerability.file}
+// Vulnerability: ${vulnerability.type}
+
+// ERROR: No RED tests found in test suite
+// RED Test: Test vulnerability exists
+function testVulnerabilityExists() {
+  // TODO: Call vulnerable function with malicious input
+  // Example: const result = vulnerableFunction(maliciousInput);
+  // Assert that vulnerability is exploitable
+}`;
+    }
+
+    // Generate test functions for each RED test
+    const testFunctions = redTests.map((redTest, index) => `
+// RED Test ${index + 1}: ${redTest.testName}
+// Purpose: Demonstrate the vulnerability exists
+function testVulnerability${index + 1}() {
+  const maliciousInput = "${redTest.attackVector}";
+  // TODO: Call vulnerable function with malicious input
+  // TODO: Assert that attack succeeds (should fail when fixed)
+}`).join('\n');
 
     return `// Generic test template - adapt to your test framework
 // File: ${vulnerability.file}
 // Vulnerability: ${vulnerability.type}
-
-// RED Test: ${testSuite.red.testName}
-// Purpose: Demonstrate the vulnerability exists
-function testVulnerabilityExists() {
-  const maliciousInput = "${testSuite.red.attackVector}";
-  // TODO: Call vulnerable function with malicious input
-  // TODO: Assert that attack succeeds (should fail when fixed)
-}
-
-// GREEN Test: ${testSuite.green.testName}
-// Purpose: Verify the fix prevents the vulnerability
-function testVulnerabilityFixed() {
-  const maliciousInput = "${testSuite.red.attackVector}";
-  // TODO: Call fixed function with malicious input
-  // TODO: Assert that attack is prevented
-}
-
-// REFACTOR Test: ${testSuite.refactor.testName}
-// Purpose: Ensure normal functionality still works
-function testFunctionalityMaintained() {
-  const validInput = "${testSuite.green.validInput}";
-  // TODO: Call function with valid input
-  // TODO: Assert expected behavior works correctly
-}`;
+${testFunctions}`;
   }
 
   /**
@@ -1720,18 +1624,45 @@ function testFunctionalityMaintained() {
   }
 
   /**
-   * Generate Laravel-specific PHPUnit tests
+   * Generate Laravel-specific PHPUnit tests (RFC-060: RED-only)
    */
   private generateLaravelPHPUnitTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile,
     className: string,
     framework?: DetectedFramework
   ): string {
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `<?php\n// ERROR: No RED tests found in test suite`;
+    }
     const namespace = this.extractNamespaceFromPath(vulnerability.file || '');
     const isController = vulnerability.file?.includes('Controller');
-    
+
+    // Generate test methods for each RED test
+    const testMethods = redTests.map((redTest, index) => `
+    /**
+     * @test
+     */
+    public function it_is_vulnerable_to_${vulnerability.type.toLowerCase()}_${index + 1}()
+    {
+        // RED: ${redTest.testName}
+        $maliciousPayload = '${redTest.attackVector}';
+
+        $response = $this->postJson('/api/vulnerable-endpoint', [
+            'input' => $maliciousPayload
+        ]);
+
+        // The vulnerability should allow the attack
+        $response->assertStatus(200);
+        $this->assertDatabaseMissing('logs', [
+            'type' => 'security_violation'
+        ]);
+    }`).join('\n');
+
     return `<?php
 
 namespace Tests\\Feature;
@@ -1744,76 +1675,48 @@ use App\\${namespace ? namespace + '\\' : ''}${className};
 class ${className}${vulnerability.type.replace(/_/g, '')}Test extends TestCase
 {
     use RefreshDatabase;
-
-    /**
-     * @test
-     */
-    public function it_is_vulnerable_to_${vulnerability.type.toLowerCase()}_red()
-    {
-        // RED: Demonstrate vulnerability exists
-        $maliciousPayload = '${testSuite.red.attackVector}';
-        
-        $response = $this->postJson('/api/vulnerable-endpoint', [
-            'input' => $maliciousPayload
-        ]);
-        
-        // The vulnerability should allow the attack
-        $response->assertStatus(200);
-        $this->assertDatabaseMissing('logs', [
-            'type' => 'security_violation'
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function it_prevents_${vulnerability.type.toLowerCase()}_green()
-    {
-        // GREEN: Verify fix prevents vulnerability
-        $maliciousPayload = '${testSuite.red.attackVector}';
-        
-        $response = $this->postJson('/api/secure-endpoint', [
-            'input' => $maliciousPayload
-        ]);
-        
-        // The fix should block the attack
-        $response->assertStatus(${vulnerability.type === VulnerabilityType.BROKEN_AUTHENTICATION ? 401 : 400});
-        $response->assertJson([
-            'error' => 'Invalid input detected'
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function it_maintains_functionality_after_fix()
-    {
-        // REFACTOR: Ensure functionality is maintained
-        $validInput = '${testSuite.green.validInput}';
-        
-        $response = $this->postJson('/api/secure-endpoint', [
-            'input' => $validInput
-        ]);
-        
-        $response->assertStatus(200);
-        $response->assertJsonStructure([
-            'data' => []
-        ]);
-    }
+${testMethods}
 }`;
   }
 
   /**
-   * Generate Symfony-specific PHPUnit tests
+   * Generate Symfony-specific PHPUnit tests (RFC-060: RED-only)
    */
   private generateSymfonyPHPUnitTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile,
     className: string
   ): string {
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `<?php\n// ERROR: No RED tests found in test suite`;
+    }
+
     const namespace = this.extractNamespaceFromPath(vulnerability.file || '');
-    
+
+    // Generate test methods for each RED test
+    const testMethods = redTests.map((redTest, index) => `
+    /**
+     * @test
+     */
+    public function test_${vulnerability.type.toLowerCase()}_vulnerability_${index + 1}(): void
+    {
+        // RED: ${redTest.testName}
+        $client = static::createClient();
+        $maliciousPayload = '${redTest.attackVector}';
+
+        $crawler = $client->request('POST', '/vulnerable-route', [
+            'data' => $maliciousPayload
+        ]);
+
+        // The vulnerability should allow the attack
+        $this->assertResponseIsSuccessful();
+        $this->assertSelectorNotExists('.error-message');
+    }`).join('\n');
+
     return `<?php
 
 namespace App\\Tests\\${namespace ? namespace + '\\' : ''}Security;
@@ -1822,85 +1725,45 @@ use Symfony\\Bundle\\FrameworkBundle\\Test\\WebTestCase;
 use App\\${namespace ? namespace + '\\' : ''}${className};
 
 class ${className}${vulnerability.type.replace(/_/g, '')}Test extends WebTestCase
-{
-    /**
-     * @test
-     */
-    public function testVulnerabilityExistsRed(): void
-    {
-        // RED: Demonstrate vulnerability exists
-        $client = static::createClient();
-        $crawler = $client->request('POST', '/vulnerable-route', [
-            'data' => '${testSuite.red.attackVector}'
-        ]);
-        
-        $this->assertResponseIsSuccessful();
-        // Vulnerability allows the attack to succeed
-        $this->assertSelectorNotExists('.error-message');
-    }
-
-    /**
-     * @test
-     */
-    public function testVulnerabilityFixedGreen(): void
-    {
-        // GREEN: Verify fix prevents vulnerability
-        $client = static::createClient();
-        $crawler = $client->request('POST', '/secure-route', [
-            'data' => '${testSuite.red.attackVector}'
-        ]);
-        
-        $this->assertResponseStatusCodeSame(400);
-        $this->assertSelectorExists('.error-message');
-        $this->assertSelectorTextContains('.error-message', 'Invalid input');
-    }
-
-    /**
-     * @test
-     */
-    public function testFunctionalityMaintained(): void
-    {
-        // REFACTOR: Ensure functionality is maintained
-        $client = static::createClient();
-        $crawler = $client->request('POST', '/secure-route', [
-            'data' => '${testSuite.green.validInput}'
-        ]);
-        
-        $this->assertResponseIsSuccessful();
-        $form = $crawler->selectButton('Submit')->form();
-        $this->assertNotNull($form);
-    }
+{${testMethods}
 }`;
   }
 
   /**
-   * Generate Pest framework tests
+   * Generate Pest framework tests (RFC-060: RED-only)
    */
   private generatePestTests(
-    testSuite: CompleteTestSuite,
+    testSuite: VulnerabilityTestSuite,
     conventions: any,
     vulnerability: VulnerabilityWithFile,
     framework?: DetectedFramework
   ): string {
+    // RFC-060: Extract RED tests
+    const redTests = this.extractRedTests(testSuite);
+
+    if (redTests.length === 0) {
+      return `<?php\n// ERROR: No RED tests found in test suite`;
+    }
+
     const className = vulnerability.file
       ?.split('/')
       .pop()
       ?.replace(/\.php$/, '') || 'Class';
-      
+
     const namespace = this.extractNamespaceFromPath(vulnerability.file || '');
     const fullClassName = namespace ? `App\\${namespace}\\${className}` : `App\\${className}`;
-    
+
     // Check for Laravel companion
     const isLaravel = framework?.companions?.includes('laravel');
-    
+
     // Base imports
-    let imports = isLaravel 
+    let imports = isLaravel
       ? `use function Pest\\Laravel\\{get, post, put, delete};
 use Illuminate\\Foundation\\Testing\\RefreshDatabase;`
       : `use ${fullClassName};
 use App\\Exceptions\\SecurityException;`;
 
-    // Dataset for multiple attack payloads
+    // Dataset for multiple attack payloads (vulnerability-type specific, not test-suite specific)
     const generateDataset = () => {
       switch (vulnerability.type) {
         case VulnerabilityType.SQL_INJECTION:
@@ -1935,6 +1798,21 @@ use App\\Exceptions\\SecurityException;`;
     const dataset = generateDataset();
 
     if (isLaravel) {
+      // Generate test blocks for each RED test (Laravel)
+      const testBlocks = redTests.map((redTest, index) => `
+it('should be vulnerable to ${vulnerability.type.toLowerCase()} - test ${index + 1} (RED)', function () {
+    // RED: ${redTest.testName}
+    $maliciousPayload = '${redTest.attackVector}';
+
+    $response = post('/api/vulnerable', [
+        'input' => $maliciousPayload
+    ]);
+
+    // The vulnerability should allow the attack
+    $response->assertStatus(200);
+    expect($response->json())->not->toHaveKey('error');
+});`).join('\n');
+
       return `<?php
 
 ${imports}
@@ -1944,43 +1822,24 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->artisan('migrate');
 });
+${testBlocks}
 
-it('should be vulnerable to ${vulnerability.type.toLowerCase()} (RED)', function () {
-    // RED: Demonstrate vulnerability exists
-    $response = post('/api/vulnerable', [
-        'input' => '${testSuite.red.attackVector}'
-    ]);
-    
-    $response->assertStatus(200);
-    // Vulnerability allows the attack
-    expect($response->json())->not->toHaveKey('error');
-});
-
-${dataset ? `it('blocks ${vulnerability.type.toLowerCase()} attempts', function ($payload) {
-    // GREEN: Verify fix prevents vulnerability
-    $response = post('/api/secure', [
-        'input' => $payload
-    ]);
-    
-    $response->assertStatus(400);
-    expect($response->json())->toHaveKey('error');
-})->with('${dataset.match(/dataset\('([^']+)'/)?.[1] || 'payloads'}');` : ''}
-
-test('maintains functionality after fix', function () {
-    // REFACTOR: Ensure functionality is maintained
-    $response = post('/api/secure', [
-        'input' => '${testSuite.green.validInput}'
-    ]);
-    
-    $response->assertStatus(200);
-    expect($response->json())->toHaveKey('data');
-    expect($response->json()['data'])->not->toBeEmpty();
-});
-
-${dataset}`;
+${dataset ? `\n${dataset}` : ''}`;
     }
 
-    // Standard Pest test (non-Laravel)
+    // Standard Pest test (non-Laravel) - Generate test blocks for each RED test
+    const testBlocks = redTests.map((redTest, index) => `
+it('should be vulnerable to ${vulnerability.type.toLowerCase()} - test ${index + 1} (RED)', function () {
+    // RED: ${redTest.testName}
+    $maliciousInput = '${redTest.attackVector}';
+
+    $result = $this->instance->process($maliciousInput);
+
+    // Vulnerability should allow the attack
+    expect($result)->not->toContain('Permission denied');
+    expect($result)->not->toContain('Invalid input');
+});`).join('\n');
+
     return `<?php
 
 ${imports}
@@ -1988,43 +1847,8 @@ ${imports}
 beforeEach(function () {
     $this->instance = new ${className}();
 });
+${testBlocks}
 
-it('should be vulnerable to ${vulnerability.type.toLowerCase()} (RED)', function () {
-    // RED: Demonstrate vulnerability exists
-    $maliciousInput = '${testSuite.red.attackVector}';
-    
-    $result = $this->instance->process($maliciousInput);
-    
-    // Vulnerability should allow the attack
-    expect($result)->not->toContain('Permission denied');
-    expect($result)->not->toContain('Invalid input');
-});
-
-it('should prevent ${vulnerability.type.toLowerCase()} attacks (GREEN)', function () {
-    // GREEN: Verify fix prevents vulnerability
-    $maliciousInput = '${testSuite.red.attackVector}';
-    
-    expect(fn() => $this->instance->process($maliciousInput))
-        ->toThrow(SecurityException::class)
-        ->toThrow('Potential security threat detected');
-});
-
-${dataset ? `test('blocks various ${vulnerability.type.toLowerCase()} payloads', function ($payload) {
-    expect(fn() => $this->instance->process($payload))
-        ->toThrow(SecurityException::class);
-})->with('${dataset.match(/dataset\('([^']+)'/)?.[1] || 'payloads'}');` : ''}
-
-test('maintains functionality after security fix', function () {
-    // REFACTOR: Ensure functionality is maintained
-    $validInput = '${testSuite.green.validInput}';
-    
-    $result = $this->instance->process($validInput);
-    
-    expect($result)->toBeString();
-    expect($result)->not->toBeEmpty();
-    expect($result)->not->toContain('error');
-});
-
-${dataset}`;
+${dataset ? `\n${dataset}` : ''}`;
   }
 }
