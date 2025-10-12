@@ -109,35 +109,62 @@ export class PhaseDataClient {
     if (!this.usePlatformStorage) {
       return this.storeLocally(phase, data, metadata);
     }
-    
+
+    // Map client phase names to platform phase names
+    const phaseMapping: { [key: string]: string } = {
+      'scan': 'scan',
+      'validate': 'validation',
+      'mitigate': 'mitigation'
+    };
+
+    const platformPhase = phaseMapping[phase] || phase;
+
+    // Extract and validate the specific phase data for the platform API
+    // Platform expects direct phase data, not wrapped in PhaseData structure
+    // NOTE: This validation happens BEFORE the try-catch so errors propagate to caller
+    let phaseSpecificData: any;
+
+    if (phase === 'scan') {
+      // For scan, send the scan data directly
+      phaseSpecificData = data.scan;
+    } else if (phase === 'validate' || phase === 'mitigate') {
+      // For validation/mitigation, extract the data for the specific issue
+      const phaseDataKey = phase === 'validate' ? 'validate' : 'mitigate';
+      const phaseIssueData = (data as any)[phaseDataKey];
+
+      if (phaseIssueData && metadata.issueNumber) {
+        // Extract just the data for this specific issue
+        phaseSpecificData = phaseIssueData[metadata.issueNumber];
+
+        // If no data found for this specific issue, throw validation error
+        if (!phaseSpecificData) {
+          throw new Error(`No ${phase} data found for issue ${metadata.issueNumber}`);
+        }
+      } else {
+        throw new Error(`No ${phase} data found for issue ${metadata.issueNumber}`);
+      }
+    }
+
+    // Try to store on platform, fall back to local on platform errors only
     try {
-      // Map client phase names to platform phase names
-      const phaseMapping: { [key: string]: string } = {
-        'scan': 'scan',
-        'validate': 'validation',
-        'mitigate': 'mitigation'
-      };
-      
-      const platformPhase = phaseMapping[phase] || phase;
-      
       const response = await fetch(`${this.baseUrl}/api/v1/phases/store`, {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify({
           phase: platformPhase,
-          data,
+          data: phaseSpecificData,
           ...metadata
         })
       });
-      
+
       if (!response.ok) {
         throw new Error(`Platform storage failed: ${response.statusText}`);
       }
-      
+
       const result = await response.json();
       return { ...result, storage: 'platform' as const };
     } catch (error) {
-      // Fallback to local storage
+      // Fallback to local storage on platform errors
       console.warn('Platform storage failed, falling back to local:', error);
       return this.storeLocally(phase, data, metadata);
     }
