@@ -18,6 +18,19 @@ export class SecurityDetectorV2 {
     this.astInterpreter = new ASTPatternInterpreter();
   }
 
+  /**
+   * Cleanup method to release resources
+   */
+  cleanup(): void {
+    // Clear cached patterns
+    this.cachedPatterns.clear();
+
+    // Cleanup AST interpreter
+    if (this.astInterpreter) {
+      this.astInterpreter.cleanup();
+    }
+  }
+
   async detect(code: string, language: string, filePath: string = 'unknown'): Promise<Vulnerability[]> {
     const vulnerabilities: Vulnerability[] = [];
     const lines = code.split('\n');
