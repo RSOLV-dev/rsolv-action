@@ -1,7 +1,7 @@
 // detector-worker.js - Worker thread for running potentially dangerous regex patterns
 // Note: This is a .js file because worker threads need a file path, not a module
 
-const { parentPort, workerData } = require('worker_threads');
+import { parentPort, workerData } from 'worker_threads';
 
 // Simple console logger for the worker
 const logger = {

@@ -47,22 +47,28 @@ export function getModeFromArgs(): string | undefined {
 export function getExecutionMode(): ExecutionMode {
   // 1. Check CLI args first
   const cliMode = getModeFromArgs();
-  if (cliMode && validateMode(cliMode)) {
-    return cliMode as ExecutionMode;
+  if (cliMode) {
+    const normalizedCliMode = cliMode.toLowerCase();
+    if (validateMode(normalizedCliMode)) {
+      return normalizedCliMode as ExecutionMode;
+    }
   }
-  
+
   // 2. Check RSOLV_MODE env var or GitHub Actions input
   const envMode = process.env.RSOLV_MODE || process.env.INPUT_MODE;
-  if (envMode && validateMode(envMode)) {
-    return envMode as ExecutionMode;
+  if (envMode) {
+    const normalizedEnvMode = envMode.toLowerCase();
+    if (validateMode(normalizedEnvMode)) {
+      return normalizedEnvMode as ExecutionMode;
+    }
   }
-  
+
   // 3. Check legacy RSOLV_SCAN_MODE for backward compatibility
   const legacyMode = process.env.RSOLV_SCAN_MODE;
-  if (legacyMode === 'scan') {
+  if (legacyMode && legacyMode.toLowerCase() === 'scan') {
     return 'scan';
   }
-  
+
   // 4. Default to 'full' mode (all phases)
   return 'full';
 }
