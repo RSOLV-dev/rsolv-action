@@ -223,15 +223,12 @@ defmodule RsolvWeb.Router do
     get "/feature-flags/:flag", FeatureFlagController, :show
   end
   
-  # Define metrics feature flag pipeline
-  pipeline :require_metrics_feature do
-    plug RsolvWeb.Plugs.FeatureFlagPlug, feature: :metrics_dashboard
-  end
-
-  # Metrics endpoint (requires metrics feature flag)
+  # Metrics endpoint (publicly accessible for Prometheus scraping)
+  # NOTE: This endpoint is intentionally NOT behind a feature flag
+  # to ensure continuous observability for monitoring systems
   scope "/metrics" do
-    pipe_through [:metrics, :require_metrics_feature]
-    
+    pipe_through :metrics
+
     get "/", RsolvWeb.MetricsController, :index
   end
 
