@@ -149,9 +149,9 @@ if [[ -n "$MEMORY_SAFE" ]]; then
     echo -e "${GREEN}Running shard $i/$TOTAL_SHARDS...${NC}"
 
     if [[ -n "$JSON_OUTPUT" ]]; then
-      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E bun x vitest run --shard=$i/$TOTAL_SHARDS --reporter=json --outputFile=$SHARD_DIR/shard-$i.json $COVERAGE"
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E bun x vitest run --shard=$i/$TOTAL_SHARDS --reporter=json --outputFile=$SHARD_DIR/shard-$i.json --passWithNoTests $COVERAGE"
     else
-      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E bun x vitest run --shard=$i/$TOTAL_SHARDS $COVERAGE"
+      SHARD_CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E bun x vitest run --shard=$i/$TOTAL_SHARDS --passWithNoTests $COVERAGE"
     fi
 
     # Run shard and check exit code
@@ -173,7 +173,7 @@ if [[ -n "$MEMORY_SAFE" ]]; then
   fi
 else
   # Regular single run
-  CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E $JSON_OUTPUT bun x vitest run $COVERAGE $WATCH_MODE $EXTRA_ARGS"
+  CMD="$MEMORY_SAFE $LIVE_API $RUN_E2E $JSON_OUTPUT bun x vitest run --passWithNoTests $COVERAGE $WATCH_MODE $EXTRA_ARGS"
   echo ""
   echo "Running command:"
   echo -e "${YELLOW}$CMD${NC}"
