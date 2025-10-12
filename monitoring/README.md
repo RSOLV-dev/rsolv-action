@@ -43,7 +43,22 @@ kubectl rollout restart deployment/alertmanager -n monitoring
 
 ## Alert Notifications
 
-- **Firing Alerts**: Sent via email through Postmark
-- **Recovery Alerts**: Sent via webhook receiver (workaround for Alertmanager issue)
+Alerts are throttled to prevent email flooding:
+- **Critical site down**: 1 email on fire, 1/day if still down, 1 on recovery
+- **Other critical**: Every 4 hours
+- **Warnings**: Every 12 hours
+- **Recovery**: Deduplicated via webhook (5-minute window)
 
-See `/home/dylan/dev/rsolv/RSOLV-infrastructure/MONITORING.md` for complete documentation.
+**Expected emails per outage**: 3 max (down → 24h reminder → recovery)
+
+**Testing**:
+```bash
+# Unit tests (throttling logic)
+python3 test_webhook_receiver.py
+
+# Integration tests (live webhook)
+./test-alert-throttling.sh
+kubectl logs -f -n monitoring deployment/webhook-receiver
+```
+
+See `/home/dylan/dev/rsolv/RSOLV-infrastructure/DEPLOYMENT.md` for deployment and `/home/dylan/dev/rsolv/RSOLV-infrastructure/MONITORING.md` for complete docs.
