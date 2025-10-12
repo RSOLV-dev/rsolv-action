@@ -1,7 +1,7 @@
 # RFC-066: Stripe Billing Integration
 
 **Status**: Draft
-**Created**: 2025-01-12
+**Created**: 2025-10-12
 **Timeline**: 3 weeks
 **Dependencies**: Stripe account (have credentials)
 
@@ -25,6 +25,19 @@
 ## Summary
 
 Implement Stripe for payment processing, subscription management, and usage-based billing. Zero Stripe code exists despite database fields being ready.
+
+## Integration Notes
+
+### RFC-060 Amendment 001 (Validation Changes)
+**Integration Point:** The `track_fix_deployed()` function is triggered after the VALIDATE/MITIGATE phases complete successfully.
+
+**Key Considerations:**
+- The validation test location changes (from `.rsolv/tests/` to framework-specific directories) do NOT affect billing
+- PhaseDataClient must confirm successful fix deployment before billing usage is tracked
+- This is the ONLY touchpoint between the validation and billing workstreams
+- Both RFCs can proceed in parallel without conflicts
+
+**Action Required:** When implementing `track_fix_deployed()`, ensure it receives confirmation from PhaseDataClient that the fix was successfully deployed and validated.
 
 ## Problem
 
@@ -74,6 +87,10 @@ end
 
 ```elixir
 defmodule Rsolv.Billing do
+  # INTEGRATION POINT: RFC-060 Amendment 001
+  # This function is called after validation/mitigation phases complete.
+  # The validation changes (test location/integration) don't affect this,
+  # but ensure PhaseDataClient reports fix deployment success before calling.
   def track_fix_deployed(customer, fix) do
     case customer.subscription_plan do
       "trial" ->
