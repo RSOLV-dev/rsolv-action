@@ -1953,21 +1953,28 @@ export class PhaseExecutor {
   }
 
   /**
-   * Explain why tests failed from ValidationResult
+   * RFC-060: Explain why RED tests failed from ValidationResult
    */
   private explainTestFailureFromResult(validation: TestValidationResult): string {
     const failures = [];
-    
-    if (!validation.fixedCommit.redTestPassed) {
-      failures.push('- The vulnerability still exists (RED test failed)');
+
+    if (!validation.fixedCommit.allPassed) {
+      failures.push('- **The vulnerability still exists** - RED tests are still failing on your fixed code');
+      // Show which specific RED tests failed if there are multiple
+      if (validation.fixedCommit.redTestsPassed.length > 1) {
+        const failedTests = validation.fixedCommit.redTestsPassed
+          .map((passed, index) => !passed ? `RED test ${index + 1}` : null)
+          .filter(Boolean);
+        if (failedTests.length > 0) {
+          failures.push(`  Failed tests: ${failedTests.join(', ')}`);
+        }
+      }
     }
-    if (!validation.fixedCommit.greenTestPassed) {
-      failures.push('- The fix was not properly applied (GREEN test failed)');
+    if (validation.vulnerableCommit.allPassed) {
+      failures.push('- **Warning**: RED tests passed on vulnerable code (they should have failed!)');
+      failures.push('  This suggests the tests may not be properly detecting the vulnerability');
     }
-    if (!validation.fixedCommit.refactorTestPassed) {
-      failures.push('- The fix broke existing functionality (REFACTOR test failed)');
-    }
-    
+
     return failures.join('\n');
   }
 

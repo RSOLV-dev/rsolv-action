@@ -489,33 +489,39 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
       prompt += '- REFACTOR test should ensure functionality is maintained\n';
     }
     
-    // Add validation failure context
+    // Add validation failure context (RFC-060: RED-only tests)
     if (validationResult && !validationResult.success) {
       prompt += '\n\n## Previous Fix Attempt Failed\n';
       prompt += `This is attempt ${iteration?.current || 2} of ${iteration?.max || 3}.\n\n`;
       prompt += '### Test Results:\n';
       prompt += '```\n';
-      prompt += `Vulnerable commit - Red test: ${validationResult.vulnerableCommit.redTestPassed ? 'PASSED' : 'FAILED'}\n`;
-      prompt += `Fixed commit - Red test: ${validationResult.fixedCommit.redTestPassed ? 'PASSED' : 'FAILED'}\n`;
-      prompt += `Fixed commit - Green test: ${validationResult.fixedCommit.greenTestPassed ? 'PASSED' : 'FAILED'}\n`;
-      prompt += `Fixed commit - Refactor test: ${validationResult.fixedCommit.refactorTestPassed ? 'PASSED' : 'FAILED'}\n`;
+      prompt += `Vulnerable commit - RED tests: ${validationResult.vulnerableCommit.allPassed ? 'PASSED (unexpected!)' : 'FAILED (expected)'}\n`;
+      prompt += `Fixed commit - RED tests: ${validationResult.fixedCommit.allPassed ? 'PASSED (expected)' : 'FAILED (problem!)'}\n`;
+
+      // Show individual test results if multiple RED tests
+      if (validationResult.fixedCommit.redTestsPassed.length > 1) {
+        prompt += '\nIndividual RED test results on fixed code:\n';
+        validationResult.fixedCommit.redTestsPassed.forEach((passed: boolean, index: number) => {
+          prompt += `  - RED test ${index + 1}: ${passed ? 'PASSED' : 'FAILED'}\n`;
+        });
+      }
       prompt += '\n```\n\n';
-      
-      if (!validationResult.fixedCommit.redTestPassed) {
-        prompt += '- The vulnerability still exists (RED test failed)\n';
+
+      if (!validationResult.fixedCommit.allPassed) {
+        prompt += '- **The vulnerability still exists** - RED tests are still failing on your fixed code\n';
+        prompt += '- This means your fix did not properly address the security issue\n';
       }
-      if (!validationResult.fixedCommit.greenTestPassed) {
-        prompt += '- The fix was not properly applied (GREEN test failed)\n';
+      if (validationResult.vulnerableCommit.allPassed) {
+        prompt += '- **Warning**: RED tests passed on vulnerable code (they should fail!)\n';
+        prompt += '- This suggests the tests may not be properly detecting the vulnerability\n';
       }
-      if (!validationResult.fixedCommit.refactorTestPassed) {
-        prompt += '- The fix broke existing functionality (REFACTOR test failed)\n';
-      }
-      
-      prompt += '**Please analyze the test failures and try a different approach.**\n';
+
+      prompt += '\n**Please analyze the test failures and try a different approach.**\n';
       prompt += 'Consider:\n';
       prompt += '- Are you handling all edge cases?\n';
       prompt += '- Is the fix too restrictive or breaking functionality?\n';
       prompt += '- Do you need to adjust the implementation strategy?\n';
+      prompt += '- Review the RED test expectations and attack vectors\n';
     }
     
     // Add iteration context

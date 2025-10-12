@@ -99,46 +99,52 @@ function createEnhancedIssueWithTestFailure(
 
 The previous fix did not pass the generated security tests:
 
-### Test Results:
-- Red Test (vulnerability should be fixed): ${validation.fixedCommit.redTestPassed ? '✅ PASSED' : '❌ FAILED'}
-- Green Test (fix should work): ${validation.fixedCommit.greenTestPassed ? '✅ PASSED' : '❌ FAILED'}  
-- Refactor Test (functionality maintained): ${validation.fixedCommit.refactorTestPassed ? '✅ PASSED' : '❌ FAILED'}
+### Test Results (RFC-060: RED-only):
+- Vulnerable Code - RED tests: ${validation.vulnerableCommit.allPassed ? '✅ PASSED (unexpected!)' : '❌ FAILED (expected)'}
+- Fixed Code - RED tests: ${validation.fixedCommit.allPassed ? '✅ PASSED (expected)' : '❌ FAILED (problem!)'}
 
 ### Generated Test Code:
 \`\`\`${framework}
 ${testCode}
 \`\`\`
 
-Please fix the vulnerability again, ensuring the fix passes all three tests.
+Please fix the vulnerability again, ensuring the fix passes RED tests.
 
 ### Why the Previous Fix Failed:
 ${explainTestFailure(validation)}
 
-### Specific Requirements:
-1. The vulnerability must be completely fixed (RED test must pass)
-2. The fix must be correctly implemented (GREEN test must pass)  
-3. Original functionality must be preserved (REFACTOR test must pass)
+### RFC-060 Requirements:
+1. The vulnerability must be completely fixed (RED tests must pass on fixed code)
+2. RED tests should have FAILED on vulnerable code (proving vulnerability existed)
+3. If RED tests passed on vulnerable code, the tests may be incorrect
 
 This is attempt ${iteration + 1} of ${maxIterations}.`
   };
 }
 
 /**
- * Explain why tests failed
+ * RFC-060: Explain why RED tests failed
  */
 function explainTestFailure(validation: ValidationResult): string {
   const failures = [];
-  
-  if (!validation.fixedCommit.redTestPassed) {
-    failures.push('- The vulnerability still exists (RED test failed)');
+
+  if (!validation.fixedCommit.allPassed) {
+    failures.push('- **The vulnerability still exists** - RED tests are still failing on your fixed code');
+    // Show which specific RED tests failed if there are multiple
+    if (validation.fixedCommit.redTestsPassed.length > 1) {
+      const failedTests = validation.fixedCommit.redTestsPassed
+        .map((passed, index) => !passed ? `RED test ${index + 1}` : null)
+        .filter(Boolean);
+      if (failedTests.length > 0) {
+        failures.push(`  Failed tests: ${failedTests.join(', ')}`);
+      }
+    }
   }
-  if (!validation.fixedCommit.greenTestPassed) {
-    failures.push('- The fix was not properly applied (GREEN test failed)');
+  if (validation.vulnerableCommit.allPassed) {
+    failures.push('- **Warning**: RED tests passed on vulnerable code (they should have failed!)');
+    failures.push('  This suggests the tests may not be properly detecting the vulnerability');
   }
-  if (!validation.fixedCommit.refactorTestPassed) {
-    failures.push('- The fix broke existing functionality (REFACTOR test failed)');
-  }
-  
+
   return failures.join('\n');
 }
 

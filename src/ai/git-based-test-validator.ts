@@ -1,31 +1,39 @@
 /**
- * GitBasedTestValidator - Phase 5E Implementation
- * 
- * Validates that vulnerability fixes actually work by running generated tests
+ * GitBasedTestValidator - RFC-060 Compatible Implementation
+ *
+ * Validates that vulnerability fixes actually work by running generated RED tests
  * against both vulnerable and fixed versions of the code using git.
+ *
+ * RFC-060: Only RED tests are generated - tests that prove vulnerability exists
  */
 
 import { execSync } from 'child_process';
 import { writeFileSync, unlinkSync, mkdirSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { tmpdir } from 'os';
-import { VulnerabilityTestSuite } from './test-generator.js';
+import { VulnerabilityTestSuite, RedTest } from './test-generator.js';
 import { logger } from '../utils/logger.js';
 
-// Type for test suite with all required properties for template generation
-type CompleteTestSuite = Required<Pick<VulnerabilityTestSuite, 'red' | 'green' | 'refactor'>> & VulnerabilityTestSuite;
+// RFC-060: Extract RED tests helper
+function extractRedTests(testSuite: VulnerabilityTestSuite): RedTest[] {
+  if (testSuite.redTests && Array.isArray(testSuite.redTests)) {
+    return testSuite.redTests;
+  }
+  if (testSuite.red) {
+    return [testSuite.red];
+  }
+  return [];
+}
 
 export interface ValidationResult {
   success: boolean;
   vulnerableCommit: {
-    redTestPassed: boolean;  // Should fail (vulnerability exists)
-    greenTestPassed: boolean; // Should fail (fix not applied)
-    refactorTestPassed: boolean; // Should pass (functionality works)
+    redTestsPassed: boolean[];  // Each should fail (vulnerability exists)
+    allPassed: boolean;         // Should be false on vulnerable code
   };
   fixedCommit: {
-    redTestPassed: boolean;  // Should pass (vulnerability fixed)
-    greenTestPassed: boolean; // Should pass (fix applied)
-    refactorTestPassed: boolean; // Should pass (functionality maintained)
+    redTestsPassed: boolean[];  // Each should pass (vulnerability fixed)
+    allPassed: boolean;         // Should be true on fixed code
   };
   isValidFix: boolean;
   error?: string;
@@ -49,10 +57,18 @@ export class GitBasedTestValidator {
     try {
       logger.info(`Validating fix: ${vulnerableCommit} -> ${fixedCommit}`);
 
+      // RFC-060: Extract RED tests
+      const redTests = extractRedTests(testSuite);
+      if (redTests.length === 0) {
+        throw new Error('No RED tests found in test suite');
+      }
+
+      logger.info(`Running ${redTests.length} RED test(s) for validation`);
+
       // Create temporary test file
-      const testFile = this.createTestFile(testSuite as CompleteTestSuite);
+      const testFile = this.createTestFile(testSuite);
       const testPath = join(this.workDir, 'validation.test.js');
-      
+
       // Ensure directory exists
       mkdirSync(dirname(testPath), { recursive: true });
       writeFileSync(testPath, testFile);
@@ -94,14 +110,12 @@ export class GitBasedTestValidator {
       return {
         success: false,
         vulnerableCommit: {
-          redTestPassed: false,
-          greenTestPassed: false,
-          refactorTestPassed: false
+          redTestsPassed: [],
+          allPassed: false
         },
         fixedCommit: {
-          redTestPassed: false,
-          greenTestPassed: false,
-          refactorTestPassed: false
+          redTestsPassed: [],
+          allPassed: false
         },
         isValidFix: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -117,10 +131,12 @@ export class GitBasedTestValidator {
     testPath: string,
     testSuite: VulnerabilityTestSuite
   ): Promise<{
-    redTestPassed: boolean;
-    greenTestPassed: boolean;
-    refactorTestPassed: boolean;
+    redTestsPassed: boolean[];
+    allPassed: boolean;
   }> {
+    // RFC-060: Extract RED tests
+    const redTests = extractRedTests(testSuite);
+
     // Store current branch
     const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', {
       cwd: this.repoPath,
@@ -131,14 +147,17 @@ export class GitBasedTestValidator {
       // Checkout commit
       execSync(`git checkout ${commit} --quiet`, { cwd: this.repoPath });
 
-      // Run each test individually to get specific results
-      const results = {
-        redTestPassed: this.runSingleTest(testPath, 'red'),
-        greenTestPassed: this.runSingleTest(testPath, 'green'),
-        refactorTestPassed: this.runSingleTest(testPath, 'refactor')
-      };
+      // Run each RED test individually
+      const redTestsPassed = redTests.map((_, index) =>
+        this.runSingleTest(testPath, index)
+      );
 
-      return results;
+      const allPassed = redTestsPassed.every(passed => passed);
+
+      return {
+        redTestsPassed,
+        allPassed
+      };
     } finally {
       // Restore original branch
       execSync(`git checkout ${currentBranch} --quiet`, { cwd: this.repoPath });
@@ -146,25 +165,30 @@ export class GitBasedTestValidator {
   }
 
   /**
-   * Run a single test and return whether it passed
+   * Run a single RED test by index
    */
-  private runSingleTest(testPath: string, testType: 'red' | 'green' | 'refactor'): boolean {
+  private runSingleTest(testPath: string, testIndex: number): boolean {
     try {
       // Create a minimal test runner that executes the test code
       const testWrapper = `
         const { execSync } = require('child_process');
         const fs = require('fs');
         const path = require('path');
-        
+
         // Load test suite
         const testSuite = require('${testPath}');
-        const test = testSuite.${testType};
-        
+        const test = testSuite.redTests[${testIndex}];
+
+        if (!test) {
+          console.error('Test not found at index ${testIndex}');
+          process.exit(1);
+        }
+
         // Create a proper test file with the test framework
         const testFileContent = \`
           // Minimal test runner for validation
           const assert = require('assert');
-          
+
           // Mock test function if not available
           if (typeof test === 'undefined') {
             global.test = async (name, fn) => {
@@ -178,7 +202,7 @@ export class GitBasedTestValidator {
               }
             };
           }
-          
+
           // Mock expect if not available
           if (typeof expect === 'undefined') {
             global.expect = (actual) => ({
@@ -192,7 +216,7 @@ export class GitBasedTestValidator {
               }
             });
           }
-          
+
           // Execute the test
           (async () => {
             try {
@@ -204,13 +228,13 @@ export class GitBasedTestValidator {
             }
           })();
         \`;
-        
+
         // Write and execute test file
-        const tempTestFile = '${testPath.replace('.test.js', '')}.${testType}.runner.js';
+        const tempTestFile = '${testPath.replace('.test.js', '')}.red_${testIndex}.runner.js';
         fs.writeFileSync(tempTestFile, testFileContent);
-        
+
         try {
-          execSync(\`node \${tempTestFile}\`, { 
+          execSync(\`node \${tempTestFile}\`, {
             cwd: '${this.repoPath}',
             stdio: 'pipe'
           });
@@ -222,10 +246,10 @@ export class GitBasedTestValidator {
         }
       `;
 
-      const wrapperPath = testPath.replace('.test.js', `.${testType}.wrapper.js`);
+      const wrapperPath = testPath.replace('.test.js', `.red_${testIndex}.wrapper.js`);
       writeFileSync(wrapperPath, testWrapper);
 
-      execSync(`node ${wrapperPath}`, { 
+      execSync(`node ${wrapperPath}`, {
         cwd: this.repoPath,
         stdio: 'pipe' // Suppress output
       });
@@ -233,53 +257,53 @@ export class GitBasedTestValidator {
       unlinkSync(wrapperPath);
       return true;
     } catch (error) {
-      logger.debug(`Test ${testType} failed:`, error);
+      logger.debug(`RED test ${testIndex} failed:`, error);
       return false;
     }
   }
 
   /**
-   * Create a test file from the test suite
+   * RFC-060: Create a test file from the test suite (RED tests only)
    */
-  private createTestFile(testSuite: CompleteTestSuite): string {
+  private createTestFile(testSuite: VulnerabilityTestSuite): string {
     // Escape backticks in test code to prevent template literal issues
     const escapeTestCode = (code: string) => code.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-    
+
+    // RFC-060: Extract RED tests
+    const redTests = extractRedTests(testSuite);
+
+    // Generate test objects
+    const testObjects = redTests.map((redTest, index) => `  {
+    testName: "${redTest.testName}",
+    testCode: \`${escapeTestCode(redTest.testCode)}\`,
+    attackVector: "${redTest.attackVector || ''}",
+    expectedBehavior: "${redTest.expectedBehavior}"
+  }`).join(',\n');
+
     return `
-// Generated test file for vulnerability validation
+// RFC-060: Generated RED test file for vulnerability validation
 const assert = require('assert');
 
 module.exports = {
-  red: {
-    testName: "${testSuite.red.testName}",
-    testCode: \`${escapeTestCode(testSuite.red.testCode)}\`,
-    expectedBehavior: "${testSuite.red.expectedBehavior}"
-  },
-  green: {
-    testName: "${testSuite.green.testName}",
-    testCode: \`${escapeTestCode(testSuite.green.testCode)}\`,
-    expectedBehavior: "${testSuite.green.expectedBehavior}"
-  },
-  refactor: {
-    testName: "${testSuite.refactor.testName}",
-    testCode: \`${escapeTestCode(testSuite.refactor.testCode)}\`,
-    expectedBehavior: "${testSuite.refactor.expectedBehavior}"
-  }
+  redTests: [
+${testObjects}
+  ]
 };
 
 // Export for direct execution
 if (require.main === module) {
   (async () => {
-    console.log('Running vulnerability validation tests...');
-    
-    // Run all tests
-    for (const [type, test] of Object.entries(module.exports)) {
-      console.log(\`Running \${type} test: \${test.testName}\`);
+    console.log('Running vulnerability validation tests (RED only)...');
+
+    // Run all RED tests
+    for (let i = 0; i < module.exports.redTests.length; i++) {
+      const test = module.exports.redTests[i];
+      console.log(\`Running RED test \${i + 1}: \${test.testName}\`);
       try {
         await eval(test.testCode);
-        console.log(\`✓ \${type} test passed\`);
+        console.log(\`✓ RED test \${i + 1} passed\`);
       } catch (error) {
-        console.log(\`✗ \${type} test failed: \${error.message}\`);
+        console.log(\`✗ RED test \${i + 1} failed: \${error.message}\`);
       }
     }
   })();
@@ -288,32 +312,30 @@ if (require.main === module) {
   }
 
   /**
-   * Validate that the test results confirm the fix
+   * RFC-060: Validate that the test results confirm the fix
+   *
+   * Expected behavior:
+   * - On vulnerable code: RED tests should FAIL (prove vulnerability exists)
+   * - On fixed code: RED tests should PASS (prove vulnerability fixed)
    */
   private validateResults(
-    vulnerableResults: any,
-    fixedResults: any
+    vulnerableResults: { redTestsPassed: boolean[]; allPassed: boolean },
+    fixedResults: { redTestsPassed: boolean[]; allPassed: boolean }
   ): boolean {
-    // On vulnerable commit:
-    // - Red test should FAIL (vulnerability exists, so test that checks for it fails)
-    // - Green test should FAIL (fix not applied yet)
-    // - Refactor test should PASS (functionality works)
+    // On vulnerable commit: RED tests should FAIL (proves vulnerability exists)
+    const vulnerableValid = !vulnerableResults.allPassed;
 
-    // On fixed commit:
-    // - Red test should PASS (vulnerability no longer exists)
-    // - Green test should PASS (fix is applied)
-    // - Refactor test should PASS (functionality still works)
+    // On fixed commit: RED tests should PASS (proves vulnerability fixed)
+    const fixedValid = fixedResults.allPassed;
 
-    const vulnerableValid = 
-      !vulnerableResults.redTestPassed &&     // Red fails (vuln exists)
-      !vulnerableResults.greenTestPassed &&   // Green fails (no fix)
-      vulnerableResults.refactorTestPassed;   // Refactor passes
+    const isValid = vulnerableValid && fixedValid;
 
-    const fixedValid = 
-      fixedResults.redTestPassed &&          // Red passes (vuln fixed)
-      fixedResults.greenTestPassed &&        // Green passes (fix applied)
-      fixedResults.refactorTestPassed;       // Refactor still passes
+    if (!isValid) {
+      logger.warn('Validation failed:');
+      logger.warn(`  Vulnerable code - RED tests failed (expected): ${vulnerableValid}`);
+      logger.warn(`  Fixed code - RED tests passed (expected): ${fixedValid}`);
+    }
 
-    return vulnerableValid && fixedValid;
+    return isValid;
   }
 }

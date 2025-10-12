@@ -12,25 +12,25 @@ import { logger } from '../utils/logger.js';
 // === CORE TYPES ===
 
 /**
+ * RFC-060: RED test structure - proves vulnerability exists
+ */
+export interface RedTest {
+  testName: string;
+  testCode: string;
+  attackVector: string;
+  expectedBehavior: 'should_fail_on_vulnerable_code';
+}
+
+/**
  * Test suite structure supporting RED, GREEN, and REFACTOR phases
  * RFC-060: In VALIDATE phase, only RED tests are generated
  */
 export interface VulnerabilityTestSuite {
   /** RED test(s) that demonstrate the vulnerability exists */
-  red?: {
-    testName: string;
-    testCode: string;
-    attackVector: string;
-    expectedBehavior: 'should_fail_on_vulnerable_code';
-  };
+  red?: RedTest;
 
   /** Multiple RED tests for complex vulnerabilities (RFC-060) */
-  redTests?: Array<{
-    testName: string;
-    testCode: string;
-    attackVector: string;
-    expectedBehavior: 'should_fail_on_vulnerable_code';
-  }>;
+  redTests?: RedTest[];
 
   /** GREEN test validates the fix works (not generated in VALIDATE phase per RFC-060) */
   green?: {
