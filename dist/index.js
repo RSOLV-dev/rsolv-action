@@ -763,73 +763,42 @@ For multiple RED tests (complex vulnerabilities), return:
 }
 
 Keep ALL strings properly escaped. Avoid long test code.
-Return ONLY the JSON, no explanations.`}parseTestSuite(X){try{let J=null,Q=X.match(/```json\s*([\s\S]*?)```/);if(Q)J=Q[1].trim();if(!J){let U=X.match(/```[\s\S]*?\n([\s\S]*?)```/);if(U)J=U[1].trim()}if(!J)J=this.extractJsonFromText(X);if(!J&&X.trim().startsWith("{"))J=X.trim();if(!J)return B.error("No JSON found in AI response. Response preview:",X.substring(0,200)),null;B.debug(`Extracted JSON string length: ${J.length} characters`),J=J.replace(/^\s*```\s*json?\s*/gm,"").replace(/\s*```\s*$/gm,"").trim();let Y=(J.match(/\{/g)||[]).length,W=(J.match(/\}/g)||[]).length;if(Y>W)B.warn(`Fixing unclosed JSON structure: ${Y} open, ${W} closed`),J+="}".repeat(Y-W);let z=!1;try{JSON.parse(J),z=!0}catch{}if(!z&&this.isActuallyTruncatedString(J)){B.warn("JSON appears truncated mid-string, attempting to close");let U=(J.match(/\[/g)||[]).length,K=(J.match(/\]/g)||[]).length;if(J+='"',U>K)J+="]".repeat(U-K);if(Y=(J.match(/\{/g)||[]).length,W=(J.match(/\}/g)||[]).length,Y>W)J+="}".repeat(Y-W)}let G;try{G=JSON.parse(J)}catch(U){return B.error("Failed to parse JSON after cleanup attempts:",U),B.debug("Attempted to parse:",J.substring(0,500)),null}if(!G.red&&!G.redTests)return B.error("Invalid test suite structure. No RED test(s) found. Keys:",Object.keys(G)),null;if(G.redTests)B.info(`Successfully parsed ${G.redTests.length} RED tests for complex vulnerability`);else if(G.red)B.info("Successfully parsed single RED test");if(G.green||G.refactor)B.warn("Response contained GREEN/REFACTOR tests - stripping per RFC-060 (VALIDATE phase is RED-only)");let H={};if(G.redTests&&Array.isArray(G.redTests))H.redTests=G.redTests.map((U)=>({testName:U.testName||"RED Test",testCode:U.testCode||"// Test code truncated",attackVector:U.attackVector||"Unknown",expectedBehavior:"should_fail_on_vulnerable_code"}));else if(G.red)H.red={testName:G.red.testName||"Vulnerability Test",testCode:G.red.testCode||"// Test code truncated",attackVector:G.red.attackVector||"Unknown",expectedBehavior:"should_fail_on_vulnerable_code"};return H}catch(J){return B.error("Failed to parse AI response:",J),B.debug("Response that failed to parse:",X.substring(0,500)),null}}generateTestCode(X,J){let Q=J.testFramework||"jest",Y=J.language||"javascript",W=X;if(Y==="javascript"||Y==="typescript")return this.generateJavaScriptTests(W,Q);else if(Y==="python")return this.generatePythonTests(W);else if(Y==="ruby")return this.generateRubyTests(W);else if(Y==="php")return this.generatePHPTests(W);else if(Y==="elixir")return this.generateElixirTests(W);return this.generateJavaScriptTests(W,Q)}generateJavaScriptTests(X,J){if(J==="jest"||J==="mocha"||J==="vitest")return`
-const { expect } = require('chai');
-
-describe('Security Vulnerability Tests', () => {
-  // RED Test - Proves vulnerability exists
-  ${X.red.testCode}
-
-  // GREEN Test - Validates fix
-  ${X.green.testCode}
-
-  // REFACTOR Test - Ensures functionality
-  ${X.refactor.testCode}
-});`;return`
-// Security Tests
-${X.red.testCode}
-${X.green.testCode}
-${X.refactor.testCode}`}generatePythonTests(X){return`
+Return ONLY the JSON, no explanations.`}parseTestSuite(X){try{let J=null,Q=X.match(/```json\s*([\s\S]*?)```/);if(Q)J=Q[1].trim();if(!J){let U=X.match(/```[\s\S]*?\n([\s\S]*?)```/);if(U)J=U[1].trim()}if(!J)J=this.extractJsonFromText(X);if(!J&&X.trim().startsWith("{"))J=X.trim();if(!J)return B.error("No JSON found in AI response. Response preview:",X.substring(0,200)),null;B.debug(`Extracted JSON string length: ${J.length} characters`),J=J.replace(/^\s*```\s*json?\s*/gm,"").replace(/\s*```\s*$/gm,"").trim();let Y=(J.match(/\{/g)||[]).length,W=(J.match(/\}/g)||[]).length;if(Y>W)B.warn(`Fixing unclosed JSON structure: ${Y} open, ${W} closed`),J+="}".repeat(Y-W);let z=!1;try{JSON.parse(J),z=!0}catch{}if(!z&&this.isActuallyTruncatedString(J)){B.warn("JSON appears truncated mid-string, attempting to close");let U=(J.match(/\[/g)||[]).length,K=(J.match(/\]/g)||[]).length;if(J+='"',U>K)J+="]".repeat(U-K);if(Y=(J.match(/\{/g)||[]).length,W=(J.match(/\}/g)||[]).length,Y>W)J+="}".repeat(Y-W)}let G;try{G=JSON.parse(J)}catch(U){return B.error("Failed to parse JSON after cleanup attempts:",U),B.debug("Attempted to parse:",J.substring(0,500)),null}if(!G.red&&!G.redTests)return B.error("Invalid test suite structure. No RED test(s) found. Keys:",Object.keys(G)),null;if(G.redTests)B.info(`Successfully parsed ${G.redTests.length} RED tests for complex vulnerability`);else if(G.red)B.info("Successfully parsed single RED test");if(G.green||G.refactor)B.warn("Response contained GREEN/REFACTOR tests - stripping per RFC-060 (VALIDATE phase is RED-only)");let H={};if(G.redTests&&Array.isArray(G.redTests))H.redTests=G.redTests.map((U)=>({testName:U.testName||"RED Test",testCode:U.testCode||"// Test code truncated",attackVector:U.attackVector||"Unknown",expectedBehavior:"should_fail_on_vulnerable_code"}));else if(G.red)H.red={testName:G.red.testName||"Vulnerability Test",testCode:G.red.testCode||"// Test code truncated",attackVector:G.red.attackVector||"Unknown",expectedBehavior:"should_fail_on_vulnerable_code"};return H}catch(J){return B.error("Failed to parse AI response:",J),B.debug("Response that failed to parse:",X.substring(0,500)),null}}generateTestCode(X,J){let Q=J.testFramework||"jest",Y=J.language||"javascript";if(Y==="javascript"||Y==="typescript")return this.generateJavaScriptTests(X,Q);else if(Y==="python")return this.generatePythonTests(X);else if(Y==="ruby")return this.generateRubyTests(X);else if(Y==="php")return this.generatePHPTests(X);else if(Y==="elixir")return this.generateElixirTests(X);return this.generateJavaScriptTests(X,Q)}generateJavaScriptTests(X,J){let Q=[];if(X.redTests&&Array.isArray(X.redTests))Q.push(...X.redTests);else if(X.red)Q.push(X.red);if(Q.length===0)return B.error("No RED tests found in test suite"),"// ERROR: No RED tests generated";let Y=Q.map((W)=>`
+  // RED Test: ${W.testName}
+  ${W.testCode}`).join(`
+`);if(J==="jest"||J==="mocha"||J==="vitest")return`
+describe('Security Vulnerability Tests', () => {${Y}
+});`;return Y}generatePythonTests(X){let J=[];if(X.redTests&&Array.isArray(X.redTests))J.push(...X.redTests);else if(X.red)J.push(X.red);if(J.length===0)return B.error("No RED tests found in test suite"),"# ERROR: No RED tests generated";return`
 import unittest
 
-class SecurityVulnerabilityTests(unittest.TestCase):
-    # RED Test - Proves vulnerability exists
-    ${X.red.testCode}
-    
-    # GREEN Test - Validates fix
-    ${X.green.testCode}
-    
-    # REFACTOR Test - Ensures functionality
-    ${X.refactor.testCode}
+class SecurityVulnerabilityTests(unittest.TestCase):${J.map((Y)=>`
+    # RED Test: ${Y.testName}
+    ${Y.testCode}`).join(`
+`)}
 
 if __name__ == '__main__':
-    unittest.main()`}generateRubyTests(X){return`
+    unittest.main()`}generateRubyTests(X){let J=[];if(X.redTests&&Array.isArray(X.redTests))J.push(...X.redTests);else if(X.red)J.push(X.red);if(J.length===0)return B.error("No RED tests found in test suite"),"# ERROR: No RED tests generated";return`
 require 'rspec'
 
-RSpec.describe 'Security Vulnerability Tests' do
-  # RED Test - Proves vulnerability exists
-  ${X.red.testCode}
-  
-  # GREEN Test - Validates fix
-  ${X.green.testCode}
-  
-  # REFACTOR Test - Ensures functionality
-  ${X.refactor.testCode}
-end`}generatePHPTests(X){return`
+RSpec.describe 'Security Vulnerability Tests' do${J.map((Y)=>`
+  # RED Test: ${Y.testName}
+  ${Y.testCode}`).join(`
+`)}
+end`}generatePHPTests(X){let J=[];if(X.redTests&&Array.isArray(X.redTests))J.push(...X.redTests);else if(X.red)J.push(X.red);if(J.length===0)return B.error("No RED tests found in test suite"),"// ERROR: No RED tests generated";return`
 <?php
 use PHPUnit\\Framework\\TestCase;
 
-class SecurityVulnerabilityTest extends TestCase {
-    // RED Test - Proves vulnerability exists
-    ${X.red.testCode}
-    
-    // GREEN Test - Validates fix
-    ${X.green.testCode}
-    
-    // REFACTOR Test - Ensures functionality
-    ${X.refactor.testCode}
-}`}generateElixirTests(X){return`
+class SecurityVulnerabilityTest extends TestCase {${J.map((Y)=>`
+    // RED Test: ${Y.testName}
+    ${Y.testCode}`).join(`
+`)}
+}`}generateElixirTests(X){let J=[];if(X.redTests&&Array.isArray(X.redTests))J.push(...X.redTests);else if(X.red)J.push(X.red);if(J.length===0)return B.error("No RED tests found in test suite"),"# ERROR: No RED tests generated";return`
 defmodule SecurityVulnerabilityTest do
   use ExUnit.Case
-
-  # RED Test - Proves vulnerability exists
-  ${X.red.testCode}
-
-  # GREEN Test - Validates fix
-  ${X.green.testCode}
-
-  # REFACTOR Test - Ensures functionality
-  ${X.refactor.testCode}
+${J.map((Y)=>`
+  # RED Test: ${Y.testName}
+  ${Y.testCode}`).join(`
+`)}
 end`}isActuallyTruncatedString(X){let J=!1,Q=!1;for(let Y=0;Y<X.length;Y++){let W=X[Y];if(Q){Q=!1;continue}if(W==="\\"&&J){Q=!0;continue}if(W==='"')J=!J}return J&&!X.trim().endsWith('"}')}extractJsonFromText(X){let J=[],Q=0,Y=!1,W=!1,z=-1;for(let U=0;U<X.length;U++){let K=X[U],V=U>0?X[U-1]:"";if(W){W=!1;continue}if(K==="\\"&&Y){W=!0;continue}if(K==='"'&&!W){Y=!Y;continue}if(!Y){if(K==="{"){if(Q===0)z=U;Q++}else if(K==="}"){if(Q--,Q===0&&z!==-1)J.push({start:z,end:U+1}),z=-1}}}let G=null,H=0;for(let U of J){let K=X.substring(U.start,U.end);try{if(JSON.parse(K),K.length>H)G=K,H=K.length}catch{}}return G}}var vL=B1(()=>{s1();OQ();_H()});class fH{frameworkDetector;coverageAnalyzer;issueInterpreter;aiConfig;baseGenerator;aiGenerator;useAIGeneration;constructor(X,J,Q,Y){this.frameworkDetector=X;this.coverageAnalyzer=J;this.issueInterpreter=Q;this.aiConfig=Y;if(this.baseGenerator=new vH,this.useAIGeneration=!!Y&&process.env.DISABLE_AI_TEST_GEN!=="true",this.useAIGeneration&&Y)this.aiGenerator=new xH(Y)}async detectFrameworksFromStructure(X){let J=[],Q=Object.keys(X).filter((W)=>W.endsWith("package.json"));for(let W of Q)try{let z=JSON.parse(X[W]),G=await this.frameworkDetector.detectFromPackageJson(z);J.push(...G.frameworks)}catch(z){}if(X["requirements.txt"]){let W=X["requirements.txt"];if(W.includes("pytest"))J.push({name:"pytest",version:this.extractVersion(W,"pytest"),type:"unit",confidence:0.9,detectionMethod:"dependency"})}if(X.Gemfile){let W=X.Gemfile;if(W.includes("minitest"))J.push({name:"minitest",version:this.extractVersion(W,"minitest"),type:"unit",confidence:0.9,detectionMethod:"dependency"});if(W.includes("rspec"))J.push({name:"rspec",version:this.extractVersion(W,"rspec"),type:"unit",confidence:0.9,detectionMethod:"dependency"})}if(X["pom.xml"]){let W=X["pom.xml"];if(W.includes("org.junit.jupiter"))J.push({name:"junit5",version:this.extractVersion(W,"junit-jupiter")||"5.9.0",type:"unit",confidence:0.95,detectionMethod:"dependency"});else if(W.includes("org.testng"))J.push({name:"testng",version:this.extractVersion(W,"testng")||"7.8.0",type:"unit",confidence:0.95,detectionMethod:"dependency"});else if(W.includes("junit")&&W.includes("<version>4"))J.push({name:"junit",version:this.extractVersion(W,"junit")||"4.13",type:"unit",confidence:0.9,detectionMethod:"dependency"});if(W.includes("spring-boot-starter-test")){let z=J.find((G)=>G.name==="junit5"||G.name==="junit");if(z)z.companions=["spring-boot"];else J.push({name:"junit5",version:this.extractVersion(W,"junit-jupiter")||"5.9.0",type:"unit",confidence:0.9,detectionMethod:"dependency",companions:["spring-boot"]})}}if(X["composer.json"])try{let W=JSON.parse(X["composer.json"]),z=W["require-dev"]||{},G=W.require||{};if(z["pestphp/pest"]){if(J.push({name:"pest",version:z["pestphp/pest"],type:"unit",confidence:0.95,detectionMethod:"dependency",companions:[]}),z["pestphp/pest-plugin-laravel"]||G["laravel/framework"])J[J.length-1].companions=["laravel"]}else if(z["phpunit/phpunit"]){if(J.push({name:"phpunit",version:z["phpunit/phpunit"],type:"unit",confidence:0.95,detectionMethod:"dependency",companions:[]}),G["laravel/framework"])J[J.length-1].companions=["laravel"];else if(G["symfony/framework-bundle"])J[J.length-1].companions=["symfony"]}}catch(W){}if(X["mix.exs"]){let W=X["mix.exs"];if(W.includes("ex_unit")||W.includes("ExUnit"))J.push({name:"exunit",version:"builtin",type:"unit",confidence:0.95,detectionMethod:"dependency"})}let Y=Object.keys(X).filter((W)=>W.includes("jest.config")||W.includes("vitest.config")||W.includes("karma.conf")||W.includes(".mocharc"));if(Y.length>0){let W=await this.frameworkDetector.detectFromConfigFiles(Y);J.push(...W.frameworks)}return{frameworks:J}}extractVersion(X,J){let Q=X.match(new RegExp(`${J}[=~><\\s]+([\\"']?)([\\d\\.\\w-]+)\\1`));return Q?Q[2]:"unknown"}async generateAdaptiveTests(X,J){try{B.info("AdaptiveTestGenerator: generateAdaptiveTests called"),B.info("Vulnerability:",JSON.stringify(X)),B.info("RepoStructure keys:",Object.keys(J));let Q=await this.detectFrameworksFromStructure(J);B.info("Framework detection result:",JSON.stringify(Q));let Y=this.selectPrimaryFramework(Q.frameworks,X.file);if(B.info("Selected primary framework:",JSON.stringify(Y)),this.useAIGeneration&&this.aiGenerator)return B.info("Using AI-based test generation"),this.generateAITests(X,J,Y);if(!Y)return B.info("No primary framework detected, generating generic tests"),this.generateGenericTests(X);let W=await this.analyzeCoverage(J,X.file||""),z=this.detectConventions(J,Y),G=await this.generateFrameworkSpecificTests(X,Y,z,W),H=await this.generateTestSuite(X,Y);return{success:!0,framework:Y.name.toLowerCase(),testCode:G,testSuite:H,suggestedFileName:this.suggestFileName(X.file||"",z),notes:this.generateNotes(Y,W,z)}}catch(Q){return B.error("Error generating adaptive tests",Q),{success:!1,framework:"unknown",testCode:"",error:Q instanceof Error?Q.message:"Unknown error"}}}selectPrimaryFramework(X,J){if(X.length===0)return null;if(X.length===1)return X[0];let Q=J?.split(".").pop()?.toLowerCase(),W={js:["jest","vitest","mocha","jasmine"],ts:["jest","vitest","mocha"],tsx:["jest","vitest","@testing-library/react"],jsx:["jest","vitest","@testing-library/react"],py:["pytest","unittest","nose2"],rb:["rspec","minitest"],php:["phpunit","pest","codeception"],java:["junit","testng"],ex:["exunit"],exs:["exunit"]}[Q||""]||[];for(let z of W){let G=X.find((H)=>H.name.toLowerCase()===z||H.name.toLowerCase().includes(z));if(G)return G}return X.sort((z,G)=>G.confidence-z.confidence)[0]}async analyzeCoverage(X,J){let Q=Object.keys(X).filter((H)=>H.includes("coverage")||H.includes("lcov")||H.includes(".coverage"));if(Q.length===0)return{hasData:!1};let Y=null;for(let H of Q){let U=X[H];if(H.includes("lcov")){Y=await this.coverageAnalyzer.parseLcov(U);break}else if(H.includes(".coverage")||H.endsWith(".json"))try{Y=await this.coverageAnalyzer.parseCoveragePy(U);break}catch(K){}}if(!Y)return{hasData:!1};let W=await this.coverageAnalyzer.findCoverageGaps(Y),z=Y.files?.find((H)=>H.path===J||H.path.endsWith(J)),G=W?await this.coverageAnalyzer.recommendTestPriorities(W):[];return{hasData:!0,fileCoverage:z,gaps:W,recommendations:G}}detectConventions(X,J){let Q=Object.entries(X).filter(([W])=>W.match(/\.(test|spec)\.(js|ts|jsx|tsx|py|rb|php|java|ex|exs)$/)||W.includes("__tests__")||W.includes("test_")||W.includes("_test")),Y={style:"unknown",assertionStyle:"unknown",fileNaming:"unknown",testDirectory:"unknown",imports:[],helpers:[],companions:J.companions||[]};for(let[W,z]of Q){if(z.includes("describe(")&&z.includes("it("))Y.style="bdd";else if(z.includes("test(")&&!z.includes("describe("))Y.style="tdd";if(z.includes("expect(")&&z.includes(".to."))Y.assertionStyle="chai-expect";else if(z.includes("expect(")&&z.includes(".toBe"))Y.assertionStyle="jest-expect";else if(z.includes("assert."))Y.assertionStyle="assert";else if(z.includes("_(")&&z.includes(".must_")||z.includes(".wont_"))Y.assertionStyle="minitest";if(W.includes(".test."))Y.fileNaming="test";else if(W.includes(".spec."))Y.fileNaming="spec";else if(W.includes("__tests__"))Y.fileNaming="__tests__";else if(W.includes("test_"))Y.fileNaming="test_prefix";let G=z.matchAll(/(?:import|require)\s*(?:\{[^}]+\}|\S+)\s*from\s*['"]([^'"]+)['"]/g);for(let H of G)if(H[1].includes("helper")||H[1].includes("setup"))Y.helpers.push(H[0]);if(z.includes("beforeEach(setup")||z.includes("afterEach(cleanup")){let H=z.match(/beforeEach\((\w+)\)/),U=z.match(/afterEach\((\w+)\)/);if(H)Y.helpers.push(`beforeEach(${H[1]})`);if(U)Y.helpers.push(`afterEach(${U[1]})`)}}return Y}async generateFrameworkSpecificTests(X,J,Q,Y){let W=J.name.toLowerCase(),z=X.type.toUpperCase();if(X.type==="cross_site_request_forgery")z="CSRF";else if(X.type==="xss")z="XSS";let G={vulnerabilityType:z,language:this.getLanguageFromFramework(W),testFramework:this.mapToBaseFramework(W),includeE2E:!1},H=await this.baseGenerator.generateTestSuite(X,G);if(!H.success||!H.testSuite)if(B.error("Base test generation failed",{success:H.success,error:H.error,vulnerability:X.type}),X.type==="xml_external_entities")H.testSuite={red:{testName:"should be vulnerable to xml external entities (RED)",testCode:"// Test XXE vulnerability",attackVector:'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',expectedBehavior:"should_fail_on_vulnerable_code"},green:{testName:"should prevent xml external entities (GREEN)",testCode:"// Test XXE prevention",validInput:'<?xml version="1.0"?><foo>bar</foo>',expectedBehavior:"should_pass_on_fixed_code"},refactor:{testName:"should maintain functionality after security fix",testCode:"// Test normal XML processing",functionalValidation:["XML parsing works correctly","Valid XML returns expected data"],expectedBehavior:"should_pass_on_both_versions"}},H.success=!0;else throw new Error(`Failed to generate base test suite: ${H.error||"Unknown error"}`);let U=this.transformToFrameworkSyntax(H.testSuite,W,Q,X,J);if(Y.hasData&&Y.fileCoverage)U=this.addCoverageAwareTests(U,Y);if(Q.helpers.length>0)U=this.addHelperImports(U,Q.helpers);return U}transformToFrameworkSyntax(X,J,Q,Y,W){let z=X;switch(J){case"vitest":return this.generateVitestTests(z,Q,Y);case"mocha":return this.generateMochaTests(z,Q,Y);case"pytest":return this.generatePytestTests(z,Q,Y);case"rspec":return this.generateRSpecTests(z,Q,Y);case"minitest":return this.generateMinitestTests(z,Q,Y);case"exunit":return this.generateExUnitTests(z,Q,Y);case"phpunit":return this.generatePHPUnitTests(z,Q,Y,W);case"pest":return this.generatePestTests(z,Q,Y,W);case"jest":return this.generateJestTests(z,Q,Y);case"junit5":return this.generateJUnit5Tests(z,Q,Y);case"testng":return this.generateTestNGTests(z,Q,Y);default:return this.generateGenericTestCode(X,Y)}}generateVitestTests(X,J,Q){let Y=Q.file?.split("/").pop()?.replace(/\.(tsx?|jsx?)$/,"")||"Component",W=Q.file?.endsWith(".tsx")||Q.file?.endsWith(".jsx")||!1,z=(H)=>{let U=H.match(/test\([^{]+\{([\s\S]*)\}\);?$/);return U?U[1].trim():H};return`${W?`import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ${Y} } from "${this.getRelativeImportPath(Q.file||"")}";`:`import { describe, test, expect } from "vitest";

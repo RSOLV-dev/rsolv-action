@@ -10,9 +10,6 @@ import { AIConfig } from './types.js';
 import { AiProviderConfig } from '../types/index.js';
 import { getTestGenerationTokenLimit } from './token-utils.js';
 
-// Type for test suite with all required properties for template generation
-type CompleteTestSuite = Required<Pick<VulnerabilityTestSuite, 'red' | 'green' | 'refactor'>> & VulnerabilityTestSuite;
-
 export interface AITestGenerationResult {
   success: boolean;
   testSuite?: VulnerabilityTestSuite;
@@ -331,114 +328,159 @@ Return ONLY the JSON, no explanations.`;
     const framework = options.testFramework || 'jest';
     const language = options.language || 'javascript';
 
-    // Assert testSuite has required properties
-    const completeTestSuite = testSuite as CompleteTestSuite;
-
+    // RFC-060: Handle RED-only test suites (no green/refactor needed in VALIDATE phase)
     if (language === 'javascript' || language === 'typescript') {
-      return this.generateJavaScriptTests(completeTestSuite, framework);
+      return this.generateJavaScriptTests(testSuite, framework);
     } else if (language === 'python') {
-      return this.generatePythonTests(completeTestSuite);
+      return this.generatePythonTests(testSuite);
     } else if (language === 'ruby') {
-      return this.generateRubyTests(completeTestSuite);
+      return this.generateRubyTests(testSuite);
     } else if (language === 'php') {
-      return this.generatePHPTests(completeTestSuite);
+      return this.generatePHPTests(testSuite);
     } else if (language === 'elixir') {
-      return this.generateElixirTests(completeTestSuite);
+      return this.generateElixirTests(testSuite);
     }
 
     // Default to JavaScript
-    return this.generateJavaScriptTests(completeTestSuite, framework);
+    return this.generateJavaScriptTests(testSuite, framework);
   }
 
-  private generateJavaScriptTests(testSuite: CompleteTestSuite, framework: string): string {
+  private generateJavaScriptTests(testSuite: VulnerabilityTestSuite, framework: string): string {
+    // RFC-060: Handle both single RED test and multiple RED tests
+    const redTests: Array<{testName: string, testCode: string}> = [];
+
+    if (testSuite.redTests && Array.isArray(testSuite.redTests)) {
+      // Multiple RED tests for complex vulnerability
+      redTests.push(...testSuite.redTests);
+    } else if (testSuite.red) {
+      // Single RED test
+      redTests.push(testSuite.red);
+    }
+
+    if (redTests.length === 0) {
+      logger.error('No RED tests found in test suite');
+      return '// ERROR: No RED tests generated';
+    }
+
+    // Generate test code for each RED test
+    const testBlocks = redTests.map(test => `
+  // RED Test: ${test.testName}
+  ${test.testCode}`).join('\n');
+
     if (framework === 'jest' || framework === 'mocha' || framework === 'vitest') {
       return `
-const { expect } = require('chai');
-
-describe('Security Vulnerability Tests', () => {
-  // RED Test - Proves vulnerability exists
-  ${testSuite.red.testCode}
-
-  // GREEN Test - Validates fix
-  ${testSuite.green.testCode}
-
-  // REFACTOR Test - Ensures functionality
-  ${testSuite.refactor.testCode}
+describe('Security Vulnerability Tests', () => {${testBlocks}
 });`;
     }
 
     // Default test structure
-    return `
-// Security Tests
-${testSuite.red.testCode}
-${testSuite.green.testCode}
-${testSuite.refactor.testCode}`;
+    return testBlocks;
   }
 
-  private generatePythonTests(testSuite: CompleteTestSuite): string {
+  private generatePythonTests(testSuite: VulnerabilityTestSuite): string {
+    // RFC-060: Handle both single RED test and multiple RED tests
+    const redTests: Array<{testName: string, testCode: string}> = [];
+
+    if (testSuite.redTests && Array.isArray(testSuite.redTests)) {
+      redTests.push(...testSuite.redTests);
+    } else if (testSuite.red) {
+      redTests.push(testSuite.red);
+    }
+
+    if (redTests.length === 0) {
+      logger.error('No RED tests found in test suite');
+      return '# ERROR: No RED tests generated';
+    }
+
+    const testBlocks = redTests.map(test => `
+    # RED Test: ${test.testName}
+    ${test.testCode}`).join('\n');
+
     return `
 import unittest
 
-class SecurityVulnerabilityTests(unittest.TestCase):
-    # RED Test - Proves vulnerability exists
-    ${testSuite.red.testCode}
-    
-    # GREEN Test - Validates fix
-    ${testSuite.green.testCode}
-    
-    # REFACTOR Test - Ensures functionality
-    ${testSuite.refactor.testCode}
+class SecurityVulnerabilityTests(unittest.TestCase):${testBlocks}
 
 if __name__ == '__main__':
     unittest.main()`;
   }
 
-  private generateRubyTests(testSuite: CompleteTestSuite): string {
+  private generateRubyTests(testSuite: VulnerabilityTestSuite): string {
+    // RFC-060: Handle both single RED test and multiple RED tests
+    const redTests: Array<{testName: string, testCode: string}> = [];
+
+    if (testSuite.redTests && Array.isArray(testSuite.redTests)) {
+      redTests.push(...testSuite.redTests);
+    } else if (testSuite.red) {
+      redTests.push(testSuite.red);
+    }
+
+    if (redTests.length === 0) {
+      logger.error('No RED tests found in test suite');
+      return '# ERROR: No RED tests generated';
+    }
+
+    const testBlocks = redTests.map(test => `
+  # RED Test: ${test.testName}
+  ${test.testCode}`).join('\n');
+
     return `
 require 'rspec'
 
-RSpec.describe 'Security Vulnerability Tests' do
-  # RED Test - Proves vulnerability exists
-  ${testSuite.red.testCode}
-  
-  # GREEN Test - Validates fix
-  ${testSuite.green.testCode}
-  
-  # REFACTOR Test - Ensures functionality
-  ${testSuite.refactor.testCode}
+RSpec.describe 'Security Vulnerability Tests' do${testBlocks}
 end`;
   }
 
-  private generatePHPTests(testSuite: CompleteTestSuite): string {
+  private generatePHPTests(testSuite: VulnerabilityTestSuite): string {
+    // RFC-060: Handle both single RED test and multiple RED tests
+    const redTests: Array<{testName: string, testCode: string}> = [];
+
+    if (testSuite.redTests && Array.isArray(testSuite.redTests)) {
+      redTests.push(...testSuite.redTests);
+    } else if (testSuite.red) {
+      redTests.push(testSuite.red);
+    }
+
+    if (redTests.length === 0) {
+      logger.error('No RED tests found in test suite');
+      return '// ERROR: No RED tests generated';
+    }
+
+    const testBlocks = redTests.map(test => `
+    // RED Test: ${test.testName}
+    ${test.testCode}`).join('\n');
+
     return `
 <?php
 use PHPUnit\\Framework\\TestCase;
 
-class SecurityVulnerabilityTest extends TestCase {
-    // RED Test - Proves vulnerability exists
-    ${testSuite.red.testCode}
-    
-    // GREEN Test - Validates fix
-    ${testSuite.green.testCode}
-    
-    // REFACTOR Test - Ensures functionality
-    ${testSuite.refactor.testCode}
+class SecurityVulnerabilityTest extends TestCase {${testBlocks}
 }`;
   }
 
-  private generateElixirTests(testSuite: CompleteTestSuite): string {
+  private generateElixirTests(testSuite: VulnerabilityTestSuite): string {
+    // RFC-060: Handle both single RED test and multiple RED tests
+    const redTests: Array<{testName: string, testCode: string}> = [];
+
+    if (testSuite.redTests && Array.isArray(testSuite.redTests)) {
+      redTests.push(...testSuite.redTests);
+    } else if (testSuite.red) {
+      redTests.push(testSuite.red);
+    }
+
+    if (redTests.length === 0) {
+      logger.error('No RED tests found in test suite');
+      return '# ERROR: No RED tests generated';
+    }
+
+    const testBlocks = redTests.map(test => `
+  # RED Test: ${test.testName}
+  ${test.testCode}`).join('\n');
+
     return `
 defmodule SecurityVulnerabilityTest do
   use ExUnit.Case
-
-  # RED Test - Proves vulnerability exists
-  ${testSuite.red.testCode}
-
-  # GREEN Test - Validates fix
-  ${testSuite.green.testCode}
-
-  # REFACTOR Test - Ensures functionality
-  ${testSuite.refactor.testCode}
+${testBlocks}
 end`;
   }
 
