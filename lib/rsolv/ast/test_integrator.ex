@@ -1,400 +1,319 @@
 defmodule Rsolv.AST.TestIntegrator do
   @moduledoc """
-  AST-based test integration for JavaScript/TypeScript, Ruby, and Python test frameworks.
+  Integrates security tests into existing test files using AST manipulation.
 
-  RFC-060-AMENDMENT-001: Integrates security tests into existing test files using a pragmatic
-  approach that combines simple parsing validation with string manipulation for insertion.
+  Parses target test file, finds appropriate insertion point, inserts new test,
+  and serializes back to code. Falls back to simple append if AST fails.
 
-  ## Strategy
-  1. Validate code structure using lightweight parsing
-  2. Use regex/string manipulation to find insertion points
-  3. Insert new test code maintaining indentation and formatting
-  4. Return integrated code
+  Currently supports:
+  - JavaScript/TypeScript with Jest, Vitest, and Mocha frameworks
 
-  ## Supported Frameworks
-  - JavaScript/TypeScript: Jest, Vitest, Mocha (uses @babel/parser)
-  - Ruby: RSpec, Minitest (uses Ripper)
-  - Python: pytest, unittest (uses ast module)
+  ## Examples
 
-  ## Design Philosophy
-  This module uses a pragmatic approach:
-  - Parsing is for VALIDATION (ensure syntax is correct)
-  - Insertion uses STRING MANIPULATION (simple, predictable, fast)
-  - Result is validated by attempting to parse again
+      iex> original_code = \"\"\"
+      ...> describe('UsersController', () => {
+      ...>   it('creates user', () => {
+      ...>     expect(User.count()).toBe(1);
+      ...>   });
+      ...> });
+      ...> \"\"\"
+      iex> test_suite = %{
+      ...>   "redTests" => [%{
+      ...>     "testName" => "rejects SQL injection",
+      ...>     "testCode" => "expect(() => search_users(payload)).toThrow()",
+      ...>     "attackVector" => "'; DROP TABLE users;--"
+      ...>   }]
+      ...> }
+      iex> {:ok, integrated, _point, method} = Rsolv.AST.TestIntegrator.generate_integration(
+      ...>   original_code, test_suite, "javascript", "vitest"
+      ...> )
+      iex> String.contains?(integrated, "rejects SQL injection")
+      true
+      iex> method
+      "ast"
 
-  This avoids complex AST traversal/serialization while ensuring correctness.
   """
 
+  alias Rsolv.AST.SessionManager
+  alias Rsolv.AST.ParserRegistry
   require Logger
 
-  ## Public API
+  @supported_frameworks ~w(vitest jest mocha)
+  @test_function_names ~w(it test specify)
+  @describe_function_names ~w(describe context suite)
+  @default_indent 2
 
   @doc """
-  Parses test code and returns a simplified AST representation.
+  Generates integrated test file content by inserting test suite into target file.
 
-  This uses language-specific parsers via external scripts to validate syntax
-  and extract structure for insertion point detection.
+  Returns `{:ok, integrated_content, insertion_point, method}` where method is
+  either "ast" (successful AST integration) or "append" (fallback).
+
+  ## Parameters
+
+  - `target_content`: The existing test file content as a string
+  - `test_suite`: Map with "redTests" array containing test definitions
+  - `language`: Language of the test file ("javascript" or "typescript")
+  - `framework`: Test framework name ("vitest", "jest", or "mocha")
+
+  ## Examples
+
+      iex> generate_integration("describe('Foo', () => {});", %{"redTests" => [...]}, "javascript", "vitest")
+      {:ok, "describe('Foo', () => {\\n  // ... new test ...\\n});", %{line: 2}, "ast"}
+
   """
-  def parse("", _language), do: {:error, :empty_file}
+  def generate_integration(target_content, test_suite, language, framework) do
+    Logger.info("TestIntegrator: Starting integration for #{language}/#{framework}")
+    Logger.debug("Target content length: #{byte_size(target_content)}, test suite: #{inspect(test_suite)}")
 
-  def parse(code, language) do
-    case language do
-      lang when lang in [:javascript, :typescript] ->
-        parse_javascript(code)
+    with {:ok, ast} <- parse_code(target_content, language),
+         {:ok, insertion_point} <- find_insertion_point(ast, framework),
+         {:ok, integrated_code} <- insert_test(ast, test_suite, language, framework, insertion_point, target_content) do
+      Logger.info("TestIntegrator: Successfully integrated test using AST")
+      {:ok, integrated_code, insertion_point, "ast"}
+    else
+      error ->
+        Logger.warning("TestIntegrator: AST integration failed (#{inspect(error)}), falling back to append")
+        fallback_content = "#{target_content}\n\n#{format_test_code(test_suite, language, framework)}"
+        {:ok, fallback_content, nil, "append"}
+    end
+  end
 
-      :ruby ->
-        parse_ruby(code)
+  # Parse code using existing parser infrastructure
+  defp parse_code(content, language) do
+    Logger.debug("TestIntegrator: Parsing #{language} code")
 
-      :python ->
-        parse_python(code)
+    with {:ok, session} <- SessionManager.create_session("test-integrator"),
+         {:ok, %{ast: ast, error: nil}} <- ParserRegistry.parse_code(session.id, "test-integrator", language, content) do
+      Logger.debug("TestIntegrator: Successfully parsed code")
+      {:ok, ast}
+    else
+      {:ok, %{error: error}} ->
+        Logger.error("TestIntegrator: Parser returned error: #{inspect(error)}")
+        {:error, {:parser_error, error}}
 
-      _ ->
-        {:error, :unsupported_language}
+      {:error, reason} = error ->
+        Logger.error("TestIntegrator: Parser failed: #{inspect(reason)}")
+        error
     end
   end
 
   @doc """
-  Finds the insertion point metadata for a target block.
+  Finds the best insertion point in the AST for the new test.
 
-  Returns metadata describing where a new test should be inserted.
+  Returns insertion point metadata with line number and strategy.
+
+  For Jest/Vitest/Mocha, we look for the last `it()` or `test()` block
+  inside the outermost `describe()` block.
+
+  ## Examples
+
+      iex> find_insertion_point(vitest_ast, "vitest")
+      {:ok, %{line: 42, strategy: "after_last_it_block", parent: "describe_block"}}
+
   """
-  def find_insertion_point(ast, target_name) when is_map(ast) do
-    cond do
-      is_javascript_ast?(ast) ->
-        %{type: :describe_block, name: target_name}
+  def find_insertion_point(ast, framework) when framework in @supported_frameworks do
+    Logger.debug("TestIntegrator: Finding insertion point for #{framework}")
 
-      is_ruby_ast?(ast) ->
-        %{type: :rspec_describe, name: target_name}
+    # Find the outermost describe block
+    case find_outermost_describe(ast) do
+      nil ->
+        Logger.warning("TestIntegrator: No describe block found")
+        {:error, :no_describe_block}
 
-      is_python_ast?(ast) ->
-        %{type: :test_class, name: target_name}
+      describe_node ->
+        # Find the last test block (it/test) within the describe
+        case find_last_test_block(describe_node) do
+          nil ->
+            Logger.warning("TestIntegrator: No test blocks found in describe")
+            # Insert at the end of describe block, before closing brace
+            {:ok, %{
+              line: get_node_end_line(describe_node) - 1,
+              strategy: "inside_describe_block",
+              parent: "describe_block"
+            }}
 
-      true ->
+          last_test ->
+            # Insert after the last test block
+            line = get_node_end_line(last_test) + 1
+            Logger.debug("TestIntegrator: Found insertion point at line #{line}")
+            {:ok, %{
+              line: line,
+              strategy: "after_last_it_block",
+              parent: "describe_block"
+            }}
+        end
+    end
+  end
+
+  def find_insertion_point(_ast, framework) do
+    Logger.error("TestIntegrator: Unsupported framework: #{framework}")
+    {:error, {:unsupported_framework, framework}}
+  end
+
+  # Find the outermost describe block in the AST
+  defp find_outermost_describe(%{"type" => "File", "program" => program}),
+    do: find_outermost_describe(program)
+
+  defp find_outermost_describe(%{"type" => "Program", "body" => body}) when is_list(body),
+    do: Enum.find_value(body, &find_describe_in_statement/1)
+
+  defp find_outermost_describe(_), do: nil
+
+  # Find describe block in a statement
+  defp find_describe_in_statement(%{"type" => "ExpressionStatement", "expression" => expr}),
+    do: find_describe_in_expression(expr)
+
+  defp find_describe_in_statement(_), do: nil
+
+  # Find describe in call expression
+  defp find_describe_in_expression(%{
+    "type" => "CallExpression",
+    "callee" => %{"type" => "Identifier", "name" => name}
+  } = node) when name in @describe_function_names, do: node
+
+  defp find_describe_in_expression(_), do: nil
+
+  # Find the last test block (it/test) within a describe
+  defp find_last_test_block(%{"arguments" => arguments}) when is_list(arguments) do
+    # The second argument should be the function containing test blocks
+    case Enum.at(arguments, 1) do
+      %{"type" => type, "body" => body} when type in ["FunctionExpression", "ArrowFunctionExpression"] ->
+        find_last_test_in_body(body)
+
+      _ ->
         nil
     end
   end
 
-  def find_insertion_point(_ast, _target_name), do: nil
+  defp find_last_test_block(_), do: nil
+
+  # Find last test in function body
+  defp find_last_test_in_body(%{"type" => "BlockStatement", "body" => statements}) when is_list(statements) do
+    statements
+    |> Enum.reverse()
+    |> Enum.find_value(&find_test_in_statement/1)
+  end
+
+  defp find_last_test_in_body(_), do: nil
+
+  # Find test in statement
+  defp find_test_in_statement(%{
+    "type" => "ExpressionStatement",
+    "expression" => %{
+      "type" => "CallExpression",
+      "callee" => %{"type" => "Identifier", "name" => name}
+    } = node
+  }) when name in @test_function_names, do: node
+
+  defp find_test_in_statement(_), do: nil
+
+  # Get end line of a node
+  defp get_node_end_line(%{"_loc" => %{"end" => %{"line" => line}}}), do: line
+  defp get_node_end_line(%{"loc" => %{"end" => %{"line" => line}}}), do: line
+  defp get_node_end_line(_), do: 1
 
   @doc """
-  Inserts a new test into existing test code.
+  Inserts test suite into the target file at the specified insertion point.
 
-  Uses string manipulation to insert the test at an appropriate location
-  while maintaining indentation and formatting conventions.
+  Since we can't easily manipulate the Babel AST directly in Elixir,
+  we use a simple string-based insertion approach that inserts the formatted
+  test code at the right line number.
+
+  ## Examples
+
+      iex> insert_test(ast, test_suite, "javascript", "vitest", insertion_point, original_content)
+      {:ok, updated_code}
+
   """
-  def insert_test("", _new_test, _language), do: {:error, :empty_file}
+  def insert_test(_ast, test_suite, language, framework, insertion_point, original_content) do
+    Logger.debug("TestIntegrator: Inserting test at line #{insertion_point.line}")
 
-  def insert_test(existing_code, new_test, language) do
-    # Validate existing code parses
-    case parse(existing_code, language) do
-      {:ok, _ast} ->
-        # Find insertion point using string analysis
-        case find_insertion_point_string(existing_code, language) do
-          {:ok, position} ->
-            # Insert the new test
-            updated_code = insert_at_position(existing_code, new_test, position, language)
+    # Format the new test code
+    test_code = format_test_code(test_suite, language, framework)
 
-            # Validate result parses correctly
-            case parse(updated_code, language) do
-              {:ok, _} -> {:ok, updated_code}
-              {:error, _} -> {:error, :parse_error}
-            end
+    # Split original content by lines
+    lines = String.split(original_content, "\n")
 
-          {:error, reason} ->
-            {:error, reason}
+    # Find the indentation of the insertion point
+    indent = detect_indentation(lines, insertion_point.line)
+
+    # Indent the test code
+    indented_test = indent_code(test_code, indent)
+
+    # Insert the test code at the specified line
+    {before_lines, after_lines} = Enum.split(lines, insertion_point.line)
+
+    integrated_lines = before_lines ++ ["\n" <> indented_test] ++ after_lines
+    integrated_code = Enum.join(integrated_lines, "\n")
+
+    {:ok, integrated_code}
+  end
+
+  # Detect indentation level at a given line
+  defp detect_indentation(lines, line_number) do
+    lines
+    |> Enum.at(max(0, line_number - 1))
+    |> case do
+      nil -> @default_indent
+      line ->
+        case Regex.run(~r/^(\s*)/, line) do
+          [_, spaces] -> byte_size(spaces)
+          _ -> @default_indent
         end
-
-      {:error, :parse_error} ->
-        # Check if this is specifically a "no test structure" case
-        if has_no_test_structure?(existing_code, language) do
-          {:error, :no_insertion_point}
-        else
-          {:error, :parse_error}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
     end
   end
 
-  @doc """
-  Serializes an AST back to source code.
+  # Indent code by adding spaces to each line
+  defp indent_code(code, indent_level) do
+    spaces = String.duplicate(" ", indent_level)
 
-  Note: This is primarily for testing AST validity. Actual insertion
-  uses string manipulation for better formatting control.
-  """
-  def serialize(ast, language) when is_map(ast) do
-    cond do
-      is_javascript_ast?(ast) and language in [:javascript, :typescript] ->
-        {:ok, "// Valid AST"}
-
-      is_ruby_ast?(ast) and language == :ruby ->
-        {:ok, "# Valid AST"}
-
-      is_python_ast?(ast) and language == :python ->
-        {:ok, "# Valid AST"}
-
-      true ->
-        {:error, :invalid_ast}
-    end
-  end
-
-  def serialize(_ast, _language), do: {:error, :invalid_ast}
-
-  ## Private Functions - Parsing
-
-  # JavaScript/TypeScript parsing using external Node.js parser
-  defp parse_javascript(code) do
-    # Use simple validation - check for basic structure
-    cond do
-      String.contains?(code, "// unclosed") ->
-        {:error, :parse_error}
-
-      String.trim(code) == "" ->
-        {:error, :empty_file}
-
-      # Check for valid describe structure
-      Regex.match?(~r/describe\s*\(/, code) or Regex.match?(~r/test\s*\(/, code) or
-          Regex.match?(~r/it\s*\(/, code) ->
-        {:ok, %{"type" => "Program", "body" => []}}
-
-      true ->
-        # If no test structure, still valid JS but not a test file
-        {:ok, %{"type" => "Program", "body" => []}}
-    end
-  end
-
-  # Ruby parsing using Ripper
-  defp parse_ruby(code) do
-    cond do
-      String.trim(code) == "" ->
-        {:error, :empty_file}
-
-      # Check for RSpec or Minitest structure
-      Regex.match?(~r/(RSpec\.)?describe|context|it ['"]/, code) or
-          Regex.match?(~r/class .* < (Minitest::Test|ActiveSupport::TestCase)/, code) ->
-        {:ok, %{type: :program, body: []}}
-
-      true ->
-        # Valid Ruby but not a test file
-        {:ok, %{type: :program, body: []}}
-    end
-  end
-
-  # Python parsing using ast module
-  defp parse_python(code) do
-    cond do
-      String.trim(code) == "" ->
-        {:error, :empty_file}
-
-      # Check for pytest or unittest structure
-      Regex.match?(~r/class Test\w+/, code) or
-          Regex.match?(~r/def test_\w+/, code) or
-          Regex.match?(~r/import (pytest|unittest)/, code) ->
-        {:ok, %{"type" => "Module", "body" => []}}
-
-      true ->
-        # Valid Python but not a test file
-        {:ok, %{"type" => "Module", "body" => []}}
-    end
-  end
-
-  ## Private Functions - AST Type Detection
-
-  defp is_javascript_ast?(%{"type" => "Program"}), do: true
-  defp is_javascript_ast?(%{type: "Program"}), do: true
-  defp is_javascript_ast?(_), do: false
-
-  defp is_ruby_ast?(%{type: :program}), do: true
-  defp is_ruby_ast?(_), do: false
-
-  defp is_python_ast?(%{"type" => "Module"}), do: true
-  defp is_python_ast?(%{type: "Module"}), do: true
-  defp is_python_ast?(_), do: false
-
-  ## Private Functions - Insertion Point Finding
-
-  defp has_no_test_structure?(code, language) do
-    case language do
-      lang when lang in [:javascript, :typescript] ->
-        not Regex.match?(~r/describe\s*\(|test\s*\(|it\s*\(/, code)
-
-      :ruby ->
-        not Regex.match?(~r/(RSpec\.)?describe|context|it ['"]/, code)
-
-      :python ->
-        not Regex.match?(~r/class Test\w+|def test_\w+/, code)
-
-      _ ->
-        false
-    end
-  end
-
-  defp find_insertion_point_string(code, language) do
-    case language do
-      lang when lang in [:javascript, :typescript] ->
-        find_js_insertion(code)
-
-      :ruby ->
-        find_ruby_insertion(code)
-
-      :python ->
-        find_python_insertion(code)
-
-      _ ->
-        {:error, :unsupported_language}
-    end
-  end
-
-  defp find_js_insertion(code) do
-    if Regex.match?(~r/describe\s*\(/, code) do
-      lines = String.split(code, "\n")
-      {position, _indent} = find_last_test_line(lines, ~r/\s*it\s*\(/, ~r/\s*}\);?\s*$/)
-      {:ok, position}
-    else
-      {:error, :no_insertion_point}
-    end
-  end
-
-  defp find_ruby_insertion(code) do
-    if Regex.match?(~r/(RSpec\.)?describe|context/, code) do
-      lines = String.split(code, "\n")
-      {position, _indent} = find_last_test_line(lines, ~r/\s*it ['"]/, ~r/\s*end\s*$/)
-      {:ok, position}
-    else
-      {:error, :no_insertion_point}
-    end
-  end
-
-  defp find_python_insertion(code) do
-    if Regex.match?(~r/class Test\w+|def test_\w+/, code) do
-      lines = String.split(code, "\n")
-      {position, _indent} = find_last_test_line(lines, ~r/\s*def test_\w+/, ~r/^\s*$/)
-      {:ok, position}
-    else
-      {:error, :no_insertion_point}
-    end
-  end
-
-  defp find_last_test_line(lines, test_pattern, _end_pattern) do
-    # Find last line matching the test pattern
-    last_test_idx =
-      lines
-      |> Enum.with_index()
-      |> Enum.filter(fn {line, _} -> Regex.match?(test_pattern, line) end)
-      |> List.last()
-
-    case last_test_idx do
-      {line, idx} ->
-        indent = get_indentation(line)
-        # Find the end of this test block
-        end_idx = find_block_end(lines, idx, indent)
-        {end_idx, indent}
-
-      nil ->
-        # No tests found - insert before the last closing brace/end
-        {max(0, length(lines) - 2), 2}
-    end
-  end
-
-  defp get_indentation(line) do
-    leading_spaces = String.replace_leading(line, String.trim_leading(line), "")
-    String.length(leading_spaces)
-  end
-
-  defp find_block_end(lines, start_idx, base_indent) do
-    # Find the next line that marks the end of the current block
-    result =
-      lines
-      |> Enum.drop(start_idx + 1)
-      |> Enum.with_index(start_idx + 1)
-      |> Enum.find(fn {line, _idx} ->
-        trimmed = String.trim(line)
-
-        cond do
-          trimmed == "" ->
-            false
-
-          String.starts_with?(trimmed, "//") or String.starts_with?(trimmed, "#") ->
-            false
-
-          true ->
-            indent = get_indentation(line)
-            # Block ends when we find a line at same or less indentation that looks like a block terminator
-            indent <= base_indent and
-              (String.starts_with?(trimmed, "end") or String.starts_with?(trimmed, "}") or
-                 String.starts_with?(trimmed, "it ") or String.starts_with?(trimmed, "def ") or
-                 String.starts_with?(trimmed, "describe") or String.starts_with?(trimmed, "test("))
-        end
-      end)
-
-    case result do
-      {_line, idx} -> idx
-      nil -> min(start_idx + 5, length(lines) - 1)
-    end
-  end
-
-  ## Private Functions - Insertion
-
-  defp insert_at_position(code, new_test, position, language) do
-    lines = String.split(code, "\n")
-    {before, after_lines} = Enum.split(lines, position)
-
-    # Determine proper indentation by looking at existing tests
-    base_indent = determine_indent_from_tests(lines, language)
-
-    # The new_test might have indentation from generation - normalize it
-    indented_test = reindent_test(new_test, base_indent)
-
-    # Combine with proper spacing
-    updated_lines = before ++ [""] ++ [indented_test] ++ after_lines
-    Enum.join(updated_lines, "\n")
-  end
-
-  defp determine_indent_from_tests(lines, language) do
-    # Find indentation of existing tests to match
-    test_pattern =
-      case language do
-        lang when lang in [:javascript, :typescript] -> ~r/^\s*(it|test)\s*\(/
-        :ruby -> ~r/^\s*it ['"]/
-        :python -> ~r/^\s*def test_\w+/
-        _ -> ~r/^\s*(it|test)/
-      end
-
-    # Find first line matching pattern and use its indentation
-    case Enum.find(lines, fn line -> Regex.match?(test_pattern, line) end) do
-      nil ->
-        # Fallback to standard indentation for the language
-        case language do
-          lang when lang in [:javascript, :typescript] -> 4
-          :ruby -> 2
-          :python -> 4
-          _ -> 2
-        end
-
-      test_line ->
-        get_indentation(test_line)
-    end
-  end
-
-  defp reindent_test(test_code, target_indent) do
-    lines = String.split(test_code, "\n")
-
-    # Strip all leading whitespace from each line
-    stripped_lines = Enum.map(lines, &String.trim_leading/1)
-
-    # Apply the target indentation to each non-empty line
-    indent_str = String.duplicate(" ", target_indent)
-
-    stripped_lines
-    |> Enum.map(fn line ->
-      if String.trim(line) == "" do
-        ""
-      else
-        indent_str <> line
-      end
+    code
+    |> String.split("\n")
+    |> Enum.map(fn
+      "" -> ""
+      line -> spaces <> line
     end)
     |> Enum.join("\n")
-    |> String.trim_trailing()
+  end
+
+  # Format test code for Jest/Vitest/Mocha
+  defp format_test_code(%{"redTests" => red_tests}, _language, framework)
+      when framework in @supported_frameworks do
+    red_tests
+    |> Enum.map(&format_single_test/1)
+    |> wrap_in_describe_block()
+  end
+
+  defp format_test_code(test_suite, _language, _framework) do
+    Logger.warning("TestIntegrator: Unexpected test suite format: #{inspect(test_suite)}")
+    "// Failed to format test - manual integration required"
+  end
+
+  # Format a single test block
+  defp format_single_test(%{"testName" => name, "testCode" => code, "attackVector" => vector}) do
+    """
+    it('#{name}', () => {
+      // Attack vector: #{vector}
+      #{indent_test_body(code)}
+    });
+    """
+  end
+
+  # Wrap test blocks in describe('security') block
+  defp wrap_in_describe_block(test_blocks) do
+    """
+    describe('security', () => {
+    #{Enum.join(test_blocks, "\n")}
+    });
+    """
+  end
+
+  # Indent test body (add 2 spaces to each line)
+  defp indent_test_body(code) do
+    code
+    |> String.split("\n")
+    |> Enum.map(&("  " <> &1))
+    |> Enum.join("\n")
   end
 end

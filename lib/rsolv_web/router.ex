@@ -202,6 +202,7 @@ defmodule RsolvWeb.Router do
 
     # Test integration endpoints (RFC-060-AMENDMENT-001)
     post "/test-integration/analyze", TestIntegrationController, :analyze
+    post "/test-integration/naming", TestIntegrationController, :naming
     post "/test-integration/generate", TestIntegrationController, :generate
   end
   
