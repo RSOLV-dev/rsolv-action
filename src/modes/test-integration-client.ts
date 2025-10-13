@@ -14,7 +14,9 @@
  * - Local/CI: Custom URL via constructor or env variable
  */
 
-// Type definitions based on RFC-060-AMENDMENT-001 API specification
+import { logger } from '../utils/logger.js';
+
+// Types based on RFC-060-AMENDMENT-001 API specification
 export interface AnalyzeRequest {
   vulnerableFile: string;
   vulnerabilityType: string;
@@ -36,20 +38,18 @@ export interface AnalyzeResponse {
 
 export interface GenerateRequest {
   targetFileContent: string;
-  testSuite: VulnerabilityTestSuite;
+  testSuite: {
+    redTests: Array<{
+      testName: string;
+      testCode: string;
+      attackVector: string;
+      expectedBehavior: string;
+      vulnerableCodePath?: string;
+      vulnerablePattern?: string;
+    }>;
+  };
   framework: string;
   language: string;
-}
-
-export interface VulnerabilityTestSuite {
-  redTests: Array<{
-    testName: string;
-    testCode: string;
-    attackVector: string;
-    expectedBehavior: string;
-    vulnerableCodePath?: string;
-    vulnerablePattern?: string;
-  }>;
 }
 
 export interface GenerateResponse {
@@ -63,9 +63,8 @@ export interface GenerateResponse {
 
 export class TestIntegrationClient {
   private readonly baseUrl: string;
-  private readonly maxRetries: number = 3;
-  private readonly baseDelayMs: number = 100;
-  private readonly timeoutMs: number = 30000;
+  private readonly maxRetries = 3;
+  private readonly baseDelay = 100; // milliseconds
 
   constructor(
     private apiKey: string,
@@ -75,112 +74,125 @@ export class TestIntegrationClient {
     this.baseUrl = baseUrl || process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
   }
 
+  /**
+   * Analyze test files and recommend best integration target
+   */
   async analyze(request: AnalyzeRequest): Promise<AnalyzeResponse> {
-    return this.post<AnalyzeRequest, AnalyzeResponse>(
+    return this.makeRequest<AnalyzeResponse>(
       '/api/v1/test-integration/analyze',
       request
     );
   }
 
+  /**
+   * Generate AST-based test integration
+   */
   async generate(request: GenerateRequest): Promise<GenerateResponse> {
-    return this.post<GenerateRequest, GenerateResponse>(
+    return this.makeRequest<GenerateResponse>(
       '/api/v1/test-integration/generate',
       request
     );
   }
 
-  private async post<TRequest, TResponse>(
+  /**
+   * Make HTTP request with retry logic and exponential backoff
+   */
+  private async makeRequest<T>(
     endpoint: string,
-    data: TRequest
-  ): Promise<TResponse> {
-    let lastError: Error | null = null;
+    body: any,
+    attempt: number = 0
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
 
-    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
-      // Add exponential backoff delay for retries (100ms, 200ms, 400ms)
-      if (attempt > 0) {
-        const delay = this.baseDelayMs * Math.pow(2, attempt - 1);
-        await new Promise(resolve => setTimeout(resolve, delay));
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'x-api-key': this.apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      // Handle 4xx client errors - don't retry
+      if (response.status >= 400 && response.status < 500) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized: Invalid API key');
+        }
+
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = `HTTP ${response.status}: ${errorData.error}`;
+          }
+        } catch {
+          // Ignore JSON parse errors
+        }
+
+        throw new Error(errorMessage);
       }
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
-
-      try {
-        const response = await fetch(`${this.baseUrl}${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': this.apiKey
-          },
-          body: JSON.stringify(data),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        // Handle HTTP errors
-        if (!response.ok) {
-          // Don't retry on 4xx client errors
-          if (response.status >= 400 && response.status < 500) {
-            let errorMessage = response.statusText;
-
-            // Try to get error details from response body
-            if (response.json && typeof response.json === 'function') {
-              try {
-                const errorBody = await response.json();
-                errorMessage = (errorBody as any).error || errorMessage;
-              } catch {
-                // If json parsing fails, use statusText
-              }
-            }
-
-            if (response.status === 401) {
-              throw new Error(`Authentication failed: ${errorMessage}`);
-            }
-
-            throw new Error(`Client error (${response.status}): ${errorMessage}`);
-          }
-
-          // Retry on 5xx server errors
-          if (response.status >= 500) {
-            lastError = new Error(`Server error: ${response.status} ${response.statusText}`);
-            continue;
-          }
+      // Handle 5xx server errors - retry with exponential backoff
+      if (response.status >= 500) {
+        if (attempt < this.maxRetries) {
+          const delay = this.baseDelay * Math.pow(2, attempt);
+          logger.warn(`Server error (${response.status}), retrying in ${delay}ms (attempt ${attempt + 1}/${this.maxRetries})`);
+          await this.sleep(delay);
+          return this.makeRequest<T>(endpoint, body, attempt + 1);
         }
-
-        // Success - parse and return response
-        const result = await response.json();
-        return result as TResponse;
-
-      } catch (error) {
-        clearTimeout(timeoutId);
-
-        // Re-throw 4xx errors immediately (no retry)
-        if (error instanceof Error &&
-            (error.message.includes('Client error') ||
-             error.message.includes('Authentication failed'))) {
-          throw error;
-        }
-
-        // Handle abort/timeout
-        if (error instanceof Error && error.name === 'AbortError') {
-          lastError = new Error('Network timeout');
-          continue;
-        }
-
-        // Handle network errors (retry)
-        if (error instanceof Error) {
-          lastError = error;
-          continue;
-        }
-
-        // Unknown error - store and retry
-        lastError = new Error('Unknown error occurred');
-        continue;
+        throw new Error(`Server error after ${this.maxRetries} attempts: ${response.statusText}`);
       }
+
+      // Success - parse and return response
+      if (!response.ok) {
+        throw new Error(`Unexpected response: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+
+    } catch (error) {
+      // Network errors - retry with exponential backoff
+      if (this.isRetriableError(error) && attempt < this.maxRetries) {
+        const delay = this.baseDelay * Math.pow(2, attempt);
+        logger.warn(`Network error, retrying in ${delay}ms (attempt ${attempt + 1}/${this.maxRetries}):`, error);
+        await this.sleep(delay);
+        return this.makeRequest<T>(endpoint, body, attempt + 1);
+      }
+
+      // Re-throw if we've exhausted retries or it's not retriable
+      throw error;
+    }
+  }
+
+  /**
+   * Check if error is retriable (network issues)
+   */
+  private isRetriableError(error: any): boolean {
+    // Network errors from fetch
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return true;
     }
 
-    // All retries exhausted
-    throw lastError || new Error('Request failed after retries');
+    // Connection errors
+    const retriableMessages = [
+      'ECONNREFUSED',
+      'ENOTFOUND',
+      'ETIMEDOUT',
+      'ECONNRESET',
+      'Network timeout',
+      'Network error'
+    ];
+
+    return retriableMessages.some(msg =>
+      error?.message?.includes(msg) || error?.code?.includes(msg)
+    );
+  }
+
+  /**
+   * Sleep utility for backoff
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }

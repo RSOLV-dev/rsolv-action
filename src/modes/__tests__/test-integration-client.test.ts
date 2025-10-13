@@ -24,7 +24,7 @@ import {
   type AnalyzeResponse,
   type GenerateRequest,
   type GenerateResponse
-} from '../test-integration-client';
+} from '../test-integration-client.js';
 
 describe('TestIntegrationClient', () => {
   let client: TestIntegrationClient;

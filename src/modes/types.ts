@@ -85,3 +85,54 @@ export interface FalsePositiveCache {
   entries: FalsePositiveEntry[];
   version: string;
 }
+
+/**
+ * RFC-060-AMENDMENT-001: Test Integration Types
+ */
+
+// Vulnerability information for test generation
+export interface Vulnerability {
+  type: string;
+  description: string;
+  location: string;
+  attackVector: string;
+  vulnerablePattern?: string;
+  source?: string;
+}
+
+// Target test file context for LLM
+export interface TestFileContext {
+  path: string;
+  content: string;  // Full file content for LLM context
+  framework: string;
+}
+
+// Test suite structure
+export interface TestSuite {
+  framework: string;
+  testFile: string;
+  redTests: Array<{
+    testName: string;
+    testCode: string;
+    attackVector: string;
+    expectedBehavior: string;
+    vulnerableCodePath?: string;
+    vulnerablePattern?: string;
+  }>;
+}
+
+// Attempt history for retry loop
+export interface AttemptHistory {
+  attempt: number;
+  error: 'SyntaxError' | 'TestPassedUnexpectedly' | 'ExistingTestsRegression' | string;
+  errorMessage: string;
+  timestamp: string;
+}
+
+// Framework information
+export interface TestFramework {
+  name: string;
+  version?: string;
+  testCommand?: string;
+  syntaxCheckCommand?: string;
+}
