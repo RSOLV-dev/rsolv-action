@@ -22,6 +22,9 @@ erl_crash.dump
 # Elixir LSP files
 .elixir_ls/
 
+# Ignore compiled .beam files
+*.beam
+
 # Ignore package tarball (built via "mix hex.build").
 rsolv_api-*.tar
 
