@@ -18,87 +18,13 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-
-// Types based on RFC-060-AMENDMENT-001 API specification
-interface AnalyzeRequest {
-  vulnerableFile: string;
-  vulnerabilityType: string;
-  candidateTestFiles: string[];
-  framework: string;
-}
-
-interface AnalyzeResponse {
-  recommendations: Array<{
-    path: string;
-    score: number;
-    reason: string;
-  }>;
-  fallback: {
-    path: string;
-    reason: string;
-  };
-}
-
-interface GenerateRequest {
-  targetFileContent: string;
-  testSuite: {
-    redTests: Array<{
-      testName: string;
-      testCode: string;
-      attackVector: string;
-      expectedBehavior: string;
-      vulnerableCodePath?: string;
-      vulnerablePattern?: string;
-    }>;
-  };
-  framework: string;
-  language: string;
-}
-
-interface GenerateResponse {
-  integratedContent: string;
-  method: 'ast' | 'append';
-  insertionPoint: {
-    line?: number;
-    strategy: string;
-  };
-}
-
-/**
- * TestIntegrationClient - Backend API client for test integration
- *
- * Responsibilities:
- * 1. Analyze test files and score integration suitability
- * 2. Generate AST-based test integration
- * 3. Handle retry logic with exponential backoff
- * 4. Authenticate with x-api-key header (per project convention)
- *
- * Environment-aware URL configuration:
- * - Production: https://api.rsolv.dev
- * - Staging: https://api.rsolv-staging.com (via RSOLV_API_URL env)
- * - Local/CI: Custom URL via constructor or env variable
- */
-class TestIntegrationClient {
-  private readonly baseUrl: string;
-
-  constructor(
-    private apiKey: string,
-    baseUrl?: string
-  ) {
-    // Support environment variable override with production default
-    this.baseUrl = baseUrl || process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
-  }
-
-  async analyze(request: AnalyzeRequest): Promise<AnalyzeResponse> {
-    // STUB: Will be implemented in Phase 1
-    throw new Error('Not implemented');
-  }
-
-  async generate(request: GenerateRequest): Promise<GenerateResponse> {
-    // STUB: Will be implemented in Phase 1
-    throw new Error('Not implemented');
-  }
-}
+import {
+  TestIntegrationClient,
+  type AnalyzeRequest,
+  type AnalyzeResponse,
+  type GenerateRequest,
+  type GenerateResponse
+} from '../test-integration-client';
 
 describe('TestIntegrationClient', () => {
   let client: TestIntegrationClient;
@@ -226,17 +152,24 @@ expect(User.find(5).admin).to be_falsey  # Should not escalate to admin`,
   describe('Retry logic with exponential backoff', () => {
     it('should retry on network timeout errors', async () => {
       // Arrange
-      const timeoutError = new Error('Network timeout');
-      mockFetch
-        .mockRejectedValueOnce(timeoutError)
-        .mockRejectedValueOnce(timeoutError)
-        .mockResolvedValueOnce({
+      let attemptCount = 0;
+      mockFetch.mockImplementation(() => {
+        attemptCount++;
+
+        // Fail first 2 attempts with network timeout error
+        if (attemptCount < 3) {
+          return Promise.reject(new Error('Network timeout'));
+        }
+
+        // Succeed on 3rd attempt
+        return Promise.resolve({
           ok: true,
           json: async () => ({
             recommendations: [],
             fallback: { path: 'test.rb', reason: 'fallback' }
           })
         });
+      });
 
       const request: AnalyzeRequest = {
         vulnerableFile: 'app/controllers/users_controller.rb',
@@ -302,8 +235,8 @@ expect(User.find(5).admin).to be_falsey  # Should not escalate to admin`,
         }
         lastCallTime = now;
 
-        // Fail first 2 attempts
-        if (delays.length < 2) {
+        // Fail first 2 attempts (attempts 1 and 2), succeed on attempt 3
+        if (delays.length < 3) {
           return Promise.reject(new Error('Network error'));
         }
 
