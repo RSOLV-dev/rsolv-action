@@ -202,6 +202,9 @@ defmodule RsolvWeb.Router do
 
     # Test integration helper endpoints (RFC-060-AMENDMENT-001)
     post "/test-integration/naming", TestIntegrationController, :naming
+
+    # Framework detection endpoint (RFC-060-AMENDMENT-001 Phase 1-Backend)
+    post "/framework/detect", FrameworkController, :detect
   end
   
   scope "/api", RsolvWeb do

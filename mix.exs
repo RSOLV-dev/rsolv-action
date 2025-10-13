@@ -69,7 +69,8 @@ defmodule Rsolv.MixProject do
       {:oban, "~> 2.17"},
       {:number, "~> 1.0"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev}
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
+      {:open_api_spex, "~> 3.22"}
     ]
   end
 
