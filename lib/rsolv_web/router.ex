@@ -175,30 +175,33 @@ defmodule RsolvWeb.Router do
   
   scope "/api/v1", RsolvWeb.Api.V1 do
     pipe_through :api
-    
+
     # Vulnerability validation endpoint (routed based on feature flag)
     post "/vulnerabilities/validate", VulnerabilityValidationRouter, :validate
-    
+
     # Pattern endpoints
     get "/patterns", PatternController, :index
     get "/patterns/stats", PatternController, :stats
     get "/patterns/by-language/:language", PatternController, :by_language
     get "/patterns/v2", PatternController, :index_v2
     get "/patterns/:id/metadata", PatternController, :metadata
-    
+
     # AST analysis endpoint
     post "/ast/analyze", ASTController, :analyze
-    
+
     # Compatibility route for GitHub Action (v3.5.2 and earlier)
     # TODO: Remove after updating action to use /api/v1/vulnerabilities/validate
     post "/ast/validate", VulnerabilityValidationRouter, :validate
-    
+
     # Audit log endpoint
     resources "/audit-logs", AuditLogController, only: [:index, :show]
-    
+
     # Phase data endpoints
     post "/phases/store", PhaseController, :store
     get "/phases/retrieve", PhaseController, :retrieve
+
+    # Test integration helper endpoints (RFC-060-AMENDMENT-001)
+    post "/test-integration/naming", TestIntegrationController, :naming
   end
   
   scope "/api", RsolvWeb do
