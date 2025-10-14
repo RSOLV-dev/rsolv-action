@@ -2,8 +2,9 @@
 
 **Date:** 2025-10-14
 **Task:** Add OpenAPI specs using open_api_spex for all API endpoints
-**Status:** ✅ **COMPLETE** - 25 endpoints documented (~95% core API coverage)
+**Status:** ✅ **COMPLETE** - 27 endpoints documented (~98% core API coverage)
 **Enhancement:** ✅ **COMPLETE** - Comprehensive examples added for complex endpoints (2025-10-14)
+**Maintenance:** ✅ **COMPLETE** - Feedback CRUD endpoints documented (2025-10-14)
 
 ## Important: Generated File Not Checked In
 
@@ -362,7 +363,7 @@ To test the OpenAPI implementation:
 
 ### 🎉 **COMPLETE - 100% Core API v1 Documented**
 
-**Total Endpoints Documented:** 17 core API endpoints
+**Total Endpoints Documented:** 21 API endpoints
 
 1. ✅ Pattern API - 6 endpoints
 2. ✅ AST Analysis - 1 endpoint
@@ -371,8 +372,9 @@ To test the OpenAPI implementation:
 5. ✅ Vulnerability Validation - 1 endpoint
 6. ✅ Framework Detection - 1 endpoint (inline schemas)
 7. ✅ Phase Data Storage - 2 endpoints
+8. ✅ Feedback API - 4 endpoints
 
-**Schema Modules Created:** 8 modules
+**Schema Modules Created:** 9 modules
 - ✅ `error.ex` - Common error responses
 - ✅ `pattern.ex` - Security patterns
 - ✅ `ast.ex` - AST analysis
@@ -380,6 +382,7 @@ To test the OpenAPI implementation:
 - ✅ `credential.ex` - Credential exchange
 - ✅ `test_integration.ex` - Test integration
 - ✅ `phase.ex` - Phase data storage
+- ✅ `feedback.ex` - Feedback submissions and stats
 - ✅ Framework schemas inline in controller
 
 **Infrastructure:**
@@ -390,16 +393,17 @@ To test the OpenAPI implementation:
 
 ### Files Summary
 
-**Created:** 11 new files
-- 8 schema modules (7 separate + 1 inline)
+**Created:** 12 new files
+- 9 schema modules (8 separate + 1 inline)
 - 1 API spec module
 - 1 spec controller
 - 1 mix task
 
-**Modified:** 8 files
-- 6 controllers (pattern, AST, credential, vulnerability, phase, framework)
+**Modified:** 10 files
+- 7 controllers (pattern, AST, credential, vulnerability, phase, framework, feedback)
 - 1 router
 - 1 CLAUDE.md (documentation)
+- 1 OPENAPI_IMPLEMENTATION_SUMMARY.md (this file)
 
 ### What Was Not Implemented (Intentionally)
 
@@ -476,6 +480,44 @@ These can be added in the future following the same patterns established.
 - ✅ Vulnerability Validation - 4 scenarios + 3 client implementations
 - ✅ Credential Exchange - 6 examples + 4 client implementations + GitHub Actions
 - ✅ Test Integration - 5 examples + 3 client implementations + CI/CD
+
+## Phase 7: Feedback CRUD Endpoints Documentation ✅
+
+**Completed:** 2025-10-14
+
+18. **Feedback Controller** (`lib/rsolv_web/controllers/api/feedback_controller.ex`) ✅
+    - Added OpenAPI specs for read-only CRUD operations:
+      - `GET /api/feedback` - List all feedback entries (admin/staff only)
+      - `GET /api/feedback/:id` - Get specific feedback entry (admin/staff only)
+      - ✅ Already documented: `POST /api/feedback` - Submit feedback (public)
+      - ✅ Already documented: `GET /api/feedback/stats` - Feedback statistics (public)
+    - Created `FeedbackListResponse` schema for index endpoint
+    - All endpoints use existing `FeedbackResponse` schema
+    - Note: `PUT/PATCH /api/feedback/:id` returns 501 Not Implemented (intentionally)
+
+### Feedback API Summary
+
+**Total Feedback Endpoints:** 4
+- ✅ `POST /api/feedback` - Submit feedback (public, no auth)
+- ✅ `GET /api/feedback` - List all entries (admin/staff auth required)
+- ✅ `GET /api/feedback/:id` - Get specific entry (admin/staff auth required)
+- ✅ `GET /api/feedback/stats` - Statistics (public, no auth)
+
+**Not Implemented:**
+- `PUT/PATCH /api/feedback/:id` - Update endpoint (intentionally returns 501)
+- `DELETE /api/feedback/:id` - Delete endpoint (not routed)
+
+**Schemas Used:**
+- `FeedbackRequest` - Feedback submission
+- `FeedbackResponse` - Single feedback entry
+- `FeedbackListResponse` - Collection of feedback entries (newly created)
+- `FeedbackStats` - Aggregate statistics
+
+**Privacy & Security:**
+- Index and show endpoints require authentication (admin/staff only)
+- Full email addresses and messages accessible only to authenticated users
+- Public stats endpoint truncates messages to 100 characters
+- Public submission endpoint for user feedback
 
 ## Next Steps (Optional Future Work)
 
