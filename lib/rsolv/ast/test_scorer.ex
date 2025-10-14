@@ -259,7 +259,7 @@ defmodule Rsolv.AST.TestScorer do
   end
 
   # Calculate file similarity with enhanced Python test pattern matching
-  defp calculate_file_similarity(file1, file2, dirs1, dirs2) do
+  defp calculate_file_similarity(file1, file2, dirs1, _dirs2) do
     cond do
       # Exact match - highest score
       file1 == file2 and file1 != "" ->

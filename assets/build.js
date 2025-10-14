@@ -51,7 +51,7 @@ async function buildJS() {
       minify: isDeploy,
       sourcemap: !isDeploy ? "external" : "none",
       naming: "[dir]/[name].[ext]",
-      external: ["/fonts/*", "/images/*"],
+      external: ["/fonts/*", "/images/*", "react", "react-dom/client", "vibe-kanban-web-companion"],
     });
     
     if (!result.success) {
