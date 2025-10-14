@@ -336,34 +336,161 @@ We use `open_api_spex` for all REST API documentation. This is the community sta
 - Run `mix openapi.spec.json` to generate the spec file
 - Validate specs in CI pipeline
 
-**Documentation Structure:**
+**Quick Start - Adding OpenAPI Docs to a New Endpoint:**
+
+1. **Create schema module** (if new feature):
 ```elixir
-@operation :endpoint_name
-@parameters [
-  api_key: [in: :header, required: true, description: "API key"],
-  # ... other parameters
-]
-@responses [
-  200: {"Success", "application/json", ResponseSchema},
-  401: {"Unauthorized", "application/json", ErrorSchema}
-]
-def endpoint_name(conn, params) do
-  # implementation
+# lib/rsolv_web/schemas/your_feature.ex
+defmodule RsolvWeb.Schemas.YourFeature do
+  alias OpenApiSpex.Schema
+
+  defmodule RequestSchema do
+    @moduledoc "Description of request"
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "RequestSchema",
+      type: :object,
+      properties: %{
+        field_name: %Schema{type: :string, description: "Field description", example: "example value"}
+      },
+      required: [:field_name],
+      example: %{"field_name" => "example value"}
+    })
+  end
+
+  defmodule ResponseSchema do
+    @moduledoc "Description of response"
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "ResponseSchema",
+      type: :object,
+      properties: %{
+        result: %Schema{type: :string}
+      }
+    })
+  end
 end
 ```
 
+2. **Update controller**:
+```elixir
+defmodule YourController do
+  use RsolvWeb, :controller
+  use OpenApiSpex.ControllerSpecs  # Add this
+
+  alias RsolvWeb.Schemas.YourFeature.{RequestSchema, ResponseSchema}
+  alias RsolvWeb.Schemas.Error.{ErrorResponse, RateLimitError}
+
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true  # Add this
+  tags ["YourFeature"]  # Add this - used for grouping in Swagger UI
+
+  operation(:your_action,
+    summary: "Brief summary of what this does",
+    description: """
+    Detailed description with markdown support.
+
+    **Key Points:**
+    - Important detail 1
+    - Important detail 2
+
+    **Rate Limiting:** 100 requests per minute
+    """,
+    parameters: [
+      param_name: [
+        in: :query,  # or :path, :header, :cookie
+        description: "What this parameter does",
+        type: :string,
+        required: true,
+        example: "example-value"
+      ]
+    ],
+    request_body: {"Request description", "application/json", RequestSchema},
+    responses: [
+      ok: {"Success message", "application/json", ResponseSchema},
+      bad_request: {"Invalid request", "application/json", ErrorResponse},
+      unauthorized: {"Invalid API key", "application/json", ErrorResponse},
+      too_many_requests: {"Rate limit exceeded", "application/json", RateLimitError}
+    ],
+    security: [%{"ApiKeyAuth" => []}]  # or [%{}, %{"ApiKeyAuth" => []}] for optional auth
+  )
+
+  def your_action(conn, params) do
+    # implementation
+  end
+end
+```
+
+3. **Generate and view spec**:
+```bash
+# Generate OpenAPI JSON spec
+mix openapi.spec.json
+
+# Start server and view interactive docs
+mix phx.server
+# Then visit: http://localhost:4000/api/docs
+```
+
 **Required for Each Endpoint:**
-- Summary and description
-- Complete request/response schemas
-- All error responses documented
+- Summary and description (with markdown for complex endpoints)
+- Complete request/response schemas with examples
+- All error responses documented (400, 401, 403, 404, 429, 500)
 - Example values for complex types
 - Security requirements (authentication, rate limits)
+- Parameter descriptions with types and constraints
+
+**Schema Organization:**
+- Schemas live in `lib/rsolv_web/schemas/`
+- One file per feature area (e.g., `pattern.ex`, `ast.ex`, `credential.ex`)
+- Use nested modules for request/response pairs
+- Reuse common schemas (ErrorResponse, RateLimitError) from `error.ex`
+
+**Common Patterns:**
+```elixir
+# Optional field
+field_name: %Schema{type: :string, nullable: true, description: "..."}
+
+# Array of objects
+items: %Schema{type: :array, items: SomeSchema, minItems: 1, maxItems: 10}
+
+# Enum values
+status: %Schema{type: :string, enum: ["pending", "completed", "failed"]}
+
+# Nested object
+metadata: %Schema{
+  type: :object,
+  properties: %{
+    created_at: %Schema{type: :string, format: :"date-time"}
+  }
+}
+
+# Union/anyOf (not directly supported, use oneOf or additionalProperties)
+```
 
 **Maintenance:**
-- Breaking changes require API version bump
-- Test mode endpoints must clearly indicate test-only status
+- Breaking changes require API version bump (e.g., /api/v2)
+- Test mode endpoints must clearly indicate test-only status in description
 - Keep schemas DRY by using shared components
 - Document rate limits and quotas in operation descriptions
+- Update `OPENAPI_IMPLEMENTATION_SUMMARY.md` when adding new endpoints
+- Regenerate spec after changes: `mix openapi.spec.json`
+
+**Validation:**
+```bash
+# Generate spec (validates structure)
+mix openapi.spec.json
+
+# Check compilation (validates references)
+mix compile
+
+# View in Swagger UI (validates usability)
+mix phx.server
+open http://localhost:4000/api/docs
+```
+
+**Current Status:** As of 2025-10-14, 13/18+ core API endpoints documented (65% complete).
+See `OPENAPI_IMPLEMENTATION_SUMMARY.md` for detailed progress.
 
 ## UI and Styling
 

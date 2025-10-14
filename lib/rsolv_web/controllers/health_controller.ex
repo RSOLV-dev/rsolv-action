@@ -1,5 +1,43 @@
 defmodule RsolvWeb.HealthController do
   use RsolvWeb, :controller
+  use OpenApiSpex.ControllerSpecs
+
+  alias RsolvWeb.Schemas.Health.HealthResponse
+
+  tags ["Health"]
+
+  operation(:index,
+    summary: "Health check endpoint",
+    description: """
+    Returns the current health status of the RSOLV API and its dependencies.
+
+    **No Authentication Required** - This endpoint is publicly accessible for monitoring purposes.
+
+    **Health Status:**
+    - `healthy`: All services are operational
+    - `degraded`: One or more services are experiencing issues
+
+    **Checked Services:**
+    - PostgreSQL database connectivity
+    - AI provider status (Anthropic, OpenAI, OpenRouter)
+    - BEAM clustering status (if enabled)
+
+    **Use Cases:**
+    - Kubernetes liveness/readiness probes
+    - External monitoring systems (Datadog, New Relic, etc.)
+    - Load balancer health checks
+    - System status dashboards
+    """,
+    responses: [
+      ok: {"System is healthy", "application/json", HealthResponse},
+      service_unavailable: {
+        "System is degraded (one or more services unhealthy)",
+        "application/json",
+        HealthResponse
+      }
+    ],
+    security: []
+  )
 
   def index(conn, _params) do
     # Basic health check

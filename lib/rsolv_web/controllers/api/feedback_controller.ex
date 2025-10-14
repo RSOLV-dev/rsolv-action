@@ -1,12 +1,56 @@
 defmodule RsolvWeb.API.FeedbackController do
   use RsolvWeb, :controller
+  use OpenApiSpex.ControllerSpecs
+
   require Logger
   alias Rsolv.Feedback
   alias RsolvWeb.Services.Metrics
-  
-  @doc """
-  Create a new feedback entry.
-  """
+  alias RsolvWeb.Schemas.Feedback.{FeedbackRequest, FeedbackResponse, FeedbackStats}
+  alias RsolvWeb.Schemas.Error.{ErrorResponse, ValidationError}
+
+  tags ["Feedback"]
+
+  operation(:create,
+    summary: "Submit user feedback",
+    description: """
+    Submit product feedback, feature requests, or bug reports.
+
+    **No Authentication Required** - Open for all users.
+
+    **Use Cases:**
+    - Product feedback and suggestions
+    - Feature requests
+    - Bug reports
+    - User experience insights
+    - Customer satisfaction ratings
+
+    **Prometheus Metrics:**
+    This endpoint tracks feedback submissions for monitoring:
+    - Total submissions by type
+    - Success/error rates
+    - User satisfaction trends
+
+    **Email Collection:**
+    Email addresses are used to follow up on feedback and notify users
+    of feature implementations or bug fixes related to their submissions.
+    """,
+    request_body: {
+      "Feedback submission",
+      "application/json",
+      FeedbackRequest,
+      required: true
+    },
+    responses: [
+      created: {"Feedback submitted successfully", "application/json", FeedbackResponse},
+      unprocessable_entity: {
+        "Invalid feedback data",
+        "application/json",
+        ValidationError
+      }
+    ],
+    security: []
+  )
+
   def create(conn, params) do
     Logger.info("Received feedback submission", metadata: %{params: params})
     
@@ -73,9 +117,34 @@ defmodule RsolvWeb.API.FeedbackController do
     |> render("error.json", error: "Update not implemented")
   end
   
-  @doc """
-  Get a summary of feedback statistics.
-  """
+  operation(:stats,
+    summary: "Get feedback statistics",
+    description: """
+    Retrieve aggregate statistics and recent feedback submissions.
+
+    **No Authentication Required** - Public for transparency.
+
+    **Statistics Included:**
+    - Total feedback count
+    - Rating distribution (1-5 stars)
+    - Recent 10 feedback submissions (truncated)
+    - Generation timestamp
+
+    **Privacy:**
+    Recent feedback messages are truncated to 100 characters to respect
+    user privacy while providing insights into common themes.
+
+    **Use Cases:**
+    - Public feedback transparency
+    - Product satisfaction metrics
+    - Community engagement tracking
+    """,
+    responses: [
+      ok: {"Feedback statistics retrieved successfully", "application/json", FeedbackStats}
+    ],
+    security: []
+  )
+
   def stats(conn, _params) do
     # Generate statistics from the database
     total_count = Feedback.count_entries()

@@ -1,18 +1,88 @@
 defmodule RsolvWeb.Api.V1.AuditLogController do
   use RsolvWeb, :controller
-  
+  use OpenApiSpex.ControllerSpecs
+
   alias Rsolv.AST.AuditLogger
-  
-  @doc """
-  Query audit logs with filters.
-  
-  Query parameters:
-  - event_type: Filter by event type
-  - severity: Filter by severity (info, warning, error, critical)
-  - since: ISO8601 timestamp for start time
-  - until: ISO8601 timestamp for end time
-  - correlation_id: Filter by correlation ID
-  """
+  alias RsolvWeb.Schemas.Audit.AuditLogResponse
+  alias RsolvWeb.Schemas.Error.ErrorResponse
+
+  tags ["Audit"]
+
+  operation(:index,
+    summary: "Query audit logs",
+    description: """
+    Retrieve security audit events with optional filtering.
+
+    **Authentication Required** - Enterprise tier only.
+
+    **Query Filters:**
+    - Filter by event type, severity, time range, or correlation ID
+    - Results are returned in reverse chronological order (newest first)
+    - Maximum 1000 events per query
+
+    **Common Event Types:**
+    - `api_access`: API endpoint access
+    - `auth_failure`: Authentication failures
+    - `rate_limit_exceeded`: Rate limit violations
+    - `credential_exchange`: API key usage
+    - `vulnerability_scan`: Security scan operations
+
+    **Severity Levels:**
+    - `info`: Normal operational events
+    - `warning`: Noteworthy but non-critical events
+    - `error`: Error conditions
+    - `critical`: Security incidents requiring immediate attention
+
+    **Compliance:**
+    This endpoint supports SOC 2, ISO 27001, and GDPR compliance requirements
+    by providing comprehensive audit trails of all security-relevant events.
+    """,
+    parameters: [
+      event_type: [
+        in: :query,
+        description: "Filter by event type (e.g., api_access, auth_failure)",
+        type: :string,
+        required: false
+      ],
+      severity: [
+        in: :query,
+        description: "Filter by severity level (info, warning, error, critical)",
+        type: :string,
+        required: false
+      ],
+      since: [
+        in: :query,
+        description: "Start time (ISO8601 format)",
+        type: :string,
+        required: false,
+        example: "2025-10-14T00:00:00Z"
+      ],
+      until: [
+        in: :query,
+        description: "End time (ISO8601 format)",
+        type: :string,
+        required: false,
+        example: "2025-10-14T23:59:59Z"
+      ],
+      correlation_id: [
+        in: :query,
+        description: "Filter by correlation ID to track related events",
+        type: :string,
+        required: false
+      ]
+    ],
+    responses: [
+      ok: {"Audit events retrieved successfully", "application/json", AuditLogResponse},
+      unauthorized: {"Invalid or missing API key", "application/json", ErrorResponse},
+      forbidden: {
+        "Insufficient permissions (Enterprise tier required)",
+        "application/json",
+        ErrorResponse
+      }
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
+
   def index(conn, params) do
     criteria = build_query_criteria(params)
     

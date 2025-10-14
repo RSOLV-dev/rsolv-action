@@ -1,8 +1,67 @@
 defmodule RsolvWeb.FixAttemptController do
   use RsolvWeb, :controller
+  use OpenApiSpex.ControllerSpecs
+
   alias Rsolv.Billing.FixAttempt
   alias Rsolv.Repo
+  alias RsolvWeb.Schemas.FixAttempt.{FixAttemptRequest, FixAttemptResponse, ConflictError}
+  alias RsolvWeb.Schemas.Error.{ErrorResponse, ValidationError}
+
   require Logger
+
+  tags ["Fix Attempts"]
+
+  operation(:create,
+    summary: "Record a fix attempt",
+    description: """
+    Record a new security fix attempt for billing and tracking purposes.
+
+    **Authentication Required** - Used by RSOLV GitHub Action.
+
+    **Purpose:**
+    This endpoint tracks each vulnerability fix attempt across the SCAN → VALIDATE → MITIGATE workflow.
+    Fix attempts are used for:
+    - Billing and quota management
+    - Success rate analytics
+    - Customer usage tracking
+    - GitHub Actions workflow monitoring
+
+    **Deduplication:**
+    If a fix attempt already exists for the same org/repo/PR combination,
+    returns a 409 Conflict error to prevent duplicate billing.
+
+    **Status Values:**
+    - `pending`: Fix attempt created, workflow not yet started
+    - `in_progress`: Currently applying fixes
+    - `completed`: Successfully created PR with fixes
+    - `failed`: Fix attempt failed (errors, no fixes needed, etc.)
+
+    **Billing:**
+    Fix attempts are typically billed when status transitions to `completed`.
+    Failed attempts may be credited or not billed depending on the failure reason.
+    """,
+    request_body: {
+      "Fix attempt details",
+      "application/json",
+      FixAttemptRequest,
+      required: true
+    },
+    responses: [
+      created: {"Fix attempt recorded successfully", "application/json", FixAttemptResponse},
+      conflict: {
+        "Fix attempt already exists for this PR",
+        "application/json",
+        ConflictError
+      },
+      unauthorized: {"Invalid or missing API key", "application/json", ErrorResponse},
+      unprocessable_entity: {
+        "Validation errors in request body",
+        "application/json",
+        ValidationError
+      }
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
 
   def create(conn, params) do
     Logger.info("Recording fix attempt for PR #{params["pr_number"]} from #{params["github_org"]}/#{params["repo_name"]}")

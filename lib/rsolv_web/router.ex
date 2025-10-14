@@ -211,21 +211,25 @@ defmodule RsolvWeb.Router do
   
   scope "/api", RsolvWeb do
     pipe_through :api
-    
+
+    # OpenAPI specification
+    get "/openapi", ApiSpecController, :spec
+    get "/docs", ApiSpecController, :swaggerui
+
     # Health check
     get "/health", HealthController, :index
-    
+
     # Analytics tracking endpoint (CSRF-free for client-side JavaScript)
     post "/track", TrackController, :track
-    
+
     # Webhooks
     post "/webhooks/github", WebhookController, :github
-    
-    
+
+
     # Education resources
     get "/education/resources", EducationController, :index
     get "/education/resources/:id", EducationController, :show
-    
+
     # Feature flags
     get "/feature-flags", FeatureFlagController, :index
     get "/feature-flags/:flag", FeatureFlagController, :show

@@ -1,13 +1,61 @@
 defmodule RsolvWeb.Api.V1.PatternController do
   use RsolvWeb, :controller
+  use OpenApiSpex.ControllerSpecs
   require Logger
 
   alias Rsolv.Security.ASTPattern
   alias Rsolv.Security.Pattern
   alias Rsolv.Security.DemoPatterns
   alias Rsolv.Security.Patterns.JSONSerializer
+  alias RsolvWeb.Schemas.Pattern.{PatternResponse, PatternStatsResponse, PatternMetadataResponse}
+  alias RsolvWeb.Schemas.Error.ErrorResponse
 
   plug RsolvWeb.Plugs.ApiAuthentication, optional: true
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+
+  tags ["Patterns"]
+
+  operation(:index,
+    summary: "List security patterns",
+    description: """
+    Get security vulnerability detection patterns for a specific language.
+
+    **Access Model:**
+    - Without API key: Returns 5 demo patterns per language
+    - With valid API key: Returns all 400+ patterns for the language
+    - With invalid API key: Returns 401 Unauthorized
+
+    **Format Options:**
+    - `standard`: Basic pattern information (regex, metadata)
+    - `enhanced`: Includes AST rules, context rules, and confidence scoring
+    """,
+    parameters: [
+      language: [
+        in: :query,
+        description: "Programming language (javascript, typescript, python, ruby, java, php, go, elixir)",
+        type: :string,
+        example: "javascript"
+      ],
+      format: [
+        in: :query,
+        description: "Response format (standard or enhanced)",
+        type: :string,
+        example: "standard"
+      ],
+      include_metadata: [
+        in: :query,
+        description: "Include detailed vulnerability metadata",
+        type: :boolean,
+        example: false
+      ]
+    ],
+    responses: [
+      ok: {"Patterns retrieved successfully", "application/json", PatternResponse},
+      unauthorized: {"Invalid API key", "application/json", ErrorResponse},
+      internal_server_error: {"Internal server error", "application/json", ErrorResponse}
+    ],
+    security: [%{}, %{"ApiKeyAuth" => []}]
+  )
 
   @doc """
   Get security patterns for a language.
@@ -147,6 +195,16 @@ defmodule RsolvWeb.Api.V1.PatternController do
     end
   end
 
+  operation(:stats,
+    summary: "Get pattern statistics",
+    description: "Retrieve statistics about available security patterns across all languages",
+    responses: [
+      ok: {"Statistics retrieved successfully", "application/json", PatternStatsResponse},
+      internal_server_error: {"Internal server error", "application/json", ErrorResponse}
+    ],
+    security: [%{}, %{"ApiKeyAuth" => []}]
+  )
+
   @doc """
   Get pattern statistics across all languages.
   """
@@ -187,6 +245,30 @@ defmodule RsolvWeb.Api.V1.PatternController do
     end
   end
 
+  operation(:by_language,
+    summary: "Get patterns by language",
+    description: "Get security patterns for a specific language (convenience endpoint)",
+    parameters: [
+      language: [
+        in: :path,
+        description: "Programming language",
+        type: :string,
+        example: "javascript",
+        required: true
+      ],
+      format: [
+        in: :query,
+        description: "Response format (standard or enhanced)",
+        type: :string
+      ]
+    ],
+    responses: [
+      ok: {"Patterns retrieved successfully", "application/json", PatternResponse},
+      unauthorized: {"Invalid API key", "application/json", ErrorResponse}
+    ],
+    security: [%{}, %{"ApiKeyAuth" => []}]
+  )
+
   @doc """
   Get security patterns for a specific language.
   """
@@ -195,6 +277,24 @@ defmodule RsolvWeb.Api.V1.PatternController do
     enhanced_params = Map.put(params, "language", language)
     index(conn, enhanced_params)
   end
+
+  operation(:index_v2,
+    summary: "List patterns (v2 - enhanced format)",
+    description: "Get security patterns with enhanced AST format by default",
+    parameters: [
+      language: [
+        in: :query,
+        description: "Programming language",
+        type: :string,
+        example: "javascript"
+      ]
+    ],
+    responses: [
+      ok: {"Patterns retrieved successfully (enhanced format)", "application/json", PatternResponse},
+      unauthorized: {"Invalid API key", "application/json", ErrorResponse}
+    ],
+    security: [%{}, %{"ApiKeyAuth" => []}]
+  )
 
   @doc """
   V2 API endpoint - returns enhanced format by default.
@@ -364,6 +464,25 @@ defmodule RsolvWeb.Api.V1.PatternController do
     Map.put(formatted_pattern, "vulnerability_metadata", vulnerability_metadata)
   end
   
+  operation(:metadata,
+    summary: "Get pattern metadata",
+    description: "Get detailed metadata for a specific pattern including references and attack vectors",
+    parameters: [
+      id: [
+        in: :path,
+        description: "Pattern ID",
+        type: :string,
+        example: "js-sql-injection-concat",
+        required: true
+      ]
+    ],
+    responses: [
+      ok: {"Pattern metadata retrieved successfully", "application/json", PatternMetadataResponse},
+      not_found: {"Pattern not found", "application/json", ErrorResponse}
+    ],
+    security: [%{}, %{"ApiKeyAuth" => []}]
+  )
+
   def metadata(conn, %{"id" => pattern_id}) do
     # Check if pattern exists and has metadata
     case get_pattern_metadata(pattern_id) do

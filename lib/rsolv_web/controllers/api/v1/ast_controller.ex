@@ -1,31 +1,85 @@
 defmodule RsolvWeb.Api.V1.ASTController do
   @moduledoc """
   Fixed AST controller implementation using client-provided encryption keys.
-  
+
   Security approach:
   1. Client generates AES-256 key using crypto.randomBytes(32)
   2. Client sends key in X-Encryption-Key header (base64 encoded) over HTTPS
   3. Server uses client key for decryption
   4. No custom crypto - uses Erlang's :crypto module (same as Plug.Crypto)
-  
+
   This follows the same pattern as Phoenix.Token but with explicit key exchange.
   """
-  
+
   use RsolvWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias Rsolv.AST.AnalysisService
   alias Rsolv.AST.SessionManager
   alias Rsolv.RateLimiter
+  alias RsolvWeb.Schemas.AST.ASTAnalyzeRequest
+  alias RsolvWeb.Schemas.AST.ASTAnalyzeResponse
+  alias RsolvWeb.Schemas.Error.{ErrorResponse, RateLimitError}
 
   require Logger
 
   plug RsolvWeb.Plugs.ApiAuthentication
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+
+  tags ["AST"]
   
   @max_files 10
   @max_file_size 10 * 1024 * 1024  # 10MB
   @request_timeout 30_000  # 30 seconds
   @encryption_key_size 32  # 256 bits for AES-256
-  
+
+  operation(:analyze,
+    summary: "Analyze code using AST patterns",
+    description: """
+    Perform Abstract Syntax Tree (AST) analysis on encrypted source code files.
+
+    **Security Model:**
+    - Client generates AES-256 encryption key (32 bytes)
+    - Code is encrypted client-side using AES-256-GCM
+    - Encryption key sent via `X-Encryption-Key` header (base64-encoded)
+    - Server decrypts only in memory, never stores code
+    - Immediate cleanup after analysis
+
+    **Rate Limiting:**
+    - Subject to per-customer rate limits
+    - Returns 429 with `Retry-After` header if exceeded
+
+    **Sessions:**
+    - Optional `sessionId` for multi-request analysis
+    - Sessions expire after 1 hour of inactivity
+    - Session maintains context across multiple file batches
+
+    **Limits:**
+    - Maximum #{@max_files} files per request
+    - Maximum #{div(@max_file_size, 1024 * 1024)}MB per file
+    - #{div(@request_timeout, 1000)} second timeout per request
+    """,
+    parameters: [
+      "X-Encryption-Key": [
+        in: :header,
+        description: "Base64-encoded AES-256 encryption key (32 bytes)",
+        type: :string,
+        required: true,
+        example: "YourBase64EncodedKeyHere=="
+      ]
+    ],
+    request_body:
+      {"Analysis request with encrypted files", "application/json", ASTAnalyzeRequest},
+    responses: [
+      ok: {"Analysis completed successfully", "application/json", ASTAnalyzeResponse},
+      bad_request: {"Invalid request or decryption failed", "application/json", ErrorResponse},
+      unauthorized: {"Invalid or missing API key", "application/json", ErrorResponse},
+      too_many_requests: {"Rate limit exceeded", "application/json", RateLimitError},
+      internal_server_error: {"Analysis failed", "application/json", ErrorResponse}
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
+
   def analyze(conn, params) do
     start_time = System.monotonic_time(:millisecond)
     request_id = params["requestId"] || generate_request_id()

@@ -1,14 +1,56 @@
 defmodule RsolvWeb.CredentialController do
   use RsolvWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias Rsolv.Credentials
   alias Rsolv.RateLimiter
+  alias RsolvWeb.Schemas.Credential.{CredentialExchangeRequest, CredentialExchangeResponse, CredentialRefreshRequest, UsageReportRequest, UsageReportResponse}
+  alias RsolvWeb.Schemas.Error.{ErrorResponse, RateLimitError}
 
   require Logger
 
   plug RsolvWeb.Plugs.ApiAuthentication
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+
+  tags ["Credentials"]
 
   @max_ttl_minutes 240  # 4 hours max
+
+  operation(:exchange,
+    summary: "Exchange API key for temporary AI provider credentials",
+    description: """
+    Exchange your RSOLV API key for temporary credentials to AI providers (Anthropic, OpenAI).
+
+    **Use Case:**
+    For GitHub Actions, this allows the action to use AI capabilities without exposing long-lived API keys.
+
+    **Security:**
+    - Credentials are temporary (1-4 hours TTL)
+    - Usage limits enforced per customer
+    - Rate limited per customer account
+    - GitHub job metadata automatically tracked
+
+    **Supported Providers:**
+    - `anthropic` - Anthropic Claude API
+    - `openai` - OpenAI GPT API
+    - `openrouter` - OpenRouter API
+    - `ollama` - Ollama local API
+
+    **Headers:**
+    - `X-GitHub-Job` - GitHub Actions job ID (optional)
+    - `X-GitHub-Run` - GitHub Actions run ID (optional)
+    """,
+    request_body: {"Credential exchange request", "application/json", CredentialExchangeRequest},
+    responses: [
+      ok: {"Credentials generated successfully", "application/json", CredentialExchangeResponse},
+      bad_request: {"Invalid request parameters", "application/json", ErrorResponse},
+      unauthorized: {"Invalid API key", "application/json", ErrorResponse},
+      forbidden: {"Usage limit exceeded", "application/json", ErrorResponse},
+      too_many_requests: {"Rate limit exceeded", "application/json", RateLimitError},
+      internal_server_error: {"Failed to generate credentials", "application/json", ErrorResponse}
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
 
   def exchange(conn, params) do
     Logger.info("[CredentialController] Starting exchange with params: #{inspect(params)}")
@@ -81,6 +123,33 @@ defmodule RsolvWeb.CredentialController do
     end
   end
 
+  operation(:refresh,
+    summary: "Refresh expiring temporary credentials",
+    description: """
+    Refresh temporary AI provider credentials that are about to expire.
+
+    **Eligibility:**
+    - Credential must expire within 5 minutes
+    - Customer must own the credential
+    - Old credential is automatically revoked
+
+    **New Credential:**
+    - Same provider as original
+    - 1 hour TTL (fixed for refreshed credentials)
+    - New credential ID generated
+    """,
+    request_body: {"Credential refresh request", "application/json", CredentialRefreshRequest},
+    responses: [
+      ok: {"Credential refreshed successfully", "application/json", CredentialExchangeResponse},
+      bad_request: {"Not eligible for refresh", "application/json", ErrorResponse},
+      unauthorized: {"Invalid API key", "application/json", ErrorResponse},
+      forbidden: {"Access denied to credential", "application/json", ErrorResponse},
+      not_found: {"Credential not found", "application/json", ErrorResponse},
+      internal_server_error: {"Failed to refresh credential", "application/json", ErrorResponse}
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
+
   def refresh(conn, params) do
     customer = conn.assigns.customer
 
@@ -122,6 +191,32 @@ defmodule RsolvWeb.CredentialController do
         |> json(%{error: "Internal server error"})
     end
   end
+
+  operation(:report_usage,
+    summary: "Report AI API usage for billing",
+    description: """
+    Report usage of temporary AI provider credentials for billing and quota tracking.
+
+    **Usage Metrics:**
+    - Tokens used
+    - Request count
+    - Provider identifier
+    - Optional job ID for tracking
+
+    **Billing:**
+    - Approximate 1 fix = 2000 tokens
+    - Usage counted against monthly quota
+    - Automatically updates customer usage
+    """,
+    request_body: {"Usage report request", "application/json", UsageReportRequest},
+    responses: [
+      ok: {"Usage recorded successfully", "application/json", UsageReportResponse},
+      bad_request: {"Invalid usage data", "application/json", ErrorResponse},
+      unauthorized: {"Invalid API key", "application/json", ErrorResponse},
+      internal_server_error: {"Failed to record usage", "application/json", ErrorResponse}
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
 
   def report_usage(conn, params) do
     customer = conn.assigns.customer

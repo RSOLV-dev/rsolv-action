@@ -34,6 +34,9 @@ rsolv_api-*.tar
 # Ignore digested assets cache.
 /priv/static/cache_manifest.json
 
+# Ignore generated OpenAPI spec (regenerate with: mix rsolv.openapi)
+/priv/static/openapi.json
+
 # ugh, somehow we ended up with node modules in here
 node_modules/
 

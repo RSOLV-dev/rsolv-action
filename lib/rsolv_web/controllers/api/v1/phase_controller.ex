@@ -1,15 +1,55 @@
 defmodule RsolvWeb.Api.V1.PhaseController do
   use RsolvWeb, :controller
+  use OpenApiSpex.ControllerSpecs
+
   alias Rsolv.Phases
   alias Rsolv.Customers
+  alias RsolvWeb.Schemas.Phase.{PhaseStoreRequest, PhaseStoreResponse, PhaseRetrieveResponse}
+  alias RsolvWeb.Schemas.Error.ErrorResponse
 
   plug RsolvWeb.Plugs.ApiAuthentication
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
 
   action_fallback RsolvWeb.FallbackController
 
+  tags ["Phases"]
+
+  operation(:store,
+    summary: "Store phase execution data",
+    description: """
+    Stores data from RSOLV GitHub Action workflow phases (scan, validation, mitigation).
+
+    **Phases:**
+    - `scan`: Initial vulnerability detection results
+    - `validation`: RED/GREEN/REFACTOR test generation results
+    - `mitigation`: Final fix and PR creation results
+
+    **Data Flow:**
+    1. SCAN phase stores findings and creates GitHub issues
+    2. VALIDATION phase stores test generation results (linked by issue number)
+    3. MITIGATION phase stores fix application and PR details (linked by issue number)
+
+    **Requirements:**
+    - `issueNumber` required for validation and mitigation phases
+    - `branch` optional for scan phase
+    - Data structure varies by phase type
+
+    **Use Case:**
+    Enables tracking of multi-phase fix attempts across workflow runs.
+    """,
+    request_body: {"Phase data storage request", "application/json", PhaseStoreRequest},
+    responses: [
+      ok: {"Phase data stored successfully", "application/json", PhaseStoreResponse},
+      bad_request: {"Invalid request parameters", "application/json", ErrorResponse},
+      unauthorized: {"Invalid API key", "application/json", ErrorResponse},
+      internal_server_error: {"Failed to store phase data", "application/json", ErrorResponse}
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
+
   @doc """
   Store phase execution data.
-  
+
   Expects JSON body with:
   - phase: "scan" | "validation" | "mitigation"
   - repo: "owner/name" format
@@ -136,14 +176,63 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   end
   defp count_changed_files(_), do: 0
   
+  operation(:retrieve,
+    summary: "Retrieve accumulated phase data",
+    description: """
+    Retrieves accumulated data from all three workflow phases for a specific fix attempt.
+
+    **Lookup Keys:**
+    - Repository (owner/name format)
+    - GitHub issue number
+    - Commit SHA
+
+    **Returns:**
+    Merged data from scan, validation, and mitigation phases, allowing the action
+    to access previous phase results in later phases.
+
+    **Example Use Case:**
+    MITIGATION phase retrieves VALIDATION phase test files to verify fixes pass tests.
+    """,
+    parameters: [
+      repo: [
+        in: :query,
+        description: "Repository in owner/name format",
+        type: :string,
+        required: true,
+        example: "octocat/hello-world"
+      ],
+      issue: [
+        in: :query,
+        description: "GitHub issue number",
+        type: :integer,
+        required: true,
+        example: 42
+      ],
+      commit: [
+        in: :query,
+        description: "Git commit SHA",
+        type: :string,
+        required: true,
+        example: "abc123def456"
+      ]
+    ],
+    responses: [
+      ok: {"Phase data retrieved successfully", "application/json", PhaseRetrieveResponse},
+      bad_request: {"Invalid query parameters", "application/json", ErrorResponse},
+      unauthorized: {"Invalid API key", "application/json", ErrorResponse},
+      not_found: {"Phase data not found", "application/json", ErrorResponse}
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
+
   @doc """
   Retrieve phase execution data.
-  
+
   Expects query parameters:
   - repo: "owner/name" format
   - issue: Issue number
   - commit: Git commit SHA
-  
+
   Returns accumulated phase data from all three phases.
   """
   def retrieve(conn, params) do
