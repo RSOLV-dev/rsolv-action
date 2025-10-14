@@ -394,11 +394,13 @@ defmodule Rsolv.AST.TestIntegrator do
   end
 
   # Check if node is a test function (starts with test_)
-  # Python parser returns "FunctionDef" with name as direct string
+  # Python parser returns "FunctionDef" or "AsyncFunctionDef" with name as direct string
   defp is_python_test_function(%{
-    "type" => "FunctionDef",
+    "type" => type,
     "name" => name
-  }) when is_binary(name), do: String.starts_with?(name, @python_test_prefix)
+  }) when type in ["FunctionDef", "AsyncFunctionDef"] and is_binary(name) do
+    String.starts_with?(name, @python_test_prefix)
+  end
 
   defp is_python_test_function(_), do: false
 
@@ -425,7 +427,7 @@ defmodule Rsolv.AST.TestIntegrator do
     lines = String.split(original_content, "\n")
 
     # Find the indentation of the insertion point
-    indent = detect_indentation(lines, insertion_point.line)
+    indent = detect_indentation(lines, insertion_point.line, language, insertion_point.parent)
 
     # Indent the test code
     indented_test = indent_code(test_code, indent)
@@ -440,15 +442,46 @@ defmodule Rsolv.AST.TestIntegrator do
   end
 
   # Detect indentation level at a given line
-  defp detect_indentation(lines, line_number) do
+  # For Python test classes, use standard 4-space indentation for methods
+  defp detect_indentation(lines, line_number, "python", "test_class") do
+    # Python PEP 8 standard: 4 spaces for class methods
+    4
+  end
+
+  defp detect_indentation(lines, line_number, _language, _parent) do
+    # For other cases, detect from the previous non-empty line
     lines
-    |> Enum.at(max(0, line_number - 1))
+    |> Enum.take(line_number)
+    |> Enum.reverse()
+    |> Enum.find(fn line -> String.trim(line) != "" end)
     |> case do
-      nil -> @default_indent
+      nil ->
+        @default_indent
+
       line ->
-        case Regex.run(~r/^(\s*)/, line) do
-          [_, spaces] -> byte_size(spaces)
-          _ -> @default_indent
+        # If the line is a method/function definition, use its indentation
+        # If it's a method body, look for "def " or "it(" patterns
+        cond do
+          # Python method definition
+          String.match?(line, ~r/^\s*(async\s+)?def\s+/) ->
+            case Regex.run(~r/^(\s*)/, line) do
+              [_, spaces] -> byte_size(spaces)
+              _ -> @default_indent
+            end
+
+          # JavaScript/Ruby test blocks
+          String.match?(line, ~r/^\s*(it|test|describe|context)\s*[\(\']/) ->
+            case Regex.run(~r/^(\s*)/, line) do
+              [_, spaces] -> byte_size(spaces)
+              _ -> @default_indent
+            end
+
+          # Default: use previous line indentation
+          true ->
+            case Regex.run(~r/^(\s*)/, line) do
+              [_, spaces] -> byte_size(spaces)
+              _ -> @default_indent
+            end
         end
     end
   end
