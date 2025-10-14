@@ -38,9 +38,14 @@ defmodule Rsolv.AST.TestIntegrator do
   alias Rsolv.AST.ParserRegistry
   require Logger
 
-  @supported_frameworks ~w(vitest jest mocha)
+  @supported_frameworks ~w(vitest jest mocha rspec pytest)
   @test_function_names ~w(it test specify)
   @describe_function_names ~w(describe context suite)
+  # Ruby-specific
+  @ruby_describe_names ~w(describe context)
+  @ruby_test_names ~w(it specify example)
+  # Python-specific
+  @python_test_prefix "test_"
   @default_indent 2
 
   @doc """
@@ -146,6 +151,57 @@ defmodule Rsolv.AST.TestIntegrator do
     end
   end
 
+  # RSpec insertion point logic
+  def find_insertion_point(ast, "rspec") do
+    Logger.debug("TestIntegrator: Finding insertion point for RSpec")
+
+    case find_ruby_outermost_describe(ast) do
+      nil ->
+        Logger.warning("TestIntegrator: No describe block found in RSpec file")
+        {:error, :no_describe_block}
+
+      describe_node ->
+        case find_ruby_last_test_block(describe_node) do
+          nil ->
+            Logger.warning("TestIntegrator: No test blocks found in describe")
+            {:ok, %{
+              line: get_node_end_line(describe_node) - 1,
+              strategy: "inside_describe_block",
+              parent: "describe_block"
+            }}
+
+          last_test ->
+            line = get_node_end_line(last_test) + 1
+            Logger.debug("TestIntegrator: Found RSpec insertion point at line #{line}")
+            {:ok, %{
+              line: line,
+              strategy: "after_last_it_block",
+              parent: "describe_block"
+            }}
+        end
+    end
+  end
+
+  # pytest insertion point logic
+  def find_insertion_point(ast, "pytest") do
+    Logger.debug("TestIntegrator: Finding insertion point for pytest")
+
+    case find_python_test_container(ast) do
+      nil ->
+        Logger.warning("TestIntegrator: No test class or function found in pytest file")
+        {:error, :no_test_container}
+
+      {container_type, container_node, last_test} ->
+        line = if last_test, do: get_node_end_line(last_test) + 1, else: get_node_end_line(container_node) - 1
+        Logger.debug("TestIntegrator: Found pytest insertion point at line #{line} (#{container_type})")
+        {:ok, %{
+          line: line,
+          strategy: "after_last_test_function",
+          parent: container_type
+        }}
+    end
+  end
+
   def find_insertion_point(_ast, framework) do
     Logger.error("TestIntegrator: Unsupported framework: #{framework}")
     {:error, {:unsupported_framework, framework}}
@@ -213,6 +269,109 @@ defmodule Rsolv.AST.TestIntegrator do
   defp get_node_end_line(%{"loc" => %{"end" => %{"line" => line}}}), do: line
   defp get_node_end_line(_), do: 1
 
+  # ============================================================================
+  # Ruby AST Helper Functions (RSpec)
+  # ============================================================================
+
+  # Find outermost describe/context block in Ruby AST
+  defp find_ruby_outermost_describe(%{"type" => "program", "statements" => statements}) when is_list(statements),
+    do: Enum.find_value(statements, &find_ruby_describe_in_statement/1)
+
+  defp find_ruby_outermost_describe(_), do: nil
+
+  # Find describe/context in Ruby statement
+  defp find_ruby_describe_in_statement(%{
+    "type" => "method_call",
+    "method" => %{"type" => "identifier", "name" => name}
+  } = node) when name in @ruby_describe_names, do: node
+
+  defp find_ruby_describe_in_statement(_), do: nil
+
+  # Find last it/specify/example block in Ruby describe
+  defp find_ruby_last_test_block(%{"arguments" => arguments}) when is_list(arguments) do
+    # Last argument should be the block containing tests
+    case List.last(arguments) do
+      %{"type" => "do_block", "body" => body} when is_list(body) ->
+        body
+        |> Enum.reverse()
+        |> Enum.find_value(&find_ruby_test_in_statement/1)
+
+      %{"type" => "block", "body" => %{"statements" => statements}} when is_list(statements) ->
+        statements
+        |> Enum.reverse()
+        |> Enum.find_value(&find_ruby_test_in_statement/1)
+
+      _ -> nil
+    end
+  end
+
+  defp find_ruby_last_test_block(_), do: nil
+
+  # Find it/specify/example in Ruby statement
+  defp find_ruby_test_in_statement(%{
+    "type" => "method_call",
+    "method" => %{"type" => "identifier", "name" => name}
+  } = node) when name in @ruby_test_names, do: node
+
+  defp find_ruby_test_in_statement(_), do: nil
+
+  # ============================================================================
+  # Python AST Helper Functions (pytest)
+  # ============================================================================
+
+  # Find test container (class or module-level) in Python AST
+  defp find_python_test_container(%{"type" => "module", "body" => body}) when is_list(body) do
+    # Look for test class first, then fall back to module-level test functions
+    case find_python_test_class(body) do
+      {class_node, last_test} -> {"test_class", class_node, last_test}
+      nil ->
+        case find_python_last_module_test(body) do
+          nil -> nil
+          last_test -> {"module", %{"type" => "module"}, last_test}
+        end
+    end
+  end
+
+  defp find_python_test_container(_), do: nil
+
+  # Find test class (class starting with Test or containing test_ methods)
+  defp find_python_test_class(statements) do
+    test_class = Enum.find(statements, fn
+      %{"type" => "class_definition", "name" => %{"name" => name}} ->
+        String.starts_with?(name, "Test")
+      _ -> false
+    end)
+
+    case test_class do
+      nil -> nil
+      %{"body" => body} when is_list(body) ->
+        last_test = find_python_last_test_in_class(body)
+        {test_class, last_test}
+    end
+  end
+
+  # Find last test function in class body
+  defp find_python_last_test_in_class(body) do
+    body
+    |> Enum.reverse()
+    |> Enum.find(&is_python_test_function/1)
+  end
+
+  # Find last module-level test function
+  defp find_python_last_module_test(statements) do
+    statements
+    |> Enum.reverse()
+    |> Enum.find(&is_python_test_function/1)
+  end
+
+  # Check if node is a test function (starts with test_)
+  defp is_python_test_function(%{
+    "type" => "function_definition",
+    "name" => %{"name" => name}
+  }), do: String.starts_with?(name, @python_test_prefix)
+
+  defp is_python_test_function(_), do: false
+
   @doc """
   Inserts test suite into the target file at the specified insertion point.
 
@@ -279,10 +438,24 @@ defmodule Rsolv.AST.TestIntegrator do
 
   # Format test code for Jest/Vitest/Mocha
   defp format_test_code(%{"redTests" => red_tests}, _language, framework)
-      when framework in @supported_frameworks do
+      when framework in ~w(vitest jest mocha) do
     red_tests
-    |> Enum.map(&format_single_test/1)
-    |> wrap_in_describe_block()
+    |> Enum.map(&format_single_js_test/1)
+    |> wrap_in_js_describe_block()
+  end
+
+  # Format test code for RSpec
+  defp format_test_code(%{"redTests" => red_tests}, "ruby", "rspec") do
+    red_tests
+    |> Enum.map(&format_single_rspec_test/1)
+    |> wrap_in_rspec_describe_block()
+  end
+
+  # Format test code for pytest
+  defp format_test_code(%{"redTests" => red_tests}, "python", "pytest") do
+    red_tests
+    |> Enum.map(&format_single_pytest_test/1)
+    |> wrap_in_pytest_class()
   end
 
   defp format_test_code(test_suite, _language, _framework) do
@@ -290,8 +463,8 @@ defmodule Rsolv.AST.TestIntegrator do
     "// Failed to format test - manual integration required"
   end
 
-  # Format a single test block
-  defp format_single_test(%{"testName" => name, "testCode" => code, "attackVector" => vector}) do
+  # Format a single JavaScript/TypeScript test block
+  defp format_single_js_test(%{"testName" => name, "testCode" => code, "attackVector" => vector}) do
     """
     it('#{name}', () => {
       // Attack vector: #{vector}
@@ -300,12 +473,60 @@ defmodule Rsolv.AST.TestIntegrator do
     """
   end
 
-  # Wrap test blocks in describe('security') block
-  defp wrap_in_describe_block(test_blocks) do
+  # Format a single RSpec test block
+  defp format_single_rspec_test(%{"testName" => name, "testCode" => code, "attackVector" => vector}) do
+    """
+    it '#{name}' do
+      # Attack vector: #{vector}
+      #{indent_test_body(code)}
+    end
+    """
+  end
+
+  # Format a single pytest test function
+  defp format_single_pytest_test(%{"testName" => name, "testCode" => code, "attackVector" => vector}) do
+    # Convert test name to valid Python function name
+    func_name = name
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9_]/, "_")
+    |> String.replace(~r/_+/, "_")
+    |> String.trim("_")
+
+    """
+    def test_#{func_name}():
+        \"\"\"#{name}
+
+        Attack vector: #{vector}
+        \"\"\"
+        #{indent_test_body(code)}
+    """
+  end
+
+  # Wrap test blocks in describe('security') block for JavaScript
+  defp wrap_in_js_describe_block(test_blocks) do
     """
     describe('security', () => {
     #{Enum.join(test_blocks, "\n")}
     });
+    """
+  end
+
+  # Wrap test blocks in describe 'security' block for RSpec
+  defp wrap_in_rspec_describe_block(test_blocks) do
+    """
+    describe 'security' do
+    #{Enum.join(test_blocks, "\n")}
+    end
+    """
+  end
+
+  # Wrap test functions in TestSecurity class for pytest
+  defp wrap_in_pytest_class(test_functions) do
+    """
+    class TestSecurity:
+        \"\"\"Security test suite for vulnerability validation\"\"\"
+
+    #{Enum.join(test_functions, "\n")}
     """
   end
 
