@@ -1,7 +1,7 @@
 defmodule Rsolv.Repo.Migrations.RenameUserToCustomerInAnalytics do
   use Ecto.Migration
 
-  def change do
+  def up do
     # Rename user_id to customer_id in analytics_page_views
     rename table(:analytics_page_views), :user_id, to: :customer_id
 
@@ -22,6 +22,32 @@ defmodule Rsolv.Repo.Migrations.RenameUserToCustomerInAnalytics do
     # Add new foreign key constraint to customers table
     alter table(:analytics_conversions) do
       modify :customer_id, references(:customers, on_delete: :delete_all)
+    end
+  end
+
+  def down do
+    # Reverse changes for analytics_conversions
+    # Drop the customer foreign key constraint
+    drop_if_exists constraint(:analytics_conversions, "analytics_conversions_customer_id_fkey")
+
+    # Rename customer_id back to user_id
+    rename table(:analytics_conversions), :customer_id, to: :user_id
+
+    # Add back the user foreign key constraint
+    alter table(:analytics_conversions) do
+      modify :user_id, references(:users, on_delete: :delete_all)
+    end
+
+    # Reverse changes for analytics_page_views
+    # Drop the customer foreign key constraint
+    drop_if_exists constraint(:analytics_page_views, "analytics_page_views_customer_id_fkey")
+
+    # Rename customer_id back to user_id
+    rename table(:analytics_page_views), :customer_id, to: :user_id
+
+    # Add back the user foreign key constraint
+    alter table(:analytics_page_views) do
+      modify :user_id, references(:users, on_delete: :delete_all)
     end
   end
 end

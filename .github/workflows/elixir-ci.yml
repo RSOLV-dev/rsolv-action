@@ -198,13 +198,13 @@ jobs:
           mix ecto.migrate
           echo "✅ Migrations applied successfully"
 
-      # TODO: Re-enable rollback test after fixing non-reversible migrations (vibe-kanban ticket)
-      # - name: Test migration reversibility
-      #   run: |
-      #     echo "→ Rolling back ALL..."
-      #     mix ecto.rollback --all
-      #     echo "→ Re-migrating UP (verify idempotency)..."
-      #     mix ecto.migrate
+      - name: Test migration reversibility
+        run: |
+          echo "→ Rolling back ALL..."
+          mix ecto.rollback --all
+          echo "→ Re-migrating UP (verify idempotency)..."
+          mix ecto.migrate
+          echo "✅ Migrations are reversible and idempotent"
 
       - name: Run seeds
         run: mix run priv/repo/seeds.exs
