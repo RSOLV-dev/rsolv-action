@@ -3,7 +3,6 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   use OpenApiSpex.ControllerSpecs
 
   alias Rsolv.Phases
-  alias Rsolv.Customers
   alias RsolvWeb.Schemas.Phase.{PhaseStoreRequest, PhaseStoreResponse, PhaseRetrieveResponse}
   alias RsolvWeb.Schemas.Error.ErrorResponse
 

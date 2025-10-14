@@ -56,33 +56,13 @@ defmodule RsolvWeb.CredentialControllerDemo do
 
   @doc """
   Auto-create or fetch forge account for demo purposes
+
+  Note: This is a stub implementation. The actual forge account management
+  functions need to be implemented in the Rsolv.Customers context.
   """
-  def ensure_demo_forge_account(forge_account_id) do
-    # Check if this forge account exists, create if not
-    case Rsolv.Forges.get_forge_account_by_external_id(forge_account_id) do
-      nil ->
-        # Create a demo forge account
-        attrs = %{
-          external_id: forge_account_id,
-          provider: "github",
-          name: "Demo Account (#{forge_account_id})",
-          metadata: %{
-            "demo" => true,
-            "created_at" => DateTime.utc_now()
-          }
-        }
-
-        case Rsolv.Forges.create_forge_account(attrs) do
-          {:ok, forge_account} ->
-            Logger.info("Created demo forge account: #{forge_account_id}")
-            {:ok, forge_account}
-          error ->
-            Logger.error("Failed to create demo forge account: #{inspect(error)}")
-            {:error, :forge_account_creation_failed}
-        end
-
-      forge_account ->
-        {:ok, forge_account}
-    end
+  def ensure_demo_forge_account(_forge_account_id) do
+    Logger.warning("Demo forge account creation not yet implemented - returning stub")
+    # TODO: Implement get_forge_account_by_external_id and create_forge_account in Rsolv.Customers
+    {:error, :not_implemented}
   end
 end

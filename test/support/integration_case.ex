@@ -74,23 +74,4 @@ defmodule Rsolv.IntegrationCase do
         flunk("Process #{inspect(name)} did not start properly")
     end
   end
-  
-  defp _cleanup_ets_tables do
-    # List of ETS tables that might need cleanup
-    tables = [
-      :validation_cache,
-      :validation_cache_stats,
-      :ast_cache,
-      :encryption_key_history,
-      :audit_log_buffer,
-      :pattern_cache
-    ]
-    
-    Enum.each(tables, fn table ->
-      case :ets.info(table) do
-        :undefined -> :ok
-        _ -> :ets.delete_all_objects(table)
-      end
-    end)
-  end
 end

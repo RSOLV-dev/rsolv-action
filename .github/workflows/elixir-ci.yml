@@ -52,7 +52,7 @@ jobs:
         run: mix deps.compile
 
       - name: Compile application
-        run: mix compile  # TODO: Add --warnings-as-errors after fixing warnings (vibe-kanban ticket)
+        run: mix compile --warnings-as-errors
 
       - name: Create and migrate database
         run: |
@@ -157,7 +157,7 @@ jobs:
       #   run: mix format --check-formatted
 
       - name: Compile and check for errors
-        run: mix compile  # TODO: Add --warnings-as-errors after fixing warnings (vibe-kanban ticket)
+        run: mix compile --warnings-as-errors
 
   migrations:
     name: Migration Integrity

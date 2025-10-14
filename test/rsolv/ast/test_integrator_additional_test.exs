@@ -9,14 +9,8 @@ defmodule Rsolv.AST.TestIntegratorAdditionalTest do
   - Very large test files
   - Special characters in test names
   - Framework-specific edge cases (before/after hooks, fixtures, etc.)
-
-  NOTE: These tests are temporarily skipped due to function arity mismatch.
-  The tests call TestIntegrator.insert_test/3 but the function is now insert_test/6.
-  This needs to be fixed separately.
   """
   use ExUnit.Case, async: true
-
-  @moduletag :skip
 
   alias Rsolv.AST.TestIntegrator
 

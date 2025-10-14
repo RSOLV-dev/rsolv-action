@@ -11,7 +11,26 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
 
   use Rsolv.Security.Patterns.PatternBase
 
+  alias Rsolv.Security.Pattern
+
   @impl true
+  def pattern do
+    meta = metadata()
+    %Pattern{
+      id: meta.id,
+      name: meta.name,
+      description: meta.description,
+      type: String.to_existing_atom(meta.type),
+      severity: String.to_existing_atom(meta.severity),
+      languages: meta.languages,
+      regex: hd(regex_patterns()),  # Use first pattern as primary
+      cwe_id: meta.cwe_id,
+      owasp_category: meta.owasp_category,
+      recommendation: recommendation(),
+      test_cases: test_cases()
+    }
+  end
+
   def metadata do
     %{
       id: "javascript-log-injection",
@@ -25,7 +44,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
     }
   end
 
-  @impl true
+
   def regex_patterns do
     [
       # console.log/error/warn with concatenation or template literal containing req/request
@@ -45,7 +64,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
     ]
   end
 
-  @impl true
+
   def test_cases do
     %{
       vulnerable: [
@@ -65,7 +84,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
     }
   end
 
-  @impl true
+
   def recommendation do
     """
     Sanitize all user input before including it in log messages:
@@ -89,7 +108,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
     """
   end
 
-  @impl true
+
   def ast_rules do
     %{
       javascript: %{
@@ -109,7 +128,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
     }
   end
 
-  @impl true
+
   def context_rules do
     %{
       exclude_paths: [
@@ -124,6 +143,15 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
         "JSON.stringify",
         "encodeURIComponent"
       ]
+    }
+  end
+
+  @impl true
+  def ast_enhancement do
+    %{
+      ast_rules: ast_rules(),
+      context_rules: context_rules(),
+      min_confidence: 0.6
     }
   end
 end
