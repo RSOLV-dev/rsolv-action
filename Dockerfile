@@ -58,9 +58,16 @@ RUN apk add --no-cache \
     curl \
     ca-certificates \
     python3 \
-    ruby ruby-dev \
+    ruby ruby-dev ruby-bundler \
     php82 php82-json php82-tokenizer \
     nodejs npm bash
+
+# Install Ruby gems for parser
+COPY --from=builder /app/priv/parsers/ruby/Gemfile /tmp/ruby-parser/Gemfile
+COPY --from=builder /app/priv/parsers/ruby/Gemfile.lock /tmp/ruby-parser/Gemfile.lock
+RUN cd /tmp/ruby-parser && \
+    bundle install --system --jobs=4 --retry=3 && \
+    rm -rf /tmp/ruby-parser
 
 # Create app user
 RUN adduser -D -h /app app

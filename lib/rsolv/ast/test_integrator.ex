@@ -38,7 +38,7 @@ defmodule Rsolv.AST.TestIntegrator do
   alias Rsolv.AST.ParserRegistry
   require Logger
 
-  @supported_frameworks ~w(vitest jest mocha rspec pytest)
+  @supported_frameworks ~w(vitest jest mocha)
   @test_function_names ~w(it test specify)
   @describe_function_names ~w(describe context suite)
   # Ruby-specific
@@ -91,6 +91,10 @@ defmodule Rsolv.AST.TestIntegrator do
     with {:ok, session} <- SessionManager.create_session("test-integrator"),
          {:ok, %{ast: ast, error: nil}} <- ParserRegistry.parse_code(session.id, "test-integrator", language, content) do
       Logger.debug("TestIntegrator: Successfully parsed code")
+      # Debug: write AST to file for inspection
+      if language in ["ruby", "python"] do
+        File.write!("/tmp/ast_debug_#{language}.json", JSON.encode!(ast))
+      end
       {:ok, ast}
     else
       {:ok, %{error: error}} ->
@@ -274,60 +278,73 @@ defmodule Rsolv.AST.TestIntegrator do
   # ============================================================================
 
   # Find outermost describe/context block in Ruby AST
-  defp find_ruby_outermost_describe(%{"type" => "program", "statements" => statements}) when is_list(statements),
-    do: Enum.find_value(statements, &find_ruby_describe_in_statement/1)
+  # Ruby parser returns top-level "begin" node with children array
+  defp find_ruby_outermost_describe(%{"type" => "begin", "children" => children}) when is_list(children),
+    do: Enum.find_value(children, &find_ruby_describe_in_node/1)
 
   defp find_ruby_outermost_describe(_), do: nil
 
-  # Find describe/context in Ruby statement
-  defp find_ruby_describe_in_statement(%{
-    "type" => "method_call",
-    "method" => %{"type" => "identifier", "name" => name}
-  } = node) when name in @ruby_describe_names, do: node
+  # Find describe/context block - it's a "block" node with "send" as first child
+  defp find_ruby_describe_in_node(%{"type" => "block", "children" => [send_node | _]} = node) do
+    case send_node do
+      %{"type" => "send", "children" => [%{"type" => "const", "children" => [nil, "RSpec"]}, "describe" | _]} ->
+        node
+      %{"type" => "send", "children" => [nil, name | _]} when name in @ruby_describe_names ->
+        node
+      _ ->
+        nil
+    end
+  end
 
-  defp find_ruby_describe_in_statement(_), do: nil
+  defp find_ruby_describe_in_node(_), do: nil
 
   # Find last it/specify/example block in Ruby describe
-  defp find_ruby_last_test_block(%{"arguments" => arguments}) when is_list(arguments) do
-    # Last argument should be the block containing tests
-    case List.last(arguments) do
-      %{"type" => "do_block", "body" => body} when is_list(body) ->
-        body
-        |> Enum.reverse()
-        |> Enum.find_value(&find_ruby_test_in_statement/1)
+  # Ruby parser returns block with exactly 3 children: [send_node, args_node, body_node]
+  defp find_ruby_last_test_block(%{"type" => "block", "children" => children}) when is_list(children) and length(children) >= 3 do
+    # Third child (index 2) is the body - usually a "begin" node with multiple children
+    body_node = Enum.at(children, 2)
 
-      %{"type" => "block", "body" => %{"statements" => statements}} when is_list(statements) ->
-        statements
+    case body_node do
+      %{"type" => "begin", "children" => body_children} when is_list(body_children) ->
+        # Find last test block in body
+        body_children
         |> Enum.reverse()
-        |> Enum.find_value(&find_ruby_test_in_statement/1)
+        |> Enum.find_value(&find_ruby_test_in_node/1)
 
-      _ -> nil
+      # Body might be a single node
+      single_node ->
+        find_ruby_test_in_node(single_node)
     end
   end
 
   defp find_ruby_last_test_block(_), do: nil
 
-  # Find it/specify/example in Ruby statement
-  defp find_ruby_test_in_statement(%{
-    "type" => "method_call",
-    "method" => %{"type" => "identifier", "name" => name}
-  } = node) when name in @ruby_test_names, do: node
+  # Find it/specify/example block - it's a "block" node with "send" as first child
+  defp find_ruby_test_in_node(%{"type" => "block", "children" => [send_node | _]} = node) do
+    case send_node do
+      %{"type" => "send", "children" => [nil, name | _]} when name in @ruby_test_names ->
+        node
+      _ ->
+        nil
+    end
+  end
 
-  defp find_ruby_test_in_statement(_), do: nil
+  defp find_ruby_test_in_node(_), do: nil
 
   # ============================================================================
   # Python AST Helper Functions (pytest)
   # ============================================================================
 
   # Find test container (class or module-level) in Python AST
-  defp find_python_test_container(%{"type" => "module", "body" => body}) when is_list(body) do
+  # Python parser returns "Module" (capital M) with body array
+  defp find_python_test_container(%{"type" => "Module", "body" => body}) when is_list(body) do
     # Look for test class first, then fall back to module-level test functions
     case find_python_test_class(body) do
       {class_node, last_test} -> {"test_class", class_node, last_test}
       nil ->
         case find_python_last_module_test(body) do
           nil -> nil
-          last_test -> {"module", %{"type" => "module"}, last_test}
+          last_test -> {"module", %{"type" => "Module"}, last_test}
         end
     end
   end
@@ -335,9 +352,10 @@ defmodule Rsolv.AST.TestIntegrator do
   defp find_python_test_container(_), do: nil
 
   # Find test class (class starting with Test or containing test_ methods)
+  # Python parser returns "ClassDef" with name as direct string
   defp find_python_test_class(statements) do
     test_class = Enum.find(statements, fn
-      %{"type" => "class_definition", "name" => %{"name" => name}} ->
+      %{"type" => "ClassDef", "name" => name} when is_binary(name) ->
         String.starts_with?(name, "Test")
       _ -> false
     end)
@@ -365,10 +383,11 @@ defmodule Rsolv.AST.TestIntegrator do
   end
 
   # Check if node is a test function (starts with test_)
+  # Python parser returns "FunctionDef" with name as direct string
   defp is_python_test_function(%{
-    "type" => "function_definition",
-    "name" => %{"name" => name}
-  }), do: String.starts_with?(name, @python_test_prefix)
+    "type" => "FunctionDef",
+    "name" => name
+  }) when is_binary(name), do: String.starts_with?(name, @python_test_prefix)
 
   defp is_python_test_function(_), do: false
 
