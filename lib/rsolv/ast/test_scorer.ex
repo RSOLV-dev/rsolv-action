@@ -246,7 +246,7 @@ defmodule Rsolv.AST.TestScorer do
     {dirs2, file2} = split_dirs_and_file(norm2)
 
     # File match score (0.5 weight)
-    file_score = if file1 == file2 and file1 != "", do: 0.5, else: 0.0
+    file_score = calculate_file_similarity(file1, file2, dirs1, dirs2)
 
     # Directory match score (0.5 weight)
     dir_score = score_directory_similarity(dirs1, dirs2)
@@ -256,6 +256,58 @@ defmodule Rsolv.AST.TestScorer do
 
   defp normalize_segment(segment) do
     segment |> remove_extension() |> remove_test_affixes()
+  end
+
+  # Calculate file similarity with enhanced Python test pattern matching
+  defp calculate_file_similarity(file1, file2, dirs1, dirs2) do
+    cond do
+      # Exact match - highest score
+      file1 == file2 and file1 != "" ->
+        0.5
+
+      # Test file name matches a directory component in source path
+      # e.g., test_dao.py matches sqli/dao/student.py
+      # This is a strong signal that the test is for that module/layer
+      file2 != "" and file2 in dirs1 ->
+        0.5
+
+      # Fuzzy match for singular/plural and common patterns
+      fuzzy_match?(file1, file2) ->
+        0.4
+
+      # Check if test file relates to any directory in source
+      # e.g., "dao" in dirs1 and "dao" in file2
+      has_directory_overlap?(file2, dirs1) ->
+        0.3
+
+      true ->
+        0.0
+    end
+  end
+
+  # Check if two filenames are fuzzy matches (singular/plural, etc.)
+  defp fuzzy_match?(file1, file2) when file1 == "" or file2 == "", do: false
+
+  defp fuzzy_match?(file1, file2) do
+    # Remove common suffixes
+    base1 = String.replace(file1, ~r/(s|es|ies)$/, "")
+    base2 = String.replace(file2, ~r/(s|es|ies)$/, "")
+
+    # Check if one is the singular/plural of the other
+    String.jaro_distance(base1, base2) > 0.85 or
+      file1 == base2 or
+      file2 == base1 or
+      String.starts_with?(file1, file2) or
+      String.starts_with?(file2, file1)
+  end
+
+  # Check if test filename component appears in any source directory
+  defp has_directory_overlap?(_file, []), do: false
+
+  defp has_directory_overlap?(file, dirs) do
+    Enum.any?(dirs, fn dir ->
+      String.contains?(file, dir) or String.contains?(dir, file)
+    end)
   end
 
   defp score_directory_similarity(dirs1, dirs2) do
@@ -269,11 +321,24 @@ defmodule Rsolv.AST.TestScorer do
     # Apply penalty if prefixes differ (except for strongly-paired prefixes)
     penalty = prefix_mismatch_penalty(dirs1, dirs2, norm1, norm2)
 
-    base_score - penalty
+    # Boost score if there's any directory overlap even after normalization
+    overlap_bonus = if has_any_directory_overlap?(norm1, norm2), do: 0.2, else: 0.0
+
+    base_score - penalty + overlap_bonus
   end
 
   defp directory_base_score([], []), do: 0.5
   defp directory_base_score(dirs1, dirs2), do: jaccard_similarity(dirs1, dirs2) * 0.5
+
+  # Check if there's any overlap between two directory lists
+  defp has_any_directory_overlap?([], _), do: false
+  defp has_any_directory_overlap?(_, []), do: false
+
+  defp has_any_directory_overlap?(dirs1, dirs2) do
+    set1 = MapSet.new(dirs1)
+    set2 = MapSet.new(dirs2)
+    MapSet.intersection(set1, set2) |> MapSet.size() > 0
+  end
 
   defp jaccard_similarity(list1, list2) do
     set1 = MapSet.new(list1)
