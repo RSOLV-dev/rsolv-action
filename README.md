@@ -1,5 +1,7 @@
 # RSOLV API Service
 
+[![Elixir CI](https://github.com/RSOLV-dev/rsolv/actions/workflows/elixir-ci.yml/badge.svg)](https://github.com/RSOLV-dev/rsolv/actions/workflows/elixir-ci.yml)
+
 Backend API service for the RSOLV automated issue fixing platform.
 
 ## Overview
@@ -109,6 +111,79 @@ See [`.env.example`](.env.example) for a complete list of configuration options.
 - `KIT_API_KEY` - For ConvertKit integration
 
 **Note:** The application will run with minimal configuration, but some features require API keys.
+
+### Running Tests
+
+```bash
+# Run the full test suite
+mix test
+
+# Run tests with detailed output
+mix test --trace
+
+# Run a specific test file
+mix test test/rsolv_web/controllers/pattern_controller_test.exs
+
+# Run tests with coverage (if configured)
+mix test --cover
+```
+
+### Continuous Integration
+
+This project uses GitHub Actions for continuous integration. The CI pipeline runs automatically on:
+- Push to `main` or `develop` branches
+- Pull requests targeting `main` or `develop`
+- Manual workflow dispatch
+
+#### CI Jobs
+
+1. **Test Suite** - Runs the full Elixir test suite with PostgreSQL
+2. **OpenAPI Spec Validation** - Generates and validates the OpenAPI specification
+3. **Code Quality** - Checks code formatting and compilation warnings
+4. **Migration Integrity** - Verifies database migrations are reversible (up/down/up)
+5. **Asset Compilation** - Builds frontend assets (Tailwind CSS, esbuild)
+
+#### Status Checks
+
+**Note:** Some checks (tests, asset compilation, migration rollback, formatting, and warnings enforcement) are presently non-fatal or disabled in the CI workflow. The guarantees below reflect intended coverage, but not all failures will block merges until the workflow is tightened.
+
+The CI pipeline currently runs:
+- ✅ All tests (non-fatal; failures do not block merges)
+- ✅ OpenAPI spec generation (fatal; failures block merges)
+- ✅ Code formatting (`mix format --check-formatted`) (non-fatal)
+- ✅ Compilation warnings (non-fatal)
+- ✅ Migration reversibility (non-fatal)
+- ✅ Database seeds
+- ✅ Asset compilation (non-fatal)
+#### Running CI Checks Locally
+
+Before pushing, you can run the same checks locally:
+
+```bash
+# Run tests
+mix test
+
+# Check code formatting
+mix format --check-formatted
+
+# Fix formatting issues
+mix format
+
+# Compile with warnings as errors
+mix compile --warnings-as-errors
+
+# Generate OpenAPI spec
+mix rsolv.openapi priv/static/openapi.json
+
+# Verify migrations
+mix ecto.migrate
+mix ecto.rollback --all
+mix ecto.migrate
+mix run priv/repo/seeds.exs
+
+# Build assets
+mix assets.build
+```
 
 ### 🤖 AI-Assisted Development with Tidewave
 

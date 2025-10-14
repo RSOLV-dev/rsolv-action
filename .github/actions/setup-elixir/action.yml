@@ -1,0 +1,37 @@
+name: 'Setup Elixir Environment'
+description: 'Sets up Elixir, OTP, and caches dependencies'
+inputs:
+  elixir-version:
+    description: 'Elixir version to use'
+    required: false
+    default: '1.18.1'
+  otp-version:
+    description: 'OTP version to use'
+    required: false
+    default: '27.2'
+  cache-key-prefix:
+    description: 'Prefix for cache key (e.g., "test", "openapi", "quality")'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: ${{ inputs.elixir-version }}
+        otp-version: ${{ inputs.otp-version }}
+
+    - name: Restore dependencies cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          deps
+          _build
+        key: ${{ runner.os }}-mix-${{ inputs.cache-key-prefix }}-${{ inputs.elixir-version }}-${{ inputs.otp-version }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ inputs.cache-key-prefix }}-${{ inputs.elixir-version }}-${{ inputs.otp-version }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: mix deps.get
