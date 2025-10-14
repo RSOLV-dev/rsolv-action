@@ -62,12 +62,14 @@ RUN apk add --no-cache \
     php82 php82-json php82-tokenizer \
     nodejs npm bash
 
-# Install Ruby gems for parser
+# Install Ruby gems for parser (needs build-base temporarily for native extensions)
 COPY --from=builder /app/priv/parsers/ruby/Gemfile /tmp/ruby-parser/Gemfile
 COPY --from=builder /app/priv/parsers/ruby/Gemfile.lock /tmp/ruby-parser/Gemfile.lock
-RUN cd /tmp/ruby-parser && \
+RUN apk add --no-cache --virtual .build-deps build-base && \
+    cd /tmp/ruby-parser && \
     bundle install --system --jobs=4 --retry=3 && \
-    rm -rf /tmp/ruby-parser
+    rm -rf /tmp/ruby-parser && \
+    apk del .build-deps
 
 # Create app user
 RUN adduser -D -h /app app
