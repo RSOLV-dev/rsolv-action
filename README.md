@@ -40,16 +40,75 @@ The API is designed with security as a top priority, ensuring:
 
 ## Development Setup
 
-```bash
-# Install dependencies
-mix deps.get
+### Quick Start (Recommended)
 
-# Setup the database
-mix ecto.setup
+```bash
+# Clone the repository
+git clone https://github.com/rsolv/platform
+cd platform
+
+# Run the interactive environment setup wizard
+mix dev.env.setup
+
+# Complete the project setup (dependencies, database, assets)
+mix setup
 
 # Start the Phoenix server
 mix phx.server
 ```
+
+The wizard will guide you through:
+- ✅ Generating secure secrets
+- 🤖 Configuring AI providers (optional)
+- 🗄️ Testing database connection
+- 📧 Setting up email (optional)
+
+### Manual Setup
+
+If you prefer manual configuration:
+
+1. **Copy environment template:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Generate secret key:**
+   ```bash
+   mix phx.gen.secret
+   # Copy the output to SECRET_KEY_BASE in .env
+   ```
+
+3. **Configure database** (edit `.env`):
+   ```bash
+   DATABASE_URL=postgresql://postgres:postgres@localhost/rsolv_dev
+   DATABASE_SSL=false
+   ```
+
+4. **(Optional) Add AI provider keys** to `.env`:
+   - **Anthropic**: Get key at [console.anthropic.com](https://console.anthropic.com/)
+   - **OpenAI**: Get key at [platform.openai.com](https://platform.openai.com/api-keys)
+   - **OpenRouter**: Get key at [openrouter.ai](https://openrouter.ai/keys)
+
+5. **Run setup:**
+   ```bash
+   mix setup
+   ```
+
+### Environment Variables
+
+See [`.env.example`](.env.example) for a complete list of configuration options.
+
+**Required:**
+- `DATABASE_URL` - PostgreSQL connection string
+- `SECRET_KEY_BASE` - Phoenix secret (64+ characters)
+
+**Optional:**
+- `ANTHROPIC_API_KEY` - For Claude AI features
+- `OPENAI_API_KEY` - For OpenAI features
+- `POSTMARK_API_KEY` - For transactional emails
+- `KIT_API_KEY` - For ConvertKit integration
+
+**Note:** The application will run with minimal configuration, but some features require API keys.
 
 ### 🤖 AI-Assisted Development with Tidewave
 
