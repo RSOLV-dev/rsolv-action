@@ -145,15 +145,16 @@ This project uses GitHub Actions for continuous integration. The CI pipeline run
 
 #### Status Checks
 
-All CI jobs must pass before a pull request can be merged. The CI pipeline ensures:
-- ✅ All tests pass
-- ✅ OpenAPI spec generation succeeds (25+ endpoints documented)
-- ✅ Code is properly formatted (`mix format --check-formatted`)
-- ✅ No compilation warnings
-- ✅ Migrations are reversible
-- ✅ Database seeds run successfully
-- ✅ Assets compile without errors
+**Note:** Some checks (tests, asset compilation, migration rollback, formatting, and warnings enforcement) are presently non-fatal or disabled in the CI workflow. The guarantees below reflect intended coverage, but not all failures will block merges until the workflow is tightened.
 
+The CI pipeline currently runs:
+- ✅ All tests (non-fatal; failures do not block merges)
+- ✅ OpenAPI spec generation (fatal; failures block merges)
+- ✅ Code formatting (`mix format --check-formatted`) (non-fatal)
+- ✅ Compilation warnings (non-fatal)
+- ✅ Migration reversibility (non-fatal)
+- ✅ Database seeds
+- ✅ Asset compilation (non-fatal)
 #### Running CI Checks Locally
 
 Before pushing, you can run the same checks locally:
