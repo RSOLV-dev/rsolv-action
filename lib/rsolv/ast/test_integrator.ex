@@ -79,7 +79,9 @@ defmodule Rsolv.AST.TestIntegrator do
     else
       error ->
         Logger.warning("TestIntegrator: AST integration failed (#{inspect(error)}), falling back to append")
-        fallback_content = "#{target_content}\n\n#{format_test_code(test_suite, language, framework)}"
+        # For fallback, use default insertion_point (module level, no parent)
+        fallback_insertion_point = %{parent: "module"}
+        fallback_content = "#{target_content}\n\n#{format_test_code(test_suite, language, framework, fallback_insertion_point)}"
         {:ok, fallback_content, nil, "append"}
     end
   end
@@ -269,8 +271,12 @@ defmodule Rsolv.AST.TestIntegrator do
   defp find_test_in_statement(_), do: nil
 
   # Get end line of a node
+  # JavaScript/TypeScript parsers use these formats
   defp get_node_end_line(%{"_loc" => %{"end" => %{"line" => line}}}), do: line
   defp get_node_end_line(%{"loc" => %{"end" => %{"line" => line}}}), do: line
+  # Python parser uses _end_lineno (note: 1-indexed)
+  defp get_node_end_line(%{"_end_lineno" => line}) when is_integer(line), do: line
+  # Ruby parser might use different format
   defp get_node_end_line(_), do: 1
 
   # ============================================================================
@@ -412,8 +418,8 @@ defmodule Rsolv.AST.TestIntegrator do
   def insert_test(_ast, test_suite, language, framework, insertion_point, original_content) do
     Logger.debug("TestIntegrator: Inserting test at line #{insertion_point.line}")
 
-    # Format the new test code
-    test_code = format_test_code(test_suite, language, framework)
+    # Format the new test code (pass insertion_point for context-aware formatting)
+    test_code = format_test_code(test_suite, language, framework, insertion_point)
 
     # Split original content by lines
     lines = String.split(original_content, "\n")
@@ -461,7 +467,7 @@ defmodule Rsolv.AST.TestIntegrator do
   end
 
   # Format test code for Jest/Vitest/Mocha
-  defp format_test_code(%{"redTests" => red_tests}, _language, framework)
+  defp format_test_code(%{"redTests" => red_tests}, _language, framework, _insertion_point)
       when framework in ~w(vitest jest mocha) do
     red_tests
     |> Enum.map(&format_single_js_test/1)
@@ -469,20 +475,25 @@ defmodule Rsolv.AST.TestIntegrator do
   end
 
   # Format test code for RSpec
-  defp format_test_code(%{"redTests" => red_tests}, "ruby", "rspec") do
+  defp format_test_code(%{"redTests" => red_tests}, "ruby", "rspec", _insertion_point) do
     red_tests
     |> Enum.map(&format_single_rspec_test/1)
     |> wrap_in_rspec_describe_block()
   end
 
   # Format test code for pytest
-  defp format_test_code(%{"redTests" => red_tests}, "python", "pytest") do
-    red_tests
-    |> Enum.map(&format_single_pytest_test/1)
-    |> wrap_in_pytest_class()
+  defp format_test_code(%{"redTests" => red_tests}, "python", "pytest", insertion_point) do
+    formatted_tests = Enum.map(red_tests, &format_single_pytest_test/1)
+
+    # If inserting into existing test class, don't wrap in new class
+    if insertion_point.parent == "test_class" do
+      Enum.join(formatted_tests, "\n\n")
+    else
+      wrap_in_pytest_class(formatted_tests)
+    end
   end
 
-  defp format_test_code(test_suite, _language, _framework) do
+  defp format_test_code(test_suite, _language, _framework, _insertion_point) do
     Logger.warning("TestIntegrator: Unexpected test suite format: #{inspect(test_suite)}")
     "// Failed to format test - manual integration required"
   end
@@ -509,21 +520,31 @@ defmodule Rsolv.AST.TestIntegrator do
 
   # Format a single pytest test function
   defp format_single_pytest_test(%{"testName" => name, "testCode" => code, "attackVector" => vector}) do
-    # Convert test name to valid Python function name
-    func_name = name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z0-9_]/, "_")
-    |> String.replace(~r/_+/, "_")
-    |> String.trim("_")
+    # Check if code is already a complete function definition
+    if String.starts_with?(String.trim(code), "def ") or String.starts_with?(String.trim(code), "async def ") do
+      # Code is already a complete method - use it directly with attack vector comment
+      """
+      # Attack vector: #{vector}
+      #{code}
+      """
+    else
+      # Code is just test body - wrap in function definition
+      # Convert test name to valid Python function name
+      func_name = name
+      |> String.downcase()
+      |> String.replace(~r/[^a-z0-9_]/, "_")
+      |> String.replace(~r/_+/, "_")
+      |> String.trim("_")
 
-    """
-    def test_#{func_name}():
-        \"\"\"#{name}
+      """
+      def test_#{func_name}(self):
+          \"\"\"#{name}
 
-        Attack vector: #{vector}
-        \"\"\"
-        #{indent_test_body(code)}
-    """
+          Attack vector: #{vector}
+          \"\"\"
+          #{indent_test_body(code, 4)}
+      """
+    end
   end
 
   # Wrap test blocks in describe('security') block for JavaScript
@@ -554,11 +575,16 @@ defmodule Rsolv.AST.TestIntegrator do
     """
   end
 
-  # Indent test body (add 2 spaces to each line)
-  defp indent_test_body(code) do
+  # Indent test body (add specified number of spaces to each line, default 2)
+  defp indent_test_body(code, spaces \\ 2) do
+    indent = String.duplicate(" ", spaces)
+
     code
     |> String.split("\n")
-    |> Enum.map(&("  " <> &1))
+    |> Enum.map(fn
+      "" -> ""
+      line -> indent <> line
+    end)
     |> Enum.join("\n")
   end
 end
