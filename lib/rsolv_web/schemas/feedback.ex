@@ -101,6 +101,44 @@ defmodule RsolvWeb.Schemas.Feedback do
     })
   end
 
+  defmodule FeedbackListResponse do
+    @moduledoc "List of feedback entries"
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "FeedbackListResponse",
+      type: :object,
+      description: "Collection of feedback entries",
+      properties: %{
+        data: %Schema{
+          type: :array,
+          items: FeedbackResponse,
+          description: "Array of feedback entries"
+        },
+        total: %Schema{
+          type: :integer,
+          description: "Total number of feedback entries",
+          example: 142
+        }
+      },
+      required: [:data],
+      example: %{
+        "data" => [
+          %{
+            "id" => "550e8400-e29b-41d4-a716-446655440000",
+            "email" => "user@example.com",
+            "message" => "Great product!",
+            "rating" => 5,
+            "tags" => ["general"],
+            "source" => "api",
+            "created_at" => "2025-10-14T15:30:00Z"
+          }
+        ],
+        "total" => 142
+      }
+    })
+  end
+
   defmodule FeedbackStats do
     @moduledoc "Feedback statistics response"
     require OpenApiSpex

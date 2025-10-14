@@ -3,7 +3,6 @@ defmodule Rsolv.PromEx.ValidationPlugin do
   PromEx plugin for RFC-060 validation and mitigation metrics.
   """
   use PromEx.Plugin
-  alias Telemetry.Metrics
 
   @impl true
   def event_metrics(_opts) do

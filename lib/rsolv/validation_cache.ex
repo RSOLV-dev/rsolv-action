@@ -128,7 +128,7 @@ defmodule Rsolv.ValidationCache do
         {:ok, cached}
         
       {:error, changeset} ->
-        Logger.warn("Failed to store cached validation",
+        Logger.warning("Failed to store cached validation",
           errors: inspect(changeset.errors)
         )
         {:error, changeset}

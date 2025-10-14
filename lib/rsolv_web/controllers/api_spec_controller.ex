@@ -5,9 +5,6 @@ defmodule RsolvWeb.ApiSpecController do
 
   use RsolvWeb, :controller
 
-  alias OpenApiSpex.OpenApi
-  alias Plug.Conn
-
   @doc """
   Serves the OpenAPI specification as JSON.
   """

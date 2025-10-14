@@ -5,7 +5,7 @@ defmodule RsolvWeb.API.FeedbackController do
   require Logger
   alias Rsolv.Feedback
   alias RsolvWeb.Services.Metrics
-  alias RsolvWeb.Schemas.Feedback.{FeedbackRequest, FeedbackResponse, FeedbackStats}
+  alias RsolvWeb.Schemas.Feedback.{FeedbackRequest, FeedbackResponse, FeedbackListResponse, FeedbackStats}
   alias RsolvWeb.Schemas.Error.{ErrorResponse, ValidationError}
 
   tags ["Feedback"]
@@ -84,17 +84,76 @@ defmodule RsolvWeb.API.FeedbackController do
     end
   end
   
-  @doc """
-  Get all feedback entries.
-  """
+  operation(:index,
+    summary: "List all feedback entries",
+    description: """
+    Retrieve all feedback submissions.
+
+    **Authentication Required** - Admin/Staff access only.
+
+    **Use Cases:**
+    - Review all customer feedback
+    - Analyze feedback trends
+    - Export feedback data for analysis
+    - Moderate and respond to feedback
+
+    **Response Format:**
+    Returns all feedback entries with complete details including email,
+    message, rating, tags, source, and timestamps.
+
+    **Privacy Note:**
+    This endpoint returns full feedback content including email addresses.
+    Access should be restricted to authorized staff only.
+    """,
+    responses: [
+      ok: {"All feedback entries retrieved successfully", "application/json", FeedbackListResponse},
+      unauthorized: {"Invalid or missing authentication", "application/json", ErrorResponse}
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
+
   def index(conn, _params) do
     feedback = Feedback.list_entries()
     render(conn, "index.json", feedback: feedback)
   end
   
-  @doc """
-  Get a specific feedback entry.
-  """
+  operation(:show,
+    summary: "Get a specific feedback entry",
+    description: """
+    Retrieve a single feedback submission by ID.
+
+    **Authentication Required** - Admin/Staff access only.
+
+    **Use Cases:**
+    - View complete feedback details
+    - Investigate specific user feedback
+    - Track feedback resolution
+    - Link to customer records
+
+    **Response Format:**
+    Returns complete feedback details including:
+    - User email address
+    - Full message content
+    - Rating and tags
+    - Source and timestamps
+    """,
+    parameters: [
+      id: [
+        in: :path,
+        description: "Unique feedback entry ID (UUID format)",
+        type: :string,
+        required: true,
+        example: "550e8400-e29b-41d4-a716-446655440000"
+      ]
+    ],
+    responses: [
+      ok: {"Feedback entry retrieved successfully", "application/json", FeedbackResponse},
+      not_found: {"Feedback entry not found", "application/json", ErrorResponse},
+      unauthorized: {"Invalid or missing authentication", "application/json", ErrorResponse}
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
+
   def show(conn, %{"id" => id}) do
     try do
       feedback = Feedback.get_entry!(id)

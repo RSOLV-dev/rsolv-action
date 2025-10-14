@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.AddForgeAccount do
   use Mix.Task
   alias Rsolv.Repo
-  alias Rsolv.Customers.{Customer, ApiKey, ForgeAccount}
+  alias Rsolv.Customers.ForgeAccount
 
   @shortdoc "Adds a forge_account association for an existing API key"
 

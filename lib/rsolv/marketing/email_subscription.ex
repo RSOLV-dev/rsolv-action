@@ -9,9 +9,11 @@ defmodule Rsolv.Marketing.EmailSubscription do
     field :tags, {:array, :string}, default: []
     field :convertkit_subscriber_id, :string
     field :unsubscribed_at, :naive_datetime
-    
-    belongs_to :user, Rsolv.Accounts.User
-    
+
+    # TODO: Replace with actual user schema when implemented
+    # belongs_to :user, Rsolv.Accounts.User
+    field :user_id, :integer
+
     timestamps(type: :utc_datetime)
   end
 

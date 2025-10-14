@@ -277,7 +277,7 @@ defmodule Mix.Tasks.Dev.EnvSetup do
     File.write!(@env_file, new_content)
   end
 
-  defp prompt_yes_no(question, default \\ true) do
+  defp prompt_yes_no(question, default) do
     default_str = if default, do: "Y/n", else: "y/N"
 
     case IO.gets("#{question} [#{default_str}] ") do

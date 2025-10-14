@@ -27,11 +27,7 @@ defmodule RsolvWeb.PageController do
     {mnesia_status, mnesia_info} = check_mnesia_health()
     
     # Check database health
-    db_result = check_database_health()
-    {db_status, db_message, db_info} = case db_result do
-      {status, message, info} -> {status, message, info}
-      {status, message} -> {status, message, %{}}
-    end
+    {db_status, db_message, db_info} = check_database_health()
     
     # Check analytics readiness (partition exists for current month)
     {analytics_status, analytics_message} = check_analytics_health()

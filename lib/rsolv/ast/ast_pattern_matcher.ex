@@ -386,44 +386,12 @@ defmodule Rsolv.AST.ASTPatternMatcher do
     end
   end
   
-  @doc """
-  Checks if a node's arguments match the specified analysis requirements.
-  
-  Supports checking argument position, value patterns, and various other constraints
-  to reduce false positives in pattern matching.
-  
-  ## Examples
-  
-      iex> alias Rsolv.AST.ASTPatternMatcher
-      iex> # Test MD5 detection - should match
-      iex> node = %{"type" => "CallExpression", "arguments" => [%{"type" => "Literal", "value" => "md5"}]}
-      iex> arg_req = %{"position" => 0, "value_pattern" => ~r/^md5$/i}
-      iex> ASTPatternMatcher.check_argument_analysis(node, arg_req, %{})
-      true
-      
-      iex> alias Rsolv.AST.ASTPatternMatcher
-      iex> # Test SHA256 detection - should NOT match MD5 pattern
-      iex> node = %{"type" => "CallExpression", "arguments" => [%{"type" => "Literal", "value" => "sha256"}]}
-      iex> arg_req = %{"position" => 0, "value_pattern" => ~r/^md5$/i}
-      iex> ASTPatternMatcher.check_argument_analysis(node, arg_req, %{})
-      false
-      
-      iex> alias Rsolv.AST.ASTPatternMatcher
-      iex> # Test SHA1 detection with hyphen - should match
-      iex> node = %{"type" => "CallExpression", "arguments" => [%{"type" => "Literal", "value" => "sha-1"}]}
-      iex> arg_req = %{"position" => 0, "value_pattern" => ~r/^sha-?1$/i}
-      iex> ASTPatternMatcher.check_argument_analysis(node, arg_req, %{})
-      true
-      
-      iex> alias Rsolv.AST.ASTPatternMatcher
-      iex> # Test when no arguments at position - should fail
-      iex> node = %{"type" => "CallExpression", "arguments" => []}
-      iex> arg_req = %{"position" => 0, "value_pattern" => ~r/^md5$/i}
-      iex> ASTPatternMatcher.check_argument_analysis(node, arg_req, %{})
-      false
-  """
-  @doc false  # Internal function, but needs to be public for doctests
-  def check_argument_analysis(node, arg_req, context \\ %{}) do
+  # Internal function, but needs to be public for doctests.
+  # Checks if a node's arguments match the specified analysis requirements.
+  # Supports checking argument position, value patterns, and various other constraints
+  # to reduce false positives in pattern matching.
+  @doc false
+  def check_argument_analysis(node, arg_req, _context \\ %{}) do
     # For CallExpression, check the arguments
     args = Map.get(node, "arguments", [])
     

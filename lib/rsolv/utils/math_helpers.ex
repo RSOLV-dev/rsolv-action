@@ -20,7 +20,8 @@ defmodule Rsolv.Utils.MathHelpers do
   """
   @spec safe_percentage(number(), number()) :: float()
   def safe_percentage(_numerator, 0), do: 0.0
-  def safe_percentage(_numerator, 0.0), do: 0.0
+  def safe_percentage(_numerator, +0.0), do: 0.0
+  def safe_percentage(_numerator, -0.0), do: 0.0
   def safe_percentage(numerator, denominator) when is_number(numerator) and is_number(denominator) do
     # Convert to float and multiply by 100 for percentage
     (numerator * 100.0) / denominator

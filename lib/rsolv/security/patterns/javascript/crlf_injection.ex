@@ -12,7 +12,26 @@ defmodule Rsolv.Security.Patterns.JavaScript.CrlfInjection do
 
   use Rsolv.Security.Patterns.PatternBase
 
+  alias Rsolv.Security.Pattern
+
   @impl true
+  def pattern do
+    meta = metadata()
+    %Pattern{
+      id: meta.id,
+      name: meta.name,
+      description: meta.description,
+      type: String.to_existing_atom(meta.type),
+      severity: String.to_existing_atom(meta.severity),
+      languages: meta.languages,
+      regex: hd(regex_patterns()),  # Use first pattern as primary
+      cwe_id: meta.cwe_id,
+      owasp_category: meta.owasp_category,
+      recommendation: recommendation(),
+      test_cases: test_cases()
+    }
+  end
+
   def metadata do
     %{
       id: "javascript-crlf-injection",
@@ -26,7 +45,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.CrlfInjection do
     }
   end
 
-  @impl true
+
   def regex_patterns do
     [
       # setHeader with user input
@@ -55,7 +74,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.CrlfInjection do
     ]
   end
 
-  @impl true
+
   def test_cases do
     %{
       vulnerable: [
@@ -78,7 +97,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.CrlfInjection do
     }
   end
 
-  @impl true
+
   def recommendation do
     """
     Validate and sanitize all user input used in HTTP headers:
@@ -116,7 +135,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.CrlfInjection do
     """
   end
 
-  @impl true
+
   def ast_rules do
     %{
       javascript: %{
@@ -136,7 +155,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.CrlfInjection do
     }
   end
 
-  @impl true
+
   def context_rules do
     %{
       exclude_paths: [
@@ -158,7 +177,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.CrlfInjection do
     }
   end
 
-  @impl true
+
   def confidence_rules do
     %{
       base: 80,
@@ -168,6 +187,16 @@ defmodule Rsolv.Security.Patterns.JavaScript.CrlfInjection do
         "location_header" => +10,    # Location header is higher risk
         "cookie_header" => +10       # Set-Cookie is higher risk
       }
+    }
+  end
+
+  @impl true
+  def ast_enhancement do
+    %{
+      ast_rules: ast_rules(),
+      context_rules: context_rules(),
+      confidence_rules: confidence_rules(),
+      min_confidence: 0.6
     }
   end
 end
