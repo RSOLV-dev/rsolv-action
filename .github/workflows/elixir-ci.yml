@@ -5,23 +5,20 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:
 
 env:
   MIX_ENV: test
   ELIXIR_VERSION: "1.18.1"
   OTP_VERSION: "27.2"
+  # Mock API keys for tests (don't make real API calls in CI)
+  ANTHROPIC_API_KEY: mock_test_key_anthropic_at_least_32_characters
+  OPENAI_API_KEY: mock_test_key_openai_at_least_32_characters
 
 jobs:
-  # Job 1: Run Elixir test suite
   test:
-    name: Test Suite (Elixir ${{matrix.elixir}} / OTP ${{matrix.otp}})
+    name: Test Suite
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        elixir: ["1.18.1"]
-        otp: ["27.2"]
 
     services:
       postgres:
@@ -41,34 +38,15 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_test
       SECRET_KEY_BASE: test-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789
-      # Mock API keys for tests (don't make real API calls in CI)
-      ANTHROPIC_API_KEY: mock_test_key_anthropic_at_least_32_characters
-      OPENAI_API_KEY: mock_test_key_openai_at_least_32_characters
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          submodules: false # Skip submodules for faster checkout
+          submodules: false
 
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
+      - uses: ./.github/actions/setup-elixir
         with:
-          elixir-version: ${{ matrix.elixir }}
-          otp-version: ${{ matrix.otp }}
-
-      - name: Restore dependencies cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-
-
-      - name: Install dependencies
-        run: mix deps.get
+          cache-key-prefix: test
 
       - name: Compile dependencies
         run: mix deps.compile
@@ -76,7 +54,7 @@ jobs:
       - name: Compile application
         run: mix compile --warnings-as-errors
 
-      - name: Create and migrate test database
+      - name: Create and migrate database
         run: |
           mix ecto.create
           mix ecto.migrate
@@ -88,20 +66,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}
-          path: |
-            _build/test/lib/rsolv/test-results.xml
+          name: test-results
+          path: _build/test/lib/rsolv/test-results.xml
           if-no-files-found: ignore
 
-  # Job 2: OpenAPI Spec Validation (CRITICAL!)
   openapi-validation:
     name: OpenAPI Spec Validation
     runs-on: ubuntu-latest
-
-    env:
-      MIX_ENV: dev # OpenAPI generation typically runs in dev
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_dev
-      SECRET_KEY_BASE: dev-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789
 
     services:
       postgres:
@@ -118,30 +89,19 @@ jobs:
         ports:
           - 5432:5432
 
+    env:
+      MIX_ENV: dev
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_dev
+      SECRET_KEY_BASE: dev-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: false
 
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
+      - uses: ./.github/actions/setup-elixir
         with:
-          elixir-version: ${{ env.ELIXIR_VERSION }}
-          otp-version: ${{ env.OTP_VERSION }}
-
-      - name: Restore dependencies cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-openapi-${{ hashFiles('**/mix.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-mix-openapi-
-
-      - name: Install dependencies
-        run: mix deps.get
+          cache-key-prefix: openapi
 
       - name: Create and migrate database
         run: |
@@ -149,115 +109,54 @@ jobs:
           mix ecto.migrate
 
       - name: Generate OpenAPI spec
-        run: |
-          echo "=== Generating OpenAPI specification ==="
-          mix rsolv.openapi priv/static/openapi.json
+        run: mix rsolv.openapi priv/static/openapi.json
 
       - name: Validate OpenAPI spec
         run: |
-          echo "=== Validating OpenAPI spec ==="
-
           # Check that file was generated
-          if [ ! -f priv/static/openapi.json ]; then
-            echo "ERROR: OpenAPI spec file not generated!"
-            exit 1
-          fi
+          test -f priv/static/openapi.json || { echo "ERROR: OpenAPI spec not generated!"; exit 1; }
 
           # Check file size (should be > 100KB)
           FILE_SIZE=$(stat -c%s priv/static/openapi.json)
-          if [ "$FILE_SIZE" -lt 102400 ]; then
-            echo "ERROR: OpenAPI spec file is too small ($FILE_SIZE bytes). Expected > 100KB."
-            exit 1
-          fi
+          [ "$FILE_SIZE" -ge 102400 ] || { echo "ERROR: Spec too small ($FILE_SIZE bytes)"; exit 1; }
 
-          echo "✅ OpenAPI spec file size: $FILE_SIZE bytes"
+          # Validate JSON and count paths
+          jq empty priv/static/openapi.json || { echo "ERROR: Invalid JSON!"; exit 1; }
 
-          # Validate JSON format
-          if ! jq empty priv/static/openapi.json 2>/dev/null; then
-            echo "ERROR: OpenAPI spec is not valid JSON!"
-            exit 1
-          fi
-
-          echo "✅ OpenAPI spec is valid JSON"
-
-          # Count paths (should be 25+)
           PATH_COUNT=$(jq '.paths | length' priv/static/openapi.json)
-          if [ "$PATH_COUNT" -lt 25 ]; then
-            echo "ERROR: Expected at least 25 API paths, found only $PATH_COUNT"
-            exit 1
-          fi
+          [ "$PATH_COUNT" -ge 25 ] || { echo "ERROR: Expected ≥25 paths, found $PATH_COUNT"; exit 1; }
 
-          echo "✅ OpenAPI spec contains $PATH_COUNT API paths"
+          # Success output
+          echo "✅ Spec valid: $FILE_SIZE bytes, $PATH_COUNT endpoints"
 
-          # Verify OpenAPI version
-          OPENAPI_VERSION=$(jq -r '.openapi' priv/static/openapi.json)
-          echo "✅ OpenAPI version: $OPENAPI_VERSION"
-
-          # Verify info section
-          API_TITLE=$(jq -r '.info.title' priv/static/openapi.json)
-          API_VERSION=$(jq -r '.info.version' priv/static/openapi.json)
-          echo "✅ API Title: $API_TITLE"
-          echo "✅ API Version: $API_VERSION"
-
-          echo ""
-          echo "=== OpenAPI Spec Validation Complete ==="
-
-      - name: Upload OpenAPI spec artifact
+      - name: Upload OpenAPI spec
         uses: actions/upload-artifact@v4
         with:
           name: openapi-spec
           path: priv/static/openapi.json
 
-  # Job 3: Code Quality Checks
   code-quality:
-    name: Code Quality (Format & Warnings)
+    name: Code Quality
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: false
 
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
+      - uses: ./.github/actions/setup-elixir
         with:
-          elixir-version: ${{ env.ELIXIR_VERSION }}
-          otp-version: ${{ env.OTP_VERSION }}
-
-      - name: Restore dependencies cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-quality-${{ hashFiles('**/mix.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-mix-quality-
-
-      - name: Install dependencies
-        run: mix deps.get
+          cache-key-prefix: quality
 
       - name: Check code formatting
-        run: |
-          echo "=== Checking Elixir code formatting ==="
-          mix format --check-formatted
-          echo "✅ Code formatting check passed"
+        run: mix format --check-formatted
 
       - name: Compile with warnings as errors
-        run: |
-          echo "=== Compiling with warnings as errors ==="
-          mix compile --warnings-as-errors
-          echo "✅ Compilation successful with no warnings"
+        run: mix compile --warnings-as-errors
 
-  # Job 4: Database Migration Verification
   migrations:
     name: Migration Integrity
     runs-on: ubuntu-latest
-
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_migration_test
-      SECRET_KEY_BASE: test-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789
 
     services:
       postgres:
@@ -274,79 +173,49 @@ jobs:
         ports:
           - 5432:5432
 
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_migration_test
+      SECRET_KEY_BASE: test-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: false
 
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
+      - uses: ./.github/actions/setup-elixir
         with:
-          elixir-version: ${{ env.ELIXIR_VERSION }}
-          otp-version: ${{ env.OTP_VERSION }}
+          cache-key-prefix: migrations
 
-      - name: Restore dependencies cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-migrations-${{ hashFiles('**/mix.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-mix-migrations-
-
-      - name: Install dependencies
-        run: mix deps.get
-
-      - name: Create database
-        run: mix ecto.create
-
-      - name: Run migrations (up)
+      - name: Test migration reversibility
         run: |
-          echo "=== Running all migrations UP ==="
+          mix ecto.create
+
+          echo "→ Migrating UP..."
           mix ecto.migrate
-          echo "✅ All migrations applied successfully"
 
-      - name: Get migration count
-        run: |
-          MIGRATION_COUNT=$(mix ecto.migrations | grep -c "up" || true)
-          echo "Total migrations applied: $MIGRATION_COUNT"
-
-      - name: Rollback all migrations
-        run: |
-          echo "=== Rolling back all migrations ==="
+          echo "→ Rolling back ALL..."
           mix ecto.rollback --all
-          echo "✅ All migrations rolled back successfully"
 
-      - name: Re-run migrations (verify idempotency)
-        run: |
-          echo "=== Re-running all migrations UP ==="
+          echo "→ Re-migrating UP (verify idempotency)..."
           mix ecto.migrate
-          echo "✅ Migrations are idempotent and reversible"
+
+          echo "✅ Migrations are reversible and idempotent"
 
       - name: Run seeds
-        run: |
-          echo "=== Running database seeds ==="
-          mix run priv/repo/seeds.exs
-          echo "✅ Database seeds executed successfully"
+        run: mix run priv/repo/seeds.exs
 
-  # Job 5: Asset Compilation
   assets:
     name: Asset Compilation
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: false
 
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
+      - uses: ./.github/actions/setup-elixir
         with:
-          elixir-version: ${{ env.ELIXIR_VERSION }}
-          otp-version: ${{ env.OTP_VERSION }}
+          cache-key-prefix: assets
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -355,52 +224,20 @@ jobs:
           cache: "npm"
           cache-dependency-path: assets/package-lock.json
 
-      - name: Restore dependencies cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-assets-${{ hashFiles('**/mix.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-mix-assets-
-
-      - name: Install Elixir dependencies
-        run: mix deps.get
-
       - name: Install Node.js dependencies
         run: |
           if [ -f "assets/package.json" ]; then
             cd assets && npm ci
-          else
-            echo "No assets/package.json found, skipping npm install"
           fi
-
-      - name: Setup assets
-        run: |
-          echo "=== Setting up asset build tools ==="
-          mix assets.setup
-          echo "✅ Asset tools installed"
 
       - name: Build assets
         run: |
-          echo "=== Building assets ==="
+          mix assets.setup
           mix assets.build
-          echo "✅ Assets compiled successfully"
 
       - name: Verify assets directory
-        run: |
-          echo "=== Verifying assets output ==="
-          if [ -d "priv/static/assets" ]; then
-            echo "✅ Assets directory created"
-            ls -lh priv/static/assets/ | head -20
-          else
-            echo "WARNING: Assets directory not found at priv/static/assets"
-            echo "Checking for alternative locations..."
-            find priv/static -type d -name "assets" || true
-          fi
+        run: test -d "priv/static/assets" || echo "⚠️  Assets directory not found"
 
-  # Summary job - only runs if all jobs succeed
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
@@ -410,15 +247,5 @@ jobs:
     steps:
       - name: All checks passed
         run: |
-          echo "============================================"
           echo "✅ All CI checks passed successfully!"
-          echo "============================================"
-          echo ""
-          echo "Completed jobs:"
-          echo "  ✅ Test Suite"
-          echo "  ✅ OpenAPI Spec Validation"
-          echo "  ✅ Code Quality"
-          echo "  ✅ Migration Integrity"
-          echo "  ✅ Asset Compilation"
-          echo ""
           echo "Ready to merge! 🚀"
