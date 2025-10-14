@@ -76,7 +76,11 @@ defmodule Rsolv.MixProject do
 
   defp aliases do
     [
-      setup: ["deps.get", "assets.setup", "assets.build", "ecto.setup", "rsolv.openapi"],
+      # Setup uses Mix.Tasks.Setup which delegates to dev.setup for enhanced flow
+      # This provides: .env checking, preflight, install, verify, summary
+      setup: "setup",
+      # Basic setup without validation (for CI or when checks aren't needed)
+      "setup.basic": ["deps.get", "assets.setup", "assets.build", "ecto.setup", "rsolv.openapi"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
