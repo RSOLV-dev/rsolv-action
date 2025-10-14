@@ -278,9 +278,14 @@ defmodule Rsolv.AST.TestIntegrator do
   # ============================================================================
 
   # Find outermost describe/context block in Ruby AST
-  # Ruby parser returns top-level "begin" node with children array
+  # Ruby parser returns:
+  # - "begin" node with children array when file has multiple statements (e.g., require + describe)
+  # - "block" node directly when file has only the describe block
   defp find_ruby_outermost_describe(%{"type" => "begin", "children" => children}) when is_list(children),
     do: Enum.find_value(children, &find_ruby_describe_in_node/1)
+
+  defp find_ruby_outermost_describe(%{"type" => "block"} = node),
+    do: find_ruby_describe_in_node(node)
 
   defp find_ruby_outermost_describe(_), do: nil
 
