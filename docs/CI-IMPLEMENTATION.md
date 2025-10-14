@@ -66,7 +66,7 @@ Summary job that only runs if all jobs pass. **Why:** Single status check for br
     cache-key-prefix: test  # or: openapi, quality, migrations, assets
 ```
 
-**Why not YAML anchors?** GitHub Actions doesn't support them.
+**Why not YAML anchors?** GitHub Actions supports YAML anchors and aliases in most contexts, but they cannot be used in some dynamic sections (e.g., matrix values). Composite actions were chosen for broader compatibility.
 
 ### PostgreSQL Service Containers
 Jobs that need a database use service containers instead of external DBs. **Why:**
