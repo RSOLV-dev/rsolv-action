@@ -225,11 +225,10 @@ jobs:
       - name: Build assets
         run: |
           mix assets.setup
-          mix assets.build || echo "⚠️  Asset build had warnings/errors (non-fatal)"
+          mix assets.build
 
-      # TODO: Make asset compilation strict after fixing bundling issues (vibe-kanban ticket)
       - name: Verify assets directory
-        run: test -d "priv/static/assets" || echo "⚠️  Assets directory not found"
+        run: test -d "priv/static/assets"
 
   ci-success:
     name: CI Success
