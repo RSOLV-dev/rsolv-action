@@ -113,7 +113,7 @@ describe('Phase 4 E2E - Ruby/RSpec with RailsGoat', () => {
     };
 
     try {
-      const scanOutput = execSync(`node ${path.join(ACTION_PATH, 'src/index.ts')}`, {
+      const scanOutput = execSync(`bun run ${path.join(ACTION_PATH, 'src/index.ts')}`, {
         encoding: 'utf8',
         cwd: testRepoPath,
         env: scanEnv,
@@ -148,7 +148,7 @@ describe('Phase 4 E2E - Ruby/RSpec with RailsGoat', () => {
 
     let validateOutput: string;
     try {
-      validateOutput = execSync(`node ${path.join(ACTION_PATH, 'src/index.ts')}`, {
+      validateOutput = execSync(`bun run ${path.join(ACTION_PATH, 'src/index.ts')}`, {
         encoding: 'utf8',
         cwd: testRepoPath,
         env: validateEnv,
@@ -210,13 +210,13 @@ describe('Phase 4 E2E - Ruby/RSpec with RailsGoat', () => {
     // Check 3: Verify test uses RSpec conventions
     console.log('\n📋 Checking RSpec conventions...');
 
-    // Should use describe blocks
-    expect(testContent).toMatch(/describe\s+['"]?[\w:]+['"]?\s+do/);
-    console.log('✅ Uses describe blocks');
+    // Should use describe or feature blocks (both are valid RSpec)
+    expect(testContent).toMatch(/(describe|feature)\s+['"]/);
+    console.log('✅ Uses describe/feature blocks');
 
-    // Should use it blocks
-    expect(testContent).toMatch(/it\s+['"].*['"]\s+do/);
-    console.log('✅ Uses it blocks');
+    // Should use it or scenario blocks (scenario is used with feature)
+    expect(testContent).toMatch(/(it|scenario)\s+['"].*['"]\s+do/);
+    console.log('✅ Uses it/scenario blocks');
 
     // Should use expect syntax (not should)
     expect(testContent).toMatch(/expect\([^)]+\)\.to/);
@@ -247,7 +247,7 @@ describe('Phase 4 E2E - Ruby/RSpec with RailsGoat', () => {
     console.log('\n🔗 Checking integration...');
 
     const lines = testContent.split('\n');
-    const firstDescribeLine = lines.findIndex(l => l.match(/^\s*describe\s+/));
+    const firstDescribeLine = lines.findIndex(l => l.match(/^\s*(describe|feature)\s+/));
 
     if (firstDescribeLine > 0) {
       console.log('✅ Test is integrated (not first line)');
@@ -355,7 +355,7 @@ describe('Phase 4 E2E - Ruby/RSpec with RailsGoat', () => {
     };
 
     try {
-      const mitigateOutput = execSync(`node ${path.join(ACTION_PATH, 'src/index.ts')}`, {
+      const mitigateOutput = execSync(`bun run ${path.join(ACTION_PATH, 'src/index.ts')}`, {
         encoding: 'utf8',
         cwd: testRepoPath,
         env: mitigateEnv,
