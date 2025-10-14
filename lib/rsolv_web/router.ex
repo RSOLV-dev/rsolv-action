@@ -204,6 +204,9 @@ defmodule RsolvWeb.Router do
     post "/test-integration/analyze", TestIntegrationController, :analyze
     post "/test-integration/naming", TestIntegrationController, :naming
     post "/test-integration/generate", TestIntegrationController, :generate
+
+    # Framework detection helper API
+    post "/framework/detect", FrameworkController, :detect
   end
   
   scope "/api", RsolvWeb do
