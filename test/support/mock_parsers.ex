@@ -285,7 +285,7 @@ defmodule Rsolv.AST.MockParsers do
               "type" => "MethodDeclaration",
               "name" => "hello",
               "modifiers" => ["public", "static"],
-              "type" => "String",
+              "returnType" => "String",
               "body" => %{
                 "type" => "BlockStmt",
                 "statements" => [

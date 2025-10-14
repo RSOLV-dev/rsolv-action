@@ -2,7 +2,6 @@ defmodule RsolvWeb.Admin.ApiKeyLive.Index do
   use RsolvWeb, :live_view
 
   alias Rsolv.Customers
-  alias Rsolv.Customers.ApiKey
 
   @impl true
   def mount(_params, _session, socket) do

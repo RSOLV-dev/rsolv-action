@@ -443,7 +443,7 @@ defmodule Rsolv.AST.TestIntegrator do
 
   # Detect indentation level at a given line
   # For Python test classes, use standard 4-space indentation for methods
-  defp detect_indentation(lines, line_number, "python", "test_class") do
+  defp detect_indentation(_lines, _line_number, "python", "test_class") do
     # Python PEP 8 standard: 4 spaces for class methods
     4
   end
