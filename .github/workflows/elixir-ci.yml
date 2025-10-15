@@ -159,6 +159,9 @@ jobs:
       - name: Compile and check for errors
         run: mix compile --warnings-as-errors
 
+      - name: Run Credo (includes migration safety checks)
+        run: mix credo --strict
+
   migrations:
     name: Migration Integrity
     runs-on: ubuntu-latest

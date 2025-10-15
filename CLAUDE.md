@@ -161,12 +161,26 @@ See [DEV_SETUP.md](DEV_SETUP.md) for comprehensive troubleshooting.
 
 **IMPORTANT**: Run migration safety checks before committing migrations to catch dangerous operations early.
 
-We use the `excellent_migrations` package to detect potentially unsafe migration operations that could cause production issues:
+We use the `excellent_migrations` package to detect potentially unsafe migration operations that could cause production issues. It's integrated with Credo for automatic checks during development.
+
+#### Running Migration Checks
 
 ```bash
-# Check all migrations for safety issues
+# Recommended: Run Credo (includes migration safety checks)
+mix credo
+
+# Check only migration files
+mix credo priv/repo/migrations/*.exs
+
+# Or run migration checks directly
 mix excellent_migrations.check_safety
 ```
+
+**Credo Integration:** Migration safety checks run automatically as part of `mix credo`. When running on migration files, you'll see warnings like:
+- `[W] ↗ Index not concurrently`
+- `[W] ↗ Column reference added`
+- `[W] ↗ Raw sql executed`
+- `[W] ↗ Column type changed`
 
 **What It Detects:**
 - ✅ Adding columns with defaults (causes table locks on large tables)
@@ -179,7 +193,7 @@ mix excellent_migrations.check_safety
 - ✅ Missing reversible down/0 functions
 
 **Best Practices:**
-1. Always run safety checks on new migrations before committing
+1. Run `mix credo` before committing (includes migration checks)
 2. For large tables, use `algorithm: :concurrently` when adding indexes
 3. Add columns without defaults, then backfill and add constraint separately
 4. Use `validate: false` when adding foreign keys, then validate separately
