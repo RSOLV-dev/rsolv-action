@@ -17,8 +17,10 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Create node_modules directory
-        run: mkdir -p node_modules
+      - name: Prepare node_modules directory
+        run: |
+          rm -f node_modules
+          mkdir -p node_modules
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -55,8 +57,10 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Create node_modules directory
-        run: mkdir -p node_modules
+      - name: Prepare node_modules directory
+        run: |
+          rm -f node_modules
+          mkdir -p node_modules
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
