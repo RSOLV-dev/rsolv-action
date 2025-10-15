@@ -1,8 +1,26 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { SecurityAwareAnalyzer } from '../../src/ai/security-analyzer.js';
 import { IssueContext, ActionConfig } from '../../src/types/index.js';
 
 describe('SecurityAwareAnalyzer Integration', () => {
+  const originalEnv = process.env.USE_LOCAL_PATTERNS;
+  let analyzer: SecurityAwareAnalyzer;
+
+  beforeAll(() => {
+    // Force the use of local patterns in tests to avoid API dependency
+    process.env.USE_LOCAL_PATTERNS = 'true';
+    // Create analyzer AFTER setting the environment variable
+    analyzer = new SecurityAwareAnalyzer();
+  });
+
+  afterAll(() => {
+    if (originalEnv) {
+      process.env.USE_LOCAL_PATTERNS = originalEnv;
+    } else {
+      delete process.env.USE_LOCAL_PATTERNS;
+    }
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -10,8 +28,6 @@ describe('SecurityAwareAnalyzer Integration', () => {
   afterEach(() => {
     vi.resetModules();
   });
-
-  const analyzer = new SecurityAwareAnalyzer();
 
   // Mock AI client for testing
   const mockAiClient = {
