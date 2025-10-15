@@ -101,7 +101,7 @@ The previous fix did not pass the generated security tests:
 
 ### Test Results (RFC-060: RED-only):
 - Vulnerable Code - RED tests: ${validation.vulnerableCommit.allPassed ? '✅ PASSED (unexpected!)' : '❌ FAILED (expected)'}
-- Fixed Code - RED tests: ${validation.fixedCommit.allPassed ? '✅ PASSED (expected)' : '❌ FAILED (problem!)'}
+- Fixed Code - RED tests: ${validation.fixedCommit.allPassed ? '✅ PASSED (expected)' : '❌ FAILED (problem!) - RED test failed'}
 
 ### Generated Test Code:
 \`\`\`${framework}
@@ -131,7 +131,7 @@ function explainTestFailure(validation: ValidationResult): string {
   if (!validation.fixedCommit.allPassed) {
     failures.push('- **The vulnerability still exists** - RED tests are still failing on your fixed code');
     // Show which specific RED tests failed if there are multiple
-    if (validation.fixedCommit.redTestsPassed.length > 1) {
+    if (validation.fixedCommit.redTestsPassed && validation.fixedCommit.redTestsPassed.length > 1) {
       const failedTests = validation.fixedCommit.redTestsPassed
         .map((passed, index) => !passed ? `RED test ${index + 1}` : null)
         .filter(Boolean);
@@ -397,37 +397,43 @@ export async function processIssueWithGit(
       logger.info(`[DEBUG] DISABLE_FIX_VALIDATION env var: ${process.env.DISABLE_FIX_VALIDATION}`);
       logger.info(`[DEBUG] config.fixValidation?.enabled: ${config.fixValidation?.enabled}`);
       logger.info(`[DEBUG] config.testGeneration?.validateFixes: ${config.testGeneration?.validateFixes}`);
-      
+
       const skipValidation = config.fixValidation?.enabled === false;
       logger.info(`[DEBUG] skipValidation calculated as: ${skipValidation}`);
-      
+
       if (skipValidation) {
         // Skip validation when explicitly disabled (e.g., DISABLE_FIX_VALIDATION=true)
         logger.info('📋 Skipping fix validation (DISABLE_FIX_VALIDATION=true)');
         logger.info('Fix will be applied without validation - proceeding to PR creation');
         break; // Exit the iteration loop and proceed to PR creation
-      } else if (config.testGeneration?.validateFixes === true || config.fixValidation?.enabled === true) {
-        
+      }
+
+      // Validation is enabled - proceed with validation
+      const shouldValidate = config.testGeneration?.validateFixes === true ||
+                            config.fixValidation?.enabled === true ||
+                            (config.fixValidation?.enabled !== false && testResults?.generatedTests?.success);
+
+      if (shouldValidate) {
         // Check if we should use static validation for this vulnerability type
         const { shouldUseStaticValidation } = await import('./static-xss-validator.js');
         const vulnerabilityType = analysisData.vulnerabilityType || 'unknown';
         const filePath = analysisData.filesToModify?.[0] || '';
-        
+
         let validationPassed = false;
         let validationResult: any = null;
-        
+
         if (shouldUseStaticValidation(vulnerabilityType, filePath)) {
           // Use static analysis for browser-based XSS in config files
           logger.info(`Validating fix with static analysis for ${vulnerabilityType} in ${filePath}...`);
           const { StaticXSSValidator } = await import('./static-xss-validator.js');
           const staticValidator = new StaticXSSValidator();
-          
+
           const staticValidation = staticValidator.validateXSSFix(
             filePath,
             beforeFixCommit,
             isGitSolutionResult(solution) ? solution.commitHash! : 'HEAD'
           );
-          
+
           if (staticValidation.isValidFix) {
             logger.info('✅ Fix validated successfully using static analysis');
             logger.info(`Safe patterns found: ${staticValidation.safePatterns.join(', ')}`);
@@ -451,23 +457,26 @@ export async function processIssueWithGit(
           // Use runtime test validation for other vulnerability types
           logger.info(`Validating fix with pre-generated executable tests...`);
           const validator = new GitBasedTestValidator();
-          
+
           validationResult = await validator.validateFixWithTests(
             beforeFixCommit,
             isGitSolutionResult(solution) ? solution.commitHash! : 'HEAD',
             testResults.generatedTests.testSuite
           );
-          
+
           if (validationResult.isValidFix) {
             logger.info('✅ Fix validated successfully with tests');
             validationPassed = true;
+          } else {
+            logger.warn('❌ Runtime test validation failed');
+            validationPassed = false;
           }
         } else {
           // No validation available, assume fix is good
           logger.warn('⚠️ No validation available, proceeding without validation');
           validationPassed = true;
         }
-        
+
         if (validationPassed) {
           break; // Exit loop, fix is good
         }
@@ -514,12 +523,12 @@ export async function processIssueWithGit(
             error: errorMessage
           };
         }
-        
+
         logger.info(`Fix iteration ${iteration}: Previous fix failed validation`);
-        
+
         // Reset to before the failed fix
         execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
-        
+
         // Enhance issue context with validation failure information
         if (validationResult) {
           // Check if this was a static validation failure
@@ -570,12 +579,12 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           // No validation result, use original issue
           currentIssue = issue;
         }
-        
+
         // Loop back to Step 3
         continue;
       }
-      
-      // No validation needed or validation passed
+
+      // No validation needed
       break;
     }
     
