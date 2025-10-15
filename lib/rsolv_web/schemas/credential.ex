@@ -65,7 +65,7 @@ defmodule RsolvWeb.Schemas.Credential do
             id: rsolv-creds
             run: |
               response=$(curl -X POST https://api.rsolv.dev/api/v1/credentials/exchange \\
-                -H "Authorization: Bearer $RSOLV_API_KEY" \\
+                -H "x-api-key: $RSOLV_API_KEY" \\
                 -H "Content-Type: application/json" \\
                 -d '{
                   "providers": ["anthropic", "openai"],
@@ -140,7 +140,7 @@ defmodule RsolvWeb.Schemas.Credential do
           },
           {
             headers: {
-              'Authorization': `Bearer ${apiKey}`,
+              'x-api-key': apiKey,
               'Content-Type': 'application/json',
               'X-GitHub-Workflow': process.env.GITHUB_WORKFLOW || '',
               'X-GitHub-Repository': process.env.GITHUB_REPOSITORY || '',
@@ -187,7 +187,7 @@ defmodule RsolvWeb.Schemas.Credential do
                 'ttl_minutes': ttl_minutes
             },
             headers={
-                'Authorization': f'Bearer {api_key}',
+                'x-api-key': api_key,
                 'Content-Type': 'application/json'
             }
         )
@@ -222,7 +222,7 @@ defmodule RsolvWeb.Schemas.Credential do
     ```bash
     # Exchange credentials
     curl -X POST https://api.rsolv.dev/api/v1/credentials/exchange \\
-      -H "Authorization: Bearer $RSOLV_API_KEY" \\
+      -H "x-api-key: $RSOLV_API_KEY" \\
       -H "Content-Type: application/json" \\
       -H "X-GitHub-Workflow: security-scan" \\
       -H "X-GitHub-Repository: myorg/myrepo" \\
@@ -257,14 +257,14 @@ defmodule RsolvWeb.Schemas.Credential do
     ```bash
     # First exchange
     response=$(curl -X POST https://api.rsolv.dev/api/v1/credentials/exchange \\
-      -H "Authorization: Bearer $API_KEY" \\
+      -H "x-api-key: $API_KEY" \\
       -d '{"providers": ["anthropic"], "ttl_minutes": 60}')
 
     cred_id=$(echo "$response" | jq -r '.credentials.anthropic.credential_id')
 
     # Later, refresh before expiration
     curl -X POST https://api.rsolv.dev/api/v1/credentials/refresh \\
-      -H "Authorization: Bearer $API_KEY" \\
+      -H "x-api-key: $API_KEY" \\
       -d "{\"credential_id\": \"$cred_id\"}"
     ```
     """

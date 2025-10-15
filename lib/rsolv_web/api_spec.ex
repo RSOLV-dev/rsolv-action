@@ -36,10 +36,10 @@ defmodule RsolvWeb.ApiSpec do
         ## Authentication
 
         Most endpoints require authentication via API key. Include your API key in the
-        `Authorization` header as a Bearer token:
+        `x-api-key` header:
 
         ```
-        Authorization: Bearer rsolv_your_api_key_here
+        x-api-key: rsolv_your_api_key_here
         ```
 
         Some endpoints (like pattern demo access and health checks) are available without authentication.
@@ -70,12 +70,15 @@ defmodule RsolvWeb.ApiSpec do
       components: %Components{
         securitySchemes: %{
           "ApiKeyAuth" => %SecurityScheme{
-            type: "http",
-            scheme: "bearer",
-            bearerFormat: "API Key",
+            type: "apiKey",
+            name: "x-api-key",
+            in: "header",
             description: """
             API key authentication. Obtain your API key from the RSOLV dashboard
-            and include it as a Bearer token in the Authorization header.
+            and include it in the x-api-key header.
+
+            Example:
+            x-api-key: rsolv_your_api_key_here
             """
           }
         }
