@@ -50,9 +50,9 @@ describe('Config Loading with maxIssues', () => {
 
   test('should load default config without maxIssues', async () => {
     const config = await loadConfig();
-    
+
     expect(config.maxIssues).toBeUndefined();
-    expect(config.apiKey).toBe('test-api-key');
+    expect(config.rsolvApiKey).toBe('test-api-key');
   });
 
   test('should load maxIssues from environment variable', async () => {

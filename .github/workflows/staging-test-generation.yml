@@ -202,7 +202,7 @@ jobs:
       - name: Create staging config
         run: |
           cat > .github/rsolv-staging.yml << EOF
-          apiKey: \${{ secrets.RSOLV_STAGING_API_KEY }}
+          rsolvApiKey: \${{ secrets.RSOLV_STAGING_API_KEY }}
           issueLabel: 'rsolv:staging-test'
           enableSecurityAnalysis: true
           fixValidation:

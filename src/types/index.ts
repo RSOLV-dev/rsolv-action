@@ -1,7 +1,9 @@
 // Core action types
 
 export interface ActionConfig {
-  apiKey: string;
+  // RSOLV Platform API Key (customer authentication)
+  rsolvApiKey: string;
+
   configPath: string;
   issueLabel: string;
   scanLabel?: string;  // Label for scan-detected issues (default: 'rsolv:detected')
@@ -11,7 +13,6 @@ export interface ActionConfig {
   containerConfig: ContainerConfig;
   securitySettings: SecuritySettings;
   enableSecurityAnalysis?: boolean;
-  rsolvApiKey?: string;
   maxIssues?: number; // Maximum number of issues to process in a single run
   fixValidation?: FixValidationConfig;
   customerTier?: string;
@@ -88,7 +89,10 @@ export interface IssueProcessingResult {
 
 export interface AiProviderConfig {
   provider: 'openai' | 'anthropic' | 'mistral' | 'ollama' | string;
-  apiKey?: string;
+
+  // AI Provider API Key (Anthropic, OpenAI, etc.)
+  providerApiKey?: string;
+
   model: string;
   baseUrl?: string;
   maxTokens?: number;

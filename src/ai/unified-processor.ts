@@ -153,7 +153,7 @@ async function processIssue(
       
       const aiConfig: AIConfig = {
         provider: config.aiProvider.provider as any,
-        apiKey: config.aiProvider.apiKey,
+        apiKey: config.aiProvider.providerApiKey,
         model: config.aiProvider.model,
         temperature: config.aiProvider.temperature,
         maxTokens: config.aiProvider.maxTokens,
@@ -203,7 +203,7 @@ async function processIssue(
       // Use enhanced context gathering (existing code)
       const aiConfig: AIConfig = {
         provider: config.aiProvider.provider as any,
-        apiKey: config.aiProvider.apiKey,
+        apiKey: config.aiProvider.providerApiKey,
         model: config.aiProvider.model,
         temperature: config.aiProvider.temperature,
         maxTokens: config.aiProvider.maxTokens,

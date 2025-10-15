@@ -260,7 +260,7 @@ export async function processIssueWithGit(
       // Pass AI config for test generation
       const aiConfig: AIConfig = {
         provider: 'anthropic',
-        apiKey: config.aiProvider.apiKey,
+        apiKey: config.aiProvider.providerApiKey,
         model: config.aiProvider.model,
         temperature: 0.2,
         maxTokens: config.aiProvider.maxTokens,
@@ -309,7 +309,7 @@ export async function processIssueWithGit(
     // Step 3: Set up Claude Code adapter
     const aiConfig: AIConfig = {
       provider: 'anthropic',
-      apiKey: config.aiProvider.apiKey,
+      apiKey: config.aiProvider.providerApiKey,
       model: config.aiProvider.model,
       temperature: 0.1, // Low temperature for consistent fixes
       maxTokens: config.aiProvider.maxTokens,

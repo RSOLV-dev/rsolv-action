@@ -15,7 +15,11 @@ describe('Three-Phase Workflow Integration', () => {
   let testRepoPath: string;
   let mockIssue: IssueContext;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Reset mock git state for fresh test
+    const { resetMockGitState } = await import('../../../test-fixtures/mock-claude-code-sdk.js');
+    resetMockGitState();
+
     // Create a temporary test repository
     testRepoPath = '/tmp/integration-test-' + Date.now();
     fs.mkdirSync(testRepoPath, { recursive: true });
