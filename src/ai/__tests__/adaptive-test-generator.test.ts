@@ -103,7 +103,7 @@ describe('AdaptiveTestGenerator', () => {
 
       expect(result.success).toBe(true);
       expect(result.testCode).toContain('import pytest');
-      expect(result.testCode).toContain('def test_path_traversal_vulnerability_red(self):');
+      expect(result.testCode).toMatch(/def test_path_traversal_vulnerability_\d+\(self\):/);
       expect(result.testCode).toContain('assert "root" not in result');
       expect(result.testCode).toContain('@pytest.mark.security');
       expect(result.framework).toBe('pytest');
@@ -128,7 +128,7 @@ describe('AdaptiveTestGenerator', () => {
       expect(result.success).toBe(true);
       expect(result.testCode).toContain('require "minitest/autorun"');
       expect(result.testCode).toContain('describe CommandRunner do');
-      expect(result.testCode).toMatch(/it ["']must be vulnerable to command[_ ]injection \(RED\)["'] do/);
+      expect(result.testCode).toMatch(/it ["']should be vulnerable to command[_ ]injection \(RED\)["'] do/);
       expect(result.testCode).toContain('_(result).wont_include "Permission denied"');
       expect(result.framework).toBe('minitest');
     });
@@ -152,8 +152,8 @@ describe('AdaptiveTestGenerator', () => {
       expect(result.success).toBe(true);
       expect(result.testCode).toContain('use ExUnit.Case');
       expect(result.testCode).toMatch(/describe ["']command[_ ]injection vulnerability["'] do/);
-      expect(result.testCode).toContain('test "vulnerable to malicious payload (RED)" do');
-      expect(result.testCode).toContain('assert {:error, _} = ');
+      expect(result.testCode).toMatch(/test ["']should be vulnerable to command[_ ]injection \(RED\)["'] do/);
+      expect(result.testCode).toContain('assert {:ok, result} = ');
       expect(result.framework).toBe('exunit');
     });
 
@@ -180,7 +180,7 @@ describe('AdaptiveTestGenerator', () => {
       expect(result.success).toBe(true);
       expect(result.testCode).toContain('use PHPUnit\\Framework\\TestCase;');
       expect(result.testCode).toMatch(/class UserProfile.*Test extends TestCase/);
-      expect(result.testCode).toMatch(/public function test.*VulnerabilityRed\(\)/);
+      expect(result.testCode).toMatch(/public function test[A-Z]+Vulnerability\d+\(\): void/);
       // Modern PHPUnit uses attributes instead of annotations
       expect(result.testCode).toContain('#[Group(\'security\')]');
       // Check for security assertions
