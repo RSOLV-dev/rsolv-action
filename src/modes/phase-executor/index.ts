@@ -1622,10 +1622,11 @@ export class PhaseExecutor {
       let iteration = 0;
       const maxIterations = this.maxIterations || this.getMaxIterations(issue);
       let currentIssue = issue;
-      
+      let validationSucceeded = false;
+
       while (iteration < maxIterations) {
         logger.info(`[MITIGATE] Fix attempt ${iteration + 1}/${maxIterations}`);
-        
+
         logger.info('=== MITIGATION ADAPTER CREATION DEBUG ===');
         logger.info(`useVendedCredentials in aiConfig: ${aiConfig.useVendedCredentials}`);
         logger.info(`this.config.aiProvider.useVendedCredentials: ${this.config.aiProvider.useVendedCredentials}`);
@@ -1633,23 +1634,23 @@ export class PhaseExecutor {
         logger.info('==========================================');
 
         const adapter = new GitBasedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
-        
+
         // Convert AnalysisData to IssueAnalysis
         const issueAnalysis: IssueAnalysis = {
           summary: `${analysisData.issueType} issue analysis`,
-          complexity: analysisData.estimatedComplexity === 'simple' ? 'low' : 
+          complexity: analysisData.estimatedComplexity === 'simple' ? 'low' :
                      analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
           estimatedTime: 60,
           potentialFixes: [analysisData.suggestedApproach || ''],
           recommendedApproach: analysisData.suggestedApproach || '',
           relatedFiles: analysisData.filesToModify
         };
-        
+
         const validationContext = iteration > 0 ? {
           current: iteration + 1,
           max: maxIterations
         } : undefined;
-        
+
         solution = await adapter.generateSolutionWithGit(
           currentIssue,
           issueAnalysis,
@@ -1658,7 +1659,7 @@ export class PhaseExecutor {
           undefined,
           validationContext
         );
-        
+
         if (!solution.success) {
           // Check if this is a test mode validation failure that we should proceed with
           const isTestMode = process.env.RSOLV_TESTING_MODE === 'true';
@@ -1674,39 +1675,41 @@ export class PhaseExecutor {
             };
           }
         }
-        
+
         // Validate fix if tests were generated
         logger.info(`[MITIGATE DEBUG] DISABLE_FIX_VALIDATION env: ${process.env.DISABLE_FIX_VALIDATION}`);
         logger.info(`[MITIGATE DEBUG] config.fixValidation?.enabled: ${this.config.fixValidation?.enabled}`);
         logger.info(`[MITIGATE DEBUG] config.testGeneration?.validateFixes: ${this.config.testGeneration?.validateFixes}`);
-        
+
         const skipValidation = this.config.fixValidation?.enabled === false;
         logger.info(`[MITIGATE DEBUG] skipValidation calculated as: ${skipValidation}`);
-        
+
         if (skipValidation) {
           logger.info(`[MITIGATE] 📋 Skipping fix validation (DISABLE_FIX_VALIDATION=true)`);
           logger.info(`[MITIGATE] Fix will be applied without validation - proceeding to PR creation`);
           break; // Exit the iteration loop and proceed to PR creation
         } else if ((this.config.testGeneration?.validateFixes === true || this.config.fixValidation?.enabled === true) &&
             generatedTests?.success && generatedTests.testSuite) {
-          
+
           logger.info(`[MITIGATE] Validating fix with tests...`);
-          
+
           const validator = this.gitBasedValidator || new GitBasedTestValidator();
           const validation = await validator.validateFixWithTests(
             beforeFixCommit,
             solution.commitHash!,
             generatedTests.testSuite
           );
-          
+
           if (validation.isValidFix) {
             logger.info('[MITIGATE] ✅ Fix validated successfully');
+            validationSucceeded = true;
             break;
           }
-          
+
           // Fix failed, prepare for retry
-          iteration++;
-          if (iteration >= maxIterations) {
+          logger.info(`[MITIGATE] ❌ Fix validation failed, will retry (${iteration + 1}/${maxIterations} attempts so far)`);
+
+          if (iteration + 1 >= maxIterations) {
             const isTestMode = process.env.RSOLV_TESTING_MODE === 'true';
 
             if (isTestMode) {
@@ -1727,22 +1730,24 @@ export class PhaseExecutor {
               error: this.explainTestFailureFromResult(validation)
             };
           }
-          
+
           // Reset and enhance issue for retry
           execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
           currentIssue = this.createEnhancedIssueWithTestFailure(
             issue,
             validation,
             validationData,
-            iteration,
+            iteration + 1,
             maxIterations
           );
-          
+
+          iteration++;
           continue;
+        } else {
+          // No validation needed
+          logger.info(`[MITIGATE] No validation configured, proceeding to PR creation`);
+          break;
         }
-        
-        // No validation needed or passed
-        break;
       }
       
       // Create PR from the commit
