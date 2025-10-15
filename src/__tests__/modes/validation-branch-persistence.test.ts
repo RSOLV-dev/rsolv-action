@@ -18,6 +18,9 @@ import * as path from 'path';
 import { execSync } from 'child_process';
 import { initTestRepo } from '../helpers/git-test-utils.js';
 
+// Unmock child_process for this test - we need real git operations
+vi.unmock('child_process');
+
 // Mock PhaseDataClient for testing
 class MockPhaseDataClient extends PhaseDataClient {
   private storage = new Map<string, PhaseData>();
@@ -114,17 +117,17 @@ describe('Validation Branch Persistence', () => {
 
   describe('Phase 1 RED: Define expected behavior', () => {
     it('should create a feature branch during validation', async () => {
-      // This test will fail until we implement branch creation
       const branchName = `rsolv/validate/issue-${mockIssue.number}`;
 
-      // Run validation (mocked for now)
+      // Run validation
       await validationMode.createValidationBranch(mockIssue);
 
       // Check that branch was created
       const branches = execSync('git branch --list', { cwd: testRepoPath })
         .toString()
         .split('\n')
-        .map(b => b.trim().replace('* ', ''));
+        .map(b => b.trim().replace('* ', '').replace(/^\*\s*/, ''))
+        .filter(b => b.length > 0);
 
       expect(branches).toContain(branchName);
     });
