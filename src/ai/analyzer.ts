@@ -66,7 +66,26 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
   try {
     // Debug: Log the actual AI response
     logger.info(`AI analysis response for issue #${issue.number}:`, response.substring(0, 500));
-    
+
+    // Try to parse as JSON first (for mocked responses and structured AI outputs)
+    try {
+      const jsonData = JSON.parse(response);
+      if (jsonData && typeof jsonData === 'object') {
+        return {
+          issueType: jsonData.issueType || determineIssueType(issue),
+          filesToModify: Array.isArray(jsonData.filesToModify) ? jsonData.filesToModify : [],
+          estimatedComplexity: jsonData.estimatedComplexity || 'medium',
+          requiredContext: jsonData.requiredContext || [],
+          suggestedApproach: jsonData.suggestedApproach || '',
+          confidenceScore: jsonData.confidenceScore || 0.7,
+          canBeFixed: jsonData.canBeFixed !== undefined ? jsonData.canBeFixed : true
+        };
+      }
+    } catch (jsonError) {
+      // Not JSON, continue with text parsing
+      logger.debug('Response is not JSON, using text parsing');
+    }
+
     // Simple heuristic for determining issue type from title/body
     const issueType = determineIssueType(issue);
     
