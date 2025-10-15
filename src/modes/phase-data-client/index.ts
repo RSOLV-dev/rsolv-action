@@ -129,12 +129,12 @@ export class PhaseDataClient {
       phaseSpecificData = data.scan;
     } else if (phase === 'validate' || phase === 'mitigate') {
       // For validation/mitigation, extract the data for the specific issue
-      const phaseDataKey = phase === 'validate' ? 'validation' : 'mitigation';
-      const phaseIssueData = (data as any)[phaseDataKey];
+      // Use the client-side key names (validate/mitigate, not validation/mitigation)
+      const phaseIssueData = (data as any)[phase];
 
       if (phaseIssueData && metadata.issueNumber) {
-        // Extract just the data for this specific issue using the correct key format
-        const issueKey = `issue-${metadata.issueNumber}`;
+        // Extract just the data for this specific issue using the issue number as key
+        const issueKey = String(metadata.issueNumber);
         phaseSpecificData = phaseIssueData[issueKey];
 
         // If no data found for this specific issue, throw validation error
