@@ -4,35 +4,35 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
   import Phoenix.LiveViewTest
   import Rsolv.CustomersFixtures
   import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
-  
+
   setup do
     staff = staff_customer_fixture()
     %{staff: staff}
   end
-  
+
   describe "Index" do
     test "mounts with customers", %{conn: conn, staff: staff} do
       # Create some test customers
       customer1 = customer_fixture(email: "test1@example.com", name: "Test Customer 1")
       customer2 = customer_fixture(email: "test2@example.com", name: "Test Customer 2")
-      
+
       # Log in as staff
       conn = log_in_customer(conn, staff)
-      
+
       # Navigate to the customer list LiveView
       {:ok, view, html} = live(conn, "/admin/customers")
-      
+
       # Check that both customers appear in the table
       assert html =~ "Test Customer 1"
       assert html =~ "test1@example.com"
       assert html =~ "Test Customer 2"
       assert html =~ "test2@example.com"
-      
+
       # Check that pagination info is present
       assert html =~ "Showing"
       assert html =~ "of"
     end
-    
+
     test "paginates customers", %{conn: conn, staff: staff} do
       # Create 25 customers (more than one page)
       for i <- 1..25 do
@@ -41,111 +41,114 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
           name: "Customer #{i}"
         )
       end
-      
+
       conn = log_in_customer(conn, staff)
       {:ok, view, html} = live(conn, "/admin/customers")
-      
+
       # Default sort is inserted_at DESC, so newest customers appear first
       # We expect at least customers 25 down to 7 on the first page
       assert html =~ "Customer 25"
       assert html =~ "Customer 7"
-      
+
       # Should show pagination info
       assert html =~ "Showing"
-      
+
       # Navigate to page 2
       view
       |> element("a", "2")
       |> render_click()
-      
+
       html = render(view)
-      
+
       # Should show remaining customers including 1
       assert html =~ "Customer 1"
       refute html =~ "Customer 25"
     end
-    
-    test "filters by status", %{conn: conn, staff: staff} do
-      active_customer = customer_fixture(
-        email: unique_email("active"),
-        name: "Active Customer",
-        active: true
-      )
 
-      inactive_customer = customer_fixture(
-        email: unique_email("inactive"),
-        name: "Inactive Customer",
-        active: false
-      )
-      
+    test "filters by status", %{conn: conn, staff: staff} do
+      active_customer =
+        customer_fixture(
+          email: unique_email("active"),
+          name: "Active Customer",
+          active: true
+        )
+
+      inactive_customer =
+        customer_fixture(
+          email: unique_email("inactive"),
+          name: "Inactive Customer",
+          active: false
+        )
+
       conn = log_in_customer(conn, staff)
       {:ok, view, html} = live(conn, "/admin/customers")
-      
+
       # Initially shows all customers
       assert html =~ "Active Customer"
       assert html =~ "Inactive Customer"
-      
+
       # Filter by active status
       view
       |> form("#filter-form", %{status: "active"})
       |> render_change()
-      
+
       html = render(view)
       assert html =~ "Active Customer"
       refute html =~ "Inactive Customer"
-      
+
       # Filter by inactive status
       view
       |> form("#filter-form", %{status: "inactive"})
       |> render_change()
-      
+
       html = render(view)
       refute html =~ "Active Customer"
       assert html =~ "Inactive Customer"
     end
-    
+
     test "sorts by column", %{conn: conn, staff: staff} do
       customer_a = customer_fixture(email: "alpha@example.com", name: "Alpha")
       customer_z = customer_fixture(email: "zulu@example.com", name: "Zulu")
-      
+
       conn = log_in_customer(conn, staff)
       {:ok, view, html} = live(conn, "/admin/customers")
-      
+
       # Default sort should be by inserted_at desc (newest first)
       # Since customer_z was created after customer_a, it should appear first
       assert html =~ "Zulu"
       assert html =~ "Alpha"
-      
+
       # Click name column to sort by name ascending
       view
       |> element("th[phx-click=\"sort\"][phx-value-field=\"name\"]")
       |> render_click()
-      
+
       html = render(view)
       # When sorted by name asc, Alpha should come before Zulu
       assert html =~ ~r/Alpha.*Zulu/s
-      
+
       # Click again to sort by name descending
       view
       |> element("th[phx-click=\"sort\"][phx-value-field=\"name\"]")
       |> render_click()
-      
+
       html = render(view)
       # When sorted by name desc, Zulu should come before Alpha
       assert html =~ ~r/Zulu.*Alpha/s
     end
-    
+
     test "requires staff authentication", %{conn: conn} do
       regular_customer = customer_fixture(is_staff: false)
 
       # Try to access without login
       assert {:error, {:redirect, %{to: "/admin/login"}}} =
-        live(conn, "/admin/customers")
+               live(conn, "/admin/customers")
 
       # Try to access as non-staff customer
       conn = log_in_customer(conn, regular_customer)
+
       assert {:error, {:redirect, %{to: "/"}}} =
-        live(conn, "/admin/customers")
+               live(conn, "/admin/customers")
     end
 
     test "shows edit button for each customer", %{conn: conn, staff: staff} do
@@ -156,7 +159,10 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Check for edit button in actions column
       assert html =~ "Edit"
-      assert view |> element("a[phx-click=\"edit\"][phx-value-id=\"#{customer.id}\"]") |> has_element?()
+
+      assert view
+             |> element("a[phx-click=\"edit\"][phx-value-id=\"#{customer.id}\"]")
+             |> has_element?()
     end
 
     test "opens edit modal when edit button clicked", %{conn: conn, staff: staff} do
@@ -191,10 +197,12 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Submit updated data (omit active to uncheck checkbox)
       view
-      |> form("#customer-form", customer: %{
-        name: "New Name",
-        email: "new@example.com"
-      })
+      |> form("#customer-form",
+        customer: %{
+          name: "New Name",
+          email: "new@example.com"
+        }
+      )
       |> render_submit()
 
       html = render(view)
@@ -242,14 +250,16 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Submit new customer data
       view
-      |> form("#customer-form", customer: %{
-        name: "Brand New Customer",
-        email: "brand.new@example.com",
-        password: "SecurePassword123!",
-        active: "on",
-        subscription_plan: "pro",
-        monthly_limit: 5000
-      })
+      |> form("#customer-form",
+        customer: %{
+          name: "Brand New Customer",
+          email: "brand.new@example.com",
+          password: "SecurePassword123!",
+          active: "on",
+          subscription_plan: "pro",
+          monthly_limit: 5000
+        }
+      )
       |> render_submit()
 
       html = render(view)
@@ -268,7 +278,10 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
 
       # Check for delete button in actions column
       assert html =~ "Delete"
-      assert view |> element("button[phx-click=\"delete\"][phx-value-id=\"#{customer.id}\"]") |> has_element?()
+
+      assert view
+             |> element("button[phx-click=\"delete\"][phx-value-id=\"#{customer.id}\"]")
+             |> has_element?()
     end
 
     test "shows confirmation dialog when delete clicked", %{conn: conn, staff: staff} do
@@ -323,8 +336,13 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
       {:ok, view, html} = live(conn, "/admin/customers")
 
       # Check that checkboxes exist for each customer
-      assert view |> element("input[type=checkbox][phx-value-id=\"#{customer1.id}\"]") |> has_element?()
-      assert view |> element("input[type=checkbox][phx-value-id=\"#{customer2.id}\"]") |> has_element?()
+      assert view
+             |> element("input[type=checkbox][phx-value-id=\"#{customer1.id}\"]")
+             |> has_element?()
+
+      assert view
+             |> element("input[type=checkbox][phx-value-id=\"#{customer2.id}\"]")
+             |> has_element?()
     end
 
     test "toggles individual customer selection", %{conn: conn, staff: staff} do
@@ -367,8 +385,11 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
       html = render(view)
 
       # Both customers should be selected
-      assert html =~ ~s(input type="checkbox" phx-click="toggle-select" phx-value-id="#{customer1.id}" checked)
-      assert html =~ ~s(input type="checkbox" phx-click="toggle-select" phx-value-id="#{customer2.id}" checked)
+      assert html =~
+               ~s(input type="checkbox" phx-click="toggle-select" phx-value-id="#{customer1.id}" checked)
+
+      assert html =~
+               ~s(input type="checkbox" phx-click="toggle-select" phx-value-id="#{customer2.id}" checked)
     end
 
     test "shows bulk actions dropdown when customers are selected", %{conn: conn, staff: staff} do
@@ -396,5 +417,4 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
       assert html =~ "Delete"
     end
   end
-
 end

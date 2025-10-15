@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
   @moduledoc """
   Cross-Site Scripting (XSS) via innerHTML in JavaScript
-  
+
   Detects dangerous patterns like:
     element.innerHTML = userInput
     document.getElementById('div').innerHTML = untrustedData
@@ -15,13 +15,13 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
   innerHTML is one of the most common DOM XSS sinks. It parses and executes
   any HTML/JavaScript in the assigned string, making it extremely dangerous
   when used with untrusted data.
-  
+
   ## Vulnerability Details
-  
+
   DOM-based XSS occurs when attacker-controlled data reaches dangerous sinks
   like innerHTML without proper sanitization. Unlike reflected or stored XSS,
   DOM XSS happens entirely in the browser, often bypassing server-side defenses.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable code
@@ -31,13 +31,13 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
   // Executes: alert(document.cookie)
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Structured vulnerability metadata for XSS via innerHTML.
-  
+
   This metadata documents the specific risks of using innerHTML with
   untrusted data, including various attack vectors and bypass techniques.
   """
@@ -52,7 +52,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
       happens entirely client-side, potentially bypassing server-side XSS filters and 
       Web Application Firewalls (WAFs).
       """,
-      
       references: [
         %{
           type: :cwe,
@@ -63,7 +62,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
         %{
           type: :owasp,
           id: "DOM_XSS",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html",
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html",
           title: "OWASP DOM based XSS Prevention Cheat Sheet"
         },
         %{
@@ -75,17 +75,18 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
         %{
           type: :mdn,
           id: "innerHTML_security",
-          url: "https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML#security_considerations",
+          url:
+            "https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML#security_considerations",
           title: "MDN - innerHTML Security Considerations"
         },
         %{
           type: :portswigger,
           id: "dom_xss_lab",
-          url: "https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-innerhtml-sink",
+          url:
+            "https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-innerhtml-sink",
           title: "PortSwigger - DOM XSS in innerHTML sink"
         }
       ],
-      
       attack_vectors: [
         "Script tags: <script>alert(1)</script>",
         "Event handlers: <img src=x onerror=alert(1)>",
@@ -96,7 +97,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
         "Style injection: <style>@keyframes x{}</style><div style='animation-name:x' onanimationstart=alert(1)>",
         "Meta refresh: <meta http-equiv='refresh' content='0;javascript:alert(1)'>"
       ],
-      
       real_world_impact: [
         "Session hijacking through cookie theft",
         "Keylogging and form data interception",
@@ -107,7 +107,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
         "CSRF token theft enabling further attacks",
         "Local storage and IndexedDB data exfiltration"
       ],
-      
       cve_examples: [
         %{
           id: "CVE-2020-11022",
@@ -131,7 +130,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
           note: "Modern frameworks still vulnerable to innerHTML XSS"
         }
       ],
-      
       detection_notes: """
       This pattern detects assignments to innerHTML property with potentially
       untrusted data. Key indicators:
@@ -139,11 +137,10 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
       2. Common variable names suggesting user input (userInput, data, etc.)
       3. Request parameters (req.query, req.params)
       4. String concatenation or template literals with innerHTML
-      
+
       The pattern must avoid matching legitimate sanitized usage like
       DOMPurify.sanitize() or the new setHTML() API.
       """,
-      
       safe_alternatives: [
         "Use element.textContent for plain text (automatically escapes HTML)",
         "Use element.innerText for styled text (also escapes HTML)",
@@ -153,7 +150,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
         "Use a templating library with automatic escaping (React, Vue, Angular)",
         "Implement Content Security Policy (CSP) to mitigate XSS impact"
       ],
-      
       additional_context: %{
         common_mistakes: [
           "Believing innerHTML is safe for 'trusted' user input",
@@ -162,14 +158,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
           "Not considering DOM clobbering attacks",
           "Assuming server-side XSS protection prevents DOM XSS"
         ],
-        
         browser_differences: [
           "Different browsers may execute different XSS payloads",
           "IE/Edge had different innerHTML parsing than Chrome/Firefox",
           "Some browsers block <script> in innerHTML but not event handlers",
           "Mobile browsers may have different XSS filters"
         ],
-        
         modern_defenses: [
           "Content Security Policy (CSP) with strict directives",
           "Trusted Types API for sink validation",
@@ -180,12 +174,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
       }
     }
   end
-  
+
   @doc """
   Returns the pattern definition for XSS via innerHTML.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssInnerhtml.pattern()
       iex> pattern.id
       "js-xss-innerhtml"
@@ -206,7 +200,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
       regex: ~r/^(?!.*\/\/).*\.innerHTML\s*=/m,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
-      recommendation: "Use textContent or innerText for plain text. For HTML content, use DOMPurify.sanitize() or the Sanitizer API.",
+      recommendation:
+        "Use textContent or innerText for plain text. For HTML content, use DOMPurify.sanitize() or the Sanitizer API.",
       test_cases: %{
         vulnerable: [
           ~S|element.innerHTML = userInput|,
@@ -225,37 +220,39 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Handles JavaScript/TypeScript files and HTML files with embedded JavaScript.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx)$/i) ->
+        true
+
       # HTML files with script tags
       String.match?(file_path, ~r/\.html?$/i) && content != nil ->
         String.contains?(content, "<script")
-        
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XSS vulnerabilities and:
   - innerHTML assignments with sanitized content (DOMPurify, etc.)
   - Static HTML content without user input
   - Escaped HTML content
   - Framework-managed content (React, Vue, etc.)
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -294,10 +291,14 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/fixtures/],
-        exclude_if_sanitized: true,          # DOMPurify, sanitize-html, etc.
-        exclude_if_static_content: true,     # No dynamic content
-        exclude_if_escaped: true,            # Uses escape functions
-        safe_if_uses_text_content: true      # textContent is safe
+        # DOMPurify, sanitize-html, etc.
+        exclude_if_sanitized: true,
+        # No dynamic content
+        exclude_if_static_content: true,
+        # Uses escape functions
+        exclude_if_escaped: true,
+        # textContent is safe
+        safe_if_uses_text_content: true
       },
       confidence_rules: %{
         base: 0.4,
@@ -308,10 +309,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
           "uses_sanitize_function" => -0.8,
           "uses_escape_html" => -0.7,
           "static_html_only" => -1.0,
-          "in_framework_template" => -0.6    # React/Vue handle this
+          # React/Vue handle this
+          "in_framework_template" => -0.6
         }
       },
-      min_confidence: 0.6  # Lowered from 0.8 - innerHTML with user input is high risk
+      # Lowered from 0.8 - innerHTML with user input is high risk
+      min_confidence: 0.6
     }
   end
 end

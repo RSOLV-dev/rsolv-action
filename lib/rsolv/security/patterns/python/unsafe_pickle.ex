@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
   @moduledoc """
   Insecure Deserialization via Python pickle Module
-  
+
   Detects dangerous patterns like:
     data = pickle.loads(user_data)
     with open('data.pkl', 'rb') as f: obj = pickle.load(f)
@@ -16,30 +16,30 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
   When pickle deserializes an object, it can invoke any callable Python
   object, allowing attackers to execute arbitrary commands by crafting
   malicious pickle data. This is not a bug - it's by design.
-  
+
   ## Vulnerability Details
-  
+
   Pickle is Python's native serialization format that can serialize almost
   any Python object, including code objects. During deserialization, pickle
   can be instructed to import modules, call functions, and execute code.
   This makes it extremely dangerous when used with untrusted data.
-  
+
   ### Attack Example
   ```python
   # Attacker creates malicious pickle data
   import pickle
   import os
-  
+
   class RCE:
       def __reduce__(self):
           return (os.system, ('rm -rf /',))
-  
+
   malicious_data = pickle.dumps(RCE())
-  
+
   # Victim application deserializes it
   pickle.loads(malicious_data)  # Executes 'rm -rf /'
   ```
-  
+
   ### Why Pickle is Dangerous
   The pickle protocol includes opcodes that can:
   - Import any module
@@ -48,18 +48,18 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
   - Execute arbitrary Python expressions
   This functionality cannot be disabled or sandboxed safely.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the unsafe pickle detection pattern.
-  
+
   This pattern detects usage of Python's pickle module for deserialization,
   which can lead to remote code execution vulnerabilities.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafePickle.pattern()
       iex> pattern.id
       "python-unsafe-pickle"
@@ -116,10 +116,10 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for Python pickle deserialization.
-  
+
   This metadata documents the severe security implications of using pickle
   with untrusted data and provides guidance for secure alternatives.
   """
@@ -130,26 +130,26 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
       represent one of the most critical security issues in Python applications.
       Unlike other serialization formats, pickle is not just a data format - it's
       a stack-based virtual machine that can execute arbitrary Python code.
-      
+
       When pickle deserializes data, it can:
       - Import any Python module
       - Create instances of any class
       - Call any callable object
       - Execute arbitrary Python expressions
       - Access and modify global state
-      
+
       This is not a flaw or bug in pickle - it's the intended design. The pickle
       documentation explicitly warns: "The pickle module is not secure. Only
       unpickle data you trust." However, many developers don't fully understand
       the implications of this warning.
-      
+
       The vulnerability is particularly dangerous because:
       1. Exploitation requires only the ability to provide pickle data
       2. No additional vulnerabilities are needed - pickle itself is the vulnerability
       3. Attacks can be crafted to work across Python versions
       4. The payload executes with the privileges of the Python process
       5. It's often used in web applications, APIs, and distributed systems
-      
+
       Common attack vectors include web applications that pickle user sessions,
       APIs that accept pickled data, distributed computing frameworks like Celery
       when configured to use pickle, and any system that stores pickled data
@@ -243,7 +243,7 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
       2. cPickle usage (Python 2 compatibility)
       3. pickle.Unpickler class instantiation
       4. Both immediate calls and stored references
-      
+
       The pattern intentionally catches all pickle usage because there's no
       safe way to use pickle with untrusted data. Even with restricted
       unpicklers or custom find_class methods, bypasses have been found.
@@ -288,15 +288,15 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities
   and safe usage patterns (though pickle is rarely truly safe).
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafePickle.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -319,12 +319,14 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
         node_type: "Call",
         function_names: [
           "pickle.loads",
-          "pickle.load", 
+          "pickle.load",
           "cPickle.loads",
           "cPickle.load",
           "pickle.Unpickler",
-          "loads",  # When imported directly
-          "load"    # When imported directly
+          # When imported directly
+          "loads",
+          # When imported directly
+          "load"
         ],
         import_check: %{
           modules: ["pickle", "cPickle", "_pickle"],
@@ -351,18 +353,29 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
         check_data_source: true
       },
       confidence_rules: %{
-        base: 0.9,  # Start high - pickle is almost always dangerous
+        # Start high - pickle is almost always dangerous
+        base: 0.9,
         adjustments: %{
-          "user_controlled_input" => 0.1,    # Definite vulnerability
-          "network_data" => 0.1,             # Remote exploitation
-          "file_input" => 0.05,              # File-based attacks
-          "base64_decode" => 0.05,           # Common attack pattern
-          "request_data" => 0.1,             # Web exploitation
-          "hardcoded_data" => -0.3,          # Less likely exploitable
-          "test_code" => -0.8,               # Test files
-          "example_code" => -0.6,            # Documentation
-          "trusted_source_comment" => -0.4,  # Marked as trusted
-          "generated_file" => -0.5           # Auto-generated code
+          # Definite vulnerability
+          "user_controlled_input" => 0.1,
+          # Remote exploitation
+          "network_data" => 0.1,
+          # File-based attacks
+          "file_input" => 0.05,
+          # Common attack pattern
+          "base64_decode" => 0.05,
+          # Web exploitation
+          "request_data" => 0.1,
+          # Less likely exploitable
+          "hardcoded_data" => -0.3,
+          # Test files
+          "test_code" => -0.8,
+          # Documentation
+          "example_code" => -0.6,
+          # Marked as trusted
+          "trusted_source_comment" => -0.4,
+          # Auto-generated code
+          "generated_file" => -0.5
         }
       },
       min_confidence: 0.7

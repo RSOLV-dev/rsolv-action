@@ -7,11 +7,14 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
   describe "pattern/0" do
     test "returns valid pattern structure" do
       pattern = NosqlInjection.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "django-nosql-injection"
       assert pattern.name == "Django NoSQL Injection"
-      assert pattern.description == "NoSQL injection through MongoDB, Elasticsearch, or Redis with user input"
+
+      assert pattern.description ==
+               "NoSQL injection through MongoDB, Elasticsearch, or Redis with user input"
+
       assert pattern.type == :nosql_injection
       assert pattern.severity == :high
       assert pattern.languages == ["python"]
@@ -26,7 +29,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
   describe "vulnerability_metadata/0" do
     test "returns comprehensive metadata" do
       metadata = NosqlInjection.vulnerability_metadata()
-      
+
       assert is_map(metadata)
       assert Map.has_key?(metadata, :description)
       assert Map.has_key?(metadata, :attack_vectors)
@@ -37,7 +40,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
       assert Map.has_key?(metadata, :remediation_steps)
       assert Map.has_key?(metadata, :detection_methods)
       assert Map.has_key?(metadata, :prevention_tips)
-      
+
       assert String.contains?(metadata.description, "NoSQL")
       assert String.contains?(metadata.description, "injection")
       assert String.contains?(metadata.cve_examples, "CVE")
@@ -48,22 +51,22 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
   describe "ast_enhancement/0" do
     test "returns AST enhancement configuration" do
       ast = NosqlInjection.ast_enhancement()
-      
+
       assert is_map(ast)
       assert Map.has_key?(ast, :context_rules)
       assert Map.has_key?(ast, :confidence_rules)
       assert Map.has_key?(ast, :ast_rules)
-      
+
       # Check context rules
       assert is_map(ast.context_rules)
       assert is_list(ast.context_rules.nosql_methods)
       assert "find" in ast.context_rules.nosql_methods
-      
+
       # Check confidence rules
       assert is_map(ast.confidence_rules)
       assert is_map(ast.confidence_rules.adjustments)
       assert ast.confidence_rules.adjustments.json_loads_with_user_input == +0.8
-      
+
       # Check AST rules
       assert is_map(ast.ast_rules)
       assert ast.ast_rules.nosql_analysis.detect_json_parsing == true
@@ -73,7 +76,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
   describe "enhanced_pattern/0" do
     test "includes AST enhancement in pattern" do
       pattern = NosqlInjection.enhanced_pattern()
-      
+
       assert %Pattern{} = pattern
       assert Map.has_key?(pattern, :ast_enhancement)
       assert pattern.ast_enhancement == NosqlInjection.ast_enhancement()
@@ -87,12 +90,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           query = {'$where': request.GET.get('query')}
           results = db.products.find(query)
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects filter with json.loads from request" do
@@ -101,12 +104,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           filter_data = json.loads(request.body)
           users = User.objects.filter(**filter_data)
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects aggregate with json.loads" do
@@ -115,12 +118,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           pipeline = json.loads(request.GET.get('pipeline', '[]'))
           results = collection.aggregate(pipeline)
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects find with json.loads" do
@@ -129,12 +132,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           query = json.loads(request.POST.get('query'))
           documents = collection.find(query)
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects elasticsearch search with user input" do
@@ -143,12 +146,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           body = json.loads(request.body)
           results = es.search(body=body)
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects redis eval with request data" do
@@ -157,12 +160,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           script = request.POST.get('script')
           result = redis_client.eval(script, 0)
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects MongoDB raw query with user input" do
@@ -170,12 +173,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
       def custom_query(request):
           collection.raw({'$where': f"this.price > {request.GET['min_price']}"})
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
   end
 
@@ -187,12 +190,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           age = request.GET.get('age')
           users = User.objects.filter(name=name, age=age)
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
 
     test "does not flag safe MongoDB query with validation" do
@@ -202,12 +205,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           if category in ALLOWED_CATEGORIES:
               products = collection.find({'category': category})
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
 
     test "does not flag safe elasticsearch with structured query" do
@@ -223,12 +226,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           }
           results = es.search(body=query)
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
 
     test "does not flag redis commands without eval" do
@@ -238,12 +241,12 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           value = request.POST.get('data')
           redis_client.set(key, value)
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
 
     test "does not flag json.loads without database operations" do
@@ -253,19 +256,19 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjectionTest do
           result = calculate_something(data)
           return JsonResponse({'result': result})
       """
-      
+
       pattern = NosqlInjection.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
   end
 
   describe "applies_to_file?/2" do
     test "applies to Django Python files" do
       assert NosqlInjection.applies_to_file?("views.py", ["django"])
-      assert NosqlInjection.applies_to_file?("models.py", ["django"]) 
+      assert NosqlInjection.applies_to_file?("models.py", ["django"])
       assert NosqlInjection.applies_to_file?("api_views.py", ["django"])
       assert NosqlInjection.applies_to_file?("serializers.py", ["django"])
     end

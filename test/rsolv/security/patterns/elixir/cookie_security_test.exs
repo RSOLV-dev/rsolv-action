@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.Patterns.Elixir.CookieSecurity
   alias Rsolv.Security.Pattern
 
   describe "cookie_security pattern" do
     test "returns correct pattern structure" do
       pattern = CookieSecurity.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "elixir-cookie-security"
       assert pattern.name == "Insecure Cookie Configuration"
@@ -16,7 +16,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
       assert pattern.languages == ["elixir"]
       assert pattern.cwe_id == "CWE-614"
       assert pattern.owasp_category == "A05:2021"
-      
+
       assert is_binary(pattern.description)
       assert is_binary(pattern.recommendation)
       assert is_list(pattern.regex)
@@ -25,7 +25,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "detects put_resp_cookie without security flags" do
       pattern = CookieSecurity.pattern()
-      
+
       test_cases = [
         ~S|put_resp_cookie(conn, "session", value)|,
         ~S|put_resp_cookie(conn, "auth_token", token)|,
@@ -33,7 +33,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
         "conn |> put_resp_cookie(\"csrf_token\", csrf)",
         ~S|Plug.Conn.put_resp_cookie(conn, "session_id", session_id)|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -42,7 +42,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "detects put_resp_cookie with only partial security flags" do
       pattern = CookieSecurity.pattern()
-      
+
       test_cases = [
         ~S|put_resp_cookie(conn, "session", value, secure: true)|,
         ~S|put_resp_cookie(conn, "auth", token, http_only: true)|,
@@ -50,7 +50,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
         ~S|put_resp_cookie(conn, "user", id, max_age: 3600)|,
         ~S|put_resp_cookie(conn, "data", data, path: "/")|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -59,7 +59,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "detects sensitive cookie names without security flags" do
       pattern = CookieSecurity.pattern()
-      
+
       test_cases = [
         ~S|put_resp_cookie(conn, "session_token", value)|,
         ~S|put_resp_cookie(conn, "auth_cookie", token)|,
@@ -68,7 +68,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
         ~S|put_resp_cookie(conn, "authentication", auth)|,
         ~S|put_resp_cookie(conn, "login_token", login)|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -77,14 +77,14 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "detects cookies with incomplete security configuration" do
       pattern = CookieSecurity.pattern()
-      
+
       test_cases = [
         ~S|put_resp_cookie(conn, "session", value, secure: true, max_age: 3600)|,
         ~S|put_resp_cookie(conn, "auth", token, http_only: true, path: "/")|,
         ~S|put_resp_cookie(conn, "csrf", csrf, same_site: "Lax", domain: "example.com")|,
         ~S|put_resp_cookie(conn, "user", data, secure: false, http_only: true)|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -93,7 +93,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "detects multi-line cookie configurations without all security flags" do
       pattern = CookieSecurity.pattern()
-      
+
       test_cases = [
         ~S"""
         put_resp_cookie(conn, "session", session_id,
@@ -112,7 +112,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
              domain: "localhost")
         """
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -121,13 +121,13 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "does not detect cookies with all required security flags" do
       pattern = CookieSecurity.pattern()
-      
+
       safe_code = [
         ~S|put_resp_cookie(conn, "session", value, secure: true, http_only: true, same_site: "Strict")|,
         ~S|put_resp_cookie(conn, "auth", token, secure: true, http_only: true, same_site: "Lax")|,
         ~S|Plug.Conn.put_resp_cookie(conn, "csrf", csrf, secure: true, http_only: true, same_site: "None")|
       ]
-      
+
       for safe <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, safe)),
                "False positive detected for: #{safe}"
@@ -136,14 +136,14 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "does not detect non-sensitive cookies without flags" do
       pattern = CookieSecurity.pattern()
-      
+
       safe_code = [
         ~S|put_resp_cookie(conn, "theme", "dark")|,
         ~S|put_resp_cookie(conn, "language", "en")|,
         ~S|put_resp_cookie(conn, "timezone", "UTC")|,
         ~S|put_resp_cookie(conn, "preferences", prefs)|
       ]
-      
+
       for safe <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, safe)),
                "False positive detected for: #{safe}"
@@ -152,13 +152,13 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "does not detect comments or documentation" do
       pattern = CookieSecurity.pattern()
-      
+
       safe_code = [
         ~S|# put_resp_cookie(conn, "session", value)|,
         ~S|@doc "Use put_resp_cookie with secure flags"|,
         ~S|# TODO: Add secure: true to put_resp_cookie|
       ]
-      
+
       for safe <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, safe)),
                "False positive detected for: #{safe}"
@@ -167,9 +167,9 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "includes comprehensive vulnerability metadata" do
       metadata = CookieSecurity.vulnerability_metadata()
-      
+
       assert metadata.attack_vectors
-      assert metadata.business_impact  
+      assert metadata.business_impact
       assert metadata.technical_impact
       assert metadata.likelihood
       assert metadata.cve_examples
@@ -182,7 +182,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "vulnerability metadata contains cookie-specific information" do
       metadata = CookieSecurity.vulnerability_metadata()
-      
+
       assert String.contains?(metadata.attack_vectors, "session")
       assert String.contains?(metadata.business_impact, "hijacking")
       assert String.contains?(metadata.technical_impact, "cookie")
@@ -192,7 +192,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "includes AST enhancement rules" do
       enhancement = CookieSecurity.ast_enhancement()
-      
+
       assert enhancement.min_confidence
       assert enhancement.context_rules
       assert enhancement.confidence_rules
@@ -201,7 +201,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "AST enhancement has cookie-specific rules" do
       enhancement = CookieSecurity.ast_enhancement()
-      
+
       assert enhancement.context_rules.sensitive_cookie_names
       assert enhancement.context_rules.required_security_flags
       assert enhancement.ast_rules.cookie_analysis
@@ -211,7 +211,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "enhanced pattern integrates AST rules" do
       enhanced = CookieSecurity.enhanced_pattern()
-      
+
       assert enhanced.id == "elixir-cookie-security"
       assert enhanced.ast_enhancement.min_confidence
       assert is_float(enhanced.ast_enhancement.min_confidence)
@@ -219,7 +219,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurityTest do
 
     test "pattern includes educational test cases" do
       pattern = CookieSecurity.pattern()
-      
+
       assert pattern.test_cases.vulnerable
       assert pattern.test_cases.safe
       assert length(pattern.test_cases.vulnerable) > 0

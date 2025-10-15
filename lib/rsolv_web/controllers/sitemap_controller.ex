@@ -3,7 +3,7 @@ defmodule RsolvWeb.SitemapController do
 
   def index(conn, _params) do
     sitemap = generate_sitemap()
-    
+
     conn
     |> put_resp_content_type("application/xml")
     |> send_resp(200, sitemap)
@@ -36,7 +36,7 @@ defmodule RsolvWeb.SitemapController do
 
   defp blog_post_entries do
     posts = RsolvWeb.Services.BlogService.list_posts()
-    
+
     posts
     |> Enum.filter(&(&1.status == "published"))
     |> Enum.map(fn post ->

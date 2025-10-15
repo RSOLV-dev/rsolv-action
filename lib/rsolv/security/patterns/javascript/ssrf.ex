@@ -1,17 +1,17 @@
 defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
   @moduledoc """
   Detects Server-Side Request Forgery (SSRF) vulnerabilities in JavaScript/TypeScript code.
-  
+
   SSRF occurs when an application makes HTTP requests to arbitrary URLs provided by users
   without proper validation. This can allow attackers to access internal resources, bypass
   firewalls, or perform port scanning on internal networks.
-  
+
   ## Vulnerability Details
-  
+
   SSRF vulnerabilities enable attackers to make the server perform requests on their behalf.
   This is particularly dangerous in cloud environments where metadata services (like AWS
   169.254.169.254) can expose credentials and configuration data.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Direct use of user input in HTTP request
@@ -19,21 +19,21 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
     const response = await axios.get(req.body.url);
     res.json(response.data);
   });
-  
+
   // Attack: Access internal services
   // POST /webhook { "url": "http://169.254.169.254/latest/meta-data/iam/security-credentials/" }
   // POST /webhook { "url": "http://internal-api:8080/admin/users" }
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the pattern definition for SSRF detection.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.Ssrf.pattern()
       iex> pattern.id
       "js-ssrf"
@@ -57,7 +57,8 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
     %Pattern{
       id: "js-ssrf",
       name: "Server-Side Request Forgery (SSRF)",
-      description: "Server-side request forgery occurs when user-controlled URLs are used in HTTP requests without validation",
+      description:
+        "Server-side request forgery occurs when user-controlled URLs are used in HTTP requests without validation",
       type: :ssrf,
       severity: :high,
       languages: ["javascript", "typescript"],
@@ -86,7 +87,8 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
       /x,
       cwe_id: "CWE-918",
       owasp_category: "A10:2021",
-      recommendation: "Validate URLs against an allowlist, block private IP ranges and sensitive protocols. Consider using a proxy service for external requests.",
+      recommendation:
+        "Validate URLs against an allowlist, block private IP ranges and sensitive protocols. Consider using a proxy service for external requests.",
       test_cases: %{
         vulnerable: [
           ~S|axios.get(req.body.url)|,
@@ -105,7 +107,7 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
       }
     }
   end
-  
+
   @doc """
   Returns comprehensive vulnerability metadata for SSRF.
   """
@@ -115,13 +117,13 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
       description: """
       Server-Side Request Forgery (SSRF) is a vulnerability where an attacker can make
       the server perform HTTP requests to arbitrary destinations. This can lead to:
-      
+
       1. Access to internal services behind firewalls
       2. Port scanning of internal networks
       3. Reading cloud metadata services (AWS, GCP, Azure)
       4. Bypassing access controls using the server's IP
       5. Denial of service through resource exhaustion
-      
+
       SSRF is particularly dangerous in cloud environments where metadata endpoints
       at 169.254.169.254 can expose IAM credentials, API keys, and configuration.
       """,
@@ -142,7 +144,8 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
           type: :research,
           id: "ssrf_bible",
           title: "SSRF Bible - Comprehensive SSRF Guide",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -204,7 +207,7 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
       2. User-controlled input being passed as the URL parameter
       3. Common request methods (GET, POST, PUT, DELETE, etc.)
       4. Both direct parameter passing and object-based configurations
-      
+
       The pattern is designed to catch the most common SSRF patterns while
       minimizing false positives from hardcoded or validated URLs.
       """,
@@ -251,19 +254,19 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SSRF vulnerabilities and:
   - Validated URLs with allowlist checking
   - Static API endpoints with dynamic paths
   - Proxied requests through safe gateways
   - URLs constructed from safe components
   - Test/mock HTTP requests
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.Ssrf.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -306,9 +309,12 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/mock/, ~r/fixtures/],
-        exclude_if_url_validated: true,     # Skip if URL is validated
-        exclude_if_allowlisted: true,       # Skip if URL is checked against allowlist
-        safe_if_uses_proxy: true,           # Using a proxy service is safer
+        # Skip if URL is validated
+        exclude_if_url_validated: true,
+        # Skip if URL is checked against allowlist
+        exclude_if_allowlisted: true,
+        # Using a proxy service is safer
+        safe_if_uses_proxy: true,
         safe_url_patterns: ["isValidUrl", "validateUrl", "checkAllowlist", "urlWhitelist"]
       },
       confidence_rules: %{

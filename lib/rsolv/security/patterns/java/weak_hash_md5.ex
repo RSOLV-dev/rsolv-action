@@ -1,44 +1,45 @@
 defmodule Rsolv.Security.Patterns.Java.WeakHashMd5 do
   @moduledoc """
   Weak Cryptography - MD5 pattern for Java code.
-  
+
   Detects usage of MD5 hash algorithm which is cryptographically broken and vulnerable
   to collision attacks. MD5 should not be used for any security-sensitive purposes
   including password hashing, digital signatures, or data integrity verification.
-  
+
   ## Vulnerability Details
-  
+
   MD5 (Message Digest 5) is a cryptographic hash function that produces a 128-bit hash value.
   However, it is fundamentally broken due to its vulnerability to collision attacks, where
   attackers can create two different inputs that produce the same hash output. This breaks
   the fundamental property of cryptographic hash functions.
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable code
   MessageDigest md = MessageDigest.getInstance("MD5");
   String passwordHash = bytesToHex(md.digest(password.getBytes()));
-  
+
   // Attack: MD5 collision allows creation of different passwords with same hash
   // Attacker can forge digital signatures or bypass authentication
   ```
-  
+
   ## References
-  
+
   - CWE-327: Use of a Broken or Risky Cryptographic Algorithm
   - OWASP A02:2021 - Cryptographic Failures
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "java-weak-hash-md5",
       name: "Weak Cryptography - MD5",
-      description: "MD5 algorithm is cryptographically broken and vulnerable to collision attacks",
+      description:
+        "MD5 algorithm is cryptographically broken and vulnerable to collision attacks",
       type: :weak_crypto,
       severity: :medium,
       languages: ["java"],
@@ -72,7 +73,7 @@ String hashedPassword = encoder.encode(password);|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -82,13 +83,13 @@ String hashedPassword = encoder.encode(password);|
       used for security-sensitive purposes. The algorithm is vulnerable to collision
       attacks where attackers can create two different inputs that produce identical
       hash outputs.
-      
+
       Key vulnerabilities of MD5:
       - Collision attacks can be performed in seconds on modern hardware
       - Pre-image attacks are theoretically possible with sufficient computing power
       - Length extension attacks are possible in certain contexts
       - Not suitable for password hashing due to speed and collision vulnerabilities
-      
+
       Common vulnerable usage patterns:
       - Password hashing and storage
       - Digital signature generation
@@ -125,7 +126,8 @@ String hashedPassword = encoder.encode(password);|
           type: :research,
           id: "cryptographic_failures_medium",
           title: "Cryptographic Failures: Understanding and Preventing Vulnerabilities",
-          url: "https://medium.com/@ajay.monga73/cryptographic-failures-understanding-and-preventing-vulnerabilities-91c8b2c56854"
+          url:
+            "https://medium.com/@ajay.monga73/cryptographic-failures-understanding-and-preventing-vulnerabilities-91c8b2c56854"
         }
       ],
       attack_vectors: [
@@ -155,7 +157,8 @@ String hashedPassword = encoder.encode(password);|
         },
         %{
           id: "CVE-2015-7575",
-          description: "SLOTH - Weak MD5 signature hash vulnerability affecting multiple implementations",
+          description:
+            "SLOTH - Weak MD5 signature hash vulnerability affecting multiple implementations",
           severity: "high",
           cvss: 7.1,
           note: "MD5 signature vulnerabilities in TLS connections enabling MitM attacks"
@@ -169,7 +172,7 @@ String hashedPassword = encoder.encode(password);|
       - Variable assignments where MD5 is specified as the algorithm
       - Method calls passing MD5 as hash algorithm parameter
       - Constants and enum references to MD5 algorithms
-      
+
       The pattern looks for both direct MessageDigest usage and indirect references
       to MD5 through variables, constants, and method parameters.
       """,
@@ -212,15 +215,15 @@ String hashedPassword = encoder.encode(password);|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between cryptographic usage of MD5 and
   acceptable non-security uses like file checksums or legacy compatibility.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakHashMd5.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -254,7 +257,14 @@ String hashedPassword = encoder.encode(password);|
         },
         method_analysis: %{
           check_method_names: true,
-          md5_method_patterns: ["computeMD5", "calculateMD5", "generateMD5", "getMD5", "md5Hash", "createMD5"],
+          md5_method_patterns: [
+            "computeMD5",
+            "calculateMD5",
+            "generateMD5",
+            "getMD5",
+            "md5Hash",
+            "createMD5"
+          ],
           check_return_types: true,
           cryptographic_contexts: ["hash", "digest", "sign", "verify", "authenticate"]
         }
@@ -263,17 +273,21 @@ String hashedPassword = encoder.encode(password);|
         check_cryptographic_context: true,
         high_risk_contexts: [
           "password hashing",
-          "digital signatures", 
+          "digital signatures",
           "authentication tokens",
           "session management",
           "API key generation",
           "certificate verification"
         ],
         acceptable_uses: %{
-          file_checksums: false,  # Still risky due to collision attacks
-          legacy_compatibility: false,  # Should be upgraded
-          non_security_hashing: false,  # Attackers can still exploit
-          performance_critical: false   # SHA-256 is fast enough
+          # Still risky due to collision attacks
+          file_checksums: false,
+          # Should be upgraded
+          legacy_compatibility: false,
+          # Attackers can still exploit
+          non_security_hashing: false,
+          # SHA-256 is fast enough
+          performance_critical: false
         },
         strong_algorithms: ["SHA-256", "SHA-384", "SHA-512", "SHA3-256", "SHA3-384", "SHA3-512"],
         password_libraries: ["BCrypt", "SCrypt", "Argon2", "PBKDF2"],
@@ -287,10 +301,12 @@ String hashedPassword = encoder.encode(password);|
           "has_security_variable_name" => 0.1,
           "in_authentication_code" => 0.2,
           "in_password_handling" => 0.3,
-          "uses_checksum_only" => -0.2,  # Still risky but lower priority
+          # Still risky but lower priority
+          "uses_checksum_only" => -0.2,
           "in_test_code" => -0.4,
           "is_commented_out" => -0.8,
-          "has_upgrade_comment" => -0.1  # Acknowledged technical debt
+          # Acknowledged technical debt
+          "has_upgrade_comment" => -0.1
         }
       },
       min_confidence: 0.6

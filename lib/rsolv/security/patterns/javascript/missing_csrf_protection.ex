@@ -1,17 +1,17 @@
 defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
   @moduledoc """
   Detects missing CSRF protection in Express.js and similar Node.js frameworks.
-  
+
   Cross-Site Request Forgery (CSRF) occurs when a malicious website tricks a user's
   browser into making unwanted requests to another site where the user is authenticated.
   This can lead to unauthorized state changes like fund transfers or account modifications.
-  
+
   ## Vulnerability Details
-  
+
   CSRF attacks exploit the trust that a web application has in the user's browser.
   Since browsers automatically include cookies with requests, an attacker can create
   a malicious page that submits forms or makes requests to the vulnerable application.
-  
+
   ### Attack Example
   ```html
   <!-- Malicious site tricks user into transferring money -->
@@ -21,7 +21,7 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
   </form>
   <script>document.forms[0].submit();</script>
   ```
-  
+
   ### Vulnerable Code
   ```javascript
   // No CSRF protection on state-changing endpoint
@@ -30,13 +30,13 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
     res.json({success: true});
   });
   ```
-  
+
   ### Safe Code
   ```javascript
   // Using CSRF middleware
   const csrf = require('csurf');
   app.use(csrf());
-  
+
   app.post('/api/transfer', (req, res) => {
     // CSRF token automatically validated by middleware
     transferFunds(req.body.amount, req.body.to);
@@ -44,18 +44,18 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
   });
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the pattern definition for missing CSRF protection.
-  
+
   Note: AST enhancement can leverage Kagi MCP for researching framework-specific
   CSRF protection patterns and modern security middleware configurations.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.pattern()
       iex> pattern.id
       "js-missing-csrf"
@@ -79,7 +79,8 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
     %Pattern{
       id: "js-missing-csrf",
       name: "Missing CSRF Protection",
-      description: "State-changing endpoints without CSRF protection are vulnerable to cross-site request forgery attacks",
+      description:
+        "State-changing endpoints without CSRF protection are vulnerable to cross-site request forgery attacks",
       type: :csrf,
       severity: :high,
       languages: ["javascript", "typescript"],
@@ -104,7 +105,8 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
       /x,
       cwe_id: "CWE-352",
       owasp_category: "A01:2021",
-      recommendation: "Implement CSRF protection using tokens, SameSite cookies, or double-submit cookies. Verify the Origin/Referer headers.",
+      recommendation:
+        "Implement CSRF protection using tokens, SameSite cookies, or double-submit cookies. Verify the Origin/Referer headers.",
       test_cases: %{
         vulnerable: [
           ~S|app.post('/api/transfer', (req, res) => { transferMoney(req.body) })|,
@@ -121,7 +123,7 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
       }
     }
   end
-  
+
   @doc """
   Returns comprehensive vulnerability metadata for CSRF.
   """
@@ -131,17 +133,17 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
       description: """
       Cross-Site Request Forgery (CSRF) is an attack that tricks authenticated users
       into executing unwanted actions on a web application. The attack works because:
-      
+
       1. Browsers automatically include cookies with every request to a domain
       2. The server trusts requests with valid session cookies
       3. The server cannot distinguish between legitimate and forged requests
-      
+
       CSRF attacks can result in unauthorized state changes like:
       - Financial transactions
       - Email/password changes
       - Administrative actions
       - Data modifications
-      
+
       Modern frameworks provide built-in CSRF protection, but it must be properly
       configured and applied to all state-changing endpoints.
       """,
@@ -162,13 +164,15 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
           type: :owasp,
           id: "CSRF_Prevention",
           title: "OWASP CSRF Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
           id: "node_csrf_guide",
           title: "Node.js CSRF Protection Guide",
-          url: "https://www.stackhawk.com/blog/node-js-csrf-protection-guide-examples-and-how-to-enable-it/"
+          url:
+            "https://www.stackhawk.com/blog/node-js-csrf-protection-guide-examples-and-how-to-enable-it/"
         }
       ],
       attack_vectors: [
@@ -221,12 +225,12 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
       1. State-changing HTTP methods (POST, PUT, PATCH, DELETE)
       2. Absence of CSRF middleware in the route definition
       3. Express.js and similar framework routing patterns
-      
+
       Note: This regex-based approach has limitations:
       - Cannot detect app-wide CSRF middleware (app.use(csrf()))
       - May miss custom CSRF implementations
       - Framework-specific patterns may vary
-      
+
       AST enhancement significantly improves accuracy by analyzing the
       middleware chain and framework configuration.
       """,
@@ -275,18 +279,18 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual CSRF vulnerabilities and:
   - Routes protected by app-wide CSRF middleware
   - API endpoints using token-based authentication
   - CORS-protected endpoints with preflight checks
   - Routes using custom header validation
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.ast_enhancement()
       iex> Enum.sort(Map.keys(enhancement))
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -322,11 +326,16 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/examples/, ~r/docs/],
-        exclude_if_app_wide_csrf: true,      # app.use(csrf()) configured globally
-        exclude_if_api_only: true,           # API endpoints often use different auth
-        exclude_if_has_cors_preflight: true, # CORS preflight provides CSRF protection
-        safe_if_readonly_operation: true,    # GET/HEAD are safe
-        exclude_if_custom_header_check: true # Custom header checking (X-Requested-With)
+        # app.use(csrf()) configured globally
+        exclude_if_app_wide_csrf: true,
+        # API endpoints often use different auth
+        exclude_if_api_only: true,
+        # CORS preflight provides CSRF protection
+        exclude_if_has_cors_preflight: true,
+        # GET/HEAD are safe
+        safe_if_readonly_operation: true,
+        # Custom header checking (X-Requested-With)
+        exclude_if_custom_header_check: true
       },
       confidence_rules: %{
         base: 0.3,
@@ -335,10 +344,14 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
           "modifies_database" => 0.3,
           "handles_payments" => 0.3,
           "has_global_csrf" => -0.9,
-          "is_api_endpoint" => -0.6,         # APIs often use tokens instead
-          "requires_custom_header" => -0.7,   # X-Requested-With provides protection
-          "uses_double_submit" => -0.8,      # Double-submit cookie pattern
-          "requires_api_key" => -0.5         # API key auth is different
+          # APIs often use tokens instead
+          "is_api_endpoint" => -0.6,
+          # X-Requested-With provides protection
+          "requires_custom_header" => -0.7,
+          # Double-submit cookie pattern
+          "uses_double_submit" => -0.8,
+          # API key auth is different
+          "requires_api_key" => -0.5
         }
       },
       min_confidence: 0.8

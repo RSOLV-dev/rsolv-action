@@ -1,18 +1,18 @@
 defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
   @moduledoc """
   Detects LDAP injection vulnerabilities in JavaScript/TypeScript code.
-  
+
   LDAP (Lightweight Directory Access Protocol) injection occurs when untrusted user
   input is concatenated into LDAP queries without proper escaping. This can allow
   attackers to modify query logic, bypass authentication, or extract sensitive data.
-  
+
   ## Vulnerability Details
-  
+
   LDAP injection is similar to SQL injection but targets directory services. Special
   characters like parentheses, asterisks, and backslashes can alter LDAP filter logic.
   Common attack vectors include authentication bypass using wildcard filters or logic
   manipulation.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Direct concatenation of user input
@@ -21,20 +21,20 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
     // If username is "*", matches all users
     // If username is "admin)(|(password=*", reveals passwords
   });
-  
+
   // Attack input: "admin)(objectClass=*))(&(objectClass=void"
   // Results in: "(cn=admin)(objectClass=*))(&(objectClass=void)"
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the pattern definition for LDAP injection detection.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.LdapInjection.pattern()
       iex> pattern.id
       "js-ldap-injection"
@@ -58,7 +58,8 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
     %Pattern{
       id: "js-ldap-injection",
       name: "LDAP Injection",
-      description: "LDAP queries constructed with user input can be manipulated to bypass authentication or access unauthorized data",
+      description:
+        "LDAP queries constructed with user input can be manipulated to bypass authentication or access unauthorized data",
       type: :ldap_injection,
       severity: :high,
       languages: ["javascript", "typescript"],
@@ -98,12 +99,13 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
       /xi,
       cwe_id: "CWE-90",
       owasp_category: "A03:2021",
-      recommendation: "Always escape special LDAP characters in user input. Use LDAP escape libraries like ldapjs.escape() or implement proper escaping for (, ), *, \\, and null bytes.",
+      recommendation:
+        "Always escape special LDAP characters in user input. Use LDAP escape libraries like ldapjs.escape() or implement proper escaping for (, ), *, \\, and null bytes.",
       test_cases: %{
         vulnerable: [
           ~S|ldap.search("(cn=" + username + ")")|,
           ~S|client.search({filter: "(uid=" + req.body.user + ")"})|,
-          ~S|filter = "(&(objectClass=user)(sAMAccountName=" + userInput + "))"| ,
+          ~S|filter = "(&(objectClass=user)(sAMAccountName=" + userInput + "))"|,
           ~S|ldap.bind("cn=" + username + ",ou=users,dc=example,dc=com")|,
           ~S|ldap.search(`(cn=${req.body.username})`)|,
           ~S|ldap.modify("cn=admin", {mail: req.body.email})|
@@ -118,7 +120,7 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
       }
     }
   end
-  
+
   @doc """
   Returns comprehensive vulnerability metadata for LDAP injection.
   """
@@ -130,7 +132,7 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
       proper sanitization. Attackers can manipulate LDAP filters and distinguished names
       (DNs) to bypass authentication, elevate privileges, or extract sensitive information
       from directory services.
-      
+
       LDAP uses special characters that must be escaped:
       - Parentheses: ( and ) - Used for grouping filters
       - Asterisk: * - Wildcard matching
@@ -155,7 +157,8 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
           type: :research,
           id: "ldap_injection_owasp",
           title: "OWASP LDAP Injection Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -209,7 +212,7 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
       2. DN (Distinguished Name) construction with user data
       3. Template literal usage with interpolated user input in LDAP contexts
       4. Common LDAP method calls (search, bind, add, modify) with concatenated input
-      
+
       The pattern avoids false positives by not matching when escape functions are present.
       """,
       safe_alternatives: [
@@ -239,7 +242,7 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
         ldap_special_chars: %{
           filter_escape: [
             "( -> \\28",
-            ") -> \\29", 
+            ") -> \\29",
             "\\ -> \\5c",
             "* -> \\2a",
             "NUL -> \\00"
@@ -257,19 +260,19 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual LDAP injection vulnerabilities and:
   - LDAP queries using proper escape functions
   - Parameterized LDAP query builders
   - Allowlist-validated input
   - Static filter templates
   - Pre-compiled LDAP queries
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.LdapInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -310,9 +313,12 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/],
-        exclude_if_escaped: true,            # LDAP escape functions
-        exclude_if_parameterized: true,      # Using LDAP query builders
-        exclude_if_allowlist_only: true,     # Only predefined values
+        # LDAP escape functions
+        exclude_if_escaped: true,
+        # Using LDAP query builders
+        exclude_if_parameterized: true,
+        # Only predefined values
+        exclude_if_allowlist_only: true,
         ldap_escape_functions: ["ldap.escape", "escapeLDAPSearchFilter", "ldapEscape"]
       },
       confidence_rules: %{

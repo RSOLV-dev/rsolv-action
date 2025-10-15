@@ -8,10 +8,11 @@ defmodule Rsolv.Analytics.PageViewTest do
   describe "page_view schema" do
     test "should belong to customer, not user" do
       # Create a customer
-      {:ok, customer} = Repo.insert(%Customer{
-        name: "Test Company",
-        email: unique_email()
-      })
+      {:ok, customer} =
+        Repo.insert(%Customer{
+          name: "Test Company",
+          email: unique_email()
+        })
 
       # Create a page view associated with the customer
       page_view = %PageView{

@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
   @moduledoc """
   SQL Injection via Python F-String Formatting
-  
+
   Detects dangerous patterns like:
     cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")
     db.execute(f"DELETE FROM posts WHERE id = {post_id}")
@@ -13,35 +13,35 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
     cursor.execute("UPDATE users SET status = :status", {"status": status})
     
   ## Vulnerability Details
-  
+
   Python f-strings (formatted string literals) introduced in Python 3.6 provide
   a convenient way to embed expressions inside string literals. However, when
   used to construct SQL queries, they create the same SQL injection vulnerabilities
   as other string formatting methods.
-  
+
   The vulnerability occurs when:
   1. SQL query strings use f-string formatting with embedded expressions
   2. User input is directly interpolated into the query via f-string expressions
   3. The formatted string is then executed as SQL
-  
+
   This pattern is particularly dangerous because:
   - F-strings evaluate expressions at runtime, including function calls
   - The syntax is clean and modern, giving a false sense of security
   - No escaping is performed on the interpolated values
   - Complex expressions can be embedded, making detection harder
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the SQL injection via f-string formatting pattern.
-  
+
   This pattern detects usage of Python f-strings in SQL queries
   which can lead to SQL injection vulnerabilities.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFstring.pattern()
       iex> pattern.id
       "python-sql-injection-fstring"
@@ -75,7 +75,8 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
       /x,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",
+      recommendation:
+        "Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",
       test_cases: %{
         vulnerable: [
           ~S|cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")|,
@@ -94,7 +95,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -103,7 +104,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
       F-strings, introduced in Python 3.6, allow embedding expressions inside string literals
       using {expression} syntax. When used to construct SQL queries, user input is directly
       interpolated into the query string without any escaping or parameterization.
-      
+
       This vulnerability is particularly insidious because:
       - F-strings are the most modern and recommended string formatting method in Python
       - The clean syntax can give developers a false sense of security
@@ -115,7 +116,8 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -166,7 +168,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
       1. F-string literals (prefixed with 'f') containing curly brace expressions
       2. Database execute methods called with f-string formatted queries
       3. Variable assignments of f-strings later used in execute calls
-      
+
       Key indicators:
       - The 'f' prefix before quote characters
       - Curly braces {} containing expressions
@@ -195,15 +197,15 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SQL injection vulnerabilities
   and legitimate uses of f-strings in non-SQL contexts.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionFstring.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]

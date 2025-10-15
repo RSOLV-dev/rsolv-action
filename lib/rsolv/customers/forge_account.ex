@@ -7,9 +7,9 @@ defmodule Rsolv.Customers.ForgeAccount do
     field :namespace, :string
     field :verified_at, :utc_datetime_usec
     field :metadata, :map, default: %{}
-    
+
     belongs_to :customer, Rsolv.Customers.Customer
-    
+
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -21,8 +21,9 @@ defmodule Rsolv.Customers.ForgeAccount do
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> validate_inclusion(:forge_type, [:github])
-    |> validate_format(:namespace, ~r/^[a-zA-Z0-9][a-zA-Z0-9-_]*$/, 
-         message: "must contain only alphanumeric characters, hyphens, and underscores")
+    |> validate_format(:namespace, ~r/^[a-zA-Z0-9][a-zA-Z0-9-_]*$/,
+      message: "must contain only alphanumeric characters, hyphens, and underscores"
+    )
     |> unique_constraint([:customer_id, :forge_type, :namespace])
   end
 end

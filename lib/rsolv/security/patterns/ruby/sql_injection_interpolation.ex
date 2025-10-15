@@ -1,22 +1,22 @@
 defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
   @moduledoc """
   Pattern for detecting SQL injection vulnerabilities via string interpolation in Ruby applications.
-  
+
   This pattern identifies when user input is directly interpolated into SQL queries using Ruby's
   string interpolation syntax #{}, which bypasses SQL parameter binding and creates injection
   vulnerabilities.
-  
+
   ## Vulnerability Details
-  
+
   SQL injection via string interpolation occurs when developers construct SQL queries by
   directly embedding variables into SQL strings using Ruby's #{} interpolation syntax.
   This practice is extremely dangerous because:
-  
+
   - **Direct Code Execution**: User input becomes part of the SQL command structure
   - **Bypasses Parameter Binding**: No sanitization or escaping is performed
   - **ActiveRecord Blind Spot**: Even secure ORM methods become vulnerable when passed raw SQL
   - **Difficult to Detect**: String interpolation can appear in many contexts
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable SQL interpolation
@@ -33,14 +33,14 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
       # Attack: params[:status] = "1; INSERT INTO admin_users..."
     end
   end
-  
+
   # Attack result: Complete database compromise
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -88,7 +88,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -96,25 +96,25 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
       SQL injection via string interpolation is one of the most dangerous vulnerabilities
       in Ruby on Rails applications. It occurs when developers use Ruby's string interpolation
       syntax (#{}) to insert user-controlled data directly into SQL queries.
-      
+
       **How String Interpolation Works:**
       Ruby's #{} syntax evaluates expressions and inserts their string representation
       directly into the containing string. When used with SQL, this creates a direct
       pathway for attackers to inject malicious SQL code.
-      
+
       **Why It's Dangerous:**
       - **No Sanitization**: String interpolation performs no SQL escaping or validation
       - **ActiveRecord Bypass**: Even secure ORM methods become vulnerable when given raw SQL
       - **Silent Failures**: Vulnerable code often appears to work correctly in testing
       - **Widespread Usage**: Many developers use interpolation for dynamic column names or conditions
-      
+
       **Common Vulnerable Patterns:**
       - Dynamic WHERE clauses: `where("column = '\#{value}'")`
       - Dynamic ORDER BY: `order("\#{column} \#{direction}")`
       - Custom joins: `joins("JOIN table ON condition = \#{value}")`
       - Raw SQL execution: `connection.execute("SQL with \#{variables}")`
       - Search queries: `find_by_sql("SELECT * WHERE field LIKE '%\#{search}%'")`
-      
+
       **Attack Vectors:**
       Attackers can exploit string interpolation to:
       - Extract sensitive data through UNION-based attacks
@@ -122,7 +122,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
       - Execute administrative commands like DROP TABLE
       - Insert malicious data or create backdoor accounts
       - Cause denial of service through resource-intensive queries
-      
+
       **Real-World Context:**
       CVE-2023-22794 demonstrated how even Rails' built-in comment functionality
       could be vulnerable to SQL injection when user input was interpolated into
@@ -132,7 +132,8 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -191,7 +192,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
           note: "Improper sanitization of comments allowed SQL injection via string interpolation"
         },
         %{
-          id: "CVE-2019-5420", 
+          id: "CVE-2019-5420",
           description: "File Content Disclosure in Action View",
           severity: "high",
           cvss: 7.5,
@@ -214,26 +215,26 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
       ],
       detection_notes: """
       This pattern detects SQL injection via string interpolation by looking for:
-      
+
       **ActiveRecord Method Patterns:**
       - .where(), .joins(), .order(), .group(), .having() with string arguments containing #{}
       - .find_by_sql() with interpolated strings
       - .select(), .from() clauses with dynamic content
-      
+
       **Database Connection Patterns:**
       - ActiveRecord::Base.connection.execute() with interpolated strings
       - Direct database connection methods with SQL keywords and interpolation
-      
+
       **SQL Keyword Detection:**
       - Patterns that match SQL keywords (SELECT, INSERT, UPDATE, DELETE) followed by interpolation
       - This helps catch raw SQL execution that bypasses ActiveRecord
-      
+
       **False Positive Considerations:**
       - Static strings without user input (acceptable but should be reviewed)
       - Interpolation of safe, developer-controlled values (still risky practice)
       - Comments and documentation containing example code
       - Test files and fixtures (excluded by AST enhancement)
-      
+
       **Limitations:**
       - Cannot detect all forms of dynamic SQL construction
       - May miss complex string building across multiple lines
@@ -270,7 +271,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
         rails_specific: %{
           safe_methods: [
             "where(hash): Always safe with hash arguments",
-            "find_by(attributes): Safe for simple attribute lookups", 
+            "find_by(attributes): Safe for simple attribute lookups",
             "joins(symbol): Safe when using association names",
             "order(symbol): Safe when using column symbols",
             "group(symbol): Safe when using column symbols"
@@ -293,15 +294,15 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SQL injection vulnerabilities
   and safe string interpolation practices.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -316,8 +317,19 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
       ast_rules: %{
         node_type: "CallExpression",
         method_names: [
-          "where", "joins", "order", "group", "having", "select", "from",
-          "find_by_sql", "execute", "count", "sum", "update_all", "delete_all"
+          "where",
+          "joins",
+          "order",
+          "group",
+          "having",
+          "select",
+          "from",
+          "find_by_sql",
+          "execute",
+          "count",
+          "sum",
+          "update_all",
+          "delete_all"
         ],
         receiver_analysis: %{
           check_activerecord_context: true,
@@ -342,12 +354,23 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
         ],
         check_sql_context: true,
         safe_patterns: [
-          "?", ":named_param", "ActiveRecord::Base.sanitize_sql",
-          "quote", "quote_string", "sanitize"
+          "?",
+          ":named_param",
+          "ActiveRecord::Base.sanitize_sql",
+          "quote",
+          "quote_string",
+          "sanitize"
         ],
         dangerous_sources: [
-          "params", "request", "cookies", "session", "ENV",
-          "gets", "ARGV", "user_input", "form_data"
+          "params",
+          "request",
+          "cookies",
+          "session",
+          "ENV",
+          "gets",
+          "ARGV",
+          "user_input",
+          "form_data"
         ],
         framework_methods: %{
           activerecord_safe: ["where", "find_by", "joins", "order", "group"],

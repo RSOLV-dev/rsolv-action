@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Python.DebugTrue do
   @moduledoc """
   Pattern for detecting DEBUG = True in Python code.
-  
+
   This is a common security misconfiguration in Django and Flask applications
   where debug mode is accidentally left enabled in production.
   """
@@ -10,9 +10,9 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
 
   @doc """
   Returns the complete pattern for detecting DEBUG = True.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.DebugTrue.pattern()
       iex> pattern.id
       "python-debug-true"
@@ -25,7 +25,8 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
     %Pattern{
       id: "python-debug-true",
       name: "Debug Mode Enabled",
-      description: "Detects when DEBUG is set to True, which can expose sensitive information in production",
+      description:
+        "Detects when DEBUG is set to True, which can expose sensitive information in production",
       type: :information_disclosure,
       severity: :medium,
       languages: ["python"],
@@ -126,23 +127,23 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
         "Django settings with DEBUG enabled" => """
         # settings.py
         DEBUG = True
-        
+
         ALLOWED_HOSTS = ['*']
-        
+
         # This exposes detailed error pages to users
         """,
         "Flask application with debug mode" => """
         from flask import Flask
-        
+
         app = Flask(__name__)
         app.debug = True  # Exposes Werkzeug debugger
-        
+
         if __name__ == '__main__':
             app.run(host='0.0.0.0')
         """,
         "Environment variable with unsafe default" => """
         import os
-        
+
         # Defaults to True if DEBUG env var not set
         DEBUG = os.environ.get('DEBUG', True)
         """
@@ -151,30 +152,30 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
         "Proper Django production settings" => """
         # settings.py
         DEBUG = False
-        
+
         ALLOWED_HOSTS = ['yourdomain.com']
-        
+
         # Use environment variable with safe default
         DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
         """,
         "Flask with environment-based debug" => """
         from flask import Flask
         import os
-        
+
         app = Flask(__name__)
         app.debug = os.environ.get('FLASK_ENV') == 'development'
-        
+
         if __name__ == '__main__':
             app.run()
         """,
         "Settings split by environment" => """
         # settings/base.py
         DEBUG = False  # Default to False
-        
+
         # settings/development.py
         from .base import *
         DEBUG = True
-        
+
         # settings/production.py
         from .base import *
         DEBUG = False
@@ -203,36 +204,36 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
     """
     Debug mode is a feature in web frameworks that provides detailed error pages,
     stack traces, and debugging information. When enabled in production, it exposes:
-    
+
     1. **Detailed Error Pages**: Full stack traces with code snippets
     2. **Environment Variables**: Sensitive configuration values
     3. **File Paths**: Internal directory structure
     4. **Database Queries**: SQL statements and performance data
     5. **Installed Packages**: Version information for potential exploits
-    
+
     ## Framework-Specific Risks
-    
+
     ### Django
     - Exposes settings including SECRET_KEY
     - Shows all registered URL patterns
     - Displays template source code
     - Lists all installed apps and middleware
-    
+
     ### Flask
     - Enables Werkzeug interactive debugger
     - Allows code execution in stack frames
     - Shows environment variables
     - Exposes application structure
-    
+
     ## Real-World Impact
-    
+
     - Information disclosure for targeted attacks
     - Potential remote code execution (Flask debugger)
     - Exposure of API keys and credentials
     - Database schema revelation
-    
+
     ## Detection in Production
-    
+
     Debug mode can often be detected by:
     - Triggering a 404 error and checking for detailed debug page
     - Looking for debug toolbars or panels
@@ -242,7 +243,7 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
 
   @doc """
   Comprehensive vulnerability metadata for debug mode enabled in Python web frameworks.
-  
+
   This metadata documents the critical security implications of running with debug mode
   enabled in production environments, particularly for Django and Flask applications.
   """
@@ -253,7 +254,7 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
       error pages, stack traces, and debugging information. When accidentally left enabled 
       in production environments, it creates severe security vulnerabilities by exposing 
       sensitive internal application details to potential attackers.
-      
+
       In Django (DEBUG = True):
       1. Exposes full stack traces with source code snippets on errors
       2. Reveals all environment variables including SECRET_KEY and API credentials
@@ -262,14 +263,14 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
       5. Displays SQL queries with execution times
       6. Shows all installed apps, middleware, and template configurations
       7. Can expose session data and authentication tokens
-      
+
       In Flask (app.debug = True):
       1. Enables the Werkzeug interactive debugger
       2. Allows arbitrary Python code execution through the debugger console
       3. Exposes application source code and file structure
       4. Shows environment variables and configuration
       5. Provides interactive shell access in error contexts
-      
+
       Attackers can trigger debug pages by causing application errors (404s, 500s) and
       use the exposed information to craft targeted attacks, steal credentials, or
       achieve remote code execution through the interactive debugger.
@@ -364,13 +365,13 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
       ],
       detection_notes: """
       This pattern detects various forms of debug mode enablement:
-      
+
       1. Direct DEBUG = True assignment in settings files
       2. Django settings.DEBUG = True configuration
       3. Flask app.debug = True or app.config['DEBUG'] = True
       4. Environment variable defaults that enable debug (risky patterns)
       5. Configuration dictionaries with 'debug': True
-      
+
       The pattern is case-sensitive for DEBUG to avoid false positives.
       It specifically targets production-risky patterns while allowing
       for proper environment-based configuration.
@@ -437,9 +438,9 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
 
   @doc """
   Returns AST enhancement rules for improved detection.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.DebugTrue.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]

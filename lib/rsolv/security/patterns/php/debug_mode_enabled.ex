@@ -1,34 +1,34 @@
 defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
   @moduledoc """
   Pattern for detecting debug mode enabled in PHP applications.
-  
+
   This pattern identifies when PHP applications have debug mode or verbose error
   reporting enabled in production environments, potentially exposing sensitive
   information like database credentials, file paths, and application internals.
-  
+
   ## Vulnerability Details
-  
+
   Debug mode configuration like `display_errors = 1` or `error_reporting(E_ALL)`
   can expose detailed error messages to end users, revealing sensitive information
   about the application's structure, database queries, file paths, and potential
   vulnerabilities.
-  
+
   ### Attack Example
   ```php
   // Vulnerable configuration
   ini_set('display_errors', 1);
   error_reporting(E_ALL);
-  
+
   // If an error occurs:
   // Fatal error: Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 
   // 1146 Table 'myapp.users' doesn't exist in /var/www/app/models/UserModel.php:45
   // Stack trace: #0 /var/www/app/controllers/LoginController.php:23: UserModel->findByEmail()
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -38,7 +38,8 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
       type: :information_disclosure,
       severity: :medium,
       languages: ["php"],
-      regex: ~r/(ini_set\s*\(\s*['"]display_errors['"]\s*,\s*(['"]?1['"]?|true|['"]on['"]?))|error_reporting\s*\(\s*E_ALL/i,
+      regex:
+        ~r/(ini_set\s*\(\s*['"]display_errors['"]\s*,\s*(['"]?1['"]?|true|['"]on['"]?))|error_reporting\s*\(\s*E_ALL/i,
       cwe_id: "CWE-489",
       owasp_category: "A05:2021",
       recommendation: "Disable debug mode and error display in production",
@@ -56,7 +57,7 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -66,11 +67,11 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
       revealing database schemas, file paths, configuration details, and code logic
       to attackers. This information disclosure can be leveraged to craft more
       sophisticated attacks against the application.
-      
+
       When PHP's display_errors is enabled or error_reporting is set to show all
       errors, detailed error messages including stack traces are sent to the browser.
       These messages often contain:
-      
+
       **Information Exposed**:
       - Full file system paths revealing directory structure
       - Database table and column names
@@ -79,19 +80,19 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
       - Internal function and class names
       - Server configuration details
       - Sensitive variable contents in stack traces
-      
+
       **Attack Scenarios**:
-      
+
       **Path Disclosure**: Error messages reveal full file paths like
       `/var/www/app/config/database.php`, helping attackers understand the
       application structure and potentially access configuration files.
-      
+
       **Database Schema Enumeration**: SQL errors expose table names, column names,
       and relationships, allowing attackers to craft targeted SQL injection attacks.
-      
+
       **Version Fingerprinting**: Stack traces reveal framework versions, making it
       easier to find known vulnerabilities specific to those versions.
-      
+
       **Source Code Disclosure**: Parse errors can reveal portions of source code,
       including business logic and security checks.
       """,
@@ -171,21 +172,21 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
       ],
       detection_notes: """
       This pattern detects debug mode configuration by identifying:
-      
+
       1. **ini_set() calls**: Detects setting display_errors to enabled values
          - ini_set('display_errors', 1)
          - ini_set('display_errors', 'on')
          - ini_set('display_errors', true)
-      
+
       2. **Common Values**: Matches various ways to enable errors
          - Numeric: 1
          - String: 'on', 'On', 'ON'
          - Boolean: true
-      
+
       3. **Case Insensitive**: The /i flag ensures 'on', 'On', 'ON' all match
-      
+
       The regex: ini_set\\s*\\(\\s*['\"]display_errors['\"]\\s*,\\s*(1|true|on)
-      
+
       Note: This pattern focuses on display_errors. Additional patterns may be
       needed for error_reporting(E_ALL) and other debug configurations.
       """,
@@ -230,9 +231,9 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
 
   @doc """
   Returns test cases for the debug mode enabled pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.DebugModeEnabled.test_cases()
       iex> length(test_cases.positive)
       8
@@ -316,9 +317,9 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
 
   @doc """
   Returns examples of vulnerable and fixed code.
-  
+
   ## Examples
-  
+
       iex> examples = Rsolv.Security.Patterns.Php.DebugModeEnabled.examples()
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
@@ -330,7 +331,7 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
         // VULNERABLE: Debug mode enabled
         ini_set('display_errors', 1);
         error_reporting(E_ALL);
-        
+
         // Any error will expose sensitive information:
         $db = new PDO('mysql:host=localhost;dbname=app', $user, $pass);
         // Could reveal: Fatal error: Uncaught PDOException: SQLSTATE[HY000] [1045] 
@@ -343,7 +344,7 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
             ini_set('display_startup_errors', 1);
             error_reporting(E_ALL);
         }
-        
+
         // Parse errors expose source code:
         // Parse error: syntax error, unexpected '}' in /var/www/app/admin/users.php on line 45
         """,
@@ -352,7 +353,7 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
         define('WP_DEBUG', true);
         define('WP_DEBUG_DISPLAY', true);
         ini_set('display_errors', 1);
-        
+
         // Exposes WordPress paths and database queries:
         // WordPress database error Table 'wp_users' doesn't exist for query 
         // SELECT * FROM wp_users WHERE user_email = 'admin@site.com'
@@ -365,7 +366,7 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
         ini_set('log_errors', 1);
         ini_set('error_log', '/var/log/php/app-errors.log');
         error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
-        
+
         // Custom error handler for user-friendly messages
         set_error_handler(function($severity, $message, $file, $line) {
             error_log("Error [$severity]: $message in $file:$line");
@@ -382,7 +383,7 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
         "Environment-based config" => """
         // SECURE: Environment-aware configuration
         $environment = $_ENV['APP_ENV'] ?? 'production';
-        
+
         if ($environment === 'production') {
             ini_set('display_errors', 0);
             ini_set('log_errors', 1);
@@ -392,7 +393,7 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
             ini_set('display_errors', 1);
             error_reporting(E_ALL);
         }
-        
+
         // Use structured logging
         function logError($message, $context = []) {
             $log = [
@@ -409,18 +410,18 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
         // SECURE: Professional error handling
         use Sentry\\SentrySdk;
         use Sentry\\State\\Scope;
-        
+
         // Disable display, enable logging
         ini_set('display_errors', 0);
         ini_set('log_errors', 1);
-        
+
         // Initialize error monitoring
         SentrySdk::init([
             'dsn' => $_ENV['SENTRY_DSN'],
             'environment' => $_ENV['APP_ENV'],
             'traces_sample_rate' => 0.1,
         ]);
-        
+
         // Custom exception handler
         set_exception_handler(function($exception) {
             // Log to monitoring service
@@ -440,9 +441,9 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
 
   @doc """
   Returns educational description of the vulnerability.
-  
+
   ## Examples
-  
+
       iex> desc = Rsolv.Security.Patterns.Php.DebugModeEnabled.vulnerability_description()
       iex> desc =~ "debug"
       true
@@ -461,44 +462,44 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
     significant security misconfiguration that can expose sensitive information 
     about your application's internal workings, making it easier for attackers 
     to identify and exploit vulnerabilities.
-    
+
     When display_errors is enabled in debug mode, PHP sends detailed error messages directly to 
     the browser, including file paths, line numbers, function names, and sometimes 
     even variable contents. This information disclosure can be catastrophic for 
     application security.
-    
+
     ## Security Impact
-    
+
     **Information Disclosure**: Error messages reveal the application's directory 
     structure, database schema, server configuration, and code organization, 
     providing attackers with a roadmap for exploitation.
-    
+
     **Attack Surface Mapping**: Stack traces expose the application's architecture, 
     making it easier to identify components, libraries, and potential entry points 
     for attacks.
-    
+
     **Vulnerability Discovery**: Error messages can reveal specific vulnerabilities 
     like SQL injection points, file inclusion paths, or authentication bypasses.
-    
+
     ## Common Scenarios
-    
+
     1. **Path Disclosure**:
        - Reveals full file system paths
        - Exposes directory structure
        - Shows configuration file locations
-    
+
     2. **Database Exposure**:
        - Table and column names
        - Query structure
        - Connection details
-    
+
     3. **Code Disclosure**:
        - Function and class names
        - Business logic flow
        - Security check implementations
-    
+
     ## Prevention
-    
+
     Always disable display_errors in production, use proper error logging, 
     implement custom error handlers that show generic messages to users, and 
     utilize professional error monitoring services to track issues without 
@@ -535,41 +536,66 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
           type: "debug_settings",
           description: "Identify debug-related configurations",
           dangerous_settings: [
-            "display_errors", "display_startup_errors",
-            "html_errors", "track_errors"
+            "display_errors",
+            "display_startup_errors",
+            "html_errors",
+            "track_errors"
           ],
           dangerous_values: ["1", "on", "true", "yes"],
           safe_values: ["0", "off", "false", "no"],
           related_functions: [
-            "error_reporting", "set_error_handler",
-            "set_exception_handler", "ini_set", "ini_get"
+            "error_reporting",
+            "set_error_handler",
+            "set_exception_handler",
+            "ini_set",
+            "ini_get"
           ]
         },
         %{
           type: "environment_detection",
           description: "Check for environment-based configuration",
           environment_checks: [
-            "$_ENV", "$_SERVER", "getenv",
-            "APP_ENV", "APPLICATION_ENV", "ENVIRONMENT"
+            "$_ENV",
+            "$_SERVER",
+            "getenv",
+            "APP_ENV",
+            "APPLICATION_ENV",
+            "ENVIRONMENT"
           ],
           development_indicators: [
-            "dev", "development", "local", "debug",
-            "test", "staging", "localhost"
+            "dev",
+            "development",
+            "local",
+            "debug",
+            "test",
+            "staging",
+            "localhost"
           ],
           production_indicators: [
-            "prod", "production", "live", "master"
+            "prod",
+            "production",
+            "live",
+            "master"
           ]
         },
         %{
           type: "production_indicators",
           description: "Detect production environment context",
           production_checks: [
-            "production", "live", "prod",
-            ".com", ".org", ".net"
+            "production",
+            "live",
+            "prod",
+            ".com",
+            ".org",
+            ".net"
           ],
           exclude_patterns: [
-            "example.com", "test.com", "localhost",
-            "127.0.0.1", "dev.", "staging."
+            "example.com",
+            "test.com",
+            "localhost",
+            "127.0.0.1",
+            "dev.",
+            "staging."
           ]
         },
         %{
@@ -581,8 +607,12 @@ defmodule Rsolv.Security.Patterns.Php.DebugModeEnabled do
             "getenv.*APP_ENV.*production"
           ],
           configuration_files: [
-            "config", "settings", "bootstrap",
-            "init", "env", ".env"
+            "config",
+            "settings",
+            "bootstrap",
+            "init",
+            "env",
+            ".env"
           ]
         }
       ]

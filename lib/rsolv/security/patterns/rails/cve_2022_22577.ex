@@ -1,20 +1,20 @@
 defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
   @moduledoc """
   CVE-2022-22577 - XSS Vulnerability in Rails Action Pack.
-  
+
   This vulnerability affects Rails Action Pack versions >= 5.2.0 where Content-Security-Policy 
   (CSP) headers were only sent along with responses that Rails considered as "HTML" responses. 
   This left API requests without CSP headers, and when user input is used to construct CSP headers,
   it could allow attackers to bypass CSP protections and inject malicious directives.
-  
+
   ## Vulnerability Details
-  
+
   CVE-2022-22577 is a cross-site scripting (XSS) vulnerability that occurs when:
   1. Rails applications dynamically construct CSP headers using user input
   2. API endpoints lack proper CSP header protection
   3. User-controlled data is injected into CSP directive values
   4. Nonce values are constructed from user input
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable: User input directly in CSP header
@@ -23,7 +23,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
     render json: { data: data }
   end
   ```
-  
+
   ### Safe Example
   ```ruby  
   # Safe: Static CSP with allowlist validation
@@ -37,14 +37,15 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-cve-2022-22577",
       name: "CVE-2022-22577 - XSS in Action Pack",
-      description: "XSS vulnerability in CSP headers allowing script injection through user input",
+      description:
+        "XSS vulnerability in CSP headers allowing script injection through user input",
       type: :xss,
       severity: :medium,
       languages: ["ruby"],
@@ -56,26 +57,26 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
         ~r/^(?!.*[^\\]#[^{]).*response\.headers\[['"]CSP['"]]\s*=.*?\\*#\{params\[/,
         ~r/^(?!.*[^\\]#[^{]).*response\.headers\[['"]Content-Security-Policy['"]]\s*=.*?\\*#\{request\./,
         ~r/^(?!.*[^\\]#[^{]).*response\.headers\[['"]Content-Security-Policy['"]]\s*=\s*params\[/,
-        
+
         # CSP policy builder with user input (handle multiline with \\n)
         ~r/content_security_policy[\s\S\\]*?policy\.[\w_]+\s+params\[/,
         ~r/content_security_policy[\s\S\\]*?policy\.[\w_]+.*?\\*#\{params\[/,
         ~r/content_security_policy[\s\S\\]*?policy\.[\w_]+.*?\\*#\{request\./,
         ~r/content_security_policy.*?\\n.*?params\[/,
-        
+
         # Dynamic CSP directive construction
         ~r/policy\.(script_src|style_src|default_src|connect_src|img_src|font_src).*?\\*#\{params\[/,
         ~r/policy\.(script_src|style_src|default_src|connect_src|img_src|font_src).*?\\*#\{request\./,
         ~r/policy\.(script_src|style_src|default_src|connect_src|img_src|font_src).*?\\*#\{user_/,
         ~r/policy\.(script_src|style_src|default_src|connect_src|img_src|font_src)\s+params\[/,
-        
+
         # Nonce injection vulnerabilities (handle multiline)
         ~r/['"]nonce-\\*#\{params\[/,
         ~r/['"]nonce-\\*#\{user_/,
         ~r/['"]nonce-\\*#\{[^}]*params/,
         ~r/params\[:nonce\].*?\\n.*?nonce-\\*#\{/,
         ~r/= params\[:nonce\].*?\\n.*?['"]nonce-\\*#\{/,
-        
+
         # CSP function calls with user input
         ~r/build_csp\(params\[/,
         ~r/set_csp.*?params\[/,
@@ -84,7 +85,8 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
       ],
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
-      recommendation: "Validate and sanitize any user input used in Content-Security-Policy headers. Use allowlists for CSP directive values instead of direct user input.",
+      recommendation:
+        "Validate and sanitize any user input used in Content-Security-Policy headers. Use allowlists for CSP directive values instead of direct user input.",
       test_cases: %{
         vulnerable: [
           "response.headers[\"Content-Security-Policy\"] = \"default-src \#{params[:csp]}\"",
@@ -101,7 +103,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -138,12 +140,13 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
       - Cross-origin data exfiltration through crafted CSP directives
       - Persistent XSS through stored malicious CSP configurations
       """,
-      likelihood: "Medium - Common in Rails applications that dynamically construct CSP headers, especially API endpoints accepting user input for security configurations",
+      likelihood:
+        "Medium - Common in Rails applications that dynamically construct CSP headers, especially API endpoints accepting user input for security configurations",
       cve_examples: """
       CVE-2022-22577 - Rails Action Pack XSS vulnerability (CVSS 6.1 Medium)
       Affects: Rails >= 5.2.0, < 5.2.0 (typo in original, should be < 7.0.2.4)
       Fixed in: Rails 7.0.2.4, 6.1.5.1, 6.0.4.8, 5.2.7.1
-      
+
       Related vulnerabilities:
       CVE-2024-54133 - Content Security Policy bypass in Action Dispatch
       GHSA-mm33-5vfq-3mm3 - Cross-site Scripting Vulnerability in Action Pack
@@ -204,7 +207,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
           
           render json: { data: data }
         end
-      
+
       # Safe static CSP configuration
       Rails.application.config.content_security_policy do |policy|
         policy.default_src :self
@@ -212,7 +215,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
         policy.style_src   :self, 'https://fonts.googleapis.com'
         policy.connect_src :self, 'https://api.example.com'
       end
-      
+
       # Safe nonce-based CSP
       def secure_endpoint
         nonce = SecureRandom.base64(32)  # Server-generated nonce
@@ -222,44 +225,68 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.8,
-      
       context_rules: %{
         # CSP-related headers and directives
         csp_headers: [
-          "Content-Security-Policy", "CSP", "Content-Security-Policy-Report-Only"
+          "Content-Security-Policy",
+          "CSP",
+          "Content-Security-Policy-Report-Only"
         ],
-        
+
         # CSP directive names
         csp_directives: [
-          "default_src", "script_src", "style_src", "img_src", "connect_src",
-          "font_src", "object_src", "media_src", "frame_src", "child_src",
-          "frame_ancestors", "form_action", "upgrade_insecure_requests"
+          "default_src",
+          "script_src",
+          "style_src",
+          "img_src",
+          "connect_src",
+          "font_src",
+          "object_src",
+          "media_src",
+          "frame_src",
+          "child_src",
+          "frame_ancestors",
+          "form_action",
+          "upgrade_insecure_requests"
         ],
-        
+
         # Dangerous input sources
         dangerous_sources: [
-          "params", "request.headers", "request.params", "user_input", 
-          "session", "cookies", "request.query_parameters"
+          "params",
+          "request.headers",
+          "request.params",
+          "user_input",
+          "session",
+          "cookies",
+          "request.query_parameters"
         ],
-        
+
         # Safe CSP patterns that should reduce confidence
         safe_patterns: [
-          ~r/'self'/,                                    # Self reference
-          ~r/'none'/,                                    # None directive
-          ~r/'unsafe-inline'/,                           # Explicit unsafe inline
-          ~r/'unsafe-eval'/,                             # Explicit unsafe eval
-          ~r/https:\/\/[\w\-\.]+/,                       # HTTPS URLs
-          ~r/ALLOWED_\w+/,                               # Allowlist constants
-          ~r/#.*response\.headers.*CSP/,                 # Commented CSP code
-          ~r/SecureRandom\./,                            # Secure random nonce
-          ~r/Rails\.application\.config\.content_security_policy/ # Static config
+          # Self reference
+          ~r/'self'/,
+          # None directive
+          ~r/'none'/,
+          # Explicit unsafe inline
+          ~r/'unsafe-inline'/,
+          # Explicit unsafe eval
+          ~r/'unsafe-eval'/,
+          # HTTPS URLs
+          ~r/https:\/\/[\w\-\.]+/,
+          # Allowlist constants
+          ~r/ALLOWED_\w+/,
+          # Commented CSP code
+          ~r/#.*response\.headers.*CSP/,
+          # Secure random nonce
+          ~r/SecureRandom\./,
+          # Static config
+          ~r/Rails\.application\.config\.content_security_policy/
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence indicators
@@ -268,21 +295,20 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
           nonce_manipulation: +0.5,
           multiple_directive_injection: +0.3,
           api_endpoint_context: +0.3,
-          
+
           # Lower confidence adjustments
           static_csp_value: -0.6,
           allowlist_validation: -0.7,
           commented_code: -1.0,
           test_file_context: -0.8,
           secure_random_nonce: -0.5,
-          
+
           # Context-based adjustments
           in_controller_action: +0.2,
           in_api_controller: +0.3,
           in_security_config: -0.4
         }
       },
-      
       ast_rules: %{
         # HTTP header analysis
         header_analysis: %{
@@ -291,7 +317,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
           validate_header_values: true,
           check_dynamic_headers: true
         },
-        
+
         # CSP specific analysis
         csp_analysis: %{
           check_directive_injection: true,
@@ -299,7 +325,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
           validate_source_lists: true,
           check_policy_builder_usage: true
         },
-        
+
         # Input validation analysis
         input_validation: %{
           check_params_usage: true,
@@ -310,6 +336,4 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
       }
     }
   end
-  
 end
-

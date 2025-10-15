@@ -12,16 +12,23 @@ defmodule Rsolv.Phases.ValidationExecution do
     field :started_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
     field :error_message, :string
-    
+
     belongs_to :repository, Rsolv.Phases.Repository
     belongs_to :api_key, Rsolv.Customers.ApiKey
-    
+
     timestamps(type: :utc_datetime_usec)
   end
 
   @required_fields [:repository_id, :issue_number, :commit_sha, :data]
-  @optional_fields [:status, :validated, :vulnerabilities_found, :started_at, 
-                    :completed_at, :error_message, :api_key_id]
+  @optional_fields [
+    :status,
+    :validated,
+    :vulnerabilities_found,
+    :started_at,
+    :completed_at,
+    :error_message,
+    :api_key_id
+  ]
 
   def changeset(validation_execution, attrs) do
     validation_execution
@@ -44,6 +51,7 @@ defmodule Rsolv.Phases.ValidationExecution do
 
   defp put_completed_at_if_done(changeset) do
     status = get_change(changeset, :status)
+
     if status in [:completed, :failed] and get_field(changeset, :completed_at) == nil do
       put_change(changeset, :completed_at, DateTime.utc_now() |> DateTime.truncate(:microsecond))
     else
@@ -53,10 +61,12 @@ defmodule Rsolv.Phases.ValidationExecution do
 
   defp extract_validation_result(changeset) do
     case get_change(changeset, :data) do
-      %{"validated" => validated, "vulnerabilities" => vulnerabilities} when is_list(vulnerabilities) ->
+      %{"validated" => validated, "vulnerabilities" => vulnerabilities}
+      when is_list(vulnerabilities) ->
         changeset
         |> put_change(:validated, validated)
         |> put_change(:vulnerabilities_found, length(vulnerabilities))
+
       _ ->
         changeset
     end

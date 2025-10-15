@@ -61,7 +61,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
 
   1. **Configuration Information Disclosure**: `debug: true` in production exposes
      detailed error messages that reveal application structure and internal logic
-  
+
   2. **Sensitive Data Logging**: `IO.inspect/2` calls can log user credentials,
      session tokens, and personal information to application logs
      
@@ -86,7 +86,8 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
     %Rsolv.Security.Pattern{
       id: "elixir-debug-mode-enabled",
       name: "Debug Mode Enabled",
-      description: "Debug mode configurations and debug function usage that can expose sensitive information in production",
+      description:
+        "Debug mode configurations and debug function usage that can expose sensitive information in production",
       type: :information_disclosure,
       severity: :medium,
       languages: ["elixir"],
@@ -95,27 +96,28 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
         # Config debug: true patterns
         ~r/config\s+:[^,]+.*debug:\s*true/s,
         ~r/config\s*\(\s*:[^,]+.*debug:\s*true\s*\)/s,
-        
+
         # Phoenix LiveView debug annotations
         ~r/debug_heex_annotations:\s*true/,
-        
+
         # IO.inspect patterns  
         ~r/IO\.inspect\s*\(|IO\.inspect\s+[^(]/,
-        
+
         # dbg/1 patterns (Elixir 1.14+)
         ~r/\bdbg\s*\(/,
         ~r/\|\s*>\s*dbg\s*\(\s*\)/,
-        
+
         # Logger debug level in config
         ~r/config\s+:logger,\s*level:\s*:debug/,
-        
+
         # Mix.env debug checks that may still execute in prod (avoid :dev checks)
         ~r/if\s+Mix\.env\(\)\s*!=\s*:prod\s+do.*IO\.inspect/s,
         ~r/unless\s+Mix\.env\(\)\s*==\s*:prod\s+do.*IO\.inspect/s
       ],
       cwe_id: "CWE-489",
       owasp_category: "A05:2021",
-      recommendation: "Disable debug configurations in production and replace debug function calls with proper logging",
+      recommendation:
+        "Disable debug configurations in production and replace debug function calls with proper logging",
       test_cases: %{
         vulnerable: [
           ~S|config :my_app, debug: true|,
@@ -157,10 +159,11 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
       - Internal API endpoints and authentication mechanisms
       - Session tokens and security keys in logs
       """,
-      likelihood: "Medium: Debug configurations commonly left enabled accidentally in production deployments",
+      likelihood:
+        "Medium: Debug configurations commonly left enabled accidentally in production deployments",
       cve_examples: [
         "CWE-489: Active Debug Code",
-        "CWE-532: Insertion of Sensitive Information into Log File", 
+        "CWE-532: Insertion of Sensitive Information into Log File",
         "CWE-200: Information Exposure"
       ],
       compliance_standards: [
@@ -202,7 +205,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,

@@ -1,46 +1,46 @@
 defmodule Rsolv.Security.Patterns.Java.SqlInjectionStringFormat do
   @moduledoc """
   SQL Injection via String.format pattern for Java code.
-  
+
   Detects SQL injection vulnerabilities where String.format() or MessageFormat.format()
   are used to build SQL queries. These methods perform string interpolation without
   any SQL-specific sanitization, making them vulnerable to injection attacks.
-  
+
   ## Vulnerability Details
-  
+
   String.format() uses format specifiers like %s, %d, %f to inject values into strings.
   When used to build SQL queries, attackers can inject malicious SQL code through
   these format parameters. While %d (integer) provides some protection, %s (string)
   allows arbitrary input.
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable code
   String userId = request.getParameter("id");
   String query = String.format("SELECT * FROM users WHERE id = %s", userId);
   stmt.executeQuery(query);
-  
+
   // Attack input: userId = "1 OR 1=1 --"
   // Results in: SELECT * FROM users WHERE id = 1 OR 1=1 --
   // Returns all users instead of just one
   ```
-  
+
   ### Real-World Impact
-  
+
   Many developers mistakenly believe String.format() provides some security benefit over
   simple concatenation, but it offers no protection against SQL injection. This has led
   to numerous vulnerabilities in production applications.
-  
+
   ## References
-  
+
   - CWE-89: Improper Neutralization of Special Elements used in an SQL Command
   - OWASP A03:2021 - Injection
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -70,7 +70,8 @@ defmodule Rsolv.Security.Patterns.Java.SqlInjectionStringFormat do
       ],
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use PreparedStatement with setString(), setInt(), etc. instead of String.format()",
+      recommendation:
+        "Use PreparedStatement with setString(), setInt(), etc. instead of String.format()",
       test_cases: %{
         vulnerable: [
           ~S|executeQuery(String.format("SELECT * FROM users WHERE id = %s", userId))|,
@@ -88,7 +89,7 @@ pstmt.setString(1, userId);|,
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -98,7 +99,7 @@ pstmt.setString(1, userId);|,
       SQL-specific escaping or validation. While format specifiers like %d provide type
       checking, they don't prevent SQL injection in numeric contexts, and %s allows arbitrary
       string injection.
-      
+
       This vulnerability is particularly dangerous because developers often mistakenly believe
       that using String.format() is safer than simple concatenation, when in fact it provides
       no additional security benefits for SQL query construction.
@@ -107,7 +108,8 @@ pstmt.setString(1, userId);|,
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -120,13 +122,15 @@ pstmt.setString(1, userId);|,
           type: :research,
           id: "java_string_format_security",
           title: "Testing for Format String Injection - OWASP",
-          url: "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/13-Testing_for_Format_String_Injection"
+          url:
+            "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/13-Testing_for_Format_String_Injection"
         },
         %{
           type: :article,
           id: "sql_injection_prevention",
           title: "SQL Injection Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
         }
       ],
       attack_vectors: [
@@ -162,7 +166,8 @@ pstmt.setString(1, userId);|,
         },
         %{
           id: "CVE-2025-24787",
-          description: "Parameter injection in database connection strings via string concatenation",
+          description:
+            "Parameter injection in database connection strings via string concatenation",
           severity: "critical",
           cvss: 9.8,
           note: "String concatenation and formatting allowed injection in connection parameters"
@@ -175,7 +180,7 @@ pstmt.setString(1, userId);|,
       - Use in prepareStatement() defeating the purpose of prepared statements
       - Assignment to query variables later executed
       - Use in JDBC template methods
-      
+
       False positives may occur when String.format() is used for non-SQL purposes like
       logging or building non-SQL strings. AST enhancement helps distinguish SQL contexts.
       """,
@@ -209,15 +214,15 @@ pstmt.setString(1, userId);|,
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between SQL-related String.format usage
   and general string formatting for logging or display purposes.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.SqlInjectionStringFormat.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -245,9 +250,16 @@ pstmt.setString(1, userId);|,
         sql_context: %{
           check_parent_call: true,
           sql_methods: [
-            "executeQuery", "executeUpdate", "execute", "executeBatch",
-            "prepareStatement", "prepareCall", "addBatch",
-            "query", "update", "batchUpdate"
+            "executeQuery",
+            "executeUpdate",
+            "execute",
+            "executeBatch",
+            "prepareStatement",
+            "prepareCall",
+            "addBatch",
+            "query",
+            "update",
+            "batchUpdate"
           ],
           check_variable_usage: true,
           sql_variable_patterns: ["query", "sql", "statement", "cmd"]

@@ -149,6 +149,7 @@ defmodule Rsolv.AST.TestScorerTest do
   describe "find_best_test_file/2" do
     test "selects test file with highest score" do
       vulnerable_file = "src/services/payment.js"
+
       candidate_tests = [
         "test/services/payment.test.js",
         "test/api/endpoints.test.js",

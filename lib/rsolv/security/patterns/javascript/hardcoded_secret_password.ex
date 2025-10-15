@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
   @moduledoc """
   Hardcoded Secret - Password in JavaScript/Node.js
-  
+
   Detects dangerous patterns like:
     const password = "admin123"
     let dbPassword = 'secretpass'
@@ -16,18 +16,18 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
   vulnerabilities in software development. This practice exposes sensitive 
   authentication credentials to anyone with access to the codebase, including 
   developers, version control systems, code repositories, and potentially attackers.
-  
+
   ## Vulnerability Details
-  
+
   Hardcoded passwords violate fundamental security principles and create multiple 
   attack vectors:
-  
+
   1. **Source Code Exposure**: Passwords visible in plain text to anyone with code access
   2. **Version Control History**: Passwords permanently stored in git history
   3. **Repository Scanning**: Automated tools easily detect hardcoded credentials
   4. **Deployment Leakage**: Passwords exposed in build artifacts and logs
   5. **Shared Development**: Multiple developers gain access to production credentials
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Hardcoded database password
@@ -37,24 +37,23 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
     password: 'Pr0duct10nP@ss2024',  // <- Exposed in source code
     database: 'users'
   };
-  
+
   // Vulnerable: API authentication
   const config = {
     apiKey: process.env.API_KEY,        // Good
     password: "supersecret123"          // <- Bad: Hardcoded
   };
   ```
-  
+
   ### Modern Attack Scenarios
   Hardcoded passwords enable numerous attack vectors including unauthorized database 
   access, API abuse, privilege escalation, and lateral movement within systems. 
   Attackers regularly scan public repositories for exposed credentials, making this 
   a high-priority target for both automated tools and manual exploitation.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
 
   def pattern do
     %Pattern{
@@ -67,7 +66,8 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
       regex: ~r/(?:password|passwd|pwd)\s*[=:]\s*["'`][^"'`]{4,}["'`]/i,
       cwe_id: "CWE-798",
       owasp_category: "A07:2021",
-      recommendation: "Store passwords in environment variables or secure configuration management systems.",
+      recommendation:
+        "Store passwords in environment variables or secure configuration management systems.",
       test_cases: %{
         vulnerable: [
           ~s(const password = "admin123"),
@@ -100,10 +100,10 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for hardcoded passwords.
-  
+
   This metadata documents the critical security risks of storing passwords directly 
   in source code and provides authoritative guidance for secure credential management.
   """
@@ -114,19 +114,19 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
       security vulnerabilities in software development. This practice involves storing 
       authentication credentials directly in source code, making them visible to anyone 
       with access to the codebase, version control history, or deployment artifacts.
-      
+
       The vulnerability is particularly dangerous because it combines high impact with 
       trivial exploitation. Once discovered, hardcoded passwords provide immediate 
       unauthorized access to systems, databases, APIs, and other sensitive resources. 
       The exposure is persistent and difficult to remediate completely, as passwords 
       may remain in version control history even after being removed from current code.
-      
+
       Modern development practices, including public repositories, CI/CD pipelines, 
       and automated code scanning, have made hardcoded passwords increasingly risky. 
       Attackers routinely scan GitHub and other platforms for exposed credentials, 
       often gaining access to production systems within hours of code commits containing 
       hardcoded passwords.
-      
+
       Beyond direct security risks, hardcoded passwords violate compliance requirements, 
       complicate credential rotation, prevent proper access management, and create 
       operational challenges for teams managing multiple environments and deployment scenarios.
@@ -160,7 +160,8 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
           type: :research,
           id: "github_credential_exposure",
           title: "Empirical Study of Credential Exposure in Public Repositories",
-          url: "https://www.ndss-symposium.org/wp-content/uploads/2019/02/ndss2019_04B-3_Meli_paper.pdf"
+          url:
+            "https://www.ndss-symposium.org/wp-content/uploads/2019/02/ndss2019_04B-3_Meli_paper.pdf"
         }
       ],
       attack_vectors: [
@@ -217,14 +218,14 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
       This pattern detects variable assignments where password-related identifiers 
       (password, passwd, pwd) are assigned string literals of 4 or more characters.
       The detection covers:
-      
+
       1. Variable declarations: const password = "value"
       2. Object properties: { password: "value" }
       3. Assignment expressions: password = "value"
       4. Various quote styles: single, double, template literals
       5. Case variations: password, PASSWORD, Password
       6. Common abbreviations: passwd, pwd
-      
+
       The pattern uses a minimum length of 4 characters to reduce false positives 
       from test data or placeholder values while catching real passwords. The regex 
       is designed to be sensitive enough to catch hardcoded credentials while 
@@ -288,39 +289,41 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Applies to JavaScript/TypeScript files or any file containing password assignments.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files always apply
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) ->
+        true
+
       # If content is provided, check for password assignments
       content != nil ->
         # Check for password-related variable names in content
-        String.contains?(content, "password") || 
-        String.contains?(content, "passwd") ||
-        String.contains?(content, "pwd") ||
         # Also check if the pattern regex itself matches
-        Regex.match?(pattern().regex, content)
-        
+        String.contains?(content, "password") ||
+          String.contains?(content, "passwd") ||
+          String.contains?(content, "pwd") ||
+          Regex.match?(pattern().regex, content)
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual hardcoded passwords
   and legitimate uses of the word "password" in code.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -342,59 +345,92 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
     %{
       ast_rules: %{
         node_type: "VariableDeclarator",
-        value_types: ["Literal", "TemplateLiteral"],  # String values
+        # String values
+        value_types: ["Literal", "TemplateLiteral"],
         identifier_check: %{
           pattern: ~r/(?:password|passwd|pwd|pass|secret|credential)/i,
-          exclude_pattern: ~r/(?:regex|pattern|validation|test|example|placeholder|message|error|field|input)/i
+          exclude_pattern:
+            ~r/(?:regex|pattern|validation|test|example|placeholder|message|error|field|input)/i
         },
         assignment_analysis: %{
           check_value_content: true,
           suspicious_values: ~r/^(?!.*(?:TODO|FIXME|CHANGE_ME|placeholder|example)).*$/i,
-          min_value_length: 4,  # Real passwords are usually longer
-          max_value_length: 100  # Very long strings are likely not passwords
+          # Real passwords are usually longer
+          min_value_length: 4,
+          # Very long strings are likely not passwords
+          max_value_length: 100
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/fixtures/, ~r/examples/, ~r/docs/],
         safe_patterns: [
-          "process.env",      # Environment variables
-          "config.get",       # Configuration systems
-          "getenv",           # Environment access
-          "prompt",           # User input
-          "readPassword",     # Password input functions
-          "getSecret",        # Secret management
-          "vault",            # HashiCorp Vault
-          "secretManager",    # AWS/GCP secret managers
-          "keychain"          # OS keychains
+          # Environment variables
+          "process.env",
+          # Configuration systems
+          "config.get",
+          # Environment access
+          "getenv",
+          # User input
+          "prompt",
+          # Password input functions
+          "readPassword",
+          # Secret management
+          "getSecret",
+          # HashiCorp Vault
+          "vault",
+          # AWS/GCP secret managers
+          "secretManager",
+          # OS keychains
+          "keychain"
         ],
         check_surrounding_code: true,
         safe_contexts: [
-          "validation",       # Password validation logic
-          "placeholder",      # UI placeholders
-          "error_message",    # Error messages about passwords
-          "documentation",    # Code comments
-          "schema",           # Database schemas
-          "mock",             # Mock data
-          "fixture"           # Test fixtures
+          # Password validation logic
+          "validation",
+          # UI placeholders
+          "placeholder",
+          # Error messages about passwords
+          "error_message",
+          # Code comments
+          "documentation",
+          # Database schemas
+          "schema",
+          # Mock data
+          "mock",
+          # Test fixtures
+          "fixture"
         ]
       },
       confidence_rules: %{
-        base: 0.6,  # Medium-high base - many false positives possible
+        # Medium-high base - many false positives possible
+        base: 0.6,
         adjustments: %{
-          "literal_string_value" => 0.4,        # Direct string assignment
-          "production_file" => 0.3,             # In production code
-          "config_file" => 0.3,                 # Configuration files
-          "short_value" => -0.2,                # Very short values unlikely
-          "environment_variable" => -0.8,       # Using env vars is safe
-          "test_file" => -0.7,                  # Test files OK
-          "example_code" => -0.6,               # Example/demo code
-          "validation_context" => -0.5,         # Password validation logic
-          "ui_placeholder" => -0.6,             # UI placeholder text
-          "encrypted_value" => -0.3,            # Already encrypted
-          "configuration_access" => -0.7        # Using config system
+          # Direct string assignment
+          "literal_string_value" => 0.4,
+          # In production code
+          "production_file" => 0.3,
+          # Configuration files
+          "config_file" => 0.3,
+          # Very short values unlikely
+          "short_value" => -0.2,
+          # Using env vars is safe
+          "environment_variable" => -0.8,
+          # Test files OK
+          "test_file" => -0.7,
+          # Example/demo code
+          "example_code" => -0.6,
+          # Password validation logic
+          "validation_context" => -0.5,
+          # UI placeholder text
+          "ui_placeholder" => -0.6,
+          # Already encrypted
+          "encrypted_value" => -0.3,
+          # Using config system
+          "configuration_access" => -0.7
         }
       },
-      min_confidence: 0.8  # High threshold due to many false positives
+      # High threshold due to many false positives
+      min_confidence: 0.8
     }
   end
 end

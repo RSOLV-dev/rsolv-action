@@ -8,12 +8,12 @@ defmodule Rsolv.Customers do
   require Logger
 
   alias Rsolv.Customers.{Customer, ApiKey}
-  
+
   @doc """
   Gets an API key by its key value.
-  
+
   ## Examples
-  
+
       iex> get_api_key_by_key("test_abc123")
       %ApiKey{}
       
@@ -24,6 +24,7 @@ defmodule Rsolv.Customers do
     Repo.get_by(ApiKey, key: key, active: true)
     |> Repo.preload(:customer)
   end
+
   def get_api_key_by_key(_), do: nil
 
   @doc """
@@ -59,6 +60,7 @@ defmodule Rsolv.Customers do
   Gets a customer by API key.
   """
   def get_customer_by_api_key(nil), do: nil
+
   def get_customer_by_api_key(api_key) when is_binary(api_key) do
     Logger.info("🔍 [API Auth Debug] Looking up API key: #{String.slice(api_key, 0..15)}...")
 
@@ -75,21 +77,24 @@ defmodule Rsolv.Customers do
           Logger.warning("⚠️ [API Auth Debug] Customer #{customer_id} is inactive - auth failed")
           nil
         end
+
       nil ->
         # Check if key exists but is inactive
         case Repo.get_by(ApiKey, key: api_key) do
           %ApiKey{active: false} ->
             Logger.warning("⚠️ [API Auth Debug] API key exists but is inactive")
+
           nil ->
             Logger.warning("❌ [API Auth Debug] API key not found in database")
         end
+
         nil
     end
   end
 
   @doc """
   Creates a customer.
-  
+
   DEPRECATED: This function requiring a user is deprecated.
   Use register_customer/1 for new customers with passwords.
 
@@ -103,17 +108,18 @@ defmodule Rsolv.Customers do
 
   """
   def create_customer(attrs) when is_map(attrs) do
-    changeset = if Map.has_key?(attrs, :password) or Map.has_key?(attrs, "password") do
-      # Use registration changeset when password is provided
-      Customer.registration_changeset(%Customer{}, attrs)
-    else
-      # Use regular changeset for customers without passwords (e.g., API-only customers)
-      Customer.changeset(%Customer{}, attrs)
-    end
-    
+    changeset =
+      if Map.has_key?(attrs, :password) or Map.has_key?(attrs, "password") do
+        # Use registration changeset when password is provided
+        Customer.registration_changeset(%Customer{}, attrs)
+      else
+        # Use regular changeset for customers without passwords (e.g., API-only customers)
+        Customer.changeset(%Customer{}, attrs)
+      end
+
     Repo.insert(changeset)
   end
-  
+
   # Legacy support for user-based creation (deprecated)
   def create_customer(user, attrs) when is_struct(user) do
     create_customer(attrs)
@@ -136,7 +142,7 @@ defmodule Rsolv.Customers do
     |> Customer.changeset(attrs)
     |> Repo.update()
   end
-  
+
   # Legacy support removed - all customers must be structs
   def update_customer(customer, _attrs) when is_map(customer) and not is_struct(customer) do
     {:error, "Legacy customer format no longer supported"}
@@ -185,7 +191,7 @@ defmodule Rsolv.Customers do
   """
   def create_api_key(%Customer{} = customer, attrs \\ %{}) do
     attrs = Map.put(attrs, :customer_id, customer.id)
-    
+
     %ApiKey{}
     |> ApiKey.changeset(attrs)
     |> Repo.insert()
@@ -273,7 +279,7 @@ defmodule Rsolv.Customers do
       update: [inc: [current_usage: ^amount]]
     )
     |> Repo.update_all([])
-    
+
     {:ok, Repo.get!(Customer, customer.id)}
   end
 
@@ -284,14 +290,14 @@ defmodule Rsolv.Customers do
     from(c in Customer, update: [set: [current_usage: 0]])
     |> Repo.update_all([])
   end
-  
+
   ## Authentication Functions
-  
+
   @doc """
   Registers a new customer with email and password.
-  
+
   ## Examples
-  
+
       iex> register_customer(%{email: "test@example.com", password: "SecureP@ss123!", name: "Test"})
       {:ok, %Customer{}}
       
@@ -303,21 +309,21 @@ defmodule Rsolv.Customers do
     |> Customer.registration_changeset(attrs)
     |> Repo.insert()
   end
-  
+
   @doc """
   Gets a customer by email.
   """
   def get_customer_by_email(email) when is_binary(email) do
     Repo.get_by(Customer, email: email)
   end
-  
+
   @doc """
   Authenticates a customer by email and password.
-  
+
   Uses the Mnesia-based rate limiter to prevent brute force attacks.
-  
+
   ## Examples
-  
+
       iex> authenticate_customer_by_email_and_password("test@example.com", "correct_password")
       {:ok, %Customer{}}
       
@@ -333,12 +339,12 @@ defmodule Rsolv.Customers do
     # Use email hash as a pseudo customer_id for rate limiting
     # This prevents email enumeration while still rate limiting per email
     pseudo_id = :crypto.hash(:sha256, email) |> Base.encode16()
-    
+
     case Rsolv.RateLimiter.check_rate_limit(pseudo_id, :auth_attempt) do
       :ok ->
         # Proceed with authentication
         customer = get_customer_by_email(email)
-        
+
         if Customer.valid_password?(customer, password) do
           # Successful authentication - no way to reset individual keys in current RateLimiter
           {:ok, customer}
@@ -346,36 +352,37 @@ defmodule Rsolv.Customers do
           # Failed authentication
           {:error, :invalid_credentials}
         end
-        
+
       {:error, :rate_limited} ->
         {:error, :too_many_attempts}
     end
   end
-  
+
   def authenticate_customer_by_email_and_password(_, _) do
     # Prevent timing attacks even with nil inputs
     Bcrypt.no_user_verify()
     {:error, :invalid_credentials}
   end
-  
+
   ## Session token management
-  
+
   @doc """
   Generates a session token for a customer.
   """
   def generate_customer_session_token(customer) do
     token = :crypto.strong_rand_bytes(32) |> Base.url_encode64()
-    
+
     # Store in distributed Mnesia table for cluster-wide access
     case Rsolv.CustomerSessions.put_session(token, customer.id) do
-      {:atomic, _result} -> 
+      {:atomic, _result} ->
         token
+
       error ->
         Logger.error("Failed to store session: #{inspect(error)}")
         raise "Failed to create session token"
     end
   end
-  
+
   @doc """
   Gets a customer by session token.
   """
@@ -383,10 +390,13 @@ defmodule Rsolv.Customers do
     case Rsolv.CustomerSessions.get_session(token) do
       {:ok, customer_id} ->
         get_customer!(customer_id)
+
       {:error, :not_found} ->
         nil
+
       {:error, :expired} ->
         nil
+
       {:error, reason} ->
         Logger.error("Failed to retrieve session: #{inspect(reason)}")
         nil
@@ -394,7 +404,7 @@ defmodule Rsolv.Customers do
   rescue
     _ -> nil
   end
-  
+
   @doc """
   Deletes a session token.
   """

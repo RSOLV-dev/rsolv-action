@@ -9,21 +9,29 @@ IO.puts("Currently marked as migrated: #{inspect(existing_versions)}")
 
 # Migrations that should be marked as already run (since tables exist)
 already_run = [
-  "20240525000001",  # CreateCustomers - table exists
-  "20240525160000",  # CreateApiKeys - table exists
-  "20250703162754",  # CreateAnalyticsTables - was run before
-  "20250703214726",  # DropAnalyticsEventsForRsolvLanding - was run
+  # CreateCustomers - table exists
+  "20240525000001",
+  # CreateApiKeys - table exists
+  "20240525160000",
+  # CreateAnalyticsTables - was run before
+  "20250703162754",
+  # DropAnalyticsEventsForRsolvLanding - was run
+  "20250703214726"
 ]
 
 # Mark them as run if not already marked
 Enum.each(already_run, fn version ->
   unless version in existing_versions do
     IO.puts("Marking migration #{version} as already run...")
-    Repo.query!("""
-      INSERT INTO schema_migrations (version, inserted_at)
-      VALUES ($1, NOW())
-      ON CONFLICT (version) DO NOTHING
-    """, [version])
+
+    Repo.query!(
+      """
+        INSERT INTO schema_migrations (version, inserted_at)
+        VALUES ($1, NOW())
+        ON CONFLICT (version) DO NOTHING
+      """,
+      [version]
+    )
   end
 end)
 
@@ -40,7 +48,10 @@ unless partitioned_migration_version in existing_versions do
 
   # Now we can run the migration that creates the partitioned table
   IO.puts("Migration ready to run: #{partitioned_migration_version}")
-  IO.puts("Run: kubectl exec -n rsolv-production deploy/rsolv-platform -- /app/bin/rsolv eval 'Rsolv.ReleaseTasks.migrate()'")
+
+  IO.puts(
+    "Run: kubectl exec -n rsolv-production deploy/rsolv-platform -- /app/bin/rsolv eval 'Rsolv.ReleaseTasks.migrate()'"
+  )
 else
   IO.puts("Partitioned migration already marked as run")
 end

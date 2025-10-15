@@ -1,33 +1,33 @@
 defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
   @moduledoc """
   Pattern for detecting hardcoded credentials in PHP code.
-  
+
   This pattern identifies when sensitive credentials like passwords, API keys,
   tokens, and secrets are hardcoded directly in the source code. This is a
   critical security vulnerability as it exposes credentials to anyone with
   access to the codebase.
-  
+
   ## Vulnerability Details
-  
+
   Hardcoded credentials are one of the most common and dangerous security
   vulnerabilities. They expose sensitive authentication data in source code,
   version control systems, and compiled applications. This can lead to
   unauthorized access, data breaches, and complete system compromise.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
   $password = "admin123";
   $api_key = "sk-1234567890abcdef";
-  
+
   // Anyone with code access can see these credentials
   // They're also visible in version control history
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -37,7 +37,8 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       type: :hardcoded_secret,
       severity: :critical,
       languages: ["php"],
-      regex: ~r/(?:\$(?:password|passwd|pwd|mysql_pwd|db_password|api_key|apikey|secret|token|auth_token|secret_key)|password|api_key|secret|token)\s*[=:]\s*['"][^'"]{3,}['"]|define\s*\(\s*['"](?:DB_)?(?:PASSWORD|API_KEY|SECRET|TOKEN|AUTH_TOKEN|SECRET_KEY|SECRET_TOKEN)['"]\s*,\s*['"][^'"]{3,}['"]\)|['"](?:password|api_key|secret|token)['"]\s*=>\s*['"][^'"]{3,}['"]/i,
+      regex:
+        ~r/(?:\$(?:password|passwd|pwd|mysql_pwd|db_password|api_key|apikey|secret|token|auth_token|secret_key)|password|api_key|secret|token)\s*[=:]\s*['"][^'"]{3,}['"]|define\s*\(\s*['"](?:DB_)?(?:PASSWORD|API_KEY|SECRET|TOKEN|AUTH_TOKEN|SECRET_KEY|SECRET_TOKEN)['"]\s*,\s*['"][^'"]{3,}['"]\)|['"](?:password|api_key|secret|token)['"]\s*=>\s*['"][^'"]{3,}['"]/i,
       cwe_id: "CWE-798",
       owasp_category: "A07:2021",
       recommendation: "Use environment variables or secure configuration management",
@@ -55,7 +56,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -64,7 +65,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       authentication data is embedded directly in source code. This practice exposes
       passwords, API keys, tokens, and other secrets to anyone who can access the
       codebase, including developers, contractors, and potential attackers.
-      
+
       Why hardcoded credentials are dangerous:
       - Visible in source code repositories
       - Cannot be rotated without code changes
@@ -72,7 +73,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       - Accessible to all developers and systems
       - Often forgotten and left in production code
       - Easily discovered by automated scanners
-      
+
       The risk is amplified when code is:
       - Stored in public repositories
       - Shared with third parties
@@ -160,7 +161,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       - PHP define() statements with credential constants
       - Array assignments with credential keys
       - Common patterns like $password = "value"
-      
+
       The regex requires credential values to be at least 3 characters
       to reduce false positives from empty strings or placeholders.
       """,
@@ -200,12 +201,12 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.HardcodedCredentials.test_cases()
       iex> length(test_cases.positive) > 0
       true
@@ -282,7 +283,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -295,9 +296,9 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
         $db_user = 'admin';
         $db_password = 'admin123';  // Hardcoded password!
         $db_name = 'production_db';
-        
+
         $connection = mysqli_connect($db_host, $db_user, $db_password, $db_name);
-        
+
         // Anyone with code access can connect to your database
         """,
         "API integration" => ~S"""
@@ -314,7 +315,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
                 // Process payment...
             }
         }
-        
+
         // API keys exposed in source code
         """,
         "Configuration file" => ~S"""
@@ -324,11 +325,11 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
         define('DB_USER', 'root');
         define('DB_PASSWORD', 'MyStr0ngP@ssw0rd!');
         define('DB_NAME', 'company_data');
-        
+
         define('SMTP_PASSWORD', 'smtp_secret_123');
         define('API_KEY', 'AKIAIOSFODNN7EXAMPLE');
         define('SECRET_KEY', 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY');
-        
+
         // All credentials visible to anyone
         """,
         "Multiple services" => ~S"""
@@ -356,13 +357,13 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
         $db_user = $_ENV['DB_USER'] ?? 'app';
         $db_password = $_ENV['DB_PASSWORD'];  // Required, no default
         $db_name = $_ENV['DB_NAME'] ?? 'app_db';
-        
+
         if (empty($db_password)) {
             throw new Exception('Database password not configured');
         }
-        
+
         $connection = mysqli_connect($db_host, $db_user, $db_password, $db_name);
-        
+
         // Credentials stored securely outside code
         """,
         "Configuration file approach" => ~S"""
@@ -389,7 +390,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
                 return $this->secrets[$key] ?? null;
             }
         }
-        
+
         // Usage
         $config = new Config();
         $api_key = $config->get('payment_api_key');
@@ -397,15 +398,15 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
         "Using dotenv library" => ~S"""
         // Using vlucas/phpdotenv - SECURE
         require_once 'vendor/autoload.php';
-        
+
         // Load .env file from outside web root
         $dotenv = Dotenv\Dotenv::createImmutable('/var/www/config');
         $dotenv->load();
-        
+
         // Required variables
         $dotenv->required(['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS']);
         $dotenv->required('API_KEY')->notEmpty();
-        
+
         // Access via $_ENV
         $db_config = [
             'host' => $_ENV['DB_HOST'],
@@ -413,7 +414,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
             'username' => $_ENV['DB_USER'],
             'password' => $_ENV['DB_PASS']
         ];
-        
+
         // .env file (never commit this!)
         // DB_HOST=localhost
         // DB_NAME=myapp
@@ -424,7 +425,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
         "Key management service" => ~S"""
         // Using AWS Secrets Manager - SECURE
         use Aws\SecretsManager\SecretsManagerClient;
-        
+
         class SecretManager {
             private $client;
             private $cache = [];
@@ -459,7 +460,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
                 }
             }
         }
-        
+
         // Usage
         $secrets = new SecretManager();
         $dbCreds = $secrets->getSecret('prod/database/credentials');
@@ -468,7 +469,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -478,92 +479,92 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
     in software development. When passwords, API keys, tokens, or other authentication
     secrets are embedded directly in source code, they become permanently exposed to
     anyone who gains access to that code.
-    
+
     ## The Danger of Hardcoded Credentials
-    
+
     ### Immediate Risks
-    
+
     1. **Source Code Exposure**
        - Visible to all developers
        - Stored in version control forever
        - Accessible in code reviews
        - Exposed in build artifacts
-    
+
     2. **Credential Lifecycle Issues**
        - Cannot rotate without code changes
        - No audit trail of access
        - No expiration management
        - Shared across all environments
-    
+
     3. **Compliance Violations**
        - PCI-DSS: Requires credential protection
        - GDPR: Demands data security
        - HIPAA: Mandates access controls
        - SOC 2: Requires secure practices
-    
+
     ## Common Scenarios
-    
+
     ### Database Passwords
     ```php
     $conn = new PDO('mysql:host=localhost;dbname=prod', 
                     'root', 'admin123');  // NEVER DO THIS!
     ```
-    
+
     ### API Keys
     ```php
     $stripe = new StripeClient('sk_live_4eC39HqLyjWDarjtT1zdp7dc');
     ```
-    
+
     ### Service Credentials
     ```php
     define('SMTP_USER', 'admin@company.com');
     define('SMTP_PASS', 'EmailPassword123!');
     ```
-    
+
     ## Attack Scenarios
-    
+
     ### 1. Public Repository Exposure
     - Code pushed to GitHub/GitLab
     - Forks retain credential history
     - Automated scanners find secrets
     - Credentials exploited within minutes
-    
+
     ### 2. Supply Chain Attacks
     - Third-party developer access
     - Contractor code reviews
     - Open source contributions
     - Vendor security breaches
-    
+
     ### 3. Internal Threats
     - Disgruntled employees
     - Accidental exposure
     - Insufficient access controls
     - Shared development environments
-    
+
     ## Detection Methods
-    
+
     Attackers use various techniques to find hardcoded credentials:
-    
+
     1. **Automated Scanning**
        - GitHub secret scanning
        - TruffleHog
        - GitGuardian
        - AWS git-secrets
-    
+
     2. **Manual Search**
        - grep for password patterns
        - Search for API key formats
        - Review configuration files
        - Analyze commit history
-    
+
     3. **Binary Analysis**
        - Extract strings from compiled code
        - Decompile applications
        - Memory dump analysis
        - Network traffic inspection
-    
+
     ## Secure Credential Management
-    
+
     ### Environment Variables
     ```php
     $password = $_ENV['DB_PASSWORD'];
@@ -571,21 +572,21 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
         throw new Exception('Database password not configured');
     }
     ```
-    
+
     ### Configuration Files
     - Store outside web root
     - Set restrictive permissions
     - Encrypt sensitive values
     - Never commit to version control
-    
+
     ### Secret Management Systems
     - AWS Secrets Manager
     - HashiCorp Vault
     - Azure Key Vault
     - Kubernetes Secrets
-    
+
     ### Best Practices
-    
+
     1. **Never hardcode credentials**
     2. **Use strong, unique passwords**
     3. **Rotate credentials regularly**
@@ -593,34 +594,34 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
     5. **Audit credential access**
     6. **Use encryption at rest**
     7. **Monitor for exposed secrets**
-    
+
     ## Remediation Steps
-    
+
     If credentials are already hardcoded:
-    
+
     1. **Immediate Actions**
        - Rotate all exposed credentials
        - Remove from current code
        - Clean git history
        - Audit access logs
-    
+
     2. **Long-term Solutions**
        - Implement secret management
        - Add pre-commit hooks
        - Configure CI/CD scanning
        - Train development team
-    
+
     Remember: Once a credential is committed to version control,
     it should be considered compromised forever. The only safe
     action is to rotate it immediately.
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.HardcodedCredentials.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
@@ -647,7 +648,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
             "pass",
             "secret",
             "api_key",
-            "apikey", 
+            "apikey",
             "token",
             "auth",
             "credential",

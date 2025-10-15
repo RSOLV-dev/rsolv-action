@@ -1,16 +1,16 @@
 defmodule Rsolv.Security.PatternEnhancer do
   @moduledoc """
   Simple pattern enhancement to reduce false positives.
-  
+
   Takes existing patterns and adds minimal context rules
   without changing the core structure.
   """
-  
+
   @doc """
   Enhance patterns with context rules based on their type.
-  
+
   ## Examples
-  
+
       iex> pattern = %Pattern{id: "js-sql-injection", type: "sql_injection"}
       iex> enhanced = PatternEnhancer.enhance(pattern)
       iex> enhanced.exclude_paths
@@ -19,7 +19,7 @@ defmodule Rsolv.Security.PatternEnhancer do
   def enhance(patterns) when is_list(patterns) do
     Enum.map(patterns, &enhance/1)
   end
-  
+
   def enhance(%{type: "sql_injection"} = pattern) do
     pattern
     |> Map.put(:exclude_paths, ["test", "spec", "__tests__", "node_modules"])
@@ -35,11 +35,12 @@ defmodule Rsolv.Security.PatternEnhancer do
       end
     end)
   end
-  
+
   def enhance(%{type: "logging"} = pattern) do
     pattern
     |> Map.put(:exclude_paths, ["test", "spec", "mock", "stub", "__tests__"])
-    |> Map.put(:base_confidence, 0.6)  # Lower confidence for logging patterns
+    # Lower confidence for logging patterns
+    |> Map.put(:base_confidence, 0.6)
     |> Map.put(:exclude_patterns, [
       # Exclude if logging exists anywhere nearby
       ~r/\b(log|logger|console\.log|audit)\b/i,
@@ -47,22 +48,24 @@ defmodule Rsolv.Security.PatternEnhancer do
       ~r/\b(mock|stub|fake|spy)\b/i
     ])
   end
-  
+
   def enhance(%{type: "nosql_injection"} = pattern) do
     pattern
     |> Map.put(:exclude_paths, ["test", "spec"])
     |> Map.put(:safe_method_names, [
       # Mongoose methods that sanitize by default
-      "findById", "findByIdAndUpdate", "findByIdAndDelete"
+      "findById",
+      "findByIdAndUpdate",
+      "findByIdAndDelete"
     ])
   end
-  
+
   # Default enhancement for other patterns
   def enhance(pattern) do
     pattern
     |> Map.put(:exclude_paths, ["test", "spec", "node_modules"])
   end
-  
+
   @doc """
   Check if enhanced patterns are enabled via config.
   """

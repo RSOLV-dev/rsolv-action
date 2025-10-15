@@ -1,43 +1,44 @@
 defmodule Rsolv.Security.Patterns.Php.SqlInjectionInterpolation do
   @moduledoc """
   Pattern for detecting SQL injection via variable interpolation in PHP.
-  
+
   This pattern identifies when PHP variables ($_GET, $_POST, $_REQUEST, $_COOKIE) are 
   directly interpolated into SQL query strings using double quotes. PHP's variable 
   interpolation feature makes it trivial to accidentally create SQL injection vulnerabilities.
-  
+
   ## Vulnerability Details
-  
+
   When using double quotes in PHP, variables are automatically interpolated:
   ```php
   $query = "SELECT * FROM users WHERE name = '$_GET[name]'";
   // If $_GET['name'] = "admin' OR '1'='1", the query becomes:
   // SELECT * FROM users WHERE name = 'admin' OR '1'='1'
   ```
-  
+
   This is equally dangerous as concatenation but even more subtle because developers
   might not realize that interpolation creates the same vulnerability.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
   $id = $_GET['id'];
   $query = "SELECT * FROM users WHERE id = $id";
-  
+
   // Attack: ?id=1 OR 1=1 UNION SELECT password FROM admins--
   // Results in: SELECT * FROM users WHERE id = 1 OR 1=1 UNION SELECT password FROM admins--
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "php-sql-injection-interpolation",
       name: "SQL Injection via Variable Interpolation",
-      description: "User input interpolated directly into SQL strings creates SQL injection vulnerabilities",
+      description:
+        "User input interpolated directly into SQL strings creates SQL injection vulnerabilities",
       type: :sql_injection,
       severity: :critical,
       languages: ["php"],
@@ -57,7 +58,7 @@ $stmt->execute(['name' => $_GET['name']]);|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -66,12 +67,12 @@ $stmt->execute(['name' => $_GET['name']]);|
       where variables are automatically expanded within the string. This creates the same
       vulnerability as concatenation but is often overlooked because it appears more natural
       and concise to PHP developers.
-      
+
       The vulnerability occurs in several forms:
       - Simple interpolation: "WHERE id = $_GET[id]"
       - Quoted interpolation: "WHERE name = '$_POST[name]'"
       - Complex interpolation: "WHERE user = '{$_GET['user']}'"
-      
+
       All forms are equally dangerous and can lead to:
       - Complete database compromise
       - Authentication bypass
@@ -83,7 +84,8 @@ $stmt->execute(['name' => $_GET['name']]);|
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -96,13 +98,15 @@ $stmt->execute(['name' => $_GET['name']]);|
           type: :research,
           id: "php_interpolation_security",
           title: "PHP String Interpolation Security",
-          url: "https://www.php.net/manual/en/language.types.string.php#language.types.string.parsing"
+          url:
+            "https://www.php.net/manual/en/language.types.string.php#language.types.string.parsing"
         },
         %{
           type: :research,
           id: "stackoverflow_interpolation",
           title: "PHP Variable Interpolation and SQL Injection",
-          url: "https://stackoverflow.com/questions/71332933/what-is-the-use-of-curly-braces-in-php-mysql"
+          url:
+            "https://stackoverflow.com/questions/71332933/what-is-the-use-of-curly-braces-in-php-mysql"
         }
       ],
       attack_vectors: [
@@ -124,14 +128,16 @@ $stmt->execute(['name' => $_GET['name']]);|
       cve_examples: [
         %{
           id: "CVE-2022-21703",
-          description: "Grafana 7.5.15/8.3.5 - SQL injection via variable interpolation in data source queries",
+          description:
+            "Grafana 7.5.15/8.3.5 - SQL injection via variable interpolation in data source queries",
           severity: "critical",
           cvss: 9.8,
           note: "Variable interpolation in database queries allowed SQL injection"
         },
         %{
           id: "CVE-2021-44228",
-          description: "Multiple PHP applications - Secondary SQL injections via Log4j string interpolation",
+          description:
+            "Multiple PHP applications - Secondary SQL injections via Log4j string interpolation",
           severity: "critical",
           cvss: 10.0,
           note: "Log4j vulnerability led to SQL injection through PHP variable interpolation"
@@ -156,7 +162,7 @@ $stmt->execute(['name' => $_GET['name']]);|
       - SQL keywords within double-quoted strings
       - Direct use of PHP superglobal arrays ($_GET, $_POST, etc.)
       - Array notation without quotes around the key (common PHP shorthand)
-      
+
       The pattern covers various interpolation syntaxes:
       - Simple: "$_GET[id]"
       - Quoted: "'$_POST[name]'"
@@ -192,12 +198,12 @@ $stmt->execute(['name' => $_GET['name']]);|
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.SqlInjectionInterpolation.test_cases()
       iex> length(test_cases.positive) > 0
       true
@@ -222,7 +228,8 @@ $stmt->execute(['name' => $_GET['name']]);|
           description: "Complex syntax interpolation"
         },
         %{
-          code: ~S|mysqli_query($conn, "UPDATE users SET status = '$_REQUEST[status]' WHERE id = $id");|,
+          code:
+            ~S|mysqli_query($conn, "UPDATE users SET status = '$_REQUEST[status]' WHERE id = $id");|,
           description: "Direct query execution with interpolation"
         },
         %{
@@ -250,7 +257,7 @@ $stmt->execute(['name' => $_GET['name']]);|
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -263,7 +270,7 @@ $stmt->execute(['name' => $_GET['name']]);|
         $password = $_POST['password'];
         $query = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
         $result = mysqli_query($conn, $query);
-        
+
         // Attack: username = admin' -- 
         // Results in: SELECT * FROM users WHERE username = 'admin' -- ' AND password = ''
         """,
@@ -272,7 +279,7 @@ $stmt->execute(['name' => $_GET['name']]);|
         $product_id = $_GET['id'];
         $sql = "SELECT * FROM products WHERE id = $product_id AND status = 'active'";
         $result = $db->query($sql);
-        
+
         // Attack: ?id=1 OR 1=1
         // Results in: SELECT * FROM products WHERE id = 1 OR 1=1 AND status = 'active'
         // Returns all products regardless of status
@@ -282,7 +289,7 @@ $stmt->execute(['name' => $_GET['name']]);|
         $search = $_GET['search'];
         $filter = $_GET['filter'];
         $query = "SELECT * FROM users WHERE name LIKE '%{$search}%' AND department = '{$filter}'";
-        
+
         // Attack: ?search=admin%' OR '1'='1&filter=IT' OR '1'='1
         // Bypasses all search restrictions
         """
@@ -292,44 +299,44 @@ $stmt->execute(['name' => $_GET['name']]);|
         // Login check - SECURE
         $username = $_POST['username'];
         $password = $_POST['password'];
-        
+
         $stmt = $pdo->prepare("SELECT * FROM users WHERE username = :username AND password = :password");
         $stmt->execute([
             ':username' => $username,
             ':password' => $password
         ]);
         $result = $stmt->fetch();
-        
+
         // User input is properly parameterized, SQL injection is not possible
         """,
         "MySQLi with positional placeholders" => ~S"""
         // Product lookup - SECURE
         $product_id = $_GET['id'];
-        
+
         $stmt = $mysqli->prepare("SELECT * FROM products WHERE id = ? AND status = 'active'");
         $stmt->bind_param("i", $product_id);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         // The 'i' parameter ensures the value is treated as an integer
         """,
         "Type-safe parameter binding" => ~S"""
         // User search - SECURE
         $search = $_GET['search'];
         $filter = $_GET['filter'];
-        
+
         $stmt = $pdo->prepare("SELECT * FROM users WHERE name LIKE :search AND department = :filter");
         $stmt->execute([
             ':search' => '%' . $search . '%',
             ':filter' => $filter
         ]);
-        
+
         // LIKE wildcards are added safely outside the SQL query
         """
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -338,46 +345,46 @@ $stmt->execute(['name' => $_GET['name']]);|
     SQL injection via variable interpolation is a critical vulnerability that exploits
     PHP's convenient but dangerous string interpolation feature. When developers use
     double quotes for SQL queries, PHP automatically expands variables within the string.
-    
+
     ## Why It's Dangerous
-    
+
     Variable interpolation appears safer than concatenation to many developers because:
     - It looks cleaner and more readable
     - It's a native PHP feature used everywhere
     - The quotes around variables create a false sense of security
     - IDEs often syntax-highlight it as a single string
-    
+
     However, it creates identical vulnerabilities to concatenation.
-    
+
     ## PHP Interpolation Mechanics
-    
+
     PHP supports several interpolation syntaxes in double quotes:
-    
+
     1. **Simple syntax**: `"WHERE id = $_GET[id]"`
     2. **Complex syntax**: `"WHERE id = {$_GET['id']}"`
     3. **Variable variables**: `"WHERE id = ${$_GET['field']}"`
     4. **Object properties**: `"WHERE id = $obj->id"`
-    
+
     All are vulnerable when user input is involved.
-    
+
     ## Real-World CVE Examples
-    
+
     - **CVE-2022-21703**: Grafana SQL injection via interpolated variables
     - **CVE-2020-35572**: osCommerce SQL injection in product queries
     - **CVE-2019-10067**: Dolibarr ERP multiple SQL injections
     - **CVE-2021-44228**: Secondary SQL injections via Log4j interpolation
-    
+
     ## Attack Techniques
-    
+
     Attackers exploit interpolation using:
     - **Quote breaking**: `admin' OR '1'='1`
     - **Comment injection**: `admin'--`
     - **Union attacks**: `1 UNION SELECT password FROM admins`
     - **Boolean blind**: `admin' AND 1=1--`
     - **Time delays**: `admin' AND SLEEP(5)--`
-    
+
     ## Prevention
-    
+
     The only reliable prevention is parameterized queries:
     - Use prepared statements with PDO or MySQLi
     - Never interpolate user input into SQL strings
@@ -385,12 +392,12 @@ $stmt->execute(['name' => $_GET['name']]);|
     - Enable SQL query logging to detect injection attempts
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.SqlInjectionInterpolation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]

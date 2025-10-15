@@ -1,30 +1,30 @@
 defmodule Rsolv.Security.Patterns.Php.FileUploadNoValidation do
   @moduledoc """
   Pattern for detecting file upload vulnerabilities without validation in PHP.
-  
+
   This pattern identifies when files are uploaded using move_uploaded_file() with
   the original filename from $_FILES without proper validation. This can lead to
   web shell uploads, path traversal, and other serious security issues.
-  
+
   ## Vulnerability Details
-  
+
   Unrestricted file upload vulnerabilities occur when applications accept file
   uploads without validating the file type, content, size, or name. Attackers
   can upload malicious files like PHP shells to gain remote code execution.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
   move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . $_FILES['file']['name']);
-  
+
   // Attack: Upload shell.php containing <?php system($_GET['cmd']); ?>
   // Result: Remote code execution via uploads/shell.php?cmd=id
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -63,7 +63,7 @@ if (in_array($ext, $allowed)) {
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -72,14 +72,14 @@ if (in_array($ext, $allowed)) {
       applications. When files are uploaded without proper validation, attackers can
       upload malicious files that lead to remote code execution, defacement, or
       complete server compromise.
-      
+
       Common attack scenarios:
       - web shell upload: PHP files containing backdoor code
       - Path traversal: Overwriting system files
       - XSS via SVG/HTML: Malicious client-side scripts
       - DoS attacks: Large files exhausting disk space
       - MIME type confusion: Executable files disguised as images
-      
+
       The vulnerability is particularly severe when uploaded files are accessible
       via web URLs and can be executed by the web server.
       """,
@@ -164,7 +164,7 @@ if (in_array($ext, $allowed)) {
       - Direct use of $_FILES['name'] without validation
       - Missing file type or extension checks
       - No content validation or sanitization
-      
+
       The pattern specifically targets the dangerous practice of using
       the user-supplied filename directly.
       """,
@@ -204,12 +204,12 @@ if (in_array($ext, $allowed)) {
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.FileUploadNoValidation.test_cases()
       iex> length(test_cases.positive) > 0
       true
@@ -222,11 +222,13 @@ if (in_array($ext, $allowed)) {
     %{
       positive: [
         %{
-          code: ~S|move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . $_FILES['file']['name']);|,
+          code:
+            ~S|move_uploaded_file($_FILES['file']['tmp_name'], 'uploads/' . $_FILES['file']['name']);|,
           description: "Direct use of user-supplied filename"
         },
         %{
-          code: ~S|move_uploaded_file($_FILES['upload']['tmp_name'], $dir . $_FILES['upload']['name']);|,
+          code:
+            ~S|move_uploaded_file($_FILES['upload']['tmp_name'], $dir . $_FILES['upload']['name']);|,
           description: "Path concatenation with original name"
         },
         %{
@@ -264,7 +266,7 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -281,7 +283,7 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
                 echo "File uploaded successfully!";
             }
         }
-        
+
         // Attack: Upload shell.php with malicious code
         // Result: shell.php accessible at /uploads/shell.php
         """,
@@ -289,28 +291,28 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
         // Avatar upload - VULNERABLE
         $target_dir = "avatars/";
         $target_file = $target_dir . basename($_FILES["avatar"]["name"]);
-        
+
         // Only checking file size, not type!
         if ($_FILES["avatar"]["size"] > 500000) {
             die("File too large");
         }
-        
+
         move_uploaded_file($_FILES["avatar"]["tmp_name"], $target_file);
-        
+
         // Attacker uploads small PHP shell as avatar
         """,
         "Document management system" => ~S"""
         // Document upload - VULNERABLE
         $userId = $_SESSION['user_id'];
         $docPath = "documents/$userId/" . $_FILES['document']['name'];
-        
+
         // Creating user directory
         if (!file_exists("documents/$userId")) {
             mkdir("documents/$userId", 0777, true);
         }
-        
+
         move_uploaded_file($_FILES['document']['tmp_name'], $docPath);
-        
+
         // No validation = arbitrary file upload
         """
       },
@@ -452,7 +454,7 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -462,68 +464,68 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
     issues in web applications. They occur when applications accept file uploads
     without properly validating the file type, content, name, or size, potentially
     allowing attackers to upload and execute malicious code.
-    
+
     ## Why It's Dangerous
-    
+
     File upload vulnerabilities can lead to:
-    
+
     1. **Remote Code Execution (RCE)**
        - Upload PHP shells or backdoors
        - Execute arbitrary commands on the server
        - Complete server compromise
-    
+
     2. **Cross-Site Scripting (XSS)**
        - Upload HTML or SVG files with JavaScript
        - Stored XSS attacks
        - Phishing pages
-    
+
     3. **Path Traversal**
        - Overwrite system files
        - Replace application files
        - Modify configuration
-    
+
     ## Attack Techniques
-    
+
     ### Basic web shell Upload
     ```php
     // shell.php
     <?php system($_GET['cmd']); ?>
-    
+
     // Access: /uploads/shell.php?cmd=whoami
     ```
-    
+
     ### Bypassing Extension Filters
-    
+
     1. **Double Extensions**
        - `shell.php.jpg`
        - `backdoor.jpg.php`
-    
+
     2. **Case Variations**
        - `shell.PHP`
        - `SHELL.pHp`
-    
+
     3. **Null Bytes (Historical)**
        - `shell.php%00.jpg`
-    
+
     4. **Alternate Extensions**
        - `.php3`, `.php4`, `.php5`
        - `.phtml`, `.phar`
-    
+
     ### MIME Type Spoofing
     ```
     Content-Type: image/jpeg
-    
+
     <?php eval($_POST['cmd']); ?>
     ```
-    
+
     ### Polyglot Files
     Files that are valid in multiple formats:
     - GIF89a header + PHP code
     - JPEG with PHP in EXIF data
     - PDF with embedded PHP
-    
+
     ## Validation Requirements
-    
+
     ### 1. Extension Validation
     ```php
     $allowed = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
@@ -532,14 +534,14 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
         die("Invalid file type");
     }
     ```
-    
+
     ### 2. MIME Type Verification
     ```php
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mime = finfo_file($finfo, $_FILES['upload']['tmp_name']);
     finfo_close($finfo);
     ```
-    
+
     ### 3. Content Validation
     ```php
     // For images
@@ -548,61 +550,61 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
         die("Not a valid image");
     }
     ```
-    
+
     ### 4. Filename Sanitization
     ```php
     // Generate safe names
     $newName = uniqid() . '.' . $extension;
-    
+
     // Or sanitize existing
     $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '', $filename);
     ```
-    
+
     ## Security Best Practices
-    
+
     1. **Store Outside Web Root**
        ```php
        $uploadPath = '/var/uploads/'; // Not web accessible
        ```
-    
+
     2. **Remove Execute Permissions**
        ```php
        chmod($uploadedFile, 0644);
        ```
-    
+
     3. **Use .htaccess Protection**
        ```apache
        # In upload directory
        php_flag engine off
        AddHandler cgi-script .php .pl .py .jsp .asp .sh .cgi
        ```
-    
+
     4. **Separate Domain**
        - Serve user content from a different domain
        - Prevents cookie access
        - Isolates uploaded content
-    
+
     5. **Image Processing**
        - Re-encode images to strip malicious code
        - Use GD or ImageMagick
        - Generate thumbnails
-    
+
     ## Modern Solutions
-    
+
     - **Cloud Storage**: S3, Google Cloud Storage
     - **CDN Services**: Cloudflare, Fastly
     - **Specialized Services**: Cloudinary, Uploadcare
-    
+
     These services handle validation and serve files safely, removing
     the burden of secure file handling from your application.
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.FileUploadNoValidation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]

@@ -1,49 +1,50 @@
 defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
   @moduledoc """
   Weak Cryptography - SHA1 pattern for Java code.
-  
+
   Detects usage of SHA-1 hash algorithm which is cryptographically broken and vulnerable
   to collision attacks. SHA-1 should not be used for any security-sensitive purposes
   including password hashing, digital signatures, or data integrity verification.
-  
+
   ## Vulnerability Details
-  
+
   SHA-1 (Secure Hash Algorithm 1) is a cryptographic hash function that produces a 160-bit hash value.
   However, it is fundamentally broken due to its vulnerability to collision attacks, where
   attackers can create two different inputs that produce the same hash output. This breaks
   the fundamental property of cryptographic hash functions and makes SHA-1 unsuitable for
   security applications.
-  
+
   The SLOTH (Security Losses from Obsolete and Truncated Transcript Hashes) attack
   demonstrates practical exploitation of SHA-1 weaknesses in TLS connections.
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable code
   MessageDigest md = MessageDigest.getInstance("SHA-1");
   String passwordHash = bytesToHex(md.digest(password.getBytes()));
-  
+
   // Attack: SHA-1 collision allows creation of different passwords with same hash
   // SLOTH attack can exploit SHA-1 in TLS signature verification
   ```
-  
+
   ## References
-  
+
   - CWE-327: Use of a Broken or Risky Cryptographic Algorithm
   - OWASP A02:2021 - Cryptographic Failures
   - CVE-2015-7575: SLOTH Attack on SHA-1 signatures
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "java-weak-hash-sha1",
       name: "Weak Cryptography - SHA1",
-      description: "SHA-1 algorithm is cryptographically broken and vulnerable to collision attacks",
+      description:
+        "SHA-1 algorithm is cryptographically broken and vulnerable to collision attacks",
       type: :weak_crypto,
       severity: :medium,
       languages: ["java"],
@@ -82,7 +83,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -92,14 +93,14 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
       used for security-sensitive purposes. The algorithm is vulnerable to collision
       attacks where attackers can create two different inputs that produce identical
       hash outputs.
-      
+
       Key vulnerabilities of SHA-1:
       - Collision attacks demonstrated in practice (SHAttered attack, 2017)
       - SLOTH attack exploits SHA-1 weaknesses in TLS connections
       - Pre-image attacks are theoretically possible with sufficient computing power
       - Length extension attacks are possible in certain contexts
       - Not suitable for password hashing due to speed and collision vulnerabilities
-      
+
       Common vulnerable usage patterns:
       - Password hashing and storage
       - Digital signature generation (SHA1withRSA)
@@ -150,7 +151,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
       ],
       real_world_impact: [
         "Authentication bypass through password hash collisions",
-        "Digital signature forgery enabling document tampering", 
+        "Digital signature forgery enabling document tampering",
         "SSL/TLS certificate forgery for man-in-the-middle attacks",
         "Data integrity violations in file verification systems",
         "Session hijacking through predictable token generation",
@@ -160,7 +161,8 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
       cve_examples: [
         %{
           id: "CVE-2015-7575",
-          description: "SLOTH - Weak SHA-1 signature hash vulnerability affecting TLS implementations",
+          description:
+            "SLOTH - Weak SHA-1 signature hash vulnerability affecting TLS implementations",
           severity: "high",
           cvss: 7.1,
           note: "SHA-1 signature vulnerabilities in TLS connections enabling MitM attacks"
@@ -183,7 +185,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
       - Constants and enum references to SHA1 algorithms
       - TLS signature algorithms using SHA-1 (SHA1withRSA)
       - Random number generation using SHA1PRNG
-      
+
       The pattern looks for both direct MessageDigest usage and indirect references
       to SHA-1 through variables, constants, and method parameters.
       """,
@@ -229,15 +231,15 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between cryptographic usage of SHA-1 and
   acceptable legacy uses, while maintaining high detection for security contexts.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakHashSha1.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -267,7 +269,14 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
           weak_algorithm_patterns: ["SHA-1", "sha-1", "SHA1", "sha1"],
           check_variable_assignments: true,
           check_method_parameters: true,
-          algorithm_variable_names: ["algorithm", "digest", "hash", "hashType", "digestType", "signatureAlgorithm"]
+          algorithm_variable_names: [
+            "algorithm",
+            "digest",
+            "hash",
+            "hashType",
+            "digestType",
+            "signatureAlgorithm"
+          ]
         },
         signature_analysis: %{
           check_signature_algorithms: true,
@@ -280,7 +289,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
         check_cryptographic_context: true,
         high_risk_contexts: [
           "password hashing",
-          "digital signatures", 
+          "digital signatures",
           "authentication tokens",
           "session management",
           "API key generation",
@@ -289,10 +298,14 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
           "random number generation"
         ],
         acceptable_uses: %{
-          git_checksums: false,  # Git uses SHA-1 but attacks are possible
-          legacy_compatibility: false,  # Should be upgraded
-          non_security_hashing: false,  # Attackers can still exploit
-          performance_critical: false   # SHA-256 is fast enough
+          # Git uses SHA-1 but attacks are possible
+          git_checksums: false,
+          # Should be upgraded
+          legacy_compatibility: false,
+          # Attackers can still exploit
+          non_security_hashing: false,
+          # SHA-256 is fast enough
+          performance_critical: false
         },
         strong_algorithms: ["SHA-256", "SHA-384", "SHA-512", "SHA3-256", "SHA3-384", "SHA3-512"],
         password_libraries: ["BCrypt", "SCrypt", "Argon2", "PBKDF2"],
@@ -311,7 +324,8 @@ defmodule Rsolv.Security.Patterns.Java.WeakHashSha1 do
           "in_test_code" => -0.4,
           "is_commented_out" => -0.8,
           "has_upgrade_comment" => -0.1,
-          "is_git_related" => -0.2  # Still risky but lower priority
+          # Still risky but lower priority
+          "is_git_related" => -0.2
         }
       },
       min_confidence: 0.7

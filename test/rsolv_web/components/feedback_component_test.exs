@@ -2,7 +2,7 @@ defmodule RsolvWeb.FeedbackComponentTest do
   use RsolvWeb.ConnCase, async: true
   import Phoenix.Component
   import Phoenix.LiveViewTest
-  
+
   alias RsolvWeb.FeedbackComponent
 
   describe "feedback_form component" do
@@ -16,17 +16,18 @@ defmodule RsolvWeb.FeedbackComponentTest do
         expanded: false,
         categories: []
       }
-      
-      html = rendered_to_string(~H"""
+
+      html =
+        rendered_to_string(~H"""
         <FeedbackComponent.feedback_form {assigns} />
-      """)
-      
+        """)
+
       # Should use card classes helper
       assert html =~ "bg-white dark:bg-slate-800"
-      
+
       # Should use text classes for labels
       assert html =~ "text-gray-700 dark:text-gray-300"
-      
+
       # Should use input classes
       assert html =~ "dark:bg-slate-700"
       assert html =~ "dark:text-gray-200"

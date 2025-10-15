@@ -6,7 +6,7 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpenTest do
   describe "pattern/0" do
     test "returns correct pattern structure" do
       pattern = PathTraversalOpen.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "python-path-traversal-open"
       assert pattern.name == "Path Traversal via open()"
@@ -31,9 +31,9 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpenTest do
         ~S|with open(path + filename) as f:|,
         ~S|file = open(UPLOAD_DIR + user_input)|
       ]
-      
+
       for code <- vulnerable_code do
-        assert Regex.match?(pattern.regex, code), 
+        assert Regex.match?(pattern.regex, code),
                "Should match vulnerable code: #{code}"
       end
     end
@@ -55,7 +55,11 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpenTest do
     end
 
     test "detects variable assignment followed by open()", %{pattern: pattern} do
-      assert Regex.match?(pattern.regex, ~S|file_path = base_dir + "/" + user_input; open(file_path)|)
+      assert Regex.match?(
+               pattern.regex,
+               ~S|file_path = base_dir + "/" + user_input; open(file_path)|
+             )
+
       assert Regex.match?(pattern.regex, ~S|path = f"/tmp/{filename}"; open(path)|)
     end
 
@@ -67,9 +71,9 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpenTest do
         ~S|safe_name = os.path.basename(filename); open(os.path.join("/uploads", safe_name))|,
         ~S|if os.path.commonpath([base_dir, requested_path]) == base_dir: open(requested_path)|
       ]
-      
+
       for code <- safe_code do
-        refute Regex.match?(pattern.regex, code), 
+        refute Regex.match?(pattern.regex, code),
                "Should NOT match safe code: #{code}"
       end
     end
@@ -78,7 +82,7 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpenTest do
   describe "vulnerability_metadata/0" do
     test "returns comprehensive vulnerability metadata" do
       metadata = PathTraversalOpen.vulnerability_metadata()
-      
+
       assert is_map(metadata)
       assert is_binary(metadata.description)
       assert is_list(metadata.references)
@@ -95,7 +99,7 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpenTest do
   describe "ast_enhancement/0" do
     test "returns AST enhancement rules" do
       enhancement = PathTraversalOpen.ast_enhancement()
-      
+
       assert is_map(enhancement)
       assert Map.has_key?(enhancement, :ast_rules)
       assert Map.has_key?(enhancement, :context_rules)
@@ -105,7 +109,7 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpenTest do
 
     test "confidence scoring reduces false positives" do
       enhancement = PathTraversalOpen.ast_enhancement()
-      
+
       assert enhancement.min_confidence == 0.7
       assert enhancement.confidence_rules.base == 0.5
       assert enhancement.confidence_rules.adjustments["has_user_input"] == 0.3
@@ -116,7 +120,7 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpenTest do
   describe "enhanced_pattern/0" do
     test "uses AST enhancement" do
       enhanced = PathTraversalOpen.enhanced_pattern()
-      
+
       assert enhanced.id == "python-path-traversal-open"
       assert enhanced.ast_rules
       assert enhanced.min_confidence == 0.7
@@ -128,7 +132,7 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpenTest do
       assert PathTraversalOpen.applies_to_file?("script.py", nil)
       assert PathTraversalOpen.applies_to_file?("utils/helper.py", nil)
       assert PathTraversalOpen.applies_to_file?("src/main.py", nil)
-      
+
       refute PathTraversalOpen.applies_to_file?("script.js", nil)
       refute PathTraversalOpen.applies_to_file?("config.rb", nil)
       refute PathTraversalOpen.applies_to_file?("README.md", nil)

@@ -1,19 +1,19 @@
 defmodule Rsolv.Security.Patterns.Php.SessionFixation do
   @moduledoc """
   Pattern for detecting session fixation vulnerabilities in PHP.
-  
+
   This pattern identifies when PHP applications accept session IDs from user input
   without proper regeneration, potentially allowing attackers to hijack user sessions
   by fixing the session ID before the user logs in.
-  
+
   ## Vulnerability Details
-  
+
   Session fixation is a security vulnerability that allows an attacker to hijack a
   legitimate user session by fixing (setting) the user's session ID before the user
   logs in. This attack exploits applications that don't regenerate session IDs after
   successful authentication, allowing the attacker to know the session ID and gain
   unauthorized access to the user's account.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code - accepts session ID from user input
@@ -21,20 +21,20 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       session_id($_GET['PHPSESSID']);
   }
   session_start();
-  
+
   // User logs in successfully, but session ID remains the same
   // Attacker can now use the known session ID to impersonate the user
   ```
-  
+
   The attack works by tricking the user into visiting a URL with a predetermined
   session ID, then waiting for the user to authenticate. Since the session ID
   doesn't change after login, the attacker can use the known ID to access the
   user's authenticated session.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -64,7 +64,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -73,23 +73,23 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       legitimate user sessions by predetermining the session identifier. This attack exploits
       applications that fail to regenerate session IDs after successful authentication, enabling
       attackers to gain unauthorized access to user accounts and sensitive data.
-      
+
       The vulnerability occurs when applications accept session identifiers from user input
       (through GET parameters, POST data, cookies, or other request data) and use them without
       proper validation or regeneration. This creates an opportunity for attackers to set a
       known session ID before a user authenticates, then use that same ID to access the user's
       authenticated session after login.
-      
+
       ### The Attack Mechanism
-      
+
       Session fixation attacks typically follow this sequence:
       1. **Session ID Prediction/Setting**: Attacker obtains or sets a valid session ID
       2. **Session ID Fixation**: Attacker tricks the victim into using the predetermined session ID
       3. **User Authentication**: Victim logs in using the fixed session ID
       4. **Session Hijacking**: Attacker uses the known session ID to access the authenticated session
-      
+
       ### Common Vulnerable Scenarios
-      
+
       #### Direct Session ID Acceptance
       Applications that directly accept session IDs from user input are immediately vulnerable:
       ```php
@@ -99,7 +99,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       }
       session_start();
       ```
-      
+
       #### Cross-Site Session ID Injection
       Attackers can inject session IDs through various means:
       ```php
@@ -107,47 +107,47 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       if (isset($_POST['session_token'])) {
           session_id($_POST['session_token']);
       }
-      
+
       // VULNERABLE - cookie-based session fixation
       if (isset($_COOKIE['custom_session'])) {
           session_id($_COOKIE['custom_session']);
       }
       ```
-      
+
       #### Authentication Without Regeneration
       Even when not directly accepting user input, failing to regenerate session IDs
       after authentication leaves applications vulnerable:
       ```php
       // VULNERABLE - session ID remains the same after login
       session_start();
-      
+
       if ($username && $password && authenticate($username, $password)) {
           $_SESSION['authenticated'] = true;
           $_SESSION['user_id'] = $user_id;
           // BUG: Session ID not regenerated after successful authentication
       }
       ```
-      
+
       ### Attack Vectors and Techniques
-      
+
       #### URL-Based Session Fixation
       ```
       # Attacker sends victim a link with predetermined session ID
       https://example.com/login.php?PHPSESSID=attacker_controlled_session_id
-      
+
       # Or through session_name parameter
       https://example.com/login.php?SESSIONID=fixed_session_identifier
       ```
-      
+
       #### Cookie-Based Session Fixation
       ```javascript
       // Attacker injects session cookie via XSS or other means
       document.cookie = "PHPSESSID=attacker_session_id; path=/";
-      
+
       // Or through subdomain cookie injection
       document.cookie = "PHPSESSID=fixed_id; domain=.example.com";
       ```
-      
+
       #### Form-Based Session Fixation
       ```html
       <!-- Attacker creates form that submits session ID -->
@@ -158,20 +158,20 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
           <input type="submit" value="Login">
       </form>
       ```
-      
+
       #### Meta-Refresh and JavaScript Injection
       ```html
       <!-- Attacker redirects victim to URL with fixed session -->
       <meta http-equiv="refresh" content="0;url=https://target.com/app.php?PHPSESSID=fixed_session">
-      
+
       <!-- Or via JavaScript -->
       <script>
       window.location = "https://target.com/login?sid=attacker_session_id";
       </script>
       ```
-      
+
       ### Impact and Consequences
-      
+
       Successful session fixation attacks can lead to:
       - **Complete Account Takeover**: Attacker gains full access to victim's account
       - **Data Theft**: Access to personal information, financial data, and sensitive documents
@@ -204,7 +204,8 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
           type: :owasp,
           id: "session_management",
           title: "OWASP Session Management Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
         },
         %{
           type: :php,
@@ -276,12 +277,12 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       - Acceptance of session identifiers from $_GET, $_POST, $_REQUEST, or $_COOKIE
       - Function calls that set session IDs from untrusted sources
       - Common patterns where user input controls session management
-      
+
       The regex specifically looks for:
       - session_id() function calls with superglobal variable parameters
       - Various whitespace and formatting patterns around function calls
       - Multiple types of user input sources (GET, POST, REQUEST, COOKIE)
-      
+
       False positives may occur when:
       - Session IDs are generated securely and not from user input
       - session_id() is called without parameters (returns current session ID)
@@ -332,12 +333,12 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.SessionFixation.test_cases()
       iex> length(test_cases.positive) > 0
       true
@@ -426,7 +427,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -440,9 +441,9 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         if (isset($_GET['PHPSESSID'])) {
             session_id($_GET['PHPSESSID']);
         }
-        
+
         session_start();
-        
+
         // Process login
         if ($_POST['username'] && $_POST['password']) {
             if (authenticate($_POST['username'], $_POST['password'])) {
@@ -454,7 +455,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
                 redirect('/dashboard');
             }
         }
-        
+
         // Attack URL: https://example.com/login.php?PHPSESSID=attacker_session_id
         // After victim logs in, attacker can access: https://example.com/dashboard.php
         """,
@@ -492,10 +493,10 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
                 return false;
             }
         }
-        
+
         $manager = new SessionManager();
         $manager->initialize();
-        
+
         // Attack: POST session_token=fixed_id or cookie injection
         """,
         "E-commerce Checkout" => ~S"""
@@ -506,16 +507,16 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
             // VULNERABLE: Accept session from request data
             session_id($_REQUEST['cart_session']);
         }
-        
+
         session_start();
-        
+
         // Guest checkout process
         if ($_POST['guest_checkout']) {
             $_SESSION['guest_user'] = true;
             $_SESSION['cart_items'] = $_POST['items'];
             $_SESSION['billing_info'] = $_POST['billing'];
         }
-        
+
         // User registration/login during checkout
         if ($_POST['create_account']) {
             $user_id = create_user_account($_POST['email'], $_POST['password']);
@@ -525,7 +526,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
             $_SESSION['authenticated'] = true;
             unset($_SESSION['guest_user']);
         }
-        
+
         // Attack: Attacker fixes session before guest checkout, then hijacks after user creates account
         """,
         "API Session Management" => ~S"""
@@ -561,7 +562,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
                 return $this->sendUnauthorizedResponse();
             }
         }
-        
+
         // Attack: Client application can be tricked into using fixed session ID
         """
       },
@@ -571,7 +572,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         <?php
         // Never accept session IDs from user input
         session_start();
-        
+
         // Process login
         if ($_POST['username'] && $_POST['password']) {
             if (authenticate($_POST['username'], $_POST['password'])) {
@@ -751,11 +752,11 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         ini_set('session.cookie_samesite', 'Strict'); // CSRF protection
         ini_set('session.gc_maxlifetime', 1800);    // 30-minute timeout
         ini_set('session.cookie_lifetime', 0);      // Session cookies only
-        
+
         // Additional security measures
         session_name('SECURE_SESSION_ID');          // Custom session name
         session_start();
-        
+
         // Regular session validation
         function validateSession() {
             if (!isset($_SESSION['csrf_token'])) {
@@ -769,13 +770,13 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
                 $_SESSION['csrf_created'] = time();
             }
         }
-        
+
         validateSession();
         """
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -785,21 +786,21 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
     legitimate user sessions by predetermining the session identifier. This attack exploits
     applications that fail to regenerate session IDs after successful authentication, allowing
     attackers to gain unauthorized access to user accounts without requiring credential theft.
-    
+
     ## Understanding Session Fixation Attacks
-    
+
     ### The Basic Mechanism
-    
+
     Session fixation attacks work by exploiting the trust relationship between session
     identifiers and user authentication status. The attack follows this sequence:
-    
+
     1. **Session ID Acquisition**: Attacker obtains or generates a valid session identifier
     2. **Session ID Fixation**: Attacker tricks the victim into using the predetermined session ID
     3. **User Authentication**: Victim logs in successfully using the fixed session ID
     4. **Session Hijacking**: Attacker uses the known session ID to access the authenticated session
-    
+
     ### Common Vulnerable PHP Patterns
-    
+
     #### Direct Session ID Acceptance
     ```php
     // VULNERABLE - accepts session ID from URL parameter
@@ -807,10 +808,10 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         session_id($_GET['PHPSESSID']);
     }
     session_start();
-    
+
     // Attack URL: https://example.com/login.php?PHPSESSID=attacker_session_id
     ```
-    
+
     #### Multiple Input Source Acceptance
     ```php
     // VULNERABLE - accepts session ID from various sources
@@ -823,7 +824,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
     }
     session_start();
     ```
-    
+
     #### Form-Based Session Fixation
     ```php
     // VULNERABLE - accepts session ID from form data
@@ -831,39 +832,39 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         session_id($_POST['session_token']);
     }
     session_start();
-    
+
     // Attacker creates malicious form with fixed session ID
     ```
-    
+
     ## Attack Techniques and Vectors
-    
+
     ### URL-Based Session Fixation
     The most common attack vector involves embedding session IDs in URLs:
     ```
     https://banking.example.com/login.php?PHPSESSID=ABC123ATTACKER456
     ```
-    
+
     Attackers distribute these URLs through:
     - Email phishing campaigns
     - Social media links
     - Malicious advertisements
     - Cross-site scripting (XSS) attacks
-    
+
     ### Cookie-Based Session Fixation
     Attackers can inject session cookies through various means:
     ```javascript
     // Via XSS vulnerability
     document.cookie = "PHPSESSID=attacker_session_id; path=/";
-    
+
     // Via subdomain cookie injection
     document.cookie = "PHPSESSID=fixed_id; domain=.example.com; path=/";
     ```
-    
+
     ### Cross-Site Session Fixation
     ```html
     <!-- Attacker site injects session cookie -->
     <iframe src="https://target.com/set_session.php?sid=fixed_session_id"></iframe>
-    
+
     <!-- Then redirects victim to login -->
     <script>
     setTimeout(() => {
@@ -871,7 +872,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
     }, 1000);
     </script>
     ```
-    
+
     ### Form-Based Attacks
     ```html
     <!-- Attacker creates fake login form -->
@@ -882,37 +883,37 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         <input type="submit" value="Login">
     </form>
     ```
-    
+
     ## Real-World Attack Scenarios
-    
+
     ### Banking Application Attack
     1. Attacker sends phishing email with session-fixed banking URL
     2. Victim clicks link and is redirected to legitimate banking site
     3. Banking application accepts session ID from URL parameter
     4. Victim logs in successfully using fixed session ID
     5. Attacker uses known session ID to access victim's banking account
-    
+
     ### E-commerce Platform Hijacking
     1. Attacker injects session cookie via XSS on related subdomain
     2. Victim browses to main e-commerce site with fixed session
     3. Victim adds items to cart and proceeds to checkout
     4. Victim creates account or logs in during checkout process
     5. Attacker accesses victim's account with saved payment methods
-    
+
     ### Corporate Application Compromise
     1. Attacker sends internal email with session-fixed intranet URL
     2. Employee clicks link during work hours
     3. Corporate application accepts session ID from URL
     4. Employee authenticates with company credentials
     5. Attacker gains access to internal systems and sensitive data
-    
+
     ## Advanced Attack Techniques
-    
+
     ### Session Race Conditions
     ```php
     // VULNERABLE - race condition during authentication
     session_start();
-    
+
     if (authenticate($username, $password)) {
         $_SESSION['authenticated'] = true;
         // WINDOW: Attacker can access session before regeneration
@@ -920,51 +921,51 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         session_regenerate_id(true);
     }
     ```
-    
+
     ### Session Adoption Attacks
     ```php
     // VULNERABLE - adopting uninitialized sessions
     session_start();
-    
+
     if (!isset($_SESSION['initialized'])) {
         // Session might be attacker-controlled
         $_SESSION['initialized'] = true;
         $_SESSION['guest_user'] = true;
     }
     ```
-    
+
     ### Multi-Step Authentication Bypass
     ```php
     // VULNERABLE - session not regenerated between authentication steps
     session_start();
-    
+
     // Step 1: Username/password
     if (verify_credentials($username, $password)) {
         $_SESSION['step1_complete'] = true;
     }
-    
+
     // Step 2: Two-factor authentication
     if ($_SESSION['step1_complete'] && verify_2fa($token)) {
         $_SESSION['authenticated'] = true;
         // BUG: Session ID still fixed from initial authentication
     }
     ```
-    
+
     ## Prevention Strategies
-    
+
     ### Session ID Regeneration
     The most critical defense is proper session ID regeneration:
     ```php
     // SECURE - regenerate session ID after authentication
     session_start();
-    
+
     if (authenticate($username, $password)) {
         session_regenerate_id(true);  // true = delete old session
         $_SESSION['authenticated'] = true;
         $_SESSION['user_id'] = $user_id;
     }
     ```
-    
+
     ### Secure Session Configuration
     ```php
     // Configure secure session settings
@@ -974,14 +975,14 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
     ini_set('session.cookie_secure', 1);
     ini_set('session.cookie_samesite', 'Strict');
     ```
-    
+
     ### Input Validation and Rejection
     ```php
     // SECURE - never accept session IDs from user input
     // session_id($_GET['PHPSESSID']);  // NEVER DO THIS
-    
+
     session_start();
-    
+
     // If custom session management is needed, use mapping
     $allowed_sessions = get_valid_session_mapping();
     if (isset($_GET['app_token']) && 
@@ -990,7 +991,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         // Use internal mapping instead of direct session ID
     }
     ```
-    
+
     ### Session Validation and Fingerprinting
     ```php
     function validate_session() {
@@ -1019,7 +1020,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         return true;
     }
     ```
-    
+
     ### Regular Session Regeneration
     ```php
     // Regenerate session ID periodically
@@ -1030,62 +1031,62 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         $_SESSION['last_regeneration'] = time();
     }
     ```
-    
+
     ## Security Testing
-    
+
     ### Manual Testing Techniques
     ```
     # Test URL parameter acceptance
     https://target.com/login.php?PHPSESSID=test_session_123
-    
+
     # Test form-based session injection
     POST /login.php
     Content-Type: application/x-www-form-urlencoded
-    
+
     session_id=test_session_456&username=user&password=pass
-    
+
     # Test cookie injection
     Cookie: PHPSESSID=test_session_789
     ```
-    
+
     ### Automated Testing
     Use tools and scripts to test for session fixation:
     - Burp Suite's session handling rules
     - OWASP ZAP's session management scanner
     - Custom scripts to test session ID acceptance
-    
+
     ## Framework-Specific Considerations
-    
+
     ### Laravel Session Security
     ```php
     // Laravel automatically regenerates session IDs
     Auth::login($user);  // Regenerates session ID automatically
-    
+
     // Manual regeneration if needed
     session()->regenerate();
     ```
-    
+
     ### Symfony Session Management
     ```php
     // Symfony session regeneration
     $session = $request->getSession();
     $session->migrate(true);  // true = destroy old session
     ```
-    
+
     Remember: Session fixation vulnerabilities can completely compromise user accounts
     without requiring credential theft. Always regenerate session IDs after authentication
     and never accept session identifiers from user input.
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities and false positives
   by analyzing the context of session ID usage and checking for proper security measures.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.SessionFixation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]

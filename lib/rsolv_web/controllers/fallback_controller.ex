@@ -50,55 +50,55 @@ defmodule RsolvWeb.FallbackController do
     |> put_status(:bad_request)
     |> json(%{error: "Phase is required"})
   end
-  
+
   def call(conn, {:error, :repo_required}) do
     conn
     |> put_status(:bad_request)
     |> json(%{error: "Repository is required"})
   end
-  
+
   def call(conn, {:error, :commit_sha_required}) do
     conn
     |> put_status(:bad_request)
     |> json(%{error: "Commit SHA is required"})
   end
-  
+
   def call(conn, {:error, :issue_number_required}) do
     conn
     |> put_status(:bad_request)
     |> json(%{error: "Issue number is required for validation and mitigation phases"})
   end
-  
+
   def call(conn, {:error, :invalid_phase}) do
     conn
     |> put_status(:bad_request)
     |> json(%{error: "Invalid phase. Must be 'scan', 'validation', or 'mitigation'"})
   end
-  
+
   def call(conn, {:error, :issue_required}) do
     conn
     |> put_status(:bad_request)
     |> json(%{error: "Issue number is required"})
   end
-  
+
   def call(conn, {:error, :commit_required}) do
     conn
     |> put_status(:bad_request)
     |> json(%{error: "Commit SHA is required"})
   end
-  
+
   def call(conn, {:error, :invalid_issue_number}) do
     conn
     |> put_status(:bad_request)
     |> json(%{error: "Invalid issue number format"})
   end
-  
+
   def call(conn, {:error, :forge_not_verified}) do
     conn
     |> put_status(:forbidden)
     |> json(%{error: "Forge account not verified"})
   end
-  
+
   # This clause handles invalid API key errors.
   def call(conn, {:error, :invalid_api_key}) do
     conn

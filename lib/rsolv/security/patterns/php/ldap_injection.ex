@@ -1,43 +1,43 @@
 defmodule Rsolv.Security.Patterns.Php.LdapInjection do
   @moduledoc """
   Pattern for detecting LDAP injection vulnerabilities in PHP.
-  
+
   This pattern identifies when PHP applications construct LDAP search filters
   using unsanitized user input, potentially allowing attackers to manipulate
   LDAP queries and gain unauthorized access to directory information.
-  
+
   ## Vulnerability Details
-  
+
   LDAP injection is a critical security vulnerability that occurs when applications
   construct LDAP search filters by directly concatenating or interpolating user input
   without proper escaping or validation. This allows attackers to manipulate LDAP
   queries and potentially:
-  
+
   - Bypass authentication mechanisms
   - Extract sensitive directory information
   - Enumerate users and organizational structure
   - Escalate privileges within directory services
-  
+
   ### Attack Example
   ```php
   // Vulnerable code - user input directly in LDAP filter
   $username = $_POST['username']; // Attacker input: "admin)(|(objectClass=*"
   $filter = "(uid=$username)";
   $result = ldap_search($ds, $dn, $filter);
-  
+
   // Results in malicious filter: (uid=admin)(|(objectClass=*)
   // This can bypass authentication or extract all directory entries
   ```
-  
+
   LDAP filters use a specific syntax with parentheses, operators, and special
   characters. When user input containing these characters is not properly escaped,
   attackers can break out of the intended filter structure and inject their own
   LDAP logic.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -67,7 +67,7 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -77,59 +77,59 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
       LDAP search filters. This vulnerability occurs when applications construct LDAP queries 
       using unsanitized user input, enabling attackers to bypass authentication, extract 
       sensitive directory information, and potentially compromise entire directory services.
-      
+
       LDAP injection attacks exploit the special syntax and operators used in LDAP search filters.
       LDAP filters use parentheses, logical operators (&, |, !), and special characters that have
       specific meaning in LDAP queries. When user input containing these characters is not properly
       escaped or validated, attackers can break out of the intended filter structure and inject
       their own LDAP logic.
-      
+
       ### Common Attack Vectors
-      
+
       **Authentication Bypass**: The most common LDAP injection attack targets authentication
       systems that use LDAP for user verification. By injecting logical operators, attackers
       can create filters that always evaluate to true:
-      
+
       ```php
       // Vulnerable authentication code
       $username = $_POST['username']; // Attacker input: "admin)(|(objectClass=*"
       $password = $_POST['password'];
       $filter = "(&(uid=$username)(password=$password))";
       $result = ldap_search($connection, $baseDN, $filter);
-      
+
       // Malicious filter becomes:
       // (&(uid=admin)(|(objectClass=*)(password=anything))
       // This bypasses password check for admin user
       ```
-      
+
       **Information Disclosure**: Attackers can modify search filters to extract sensitive
       directory information beyond what the application intended to expose:
-      
+
       ```php
       // Intended: Search for users by department
       $dept = $_GET['department']; // Attacker input: "*)(objectClass=*"
       $filter = "(department=$dept)";
-      
+
       // Results in: (department=*)(objectClass=*)
       // This returns all directory entries instead of just department users
       ```
-      
+
       **Privilege Escalation**: In applications that use LDAP groups for authorization,
       injection attacks can manipulate group membership queries:
-      
+
       ```php
       // Check if user is admin
       $user = $_SESSION['username']; // Attacker input: "*)(|(memberOf=cn=admin,*"
       $filter = "(&(uid=$user)(memberOf=cn=user,ou=groups,dc=company,dc=com))";
-      
+
       // Becomes: (&(uid=*)(|(memberOf=cn=admin,*)(memberOf=cn=user,ou=groups,dc=company,dc=com))
       // This can grant admin privileges to any user
       ```
-      
+
       ### Directory Service Impact
-      
+
       LDAP injection attacks can have severe consequences for organizations:
-      
+
       - **User Enumeration**: Attackers can discover valid usernames, email addresses, and
         organizational structure information
       - **Authentication Bypass**: Complete circumvention of login mechanisms
@@ -137,9 +137,9 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
         and internal organizational data
       - **Privilege Escalation**: Unauthorized access to administrative functions
       - **Service Disruption**: Malformed queries can cause LDAP server performance issues
-      
+
       ### Enterprise Directory Vulnerabilities
-      
+
       Enterprise directory services like Active Directory, OpenLDAP, and others are particularly
       vulnerable because they often contain:
       - Employee personal information (names, emails, phone numbers)
@@ -152,7 +152,8 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
         %{
           type: :cwe,
           id: "CWE-90",
-          title: "Improper Neutralization of Special Elements used in an LDAP Query ('LDAP Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an LDAP Query ('LDAP Injection')",
           url: "https://cwe.mitre.org/data/definitions/90.html"
         },
         %{
@@ -165,7 +166,8 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
           type: :owasp,
           id: "LDAP_Prevention",
           title: "OWASP LDAP Injection Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -211,7 +213,8 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
           description: "Joomla! LDAP injection enabling account takeover",
           severity: "critical",
           cvss: 9.8,
-          note: "Critical vulnerability allowing complete site takeover via LDAP filter manipulation"
+          note:
+            "Critical vulnerability allowing complete site takeover via LDAP filter manipulation"
         },
         %{
           id: "CVE-2024-11236",
@@ -237,25 +240,25 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
       ],
       detection_notes: """
       This pattern detects LDAP injection vulnerabilities by identifying PHP code that:
-      
+
       1. **Function Analysis**: Matches LDAP query functions:
          - ldap_search() - searches LDAP directory tree
          - ldap_list() - lists entries in LDAP directory
          - ldap_read() - reads single LDAP entry
-      
+
       2. **Parameter Inspection**: Analyzes the third parameter (filter parameter) for:
          - Direct user input variables ($_GET, $_POST, $_REQUEST, $_COOKIE)
          - Unescaped concatenation of user data
          - Missing sanitization or validation
-      
+
       3. **Context Validation**: The regex pattern specifically looks for:
          - LDAP function calls with proper parameter structure
          - User input sources within the filter parameter
          - Absence of proper escaping mechanisms
-      
+
       The pattern uses a regex that matches the structure:
       ldap_function(connection, base_dn, "filter_with_$_USER_INPUT")
-      
+
       Special considerations:
       - Matches both quoted and unquoted filter parameters
       - Detects concatenation patterns with user input
@@ -305,9 +308,9 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
 
   @doc """
   Returns test cases for the LDAP injection pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.LdapInjection.test_cases()
       iex> length(test_cases.positive)
       8
@@ -362,7 +365,8 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
           description: "Properly escaped user input"
         },
         %{
-          code: ~S|$filter = "(uid=" . ldap_escape($_POST['username'], null, LDAP_ESCAPE_FILTER) . ")"; ldap_search($ds, $dn, $filter);|,
+          code:
+            ~S|$filter = "(uid=" . ldap_escape($_POST['username'], null, LDAP_ESCAPE_FILTER) . ")"; ldap_search($ds, $dn, $filter);|,
           description: "LDAP_ESCAPE_FILTER flag usage"
         },
         %{
@@ -383,9 +387,9 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
 
   @doc """
   Returns examples of vulnerable and fixed code.
-  
+
   ## Examples
-  
+
       iex> examples = Rsolv.Security.Patterns.Php.LdapInjection.examples()
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
@@ -399,7 +403,7 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
         $password = $_POST['password'];
         $filter = "(&(uid=$username)(password=$password))";
         $result = ldap_search($connection, $baseDN, $filter);
-        
+
         // Attacker input: username = "admin)(|(objectClass=*"
         // Results in: (&(uid=admin)(|(objectClass=*)(password=anything))
         """,
@@ -408,7 +412,7 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
         $department = $_GET['dept'];
         $filter = "(department=$department)";
         $employees = ldap_search($ldap, $base, $filter);
-        
+
         // Attacker input: dept = "*)(objectClass=*"
         // Results in: (department=*)(objectClass=*)
         // Returns all directory entries
@@ -418,7 +422,7 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
         $search = $_GET['q'];
         $filter = "(cn=*$search*)";
         $users = ldap_search($ldap, $userBase, $filter);
-        
+
         // Attacker can inject: q = "*)(uid=admin*"
         // To discover specific usernames
         """
@@ -445,11 +449,11 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
         // SECURE: Allowlist-based validation
         $allowedDepartments = ['IT', 'HR', 'Finance', 'Marketing'];
         $department = $_GET['dept'];
-        
+
         if (!in_array($department, $allowedDepartments)) {
             throw new InvalidArgumentException('Invalid department');
         }
-        
+
         $filter = "(department=$department)";
         $employees = ldap_search($ldap, $base, $filter);
         """
@@ -459,9 +463,9 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
 
   @doc """
   Returns educational description of the vulnerability.
-  
+
   ## Examples
-  
+
       iex> desc = Rsolv.Security.Patterns.Php.LdapInjection.vulnerability_description()
       iex> desc =~ "LDAP injection"
       true
@@ -479,9 +483,9 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
     LDAP injection occurs when applications construct LDAP search filters using 
     unsanitized user input, allowing attackers to manipulate LDAP queries and 
     potentially bypass authentication or extract sensitive directory information.
-    
+
     In PHP, this commonly happens when:
-    
+
     1. **Direct Input Usage**: User input from $_GET, $_POST, $_REQUEST, or $_COOKIE
        is directly concatenated into LDAP filter strings without escaping.
        
@@ -490,20 +494,20 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
        
     3. **Improper Escaping**: Custom or incorrect escaping methods are used instead
        of the proper ldap_escape() function with LDAP_ESCAPE_FILTER flag.
-    
+
     ## Attack Techniques
-    
+
     **Authentication Bypass**: Attackers inject LDAP operators to create always-true
     conditions, bypassing username/password verification.
-    
+
     **Information Disclosure**: Malicious filters can extract more data than intended,
     including sensitive organizational information.
-    
+
     **Privilege Escalation**: In systems using LDAP for authorization, attackers can
     manipulate group membership queries to gain elevated privileges.
-    
+
     ## Prevention
-    
+
     Always use ldap_escape() with the LDAP_ESCAPE_FILTER flag to properly escape
     user input before including it in LDAP filters. Additionally, implement input
     validation and consider using allowlists for expected values.
@@ -539,7 +543,10 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
           type: "ldap_functions",
           description: "Identify LDAP query functions that accept filters",
           functions: [
-            "ldap_search", "ldap_list", "ldap_read", "ldap_compare"
+            "ldap_search",
+            "ldap_list",
+            "ldap_read",
+            "ldap_compare"
           ]
         },
         %{
@@ -559,8 +566,14 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
           type: "context_validation",
           description: "Validate LDAP injection context and exclude false positives",
           exclude_patterns: [
-            "test", "mock", "example", "demo", "comment",
-            "documentation", "tutorial", "sample"
+            "test",
+            "mock",
+            "example",
+            "demo",
+            "comment",
+            "documentation",
+            "tutorial",
+            "sample"
           ]
         }
       ]

@@ -5,38 +5,57 @@
     <div class="text-center mb-10">
       <h2 class="text-3xl md:text-4xl font-bold mb-3">Unsubscribed Successfully</h2>
       <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-        You have successfully unsubscribed <span class="font-semibold"><%= @email %></span> from all RSOLV marketing communications.
+        You have successfully unsubscribed <span class="font-semibold">{@email}</span>
+        from all RSOLV marketing communications.
       </p>
     </div>
-    
+
     <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
       <div class="text-center">
         <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          <svg
+            class="w-8 h-8 text-green-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+            >
+            </path>
           </svg>
         </div>
-        
+
         <h3 class="text-xl font-bold mb-4">Unsubscribe Confirmed</h3>
-        
+
         <p class="text-gray-600 mb-6">
           Your email address has been removed from our mailing list. You should not receive any more marketing emails from us.
         </p>
-        
+
         <p class="text-gray-600 mb-6">
           Please note: This change may take up to 48 hours to fully process across all our systems.
         </p>
-        
+
         <div class="mt-6">
-          <a href="/" class="bg-brand-blue text-white font-semibold py-2 px-6 rounded-md hover:bg-brand-dark transition-colors">
+          <a
+            href="/"
+            class="bg-brand-blue text-white font-semibold py-2 px-6 rounded-md hover:bg-brand-dark transition-colors"
+          >
             Return to Homepage
           </a>
         </div>
       </div>
     </div>
-    
+
     <div class="mt-8 text-center text-gray-600">
-      <p>Changed your mind? <a href="/early-access" class="text-brand-blue hover:underline">Re-subscribe here</a></p>
+      <p>
+        Changed your mind?
+        <a href="/early-access" class="text-brand-blue hover:underline">Re-subscribe here</a>
+      </p>
     </div>
   </div>
 </section>

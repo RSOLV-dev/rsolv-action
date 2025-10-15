@@ -2,9 +2,9 @@ defmodule Rsolv.TestActor do
   @moduledoc """
   A simple actor implementation for FunWithFlags testing.
   """
-  
+
   defstruct [:id]
-  
+
   def new(id), do: %__MODULE__{id: id}
 end
 

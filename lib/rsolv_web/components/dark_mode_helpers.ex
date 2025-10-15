@@ -6,7 +6,7 @@ defmodule RsolvWeb.Components.DarkModeHelpers do
 
   @doc """
   Returns classes for standard card/panel styling with dark mode support.
-  
+
   ## Examples
       
       <div class={card_classes()}>
@@ -26,9 +26,9 @@ defmodule RsolvWeb.Components.DarkModeHelpers do
   """
   def input_classes(additional_classes \\ "") do
     "shadow appearance-none border dark:border-gray-600 rounded w-full py-2 px-3 " <>
-    "text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 " <>
-    "leading-tight focus:outline-none focus:shadow-outline " <>
-    "focus:ring-2 focus:ring-brand-blue dark:focus:ring-brand-green #{additional_classes}"
+      "text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 " <>
+      "leading-tight focus:outline-none focus:shadow-outline " <>
+      "focus:ring-2 focus:ring-brand-blue dark:focus:ring-brand-green #{additional_classes}"
   end
 
   @doc """
@@ -40,31 +40,35 @@ defmodule RsolvWeb.Components.DarkModeHelpers do
 
   @doc """
   Returns classes for section backgrounds with dark mode support.
-  
+
   ## Options
     * `:variant` - :default | :light | :dark
   """
   def section_classes(variant \\ :default, additional_classes \\ "") do
-    base = case variant do
-      :light -> "bg-brand-light dark:bg-slate-900"
-      :dark -> "bg-gray-50 dark:bg-slate-900"
-      _ -> "bg-white dark:bg-slate-950"
-    end
+    base =
+      case variant do
+        :light -> "bg-brand-light dark:bg-slate-900"
+        :dark -> "bg-gray-50 dark:bg-slate-900"
+        _ -> "bg-white dark:bg-slate-950"
+      end
+
     "#{base} #{additional_classes}"
   end
 
   @doc """
   Returns classes for text with proper dark mode contrast.
-  
+
   ## Options
     * `:variant` - :default | :muted | :heading
   """
   def text_classes(variant \\ :default, additional_classes \\ "") do
-    base = case variant do
-      :muted -> "text-gray-600 dark:text-gray-400"
-      :heading -> "text-gray-900 dark:text-white"
-      _ -> "text-gray-700 dark:text-gray-300"
-    end
+    base =
+      case variant do
+        :muted -> "text-gray-600 dark:text-gray-400"
+        :heading -> "text-gray-900 dark:text-white"
+        _ -> "text-gray-700 dark:text-gray-300"
+      end
+
     "#{base} #{additional_classes}"
   end
 

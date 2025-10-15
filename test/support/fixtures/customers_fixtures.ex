@@ -10,7 +10,7 @@ defmodule Rsolv.CustomersFixtures do
   Generate a unique customer email.
   """
   def unique_customer_email, do: "customer#{System.unique_integer()}@example.com"
-  
+
   @doc """
   Get the valid customer password for testing.
   """

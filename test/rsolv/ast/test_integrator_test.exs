@@ -30,7 +30,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
         "redTests" => [
           %{
             "testName" => "rejects SQL injection in search endpoint",
-            "testCode" => "post('/search', { q: \"admin'; DROP TABLE users;--\" });\nexpect(response.status).toBe(400);",
+            "testCode" =>
+              "post('/search', { q: \"admin'; DROP TABLE users;--\" });\nexpect(response.status).toBe(400);",
             "attackVector" => "admin'; DROP TABLE users;--"
           }
         ]
@@ -45,7 +46,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
       assert String.contains?(integrated_code, "rejects SQL injection in search endpoint")
       assert String.contains?(integrated_code, "describe('security'")
       assert String.contains?(integrated_code, "admin'; DROP TABLE users;--")
-      assert String.contains?(integrated_code, "creates user")  # Original test preserved
+      # Original test preserved
+      assert String.contains?(integrated_code, "creates user")
     end
 
     test "integrates test with multiple RED tests" do
@@ -61,7 +63,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
         "redTests" => [
           %{
             "testName" => "prevents SQL injection in login",
-            "testCode" => "const result = login(\"' OR '1'='1\", 'pass');\nexpect(result).toBeNull();",
+            "testCode" =>
+              "const result = login(\"' OR '1'='1\", 'pass');\nexpect(result).toBeNull();",
             "attackVector" => "' OR '1'='1"
           },
           %{
@@ -94,7 +97,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
         "redTests" => [
           %{
             "testName" => "validates payment amount",
-            "testCode" => "const invalidAmount: number = -50;\nexpect(() => processPayment(invalidAmount)).toThrow();",
+            "testCode" =>
+              "const invalidAmount: number = -50;\nexpect(() => processPayment(invalidAmount)).toThrow();",
             "attackVector" => "negative amount"
           }
         ]
@@ -121,7 +125,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
         "redTests" => [
           %{
             "testName" => "prevents path traversal",
-            "testCode" => "const result = readFile('../../../etc/passwd');\nexpect(result).toBeNull();",
+            "testCode" =>
+              "const result = readFile('../../../etc/passwd');\nexpect(result).toBeNull();",
             "attackVector" => "../../../etc/passwd"
           }
         ]
@@ -151,7 +156,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
         "redTests" => [
           %{
             "testName" => "should prevent SQL injection",
-            "testCode" => "const result = vulnerableQuery(\"'; DROP TABLE users;--\");\nexpect(result).toBeNull();",
+            "testCode" =>
+              "const result = vulnerableQuery(\"'; DROP TABLE users;--\");\nexpect(result).toBeNull();",
             "attackVector" => "'; DROP TABLE users;--"
           }
         ]
@@ -179,7 +185,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
         "redTests" => [
           %{
             "testName" => "rejects malicious input",
-            "testCode" => "const result = authenticate(\"admin' --\");\nexpect(result).to.be.null;",
+            "testCode" =>
+              "const result = authenticate(\"admin' --\");\nexpect(result).to.be.null;",
             "attackVector" => "admin' --"
           }
         ]
@@ -274,7 +281,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
         "redTests" => [
           %{
             "testName" => "prevents XSS attack",
-            "testCode" => "const result = render('<script>alert(\"XSS\")</script>');\nexpect(result).not.toContain('<script>');",
+            "testCode" =>
+              "const result = render('<script>alert(\"XSS\")</script>');\nexpect(result).not.toContain('<script>');",
             "attackVector" => "<script>alert(\"XSS\")</script>"
           }
         ]

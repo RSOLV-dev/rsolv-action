@@ -29,13 +29,13 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeFileUpload do
   ```elixir
   # VULNERABLE - Direct use of user-provided filename
   File.write!("/uploads/\#{upload.filename}", upload.content)
-  
+
   # VULNERABLE - String concatenation with user input
   File.write!("/uploads/" <> params.filename, data)
-  
+
   # VULNERABLE - Path.join with unsanitized filename
   File.write!(Path.join(upload_dir, upload.filename), content)
-  
+
   # VULNERABLE - No file type validation
   File.write!(upload_path <> upload.filename, content)
   ```
@@ -47,11 +47,11 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeFileUpload do
     safe_name = "\#{UUID.generate()}_\#{Path.basename(upload.filename)}"
     File.write!(Path.join(upload_dir, safe_name), upload.content)
   end
-  
+
   # SAFE - UUID-based filename generation
   filename = "\#{UUID.generate()}\#{Path.extname(upload.filename)}"
   File.write!(Path.join(upload_dir, filename), upload.content)
-  
+
   # SAFE - Hardcoded safe path
   File.write!("/uploads/processed_file.jpg", content)
   ```
@@ -82,7 +82,8 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeFileUpload do
     %Rsolv.Security.Pattern{
       id: "elixir-unsafe-file-upload",
       name: "Unsafe File Upload",
-      description: "File upload operations using unsanitized user input enable path traversal attacks and RCE",
+      description:
+        "File upload operations using unsanitized user input enable path traversal attacks and RCE",
       type: :file_upload,
       severity: :high,
       languages: ["elixir"],
@@ -90,22 +91,23 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeFileUpload do
       regex: [
         # File.write operations with user filename interpolation - exclude comments
         ~r/^(?!\s*#).*File\.write!?\s*\(\s*[^,]*#\{[^}]*(?:\.filename|params\[|filename)/,
-        
+
         # File.write with string concatenation using user input - exclude comments
         ~r/^(?!\s*#).*File\.write!?\s*\([^,]*\s*<>\s*[^,]*(?:\.filename|params\[)/,
-        
+
         # Path.join with user-controlled filename - exclude comments
         ~r/^(?!\s*#).*Path\.join\s*\([^,\]]*,\s*[^,\]]*(?:\.filename|params\[)/,
-        
+
         # File.write with Path.join containing user input - exclude comments
         ~r/^(?!\s*#).*File\.write!?\s*\(\s*Path\.join\s*\([^)]*(?:\.filename|params\[)[^)]*\)/,
-        
+
         # Path.join with array notation - exclude comments
         ~r/^(?!\s*#).*Path\.join\s*\(\s*\[[^\]]*(?:\.filename|params\[)[^\]]*\]/
       ],
       cwe_id: "CWE-434",
       owasp_category: "A01:2021",
-      recommendation: "Validate file types, sanitize filenames, and use safe upload directories with generated filenames",
+      recommendation:
+        "Validate file types, sanitize filenames, and use safe upload directories with generated filenames",
       test_cases: %{
         vulnerable: [
           ~S|File.write!("/uploads/#{upload.filename}", upload.content)|,
@@ -149,7 +151,8 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeFileUpload do
       - Configuration tampering by overwriting critical application configuration files
       - Denial of service attacks through large file uploads or disk space exhaustion
       """,
-      likelihood: "High: File upload functionality is common in web applications and frequently lacks proper security controls",
+      likelihood:
+        "High: File upload functionality is common in web applications and frequently lacks proper security controls",
       cve_examples: [
         "CWE-434: Unrestricted Upload of File with Dangerous Type",
         "CWE-22: Improper Limitation of a Pathname to a Restricted Directory",
@@ -196,7 +199,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeFileUpload do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -210,7 +213,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeFileUpload do
         ],
         user_input_sources: [
           "upload.filename",
-          "params.filename", 
+          "params.filename",
           "params[:filename]",
           "upload_params.filename",
           "file_params.filename",
@@ -224,8 +227,19 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeFileUpload do
           "secure_filename"
         ],
         dangerous_extensions: [
-          ".php", ".jsp", ".exe", ".sh", ".bat", ".cmd", ".scr",
-          ".vbs", ".jar", ".war", ".py", ".rb", ".pl"
+          ".php",
+          ".jsp",
+          ".exe",
+          ".sh",
+          ".bat",
+          ".cmd",
+          ".scr",
+          ".vbs",
+          ".jar",
+          ".war",
+          ".py",
+          ".rb",
+          ".pl"
         ]
       },
       confidence_rules: %{

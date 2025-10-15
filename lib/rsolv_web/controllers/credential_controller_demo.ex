@@ -12,9 +12,10 @@ defmodule RsolvWeb.CredentialControllerDemo do
   """
   def handle_demo_mode(params, conn) do
     # Check for demo mode indicators
-    is_demo = params["demo_mode"] == true ||
-              params["forge_type"] == "local" ||
-              get_req_header(conn, "x-rsolv-demo-mode") != []
+    is_demo =
+      params["demo_mode"] == true ||
+        params["forge_type"] == "local" ||
+        get_req_header(conn, "x-rsolv-demo-mode") != []
 
     if is_demo do
       {:ok, enrich_params_for_demo(params)}
@@ -32,17 +33,24 @@ defmodule RsolvWeb.CredentialControllerDemo do
     |> Map.put_new("forge_account_id", get_forge_account_from_context(params))
     |> Map.put_new("repository", get_repository_from_context(params))
     |> Map.put_new("issue_number", params["issue_number"] || 1)
-    |> Map.put_new("providers", ["anthropic"])  # Default to Anthropic for demos
+    # Default to Anthropic for demos
+    |> Map.put_new("providers", ["anthropic"])
   end
 
   defp get_forge_account_from_context(params) do
     # Try to infer from various sources
     cond do
-      params["forge_account_id"] -> params["forge_account_id"]
-      params["github_actor"] -> "github-#{params["github_actor"]}"
+      params["forge_account_id"] ->
+        params["forge_account_id"]
+
+      params["github_actor"] ->
+        "github-#{params["github_actor"]}"
+
       params["repository"] && String.contains?(params["repository"], "/") ->
         params["repository"] |> String.split("/") |> List.first() |> then(&"github-#{&1}")
-      true -> "demo-local-#{:os.system_time(:second)}"
+
+      true ->
+        "demo-local-#{:os.system_time(:second)}"
     end
   end
 

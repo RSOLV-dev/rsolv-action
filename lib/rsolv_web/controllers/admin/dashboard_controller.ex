@@ -8,6 +8,7 @@ defmodule RsolvWeb.Admin.DashboardController do
 
   def index(conn, _params) do
     metrics = gather_metrics()
+
     render(conn, :index,
       customer: conn.assigns.current_customer,
       metrics: metrics
@@ -47,7 +48,6 @@ defmodule RsolvWeb.Admin.DashboardController do
       _ -> "Error"
     end
   end
-
 
   defp get_recent_activity do
     # Get recent API key creations with preloaded customer
@@ -98,7 +98,7 @@ defmodule RsolvWeb.Admin.DashboardController do
       this_month: 0
     }
   end
-  
+
   def logout(conn, _params) do
     CustomerAuth.log_out_customer(conn)
   end

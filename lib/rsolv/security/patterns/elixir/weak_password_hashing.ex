@@ -29,13 +29,13 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashing do
   ```elixir
   # VULNERABLE - SHA256 is too fast for passwords
   :crypto.hash(:sha256, password <> salt)
-  
+
   # VULNERABLE - MD5 is broken for passwords
   :crypto.hash(:md5, password)
-  
+
   # VULNERABLE - SHA512 still too fast
   Base.encode16(:crypto.hash(:sha512, password))
-  
+
   # VULNERABLE - Simple salting insufficient
   password_hash = :crypto.hash(:sha256, password <> get_salt())
   ```
@@ -44,13 +44,13 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashing do
   ```elixir
   # SAFE - Argon2 (recommended)
   Argon2.hash_pwd_salt(password)
-  
+
   # SAFE - Bcrypt with cost factor
   Bcrypt.hash_pwd_salt(password, log_rounds: 12)
-  
+
   # SAFE - Pbkdf2 with iterations
   Pbkdf2.hash_pwd_salt(password, rounds: 100_000)
-  
+
   # SAFE - Verification
   Argon2.verify_pass(password, stored_hash)
   ```
@@ -89,25 +89,25 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashing do
       regex: [
         # :crypto.hash with password - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*:crypto\.hash\s*\(\s*:(?:sha|sha256|sha512|sha224|md5)\s*,\s*.*password/m,
-        
+
         # Base.encode with crypto.hash and password - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*Base\.(?:encode16|encode64|encode32|url_encode64|hex_encode32|hex_encode16)\s*\(\s*:crypto\.hash\s*\(.*pass/m,
-        
+
         # Password hash assignment - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*(?:password_hash|pwd_hash|hashed_password|pass_hash|user_password_hash)\s*=\s*:crypto\.hash/m,
-        
+
         # Legacy crypto functions with password - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*:crypto\.(?:sha|sha256|sha512|md5)\s*\(\s*.*password/m,
-        
+
         # :erlang.md5 with password - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*:erlang\.md5\s*\(\s*.*password/m,
-        
+
         # Pipeline with crypto.hash and password - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*password.*\|>.*:crypto\.hash/m,
-        
+
         # Assignment with pipeline to crypto.hash - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*=.*\n.*\|>.*:crypto\.hash/m,
-        
+
         # then(&:crypto.hash) pattern - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*then\s*\(&:crypto\.hash/m
       ],
@@ -157,7 +157,8 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashing do
       - Lateral movement using cracked credentials across systems
       - Long-term persistent access through compromised accounts
       """,
-      likelihood: "High: Common mistake as developers often use familiar hash functions without understanding password-specific requirements",
+      likelihood:
+        "High: Common mistake as developers often use familiar hash functions without understanding password-specific requirements",
       cve_examples: [
         "CWE-916: Use of Password Hash With Insufficient Computational Effort",
         "CVE-2012-3287: Insufficient computational effort in password hashing",
@@ -204,24 +205,42 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashing do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
       context_rules: %{
         weak_algorithms: [
-          "md5", "sha", "sha1", "sha224", "sha256", "sha384", "sha512"
+          "md5",
+          "sha",
+          "sha1",
+          "sha224",
+          "sha256",
+          "sha384",
+          "sha512"
         ],
         strong_algorithms: [
-          "argon2", "bcrypt", "pbkdf2", "scrypt"
+          "argon2",
+          "bcrypt",
+          "pbkdf2",
+          "scrypt"
         ],
         password_indicators: [
-          "password", "pwd", "pass", "passwd", "passphrase",
-          "secret", "pin", "passcode"
+          "password",
+          "pwd",
+          "pass",
+          "passwd",
+          "passphrase",
+          "secret",
+          "pin",
+          "passcode"
         ],
         hash_functions: [
-          ":crypto.hash", ":crypto.sha", ":crypto.sha256", 
-          ":crypto.md5", ":erlang.md5"
+          ":crypto.hash",
+          ":crypto.sha",
+          ":crypto.sha256",
+          ":crypto.md5",
+          ":erlang.md5"
         ]
       },
       confidence_rules: %{

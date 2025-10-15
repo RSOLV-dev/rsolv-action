@@ -6,7 +6,8 @@
 
 parsers = Rsolv.AST.ParserRegistry.list_parsers()
 
-IO.puts "Available parsers:"
+IO.puts("Available parsers:")
+
 Enum.each(parsers, fn {lang, config} ->
-  IO.puts "  - #{lang}: #{inspect(config)}"
+  IO.puts("  - #{lang}: #{inspect(config)}")
 end)

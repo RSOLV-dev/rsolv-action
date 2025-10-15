@@ -1,45 +1,45 @@
 defmodule Rsolv.Security.Patterns.Java.SqlInjectionStatement do
   @moduledoc """
   SQL Injection via Statement pattern for Java code.
-  
+
   Detects SQL injection vulnerabilities where Java Statement objects are used with
   string concatenation to build SQL queries. This is one of the most common and
   dangerous security vulnerabilities.
-  
+
   ## Vulnerability Details
-  
+
   Using java.sql.Statement with string concatenation allows attackers to inject
   arbitrary SQL commands. The Statement interface executes SQL directly without
   parameterization, making it vulnerable when user input is concatenated.
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable code
   String userId = request.getParameter("id");
   Statement stmt = conn.createStatement();
   ResultSet rs = stmt.executeQuery("SELECT * FROM users WHERE id = " + userId);
-  
+
   // Attack input: userId = "1 OR 1=1 --"
   // Results in: SELECT * FROM users WHERE id = 1 OR 1=1 --
   // Returns all users instead of just one
   ```
-  
+
   ### Real-World Impact
-  
+
   - CVE-2022-21724: Critical SQL injection in JDBC allowing full database compromise
   - CVE-2024-1597: SQL injection in PostgreSQL JDBC driver via string concatenation
   - CVE-2022-31197: Multiple SQL injection vulnerabilities in MySQL Connector/J
-  
+
   ## References
-  
+
   - CWE-89: Improper Neutralization of Special Elements used in an SQL Command
   - OWASP A03:2021 - Injection
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -64,7 +64,8 @@ defmodule Rsolv.Security.Patterns.Java.SqlInjectionStatement do
       ],
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use PreparedStatement with parameterized queries instead of Statement with string concatenation",
+      recommendation:
+        "Use PreparedStatement with parameterized queries instead of Statement with string concatenation",
       test_cases: %{
         vulnerable: [
           ~S|Statement stmt = conn.createStatement();
@@ -83,7 +84,7 @@ pstmt.setString(1, productName);|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -92,7 +93,7 @@ pstmt.setString(1, productName);|
       executed through java.sql.Statement. This allows attackers to manipulate the query structure
       and execute arbitrary SQL commands. Statement.executeQuery(), executeUpdate(), and execute()
       methods are vulnerable when used with string concatenation.
-      
+
       The vulnerability can lead to unauthorized data access, data modification, administrative
       operations execution, and in some cases, operating system command execution.
       """,
@@ -100,7 +101,8 @@ pstmt.setString(1, productName);|
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -113,7 +115,8 @@ pstmt.setString(1, productName);|
           type: :research,
           id: "java_sql_injection_prevention",
           title: "Java SQL Injection Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :documentation,
@@ -141,21 +144,25 @@ pstmt.setString(1, productName);|
       cve_examples: [
         %{
           id: "CVE-2022-21724",
-          description: "Critical SQL injection vulnerability in JDBC implementations allowing remote code execution",
+          description:
+            "Critical SQL injection vulnerability in JDBC implementations allowing remote code execution",
           severity: "critical",
           cvss: 9.8,
-          note: "Affected multiple JDBC drivers due to improper input sanitization in Statement execution"
+          note:
+            "Affected multiple JDBC drivers due to improper input sanitization in Statement execution"
         },
         %{
           id: "CVE-2024-1597",
-          description: "SQL injection in PostgreSQL JDBC driver through string concatenation in queries",
+          description:
+            "SQL injection in PostgreSQL JDBC driver through string concatenation in queries",
           severity: "high",
           cvss: 8.8,
           note: "Allows attackers to execute arbitrary SQL commands via crafted input parameters"
         },
         %{
           id: "CVE-2022-31197",
-          description: "Multiple SQL injection vulnerabilities in MySQL Connector/J when using Statement",
+          description:
+            "Multiple SQL injection vulnerabilities in MySQL Connector/J when using Statement",
           severity: "high",
           cvss: 8.1,
           note: "Improper neutralization of special elements in Statement.executeQuery() calls"
@@ -174,7 +181,7 @@ pstmt.setString(1, productName);|
       - String.format() used to build queries
       - StringBuilder/StringBuffer to construct SQL
       - Any dynamic SQL construction with Statement interface
-      
+
       False positives may occur with logging statements or when building non-SQL strings.
       AST enhancement helps distinguish actual SQL operations from other string operations.
       """,
@@ -208,15 +215,15 @@ pstmt.setString(1, productName);|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SQL operations and false positives
   like logging statements or non-SQL string concatenation.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.SqlInjectionStatement.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]

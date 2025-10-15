@@ -29,16 +29,16 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls do
   ```elixir
   # VULNERABLE - Direct execution of user commands
   GenServer.call(pid, {:execute, user_command})
-  
+
   # VULNERABLE - Dynamic command from user input
   GenServer.call(server, {String.to_atom(cmd), args})
-  
+
   # VULNERABLE - Unvalidated code evaluation
   def handle_call({:eval, code}, _from, state) do
     result = Code.eval_string(code)
     {:reply, result, state}
   end
-  
+
   # VULNERABLE - Direct message passing
   GenServer.call(worker, untrusted_message)
   ```
@@ -51,14 +51,14 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls do
     "restart" -> GenServer.call(pid, :restart)
     _ -> {:error, :invalid_command}
   end
-  
+
   # SAFE - Validated command execution
   case validate_command(user_command) do
     {:ok, :status} -> GenServer.call(pid, :get_status)
     {:ok, :update, data} -> GenServer.call(pid, {:update, data})
     :error -> {:error, :invalid_command}
   end
-  
+
   # SAFE - Pattern matching in handler
   def handle_call({:increment, n}, _from, state) when is_integer(n) do
     {:reply, :ok, state + n}
@@ -91,7 +91,8 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls do
     %Rsolv.Security.Pattern{
       id: "elixir-unsafe-genserver-calls",
       name: "Unsafe GenServer Calls",
-      description: "GenServer calls with unvalidated user input enable remote code execution attacks",
+      description:
+        "GenServer calls with unvalidated user input enable remote code execution attacks",
       type: :rce,
       severity: :medium,
       languages: ["elixir"],
@@ -99,25 +100,26 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls do
       regex: [
         # GenServer.call with execute/run/eval commands - exclude safe_command variables
         ~r/^(?!\s*#)(?!\s*@doc)(?!.*safe_command)(?!.*validated_)(?!.*checked_).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{\s*:(?:execute|run|eval|run_code|eval_string|run_command|execute_code)/m,
-        
+
         # GenServer.call with dynamic atom interpolation
         ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{\s*:"#\{/m,
-        
+
         # GenServer.call with String.to_atom
         ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{String\.to_atom/m,
-        
+
         # GenServer.call with variable message (untrusted) - exclude safe variables
         ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*(?:request|untrusted_message|user_input|params)\s*[,)]/m,
-        
+
         # handle_call with execute/run/eval patterns
         ~r/^(?!\s*#)(?!\s*@doc).*def\s+handle_call\s*\(\s*\{\s*:(?:execute|run|eval|run_code|eval_string|run_command|execute_code)/m,
-        
+
         # GenServer.call with tuple variable - exclude safe variable names
         ~r/^(?!\s*#)(?!\s*@doc).*GenServer\.call\s*\(\s*[^,]+\s*,\s*\{[^:}][^,}]*,\s*(?!safe_|validated_|checked_)(?:user_input|input|cmd|command|code)/m
       ],
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
-      recommendation: "Validate and whitelist all GenServer commands, never execute user input directly",
+      recommendation:
+        "Validate and whitelist all GenServer commands, never execute user input directly",
       test_cases: %{
         vulnerable: [
           ~S|GenServer.call(pid, {:execute, user_command})|,
@@ -166,7 +168,8 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls do
       - Resource exhaustion through malicious call patterns and atom table pollution
       - Privilege escalation by hijacking processes with elevated permissions
       """,
-      likelihood: "Medium: GenServer patterns are common in Elixir/OTP applications and input validation is often overlooked",
+      likelihood:
+        "Medium: GenServer patterns are common in Elixir/OTP applications and input validation is often overlooked",
       cve_examples: [
         "CWE-94: Improper Control of Generation of Code",
         "CWE-78: OS Command Injection via GenServer handlers",
@@ -213,26 +216,49 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
       context_rules: %{
         unsafe_commands: [
-          "execute", "run", "eval", "run_code", "eval_string", 
-          "run_command", "execute_code", "system", "cmd"
+          "execute",
+          "run",
+          "eval",
+          "run_code",
+          "eval_string",
+          "run_command",
+          "execute_code",
+          "system",
+          "cmd"
         ],
         genserver_functions: [
-          "GenServer.call", "GenServer.cast", "GenServer.multi_call",
-          ":gen_server.call", ":gen_server.cast"
+          "GenServer.call",
+          "GenServer.cast",
+          "GenServer.multi_call",
+          ":gen_server.call",
+          ":gen_server.cast"
         ],
         user_input_indicators: [
-          "params", "user_input", "input", "cmd", "command", 
-          "code", "request", "untrusted", "data"
+          "params",
+          "user_input",
+          "input",
+          "cmd",
+          "command",
+          "code",
+          "request",
+          "untrusted",
+          "data"
         ],
         safe_commands: [
-          "get_state", "get_status", "increment", "decrement",
-          "update", "fetch", "list", "count"
+          "get_state",
+          "get_status",
+          "increment",
+          "decrement",
+          "update",
+          "fetch",
+          "list",
+          "count"
         ],
         exclude_comments: true,
         exclude_doc_attributes: true,

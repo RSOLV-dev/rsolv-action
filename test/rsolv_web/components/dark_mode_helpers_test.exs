@@ -1,6 +1,6 @@
 defmodule RsolvWeb.Components.DarkModeHelpersTest do
   use ExUnit.Case, async: true
-  
+
   alias RsolvWeb.Components.DarkModeHelpers
 
   describe "card_classes/1" do
@@ -9,15 +9,15 @@ defmodule RsolvWeb.Components.DarkModeHelpersTest do
     end
 
     test "appends additional classes" do
-      assert DarkModeHelpers.card_classes("shadow-lg rounded-lg") == 
-        "bg-white dark:bg-slate-800 shadow-lg rounded-lg"
+      assert DarkModeHelpers.card_classes("shadow-lg rounded-lg") ==
+               "bg-white dark:bg-slate-800 shadow-lg rounded-lg"
     end
   end
 
   describe "input_classes/1" do
     test "returns comprehensive input classes with dark mode support" do
       result = DarkModeHelpers.input_classes()
-      
+
       # Should include all necessary classes
       assert result =~ "shadow appearance-none"
       assert result =~ "border dark:border-gray-600"
@@ -34,8 +34,8 @@ defmodule RsolvWeb.Components.DarkModeHelpersTest do
 
   describe "label_classes/1" do
     test "returns label classes with dark mode support" do
-      assert DarkModeHelpers.label_classes() == 
-        "block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2 "
+      assert DarkModeHelpers.label_classes() ==
+               "block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2 "
     end
   end
 
@@ -53,7 +53,8 @@ defmodule RsolvWeb.Components.DarkModeHelpersTest do
     end
 
     test "appends additional classes" do
-      assert DarkModeHelpers.section_classes(:default, "py-20") == "bg-white dark:bg-slate-950 py-20"
+      assert DarkModeHelpers.section_classes(:default, "py-20") ==
+               "bg-white dark:bg-slate-950 py-20"
     end
   end
 
@@ -71,8 +72,8 @@ defmodule RsolvWeb.Components.DarkModeHelpersTest do
     end
 
     test "appends additional classes" do
-      assert DarkModeHelpers.text_classes(:default, "text-lg") == 
-        "text-gray-700 dark:text-gray-300 text-lg"
+      assert DarkModeHelpers.text_classes(:default, "text-lg") ==
+               "text-gray-700 dark:text-gray-300 text-lg"
     end
   end
 

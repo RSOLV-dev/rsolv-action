@@ -14,22 +14,22 @@ defmodule Rsolv.Notifications.AlertThrottle do
   """
   def can_send_alert?(repo_name, max_daily_alerts) do
     key = daily_key(repo_name)
-    
+
     case Cachex.get(@cache_name, key) do
       {:ok, nil} ->
         # First alert of the day
         Cachex.put(@cache_name, key, 1, ttl: @ttl)
         true
-      
+
       {:ok, count} when count < max_daily_alerts ->
         # Under the limit
         Cachex.incr(@cache_name, key)
         true
-      
+
       {:ok, _count} ->
         # Over the limit
         false
-      
+
       {:error, _} ->
         # Cache error, allow the alert but log
         require Logger
@@ -43,7 +43,7 @@ defmodule Rsolv.Notifications.AlertThrottle do
   """
   def get_daily_count(repo_name) do
     key = daily_key(repo_name)
-    
+
     case Cachex.get(@cache_name, key) do
       {:ok, nil} -> 0
       {:ok, count} -> count

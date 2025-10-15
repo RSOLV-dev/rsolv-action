@@ -31,18 +31,18 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeRedirect do
   def callback(conn, %{"return_to" => url}) do
     redirect(conn, external: url)
   end
-  
+
   # VULNERABLE - parameter-based external redirect
   def redirect_user(conn, params) do
     redirect(conn, external: params["redirect_url"])
   end
-  
+
   # VULNERABLE - header-based redirection
   def return_redirect(conn, _params) do
     referer = get_req_header(conn, "referer") |> List.first()
     redirect(conn, external: referer)
   end
-  
+
   # VULNERABLE - string interpolation with user data
   def custom_redirect(conn, %{"path" => path}) do
     redirect(conn, external: "https://api.example.com/" <> path)
@@ -59,17 +59,17 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeRedirect do
       redirect(conn, to: Routes.home_path(conn, :index))
     end
   end
-  
+
   # SAFE - local redirects only
   def redirect_user(conn, %{"path" => path}) do
     redirect(conn, to: Routes.page_path(conn, :show, path))
   end
-  
+
   # SAFE - hardcoded external redirects
   def oauth_redirect(conn, _params) do
     redirect(conn, external: "https://oauth.trusted-provider.com/authorize")
   end
-  
+
   # SAFE - validation function
   def safe_redirect(conn, %{"url" => url}) do
     case validate_redirect_url(url) do
@@ -109,7 +109,8 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeRedirect do
     %Rsolv.Security.Pattern{
       id: "elixir-unsafe-redirect",
       name: "Open Redirect Vulnerability",
-      description: "Unvalidated redirects to user-controlled URLs can enable phishing attacks and social engineering",
+      description:
+        "Unvalidated redirects to user-controlled URLs can enable phishing attacks and social engineering",
       type: :open_redirect,
       severity: :medium,
       languages: ["elixir"],
@@ -121,24 +122,25 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeRedirect do
         ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*params\./m,
         # Conn params redirects - exclude comments
         ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*conn\s*\.\s*(?:params|query_params|body_params)/m,
-        
+
         # Variable-based redirects from user input - exclude comments and single 'url' variable
         ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*(?:user_|redirect_|return_|next_|callback_)\w+/m,
         # Variable-based redirects with compound names - exclude comments
         ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*\w+_(?:url|path)\w*/m,
-        
+
         # Request header based redirects - exclude comments
         ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*get_req_header/m,
-        
+
         # String interpolation patterns - exclude comments
         ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*[^,)]*#\{[^}]+\}/m,
-        
+
         # String concatenation patterns - exclude comments
         ~r/^(?!\s*#).*redirect\s*\(\s*conn\s*,[\s\n]*external:\s*[^,)]*<>\s*(?:params|path|url|user_|redirect_)/m
       ],
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
-      recommendation: "Validate redirect URLs against an allowlist of trusted domains or use local redirects with :to option",
+      recommendation:
+        "Validate redirect URLs against an allowlist of trusted domains or use local redirects with :to option",
       test_cases: %{
         vulnerable: [
           ~S|redirect(conn, external: params["return_to"])|,
@@ -231,7 +233,7 @@ end|
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
@@ -246,7 +248,7 @@ end|
           "params",
           "user_",
           "input",
-          "request", 
+          "request",
           "data",
           "conn.params",
           "conn.query_params",

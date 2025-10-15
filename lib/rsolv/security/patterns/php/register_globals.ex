@@ -1,18 +1,18 @@
 defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
   @moduledoc """
   Pattern for detecting register_globals dependency in PHP.
-  
+
   This pattern identifies code that appears to rely on the deprecated
   register_globals feature where uninitialized variables might be coming
   from user input.
-  
+
   ## Vulnerability Details
-  
+
   The register_globals directive was a PHP configuration option that automatically
   created global variables from GET, POST, COOKIE, and SERVER variables. This
   led to severe security vulnerabilities as attackers could inject arbitrary
   variables into the application's execution context.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code - $authenticated not initialized
@@ -21,15 +21,15 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
       show_admin_panel();
   }
   ```
-  
+
   While register_globals was removed in PHP 5.4, legacy code or code written
   with bad practices may still exhibit similar vulnerabilities through lack
   of proper variable initialization.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -41,7 +41,8 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
       languages: ["php"],
       # Match potentially uninitialized authentication variables
       # Note: This regex is broad - proper detection requires data flow analysis
-      regex: ~r/^(?!.*\/\/).*if\s*\(\s*[!&|(\s]*\$(?!_)(?:authenticated|admin|user_id|logged_in|admin_mode|privileged|bypass_auth)\b/m,
+      regex:
+        ~r/^(?!.*\/\/).*if\s*\(\s*[!&|(\s]*\$(?!_)(?:authenticated|admin|user_id|logged_in|admin_mode|privileged|bypass_auth)\b/m,
       cwe_id: "CWE-473",
       owasp_category: "A04:2021",
       recommendation: "Initialize all variables and don't rely on register_globals",
@@ -61,7 +62,7 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -70,13 +71,13 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
       variables that could be controlled by user input. While the register_globals
       directive was removed in PHP 5.4, legacy code or poorly written new code may
       still exhibit similar patterns.
-      
+
       When register_globals was enabled, PHP would automatically create variables from
       GET, POST, COOKIE, and SERVER data. For example, a request to script.php?foo=bar
       would create a variable $foo with value "bar" in the global scope.
-      
+
       ### How Register Globals Works
-      
+
       **Without register_globals (secure):**
       ```php
       // $authenticated is undefined
@@ -84,7 +85,7 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
           // This block won't execute
       }
       ```
-      
+
       **With register_globals (vulnerable):**
       ```php
       // Attacker requests: page.php?authenticated=1
@@ -93,23 +94,23 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
           show_admin_functions();
       }
       ```
-      
+
       ### Common Vulnerable Patterns
-      
+
       1. **Authentication Bypass**:
          - Uninitialized $authenticated, $is_logged_in variables
          - Attacker sets these via GET/POST parameters
-      
+
       2. **Privilege Escalation**:
          - Uninitialized $is_admin, $user_role variables
          - Attacker elevates privileges through URL parameters
-      
+
       3. **Configuration Override**:
          - Uninitialized configuration variables
          - Attacker modifies application behavior
-      
+
       ### Modern Equivalents
-      
+
       Even without register_globals, similar vulnerabilities can occur through:
       - Using extract() on $_GET/$_POST arrays
       - Variable variables ($$var) with user input
@@ -163,7 +164,8 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
       cve_examples: [
         %{
           id: "CVE-2025-1134",
-          description: "HospitanDoc 3.0 register_globals-style vulnerability via uninitialized variables",
+          description:
+            "HospitanDoc 3.0 register_globals-style vulnerability via uninitialized variables",
           severity: "critical",
           cvss: 9.8,
           note: "Authentication bypass through uninitialized $authenticated variable"
@@ -192,18 +194,18 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
       ],
       detection_notes: """
       This pattern detects potential register_globals vulnerabilities by identifying:
-      
+
       1. **Uninitialized Variable Usage**: Variables used in conditions without initialization
       2. **Security-Critical Names**: Focus on authentication/authorization variable names:
          - $authenticated, $admin, $user_id, $logged_in
          - Common security-related variable patterns
-      
+
       3. **Conditional Context**: Variables used in if statements where they control access
       4. **Exclusion of Superglobals**: Pattern excludes $_GET, $_POST, etc. ((?!_) negative lookahead)
-      
+
       The regex pattern:
       if\\s*\\(\\s*\\$(?!_)(authenticated|admin|user_id|logged_in)\\s*\\)
-      
+
       This matches if statements with suspicious uninitialized variables while
       excluding PHP superglobals that start with $_.
       """,
@@ -246,9 +248,9 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
 
   @doc """
   Returns test cases for the register globals pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.RegisterGlobals.test_cases()
       iex> length(test_cases.positive)
       8
@@ -324,9 +326,9 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
 
   @doc """
   Returns examples of vulnerable and fixed code.
-  
+
   ## Examples
-  
+
       iex> examples = Rsolv.Security.Patterns.Php.RegisterGlobals.examples()
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
@@ -348,7 +350,7 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
             delete_user($_GET['id']);
             modify_settings($_POST['config']);
         }
-        
+
         // Attacker sets ?is_admin=1 to gain admin access
         """,
         "Multiple vulnerabilities" => """
@@ -373,14 +375,14 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
         $authenticated = false;
         $is_admin = false;
         $user_id = null;
-        
+
         // Check authentication properly
         if (isset($_SESSION['user_id'])) {
             $authenticated = true;
             $user_id = $_SESSION['user_id'];
             $is_admin = ($_SESSION['role'] === 'admin');
         }
-        
+
         if ($authenticated) {
             // Now safe to use
             include 'user/dashboard.php';
@@ -389,7 +391,7 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
         "Use superglobals" => """
         // SECURE: Direct session usage
         session_start();
-        
+
         if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
             echo "Welcome " . htmlspecialchars($_SESSION['username']);
             
@@ -418,7 +420,7 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
                 return $this->user && $this->user['role'] === 'admin';
             }
         }
-        
+
         $auth = new Auth();
         if ($auth->isAuthenticated()) {
             // Safe to proceed
@@ -430,9 +432,9 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
 
   @doc """
   Returns educational description of the vulnerability.
-  
+
   ## Examples
-  
+
       iex> desc = Rsolv.Security.Patterns.Php.RegisterGlobals.vulnerability_description()
       iex> desc =~ "register_globals"
       true
@@ -450,41 +452,41 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
     Register globals vulnerabilities occur when PHP applications use uninitialized 
     variables that could be controlled by user input, mimicking the dangerous 
     behavior of PHP's deprecated register_globals directive.
-    
+
     The register_globals feature automatically created variables from GET, POST, 
     COOKIE, and SERVER data. While removed in PHP 5.4, legacy code patterns 
     still create similar vulnerabilities through poor variable initialization.
-    
+
     ## Security Impact
-    
+
     **Authentication Bypass**: Attackers can set authentication flags by adding 
     parameters to URLs, completely bypassing login systems.
-    
+
     **Privilege Escalation**: User roles and permissions stored in uninitialized 
     variables can be manipulated to gain administrative access.
-    
+
     **Application Control**: Critical configuration variables can be overwritten, 
     allowing attackers to modify application behavior.
-    
+
     ## Attack Scenarios
-    
+
     1. **Direct Authentication Bypass**:
        - Application checks if ($authenticated)
        - Attacker adds ?authenticated=1 to URL
        - Gains immediate access without credentials
-    
+
     2. **Role Manipulation**:
        - Application uses uninitialized $is_admin
        - Attacker sets ?is_admin=1 parameter
        - Receives full administrative privileges
-    
+
     3. **Session Variable Injection**:
        - Uninitialized session-like variables
        - Attacker injects session data via GET/POST
        - Hijacks user sessions or creates fake ones
-    
+
     ## Prevention
-    
+
     Always initialize variables before use, utilize PHP's superglobal arrays 
     directly ($_SESSION, $_POST, etc.), and enable error reporting to catch 
     undefined variable usage during development.
@@ -520,51 +522,95 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
           type: "variable_analysis",
           description: "Identify security-critical uninitialized variables",
           suspicious_variables: [
-            "authenticated", "admin", "user_id", "logged_in",
-            "authorized", "privileged", "access_level", "permission",
-            "is_admin", "is_user", "is_logged_in", "is_authenticated",
-            "role", "user_role", "user_type", "user_level"
+            "authenticated",
+            "admin",
+            "user_id",
+            "logged_in",
+            "authorized",
+            "privileged",
+            "access_level",
+            "permission",
+            "is_admin",
+            "is_user",
+            "is_logged_in",
+            "is_authenticated",
+            "role",
+            "user_role",
+            "user_type",
+            "user_level"
           ],
           initialization_patterns: [
-            "= false", "= null", "= 0", "= ''",
-            "isset(", "!empty(", "array_key_exists("
+            "= false",
+            "= null",
+            "= 0",
+            "= ''",
+            "isset(",
+            "!empty(",
+            "array_key_exists("
           ]
         },
         %{
           type: "context_analysis",
           description: "Check if variables are used in security contexts",
           security_contexts: [
-            "authentication", "authorization", "access control",
-            "permission check", "admin check", "user verification"
+            "authentication",
+            "authorization",
+            "access control",
+            "permission check",
+            "admin check",
+            "user verification"
           ],
           dangerous_operations: [
-            "include", "require", "eval", "system", "exec",
-            "file_get_contents", "fopen", "unlink", "mysql_query"
+            "include",
+            "require",
+            "eval",
+            "system",
+            "exec",
+            "file_get_contents",
+            "fopen",
+            "unlink",
+            "mysql_query"
           ]
         },
         %{
           type: "initialization_tracking",
           description: "Track if variables are initialized before use",
           safe_patterns: [
-            "$var = value", "isset($_SESSION[", "isset($_COOKIE[",
-            "filter_input(", "filter_var(", "$this->", "self::",
-            "defined(", "constant("
+            "$var = value",
+            "isset($_SESSION[",
+            "isset($_COOKIE[",
+            "filter_input(",
+            "filter_var(",
+            "$this->",
+            "self::",
+            "defined(",
+            "constant("
           ],
           framework_patterns: [
-            "$request->get(", "$app->param(", "Input::get(",
-            "$_ENV[", "getenv(", "config("
+            "$request->get(",
+            "$app->param(",
+            "Input::get(",
+            "$_ENV[",
+            "getenv(",
+            "config("
           ]
         },
         %{
-          type: "scope_analysis", 
+          type: "scope_analysis",
           description: "Analyze variable scope and initialization",
           exclude_patterns: [
-            "function parameters", "foreach variables", "class properties",
-            "global declaration", "static variables", "constants"
+            "function parameters",
+            "foreach variables",
+            "class properties",
+            "global declaration",
+            "static variables",
+            "constants"
           ],
           include_patterns: [
-            "global scope", "function scope without init",
-            "conditional blocks", "loop bodies"
+            "global scope",
+            "function scope without init",
+            "conditional blocks",
+            "loop bodies"
           ]
         }
       ]

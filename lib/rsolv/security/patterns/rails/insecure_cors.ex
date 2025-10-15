@@ -1,21 +1,21 @@
 defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
   @moduledoc """
   Rails Insecure CORS Configuration pattern for Rails applications.
-  
+
   This pattern detects insecure Cross-Origin Resource Sharing (CORS) configurations
   in Rails applications that could lead to security vulnerabilities. CORS 
   misconfigurations are a common source of vulnerabilities that allow unauthorized
   cross-origin requests and can expose sensitive data to malicious websites.
-  
+
   ## Background
-  
+
   CORS is a mechanism that allows servers to specify which origins are permitted
   to access resources from a web page. Misconfigured CORS policies can lead to
   serious security vulnerabilities including unauthorized data access, credential
   theft, and cross-site scripting attacks.
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability occurs when:
   1. Origins are set to wildcard "*" with credentials enabled
   2. Headers are set to :any or "*" allowing any headers
@@ -23,16 +23,16 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
   4. Dynamic origins with overly permissive regex patterns
   5. Direct header manipulation with wildcard values
   6. Insecure rack-cors configurations
-  
+
   ## Known CVEs
-  
+
   - CVE-2024-25124: CORS middleware insecure configurations leading to vulnerabilities
   - CVE-2021-27786: CORS bypass vulnerabilities in web applications
   - Multiple rack-cors configuration vulnerabilities
   - Fiber CORS middleware vulnerabilities (GHSA-fmg4-x8pw-hjhg)
-  
+
   ## Examples
-  
+
       # Critical - Wildcard origin with credentials
       allow do
         origins '*'
@@ -55,13 +55,13 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
         credentials true
       end
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-insecure-cors",
-      name: "Insecure CORS Configuration", 
+      name: "Insecure CORS Configuration",
       description: "Overly permissive Cross-Origin Resource Sharing configuration",
       type: :security_misconfiguration,
       severity: :medium,
@@ -70,40 +70,42 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       regex: [
         # Wildcard origins with any configuration (exclude comments)
         ~r/^(?!.*#).*origins\s+["']?\*["']?/,
-        
+
         # Wildcard headers configuration  
         ~r/headers\s+:any/,
         ~r/headers\s+["']?\*["']?/,
         ~r/headers:\s*:any/,
         ~r/headers:\s*["']?\*["']?/,
-        
+
         # Wildcard methods configuration
         ~r/methods\s+:any/,
         ~r/methods\s+["']?\*["']?/,
         ~r/methods:\s*:any/,
         ~r/methods:\s*["']?\*["']?/,
-        
+
         # Dangerous wildcard origins with credentials (multiline)
         ~r/origins\s+["']?\*["']?.*?credentials\s+true/s,
-        
+
         # Direct header manipulation with wildcards
         ~r/response\.headers\[["']Access-Control-Allow-Origin["']\]\s*=\s*["']\*["']/,
         ~r/headers\[["']Access-Control-Allow-Origin["']\]\s*=\s*["']\*["']/,
-        
+
         # Resource configurations with wildcards
         ~r/resource\s+["']?\*["']?,?\s*.*?origins:\s*["']?\*["']?/,
         ~r/resource\s+["'][^"']+["'],\s*.*?origins:\s*["']?\*["']?/,
         ~r/resource\s+["']?\*["']?,?\s*.*?headers:\s*:any/,
         ~r/resource\s+["']?\*["']?,?\s*.*?methods:\s*:any/,
-        
+
         # Insecure rack-cors configurations
         ~r/Rack::Cors\s+do.*?origins\s+["']?\*["']?/s,
         ~r/use\s+Rack::Cors.*?origins\s+["']?\*["']?/s,
-        
+
         # Overly permissive regex patterns
-        ~r/origins\s+\/\.\*\\?\./,  # Any domain patterns like /.*/
-        ~r/origins\s+\/https?\?\:\\?\/\\?\//,  # Any protocol patterns
-        
+        # Any domain patterns like /.*/
+        ~r/origins\s+\/\.\*\\?\./,
+        # Any protocol patterns
+        ~r/origins\s+\/https?\?\:\\?\/\\?\//,
+
         # Dynamic origins that return true for everything
         ~r/origins\s+->\s*\(.*?\)\s*\{\s*true\s*\}/,
         ~r/origins\s+lambda.*?\{\s*.*?true.*?\}/,
@@ -111,7 +113,8 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       ],
       cwe_id: "CWE-346",
       owasp_category: "A05:2021",
-      recommendation: "Specify explicit origins, headers, and methods in Rails CORS. Never use credentials: true with origins: \"*\" in Rails",
+      recommendation:
+        "Specify explicit origins, headers, and methods in Rails CORS. Never use credentials: true with origins: \"*\" in Rails",
       test_cases: %{
         vulnerable: [
           "origins \"*\"\\ncredentials true",
@@ -128,7 +131,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -140,7 +143,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       or methods without proper restrictions. Such misconfigurations can lead 
       to unauthorized data access, credential theft, and bypass of same-origin 
       policy protections.
-      
+
       The vulnerability is particularly dangerous because:
       1. It bypasses fundamental browser security mechanisms
       2. CORS misconfigurations can expose sensitive API endpoints
@@ -148,7 +151,6 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       4. It can enable sophisticated cross-site scripting attacks
       5. Many developers misunderstand CORS security implications
       """,
-      
       attack_vectors: """
       1. **Credential Theft via Wildcard Origins**: Malicious sites access authenticated APIs
       2. **Cross-Origin Data Exfiltration**: Unauthorized reading of sensitive API responses
@@ -161,7 +163,6 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       9. **Client-Side Template Injection**: Injecting templates via permissive CORS
       10. **Authentication Bypass**: Using CORS to bypass authentication mechanisms
       """,
-      
       business_impact: """
       - Unauthorized access to sensitive customer data and business information
       - Data breach exposing customer personal information and financial data
@@ -174,7 +175,6 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       - Loss of customer trust and potential customer churn
       - Financial losses from fraud and regulatory fines
       """,
-      
       technical_impact: """
       - Complete bypass of same-origin policy browser protections
       - Unauthorized access to authenticated API endpoints and resources
@@ -187,9 +187,8 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       - Internal network scanning and service discovery
       - Credential harvesting and session hijacking
       """,
-      
-      likelihood: "High - CORS misconfigurations are extremely common due to developer misunderstanding of CORS security implications and convenience of wildcard configurations",
-      
+      likelihood:
+        "High - CORS misconfigurations are extremely common due to developer misunderstanding of CORS security implications and convenience of wildcard configurations",
       cve_examples: """
       CVE-2024-25124 - CORS middleware insecure configurations in web frameworks
       CVE-2021-27786 - CORS bypass vulnerabilities allowing unauthorized cross-origin requests
@@ -200,7 +199,6 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       OWASP Top 10 2021 includes security misconfigurations as A05
       Common CORS vulnerabilities in Fortune 500 company APIs and web applications
       """,
-      
       compliance_standards: [
         "OWASP Top 10 2021 - A05: Security Misconfiguration",
         "CWE-346: Origin Validation Error",
@@ -211,7 +209,6 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
         "ASVS 4.0 - V14.5 HTTP Security Headers Verification Requirements",
         "SANS Top 25 - CWE-346 Origin Validation Error"
       ],
-      
       remediation_steps: """
       1. **Secure CORS Configuration (Critical)**:
          ```ruby
@@ -237,7 +234,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
              expose %w[X-Total-Count]       # Explicitly expose headers if needed
            end
          ```
-      
+
       2. **Environment-Specific Configuration**:
          ```ruby
          # config/initializers/cors.rb
@@ -258,7 +255,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
              end
            end
          ```
-      
+
       3. **Multiple Resource Configuration**:
          ```ruby
          Rails.application.config.middleware.insert_before 0, Rack::Cors do
@@ -279,7 +276,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
                credentials: true
            end
          ```
-      
+
       4. **Dynamic Origin Validation (Advanced)**:
          ```ruby
          # Safe dynamic origin validation
@@ -300,7 +297,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
              methods %w[GET POST PUT DELETE]
            end
          ```
-      
+
       5. **CORS Security Headers**:
          ```ruby
          # In ApplicationController or specific controllers
@@ -334,7 +331,6 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
            end
          ```
       """,
-      
       prevention_tips: """
       - Never use wildcard "*" origins with credentials: true
       - Always specify explicit allowed origins using HTTPS
@@ -349,7 +345,6 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       - Implement automated tests for CORS security configurations
       - Regular security training on CORS vulnerabilities for developers
       """,
-      
       detection_methods: """
       - Static analysis with Brakeman scanner (detects CORS misconfigurations)
       - Manual code review of config/initializers/cors.rb and controller files
@@ -362,7 +357,6 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       - Runtime monitoring of CORS-related HTTP headers
       - Security-focused linters and IDE plugins for CORS validation
       """,
-      
       safe_alternatives: """
       # 1. Production-Ready CORS Configuration
       # config/initializers/cors.rb
@@ -375,7 +369,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
           expose %w[X-Total-Count X-Pagination-Total]
         end
       end
-      
+
       # 2. Environment-Aware Configuration
       class CorsConfiguration
         def self.configure
@@ -410,10 +404,10 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
         def self.allowed_methods
           %w[GET POST PUT PATCH DELETE OPTIONS]
         end
-      
+
       # In config/initializers/cors.rb
       CorsConfiguration.configure
-      
+
       # 3. Secure Dynamic Origin Validation
       class SecureCorsOriginValidator
         ALLOWED_DOMAINS = %w[
@@ -435,7 +429,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
           ALLOWED_DOMAINS.include?(uri.host)
         end
       end
-      
+
       Rails.application.config.middleware.insert_before 0, Rack::Cors do
         allow do
           origins SecureCorsOriginValidator
@@ -443,7 +437,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
           headers %w[Content-Type Authorization]
           methods %w[GET POST PUT DELETE]
         end
-      
+
       # 4. API-Specific CORS Configuration
       Rails.application.config.middleware.insert_before 0, Rack::Cors do
         # Public API - no credentials
@@ -472,7 +466,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
             credentials: true
         end
       end
-      
+
       # 5. CORS Security Validator
       class CorsSecurityValidator
         def self.validate_configuration!
@@ -491,7 +485,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
           false
         end
       end
-      
+
       # In config/environments/production.rb
       config.after_initialize do
         CorsSecurityValidator.validate_configuration!
@@ -499,43 +493,61 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.7,
-      
       context_rules: %{
         # CORS configuration methods
         cors_methods: [
-          "origins", "headers", "methods", "credentials", "resource", 
-          "allow", "expose"
+          "origins",
+          "headers",
+          "methods",
+          "credentials",
+          "resource",
+          "allow",
+          "expose"
         ],
-        
+
         # Dangerous origin values
         dangerous_origins: [
-          "*", ":any", "/.*/", "/.*\\./", "/https?:\\/\\/.*/",
-          "true", "lambda", "proc", "->"
+          "*",
+          ":any",
+          "/.*/",
+          "/.*\\./",
+          "/https?:\\/\\/.*/",
+          "true",
+          "lambda",
+          "proc",
+          "->"
         ],
-        
+
         # Dangerous header/method values
         dangerous_values: [":any", "*", "/.*/", "true"],
-        
+
         # CORS middleware classes
         cors_middleware: [
-          "Rack::Cors", "ActionDispatch::Cors", "Cors"
+          "Rack::Cors",
+          "ActionDispatch::Cors",
+          "Cors"
         ],
-        
+
         # Safe patterns to reduce false positives
         safe_patterns: [
-          ~r/origins\s+["']https:\/\/[^*"']+["']/,    # HTTPS specific origins
-          ~r/origins\s+\[.*?["']https:\/\/.*?["'].*?\]/,  # Array of HTTPS origins
-          ~r/headers\s+\[.*?["'][^*:]+["'].*?\]/,     # Array of specific headers
-          ~r/methods\s+\[.*?["'][^*:]+["'].*?\]/,     # Array of specific methods
-          ~r/#.*origins\s+["']?\*["']?/,              # Commented out wildcards
-          ~r/origins.*Rails\.env\.development\?/      # Environment-specific
+          # HTTPS specific origins
+          ~r/origins\s+["']https:\/\/[^*"']+["']/,
+          # Array of HTTPS origins
+          ~r/origins\s+\[.*?["']https:\/\/.*?["'].*?\]/,
+          # Array of specific headers
+          ~r/headers\s+\[.*?["'][^*:]+["'].*?\]/,
+          # Array of specific methods
+          ~r/methods\s+\[.*?["'][^*:]+["'].*?\]/,
+          # Commented out wildcards
+          ~r/#.*origins\s+["']?\*["']?/,
+          # Environment-specific
+          ~r/origins.*Rails\.env\.development\?/
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence for dangerous combinations
@@ -544,30 +556,29 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
           wildcard_headers_methods: +0.3,
           overly_permissive_regex: +0.4,
           dynamic_always_true: +0.5,
-          
+
           # Medium confidence for potentially dangerous patterns
           direct_header_manipulation: +0.3,
           rack_cors_wildcard: +0.2,
           any_keyword_usage: +0.2,
-          
+
           # Lower confidence for safer patterns
           https_specific_origins: -0.4,
           explicit_origin_arrays: -0.5,
           environment_conditional: -0.3,
           commented_configuration: -0.8,
-          
+
           # Context-based adjustments
           in_development_env: -0.4,
           in_test_file: -0.9,
           in_cors_initializer: +0.1,
           has_origin_validation: -0.4,
-          
+
           # File location adjustments
           in_controller: +0.1,
           in_initializer: +0.2
         }
       },
-      
       ast_rules: %{
         # CORS analysis
         cors_analysis: %{
@@ -576,7 +587,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
           validate_credentials_usage: true,
           check_header_method_permissions: true
         },
-        
+
         # Origin validation
         origin_validation: %{
           check_origin_patterns: true,
@@ -584,14 +595,14 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
           validate_dynamic_origins: true,
           check_https_enforcement: true
         },
-        
+
         # Configuration analysis
         config_analysis: %{
           check_environment_specific: true,
           detect_credential_combinations: true,
           validate_resource_restrictions: true
         },
-        
+
         # Security validation
         security_validation: %{
           dangerous_combinations: %{
@@ -604,4 +615,3 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
     }
   end
 end
-

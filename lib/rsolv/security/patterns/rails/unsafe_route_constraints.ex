@@ -1,14 +1,14 @@
 defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
   @moduledoc """
   Rails Unsafe Route Constraints pattern for Rails applications.
-  
+
   This pattern detects broken access control vulnerabilities in Rails route 
   constraints that can be bypassed or allow code execution. Route constraints 
   are intended to restrict access to routes based on request properties, but 
   unsafe implementations can lead to security bypasses or even remote code execution.
-  
+
   ## Background
-  
+
   Rails route constraints allow developers to control which requests can access
   specific routes. However, several dangerous patterns can emerge:
   1. Overly permissive regex constraints (/./) that match everything
@@ -16,9 +16,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
   3. Lambda constraints that use eval() or other dangerous methods
   4. Constraints that always return true, bypassing all security
   5. Subdomain constraints that can be manipulated by attackers
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability occurs when:
   1. Route constraints use overly permissive regex patterns like /.*/
   2. User input is interpolated into constraint regex patterns
@@ -27,16 +27,16 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
   5. send() or method_missing() are used in constraint logic
   6. System commands are executed within constraint checks
   7. Format or host constraints are overly permissive
-  
+
   ## Known CVEs
-  
+
   - CVE-2020-8264: Rails security constraint bypass through skip callbacks
   - CVE-2016-6316: Possible XSS via User-Friendly URLs in Action View
   - Multiple route constraint bypass vulnerabilities in Rails applications
   - ReDoS attacks via poorly crafted route constraint regex patterns
-  
+
   ## Examples
-  
+
       # Critical - Overly permissive regex
       constraints: { id: /.*/ }
       
@@ -55,9 +55,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       # Safe - Proper validation
       constraints: lambda { |req| ALLOWED_IDS.include?(req.params[:id]) }
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-unsafe-route-constraints",
@@ -73,21 +73,21 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
         ~r/^(?!.*#.*constraints).*constraints\s+\w+:\s*\/\.\*\//,
         ~r/^(?!.*#.*constraints).*constraints\(\s*\{\s*\w+:\s*\/\.\*\/\s*\}/,
         ~r/^(?!.*#.*constraints).*constraints\s*\{\s*\w+:\s*\/\.\*\/\s*\}/,
-        
+
         # Parameter interpolation in constraints (dangerous)
         ~r/constraints:\s*\{\s*\w+:\s*\/.*?#\{.*?params/,
         ~r/constraints\s+\w+:\s*\/.*?#\{.*?params/,
         ~r/constraints:\s*\{\s*\w+:\s*\/.*?#\{.*?user_input/,
         ~r/constraints:\s*\{\s*\w+:\s*\/.*?#\{.*?request\.params/,
         ~r/constraints\(\s*\{\s*\w+:\s*\/.*?#\{.*?params/,
-        
+
         # Lambda constraints with eval (critical)
         ~r/constraints:\s*lambda.*?eval\s*\(/,
         ~r/constraints\s+lambda.*?eval\s*\(/,
         ~r/constraints:\s*->\s*\{.*?eval\s*\(/,
         ~r/constraints:\s*proc.*?eval\s*\(/,
         ~r/constraints\s+lambda.*?instance_eval\s*\(/,
-        
+
         # Lambda constraints that always return true (bypass)
         ~r/constraints\s+lambda\s*\{\s*\|[^}]*\|\s*true\s*\}/,
         ~r/constraints:\s*lambda\s*\{\s*\|[^}]*\|\s*true\s*\}/,
@@ -95,25 +95,25 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
         ~r/constraints\s+lambda\s*\{\s*true\s*\}/,
         ~r/constraints:\s*proc\s*\{\s*\|[^}]*\|\s*true\s*\}/,
         ~r/constraints\s+proc\s*\{\s*\|[^}]*\|\s*true\s*\}/,
-        
+
         # Unsafe subdomain constraints
         ~r/constraints\s+subdomain:\s*\/\.\*\//,
         ~r/constraints:\s*\{\s*subdomain:\s*\/\.\*\/\s*\}/,
         ~r/constraints\s+subdomain:\s*\/.*?#\{.*?params/,
         ~r/constraints:\s*\{\s*subdomain:\s*\/.*?#\{.*?user_input/,
-        
+
         # send method calls in constraints (dangerous metaprogramming)
         ~r/constraints:\s*lambda.*?\.send\s*\(/,
         ~r/constraints\s+lambda.*?\.send\s*\(/,
         ~r/constraints:\s*->\s*\{.*?\.send\s*\(/,
         ~r/constraints:\s*proc.*?\.send\s*\(/,
         ~r/constraints\s+proc.*?\.send\s*\(/,
-        
+
         # method_missing calls in constraints
         ~r/constraints:\s*lambda.*?method_missing\s*\(/,
         ~r/constraints\s+lambda.*?method_missing\s*\(/,
         ~r/constraints:\s*->\s*\{.*?method_missing\s*\(/,
-        
+
         # System calls in constraints (command injection)
         ~r/constraints:\s*lambda.*?system\s*\(/,
         ~r/constraints\s+lambda.*?system\s*\(/,
@@ -121,12 +121,12 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
         ~r/constraints:\s*->\s*\{.*?`[^`]*#\{.*?params/,
         ~r/constraints:\s*proc.*?exec\s*\(/,
         ~r/constraints\s+proc.*?exec\s*\(/,
-        
+
         # Unsafe format constraints
         ~r/constraints:\s*\{\s*format:\s*\/\.\*\/\s*\}/,
         ~r/constraints\s+format:\s*\/\.\*\//,
         ~r/constraints:\s*\{\s*format:\s*\/.*?#\{.*?params/,
-        
+
         # Unsafe host constraints
         ~r/constraints:\s*\{\s*host:\s*\/\.\*\/\s*\}/,
         ~r/constraints\s+host:\s*\/\.\*\//,
@@ -135,7 +135,8 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       ],
       cwe_id: "CWE-285",
       owasp_category: "A01:2021",
-      recommendation: "Use specific, restrictive regex patterns for Rails route constraints. Avoid dynamic constraints with user input in Rails routes.",
+      recommendation:
+        "Use specific, restrictive regex patterns for Rails route constraints. Avoid dynamic constraints with user input in Rails routes.",
       test_cases: %{
         vulnerable: [
           "constraints: { id: /.*/ }",
@@ -152,7 +153,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -160,7 +161,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       access can be bypassed or exploited for code execution. Route constraints 
       are Rails' mechanism for controlling which requests can access specific routes 
       based on request properties like parameters, subdomains, or headers.
-      
+
       The vulnerability manifests in several dangerous patterns:
       1. Overly permissive regex patterns (/./) that match everything, effectively disabling security
       2. Dynamic constraint generation using user input in regex patterns, leading to ReDoS or bypasses
@@ -170,7 +171,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       6. System command execution within constraint evaluation
       7. Subdomain, format, or host constraints that can be manipulated by attackers
       """,
-      
       attack_vectors: ~S"""
       1. **Constraint Bypass via Overly Permissive Regex**: constraints: { id: /.*/ } matches any input, bypassing intended restrictions
       2. **ReDoS via Dynamic Regex**: constraints: { param: /#{params[:pattern]}/ } allows catastrophic backtracking patterns
@@ -183,7 +183,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       9. **Format Bypass**: constraints: { format: /.*/ } bypasses format-based access controls
       10. **Parameter Pollution**: Multiple parameters with same name can bypass constraint logic
       """,
-      
       business_impact: """
       - Complete access control bypass allowing unauthorized access to protected resources
       - Administrative panel access by non-admin users leading to data breaches
@@ -196,7 +195,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       - Loss of customer trust and potential customer churn
       - Competitive intelligence theft through unauthorized access
       """,
-      
       technical_impact: """
       - Elevation of privilege allowing low-privileged users to access admin functions
       - Complete authentication and authorization bypass
@@ -209,9 +207,8 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       - API endpoint access without proper authentication
       - Administrative interface exposure to public users
       """,
-      
-      likelihood: "High - Route constraints are commonly misconfigured and developers often use overly permissive patterns for convenience",
-      
+      likelihood:
+        "High - Route constraints are commonly misconfigured and developers often use overly permissive patterns for convenience",
       cve_examples: [
         "CVE-2020-8264 - Rails security constraint bypass through skip callbacks (CVSS 7.5)",
         "CVE-2016-6316 - Possible XSS via User-Friendly URLs in Action View",
@@ -221,7 +218,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
         "CVE-2019-5419 - Denial of Service in Action View (related to route constraints)",
         "Multiple ReDoS vulnerabilities in Rails route constraint patterns"
       ],
-      
       compliance_standards: [
         "OWASP Top 10 2021 - A01: Broken Access Control",
         "CWE-285: Improper Authorization",
@@ -233,7 +229,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
         "ASVS 4.0 - V4.1 General Access Control Design",
         "SANS Top 25 - CWE-285 Improper Authorization"
       ],
-      
       remediation_steps: """
       1. **Use Specific Regex Patterns (Critical)**:
          ```ruby
@@ -245,7 +240,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
          constraints: { slug: /[a-z0-9-]+/ }          # SAFE - Alphanumeric with dashes
          constraints: { format: /json|xml|html/ }     # SAFE - Specific formats
          ```
-      
+
       2. **Avoid User Input in Constraints**:
          ```ruby
          # NEVER interpolate user input into constraints
@@ -263,7 +258,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
            constraints: { param: ALLOWED_PATTERNS[pattern_key] }
          end
          ```
-      
+
       3. **Secure Lambda Constraints**:
          ```ruby
          # NEVER use eval or dangerous methods
@@ -283,7 +278,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
            req.headers['Authorization'].present?
          }
          ```
-      
+
       4. **Validate Subdomain/Host Constraints**:
          ```ruby
          # Bad - Overly permissive
@@ -300,7 +295,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
            ALLOWED_SUBDOMAINS.include?(req.subdomain)
          }
          ```
-      
+
       5. **Input Validation and Sanitization**:
          ```ruby
          # Add validation at model/controller level
@@ -318,7 +313,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
            end
          ```
       """,
-      
       prevention_tips: """
       - Always use specific, restrictive regex patterns in route constraints
       - Never interpolate user input directly into constraint regex patterns
@@ -333,7 +327,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       - Use security linters like Brakeman to detect unsafe constraint patterns
       - Implement unit tests specifically for constraint bypass attempts
       """,
-      
       detection_methods: """
       - Static analysis with Brakeman scanner (detects most unsafe constraint patterns)
       - Manual code review focusing on route.rb files and constraint definitions
@@ -346,17 +339,16 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       - Regular expression analysis for ReDoS vulnerability patterns
       - Integration testing with invalid/malicious constraint inputs
       """,
-      
       safe_alternatives: """
       # 1. Use specific regex patterns instead of catch-all
       # Bad
       constraints: { id: /.*/ }
-      
+
       # Good
       constraints: { id: /\\d+/ }                    # Only numeric IDs
       constraints: { slug: /[a-z0-9-]{1,50}/ }       # Alphanumeric slugs
       constraints: { format: /json|xml|html/ }       # Specific formats
-      
+
       # 2. Use whitelist-based validation for dynamic constraints
       class RouteConstraints
         ALLOWED_FORMATS = %w[json xml html csv].freeze
@@ -369,12 +361,12 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
         def self.valid_subdomain?(subdomain)
           ALLOWED_SUBDOMAINS.include?(subdomain.to_s)
         end
-      
+
       # Usage
       constraints: lambda { |req| 
         RouteConstraints.valid_format?(req.format.symbol)
       }
-      
+
       # 3. Use object-based constraint classes
       class AdminConstraint
         def matches?(request)
@@ -392,21 +384,21 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
           # Safe token validation logic
         end
       end
-      
+
       # Usage
       constraints AdminConstraint.new do
         # Admin routes here
       end
-      
+
       # 4. Use Rails built-in constraint helpers
       constraints subdomain: 'api' do
         # API routes
       end
-      
+
       constraints format: :json do
         # JSON-only routes  
       end
-      
+
       # 5. Implement custom constraint validation
       class SecureConstraints
         def self.secure_id_constraint
@@ -424,21 +416,21 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
             req.headers['X-API-Key'].present?
           }
         end
-      
+
       # Usage
       constraints SecureConstraints.secure_id_constraint do
         get 'users/:id', to: 'users#show'
       end
-      
+
       constraints SecureConstraints.api_constraint do
         # Secure API routes
       end
-      
+
       # 6. Environment-based constraints
       constraints lambda { |req| Rails.env.development? } do
         # Development-only routes
       end
-      
+
       # 7. Feature flag constraints
       constraints lambda { |req| FeatureFlag.enabled?(:new_ui) } do
         # Feature-flagged routes
@@ -446,40 +438,66 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.8,
-      
       context_rules: %{
         # Patterns that indicate dangerous constraint usage
         dangerous_patterns: [
-          "/.*//", "/.*/", "eval(", "system(", "send(", "method_missing(",
-          "true }", "params[", "user_input", "request.params"
+          "/.*//",
+          "/.*/",
+          "eval(",
+          "system(",
+          "send(",
+          "method_missing(",
+          "true }",
+          "params[",
+          "user_input",
+          "request.params"
         ],
-        
+
         # Methods that define constraints
         constraint_methods: [
-          "constraints", "lambda", "proc", "->", "match", "get", "post", "put", "delete"
+          "constraints",
+          "lambda",
+          "proc",
+          "->",
+          "match",
+          "get",
+          "post",
+          "put",
+          "delete"
         ],
-        
+
         # Safe constraint patterns to reduce false positives
         safe_patterns: [
-          ~r/\\A.*\\z/,                          # Anchored patterns
-          ~r/\\d+/,                             # Digit patterns  
-          ~r/[a-z0-9-]+/,                       # Alphanumeric patterns
-          ~r/json|xml|html/,                    # Specific format lists
-          ~r/constraints.*==.*['"].*['"]/,       # String equality checks
-          ~r/ALLOWED_|WHITELIST_|VALID_/         # Whitelist constants
+          # Anchored patterns
+          ~r/\\A.*\\z/,
+          # Digit patterns  
+          ~r/\\d+/,
+          # Alphanumeric patterns
+          ~r/[a-z0-9-]+/,
+          # Specific format lists
+          ~r/json|xml|html/,
+          # String equality checks
+          ~r/constraints.*==.*['"].*['"]/,
+          # Whitelist constants
+          ~r/ALLOWED_|WHITELIST_|VALID_/
         ],
-        
+
         # User input sources in Rails
         user_input_sources: [
-          "params", "request.params", "cookies", "session",
-          "headers", "query_params", "form_params", "user_input"
+          "params",
+          "request.params",
+          "cookies",
+          "session",
+          "headers",
+          "query_params",
+          "form_params",
+          "user_input"
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # Very high confidence for dangerous patterns
@@ -489,14 +507,14 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
           user_input_interpolation: +0.5,
           send_method_usage: +0.4,
           system_command_execution: +0.6,
-          
+
           # Lower confidence for potentially safe patterns
           uses_whitelist_constant: -0.3,
           anchored_regex_pattern: -0.2,
           specific_format_list: -0.2,
           environment_check: -0.4,
           static_string_constraint: -0.5,
-          
+
           # Context-based adjustments
           in_test_file: -0.7,
           in_development_config: -0.3,
@@ -504,7 +522,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
           documented_security_review: -0.1
         }
       },
-      
       ast_rules: %{
         # Route constraint analysis
         route_analysis: %{
@@ -513,7 +530,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
           analyze_regex_patterns: true,
           track_user_input_flow: true
         },
-        
+
         # Method call pattern analysis
         method_analysis: %{
           dangerous_methods: ["eval", "send", "method_missing", "system", "exec"],
@@ -521,7 +538,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
           check_method_chaining: true,
           detect_metaprogramming: true
         },
-        
+
         # Regex pattern analysis
         regex_analysis: %{
           detect_overly_permissive: true,
@@ -530,7 +547,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
           detect_interpolation: true,
           permissive_patterns: ["/.*//", "/.*/", "/\\w*//", "/\\s*//"]
         },
-        
+
         # Security validation
         security_validation: %{
           check_input_validation: true,
@@ -542,4 +559,3 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
     }
   end
 end
-

@@ -10,25 +10,31 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
     # Use unique email for async tests to avoid conflicts
     unique_email = "test-#{:rand.uniform(1_000_000)}@example.com"
 
-    {:ok, customer} = Customers.create_customer(%{
-      name: "Test Customer",
-      email: unique_email,
-      monthly_limit: 100,
-      current_usage: 0
-    })
+    {:ok, customer} =
+      Customers.create_customer(%{
+        name: "Test Customer",
+        email: unique_email,
+        monthly_limit: 100,
+        current_usage: 0
+      })
 
     api_key = "test_api_key_#{:crypto.strong_rand_bytes(16) |> Base.encode64()}"
 
-    {:ok, api_key_record} = Customers.create_api_key(customer, %{
-      key: api_key,
-      name: "Test API Key"
-    })
+    {:ok, api_key_record} =
+      Customers.create_api_key(customer, %{
+        key: api_key,
+        name: "Test API Key"
+      })
 
     {:ok, customer: customer, api_key: api_key, api_key_record: api_key_record}
   end
 
   describe "authentication with required auth (default)" do
-    test "authenticates successfully with x-api-key header", %{conn: conn, customer: customer, api_key: api_key} do
+    test "authenticates successfully with x-api-key header", %{
+      conn: conn,
+      customer: customer,
+      api_key: api_key
+    } do
       conn =
         conn
         |> put_req_header("x-api-key", api_key)
@@ -38,7 +44,12 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       refute conn.halted
     end
 
-    test "stores both customer and api_key record on successful authentication", %{conn: conn, customer: customer, api_key: api_key, api_key_record: api_key_record} do
+    test "stores both customer and api_key record on successful authentication", %{
+      conn: conn,
+      customer: customer,
+      api_key: api_key,
+      api_key_record: api_key_record
+    } do
       conn =
         conn
         |> put_req_header("x-api-key", api_key)
@@ -70,7 +81,11 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       assert resp["requestId"]
     end
 
-    test "ignores Authorization header when x-api-key is present", %{conn: conn, customer: customer, api_key: api_key} do
+    test "ignores Authorization header when x-api-key is present", %{
+      conn: conn,
+      customer: customer,
+      api_key: api_key
+    } do
       conn =
         conn
         |> put_req_header("x-api-key", api_key)
@@ -132,7 +147,11 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
       refute conn.halted
     end
 
-    test "authenticates successfully with valid key when optional", %{conn: conn, customer: customer, api_key: api_key} do
+    test "authenticates successfully with valid key when optional", %{
+      conn: conn,
+      customer: customer,
+      api_key: api_key
+    } do
       conn =
         conn
         |> put_req_header("x-api-key", api_key)

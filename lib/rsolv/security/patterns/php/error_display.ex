@@ -1,18 +1,18 @@
 defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
   @moduledoc """
   Pattern for detecting detailed error messages shown to users in PHP applications.
-  
+
   This pattern identifies when PHP applications display detailed database or system
   error messages directly to users, potentially exposing sensitive information about
   the application's internal structure, database schema, or configuration.
-  
+
   ## Vulnerability Details
-  
+
   Displaying detailed error messages to end users can expose sensitive information
   such as database structure, SQL queries, file paths, and server configuration.
   This information can be leveraged by attackers to craft more sophisticated attacks
   against the application.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
@@ -23,10 +23,10 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
   }
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -52,7 +52,7 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -62,34 +62,34 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
       While helpful during development, detailed error messages in production can
       provide attackers with valuable information about the application's architecture,
       dependencies, and potential vulnerabilities.
-      
+
       When database errors are displayed directly to users, they often reveal:
-      
+
       **Database Information**:
       - Table and column names
       - Database structure and relationships
       - SQL query syntax and logic
       - Database server type and version
       - Connection parameters
-      
+
       **Application Details**:
       - File paths and directory structure
       - Function and class names
       - Framework and library information
       - Server configuration
       - Internal application state
-      
+
       **Attack Facilitation**:
-      
+
       **SQL Injection Reconnaissance**: Error messages help attackers understand
       database structure, making it easier to craft successful SQL injection attacks.
-      
+
       **Path Traversal**: File paths in errors reveal directory structure, aiding
       in path traversal and local file inclusion attacks.
-      
+
       **Technology Fingerprinting**: Error formats and messages reveal the technology
       stack, allowing attackers to research known vulnerabilities.
-      
+
       **Business Logic Discovery**: Error messages can reveal application flow and
       business rules that shouldn't be exposed.
       """,
@@ -169,16 +169,16 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
       ],
       detection_notes: """
       This pattern detects information disclosure by identifying:
-      
+
       1. **Output Functions**: die() or exit() that terminate execution
       2. **Error Context**: String containing "error" concatenated with content
       3. **Database Error Functions**: Functions ending with _error or _errno
          - mysqli_error(), mysql_error()
          - pg_last_error(), oci_error()
          - sqlsrv_errors(), mysqli_errno()
-      
+
       The regex: (die|exit)\\s*\\(\\s*["'][^"']*error[^"']*["']\\s*\\.\\s*\\w+_(error|errno)
-      
+
       This pattern specifically targets database error disclosure. Additional patterns
       may be needed for other types of error information disclosure.
       """,
@@ -223,9 +223,9 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
 
   @doc """
   Returns test cases for the error display pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.ErrorDisplay.test_cases()
       iex> length(test_cases.positive)
       8
@@ -309,9 +309,9 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
 
   @doc """
   Returns examples of vulnerable and fixed code.
-  
+
   ## Examples
-  
+
       iex> examples = Rsolv.Security.Patterns.Php.ErrorDisplay.examples()
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
@@ -326,7 +326,7 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
             die("Database error: " . mysqli_error($conn));
             // Could expose: Database error: You have an error in your SQL syntax
         }
-        
+
         // VULNERABLE: Connection error details
         $conn = mysqli_connect($host, $user, $pass, $db);
         if (!$conn) {
@@ -338,12 +338,12 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
         // VULNERABLE: Exposing query structure
         $query = "INSERT INTO orders (user_id, total) VALUES ($user_id, $total)";
         $result = mysqli_query($conn, $query);
-        
+
         if (!$result) {
             exit("Query failed: " . mysqli_error($conn));
             // Exposes table structure and query logic
         }
-        
+
         // VULNERABLE: PostgreSQL errors
         $result = pg_query($conn, $sql);
         if (!$result) {
@@ -376,7 +376,7 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
             // Show generic message to user
             die("An error occurred. Please try again later.");
         }
-        
+
         // SECURE: Error codes for support
         if (!$result) {
             $error_code = 'DB_ERR_' . time();
@@ -412,7 +412,7 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
                 exit();
             }
         }
-        
+
         // Usage
         if (!$result) {
             $handler->handleDatabaseError(mysqli_error($conn), [
@@ -462,9 +462,9 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
 
   @doc """
   Returns educational description of the vulnerability.
-  
+
   ## Examples
-  
+
       iex> desc = Rsolv.Security.Patterns.Php.ErrorDisplay.vulnerability_description()
       iex> desc =~ "error"
       true
@@ -483,44 +483,44 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
     sensitive technical details to end users, providing attackers with valuable 
     information about the system's architecture, configuration, and potential 
     vulnerabilities.
-    
+
     While detailed error messages are helpful during development, they become a 
     security risk in production environments. Database errors, in particular, can 
     expose table names, column structures, query syntax, and even data values that 
     should remain confidential.
-    
+
     ## Security Impact
-    
+
     **Information Leakage**: Error messages reveal internal system details that 
     attackers can use to understand the application's structure and identify 
     potential attack vectors.
-    
+
     **Attack Surface Mapping**: Technical errors help attackers enumerate the 
     technology stack, database schema, and application endpoints, making targeted 
     attacks more feasible.
-    
+
     **Vulnerability Discovery**: Error messages often reveal the exact nature of 
     input validation failures, making it easier to craft successful exploits.
-    
+
     ## Common Scenarios
-    
+
     1. **Database Errors**:
        - Table and column names exposed
        - SQL syntax revealed
        - Database version information
-    
+
     2. **File System Errors**:
        - Full file paths disclosed
        - Directory structure mapped
        - Permission details revealed
-    
+
     3. **Application Errors**:
        - Framework version exposed
        - Internal function names
        - Business logic revealed
-    
+
     ## Prevention
-    
+
     Always log detailed errors for debugging purposes but display only generic 
     messages to users, implement proper error handling with environment-specific 
     behavior, use error monitoring services for production issues, and regularly 
@@ -557,52 +557,80 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
           type: "error_functions",
           description: "Identify error-related functions",
           database_errors: [
-            "mysqli_error", "mysql_error", "pg_last_error",
-            "oci_error", "sqlsrv_errors", "db2_conn_error"
+            "mysqli_error",
+            "mysql_error",
+            "pg_last_error",
+            "oci_error",
+            "sqlsrv_errors",
+            "db2_conn_error"
           ],
           system_errors: [
-            "error_get_last", "libxml_get_errors",
-            "curl_error", "json_last_error_msg"
+            "error_get_last",
+            "libxml_get_errors",
+            "curl_error",
+            "json_last_error_msg"
           ],
           error_numbers: [
-            "mysqli_errno", "mysql_errno", "pg_last_error",
-            "oci_error", "sqlsrv_errors"
+            "mysqli_errno",
+            "mysql_errno",
+            "pg_last_error",
+            "oci_error",
+            "sqlsrv_errors"
           ]
         },
         %{
           type: "output_context",
           description: "Analyze how errors are output",
           dangerous_outputs: [
-            "die", "exit", "echo", "print",
-            "printf", "var_dump", "print_r"
+            "die",
+            "exit",
+            "echo",
+            "print",
+            "printf",
+            "var_dump",
+            "print_r"
           ],
           safe_outputs: [
-            "error_log", "syslog", "trigger_error",
-            "throw", "logger", "monolog"
+            "error_log",
+            "syslog",
+            "trigger_error",
+            "throw",
+            "logger",
+            "monolog"
           ]
         },
         %{
           type: "error_handling_patterns",
           description: "Detect proper error handling",
           safe_patterns: [
-            "try.*catch", "set_error_handler",
-            "set_exception_handler", "error_reporting\\(0\\)"
+            "try.*catch",
+            "set_error_handler",
+            "set_exception_handler",
+            "error_reporting\\(0\\)"
           ],
           logging_patterns: [
-            "error_log", "\\$logger->", "monolog",
-            "log4php", "psr-3"
+            "error_log",
+            "\\$logger->",
+            "monolog",
+            "log4php",
+            "psr-3"
           ]
         },
         %{
           type: "environment_detection",
           description: "Check for environment-specific handling",
           production_indicators: [
-            "production", "prod", "live",
-            "APP_ENV", "ENVIRONMENT"
+            "production",
+            "prod",
+            "live",
+            "APP_ENV",
+            "ENVIRONMENT"
           ],
           generic_messages: [
-            "error occurred", "try again",
-            "contact support", "error code"
+            "error occurred",
+            "try again",
+            "contact support",
+            "error code"
           ]
         }
       ]

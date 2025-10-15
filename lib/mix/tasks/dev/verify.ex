@@ -117,7 +117,10 @@ defmodule Mix.Tasks.Dev.Verify do
         print_success("Seeds loaded (#{customer_count} customers, #{api_key_count} API keys)")
         {:ok, :seeds, %{customers: customer_count, api_keys: api_key_count}}
       else
-        print_warning("Seeds may not be complete (#{customer_count} customers, #{api_key_count} API keys)")
+        print_warning(
+          "Seeds may not be complete (#{customer_count} customers, #{api_key_count} API keys)"
+        )
+
         print_suggestion("Expected at least 5 customers and 5 API keys")
         print_suggestion("Run: mix run priv/repo/seeds.exs")
         {:ok, :seeds, %{customers: customer_count, api_keys: api_key_count}}
@@ -140,7 +143,11 @@ defmodule Mix.Tasks.Dev.Verify do
             case Jason.decode(content) do
               {:ok, spec} ->
                 paths = map_size(Map.get(spec, "paths", %{}))
-                print_success("OpenAPI spec generated (#{paths} endpoints, #{format_bytes(size)})")
+
+                print_success(
+                  "OpenAPI spec generated (#{paths} endpoints, #{format_bytes(size)})"
+                )
+
                 {:ok, :openapi, %{endpoints: paths, size: size}}
 
               {:error, _} ->

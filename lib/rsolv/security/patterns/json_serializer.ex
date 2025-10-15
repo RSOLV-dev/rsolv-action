@@ -6,9 +6,9 @@ defmodule Rsolv.Security.Patterns.JSONSerializer do
 
   @doc """
   Prepares a pattern for JSON encoding by converting regex objects to maps.
-  
+
   ## Examples
-  
+
       iex> prepare_for_json(~r/test/)
       %{"__type__" => "regex", "source" => "test", "flags" => []}
       
@@ -29,7 +29,7 @@ defmodule Rsolv.Security.Patterns.JSONSerializer do
     |> Map.from_struct()
     |> prepare_for_json()
   end
-  
+
   def prepare_for_json(data) when is_map(data) do
     data
     |> Enum.map(fn {key, value} -> {key, prepare_for_json(value)} end)
@@ -74,7 +74,7 @@ defmodule Rsolv.Security.Patterns.JSONSerializer do
   """
   def encode(data) do
     prepared = prepare_for_json(data)
-    
+
     try do
       {:ok, JSON.encode!(prepared)}
     rescue

@@ -1,25 +1,26 @@
 defmodule Rsolv.AST.PatternAdapterTest do
   use Rsolv.IntegrationCase
   import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
-  
+
   alias Rsolv.AST.PatternAdapter
   alias Rsolv.Security.{Pattern, ASTPattern}
-  
+
   setup do
     # Ensure PatternServer is started if not running
     if Process.whereis(Rsolv.Security.PatternServer) == nil do
       {:ok, _pid} = start_supervised(Rsolv.Security.PatternServer)
     end
+
     :ok
   end
-  
+
   describe "load_patterns_for_language/1" do
     test "loads JavaScript patterns with AST enhancements" do
       patterns = PatternAdapter.load_patterns_for_language("javascript")
-      
+
       assert is_list(patterns)
       assert length(patterns) > 0
-      
+
       # Check for SQL injection pattern
       sql_pattern = Enum.find(patterns, &(&1.id == "js-sql-injection-concat"))
       assert sql_pattern != nil
@@ -29,39 +30,42 @@ defmodule Rsolv.AST.PatternAdapterTest do
       assert sql_pattern.context_rules != nil
       assert sql_pattern.confidence_rules != nil
     end
-    
+
     test "loads Python patterns with AST enhancements" do
       patterns = PatternAdapter.load_patterns_for_language("python")
-      
+
       assert is_list(patterns)
       assert length(patterns) > 0
-      
+
       # Check for a Python-specific pattern
       python_pattern = Enum.find(patterns, &(&1.languages == ["python"]))
       assert python_pattern != nil
     end
-    
+
     test "returns empty list for unsupported language" do
       patterns = PatternAdapter.load_patterns_for_language("cobol")
       assert patterns == []
     end
-    
+
     test "caches patterns for repeated calls" do
       # First call should load patterns
-      {time1, patterns1} = :timer.tc(fn ->
-        PatternAdapter.load_patterns_for_language("javascript")
-      end)
-      
+      {time1, patterns1} =
+        :timer.tc(fn ->
+          PatternAdapter.load_patterns_for_language("javascript")
+        end)
+
       # Second call should be cached and faster
-      {time2, patterns2} = :timer.tc(fn ->
-        PatternAdapter.load_patterns_for_language("javascript")
-      end)
-      
+      {time2, patterns2} =
+        :timer.tc(fn ->
+          PatternAdapter.load_patterns_for_language("javascript")
+        end)
+
       assert patterns1 == patterns2
-      assert time2 < time1 / 2  # Cached call should be faster (relaxed from /10 to /2)
+      # Cached call should be faster (relaxed from /10 to /2)
+      assert time2 < time1 / 2
     end
   end
-  
+
   describe "convert_to_matcher_format/1" do
     test "converts AST pattern to matcher format" do
       ast_pattern = %ASTPattern{
@@ -88,9 +92,9 @@ defmodule Rsolv.AST.PatternAdapterTest do
         },
         min_confidence: 0.7
       }
-      
+
       matcher_pattern = PatternAdapter.convert_to_matcher_format(ast_pattern)
-      
+
       assert matcher_pattern.id == "test-pattern"
       assert matcher_pattern.name == "Test Pattern"
       assert matcher_pattern.pattern_type == :sql_injection
@@ -100,7 +104,7 @@ defmodule Rsolv.AST.PatternAdapterTest do
       assert matcher_pattern.confidence_rules == ast_pattern.confidence_rules
       assert matcher_pattern.min_confidence == 0.7
     end
-    
+
     test "uses default min_confidence if not specified" do
       ast_pattern = %ASTPattern{
         id: "test-pattern",
@@ -108,12 +112,12 @@ defmodule Rsolv.AST.PatternAdapterTest do
         type: :xss,
         min_confidence: nil
       }
-      
+
       matcher_pattern = PatternAdapter.convert_to_matcher_format(ast_pattern)
       assert matcher_pattern.min_confidence == 0.7
     end
   end
-  
+
   describe "enhance_patterns/1" do
     test "enhances regular patterns with AST rules" do
       regular_pattern = %Pattern{
@@ -127,15 +131,16 @@ defmodule Rsolv.AST.PatternAdapterTest do
         recommendation: "Use parameterized queries",
         test_cases: []
       }
-      
+
       enhanced = PatternAdapter.enhance_pattern(regular_pattern)
-      
+
       assert enhanced.ast_rules != nil
       assert enhanced.context_rules != nil
       assert enhanced.confidence_rules != nil
-      assert enhanced.regex == regular_pattern.regex  # Original regex preserved
+      # Original regex preserved
+      assert enhanced.regex == regular_pattern.regex
     end
-    
+
     test "returns pattern unchanged if no AST enhancement available" do
       pattern = %Pattern{
         id: "unknown-pattern",
@@ -148,27 +153,29 @@ defmodule Rsolv.AST.PatternAdapterTest do
         languages: ["javascript"],
         regex: ~r/unknown/
       }
-      
+
       enhanced = PatternAdapter.enhance_pattern(pattern)
       assert enhanced.ast_rules == nil
-      assert enhanced.context_rules != nil  # This should still have context_rules
+      # This should still have context_rules
+      assert enhanced.context_rules != nil
     end
   end
-  
+
   describe "integration with PatternRegistry" do
     test "loads patterns from registry and enhances them" do
       # This tests the full integration
       patterns = PatternAdapter.load_patterns_for_language("javascript")
-      
+
       # Should have patterns from the registry
       assert length(patterns) > 5
-      
+
       # Patterns should be enhanced (these come from load_patterns_for_language which converts to matcher format)
       enhanced_patterns = Enum.filter(patterns, &(&1.ast_pattern != nil))
       assert length(enhanced_patterns) > 0
-      
+
       # Check specific enhancements
       sql_pattern = Enum.find(patterns, &(&1.id == "js-sql-injection-concat"))
+
       if sql_pattern do
         assert sql_pattern.ast_pattern != nil
       else

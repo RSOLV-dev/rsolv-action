@@ -1,27 +1,27 @@
 defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
   @moduledoc """
   Trust All Certificates pattern for Java code.
-  
+
   Detects implementations of TrustManager and HostnameVerifier that accept all certificates
   without proper validation. These "trust all" implementations disable SSL/TLS certificate
   verification, making applications vulnerable to Man-in-the-Middle (MitM) attacks.
-  
+
   ## Vulnerability Details
-  
+
   Trust all certificates vulnerabilities occur when applications bypass SSL/TLS certificate
   validation by implementing empty or permissive TrustManager and HostnameVerifier classes.
   This removes the cryptographic protections that certificates provide, allowing attackers
   to intercept and modify network communications.
-  
+
   Common vulnerable patterns:
   - Empty checkClientTrusted() and checkServerTrusted() methods in X509TrustManager
   - HostnameVerifier that always returns true
   - SSLContext initialized with permissive TrustManager arrays
   - Disabled certificate validation in HTTP clients
   - Custom TrustManager implementations that don't perform validation
-  
+
   ### Attack Examples
-  
+
   ```java
   // Vulnerable code - TrustManager that accepts all certificates
   TrustManager[] trustAllCerts = new TrustManager[] {
@@ -31,32 +31,32 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
           public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
       }
   };
-  
+
   // Vulnerable code - HostnameVerifier that accepts all hostnames
   HostnameVerifier allHostsValid = new HostnameVerifier() {
       public boolean verify(String hostname, SSLSession session) { return true; }
   };
   ```
-  
+
   ## References
-  
+
   - CWE-295: Improper Certificate Validation
   - OWASP A07:2021 - Identification and Authentication Failures
   - Android Security Advisory: Unsafe X509TrustManager implementations
   - CVE-2020-26234: MiTM vulnerabilities in applications with insecure TrustManager
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Pattern detects trust all certificates implementations in Java code.
-  
+
   Identifies implementations that bypass SSL/TLS certificate validation, including
   empty TrustManager methods and permissive HostnameVerifier implementations.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Java.TrustAllCerts.pattern()
       iex> pattern.id
       "java-trust-all-certs"
@@ -80,7 +80,8 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
     %Pattern{
       id: "java-trust-all-certs",
       name: "Trust All Certificates",
-      description: "TrustManager or HostnameVerifier implementations that bypass certificate validation",
+      description:
+        "TrustManager or HostnameVerifier implementations that bypass certificate validation",
       type: :authentication,
       severity: :critical,
       languages: ["java"],
@@ -102,7 +103,8 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
       ],
       cwe_id: "CWE-295",
       owasp_category: "A07:2021",
-      recommendation: "Implement proper certificate validation using default TrustManager or custom validation logic",
+      recommendation:
+        "Implement proper certificate validation using default TrustManager or custom validation logic",
       test_cases: %{
         vulnerable: [
           ~S|public void checkClientTrusted(X509Certificate[] chain, String authType) {}|,
@@ -121,7 +123,7 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -130,21 +132,21 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
       validation by implementing permissive TrustManager and HostnameVerifier classes. This removes
       the cryptographic protections that certificates provide, making applications vulnerable to
       Man-in-the-Middle (MitM) attacks where attackers can intercept and modify network communications.
-      
+
       These vulnerabilities typically manifest through:
       - Empty checkClientTrusted() and checkServerTrusted() methods that don't perform validation
       - HostnameVerifier implementations that always return true regardless of hostname
       - SSLContext configurations that use custom TrustManager arrays without validation
       - HTTP clients configured to ignore certificate errors
       - Development code that disables certificate checks accidentally reaching production
-      
+
       The vulnerability is particularly dangerous because:
       - It completely bypasses the PKI (Public Key Infrastructure) security model
       - Attackers can use self-signed certificates to impersonate legitimate servers
       - Network traffic becomes vulnerable to interception and modification
       - Users have no indication that their connections are insecure
       - Compliance frameworks explicitly prohibit disabling certificate validation
-      
+
       Historical context:
       - Featured in OWASP Top 10 2021 under A07 (Identification and Authentication Failures)
       - Common in mobile applications leading to Google Play Store warnings
@@ -162,7 +164,7 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
         %{
           type: :owasp,
           id: "A07:2021",
-          title: "OWASP Top 10 2021 - A07 Identification and Authentication Failures", 
+          title: "OWASP Top 10 2021 - A07 Identification and Authentication Failures",
           url: "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/"
         },
         %{
@@ -181,7 +183,8 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
           type: :research,
           id: "tls_certificate_validation_guide",
           title: "Transport Layer Security Certificate Validation Guide",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html"
         }
       ],
       attack_vectors: [
@@ -205,15 +208,17 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
       cve_examples: [
         %{
           id: "CVE-2020-26234",
-          description: "Multiple applications use insecure TrustManager implementations allowing MitM attacks",
+          description:
+            "Multiple applications use insecure TrustManager implementations allowing MitM attacks",
           severity: "high",
           cvss: 7.4,
           note: "Affects applications that trust all certificates, enabling traffic interception"
         },
         %{
           id: "CVE-2019-16303",
-          description: "JHipster Generator creates applications with disabled certificate validation",
-          severity: "medium", 
+          description:
+            "JHipster Generator creates applications with disabled certificate validation",
+          severity: "medium",
           cvss: 6.5,
           note: "Generated applications contain TrustManager that accepts all certificates"
         },
@@ -227,20 +232,20 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
       ],
       detection_notes: """
       This pattern detects certificate validation bypass by identifying:
-      
+
       1. Empty TrustManager method implementations with minimal or no validation logic
       2. HostnameVerifier methods that unconditionally return true
       3. SSLContext initialization patterns that use permissive TrustManager arrays
       4. Lambda expressions and method references that bypass hostname verification
       5. Configuration patterns that disable certificate validation
-      
+
       The pattern uses negative lookahead to exclude commented lines and focuses on:
       - Method signatures for checkClientTrusted and checkServerTrusted
       - Empty method bodies or bodies containing only comments/return statements
       - HostnameVerifier verify methods that return true without validation
       - SSLContext and HttpsURLConnection configuration patterns
       - TrustManager array declarations with empty implementations
-      
+
       Key detection criteria:
       - Looks for method signatures with empty or minimal implementations
       - Excludes properly commented development code
@@ -296,15 +301,15 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual certificate validation bypass
   vulnerabilities and acceptable uses such as development testing or specific configurations.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.TrustAllCerts.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -324,10 +329,19 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
         node_type: "MethodDeclaration",
         trust_analysis: %{
           check_trust_manager: true,
-          trust_manager_methods: ["checkClientTrusted", "checkServerTrusted", "getAcceptedIssuers"],
+          trust_manager_methods: [
+            "checkClientTrusted",
+            "checkServerTrusted",
+            "getAcceptedIssuers"
+          ],
           check_empty_implementation: true,
           check_method_body: true,
-          empty_body_indicators: ["return;", "// TODO", "/* TODO */", "throw new UnsupportedOperationException"]
+          empty_body_indicators: [
+            "return;",
+            "// TODO",
+            "/* TODO */",
+            "throw new UnsupportedOperationException"
+          ]
         },
         certificate_analysis: %{
           check_certificate_validation: true,
@@ -359,17 +373,30 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
         ],
         insecure_trust_indicators: [
           "trust_all_certificates",
-          "disable_ssl_verification", 
+          "disable_ssl_verification",
           "accept_all_certificates",
           "ignore_ssl_errors",
           "bypass_certificate_validation"
         ],
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/example/, ~r/demo/, ~r/sample/],
         development_indicators: [
-          "development", "dev", "test", "demo", "example", "sample", "local", "localhost"
+          "development",
+          "dev",
+          "test",
+          "demo",
+          "example",
+          "sample",
+          "local",
+          "localhost"
         ],
         production_contexts: [
-          "production", "prod", "live", "release", "deployed", "enterprise", "commercial"
+          "production",
+          "prod",
+          "live",
+          "release",
+          "deployed",
+          "enterprise",
+          "commercial"
         ]
       },
       confidence_rules: %{

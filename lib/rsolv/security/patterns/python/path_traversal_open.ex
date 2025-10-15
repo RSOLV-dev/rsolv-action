@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
   @moduledoc """
   Path Traversal via Python open()
-  
+
   Detects dangerous patterns like:
     open("/uploads/" + filename)
     open(f"/tmp/{user_file}")
@@ -16,12 +16,12 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
         open(requested_path)
     
   ## Vulnerability Details
-  
+
   Path traversal (directory traversal) vulnerabilities occur when user-controlled
   input is used to construct file paths without proper validation. Attackers can
   use special sequences like "../" to navigate outside intended directories and
   access sensitive files anywhere on the filesystem.
-  
+
   In Python, the open() function is commonly used for file operations. When the
   filename parameter includes user input without validation, attackers can:
   - Access configuration files (/etc/passwd, ~/.ssh/id_rsa)
@@ -29,18 +29,18 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
   - Access log files containing sensitive data
   - Read system files to gather information for further attacks
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the path traversal via open() pattern.
-  
+
   This pattern detects usage of open() with user-controlled input
   which can lead to unauthorized file access.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.PathTraversalOpen.pattern()
       iex> pattern.id
       "python-path-traversal-open"
@@ -110,7 +110,7 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -119,13 +119,13 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
       is used to construct file paths without proper validation, attackers can use
       directory traversal sequences (../, ..\\) to access files outside the intended
       directory.
-      
+
       The vulnerability occurs when:
       1. User input is directly concatenated or interpolated into file paths
       2. No path validation or sanitization is performed
       3. The application has permissions to read files outside the web root
       4. Error messages may reveal file existence or contents
-      
+
       Common attack patterns include:
       - ../../../etc/passwd - Access system files on Unix/Linux
       - ..\\..\\..\\windows\\system32\\config\\sam - Access Windows system files
@@ -213,7 +213,7 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
       3. F-string formatting with user variables
       4. % formatting and .format() methods
       5. Variable assignment followed by open()
-      
+
       Key indicators:
       - The open() function call
       - Dynamic string construction for file paths
@@ -247,15 +247,15 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual path traversal vulnerabilities
   and legitimate file operations with hardcoded paths.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.PathTraversalOpen.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]

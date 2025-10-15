@@ -4,16 +4,16 @@ defmodule RsolvWeb.Components.ThemeToggle do
   @doc """
   Renders a theme toggle button that switches between light and dark modes.
   Works on both LiveView and regular controller pages.
-  
+
   ## Examples
-  
+
       <.theme_toggle />
       <.theme_toggle class="ml-4" />
   """
   def theme_toggle(assigns) do
     assigns = assign_new(assigns, :class, fn -> "" end)
     assigns = assign_new(assigns, :id, fn -> nil end)
-    
+
     ~H"""
     <button
       type="button"
@@ -46,7 +46,7 @@ defmodule RsolvWeb.Components.ThemeToggle do
         />
       </svg>
       
-      <!-- Moon icon (visible in light mode) -->
+    <!-- Moon icon (visible in light mode) -->
       <svg
         class="theme-toggle-dark-icon block dark:hidden w-5 h-5 text-gray-600 dark:text-gray-400"
         fill="currentColor"

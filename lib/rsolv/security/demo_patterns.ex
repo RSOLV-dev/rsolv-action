@@ -1,16 +1,16 @@
 defmodule Rsolv.Security.DemoPatterns do
   @moduledoc """
   Demo patterns available without an API key.
-  
+
   These patterns demonstrate RSOLV's capabilities and encourage users to upgrade
   for access to the full set of 172+ security patterns.
   """
-  
+
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns a curated set of demo patterns for users without an API key.
-  
+
   The demo patterns are chosen to:
   - Show high-impact vulnerabilities (SQL injection, XSS, etc.)
   - Cover multiple languages
@@ -21,7 +21,7 @@ defmodule Rsolv.Security.DemoPatterns do
     all_demo_patterns()
     |> filter_by_language(language)
   end
-  
+
   defp all_demo_patterns do
     [
       # JavaScript patterns (5)
@@ -135,7 +135,7 @@ defmodule Rsolv.Security.DemoPatterns do
           ]
         }
       },
-      
+
       # Python patterns (4)
       %Pattern{
         id: "python-sql-injection-format",
@@ -225,7 +225,7 @@ defmodule Rsolv.Security.DemoPatterns do
           ]
         }
       },
-      
+
       # Ruby patterns (3)
       %Pattern{
         id: "ruby-sql-injection-interpolation",
@@ -293,7 +293,7 @@ defmodule Rsolv.Security.DemoPatterns do
           ]
         }
       },
-      
+
       # Java patterns (3)
       %Pattern{
         id: "java-sql-injection-statement",
@@ -302,7 +302,8 @@ defmodule Rsolv.Security.DemoPatterns do
         type: :sql_injection,
         severity: :critical,
         languages: ["java"],
-        regex: ~r/(?:createStatement|executeQuery|executeUpdate)\s*\([^)]*?\+|".*(?:SELECT|INSERT|UPDATE|DELETE).*"\s*\+/,
+        regex:
+          ~r/(?:createStatement|executeQuery|executeUpdate)\s*\([^)]*?\+|".*(?:SELECT|INSERT|UPDATE|DELETE).*"\s*\+/,
         cwe_id: "CWE-89",
         owasp_category: "A03:2021",
         recommendation: "Use PreparedStatement with parameters",
@@ -324,7 +325,8 @@ defmodule Rsolv.Security.DemoPatterns do
         type: :xxe,
         severity: :high,
         languages: ["java"],
-        regex: ~r/DocumentBuilderFactory\.newInstance\s*\(\s*\)(?![\s\S]*?setFeature.*?FEATURE_SECURE_PROCESSING)/,
+        regex:
+          ~r/DocumentBuilderFactory\.newInstance\s*\(\s*\)(?![\s\S]*?setFeature.*?FEATURE_SECURE_PROCESSING)/,
         cwe_id: "CWE-611",
         owasp_category: "A05:2021",
         recommendation: "Disable external entities in XML parser",
@@ -359,7 +361,7 @@ defmodule Rsolv.Security.DemoPatterns do
           ]
         }
       },
-      
+
       # PHP patterns (3)
       %Pattern{
         id: "php-sql-injection-concat",
@@ -368,7 +370,8 @@ defmodule Rsolv.Security.DemoPatterns do
         type: :sql_injection,
         severity: :critical,
         languages: ["php"],
-        regex: ~r/(?:mysql_query|mysqli_query|query)\s*\(\s*["'].*(?:SELECT|INSERT|UPDATE|DELETE).*["']\s*\./,
+        regex:
+          ~r/(?:mysql_query|mysqli_query|query)\s*\(\s*["'].*(?:SELECT|INSERT|UPDATE|DELETE).*["']\s*\./,
         cwe_id: "CWE-89",
         owasp_category: "A03:2021",
         recommendation: "Use prepared statements with PDO or mysqli",
@@ -427,7 +430,7 @@ defmodule Rsolv.Security.DemoPatterns do
           ]
         }
       },
-      
+
       # Elixir pattern (1) 
       %Pattern{
         id: "elixir-sql-injection-interpolation",
@@ -453,8 +456,9 @@ defmodule Rsolv.Security.DemoPatterns do
       }
     ]
   end
-  
+
   defp filter_by_language(patterns, nil), do: patterns
+
   defp filter_by_language(patterns, language) do
     Enum.filter(patterns, fn pattern ->
       language in pattern.languages

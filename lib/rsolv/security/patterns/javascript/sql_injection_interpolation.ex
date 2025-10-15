@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
   @moduledoc """
   SQL Injection via Template Literals (String Interpolation) in JavaScript
-  
+
   Detects dangerous patterns like:
     const query = `SELECT * FROM users WHERE id = ${userId}`
     db.query(`DELETE FROM posts WHERE author = '${username}'`)
@@ -12,13 +12,13 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
     
   Template literals using backticks (`) with ${} interpolation are just as vulnerable
   as string concatenation when used to build SQL queries.
-  
+
   ## Vulnerability Details
-  
+
   ES6 template literals do NOT protect against SQL injection. They are simply another
   way to build strings and pose the same security risks as concatenation. Developers
   often mistakenly believe template literals are safer, leading to vulnerable code.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable code
@@ -28,13 +28,13 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
   // This bypasses authentication!
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Structured vulnerability metadata for SQL injection via template literals.
-  
+
   This metadata documents the specific risks of using ES6 template literals
   for SQL query construction, a common misconception among developers.
   """
@@ -48,7 +48,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
       concatenation. The interpolated values are inserted directly into the string 
       without any escaping or parameterization.
       """,
-      
       references: [
         %{
           type: :cwe,
@@ -65,13 +64,15 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
         %{
           type: :research,
           id: "template-literal-injection",
-          url: "https://r1cs3c.medium.com/understanding-and-preventing-js-template-literal-injection-attacks-cf0e7c799cde",
+          url:
+            "https://r1cs3c.medium.com/understanding-and-preventing-js-template-literal-injection-attacks-cf0e7c799cde",
           title: "Understanding and Preventing JS Template Literal Injection Attacks"
         },
         %{
           type: :stackoverflow,
           id: "es6-sql-injection",
-          url: "https://stackoverflow.com/questions/44086785/do-es6-template-literals-protect-against-sql-injection",
+          url:
+            "https://stackoverflow.com/questions/44086785/do-es6-template-literals-protect-against-sql-injection",
           title: "Do ES6 template literals protect against SQL injection?"
         },
         %{
@@ -81,7 +82,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
           title: "Why SQL template tags are not vulnerable to SQL injection attacks"
         }
       ],
-      
       attack_vectors: [
         "Template literal interpolation with ${} syntax containing user input",
         "Breaking out of SQL string context using quotes within interpolated values",
@@ -90,7 +90,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
         "Combining multiple interpolations to build complex injection payloads",
         "Using template literal line breaks to inject multi-line SQL commands"
       ],
-      
       real_world_impact: [
         "Authentication bypass through always-true conditions",
         "Data exfiltration via UNION SELECT attacks",
@@ -99,11 +98,11 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
         "Data tampering or deletion of critical records",
         "Potential for second-order SQL injection if data is stored and reused"
       ],
-      
       cve_examples: [
         %{
           id: "CVE-2023-29453",
-          description: "Template literal injection in html/template affecting Go templates with JavaScript",
+          description:
+            "Template literal injection in html/template affecting Go templates with JavaScript",
           severity: "high",
           cvss: 7.5,
           note: "While focused on Go templates, demonstrates template literal injection risks"
@@ -116,7 +115,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
           note: "Shows how template injection can escalate to remote code execution"
         }
       ],
-      
       safe_alternatives: [
         "Use parameterized queries: db.query('SELECT * FROM users WHERE id = ?', [userId])",
         "Use query builders: knex('users').where('id', userId)",
@@ -124,7 +122,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
         "Use SQL template tag libraries that automatically escape values",
         "Always validate and sanitize user input before database operations"
       ],
-      
       detection_notes: """
       This pattern detects template literals (backtick strings) containing SQL keywords
       with ${} interpolation. Key indicators:
@@ -132,11 +129,10 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
       2. SQL keywords (SELECT, INSERT, UPDATE, DELETE, etc.)
       3. ${} interpolation syntax within the SQL string
       4. Common user input sources (req.params, req.body, etc.)
-      
+
       The pattern must be careful not to match legitimate uses of template literals
       for non-SQL purposes or properly parameterized query builders.
       """,
-      
       additional_context: %{
         common_mistakes: [
           "Believing template literals automatically escape SQL",
@@ -144,7 +140,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
           "Assuming template literals are 'modern' and therefore secure",
           "Using template literals for 'cleaner' SQL code without considering security"
         ],
-        
         secure_alternatives: [
           "Use parameterized queries with placeholders (?, $1, :param)",
           "Use query builder libraries with proper escaping",
@@ -154,12 +149,12 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
       }
     }
   end
-  
+
   @doc """
   Returns the pattern definition for SQL injection via template literals.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation.pattern()
       iex> pattern.id
       "js-sql-injection-interpolation"
@@ -176,10 +171,12 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
       severity: :critical,
       languages: ["javascript", "typescript"],
       # Matches template literals containing SQL keywords and ${} interpolation
-      regex: ~r/`[^`]*(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|FROM|WHERE)[^`]*\$\{[^}]+\}[^`]*`/i,
+      regex:
+        ~r/`[^`]*(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|FROM|WHERE)[^`]*\$\{[^}]+\}[^`]*`/i,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries instead of string interpolation for SQL queries.",
+      recommendation:
+        "Use parameterized queries instead of string interpolation for SQL queries.",
       test_cases: %{
         vulnerable: [
           ~S|const query = `SELECT * FROM users WHERE name = '${userName}'`|,
@@ -196,18 +193,18 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SQL injection vulnerabilities and:
   - Tagged template literals (sql`...`) which often use safe query builders
   - Parameterized queries using template tag functions
   - Template literals used only for logging SQL queries
   - Test code that builds queries for assertions
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -249,8 +246,10 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/],
         exclude_if_parameterized: true,
-        exclude_if_tagged_template: true,    # sql`SELECT...` tagged templates are often safe
-        exclude_if_uses_escaping: true       # Uses escape functions
+        # sql`SELECT...` tagged templates are often safe
+        exclude_if_tagged_template: true,
+        # Uses escape functions
+        exclude_if_uses_escaping: true
       },
       confidence_rules: %{
         base: 0.3,
@@ -258,7 +257,8 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
           "template_with_user_input" => 0.4,
           "in_db_query_call" => 0.3,
           "contains_sql_keywords" => 0.2,
-          "uses_tagged_template" => -0.8,    # sql`...` is often a safe library
+          # sql`...` is often a safe library
+          "uses_tagged_template" => -0.8,
           "has_escape_function" => -0.7,
           "uses_query_builder" => -0.8,
           "is_logging_only" => -1.0

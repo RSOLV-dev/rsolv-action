@@ -2,21 +2,21 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
   @moduledoc """
   Detects safe coding patterns that are often incorrectly flagged as vulnerabilities.
   Part of RFC-042: AST False Positive Reduction Enhancement.
-  
+
   This module identifies patterns that use secure coding practices like parameterized
   queries, constant comparisons, and framework-provided escaping mechanisms.
   """
-  
+
   @doc """
   Checks if a code pattern is actually safe despite matching a vulnerability pattern.
-  
+
   ## Parameters
     - vulnerability_type: The type of vulnerability detected (:sql_injection, :timing_attack, etc.)
     - code: The code snippet to check
     - context: Additional context (language, framework, etc.)
-  
+
   ## Examples
-  
+
       iex> SafePatternDetector.is_safe_pattern?(:timing_attack, "e.code === DOMException.QUOTA_EXCEEDED_ERR", %{language: "javascript"})
       true
       
@@ -24,24 +24,28 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
       true
   """
   def is_safe_pattern?(vulnerability_type, code, context \\ %{})
-  
+
   def is_safe_pattern?(:timing_attack, code, %{language: language}) do
     patterns = get_timing_safe_patterns(language)
-    
+
     # Check for safe patterns
     safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
-    
+
     # Also check for unsafe patterns that override safe detection
     unsafe_patterns = [
-      ~r/password\s*===?\s*[^A-Z]/,  # password comparison with non-constant
-      ~r/token\s*===?\s*req\./,       # token from request
-      ~r/apiKey\s*===?\s*user/,       # API key from user
-      ~r/secret\s*===?\s*[^A-Z]/,     # secret comparison
+      # password comparison with non-constant
+      ~r/password\s*===?\s*[^A-Z]/,
+      # token from request
+      ~r/token\s*===?\s*req\./,
+      # API key from user
+      ~r/apiKey\s*===?\s*user/,
+      # secret comparison
+      ~r/secret\s*===?\s*[^A-Z]/
     ]
-    
+
     safe && !Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
   end
-  
+
   def is_safe_pattern?(:sql_injection, nil, %{language: _language}), do: false
   def is_safe_pattern?(:sql_injection, "", %{language: _language}), do: false
 
@@ -58,180 +62,261 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
       Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
     end
   end
-  
-  def is_safe_pattern?(:nosql_injection, nil, %{language: language}) when language in ["javascript", "python"], do: false
-  def is_safe_pattern?(:nosql_injection, "", %{language: language}) when language in ["javascript", "python"], do: false
 
-  def is_safe_pattern?(:nosql_injection, code, %{language: language}) when language in ["javascript", "python"] do
+  def is_safe_pattern?(:nosql_injection, nil, %{language: language})
+      when language in ["javascript", "python"],
+      do: false
+
+  def is_safe_pattern?(:nosql_injection, "", %{language: language})
+      when language in ["javascript", "python"],
+      do: false
+
+  def is_safe_pattern?(:nosql_injection, code, %{language: language})
+      when language in ["javascript", "python"] do
     patterns = get_nosql_safe_patterns(language)
     safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
 
     # Check for dangerous patterns
     has_where = Regex.match?(~r/\$where/, code)
-    has_user_input = Regex.match?(~r/req\.(body|query|params)/, code) ||
-                     Regex.match?(~r/request\.(POST|GET)/, code) ||
-                     Regex.match?(~r/json\.loads/, code)  # Dynamic JSON parsing
+    # Dynamic JSON parsing
+    has_user_input =
+      Regex.match?(~r/req\.(body|query|params)/, code) ||
+        Regex.match?(~r/request\.(POST|GET)/, code) ||
+        Regex.match?(~r/json\.loads/, code)
 
     # Safe only if it matches safe patterns AND doesn't have dangerous inputs
     safe && !has_where && !has_user_input
   end
-  
+
   def is_safe_pattern?(:nosql_injection, _code, _context), do: false
-  
+
   def is_safe_pattern?(:xss, nil, %{language: _language}), do: false
   def is_safe_pattern?(:xss, "", %{language: _language}), do: false
 
   def is_safe_pattern?(:xss, code, %{language: language}) do
     patterns = get_xss_safe_patterns(language)
     has_safe = Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
-    
+
     # Check for dangerous HTML insertion WITHOUT escaping
     # Note: We check if escaping functions are present separately
     unsafe_patterns = [
-      ~r/document\.write\([^)]*user/i, # document.write with user input
-      ~r/insertAdjacentHTML\(/,       # insertAdjacentHTML
+      # document.write with user input
+      ~r/document\.write\([^)]*user/i,
+      # insertAdjacentHTML
+      ~r/insertAdjacentHTML\(/
     ]
-    
+
     # Check for potentially dangerous patterns that need escaping
-    needs_escaping = Regex.match?(~r/\.innerHTML\s*=/, code) || 
-                     Regex.match?(~r/\.outerHTML\s*=/, code)
-    
+    needs_escaping =
+      Regex.match?(~r/\.innerHTML\s*=/, code) ||
+        Regex.match?(~r/\.outerHTML\s*=/, code)
+
     has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
-    
+
     # Check for explicit escaping/sanitization
-    has_escaping = Regex.match?(~r/escape|sanitize|DOMPurify|textContent|innerText|createTextNode|React\.createElement/i, code)
-    
+    has_escaping =
+      Regex.match?(
+        ~r/escape|sanitize|DOMPurify|textContent|innerText|createTextNode|React\.createElement/i,
+        code
+      )
+
     # Safe if:
     # 1. Has safe patterns OR escaping, AND
     # 2. No definitely unsafe patterns, AND
     # 3. If using innerHTML/outerHTML, must have escaping
     (has_safe || has_escaping) && !has_unsafe && (!needs_escaping || has_escaping)
   end
-  
+
   def is_safe_pattern?(:code_injection, code, %{language: "javascript"}) do
     # Check for eval with literals or constants
     safe_patterns = [
-      ~r/eval\(['"][\w\s\+\-\*\/\(\)]+['"]\)/,  # Eval with literal string
-      ~r/eval\([A-Z_]+\)/,                       # Eval with constant
-      ~r/new Function\(['"]return/,             # Safe Function constructor
+      # Eval with literal string
+      ~r/eval\(['"][\w\s\+\-\*\/\(\)]+['"]\)/,
+      # Eval with constant
+      ~r/eval\([A-Z_]+\)/,
+      # Safe Function constructor
+      ~r/new Function\(['"]return/
     ]
-    
+
     Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
   end
-  
-  def is_safe_pattern?(:command_injection, code, %{language: language}) when language in ["javascript", "python", "ruby", "php"] do
+
+  def is_safe_pattern?(:command_injection, code, %{language: language})
+      when language in ["javascript", "python", "ruby", "php"] do
     # Check for safe command execution patterns
-    safe_patterns = case language do
-      "javascript" -> [
-        ~r/execFile\(/,                  # execFile is safer than exec
-        ~r/spawn\(['"][^'"]+['"]\s*,\s*\[/,  # spawn with array of args
-        ~r/exec\(['"][^'"$`]+['"]\)\s*$/,    # exec with literal string only (no concat)
-      ]
-      "python" -> [
-        ~r/subprocess\.run\(\[/,         # subprocess.run with list
-        ~r/subprocess\.call\(\[/,        # subprocess.call with list
-        ~r/os\.execv/,                   # os.execv (doesn't use shell)
-        ~r/check=True/,                  # Explicit check flag
-      ]
-      "ruby" -> [
-        ~r/system\(['"][^'"$`]+['"]\)/,  # system with literal string
-        ~r/Open3\./,                     # Open3 is safer
-      ]
-      "php" -> [
-        ~r/escapeshellcmd/,              # Command escaping
-        ~r/escapeshellarg/,              # Argument escaping
-        ~r/exec\(['"][^'"$`]+['"]\)/,    # exec with literal
-      ]
-    end
-    
+    safe_patterns =
+      case language do
+        "javascript" ->
+          [
+            # execFile is safer than exec
+            ~r/execFile\(/,
+            # spawn with array of args
+            ~r/spawn\(['"][^'"]+['"]\s*,\s*\[/,
+            # exec with literal string only (no concat)
+            ~r/exec\(['"][^'"$`]+['"]\)\s*$/
+          ]
+
+        "python" ->
+          [
+            # subprocess.run with list
+            ~r/subprocess\.run\(\[/,
+            # subprocess.call with list
+            ~r/subprocess\.call\(\[/,
+            # os.execv (doesn't use shell)
+            ~r/os\.execv/,
+            # Explicit check flag
+            ~r/check=True/
+          ]
+
+        "ruby" ->
+          [
+            # system with literal string
+            ~r/system\(['"][^'"$`]+['"]\)/,
+            # Open3 is safer
+            ~r/Open3\./
+          ]
+
+        "php" ->
+          [
+            # Command escaping
+            ~r/escapeshellcmd/,
+            # Argument escaping
+            ~r/escapeshellarg/,
+            # exec with literal
+            ~r/exec\(['"][^'"$`]+['"]\)/
+          ]
+      end
+
     # Check for unsafe patterns that override safe detection
     unsafe_patterns = [
-      ~r/\+\s*user/,                   # String concatenation with user variables
-      ~r/\$\{.*user/,                  # Template literals with user input
-      ~r/\$\(/,                        # Command substitution
-      ~r/`.*\$/,                       # Backticks with variables
-      ~r/req\./,                       # Request data
-      ~r/params\[/,                    # Parameters array access
-      ~r/shell\s*:\s*true/,            # shell: true option
-      ~r/shell=True/,                  # Python shell=True
+      # String concatenation with user variables
+      ~r/\+\s*user/,
+      # Template literals with user input
+      ~r/\$\{.*user/,
+      # Command substitution
+      ~r/\$\(/,
+      # Backticks with variables
+      ~r/`.*\$/,
+      # Request data
+      ~r/req\./,
+      # Parameters array access
+      ~r/params\[/,
+      # shell: true option
+      ~r/shell\s*:\s*true/,
+      # Python shell=True
+      ~r/shell=True/
     ]
-    
+
     has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
     has_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
-    
+
     # Only safe if it matches safe patterns AND doesn't match unsafe patterns
     has_safe && !has_unsafe
   end
-  
+
   def is_safe_pattern?(:command_injection, _code, _context), do: false
-  
+
   def is_safe_pattern?(:path_traversal, nil, %{language: _language}), do: false
   def is_safe_pattern?(:path_traversal, "", %{language: _language}), do: false
 
   def is_safe_pattern?(:path_traversal, code, %{language: _language}) do
     # Check for safe sanitization patterns FIRST
     safe_patterns = [
-      ~r/path\.normalize\(/,           # path.normalize is always safe
-      ~r/path\.resolve\(/,             # path.resolve is safe
-      ~r/Path\([^)]*\)\.resolve\(/,    # pathlib.Path().resolve() is safe
-      ~r/basename\(/,                  # Using basename (PHP) is safe
-      ~r/realpath\(/,                  # realpath (PHP) is safe
+      # path.normalize is always safe
+      ~r/path\.normalize\(/,
+      # path.resolve is safe
+      ~r/path\.resolve\(/,
+      # pathlib.Path().resolve() is safe
+      ~r/Path\([^)]*\)\.resolve\(/,
+      # Using basename (PHP) is safe
+      ~r/basename\(/,
+      # realpath (PHP) is safe
+      ~r/realpath\(/
     ]
-    
+
     # These patterns are conditionally safe (only with constants/literals)
     conditionally_safe_patterns = [
-      ~r/path\.join\(__dirname/,           # path.join with __dirname
-      ~r/path\.join\([^,]*['"][^'"]*['"]/, # path.join with literals
-      ~r/os\.path\.join\([A-Z_]+/,         # os.path.join with constants like BASE_DIR
-      ~r/os\.path\.join\(['"][^'"]*['"]/, # os.path.join with literals only
-      ~r/Rails\.root\.join\(['"][^'"]*['"]/, # Rails.root.join with literals
-      ~r/pathlib\.Path/,                   # pathlib.Path is generally safe
+      # path.join with __dirname
+      ~r/path\.join\(__dirname/,
+      # path.join with literals
+      ~r/path\.join\([^,]*['"][^'"]*['"]/,
+      # os.path.join with constants like BASE_DIR
+      ~r/os\.path\.join\([A-Z_]+/,
+      # os.path.join with literals only
+      ~r/os\.path\.join\(['"][^'"]*['"]/,
+      # Rails.root.join with literals
+      ~r/Rails\.root\.join\(['"][^'"]*['"]/,
+      # pathlib.Path is generally safe
+      ~r/pathlib\.Path/
     ]
-    
+
     # Check for definitely unsafe patterns - but exclude safe built-ins
     definitely_unsafe = [
-      ~r/req\.(query|body|params)/,    # request data
-      ~r/params\[/,                    # params hash
-      ~r/\$_GET/,                      # PHP GET params
-      ~r/\$_POST/,                     # PHP POST params
-      ~r/\.\.\//,                      # Path traversal
-      ~r/user_?[pP]ath/,                # user_path or userPath variables
-      ~r/user_?[fF]ile/,                # user_file or userFile variables
+      # request data
+      ~r/req\.(query|body|params)/,
+      # params hash
+      ~r/params\[/,
+      # PHP GET params
+      ~r/\$_GET/,
+      # PHP POST params
+      ~r/\$_POST/,
+      # Path traversal
+      ~r/\.\.\//,
+      # user_path or userPath variables
+      ~r/user_?[pP]ath/,
+      # user_file or userFile variables
+      ~r/user_?[fF]ile/
     ]
-    
+
     # If it uses a safe sanitization method, it's safe regardless of input
     cond do
       Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end) ->
         true
+
       Enum.any?(definitely_unsafe, fn pattern -> Regex.match?(pattern, code) end) ->
         false
+
       true ->
         # Check conditionally safe patterns
         Enum.any?(conditionally_safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
     end
   end
-  
+
   def is_safe_pattern?(:ssrf, code, %{language: _language}) do
     # Check for safe URL patterns (constants, not user input)
     safe_patterns = [
-      ~r/axios\.get\(['"][^'"]+['"]\)/,        # Literal URL (JS)
-      ~r/fetch\(['"][^'"]+['"]\)/,             # Literal URL (JS)
-      ~r/fetch\(`\$\{[A-Z_]+\}/,               # Template with constants (JS)
-      ~r/\$\{[A-Z_]+\}/,                        # Using constants like ${API_BASE}
-      ~r/process\.env\.[A-Z_]+/,               # Environment variables
-      ~r/requests\.get\(f['"]\{[A-Z_]+\}/,     # Python f-string with constants
-      ~r/urlopen\(['"][^'"]+['"]\)/,           # Python literal URL
-      ~r/localhost|127\.0\.0\.1/,              # Localhost URLs
+      # Literal URL (JS)
+      ~r/axios\.get\(['"][^'"]+['"]\)/,
+      # Literal URL (JS)
+      ~r/fetch\(['"][^'"]+['"]\)/,
+      # Template with constants (JS)
+      ~r/fetch\(`\$\{[A-Z_]+\}/,
+      # Using constants like ${API_BASE}
+      ~r/\$\{[A-Z_]+\}/,
+      # Environment variables
+      ~r/process\.env\.[A-Z_]+/,
+      # Python f-string with constants
+      ~r/requests\.get\(f['"]\{[A-Z_]+\}/,
+      # Python literal URL
+      ~r/urlopen\(['"][^'"]+['"]\)/,
+      # Localhost URLs
+      ~r/localhost|127\.0\.0\.1/
     ]
 
     # Check for unsafe patterns with user input
     unsafe_patterns = [
-      ~r/req\.\w+/,                    # Request data
-      ~r/params\[/,                     # Parameters
-      ~r/body\./,                       # Body data
-      ~r/query\./,                      # Query data
-      ~r/user[A-Z]/,                    # User input (camelCase)
-      ~r/user_/,                        # User input (snake_case)
+      # Request data
+      ~r/req\.\w+/,
+      # Parameters
+      ~r/params\[/,
+      # Body data
+      ~r/body\./,
+      # Query data
+      ~r/query\./,
+      # User input (camelCase)
+      ~r/user[A-Z]/,
+      # User input (snake_case)
+      ~r/user_/
     ]
 
     has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
@@ -248,118 +333,185 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     # Check for safe patterns - using environment variables, config, or secret managers
     safe_patterns = [
       # Environment variables - JavaScript/TypeScript
-      ~r/process\.env\.[A-Z_]+/,               # process.env.API_KEY
-      ~r/import\.meta\.env\.[A-Z_]+/,          # Vite: import.meta.env.VITE_API_KEY
+      # process.env.API_KEY
+      ~r/process\.env\.[A-Z_]+/,
+      # Vite: import.meta.env.VITE_API_KEY
+      ~r/import\.meta\.env\.[A-Z_]+/,
 
       # Environment variables - Python
-      ~r/os\.environ\[/,                       # os.environ['KEY']
-      ~r/os\.getenv\(/,                        # os.getenv('KEY')
-      ~r/environ\.get\(/,                      # environ.get('KEY')
+      # os.environ['KEY']
+      ~r/os\.environ\[/,
+      # os.getenv('KEY')
+      ~r/os\.getenv\(/,
+      # environ.get('KEY')
+      ~r/environ\.get\(/,
 
       # Environment variables - Ruby
-      ~r/ENV\[/,                               # ENV['KEY']
-      ~r/ENV\.fetch\(/,                        # ENV.fetch('KEY')
+      # ENV['KEY']
+      ~r/ENV\[/,
+      # ENV.fetch('KEY')
+      ~r/ENV\.fetch\(/,
 
       # Environment variables - PHP
-      ~r/\$_ENV\[/,                            # $_ENV['KEY']
-      ~r/getenv\(/,                            # getenv('KEY')
-      ~r/\$_SERVER\[['"].*KEY/,                # $_SERVER['API_KEY']
+      # $_ENV['KEY']
+      ~r/\$_ENV\[/,
+      # getenv('KEY')
+      ~r/getenv\(/,
+      # $_SERVER['API_KEY']
+      ~r/\$_SERVER\[['"].*KEY/,
 
       # Environment variables - Go
-      ~r/os\.Getenv\(/,                        # os.Getenv("KEY")
-      ~r/os\.LookupEnv\(/,                     # os.LookupEnv("KEY")
+      # os.Getenv("KEY")
+      ~r/os\.Getenv\(/,
+      # os.LookupEnv("KEY")
+      ~r/os\.LookupEnv\(/,
 
       # Environment variables - Java
-      ~r/System\.getenv\(/,                    # System.getenv("KEY")
-      ~r/System\.getProperty\(/,               # System.getProperty("key")
+      # System.getenv("KEY")
+      ~r/System\.getenv\(/,
+      # System.getProperty("key")
+      ~r/System\.getProperty\(/,
 
       # Environment variables - Rust
-      ~r/env::var\(/,                          # env::var("KEY")
-      ~r/std::env::var\(/,                     # std::env::var("KEY")
+      # env::var("KEY")
+      ~r/env::var\(/,
+      # std::env::var("KEY")
+      ~r/std::env::var\(/,
 
       # Environment variables - Elixir
-      ~r/System\.get_env\(/,                   # System.get_env("KEY")
-      ~r/System\.fetch_env!\(/,                # System.fetch_env!("KEY")
+      # System.get_env("KEY")
+      ~r/System\.get_env\(/,
+      # System.fetch_env!("KEY")
+      ~r/System\.fetch_env!\(/,
 
       # Config files - JavaScript/TypeScript
-      ~r/config\.get\(/,                       # config.get('key')
-      ~r/process\.env\[/,                      # process.env[key]
-      ~r/require\(['"]config['"]\)/,           # require('config')
+      # config.get('key')
+      ~r/config\.get\(/,
+      # process.env[key]
+      ~r/process\.env\[/,
+      # require('config')
+      ~r/require\(['"]config['"]\)/,
 
       # Config files - Python
-      ~r/settings\.[A-Z_]+/,                   # Django: settings.SECRET_KEY
-      ~r/config\[/,                            # config['key']
-      ~r/ConfigParser/,                        # ConfigParser usage
+      # Django: settings.SECRET_KEY
+      ~r/settings\.[A-Z_]+/,
+      # config['key']
+      ~r/config\[/,
+      # ConfigParser usage
+      ~r/ConfigParser/,
 
       # Config files - Ruby
-      ~r/Rails\.application\.credentials/,     # Rails credentials
-      ~r/Rails\.application\.secrets/,         # Rails secrets
-      ~r/Config\./,                            # Config gem
+      # Rails credentials
+      ~r/Rails\.application\.credentials/,
+      # Rails secrets
+      ~r/Rails\.application\.secrets/,
+      # Config gem
+      ~r/Config\./,
 
       # Config files - PHP
-      ~r/config\(/,                           # Laravel: config('app.key')
-      ~r/Config::get\(/,                       # Config::get('key')
+      # Laravel: config('app.key')
+      ~r/config\(/,
+      # Config::get('key')
+      ~r/Config::get\(/,
 
       # Config files - Go
-      ~r/viper\./,                             # Viper config
-      ~r/godotenv/,                            # godotenv usage
+      # Viper config
+      ~r/viper\./,
+      # godotenv usage
+      ~r/godotenv/,
 
       # Config files - Java
-      ~r/Properties\(\)/,                      # Properties file
-      ~r/@Value\(/,                            # Spring @Value
-      ~r/application\.properties/,             # Spring properties
+      # Properties file
+      ~r/Properties\(\)/,
+      # Spring @Value
+      ~r/@Value\(/,
+      # Spring properties
+      ~r/application\.properties/,
 
       # Config files - Rust
-      ~r/Config::builder\(/,                   # config crate
-      ~r/dotenv\(\)/,                          # dotenv usage
+      # config crate
+      ~r/Config::builder\(/,
+      # dotenv usage
+      ~r/dotenv\(\)/,
 
       # Config files - Elixir
-      ~r/Application\.get_env\(/,              # Application.get_env()
-      ~r/Application\.fetch_env!\(/,           # Application.fetch_env!()
-      ~r/config :[\w]+,/,                      # config :app, key: value
+      # Application.get_env()
+      ~r/Application\.get_env\(/,
+      # Application.fetch_env!()
+      ~r/Application\.fetch_env!\(/,
+      # config :app, key: value
+      ~r/config :[\w]+,/,
 
       # Secret managers
-      ~r/secretsManager\./,                    # AWS Secrets Manager
-      ~r/SecretsManager/,                      # AWS SDK
-      ~r/key_vault\./,                         # Azure Key Vault
-      ~r/KeyVault/,                            # Azure SDK
-      ~r/vault\./,                             # HashiCorp Vault
-      ~r/SecretManager\./,                     # Google Secret Manager
-      ~r/KMS\./,                               # AWS KMS
-      ~r/ParameterStore/,                      # AWS Parameter Store
+      # AWS Secrets Manager
+      ~r/secretsManager\./,
+      # AWS SDK
+      ~r/SecretsManager/,
+      # Azure Key Vault
+      ~r/key_vault\./,
+      # Azure SDK
+      ~r/KeyVault/,
+      # HashiCorp Vault
+      ~r/vault\./,
+      # Google Secret Manager
+      ~r/SecretManager\./,
+      # AWS KMS
+      ~r/KMS\./,
+      # AWS Parameter Store
+      ~r/ParameterStore/,
 
       # Framework-specific secure patterns
-      ~r/Rails\.application\.secrets/,         # Rails secrets
-      ~r/Keyring\./,                           # Python keyring
-      ~r/keychain\./,                          # macOS Keychain
-      ~r/credential_process/,                  # AWS credential process
+      # Rails secrets
+      ~r/Rails\.application\.secrets/,
+      # Python keyring
+      ~r/Keyring\./,
+      # macOS Keychain
+      ~r/keychain\./,
+      # AWS credential process
+      ~r/credential_process/,
 
       # Config loaders
-      ~r/dotenv/,                              # dotenv library
-      ~r/decouple/,                            # python-decouple
-      ~r/environs/,                            # environs library
+      # dotenv library
+      ~r/dotenv/,
+      # python-decouple
+      ~r/decouple/,
+      # environs library
+      ~r/environs/
     ]
 
     # Check for unsafe patterns - hardcoded secrets
     unsafe_patterns = [
       # Common secret patterns
-      ~r/['"][a-zA-Z0-9]{32,}['"]/,           # Long alphanumeric strings
-      ~r/sk[-_][a-zA-Z0-9]+/,                 # Stripe-like keys
-      ~r/AKIA[A-Z0-9]+/,                      # AWS access keys
-      ~r/ghp_[a-zA-Z0-9]+/,                   # GitHub personal tokens
-      ~r/glpat-[a-zA-Z0-9]+/,                 # GitLab tokens
-      ~r/['"]Bearer\s+[a-zA-Z0-9\-._]+['"]/,  # Bearer tokens
+      # Long alphanumeric strings
+      ~r/['"][a-zA-Z0-9]{32,}['"]/,
+      # Stripe-like keys
+      ~r/sk[-_][a-zA-Z0-9]+/,
+      # AWS access keys
+      ~r/AKIA[A-Z0-9]+/,
+      # GitHub personal tokens
+      ~r/ghp_[a-zA-Z0-9]+/,
+      # GitLab tokens
+      ~r/glpat-[a-zA-Z0-9]+/,
+      # Bearer tokens
+      ~r/['"]Bearer\s+[a-zA-Z0-9\-._]+['"]/,
 
       # Password patterns
-      ~r/password\s*[:=]\s*['"][^'"]+['"]/,   # password = "something"
-      ~r/passwd\s*[:=]\s*['"][^'"]+['"]/,     # passwd = "something"
-      ~r/pwd\s*[:=]\s*['"][^'"]+['"]/,        # pwd = "something"
+      # password = "something"
+      ~r/password\s*[:=]\s*['"][^'"]+['"]/,
+      # passwd = "something"
+      ~r/passwd\s*[:=]\s*['"][^'"]+['"]/,
+      # pwd = "something"
+      ~r/pwd\s*[:=]\s*['"][^'"]+['"]/,
 
       # API key patterns
-      ~r/api_?key\s*[:=]\s*['"][^'"]+['"]/i,  # api_key = "something"
-      ~r/apikey\s*[:=]\s*['"][^'"]+['"]/i,    # apikey = "something"
-      ~r/token\s*[:=]\s*['"][^'"]+['"]/,      # token = "something"
-      ~r/secret\s*[:=]\s*['"][^'"]+['"]/,     # secret = "something"
+      # api_key = "something"
+      ~r/api_?key\s*[:=]\s*['"][^'"]+['"]/i,
+      # apikey = "something"
+      ~r/apikey\s*[:=]\s*['"][^'"]+['"]/i,
+      # token = "something"
+      ~r/token\s*[:=]\s*['"][^'"]+['"]/,
+      # secret = "something"
+      ~r/secret\s*[:=]\s*['"][^'"]+['"]/
     ]
 
     has_safe = Enum.any?(safe_patterns, fn pattern -> Regex.match?(pattern, code) end)
@@ -371,135 +523,251 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
 
   # Default case - not recognized as safe
   def is_safe_pattern?(_vulnerability_type, _code, _context), do: false
-  
+
   # Private helper functions
-  
-  defp get_timing_safe_patterns("javascript"), do: [
-    ~r/===\s+[A-Z][A-Z_]+/,              # Constant comparison
-    ~r/===\s+\w+\.[A-Z]/,                # Module constant
-    ~r/\.code\s*===\s*DOMException\./,  # DOMException constants
-    ~r/\.status\s*===\s*\d+/,           # HTTP status codes
-    ~r/===\s*\d+/,                       # Numeric literal comparison
-    ~r/!==\s*\d+/,                       # Numeric literal not-equal
-    ~r/\w+\s*===\s*\d+/,                 # Any variable compared to number
-  ]
-  defp get_timing_safe_patterns("python"), do: [
-    ~r/==\s+[A-Z][A-Z_]+/,               # Constant comparison
-    ~r/==\s+\w+\.[A-Z]/,                 # Module constant
-    ~r/\.status_code\s*==\s*\d+/,       # HTTP status codes
-  ]
-  defp get_timing_safe_patterns("ruby"), do: [
-    ~r/==\s+[A-Z][A-Z_]+/,               # Constant comparison
-    ~r/==\s+::\w+/,                      # Module constant
-    ~r/\.status\s*==\s*\d+/,             # HTTP status codes
-  ]
-  defp get_timing_safe_patterns("php"), do: [
-    ~r/===\s+[A-Z][A-Z_]+/,              # Constant comparison
-    ~r/===\s+\w+::[A-Z]/,                # Class constant
-    ~r/->getStatusCode\(\)\s*===\s*\d+/, # HTTP status codes
-  ]
+
+  defp get_timing_safe_patterns("javascript"),
+    do: [
+      # Constant comparison
+      ~r/===\s+[A-Z][A-Z_]+/,
+      # Module constant
+      ~r/===\s+\w+\.[A-Z]/,
+      # DOMException constants
+      ~r/\.code\s*===\s*DOMException\./,
+      # HTTP status codes
+      ~r/\.status\s*===\s*\d+/,
+      # Numeric literal comparison
+      ~r/===\s*\d+/,
+      # Numeric literal not-equal
+      ~r/!==\s*\d+/,
+      # Any variable compared to number
+      ~r/\w+\s*===\s*\d+/
+    ]
+
+  defp get_timing_safe_patterns("python"),
+    do: [
+      # Constant comparison
+      ~r/==\s+[A-Z][A-Z_]+/,
+      # Module constant
+      ~r/==\s+\w+\.[A-Z]/,
+      # HTTP status codes
+      ~r/\.status_code\s*==\s*\d+/
+    ]
+
+  defp get_timing_safe_patterns("ruby"),
+    do: [
+      # Constant comparison
+      ~r/==\s+[A-Z][A-Z_]+/,
+      # Module constant
+      ~r/==\s+::\w+/,
+      # HTTP status codes
+      ~r/\.status\s*==\s*\d+/
+    ]
+
+  defp get_timing_safe_patterns("php"),
+    do: [
+      # Constant comparison
+      ~r/===\s+[A-Z][A-Z_]+/,
+      # Class constant
+      ~r/===\s+\w+::[A-Z]/,
+      # HTTP status codes
+      ~r/->getStatusCode\(\)\s*===\s*\d+/
+    ]
+
   defp get_timing_safe_patterns(_), do: []
 
-  defp get_sql_unsafe_patterns("javascript"), do: [
-    ~r/SELECT.*\+\s*\w+/i,               # SELECT with concatenation
-    ~r/WHERE.*\+\s*\w+/i,                # WHERE with concatenation  
-    ~r/VALUES.*\+\s*\w+/i,               # VALUES with concatenation
-    ~r/FROM\s+['"]?\s*\+\s*/i,          # FROM with concatenation
-    ~r/query\([^,]*\+[^,]*\)/,           # query() with concatenation
-    ~r/password\s*===\s*\w+Password/,    # Timing attack vulnerability on same line
-    ~r/apiKey\s*===/,                    # API key comparison on same line
-    ~r/token\s*===/,                     # Token comparison on same line
-  ]
-  defp get_sql_unsafe_patterns("python"), do: [
-    ~r/SELECT.*["']\s*%\s*\w+/i,         # SELECT with % formatting (not parameterized)
-    ~r/WHERE.*["']\s*%\s*\w+/i,          # WHERE with % formatting (not parameterized)
-    ~r/VALUES.*["']\s*%\s*\w+/i,         # VALUES with % formatting (not parameterized)
-    ~r/execute\([^,]+["']\s*%\s*[^,)]+\)$/,  # execute() with % formatting without params
-    ~r/SELECT.*f["']/i,                  # f-string in SQL
-    ~r/WHERE.*f["']/i,                   # f-string in WHERE
-  ]
-  defp get_sql_unsafe_patterns("ruby"), do: [
-    ~r/SELECT.*#\{/i,                    # SELECT with interpolation
-    ~r/WHERE.*#\{/i,                     # WHERE with interpolation
-    ~r/VALUES.*#\{/i,                    # VALUES with interpolation
-    ~r/exec\([^,]*\+[^,]*\)/,            # exec() with concatenation
-  ]
-  defp get_sql_unsafe_patterns("php"), do: [
-    ~r/SELECT.*\.\s*\$/i,                # SELECT with concatenation
-    ~r/WHERE.*\.\s*\$/i,                 # WHERE with concatenation
-    ~r/VALUES.*\.\s*\$/i,                # VALUES with concatenation
-    ~r/query\([^,]*\.\s*\$/,             # query() with concatenation
-  ]
+  defp get_sql_unsafe_patterns("javascript"),
+    do: [
+      # SELECT with concatenation
+      ~r/SELECT.*\+\s*\w+/i,
+      # WHERE with concatenation  
+      ~r/WHERE.*\+\s*\w+/i,
+      # VALUES with concatenation
+      ~r/VALUES.*\+\s*\w+/i,
+      # FROM with concatenation
+      ~r/FROM\s+['"]?\s*\+\s*/i,
+      # query() with concatenation
+      ~r/query\([^,]*\+[^,]*\)/,
+      # Timing attack vulnerability on same line
+      ~r/password\s*===\s*\w+Password/,
+      # API key comparison on same line
+      ~r/apiKey\s*===/,
+      # Token comparison on same line
+      ~r/token\s*===/
+    ]
+
+  defp get_sql_unsafe_patterns("python"),
+    do: [
+      # SELECT with % formatting (not parameterized)
+      ~r/SELECT.*["']\s*%\s*\w+/i,
+      # WHERE with % formatting (not parameterized)
+      ~r/WHERE.*["']\s*%\s*\w+/i,
+      # VALUES with % formatting (not parameterized)
+      ~r/VALUES.*["']\s*%\s*\w+/i,
+      # execute() with % formatting without params
+      ~r/execute\([^,]+["']\s*%\s*[^,)]+\)$/,
+      # f-string in SQL
+      ~r/SELECT.*f["']/i,
+      # f-string in WHERE
+      ~r/WHERE.*f["']/i
+    ]
+
+  defp get_sql_unsafe_patterns("ruby"),
+    do: [
+      # SELECT with interpolation
+      ~r/SELECT.*#\{/i,
+      # WHERE with interpolation
+      ~r/WHERE.*#\{/i,
+      # VALUES with interpolation
+      ~r/VALUES.*#\{/i,
+      # exec() with concatenation
+      ~r/exec\([^,]*\+[^,]*\)/
+    ]
+
+  defp get_sql_unsafe_patterns("php"),
+    do: [
+      # SELECT with concatenation
+      ~r/SELECT.*\.\s*\$/i,
+      # WHERE with concatenation
+      ~r/WHERE.*\.\s*\$/i,
+      # VALUES with concatenation
+      ~r/VALUES.*\.\s*\$/i,
+      # query() with concatenation
+      ~r/query\([^,]*\.\s*\$/
+    ]
+
   defp get_sql_unsafe_patterns(_), do: []
 
-  defp get_sql_safe_patterns("javascript"), do: [
-    ~r/\$\d+/,                            # PostgreSQL params ($1, $2)
-    ~r/\?\s*[,\)]/,                       # MySQL params (?)
-    ~r/:\w+/,                             # Named params (:id, :name)
-    ~r/\.query\([^,]+,\s*\[/,            # Parameterized query with array
-    ~r/\.prepare\(/,                      # Prepared statements
-  ]
-  defp get_sql_safe_patterns("python"), do: [
-    ~r/\.execute\([^,]+,\s*[\[\(]/,      # Parameterized execute with params
-    ~r/\.executemany\([^,]+,\s*[\[\(]/,  # Parameterized executemany
-    ~r/\?\s*[,\)]/,                       # SQLite params when not using %
-    ~r/:\w+/,                             # Named params
-    ~r/\.objects\.filter\(/,              # Django ORM filter
-    ~r/\.objects\.get\(/,                 # Django ORM get
-    ~r/\.objects\.all\(/,                 # Django ORM all
-  ]
-  defp get_sql_safe_patterns("ruby"), do: [
-    ~r/\?\s*[,\)]/,                       # Placeholder params
-    ~r/:\w+/,                             # Named params
-    ~r/\.where\([^,]+,\s*[\[\{]/,        # Rails where with params
-  ]
-  defp get_sql_safe_patterns("php"), do: [
-    ~r/\?\s*[,\)]/,                       # PDO placeholders
-    ~r/:\w+/,                             # PDO named params
-    ~r/->prepare\(/,                      # Prepared statements
-    ~r/->bind_param\(/,                   # mysqli bind
-  ]
+  defp get_sql_safe_patterns("javascript"),
+    do: [
+      # PostgreSQL params ($1, $2)
+      ~r/\$\d+/,
+      # MySQL params (?)
+      ~r/\?\s*[,\)]/,
+      # Named params (:id, :name)
+      ~r/:\w+/,
+      # Parameterized query with array
+      ~r/\.query\([^,]+,\s*\[/,
+      # Prepared statements
+      ~r/\.prepare\(/
+    ]
+
+  defp get_sql_safe_patterns("python"),
+    do: [
+      # Parameterized execute with params
+      ~r/\.execute\([^,]+,\s*[\[\(]/,
+      # Parameterized executemany
+      ~r/\.executemany\([^,]+,\s*[\[\(]/,
+      # SQLite params when not using %
+      ~r/\?\s*[,\)]/,
+      # Named params
+      ~r/:\w+/,
+      # Django ORM filter
+      ~r/\.objects\.filter\(/,
+      # Django ORM get
+      ~r/\.objects\.get\(/,
+      # Django ORM all
+      ~r/\.objects\.all\(/
+    ]
+
+  defp get_sql_safe_patterns("ruby"),
+    do: [
+      # Placeholder params
+      ~r/\?\s*[,\)]/,
+      # Named params
+      ~r/:\w+/,
+      # Rails where with params
+      ~r/\.where\([^,]+,\s*[\[\{]/
+    ]
+
+  defp get_sql_safe_patterns("php"),
+    do: [
+      # PDO placeholders
+      ~r/\?\s*[,\)]/,
+      # PDO named params
+      ~r/:\w+/,
+      # Prepared statements
+      ~r/->prepare\(/,
+      # mysqli bind
+      ~r/->bind_param\(/
+    ]
+
   defp get_sql_safe_patterns(_), do: []
 
-  defp get_nosql_safe_patterns("javascript"), do: [
-    ~r/\.find\(\{[^$]*\}\)/,             # No $where
-    ~r/\.findOne\(\{[^$]*\}\)/,          # No $where
-    ~r/\.findById\(/,                    # Safe findById
-    ~r/\.updateOne\(\{[^$]*\}\)/,        # No $where in update
-  ]
-  defp get_nosql_safe_patterns("python"), do: [
-    ~r/\.find\(\{[^$]*\}\)/,             # No $where
-    ~r/\.find_one\(\{[^$]*\}\)/,         # No $where
-  ]
+  defp get_nosql_safe_patterns("javascript"),
+    do: [
+      # No $where
+      ~r/\.find\(\{[^$]*\}\)/,
+      # No $where
+      ~r/\.findOne\(\{[^$]*\}\)/,
+      # Safe findById
+      ~r/\.findById\(/,
+      # No $where in update
+      ~r/\.updateOne\(\{[^$]*\}\)/
+    ]
+
+  defp get_nosql_safe_patterns("python"),
+    do: [
+      # No $where
+      ~r/\.find\(\{[^$]*\}\)/,
+      # No $where
+      ~r/\.find_one\(\{[^$]*\}\)/
+    ]
+
   defp get_nosql_safe_patterns(_), do: []
-  
-  defp get_xss_safe_patterns("javascript"), do: [
-    ~r/\.textContent\s*=/,               # Safe text content
-    ~r/\.innerText\s*=/,                # Safe inner text
-    ~r/\.render\(/,                      # Template rendering (usually safe)
-    ~r/escape\(/,                        # Escaping function
-    ~r/sanitize\(/,                      # Sanitization
-    ~r/\$\([^)]+\)\.text\(/,            # jQuery .text() method
-    ~r/createTextNode\(/,                # DOM createTextNode
-    ~r/React\.createElement\(/,          # React createElement is safe by default
-  ]
-  defp get_xss_safe_patterns("python"), do: [
-    ~r/escape\(/,                        # Escaping
-    ~r/markup\.escape\(/,                # Markup escape
-    ~r/\.render\(/,                      # Template rendering
-  ]
-  defp get_xss_safe_patterns("ruby"), do: [
-    ~r/html_safe/,                       # Rails html_safe
-    ~r/escape_html\(/,                   # HTML escaping
-    ~r/h\(/,                             # Rails h() helper
-  ]
-  defp get_xss_safe_patterns("php"), do: [
-    ~r/htmlspecialchars\(/,              # PHP escaping
-    ~r/htmlentities\(/,                  # PHP entities
-    ~r/filter_var\(/,                    # Input filtering
-  ]
+
+  defp get_xss_safe_patterns("javascript"),
+    do: [
+      # Safe text content
+      ~r/\.textContent\s*=/,
+      # Safe inner text
+      ~r/\.innerText\s*=/,
+      # Template rendering (usually safe)
+      ~r/\.render\(/,
+      # Escaping function
+      ~r/escape\(/,
+      # Sanitization
+      ~r/sanitize\(/,
+      # jQuery .text() method
+      ~r/\$\([^)]+\)\.text\(/,
+      # DOM createTextNode
+      ~r/createTextNode\(/,
+      # React createElement is safe by default
+      ~r/React\.createElement\(/
+    ]
+
+  defp get_xss_safe_patterns("python"),
+    do: [
+      # Escaping
+      ~r/escape\(/,
+      # Markup escape
+      ~r/markup\.escape\(/,
+      # Template rendering
+      ~r/\.render\(/
+    ]
+
+  defp get_xss_safe_patterns("ruby"),
+    do: [
+      # Rails html_safe
+      ~r/html_safe/,
+      # HTML escaping
+      ~r/escape_html\(/,
+      # Rails h() helper
+      ~r/h\(/
+    ]
+
+  defp get_xss_safe_patterns("php"),
+    do: [
+      # PHP escaping
+      ~r/htmlspecialchars\(/,
+      # PHP entities
+      ~r/htmlentities\(/,
+      # Input filtering
+      ~r/filter_var\(/
+    ]
+
   defp get_xss_safe_patterns(_), do: []
-  
+
   @doc """
   Explains why a pattern was considered safe or unsafe.
   """
@@ -532,16 +800,18 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
       end
     end
   end
-  
+
   @doc """
   Returns confidence adjustment based on pattern safety.
   Safe patterns get very low confidence (likely false positive).
   """
   def confidence_adjustment(vulnerability_type, code, context) do
     if is_safe_pattern?(vulnerability_type, code, context) do
-      0.1  # 90% reduction for safe patterns
+      # 90% reduction for safe patterns
+      0.1
     else
-      1.0  # No adjustment for potentially unsafe patterns
+      # No adjustment for potentially unsafe patterns
+      1.0
     end
   end
 end

@@ -1,45 +1,45 @@
 defmodule Rsolv.Security.Patterns.Elixir.XssRawHtml do
   @moduledoc """
   Detects Cross-Site Scripting (XSS) vulnerabilities via raw/html_safe in Phoenix.
-  
+
   This pattern identifies dangerous usage of `Phoenix.HTML.raw/1`, `html_safe/0`, and
   related functions that bypass Phoenix's automatic HTML escaping, potentially allowing
   attackers to inject malicious JavaScript.
-  
+
   ## Vulnerability Details
-  
+
   Phoenix automatically escapes HTML content by default to prevent XSS attacks. However,
   developers can bypass this protection using `raw/1` or `html_safe/0` functions. When
   these functions are used with user-controlled input, it creates XSS vulnerabilities.
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   # In controller
   user_input = params["content"]
-  
+
   # In template
   <%= raw(user_input) %>
   ```
-  
+
   If user_input contains `<script>alert('XSS')</script>`, it will execute in the browser.
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   # Let Phoenix auto-escape
   <%= user_input %>
-  
+
   # Or use Phoenix.HTML.escape/1 explicitly
   <%= Phoenix.HTML.escape(user_input) %>
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -67,7 +67,8 @@ defmodule Rsolv.Security.Patterns.Elixir.XssRawHtml do
       ],
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
-      recommendation: "Use Phoenix's automatic HTML escaping or Phoenix.HTML.escape/1 for user input",
+      recommendation:
+        "Use Phoenix's automatic HTML escaping or Phoenix.HTML.escape/1 for user input",
       test_cases: %{
         vulnerable: [
           ~S|Phoenix.HTML.raw(user_input)|,
@@ -86,7 +87,7 @@ defmodule Rsolv.Security.Patterns.Elixir.XssRawHtml do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -102,7 +103,8 @@ defmodule Rsolv.Security.Patterns.Elixir.XssRawHtml do
         %{
           type: :cwe,
           id: "CWE-79",
-          title: "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+          title:
+            "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
           url: "https://cwe.mitre.org/data/definitions/79.html"
         },
         %{
@@ -144,7 +146,8 @@ defmodule Rsolv.Security.Patterns.Elixir.XssRawHtml do
           description: "Phoenix.HTML before 3.0.4 XSS in HEEx class attributes",
           severity: "high",
           cvss: 6.1,
-          note: "XSS vulnerability in Phoenix HTML tag generation allowing script injection via class attributes"
+          note:
+            "XSS vulnerability in Phoenix HTML tag generation allowing script injection via class attributes"
         },
         %{
           id: "CVE-2020-15169",
@@ -184,7 +187,7 @@ defmodule Rsolv.Security.Patterns.Elixir.XssRawHtml do
       }
     }
   end
-  
+
   @impl true
   def ast_enhancement do
     %{

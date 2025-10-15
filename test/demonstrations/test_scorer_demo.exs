@@ -47,6 +47,7 @@ defmodule TestScorerDemo do
     section_header("Scenario 1: Ruby/RSpec - Strongly-Paired Prefixes")
 
     vulnerable_file = "lib/app/services/user_service.ex"
+
     candidates = [
       "test/app/services/user_service_test.exs",
       "test/app/models/user_test.exs",
@@ -74,6 +75,7 @@ defmodule TestScorerDemo do
     section_header("Scenario 2: JavaScript/Vitest - Different Prefixes")
 
     vulnerable_file = "src/controllers/api/v1/users_controller.js"
+
     candidates = [
       "test/controllers/api/v1/users_controller.test.js",
       "test/controllers/users_controller.test.js",
@@ -92,7 +94,9 @@ defmodule TestScorerDemo do
 
       # Explain the score
       if rec.score == 0.99 do
-        IO.puts("             Note: 0.99 (not 1.0) because 'src' and 'test' aren't strongly-paired")
+        IO.puts(
+          "             Note: 0.99 (not 1.0) because 'src' and 'test' aren't strongly-paired"
+        )
       end
     end)
 
@@ -105,6 +109,7 @@ defmodule TestScorerDemo do
     section_header("Scenario 3: Python/pytest - Multiple Candidates Ranked")
 
     vulnerable_file = "app/services/authentication.py"
+
     candidates = [
       "tests/services/test_authentication.py",
       "tests/unit/test_auth.py",
@@ -132,6 +137,7 @@ defmodule TestScorerDemo do
     section_header("Scenario 4: Deep Directory Structures")
 
     vulnerable_file = "lib/rsolv/ast/pattern_matcher.ex"
+
     candidates = [
       "test/rsolv/ast/pattern_matcher_test.exs",
       "test/rsolv/ast/ast_normalizer_test.exs",
@@ -156,6 +162,7 @@ defmodule TestScorerDemo do
     section_header("Scenario 5: No Good Matches - Fallback Path")
 
     vulnerable_file = "src/database/migrations/001_create_users.sql"
+
     candidates = [
       "test/api/users_test.js",
       "test/models/account_test.js"
@@ -183,6 +190,7 @@ defmodule TestScorerDemo do
     section_header("Scenario 6: Identical Scores - Consistent Ordering")
 
     vulnerable_file = "app/utils/helpers.rb"
+
     candidates = [
       "spec/unit/calculator_spec.rb",
       "spec/unit/formatter_spec.rb",
@@ -214,13 +222,14 @@ defmodule TestScorerDemo do
   defp format_score(score) do
     score_str = :erlang.float_to_binary(score, decimals: 2)
 
-    color = cond do
-      score >= 1.5 -> :green
-      score >= 1.0 -> :green
-      score >= 0.8 -> :yellow
-      score >= 0.5 -> :light_yellow
-      true -> :red
-    end
+    color =
+      cond do
+        score >= 1.5 -> :green
+        score >= 1.0 -> :green
+        score >= 0.8 -> :yellow
+        score >= 0.5 -> :light_yellow
+        true -> :red
+      end
 
     colorize(String.pad_leading(score_str, 4), color)
   end
@@ -234,12 +243,16 @@ defmodule TestScorerDemo do
     cond do
       score >= 1.5 ->
         IO.puts("       Breakdown: 1.0 (path match) + 0.3 (module) + 0.2 (directory) = 1.5")
+
       score >= 1.2 ->
         IO.puts("       Breakdown: ~1.0 (path match) + 0.3 (module bonus)")
+
       score >= 1.0 ->
         IO.puts("       Breakdown: 1.0 (perfect path match)")
+
       score >= 0.8 ->
         IO.puts("       Breakdown: ~0.8-1.0 (high path similarity)")
+
       true ->
         IO.puts("       Breakdown: <0.8 (limited similarity)")
     end

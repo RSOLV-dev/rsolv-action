@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
   @moduledoc """
   Insecure Deserialization in JavaScript/Node.js
-  
+
   Detects dangerous patterns like:
     JSON.parse(req.body.data)
     yaml.load(userInput)
@@ -17,33 +17,33 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
   without proper validation. In JavaScript, this can lead to remote code execution
   through various attack vectors including prototype pollution, code injection via
   eval-like behaviors, and exploitation of unsafe parsing libraries.
-  
+
   ## Vulnerability Details
-  
+
   While JavaScript's `JSON.parse()` is generally safer than deserialization in other
   languages, it can still be exploited when combined with other vulnerabilities or
   when using unsafe parsing libraries. The risk increases dramatically when using
   eval-based parsing, YAML deserializers, or custom deserialization functions that
   don't properly validate input structure and content.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Direct YAML parsing with user input
   const yaml = require('js-yaml');
-  
+
   app.post('/config', (req, res) => {
     // This can execute arbitrary JavaScript!
     const config = yaml.load(req.body.yamlData);
     applyConfig(config);
   });
-  
+
   // Attack payload:
   // !!js/function >
   //   function() {
   //     require('child_process').exec('rm -rf /');
   //   }()
   ```
-  
+
   ### Modern Attack Scenarios
   Insecure deserialization in Node.js applications can lead to:
   - Remote code execution through YAML/XML parsers
@@ -51,7 +51,7 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
   - Server-side request forgery through configuration injection
   - Denial of service through resource exhaustion
   - Privilege escalation by manipulating application state
-  
+
   The vulnerability is particularly dangerous in:
   - API endpoints that accept complex data structures
   - Configuration management systems
@@ -59,20 +59,20 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
   - Inter-service communication in microservices
   - Plugin or extension systems that load external code
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the insecure deserialization detection pattern.
-  
+
   This pattern detects dangerous deserialization of untrusted data that can lead to
   remote code execution (RCE) in JavaScript/Node.js applications. It covers multiple
   deserialization vectors including JSON parsing with prototype pollution risks,
   YAML parsing with code execution, eval-based deserialization, and VM module usage.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> pattern.id
       "js-insecure-deserialization"
@@ -132,7 +132,8 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
       type: :deserialization,
       severity: :high,
       languages: ["javascript", "typescript"],
-      regex: ~r/(?:JSON\.parse|yaml\.load|YAML\.load|YAML\.parse|yamljs\.load|js-yaml\.load|yamlParser\.load|loadYaml|(?<!safe)deserialize|unserialize|eval|Function|vm\.run(?:InContext|InNewContext|InThisContext)?|vm\.Script|runInNewContext|parseXML|parseXmlString|xml2js\.parseString|xmlParse|xmlParser\.parse|xmlToObject|convertXML|processXML|fromJSON|parseObject|reconstruct)\s*\([^)]*?(?:req\.body|request\.body|req\.params|request\.params|req\.query|request\.query|req\b|request\b|params\b|query\b|body\b|user|input|data(?!base64)|payload)/i,
+      regex:
+        ~r/(?:JSON\.parse|yaml\.load|YAML\.load|YAML\.parse|yamljs\.load|js-yaml\.load|yamlParser\.load|loadYaml|(?<!safe)deserialize|unserialize|eval|Function|vm\.run(?:InContext|InNewContext|InThisContext)?|vm\.Script|runInNewContext|parseXML|parseXmlString|xml2js\.parseString|xmlParse|xmlParser\.parse|xmlToObject|convertXML|processXML|fromJSON|parseObject|reconstruct)\s*\([^)]*?(?:req\.body|request\.body|req\.params|request\.params|req\.query|request\.query|req\b|request\b|params\b|query\b|body\b|user|input|data(?!base64)|payload)/i,
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
       recommendation: "Validate data structure before deserialization. Use safe parsing methods.",
@@ -159,10 +160,10 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for insecure deserialization.
-  
+
   This metadata documents the critical security implications of unsafe
   deserialization patterns and provides authoritative guidance for secure
   data parsing in JavaScript applications.
@@ -176,25 +177,25 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
       safe compared to serialization in languages like Java or PHP, the JavaScript
       ecosystem presents unique risks through various parsing libraries and
       eval-based deserialization patterns.
-      
+
       The vulnerability in JavaScript manifests primarily through:
       1. YAML parsers that support code execution features
       2. XML parsers vulnerable to XXE and code injection
       3. Custom deserialization functions using eval() or Function()
       4. Prototype pollution through malicious JSON structures
       5. VM-based code execution with user-controlled input
-      
+
       Modern Node.js applications are particularly vulnerable due to their
       heavy reliance on configuration files, inter-service communication, and
       dynamic module loading. A single insecure deserialization vulnerability
       can compromise an entire application or even the underlying server.
-      
+
       The rise of microservices architectures has expanded the attack surface,
       as services often exchange complex data structures through APIs. Without
       proper validation at each service boundary, attackers can exploit
       deserialization vulnerabilities to traverse through multiple services,
       achieving lateral movement within the infrastructure.
-      
+
       The JavaScript-specific nature of these attacks often involves exploiting
       the language's dynamic features, prototype chain manipulation, and the
       availability of powerful runtime APIs like child_process in Node.js
@@ -217,7 +218,8 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
           type: :research,
           id: "nodejs_deserialization",
           title: "Exploiting Node.js deserialization bug for Remote Code Execution",
-          url: "https://opsecx.com/index.php/2017/02/08/exploiting-node-js-deserialization-bug-for-remote-code-execution/"
+          url:
+            "https://opsecx.com/index.php/2017/02/08/exploiting-node-js-deserialization-bug-for-remote-code-execution/"
         },
         %{
           type: :vendor,
@@ -261,14 +263,16 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
       cve_examples: [
         %{
           id: "CVE-2017-16138",
-          description: "The mime module < 1.4.1, 2.0.0 - 2.0.4 is vulnerable to Regular Expression Denial of Service via a malicious Content-Type header",
+          description:
+            "The mime module < 1.4.1, 2.0.0 - 2.0.4 is vulnerable to Regular Expression Denial of Service via a malicious Content-Type header",
           severity: "high",
           cvss: 7.5,
           note: "Demonstrates how parsing untrusted input can lead to DoS"
         },
         %{
           id: "CVE-2019-10744",
-          description: "Versions of lodash before 4.17.12 are vulnerable to Prototype Pollution via defaultsDeep, merge, and mergeWith functions",
+          description:
+            "Versions of lodash before 4.17.12 are vulnerable to Prototype Pollution via defaultsDeep, merge, and mergeWith functions",
           severity: "critical",
           cvss: 9.1,
           note: "Shows how object merging can lead to prototype pollution"
@@ -297,7 +301,7 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
       ],
       detection_notes: """
       This pattern detects various forms of unsafe deserialization in JavaScript:
-      
+
       1. JSON.parse() with user-controlled input - while generally safe, can lead
          to prototype pollution when combined with unsafe object operations
       2. YAML parsers (yaml.load, YAML.load) - extremely dangerous as they can
@@ -306,7 +310,7 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
       4. Eval-based parsing - using eval() or Function() constructor with user data
       5. VM module usage - Node.js VM contexts with user-controlled code
       6. XML parsing functions - can lead to XXE and code injection
-      
+
       The pattern specifically looks for these dangerous functions being called
       with common user input sources like req.body, params, query, userInput, etc.
       The detection prioritizes high-risk deserialization methods while trying
@@ -355,38 +359,40 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Applies to JavaScript/TypeScript files or any file containing deserialization operations.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files always apply
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) ->
+        true
+
       # If content is provided, check for deserialization operations
       content != nil ->
-        String.contains?(content, "JSON.parse") || 
-        String.contains?(content, "yaml.load") ||
-        String.contains?(content, "deserialize") ||
-        String.contains?(content, "eval(") ||
-        String.contains?(content, "new Function")
-        
+        String.contains?(content, "JSON.parse") ||
+          String.contains?(content, "yaml.load") ||
+          String.contains?(content, "deserialize") ||
+          String.contains?(content, "eval(") ||
+          String.contains?(content, "new Function")
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual insecure deserialization
   and safe parsing practices with proper validation.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -415,7 +421,8 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
             "jsonParse"
           ],
           yaml_parsers: [
-            "yaml.load",         # Dangerous
+            # Dangerous
+            "yaml.load",
             "YAML.load",
             "yamljs.load",
             "js-yaml.load",
@@ -479,11 +486,13 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
           ~r/seeds/
         ],
         safe_patterns: [
-          "yaml.safeLoad",      # Safe YAML parsing
+          # Safe YAML parsing
+          "yaml.safeLoad",
           "YAML.safeLoad",
           "yamljs.safeLoad",
           "js-yaml.safeLoad",
-          "ajv.validate",       # Schema validation
+          # Schema validation
+          "ajv.validate",
           "joi.validate",
           "validateSchema",
           "schemaValidation",
@@ -495,7 +504,8 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
         ],
         check_validation: true,
         validation_patterns: [
-          "validate",           # Validation functions
+          # Validation functions
+          "validate",
           "sanitize",
           "clean",
           "filter",
@@ -506,38 +516,55 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
         ],
         check_hardcoded: true,
         hardcoded_indicators: [
-          "const config =",     # Hardcoded configurations
+          # Hardcoded configurations
+          "const config =",
           "static",
           "default",
           "constant",
           "hardcoded",
           "fixture",
-          "'{'",               # Literal JSON strings
+          # Literal JSON strings
+          "'{'",
           "\"{",
           "`{`"
         ]
       },
       confidence_rules: %{
-        base: 0.7,  # High base - deserialization is dangerous
+        # High base - deserialization is dangerous
+        base: 0.7,
         adjustments: %{
-          "yaml_load" => 0.5,                   # Very dangerous
-          "eval_deserialization" => 0.5,        # Extremely dangerous
-          "xml_external_entities" => 0.4,       # XXE risk
-          "user_input" => 0.3,                  # Direct user input
-          "no_validation" => 0.3,               # No validation seen
-          "vm_execution" => 0.4,                # VM module usage
-          "safe_yaml" => -0.9,                  # Using safeLoad
-          "schema_validation" => -0.7,          # Schema validation present
-          "test_code" => -0.8,                  # Test files
-          "hardcoded_input" => -0.6,            # Hardcoded values
-          "wrapped_in_try_catch" => -0.3,      # Error handling
-          "input_sanitization" => -0.5,         # Sanitization present
-          "trusted_source" => -0.4,             # Internal APIs
-          "configuration_file" => -0.3          # Config files less risky
+          # Very dangerous
+          "yaml_load" => 0.5,
+          # Extremely dangerous
+          "eval_deserialization" => 0.5,
+          # XXE risk
+          "xml_external_entities" => 0.4,
+          # Direct user input
+          "user_input" => 0.3,
+          # No validation seen
+          "no_validation" => 0.3,
+          # VM module usage
+          "vm_execution" => 0.4,
+          # Using safeLoad
+          "safe_yaml" => -0.9,
+          # Schema validation present
+          "schema_validation" => -0.7,
+          # Test files
+          "test_code" => -0.8,
+          # Hardcoded values
+          "hardcoded_input" => -0.6,
+          # Error handling
+          "wrapped_in_try_catch" => -0.3,
+          # Sanitization present
+          "input_sanitization" => -0.5,
+          # Internal APIs
+          "trusted_source" => -0.4,
+          # Config files less risky
+          "configuration_file" => -0.3
         }
       },
-      min_confidence: 0.8  # High threshold - many false positives possible
+      # High threshold - many false positives possible
+      min_confidence: 0.8
     }
   end
-  
 end

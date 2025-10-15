@@ -1,12 +1,9 @@
-<%
-  # Get current path - available from LiveView hooks or fallback to conn for controllers
-  current_path = assigns[:current_path] || 
-    (assigns[:conn] && Phoenix.Controller.current_path(assigns.conn)) || 
-    "/"
-%>
-<RsolvWeb.Components.Header.header 
-  current_path={current_path}
-/>
+<% # Get current path - available from LiveView hooks or fallback to conn for controllers
+current_path =
+  assigns[:current_path] ||
+    (assigns[:conn] && Phoenix.Controller.current_path(assigns.conn)) ||
+    "/" %>
+<RsolvWeb.Components.Header.header current_path={current_path} />
 <main>
-  <%= @inner_content %>
+  {@inner_content}
 </main>

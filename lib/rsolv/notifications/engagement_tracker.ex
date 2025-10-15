@@ -44,10 +44,10 @@ defmodule Rsolv.Notifications.EngagementTracker do
       dashboard_clicks: [],
       metrics_cache: %{}
     }
-    
+
     # Schedule periodic metrics calculation
     Process.send_after(self(), :calculate_metrics, :timer.minutes(5))
-    
+
     {:ok, state}
   end
 
@@ -59,7 +59,7 @@ defmodule Rsolv.Notifications.EngagementTracker do
       timestamp: timestamp,
       clicked: false
     }
-    
+
     new_state = %{state | alerts_sent: [alert | state.alerts_sent]}
     {:noreply, new_state}
   end
@@ -69,22 +69,23 @@ defmodule Rsolv.Notifications.EngagementTracker do
       alert_id: alert_id,
       timestamp: timestamp
     }
-    
+
     # Update the alert as clicked
-    updated_alerts = Enum.map(state.alerts_sent, fn alert ->
-      if alert.id == alert_id do
-        %{alert | clicked: true}
-      else
-        alert
-      end
-    end)
-    
+    updated_alerts =
+      Enum.map(state.alerts_sent, fn alert ->
+        if alert.id == alert_id do
+          %{alert | clicked: true}
+        else
+          alert
+        end
+      end)
+
     new_state = %{
-      state | 
-      alerts_sent: updated_alerts,
-      dashboard_clicks: [click | state.dashboard_clicks]
+      state
+      | alerts_sent: updated_alerts,
+        dashboard_clicks: [click | state.dashboard_clicks]
     }
-    
+
     {:noreply, new_state}
   end
 
@@ -97,16 +98,16 @@ defmodule Rsolv.Notifications.EngagementTracker do
     # Calculate and cache common metrics
     weekly_metrics = calculate_metrics_for_range(state, :week)
     daily_metrics = calculate_metrics_for_range(state, :day)
-    
+
     new_cache = %{
       week: weekly_metrics,
       day: daily_metrics,
       updated_at: DateTime.utc_now()
     }
-    
+
     # Schedule next calculation
     Process.send_after(self(), :calculate_metrics, :timer.minutes(5))
-    
+
     {:noreply, %{state | metrics_cache: new_cache}}
   end
 
@@ -118,28 +119,31 @@ defmodule Rsolv.Notifications.EngagementTracker do
 
   defp calculate_metrics_for_range(state, time_range) do
     cutoff_time = get_cutoff_time(time_range)
-    
-    recent_alerts = Enum.filter(state.alerts_sent, fn alert ->
-      alert.timestamp > cutoff_time
-    end)
-    
+
+    recent_alerts =
+      Enum.filter(state.alerts_sent, fn alert ->
+        alert.timestamp > cutoff_time
+      end)
+
     total_sent = length(recent_alerts)
     total_clicked = Enum.count(recent_alerts, & &1.clicked)
-    
-    click_rate = if total_sent > 0 do
-      Float.round(total_clicked / total_sent * 100, 1)
-    else
-      0.0
-    end
-    
+
+    click_rate =
+      if total_sent > 0 do
+        Float.round(total_clicked / total_sent * 100, 1)
+      else
+        0.0
+      end
+
     # Group by vulnerability type
-    by_type = recent_alerts
-    |> Enum.group_by(& &1.vulnerability_type)
-    |> Enum.map(fn {type, alerts} -> 
-      {type, length(alerts)}
-    end)
-    |> Enum.sort_by(fn {_type, count} -> -count end)
-    
+    by_type =
+      recent_alerts
+      |> Enum.group_by(& &1.vulnerability_type)
+      |> Enum.map(fn {type, alerts} ->
+        {type, length(alerts)}
+      end)
+      |> Enum.sort_by(fn {_type, count} -> -count end)
+
     %{
       total_alerts_sent: total_sent,
       total_clicks: total_clicked,

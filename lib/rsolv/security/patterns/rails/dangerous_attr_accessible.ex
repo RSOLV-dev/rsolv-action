@@ -1,35 +1,35 @@
 defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
   @moduledoc """
   Dangerous attr_accessible usage pattern for Rails applications.
-  
+
   This pattern detects overly permissive attr_accessible declarations in Rails 2.x 
   and 3.x applications that can lead to mass assignment vulnerabilities. This was
   Rails' primary defense against mass assignment before Strong Parameters in Rails 4.
-  
+
   ## Background
-  
+
   Before Rails 4, the attr_accessible and attr_protected methods were used to control
   mass assignment. However, these approaches had significant weaknesses:
   - attr_protected uses blacklisting (dangerous - you might forget fields)
   - attr_accessible uses whitelisting (safer but still error-prone)
   - Missing attr_accessible means ALL attributes are assignable
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability occurs when:
   1. attr_accessible includes sensitive fields (admin, role, etc.)
   2. Models lack any attr_accessible declaration (everything is assignable)
   3. Using attr_accessible with :as => :admin options carelessly
   4. Including password or token fields in attr_accessible
-  
+
   ## Known CVEs
-  
+
   - CVE-2013-0276: ActiveRecord attr_protected bypass vulnerability
   - CVE-2012-2660: Rails mass assignment vulnerability affecting GitHub
   - CVE-2012-2694: Mass assignment vulnerability in Rails 3.x
-  
+
   ## Examples
-  
+
       # Vulnerable - admin field exposed
       attr_accessible :name, :email, :admin
       
@@ -45,14 +45,15 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       attr_accessible :name, :email, :bio
       attr_protected :admin, :role, :permissions
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-dangerous-attr-accessible",
       name: "Dangerous attr_accessible Usage",
-      description: "Overly permissive attr_accessible in older Rails versions or missing protection",
+      description:
+        "Overly permissive attr_accessible in older Rails versions or missing protection",
       type: :mass_assignment,
       severity: :high,
       languages: ["ruby"],
@@ -71,7 +72,8 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       ],
       cwe_id: "CWE-915",
       owasp_category: "A01:2021",
-      recommendation: "Upgrade to Rails 4+ and use strong parameters. If using older Rails, carefully restrict attr_accessible fields.",
+      recommendation:
+        "Upgrade to Rails 4+ and use strong parameters. If using older Rails, carefully restrict attr_accessible fields.",
       test_cases: %{
         vulnerable: [
           "attr_accessible :name, :email, :admin",
@@ -86,7 +88,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -94,13 +96,12 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       is misconfigured or missing entirely. This allows attackers to set any model
       attribute through HTTP parameters, potentially escalating privileges or accessing
       protected data.
-      
+
       The attr_accessible/attr_protected mechanism was Rails' first attempt at preventing
       mass assignment, but it had significant flaws that led to high-profile breaches
       including the GitHub hack of 2012 where Egor Homakov demonstrated the vulnerability
       by adding his SSH key to the Rails repository.
       """,
-      
       attack_vectors: """
       1. **Direct Privilege Escalation**: POST user[admin]=true or user[role]=admin
       2. **Account Takeover**: Modifying user_id or email to hijack accounts  
@@ -109,7 +110,6 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       5. **Association Manipulation**: Changing foreign keys to access other users' data
       6. **Bypass Validation**: Setting internal fields like confirmed_at or verified
       """,
-      
       business_impact: """
       - Complete system compromise through admin privilege escalation
       - Data breach affecting all users and sensitive information
@@ -117,7 +117,6 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       - Reputation damage from high-profile security incidents
       - Legal liability for data protection violations
       """,
-      
       technical_impact: """
       - Arbitrary database field modification
       - Complete bypass of business logic and validations
@@ -125,23 +124,19 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       - Potential for SQL injection through nested attributes
       - Session hijacking and impersonation
       """,
-      
       likelihood: "Very High - Common mistake in Rails 2.x/3.x applications",
-      
       cve_examples: [
         "CVE-2013-0276 - ActiveRecord attr_protected bypass allowing mass assignment",
         "CVE-2012-2660 - GitHub mass assignment vulnerability via public key upload",
         "CVE-2012-2694 - Rails mass assignment vulnerability in protected attributes",
         "CVE-2012-2661 - Rails SQL injection via nested mass assignment"
       ],
-      
       compliance_standards: [
         "OWASP Top 10 2021 - A01: Broken Access Control",
         "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes",
         "PCI DSS 6.5.8 - Improper access control",
         "NIST SP 800-53 - AC-3 Access Enforcement"
       ],
-      
       remediation_steps: """
       1. **Immediate Fix for Rails 2.x/3.x**:
          ```ruby
@@ -155,7 +150,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
          attr_accessible :name, :email
          attr_accessible :name, :email, :admin, as: :admin
          ```
-      
+
       2. **Upgrade to Rails 4+ (Recommended)**:
          ```ruby
          # Use Strong Parameters instead
@@ -163,12 +158,12 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
            params.require(:user).permit(:name, :email, :bio)
          end
          ```
-      
+
       3. **Audit Existing Models**:
          - Search for models without attr_accessible
          - Review all attr_accessible declarations
          - Remove sensitive fields from white lists
-      
+
       4. **Add Protection Gradually**:
          ```ruby
          # Start with attr_protected for critical fields
@@ -178,7 +173,6 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
          attr_accessible :name, :email, :profile_attributes
          ```
       """,
-      
       prevention_tips: """
       - Upgrade to Rails 4+ and use strong parameters
       - Never include role/permission fields in attr_accessible
@@ -188,7 +182,6 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       - Use role-based attr_accessible when needed
       - Document which attributes should be mass-assignable
       """,
-      
       detection_methods: """
       - Static analysis with Brakeman scanner
       - grep for models without attr_accessible
@@ -196,7 +189,6 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       - Automated testing of mass assignment protection
       - Security code reviews focusing on models
       """,
-      
       safe_alternatives: """
       # Rails 2.x/3.x - Proper attr_accessible usage
       class User < ActiveRecord::Base
@@ -209,7 +201,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
         # Explicitly protect dangerous fields
         attr_protected :admin, :role, :confirmed_at
       end
-      
+
       # Rails 4+ - Strong Parameters (Recommended)
       class UsersController < ApplicationController
         def user_params
@@ -219,7 +211,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
             params.require(:user).permit(:name, :email, :bio)
           end
       end
-      
+
       # Form objects for complex scenarios
       class UserRegistrationForm
         include ActiveModel::Model
@@ -234,11 +226,10 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.8,
-      
       context_rules: %{
         # Rails version affects attr_accessible availability
         rails_version_checks: %{
@@ -246,7 +237,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
           "2.0-3.2" => "attr_accessible is primary mass assignment protection",
           ">= 4.0" => "Should use Strong Parameters instead"
         },
-        
+
         # Look for model indicators
         model_indicators: [
           "< ActiveRecord::Base",
@@ -254,16 +245,23 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
           "include ActiveModel",
           "app/models/"
         ],
-        
+
         # Dangerous attribute names
         dangerous_attributes: [
-          "admin", "role", "is_admin", "administrator",
-          "permissions", "user_role", "privilege",
-          "password_digest", "encrypted_password",
-          "api_key", "authentication_token", "session_token"
+          "admin",
+          "role",
+          "is_admin",
+          "administrator",
+          "permissions",
+          "user_role",
+          "privilege",
+          "password_digest",
+          "encrypted_password",
+          "api_key",
+          "authentication_token",
+          "session_token"
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence for dangerous fields
@@ -282,7 +280,6 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
           is_commented: -0.8
         }
       },
-      
       ast_rules: %{
         # Analyze attribute lists
         attribute_analysis: %{
@@ -297,14 +294,14 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
             ~r/title|content|body/i
           ]
         },
-        
+
         # Model structure analysis
         model_analysis: %{
           check_protection_presence: true,
           check_model_hierarchy: true,
           check_validation_presence: true
         },
-        
+
         # Rails-specific analysis
         rails_analysis: %{
           check_rails_version: true,
@@ -314,6 +311,4 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       }
     }
   end
-  
 end
-

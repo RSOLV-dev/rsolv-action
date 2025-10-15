@@ -1,37 +1,37 @@
 defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
   @moduledoc """
   Detects XPath injection vulnerabilities in JavaScript/TypeScript code.
-  
+
   XPath injection occurs when untrusted user input is concatenated into XPath queries
   without proper sanitization. Attackers can modify query logic to bypass security
   controls or extract sensitive data from XML documents.
-  
+
   ## Vulnerability Details
-  
+
   XPath is a query language for XML documents. Like SQL injection, XPath injection
   allows attackers to manipulate queries by injecting special characters and expressions.
   Common attack vectors include authentication bypass using logical operators and
   data extraction using XPath functions.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Direct concatenation of user input
   const users = xpath.select("//user[username='" + username + "' and password='" + password + "']");
-  
+
   // Attack input: admin' or '1'='1
   // Results in: //user[username='admin' or '1'='1' and password='...']
   // This returns all users, bypassing authentication
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the pattern definition for XPath injection detection.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XpathInjection.pattern()
       iex> pattern.id
       "js-xpath-injection"
@@ -55,7 +55,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
     %Pattern{
       id: "js-xpath-injection",
       name: "XPath Injection",
-      description: "XPath queries constructed with user input can be manipulated to extract unauthorized data or bypass authentication",
+      description:
+        "XPath queries constructed with user input can be manipulated to extract unauthorized data or bypass authentication",
       type: :xpath_injection,
       severity: :high,
       languages: ["javascript", "typescript"],
@@ -76,7 +77,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
       /x,
       cwe_id: "CWE-643",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized XPath queries or properly escape special characters. Never concatenate user input directly into XPath expressions.",
+      recommendation:
+        "Use parameterized XPath queries or properly escape special characters. Never concatenate user input directly into XPath expressions.",
       test_cases: %{
         vulnerable: [
           ~S|xpath.select("//user[name='" + username + "']")|,
@@ -96,7 +98,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
       }
     }
   end
-  
+
   @doc """
   Returns comprehensive vulnerability metadata for XPath injection.
   """
@@ -108,7 +110,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
       expressions into applications that construct XPath queries from user input.
       This can lead to unauthorized data access, authentication bypass, and 
       information disclosure from XML documents.
-      
+
       XPath uses special characters and functions that must be properly handled:
       - Single and double quotes: ' and " - String delimiters
       - Square brackets: [ and ] - Predicate expressions
@@ -187,7 +189,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
       2. User input concatenated into XPath expressions using + operator
       3. Template literals with interpolated user input in XPath contexts
       4. Common XPath syntax patterns combined with user input sources
-      
+
       The pattern focuses on JavaScript/Node.js XPath libraries and DOM methods.
       """,
       safe_alternatives: [
@@ -224,19 +226,19 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XPath injection vulnerabilities and:
   - Parameterized XPath queries with proper variable binding
   - Pre-compiled XPath expressions
   - Escaped XPath expressions
   - XPath builder libraries with automatic escaping
   - Static XPath queries without user input
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XpathInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -278,9 +280,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/],
-        exclude_if_parameterized: true,      # xpath.select(expr, params)
-        exclude_if_escaped: true,            # XPath escaping
-        exclude_if_compiled: true,           # Pre-compiled XPath
+        # xpath.select(expr, params)
+        exclude_if_parameterized: true,
+        # XPath escaping
+        exclude_if_escaped: true,
+        # Pre-compiled XPath
+        exclude_if_compiled: true,
         safe_xpath_patterns: ["xpath.compile", "createExpression"]
       },
       confidence_rules: %{

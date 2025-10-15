@@ -29,16 +29,16 @@ defmodule Rsolv.Security.Patterns.Elixir.HardcodedSecrets do
   ```elixir
   # VULNERABLE - hardcoded API key
   @api_key "sk_live_abcd1234efgh5678"
-  
+
   # VULNERABLE - hardcoded database password
   database_url = "postgres://user:secret123@localhost/myapp"
-  
+
   # VULNERABLE - hardcoded JWT secret
   def get_jwt_secret, do: "my-super-secret-jwt-key-12345"
-  
+
   # VULNERABLE - hardcoded encryption key
   @encryption_key "32charencryptionkey123456789012"
-  
+
   # VULNERABLE - hardcoded AWS credentials
   @aws_access_key "AKIAIOSFODNN7EXAMPLE"
   ```
@@ -47,16 +47,16 @@ defmodule Rsolv.Security.Patterns.Elixir.HardcodedSecrets do
   ```elixir
   # SAFE - environment variable usage
   @api_key System.get_env("API_KEY")
-  
+
   # SAFE - application configuration
   secret_key = Application.get_env(:myapp, :secret_key)
-  
+
   # SAFE - runtime configuration
   database_url = System.fetch_env!("DATABASE_URL")
-  
+
   # SAFE - config files with runtime secrets
   config :myapp, :encryption_key, System.get_env("ENCRYPTION_KEY")
-  
+
   # SAFE - using Phoenix secret key base
   config :myapp, MyAppWeb.Endpoint,
     secret_key_base: System.get_env("SECRET_KEY_BASE")
@@ -114,7 +114,8 @@ defmodule Rsolv.Security.Patterns.Elixir.HardcodedSecrets do
       ],
       cwe_id: "CWE-798",
       owasp_category: "A02:2021",
-      recommendation: "Use environment variables or runtime configuration to manage secrets securely",
+      recommendation:
+        "Use environment variables or runtime configuration to manage secrets securely",
       test_cases: %{
         vulnerable: [
           ~S|@api_key "sk_live_abcd1234efgh5678"|,
@@ -204,7 +205,7 @@ defmodule Rsolv.Security.Patterns.Elixir.HardcodedSecrets do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -218,7 +219,7 @@ defmodule Rsolv.Security.Patterns.Elixir.HardcodedSecrets do
         secret_indicators: [
           "api_key",
           "secret",
-          "password", 
+          "password",
           "token",
           "credential",
           "private_key",

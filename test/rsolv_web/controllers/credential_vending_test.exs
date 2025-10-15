@@ -44,9 +44,12 @@ defmodule RsolvWeb.CredentialVendingTest do
       conn =
         conn
         |> put_req_header("x-api-key", api_key.key)
-        |> post("/api/v1/credentials/exchange", %{
-          # Missing providers
-        })
+        |> post(
+          "/api/v1/credentials/exchange",
+          %{
+            # Missing providers
+          }
+        )
 
       assert json_response(conn, 400)
     end

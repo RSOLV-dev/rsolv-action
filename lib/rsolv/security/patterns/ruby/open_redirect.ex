@@ -1,34 +1,34 @@
 defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
   @moduledoc """
   Detects Open Redirect vulnerabilities in Ruby applications.
-  
+
   Open redirect vulnerabilities occur when an application redirects users to a URL
   specified by user input without proper validation. Attackers can exploit this to
   redirect victims to malicious websites for phishing or other attacks.
-  
+
   ## Vulnerability Details
-  
+
   Ruby on Rails applications are vulnerable when using redirect_to with untrusted
   input such as params, request.referer, or :back without validation. While Rails 7.0+
   provides some protection, developers must still be careful with redirect destinations.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable - Direct use of params
   def logout
     redirect_to params[:return_url]
   end
-  
+
   # Vulnerable - Using request.referer
   def cancel
     redirect_to request.referer || root_path
   end
-  
+
   # Vulnerable - String interpolation
   def switch_site
     redirect_to "https://\#{params[:subdomain]}.example.com"
   end
-  
+
   # Secure - Validation with allowlist
   def logout_safe
     safe_urls = [root_path, login_path, dashboard_path]
@@ -41,26 +41,26 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
     end
   end
   ```
-  
+
   ### Real-World Impact
   - Phishing attacks by redirecting to lookalike domains
   - Credential theft through malicious login pages
   - OAuth token theft via redirect manipulation
   - Bypassing security filters and access controls
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the Open Redirect pattern for Ruby applications.
-  
+
   Detects redirect operations that use user-controlled input without
   proper validation, which could allow attackers to redirect users to
   malicious websites.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.OpenRedirect.pattern()
       iex> pattern.id
       "ruby-open-redirect"
@@ -84,7 +84,8 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
     %Pattern{
       id: "ruby-open-redirect",
       name: "Open Redirect",
-      description: "Detects unvalidated redirect destinations that could allow attackers to redirect users to malicious sites",
+      description:
+        "Detects unvalidated redirect destinations that could allow attackers to redirect users to malicious sites",
       type: :open_redirect,
       severity: :medium,
       languages: ["ruby"],
@@ -92,29 +93,30 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
         # redirect_to with direct params
         ~r/redirect_to\s+(?:params|request\.(?:params|parameters))\[/,
         ~r/redirect_to\s+@(?:user|current_user|account|session)[\w_]*(?:\s|$|,)/,
-        
+
         # redirect_to with request.referer/referrer
         ~r/redirect_to\s+request\.(?:referer|referrer)/,
         ~r/redirect_to\s+request\.env\[['"]HTTP_REFERER['"]\]/,
         ~r/redirect_to\s+request\.headers\[['"]Referer['"]\]/,
-        
+
         # redirect_to :back (with or without parentheses)
         ~r/redirect_to\s*\(?\s*:back/,
-        
+
         # redirect_back with user-controlled fallback
         ~r/redirect_back.*fallback_location:\s*(?:params|request\.(?:params|parameters)|user_|@\w+)/,
-        
+
         # String interpolation in URLs
         ~r/redirect_to\s+["'].*?#\{.*?(?:params|request\.(?:params|parameters)|user_|@\w+).*?\}/,
         ~r/redirect_to\s+["'](?:https?:)?\/\/.*?#\{/,
-        
+
         # URL construction with user input (must come from user)
-        ~r/(?:url|redirect_url|target)\s*=\s*(?:params|request\.(?:params|parameters)|user[\w_]*|@user)[\[\.]/, 
+        ~r/(?:url|redirect_url|target)\s*=\s*(?:params|request\.(?:params|parameters)|user[\w_]*|@user)[\[\.]/,
         ~r/redirect_to\s+(?:url|redirect_url|target)(?:\s|$)/
       ],
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
-      recommendation: "Validate redirect URLs against an allowlist or use URL parsing to ensure redirects stay within your domain",
+      recommendation:
+        "Validate redirect URLs against an allowlist or use URL parsing to ensure redirects stay within your domain",
       test_cases: %{
         vulnerable: [
           "redirect_to params[:return_url]",
@@ -165,7 +167,8 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
           type: :research,
           id: "owasp_unvalidated_redirects",
           title: "Unvalidated Redirects and Forwards - OWASP Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
         }
       ],
       attack_vectors: [
@@ -187,7 +190,8 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
       cve_examples: [
         %{
           id: "CVE-2023-22797",
-          description: "Rails Action Pack open redirect vulnerability in redirect_to with untrusted input",
+          description:
+            "Rails Action Pack open redirect vulnerability in redirect_to with untrusted input",
           severity: "medium",
           cvss: 6.1,
           note: "Bypass of Rails 7.0 open redirect protection with specially crafted URLs"
@@ -222,7 +226,7 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
       - redirect_back with user-controlled fallback locations
       - String interpolation in redirect URLs
       - URL construction with user input before redirection
-      
+
       The pattern focuses on identifying redirect methods that accept untrusted input
       without validation. AST enhancement provides additional context analysis.
       """,
@@ -293,7 +297,15 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
           check_url_construction: true
         },
         user_input_analysis: %{
-          input_sources: ["params", "request", "cookies", "session", "user_input", "@user", "@current_user"],
+          input_sources: [
+            "params",
+            "request",
+            "cookies",
+            "session",
+            "user_input",
+            "@user",
+            "@current_user"
+          ],
           check_url_construction: true,
           check_variable_assignment: true,
           track_tainted_variables: true,

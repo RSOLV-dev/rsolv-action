@@ -1,59 +1,59 @@
 defmodule Rsolv.Security.Patterns.Java.WeakRandom do
   @moduledoc """
   Weak Random Number Generation pattern for Java code.
-  
+
   Detects usage of cryptographically weak pseudo-random number generators (PRNGs) in Java
   applications where cryptographically secure randomness is required. Using weak PRNGs like
   java.util.Random or Math.random() in security-sensitive contexts can lead to predictable
   values that attackers can exploit.
-  
+
   ## Vulnerability Details
-  
+
   Weak PRNG vulnerabilities occur when applications use standard pseudo-random number
   generators for security purposes. These generators are designed for statistical randomness
   but not cryptographic security, making their output predictable and exploitable.
-  
+
   Common vulnerable patterns:
   - Using java.util.Random for token, password, or key generation
   - Using Math.random() for security-sensitive random values
   - Using ThreadLocalRandom for cryptographic purposes
   - Generating session IDs, CSRF tokens, or API keys with weak PRNGs
   - Creating salts, nonces, or initialization vectors with predictable randomness
-  
+
   ### Attack Examples
-  
+
   ```java
   // Vulnerable code - weak PRNG for token generation
   Random random = new Random();
   String token = String.valueOf(random.nextLong());
-  
+
   // Vulnerable code - Math.random() for session ID
   String sessionId = String.valueOf((int)(Math.random() * 1000000));
-  
+
   // Vulnerable code - ThreadLocalRandom for cryptographic key
   byte[] key = new byte[16];
   ThreadLocalRandom.current().nextBytes(key);
   ```
-  
+
   ## References
-  
+
   - CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator
   - OWASP A02:2021 - Cryptographic Failures
   - CVE-2024-29868: Apache StreamPipes weak PRNG in password recovery
   - CVE-2013-6386: Drupal weak PRNG allowing account takeover
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Pattern detects weak random number generation in Java code.
-  
+
   Identifies usage of cryptographically weak PRNGs in contexts where secure
   randomness is required, leading to predictable values that can be exploited.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Java.WeakRandom.pattern()
       iex> pattern.id
       "java-weak-random"
@@ -116,7 +116,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -125,21 +125,21 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
       standard random number generators like java.util.Random, Math.random(), or ThreadLocalRandom
       for security-sensitive operations. These generators are designed for statistical randomness
       but not cryptographic security, making their output predictable and exploitable by attackers.
-      
+
       Weak PRNG usage can lead to:
       - Predictable session IDs and authentication tokens
       - Guessable passwords and password reset tokens
       - Exploitable cryptographic keys and initialization vectors
       - Predictable CSRF tokens and API keys
       - Compromised salts and nonces in cryptographic operations
-      
+
       The vulnerability is particularly dangerous because:
       - Standard PRNGs use deterministic algorithms with known mathematical properties
       - Seed values are often predictable (system time, process ID, etc.)
       - Attackers can predict future values if they observe some outputs
       - Large-scale attacks become feasible with predictable randomness
       - Many developers are unaware of the security implications
-      
+
       Historical context:
       - Weak PRNG attacks have been documented since the early days of computing
       - Featured in OWASP Top 10 2021 under A02 (Cryptographic Failures)
@@ -157,7 +157,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
         %{
           type: :owasp,
           id: "A02:2021",
-          title: "OWASP Top 10 2021 - A02 Cryptographic Failures", 
+          title: "OWASP Top 10 2021 - A02 Cryptographic Failures",
           url: "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
         },
         %{
@@ -170,7 +170,8 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
           type: :research,
           id: "owasp_weak_encryption_testing",
           title: "OWASP Testing for Weak Encryption",
-          url: "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/04-Testing_for_Weak_Encryption"
+          url:
+            "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/04-Testing_for_Weak_Encryption"
         },
         %{
           type: :research,
@@ -200,21 +201,25 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
       cve_examples: [
         %{
           id: "CVE-2024-29868",
-          description: "Apache StreamPipes weak PRNG in user self-registration and password recovery mechanism",
+          description:
+            "Apache StreamPipes weak PRNG in user self-registration and password recovery mechanism",
           severity: "high",
           cvss: 7.5,
           note: "Allows attackers to guess recovery tokens and take over user accounts"
         },
         %{
           id: "CVE-2013-6386",
-          description: "Drupal uses PHP mt_rand() with predictable seeds for user account password reset tokens",
+          description:
+            "Drupal uses PHP mt_rand() with predictable seeds for user account password reset tokens",
           severity: "critical",
           cvss: 9.0,
-          note: "Remote attackers can determine administrator passwords and gain unauthorized access"
+          note:
+            "Remote attackers can determine administrator passwords and gain unauthorized access"
         },
         %{
           id: "CVE-2006-3419",
-          description: "Multiple applications use weak PRNG for session management enabling session hijacking",
+          description:
+            "Multiple applications use weak PRNG for session management enabling session hijacking",
           severity: "medium",
           cvss: 6.4,
           note: "Predictable session identifiers allow attackers to impersonate legitimate users"
@@ -222,19 +227,19 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
       ],
       detection_notes: """
       This pattern detects insecure random number generation by identifying:
-      
+
       1. java.util.Random instantiation using 'new Random()' constructor calls
       2. Math.random() method invocations for generating random values
       3. ThreadLocalRandom.current() usage which is not cryptographically secure
       4. Random instance method calls (.nextInt(), .nextLong(), .nextBytes(), etc.)
       5. Named random variables being used in method calls (random.next*, rand.next*, etc.)
-      
+
       The pattern uses negative lookahead to exclude commented lines and focuses on:
       - Constructor calls creating new Random instances
       - Static method calls to Math.random() and ThreadLocalRandom
       - Instance method calls on random number generators
       - Common variable naming patterns for random generators
-      
+
       Key detection criteria:
       - Looks for instantiation and usage patterns of weak PRNGs
       - Excludes commented code and import statements
@@ -297,15 +302,15 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between security-sensitive random number usage
   and acceptable uses of weak PRNGs for non-cryptographic purposes.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakRandom.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -326,7 +331,14 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
         random_analysis: %{
           check_random_usage: true,
           random_classes: ["Random", "ThreadLocalRandom"],
-          random_methods: ["nextInt", "nextLong", "nextDouble", "nextFloat", "nextBoolean", "nextBytes"],
+          random_methods: [
+            "nextInt",
+            "nextLong",
+            "nextDouble",
+            "nextFloat",
+            "nextBoolean",
+            "nextBytes"
+          ],
           check_constructor_calls: true,
           check_static_methods: true,
           static_random_methods: ["Math.random", "ThreadLocalRandom.current"]
@@ -334,18 +346,44 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
         security_analysis: %{
           check_security_context: true,
           security_indicators: [
-            "token", "password", "key", "secret", "session", "csrf", "auth", "nonce", 
-            "salt", "iv", "seed", "challenge", "otp", "uuid", "guid"
+            "token",
+            "password",
+            "key",
+            "secret",
+            "session",
+            "csrf",
+            "auth",
+            "nonce",
+            "salt",
+            "iv",
+            "seed",
+            "challenge",
+            "otp",
+            "uuid",
+            "guid"
           ],
           crypto_contexts: [
-            "authentication", "authorization", "encryption", "signing", "verification",
-            "password_reset", "session_management", "api_key_generation"
+            "authentication",
+            "authorization",
+            "encryption",
+            "signing",
+            "verification",
+            "password_reset",
+            "session_management",
+            "api_key_generation"
           ],
           security_method_patterns: ["generate", "create", "init", "reset", "verify"]
         },
         method_analysis: %{
           check_random_methods: true,
-          random_method_names: ["nextInt", "nextLong", "nextDouble", "nextFloat", "nextBoolean", "nextBytes"],
+          random_method_names: [
+            "nextInt",
+            "nextLong",
+            "nextDouble",
+            "nextFloat",
+            "nextBoolean",
+            "nextBytes"
+          ],
           dangerous_method_patterns: ["random", "rand", "rng", "generator"],
           check_method_chaining: true,
           security_return_types: ["String", "byte[]", "int", "long", "UUID"]
@@ -363,7 +401,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
         secure_random_sources: [
           "SecureRandom",
           "SecureRandom.getInstanceStrong",
-          "SecureRandom.getInstance", 
+          "SecureRandom.getInstance",
           "CryptoRandom",
           "SystemRandom",
           "OSRandom"
@@ -376,12 +414,23 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
         ],
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/example/, ~r/demo/, ~r/sample/],
         acceptable_contexts: [
-          "games", "simulation", "testing", "benchmarking", "mathematical_operations",
-          "ui_effects", "non_security_randomization", "performance_testing"
+          "games",
+          "simulation",
+          "testing",
+          "benchmarking",
+          "mathematical_operations",
+          "ui_effects",
+          "non_security_randomization",
+          "performance_testing"
         ],
         high_risk_contexts: [
-          "authentication", "session_management", "password_generation", "key_generation",
-          "token_creation", "cryptographic_operations", "security_challenges"
+          "authentication",
+          "session_management",
+          "password_generation",
+          "key_generation",
+          "token_creation",
+          "cryptographic_operations",
+          "security_challenges"
         ]
       },
       confidence_rules: %{

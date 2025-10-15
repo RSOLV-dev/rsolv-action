@@ -62,24 +62,32 @@ defmodule SafePatternTest do
       IO.puts("Language: #{test_case.language}")
 
       # Test safe code
-      safe_result = SafePatternDetector.is_safe_pattern?(
-        test_case.type,
-        test_case.safe_code,
-        %{language: test_case.language}
-      )
+      safe_result =
+        SafePatternDetector.is_safe_pattern?(
+          test_case.type,
+          test_case.safe_code,
+          %{language: test_case.language}
+        )
 
       # Test vulnerable code
-      vuln_result = SafePatternDetector.is_safe_pattern?(
-        test_case.type,
-        test_case.vulnerable_code,
-        %{language: test_case.language}
-      )
+      vuln_result =
+        SafePatternDetector.is_safe_pattern?(
+          test_case.type,
+          test_case.vulnerable_code,
+          %{language: test_case.language}
+        )
 
       IO.puts("Safe code: #{inspect(test_case.safe_code)}")
-      IO.puts("  -> Detected as safe: #{safe_result} #{if safe_result, do: "✅", else: "❌ ISSUE!"}")
+
+      IO.puts(
+        "  -> Detected as safe: #{safe_result} #{if safe_result, do: "✅", else: "❌ ISSUE!"}"
+      )
 
       IO.puts("Vulnerable code: #{inspect(test_case.vulnerable_code)}")
-      IO.puts("  -> Detected as safe: #{vuln_result} #{if !vuln_result, do: "✅", else: "❌ ISSUE!"}")
+
+      IO.puts(
+        "  -> Detected as safe: #{vuln_result} #{if !vuln_result, do: "✅", else: "❌ ISSUE!"}"
+      )
 
       IO.puts("")
     end)

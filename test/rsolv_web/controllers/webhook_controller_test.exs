@@ -1,11 +1,11 @@
 defmodule RsolvWeb.WebhookControllerTest do
   use RsolvWeb.ConnCase
-  
+
   alias Rsolv.Billing.FixAttempt
   alias Rsolv.Repo
 
   @github_webhook_secret "default_dev_secret"
-  
+
   describe "github webhook" do
     test "handles pull request opened event", %{conn: conn} do
       payload = %{
@@ -28,32 +28,34 @@ defmodule RsolvWeb.WebhookControllerTest do
           }
         }
       }
-      
+
       raw_body = Jason.encode!(payload)
       signature = compute_github_signature(raw_body)
-      
-      conn = conn
+
+      conn =
+        conn
         |> put_req_header("x-github-event", "pull_request")
         |> put_req_header("x-hub-signature-256", signature)
         |> put_req_header("content-type", "application/json")
         |> assign(:test_mode, true)
         |> assign(:raw_body, raw_body)
         |> post("/api/webhooks/github", raw_body)
-        
+
       assert json_response(conn, 200) == %{
-        "status" => "success",
-        "result" => "pr_opened"
-      }
-      
+               "status" => "success",
+               "result" => "pr_opened"
+             }
+
       # Verify fix attempt was created
       fix_attempt = Repo.get_by(FixAttempt, pr_number: 123, github_org: "test-org")
       assert fix_attempt != nil
       assert fix_attempt.status == "pending"
     end
-    
+
     test "handles pull request merged event", %{conn: conn} do
       # Create a pending fix attempt first
-      {:ok, _} = %FixAttempt{}
+      {:ok, _} =
+        %FixAttempt{}
         |> FixAttempt.changeset(%{
           github_org: "test-org",
           repo_name: "test-repo",
@@ -61,7 +63,7 @@ defmodule RsolvWeb.WebhookControllerTest do
           status: "pending"
         })
         |> Repo.insert()
-      
+
       payload = %{
         "action" => "closed",
         "pull_request" => %{
@@ -78,58 +80,62 @@ defmodule RsolvWeb.WebhookControllerTest do
           }
         }
       }
-      
+
       raw_body = Jason.encode!(payload)
       signature = compute_github_signature(raw_body)
-      
-      conn = conn
+
+      conn =
+        conn
         |> put_req_header("x-github-event", "pull_request")
         |> put_req_header("x-hub-signature-256", signature)
         |> put_req_header("content-type", "application/json")
         |> assign(:test_mode, true)
         |> assign(:raw_body, raw_body)
         |> post("/api/webhooks/github", raw_body)
-        
+
       assert json_response(conn, 200) == %{
-        "status" => "success",
-        "result" => "merged"
-      }
-      
+               "status" => "success",
+               "result" => "merged"
+             }
+
       # Verify fix attempt was updated
       fix_attempt = Repo.get_by(FixAttempt, pr_number: 124)
       assert fix_attempt.status == "merged"
     end
-    
+
     test "rejects request with invalid signature", %{conn: conn} do
       payload = %{"action" => "opened"}
       raw_body = Jason.encode!(payload)
-      
-      conn = conn
+
+      conn =
+        conn
         |> put_req_header("x-github-event", "pull_request")
         |> put_req_header("x-hub-signature-256", "sha256=invalid")
         |> put_req_header("content-type", "application/json")
         |> assign(:raw_body, raw_body)
         |> assign(:test_mode, false)
         |> post("/api/webhooks/github", payload)
-        
+
       assert json_response(conn, 401) == %{
-        "error" => "Invalid signature"
-      }
+               "error" => "Invalid signature"
+             }
     end
-    
+
     test "rejects request without signature", %{conn: conn} do
-      conn = conn
+      conn =
+        conn
         |> put_req_header("x-github-event", "pull_request")
         |> put_req_header("content-type", "application/json")
         |> post("/api/webhooks/github", %{})
-        
+
       assert json_response(conn, 401) == %{
-        "error" => "Missing signature"
-      }
+               "error" => "Missing signature"
+             }
     end
   end
-  
+
   defp compute_github_signature(payload) do
-    "sha256=" <> Base.encode16(:crypto.mac(:hmac, :sha256, @github_webhook_secret, payload), case: :lower)
+    "sha256=" <>
+      Base.encode16(:crypto.mac(:hmac, :sha256, @github_webhook_secret, payload), case: :lower)
   end
 end

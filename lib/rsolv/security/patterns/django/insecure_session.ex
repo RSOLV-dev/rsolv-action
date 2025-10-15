@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Django.InsecureSession do
   @moduledoc """
   Django Insecure Session Configuration pattern for Django applications.
-  
+
   This pattern detects insecure session cookie configurations in Django settings
   that can lead to session hijacking, cross-site scripting (XSS), and 
   man-in-the-middle attacks.
-  
+
   ## Background
-  
+
   Django provides several security-related settings for session and CSRF cookies:
   - SESSION_COOKIE_SECURE: Ensures cookies are only sent over HTTPS
   - SESSION_COOKIE_HTTPONLY: Prevents JavaScript access to session cookies
@@ -15,17 +15,17 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
   - CSRF_COOKIE_SECURE: Ensures CSRF tokens are only sent over HTTPS
   - CSRF_COOKIE_HTTPONLY: Prevents JavaScript access to CSRF tokens
   - LANGUAGE_COOKIE_SECURE: Ensures language preference cookies use HTTPS
-  
+
   ## Vulnerability Details
-  
+
   When these settings are disabled (set to False) or misconfigured:
   1. Cookies can be intercepted over insecure HTTP connections
   2. JavaScript can access session cookies (XSS vulnerability)
   3. Cross-site requests can include cookies (CSRF vulnerability)
   4. Session hijacking becomes possible through various attack vectors
-  
+
   ## Examples
-  
+
       # VULNERABLE - Insecure session configuration
       SESSION_COOKIE_SECURE = False  # Sent over HTTP
       SESSION_COOKIE_HTTPONLY = False  # Accessible via JS
@@ -44,9 +44,9 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           SESSION_COOKIE_SECURE = True
           CSRF_COOKIE_SECURE = True
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   @impl true
   def pattern do
     %Rsolv.Security.Pattern{
@@ -67,7 +67,8 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
       ],
       cwe_id: "CWE-614",
       owasp_category: "A05:2021",
-      recommendation: "Enable secure session cookies: SESSION_COOKIE_SECURE = True, SESSION_COOKIE_HTTPONLY = True, SESSION_COOKIE_SAMESITE = 'Strict'",
+      recommendation:
+        "Enable secure session cookies: SESSION_COOKIE_SECURE = True, SESSION_COOKIE_HTTPONLY = True, SESSION_COOKIE_SAMESITE = 'Strict'",
       test_cases: %{
         vulnerable: [
           "SESSION_COOKIE_SECURE = False",
@@ -84,7 +85,7 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -93,28 +94,27 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
       attack vectors including session hijacking, cross-site scripting (XSS), and
       man-in-the-middle attacks. Django's session framework uses cookies to store
       session IDs by default, and these cookies must be properly secured.
-      
+
       Key vulnerabilities arise when:
-      
+
       1. **SESSION_COOKIE_SECURE = False**: Cookies are transmitted over insecure HTTP
          connections, allowing interception by network attackers.
-      
+
       2. **SESSION_COOKIE_HTTPONLY = False**: JavaScript can access session cookies,
          enabling XSS attacks to steal session IDs.
-      
+
       3. **SESSION_COOKIE_SAMESITE = None**: Cookies are sent with cross-site requests,
          enabling CSRF attacks.
-      
+
       4. **CSRF_COOKIE_SECURE = False**: CSRF tokens transmitted over HTTP can be
          intercepted and replayed.
-      
+
       5. **Missing security headers**: Without proper cookie flags, sessions are
          vulnerable to various client-side attacks.
-      
+
       These vulnerabilities are particularly critical in production environments where
       sensitive user data and authenticated sessions must be protected.
       """,
-      
       references: [
         %{
           type: :cwe,
@@ -141,7 +141,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           url: "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/"
         }
       ],
-      
       attack_vectors: [
         "Session hijacking via network sniffing on HTTP connections",
         "Cross-site scripting (XSS) to steal session cookies via document.cookie",
@@ -152,7 +151,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
         "Browser-based attacks accessing cookies via JavaScript",
         "Network-level attacks using ARP spoofing or DNS hijacking"
       ],
-      
       real_world_impact: [
         "Account takeover allowing unauthorized access to user accounts",
         "Data breach exposing sensitive user information",
@@ -163,51 +161,52 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
         "Legal liability from compromised user accounts",
         "Business disruption from mass account compromises"
       ],
-      
       cve_examples: [
         %{
           id: "CVE-2014-0482",
-          description: "Django RemoteUserMiddleware session hijacking vulnerability allowing authenticated users to hijack sessions via REMOTE_USER header manipulation",
+          description:
+            "Django RemoteUserMiddleware session hijacking vulnerability allowing authenticated users to hijack sessions via REMOTE_USER header manipulation",
           severity: "medium",
           cvss: 6.5,
           note: "Affected Django < 1.4.14, < 1.5.9, < 1.6.6"
         },
         %{
           id: "CVE-2015-3982",
-          description: "Django session.flush() in cached_db backend doesn't properly flush sessions, allowing session hijacking through empty session keys",
+          description:
+            "Django session.flush() in cached_db backend doesn't properly flush sessions, allowing session hijacking through empty session keys",
           severity: "medium",
           cvss: 5.3,
           note: "Affected Django 1.8.x before 1.8.2"
         },
         %{
           id: "CVE-2020-5224",
-          description: "django-user-sessions exposes session keys in session list views, enabling session takeover when combined with XSS",
+          description:
+            "django-user-sessions exposes session keys in session list views, enabling session takeover when combined with XSS",
           severity: "medium",
           cvss: 6.1,
           note: "Affected django-user-sessions before 1.7.1"
         },
         %{
           id: "CVE-2011-4136",
-          description: "Django session modification vulnerability allowing remote attackers to modify sessions of other users",
+          description:
+            "Django session modification vulnerability allowing remote attackers to modify sessions of other users",
           severity: "high",
           cvss: 7.5,
           note: "Affected Django before 1.2.7 and 1.3.x before 1.3.1"
         }
       ],
-      
       detection_notes: """
       This pattern detects insecure session cookie configurations by matching Django
       settings that explicitly disable security features. It looks for:
-      
+
       1. Explicit False values for security flags
       2. None value for SESSION_COOKIE_SAMESITE
       3. Missing or disabled HTTPONLY attributes
       4. Insecure cookie transmission settings
-      
+
       The pattern focuses on production-critical settings that should never be
       disabled in live environments.
       """,
-      
       safe_alternatives: [
         "SESSION_COOKIE_SECURE = True  # Always use HTTPS in production",
         "SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access",
@@ -218,7 +217,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
         "SESSION_COOKIE_AGE = 1209600  # 2 weeks max session",
         "SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Clear on close"
       ],
-      
       additional_context: %{
         common_mistakes: [
           "Disabling secure cookies for local development and forgetting to enable in production",
@@ -227,7 +225,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           "Not using HTTPS in production, making secure cookies impossible",
           "Copying development settings to production environments"
         ],
-        
         secure_patterns: [
           """
           # Separate settings for development and production
@@ -254,7 +251,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           X_FRAME_OPTIONS = 'DENY'
           """
         ],
-        
         framework_specific_notes: [
           "Django 3.0+ defaults SESSION_COOKIE_SAMESITE to 'Lax'",
           "Django 3.1+ supports SESSION_COOKIE_SAMESITE = 'None' with Secure requirement",
@@ -265,12 +261,11 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
       }
     }
   end
-  
+
   @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
-      
       context_rules: %{
         cookie_settings: [
           "SESSION_COOKIE_SECURE",
@@ -282,7 +277,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           "SECURE_SSL_REDIRECT",
           "SESSION_EXPIRE_AT_BROWSER_CLOSE"
         ],
-        
         django_settings_files: [
           "settings.py",
           "settings/base.py",
@@ -293,7 +287,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           "conf/settings.py",
           "config/settings.py"
         ],
-        
         security_indicators: [
           "DEBUG = False",
           "ALLOWED_HOSTS",
@@ -301,7 +294,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           "production",
           "deploy"
         ],
-        
         development_indicators: [
           "DEBUG = True",
           "localhost",
@@ -310,7 +302,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           "local"
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence patterns
@@ -318,21 +309,21 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           none_samesite_value: +0.9,
           multiple_insecure_settings: +0.95,
           production_file: +0.8,
-          
+
           # Medium confidence
           single_setting: +0.5,
           staging_file: +0.6,
-          
+
           # Lower confidence
           in_development_settings: -0.7,
           debug_true_nearby: -0.6,
           localhost_in_file: -0.5,
           conditional_setting: -0.4,
-          
+
           # Context adjustments
           in_production_settings: +0.3,
           security_focused_file: +0.4,
-          
+
           # False positive reduction
           in_comments: -1.0,
           in_test_file: -0.9,
@@ -340,7 +331,6 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           environment_variable_based: -0.3
         }
       },
-      
       ast_rules: %{
         settings_analysis: %{
           detect_cookie_configs: true,
@@ -348,21 +338,18 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
           track_debug_mode: true,
           analyze_conditionals: true
         },
-        
         file_analysis: %{
           identify_settings_files: true,
           detect_environment_type: true,
           check_import_structure: true,
           analyze_file_patterns: true
         },
-        
         security_analysis: %{
           detect_security_blocks: true,
           check_ssl_configuration: true,
           analyze_middleware_setup: true,
           track_security_headers: true
         },
-        
         context_analysis: %{
           check_surrounding_settings: true,
           detect_configuration_blocks: true,

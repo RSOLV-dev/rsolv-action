@@ -1,38 +1,38 @@
 defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
   @moduledoc """
   ERB Template Injection pattern for Rails applications.
-  
+
   This pattern detects Server-Side Template Injection (SSTI) vulnerabilities
   through ERB template evaluation with user input. This is one of the most
   critical vulnerabilities in Rails applications as it can lead to complete
   remote code execution on the server.
-  
+
   ## Background
-  
+
   ERB (Embedded Ruby) is the default templating engine in Rails. SSTI occurs when:
   - User input is directly passed to ERB.new() 
   - User input is used in render inline: calls
   - User input is interpolated into template names
   - ActionView::Template.new() is called with user data
   - Haml templates are created with user input
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability occurs when:
   1. User input is directly evaluated as ERB template code
   2. Template names or sources are constructed with user input
   3. Render methods accept unvalidated user input
   4. Haml engines are initialized with user-controlled data
-  
+
   ## Known CVEs
-  
+
   - CVE-2016-2098: RCE via render inline in Rails (CVSS 9.8)
   - CVE-2020-8163: Code injection via locals parameter in render
   - CVE-2019-5418: File content disclosure via render file (related)
   - Multiple template injection incidents in Rails applications
-  
+
   ## Examples
-  
+
       # Critical - Direct ERB evaluation
       ERB.new(params[:template]).result
       
@@ -45,9 +45,9 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       # Safe - Static template with data binding
       render template: "users/show", locals: { data: params[:data] }
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-erb-injection",
@@ -93,7 +93,8 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       ],
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
-      recommendation: "Never render user input as Rails ERB templates. Use static Rails templates with safe data binding and Rails helpers.",
+      recommendation:
+        "Never render user input as Rails ERB templates. Use static Rails templates with safe data binding and Rails helpers.",
       test_cases: %{
         vulnerable: [
           "ERB.new(params[:template]).result",
@@ -108,7 +109,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -117,7 +118,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       input is directly evaluated as template code, allowing attackers to execute
       arbitrary Ruby code on the server. ERB is Rails' default templating engine,
       making this vulnerability particularly dangerous in web applications.
-      
+
       The vulnerability is especially severe because:
       1. ERB has full access to Ruby's capabilities and server environment
       2. Successful exploitation leads to complete server compromise
@@ -125,7 +126,6 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       4. Attackers can access files, databases, and execute system commands
       5. It's often overlooked during security reviews due to template complexity
       """,
-      
       attack_vectors: """
       1. **Direct Code Execution via ERB**: <%= system('whoami') %>
       2. **File System Access**: <%= File.read('/etc/passwd') %>
@@ -138,7 +138,6 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       9. **Application Source Code Disclosure**: <%= File.read(Rails.root.join('config/secrets.yml')) %>
       10. **Session Hijacking**: <%= session.to_h %> or <%= cookies.to_h %>
       """,
-      
       business_impact: """
       - Complete server and application compromise via remote code execution
       - Full data breach exposing all customer and business data  
@@ -150,7 +149,6 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       - Competitive disadvantage from stolen intellectual property and trade secrets
       - Potential criminal charges if sensitive government or healthcare data is exposed
       """,
-      
       technical_impact: """
       - Arbitrary code execution with application privileges
       - Complete file system access (read/write/execute)
@@ -162,9 +160,8 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       - Ability to modify application code and behavior
       - Session and authentication bypass
       """,
-      
-      likelihood: "Medium-High - Template injection is less common than SQL injection but devastating when present",
-      
+      likelihood:
+        "Medium-High - Template injection is less common than SQL injection but devastating when present",
       cve_examples: [
         "CVE-2016-2098 - Rails RCE via render inline affecting Rails < 3.2.22.2, 4.x < 4.1.14.2, 4.2.x < 4.2.5.2 (CVSS 9.8)",
         "CVE-2020-8163 - Rails code injection via locals parameter affecting Rails < 5.0.1 (CVSS 7.5)",
@@ -172,17 +169,15 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
         "HackerOne Report #942103 - SSTI in Rails UJS test server leading to RCE",
         "Multiple undisclosed SSTI vulnerabilities in Rails applications reported via bug bounty programs"
       ],
-      
       compliance_standards: [
         "OWASP Top 10 2021 - A03: Injection",
-        "CWE-94: Code Injection", 
+        "CWE-94: Code Injection",
         "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code",
         "PCI DSS 6.5.1 - Injection flaws",
         "NIST SP 800-53 - SI-10 Information Input Validation",
         "ISO 27001 - A.14.2.5 Secure system engineering principles",
         "ASVS 4.0 - V5.3 Output Encoding and Injection Prevention"
       ],
-      
       remediation_steps: """
       1. **Never Use User Input in Template Evaluation (Critical)**:
          ```ruby
@@ -194,7 +189,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
          # Always use static templates with data binding
          render template: "users/show", locals: { user_data: params[:data] }  # SAFE
          ```
-      
+
       2. **Use Static Template Names Only**:
          ```ruby
          # Bad - dynamic template names
@@ -206,7 +201,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
                         params[:template] : 'dashboard'
          render template: "users/\#{template_name}"  # SAFE
          ```
-      
+
       3. **Secure Data Passing to Templates**:
          ```ruby
          # Pass data safely via locals
@@ -216,7 +211,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
            data: safe_data_hash
          }
          ```
-      
+
       4. **Input Validation and Sanitization**:
          ```ruby
          # If you must construct templates dynamically (strongly discouraged)
@@ -230,7 +225,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
          # Sanitize any dynamic content
          content = ActionController::Base.helpers.sanitize(params[:content])
          ```
-      
+
       5. **Content Security Policy (Defense in Depth)**:
          ```ruby
          # In ApplicationController
@@ -244,7 +239,6 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
          end
          ```
       """,
-      
       prevention_tips: """
       - Never pass user input directly to ERB.new(), render inline:, or template: with interpolation
       - Always use static template files with data passed via locals
@@ -260,7 +254,6 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       - Implement strict input validation at the controller level
       - Use Rails' strong parameters to control what data reaches templates
       """,
-      
       detection_methods: """
       - Static analysis with Brakeman scanner (detects most ERB injection patterns)
       - Manual code review focusing on all render calls and ERB usage
@@ -273,7 +266,6 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       - Security-focused linters and IDE plugins
       - Regular security audits and code reviews
       """,
-      
       safe_alternatives: """
       # 1. Use static template names with data binding (Recommended)
       render template: "users/profile", locals: {
@@ -281,7 +273,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
         data: sanitized_params,
         preferences: user_preferences
       }
-      
+
       # 2. Predefined template selection with whitelist
       class TemplateSelector
         ALLOWED_TEMPLATES = {
@@ -294,10 +286,10 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
           ALLOWED_TEMPLATES[template_key] || 'errors/not_found'
         end
       end
-      
+
       # Usage
       render template: TemplateSelector.safe_template(params[:view])
-      
+
       # 3. Component-based approach
       class SafeComponentRenderer
         def self.render_user_card(user_data)
@@ -308,7 +300,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
           )
         end
       end
-      
+
       # 4. Template builder pattern
       class SafeTemplateBuilder
         def initialize(base_template)
@@ -338,7 +330,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
           # Sanitization logic
         end
       end
-      
+
       # 5. View objects pattern
       class UserProfileView
         def initialize(user, params)
@@ -365,39 +357,57 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.95,
-      
       context_rules: %{
         # Template engines that can be dangerous
         template_engines: [
-          "ERB", "Haml", "ActionView::Template", "Slim", "Liquid"
+          "ERB",
+          "Haml",
+          "ActionView::Template",
+          "Slim",
+          "Liquid"
         ],
-        
+
         # Common sources of user input
         user_input_sources: [
-          "params", "request", "cookies", "session",
-          "query_params", "form_params", "user_input", "user_template"
+          "params",
+          "request",
+          "cookies",
+          "session",
+          "query_params",
+          "form_params",
+          "user_input",
+          "user_template"
         ],
-        
+
         # Dangerous template methods
         dangerous_patterns: [
-          "ERB.new", "render inline:", "render template:", "render partial:",
-          "Haml::Engine.new", "Haml.render", "ActionView::Template.new"
+          "ERB.new",
+          "render inline:",
+          "render template:",
+          "render partial:",
+          "Haml::Engine.new",
+          "Haml.render",
+          "ActionView::Template.new"
         ],
-        
+
         # Safe patterns to reduce false positives
         safe_patterns: [
-          ~r/render\s+template:\s*["'`]\w+["'`]/,  # Static template names
-          ~r/render\s+partial:\s*["'`][\w\/]+["'`]/,  # Static partial names
-          ~r/ERB\.new\s*\(\s*File\.read/,  # File-based templates
-          ~r/locals:\s*\{/,  # Using locals for data
-          ~r/\.html_safe\s*$/  # Explicit html_safe calls
+          # Static template names
+          ~r/render\s+template:\s*["'`]\w+["'`]/,
+          # Static partial names
+          ~r/render\s+partial:\s*["'`][\w\/]+["'`]/,
+          # File-based templates
+          ~r/ERB\.new\s*\(\s*File\.read/,
+          # Using locals for data
+          ~r/locals:\s*\{/,
+          # Explicit html_safe calls
+          ~r/\.html_safe\s*$/
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # Very high confidence for direct user input in template methods
@@ -420,25 +430,27 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
           haml_engine_usage: +0.3
         }
       },
-      
       ast_rules: %{
         # Template method analysis
         template_analysis: %{
           check_method_calls: true,
           template_methods: [
-            "render", "ERB.new", "Haml::Engine.new", "ActionView::Template.new"
+            "render",
+            "ERB.new",
+            "Haml::Engine.new",
+            "ActionView::Template.new"
           ],
           dangerous_options: ["inline", "template", "partial"],
           trace_variable_flow: true
         },
-        
+
         # String interpolation detection  
         interpolation_detection: %{
           patterns: ["StringInterpolation", "StringConcat"],
           check_for_user_input: true,
           template_context: true
         },
-        
+
         # Method call context analysis
         method_analysis: %{
           check_receiver: true,
@@ -446,7 +458,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
           check_options_hash: true,
           trace_user_input: true
         },
-        
+
         # Template safety patterns
         safety_patterns: %{
           file_based_templates: ~r/File\.read|File\.open/,
@@ -457,6 +469,4 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       }
     }
   end
-  
 end
-

@@ -17,7 +17,6 @@ defmodule Rsolv.PromEx.ValidationPlugin do
           tags: [:repo, :language, :framework, :status],
           tag_values: &extract_validation_tags/1
         ),
-
         counter(
           [:rsolv, :validation, :test_generated, :total],
           event_name: [:rsolv, :validation, :test_generated],
@@ -35,7 +34,7 @@ defmodule Rsolv.PromEx.ValidationPlugin do
           tags: [:repo, :language, :framework],
           tag_values: &extract_base_tags/1,
           unit: {:native, :millisecond},
-          reporter_options: [buckets: [1000, 5000, 10000, 30000, 60000, 120000, 300000]]
+          reporter_options: [buckets: [1000, 5000, 10000, 30000, 60000, 120_000, 300_000]]
         ),
 
         # Mitigation counters

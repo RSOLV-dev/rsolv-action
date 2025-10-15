@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
   @moduledoc """
   SQL Injection via String Concatenation in JavaScript
-  
+
   Detects dangerous patterns like:
     query = "SELECT * FROM users WHERE id = " + userId;
     db.query("SELECT * FROM users WHERE name = '" + userName + "'");
@@ -12,13 +12,13 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
     
   Note: This pattern can detect SQL injection in mixed-language files,
   such as JavaScript files that construct SQL queries.
-  
+
   ## Vulnerability Details
-  
+
   SQL injection occurs when untrusted data is concatenated directly into SQL queries,
   allowing attackers to modify the query structure. This can lead to unauthorized data
   access, modification, or deletion.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable code
@@ -28,13 +28,13 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
   // This returns ALL users instead of just one!
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Structured vulnerability metadata for SQL injection.
-  
+
   This metadata is used for:
   - Internal documentation and training
   - Generating detailed security reports
@@ -49,7 +49,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
       attacker to view data that they are not normally able to retrieve, modify or delete 
       data, and in some cases execute administrative operations on the database.
       """,
-      
       references: [
         %{
           type: :cwe,
@@ -76,7 +75,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
           title: "NIST - Information Input Validation"
         }
       ],
-      
       attack_vectors: [
         "Direct concatenation of user input into SQL queries",
         "String interpolation without proper escaping",
@@ -84,7 +82,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
         "Insufficient input validation before query construction",
         "Mixing data and SQL code in the same string"
       ],
-      
       real_world_impact: [
         "Data breach - unauthorized access to sensitive information",
         "Data loss - deletion of critical database records",
@@ -92,7 +89,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
         "Privilege escalation - gaining admin access",
         "Remote code execution (in some database configurations)"
       ],
-      
       cve_examples: [
         %{
           id: "CVE-2023-22794",
@@ -107,7 +103,6 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
           cvss: 8.8
         }
       ],
-      
       safe_alternatives: [
         "Use parameterized queries: db.query('SELECT * FROM users WHERE id = ?', [userId])",
         "Use prepared statements: db.prepare('SELECT * FROM users WHERE id = ?')",
@@ -115,25 +110,24 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
         "Use safe template literals with parameter binding",
         "Validate and sanitize input before query construction"
       ],
-      
       detection_notes: """
       This pattern specifically detects string concatenation patterns in JavaScript
       that build SQL queries. It looks for:
       1. String concatenation operators (+) near SQL keywords
       2. User input sources (req.params, req.query, req.body)
       3. Database query method calls
-      
+
       The AST enhancement reduces false positives by ensuring the concatenation
       occurs within actual database query calls.
       """
     }
   end
-  
+
   @doc """
   Returns the pattern definition for SQL injection via concatenation.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.SqlInjectionConcat.pattern()
       iex> pattern.id
       "js-sql-injection-concat"
@@ -151,7 +145,8 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
       regex: ~r/(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN).*?["']\s*\+\s*\w+/i,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries or prepared statements instead of string concatenation",
+      recommendation:
+        "Use parameterized queries or prepared statements instead of string concatenation",
       test_cases: %{
         vulnerable: [
           ~S|db.query("SELECT * FROM users WHERE id = " + req.params.id)|,
@@ -166,18 +161,18 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SQL injection vulnerabilities and:
   - Parameterized queries using placeholders (?, $1, :param)
   - ORM query builders (Knex, Sequelize, etc.)
   - SQL strings used only for logging
   - Test code that builds queries for assertions
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -215,23 +210,37 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/fixtures/, ~r/mocks/],
-        exclude_if_parameterized: true,      # Using ? or $1 placeholders
-        exclude_if_uses_orm_builder: true,   # Query builders are safer
-        exclude_if_logging_only: true,       # Just logging SQL, not executing
-        safe_if_input_validated: true        # Has input sanitization
+        # Using ? or $1 placeholders
+        exclude_if_parameterized: true,
+        # Query builders are safer
+        exclude_if_uses_orm_builder: true,
+        # Just logging SQL, not executing
+        exclude_if_logging_only: true,
+        # Has input sanitization
+        safe_if_input_validated: true
       },
       confidence_rules: %{
-        base: 0.4,  # Increased base since we relaxed context requirements
+        # Increased base since we relaxed context requirements
+        base: 0.4,
         adjustments: %{
-          "direct_req_param_concat" => 0.4,   # req.params.id directly concatenated
-          "within_db_query_call" => 0.3,      # Bonus if inside db.query() call
-          "has_sql_keywords" => 0.3,          # Contains SELECT/INSERT/etc - increased for better detection
-          "has_user_input" => 0.2,            # Clear user input present - increased for better detection
-          "uses_parameterized_query" => -0.9, # Has ?, $1, :param placeholders
-          "uses_orm_query_builder" => -0.8,   # Using Knex, Sequelize builders
-          "is_console_log" => -1.0,           # Just logging, not querying
-          "has_input_validation" => -0.7,     # Input is sanitized/escaped
-          "in_test_file" => -0.9              # Test code
+          # req.params.id directly concatenated
+          "direct_req_param_concat" => 0.4,
+          # Bonus if inside db.query() call
+          "within_db_query_call" => 0.3,
+          # Contains SELECT/INSERT/etc - increased for better detection
+          "has_sql_keywords" => 0.3,
+          # Clear user input present - increased for better detection
+          "has_user_input" => 0.2,
+          # Has ?, $1, :param placeholders
+          "uses_parameterized_query" => -0.9,
+          # Using Knex, Sequelize builders
+          "uses_orm_query_builder" => -0.8,
+          # Just logging, not querying
+          "is_console_log" => -1.0,
+          # Input is sanitized/escaped
+          "has_input_validation" => -0.7,
+          # Test code
+          "in_test_file" => -0.9
         }
       },
       min_confidence: 0.7

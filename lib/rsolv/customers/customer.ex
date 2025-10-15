@@ -9,13 +9,13 @@ defmodule Rsolv.Customers.Customer do
     field :current_usage, :integer, default: 0
     field :active, :boolean, default: true
     field :metadata, :map, default: %{}
-    
+
     # Authentication fields
     field :password, :string, virtual: true, redact: true
     field :password_hash, :string, redact: true
     field :is_staff, :boolean, default: false
     field :admin_level, :string
-    
+
     # Billing fields (consolidated from former Billing.Customer)
     field :trial_fixes_used, :integer, default: 0
     field :trial_fixes_limit, :integer, default: 5
@@ -28,25 +28,39 @@ defmodule Rsolv.Customers.Customer do
     field :fixes_used_this_month, :integer, default: 0
     field :fixes_quota_this_month, :integer, default: 0
     field :has_payment_method, :boolean, default: false
-    
+
     has_many :api_keys, Rsolv.Customers.ApiKey
     has_many :fix_attempts, Rsolv.Billing.FixAttempt
     has_many :forge_accounts, Rsolv.Customers.ForgeAccount
-    
+
     timestamps()
   end
 
   @admin_levels ~w(read_only limited full)
-  
+
   @doc false
   def changeset(customer, attrs) do
     customer
     |> cast(attrs, [
-      :name, :email, :monthly_limit, :current_usage, :active, :metadata,
-      :trial_fixes_used, :trial_fixes_limit, :stripe_customer_id, :subscription_plan,
-      :subscription_status, :rollover_fixes, :payment_method_added_at, :trial_expired_at,
-      :fixes_used_this_month, :fixes_quota_this_month, :has_payment_method,
-      :is_staff, :admin_level
+      :name,
+      :email,
+      :monthly_limit,
+      :current_usage,
+      :active,
+      :metadata,
+      :trial_fixes_used,
+      :trial_fixes_limit,
+      :stripe_customer_id,
+      :subscription_plan,
+      :subscription_status,
+      :rollover_fixes,
+      :payment_method_added_at,
+      :trial_expired_at,
+      :fixes_used_this_month,
+      :fixes_quota_this_month,
+      :has_payment_method,
+      :is_staff,
+      :admin_level
     ])
     |> validate_required([:name, :email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
@@ -54,17 +68,18 @@ defmodule Rsolv.Customers.Customer do
     |> validate_number(:monthly_limit, greater_than_or_equal_to: 0)
     |> validate_admin_level()
   end
-  
+
   @doc """
   Checks if the customer's trial has expired.
-  
+
   Returns true if trial_expired_at is set and in the past.
   """
   def trial_expired?(%__MODULE__{trial_expired_at: nil}), do: false
+
   def trial_expired?(%__MODULE__{trial_expired_at: expired_at}) do
     DateTime.compare(expired_at, DateTime.utc_now()) == :lt
   end
-  
+
   @doc """
   Changeset for customer registration with password.
   """
@@ -74,13 +89,19 @@ defmodule Rsolv.Customers.Customer do
     |> cast(attrs, [:password])
     |> validate_required([:password])
     |> validate_length(:password, min: 12, max: 72)
-    |> validate_format(:password, ~r/[a-z]/, message: "must contain at least one lowercase letter")
-    |> validate_format(:password, ~r/[A-Z]/, message: "must contain at least one uppercase letter")
+    |> validate_format(:password, ~r/[a-z]/,
+      message: "must contain at least one lowercase letter"
+    )
+    |> validate_format(:password, ~r/[A-Z]/,
+      message: "must contain at least one uppercase letter"
+    )
     |> validate_format(:password, ~r/[0-9]/, message: "must contain at least one number")
-    |> validate_format(:password, ~r/[!@#$%^&*(),.?":{}|<>]/, message: "must contain at least one special character")
+    |> validate_format(:password, ~r/[!@#$%^&*(),.?":{}|<>]/,
+      message: "must contain at least one special character"
+    )
     |> hash_password()
   end
-  
+
   @doc """
   Validates a password against the hashed password.
   """
@@ -88,23 +109,24 @@ defmodule Rsolv.Customers.Customer do
       when is_binary(hashed_password) and byte_size(password) > 0 do
     Bcrypt.verify_pass(password, hashed_password)
   end
-  
+
   def valid_password?(_, _) do
     # Perform a dummy check to prevent timing attacks
     Bcrypt.no_user_verify()
     false
   end
-  
+
   defp hash_password(changeset) do
     case changeset do
       %Ecto.Changeset{valid?: true, changes: %{password: password}} ->
         put_change(changeset, :password_hash, Bcrypt.hash_pwd_salt(password, log_rounds: 12))
         |> delete_change(:password)
+
       _ ->
         changeset
     end
   end
-  
+
   defp validate_admin_level(changeset) do
     case get_change(changeset, :admin_level) do
       nil -> changeset

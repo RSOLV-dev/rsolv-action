@@ -16,7 +16,11 @@ defmodule RsolvWeb.Admin.CustomerLiveApiKeyTest do
   end
 
   describe "API Key Generation" do
-    test "generates and saves API key to database", %{conn: conn, staff: staff, customer: customer} do
+    test "generates and saves API key to database", %{
+      conn: conn,
+      staff: staff,
+      customer: customer
+    } do
       conn = log_in_customer(conn, staff)
       {:ok, view, _html} = live(conn, "/admin/customers/#{customer.id}")
 
@@ -72,7 +76,11 @@ defmodule RsolvWeb.Admin.CustomerLiveApiKeyTest do
       assert customer_from_key.id == customer.id
     end
 
-    test "generated API keys are active by default", %{conn: conn, staff: staff, customer: customer} do
+    test "generated API keys are active by default", %{
+      conn: conn,
+      staff: staff,
+      customer: customer
+    } do
       conn = log_in_customer(conn, staff)
       {:ok, view, _html} = live(conn, "/admin/customers/#{customer.id}")
 
@@ -89,7 +97,11 @@ defmodule RsolvWeb.Admin.CustomerLiveApiKeyTest do
       assert api_key.active == true
     end
 
-    test "multiple API keys can be generated for same customer", %{conn: conn, staff: staff, customer: customer} do
+    test "multiple API keys can be generated for same customer", %{
+      conn: conn,
+      staff: staff,
+      customer: customer
+    } do
       conn = log_in_customer(conn, staff)
       {:ok, view, _html} = live(conn, "/admin/customers/#{customer.id}")
 

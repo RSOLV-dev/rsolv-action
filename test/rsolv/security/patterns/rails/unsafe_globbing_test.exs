@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.Patterns.Rails.UnsafeGlobbing
   alias Rsolv.Security.Pattern
 
   describe "unsafe_globbing pattern" do
     test "returns correct pattern structure" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "rails-unsafe-globbing"
       assert pattern.name == "Unsafe Route Globbing"
@@ -17,7 +17,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
       assert pattern.frameworks == ["rails"]
       assert pattern.cwe_id == "CWE-22"
       assert pattern.owasp_category == "A01:2021"
-      
+
       assert is_binary(pattern.description)
       assert is_binary(pattern.recommendation)
       assert is_list(pattern.regex)
@@ -26,7 +26,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "detects basic glob routes without constraints" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       vulnerable_code = [
         ~S"get \"files/*path\", to: \"files#show\"",
         ~S"get 'downloads/*file', to: 'downloads#serve'",
@@ -35,7 +35,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
         ~S"match '*path' => 'files#show'",
         ~S"get \"*splat\", to: \"catch_all#index\""
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect: #{code}"
@@ -44,7 +44,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "detects glob routes with CVE-2014-0130 style patterns" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       vulnerable_code = [
         ~S"get \"download/*filename\", to: \"files#download\"",
         ~S"get \"serve/*path\", to: \"static#serve\"",
@@ -52,7 +52,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
         ~S"get \"assets/*asset_path\", to: \"assets#serve\"",
         ~S"get \"media/*file_path\", to: \"media#show\""
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect CVE-2014-0130 pattern: #{code}"
@@ -61,14 +61,14 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "detects glob routes with CVE-2019-5418 render file patterns" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       vulnerable_code = [
         ~S"get \"files/*path\", to: \"files#show\" # renders file: params[:path]",
         ~S"get \"templates/*template\", to: \"render#show\"",
         ~S"match \"view/*file\" => \"view#render\"",
         ~S"get \"download/*resource\", to: \"download#file\""
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect CVE-2019-5418 pattern: #{code}"
@@ -77,7 +77,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "detects generic catch-all glob routes" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       vulnerable_code = [
         ~S"get \"*all\", to: \"application#catch_all\"",
         ~S"match '*path' => 'catch_all#index'",
@@ -85,7 +85,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
         ~S"match \"*anything\" => \"default#handler\"",
         ~S"get '*glob' => 'fallback#handle'"
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect catch-all pattern: #{code}"
@@ -94,7 +94,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "detects glob routes with path traversal potential" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       vulnerable_code = [
         ~S"get \"documents/*doc_path\", to: \"docs#show\"",
         ~S"get \"uploads/*upload_path\", to: \"uploads#serve\"",
@@ -102,7 +102,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
         ~S"get \"storage/*file_path\", to: \"storage#retrieve\"",
         ~S"get \"backup/*backup_file\", to: \"backup#download\""
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect path traversal glob: #{code}"
@@ -111,14 +111,14 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "detects nested glob routes" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       vulnerable_code = [
         ~S"get \"api/v1/files/*path\", to: \"api/files#show\"",
         ~S"get \"admin/files/*filename\", to: \"admin/files#serve\"",
         ~S"match \"public/assets/*resource\" => \"public#serve\"",
         ~S"get \"user/:id/files/*filepath\", to: \"user_files#show\""
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect nested glob: #{code}"
@@ -127,13 +127,13 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "detects route blocks with glob patterns" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       vulnerable_code = [
         ~S"namespace :api do\n  get \"files/*path\", to: \"files#show\"\nend",
         ~S"scope :admin do\n  match \"*resource\" => \"admin#serve\"\nend",
         ~S"resources :users do\n  get \"files/*filename\", to: \"user_files#show\"\nend"
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect glob in route block: #{code}"
@@ -142,13 +142,13 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "detects unsafe format constraints with globs" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       vulnerable_code = [
         ~S"get \"files/*path\", to: \"files#show\", format: false",
         ~S"get \"download/*file\", to: \"download#serve\", defaults: { format: nil }",
         ~S"match \"*path\" => \"files#show\", format: false"
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect unsafe format constraint: #{code}"
@@ -157,7 +157,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "does not detect safe glob routes with proper constraints" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       safe_code = [
         # Note: Constraints and comment detection are part of AST enhancement, these may still match at regex level
         # ~S"get \"files/*path\", to: \"files#show\", constraints: { path: /[^.]/ }",
@@ -168,7 +168,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
         ~S"get \"files/:id\", to: \"files#show\" # specific param, not glob",
         ~S"get \"files\", to: \"files#index\" # no glob parameter"
       ]
-      
+
       for code <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "False positive detected for: #{code}"
@@ -177,10 +177,10 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "includes comprehensive vulnerability metadata" do
       metadata = UnsafeGlobbing.vulnerability_metadata()
-      
+
       assert metadata.description
       assert metadata.attack_vectors
-      assert metadata.business_impact  
+      assert metadata.business_impact
       assert metadata.technical_impact
       assert metadata.likelihood
       assert metadata.cve_examples
@@ -193,13 +193,13 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "vulnerability metadata contains globbing specific information" do
       metadata = UnsafeGlobbing.vulnerability_metadata()
-      
+
       assert String.contains?(String.downcase(metadata.description), "glob")
       assert String.contains?(String.downcase(metadata.attack_vectors), "path traversal")
       assert String.contains?(metadata.business_impact, "file disclosure")
       assert String.contains?(metadata.safe_alternatives, "constraint")
       assert String.contains?(String.downcase(metadata.prevention_tips), "glob")
-      
+
       # Check for CVE references found in research
       assert String.contains?(metadata.cve_examples, "CVE-2014-0130")
       assert String.contains?(metadata.cve_examples, "CVE-2019-5418")
@@ -208,7 +208,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "includes AST enhancement rules" do
       enhancement = UnsafeGlobbing.ast_enhancement()
-      
+
       assert enhancement.min_confidence
       assert enhancement.context_rules
       assert enhancement.confidence_rules
@@ -217,7 +217,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "AST enhancement has globbing specific rules" do
       enhancement = UnsafeGlobbing.ast_enhancement()
-      
+
       assert enhancement.context_rules.glob_patterns
       assert enhancement.context_rules.route_methods
       assert enhancement.ast_rules.route_analysis
@@ -226,7 +226,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "enhanced pattern integrates AST rules" do
       enhanced = UnsafeGlobbing.enhanced_pattern()
-      
+
       assert enhanced.id == "rails-unsafe-globbing"
       assert enhanced.ast_enhancement.min_confidence
       assert is_float(enhanced.ast_enhancement.min_confidence)
@@ -234,7 +234,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
 
     test "pattern includes educational test cases" do
       pattern = UnsafeGlobbing.pattern()
-      
+
       assert pattern.test_cases.vulnerable
       assert pattern.test_cases.safe
       assert length(pattern.test_cases.vulnerable) > 0

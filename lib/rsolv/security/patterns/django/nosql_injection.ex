@@ -1,29 +1,29 @@
 defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
   @moduledoc """
   Django NoSQL Injection pattern for Django applications.
-  
+
   This pattern detects NoSQL injection vulnerabilities in Django applications
   that use MongoDB, Elasticsearch, Redis, or other NoSQL databases where user
   input is unsafely incorporated into queries.
-  
+
   ## Background
-  
+
   While Django doesn't have built-in NoSQL support, many Django applications
   integrate with NoSQL databases like MongoDB (via PyMongo/Djongo), Elasticsearch,
   or Redis. These integrations can introduce NoSQL injection vulnerabilities when
   user input is directly incorporated into queries without proper sanitization.
-  
+
   ## Vulnerability Details
-  
+
   NoSQL injection occurs when:
   1. User input is passed to json.loads() and used in database queries
   2. MongoDB $where clauses contain user-controlled data
   3. Elasticsearch query bodies are built from user input
   4. Redis eval() commands execute user-provided scripts
   5. Query operators like $gt, $ne, $regex are controlled by users
-  
+
   ## Examples
-  
+
       # VULNERABLE - json.loads with user input in MongoDB
       filter_data = json.loads(request.body)
       results = collection.find(filter_data)
@@ -49,9 +49,9 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       }
       results = es.search(body=query)
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   @impl true
   def pattern do
     %Rsolv.Security.Pattern{
@@ -66,35 +66,36 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
         # MongoDB $where injection
         ~r/['"]\$where['"]\s*:\s*request\./,
         ~r/\$where.*?request\.(?:GET|POST|data)/,
-        
+
         # json.loads with user input used in database operations
         ~r/json\.loads\s*\(\s*request\..*?\).*?\.(?:find|filter|aggregate|update)/ms,
         ~r/filter_data\s*=\s*json\.loads\s*\(\s*request\./,
-        
+
         # MongoDB operations with json.loads
         ~r/collection\.find\s*\(\s*json\.loads/,
         ~r/collection\.aggregate\s*\(\s*json\.loads/,
         ~r/\.find\s*\(\s*json\.loads\s*\(\s*request\./,
-        
+
         # Elasticsearch with json.loads
         ~r/es\.search\s*\(\s*body\s*=\s*json\.loads/,
         ~r/elasticsearch.*?body\s*=\s*json\.loads/,
         ~r/body\s*=\s*json\.loads\s*\(\s*request\..*?\).*?es\.search/ms,
-        
+
         # Redis eval with user input
         ~r/redis[_\-]?client\.eval\s*\(\s*request\./,
         ~r/\.eval\s*\(\s*request\.(?:GET|POST|data)/,
         ~r/script\s*=\s*request\..*?\.eval\s*\(\s*script/ms,
-        
+
         # MongoDB raw operations with f-strings
         ~r/\.raw\s*\(\s*\{['"]\$where['"]\s*:\s*f['"]/,
-        
+
         # Direct operator injection
         ~r/\{['"]\$(?:gt|lt|ne|regex|in|nin)['"]\s*:\s*request\./
       ],
       cwe_id: "CWE-943",
       owasp_category: "A03:2021",
-      recommendation: "Validate and sanitize user input before using in NoSQL queries. Use parameterized queries where possible.",
+      recommendation:
+        "Validate and sanitize user input before using in NoSQL queries. Use parameterized queries where possible.",
       test_cases: %{
         vulnerable: [
           ~s|collection.find(json.loads(request.body))|,
@@ -109,7 +110,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -118,21 +119,20 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       queries by injecting malicious data. In Django applications using NoSQL databases,
       this commonly occurs when user input is passed to json.loads() and used directly
       in database queries, or when query operators are controlled by user input.
-      
+
       Unlike SQL injection, NoSQL injection can take many forms:
       1. Operator injection ($gt, $ne, $regex) to bypass authentication
       2. JavaScript injection via $where clauses in MongoDB
       3. Query structure manipulation through JSON parsing
       4. Script injection in Redis eval() commands
       5. Query DSL injection in Elasticsearch
-      
+
       The vulnerability is particularly dangerous because:
       - It can bypass authentication and authorization
       - Allows data extraction and manipulation
       - Can cause denial of service through complex queries
       - May enable remote code execution in some cases
       """,
-      
       attack_vectors: """
       1. **Authentication Bypass**: `{"username": "admin", "password": {"$ne": null}}`
       2. **$where JavaScript Injection**: `$where: "function() { return true; }"`
@@ -145,7 +145,6 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       9. **Aggregation Pipeline Injection**: `[{"$lookup": {...}}]`
       10. **Time-based Extraction**: `$where: "sleep(5000) || true"`
       """,
-      
       business_impact: """
       - Complete authentication bypass leading to unauthorized access
       - Data breach through extraction of sensitive documents
@@ -158,7 +157,6 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       - Competitive disadvantage from exposed business logic
       - Recovery costs including incident response and remediation
       """,
-      
       technical_impact: """
       - Authentication and authorization bypass
       - Arbitrary data retrieval from all collections
@@ -171,36 +169,34 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       - Cache poisoning in Redis-based caches
       - Query performance degradation
       """,
-      
-      likelihood: "High - Developers often trust JSON input and use json.loads() without validation",
-      
+      likelihood:
+        "High - Developers often trust JSON input and use json.loads() without validation",
       cve_examples: """
       CVE-2020-35654 (CVSS 9.8) - NoSQL Injection in Django application
       - Affected Django-based CMS with MongoDB integration
       - json.loads() used directly with user input in find() queries
       - Allowed complete authentication bypass
-      
+
       CVE-2019-10077 (CVSS 9.8) - MongoDB Injection via $where
       - JavaScript injection through $where operator
       - Remote code execution possible
       - Affected multiple Python web applications
-      
+
       CVE-2021-22911 (CVSS 9.8) - Redis Lua Injection
       - Unsafe eval() usage with user input
       - Allowed arbitrary Lua code execution
       - Database-wide impact possible
-      
+
       CVE-2018-1000815 (CVSS 8.8) - Elasticsearch Injection
       - Query DSL injection through user input
       - Information disclosure and DoS
       - Affected Python Elasticsearch clients
-      
+
       CVE-2017-16023 (CVSS 7.5) - MongoDB Operator Injection
       - Authentication bypass using $ne operator
       - Affected Node.js and Python applications
       - Demonstrated in multiple CTF challenges
       """,
-      
       compliance_standards: [
         "OWASP Top 10 2021 - A03: Injection",
         "CWE-943: Improper Neutralization of Special Elements in Data Query Logic",
@@ -211,7 +207,6 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
         "ASVS 4.0 - V5.3 Output Encoding and Injection Prevention",
         "SANS Top 25 - Injection vulnerabilities"
       ],
-      
       remediation_steps: """
       1. **Validate Input Types and Structure**:
          ```python
@@ -233,7 +228,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
          except (json.JSONDecodeError, TypeError):
              return JsonResponse({'error': 'Invalid input'}, status=400)
          ```
-      
+
       2. **Avoid $where and JavaScript Execution**:
          ```python
          # NEVER DO THIS - $where with user input
@@ -247,7 +242,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
          except ValueError:
              return JsonResponse({'error': 'Invalid price'}, status=400)
          ```
-      
+
       3. **Use ODM/ORM Libraries with Built-in Protection**:
          ```python
          # Using MongoEngine (Django MongoDB ORM)
@@ -263,7 +258,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
              age__gte=request.GET.get('min_age', 0)
          )
          ```
-      
+
       4. **Sanitize Elasticsearch Queries**:
          ```python
          # NEVER DO THIS
@@ -292,7 +287,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
          }
          results = es.search(index='products', body=query)
          ```
-      
+
       5. **Secure Redis Operations**:
          ```python
          # NEVER DO THIS - eval with user input
@@ -310,7 +305,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
          # Use safe Redis commands
          redis_client.set(key, value, ex=3600)  # With expiration
          ```
-      
+
       6. **Input Validation and Type Checking**:
          ```python
          def validate_mongodb_input(data):
@@ -336,7 +331,6 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
              return data
          ```
       """,
-      
       prevention_tips: """
       - Never pass user input directly to json.loads() for database queries
       - Avoid MongoDB $where operator; use native query operators
@@ -349,7 +343,6 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       - Monitor and log suspicious query patterns
       - Regular security audits of database operations
       """,
-      
       detection_methods: """
       - Static analysis with Bandit rules for json.loads patterns
       - Search for $where, eval(), and operator usage
@@ -360,44 +353,43 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       - Security testing with tools like NoSQLMap
       - Dependency scanning for vulnerable libraries
       """,
-      
       safe_alternatives: """
       # 1. MongoEngine for Django (Safe ODM) - Always validate user input
       from mongoengine import connect, Document, StringField, IntField, Q
-      
+
       connect('mydb')
-      
+
       class Product(Document):
           name = StringField(max_length=200, required=True)
           price = IntField(min_value=0)
           category = StringField(choices=['electronics', 'books', 'clothing'])
-      
+
       # Safe queries with validation
       products = Product.objects(
           category=request.GET.get('category', 'electronics'),
           price__gte=int(request.GET.get('min_price', 0))
       )
-      
+
       # 2. Elasticsearch DSL (Safe Query Builder)
       from elasticsearch_dsl import Search, Q
-      
+
       s = Search(using=es, index='products')
-      
+
       # Safe query construction
       query = request.GET.get('q', '')
       if query:
           s = s.query('match', title=query)
-      
+
       category = request.GET.get('category')
       if category in ['electronics', 'books', 'clothing']:
           s = s.filter('term', category=category)
-      
+
       response = s.execute()
-      
+
       # 3. PyMongo with Validation
       from pymongo import MongoClient
       from bson import ObjectId
-      
+
       def get_user_safely(user_id):
           # Validate ObjectId format
           try:
@@ -407,13 +399,13 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
           
           # Safe query
           return db.users.find_one({'_id': obj_id})
-      
+
       # 4. Redis with Safe Commands
       import redis
       import json
-      
+
       r = redis.Redis()
-      
+
       def cache_user_data(user_id, data):
           # Validate user_id is numeric
           if not str(user_id).isdigit():
@@ -424,7 +416,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
           
           # Serialize safely
           r.setex(key, 3600, json.dumps(data))
-      
+
       # 5. Query Builder Pattern
       class SafeMongoQuery:
           def __init__(self, collection):
@@ -453,46 +445,70 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       """
     }
   end
-  
+
   @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
-      
       context_rules: %{
         # NoSQL database methods
         nosql_methods: [
-          "find", "find_one", "insert", "update", "delete",
-          "aggregate", "map_reduce", "eval", "search"
+          "find",
+          "find_one",
+          "insert",
+          "update",
+          "delete",
+          "aggregate",
+          "map_reduce",
+          "eval",
+          "search"
         ],
-        
+
         # Dangerous functions
         dangerous_functions: [
-          "json.loads", "eval", "exec", "compile",
+          "json.loads",
+          "eval",
+          "exec",
+          "compile",
           "ast.literal_eval"
         ],
-        
+
         # MongoDB operators
         mongo_operators: [
-          "$where", "$function", "$accumulator", "$code",
-          "$gt", "$gte", "$lt", "$lte", "$ne", "$regex"
+          "$where",
+          "$function",
+          "$accumulator",
+          "$code",
+          "$gt",
+          "$gte",
+          "$lt",
+          "$lte",
+          "$ne",
+          "$regex"
         ],
-        
+
         # Safe patterns to exclude
         safe_patterns: [
-          ~r/if\s+\w+\s+in\s+ALLOWED_/,          # Whitelist check
-          ~r/isinstance\s*\(\s*\w+,\s*(?:str|int|float)\)/, # Type check
-          ~r/\.find\s*\(\s*\{\s*['"]_id['"]/,    # ID lookup
-          ~r/ObjectId\s*\(/                       # ObjectId usage
+          # Whitelist check
+          ~r/if\s+\w+\s+in\s+ALLOWED_/,
+          # Type check
+          ~r/isinstance\s*\(\s*\w+,\s*(?:str|int|float)\)/,
+          # ID lookup
+          ~r/\.find\s*\(\s*\{\s*['"]_id['"]/,
+          # ObjectId usage
+          ~r/ObjectId\s*\(/
         ],
-        
+
         # User input sources
         user_inputs: [
-          "request.GET", "request.POST", "request.body",
-          "request.data", "request.FILES", "request.META"
+          "request.GET",
+          "request.POST",
+          "request.body",
+          "request.data",
+          "request.FILES",
+          "request.META"
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence patterns
@@ -500,29 +516,28 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
           where_operator_injection: +0.9,
           eval_with_user_input: +0.9,
           operator_injection: +0.7,
-          
+
           # Medium confidence
           indirect_json_loads: +0.5,
           elasticsearch_injection: +0.6,
-          
+
           # Lower confidence for safer patterns
           validated_input: -0.8,
           type_checking: -0.7,
           odm_usage: -0.9,
           whitelisted_values: -0.9,
-          
+
           # Context adjustments
           in_view_function: +0.2,
           in_api_handler: +0.3,
           in_migration: -0.8,
-          
+
           # File location adjustments
           in_test_file: -0.9,
           in_fixtures: -0.8,
           commented_line: -1.0
         }
       },
-      
       ast_rules: %{
         # NoSQL analysis
         nosql_analysis: %{
@@ -531,7 +546,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
           analyze_query_building: true,
           track_user_input_flow: true
         },
-        
+
         # Input validation
         validation_analysis: %{
           detect_type_checking: true,
@@ -539,7 +554,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
           check_sanitization: true,
           identify_validation_functions: true
         },
-        
+
         # Database client detection
         client_analysis: %{
           identify_mongodb_clients: true,
@@ -547,7 +562,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
           find_redis_clients: true,
           check_odm_usage: true
         },
-        
+
         # Safe pattern detection
         safe_pattern_analysis: %{
           detect_parameterization: true,
@@ -558,28 +573,30 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       }
     }
   end
-  
-  def applies_to_file?(file_path, frameworks ) do
+
+  def applies_to_file?(file_path, frameworks) do
     # Apply to Python files in Django projects
     is_python_file = String.ends_with?(file_path, ".py")
-    
+
     # Django framework check
     frameworks_list = frameworks || []
     is_django = "django" in frameworks_list
-    
+
     # Common Django file patterns
-    is_django_file = String.contains?(file_path, "views.py") ||
-                    String.contains?(file_path, "models.py") ||
-                    String.contains?(file_path, "api_views.py") ||
-                    String.contains?(file_path, "serializers.py")
-    
+    is_django_file =
+      String.contains?(file_path, "views.py") ||
+        String.contains?(file_path, "models.py") ||
+        String.contains?(file_path, "api_views.py") ||
+        String.contains?(file_path, "serializers.py")
+
     # Not a test file
-    not_test = !String.contains?(file_path, "test") &&
-               !String.contains?(file_path, "spec")
-    
+    not_test =
+      !String.contains?(file_path, "test") &&
+        !String.contains?(file_path, "spec")
+
     # If no frameworks specified but it looks like Django, include it
     inferred_django = frameworks_list == [] && is_django_file
-    
+
     is_python_file && (is_django || inferred_django) && not_test
   end
 end

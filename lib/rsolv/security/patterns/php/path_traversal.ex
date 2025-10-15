@@ -1,38 +1,38 @@
 defmodule Rsolv.Security.Patterns.Php.PathTraversal do
   @moduledoc """
   Pattern for detecting path traversal vulnerabilities in PHP.
-  
+
   This pattern identifies when PHP file access functions like file_get_contents(),
   fopen(), include, require, or readfile() are used with user-controlled input
   without proper validation, potentially allowing attackers to access files
   outside the intended directory structure.
-  
+
   ## Vulnerability Details
-  
+
   Path traversal (also known as directory traversal) is a security vulnerability
   that allows attackers to access files and directories that are stored outside
   the web application's intended directory. This occurs when user input is used
   to construct file paths without proper validation or sanitization.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code - user controls the file path
   $file = $_GET['file'];
   $content = file_get_contents('./uploads/' . $file);
-  
+
   // Attacker can use: ?file=../../etc/passwd
   // Resulting path: ./uploads/../../etc/passwd
   // Which resolves to: /etc/passwd
   ```
-  
+
   The attack exploits relative path sequences like "../" (dot-dot-slash) to
   navigate up the directory structure and access sensitive files outside
   the application's intended scope.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -42,7 +42,8 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
       type: :path_traversal,
       severity: :high,
       languages: ["php"],
-      regex: ~r/(file_get_contents|fopen|readfile)\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)|(include|include_once|require|require_once)\s*\(?[^;]*\$_(GET|POST|REQUEST|COOKIE)/,
+      regex:
+        ~r/(file_get_contents|fopen|readfile)\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)|(include|include_once|require|require_once)\s*\(?[^;]*\$_(GET|POST|REQUEST|COOKIE)/,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
       recommendation: "Validate and sanitize file paths, use basename() or realpath()",
@@ -63,7 +64,7 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -73,44 +74,44 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
       occurs when user input is used to construct file paths without proper validation, enabling
       attackers to use relative path sequences like "../" to navigate the file system and access
       sensitive files such as configuration files, password files, or application source code.
-      
+
       In PHP applications, path traversal vulnerabilities commonly arise when file access functions
       like file_get_contents(), fopen(), include, require, or readfile() process user-controlled
       input without adequate path validation. These functions treat user input as legitimate file
       paths, making them susceptible to directory traversal attacks.
-      
+
       ### The Attack Mechanism
-      
+
       Path traversal attacks exploit the file system's directory navigation features:
       1. **Relative Path Sequences**: Use "../" to move up directory levels
       2. **Absolute Paths**: Directly specify full paths to system files
       3. **URL Encoding**: Encode traversal sequences to bypass basic filters
       4. **Double Encoding**: Use multiple encoding layers to evade detection
-      
+
       ### Common Attack Vectors
-      
+
       #### Basic Directory Traversal
       ```
       GET /download.php?file=../../../etc/passwd
       ```
-      
+
       #### URL-Encoded Traversal
       ```
       GET /download.php?file=%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd
       ```
-      
+
       #### Double-Encoded Traversal
       ```
       GET /download.php?file=%252e%252e%252f%252e%252e%252f%252e%252e%252fetc%252fpasswd
       ```
-      
+
       #### Null Byte Injection (PHP < 5.3.4)
       ```
       GET /download.php?file=../../../etc/passwd%00.txt
       ```
-      
+
       ### Impact and Consequences
-      
+
       Successful path traversal attacks can lead to:
       - **Configuration File Disclosure**: Access to database credentials, API keys
       - **Source Code Exposure**: Revelation of application logic and vulnerabilities
@@ -141,7 +142,8 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
           type: :owasp,
           id: "testing_directory_traversal",
           title: "OWASP Testing Guide - Directory Traversal",
-          url: "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization_Testing/01-Testing_Directory_Traversal_File_Include"
+          url:
+            "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization_Testing/01-Testing_Directory_Traversal_File_Include"
         },
         %{
           type: :research,
@@ -213,13 +215,13 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
       - Direct usage of superglobal variables ($_GET, $_POST, $_REQUEST, $_COOKIE) in file paths
       - Function calls that combine user input with file system operations
       - Common patterns where user input is concatenated with base paths
-      
+
       The regex specifically looks for:
       - file_get_contents(), fopen(), readfile() - file reading functions
       - include, include_once, require, require_once - file inclusion functions
       - Direct access to user input variables in function parameters
       - Various whitespace and formatting patterns around function calls
-      
+
       False positives may occur when:
       - File operations use properly validated input variables
       - Hardcoded file paths are used without user input
@@ -269,12 +271,12 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.PathTraversal.test_cases()
       iex> length(test_cases.positive) > 0
       true
@@ -345,15 +347,18 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
           description: "Pre-validated file path"
         },
         %{
-          code: ~S|$file = basename($_GET['file']); $content = file_get_contents('./uploads/' . $file);|,
+          code:
+            ~S|$file = basename($_GET['file']); $content = file_get_contents('./uploads/' . $file);|,
           description: "basename() validation applied"
         },
         %{
-          code: ~S|if (in_array($_GET['page'], $allowed_pages)) { include('./pages/' . $_GET['page']); }|,
+          code:
+            ~S|if (in_array($_GET['page'], $allowed_pages)) { include('./pages/' . $_GET['page']); }|,
           description: "Allowlist validation"
         },
         %{
-          code: ~S|$realpath = realpath('./uploads/' . $_GET['file']); if (strpos($realpath, '/uploads/') === 0) { readfile($realpath); }|,
+          code:
+            ~S|$realpath = realpath('./uploads/' . $_GET['file']); if (strpos($realpath, '/uploads/') === 0) { readfile($realpath); }|,
           description: "realpath() with directory validation"
         },
         %{
@@ -361,13 +366,14 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
           description: "Function name containing file operation"
         },
         %{
-          code: ~S|$data = json_decode($_POST['data'], true); $content = file_get_contents($data['filename']);|,
+          code:
+            ~S|$data = json_decode($_POST['data'], true); $content = file_get_contents($data['filename']);|,
           description: "Indirect access through data structure"
         }
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -388,7 +394,7 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
                 echo "File not found";
             }
         }
-        
+
         // Attack: ?file=../../../etc/passwd
         // Results in: ./downloads/../../../etc/passwd -> /etc/passwd
         """,
@@ -396,16 +402,16 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         // Template system - VULNERABLE
         $template = $_GET['template'] ?? 'default';
         $theme = $_GET['theme'] ?? 'standard';
-        
+
         // Load template file
         $template_path = './themes/' . $theme . '/templates/' . $template . '.php';
-        
+
         if (file_exists($template_path)) {
             include $template_path;
         } else {
             include './themes/standard/templates/error.php';
         }
-        
+
         // Attack: ?theme=../../../etc&template=passwd
         // Results in: ./themes/../../../etc/templates/passwd.php -> /etc/passwd.php
         """,
@@ -421,7 +427,7 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
                 echo '<pre>' . htmlspecialchars($contents) . '</pre>';
             }
         }
-        
+
         // Attack: logfile=../../../etc/passwd
         // Results in: /var/log/myapp/../../../etc/passwd -> /etc/passwd
         """,
@@ -447,10 +453,10 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
                 file_put_contents($config_file, $config_data);
             }
         }
-        
+
         $manager = new ConfigManager();
         $config = $manager->loadConfig($_GET['env']);
-        
+
         // Attack: ?env=../../../etc/passwd
         // Results in: ./config/../../../etc/passwd.php -> /etc/passwd.php
         """
@@ -488,26 +494,26 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         // Define allowed templates and themes
         $allowed_templates = ['home', 'about', 'contact', 'products', 'services'];
         $allowed_themes = ['standard', 'dark', 'mobile'];
-        
+
         $template = $_GET['template'] ?? 'home';
         $theme = $_GET['theme'] ?? 'standard';
-        
+
         // Validate against allowlists
         if (!in_array($template, $allowed_templates)) {
             $template = 'home';
         }
-        
+
         if (!in_array($theme, $allowed_themes)) {
             $theme = 'standard';
         }
-        
+
         // Construct safe path
         $template_path = './themes/' . $theme . '/templates/' . $template . '.php';
-        
+
         // Double-check with realpath
         $real_template_path = realpath($template_path);
         $themes_dir = realpath('./themes/');
-        
+
         if ($real_template_path && strpos($real_template_path, $themes_dir) === 0) {
             include $real_template_path;
         } else {
@@ -595,7 +601,7 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
                        preg_match('/^[a-z]+$/', $env);
             }
         }
-        
+
         try {
             $manager = new SecureConfigManager();
             $config = $manager->loadConfig($_GET['env']);
@@ -607,7 +613,7 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -617,80 +623,80 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
     files and directories outside the intended application scope. This vulnerability occurs
     when applications use user-supplied input to construct file paths without proper validation,
     allowing attackers to manipulate the path to access sensitive files on the server.
-    
+
     ## Understanding Path Traversal Attacks
-    
+
     ### The Basic Mechanism
-    
+
     Path traversal exploits the file system's directory navigation features by using relative
     path sequences to "climb" up the directory tree:
-    
+
     ```
     Normal request: /download.php?file=document.pdf
     Attack request:  /download.php?file=../../../etc/passwd
     ```
-    
+
     The attack uses "../" sequences (dot-dot-slash) to navigate up directory levels,
     eventually reaching system files outside the application's intended directory.
-    
+
     ### Common Vulnerable PHP Functions
-    
+
     #### File Reading Functions
     ```php
     // VULNERABLE - user controls file path
     $content = file_get_contents('./uploads/' . $_GET['file']);
-    
+
     // Attack: ?file=../../../etc/passwd
     // Result: Reads /etc/passwd instead of intended upload file
     ```
-    
+
     #### File Inclusion Functions
     ```php
     // VULNERABLE - dynamic include with user input
     include('./templates/' . $_GET['template'] . '.php');
-    
+
     // Attack: ?template=../../../etc/passwd%00
     // Result: Includes system file (null byte truncates .php)
     ```
-    
+
     #### File Opening Functions
     ```php
     // VULNERABLE - file handle creation with user path
     $handle = fopen('./logs/' . $_POST['logfile'], 'r');
-    
+
     // Attack: logfile=../../../etc/shadow
     // Result: Opens system password file
     ```
-    
+
     ## Attack Techniques and Variations
-    
+
     ### Basic Directory Traversal
     The simplest form uses relative path sequences:
     ```
     ../../../etc/passwd
     ..\\..\\..\\windows\\system32\\drivers\\etc\\hosts
     ```
-    
+
     ### URL Encoding
     To bypass basic filters that block "../":
     ```
     %2e%2e%2f%2e%2e%2f%2e%2e%2f
     %2e%2e%5c%2e%2e%5c%2e%2e%5c
     ```
-    
+
     ### Double URL Encoding
     For applications that decode input multiple times:
     ```
     %252e%252e%252f%252e%252e%252f%252e%252e%252f
     ```
-    
+
     ### Unicode Encoding
     Using Unicode representations of path separators:
     ```
     %c0%ae%c0%ae%c0%af
     %c1%9c
     ```
-    
+
     ### Null Byte Injection (PHP < 5.3.4)
     Truncating file extensions to bypass restrictions:
     ```php
@@ -698,15 +704,15 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
     // Attack: file=../../../etc/passwd%00
     // Result: include('../../../etc/passwd')
     ```
-    
+
     ### Mixed Case and Alternate Representations
     ```
     ..\\..\\..\\\
     ./.././.././.././
     ```
-    
+
     ## Real-World Target Files
-    
+
     ### Unix/Linux Systems
     - `/etc/passwd` - User account information
     - `/etc/shadow` - Password hashes (if readable)
@@ -715,76 +721,76 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
     - `/proc/cmdline` - Boot parameters
     - `~/.ssh/id_rsa` - SSH private keys
     - `/var/log/apache2/access.log` - Web server logs
-    
+
     ### Windows Systems
     - `C:\\windows\\system32\\drivers\\etc\\hosts`
     - `C:\\windows\\win.ini`
     - `C:\\boot.ini`
     - `C:\\windows\\system32\\config\\SAM`
-    
+
     ### Application-Specific Files
     - Database configuration files
     - Application source code
     - Backup files (.bak, .backup, .old)
     - Log files containing sensitive information
     - SSH keys and certificates
-    
+
     ## Advanced Attack Scenarios
-    
+
     ### Log Poisoning via Path Traversal
     ```php
     // Step 1: Access log file via path traversal
     file_get_contents('./logs/' . $_GET['file']);
     // Attack: ?file=../../../var/log/apache2/access.log
-    
+
     // Step 2: Poison log with PHP code via User-Agent
     // User-Agent: <?php system($_GET['cmd']); ?>
-    
+
     // Step 3: Include poisoned log file
     include('./logs/' . $_GET['file']);
     // Result: Code execution via log file inclusion
     ```
-    
+
     ### Configuration File Manipulation
     ```php
     // Access application config through path traversal
     $config = file_get_contents('./config/' . $_GET['env'] . '.php');
-    
+
     // Attack reveals database credentials:
     // ?env=../../../var/www/html/wp-config
     ```
-    
+
     ### Source Code Disclosure
     ```php
     // Reading application source code
     $content = file_get_contents('./pages/' . $_GET['page']);
-    
+
     // Attack: ?page=../admin/login.php
     // Result: Reveals authentication logic and potential vulnerabilities
     ```
-    
+
     ## Prevention Strategies
-    
+
     ### Input Validation and Sanitization
-    
+
     #### Use basename() for Filename Extraction
     ```php
     // SECURE - strips directory components
     $filename = basename($_GET['file']);
     $content = file_get_contents('./uploads/' . $filename);
     ```
-    
+
     #### Allowlist Validation
     ```php
     // SECURE - restrict to known safe files
     $allowed_files = ['report.pdf', 'manual.doc', 'readme.txt'];
     $file = $_GET['file'];
-    
+
     if (in_array($file, $allowed_files)) {
         $content = file_get_contents('./downloads/' . $file);
     }
     ```
-    
+
     #### Character Validation
     ```php
     // SECURE - only allow safe characters
@@ -792,21 +798,21 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         $content = file_get_contents('./uploads/' . $_GET['file']);
     }
     ```
-    
+
     ### Path Resolution and Validation
-    
+
     #### Using realpath() for Path Validation
     ```php
     // SECURE - resolve and validate final path
     $requested_file = './uploads/' . $_GET['file'];
     $real_path = realpath($requested_file);
     $uploads_dir = realpath('./uploads/');
-    
+
     if ($real_path && strpos($real_path, $uploads_dir) === 0) {
         $content = file_get_contents($real_path);
     }
     ```
-    
+
     #### Directory Containment Checks
     ```php
     function isPathSafe($path, $allowed_dir) {
@@ -817,9 +823,9 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
                strpos($real_path, $real_allowed) === 0;
     }
     ```
-    
+
     ### Alternative Approaches
-    
+
     #### File Mapping Systems
     ```php
     // Map user input to actual files
@@ -828,27 +834,27 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         'quick_start' => './docs/quickstart.pdf',
         'api_docs' => './docs/api.pdf'
     ];
-    
+
     $requested = $_GET['document'];
     if (isset($file_mapping[$requested])) {
         readfile($file_mapping[$requested]);
     }
     ```
-    
+
     #### Database-Driven File Access
     ```php
     // Store file metadata in database
     $stmt = $pdo->prepare("SELECT filepath FROM files WHERE id = ? AND user_id = ?");
     $stmt->execute([$_GET['file_id'], $_SESSION['user_id']]);
     $file = $stmt->fetch();
-    
+
     if ($file && file_exists($file['filepath'])) {
         readfile($file['filepath']);
     }
     ```
-    
+
     ## Security Testing
-    
+
     ### Manual Testing Payloads
     ```
     ../
@@ -862,22 +868,22 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
     %c0%ae%c0%ae%c0%af
     ..%252f..%252f..%252f
     ```
-    
+
     ### Automated Testing
     Use tools like:
     - Burp Suite's path traversal payloads
     - OWASP ZAP's directory traversal scanner
     - Custom scripts with wordlists
-    
+
     ## Framework-Specific Considerations
-    
+
     ### Laravel
     ```php
     // Use Laravel's safe path helpers
     Storage::disk('local')->get($filename);  // Confined to storage path
     File::get(storage_path('app/' . $filename));  // Safe path construction
     ```
-    
+
     ### Symfony
     ```php
     // Use Symfony's filesystem component
@@ -886,21 +892,21 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         // Safe to process
     }
     ```
-    
+
     Remember: Path traversal vulnerabilities can lead to complete information disclosure
     and potentially remote code execution. Always validate and sanitize file paths,
     use allowlist-based validation, and implement proper access controls.
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities and false positives
   by analyzing the context of file access operations and checking for safety measures.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.PathTraversal.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]

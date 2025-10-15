@@ -48,58 +48,58 @@ defmodule RsolvWeb.Services.EmailSequence do
   This should be triggered upon successful signup.
   """
   def start_onboarding_sequence(email, first_name \\ nil) do
-    Logger.info("Starting onboarding sequence", 
+    Logger.info("Starting onboarding sequence",
       metadata: %{
         email: email,
         first_name: first_name
       }
     )
-    
+
     # Send the welcome email immediately
     EmailService.send_welcome_email(email, first_name)
-    
+
     # Add sequence tag in ConvertKit
     tag_for_sequence(email, :onboarding)
-    
+
     # Schedule the remaining emails using Oban
     EmailWorker.schedule_sequence(email, first_name, :onboarding)
-    
+
     {:ok, %{status: "started", sequence: :onboarding}}
   end
-  
+
   @doc """
   Start the early access onboarding sequence for a new early access subscriber.
   This should be triggered upon successful early access signup.
   """
   def start_early_access_onboarding_sequence(email, first_name \\ nil) do
     timestamp = DateTime.utc_now() |> DateTime.to_string()
-    
-    Logger.info("[EMAIL SEQUENCE] Starting early access onboarding sequence", 
+
+    Logger.info("[EMAIL SEQUENCE] Starting early access onboarding sequence",
       email: email,
       first_name: first_name,
       timestamp: timestamp
     )
-    
+
     # Send the early access welcome email immediately
     Logger.info("[EMAIL SEQUENCE] About to call EmailService.send_early_access_welcome_email",
       email: email,
       first_name: first_name,
       timestamp: timestamp
     )
-    
+
     result = EmailService.send_early_access_welcome_email(email, first_name)
-    
+
     Logger.info("[EMAIL SEQUENCE] EmailService.send_early_access_welcome_email returned",
       result: inspect(result),
       timestamp: timestamp
     )
-    
+
     # Add sequence tag in ConvertKit
     tag_for_sequence(email, :early_access_onboarding)
-    
+
     # Schedule the remaining emails using Oban
     EmailWorker.schedule_sequence(email, first_name, :early_access_onboarding)
-    
+
     {:ok, %{status: "started", sequence: :early_access_onboarding}}
   end
 
@@ -108,20 +108,20 @@ defmodule RsolvWeb.Services.EmailSequence do
   This should be triggered when a user hasn't used the service for a while.
   """
   def start_re_engagement_sequence(email, first_name \\ nil, inactive_days \\ 30) do
-    Logger.info("Starting re-engagement sequence", 
+    Logger.info("Starting re-engagement sequence",
       metadata: %{
-        email: email, 
+        email: email,
         first_name: first_name,
         inactive_days: inactive_days
       }
     )
-    
+
     # Add sequence tag in ConvertKit
     tag_for_sequence(email, :re_engagement)
-    
+
     # Schedule the emails using Oban
     EmailWorker.schedule_sequence(email, first_name, :re_engagement)
-    
+
     {:ok, %{status: "started", sequence: :re_engagement}}
   end
 
@@ -130,20 +130,20 @@ defmodule RsolvWeb.Services.EmailSequence do
   This should be triggered a few days before the trial expiration.
   """
   def start_expiring_trial_sequence(email, first_name \\ nil, days_remaining \\ 7) do
-    Logger.info("Starting expiring trial sequence", 
+    Logger.info("Starting expiring trial sequence",
       metadata: %{
-        email: email, 
+        email: email,
         first_name: first_name,
         days_remaining: days_remaining
       }
     )
-    
+
     # Add sequence tag in ConvertKit
     tag_for_sequence(email, :expiring_trial)
-    
+
     # Schedule the emails using Oban
     EmailWorker.schedule_sequence(email, first_name, :expiring_trial)
-    
+
     {:ok, %{status: "started", sequence: :expiring_trial}}
   end
 
@@ -151,7 +151,7 @@ defmodule RsolvWeb.Services.EmailSequence do
   defp tag_for_sequence(email, sequence_name) do
     # Get ConvertKit config
     config = Application.get_env(:rsolv, :convertkit)
-    
+
     # Define sequence-specific tags
     # These tag IDs would need to be created in ConvertKit
     sequence_tags = %{
@@ -160,15 +160,15 @@ defmodule RsolvWeb.Services.EmailSequence do
       re_engagement: config[:tag_re_engagement] || "7700608",
       expiring_trial: config[:tag_expiring_trial] || "7700609"
     }
-    
+
     # Get the tag for this sequence
     tag_id = Map.get(sequence_tags, sequence_name)
-    
+
     if tag_id do
       # Add the tag
       ConvertKit.add_tag_to_subscriber(email, tag_id)
     else
-      Logger.error("No tag ID configured for sequence", 
+      Logger.error("No tag ID configured for sequence",
         metadata: %{
           sequence: sequence_name,
           email: email

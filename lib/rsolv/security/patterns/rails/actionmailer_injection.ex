@@ -1,6 +1,6 @@
 defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-actionmailer-injection",
@@ -20,23 +20,23 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
         ~r/^(?!.*#).*mail\s+from:\s*params\[/,
         ~r/^(?!.*#).*mail\s+cc:\s*params\[/,
         ~r/^(?!.*#).*mail\s+bcc:\s*params\[/,
-        
+
         # Hash syntax for mail() method
         ~r/mail\s*\(\s*:to\s*=>\s*params\[/,
         ~r/mail\s*\(\s*:from\s*=>\s*params\[/,
         ~r/mail\s*\(\s*:cc\s*=>\s*params\[/,
         ~r/mail\s*\(\s*:bcc\s*=>\s*params\[/,
-        
+
         # String interpolation with params in email headers (exclude sanitized)
         ~r/mail\s*\(\s*.*?subject:\s*[\"'`].*?#\{(?!.*sanitize)[^}]*params/,
         ~r/mail\s*\(\s*.*?from:\s*[\"'`].*?#\{(?!.*sanitize)[^}]*params/,
         ~r/mail\s+subject:\s*[\"'`].*?#\{(?!.*sanitize)[^}]*params/,
         ~r/mail\s+from:\s*[\"'`].*?#\{(?!.*sanitize)[^}]*params/,
-        
+
         # Hash syntax with string interpolation (exclude sanitized)
         ~r/mail\s*\(\s*:subject\s*=>\s*[\"'`].*?#\{(?!.*sanitize)[^}]*params/,
         ~r/mail\s*\(\s*:from\s*=>\s*[\"'`].*?#\{(?!.*sanitize)[^}]*params/,
-        
+
         # ERB template usage with params in body (with and without parens)
         ~r/mail\s*\(\s*.*?body:\s*ERB\.new\s*\(\s*params\[/,
         ~r/mail\s*\(\s*.*?body:\s*ERB\.new\s+params\[/,
@@ -44,12 +44,12 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
         ~r/mail\s+body:\s*ERB\.new\s+params\[/,
         ~r/mail\s*\(\s*:body\s*=>\s*ERB\.new\s*\(\s*params\[/,
         ~r/mail\s*\(\s*:body\s*=>\s*ERB\.new\s+params\[/,
-        
+
         # Template name from params
         ~r/mail\s*\(\s*.*?template_name:\s*params\[/,
         ~r/mail\s+template_name:\s*params\[/,
         ~r/mail\s*\(\s*:template_name\s*=>\s*params\[/,
-        
+
         # Multiline mail configurations (allow newlines with 'm' flag, exclude sanitized and comments)
         ~r/^(?!\s*#).*mail\s*\([\s\S]*?subject:\s*[\"'`].*?#\{(?!.*sanitize)[^}]*params/m,
         ~r/^(?!\s*#).*mail\s*\([\s\S]*?body:\s*ERB\.new\s*\(\s*params\[/m,
@@ -57,7 +57,8 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
       ],
       cwe_id: "CWE-117",
       owasp_category: "A03:2021",
-      recommendation: "Validate and sanitize email headers. Use address validation for email fields.",
+      recommendation:
+        "Validate and sanitize email headers. Use address validation for email fields.",
       test_cases: %{
         vulnerable: [
           "mail(to: params[:email], subject: \"Hello \#{params[:name]}\")",
@@ -74,7 +75,7 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -102,7 +103,8 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
       - Email authentication bypass through header manipulation
       - Email delivery system compromise
       """,
-      likelihood: "Medium - ActionMailer injection is common in applications that directly use params in email methods",
+      likelihood:
+        "Medium - ActionMailer injection is common in applications that directly use params in email methods",
       cve_examples: """
       CVE-2024-47889 - Possible ReDoS vulnerability in ActionMailer block_format helper
       CVE-2020-8163 - Code injection in Rails Action View render affecting ActionMailer
@@ -145,38 +147,54 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.7,
-      
       context_rules: %{
         # Email-related methods and fields
         email_fields: [
-          "to", "from", "cc", "bcc", "subject", "body", "template_name"
+          "to",
+          "from",
+          "cc",
+          "bcc",
+          "subject",
+          "body",
+          "template_name"
         ],
-        
+
         # Dangerous sources of user input
         dangerous_sources: [
-          "params", "request", "session", "cookies"
+          "params",
+          "request",
+          "session",
+          "cookies"
         ],
-        
+
         # ActionMailer methods that can be vulnerable
         mail_methods: [
-          "mail", "deliver", "deliver_now", "deliver_later"
+          "mail",
+          "deliver",
+          "deliver_now",
+          "deliver_later"
         ],
-        
+
         # Safe patterns to reduce false positives
         safe_patterns: [
-          ~r/validate_email\s*\(/,                      # Email validation
-          ~r/sanitize\s*\(/,                           # Content sanitization
-          ~r/User\.find\([^}]*\)\.email/,              # Model-based email
-          ~r/current_user\.email/,                     # Current user email
-          ~r/[A-Z_]+EMAIL/,                            # Constant emails
-          ~r/['"][^'"]*@[^'"]*['"]/                    # Static email addresses
+          # Email validation
+          ~r/validate_email\s*\(/,
+          # Content sanitization
+          ~r/sanitize\s*\(/,
+          # Model-based email
+          ~r/User\.find\([^}]*\)\.email/,
+          # Current user email
+          ~r/current_user\.email/,
+          # Constant emails
+          ~r/[A-Z_]+EMAIL/,
+          # Static email addresses
+          ~r/['"][^'"]*@[^'"]*['"]/
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence for dangerous patterns
@@ -184,19 +202,18 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
           string_interpolation_params: +0.3,
           erb_template_params: +0.5,
           multiple_vulnerable_fields: +0.3,
-          
+
           # Lower confidence for safer patterns
           email_validation_present: -0.4,
           content_sanitization: -0.5,
           model_based_email: -0.6,
           static_email_values: -0.7,
-          
+
           # Context-based adjustments
           in_mailer_class: +0.2,
           in_test_file: -0.8
         }
       },
-      
       ast_rules: %{
         # Email analysis
         email_analysis: %{
@@ -205,7 +222,7 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
           validate_email_sources: true,
           check_template_usage: true
         },
-        
+
         # Input validation
         input_validation: %{
           check_params_usage: true,
@@ -216,6 +233,4 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
       }
     }
   end
-  
 end
-

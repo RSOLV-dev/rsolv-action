@@ -10,34 +10,37 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       # Create a customer with unique email for test isolation
       unique_email = "test-#{System.unique_integer([:positive])}@example.com"
 
-      customer = %Customer{}
-      |> Customer.changeset(%{
-        name: "Test Corp",
-        email: unique_email,
-        active: true
-      })
-      |> Repo.insert!()
-      
+      customer =
+        %Customer{}
+        |> Customer.changeset(%{
+          name: "Test Corp",
+          email: unique_email,
+          active: true
+        })
+        |> Repo.insert!()
+
       # Create an API key
-      api_key = %ApiKey{}
-      |> ApiKey.changeset(%{
-        customer_id: customer.id,
-        name: "Test Key",
-        key: "test_" <> Ecto.UUID.generate(),
-        active: true
-      })
-      |> Repo.insert!()
-      
+      api_key =
+        %ApiKey{}
+        |> ApiKey.changeset(%{
+          customer_id: customer.id,
+          name: "Test Key",
+          key: "test_" <> Ecto.UUID.generate(),
+          active: true
+        })
+        |> Repo.insert!()
+
       # Create a forge account for this customer
-      forge_account = %ForgeAccount{}
-      |> ForgeAccount.changeset(%{
-        customer_id: customer.id,
-        forge_type: :github,
-        namespace: "RSOLV-dev",
-        verified_at: DateTime.utc_now()
-      })
-      |> Repo.insert!()
-      
+      forge_account =
+        %ForgeAccount{}
+        |> ForgeAccount.changeset(%{
+          customer_id: customer.id,
+          forge_type: :github,
+          namespace: "RSOLV-dev",
+          verified_at: DateTime.utc_now()
+        })
+        |> Repo.insert!()
+
       %{api_key: api_key, customer: customer, forge_account: forge_account}
     end
 
@@ -103,7 +106,7 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
         })
 
       assert %{"success" => true, "id" => validation_id} = json_response(conn, 200)
-      
+
       # Verify validation was stored with complete data
       validation = Repo.get!(ValidationExecution, validation_id)
       assert validation.issue_number == 123
@@ -111,7 +114,9 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       assert validation.commit_sha == "abc123"
       assert validation.data["branchName"] == "rsolv/validate/issue-123"
       assert validation.data["generatedTests"]["success"] == true
-      assert validation.data["generatedTests"]["testSuite"]["red"]["testName"] == "should detect vulnerability"
+
+      assert validation.data["generatedTests"]["testSuite"]["red"]["testName"] ==
+               "should detect vulnerability"
     end
 
     test "stores mitigation phase data with unwrapped format", %{conn: conn, api_key: api_key} do
@@ -159,7 +164,7 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
           commitSha: "abc123",
           data: %{}
         })
-      
+
       resp = json_response(conn, 401)
       assert resp["error"]["code"] == "INVALID_API_KEY"
       assert resp["error"]["message"] == "Invalid or expired API key"
@@ -173,11 +178,12 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/phases/store", %{
           phase: "scan",
-          repo: "OTHER-org/test",  # Customer doesn't own this namespace
+          # Customer doesn't own this namespace
+          repo: "OTHER-org/test",
           commitSha: "abc123",
           data: %{}
         })
-      
+
       assert %{"error" => "Unauthorized: no access to namespace"} = json_response(conn, 403)
     end
 
@@ -192,17 +198,18 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
           # Missing commitSha
           data: %{}
         })
-      
+
       assert %{"error" => _} = json_response(conn, 400)
     end
 
     test "auto-creates repository on first use", %{conn: conn, api_key: api_key} do
       # Verify repo doesn't exist
-      assert nil == Repo.get_by(Repository,
-        forge_type: :github,
-        namespace: "RSOLV-dev",
-        name: "new-repo"
-      )
+      assert nil ==
+               Repo.get_by(Repository,
+                 forge_type: :github,
+                 namespace: "RSOLV-dev",
+                 name: "new-repo"
+               )
 
       conn =
         conn
@@ -218,35 +225,41 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       assert %{"success" => true} = json_response(conn, 200)
 
       # Verify repo was created
-      repo = Repo.get_by(Repository,
-        forge_type: :github,
-        namespace: "RSOLV-dev",
-        name: "new-repo"
-      )
+      repo =
+        Repo.get_by(Repository,
+          forge_type: :github,
+          namespace: "RSOLV-dev",
+          name: "new-repo"
+        )
 
       assert repo != nil
       assert repo.full_path == "RSOLV-dev/new-repo"
     end
 
-    test "uses the specific API key from authentication, not just any key for customer", %{customer: customer, forge_account: _forge_account} do
+    test "uses the specific API key from authentication, not just any key for customer", %{
+      customer: customer,
+      forge_account: _forge_account
+    } do
       # Create multiple API keys for the same customer
-      api_key_1 = %ApiKey{}
-      |> ApiKey.changeset(%{
-        customer_id: customer.id,
-        name: "First Key",
-        key: "first_key_" <> Ecto.UUID.generate(),
-        active: true
-      })
-      |> Repo.insert!()
+      api_key_1 =
+        %ApiKey{}
+        |> ApiKey.changeset(%{
+          customer_id: customer.id,
+          name: "First Key",
+          key: "first_key_" <> Ecto.UUID.generate(),
+          active: true
+        })
+        |> Repo.insert!()
 
-      api_key_2 = %ApiKey{}
-      |> ApiKey.changeset(%{
-        customer_id: customer.id,
-        name: "Second Key",
-        key: "second_key_" <> Ecto.UUID.generate(),
-        active: true
-      })
-      |> Repo.insert!()
+      api_key_2 =
+        %ApiKey{}
+        |> ApiKey.changeset(%{
+          customer_id: customer.id,
+          name: "Second Key",
+          key: "second_key_" <> Ecto.UUID.generate(),
+          active: true
+        })
+        |> Repo.insert!()
 
       # Both keys share the same customer, so they share the forge account
 

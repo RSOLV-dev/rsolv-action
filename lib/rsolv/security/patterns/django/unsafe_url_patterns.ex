@@ -1,40 +1,40 @@
 defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
   @moduledoc """
   Django Unsafe URL Patterns pattern for Django applications.
-  
+
   This pattern detects URL routing configurations that may expose sensitive
   endpoints or create security vulnerabilities. Common issues include exposing
   the Django admin panel on default URLs, using overly broad wildcard patterns,
   and including debug tools in production.
-  
+
   ## Background
-  
+
   Django's URL routing system is powerful but can introduce security risks when
   misconfigured. Common vulnerabilities include:
-  
+
   - Exposing admin interface on predictable URLs
   - Using catch-all wildcard patterns that bypass security
   - Including debug tools without proper environment checks
   - Overly permissive URL patterns that expose internal endpoints
-  
+
   ## Vulnerability Details
-  
+
   Unsafe URL patterns typically manifest as:
-  
+
   1. **Default Admin URLs**: Using 'admin/' exposes the admin interface to
      automated scanning and brute force attacks
-  
+
   2. **Wildcard Patterns**: Patterns like '.*' can bypass other security
      measures and expose unintended functionality
-  
+
   3. **Debug Tool Exposure**: Including django-debug-toolbar or similar
      tools without proper DEBUG checks exposes sensitive information
-  
+
   4. **Overly Broad Includes**: Including entire URL namespaces without
      proper access controls
-  
+
   ## Examples
-  
+
       # VULNERABLE - Default admin URL
       urlpatterns = [
           path('admin/', admin.site.urls),
@@ -65,9 +65,9 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
               path('__debug__/', include('debug_toolbar.urls')),
           ]
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   @impl true
   def pattern do
     %Rsolv.Security.Pattern{
@@ -82,23 +82,24 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
         # Default admin URL patterns (most common vulnerability)
         ~r/path\s*\(\s*['"']admin['"'],\s*admin\.site\.urls\s*\)/,
         ~r/path\s*\(\s*['"']admin\/['"'],\s*admin\.site\.urls\s*\)/,
-        
+
         # Dangerous wildcard patterns
         ~r/path\s*\(\s*['"'].*\.\*['"'],/,
         ~r/re_path\s*\(\s*r['"']\^\.?\*['"'],/,
-        
+
         # Debug toolbar exposure without DEBUG check
         ~r/include\s*\(\s*['"']debug_toolbar\.urls['"']\)/,
         ~r/include\s*\(\s*['"']silk\.urls['"']\)/,
         ~r/include\s*\(\s*['"']django_extensions\.urls['"']\)/,
-        
+
         # Other dangerous debug/profiler tools
         ~r/include\s*\(\s*['"']rosetta\.urls['"']\)/,
         ~r/include\s*\(\s*['"']hijack\.urls['"']\)/
       ],
       cwe_id: "CWE-284",
       owasp_category: "A01:2021",
-      recommendation: "Use specific URL patterns. Change default admin URL. Remove debug tools in production.",
+      recommendation:
+        "Use specific URL patterns. Change default admin URL. Remove debug tools in production.",
       test_cases: %{
         vulnerable: [
           ~s|path('admin/', admin.site.urls)|,
@@ -115,7 +116,7 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -124,23 +125,23 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
       administrative interfaces, and debug information to unauthorized users.
       This vulnerability class encompasses several related security misconfigurations
       in Django's URL routing system.
-      
+
       The most common issue is exposing the Django admin interface on predictable
       URLs like '/admin/' or '/admin'. This makes the admin panel discoverable
       by automated scanners and vulnerable to brute force attacks. The Django
       admin interface is a powerful tool that can provide complete access to
       application data and functionality.
-      
+
       Another significant risk comes from overly broad URL patterns, particularly
       wildcard patterns like '.*' that can match any request. These patterns can
       bypass other security measures and expose unintended functionality, potentially
       allowing access to internal endpoints or debug information.
-      
+
       Debug tools and profilers represent another major vulnerability when included
       in production deployments. Tools like django-debug-toolbar, django-silk,
       or django-rosetta can expose sensitive information including database queries,
       environment variables, application settings, and user session data.
-      
+
       The impact of these vulnerabilities varies but commonly includes:
       - Administrative interface compromise leading to full application takeover
       - Information disclosure through debug interfaces
@@ -148,7 +149,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
       - Exposure of sensitive configuration and environment data
       - Database query inspection revealing application logic and data structure
       """,
-      
       references: [
         %{
           type: :cwe,
@@ -187,7 +187,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           url: "https://github.com/jazzband/django-debug-toolbar/security/advisories"
         }
       ],
-      
       attack_vectors: [
         "Admin panel brute force attacks on default URLs",
         "Automated scanning for exposed admin interfaces",
@@ -200,7 +199,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
         "CSRF attacks against exposed admin endpoints",
         "Credential stuffing attacks on discovered admin panels"
       ],
-      
       real_world_impact: [
         "Complete admin panel compromise leading to data breach",
         "Exposure of sensitive information including customer and business data",
@@ -213,7 +211,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
         "Financial losses from data breach remediation",
         "Legal liability from privacy regulation violations"
       ],
-      
       cve_examples: [
         %{
           id: "CVE-2021-30459",
@@ -244,30 +241,28 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           note: "Real-world example of debug tool exposure in production-like environment"
         }
       ],
-      
       detection_notes: """
       This pattern detects unsafe URL configurations by identifying:
-      
+
       1. **Default Admin URLs**: Patterns matching 'admin/' or 'admin' that expose
          the Django admin interface on predictable URLs
-      
+
       2. **Wildcard Patterns**: URL patterns using '.*' or similar catch-all
          patterns that can bypass security controls
-      
+
       3. **Debug Tool Inclusion**: Detection of debug_toolbar, silk, django_extensions,
          and other development tools being included without proper DEBUG checks
-      
+
       4. **Dangerous Includes**: Detection of potentially sensitive URL includes
          like hijack (user impersonation) or rosetta (translation interface)
-      
+
       The pattern may produce false positives in development environments where
       these configurations are intentional. However, it's important to ensure
       these patterns don't make it to production deployments.
-      
+
       Note that this pattern focuses on static URL configuration and may not
       detect dynamically generated URLs or complex conditional logic.
       """,
-      
       safe_alternatives: [
         """
         # Secure admin URL configuration
@@ -278,7 +273,7 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
             path('management-interface/', admin.site.urls),
             path('backend-dashboard/', admin.site.urls),
         ]
-        
+
         # Additional admin security
         ADMIN_URL = os.environ.get('DJANGO_ADMIN_URL', 'admin/')
         urlpatterns = [
@@ -292,7 +287,7 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
             path('', include('myapp.urls')),
             path('api/', include('api.urls')),
         ]
-        
+
         if settings.DEBUG:
             # Only add debug URLs in development
             urlpatterns += [
@@ -320,7 +315,7 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
         urlpatterns = [
             path('', include('myapp.urls')),
         ]
-        
+
         # Production admin URL from environment variable
         if not settings.DEBUG:
             admin_url = os.environ.get('ADMIN_URL')
@@ -337,7 +332,7 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
         """
         # IP-restricted admin access
         # Additional security through middleware or web server config
-        
+
         # Example nginx configuration for admin URL restriction:
         # location /secure-admin/ {
         #     allow 192.168.1.0/24;  # Office network
@@ -345,7 +340,7 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
         #     deny all;
         #     proxy_pass http://django_backend;
         # }
-        
+
         # Or use Django middleware for IP restriction
         class AdminIPRestrictionMiddleware:
             def __init__(self, get_response):
@@ -359,7 +354,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
                 return self.get_response(request)
         """
       ],
-      
       additional_context: %{
         common_mistakes: [
           "Using default admin URL '/admin/' in production",
@@ -371,25 +365,24 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           "Exposing translation interfaces (rosetta) to all users",
           "Using catch-all patterns instead of specific 404 handling"
         ],
-        
         secure_patterns: [
           """
           # Environment-aware URL configuration
           import os
           from django.conf import settings
           from django.urls import path, include
-          
+
           urlpatterns = [
               path('', include('myapp.urls')),
               path('api/', include('api.urls')),
           ]
-          
+
           # Security-conscious admin URL
           admin_path = os.environ.get('DJANGO_ADMIN_PATH', 'admin/')
           if not admin_path.endswith('/'):
               admin_path += '/'
           urlpatterns.append(path(admin_path, admin.site.urls))
-          
+
           # Development-only URLs
           if settings.DEBUG:
               try:
@@ -402,7 +395,7 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           # Secure admin configuration with additional protections
           from django.contrib import admin
           from django.conf import settings
-          
+
           # Custom admin site with security enhancements
           class SecureAdminSite(admin.AdminSite):
               site_header = 'Secure Administration'
@@ -420,14 +413,14 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
                           return False
                   
                   return True
-          
+
           secure_admin_site = SecureAdminSite(name='secure_admin')
           """,
           """
           # URL pattern validation middleware
           from django.core.exceptions import DisallowedHost
           from django.http import HttpResponseNotFound
-          
+
           class URLSecurityMiddleware:
               def __init__(self, get_response):
                   self.get_response = get_response
@@ -447,7 +440,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
                   return self.get_response(request)
           """
         ],
-        
         framework_specific_notes: [
           "Django admin URLs are case-sensitive and exact-match by default",
           "URL patterns are processed in order - place specific patterns before general ones",
@@ -461,20 +453,19 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
       }
     }
   end
-  
+
   @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.6,
-      
       context_rules: %{
         url_functions: [
           "path",
           "re_path",
           "include",
-          "url"  # Legacy Django versions
+          # Legacy Django versions
+          "url"
         ],
-        
         dangerous_patterns: [
           "admin",
           "debug_toolbar",
@@ -483,7 +474,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           "hijack",
           "django_extensions"
         ],
-        
         wildcard_indicators: [
           ".*",
           "^.*",
@@ -491,7 +481,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           ".+",
           "*"
         ],
-        
         safe_patterns: [
           "if settings.DEBUG",
           "if DEBUG",
@@ -500,7 +489,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           "development",
           "dev"
         ],
-        
         admin_variations: [
           "admin/",
           "admin",
@@ -509,7 +497,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           "management"
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence patterns
@@ -517,18 +504,18 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           wildcard_patterns: +0.8,
           debug_toolbar_without_check: +0.85,
           multiple_dangerous_patterns: +0.9,
-          
+
           # Medium confidence
           admin_variations: +0.7,
           debug_tools: +0.75,
           catch_all_patterns: +0.7,
-          
+
           # Lower confidence in safe contexts
           in_development_settings: -0.8,
           conditional_inclusion: -0.9,
           in_test_file: -0.95,
           in_local_settings: -0.8,
-          
+
           # Context-based adjustments
           has_debug_check: -0.85,
           environment_variable_based: -0.6,
@@ -536,7 +523,6 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           custom_admin_class: -0.5
         }
       },
-      
       ast_rules: %{
         url_analysis: %{
           detect_admin_patterns: true,
@@ -545,21 +531,18 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           check_url_ordering: true,
           detect_catch_all_patterns: true
         },
-        
         conditional_analysis: %{
           check_debug_conditions: true,
           analyze_environment_checks: true,
           detect_settings_usage: true,
           check_import_conditions: true
         },
-        
         security_analysis: %{
           check_ip_restrictions: true,
           analyze_middleware_usage: true,
           detect_custom_admin: true,
           check_environment_variables: true
         },
-        
         pattern_analysis: %{
           detect_regex_patterns: true,
           check_pattern_specificity: true,

@@ -1,17 +1,17 @@
 defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
   @moduledoc """
   Detects Server-Side Request Forgery (SSRF) vulnerabilities in Ruby applications.
-  
+
   SSRF vulnerabilities occur when applications make HTTP requests to URLs controlled by attackers,
   potentially allowing access to internal systems, cloud metadata services, or unauthorized
   external resources. This pattern detects unsafe usage of Ruby HTTP libraries with user input.
-  
+
   ## Vulnerability Details
-  
+
   SSRF attacks can bypass firewalls and access control mechanisms by making requests from the
   server's perspective, potentially exposing internal services, cloud metadata, or causing
   denial of service through resource exhaustion.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable - direct user input to open-uri
@@ -20,7 +20,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
     data = open(url).read  # SSRF vulnerability
     render json: { data: data }
   end
-  
+
   # Secure - URL validation and allowlist
   def fetch_data
     url = params[:url]
@@ -35,25 +35,25 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
     end
   end
   ```
-  
+
   ### Real-World Impact
   - Access to internal services and cloud metadata (AWS, GCP, Azure)
   - Port scanning and service discovery on internal networks
   - Denial of service through resource exhaustion or infinite loops
   - Bypassing network firewalls and access controls
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the SSRF via open-uri pattern for Ruby applications.
-  
+
   Detects unsafe usage of Ruby HTTP libraries including open-uri, Net::HTTP,
   HTTParty, Faraday, and RestClient with user-controlled input.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.SsrfOpenUri.pattern()
       iex> pattern.id
       "ruby-ssrf-open-uri"
@@ -77,7 +77,8 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
     %Pattern{
       id: "ruby-ssrf-open-uri",
       name: "SSRF via open-uri",
-      description: "Detects Server-Side Request Forgery vulnerabilities through unsafe usage of HTTP libraries with user input",
+      description:
+        "Detects Server-Side Request Forgery vulnerabilities through unsafe usage of HTTP libraries with user input",
       type: :ssrf,
       severity: :high,
       languages: ["ruby"],
@@ -85,22 +86,22 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
         # open-uri patterns with user input
         ~r/(?:^|[^#])\s*open\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*URI\.open\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
-        
+
         # Net::HTTP patterns with user input
         ~r/(?:^|[^#])\s*Net::HTTP\.get\s*\(\s*URI\s*[\(\.]?\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*Net::HTTP\.get_response\s*\(\s*URI\.parse\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*Net::HTTP\.start\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*Net::HTTP\.new\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
-        
+
         # HTTParty patterns with user input
         ~r/(?:^|[^#])\s*HTTParty\.(?:get|post|put|patch|delete|head|options)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*HTTParty\.request\s*\(\s*:?\w+\s*,\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
-        
+
         # Faraday patterns with user input  
         ~r/(?:^|[^#])\s*Faraday\.(?:get|post|put|patch|delete|head|options)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*Faraday\.new\s*\(\s*(?:url|base_url):\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*(?:faraday|connection)\.(?:get|post|put|patch|delete|head|options)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
-        
+
         # RestClient patterns with user input
         ~r/(?:^|[^#])\s*RestClient\.(?:get|post|put|patch|delete|head|options)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*RestClient::Request\.execute\s*\(\s*(?:.*\s+)?url:\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
@@ -108,11 +109,12 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
       ],
       cwe_id: "CWE-918",
       owasp_category: "A10:2021",
-      recommendation: "Validate and allowlist URLs before making HTTP requests. Implement request timeouts and restrict access to internal networks.",
+      recommendation:
+        "Validate and allowlist URLs before making HTTP requests. Implement request timeouts and restrict access to internal networks.",
       test_cases: %{
         vulnerable: [
           "open(params[:url])",
-          "URI.open(params[:file_url])", 
+          "URI.open(params[:file_url])",
           "Net::HTTP.get(URI(params[:target]))",
           "HTTParty.get(params[:api_url])",
           "Faraday.get(params[:endpoint])",
@@ -146,7 +148,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
         },
         %{
           type: :owasp,
-          id: "A10:2021", 
+          id: "A10:2021",
           title: "OWASP Top 10 2021 - Server-Side Request Forgery",
           url: "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/"
         },
@@ -160,7 +162,8 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
           type: :research,
           id: "owasp_ssrf_cheat_sheet",
           title: "OWASP Server-Side Request Forgery Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -192,7 +195,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
           note: "Demonstrated SSRF in Ruby OpenID library through crafted discovery URLs"
         },
         %{
-          id: "CVE-2022-27311", 
+          id: "CVE-2022-27311",
           description: "SSRF vulnerability in gibbon gem allowing unauthorized HTTP requests",
           severity: "medium",
           cvss: 5.3,
@@ -201,7 +204,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
         %{
           id: "CVE-2021-28965",
           description: "SSRF in Ruby's Net::IMAP through crafted server responses",
-          severity: "medium", 
+          severity: "medium",
           cvss: 5.8,
           note: "Demonstrates SSRF vulnerabilities even in standard library components"
         },
@@ -220,7 +223,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
       - HTTParty: Popular gem for HTTP requests
       - Faraday: HTTP/REST API client library
       - RestClient: Simple HTTP and REST client
-      
+
       The pattern uses negative lookbehind to avoid matching commented code and focuses on
       user input sources like params, request parameters, and user-controlled variables.
       """,
@@ -289,7 +292,14 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
           httparty_methods: true,
           faraday_methods: true,
           rest_client_methods: true,
-          check_method_names: ["open", "URI.open", "Net::HTTP.get", "HTTParty.get", "Faraday.get", "RestClient.get"]
+          check_method_names: [
+            "open",
+            "URI.open",
+            "Net::HTTP.get",
+            "HTTParty.get",
+            "Faraday.get",
+            "RestClient.get"
+          ]
         },
         user_input_analysis: %{
           input_sources: ["params", "request", "user_input", "user_data", "form_params"],

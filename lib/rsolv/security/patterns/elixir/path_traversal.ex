@@ -1,20 +1,20 @@
 defmodule Rsolv.Security.Patterns.Elixir.PathTraversal do
   @moduledoc """
   Detects path traversal vulnerabilities in Elixir file operations.
-  
+
   This pattern identifies instances where user-controlled input is used in file paths
   without proper validation, potentially allowing attackers to access files outside 
   intended directories using sequences like "../" or absolute paths.
-  
+
   ## Vulnerability Details
-  
+
   Path traversal vulnerabilities occur when an application uses user input to construct
   file paths without proper validation. Attackers can manipulate the input to access
   files and directories outside the intended scope, potentially reading sensitive files
   like configuration files, source code, or system files.
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   # Controller serving user uploads
@@ -24,11 +24,11 @@ defmodule Rsolv.Security.Patterns.Elixir.PathTraversal do
     send_download(conn, {:binary, content}, filename: filename)
   end
   ```
-  
+
   An attacker could request: `/download?filename=../../../etc/passwd`
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   def download(conn, %{"filename" => filename}) do
@@ -49,10 +49,10 @@ defmodule Rsolv.Security.Patterns.Elixir.PathTraversal do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -78,7 +78,8 @@ defmodule Rsolv.Security.Patterns.Elixir.PathTraversal do
       ],
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
-      recommendation: "Validate and sanitize file paths. Use Path.expand/2 with a safe base directory",
+      recommendation:
+        "Validate and sanitize file paths. Use Path.expand/2 with a safe base directory",
       test_cases: %{
         vulnerable: [
           ~S|File.read!("/uploads/#{filename}")|,
@@ -96,7 +97,7 @@ end|,
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -106,7 +107,7 @@ end|,
       traversal sequences (../, ..\) or absolute paths to access files outside the intended
       directory structure. In Elixir/Phoenix applications, this commonly happens when serving
       user uploads, processing file downloads, or managing temporary files.
-      
+
       The vulnerability is particularly dangerous because Elixir's File module functions are
       null-terminated, which can lead to additional security issues when combined with path
       traversal. Attackers can read sensitive configuration files, source code, system files,
@@ -198,15 +199,15 @@ end|,
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities and false positives
   by analyzing context and usage patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.PathTraversal.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -222,24 +223,53 @@ end|,
         node_type: "CallExpression",
         file_analysis: %{
           check_file_operations: true,
-          file_functions: ["File.read", "File.read!", "File.write", "File.write!",
-                          "File.exists?", "File.rm", "File.rm!", "File.mkdir_p!",
-                          "File.stream", "File.stream!", "File.open"],
+          file_functions: [
+            "File.read",
+            "File.read!",
+            "File.write",
+            "File.write!",
+            "File.exists?",
+            "File.rm",
+            "File.rm!",
+            "File.mkdir_p!",
+            "File.stream",
+            "File.stream!",
+            "File.open"
+          ],
           check_path_operations: true,
           path_functions: ["Path.join", "Path.expand"],
           check_io_operations: true
         },
         input_analysis: %{
-          user_input_indicators: ["params", "conn", "socket", "args", "user", "input",
-                                 "file", "filename", "path", "directory", "upload"],
+          user_input_indicators: [
+            "params",
+            "conn",
+            "socket",
+            "args",
+            "user",
+            "input",
+            "file",
+            "filename",
+            "path",
+            "directory",
+            "upload"
+          ],
           check_string_interpolation: true,
           check_concatenation: true
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/_test\.exs$/, ~r/seeds/],
-        user_input_sources: ["params", "conn.params", "conn.body_params", "socket.assigns",
-                            "args", "user_input", "request", "upload"],
+        user_input_sources: [
+          "params",
+          "conn.params",
+          "conn.body_params",
+          "socket.assigns",
+          "args",
+          "user_input",
+          "request",
+          "upload"
+        ],
         safe_patterns: ["Path.expand", "Path.basename", "String.starts_with?"],
         exclude_if_validated: true
       },

@@ -1,12 +1,12 @@
 defmodule Rsolv.Security.Patterns.Rails do
   @moduledoc """
   Ruby on Rails framework-specific security patterns.
-  
+
   This module contains 20 security patterns specifically designed for Rails
   applications. These patterns detect Rails-specific vulnerabilities beyond 
   base Ruby patterns. All patterns are tagged with frameworks: ["rails"].
   """
-  
+
   alias Rsolv.Security.Patterns.Rails.MissingStrongParameters
   alias Rsolv.Security.Patterns.Rails.DangerousAttrAccessible
   alias Rsolv.Security.Patterns.Rails.ActiverecordInjection
@@ -25,12 +25,12 @@ defmodule Rsolv.Security.Patterns.Rails do
   alias Rsolv.Security.Patterns.Rails.Cve202122881
   alias Rsolv.Security.Patterns.Rails.CallbackSecurityBypass
   alias Rsolv.Security.Patterns.Rails.Cve20195418
-  
+
   @doc """
   Returns all Rails security patterns.
-  
+
   ## Examples
-  
+
       iex> patterns = Rsolv.Security.Patterns.Rails.all()
       iex> length(patterns)
       20
@@ -61,5 +61,4 @@ defmodule Rsolv.Security.Patterns.Rails do
       Cve20195418.pattern()
     ]
   end
-  
 end

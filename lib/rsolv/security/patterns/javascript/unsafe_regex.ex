@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
   @moduledoc """
   Regular Expression Denial of Service (ReDoS) in JavaScript/Node.js
-  
+
   Detects dangerous patterns like:
     new RegExp("(a+)+$")
     /(x+x+)+y/.test(input)
@@ -16,43 +16,43 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
   exploits catastrophic backtracking in regular expression engines. When maliciously 
   crafted input is processed by vulnerable regex patterns, it can cause exponential 
   time complexity, leading to application freezes, CPU exhaustion, and denial of service.
-  
+
   ## Vulnerability Details
-  
+
   ReDoS attacks exploit specific regex patterns that create exponential backtracking:
-  
+
   1. **Nested Quantifiers**: Patterns like (a+)+ or (a*)* create exponential states
   2. **Alternation with Overlap**: Patterns like (a|a)* where alternatives overlap
   3. **Catastrophic Backtracking**: Engine tries all possible matches exponentially
   4. **Evil Regex**: Patterns that can be exploited with specific malicious input
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Nested quantifiers
   const emailRegex = /([a-zA-Z0-9_\.-]+)+@/;
   const maliciousInput = "a".repeat(50000) + "X"; 
   emailRegex.test(maliciousInput); // <- Causes infinite loop/CPU spike
-  
+
   // Vulnerable: Alternation with overlap
   const pattern = /(a|a)*b/;
   const payload = "a".repeat(30) + "c"; // No 'b' at end
   pattern.test(payload); // <- Exponential backtracking
   ```
-  
+
   ### Modern Attack Scenarios
   ReDoS vulnerabilities are particularly dangerous in Node.js applications because 
   JavaScript is single-threaded. A single ReDoS attack can freeze the entire 
   application, affecting all users. Common targets include email validation, 
   URL parsing, input sanitization, log processing, and API parameter validation.
-  
+
   The attack vectors have evolved with modern web applications, targeting 
   JSON parsing, GraphQL query validation, markdown processing, and route 
   matching systems where regex patterns process user-controlled input.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   def pattern do
     %Pattern{
       id: "js-unsafe-regex",
@@ -61,10 +61,12 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
       type: :denial_of_service,
       severity: :medium,
       languages: ["javascript", "typescript"],
-      regex: ~r/(?:new\s+RegExp|\/)[^)\/]*\([^)]*[*+].*?\)[^)]*[*+\{]|(?:new\s+RegExp|\/)[^)\/]*\([^)]*\{[^}]*\}.*?\)[^)]*[*+\{]|(?:new\s+RegExp|\/)[^)\/]*\([^)]*\|.*?\)[^)]*[*+\{]/i,
+      regex:
+        ~r/(?:new\s+RegExp|\/)[^)\/]*\([^)]*[*+].*?\)[^)]*[*+\{]|(?:new\s+RegExp|\/)[^)\/]*\([^)]*\{[^}]*\}.*?\)[^)]*[*+\{]|(?:new\s+RegExp|\/)[^)\/]*\([^)]*\|.*?\)[^)]*[*+\{]/i,
       cwe_id: "CWE-1333",
       owasp_category: "A05:2021",
-      recommendation: "Avoid nested quantifiers in regex. Use atomic groups or possessive quantifiers.",
+      recommendation:
+        "Avoid nested quantifiers in regex. Use atomic groups or possessive quantifiers.",
       test_cases: %{
         vulnerable: [
           "new RegExp(\"(a+)+$\")",
@@ -103,10 +105,10 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for ReDoS vulnerabilities.
-  
+
   This metadata documents the critical security implications of regex patterns 
   that can cause catastrophic backtracking and provides authoritative guidance 
   for secure regular expression design.
@@ -120,20 +122,20 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
       traditional DoS attacks that require high traffic volumes, ReDoS can be 
       triggered by a single maliciously crafted input string, making it an 
       extremely efficient attack vector against web applications.
-      
+
       The vulnerability stems from the inherent design of backtracking regex 
       engines used in JavaScript and most programming languages. When processing 
       patterns with nested quantifiers or overlapping alternations, the engine 
       explores exponentially increasing numbers of possible match paths. Attackers 
       exploit this by providing input that maximizes backtracking without 
       producing successful matches, forcing the engine into worst-case behavior.
-      
+
       ReDoS is particularly devastating in Node.js applications due to JavaScript's 
       single-threaded event loop architecture. A single ReDoS attack can freeze 
       the entire application, blocking all concurrent requests and effectively 
       taking the service offline. This amplifies the impact beyond traditional 
       DoS scenarios, where load balancing might mitigate individual server failures.
-      
+
       Modern web applications are increasingly vulnerable due to the proliferation 
       of regex usage in input validation, data parsing, route matching, and content 
       processing. The complexity of contemporary regex patterns, combined with the 
@@ -141,7 +143,7 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
       for ReDoS exploitation. Additionally, the adoption of microservices 
       architectures means that a single vulnerable regex pattern can cascade 
       failures across entire application ecosystems.
-      
+
       The subtlety of ReDoS vulnerabilities makes them particularly insidious. 
       Patterns that appear reasonable and perform well under normal conditions 
       can exhibit catastrophic behavior when presented with specifically crafted 
@@ -189,7 +191,7 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
       ],
       attack_vectors: [
         "Nested quantifier exploitation: Input designed to maximize backtracking in (a+)+ patterns",
-        "Alternation overlap attacks: Crafted strings that exploit overlapping choices in (a|a)* patterns", 
+        "Alternation overlap attacks: Crafted strings that exploit overlapping choices in (a|a)* patterns",
         "Catastrophic backtracking induction: Inputs that force exponential state exploration",
         "Email regex attacks: Malformed email strings that trigger ReDoS in validation patterns",
         "URL parsing exploitation: Crafted URLs that cause ReDoS in routing or validation regex",
@@ -213,12 +215,14 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
           description: "jpeg-js npm package ReDoS vulnerability in file type validation regex",
           severity: "high",
           cvss: 7.5,
-          note: "Malicious JPEG files could trigger ReDoS via nested quantifiers in metadata parsing"
+          note:
+            "Malicious JPEG files could trigger ReDoS via nested quantifiers in metadata parsing"
         },
         %{
           id: "CVE-2021-3807",
-          description: "ansi-regex npm package ReDoS vulnerability affecting terminal output processing",
-          severity: "high", 
+          description:
+            "ansi-regex npm package ReDoS vulnerability affecting terminal output processing",
+          severity: "high",
           cvss: 7.5,
           note: "Malformed ANSI escape sequences could cause catastrophic backtracking"
         },
@@ -238,7 +242,8 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
         },
         %{
           id: "CVE-2018-1000620",
-          description: "Cryprtographically Secure Pseudo-Random Number Generator (CSPRNG) ReDoS in crypto operations",
+          description:
+            "Cryprtographically Secure Pseudo-Random Number Generator (CSPRNG) ReDoS in crypto operations",
           severity: "medium",
           cvss: 5.3,
           note: "ReDoS in cryptographic input validation could impact security operations"
@@ -247,19 +252,19 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
       detection_notes: """
       This pattern detects regular expressions with nested quantifiers that are 
       susceptible to catastrophic backtracking. The detection covers:
-      
+
       1. Nested plus quantifiers: (a+)+ patterns
       2. Nested star quantifiers: (a*)* patterns  
       3. Mixed nested quantifiers: (a+)* or (a*)+ patterns
       4. RegExp constructor with nested quantifiers
       5. Literal regex patterns with nested quantifiers
       6. Complex nested structures with multiple quantifier levels
-      
+
       The regex pattern looks for quantifier characters (+, *, {n,m}) followed by 
       closing parentheses and then additional quantifiers, indicating nested 
       quantification structures. It uses case-insensitive matching and handles 
       both literal regex syntax (/pattern/) and RegExp constructor patterns.
-      
+
       The detection is designed for high sensitivity to catch potentially vulnerable 
       patterns while minimizing false positives on legitimate bounded quantifiers 
       and non-overlapping alternations. However, some complex ReDoS patterns may 
@@ -279,7 +284,7 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
       additional_context: %{
         framework_specific_risks: [
           "Express.js: ReDoS in route parameter validation affecting request routing",
-          "Next.js: ReDoS in dynamic route matching causing page load failures", 
+          "Next.js: ReDoS in dynamic route matching causing page load failures",
           "React: ReDoS in input validation hooks affecting form processing",
           "Vue.js: ReDoS in template directive parsing causing render blocking",
           "Angular: ReDoS in form validators affecting user interface responsiveness",
@@ -332,7 +337,7 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
         ],
         testing_strategies: [
           "Generate worst-case inputs using ReDoS testing tools",
-          "Measure regex execution time under various input conditions", 
+          "Measure regex execution time under various input conditions",
           "Test with exponentially growing input sizes to identify O(2^n) patterns",
           "Use fuzzing tools to generate malicious regex input automatically",
           "Implement performance regression testing for regex-heavy code paths",
@@ -341,38 +346,40 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Applies to JavaScript/TypeScript files or any file containing regex operations.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files always apply
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) ->
+        true
+
       # If content is provided, check for regex operations
       content != nil ->
-        String.contains?(content, "RegExp") || 
-        String.contains?(content, ".test(") ||
-        String.contains?(content, ".match(") ||
         # Look for regex literal syntax
-        Regex.match?(~r/\/[^\/]+\/[gimuy]*/, content)
-        
+        String.contains?(content, "RegExp") ||
+          String.contains?(content, ".test(") ||
+          String.contains?(content, ".match(") ||
+          Regex.match?(~r/\/[^\/]+\/[gimuy]*/, content)
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual ReDoS vulnerabilities
   and safe regex patterns or test code.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.UnsafeRegex.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -393,8 +400,10 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
   def ast_enhancement do
     %{
       ast_rules: %{
-        node_type: "NewExpression",  # new RegExp() calls
-        alternate_node_types: ["RegExpLiteral"],  # /pattern/ syntax
+        # new RegExp() calls
+        node_type: "NewExpression",
+        # /pattern/ syntax
+        alternate_node_types: ["RegExpLiteral"],
         callee_check: %{
           name: "RegExp"
         },
@@ -403,24 +412,41 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
           check_overlapping_alternation: true,
           check_unbounded_repetition: true,
           dangerous_patterns: [
-            "(\\w+)+",      # Nested plus quantifiers
-            "(\\w*)*",      # Nested star quantifiers
-            "(\\w+)*",      # Mixed quantifiers
-            "(a|a)*",       # Overlapping alternation
-            "(.*)+",        # Greedy nested quantifiers
-            "(.+)+",        # Multiple greedy quantifiers
-            "{\\d+,}+"      # Unbounded curly brace with quantifier
+            # Nested plus quantifiers
+            "(\\w+)+",
+            # Nested star quantifiers
+            "(\\w*)*",
+            # Mixed quantifiers
+            "(\\w+)*",
+            # Overlapping alternation
+            "(a|a)*",
+            # Greedy nested quantifiers
+            "(.*)+",
+            # Multiple greedy quantifiers
+            "(.+)+",
+            # Unbounded curly brace with quantifier
+            "{\\d+,}+"
           ],
           safe_indicators: [
-            "{1,",          # Bounded quantifiers
-            "{0,",          # Explicit bounds
-            "(?:",          # Non-capturing groups
-            "(?=",          # Lookahead assertions
-            "(?!",          # Negative lookahead
-            "(?<=",         # Lookbehind assertions
-            "(?<!",         # Negative lookbehind
-            "\\b",          # Word boundaries
-            "^", "$"        # Anchors
+            # Bounded quantifiers
+            "{1,",
+            # Explicit bounds
+            "{0,",
+            # Non-capturing groups
+            "(?:",
+            # Lookahead assertions
+            "(?=",
+            # Negative lookahead
+            "(?!",
+            # Lookbehind assertions
+            "(?<=",
+            # Negative lookbehind
+            "(?<!",
+            # Word boundaries
+            "\\b",
+            # Anchors
+            "^",
+            "$"
           ]
         }
       },
@@ -437,51 +463,82 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
           ~r/perf/
         ],
         safe_patterns: [
-          "sanitize-regex",     # Safe regex library
-          "safe-regex",         # ReDoS prevention library
-          "re2",                # Non-backtracking regex engine
-          "node-re2",           # Node.js RE2 binding
-          "regex-timeout",      # Timeout protection
-          "redos-detector",     # ReDoS detection library
-          "vuln-regex-detector" # Vulnerability detection
+          # Safe regex library
+          "sanitize-regex",
+          # ReDoS prevention library
+          "safe-regex",
+          # Non-backtracking regex engine
+          "re2",
+          # Node.js RE2 binding
+          "node-re2",
+          # Timeout protection
+          "regex-timeout",
+          # ReDoS detection library
+          "redos-detector",
+          # Vulnerability detection
+          "vuln-regex-detector"
         ],
         check_usage_context: true,
         safe_contexts: [
-          "regex_test",         # Testing regex patterns
-          "performance_test",   # Performance benchmarks
-          "validation_library", # Validation framework
-          "static_analysis",    # Code analysis tools
-          "linter",            # Linting rules
-          "formatter"          # Code formatters
+          # Testing regex patterns
+          "regex_test",
+          # Performance benchmarks
+          "performance_test",
+          # Validation framework
+          "validation_library",
+          # Code analysis tools
+          "static_analysis",
+          # Linting rules
+          "linter",
+          # Code formatters
+          "formatter"
         ],
         check_input_source: true,
         trusted_sources: [
-          "constants",          # Hardcoded patterns
-          "configuration",      # Config files
-          "allowlist",          # Predefined safe values
-          "sanitized"           # Pre-sanitized input
+          # Hardcoded patterns
+          "constants",
+          # Config files
+          "configuration",
+          # Predefined safe values
+          "allowlist",
+          # Pre-sanitized input
+          "sanitized"
         ]
       },
       confidence_rules: %{
-        base: 0.6,  # Medium-high base - ReDoS can be subtle
+        # Medium-high base - ReDoS can be subtle
+        base: 0.6,
         adjustments: %{
-          "nested_quantifiers" => 0.4,          # Strong indicator
-          "overlapping_alternation" => 0.4,     # Strong indicator
-          "unbounded_repetition" => 0.3,        # Medium indicator
-          "complex_pattern" => 0.2,             # Pattern complexity
-          "user_input" => 0.3,                  # Processing user data
-          "bounded_quantifiers" => -0.5,        # Safe pattern
-          "test_file" => -0.6,                  # Test code OK
-          "safe_library" => -0.8,               # Using safe regex lib
-          "static_pattern" => -0.3,             # Hardcoded patterns
-          "input_validation" => -0.4,           # Has input limits
-          "timeout_protection" => -0.7,         # Has timeout mechanism
-          "non_backtracking_engine" => -0.9,   # Using RE2 or similar
-          "performance_monitoring" => -0.3      # Monitoring in place
+          # Strong indicator
+          "nested_quantifiers" => 0.4,
+          # Strong indicator
+          "overlapping_alternation" => 0.4,
+          # Medium indicator
+          "unbounded_repetition" => 0.3,
+          # Pattern complexity
+          "complex_pattern" => 0.2,
+          # Processing user data
+          "user_input" => 0.3,
+          # Safe pattern
+          "bounded_quantifiers" => -0.5,
+          # Test code OK
+          "test_file" => -0.6,
+          # Using safe regex lib
+          "safe_library" => -0.8,
+          # Hardcoded patterns
+          "static_pattern" => -0.3,
+          # Has input limits
+          "input_validation" => -0.4,
+          # Has timeout mechanism
+          "timeout_protection" => -0.7,
+          # Using RE2 or similar
+          "non_backtracking_engine" => -0.9,
+          # Monitoring in place
+          "performance_monitoring" => -0.3
         }
       },
-      min_confidence: 0.75  # High threshold - ReDoS needs careful analysis
+      # High threshold - ReDoS needs careful analysis
+      min_confidence: 0.75
     }
   end
-  
 end

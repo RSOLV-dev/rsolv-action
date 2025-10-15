@@ -31,7 +31,7 @@ defmodule RsolvWeb.Endpoint do
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
-    
+
     # Tidewave integration for development
     if Code.ensure_loaded?(Tidewave) do
       plug Tidewave,

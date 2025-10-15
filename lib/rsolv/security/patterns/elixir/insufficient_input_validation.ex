@@ -29,13 +29,13 @@ defmodule Rsolv.Security.Patterns.Elixir.InsufficientInputValidation do
   ```elixir
   # VULNERABLE - Direct casting of role field without validation
   cast(user, params, [:email, :password, :role])
-  
+
   # VULNERABLE - Admin field accessible to user input
   cast(account, user_params, [:name, :admin, :email])
-  
+
   # VULNERABLE - Permission fields exposed in changeset
   cast(changeset, attrs, [:permissions, :verified, :status])
-  
+
   # VULNERABLE - Financial approval fields unprotected
   cast(payment, params, [:amount, :approved, :status])
   ```
@@ -47,13 +47,13 @@ defmodule Rsolv.Security.Patterns.Elixir.InsufficientInputValidation do
   |> cast(params, [:email, :name])
   |> validate_required([:email, :name])
   |> assign_role_if_authorized(current_user, params["role"])
-  
+
   # SAFE - Whitelist validation for sensitive fields
   user
   |> cast(params, [:email, :name])
   |> validate_inclusion(:role, ["user", "moderator"])
   |> validate_admin_permissions()
-  
+
   # SAFE - Separate changesets for different privilege levels
   case current_user.role do
     "admin" -> admin_changeset(user, params)
@@ -87,7 +87,8 @@ defmodule Rsolv.Security.Patterns.Elixir.InsufficientInputValidation do
     %Rsolv.Security.Pattern{
       id: "elixir-insufficient-input-validation",
       name: "Insufficient Input Validation",
-      description: "Ecto changeset casting sensitive fields without proper validation enables privilege escalation",
+      description:
+        "Ecto changeset casting sensitive fields without proper validation enables privilege escalation",
       type: :input_validation,
       severity: :medium,
       languages: ["elixir"],
@@ -95,25 +96,26 @@ defmodule Rsolv.Security.Patterns.Elixir.InsufficientInputValidation do
       regex: [
         # cast with role, admin, or permission fields - exclude comments
         ~r/^(?!\s*#).*cast\s*\(\s*[^,]+\s*,\s*[^,]+\s*,\s*\[[^\]]*(?::role|:admin|:permissions|:superuser|:is_admin|:moderator)/m,
-        
+
         # cast with status, approval, or verification fields - exclude comments  
         ~r/^(?!\s*#).*cast\s*\(\s*[^,]+\s*,\s*[^,]+\s*,\s*\[[^\]]*(?::status|:approved|:confirmed|:verified|:active|:suspended)/m,
-        
+
         # cast with balance, amount, or financial fields - exclude comments
         ~r/^(?!\s*#).*cast\s*\(\s*[^,]+\s*,\s*[^,]+\s*,\s*\[[^\]]*(?::balance|:amount|:price|:cost|:fee)/m,
-        
+
         # Ecto.Changeset.cast with sensitive fields - exclude comments
         ~r/^(?!\s*#).*Ecto\.Changeset\.cast\s*\(\s*[^,]+\s*,\s*[^,]+\s*,\s*\[[^\]]*(?::role|:admin|:permissions|:status|:approved)/m,
-        
+
         # Pipeline syntax with cast and sensitive fields - exclude comments
         ~r/^(?!\s*#).*\|>\s*cast\s*\(\s*[^,]+\s*,\s*\[[^\]]*(?::role|:admin|:permissions|:status|:approved|:verified|:superuser)/m,
-        
+
         # Multi-line Ecto.Changeset.cast patterns - exclude comments
         ~r/^(?!\s*#).*Ecto\.Changeset\.cast\s*\([^)]*\[[^\]]*(?::permissions|:role|:admin)/ms
       ],
       cwe_id: "CWE-20",
       owasp_category: "A03:2021",
-      recommendation: "Validate sensitive fields through separate authorization checks and use field whitelisting",
+      recommendation:
+        "Validate sensitive fields through separate authorization checks and use field whitelisting",
       test_cases: %{
         vulnerable: [
           ~S|cast(user, params, [:email, :password, :role])|,
@@ -162,16 +164,17 @@ defmodule Rsolv.Security.Patterns.Elixir.InsufficientInputValidation do
       - Workflow disruption via manipulation of approval, status, and verification mechanisms
       - Account takeover through role manipulation and permission escalation attacks
       """,
-      likelihood: "High: Common oversight in rapid development cycles where security validation is not properly implemented",
+      likelihood:
+        "High: Common oversight in rapid development cycles where security validation is not properly implemented",
       cve_examples: [
         "CWE-20: Improper Input Validation",
-        "CWE-863: Incorrect Authorization", 
+        "CWE-863: Incorrect Authorization",
         "CVE-2021-44228: Log4Shell privilege escalation via input validation bypass",
         "OWASP Top 10 A03:2021 - Injection and Input Validation"
       ],
       compliance_standards: [
         "OWASP Top 10 2021 - A03: Injection",
-        "NIST Cybersecurity Framework - PR.AC: Access Control", 
+        "NIST Cybersecurity Framework - PR.AC: Access Control",
         "ISO 27001 - A.9.2: User access management",
         "PCI DSS - Requirement 7: Restrict access by business need to know"
       ],
@@ -209,19 +212,34 @@ defmodule Rsolv.Security.Patterns.Elixir.InsufficientInputValidation do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
       context_rules: %{
         sensitive_fields: [
-          "role", "admin", "permissions", "superuser", "is_admin", "moderator",
-          "status", "approved", "confirmed", "verified", "active", "suspended",
-          "balance", "amount", "price", "cost", "fee", "payment_status"
+          "role",
+          "admin",
+          "permissions",
+          "superuser",
+          "is_admin",
+          "moderator",
+          "status",
+          "approved",
+          "confirmed",
+          "verified",
+          "active",
+          "suspended",
+          "balance",
+          "amount",
+          "price",
+          "cost",
+          "fee",
+          "payment_status"
         ],
         validation_functions: [
           "validate_required",
-          "validate_inclusion", 
+          "validate_inclusion",
           "validate_format",
           "validate_length",
           "validate_number",

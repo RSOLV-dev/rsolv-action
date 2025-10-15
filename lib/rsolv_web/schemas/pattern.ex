@@ -92,7 +92,8 @@ defmodule RsolvWeb.Schemas.Pattern do
         recommendation: %Schema{
           type: :string,
           description: "Remediation recommendation",
-          example: "Use parameterized queries or prepared statements instead of string concatenation"
+          example:
+            "Use parameterized queries or prepared statements instead of string concatenation"
         },
         examples: %Schema{
           type: :array,

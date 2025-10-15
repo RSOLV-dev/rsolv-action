@@ -11,16 +11,16 @@ end
 if config_env() == :prod do
   # Generate a unique node name based on pod name (injected by Kubernetes)
   node_basename = System.get_env("RELEASE_NODE") || "rsolv"
-  pod_name = System.get_env("POD_NAME") || "#{node_basename}-#{:rand.uniform(999999)}"
+  pod_name = System.get_env("POD_NAME") || "#{node_basename}-#{:rand.uniform(999_999)}"
   pod_namespace = System.get_env("POD_NAMESPACE") || "default"
-  
+
   # Service name should match the headless service in Kubernetes
   service_name = System.get_env("CLUSTER_SERVICE_NAME") || "staging-rsolv-platform-headless"
-  
+
   config :rsolv,
     enable_clustering: true,
     cluster_strategy: :kubernetes
-    
+
   config :libcluster,
     topologies: [
       k8s_dns: [
@@ -43,28 +43,32 @@ database_config = [
 ]
 
 # Only add SSL config when explicitly enabled or in production without explicit disable
-database_config = 
+database_config =
   cond do
     System.get_env("DATABASE_SSL") == "false" ->
       # Explicitly disable SSL to override any URL parameters
-      Keyword.merge(database_config, [
+      Keyword.merge(database_config,
         ssl: false
-      ])
+      )
+
     System.get_env("DATABASE_SSL") == "true" ->
-      Keyword.merge(database_config, [
+      Keyword.merge(database_config,
         ssl: true,
         ssl_opts: [verify: :verify_none]
-      ])
+      )
+
     config_env() == :test ->
       # Test environment should default to no SSL unless explicitly enabled
-      Keyword.merge(database_config, [
+      Keyword.merge(database_config,
         ssl: false
-      ])
+      )
+
     config_env() == :prod ->
-      Keyword.merge(database_config, [
+      Keyword.merge(database_config,
         ssl: true,
         ssl_opts: [verify: :verify_none]
-      ])
+      )
+
     true ->
       database_config
   end
@@ -86,7 +90,7 @@ config :fun_with_flags, :cache_bust_notifications,
 if config_env() != :test do
   # Get the host for origin checking
   phx_host = System.get_env("PHX_HOST") || "localhost"
-  
+
   config :rsolv, RsolvWeb.Endpoint,
     url: [host: phx_host, port: 443, scheme: "https"],
     http: [
@@ -117,9 +121,12 @@ config :rsolv, :ai_providers,
 
 # Configure rate limiting
 config :rsolv, :rate_limits,
-  credential_exchange: {10, :minute},  # 10 requests per minute
-  usage_report: {100, :minute},        # 100 reports per minute
-  auth_attempt: {10, :minute}           # 10 login attempts per minute (per RFC-056)
+  # 10 requests per minute
+  credential_exchange: {10, :minute},
+  # 100 reports per minute
+  usage_report: {100, :minute},
+  # 10 login attempts per minute (per RFC-056)
+  auth_attempt: {10, :minute}
 
 # Configure credential TTL
 config :rsolv, :credentials,
@@ -171,5 +178,4 @@ end
 
 # Configure Prometheus/PromEx monitoring (RFC-060 Phase 5.2)
 # Enable metrics collection for observability
-config :rsolv, :monitoring,
-  enabled: System.get_env("ENABLE_PROMETHEUS_METRICS", "true") == "true"
+config :rsolv, :monitoring, enabled: System.get_env("ENABLE_PROMETHEUS_METRICS", "true") == "true"

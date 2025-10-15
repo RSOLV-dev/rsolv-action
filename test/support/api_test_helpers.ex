@@ -9,24 +9,26 @@ defmodule Rsolv.APITestHelpers do
     if :ets.whereis(:rsolv_rate_limiter) != :undefined do
       :ets.delete_all_objects(:rsolv_rate_limiter)
     end
-    
+
     # Create a unique customer for this test
     unique_id = System.unique_integer([:positive])
-    
+
     # Create customer directly
-    {:ok, customer_record} = Rsolv.Customers.create_customer(%{
-      name: "Test Customer #{unique_id}",
-      email: "test#{unique_id}@example.com",
-      monthly_limit: 100,
-      current_usage: 15
-    })
-    
+    {:ok, customer_record} =
+      Rsolv.Customers.create_customer(%{
+        name: "Test Customer #{unique_id}",
+        email: "test#{unique_id}@example.com",
+        monthly_limit: 100,
+        current_usage: 15
+      })
+
     # Create an API key for this customer
-    {:ok, api_key} = Rsolv.Customers.create_api_key(customer_record, %{
-      name: "Test Key",
-      permissions: ["full_access"]
-    })
-    
+    {:ok, api_key} =
+      Rsolv.Customers.create_api_key(customer_record, %{
+        name: "Test Key",
+        permissions: ["full_access"]
+      })
+
     # Build a customer map with the API key for backward compatibility
     # This allows tests to use customer.api_key syntax
     customer = %{
@@ -42,7 +44,7 @@ defmodule Rsolv.APITestHelpers do
       trial: true,
       created_at: customer_record.inserted_at
     }
-    
+
     {:ok, customer: customer, api_key: api_key}
   end
 end

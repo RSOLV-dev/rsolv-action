@@ -6,7 +6,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
   describe "pattern/0" do
     test "returns correct pattern structure" do
       pattern = SqlInjectionFstring.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "python-sql-injection-fstring"
       assert pattern.name == "SQL Injection via F-String Formatting"
@@ -31,7 +31,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
         ~S|cursor.execute(f'INSERT INTO logs VALUES ({id}, "{message}")')|,
         ~S|db.execute(f'''SELECT * FROM products WHERE category = '{category}' ''')|
       ]
-      
+
       for code <- vulnerable_code do
         assert Regex.match?(pattern.regex, code), "Should match vulnerable code: #{code}"
       end
@@ -43,7 +43,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
         ~S|sql = f"DELETE FROM posts WHERE author = '{author}'"; db.execute(sql)|,
         ~S|update_query = f"UPDATE users SET status = '{status}'"; conn.execute(update_query)|
       ]
-      
+
       for code <- vulnerable_code do
         assert Regex.match?(pattern.regex, code), "Should match vulnerable code: #{code}"
       end
@@ -57,7 +57,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
         ~S|cursor.execute("INSERT INTO logs VALUES (?, ?)", (id, message))|,
         ~S|# Use f-strings for logging, not SQL|
       ]
-      
+
       for code <- safe_code do
         refute Regex.match?(pattern.regex, code), "Should NOT match safe code: #{code}"
       end
@@ -70,7 +70,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
         ~S|message = f"Hello {name}!"|,
         ~S|url = f"https://api.example.com/users/{user_id}"|
       ]
-      
+
       for code <- safe_code do
         refute Regex.match?(pattern.regex, code), "Should NOT match safe code: #{code}"
       end
@@ -80,7 +80,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
   describe "vulnerability_metadata/0" do
     test "returns comprehensive vulnerability metadata" do
       metadata = SqlInjectionFstring.vulnerability_metadata()
-      
+
       assert is_map(metadata)
       assert is_binary(metadata.description)
       assert is_list(metadata.references)
@@ -95,11 +95,11 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
 
     test "includes relevant CWE and OWASP references" do
       metadata = SqlInjectionFstring.vulnerability_metadata()
-      
+
       cwe_ref = Enum.find(metadata.references, &(&1.type == :cwe))
       assert cwe_ref
       assert cwe_ref.id == "CWE-89"
-      
+
       owasp_ref = Enum.find(metadata.references, &(&1.type == :owasp))
       assert owasp_ref
       assert owasp_ref.id == "A03:2021"
@@ -109,7 +109,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
   describe "ast_enhancement/0" do
     test "returns AST enhancement rules" do
       enhancement = SqlInjectionFstring.ast_enhancement()
-      
+
       assert is_map(enhancement)
       assert Map.has_key?(enhancement, :ast_rules)
       assert Map.has_key?(enhancement, :context_rules)
@@ -119,7 +119,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
 
     test "AST rules target appropriate node types" do
       enhancement = SqlInjectionFstring.ast_enhancement()
-      
+
       assert enhancement.ast_rules.node_type == "JoinedStr"
       assert enhancement.ast_rules.format_type == "f-string"
       assert is_map(enhancement.ast_rules.sql_context)
@@ -127,14 +127,19 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
 
     test "includes database context detection" do
       enhancement = SqlInjectionFstring.ast_enhancement()
-      
-      assert enhancement.context_rules.database_methods == ["execute", "executemany", "executescript"]
+
+      assert enhancement.context_rules.database_methods == [
+               "execute",
+               "executemany",
+               "executescript"
+             ]
+
       assert enhancement.context_rules.exclude_if_parameterized == true
     end
 
     test "confidence scoring reduces false positives" do
       enhancement = SqlInjectionFstring.ast_enhancement()
-      
+
       assert enhancement.min_confidence == 0.7
       assert enhancement.confidence_rules.base == 0.5
       assert enhancement.confidence_rules.adjustments["has_sql_keywords"] == 0.3
@@ -145,7 +150,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
   describe "enhanced_pattern/0" do
     test "uses AST enhancement" do
       enhanced = SqlInjectionFstring.enhanced_pattern()
-      
+
       assert enhanced.id == "python-sql-injection-fstring"
       assert enhanced.ast_rules
       assert enhanced.min_confidence == 0.7
@@ -157,7 +162,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstringTest do
       assert SqlInjectionFstring.applies_to_file?("app.py", nil)
       assert SqlInjectionFstring.applies_to_file?("models/user.py", nil)
       assert SqlInjectionFstring.applies_to_file?("src/database.py", nil)
-      
+
       refute SqlInjectionFstring.applies_to_file?("app.js", nil)
       refute SqlInjectionFstring.applies_to_file?("config.rb", nil)
       refute SqlInjectionFstring.applies_to_file?("README.md", nil)

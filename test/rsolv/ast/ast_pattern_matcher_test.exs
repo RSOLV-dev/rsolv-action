@@ -1,8 +1,8 @@
 defmodule Rsolv.AST.ASTPatternMatcherTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.AST.ASTPatternMatcher
-  
+
   describe "match/3" do
     test "detects SQL injection in Python string interpolation" do
       # Python AST for: cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
@@ -34,7 +34,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         ]
       }
-      
+
       pattern = %{
         id: "python-sql-injection",
         name: "SQL Injection via String Interpolation",
@@ -52,14 +52,14 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           ]
         }
       }
-      
+
       {:ok, matches} = ASTPatternMatcher.match(ast, pattern, "python")
-      
+
       assert length(matches) == 1
       assert hd(matches).pattern_id == "python-sql-injection"
       assert hd(matches).confidence > 0.8
     end
-    
+
     test "does NOT detect SQL injection when using parameterized queries" do
       # Python AST for: cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
       ast = %{
@@ -85,7 +85,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         ]
       }
-      
+
       pattern = %{
         id: "python-sql-injection",
         name: "SQL Injection via String Interpolation",
@@ -103,12 +103,12 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           ]
         }
       }
-      
+
       {:ok, matches} = ASTPatternMatcher.match(ast, pattern, "python")
-      
+
       assert length(matches) == 0
     end
-    
+
     test "detects XSS in Ruby ERB template" do
       # Ruby AST for: <%= user_input %>
       ast = %{
@@ -126,7 +126,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         ]
       }
-      
+
       pattern = %{
         id: "ruby-xss-erb",
         name: "XSS via Unescaped ERB Output",
@@ -139,13 +139,13 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         }
       }
-      
+
       {:ok, matches} = ASTPatternMatcher.match(ast, pattern, "ruby")
-      
+
       assert length(matches) == 1
       assert hd(matches).pattern_id == "ruby-xss-erb"
     end
-    
+
     test "detects hardcoded secrets in JavaScript" do
       # JavaScript AST for: const apiKey = "sk-1234567890abcdef"
       ast = %{
@@ -167,7 +167,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         ]
       }
-      
+
       pattern = %{
         id: "js-hardcoded-secret",
         name: "Hardcoded Secret Key",
@@ -183,14 +183,14 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         }
       }
-      
+
       {:ok, matches} = ASTPatternMatcher.match(ast, pattern, "javascript")
-      
+
       assert length(matches) == 1
       assert hd(matches).pattern_id == "js-hardcoded-secret"
       assert hd(matches).severity == "high"
     end
-    
+
     test "handles nested AST traversal" do
       # Deeply nested AST structure
       ast = %{
@@ -204,7 +204,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
                 %{
                   "type" => "IfStatement",
                   "consequent" => %{
-                    "type" => "BlockStatement", 
+                    "type" => "BlockStatement",
                     "body" => [
                       %{
                         "type" => "ExpressionStatement",
@@ -224,7 +224,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         ]
       }
-      
+
       pattern = %{
         id: "js-eval-injection",
         name: "Eval Injection",
@@ -237,13 +237,14 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           arguments: {:contains, %{type: "Identifier"}}
         }
       }
-      
+
       {:ok, matches} = ASTPatternMatcher.match(ast, pattern, "javascript")
-      
+
       assert length(matches) == 1
-      assert hd(matches).location.depth == 6  # Nested 6 levels deep (CallExpression is at 6)
+      # Nested 6 levels deep (CallExpression is at 6)
+      assert hd(matches).location.depth == 6
     end
-    
+
     test "supports wildcard matching with :any" do
       ast = %{
         "type" => "CallExpression",
@@ -254,7 +255,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           %{"type" => "Literal", "value" => 123}
         ]
       }
-      
+
       pattern = %{
         id: "dangerous-call",
         name: "Dangerous Function Call",
@@ -264,15 +265,15 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           arguments: {:includes, %{type: "Identifier"}}
         }
       }
-      
+
       {:ok, matches} = ASTPatternMatcher.match(ast, pattern, "javascript")
-      
+
       assert length(matches) == 1
       # The CallExpression itself isn't in an argument position - it's the root node
       # The pattern matches because the arguments contain an Identifier
       assert hd(matches).context.node_type == "CallExpression"
     end
-    
+
     test "returns empty list when no patterns match" do
       ast = %{
         "type" => "Program",
@@ -289,7 +290,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         ]
       }
-      
+
       pattern = %{
         id: "never-matches",
         name: "Never Matches",
@@ -297,12 +298,12 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           type: "NonExistentNodeType"
         }
       }
-      
+
       {:ok, matches} = ASTPatternMatcher.match(ast, pattern, "javascript")
-      
+
       assert matches == []
     end
-    
+
     test "provides match context and location" do
       ast = %{
         "type" => "Module",
@@ -329,7 +330,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         ]
       }
-      
+
       pattern = %{
         id: "python-eval",
         name: "Eval Usage",
@@ -338,19 +339,19 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           func: %{type: "Name", id: "eval"}
         }
       }
-      
+
       {:ok, matches} = ASTPatternMatcher.match(ast, pattern, "python")
-      
+
       assert length(matches) == 1
       match = hd(matches)
-      
+
       assert match.location.start_line == 11
       assert match.location.start_column == 4
       assert match.context.in_function == "process_user"
       assert match.context.parent_type == "Expr"
     end
   end
-  
+
   describe "match_multiple/3" do
     test "matches multiple patterns against AST" do
       ast = %{
@@ -373,7 +374,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         ]
       }
-      
+
       patterns = [
         %{
           id: "eval-usage",
@@ -393,12 +394,12 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
           }
         }
       ]
-      
+
       {:ok, matches} = ASTPatternMatcher.match_multiple(ast, patterns, "javascript")
-      
+
       assert length(matches) == 2
-      assert Enum.any?(matches, & &1.pattern_id == "eval-usage")
-      assert Enum.any?(matches, & &1.pattern_id == "hardcoded-secret")
+      assert Enum.any?(matches, &(&1.pattern_id == "eval-usage"))
+      assert Enum.any?(matches, &(&1.pattern_id == "hardcoded-secret"))
     end
   end
 end

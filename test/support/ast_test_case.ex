@@ -3,34 +3,34 @@ defmodule Rsolv.AST.TestCase do
   Shared test case for AST-related tests.
   Provides common helpers and test data for multi-language parsing.
   """
-  
+
   use ExUnit.CaseTemplate
-  
+
   using do
     quote do
       import Rsolv.AST.TestCase
       alias Rsolv.AST.PortSupervisor
     end
   end
-  
+
   setup do
     # Ensure the application is started for tests
     # Create a test session
     {:ok, session} = Rsolv.AST.SessionManager.create_session("test-customer")
-    
+
     on_exit(fn ->
       # Clean up session after test
       Rsolv.AST.SessionManager.delete_session(session.id, "test-customer")
     end)
-    
+
     {:ok, session_id: session.id, session: session}
   end
-  
+
   # Test fixtures for different languages
-  
+
   @doc "Get test code samples for a specific language"
   def test_code(language, type \\ :simple)
-  
+
   # Python test cases
   # Elixir test code
   def test_code("elixir", :simple) do
@@ -65,11 +65,11 @@ defmodule Rsolv.AST.TestCase do
         return "Hello, World!"
     """
   end
-  
+
   def test_code("python", :sql_injection_vulnerable) do
     """
     import sqlite3
-    
+
     def get_user(user_id):
         conn = sqlite3.connect('users.db')
         # VULNERABLE: Direct string interpolation
@@ -78,11 +78,11 @@ defmodule Rsolv.AST.TestCase do
         return cursor.fetchone()
     """
   end
-  
+
   def test_code("python", :sql_injection_safe) do
     """
     import sqlite3
-    
+
     def get_user(user_id):
         conn = sqlite3.connect('users.db')
         # SAFE: Parameterized query
@@ -91,24 +91,24 @@ defmodule Rsolv.AST.TestCase do
         return cursor.fetchone()
     """
   end
-  
+
   def test_code("python", :command_injection_vulnerable) do
     """
     import os
-    
+
     def process_file(filename):
         # VULNERABLE: os.system with user input
         os.system(f"cat {filename}")
     """
   end
-  
+
   def test_code("python", :syntax_error) do
     """
     def broken(:
         return "This won't parse"
     """
   end
-  
+
   # Ruby test cases
   def test_code("ruby", :simple) do
     """
@@ -117,7 +117,7 @@ defmodule Rsolv.AST.TestCase do
     end
     """
   end
-  
+
   def test_code("ruby", :sql_injection_vulnerable) do
     ~S"""
     class User < ActiveRecord::Base
@@ -128,7 +128,7 @@ defmodule Rsolv.AST.TestCase do
     end
     """
   end
-  
+
   def test_code("ruby", :sql_injection_safe) do
     """
     class User < ActiveRecord::Base
@@ -139,7 +139,7 @@ defmodule Rsolv.AST.TestCase do
     end
     """
   end
-  
+
   def test_code("ruby", :command_injection_vulnerable) do
     ~S"""
     def process_file(filename)
@@ -148,14 +148,14 @@ defmodule Rsolv.AST.TestCase do
     end
     """
   end
-  
+
   def test_code("ruby", :syntax_error) do
     """
     def broken
       "Missing end
     """
   end
-  
+
   # PHP test cases
   def test_code("php", :simple) do
     """
@@ -166,7 +166,7 @@ defmodule Rsolv.AST.TestCase do
     ?>
     """
   end
-  
+
   def test_code("php", :sql_injection_vulnerable) do
     """
     <?php
@@ -180,7 +180,7 @@ defmodule Rsolv.AST.TestCase do
     ?>
     """
   end
-  
+
   def test_code("php", :sql_injection_safe) do
     """
     <?php
@@ -195,7 +195,7 @@ defmodule Rsolv.AST.TestCase do
     ?>
     """
   end
-  
+
   def test_code("php", :xss_vulnerable) do
     """
     <?php
@@ -205,7 +205,7 @@ defmodule Rsolv.AST.TestCase do
     ?>
     """
   end
-  
+
   def test_code("php", :xss_safe) do
     """
     <?php
@@ -215,7 +215,7 @@ defmodule Rsolv.AST.TestCase do
     ?>
     """
   end
-  
+
   # Java test cases
   def test_code("java", :simple) do
     """
@@ -226,11 +226,11 @@ defmodule Rsolv.AST.TestCase do
     }
     """
   end
-  
+
   def test_code("java", :sql_injection_vulnerable) do
     """
     import java.sql.*;
-    
+
     public class UserDao {
         public User getUser(String id) throws SQLException {
             Connection conn = getConnection();
@@ -243,11 +243,11 @@ defmodule Rsolv.AST.TestCase do
     }
     """
   end
-  
+
   def test_code("java", :sql_injection_safe) do
     """
     import java.sql.*;
-    
+
     public class UserDao {
         public User getUser(String id) throws SQLException {
             Connection conn = getConnection();
@@ -261,11 +261,11 @@ defmodule Rsolv.AST.TestCase do
     }
     """
   end
-  
+
   def test_code("java", :command_injection_vulnerable) do
     """
     import java.io.*;
-    
+
     public class FileProcessor {
         public void processFile(String filename) throws IOException {
             // VULNERABLE: Runtime.exec with user input
@@ -274,7 +274,7 @@ defmodule Rsolv.AST.TestCase do
     }
     """
   end
-  
+
   # JavaScript test cases
   def test_code("javascript", :simple) do
     """
@@ -283,11 +283,11 @@ defmodule Rsolv.AST.TestCase do
     }
     """
   end
-  
+
   def test_code("javascript", :sql_injection_vulnerable) do
     """
     const mysql = require('mysql');
-    
+
     function getUser(userId) {
         const connection = mysql.createConnection({host: 'localhost'});
         // VULNERABLE: String concatenation
@@ -296,11 +296,11 @@ defmodule Rsolv.AST.TestCase do
     }
     """
   end
-  
+
   def test_code("javascript", :sql_injection_safe) do
     """
     const mysql = require('mysql');
-    
+
     function getUser(userId) {
         const connection = mysql.createConnection({host: 'localhost'});
         // SAFE: Parameterized query
@@ -309,50 +309,57 @@ defmodule Rsolv.AST.TestCase do
     }
     """
   end
-  
-  
+
   # Helper to get expected vulnerabilities
   def expected_vulnerabilities(language, code_type) do
     case {language, code_type} do
-      {_, :simple} -> []
-      {_, :syntax_error} -> [:syntax_error]
-      
-      {"python", :sql_injection_vulnerable} -> 
+      {_, :simple} ->
+        []
+
+      {_, :syntax_error} ->
+        [:syntax_error]
+
+      {"python", :sql_injection_vulnerable} ->
         [%{type: :sql_injection, severity: "high", line: 6}]
-      {"python", :command_injection_vulnerable} -> 
+
+      {"python", :command_injection_vulnerable} ->
         [%{type: :command_injection, severity: "critical", line: 5}]
-      
-      {"ruby", :sql_injection_vulnerable} -> 
+
+      {"ruby", :sql_injection_vulnerable} ->
         [%{type: :sql_injection, severity: "high", line: 4}]
-      {"ruby", :command_injection_vulnerable} -> 
+
+      {"ruby", :command_injection_vulnerable} ->
         [%{type: :command_injection, severity: "critical", line: 3}]
-      
-      {"php", :sql_injection_vulnerable} -> 
+
+      {"php", :sql_injection_vulnerable} ->
         [%{type: :sql_injection, severity: "high", line: 5}]
-      {"php", :xss_vulnerable} -> 
+
+      {"php", :xss_vulnerable} ->
         [%{type: :xss, severity: "medium", line: 4}]
-      
-      {"java", :sql_injection_vulnerable} -> 
+
+      {"java", :sql_injection_vulnerable} ->
         [%{type: :sql_injection, severity: "high", line: 7}]
-      {"java", :command_injection_vulnerable} -> 
+
+      {"java", :command_injection_vulnerable} ->
         [%{type: :command_injection, severity: "critical", line: 6}]
-      
-      {"javascript", :sql_injection_vulnerable} -> 
+
+      {"javascript", :sql_injection_vulnerable} ->
         [%{type: :sql_injection, severity: "high", line: 6}]
-      
-      {"elixir", :command_injection_vulnerable} -> 
+
+      {"elixir", :command_injection_vulnerable} ->
         [%{type: :command_injection, severity: "critical", line: 4}]
-      
-      {_, _} -> []
+
+      {_, _} ->
+        []
     end
   end
-  
+
   # Helper to create temporary test files
   def with_temp_file(content, extension, fun) do
     dir = System.tmp_dir!()
-    filename = "test_#{:rand.uniform(100000)}.#{extension}"
+    filename = "test_#{:rand.uniform(100_000)}.#{extension}"
     path = Path.join(dir, filename)
-    
+
     try do
       File.write!(path, content)
       fun.(path)
@@ -360,28 +367,31 @@ defmodule Rsolv.AST.TestCase do
       File.rm(path)
     end
   end
-  
+
   # Helper to assert AST structure
   def assert_ast_node(ast, expected_type) when is_map(ast) do
     assert ast["_type"] == expected_type
   end
-  
+
   def assert_ast_node(ast, expected_type) when is_binary(expected_type) do
     assert ast[:type] == expected_type || ast["type"] == expected_type
   end
-  
+
   # Helper to find nodes in AST
   def find_nodes(ast, node_type) when is_map(ast) do
-    nodes = if ast["_type"] == node_type or ast["type"] == node_type or ast[:type] == node_type do
-      [ast]
-    else
-      []
-    end
-    
+    nodes =
+      if ast["_type"] == node_type or ast["type"] == node_type or ast[:type] == node_type do
+        [ast]
+      else
+        []
+      end
+
     # Recursively search children
     Enum.reduce(ast, nodes, fn {_key, value}, acc ->
       case value do
-        %{} -> acc ++ find_nodes(value, node_type)
+        %{} ->
+          acc ++ find_nodes(value, node_type)
+
         list when is_list(list) ->
           Enum.reduce(list, acc, fn item, acc2 ->
             if is_map(item) do
@@ -390,20 +400,22 @@ defmodule Rsolv.AST.TestCase do
               acc2
             end
           end)
-        _ -> acc
+
+        _ ->
+          acc
       end
     end)
   end
-  
+
   def find_nodes(_, _), do: []
-  
+
   # Helper to run parser and get AST
   def parse_code(language, _code) do
     case language do
       lang when lang in ["python", "ruby"] ->
         # Direct parsing removed - use PortSupervisor.parse instead
         {:error, "Use PortSupervisor.parse instead"}
-        
+
       _ ->
         {:error, "Parser not implemented for #{language}"}
     end

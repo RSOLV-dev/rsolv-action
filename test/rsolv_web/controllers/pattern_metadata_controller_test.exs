@@ -5,11 +5,11 @@ defmodule RsolvWeb.PatternMetadataControllerTest do
     test "returns vulnerability metadata for a specific pattern", %{conn: conn} do
       # Test with our SQL injection pattern
       conn = get(conn, "/api/v1/patterns/js-sql-injection-concat/metadata")
-      
+
       assert json = json_response(conn, 200)
       assert json["pattern_id"] == "js-sql-injection-concat"
       assert json["description"] =~ "SQL injection"
-      
+
       # Check references structure
       assert is_list(json["references"])
       assert length(json["references"]) > 0
@@ -17,11 +17,11 @@ defmodule RsolvWeb.PatternMetadataControllerTest do
       assert first_ref["type"] == "cwe"
       assert first_ref["id"] == "CWE-89"
       assert first_ref["url"] =~ "cwe.mitre.org"
-      
+
       # Check attack vectors
       assert is_list(json["attack_vectors"])
       assert "Direct concatenation of user input into SQL queries" in json["attack_vectors"]
-      
+
       # Check CVE examples
       assert is_list(json["cve_examples"])
     end
@@ -43,7 +43,7 @@ defmodule RsolvWeb.PatternMetadataControllerTest do
     test "excludes metadata by default", %{conn: conn} do
       conn = get(conn, "/api/v1/patterns/by-language/javascript")
       json = json_response(conn, 200)
-      
+
       # Should have patterns but no metadata
       assert json["count"] > 0
       [first_pattern | _] = json["patterns"]
@@ -53,7 +53,7 @@ defmodule RsolvWeb.PatternMetadataControllerTest do
     test "includes metadata when requested", %{conn: conn} do
       conn = get(conn, "/api/v1/patterns/by-language/javascript?include_metadata=true")
       json = json_response(conn, 200)
-      
+
       # Should have patterns with metadata
       assert json["count"] > 0
       [first_pattern | _] = json["patterns"]

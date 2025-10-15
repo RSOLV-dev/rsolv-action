@@ -1,32 +1,32 @@
 defmodule Rsolv.Security.Patterns.Ruby.WeakCryptoMd5 do
   @moduledoc """
   Pattern for detecting weak MD5 cryptographic hash usage in Ruby applications.
-  
+
   This pattern identifies when MD5 is used for cryptographic purposes such as
   password hashing or data integrity. MD5 is considered cryptographically broken
   due to collision vulnerabilities and should not be used for security purposes.
-  
+
   ## Vulnerability Details
-  
+
   MD5 (Message-Digest Algorithm 5) was once widely used for cryptographic hashing
   but has been considered insecure since 2004 when researchers demonstrated practical
   collision attacks. Using MD5 for passwords, digital signatures, or any security-critical
   application puts data at risk.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable password storage
   password_hash = Digest::MD5.hexdigest(password)
   User.create(password_hash: password_hash)
-  
+
   # Attack: Rainbow tables, collision attacks
   # Result: Passwords can be cracked in seconds
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -43,7 +43,8 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakCryptoMd5 do
       ],
       cwe_id: "CWE-328",
       owasp_category: "A02:2021",
-      recommendation: "Use SHA-256 or SHA-384 for cryptographic hashing. For password hashing, use bcrypt.",
+      recommendation:
+        "Use SHA-256 or SHA-384 for cryptographic hashing. For password hashing, use bcrypt.",
       test_cases: %{
         vulnerable: [
           ~S|Digest::MD5.hexdigest(password)|,
@@ -59,7 +60,7 @@ hash = Digest::MD5.hexdigest(data)|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -67,24 +68,24 @@ hash = Digest::MD5.hexdigest(data)|
       MD5 (Message-Digest Algorithm 5) is a widely used cryptographic hash function
       that produces a 128-bit hash value. However, MD5 has been cryptographically
       broken and is unsuitable for security purposes due to extensive vulnerabilities.
-      
+
       The primary issues with MD5 include:
       - **Collision attacks**: Two different inputs can produce the same hash
       - **Speed**: MD5 is too fast, making brute-force attacks feasible
       - **Rainbow tables**: Pre-computed hash databases can crack MD5 passwords quickly
       - **Length extension attacks**: Attackers can append data to messages
-      
+
       Historical breaches involving MD5:
       - 2012 LinkedIn breach: 6.5 million MD5 passwords cracked
       - 2013 Adobe breach: 150 million MD5 passwords exposed
       - Flame malware used MD5 collision to forge Microsoft certificates
-      
+
       MD5 should never be used for:
       - Password storage
       - Digital signatures
       - SSL certificates
       - Any cryptographic purpose
-      
+
       Limited acceptable uses (non-security):
       - File checksums for accidental corruption detection
       - Non-cryptographic hashing (like hash tables)
@@ -153,7 +154,7 @@ hash = Digest::MD5.hexdigest(data)|
         %{
           id: "LinkedIn-2012",
           description: "LinkedIn password breach with unsalted MD5",
-          severity: "critical", 
+          severity: "critical",
           cvss: 9.0,
           note: "6.5 million passwords cracked due to weak hashing"
         },
@@ -170,7 +171,7 @@ hash = Digest::MD5.hexdigest(data)|
       - Digest::MD5 constant references
       - OpenSSL::Digest with MD5 parameter
       - Method calls to .md5()
-      
+
       The pattern may have false positives for:
       - Non-security uses like checksums
       - Legacy code under migration
@@ -211,15 +212,15 @@ hash = Digest::MD5.hexdigest(data)|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between security-critical MD5 usage
   and acceptable non-cryptographic uses like checksums.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakCryptoMd5.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]

@@ -2,12 +2,12 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
   @moduledoc """
   Helper functions for formatting and displaying dashboard data.
   """
-  
+
   require Logger
-  
+
   @doc """
   Format a DateTime or timestamp string for display.
-  
+
   ## Examples
       
       iex> format_datetime(~U[2023-05-20 12:34:56Z])
@@ -19,11 +19,13 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
   def format_datetime(%DateTime{} = datetime) do
     Calendar.strftime(datetime, "%b %d, %Y %I:%M %p")
   end
-  
+
   def format_datetime(timestamp) when is_binary(timestamp) do
     case DateTime.from_iso8601(timestamp) do
-      {:ok, datetime, _} -> format_datetime(datetime)
-      _ -> 
+      {:ok, datetime, _} ->
+        format_datetime(datetime)
+
+      _ ->
         # Try parsing just the date part
         case Date.from_iso8601(String.slice(timestamp, 0, 10)) do
           {:ok, date} -> Calendar.strftime(date, "%b %d, %Y")
@@ -31,12 +33,12 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
         end
     end
   end
-  
+
   def format_datetime(_), do: "Unknown"
-  
+
   @doc """
   Format a duration in seconds as a human-readable string.
-  
+
   ## Examples
       
       iex> format_duration(65)
@@ -49,16 +51,16 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
     hours = div(seconds, 3600)
     minutes = div(rem(seconds, 3600), 60)
     remaining_seconds = rem(seconds, 60)
-    
+
     cond do
       hours > 0 -> "#{hours}h #{minutes}m #{remaining_seconds}s"
       minutes > 0 -> "#{minutes}m #{remaining_seconds}s"
       true -> "#{remaining_seconds}s"
     end
   end
-  
+
   def format_duration(_), do: "0s"
-  
+
   @doc """
   Parse additional data JSON string.
   """
@@ -68,15 +70,15 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
       _ -> %{}
     end
   end
-  
+
   def try_parse_additional_data(_), do: %{}
-  
+
   @doc """
   Check if chart data is empty or contains usable data.
   Returns true if the data is empty or unusable, false otherwise.
-  
+
   ## Examples
-  
+
       iex> is_empty_chart_data([])
       true
       
@@ -97,21 +99,23 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
       end
     rescue
       e ->
-        Logger.warning("Error checking chart data", 
+        Logger.warning("Error checking chart data",
           metadata: %{
             error: inspect(e),
             data_type: inspect(data)
           }
         )
-        true  # Assume empty on error for safety
+
+        # Assume empty on error for safety
+        true
     end
   end
-  
+
   @doc """
   Safely extract data from a nested map/struct with a default value.
-  
+
   ## Examples
-  
+
       iex> safe_get(%{a: %{b: 1}}, [:a, :b], 0)
       1
       
@@ -128,15 +132,17 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
       _ -> default
     end
   end
-  
+
   # Helper function for safe_get
   defp get_in_path(nil, _, default), do: default
   defp get_in_path(data, [], _), do: data
+
   defp get_in_path(data, [key | rest], default) when is_map(data) do
     case Map.get(data, key) do
       nil -> default
       value -> get_in_path(value, rest, default)
     end
   end
+
   defp get_in_path(_, _, default), do: default
 end

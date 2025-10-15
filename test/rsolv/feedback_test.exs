@@ -28,7 +28,7 @@ defmodule Rsolv.FeedbackTest do
     test "list_entries/0 returns all feedback entries" do
       {:ok, entry1} = Feedback.create_entry(@valid_attrs)
       {:ok, entry2} = Feedback.create_entry(%{@valid_attrs | email: "another@example.com"})
-      
+
       entries = Feedback.list_entries()
       assert length(entries) == 2
       assert Enum.any?(entries, &(&1.id == entry1.id))
@@ -45,9 +45,12 @@ defmodule Rsolv.FeedbackTest do
     test "list_entries_by_email/1 returns entries for specific email" do
       email = "user@example.com"
       {:ok, _entry1} = Feedback.create_entry(%{@valid_attrs | email: email})
-      {:ok, _entry2} = Feedback.create_entry(%{@valid_attrs | email: email, message: "Another feedback"})
+
+      {:ok, _entry2} =
+        Feedback.create_entry(%{@valid_attrs | email: email, message: "Another feedback"})
+
       {:ok, _other} = Feedback.create_entry(%{@valid_attrs | email: "other@example.com"})
-      
+
       entries = Feedback.list_entries_by_email(email)
       assert length(entries) == 2
       assert Enum.all?(entries, &(&1.email == email))
@@ -55,10 +58,10 @@ defmodule Rsolv.FeedbackTest do
 
     test "count_entries/0 returns the total number of entries" do
       assert Feedback.count_entries() == 0
-      
+
       {:ok, _} = Feedback.create_entry(@valid_attrs)
       assert Feedback.count_entries() == 1
-      
+
       {:ok, _} = Feedback.create_entry(%{@valid_attrs | email: "another@example.com"})
       assert Feedback.count_entries() == 2
     end
@@ -71,13 +74,15 @@ defmodule Rsolv.FeedbackTest do
       old_email = unique_email("old")
       new_email = unique_email("new")
 
-      {:ok, _old_entry} = %Rsolv.Feedback.Entry{}
+      {:ok, _old_entry} =
+        %Rsolv.Feedback.Entry{}
         |> Rsolv.Feedback.Entry.changeset(%{@valid_attrs | email: old_email})
         |> Ecto.Changeset.put_change(:inserted_at, old_timestamp)
         |> Ecto.Changeset.put_change(:updated_at, old_timestamp)
         |> Rsolv.Repo.insert()
 
-      {:ok, _new_entry} = %Rsolv.Feedback.Entry{}
+      {:ok, _new_entry} =
+        %Rsolv.Feedback.Entry{}
         |> Rsolv.Feedback.Entry.changeset(%{@valid_attrs | email: new_email})
         |> Ecto.Changeset.put_change(:inserted_at, new_timestamp)
         |> Ecto.Changeset.put_change(:updated_at, new_timestamp)
@@ -98,7 +103,8 @@ defmodule Rsolv.FeedbackTest do
       csv = Feedback.export_to_csv()
       lines = String.split(csv, "\n", trim: true)
 
-      assert length(lines) == 3 # header + 2 entries
+      # header + 2 entries
+      assert length(lines) == 3
       assert String.contains?(List.first(lines), "email,message,rating,tags,inserted_at")
       assert String.contains?(csv, test_email)
       assert String.contains?(csv, "another@example.com")

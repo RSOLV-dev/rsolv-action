@@ -95,11 +95,13 @@ defmodule Rsolv.Emails do
   """
   def success_checkin_email(to_email, first_name \\ nil, usage_stats \\ nil) do
     # Get default usage stats if none provided
-    stats = usage_stats || %{
-      issues_fixed: 0,
-      prs_created: 0,
-      time_saved: "0 hours"
-    }
+    stats =
+      usage_stats ||
+        %{
+          issues_fixed: 0,
+          prs_created: 0,
+          time_saved: "0 hours"
+        }
 
     # Create email with usage stats
     create_email(
@@ -116,19 +118,21 @@ defmodule Rsolv.Emails do
   """
   def contact_form_notification(contact_data) do
     subject = "🏢 New Contact Form Submission: #{contact_data.email}"
-    
+
     # Get email configuration
-    config = Application.get_env(:rsolv, :email_config, %{
-      sender_email: "support@rsolv.dev",
-      sender_name: "RSOLV Team",
-      reply_to: "support@rsolv.dev"
-    })
+    config =
+      Application.get_env(:rsolv, :email_config, %{
+        sender_email: "support@rsolv.dev",
+        sender_name: "RSOLV Team",
+        reply_to: "support@rsolv.dev"
+      })
+
     sender_email = Map.get(config, :sender_email, "support@rsolv.dev")
     sender_name = Map.get(config, :sender_name, "RSOLV Team")
-    
+
     # Get admin emails
     admin_emails = get_admin_emails()
-    
+
     # Build email
     new_email()
     |> to(admin_emails)
@@ -159,19 +163,21 @@ defmodule Rsolv.Emails do
   """
   def admin_signup_notification(signup_data) do
     subject = "🎉 New RSOLV Signup: #{signup_data.email}"
-    
+
     # Get email configuration
-    config = Application.get_env(:rsolv, :email_config, %{
-      sender_email: "support@rsolv.dev",
-      sender_name: "RSOLV Team",
-      reply_to: "support@rsolv.dev"
-    })
+    config =
+      Application.get_env(:rsolv, :email_config, %{
+        sender_email: "support@rsolv.dev",
+        sender_name: "RSOLV Team",
+        reply_to: "support@rsolv.dev"
+      })
+
     sender_email = Map.get(config, :sender_email, "support@rsolv.dev")
     sender_name = Map.get(config, :sender_name, "RSOLV Team")
-    
+
     # Get admin emails and filter for @rsolv.dev during Postmark trial
     admin_emails = get_admin_emails()
-    
+
     # Build email
     new_email()
     |> to(admin_emails)
@@ -188,11 +194,13 @@ defmodule Rsolv.Emails do
   # Helper function to create standard email structure
   defp create_email(to_email, first_name, subject, tag, usage_stats \\ %{}) do
     # Get email configuration
-    config = Application.get_env(:rsolv, :email_config, %{
-      sender_email: "support@rsolv.dev",
-      sender_name: "RSOLV Team",
-      reply_to: "support@rsolv.dev"
-    })
+    config =
+      Application.get_env(:rsolv, :email_config, %{
+        sender_email: "support@rsolv.dev",
+        sender_name: "RSOLV Team",
+        reply_to: "support@rsolv.dev"
+      })
+
     sender_email = Map.get(config, :sender_email, "support@rsolv.dev")
     sender_name = Map.get(config, :sender_name, "RSOLV Team")
 
@@ -202,28 +210,49 @@ defmodule Rsolv.Emails do
     # Get HTML and text bodies based on template tag
     {html, text} =
       case tag do
-        "welcome" -> {welcome_html_body(name, to_email), welcome_text_body(name, to_email)}
-        "early-access" -> {early_access_welcome_html_body(name, to_email), early_access_welcome_text_body(name, to_email)}
-        "getting-started" -> {getting_started_html_body(name, to_email), getting_started_text_body(name, to_email)}
-        "setup-verification" -> 
+        "welcome" ->
+          {welcome_html_body(name, to_email), welcome_text_body(name, to_email)}
+
+        "early-access" ->
+          {early_access_welcome_html_body(name, to_email),
+           early_access_welcome_text_body(name, to_email)}
+
+        "getting-started" ->
+          {getting_started_html_body(name, to_email), getting_started_text_body(name, to_email)}
+
+        "setup-verification" ->
           html_body = EmailsHTML.render_setup_verification(%{first_name: name, email: to_email})
           {html_body, setup_verification_text_body(name, to_email)}
-        "first-issue" -> 
+
+        "first-issue" ->
           html_body = EmailsHTML.render_first_issue(%{first_name: name, email: to_email})
           {html_body, first_issue_text_body(name, to_email)}
-        "feature-deep-dive" -> 
+
+        "feature-deep-dive" ->
           html_body = EmailsHTML.render_feature_deep_dive(%{first_name: name, email: to_email})
           {html_body, feature_deep_dive_text_body(name, to_email)}
-        "feedback-request" -> 
+
+        "feedback-request" ->
           html_body = EmailsHTML.render_feedback_request(%{first_name: name, email: to_email})
           {html_body, feedback_request_text_body(name, to_email)}
-        "success-checkin" -> 
-          html_body = EmailsHTML.render_success_checkin(%{first_name: name, email: to_email, usage_stats: usage_stats})
+
+        "success-checkin" ->
+          html_body =
+            EmailsHTML.render_success_checkin(%{
+              first_name: name,
+              email: to_email,
+              usage_stats: usage_stats
+            })
+
           {html_body, success_checkin_text_body(name, to_email)}
+
         "early-access-guide" ->
           html_body = EmailsHTML.render_early_access_guide(%{first_name: name, email: to_email})
           {html_body, early_access_guide_text_body(name, to_email)}
-        _ -> {welcome_html_body(name, to_email), welcome_text_body(name, to_email)} # Fallback to welcome template
+
+        # Fallback to welcome template
+        _ ->
+          {welcome_html_body(name, to_email), welcome_text_body(name, to_email)}
       end
 
     # Build email
@@ -236,7 +265,7 @@ defmodule Rsolv.Emails do
     |> put_header("X-Postmark-Tag", tag)
     |> put_private(:tag, tag)
   end
-  
+
   # Email templates - HTML versions
 
   defp welcome_html_body(first_name, email) do
@@ -293,7 +322,7 @@ defmodule Rsolv.Emails do
     </div>
     """
   end
-  
+
   defp getting_started_html_body(first_name, email) do
     """
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -326,37 +355,37 @@ defmodule Rsolv.Emails do
     </div>
     """
   end
-  
+
   # Email templates - Text versions
-  
+
   defp welcome_text_body(first_name, email) do
     """
     Welcome to RSOLV!
-    
+
     Hi #{first_name},
-    
+
     Thanks for trying RSOLV! You're just a few minutes away from automating away your backlog.
-    
+
     Here's how to get started:
-    
+
     1. Install our GitHub Action (check the HTML version for the code snippet)
     2. Set up your repository secrets
     3. Tag your first issues with "rsolv:automate"
-    
+
     Need help? Contact us at support@rsolv.dev and we'll personally assist you.
-    
+
     Your first 10 fixes are free! After that, you only pay $15 per fix that gets deployed - no credit card required to start.
-    
+
     Best,
     The RSOLV Team
-    
+
     P.S. Check out our 2-minute video walkthrough at https://rsolv.dev/docs/getting-started
 
     ---
     To unsubscribe, visit: https://rsolv.dev/unsubscribe?email=#{email}
     """
   end
-  
+
   defp getting_started_text_body(first_name, email) do
     """
     Getting Started with RSOLV
@@ -798,16 +827,17 @@ defmodule Rsolv.Emails do
   end
 
   # Helper functions
-  
+
   # Get admin emails from runtime configuration
   defp get_admin_emails do
     admin_emails = Application.get_env(:rsolv, :admin_emails, ["admin@rsolv.dev"])
-    
+
     # For now, during Postmark trial, only send to @rsolv.dev emails
     admin_emails
     |> Enum.filter(fn email -> String.ends_with?(email, "@rsolv.dev") end)
     |> case do
-      [] -> ["admin@rsolv.dev"]  # Fallback
+      # Fallback
+      [] -> ["admin@rsolv.dev"]
       emails -> emails
     end
   end
@@ -815,7 +845,7 @@ defmodule Rsolv.Emails do
   # Generate a unique message ID for tracking
   defp generate_message_id do
     timestamp = System.system_time(:second)
-    random = :rand.uniform(999999)
+    random = :rand.uniform(999_999)
     "<#{timestamp}.#{random}@rsolv.dev>"
   end
 
@@ -856,13 +886,13 @@ defmodule Rsolv.Emails do
           </div>
           
           #{if Map.get(signup_data, :company) do
-            ~s(<div class="metric">
+      ~s(<div class="metric">
               <div class="metric-label">Company</div>
               <div class="metric-value">#{signup_data.company}</div>
             </div>)
-          else
-            ""
-          end}
+    else
+      ""
+    end}
           
           <div class="details">
             <h3 style="margin-top: 0;">Signup Details</h3>
@@ -876,31 +906,31 @@ defmodule Rsolv.Emails do
             </div>
             
             #{if Map.get(signup_data, :utm_medium) do
-              ~s(<div class="detail-row">
+      ~s(<div class="detail-row">
                 <span class="detail-label">Medium</span>
                 <span class="detail-value">#{signup_data.utm_medium}</span>
               </div>)
-            else
-              ""
-            end}
+    else
+      ""
+    end}
             
             #{if Map.get(signup_data, :utm_campaign) do
-              ~s(<div class="detail-row">
+      ~s(<div class="detail-row">
                 <span class="detail-label">Campaign</span>
                 <span class="detail-value">#{signup_data.utm_campaign}</span>
               </div>)
-            else
-              ""
-            end}
+    else
+      ""
+    end}
             
             #{if Map.get(signup_data, :referrer) do
-              ~s(<div class="detail-row">
+      ~s(<div class="detail-row">
                 <span class="detail-label">Referrer</span>
                 <span class="detail-value">#{truncate_url(signup_data.referrer)}</span>
               </div>)
-            else
-              ""
-            end}
+    else
+      ""
+    end}
           </div>
           
           <div style="margin-top: 20px; text-align: center;">
@@ -919,18 +949,18 @@ defmodule Rsolv.Emails do
   defp admin_signup_notification_text(signup_data) do
     """
     🎉 New RSOLV Signup!
-    
+
     Email: #{signup_data.email}
     #{if Map.get(signup_data, :company), do: "Company: #{signup_data.company}\n", else: ""}
     Time: #{format_timestamp(signup_data.timestamp)}
-    
+
     Source Details:
     - Source: #{Map.get(signup_data, :source, "landing_page")}
     #{if Map.get(signup_data, :utm_source), do: "- UTM Source: #{signup_data.utm_source}\n", else: ""}
     #{if Map.get(signup_data, :utm_medium), do: "- UTM Medium: #{signup_data.utm_medium}\n", else: ""}
     #{if Map.get(signup_data, :utm_campaign), do: "- UTM Campaign: #{signup_data.utm_campaign}\n", else: ""}
     #{if Map.get(signup_data, :referrer), do: "- Referrer: #{signup_data.referrer}\n", else: ""}
-    
+
     View full dashboard: https://rsolv.dev/live/dashboard
     """
   end
@@ -940,11 +970,14 @@ defmodule Rsolv.Emails do
     case DateTime.from_iso8601(timestamp) do
       {:ok, datetime, _} ->
         Calendar.strftime(datetime, "%B %d, %Y at %I:%M %p UTC")
+
       _ ->
         timestamp
     end
   end
-  defp format_timestamp(_), do: DateTime.utc_now() |> Calendar.strftime("%B %d, %Y at %I:%M %p UTC")
+
+  defp format_timestamp(_),
+    do: DateTime.utc_now() |> Calendar.strftime("%B %d, %Y at %I:%M %p UTC")
 
   # Truncate URL helper
   defp truncate_url(url) when is_binary(url) do
@@ -954,8 +987,9 @@ defmodule Rsolv.Emails do
       url
     end
   end
+
   defp truncate_url(_), do: ""
-  
+
   # Contact form notification HTML template
   defp contact_form_notification_html(contact_data) do
     """
@@ -1020,21 +1054,21 @@ defmodule Rsolv.Emails do
     </html>
     """
   end
-  
+
   # Contact form notification text template
   defp contact_form_notification_text(contact_data) do
     """
     🏢 New Contact Form Submission
-    
+
     Name: #{contact_data.name}
     Email: #{contact_data.email}
     Company: #{contact_data.company}
     Team Size: #{contact_data.team_size}
     Time: #{format_timestamp(contact_data.timestamp)}
-    
+
     Message:
     #{contact_data.message}
-    
+
     ---
     Reply directly to this email or contact them at: #{contact_data.email}
     """

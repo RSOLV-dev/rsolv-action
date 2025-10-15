@@ -1,31 +1,31 @@
 defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
   @moduledoc """
   Detects Insecure Cookie Settings in Ruby applications.
-  
+
   Cookies used for session management or authentication must be configured with proper
   security flags to prevent attacks like session hijacking, cross-site scripting (XSS),
   and cross-site request forgery (CSRF). This pattern detects cookies that are missing
   critical security attributes: secure, httponly, and samesite.
-  
+
   ## Vulnerability Details
-  
+
   Ruby on Rails applications commonly use cookies for session management. Without proper
   security flags, these cookies are vulnerable to various attacks:
   - Missing 'secure' flag: Cookies can be transmitted over unencrypted HTTP
   - Missing 'httponly' flag: Cookies can be accessed by client-side JavaScript (XSS)
   - Missing 'samesite' flag: Cookies can be sent in cross-site requests (CSRF)
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable - No security flags
   cookies[:auth_token] = token
-  
+
   # Vulnerable - Missing critical flags
   cookies[:session] = { value: session_id, expires: 1.day.from_now }
-  
+
   # Vulnerable - Explicitly disabled security
   cookies[:remember_me] = { value: user_id, httponly: false }
-  
+
   # Secure - All security flags set
   cookies[:auth_token] = {
     value: token,
@@ -35,25 +35,25 @@ defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
     expires: 1.hour.from_now
   }
   ```
-  
+
   ### Real-World Impact
   - Session hijacking through network sniffing (missing secure flag)
   - XSS attacks stealing authentication cookies (missing httponly)
   - CSRF attacks using authenticated cookies (missing samesite)
   - Persistent attacks through long-lived cookies without security
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the Insecure Cookie pattern for Ruby applications.
-  
+
   Detects cookies that are set without proper security flags, making them
   vulnerable to various attacks including session hijacking, XSS, and CSRF.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsecureCookie.pattern()
       iex> pattern.id
       "ruby-insecure-cookie"
@@ -85,35 +85,36 @@ defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
         # Direct cookie assignment without options hash
         ~r/cookies\[:\w+\]\s*=\s*[^{\s]+(?:\s|$)/,
         ~r/cookies\[['"][^'"]+['"]\]\s*=\s*[^{\s]+(?:\s|$)/,
-        
+
         # Cookies with httponly: false
         ~r/cookies.*\bhttponly:\s*false/,
-        
+
         # Cookies with secure: false
         ~r/cookies.*\bsecure:\s*false/,
-        
+
         # Cookies with options hash but missing all three security flags
         ~r/cookies\[.+?\]\s*=\s*\{(?!.*\b(?:secure|httponly|same_site))[^}]+\}/,
-        
+
         # Cookies with options hash missing secure flag
         ~r/cookies\[.+?\]\s*=\s*\{(?!.*\bsecure\b)(?=.*\bvalue\b)[^}]+\}/,
-        
+
         # Cookies with options hash missing httponly flag
         ~r/cookies\[.+?\]\s*=\s*\{(?!.*\bhttponly\b)(?=.*\bvalue\b)[^}]+\}/,
-        
+
         # Cookies with options hash missing same_site flag
         ~r/cookies\[.+?\]\s*=\s*\{(?!.*\bsame_site\b)(?=.*\bvalue\b)[^}]+\}/,
-        
+
         # Permanent cookies without security flags (direct assignment)
         ~r/cookies\.permanent\[.+?\]\s*=\s*[^{\s]+(?:\s|$)/,
         ~r/cookies\.permanent\.(?:signed|encrypted)\[.+?\]\s*=\s*[^{\s]+(?:\s|$)/,
-        
+
         # response.set_cookie without security flags
         ~r/response\.set_cookie\s*\(\s*['"][^'"]+['"]\s*,\s*[^{]/
       ],
       cwe_id: "CWE-614",
       owasp_category: "A05:2021",
-      recommendation: "Always set secure: true, httponly: true, and same_site: :strict or :lax for sensitive cookies",
+      recommendation:
+        "Always set secure: true, httponly: true, and same_site: :strict or :lax for sensitive cookies",
       test_cases: %{
         vulnerable: [
           "cookies[:auth_token] = token",
@@ -157,7 +158,8 @@ defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
           type: :research,
           id: "owasp_session_management",
           title: "Session Management Cheat Sheet - OWASP",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -185,14 +187,16 @@ defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
       cve_examples: [
         %{
           id: "CVE-2025-27219",
-          description: "Ruby CGI gem Cookie.parse DoS vulnerability due to improper cookie handling",
+          description:
+            "Ruby CGI gem Cookie.parse DoS vulnerability due to improper cookie handling",
           severity: "high",
           cvss: 7.5,
           note: "Demonstrates the importance of proper cookie parsing and validation"
         },
         %{
           id: "CVE-2019-16782",
-          description: "Rack session hijacking vulnerability through timing attacks on cookie values",
+          description:
+            "Rack session hijacking vulnerability through timing attacks on cookie values",
           severity: "medium",
           cvss: 5.9,
           note: "Session cookies without proper security can be exploited through timing attacks"
@@ -212,7 +216,7 @@ defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
       - Cookie options hash missing critical security attributes
       - Permanent cookies without security configuration
       - Response.set_cookie calls without security parameters
-      
+
       The pattern focuses on identifying missing or disabled security flags that
       leave cookies vulnerable to various attacks.
       """,
@@ -240,9 +244,11 @@ defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
           "Regularly rotate session secrets"
         ],
         framework_notes: %{
-          rails: "Rails 6+ defaults to SameSite=Lax, but secure and httponly must be explicitly set",
+          rails:
+            "Rails 6+ defaults to SameSite=Lax, but secure and httponly must be explicitly set",
           sinatra: "No default cookie security - all flags must be manually configured",
-          general: "Ruby's CGI::Cookie and Rack::Response.set_cookie require explicit security configuration"
+          general:
+            "Ruby's CGI::Cookie and Rack::Response.set_cookie require explicit security configuration"
         }
       }
     }
@@ -279,7 +285,13 @@ defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
         node_type: "CallExpression",
         cookie_analysis: %{
           check_cookie_methods: true,
-          cookie_methods: ["cookies", "response.set_cookie", "cookies.permanent", "cookies.signed", "cookies.encrypted"],
+          cookie_methods: [
+            "cookies",
+            "response.set_cookie",
+            "cookies.permanent",
+            "cookies.signed",
+            "cookies.encrypted"
+          ],
           check_options_hash: true,
           security_attributes: ["secure", "httponly", "same_site", "samesite"]
         },

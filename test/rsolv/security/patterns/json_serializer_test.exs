@@ -6,34 +6,34 @@ defmodule Rsolv.Security.Patterns.JSONSerializerTest do
     test "converts simple regex to map" do
       regex = ~r/test/
       result = JSONSerializer.prepare_for_json(regex)
-      
+
       assert result == %{
-        "__type__" => "regex",
-        "source" => "test",
-        "flags" => []
-      }
+               "__type__" => "regex",
+               "source" => "test",
+               "flags" => []
+             }
     end
 
     test "converts regex with flags" do
       regex = ~r/test/i
       result = JSONSerializer.prepare_for_json(regex)
-      
+
       assert result == %{
-        "__type__" => "regex",
-        "source" => "test",
-        "flags" => ["i"]
-      }
+               "__type__" => "regex",
+               "source" => "test",
+               "flags" => ["i"]
+             }
     end
 
     test "converts regex with multiple flags" do
       regex = ~r/test/ims
       result = JSONSerializer.prepare_for_json(regex)
-      
+
       assert result == %{
-        "__type__" => "regex",
-        "source" => "test",
-        "flags" => ["i", "m", "newline", "s"]
-      }
+               "__type__" => "regex",
+               "source" => "test",
+               "flags" => ["i", "m", "newline", "s"]
+             }
     end
 
     test "handles nested maps with regex" do
@@ -42,28 +42,28 @@ defmodule Rsolv.Security.Patterns.JSONSerializerTest do
         pattern: ~r/SELECT.*FROM/i,
         severity: :high
       }
-      
+
       result = JSONSerializer.prepare_for_json(data)
-      
+
       assert result == %{
-        id: "sql_injection",
-        pattern: %{
-          "__type__" => "regex",
-          "source" => "SELECT.*FROM",
-          "flags" => ["i"]
-        },
-        severity: :high
-      }
+               id: "sql_injection",
+               pattern: %{
+                 "__type__" => "regex",
+                 "source" => "SELECT.*FROM",
+                 "flags" => ["i"]
+               },
+               severity: :high
+             }
     end
 
     test "handles lists with regex" do
       data = [~r/test1/, ~r/test2/m]
       result = JSONSerializer.prepare_for_json(data)
-      
+
       assert result == [
-        %{"__type__" => "regex", "source" => "test1", "flags" => []},
-        %{"__type__" => "regex", "source" => "test2", "flags" => ["m"]}
-      ]
+               %{"__type__" => "regex", "source" => "test1", "flags" => []},
+               %{"__type__" => "regex", "source" => "test2", "flags" => ["m"]}
+             ]
     end
 
     test "handles deeply nested structures" do
@@ -78,23 +78,23 @@ defmodule Rsolv.Security.Patterns.JSONSerializerTest do
           }
         ]
       }
-      
+
       result = JSONSerializer.prepare_for_json(data)
-      
+
       assert result == %{
-        patterns: [
-          %{
-            id: "sql_injection",
-            rules: %{
-              pattern: %{"__type__" => "regex", "source" => "SELECT", "flags" => ["i"]},
-              exclusions: [
-                %{"__type__" => "regex", "source" => "LIMIT", "flags" => []},
-                %{"__type__" => "regex", "source" => "OFFSET", "flags" => []}
-              ]
-            }
-          }
-        ]
-      }
+               patterns: [
+                 %{
+                   id: "sql_injection",
+                   rules: %{
+                     pattern: %{"__type__" => "regex", "source" => "SELECT", "flags" => ["i"]},
+                     exclusions: [
+                       %{"__type__" => "regex", "source" => "LIMIT", "flags" => []},
+                       %{"__type__" => "regex", "source" => "OFFSET", "flags" => []}
+                     ]
+                   }
+                 }
+               ]
+             }
     end
 
     test "leaves non-regex values unchanged" do
@@ -105,7 +105,7 @@ defmodule Rsolv.Security.Patterns.JSONSerializerTest do
         nil: nil,
         bool: true
       }
-      
+
       assert JSONSerializer.prepare_for_json(data) == data
     end
   end
@@ -117,10 +117,10 @@ defmodule Rsolv.Security.Patterns.JSONSerializerTest do
         pattern: ~r/SELECT.*FROM/i,
         severity: :high
       }
-      
+
       json = JSONSerializer.encode!(pattern)
       assert is_binary(json)
-      
+
       # Verify it can be decoded
       {:ok, decoded} = JSON.decode(json)
       assert decoded["pattern"]["__type__"] == "regex"
@@ -145,15 +145,19 @@ defmodule Rsolv.Security.Patterns.JSONSerializerTest do
           safe_patterns: [~r/\?\s*,\s*\?/, ~r/:\w+/]
         }
       }
-      
+
       json = JSONSerializer.encode!(pattern)
       assert is_binary(json)
-      
+
       # Verify structure is preserved
       {:ok, decoded} = JSON.decode(json)
       assert decoded["pattern"]["source"] == "\\.(query|execute|exec|run|all|get)"
-      assert decoded["ast_rules"] |> List.first() |> Map.get("pattern") |> Map.get("__type__") == "regex"
-      assert decoded["context_rules"]["safe_patterns"] |> List.first() |> Map.get("__type__") == "regex"
+
+      assert decoded["ast_rules"] |> List.first() |> Map.get("pattern") |> Map.get("__type__") ==
+               "regex"
+
+      assert decoded["context_rules"]["safe_patterns"] |> List.first() |> Map.get("__type__") ==
+               "regex"
     end
   end
 

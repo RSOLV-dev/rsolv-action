@@ -92,31 +92,37 @@ defmodule Mix.Tasks.Dev.Preflight do
 
     # Check SECRET_KEY_BASE
     secret = get_env_value("SECRET_KEY_BASE")
-    warnings = if secret == nil or String.contains?(secret || "", "your_secret_key_base_here") or String.length(secret || "") < 64 do
-      ["SECRET_KEY_BASE is missing or using example value" | warnings]
-    else
-      warnings
-    end
+
+    warnings =
+      if secret == nil or String.contains?(secret || "", "your_secret_key_base_here") or
+           String.length(secret || "") < 64 do
+        ["SECRET_KEY_BASE is missing or using example value" | warnings]
+      else
+        warnings
+      end
 
     # Check if any AI provider is configured
     anthropic = get_env_value("ANTHROPIC_API_KEY")
     openai = get_env_value("OPENAI_API_KEY")
     openrouter = get_env_value("OPENROUTER_API_KEY")
 
-    warnings = if (anthropic == nil or anthropic == "") and
-                  (openai == nil or openai == "") and
-                  (openrouter == nil or openrouter == "") do
-      ["No AI provider API keys configured - AI features will be limited" | warnings]
-    else
-      warnings
-    end
+    warnings =
+      if (anthropic == nil or anthropic == "") and
+           (openai == nil or openai == "") and
+           (openrouter == nil or openrouter == "") do
+        ["No AI provider API keys configured - AI features will be limited" | warnings]
+      else
+        warnings
+      end
 
     # Display warnings
     unless Enum.empty?(warnings) do
       print_warning("Configuration issues in .env:")
+
       Enum.each(warnings, fn warning ->
         Mix.shell().info("   • #{warning}")
       end)
+
       Mix.shell().info("\n💡 Fix these by editing .env or running: mix dev.env.setup --force\n")
     else
       print_success("Environment configuration looks good (.env)")
@@ -131,6 +137,7 @@ defmodule Mix.Tasks.Dev.Preflight do
           [_, value] ->
             value = String.trim(value)
             if value == "", do: nil, else: value
+
           _ ->
             nil
         end
@@ -244,7 +251,9 @@ defmodule Mix.Tasks.Dev.Preflight do
       _ ->
         # If pg_isready doesn't exist, try psql
         try do
-          case System.cmd("psql", ["-h", hostname, "-p", to_string(port), "-U", username, "-c", "SELECT 1"],
+          case System.cmd(
+                 "psql",
+                 ["-h", hostname, "-p", to_string(port), "-U", username, "-c", "SELECT 1"],
                  stderr_to_stdout: true
                ) do
             {_output, 0} -> :ok
@@ -306,7 +315,8 @@ defmodule Mix.Tasks.Dev.Preflight do
     ]
 
     # If any required checks fail, overall check fails
-    required_failed = Enum.any?(checks, fn {status, required?, _, _} -> status == :error and required? end)
+    required_failed =
+      Enum.any?(checks, fn {status, required?, _, _} -> status == :error and required? end)
 
     if required_failed do
       {:error, :env_vars, "required variables missing"}

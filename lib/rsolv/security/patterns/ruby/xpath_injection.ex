@@ -1,19 +1,19 @@
 defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
   @moduledoc """
   Pattern for detecting XPath injection vulnerabilities in Ruby applications.
-  
+
   This pattern identifies when user input is directly interpolated into XPath
   expressions, allowing attackers to manipulate XML queries and potentially
   extract unauthorized data from XML documents.
-  
+
   ## Vulnerability Details
-  
+
   XPath injection occurs when applications construct XPath queries using
   unsanitized user input. Unlike SQL injection which targets databases,
   XPath injection targets XML documents, but can be equally dangerous as
   it can bypass authentication, extract sensitive data, and potentially
   lead to denial of service attacks.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable XPath query construction
@@ -34,14 +34,14 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
       end
     end
   end
-  
+
   # Attack result: Authentication bypass
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -62,7 +62,8 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
       ],
       cwe_id: "CWE-643",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized XPath queries or sanitize user input before XPath construction",
+      recommendation:
+        "Use parameterized XPath queries or sanitize user input before XPath construction",
       test_cases: %{
         vulnerable: [
           ~S|doc.xpath("//user[name='#{params[:name]}']")|,
@@ -79,7 +80,7 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -88,18 +89,18 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
       constructs XPath queries using unsanitized user input. This allows attackers
       to modify the intended XPath query logic and potentially access unauthorized
       data from XML documents.
-      
+
       **How XPath Injection Works:**
       XPath (XML Path Language) is used to navigate and select nodes in XML documents.
       When user input is directly concatenated into XPath expressions, attackers can
       inject malicious XPath code that changes the query behavior.
-      
+
       **Common Ruby XML Libraries Affected:**
       - **Nokogiri**: Most popular Ruby HTML/XML parser
       - **REXML**: Ruby's built-in XML library  
       - **LibXML**: Ruby bindings for libxml2
       - **XPath**: Direct XPath parsing libraries
-      
+
       **Why XPath Injection is Dangerous:**
       Unlike databases with access controls, XML documents are typically
       fully accessible once an XPath injection is successful:
@@ -107,13 +108,13 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
       - **Authentication Bypass**: Modify login queries to always return true
       - **Data Extraction**: Access sensitive information stored in XML
       - **Denial of Service**: Complex XPath expressions can cause performance issues
-      
+
       **Common Attack Patterns:**
       - **Authentication bypass**: `' or '1'='1` to make conditions always true
       - **Data extraction**: Use `or` conditions to extract additional nodes
       - **Blind injection**: Use functions like `string-length()` for data extraction
       - **Error-based injection**: Trigger XML parsing errors to reveal structure
-      
+
       **Ruby-Specific Vulnerabilities:**
       The CVE-2015-20108 vulnerability in the ruby-saml gem demonstrated how
       XPath injection can lead to arbitrary code execution, making this a
@@ -142,7 +143,8 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
           type: :research,
           id: "owasp_testing_xpath",
           title: "OWASP Testing Guide - XPath Injection",
-          url: "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/09-Testing_for_XPath_Injection"
+          url:
+            "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/09-Testing_for_XPath_Injection"
         },
         %{
           type: :research,
@@ -184,7 +186,7 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
         %{
           id: "CVE-2021-21295",
           description: "XPath injection in XML parsing libraries",
-          severity: "high", 
+          severity: "high",
           cvss: 7.5,
           note: "Improper XPath query construction in various XML processing libraries"
         }
@@ -192,25 +194,25 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
       detection_notes: """
       This pattern detects XPath injection by looking for Ruby XML libraries
       combined with string interpolation in XPath expressions:
-      
+
       **Primary Detection Points:**
       - .xpath() method calls with interpolated strings
       - Nokogiri XPath queries with user input
       - REXML .elements[] access with interpolation
       - XPath::Parser.parse() with dynamic content
-      
+
       **Ruby Libraries Covered:**
       - Nokogiri (most common): doc.xpath(), xml.xpath()
       - REXML (built-in): xml.elements[], doc.elements[]
       - LibXML: Various XPath methods
       - Generic XPath functions: find_by_xpath, query_xpath
-      
+
       **False Positive Considerations:**
       - Static XPath expressions without user input (lower risk)
       - Parameterized XPath queries using proper syntax
       - XPath expressions in test files (excluded by AST enhancement)
       - Comments containing XPath syntax (excluded)
-      
+
       **Detection Limitations:**
       - Complex string building across multiple lines
       - XPath queries built through method chaining
@@ -272,15 +274,15 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XPath injection vulnerabilities
   and safe XPath usage patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XpathInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -295,8 +297,15 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
       ast_rules: %{
         node_type: "CallExpression",
         method_names: [
-          "xpath", "elements", "parse", "find_by_xpath", "select_xpath", 
-          "query_xpath", "get_xpath", "search", "at_xpath"
+          "xpath",
+          "elements",
+          "parse",
+          "find_by_xpath",
+          "select_xpath",
+          "query_xpath",
+          "get_xpath",
+          "search",
+          "at_xpath"
         ],
         receiver_analysis: %{
           check_xml_context: true,
@@ -320,14 +329,27 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
         ],
         check_xpath_context: true,
         safe_patterns: [
-          "$", "?", # Parameter placeholders
-          "nil,", # Nokogiri parameter syntax
-          ".css(", # CSS selector alternative
-          ".at_css(" # CSS selector alternative
+          # Parameter placeholders
+          "$",
+          "?",
+          # Nokogiri parameter syntax
+          "nil,",
+          # CSS selector alternative
+          ".css(",
+          # CSS selector alternative
+          ".at_css("
         ],
         dangerous_sources: [
-          "params", "request", "cookies", "session", "ENV",
-          "gets", "ARGV", "user_input", "form_data", "query_string"
+          "params",
+          "request",
+          "cookies",
+          "session",
+          "ENV",
+          "gets",
+          "ARGV",
+          "user_input",
+          "form_data",
+          "query_string"
         ],
         xpath_specific: %{
           parameter_syntax_safe: true,

@@ -9,74 +9,89 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
   describe "GET /api/v1/phases/retrieve" do
     setup do
       # Create a customer directly
-      customer = %Customer{}
-      |> Customer.changeset(%{
-        name: "Test Corp",
-        email: unique_email(),
-        active: true
-      })
-      |> Repo.insert!()
-      
+      customer =
+        %Customer{}
+        |> Customer.changeset(%{
+          name: "Test Corp",
+          email: unique_email(),
+          active: true
+        })
+        |> Repo.insert!()
+
       # Create an API key
-      api_key = %ApiKey{}
-      |> ApiKey.changeset(%{
-        customer_id: customer.id,
-        name: "Test Key",
-        key: "test_" <> Ecto.UUID.generate(),
-        active: true
-      })
-      |> Repo.insert!()
-      
+      api_key =
+        %ApiKey{}
+        |> ApiKey.changeset(%{
+          customer_id: customer.id,
+          name: "Test Key",
+          key: "test_" <> Ecto.UUID.generate(),
+          active: true
+        })
+        |> Repo.insert!()
+
       # Create a forge account for this customer
-      forge_account = %ForgeAccount{}
-      |> ForgeAccount.changeset(%{
-        customer_id: customer.id,
-        forge_type: :github,
-        namespace: "RSOLV-dev",
-        verified_at: DateTime.utc_now()
-      })
-      |> Repo.insert!()
-      
+      forge_account =
+        %ForgeAccount{}
+        |> ForgeAccount.changeset(%{
+          customer_id: customer.id,
+          forge_type: :github,
+          namespace: "RSOLV-dev",
+          verified_at: DateTime.utc_now()
+        })
+        |> Repo.insert!()
+
       %{api_key: api_key, customer: customer, forge_account: forge_account}
     end
 
     test "retrieves all phase data for a repository", %{conn: conn, api_key: api_key} do
       # Store scan data
-      {:ok, _scan} = Phases.store_scan(%{
-        repo: "RSOLV-dev/nodegoat-demo",
-        commit_sha: "abc123",
-        branch: "main",
-        data: %{
-          "vulnerabilities" => [
-            %{"type" => "xss", "file" => "app.js", "line" => 42}
-          ]
-        }
-      }, api_key)
-      
+      {:ok, _scan} =
+        Phases.store_scan(
+          %{
+            repo: "RSOLV-dev/nodegoat-demo",
+            commit_sha: "abc123",
+            branch: "main",
+            data: %{
+              "vulnerabilities" => [
+                %{"type" => "xss", "file" => "app.js", "line" => 42}
+              ]
+            }
+          },
+          api_key
+        )
+
       # Store validation data
-      {:ok, _validation} = Phases.store_validation(%{
-        repo: "RSOLV-dev/nodegoat-demo",
-        issue_number: 123,
-        commit_sha: "abc123",
-        data: %{
-          "validated" => true,
-          "confidence" => 0.95
-        }
-      }, api_key)
-      
+      {:ok, _validation} =
+        Phases.store_validation(
+          %{
+            repo: "RSOLV-dev/nodegoat-demo",
+            issue_number: 123,
+            commit_sha: "abc123",
+            data: %{
+              "validated" => true,
+              "confidence" => 0.95
+            }
+          },
+          api_key
+        )
+
       # Store mitigation data
-      {:ok, _mitigation} = Phases.store_mitigation(%{
-        repo: "RSOLV-dev/nodegoat-demo",
-        issue_number: 123,
-        commit_sha: "def456",
-        data: %{
-          "pr_url" => "https://github.com/RSOLV-dev/nodegoat-demo/pull/456",
-          "fixes" => [
-            %{"file" => "app.js", "fixed" => true}
-          ]
-        }
-      }, api_key)
-      
+      {:ok, _mitigation} =
+        Phases.store_mitigation(
+          %{
+            repo: "RSOLV-dev/nodegoat-demo",
+            issue_number: 123,
+            commit_sha: "def456",
+            data: %{
+              "pr_url" => "https://github.com/RSOLV-dev/nodegoat-demo/pull/456",
+              "fixes" => [
+                %{"file" => "app.js", "fixed" => true}
+              ]
+            }
+          },
+          api_key
+        )
+
       # Retrieve all phase data
       conn =
         conn
@@ -86,19 +101,19 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
           issue: 123,
           commit: "abc123"
         })
-      
+
       response = json_response(conn, 200)
-      
+
       # Verify scan data
       assert response["scan"]
       assert response["scan"]["vulnerabilities"]
       assert length(response["scan"]["vulnerabilities"]) == 1
-      
+
       # Verify validation data
       assert response["validation"]
       assert response["validation"]["issue-123"]["validated"] == true
       assert response["validation"]["issue-123"]["confidence"] == 0.95
-      
+
       # Verify mitigation data (latest commit)
       assert response["mitigation"]
       assert response["mitigation"]["issue-123"]["pr_url"]
@@ -113,25 +128,29 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
           issue: 999,
           commit: "xyz789"
         })
-      
+
       response = json_response(conn, 200)
-      
+
       assert response == %{}
     end
 
     test "returns only available phases", %{conn: conn, api_key: api_key} do
       # Store only scan data
-      {:ok, _scan} = Phases.store_scan(%{
-        repo: "RSOLV-dev/partial-repo",
-        commit_sha: "partial123",
-        branch: "main",
-        data: %{
-          "vulnerabilities" => [
-            %{"type" => "sql_injection", "severity" => "high"}
-          ]
-        }
-      }, api_key)
-      
+      {:ok, _scan} =
+        Phases.store_scan(
+          %{
+            repo: "RSOLV-dev/partial-repo",
+            commit_sha: "partial123",
+            branch: "main",
+            data: %{
+              "vulnerabilities" => [
+                %{"type" => "sql_injection", "severity" => "high"}
+              ]
+            }
+          },
+          api_key
+        )
+
       conn =
         conn
         |> put_req_header("x-api-key", api_key.key)
@@ -140,9 +159,9 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
           issue: 456,
           commit: "partial123"
         })
-      
+
       response = json_response(conn, 200)
-      
+
       # Should have scan but not validation or mitigation
       assert response["scan"]
       assert response["scan"]["vulnerabilities"]
@@ -159,7 +178,7 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
           issue: 123,
           commit: "abc123"
         })
-      
+
       resp = json_response(conn, 401)
       assert resp["error"]["code"] == "INVALID_API_KEY"
       assert resp["error"]["message"] == "Invalid or expired API key"
@@ -175,7 +194,7 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
           issue: 123,
           commit: "abc123"
         })
-      
+
       assert %{"error" => "Unauthorized: no access to namespace"} = json_response(conn, 403)
     end
 
@@ -187,7 +206,7 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
           repo: "RSOLV-dev/test"
           # Missing issue and commit
         })
-      
+
       assert %{"error" => _} = json_response(conn, 400)
     end
   end

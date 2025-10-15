@@ -11,57 +11,64 @@ defmodule Rsolv.EarlyAccess do
   Creates a signup.
   """
   def create_signup(attrs \\ %{}) do
-    result = 
+    result =
       %Signup{}
       |> Signup.changeset(attrs)
       |> Repo.insert()
-    
+
     case result do
       {:ok, signup} ->
         # Trigger celebration metrics for Prometheus
         increment_signup_metrics(signup)
         {:ok, signup}
-        
+
       error ->
         error
     end
   end
-  
+
   # Increment Prometheus metrics for signup alerts
   defp increment_signup_metrics(signup) do
     alias RsolvWeb.Services.Metrics
-    
+
     # Track standard signup metrics
     Metrics.count_signup()
     Metrics.count_signup_by_source(signup.utm_source || "direct")
-    
+
     # Track celebration metrics
     Metrics.track_signup_event("new_signup")
     Metrics.track_signup_by_domain(signup.email)
-    
+
     # Check if this is a milestone signup
     total = count_signups()
+
     if rem(total, 10) == 0 do
       Metrics.track_signup_event("milestone")
       Metrics.update_signup_milestone(total)
     end
-    
+
     # Track high-value domains
     if is_high_value_domain?(signup.email) do
       Metrics.track_signup_event("high_value_signup")
     end
   end
-  
+
   defp is_high_value_domain?(email) do
     high_value_domains = [
-      "gitlab.com", "github.com", "microsoft.com", "google.com",
-      "amazon.com", "meta.com", "netflix.com", "spotify.com"
+      "gitlab.com",
+      "github.com",
+      "microsoft.com",
+      "google.com",
+      "amazon.com",
+      "meta.com",
+      "netflix.com",
+      "spotify.com"
     ]
-    
+
     domain = get_email_domain(email)
     Enum.member?(high_value_domains, domain)
   end
-  
+
   defp get_email_domain(email) do
     case String.split(email, "@") do
       [_, domain] -> domain
@@ -105,13 +112,15 @@ defmodule Rsolv.EarlyAccess do
   """
   def export_to_csv do
     signups = list_signups()
-    
-    header = "email,name,company,referral_source,utm_source,utm_medium,utm_campaign,signed_up_at\n"
-    
-    rows = Enum.map(signups, fn signup ->
-      ~s("#{signup.email}","#{signup.name || ""}","#{signup.company || ""}","#{signup.referral_source || ""}","#{signup.utm_source || ""}","#{signup.utm_medium || ""}","#{signup.utm_campaign || ""}","#{signup.inserted_at}")
-    end)
-    
+
+    header =
+      "email,name,company,referral_source,utm_source,utm_medium,utm_campaign,signed_up_at\n"
+
+    rows =
+      Enum.map(signups, fn signup ->
+        ~s("#{signup.email}","#{signup.name || ""}","#{signup.company || ""}","#{signup.referral_source || ""}","#{signup.utm_source || ""}","#{signup.utm_medium || ""}","#{signup.utm_campaign || ""}","#{signup.inserted_at}")
+      end)
+
     header <> Enum.join(rows, "\n")
   end
 
@@ -121,39 +130,48 @@ defmodule Rsolv.EarlyAccess do
   def import_from_csv(csv_data) do
     lines = String.split(csv_data, "\n", trim: true)
     [_header | rows] = lines
-    
-    results = Enum.reduce(rows, %{imported: 0, errors: 0, details: []}, fn row, acc ->
-      case parse_csv_row(row) do
-        {:ok, attrs} ->
-          case create_signup(attrs) do
-            {:ok, _signup} ->
-              %{acc | imported: acc.imported + 1}
-            {:error, changeset} ->
-              %{acc | errors: acc.errors + 1, details: [format_error(attrs, changeset) | acc.details]}
-          end
-        {:error, reason} ->
-          %{acc | errors: acc.errors + 1, details: [reason | acc.details]}
-      end
-    end)
-    
+
+    results =
+      Enum.reduce(rows, %{imported: 0, errors: 0, details: []}, fn row, acc ->
+        case parse_csv_row(row) do
+          {:ok, attrs} ->
+            case create_signup(attrs) do
+              {:ok, _signup} ->
+                %{acc | imported: acc.imported + 1}
+
+              {:error, changeset} ->
+                %{
+                  acc
+                  | errors: acc.errors + 1,
+                    details: [format_error(attrs, changeset) | acc.details]
+                }
+            end
+
+          {:error, reason} ->
+            %{acc | errors: acc.errors + 1, details: [reason | acc.details]}
+        end
+      end)
+
     {:ok, results}
   end
 
   defp parse_csv_row(row) do
     # Use NimbleCSV or just split on commas for now
     fields = String.split(row, ",")
-    
+
     case fields do
       [email, name, company, referral_source, utm_source, utm_medium, utm_campaign | _] ->
-        {:ok, %{
-          email: clean_csv_field(email),
-          name: clean_csv_field(name),
-          company: clean_csv_field(company),
-          referral_source: clean_csv_field(referral_source),
-          utm_source: clean_csv_field(utm_source),
-          utm_medium: clean_csv_field(utm_medium),
-          utm_campaign: clean_csv_field(utm_campaign)
-        }}
+        {:ok,
+         %{
+           email: clean_csv_field(email),
+           name: clean_csv_field(name),
+           company: clean_csv_field(company),
+           referral_source: clean_csv_field(referral_source),
+           utm_source: clean_csv_field(utm_source),
+           utm_medium: clean_csv_field(utm_medium),
+           utm_campaign: clean_csv_field(utm_campaign)
+         }}
+
       _ ->
         {:error, "Invalid CSV row: #{row}"}
     end

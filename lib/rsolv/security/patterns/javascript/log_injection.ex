@@ -16,6 +16,7 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
   @impl true
   def pattern do
     meta = metadata()
+
     %Pattern{
       id: meta.id,
       name: meta.name,
@@ -23,7 +24,8 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
       type: String.to_existing_atom(meta.type),
       severity: String.to_existing_atom(meta.severity),
       languages: meta.languages,
-      regex: hd(regex_patterns()),  # Use first pattern as primary
+      # Use first pattern as primary
+      regex: hd(regex_patterns()),
       cwe_id: meta.cwe_id,
       owasp_category: meta.owasp_category,
       recommendation: recommendation(),
@@ -40,10 +42,10 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
       languages: ["javascript", "typescript"],
       cwe_id: "CWE-117",
       owasp_category: "A09:2021",
-      description: "User input is logged without sanitization, potentially allowing log forging attacks"
+      description:
+        "User input is logged without sanitization, potentially allowing log forging attacks"
     }
   end
-
 
   def regex_patterns do
     [
@@ -64,7 +66,6 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
     ]
   end
 
-
   def test_cases do
     %{
       vulnerable: [
@@ -83,7 +84,6 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
       ]
     }
   end
-
 
   def recommendation do
     """
@@ -108,7 +108,6 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
     """
   end
 
-
   def ast_rules do
     %{
       javascript: %{
@@ -127,7 +126,6 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
       }
     }
   end
-
 
   def context_rules do
     %{

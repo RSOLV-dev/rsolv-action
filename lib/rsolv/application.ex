@@ -10,16 +10,16 @@ defmodule Rsolv.Application do
   def start(_type, _args) do
     # Ensure Hackney is started (required for HTTP requests)
     {:ok, _} = Application.ensure_all_started(:hackney)
-    
+
     # Note: Customer sessions now use Mnesia for distributed storage
     # See Rsolv.CustomerSessions module
-    
+
     # Ensure required directories exist
     create_required_directories()
 
     # Set up Prometheus metrics collection
     RsolvWeb.Plugs.PrometheusExPlug.setup()
-    
+
     # Build the list of children dynamically based on available modules
     children = [
       # Start the Ecto repository
@@ -58,14 +58,17 @@ defmodule Rsolv.Application do
       # Start to serve requests, typically the last entry
       RsolvWeb.Endpoint
     ]
-    
+
     # Add DNSCluster only if it exists (it's a Phoenix 1.7.x feature)
-    children = if Code.ensure_loaded?(DNSCluster) do
-      dns_child = {DNSCluster, query: Application.get_env(:rsolv, :dns_cluster_query) || :ignore}
-      [dns_child | children]
-    else
-      children
-    end
+    children =
+      if Code.ensure_loaded?(DNSCluster) do
+        dns_child =
+          {DNSCluster, query: Application.get_env(:rsolv, :dns_cluster_query) || :ignore}
+
+        [dns_child | children]
+      else
+        children
+      end
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

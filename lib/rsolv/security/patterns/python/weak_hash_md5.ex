@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
   @moduledoc """
   Pattern for detecting weak MD5 hash usage in Python code.
-  
+
   Detects usage of hashlib.md5() which is cryptographically broken and
   vulnerable to collision attacks. MD5 should not be used for security purposes.
   """
@@ -10,9 +10,9 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
 
   @doc """
   Returns the complete pattern for detecting weak MD5 hash usage.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.WeakHashMd5.pattern()
       iex> pattern.id
       "python-weak-hash-md5"
@@ -114,24 +114,24 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
       vulnerable: %{
         "Password hashing with MD5" => """
         import hashlib
-        
+
         def hash_password(password):
             return hashlib.md5(password.encode()).hexdigest()
-        
+
         # Vulnerable to rainbow table attacks
         stored_hash = hash_password(user_password)
         """,
         "API key generation with MD5" => """
         import hashlib
         import time
-        
+
         def generate_api_key(user_id):
             data = f"{user_id}:{time.time()}"
             return hashlib.md5(data.encode()).hexdigest()
         """,
         "Token creation with MD5" => """
         from hashlib import md5
-        
+
         def create_reset_token(email):
             return md5(email.encode()).hexdigest()
         """
@@ -139,21 +139,21 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
       fixed: %{
         "Use SHA-256 for hashing" => """
         import hashlib
-        
+
         def hash_password(password):
             return hashlib.sha256(password.encode()).hexdigest()
-        
+
         # Better: use bcrypt or argon2 for passwords
         """,
         "Use secrets module for tokens" => """
         import secrets
-        
+
         def generate_api_key():
             return secrets.token_urlsafe(32)
         """,
         "Use proper password hashing" => """
         import bcrypt
-        
+
         def hash_password(password):
             salt = bcrypt.gensalt()
             return bcrypt.hashpw(password.encode('utf-8'), salt)
@@ -182,24 +182,24 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
     """
     MD5 is a cryptographic hash function that is considered broken and unsuitable
     for security purposes. It is vulnerable to:
-    
+
     1. **Collision Attacks**: Attackers can create two different inputs that produce
        the same MD5 hash in seconds on modern hardware.
-    
+
     2. **Preimage Attacks**: While harder than collisions, MD5's resistance to
        finding an input for a given hash is weakening.
-    
+
     3. **Rainbow Tables**: Pre-computed tables make cracking MD5 hashes trivial
        for common inputs like passwords.
-    
+
     ## Real-World Exploits
-    
+
     - **Flame Malware (2012)**: Used MD5 collision to forge Microsoft certificates
     - **PlayStation 3 Hack**: MD5 weaknesses helped break PS3 security
     - **Certificate Forgery**: Researchers created rogue CA certificates using MD5
-    
+
     ## Safe Alternatives
-    
+
     - **SHA-256/SHA-3**: For general hashing needs
     - **bcrypt/scrypt/argon2**: For password hashing
     - **HMAC-SHA256**: For message authentication
@@ -209,7 +209,7 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
 
   @doc """
   Comprehensive vulnerability metadata for weak MD5 hashing in Python.
-  
+
   This metadata documents the specific risks of using MD5 in Python applications
   and provides authoritative guidance for secure alternatives.
   """
@@ -221,18 +221,18 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
       available for backward compatibility, but its use in security contexts creates 
       severe vulnerabilities. Modern attacks can generate MD5 collisions in seconds, 
       making it completely unsuitable for any security-critical applications.
-      
+
       Python developers often use MD5 through:
       1. hashlib.md5() for password hashing (critically vulnerable)
       2. Direct MD5 usage for file integrity checks (can be bypassed)
       3. API token generation using MD5 (easily forgeable)
       4. Session ID generation with MD5 (predictable and collisionable)
-      
+
       The Python 3.9+ hashlib module includes a 'usedforsecurity' parameter to 
       discourage security usage, but many developers ignore this warning. The 
       availability of rainbow tables, GPU-accelerated cracking, and collision 
       attacks makes MD5 usage a critical security vulnerability.
-      
+
       Real-world attacks have demonstrated that MD5 collisions can be used to:
       - Create malicious files with the same hash as legitimate ones
       - Forge digital certificates
@@ -294,7 +294,8 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
       cve_examples: [
         %{
           id: "CVE-2025-0508",
-          description: "SageMaker Python SDK MD5 hash collision vulnerability allowing workflow replacement",
+          description:
+            "SageMaker Python SDK MD5 hash collision vulnerability allowing workflow replacement",
           severity: "high",
           cvss: 7.5,
           note: "MD5 collisions in production AWS service causing integrity failures"
@@ -323,12 +324,12 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
       ],
       detection_notes: """
       This pattern detects MD5 usage in Python through:
-      
+
       1. hashlib.md5() calls with various import styles
       2. MD5() constructor usage from legacy implementations
       3. Direct md5.new() calls (Python 2 style)
       4. Variable names suggesting MD5 usage (md5_hash, md5sum, etc.)
-      
+
       The pattern matches case-insensitively to catch variations like MD5, md5, Md5.
       It's designed to catch the most common Python MD5 usage patterns while 
       minimizing false positives from comments or documentation.
@@ -385,9 +386,9 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
 
   @doc """
   Returns AST enhancement rules for improved detection.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.WeakHashMd5.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]

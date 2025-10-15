@@ -1,28 +1,28 @@
 defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
   @moduledoc """
   CVE-2019-5418 - File Content Disclosure vulnerability pattern for Rails applications.
-  
+
   This pattern detects the critical path traversal vulnerability in Rails Action View 
   (versions <5.2.2.1, <5.1.6.2, <5.0.7.2, <4.2.11.1 and v3) where specially crafted 
   Accept headers combined with render file: calls can expose arbitrary files from 
   the server's filesystem.
-  
+
   ## Background
-  
+
   CVE-2019-5418 is a file content disclosure vulnerability that allows attackers to
   read arbitrary files by manipulating the Accept header and exploiting the render
   file: functionality in Rails controllers.
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability occurs when:
   1. Controllers use render file: with user-controlled input
   2. Controllers use render template: or render partial: with user input
   3. Path parameters from users are incorporated into file paths
   4. No proper validation or whitelisting of allowed files
-  
+
   ## Examples
-  
+
       # VULNERABLE - Direct file path from params
       render file: params[:template]
       
@@ -39,14 +39,15 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       ALLOWED_TEMPLATES = %w[user admin guest]
       render template: "templates/\#{template}" if ALLOWED_TEMPLATES.include?(template)
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-cve-2019-5418",
       name: "CVE-2019-5418 - File Content Disclosure",
-      description: "Path traversal vulnerability in render file allowing arbitrary file disclosure",
+      description:
+        "Path traversal vulnerability in render file allowing arbitrary file disclosure",
       type: :path_traversal,
       severity: :critical,
       languages: ["ruby"],
@@ -54,37 +55,38 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       regex: [
         # Direct render file with params (exclude comments)
         ~r/^(?!.*#).*render\s+file:\s*params\[/m,
-        
+
         # Render file with string interpolation containing params (handle escaped)
         ~r/^(?!.*#).*render\s+file:\s*["'`].*?\\*#\{[^}]*params/m,
-        
+
         # Render template with params (any params usage)
         ~r/^(?!.*#).*render\s+template:\s*params\[/m,
-        
+
         # Render partial with directory traversal patterns (handle escaped)
         ~r/^(?!.*#).*render\s+partial:\s*["'`]\.\.\/\\*#\{[^}]*params/m,
-        
+
         # Variable assignment with params followed by render file
         ~r/(?:file_path|path|template)\s*=\s*.*?params\[[\s\S]*?render\s+file:/m,
-        
+
         # File.join with params used in render
         ~r/File\.join\(.*?params\[[\s\S]*?render\s+file:/m,
-        
+
         # Rails.root with params interpolation (handle escaped)
         ~r/^(?!.*#).*render\s+file:\s*["'`].*?Rails\.root.*?\\*#\{[^}]*params/m,
-        
+
         # Variable assignment to params then used in render
         ~r/(\w+)\s*=\s*params\[[\s\S]*?render\s+(?:file|template|partial):\s*\1/m,
-        
+
         # Render file with variable containing path
         ~r/^(?!.*#).*render\s+file:\s*\w*[pP]ath/m,
-        
+
         # Variable assignment with path traversal then render partial
         ~r/\w+_path\s*=\s*["'`].*?\.\.\/.*?\\*#\{.*?params[\s\S]*?render\s+partial:/m
       ],
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
-      recommendation: "Never use user input directly in Rails render file/template. Use predefined Rails templates or validate against allowlist.",
+      recommendation:
+        "Never use user input directly in Rails render file/template. Use predefined Rails templates or validate against allowlist.",
       test_cases: %{
         vulnerable: [
           "render file: params[:template]"
@@ -95,7 +97,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -105,7 +107,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       and v3. By crafting a malicious Accept header and exploiting render file: calls with 
       user-controlled input, attackers can traverse directories and access sensitive files 
       including database configurations, secrets, source code, and system files.
-      
+
       The vulnerability is particularly dangerous because:
       1. It provides direct file system access
       2. Can expose database credentials and API keys
@@ -113,7 +115,6 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       4. Can access system files like /etc/passwd
       5. Often chained with other vulnerabilities for RCE
       """,
-      
       attack_vectors: """
       1. **Malicious Accept Header**: Crafting Accept headers like "../../../../../etc/passwd{{"
       2. **Direct Parameter Injection**: Manipulating template parameters to include path traversal
@@ -126,7 +127,6 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       9. **URL Encoding**: Using encoded traversal sequences like %2e%2e%2f
       10. **Double Encoding**: Bypassing filters with double-encoded sequences
       """,
-      
       business_impact: """
       - Complete source code disclosure exposing intellectual property
       - Database credential theft leading to data breaches
@@ -139,7 +139,6 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       - Potential for follow-up attacks using disclosed information
       - Service disruption if exploited for denial of service
       """,
-      
       technical_impact: """
       - Arbitrary file reading from the filesystem
       - Source code disclosure including business logic
@@ -152,29 +151,27 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       - Information gathering for targeted attacks
       - Possible chaining with CVE-2019-5420 for RCE
       """,
-      
-      likelihood: "High - Many Rails applications use dynamic template rendering and the vulnerability is easy to exploit with basic HTTP requests",
-      
+      likelihood:
+        "High - Many Rails applications use dynamic template rendering and the vulnerability is easy to exploit with basic HTTP requests",
       cve_details: """
       CVE ID: CVE-2019-5418
       CVSS Score: 7.5 (HIGH)
       CVSS Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
-      
+
       Affected Versions:
       - Rails 5.2.0 to 5.2.2.0 (fixed in 5.2.2.1)
       - Rails 5.1.0 to 5.1.6.1 (fixed in 5.1.6.2)
       - Rails 5.0.0 to 5.0.7.1 (fixed in 5.0.7.2)
       - Rails 4.2.0 to 4.2.11.0 (fixed in 4.2.11.1)
       - All Rails 3.x versions
-      
+
       Discovery: Reported by John Hawthorn of GitHub
       Disclosure Date: March 13, 2019
-      
+
       Related Vulnerabilities:
       - Often chained with CVE-2019-5420 (DoubleTap RCE)
       - Similar to CVE-2016-0752 (older Rails directory traversal)
       """,
-      
       compliance_standards: [
         "OWASP Top 10 2021 - A01: Broken Access Control",
         "CWE-22: Path Traversal",
@@ -186,7 +183,6 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
         "ASVS 4.0 - V5.2 File Upload Requirements",
         "SANS Top 25 - CWE-22 Path Traversal"
       ],
-      
       remediation_steps: """
       1. **Immediate Patching (Critical)**:
          ```bash
@@ -206,7 +202,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
          # Then run
          bundle update rails
          ```
-      
+
       2. **Code Remediation - Never Use User Input in File Paths**:
          ```ruby
          # NEVER DO THIS - Direct user input
@@ -230,7 +226,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
            end
          end
          ```
-      
+
       3. **Whitelist Approach**:
          ```ruby
          class DocumentsController < ApplicationController
@@ -254,7 +250,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
            end
          end
          ```
-      
+
       4. **Use Rails Conventions**:
          ```ruby
          class ReportsController < ApplicationController
@@ -270,7 +266,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
            end
          end
          ```
-      
+
       5. **Input Validation and Sanitization**:
          ```ruby
          class SecureController < ApplicationController
@@ -286,7 +282,6 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
          end
          ```
       """,
-      
       prevention_tips: """
       - Always update Rails to the latest patched version
       - Never use user input directly in file paths
@@ -301,7 +296,6 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       - Disable file rendering in production when not needed
       - Implement rate limiting to prevent exploitation attempts
       """,
-      
       detection_methods: """
       - Static code analysis for render file: patterns with user input
       - Grep for vulnerable render patterns in codebase
@@ -314,7 +308,6 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       - Penetration testing with Accept header manipulation
       - Runtime Application Self-Protection (RASP) solutions
       """,
-      
       safe_alternatives: """
       # 1. Use Implicit Rendering
       class UsersController < ApplicationController
@@ -322,14 +315,14 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
           @user = User.find(params[:id])
           # Rails automatically renders app/views/users/show.html.erb
         end
-      
+
       # 2. Explicit Action Rendering
       class ReportsController < ApplicationController
         def summary
           @data = generate_summary_data
           render :summary  # Renders app/views/reports/summary.html.erb
         end
-      
+
       # 3. Conditional Rendering with Whitelist Approach
       class DocumentsController < ApplicationController
         # Use a whitelist to control allowed templates
@@ -342,7 +335,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
           template = TEMPLATES[params[:doc]] || 'documents/not_found'
           render template: template
         end
-      
+
       # 4. Secure File Downloads
       class DownloadsController < ApplicationController
         def file
@@ -363,7 +356,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
             head :not_found
           end
         end
-      
+
       # 5. API Responses (No File Rendering)
       class ApiController < ApplicationController
         def data
@@ -373,45 +366,63 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.8,
-      
       context_rules: %{
         # Render methods that can be vulnerable
         render_methods: [
-          "render", "render_to_string", "render_to_body"
+          "render",
+          "render_to_string",
+          "render_to_body"
         ],
-        
+
         # Dangerous render options
         dangerous_options: [
-          "file:", "template:", "partial:", "layout:"
+          "file:",
+          "template:",
+          "partial:",
+          "layout:"
         ],
-        
+
         # Path manipulation methods
         path_methods: [
-          "File.join", "Rails.root.join", "Pathname.new",
-          ".join", "+", "<<", "concat"
+          "File.join",
+          "Rails.root.join",
+          "Pathname.new",
+          ".join",
+          "+",
+          "<<",
+          "concat"
         ],
-        
+
         # Safe render patterns
         safe_patterns: [
-          ~r/render\s+:[\w_]+/,                    # Symbol rendering
-          ~r/render\s+json:/,                      # JSON rendering
-          ~r/render\s+xml:/,                       # XML rendering
-          ~r/render\s+plain:/,                     # Plain text
-          ~r/render\s+status:/,                    # Status only
-          ~r/ALLOWED_\w+\.include\?/               # Whitelist check
+          # Symbol rendering
+          ~r/render\s+:[\w_]+/,
+          # JSON rendering
+          ~r/render\s+json:/,
+          # XML rendering
+          ~r/render\s+xml:/,
+          # Plain text
+          ~r/render\s+plain:/,
+          # Status only
+          ~r/render\s+status:/,
+          # Whitelist check
+          ~r/ALLOWED_\w+\.include\?/
         ],
-        
+
         # User input sources
         user_inputs: [
-          "params[", "params.", "request.params",
-          "cookies[", "session[", "request.env"
+          "params[",
+          "params.",
+          "request.params",
+          "cookies[",
+          "session[",
+          "request.env"
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence for dangerous patterns
@@ -419,29 +430,28 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
           template_from_params: +0.6,
           path_traversal_sequence: +0.5,
           rails_root_with_params: +0.6,
-          
+
           # Medium confidence
           indirect_params_usage: +0.3,
           partial_with_dynamic_path: +0.4,
-          
+
           # Lower confidence for safer patterns
           whitelist_check_present: -0.6,
           static_file_path: -0.8,
           symbol_render: -0.9,
           validation_present: -0.5,
-          
+
           # Context adjustments
           in_controller: +0.2,
           in_view: +0.1,
           in_helper: +0.1,
-          
+
           # File location adjustments
           in_test_file: -0.9,
           in_spec_file: -0.9,
           commented_line: -1.0
         }
       },
-      
       ast_rules: %{
         # Render analysis
         render_analysis: %{
@@ -451,7 +461,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
           check_option_values: true,
           analyze_path_construction: true
         },
-        
+
         # Path analysis
         path_analysis: %{
           detect_traversal_sequences: true,
@@ -459,7 +469,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
           analyze_string_interpolation: true,
           detect_absolute_paths: true
         },
-        
+
         # Input tracking
         input_analysis: %{
           track_params_usage: true,
@@ -467,7 +477,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
           detect_indirect_usage: true,
           check_sanitization: true
         },
-        
+
         # Safe pattern detection
         safe_analysis: %{
           detect_whitelists: true,
@@ -478,6 +488,4 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
       }
     }
   end
-  
 end
-

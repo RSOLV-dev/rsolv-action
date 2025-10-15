@@ -1,18 +1,18 @@
 defmodule Rsolv.Security.PatternRegistry do
   @moduledoc """
   Registry for discovering and loading security patterns from the new file structure.
-  
+
   Handles:
   - Language-specific patterns (e.g., javascript/sql_injection_concat.ex)
   - Framework-specific patterns (e.g., frameworks/rails/mass_assignment.ex)
   - Cross-language patterns (e.g., common/weak_jwt_secret.ex)
   - Pattern discovery and loading
   """
-  
+
   require Logger
-  
+
   @pattern_base_path "lib/rsolv_api/security/patterns"
-  
+
   @doc """
   Get all patterns for a specific language.
   Includes both language-specific and cross-language patterns.
@@ -28,16 +28,16 @@ defmodule Rsolv.Security.PatternRegistry do
       load_patterns_directly(language)
     end
   end
-  
+
   defp load_patterns_directly(language) do
     language_modules = load_pattern_modules_from_directory("#{@pattern_base_path}/#{language}")
     common_modules = load_pattern_modules_from_directory("#{@pattern_base_path}/common")
-    
+
     (language_modules ++ common_modules)
     |> Enum.map(& &1.pattern())
     |> Enum.uniq_by(& &1.id)
   end
-  
+
   @doc """
   Get all patterns across all languages.
   """
@@ -50,12 +50,12 @@ defmodule Rsolv.Security.PatternRegistry do
         |> Enum.filter(&function_exported?(&1, :pattern, 0))
         |> Enum.map(& &1.pattern())
         |> Enum.uniq_by(& &1.id)
-      
+
       _ ->
         []
     end
   end
-  
+
   @doc """
   Get patterns by vulnerability type.
   """
@@ -63,7 +63,7 @@ defmodule Rsolv.Security.PatternRegistry do
     get_all_patterns()
     |> Enum.filter(&(&1.type == type))
   end
-  
+
   @doc """
   Get patterns that apply to a specific file.
   Takes into account file extension, embedded languages, and content.
@@ -85,37 +85,38 @@ defmodule Rsolv.Security.PatternRegistry do
           end
         end)
         |> Enum.map(& &1.pattern())
-      
+
       _ ->
         []
     end
   end
-  
+
   # Private functions
-  
+
   defp load_pattern_modules_from_directory(dir_path) do
     # Extract the language/subdirectory name from the path
     # e.g., "lib/rsolv_api/security/patterns/python" -> "python"
     language = Path.basename(dir_path)
-    
+
     # Get all modules from the application
     # This works in both development and releases
     case Application.spec(:rsolv, :modules) do
       modules when is_list(modules) ->
         # Filter modules that match our pattern namespace
-        namespace = case language do
-          "common" -> Rsolv.Security.Patterns.Common
-          "python" -> Rsolv.Security.Patterns.Python
-          "javascript" -> Rsolv.Security.Patterns.Javascript
-          "ruby" -> Rsolv.Security.Patterns.Ruby
-          "php" -> Rsolv.Security.Patterns.Php
-          "java" -> Rsolv.Security.Patterns.Java
-          "elixir" -> Rsolv.Security.Patterns.Elixir
-          "rails" -> Rsolv.Security.Patterns.Rails
-          "django" -> Rsolv.Security.Patterns.Django
-          _ -> nil
-        end
-        
+        namespace =
+          case language do
+            "common" -> Rsolv.Security.Patterns.Common
+            "python" -> Rsolv.Security.Patterns.Python
+            "javascript" -> Rsolv.Security.Patterns.Javascript
+            "ruby" -> Rsolv.Security.Patterns.Ruby
+            "php" -> Rsolv.Security.Patterns.Php
+            "java" -> Rsolv.Security.Patterns.Java
+            "elixir" -> Rsolv.Security.Patterns.Elixir
+            "rails" -> Rsolv.Security.Patterns.Rails
+            "django" -> Rsolv.Security.Patterns.Django
+            _ -> nil
+          end
+
         if namespace do
           modules
           |> Enum.filter(&pattern_module_in_namespace?(&1, namespace))
@@ -123,38 +124,37 @@ defmodule Rsolv.Security.PatternRegistry do
         else
           []
         end
-      
+
       _ ->
         # Fallback to empty if application not loaded yet
         []
     end
   end
-  
+
   defp pattern_module_in_namespace?(module, namespace) do
     module_parts = Module.split(module)
     namespace_parts = Module.split(namespace)
-    
+
     # Check if module starts with namespace
     List.starts_with?(module_parts, namespace_parts)
   end
-  
+
   defp is_pattern_module?(module) do
     # Check if module is in the patterns namespace
     module_parts = Module.split(module)
     base_parts = Module.split(Rsolv.Security.Patterns)
-    
+
     # Must be in the patterns namespace and not be a base module
-    List.starts_with?(module_parts, base_parts) && 
+    List.starts_with?(module_parts, base_parts) &&
       length(module_parts) > length(base_parts)
   end
-  
-  
+
   defp matches_file_language?(file_path, languages) do
     if languages == ["all"] or languages == ["*"] do
       true
     else
       ext = Path.extname(file_path) |> String.downcase() |> String.trim_leading(".")
-      
+
       Enum.any?(languages, fn lang ->
         case lang do
           "javascript" -> ext in ["js", "jsx", "ts", "tsx", "mjs", "cjs"]

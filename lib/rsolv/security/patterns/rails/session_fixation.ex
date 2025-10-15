@@ -1,19 +1,19 @@
 defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
   @moduledoc """
   Rails Session Fixation Vulnerability Detection Pattern.
-  
+
   Session fixation attacks occur when an application authenticates a user without 
   regenerating the session identifier. This allows attackers to hijack authenticated 
   sessions by pre-setting session IDs.
-  
+
   ## Vulnerability Details
-  
+
   Session fixation is a broken authentication vulnerability where an attacker can:
   1. Obtain a valid session ID from the target application
   2. Force a victim to use that specific session ID (via social engineering or XSS)
   3. Wait for the victim to authenticate using the fixed session ID
   4. Access the application as the authenticated victim
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable: No session regeneration after authentication
@@ -24,7 +24,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
       redirect_to dashboard_path
     end
   ```
-  
+
   ### Safe Example
   ```ruby  
   # Safe: Session regenerated before setting user data
@@ -38,9 +38,9 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-session-fixation",
@@ -53,14 +53,14 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
       regex: [
         # Authentication methods without session reset - exclude if reset_session or session.regenerate is present
         ~r/def\s+(?:login|sign_in|authenticate|create)(?![\s\S]*(?:reset_session|session\.regenerate))[\s\S]*?session\[:(?:user_id|current_user_id|authenticated_user)\]\s*=[\s\S]*?end/,
-        
+
         # Direct session assignment with user/admin identifiers (exclude commented lines and safe context)
         ~r/^(?!.*#)(?!.*(?:reset_session|session\.regenerate)).*session\[:user_id\]\s*=\s*[^#\r\n]*/,
         ~r/^(?!.*#)(?!.*(?:reset_session|session\.regenerate)).*session\[:current_user_id\]\s*=\s*[^#\r\n]*/,
         ~r/^(?!.*#)(?!.*(?:reset_session|session\.regenerate)).*session\[:authenticated_user\]\s*=\s*[^#\r\n]*/,
         ~r/^(?!.*#)(?!.*(?:reset_session|session\.regenerate)).*session\["user_id"\]\s*=\s*[^#\r\n]*/,
         ~r/^(?!.*#)(?!.*(?:reset_session|session\.regenerate)).*session\['user_id'\]\s*=\s*[^#\r\n]*/,
-        
+
         # Admin/privilege escalation without session reset - exclude if reset_session or session.regenerate is present
         ~r/def\s+(?:admin_login|create)(?![\s\S]*(?:reset_session|session\.regenerate))[\s\S]*?session\[:(?:admin|is_admin|admin_user|super_user)\]\s*=\s*true/,
         ~r/^(?!.*#)(?!.*(?:reset_session|session\.regenerate)).*session\[:admin\]\s*=\s*true/,
@@ -70,7 +70,8 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
       ],
       cwe_id: "CWE-384",
       owasp_category: "A07:2021",
-      recommendation: "Call Rails reset_session or session.regenerate before setting authentication session variables in Rails controllers",
+      recommendation:
+        "Call Rails reset_session or session.regenerate before setting authentication session variables in Rails controllers",
       test_cases: %{
         vulnerable: [
           "def login\n  if user.authenticate(params[:password])\n    session[:user_id] = user.id\n  end\nend",
@@ -86,7 +87,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -120,7 +121,8 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
       - Persistent access even after password changes
       - Ability to perform actions on behalf of legitimate users
       """,
-      likelihood: "Medium - Session fixation is common in custom Rails authentication implementations that don't follow security best practices",
+      likelihood:
+        "Medium - Session fixation is common in custom Rails authentication implementations that don't follow security best practices",
       cve_examples: """
       CVE-2007-5380 - Session fixation vulnerability in Rails before 1.2.4
       CVE-2007-6077 - Session fixation protection mechanism bypass in Rails cgi_process.rb
@@ -173,7 +175,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
           render :new
         end
       end
-      
+
       # Alternative: Use session.regenerate
       def create
         if authenticate_user(params)
@@ -184,40 +186,58 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.7,
-      
       context_rules: %{
         # Authentication-related methods that should regenerate sessions
         authentication_methods: [
-          "login", "sign_in", "authenticate", "create", "admin_login", "log_in"
+          "login",
+          "sign_in",
+          "authenticate",
+          "create",
+          "admin_login",
+          "log_in"
         ],
-        
+
         # Session fields that indicate user authentication
         session_fields: [
-          "user_id", "current_user_id", "authenticated_user", "admin", 
-          "is_admin", "admin_user", "super_user", "authenticated"
+          "user_id",
+          "current_user_id",
+          "authenticated_user",
+          "admin",
+          "is_admin",
+          "admin_user",
+          "super_user",
+          "authenticated"
         ],
-        
+
         # Methods that indicate proper session management
         safe_session_methods: [
-          "reset_session", "session.regenerate", "regenerate"
+          "reset_session",
+          "session.regenerate",
+          "regenerate"
         ],
-        
+
         # Context patterns that reduce false positives
         safe_patterns: [
-          ~r/reset_session/,                       # Proper session reset
-          ~r/session\.regenerate/,                 # Session regeneration  
-          ~r/session\[:cart_items\]/,              # Shopping cart data
-          ~r/session\[:theme\]/,                   # UI preferences
-          ~r/session\[:locale\]/,                  # Language settings
-          ~r/session\[:last_visited\]/,            # Navigation tracking
-          ~r/#.*session\[:user_id\]/               # Commented code
+          # Proper session reset
+          ~r/reset_session/,
+          # Session regeneration  
+          ~r/session\.regenerate/,
+          # Shopping cart data
+          ~r/session\[:cart_items\]/,
+          # UI preferences
+          ~r/session\[:theme\]/,
+          # Language settings
+          ~r/session\[:locale\]/,
+          # Navigation tracking
+          ~r/session\[:last_visited\]/,
+          # Commented code
+          ~r/#.*session\[:user_id\]/
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence indicators
@@ -225,19 +245,18 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
           admin_privilege_assignment: +0.5,
           authentication_method_context: +0.3,
           direct_user_id_assignment: +0.3,
-          
+
           # Lower confidence adjustments
           session_reset_present: -0.8,
           non_auth_session_data: -0.6,
           test_file_context: -0.8,
           commented_code: -1.0,
-          
+
           # Context-based adjustments
           in_controller_action: +0.2,
           multiple_session_assignments: +0.2
         }
       },
-      
       ast_rules: %{
         # Authentication flow analysis
         authentication_analysis: %{
@@ -246,7 +265,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
           validate_session_regeneration: true,
           check_authentication_flow: true
         },
-        
+
         # Session management validation
         session_validation: %{
           check_reset_session_calls: true,
@@ -257,6 +276,4 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
       }
     }
   end
-  
 end
-

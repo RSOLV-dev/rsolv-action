@@ -1,58 +1,58 @@
 defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
   @moduledoc """
   XXE via SAXParser pattern for Java code.
-  
+
   Detects XML External Entity (XXE) vulnerabilities in SAXParserFactory and SAXParser
   usage where secure processing features are not enabled. SAXParser is particularly 
   vulnerable because it processes XML using event-based parsing but lacks secure defaults,
   making it susceptible to XXE attacks, SSRF, file disclosure, and DoS attacks.
-  
+
   ## Vulnerability Details
-  
+
   XML External Entity (XXE) attacks occur when XML input containing references to external
   entities is processed by a weakly configured XML parser. The SAXParserFactory in Java
   creates SAXParser instances that are vulnerable by default and require explicit secure 
   configuration to prevent XXE attacks.
-  
+
   Common vulnerable patterns:
   - SAXParserFactory.newInstance().newSAXParser() without secure features
   - SAXParser created without disabling external entity processing
   - Missing XMLConstants.FEATURE_SECURE_PROCESSING configuration
   - XMLReader obtained from SAXParser without secure features
-  
+
   ### Attack Examples
-  
+
   ```java
   // Vulnerable code - no secure processing
   SAXParserFactory spf = SAXParserFactory.newInstance();
   SAXParser sp = spf.newSAXParser();
   sp.parse(xmlInput, handler); // Can process malicious XXE
-  
+
   // Attack payload example:
   // <?xml version="1.0" encoding="UTF-8"?>
   // <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
   // <root>&xxe;</root>
   ```
-  
+
   ## References
-  
+
   - CWE-611: Improper Restriction of XML External Entity Reference
   - OWASP A05:2021 - Security Misconfiguration
   - CVE-2024-38374: XXE in Spring Framework's XML processing
   - OWASP XXE Prevention Cheat Sheet
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Pattern detects XXE vulnerabilities in SAXParser usage in Java code.
-  
+
   Identifies SAXParserFactory and SAXParser usage without proper secure processing
   configuration, making applications vulnerable to XXE attacks.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Java.XxeSaxparser.pattern()
       iex> pattern.id
       "java-xxe-saxparser"
@@ -94,7 +94,8 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
       ],
       cwe_id: "CWE-611",
       owasp_category: "A05:2021",
-      recommendation: "Enable secure processing and disable external entity processing by setting XMLConstants.FEATURE_SECURE_PROCESSING to true and disabling external entity features",
+      recommendation:
+        "Enable secure processing and disable external entity processing by setting XMLConstants.FEATURE_SECURE_PROCESSING to true and disabling external entity features",
       test_cases: %{
         vulnerable: [
           ~S|SAXParserFactory spf = SAXParserFactory.newInstance(); SAXParser parser = spf.newSAXParser();|,
@@ -110,7 +111,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -119,14 +120,14 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
       external entities is processed by a weakly configured XML parser. The SAXParserFactory
       in Java creates parsers that are vulnerable to XXE attacks by default, requiring explicit
       secure configuration to prevent these attacks.
-      
+
       XXE attacks can lead to:
       - Disclosure of confidential data (file://, http://, ftp:// schemes)
       - Server-side request forgery (SSRF) to internal systems
       - Denial of service through billion laughs or quadratic blowup attacks
       - Remote code execution in certain configurations
       - Port scanning and service enumeration
-      
+
       The SAXParserFactory is particularly dangerous because:
       - External entity processing is enabled by default
       - No built-in protection against recursive entity expansion
@@ -134,7 +135,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
       - Can make HTTP requests to arbitrary URLs
       - XMLReader obtained from SAXParser inherits insecure defaults
       - Event-based parsing makes XXE attacks harder to detect
-      
+
       Historical context:
       - XXE has been in OWASP Top 10 since 2013 (A04:2013, A04:2017, A05:2021)
       - SAXParser widely used in enterprise applications and web services
@@ -151,20 +152,22 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
         %{
           type: :owasp,
           id: "A05:2021",
-          title: "OWASP Top 10 2021 - A05 Security Misconfiguration", 
+          title: "OWASP Top 10 2021 - A05 Security Misconfiguration",
           url: "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/"
         },
         %{
           type: :research,
           id: "owasp_xxe_prevention",
           title: "OWASP XXE Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
           id: "foojay_xxe_java",
           title: "How to Configure Your Java XML Parsers to Prevent XXE Attacks",
-          url: "https://foojay.io/today/how-to-configure-your-java-xml-parsers-to-prevent-xxe-attacks/"
+          url:
+            "https://foojay.io/today/how-to-configure-your-java-xml-parsers-to-prevent-xxe-attacks/"
         },
         %{
           type: :research,
@@ -175,7 +178,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
       ],
       attack_vectors: [
         "Local file disclosure: <!ENTITY xxe SYSTEM \"file:///etc/passwd\"> to read system files",
-        "Server-side request forgery: <!ENTITY xxe SYSTEM \"http://internal-server/admin\"> to probe internal networks", 
+        "Server-side request forgery: <!ENTITY xxe SYSTEM \"http://internal-server/admin\"> to probe internal networks",
         "Denial of service: Billion laughs attack using recursive entity expansion",
         "Remote code execution: Entity expansion leading to memory exhaustion and system compromise",
         "Data exfiltration: Combining file disclosure with HTTP requests to external servers",
@@ -193,13 +196,15 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
       cve_examples: [
         %{
           id: "CVE-2024-38374",
-          description: "XXE in Spring Framework's XML processing components using SAXParserFactory",
+          description:
+            "XXE in Spring Framework's XML processing components using SAXParserFactory",
           severity: "high",
           cvss: 8.1,
-          note: "Default SAXParserFactory configuration allows external entity processing in Spring XML handling"
+          note:
+            "Default SAXParserFactory configuration allows external entity processing in Spring XML handling"
         },
         %{
-          id: "CVE-2022-29242", 
+          id: "CVE-2022-29242",
           description: "XXE vulnerability in Stanford CoreNLP TransformXML() via SAXParser",
           severity: "high",
           cvss: 7.5,
@@ -207,25 +212,26 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
         },
         %{
           id: "CVE-2021-44228",
-          description: "Log4Shell vulnerability partially exploitable via XXE injection vectors through SAX parsing",
-          severity: "critical", 
+          description:
+            "Log4Shell vulnerability partially exploitable via XXE injection vectors through SAX parsing",
+          severity: "critical",
           cvss: 10.0,
           note: "XXE used as attack vector for LDAP injection in logging contexts using SAXParser"
         }
       ],
       detection_notes: """
       This pattern detects insecure SAXParserFactory usage by identifying:
-      
+
       1. Direct method chaining: SAXParserFactory.newInstance().newSAXParser()
       2. Variable-based factory usage without secure configuration
       3. SAXParser instantiation without preceding secure feature configuration
       4. XMLReader obtained from SAXParser without secure features
       5. Method chaining patterns that bypass security settings
-      
+
       The pattern uses negative lookahead to avoid false positives when secure processing
       is properly configured. It checks for XMLConstants.FEATURE_SECURE_PROCESSING and
       other XXE prevention features within the same code block.
-      
+
       Key detection criteria:
       - Looks for newSAXParser() calls without secure feature configuration
       - Covers both direct method chaining and variable assignment patterns
@@ -292,15 +298,15 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XXE vulnerabilities and safe
   SAXParser usage patterns that have proper security configuration.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.XxeSaxparser.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -322,7 +328,12 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
           check_saxparser_usage: true,
           saxparser_methods: ["newSAXParser", "parse", "getXMLReader", "setProperty"],
           check_secure_processing: true,
-          secure_features: ["XMLConstants.FEATURE_SECURE_PROCESSING", "disallow-doctype-decl", "external-general-entities", "external-parameter-entities"],
+          secure_features: [
+            "XMLConstants.FEATURE_SECURE_PROCESSING",
+            "disallow-doctype-decl",
+            "external-general-entities",
+            "external-parameter-entities"
+          ],
           check_factory_configuration: true
         },
         factory_analysis: %{
@@ -339,9 +350,18 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
         },
         xmlreader_analysis: %{
           check_xmlreader_usage: true,
-          xmlreader_methods: ["getXMLReader", "setContentHandler", "setErrorHandler", "setDTDHandler"],
+          xmlreader_methods: [
+            "getXMLReader",
+            "setContentHandler",
+            "setErrorHandler",
+            "setDTDHandler"
+          ],
           check_xmlreader_features: true,
-          xmlreader_secure_features: ["external-general-entities", "external-parameter-entities", "load-external-dtd"]
+          xmlreader_secure_features: [
+            "external-general-entities",
+            "external-parameter-entities",
+            "load-external-dtd"
+          ]
         }
       },
       context_rules: %{
@@ -349,7 +369,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
         secure_features: [
           "XMLConstants.FEATURE_SECURE_PROCESSING",
           "http://apache.org/xml/features/disallow-doctype-decl",
-          "http://xml.org/sax/features/external-general-entities", 
+          "http://xml.org/sax/features/external-general-entities",
           "http://xml.org/sax/features/external-parameter-entities",
           "http://apache.org/xml/features/nonvalidating/load-external-dtd"
         ],
@@ -361,7 +381,14 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
         ],
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/example/, ~r/demo/],
         check_xml_processing_context: true,
-        high_risk_contexts: ["web service", "API endpoint", "file upload", "data import", "configuration parsing", "SOAP processing"]
+        high_risk_contexts: [
+          "web service",
+          "API endpoint",
+          "file upload",
+          "data import",
+          "configuration parsing",
+          "SOAP processing"
+        ]
       },
       confidence_rules: %{
         base: 0.9,

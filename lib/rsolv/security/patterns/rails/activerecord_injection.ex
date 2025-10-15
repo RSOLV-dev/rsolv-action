@@ -1,37 +1,37 @@
 defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
   @moduledoc """
   ActiveRecord SQL Injection pattern for Rails applications.
-  
+
   This pattern detects SQL injection vulnerabilities through ActiveRecord methods
   that use string interpolation. This is one of the most critical vulnerabilities
   in Rails applications as it can lead to complete database compromise.
-  
+
   ## Background
-  
+
   ActiveRecord provides safe query interfaces, but developers can still introduce
   SQL injection vulnerabilities by:
   - Using string interpolation in query methods
   - Building SQL strings dynamically with user input
   - Using raw SQL methods without proper parameterization
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability occurs when:
   1. User input is directly interpolated into SQL queries
   2. String concatenation is used to build queries
   3. Raw SQL methods are used without parameterization
   4. Dynamic column/table names are interpolated from user input
-  
+
   ## Known CVEs
-  
+
   - CVE-2023-22794: SQL Injection via ActiveRecord comments
   - CVE-2012-2695: ActiveRecord SQL injection via nested query parameters
   - CVE-2012-6496: SQL injection via dynamic finders
   - CVE-2008-4094: SQL injection via limit and offset parameters
   - CVE-2012-2661: SQL injection on Rails affecting GitHub
-  
+
   ## Examples
-  
+
       # Vulnerable - string interpolation
       User.where("name = '\#{params[:name]}'")
       
@@ -45,9 +45,9 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       User.where("name = ?", params[:name])
       User.where(name: params[:name])
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-activerecord-injection",
@@ -83,7 +83,8 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       ],
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use Rails parameterized queries: where(\"name = ?\", params[:name]) or ActiveRecord hash conditions: where(name: params[:name])",
+      recommendation:
+        "Use Rails parameterized queries: where(\"name = ?\", params[:name]) or ActiveRecord hash conditions: where(name: params[:name])",
       test_cases: %{
         vulnerable: [
           "User.where(\"name = '\#{params[:name]}'\")"
@@ -95,7 +96,7 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -105,12 +106,11 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       interactions. Attackers can exploit these vulnerabilities to read, modify, or
       delete any data in the database, bypass authentication, escalate privileges,
       or even execute commands on the database server in some configurations.
-      
+
       The vulnerability is especially severe because Rails applications often have
       full database access, and successful exploitation can compromise the entire
       application's data integrity and confidentiality.
       """,
-      
       attack_vectors: """
       1. **Data Extraction**: ' OR 1=1 UNION SELECT username, password FROM users--
       2. **Authentication Bypass**: admin'-- \\(bypasses password check\\)
@@ -121,7 +121,6 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       7. **Error-based SQLi**: ' AND 1=CONVERT\\(int, @@version\\)--
       8. **Stacked Queries**: '; EXEC xp_cmdshell\\('net user hacker password /add'\\)--
       """,
-      
       business_impact: """
       - Complete data breach exposing all customer and business data
       - Financial losses from fraudulent transactions or data theft
@@ -131,7 +130,6 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       - Legal liability from compromised user data
       - Competitive disadvantage from stolen intellectual property
       """,
-      
       technical_impact: """
       - Full database read/write access
       - Authentication and authorization bypass
@@ -141,17 +139,14 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       - Audit trail manipulation
       - Potential for lateral movement to other systems
       """,
-      
       likelihood: "Very High - String interpolation is a common mistake in Rails applications",
-      
       cve_examples: [
         "CVE-2023-22794 - SQL Injection in ActiveRecord via comments parameter",
-        "CVE-2012-2695 - ActiveRecord SQL injection via nested query parameters", 
+        "CVE-2012-2695 - ActiveRecord SQL injection via nested query parameters",
         "CVE-2012-6496 - SQL injection in ActiveRecord dynamic finders",
         "CVE-2012-2661 - GitHub compromised via Rails SQL injection",
         "CVE-2008-4094 - SQL injection via limit and offset parameters in Rails"
       ],
-      
       compliance_standards: [
         "OWASP Top 10 2021 - A03: Injection",
         "CWE-89: SQL Injection",
@@ -159,7 +154,6 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
         "NIST SP 800-53 - SI-10 Information Input Validation",
         "ISO 27001 - A.14.2.5 Secure system engineering principles"
       ],
-      
       remediation_steps: """
       1. **Use Parameterized Queries (Preferred)**:
          ```ruby
@@ -172,7 +166,7 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
          # For multiple parameters
          User.where("name = ? AND age > ?", params[:name], params[:age])
          ```
-      
+
       2. **Use Hash Conditions (Recommended)**:
          ```ruby
          # Hash syntax - Rails automatically parameterizes
@@ -182,14 +176,14 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
          # For IN clauses
          User.where(status: ['active', 'pending'])
          ```
-      
+
       3. **Use Named Placeholders**:
          ```ruby
          User.where("name = :name AND email = :email", 
                    name: params[:name], 
                    email: params[:email])
          ```
-      
+
       4. **For Dynamic Column Names (Use Allowlist)**:
          ```ruby
          # NEVER do this
@@ -201,7 +195,7 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
                       params[:sort] : 'created_at'
          User.order("\#{sort_column} DESC")   # SAFE
          ```
-      
+
       5. **Sanitize When Raw SQL is Necessary**:
          ```ruby
          # Use sanitize_sql_array
@@ -215,7 +209,6 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
          User.find_by_sql("SELECT * FROM users WHERE name = \#{name}")
          ```
       """,
-      
       prevention_tips: """
       - Never use string interpolation (#\\{\\}) in SQL queries
       - Always use parameterized queries or hash conditions
@@ -228,7 +221,6 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       - Train developers on secure coding practices
       - Regular security audits of database queries
       """,
-      
       detection_methods: """
       - Static analysis with Brakeman scanner
       - Manual code review of all ActiveRecord queries
@@ -239,23 +231,22 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       - Penetration testing
       - Automated security scanning in CI/CD
       """,
-      
       safe_alternatives: """
       # Safe query building patterns
-      
+
       # 1. Simple where conditions
       User.where(name: params[:name])
       User.where(active: true, role: 'admin')
-      
+
       # 2. Complex conditions with Arel
       users = User.arel_table
       User.where(users[:name].eq(params[:name])
                 .and(users[:age].gt(18)))
-      
+
       # 3. Scopes with parameterized queries
       scope :by_name, ->(name) { where(name: name) }
       scope :recent, -> { where('created_at > ?', 1.week.ago) }
-      
+
       # 4. Dynamic queries with sanitization
       def self.search(fields)
         conditions = fields.map do |field, value|
@@ -263,13 +254,13 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
         end.join(" AND ")
         where(conditions)
       end
-      
+
       # 5. Using ActiveRecord query interface
       User.joins(:posts)
           .where(posts: { published: true })
           .where('users.created_at > ?', 1.year.ago)
           .order(created_at: :desc)
-      
+
       # 6. Raw SQL with proper quoting
       connection.select_all(
         sanitize_sql_array([
@@ -280,25 +271,38 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.9,
-      
       context_rules: %{
         # Common sources of user input
         input_sources: [
-          "params", "request", "cookies", "session",
-          "query_params", "form_params", "user_input"
+          "params",
+          "request",
+          "cookies",
+          "session",
+          "query_params",
+          "form_params",
+          "user_input"
         ],
-        
+
         # ActiveRecord methods vulnerable to SQL injection
         activerecord_methods: [
-          "where", "joins", "group", "having", "order",
-          "select", "find_by_sql", "count_by_sql",
-          "exists?", "update_all", "delete_all", "pluck"
+          "where",
+          "joins",
+          "group",
+          "having",
+          "order",
+          "select",
+          "find_by_sql",
+          "count_by_sql",
+          "exists?",
+          "update_all",
+          "delete_all",
+          "pluck"
         ],
-        
+
         # Safe patterns to reduce false positives
         safe_patterns: [
           ~r/where\s*\(\s*["']\w+\s*=\s*\?["']\s*,/,
@@ -307,7 +311,6 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
           ~r/sanitize_sql/
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # Very high confidence for direct user input
@@ -326,7 +329,6 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
           raw_sql_method: +0.3
         }
       },
-      
       ast_rules: %{
         # Detection of string interpolation patterns
         interpolation_detection: %{
@@ -337,14 +339,14 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
           ],
           check_for_user_input: true
         },
-        
+
         # Method call analysis
         method_analysis: %{
           check_receiver: true,
           check_arguments: true,
           trace_variable_flow: true
         },
-        
+
         # SQL query construction patterns
         query_patterns: %{
           dangerous_operators: ["+", "<<", "concat"],
@@ -354,6 +356,4 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       }
     }
   end
-  
 end
-

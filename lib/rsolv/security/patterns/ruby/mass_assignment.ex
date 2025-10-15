@@ -1,26 +1,26 @@
 defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
   @moduledoc """
   Pattern for detecting mass assignment vulnerabilities in Ruby on Rails applications.
-  
+
   This pattern identifies when Active Record models are created or updated using
   unfiltered parameters from user input (typically params hash). Without strong
   parameters protection, attackers can modify any attribute of the model, including
   sensitive fields like admin flags, user roles, or foreign keys.
-  
+
   ## Vulnerability Details
-  
+
   Mass assignment occurs when Rails applications pass user-controlled data directly
   to model creation or update methods without filtering. This allows attackers to
   set any attribute on the model, potentially bypassing application logic and
   security controls.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable controller
   def create
     @user = User.create(params[:user])  # Dangerous!
   end
-  
+
   # Attack: POST with malicious parameters
   params[:user] = {
     name: "attacker",
@@ -30,10 +30,10 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
   }
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -51,7 +51,8 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
       ],
       cwe_id: "CWE-915",
       owasp_category: "A01:2021",
-      recommendation: "Use strong parameters in Rails: params.require(:model).permit(:field1, :field2)",
+      recommendation:
+        "Use strong parameters in Rails: params.require(:model).permit(:field1, :field2)",
       test_cases: %{
         vulnerable: [
           "User.create(params[:user])",
@@ -65,7 +66,7 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -74,19 +75,19 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
       that should be protected from user input. In Rails applications, this typically
       occurs when passing the params hash directly to Active Record methods without
       using strong parameters for filtering.
-      
+
       The vulnerability gained notoriety in 2012 when Egor Homakov exploited a mass
       assignment vulnerability to gain commit access to the Rails repository on GitHub.
       This incident led to significant changes in how Rails handles parameter filtering,
       resulting in the introduction of strong parameters in Rails 4.
-      
+
       Common attack scenarios include:
       - Privilege escalation by setting admin or role attributes
       - Account takeover by modifying user_id or account_id foreign keys
       - Bypassing business logic by setting state or status fields
       - Data manipulation by changing timestamps or counters
       - Access control bypass by modifying permission-related attributes
-      
+
       The vulnerability is particularly dangerous because:
       - It's often invisible in code reviews if reviewers aren't security-aware
       - Attackers can discover vulnerable attributes through various means
@@ -174,10 +175,10 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
       - Methods like create, update, new with params[] as argument
       - Both bang (!) and non-bang versions of methods
       - Modern methods like insert and upsert
-      
+
       The pattern uses multiple regex expressions to catch various forms
       of mass assignment across different Rails versions and coding styles.
-      
+
       Note: This pattern may have false positives if params[] is used
       in a safe context (e.g., params[:id] for finding records).
       """,
@@ -216,15 +217,15 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities and
   safe parameter usage patterns like permitted parameters or safe contexts.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.MassAssignment.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -239,7 +240,17 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
       ast_rules: %{
         node_type: "MethodCall",
         receiver_patterns: ["ActiveRecord", "Model", "ApplicationRecord"],
-        method_names: ["create", "update", "update_attributes", "assign_attributes", "new", "create!", "update!", "insert", "upsert"],
+        method_names: [
+          "create",
+          "update",
+          "update_attributes",
+          "assign_attributes",
+          "new",
+          "create!",
+          "update!",
+          "insert",
+          "upsert"
+        ],
         argument_analysis: %{
           check_params_usage: true,
           detect_params_hash: true,
@@ -256,7 +267,7 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
         check_strong_params: true,
         safe_methods: [
           "permit",
-          "require", 
+          "require",
           "fetch",
           "slice",
           "except"

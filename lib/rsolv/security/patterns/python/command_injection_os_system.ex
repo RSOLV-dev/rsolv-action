@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
   @moduledoc """
   Command Injection via Python os.system()
-  
+
   Detects dangerous patterns like:
     os.system("ls " + user_input)
     os.system(f"ping {host}")
@@ -13,35 +13,35 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
     import shlex; subprocess.run(shlex.split(f"ls {shlex.quote(user_input)}"))
     
   ## Vulnerability Details
-  
+
   The os.system() function executes commands through the system shell, making it
   inherently dangerous when used with user input. Any user-controlled data passed
   to os.system() can lead to arbitrary command execution.
-  
+
   The vulnerability occurs when:
   1. User input is concatenated or interpolated into command strings
   2. No input validation or sanitization is performed
   3. The resulting string is passed to os.system()
   4. The system shell interprets special characters and command separators
-  
+
   This pattern is particularly dangerous because:
   - os.system() always uses the shell, enabling command chaining with ;, &&, ||
   - Shell metacharacters like $, `, \, ! are interpreted
   - It's a common pattern in legacy Python code
   - Developers often underestimate the security implications
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the command injection via os.system pattern.
-  
+
   This pattern detects usage of os.system() with user-controlled input
   which can lead to arbitrary command execution.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.pattern()
       iex> pattern.id
       "python-command-injection-os-system"
@@ -109,7 +109,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -118,7 +118,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
       This function passes commands directly to the system shell, interpreting
       shell metacharacters and allowing command chaining. When user input is
       incorporated into os.system() calls, attackers can execute arbitrary commands.
-      
+
       The vulnerability is severe because:
       - os.system() always invokes the shell (sh on Unix, cmd.exe on Windows)
       - No escaping is performed on the command string
@@ -149,7 +149,8 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
           type: :research,
           id: "secureflag_os_injection",
           title: "OS Command Injection in Python",
-          url: "https://knowledge-base.secureflag.com/vulnerabilities/code_injection/os_command_injection_python.html"
+          url:
+            "https://knowledge-base.secureflag.com/vulnerabilities/code_injection/os_command_injection_python.html"
         }
       ],
       attack_vectors: [
@@ -171,7 +172,8 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
       cve_examples: [
         %{
           id: "CVE-2021-21315",
-          description: "Command injection in System Information Library for Node.js via os.system",
+          description:
+            "Command injection in System Information Library for Node.js via os.system",
           severity: "critical",
           cvss: 9.8,
           note: "Unvalidated input passed to os.system() allowing arbitrary command execution"
@@ -197,7 +199,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
       2. String concatenation with + operator
       3. String formatting with %, .format(), or f-strings
       4. Any dynamic string construction passed to os.system()
-      
+
       Key indicators:
       - The os.system function call
       - Dynamic string construction methods
@@ -229,15 +231,15 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual command injection vulnerabilities
   and legitimate uses of os.system() with hardcoded commands.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]

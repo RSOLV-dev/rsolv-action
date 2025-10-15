@@ -1,196 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced RSOLV Features</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
-    
-    body {
-      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f8f9fa;
-    }
-    .container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 30px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-    .logo {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .logo img {
-      max-width: 200px;
-    }
-    h1, h2, h3 {
-      color: #10b981;
-    }
-    .feature-card {
-      background-color: #f3f4f6;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      border-left: 4px solid #10b981;
-    }
-    .feature-card h3 {
-      margin-top: 0;
-    }
-    .code {
-      background-color: #2d3748;
-      color: #e2e8f0;
-      padding: 15px;
-      border-radius: 5px;
-      font-family: 'Courier New', monospace;
-      overflow-x: auto;
-      margin: 15px 0;
-      font-size: 14px;
-    }
-    .pro-tip {
-      background-color: #fff3cd;
-      border: 1px solid #ffeaa7;
-      padding: 15px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-    .security-highlight {
-      background-color: #d4edda;
-      border: 1px solid #c3e6cb;
-      padding: 15px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-    .cta {
-      background-color: #10b981;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 5px;
-      display: inline-block;
-      text-decoration: none;
-      font-weight: bold;
-      margin: 20px 0;
-    }
-    .footer {
-      margin-top: 40px;
-      font-size: 14px;
-      color: #6b7280;
-      border-top: 1px solid #e5e7eb;
-      padding-top: 20px;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="logo">
-      <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo">
-    </div>
-    
-    <h1>Unlock the Full Power of RSOLV</h1>
-    
-    <p>Hi {@first_name},</p>
-    
-    <p>You've been using RSOLV for a few days now. Here are some advanced features and techniques that can help you get even more value from automated security scanning and vulnerability remediation:</p>
-    
-    <div class="feature-card">
-      <h3>🎯 Understanding RSOLV's Proactive Scanning</h3>
-      <p>RSOLV continuously scans your repositories for security vulnerabilities and automatically creates issues with detailed remediation plans:</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced RSOLV Features</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
+
+      body {
+        font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+      .logo {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo img {
+        max-width: 200px;
+      }
+      h1, h2, h3 {
+        color: #10b981;
+      }
+      .feature-card {
+        background-color: #f3f4f6;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #10b981;
+      }
+      .feature-card h3 {
+        margin-top: 0;
+      }
+      .code {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: 'Courier New', monospace;
+        overflow-x: auto;
+        margin: 15px 0;
+        font-size: 14px;
+      }
+      .pro-tip {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .security-highlight {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .cta {
+        background-color: #10b981;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 5px;
+        display: inline-block;
+        text-decoration: none;
+        font-weight: bold;
+        margin: 20px 0;
+      }
+      .footer {
+        margin-top: 40px;
+        font-size: 14px;
+        color: #6b7280;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 20px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">
+        <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo" />
+      </div>
+
+      <h1>Unlock the Full Power of RSOLV</h1>
+
+      <p>Hi {@first_name},</p>
+
+      <p>
+        You've been using RSOLV for a few days now. Here are some advanced features and techniques that can help you get even more value from automated security scanning and vulnerability remediation:
+      </p>
+
+      <div class="feature-card">
+        <h3>🎯 Understanding RSOLV's Proactive Scanning</h3>
+        <p>
+          RSOLV continuously scans your repositories for security vulnerabilities and automatically creates issues with detailed remediation plans:
+        </p>
+        <ul>
+          <li>
+            <strong>Automated detection:</strong>
+            Scans all files for 180+ vulnerability patterns (and growing)
+          </li>
+          <li><strong>Smart grouping:</strong> Groups similar issues for efficient review</li>
+          <li>
+            <strong>Detailed reports:</strong> Shows exact file locations and vulnerable code
+          </li>
+          <li><strong>Fix generation:</strong> Creates secure PRs that address root causes</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3>🔒 Comprehensive Security Coverage</h3>
+        <p>RSOLV proactively detects and fixes these vulnerability types across your codebase:</p>
+        <ul>
+          <li>SQL/NoSQL injection vulnerabilities</li>
+          <li>Cross-site scripting (XSS) risks</li>
+          <li>Authentication/authorization flaws</li>
+          <li>Insecure cryptographic implementations</li>
+          <li>Hardcoded secrets and API keys</li>
+          <li>Path traversal and open redirects</li>
+          <li>Insecure dependencies and configurations</li>
+        </ul>
+        <p>Each PR includes a detailed security impact assessment and verification tests.</p>
+      </div>
+
+      <div class="security-highlight">
+        <strong>🛡️ Security Example:</strong>
+        When RSOLV detects unsafe user input handling, it automatically generates fixes with proper sanitization, parameterized queries, and input validation to prevent injection attacks.
+      </div>
+
+      <div class="feature-card">
+        <h3>🚀 Efficient Issue Management</h3>
+        <p>RSOLV's proactive scanning creates organized, actionable issues:</p>
+        <ul>
+          <li><strong>Smart grouping:</strong> Similar vulnerabilities are grouped together</li>
+          <li>
+            <strong>Priority labeling:</strong> Issues labeled by severity (HIGH, MEDIUM, LOW)
+          </li>
+          <li>
+            <strong>Automated PR generation:</strong>
+            Each issue can trigger a fix PR with the "rsolv:automate" label
+          </li>
+          <li>
+            <strong>Batch review:</strong> Review and merge multiple security fixes efficiently
+          </li>
+        </ul>
+        <p>You maintain full control - review each PR before merging.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3>📊 Understanding RSOLV's PR Structure</h3>
+        <p>Every RSOLV PR includes:</p>
+        <ul>
+          <li><strong>Summary:</strong> What was fixed and why</li>
+          <li><strong>Changes:</strong> File-by-file breakdown</li>
+          <li><strong>Security Analysis:</strong> Any vulnerabilities addressed</li>
+          <li><strong>Testing:</strong> Suggested test cases</li>
+          <li><strong>Educational Notes:</strong> Learn about the fix</li>
+        </ul>
+      </div>
+
+      <div class="pro-tip">
+        <strong>💡 Pro Tip:</strong>
+        Use descriptive branch protection rules! RSOLV respects your branch protection settings, so PRs will go through your normal review process.
+      </div>
+
+      <div class="feature-card">
+        <h3>🎨 Supported Languages & Frameworks</h3>
+        <p>RSOLV provides comprehensive security coverage for:</p>
+        <ul>
+          <li><strong>JavaScript/TypeScript:</strong> Node.js, React, Vue, Express</li>
+          <li><strong>Python:</strong> Django, Flask, FastAPI</li>
+          <li><strong>Ruby:</strong> Rails, Sinatra</li>
+          <li><strong>Java:</strong> Spring, Spring Boot</li>
+          <li><strong>Go:</strong> Standard library, Gin, Echo</li>
+          <li><strong>PHP:</strong> Laravel, Symfony (coming soon)</li>
+        </ul>
+        <p>Each language has specialized patterns for framework-specific vulnerabilities.</p>
+      </div>
+
+      <h2>Coming Soon</h2>
+      <p>We're constantly improving RSOLV. Here's what's on our roadmap:</p>
       <ul>
-        <li><strong>Automated detection:</strong> Scans all files for 180+ vulnerability patterns (and growing)</li>
-        <li><strong>Smart grouping:</strong> Groups similar issues for efficient review</li>
-        <li><strong>Detailed reports:</strong> Shows exact file locations and vulnerable code</li>
-        <li><strong>Fix generation:</strong> Creates secure PRs that address root causes</li>
+        <li>Support for more languages (Go, Rust, PHP)</li>
+        <li>Custom fix preferences per repository</li>
+        <li>Team collaboration features</li>
+        <li>Integration with more platforms</li>
       </ul>
+
+      <p>Have a feature request? Just reply to this email - we love hearing from our users!</p>
+
+      <a href="https://rsolv.dev/docs/advanced" class="cta">View Advanced Documentation</a>
+
+      <p>Keep automating those fixes!</p>
+
+      <p>Best regards,<br />The RSOLV Team</p>
+
+      <div class="footer">
+        <p>
+          This email was sent to {@email}. If you no longer wish to receive these emails, you can <a href="{@unsubscribe_url}">unsubscribe</a>.
+        </p>
+        <p>
+          &copy; 2025 RSOLV - Proactive Security Scanning & Automated Remediation. Pay Only for Fixes You Deploy.
+        </p>
+      </div>
     </div>
-    
-    <div class="feature-card">
-      <h3>🔒 Comprehensive Security Coverage</h3>
-      <p>RSOLV proactively detects and fixes these vulnerability types across your codebase:</p>
-      <ul>
-        <li>SQL/NoSQL injection vulnerabilities</li>
-        <li>Cross-site scripting (XSS) risks</li>
-        <li>Authentication/authorization flaws</li>
-        <li>Insecure cryptographic implementations</li>
-        <li>Hardcoded secrets and API keys</li>
-        <li>Path traversal and open redirects</li>
-        <li>Insecure dependencies and configurations</li>
-      </ul>
-      <p>Each PR includes a detailed security impact assessment and verification tests.</p>
-    </div>
-    
-    <div class="security-highlight">
-      <strong>🛡️ Security Example:</strong> When RSOLV detects unsafe user input handling, it automatically generates fixes with proper sanitization, parameterized queries, and input validation to prevent injection attacks.
-    </div>
-    
-    <div class="feature-card">
-      <h3>🚀 Efficient Issue Management</h3>
-      <p>RSOLV's proactive scanning creates organized, actionable issues:</p>
-      <ul>
-        <li><strong>Smart grouping:</strong> Similar vulnerabilities are grouped together</li>
-        <li><strong>Priority labeling:</strong> Issues labeled by severity (HIGH, MEDIUM, LOW)</li>
-        <li><strong>Automated PR generation:</strong> Each issue can trigger a fix PR with the "rsolv:automate" label</li>
-        <li><strong>Batch review:</strong> Review and merge multiple security fixes efficiently</li>
-      </ul>
-      <p>You maintain full control - review each PR before merging.</p>
-    </div>
-    
-    <div class="feature-card">
-      <h3>📊 Understanding RSOLV's PR Structure</h3>
-      <p>Every RSOLV PR includes:</p>
-      <ul>
-        <li><strong>Summary:</strong> What was fixed and why</li>
-        <li><strong>Changes:</strong> File-by-file breakdown</li>
-        <li><strong>Security Analysis:</strong> Any vulnerabilities addressed</li>
-        <li><strong>Testing:</strong> Suggested test cases</li>
-        <li><strong>Educational Notes:</strong> Learn about the fix</li>
-      </ul>
-    </div>
-    
-    <div class="pro-tip">
-      <strong>💡 Pro Tip:</strong> Use descriptive branch protection rules! RSOLV respects your branch protection settings, so PRs will go through your normal review process.
-    </div>
-    
-    <div class="feature-card">
-      <h3>🎨 Supported Languages & Frameworks</h3>
-      <p>RSOLV provides comprehensive security coverage for:</p>
-      <ul>
-        <li><strong>JavaScript/TypeScript:</strong> Node.js, React, Vue, Express</li>
-        <li><strong>Python:</strong> Django, Flask, FastAPI</li>
-        <li><strong>Ruby:</strong> Rails, Sinatra</li>
-        <li><strong>Java:</strong> Spring, Spring Boot</li>
-        <li><strong>Go:</strong> Standard library, Gin, Echo</li>
-        <li><strong>PHP:</strong> Laravel, Symfony (coming soon)</li>
-      </ul>
-      <p>Each language has specialized patterns for framework-specific vulnerabilities.</p>
-    </div>
-    
-    <h2>Coming Soon</h2>
-    <p>We're constantly improving RSOLV. Here's what's on our roadmap:</p>
-    <ul>
-      <li>Support for more languages (Go, Rust, PHP)</li>
-      <li>Custom fix preferences per repository</li>
-      <li>Team collaboration features</li>
-      <li>Integration with more platforms</li>
-    </ul>
-    
-    <p>Have a feature request? Just reply to this email - we love hearing from our users!</p>
-    
-    <a href="https://rsolv.dev/docs/advanced" class="cta">View Advanced Documentation</a>
-    
-    <p>Keep automating those fixes!</p>
-    
-    <p>Best regards,<br>The RSOLV Team</p>
-    
-    <div class="footer">
-      <p>This email was sent to {@email}. If you no longer wish to receive these emails, you can <a href="{@unsubscribe_url}">unsubscribe</a>.</p>
-      <p>&copy; 2025 RSOLV - Proactive Security Scanning & Automated Remediation. Pay Only for Fixes You Deploy.</p>
-    </div>
-  </div>
-</body>
+  </body>
 </html>

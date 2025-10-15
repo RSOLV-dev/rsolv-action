@@ -444,7 +444,8 @@ defmodule Rsolv.AST.TestIntegratorAdditionalTest do
 
   describe "whitespace and formatting edge cases" do
     test "handles file with Windows line endings (CRLF)" do
-      test_code = "describe('Test', () => {\r\n  it('works', () => {\r\n    expect(true).toBe(true);\r\n  });\r\n});"
+      test_code =
+        "describe('Test', () => {\r\n  it('works', () => {\r\n    expect(true).toBe(true);\r\n  });\r\n});"
 
       new_test = """
         it('new test', () => {
@@ -479,7 +480,8 @@ defmodule Rsolv.AST.TestIntegratorAdditionalTest do
     end
 
     test "handles file with no trailing newline" do
-      test_code = "describe('Test', () => {\n  it('works', () => {\n    expect(true).toBe(true);\n  });\n})"
+      test_code =
+        "describe('Test', () => {\n  it('works', () => {\n    expect(true).toBe(true);\n  });\n})"
 
       new_test = """
         it('new test', () => {

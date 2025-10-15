@@ -1,20 +1,20 @@
 defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
   @moduledoc """
   Insecure Random Number Generation pattern for detecting Math.random() used for security.
-  
+
   Math.random() is not cryptographically secure and produces predictable values that
   can be guessed or brute-forced by attackers. When used for security-sensitive purposes
   like generating tokens, session IDs, or cryptographic keys, it creates vulnerabilities
   that can lead to authentication bypass, session hijacking, or cryptographic failures.
-  
+
   ## Vulnerability Details
-  
+
   Math.random() uses a pseudo-random number generator (PRNG) with known weaknesses:
   - Predictable seed values based on system time
   - Limited entropy (typically 32-64 bits)
   - Observable patterns in output sequences
   - Vulnerable to state recovery attacks
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable code - predictable token generation
@@ -23,20 +23,20 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
   // 1. Observing multiple tokens to determine PRNG state
   // 2. Brute-forcing the limited keyspace
   // 3. Exploiting timing correlations
-  
+
   // Safe alternative
   const resetToken = crypto.randomBytes(32).toString('hex');
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the pattern definition for insecure random number generation.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureRandom.pattern()
       iex> pattern.id
       "js-insecure-random"
@@ -64,10 +64,12 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
       severity: :medium,
       languages: ["javascript", "typescript"],
       # Matches Math.random() when used with security-related variable names
-      regex: ~r/(?:token|key|password|secret|salt|nonce|session|auth)[^;]*=.*Math\.random\s*\(\s*\)|Math\.random\s*\(\s*\)[^;]*(?:token|key|password|secret|salt|nonce|session|auth)/i,
+      regex:
+        ~r/(?:token|key|password|secret|salt|nonce|session|auth)[^;]*=.*Math\.random\s*\(\s*\)|Math\.random\s*\(\s*\)[^;]*(?:token|key|password|secret|salt|nonce|session|auth)/i,
       cwe_id: "CWE-330",
       owasp_category: "A02:2021",
-      recommendation: "Use crypto.randomBytes() or crypto.getRandomValues() for security purposes.",
+      recommendation:
+        "Use crypto.randomBytes() or crypto.getRandomValues() for security purposes.",
       test_cases: %{
         vulnerable: [
           ~S|const token = Math.random().toString()|,
@@ -82,10 +84,10 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
       }
     }
   end
-  
+
   @doc """
   Returns comprehensive vulnerability metadata for insecure random number generation.
-  
+
   Includes information about cryptographic weaknesses, attack techniques, and
   proper secure random number generation methods.
   """
@@ -96,21 +98,20 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
       programming tasks, not cryptographic security. It uses algorithms like xorshift128+
       or MersenneTwister that are fast but predictable. When used for security-sensitive
       operations, this predictability allows attackers to guess or determine generated values.
-      
+
       The vulnerability occurs when developers use Math.random() for:
       1. Session tokens or authentication tokens
       2. Password reset tokens
       3. API keys or secret identifiers
       4. Cryptographic nonces or initialization vectors
       5. Any value where unpredictability is a security requirement
-      
+
       Attackers can exploit this by:
       - Predicting future values after observing some outputs
       - Recovering the internal state of the PRNG
       - Brute-forcing the limited entropy space
       - Exploiting time-based correlations in seed values
       """,
-      
       references: [
         %{
           type: :cwe,
@@ -128,7 +129,8 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
           type: :owasp,
           id: "cryptographic_storage",
           title: "OWASP Cryptographic Storage Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -143,7 +145,6 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
           url: "https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues"
         }
       ],
-      
       attack_vectors: [
         "PRNG State Recovery: Observe outputs to determine internal state",
         "Seed Prediction: Exploit timestamp-based seeding on server start",
@@ -153,7 +154,6 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
         "VM Rollback: Virtual machine snapshots can repeat 'random' sequences",
         "Statistical Analysis: Detect patterns in large sets of tokens"
       ],
-      
       real_world_impact: [
         "Authentication bypass through token prediction",
         "Session hijacking via predictable session IDs",
@@ -163,7 +163,6 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
         "Financial loss from compromised payment tokens",
         "Privacy breaches through predictable anonymization"
       ],
-      
       cve_examples: [
         %{
           id: "CVE-2015-0293",
@@ -194,17 +193,15 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
           note: "Cryptocurrency wallets generated with predictable keys"
         }
       ],
-      
       detection_notes: """
       This pattern detects Math.random() usage in security contexts by looking for:
       1. Assignment to variables with security-related names
       2. Math.random() output used near security keywords
       3. Common patterns like toString(36) often used for tokens
-      
+
       The pattern may miss cases where Math.random() is used indirectly or
       where security-sensitive variable names don't match common patterns.
       """,
-      
       safe_alternatives: [
         "Node.js: crypto.randomBytes(size) for raw bytes",
         "Node.js: crypto.randomUUID() for UUID v4 generation",
@@ -214,7 +211,6 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
         "Web Crypto API: crypto.subtle.generateKey() for keys",
         "Consider hardware RNG for high-security applications"
       ],
-      
       additional_context: %{
         common_mistakes: [
           "Using Math.random() + Date.now() thinking it adds entropy",
@@ -223,7 +219,6 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
           "Assuming server-side Math.random() is secure",
           "Using predictable transformations like base36 conversion"
         ],
-        
         secure_patterns: [
           "Always use crypto module for security purposes",
           "Generate sufficient entropy (minimum 128 bits)",
@@ -231,7 +226,6 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
           "Don't log or expose generated secrets",
           "Regenerate tokens on privilege changes"
         ],
-        
         language_specific: %{
           nodejs: [
             "require('crypto').randomBytes(32) for tokens",
@@ -252,34 +246,36 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Applies to JavaScript/TypeScript files that might use Math.random().
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs|cjs)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs|cjs)$/i) ->
+        true
+
       # HTML files with script tags
       String.match?(file_path, ~r/\.html?$/i) && content != nil ->
         String.contains?(content, "<script")
-        
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between security-sensitive uses of Math.random()
   and legitimate non-security uses like animations, games, or UI effects.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureRandom.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -314,22 +310,43 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/demo/, ~r/example/],
-        exclude_if_game_logic: true,      # Games legitimately use Math.random
-        exclude_if_animation: true,        # UI animations are fine
-        exclude_if_array_shuffle: true,   # Array randomization usually OK
-        security_indicators: ["token", "key", "secret", "password", "auth", "session", "nonce", "salt", "iv"]
+        # Games legitimately use Math.random
+        exclude_if_game_logic: true,
+        # UI animations are fine
+        exclude_if_animation: true,
+        # Array randomization usually OK
+        exclude_if_array_shuffle: true,
+        security_indicators: [
+          "token",
+          "key",
+          "secret",
+          "password",
+          "auth",
+          "session",
+          "nonce",
+          "salt",
+          "iv"
+        ]
       },
       confidence_rules: %{
-        base: 0.3,  # Low base - Math.random is very common
+        # Low base - Math.random is very common
+        base: 0.3,
         adjustments: %{
           "assigned_to_security_var" => 0.5,
-          "used_with_toString" => 0.3,      # Common token pattern
-          "used_with_substring" => 0.2,     # Often used for ID generation
-          "multiplied_by_number" => -0.2,   # Often for ranges/indices
-          "in_math_expression" => -0.4,     # Likely not security
-          "in_ui_context" => -0.6,          # DOM manipulation, animations
-          "in_test_file" => -0.8,           # Tests might use it legitimately
-          "has_crypto_import" => 0.3        # File deals with security
+          # Common token pattern
+          "used_with_toString" => 0.3,
+          # Often used for ID generation
+          "used_with_substring" => 0.2,
+          # Often for ranges/indices
+          "multiplied_by_number" => -0.2,
+          # Likely not security
+          "in_math_expression" => -0.4,
+          # DOM manipulation, animations
+          "in_ui_context" => -0.6,
+          # Tests might use it legitimately
+          "in_test_file" => -0.8,
+          # File deals with security
+          "has_crypto_import" => 0.3
         }
       },
       min_confidence: 0.7

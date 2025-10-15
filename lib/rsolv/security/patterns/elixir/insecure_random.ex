@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Elixir.InsecureRandom do
   @moduledoc """
   Detects insecure random number generation in Elixir.
-  
+
   This pattern identifies the use of predictable pseudo-random number generators (PRNGs)
   like :rand.uniform and Enum.random for security-sensitive operations where cryptographically
   secure random numbers are required.
-  
+
   ## Vulnerability Details
-  
+
   Standard random functions in Elixir/Erlang are designed for speed and distribution, not
   security. They use predictable algorithms that can be reverse-engineered or predicted by
   attackers, making them unsuitable for:
@@ -16,29 +16,29 @@ defmodule Rsolv.Security.Patterns.Elixir.InsecureRandom do
   - API keys
   - Cryptographic nonces
   - Any security-sensitive random values
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   # Predictable token generation
   reset_token = :rand.uniform(999999)
   ```
-  
+
   An attacker who knows the seed or can observe enough outputs can predict future tokens.
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   # Cryptographically secure random
   reset_token = :crypto.strong_rand_bytes(32) |> Base.encode64()
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -64,7 +64,8 @@ defmodule Rsolv.Security.Patterns.Elixir.InsecureRandom do
       ],
       cwe_id: "CWE-338",
       owasp_category: "A02:2021",
-      recommendation: "Use :crypto.strong_rand_bytes/1 for cryptographically secure random values",
+      recommendation:
+        "Use :crypto.strong_rand_bytes/1 for cryptographically secure random values",
       test_cases: %{
         vulnerable: [
           ~S|token = :rand.uniform(1000000)|,
@@ -83,7 +84,7 @@ defmodule Rsolv.Security.Patterns.Elixir.InsecureRandom do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -113,7 +114,8 @@ defmodule Rsolv.Security.Patterns.Elixir.InsecureRandom do
           type: :research,
           id: "erlang_random_security",
           title: "The Adventures of Generating Random Numbers in Erlang and Elixir",
-          url: "https://hashrocket.com/blog/posts/the-adventures-of-generating-random-numbers-in-erlang-and-elixir"
+          url:
+            "https://hashrocket.com/blog/posts/the-adventures-of-generating-random-numbers-in-erlang-and-elixir"
         },
         %{
           type: :research,
@@ -142,7 +144,8 @@ defmodule Rsolv.Security.Patterns.Elixir.InsecureRandom do
           description: "Predictable UUID generation due to insecure randomness",
           severity: "high",
           cvss: 7.5,
-          note: "Demonstrates how weak randomness in identifier generation leads to security bypass"
+          note:
+            "Demonstrates how weak randomness in identifier generation leads to security bypass"
         },
         %{
           id: "CVE-2008-0166",
@@ -182,7 +185,7 @@ defmodule Rsolv.Security.Patterns.Elixir.InsecureRandom do
       }
     }
   end
-  
+
   @impl true
   def ast_enhancement do
     %{
@@ -191,18 +194,44 @@ defmodule Rsolv.Security.Patterns.Elixir.InsecureRandom do
         random_analysis: %{
           check_random_usage: true,
           insecure_functions: [":rand.uniform", "Enum.random", ":random.uniform"],
-          secure_functions: [":crypto.strong_rand_bytes", "System.unique_integer", "Ecto.UUID.generate"],
+          secure_functions: [
+            ":crypto.strong_rand_bytes",
+            "System.unique_integer",
+            "Ecto.UUID.generate"
+          ],
           check_variable_context: true
         },
         context_analysis: %{
           check_assignment_target: true,
-          security_indicators: ["token", "key", "password", "secret", "nonce", "salt", "session", "api", "auth", "csrf"],
+          security_indicators: [
+            "token",
+            "key",
+            "password",
+            "secret",
+            "nonce",
+            "salt",
+            "session",
+            "api",
+            "auth",
+            "csrf"
+          ],
           check_function_name: true
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/_test\.exs$/],
-        security_contexts: ["token", "password", "secret", "key", "session", "auth", "api", "nonce", "salt", "csrf"],
+        security_contexts: [
+          "token",
+          "password",
+          "secret",
+          "key",
+          "session",
+          "auth",
+          "api",
+          "nonce",
+          "salt",
+          "csrf"
+        ],
         exclude_if_game_context: true,
         game_indicators: ["dice", "game", "random_", "shuffle", "sample"]
       },

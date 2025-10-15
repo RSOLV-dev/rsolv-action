@@ -1,18 +1,18 @@
 defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
   @moduledoc """
   Detects Path Traversal vulnerabilities in Ruby applications.
-  
+
   Path traversal vulnerabilities occur when user-controlled input is used to construct
   file paths without proper validation. Attackers can use special characters like "../"
   to navigate outside intended directories and access sensitive files on the server.
-  
+
   ## Vulnerability Details
-  
+
   Ruby applications are vulnerable to path traversal when they use user input directly
   in file operations like File.read, File.open, send_file, or render file: without
   proper sanitization. Attackers can read configuration files, source code, or even
   system files like /etc/passwd.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable - Direct use of params in file operations
@@ -20,13 +20,13 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
     file_path = params[:file]
     send_file file_path
   end
-  
+
   # Vulnerable - String interpolation with user input
   def read_document
     content = File.read("uploads/\#{params[:document]}")
     render plain: content
   end
-  
+
   # Secure - Path validation and restriction
   def download_safe
     filename = File.basename(params[:file])
@@ -40,26 +40,26 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
     end
   end
   ```
-  
+
   ### Real-World Impact
   - Reading sensitive configuration files (database.yml, secrets.yml)
   - Accessing source code and discovering vulnerabilities
   - Reading system files containing passwords or keys
   - Information disclosure leading to further attacks
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the Path Traversal pattern for Ruby applications.
-  
+
   Detects file operations that use user-controlled input without proper
   validation, which could allow attackers to access files outside the
   intended directory.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.PathTraversal.pattern()
       iex> pattern.id
       "ruby-path-traversal"
@@ -83,34 +83,36 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
     %Pattern{
       id: "ruby-path-traversal",
       name: "Path Traversal",
-      description: "Detects file access operations with user-controlled paths that could allow directory traversal attacks",
+      description:
+        "Detects file access operations with user-controlled paths that could allow directory traversal attacks",
       type: :path_traversal,
       severity: :high,
       languages: ["ruby"],
       regex: [
         # File.read/open with direct params
         ~r/File\.(?:read|open|readlines|binread|write|exist\?)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+)/,
-        
+
         # String interpolation in file paths
         ~r/File\.(?:read|open|readlines|binread|write)\s*\(\s*["'].*?#\{.*?(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+).*?\}/,
-        
+
         # send_file with user input
         ~r/send_file\s+(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+)/,
-        
+
         # File.join with user input
         ~r/File\.(?:read|open|write)\s*\(\s*File\.join\s*\([^)]*(?:params|request\.(?:params|parameters)|user_[\w_]*)/,
         ~r/send_file\s+File\.join\s*\([^)]*(?:params|request\.(?:params|parameters)|user_[\w_]*)/,
-        
+
         # IO operations with user input
         ~r/IO\.(?:read|readlines|binread|write)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+)/,
-        
+
         # Rails render file: with user input
         ~r/render\s+file:\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+)/,
         ~r/render\s+file:\s*["'].*?#\{.*?(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+).*?\}/
       ],
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
-      recommendation: "Validate file paths using File.basename, restrict access to safe directories, and verify resolved paths stay within allowed boundaries",
+      recommendation:
+        "Validate file paths using File.basename, restrict access to safe directories, and verify resolved paths stay within allowed boundaries",
       test_cases: %{
         vulnerable: [
           "File.read(params[:file])",
@@ -155,7 +157,8 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
           type: :research,
           id: "rails_path_traversal",
           title: "Rails Path Traversal Guide: Examples and Prevention - StackHawk",
-          url: "https://www.stackhawk.com/blog/rails-path-traversal-guide-examples-and-prevention/"
+          url:
+            "https://www.stackhawk.com/blog/rails-path-traversal-guide-examples-and-prevention/"
         },
         %{
           type: :research,
@@ -183,7 +186,8 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
       cve_examples: [
         %{
           id: "CVE-2019-5418",
-          description: "Rails Action View directory traversal via specially crafted Accept headers",
+          description:
+            "Rails Action View directory traversal via specially crafted Accept headers",
           severity: "high",
           cvss: 7.5,
           note: "Allowed reading arbitrary files by manipulating render file: paths"
@@ -207,7 +211,8 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
           description: "Path traversal vulnerability in Rack::Static middleware",
           severity: "high",
           cvss: 7.5,
-          note: "Allowed unauthenticated access to arbitrary files through improper path sanitization"
+          note:
+            "Allowed unauthenticated access to arbitrary files through improper path sanitization"
         }
       ],
       detection_notes: """
@@ -217,7 +222,7 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
       - send_file calls with user-controlled paths
       - File.join usage that includes user input
       - Rails render file: with dynamic paths
-      
+
       The pattern focuses on methods that access the filesystem and could be exploited
       for unauthorized file access. AST enhancement provides additional validation checks.
       """,
@@ -243,7 +248,8 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
           "Implement strict allowlists for dynamic file access"
         ],
         framework_notes: %{
-          rails: "Rails provides some protection but render file: and send_file need careful handling",
+          rails:
+            "Rails provides some protection but render file: and send_file need careful handling",
           sinatra: "No built-in protection - all file operations need manual validation",
           general: "Ruby's File methods don't prevent traversal - validation is always required"
         }
@@ -288,7 +294,15 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
           path_methods: ["File.join", "Rails.root.join", "Pathname.new"]
         },
         user_input_analysis: %{
-          input_sources: ["params", "request", "cookies", "session", "user_input", "@user", "@current_user"],
+          input_sources: [
+            "params",
+            "request",
+            "cookies",
+            "session",
+            "user_input",
+            "@user",
+            "@current_user"
+          ],
           check_path_arguments: true,
           check_string_interpolation: true,
           track_variable_assignments: true,

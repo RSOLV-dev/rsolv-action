@@ -22,9 +22,11 @@ defmodule Rsolv.Utils.MathHelpers do
   def safe_percentage(_numerator, 0), do: 0.0
   def safe_percentage(_numerator, +0.0), do: 0.0
   def safe_percentage(_numerator, -0.0), do: 0.0
-  def safe_percentage(numerator, denominator) when is_number(numerator) and is_number(denominator) do
+
+  def safe_percentage(numerator, denominator)
+      when is_number(numerator) and is_number(denominator) do
     # Convert to float and multiply by 100 for percentage
-    (numerator * 100.0) / denominator
+    numerator * 100.0 / denominator
   end
 
   @doc """
@@ -44,7 +46,8 @@ defmodule Rsolv.Utils.MathHelpers do
 
   """
   @spec safe_round(number(), non_neg_integer()) :: float()
-  def safe_round(number, precision \\ 2) when is_number(number) and is_integer(precision) and precision >= 0 do
+  def safe_round(number, precision \\ 2)
+      when is_number(number) and is_integer(precision) and precision >= 0 do
     # Ensure number is a float before calling Float.round
     Float.round(number / 1.0, precision)
   end

@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
   @moduledoc """
   Command Injection via child_process.exec in JavaScript/Node.js
-  
+
   Detects dangerous patterns like:
     exec("ls " + userInput)
     execSync(`git clone ${repoUrl}`)
@@ -15,14 +15,14 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
   The exec() function spawns a shell and executes commands within that shell,
   passing any user input directly to the shell interpreter. This makes it
   extremely vulnerable to command injection attacks.
-  
+
   ## Vulnerability Details
-  
+
   The child_process.exec() method in Node.js spawns a shell (sh on Unix, cmd.exe
   on Windows) and executes the command within that shell. Any shell metacharacters
   in the input are interpreted by the shell, allowing attackers to chain commands,
   redirect output, or execute arbitrary programs.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable code
@@ -33,13 +33,13 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
   // Executes: cat file.txt; rm -rf /
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Structured vulnerability metadata for command injection via exec.
-  
+
   This metadata documents the specific risks of using child_process.exec()
   with user input, including shell metacharacter injection and OS differences.
   """
@@ -54,7 +54,6 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
       execution with the privileges of the Node.js process. This is one of the most 
       severe vulnerabilities as it can lead to complete system compromise.
       """,
-      
       references: [
         %{
           type: :cwe,
@@ -71,7 +70,8 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
         %{
           type: :nodejs,
           id: "child_process_security",
-          url: "https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback",
+          url:
+            "https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback",
           title: "Node.js Documentation - Security Considerations"
         },
         %{
@@ -83,11 +83,11 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
         %{
           type: :npm_advisory,
           id: "eslint_security",
-          url: "https://github.com/eslint-community/eslint-plugin-security/blob/main/docs/avoid-command-injection-node.md",
+          url:
+            "https://github.com/eslint-community/eslint-plugin-security/blob/main/docs/avoid-command-injection-node.md",
           title: "ESLint Security Plugin - Avoid Command Injection"
         }
       ],
-      
       attack_vectors: [
         "Command chaining: userInput = 'file.txt; rm -rf /'",
         "Command substitution: userInput = '$(whoami)'",
@@ -98,7 +98,6 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
         "Environment variable: userInput = '$PATH'",
         "Newline injection: userInput = 'file.txt\\nrm -rf /'"
       ],
-      
       real_world_impact: [
         "Remote code execution with application privileges",
         "Data exfiltration via command output or network tools",
@@ -109,7 +108,6 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
         "Cryptocurrency mining through injected scripts",
         "Ransomware deployment in production systems"
       ],
-      
       cve_examples: [
         %{
           id: "CVE-2024-21488",
@@ -140,7 +138,6 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
           note: "Unsanitized input passed to child_process.exec for git operations"
         }
       ],
-      
       detection_notes: """
       This pattern detects calls to exec() or execSync() where user input appears
       to be concatenated or interpolated into the command string. Key indicators:
@@ -148,11 +145,10 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
       2. String concatenation (+) or template literal interpolation (${})
       3. Common user input patterns (req.params, req.body, etc.)
       4. Variable names suggesting external input
-      
+
       The pattern must distinguish between safe static commands and those
       constructed with user input.
       """,
-      
       safe_alternatives: [
         "Use execFile() with arguments array: execFile('ls', [userInput])",
         "Use spawn() without shell option: spawn('git', ['clone', url])",
@@ -162,7 +158,6 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
         "Run commands in sandboxed environments or containers",
         "Use execFileSync() for synchronous needs instead of execSync()"
       ],
-      
       additional_context: %{
         shell_differences: [
           "Unix/Linux: Uses /bin/sh, interprets POSIX shell metacharacters",
@@ -170,7 +165,6 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
           "PowerShell: If configured, introduces additional injection vectors",
           "Docker containers: May have limited shells but still vulnerable"
         ],
-        
         common_mistakes: [
           "Believing that escaping quotes is sufficient protection",
           "Assuming certain characters are 'safe' (they're not)",
@@ -178,7 +172,6 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
           "Not considering newline characters as command separators",
           "Trusting data from 'internal' sources without validation"
         ],
-        
         secure_patterns: [
           "Always use execFile() or spawn() when possible",
           "If shell features needed, use spawn() with explicit shell array",
@@ -189,12 +182,12 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
       }
     }
   end
-  
+
   @doc """
   Returns the pattern definition for command injection via exec.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.CommandInjectionExec.pattern()
       iex> pattern.id
       "js-command-injection-exec"
@@ -213,7 +206,8 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
       regex: ~r/(?:exec|execSync)\s*\([^)]*(?:\+|\$\{)[^)]*[a-zA-Z]/,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
-      recommendation: "Use execFile with argument array instead of exec. Validate and sanitize all user input.",
+      recommendation:
+        "Use execFile with argument array instead of exec. Validate and sanitize all user input.",
       test_cases: %{
         vulnerable: [
           ~S|exec("ls " + userInput)|,
@@ -231,37 +225,39 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Applies to JavaScript/TypeScript files that might use child_process.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx)$/i) ->
+        true
+
       # HTML files with script tags
       String.match?(file_path, ~r/\.html?$/i) && content != nil ->
         String.contains?(content, "<script")
-        
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual command injection vulnerabilities and:
   - Static commands with no user input
   - Test/script files that might use exec for automation
   - Safe usage patterns like execFile or spawn with arrays
   - Commands that are properly validated or use safe patterns
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionExec.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -297,8 +293,10 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/node_modules/, ~r/scripts/],
-        exclude_if_static_command: true,  # Skip if no dynamic content
-        require_user_input_source: true   # Must trace back to user input
+        # Skip if no dynamic content
+        exclude_if_static_command: true,
+        # Must trace back to user input
+        require_user_input_source: true
       },
       confidence_rules: %{
         base: 0.4,
@@ -307,7 +305,8 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
           "uses_string_concatenation" => 0.2,
           "no_input_validation" => 0.2,
           "is_static_command" => -0.9,
-          "uses_array_args" => -0.7  # Safe pattern
+          # Safe pattern
+          "uses_array_args" => -0.7
         }
       },
       min_confidence: 0.8

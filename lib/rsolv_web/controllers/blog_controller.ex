@@ -7,11 +7,14 @@ defmodule RsolvWeb.BlogController do
 
   def index(conn, _params) do
     posts = BlogService.list_posts()
-    
+
     conn
     |> assign(:posts, posts)
     |> assign(:page_title, "RSOLV Blog - AI Security Insights")
-    |> assign(:page_description, "Technical insights on AI security, vulnerability detection, and automated code analysis from the RSOLV team.")
+    |> assign(
+      :page_description,
+      "Technical insights on AI security, vulnerability detection, and automated code analysis from the RSOLV team."
+    )
     |> render(:index)
   end
 
@@ -31,7 +34,7 @@ defmodule RsolvWeb.BlogController do
           |> put_view(RsolvWeb.ErrorHTML)
           |> render(:"404")
         end
-      
+
       {:error, :not_found} ->
         conn
         |> put_status(:not_found)
@@ -42,7 +45,7 @@ defmodule RsolvWeb.BlogController do
 
   def rss(conn, _params) do
     rss_xml = BlogService.generate_rss()
-    
+
     conn
     |> put_resp_content_type("application/rss+xml")
     |> text(rss_xml)

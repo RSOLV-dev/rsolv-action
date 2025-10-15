@@ -1,37 +1,37 @@
 defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
   @moduledoc """
   Rails Unsafe Globbing pattern for Rails applications.
-  
+
   This pattern detects path traversal vulnerabilities in Rails route globbing 
   that can lead to arbitrary file disclosure. Glob routes use wildcard parameters 
   like '*path' to capture multiple path segments, but without proper constraints 
   they can be exploited to access files outside the intended directory.
-  
+
   ## Background
-  
+
   Rails glob routes are designed to capture multiple path segments into a single
   parameter. For example, `get "files/*path", to: "files#show"` will capture
   everything after "/files/" into the :path parameter. However, this can be
   dangerous when the captured path is used to access files without validation.
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability occurs when:
   1. Glob routes lack proper path constraints
   2. The glob parameter is used directly in file operations
   3. No validation prevents path traversal sequences (../)
   4. Format constraints are disabled allowing arbitrary file extensions
   5. Controllers render files based on glob parameters without sanitization
-  
+
   ## Known CVEs
-  
+
   - CVE-2014-0130: Directory traversal in Rails actionpack with route globbing (CVSS 5.0)
   - CVE-2019-5418: File content disclosure in Action View with render file (CVSS 7.5)
   - Multiple path traversal vulnerabilities in Rails applications using unsafe globbing
   - ActionPack implicit render vulnerabilities with glob routes
-  
+
   ## Examples
-  
+
       # Critical - No constraints on glob route
       get "files/*path", to: "files#show"
       
@@ -47,9 +47,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       # Safe - Specific validation
       get "assets/*filename", to: "assets#serve", constraints: { filename: /\\A[\\w\\.-\\/]+\\z/ }
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-unsafe-globbing",
@@ -65,11 +65,11 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
         ~r/post\s+["'].*?\*\w+["']\s*,\s*to:/,
         ~r/put\s+["'].*?\*\w+["']\s*,\s*to:/,
         ~r/delete\s+["'].*?\*\w+["']\s*,\s*to:/,
-        
+
         # Match routes with both syntaxes
         ~r/match\s+["'].*?\*\w+["']\s*,\s*to:/,
         ~r/match\s+["'].*?\*\w+["']\s*=>/,
-        
+
         # Generic catch-all routes (very dangerous)
         ~r/get\s+["']\*\w+["']\s*,\s*to:/,
         ~r/match\s+["']\*\w+["']\s*=>/,
@@ -77,11 +77,11 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
         ~r/get\s+["']\*path["']/,
         ~r/get\s+["']\*splat["']/,
         ~r/match\s+["']\*anything["']/,
-        
+
         # Patterns with => syntax
         ~r/get\s+['"].*?\*\w+['"]\s*=>/,
         ~r/match\s+['"].*?\*\w+['"]\s*=>/,
-        
+
         # Specific dangerous patterns from CVE research
         ~r/get\s+["']files\/\*path["']/,
         ~r/get\s+["']download\/\*\w+["']/,
@@ -93,12 +93,12 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
         ~r/get\s+["']documents\/\*\w+["']/,
         ~r/get\s+["']storage\/\*\w+["']/,
         ~r/get\s+["']backup\/\*\w+["']/,
-        
+
         # Routes with format: false (disables format constraints)
         ~r/get\s+["'].*?\*\w+["'].*?format:\s*false/,
         ~r/match\s+["'].*?\*\w+["'].*?format:\s*false/,
         ~r/get\s+["'].*?\*\w+["'].*?defaults:\s*\{.*?format:\s*nil/,
-        
+
         # Nested route patterns that can be dangerous
         ~r/namespace\s+:\w+\s+do.*?get\s+["'].*?\*\w+["']/s,
         ~r/scope\s+:\w+\s+do.*?get\s+["'].*?\*\w+["']/s,
@@ -106,11 +106,12 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       ],
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
-      recommendation: "Add path constraints to glob routes. Validate glob parameters and restrict file access to safe directories.",
+      recommendation:
+        "Add path constraints to glob routes. Validate glob parameters and restrict file access to safe directories.",
       test_cases: %{
         vulnerable: [
           "get \"files/*path\", to: \"files#show\"",
-          "match \"*path\" => \"files#show\"", 
+          "match \"*path\" => \"files#show\"",
           "get \"download/*file\", to: \"download#serve\", format: false",
           "get \"*all\", to: \"application#catch_all\""
         ],
@@ -123,7 +124,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
@@ -132,7 +133,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       to access arbitrary files on the server. Glob routes are designed to capture multiple path 
       segments into a single parameter, making them convenient for file serving or catch-all routes, 
       but they become dangerous when the captured path is used directly in file operations.
-      
+
       The vulnerability is particularly severe because:
       1. It can lead to complete server file system disclosure
       2. Attackers can read sensitive configuration files, source code, and data
@@ -140,7 +141,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       4. Many applications use glob routes for file serving without realizing the security implications
       5. Rails' implicit rendering can automatically serve files based on glob parameters
       """,
-      
       attack_vectors: ~S"""
       1. **Basic Path Traversal**: GET /files/../../../etc/passwd (reads /etc/passwd)
       2. **Configuration File Access**: GET /files/../../../config/database.yml (database credentials)
@@ -155,7 +155,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       11. **Memory Dumps**: GET /files/../../../proc/self/maps (process memory layout)
       12. **System Information**: GET /files/../../../proc/version (system version info)
       """,
-      
       business_impact: """
       - Complete server compromise through file disclosure
       - Database credential theft leading to data breaches
@@ -168,7 +167,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       - Competitive intelligence theft through source code access
       - Financial fraud through exposed API keys and credentials
       """,
-      
       technical_impact: """
       - Arbitrary file read access across the entire server
       - Application source code and configuration disclosure
@@ -181,9 +179,8 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       - Environment variables containing sensitive information
       - Complete bypass of application access controls
       """,
-      
-      likelihood: "High - Glob routes are commonly used for file serving and many developers don't realize the security implications",
-      
+      likelihood:
+        "High - Glob routes are commonly used for file serving and many developers don't realize the security implications",
       cve_examples: """
       CVE-2014-0130 - Directory traversal in Rails actionpack/lib/abstract_controller/base.rb (CVSS 5.0)
       CVE-2019-5418 - File Content Disclosure in Action View with render file (CVSS 7.5)
@@ -193,10 +190,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       Multiple path traversal vulnerabilities in Rails applications using unsafe globbing
       ActionPack implicit render vulnerabilities with glob route parameters
       """,
-      
       compliance_standards: [
         "OWASP Top 10 2021 - A01: Broken Access Control",
-        "CWE-22: Path Traversal", 
+        "CWE-22: Path Traversal",
         "CWE-200: Information Exposure",
         "PCI DSS 6.5.8 - Improper access control",
         "NIST SP 800-53 - AC-3 Access Enforcement",
@@ -204,7 +200,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
         "ASVS 4.0 - V12.1 File and Resource Verification Requirements",
         "SANS Top 25 - CWE-22 Path Traversal"
       ],
-      
       remediation_steps: """
       1. **Add Path Constraints (Critical)**:
          ```ruby
@@ -221,7 +216,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
          get "assets/*filename", to: "assets#serve",
              constraints: { filename: /\\A[\\w\\.\\-\\/]+\\z/ } # Specific file chars
          ```
-      
+
       2. **Controller-Level Validation**:
          ```ruby
          class FilesController < ApplicationController
@@ -263,7 +258,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
              end
            end
          ```
-      
+
       3. **Use Whitelist-Based Routing**:
          ```ruby
          # Instead of glob routes, use predefined file lists
@@ -289,7 +284,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
          get "files/:file", to: "files#show", 
              constraints: { file: /\\\#{Regexp.union(ALLOWED_FILES.keys)}/ }
          ```
-      
+
       4. **Secure File Serving Helper**:
          ```ruby
          module SecureFileHelper
@@ -314,7 +309,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
          end
          ```
       """,
-      
       prevention_tips: """
       - Always add path constraints to glob routes
       - Never use glob parameters directly in file operations
@@ -329,7 +323,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       - Implement rate limiting on file serving endpoints
       - Monitor for unusual file access patterns
       """,
-      
       detection_methods: """
       - Static analysis with Brakeman scanner (detects unsafe glob routes)
       - Manual code review focusing on route.rb files and glob patterns
@@ -342,19 +335,18 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       - Runtime application security monitoring for file access anomalies
       - Log analysis for suspicious file access patterns
       """,
-      
       safe_alternatives: """
       # 1. Use specific route parameters instead of globs
       # Bad
       get "files/*path", to: "files#show"
-      
+
       # Good - Specific parameters
       get "files/:category/:filename", to: "files#show",
           constraints: { 
             category: /[a-z]+/, 
             filename: /[\\w\\.\\-]+/ 
           }
-      
+
       # 2. Implement secure file serving controller
       class SecureFilesController < ApplicationController
         SAFE_DIRECTORIES = {
@@ -395,14 +387,14 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
           render status: :not_found, plain: 'File not found'
         end
       end
-      
+
       # Routes
       get "files/:category/:filename", to: "secure_files#show",
           constraints: { 
             category: /docs|images|downloads/, 
             filename: /[\\w\\.\\-]+/ 
           }
-      
+
       # 3. Use Rails' Active Storage for file management
       class Document < ApplicationRecord
         has_one_attached :file
@@ -413,7 +405,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
         def self.find_by_public_id(public_id)
           find_by(public_id: public_id)
         end
-      
+
       # Controller
       class DocumentsController < ApplicationController
         def show
@@ -422,11 +414,11 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
           
           redirect_to rails_blob_path(document.file, disposition: "inline")
         end
-      
+
       # Routes  
       get "files/:id", to: "documents#show",
           constraints: { id: /[a-zA-Z0-9\\-]+/ }
-      
+
       # 4. Environment-based file serving restrictions
       class FilesController < ApplicationController
         before_action :check_environment
@@ -438,7 +430,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
             render status: :forbidden, plain: 'File serving disabled'
           end
       end
-      
+
       # 5. Use CDN or external file storage
       class FilesController < ApplicationController
         def show
@@ -457,43 +449,69 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.8,
-      
       context_rules: %{
         # Glob route patterns that are dangerous
         glob_patterns: [
-          "*path", "*file", "*filename", "*all", "*splat", "*anything",
-          "*asset", "*resource", "*content", "*upload", "*download"
+          "*path",
+          "*file",
+          "*filename",
+          "*all",
+          "*splat",
+          "*anything",
+          "*asset",
+          "*resource",
+          "*content",
+          "*upload",
+          "*download"
         ],
-        
+
         # Route definition methods
         route_methods: [
-          "get", "post", "put", "delete", "patch", "match", "resources", "resource"
+          "get",
+          "post",
+          "put",
+          "delete",
+          "patch",
+          "match",
+          "resources",
+          "resource"
         ],
-        
+
         # Dangerous file-serving controllers/actions
         file_serving_patterns: [
-          "files#show", "files#serve", "download#serve", "assets#serve",
-          "static#serve", "media#show", "uploads#serve", "documents#show"
+          "files#show",
+          "files#serve",
+          "download#serve",
+          "assets#serve",
+          "static#serve",
+          "media#show",
+          "uploads#serve",
+          "documents#show"
         ],
-        
+
         # Format constraint indicators
         format_patterns: [
-          "format: false", "format: nil", "defaults: { format: nil }"
+          "format: false",
+          "format: nil",
+          "defaults: { format: nil }"
         ],
-        
+
         # Safe constraint patterns
         safe_constraint_patterns: [
-          ~r/constraints:\s*\{\s*\w+:\s*\/[^\/]+\//,  # Has constraints with regex
-          ~r/constraints:\s*\{\s*path:\s*\/[^\.]\/\}/,  # Excludes dots
-          ~r/constraints.*\\A.*\\z/,                    # Anchored patterns
-          ~r/constraints.*[a-z0-9]/                     # Character classes
+          # Has constraints with regex
+          ~r/constraints:\s*\{\s*\w+:\s*\/[^\/]+\//,
+          # Excludes dots
+          ~r/constraints:\s*\{\s*path:\s*\/[^\.]\/\}/,
+          # Anchored patterns
+          ~r/constraints.*\\A.*\\z/,
+          # Character classes
+          ~r/constraints.*[a-z0-9]/
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # Very high confidence for dangerous patterns
@@ -502,13 +520,13 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
           file_serving_controller: +0.3,
           catch_all_route: +0.6,
           nested_glob_route: +0.2,
-          
+
           # Lower confidence for safer patterns
           has_path_constraints: -0.7,
           specific_file_extensions: -0.4,
           whitelist_validation: -0.5,
           development_only: -0.6,
-          
+
           # Context-based adjustments
           in_test_file: -0.8,
           commented_route: -0.9,
@@ -516,7 +534,6 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
           uses_active_storage: -0.3
         }
       },
-      
       ast_rules: %{
         # Route definition analysis
         route_analysis: %{
@@ -525,7 +542,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
           analyze_file_serving_patterns: true,
           check_format_constraints: true
         },
-        
+
         # Path parameter tracking
         parameter_analysis: %{
           track_glob_parameters: true,
@@ -533,7 +550,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
           detect_path_traversal_potential: true,
           analyze_file_access_patterns: true
         },
-        
+
         # Security validation
         security_validation: %{
           check_constraint_presence: true,
@@ -541,7 +558,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
           detect_unsafe_file_operations: true,
           check_directory_restrictions: true
         },
-        
+
         # Controller action analysis
         controller_analysis: %{
           file_serving_methods: ["send_file", "render", "File.read"],
@@ -551,6 +568,4 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       }
     }
   end
-  
 end
-

@@ -11,7 +11,7 @@ defmodule RsolvWeb.Api.V1.PhaseController do
 
   action_fallback RsolvWeb.FallbackController
 
-  tags ["Phases"]
+  tags(["Phases"])
 
   operation(:store,
     summary: "Store phase execution data",
@@ -78,9 +78,10 @@ defmodule RsolvWeb.Api.V1.PhaseController do
     # This is a temporary workaround - ideally the plug should store the full api_key struct
     import Ecto.Query
 
-    query = from a in Rsolv.Customers.ApiKey,
-      where: a.customer_id == ^customer.id,
-      limit: 1
+    query =
+      from a in Rsolv.Customers.ApiKey,
+        where: a.customer_id == ^customer.id,
+        limit: 1
 
     Rsolv.Repo.one(query)
   end
@@ -88,76 +89,99 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   defp normalize_params(params) do
     phase = params["phase"] || params[:phase]
     repo = params["repo"] || params[:repo]
-    commit_sha = params["commitSha"] || params["commit_sha"] || params[:commitSha] || params[:commit_sha]
+
+    commit_sha =
+      params["commitSha"] || params["commit_sha"] || params[:commitSha] || params[:commit_sha]
+
     data = params["data"] || params[:data] || %{}
-    issue_number = params["issueNumber"] || params["issue_number"] || params[:issueNumber] || params[:issue_number]
+
+    issue_number =
+      params["issueNumber"] || params["issue_number"] || params[:issueNumber] ||
+        params[:issue_number]
+
     branch = params["branch"] || params[:branch]
-    
+
     # Validate required fields
     cond do
       is_nil(phase) ->
         {:error, :phase_required}
+
       is_nil(repo) ->
         {:error, :repo_required}
+
       is_nil(commit_sha) ->
         {:error, :commit_sha_required}
+
       phase in ["validation", "mitigation"] and is_nil(issue_number) ->
         {:error, :issue_number_required}
+
       true ->
-        {:ok, %{
-          phase: phase,
-          repo: repo,
-          commit_sha: commit_sha,
-          data: extract_phase_data(phase, data),
-          issue_number: issue_number,
-          branch: branch
-        }}
+        {:ok,
+         %{
+           phase: phase,
+           repo: repo,
+           commit_sha: commit_sha,
+           data: extract_phase_data(phase, data),
+           issue_number: issue_number,
+           branch: branch
+         }}
     end
   end
-  
+
   # All phases now use the same simple format: data is sent directly, not wrapped
   # Example: {phase: "validation", data: {branchName: "...", validated: true}, ...}
   defp extract_phase_data(_phase, data), do: data
-  
+
   defp store_phase_data(%{phase: "scan"} = params, api_key) do
-    Phases.store_scan(%{
-      repo: params.repo,
-      commit_sha: params.commit_sha,
-      branch: params.branch,
-      data: params.data
-    }, api_key)
+    Phases.store_scan(
+      %{
+        repo: params.repo,
+        commit_sha: params.commit_sha,
+        branch: params.branch,
+        data: params.data
+      },
+      api_key
+    )
   end
-  
+
   defp store_phase_data(%{phase: "validation"} = params, api_key) do
-    Phases.store_validation(%{
-      repo: params.repo,
-      issue_number: params.issue_number,
-      commit_sha: params.commit_sha,
-      data: params.data
-    }, api_key)
+    Phases.store_validation(
+      %{
+        repo: params.repo,
+        issue_number: params.issue_number,
+        commit_sha: params.commit_sha,
+        data: params.data
+      },
+      api_key
+    )
   end
-  
+
   defp store_phase_data(%{phase: "mitigation"} = params, api_key) do
     # Extract PR details from the mitigation data
     pr_url = params.data["prUrl"] || params.data["pr_url"]
     pr_number = extract_pr_number(pr_url)
     files_changed = count_changed_files(params.data["fixes"] || params.data[:fixes] || [])
-    
-    Phases.store_mitigation(%{
-      repo: params.repo,
-      issue_number: params.issue_number,
-      commit_sha: params.commit_sha,
-      data: Map.merge(params.data, %{
-        "pr_url" => pr_url,
-        "pr_number" => pr_number,
-        "files_changed" => files_changed
-      })
-    }, api_key)
+
+    Phases.store_mitigation(
+      %{
+        repo: params.repo,
+        issue_number: params.issue_number,
+        commit_sha: params.commit_sha,
+        data:
+          Map.merge(params.data, %{
+            "pr_url" => pr_url,
+            "pr_number" => pr_number,
+            "files_changed" => files_changed
+          })
+      },
+      api_key
+    )
   end
-  
+
   defp store_phase_data(_, _), do: {:error, :invalid_phase}
-  
+
   defp extract_pr_number(nil), do: nil
+
   defp extract_pr_number(pr_url) when is_binary(pr_url) do
     # Extract PR number from URL like "https://github.com/owner/repo/pull/123"
     case Regex.run(~r/\/pull\/(\d+)/, pr_url) do
@@ -165,16 +189,18 @@ defmodule RsolvWeb.Api.V1.PhaseController do
       _ -> nil
     end
   end
+
   defp extract_pr_number(_), do: nil
-  
+
   defp count_changed_files(fixes) when is_list(fixes) do
     fixes
     |> Enum.map(&(&1["file"] || &1[:file]))
     |> Enum.uniq()
     |> Enum.count()
   end
+
   defp count_changed_files(_), do: 0
-  
+
   operation(:retrieve,
     summary: "Retrieve accumulated phase data",
     description: """
@@ -240,46 +266,56 @@ defmodule RsolvWeb.Api.V1.PhaseController do
     api_key = conn.assigns.api_key || get_customer_api_key(customer)
 
     with {:ok, validated_params} <- validate_retrieve_params(params),
-         {:ok, phase_data} <- Phases.retrieve(
-           validated_params.repo,
-           validated_params.issue,
-           validated_params.commit,
-           api_key
-         ) do
+         {:ok, phase_data} <-
+           Phases.retrieve(
+             validated_params.repo,
+             validated_params.issue,
+             validated_params.commit,
+             api_key
+           ) do
       json(conn, phase_data)
     end
   end
-  
+
   defp validate_retrieve_params(params) do
     repo = params["repo"] || params[:repo]
     issue = params["issue"] || params[:issue]
     commit = params["commit"] || params[:commit]
-    
+
     cond do
       is_nil(repo) ->
         {:error, :repo_required}
+
       is_nil(issue) ->
         {:error, :issue_required}
+
       is_nil(commit) ->
         {:error, :commit_required}
+
       true ->
         # Convert issue to integer if it's a string
-        issue_number = case issue do
-          num when is_integer(num) -> num
-          str when is_binary(str) -> 
-            case Integer.parse(str) do
-              {num, ""} -> num
-              _ -> nil
-            end
-          _ -> nil
-        end
-        
+        issue_number =
+          case issue do
+            num when is_integer(num) ->
+              num
+
+            str when is_binary(str) ->
+              case Integer.parse(str) do
+                {num, ""} -> num
+                _ -> nil
+              end
+
+            _ ->
+              nil
+          end
+
         if issue_number do
-          {:ok, %{
-            repo: repo,
-            issue: issue_number,
-            commit: commit
-          }}
+          {:ok,
+           %{
+             repo: repo,
+             issue: issue_number,
+             commit: commit
+           }}
         else
           {:error, :invalid_issue_number}
         end

@@ -1,38 +1,38 @@
 defmodule Rsolv.Security.Patterns.Java.PathTraversalFile do
   @moduledoc """
   Path Traversal via File constructor pattern for Java code.
-  
+
   Detects path traversal vulnerabilities where user input is concatenated with 
   file paths in the File constructor, potentially allowing access to files 
   outside the intended directory.
-  
+
   ## Vulnerability Details
-  
+
   Path traversal occurs when user-controlled input is used to construct file paths
   without proper validation. Attackers can use special characters like "../" to
   navigate to parent directories and access sensitive files outside the intended scope.
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable code
   String filename = request.getParameter("file");
   File file = new File("/var/uploads/" + filename);
-  
+
   // Attack: filename = "../../etc/passwd"
   // Results in: /var/uploads/../../etc/passwd -> /etc/passwd
   // Attacker can read system password file
   ```
-  
+
   ## References
-  
+
   - CWE-22: Improper Limitation of a Pathname to a Restricted Directory
   - OWASP A01:2021 - Broken Access Control
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -58,7 +58,8 @@ defmodule Rsolv.Security.Patterns.Java.PathTraversalFile do
       ],
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
-      recommendation: "Validate and sanitize file paths, use Paths.get() with canonical path validation",
+      recommendation:
+        "Validate and sanitize file paths, use Paths.get() with canonical path validation",
       test_cases: %{
         vulnerable: [
           ~S|File file = new File(uploadDir + "/" + filename);|,
@@ -75,7 +76,7 @@ File file = new File(uploadDir, safeFilename);|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -84,13 +85,13 @@ File file = new File(uploadDir, safeFilename);|
       to construct file paths without proper validation. The Java File constructor doesn't
       restrict navigation through parent directories when given paths containing "../" or
       "..\\" sequences. This allows attackers to access files outside the intended directory.
-      
+
       The vulnerability is particularly dangerous because:
       - File paths are often used to access sensitive configuration files
       - Attackers can read source code, database credentials, or system files
       - In write scenarios, attackers might overwrite critical files
       - The File API provides no built-in protection against path traversal
-      
+
       Common vulnerable patterns include:
       - Direct concatenation: new File(baseDir + userInput)
       - Path separator joining: new File(dir + File.separator + file)
@@ -113,7 +114,8 @@ File file = new File(uploadDir, safeFilename);|
           type: :research,
           id: "java_path_traversal",
           title: "Path Traversal Vulnerability in Java Applications",
-          url: "https://www.invicti.com/white-papers/exploiting-path-traversal-vulnerabilities-java-web-applications-technical-paper/"
+          url:
+            "https://www.invicti.com/white-papers/exploiting-path-traversal-vulnerabilities-java-web-applications-technical-paper/"
         },
         %{
           type: :research,
@@ -169,7 +171,7 @@ File file = new File(uploadDir, safeFilename);|
       - Concatenation with File.separator
       - Method calls that return paths concatenated with user input
       - Variable assignments followed by File construction
-      
+
       The pattern looks for the dangerous combination of File instantiation
       and string concatenation that could introduce user-controlled paths.
       """,
@@ -207,15 +209,15 @@ File file = new File(uploadDir, safeFilename);|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual path traversal vulnerabilities
   and safe file operations.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.PathTraversalFile.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -254,9 +256,14 @@ File file = new File(uploadDir, safeFilename);|
         variable_analysis: %{
           check_user_input_flow: true,
           input_methods: [
-            "getParameter", "getHeader", "getQueryString",
-            "getInputStream", "getReader", "getPathInfo",
-            "getRequestURI", "getServletPath"
+            "getParameter",
+            "getHeader",
+            "getQueryString",
+            "getInputStream",
+            "getReader",
+            "getPathInfo",
+            "getRequestURI",
+            "getServletPath"
           ],
           check_variable_usage: true
         }

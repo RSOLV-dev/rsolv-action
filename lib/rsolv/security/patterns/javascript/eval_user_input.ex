@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
   @moduledoc """
   Dangerous eval() with User Input in JavaScript/Node.js
-  
+
   Detects dangerous patterns like:
     eval(userInput)
     eval(req.body.code)
@@ -17,17 +17,17 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
   interpreter, allowing arbitrary code execution with the full privileges of the 
   running application. This makes eval() with user input a critical Remote Code 
   Execution (RCE) vulnerability.
-  
+
   ## Vulnerability Details
-  
+
   Using eval() with user-controlled input creates multiple critical attack vectors:
-  
+
   1. **Direct Code Execution**: Any JavaScript code can be executed immediately
   2. **Process Control**: Attackers can terminate processes, spawn new ones, or fork
   3. **File System Access**: Complete read/write access to the file system
   4. **Network Operations**: Ability to make network requests and establish connections
   5. **Environment Access**: Reading environment variables and system information
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Direct eval() with user input
@@ -36,13 +36,13 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
     const result = eval(expression);     // <- Complete system compromise
     res.json({result});
   });
-  
+
   // Vulnerable: Template injection via eval()
   const userTemplate = req.body.template; // "'; require('fs').unlinkSync('/etc/passwd'); '"
   const code = `const output = '${userTemplate}';`;
   eval(code); // <- File system destruction
   ```
-  
+
   ### Modern Attack Scenarios
   Eval-based RCE vulnerabilities are among the most exploited in Node.js applications, 
   particularly in template engines, expression evaluators, configuration processors, 
@@ -50,10 +50,10 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
   data exfiltration, cryptocurrency mining, botnet participation, and lateral 
   movement within infrastructure.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   def pattern do
     %Pattern{
       id: "js-eval-user-input",
@@ -62,7 +62,8 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       type: :rce,
       severity: :critical,
       languages: ["javascript", "typescript"],
-      regex: ~r/^(?!.*\/\/).*eval\s*\(.*?(?:req\.|request\.|params\.|query\.|body\.|user|input|data|Code)/im,
+      regex:
+        ~r/^(?!.*\/\/).*eval\s*\(.*?(?:req\.|request\.|params\.|query\.|body\.|user|input|data|Code)/im,
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
       recommendation: "Avoid eval(). Use JSON.parse() for JSON data or find safer alternatives.",
@@ -104,10 +105,10 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for eval() with user input.
-  
+
   This metadata documents the extreme severity of eval-based RCE vulnerabilities 
   and provides authoritative guidance for secure code evaluation alternatives.
   """
@@ -119,25 +120,25 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       JavaScript interpreter and complete control over the execution environment. 
       This vulnerability combines maximum impact (complete system compromise) with 
       trivial exploitation (injection of arbitrary code strings).
-      
+
       The eval() function bypasses all normal security boundaries and executes code 
       with the full privileges of the running application. Unlike other injection 
       vulnerabilities that may be limited to specific subsystems, eval-based RCE 
       provides unrestricted access to the entire runtime environment, including 
       file systems, network interfaces, process control, and system resources.
-      
+
       Modern JavaScript environments amplify the risk through Node.js capabilities, 
       allowing server-side code execution that can compromise entire applications, 
       databases, and infrastructure. The vulnerability is particularly dangerous 
       because it requires no special knowledge of application internals - any 
       valid JavaScript code can be executed directly.
-      
+
       Eval-based vulnerabilities are especially common in template engines, 
       expression evaluators, configuration processors, dynamic import systems, 
       and developer tools. The widespread use of eval() in legacy codebases and 
       third-party libraries creates ongoing exposure risks that are difficult to 
       identify and remediate systematically.
-      
+
       The persistence and stealth capabilities enabled by eval() RCE make it a 
       preferred vector for advanced persistent threats, allowing attackers to 
       establish backdoors, modify application logic, and maintain long-term access 
@@ -160,7 +161,8 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
           type: :vendor,
           id: "MDN_EVAL",
           title: "MDN Web Docs - Never use eval()!",
-          url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval#never_use_eval!"
+          url:
+            "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval#never_use_eval!"
         },
         %{
           type: :research,
@@ -204,10 +206,12 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       cve_examples: [
         %{
           id: "CVE-2021-44228",
-          description: "Log4Shell vulnerability exploited through eval-like mechanisms in some JavaScript logging libraries",
+          description:
+            "Log4Shell vulnerability exploited through eval-like mechanisms in some JavaScript logging libraries",
           severity: "critical",
           cvss: 10.0,
-          note: "While primarily a Java vulnerability, JavaScript variants using eval() for log processing were also affected"
+          note:
+            "While primarily a Java vulnerability, JavaScript variants using eval() for log processing were also affected"
         },
         %{
           id: "CVE-2022-25912",
@@ -241,7 +245,7 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       detection_notes: """
       This pattern detects eval() function calls that include user-controlled input 
       identifiers. The detection covers:
-      
+
       1. Direct eval() calls: eval(userInput)
       2. Request object properties: eval(req.body.code)
       3. Parameter objects: eval(params.expression)
@@ -249,12 +253,12 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       5. Generic user/input/data variables: eval(userData)
       6. Nested property access: eval(req.body.nested.code)
       7. Template literals containing user input: eval(`code ${userInput}`)
-      
+
       The regex pattern looks for eval() followed by parentheses containing common 
       user input identifiers. It uses case-insensitive matching to catch variations 
       in naming conventions and includes common request/parameter patterns used in 
       web frameworks.
-      
+
       The pattern is designed to have high sensitivity for security scanning while 
       avoiding false positives on static eval() usage or properly sanitized inputs. 
       However, any eval() usage should be carefully reviewed as it represents a 
@@ -328,10 +332,10 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       }
     }
   end
-  
+
   @doc """
   Custom validation to filter out false positives like comments.
-  
+
   This function provides additional validation beyond the regex pattern
   to handle complex cases that PCRE limitations prevent us from solving
   with lookbehind assertions.
@@ -349,31 +353,32 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       true -> true
     end
   end
-  
+
   # Helper function to detect if eval is actually in a string/template
   defp has_eval_in_string?(line) do
     # Look for eval within quotes that comes before any comment
-    comment_pos = case Regex.run(~r/\/\//, line, return: :index) do
-      [{pos, _}] -> pos
-      _ -> String.length(line)
-    end
-    
+    comment_pos =
+      case Regex.run(~r/\/\//, line, return: :index) do
+        [{pos, _}] -> pos
+        _ -> String.length(line)
+      end
+
     line_before_comment = String.slice(line, 0, comment_pos)
     String.match?(line_before_comment, ~r/["'`][^"'`]*eval[^"'`]*["'`]/)
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual eval() RCE vulnerabilities and:
   - eval() used for JSON parsing in legacy code (should be JSON.parse)
   - Static mathematical expressions without user input
   - Sandboxed evaluation (VM2, isolated-vm)
   - Generated code from build tools
   - Test and development code
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -407,33 +412,40 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
         # First argument must contain user input
         argument_analysis: %{
           first_arg_contains_user_input: true,
-          is_string_type: true,  # Not a function reference
+          # Not a function reference
+          is_string_type: true,
           not_static_string: true
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/build/, ~r/dist/],
-        exclude_if_json_parse_only: true,   # eval() for JSON parsing (legacy)
-        exclude_if_math_only: true,         # Mathematical expressions only
-        exclude_if_sandboxed: true,         # VM2, isolated-vm, etc.
-        exclude_if_generated_code: true,    # Build tools, transpilers
+        # eval() for JSON parsing (legacy)
+        exclude_if_json_parse_only: true,
+        # Mathematical expressions only
+        exclude_if_math_only: true,
+        # VM2, isolated-vm, etc.
+        exclude_if_sandboxed: true,
+        # Build tools, transpilers
+        exclude_if_generated_code: true,
         high_risk_sources: ["req.body", "req.query", "localStorage", "location.search"]
       },
       confidence_rules: %{
         base: 0.5,
         adjustments: %{
-          "direct_req_body_to_eval" => 0.5,  # Extremely dangerous
+          # Extremely dangerous
+          "direct_req_body_to_eval" => 0.5,
           "url_params_to_eval" => 0.4,
           "any_user_input_to_eval" => 0.3,
           "uses_vm2_sandbox" => -0.8,
-          "json_parse_pattern" => -0.7,       # eval('(' + json + ')')
+          # eval('(' + json + ')')
+          "json_parse_pattern" => -0.7,
           "static_math_expression" => -0.9,
           "in_build_tool" => -0.9,
           "webpack_generated" => -1.0
         }
       },
-      min_confidence: 0.7  # Lowered to catch eval(userInput) - extremely dangerous pattern
+      # Lowered to catch eval(userInput) - extremely dangerous pattern
+      min_confidence: 0.7
     }
   end
-  
 end

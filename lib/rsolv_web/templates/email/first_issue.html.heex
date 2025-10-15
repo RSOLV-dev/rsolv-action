@@ -1,185 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Submit Your First Issue with RSOLV</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
-    
-    body {
-      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f8f9fa;
-    }
-    .container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 30px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-    .logo {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .logo img {
-      max-width: 200px;
-    }
-    h1, h2, h3 {
-      color: #10b981;
-    }
-    .highlight-box {
-      background-color: #dcfce7;
-      border: 1px solid #22c55e;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-    .step-box {
-      background-color: #f3f4f6;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-      border-left: 4px solid #10b981;
-    }
-    .code {
-      background-color: #f1f5f9;
-      border: 1px solid #e2e8f0;
-      padding: 15px;
-      border-radius: 5px;
-      font-family: 'Monaco', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 15px 0;
-      font-size: 14px;
-    }
-    .example-issue {
-      background-color: #fef3c7;
-      border: 1px solid #f59e0b;
-      padding: 15px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-    .cta {
-      background-color: #10b981;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 5px;
-      display: inline-block;
-      text-decoration: none;
-      font-weight: bold;
-      margin: 20px 0;
-    }
-    .cta-secondary {
-      background-color: #6b7280;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 5px;
-      display: inline-block;
-      text-decoration: none;
-      font-weight: bold;
-      margin: 20px 0;
-    }
-    .tips-list {
-      background-color: #eff6ff;
-      border: 1px solid #3b82f6;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-    .footer {
-      margin-top: 40px;
-      font-size: 14px;
-      color: #6b7280;
-      border-top: 1px solid #e5e7eb;
-      padding-top: 20px;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="logo">
-      <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo">
-    </div>
-    
-    <h1>Ready to Submit Your First Issue?</h1>
-    
-    <p>Hi {@first_name},</p>
-    
-    <p>You've been set up with RSOLV for a few days now. It's time to experience the magic of automated issue resolution!</p>
-    
-    <div class="highlight-box">
-      <h3>🚀 Your First Automated Fix Awaits</h3>
-      <p>Choose any issue in your repository and tag it with <strong>"rsolv:automate"</strong> to watch RSOLV create a comprehensive fix with a pull request.</p>
-    </div>
-    
-    <div class="step-box">
-      <h3>Perfect First Issues to Try:</h3>
-      <ul>
-        <li><strong>Documentation fixes:</strong> "Fix typo in README.md"</li>
-        <li><strong>Code cleanup:</strong> "Remove unused imports in UserService.js"</li>
-        <li><strong>Dependency updates:</strong> "Update lodash to latest version"</li>
-        <li><strong>Bug fixes:</strong> "Fix null pointer exception in login function"</li>
-        <li><strong>Security issues:</strong> "Remove hardcoded API key from config"</li>
-      </ul>
-    </div>
-    
-    <div class="example-issue">
-      <h3>📝 Example Issue Template</h3>
-      <p><strong>Title:</strong> Fix deprecated function usage in payment processor</p>
-      <p><strong>Description:</strong></p>
-      <div class="code">
-The payment processor in `src/services/PaymentService.js` is using deprecated function `calculateTax()` which was replaced with `computeTax()` in version 2.0.
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Submit Your First Issue with RSOLV</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
 
-**Expected behavior:** Use the new `computeTax()` function
-**Current behavior:** Uses deprecated `calculateTax()` function
-**File location:** `src/services/PaymentService.js` lines 45-67
+      body {
+        font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+      .logo {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo img {
+        max-width: 200px;
+      }
+      h1, h2, h3 {
+        color: #10b981;
+      }
+      .highlight-box {
+        background-color: #dcfce7;
+        border: 1px solid #22c55e;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .step-box {
+        background-color: #f3f4f6;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border-left: 4px solid #10b981;
+      }
+      .code {
+        background-color: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: 'Monaco', 'Consolas', monospace;
+        overflow-x: auto;
+        margin: 15px 0;
+        font-size: 14px;
+      }
+      .example-issue {
+        background-color: #fef3c7;
+        border: 1px solid #f59e0b;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .cta {
+        background-color: #10b981;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 5px;
+        display: inline-block;
+        text-decoration: none;
+        font-weight: bold;
+        margin: 20px 0;
+      }
+      .cta-secondary {
+        background-color: #6b7280;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 5px;
+        display: inline-block;
+        text-decoration: none;
+        font-weight: bold;
+        margin: 20px 0;
+      }
+      .tips-list {
+        background-color: #eff6ff;
+        border: 1px solid #3b82f6;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .footer {
+        margin-top: 40px;
+        font-size: 14px;
+        color: #6b7280;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 20px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">
+        <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo" />
+      </div>
 
-Labels: rsolv:automate
+      <h1>Ready to Submit Your First Issue?</h1>
+
+      <p>Hi {@first_name},</p>
+
+      <p>
+        You've been set up with RSOLV for a few days now. It's time to experience the magic of automated issue resolution!
+      </p>
+
+      <div class="highlight-box">
+        <h3>🚀 Your First Automated Fix Awaits</h3>
+        <p>
+          Choose any issue in your repository and tag it with <strong>"rsolv:automate"</strong>
+          to watch RSOLV create a comprehensive fix with a pull request.
+        </p>
+      </div>
+
+      <div class="step-box">
+        <h3>Perfect First Issues to Try:</h3>
+        <ul>
+          <li><strong>Documentation fixes:</strong> "Fix typo in README.md"</li>
+          <li><strong>Code cleanup:</strong> "Remove unused imports in UserService.js"</li>
+          <li><strong>Dependency updates:</strong> "Update lodash to latest version"</li>
+          <li><strong>Bug fixes:</strong> "Fix null pointer exception in login function"</li>
+          <li><strong>Security issues:</strong> "Remove hardcoded API key from config"</li>
+        </ul>
+      </div>
+
+      <div class="example-issue">
+        <h3>📝 Example Issue Template</h3>
+        <p><strong>Title:</strong> Fix deprecated function usage in payment processor</p>
+        <p><strong>Description:</strong></p>
+        <div class="code">
+          The payment processor in `src/services/PaymentService.js` is using deprecated function `calculateTax()` which was replaced with `computeTax()` in version 2.0.
+
+          **Expected behavior:** Use the new `computeTax()` function
+          **Current behavior:** Uses deprecated `calculateTax()` function
+          **File location:** `src/services/PaymentService.js` lines 45-67
+
+          Labels: rsolv:automate
+        </div>
+      </div>
+
+      <div class="tips-list">
+        <h3>💡 Pro Tips for Better Fixes</h3>
+        <ul>
+          <li>Be specific about which files and functions are affected</li>
+          <li>Include error messages or stack traces when available</li>
+          <li>Describe the expected behavior clearly</li>
+          <li>Start with smaller issues to get familiar with RSOLV's capabilities</li>
+        </ul>
+      </div>
+
+      <h2>How RSOLV Works</h2>
+      <p>Once you tag an issue with "rsolv:automate":</p>
+      <ol>
+        <li>
+          <strong>Security Analysis:</strong>
+          RSOLV scans your codebase for security vulnerabilities
+        </li>
+        <li>
+          <strong>Context Understanding:</strong> AI analyzes your entire repository structure
+        </li>
+        <li>
+          <strong>Solution Generation:</strong> Creates a comprehensive fix with documentation
+        </li>
+        <li><strong>Pull Request:</strong> Submits a well-documented PR for your review</li>
+      </ol>
+
+      <div style="text-align: center;">
+        <a href="https://rsolv.dev/docs/getting-started" class="cta">View Setup Guide</a>
+        <br />
+        <a href="https://rsolv.dev/docs/writing-effective-issues" class="cta-secondary">
+          Writing Better Issues
+        </a>
+      </div>
+
+      <p>
+        <strong>Remember:</strong>
+        Your first 10 fixes are completely free! After that, you only pay $15 per fix that gets successfully deployed.
+      </p>
+
+      <p>
+        Need help getting started? Just reply to this email and I'll personally assist you with your first automated fix.
+      </p>
+
+      <p>Best regards,<br />Dylan & The RSOLV Team</p>
+
+      <p style="font-style: italic; color: #6b7280;">
+        P.S. Once you see your first RSOLV-generated PR, you'll understand why teams are saving hours every week with automated issue resolution!
+      </p>
+
+      <div class="footer">
+        <p>
+          This email was sent to {@email}. If you no longer wish to receive these emails, you can <a href="{@unsubscribe_url}">unsubscribe</a>.
+        </p>
+        <p>&copy; 2025 RSOLV - Fix Issues Automatically. Pay Only for Fixes You Deploy.</p>
       </div>
     </div>
-    
-    <div class="tips-list">
-      <h3>💡 Pro Tips for Better Fixes</h3>
-      <ul>
-        <li>Be specific about which files and functions are affected</li>
-        <li>Include error messages or stack traces when available</li>
-        <li>Describe the expected behavior clearly</li>
-        <li>Start with smaller issues to get familiar with RSOLV's capabilities</li>
-      </ul>
-    </div>
-    
-    <h2>How RSOLV Works</h2>
-    <p>Once you tag an issue with "rsolv:automate":</p>
-    <ol>
-      <li><strong>Security Analysis:</strong> RSOLV scans your codebase for security vulnerabilities</li>
-      <li><strong>Context Understanding:</strong> AI analyzes your entire repository structure</li>
-      <li><strong>Solution Generation:</strong> Creates a comprehensive fix with documentation</li>
-      <li><strong>Pull Request:</strong> Submits a well-documented PR for your review</li>
-    </ol>
-    
-    <div style="text-align: center;">
-      <a href="https://rsolv.dev/docs/getting-started" class="cta">View Setup Guide</a>
-      <br>
-      <a href="https://rsolv.dev/docs/writing-effective-issues" class="cta-secondary">Writing Better Issues</a>
-    </div>
-    
-    <p><strong>Remember:</strong> Your first 10 fixes are completely free! After that, you only pay $15 per fix that gets successfully deployed.</p>
-    
-    <p>Need help getting started? Just reply to this email and I'll personally assist you with your first automated fix.</p>
-    
-    <p>Best regards,<br>Dylan & The RSOLV Team</p>
-    
-    <p style="font-style: italic; color: #6b7280;">P.S. Once you see your first RSOLV-generated PR, you'll understand why teams are saving hours every week with automated issue resolution!</p>
-    
-    <div class="footer">
-      <p>This email was sent to {@email}. If you no longer wish to receive these emails, you can <a href="{@unsubscribe_url}">unsubscribe</a>.</p>
-      <p>&copy; 2025 RSOLV - Fix Issues Automatically. Pay Only for Fixes You Deploy.</p>
-    </div>
-  </div>
-</body>
+  </body>
 </html>

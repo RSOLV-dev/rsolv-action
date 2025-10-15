@@ -32,7 +32,8 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
         "redTests" => [
           %{
             "testName" => "rejects SQL injection in search endpoint",
-            "testCode" => "post '/search', params: { q: \"admin'; DROP TABLE users;--\" }\nexpect(response.status).to eq(400)",
+            "testCode" =>
+              "post '/search', params: { q: \"admin'; DROP TABLE users;--\" }\nexpect(response.status).to eq(400)",
             "attackVector" => "admin'; DROP TABLE users;--"
           }
         ]
@@ -159,7 +160,8 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
         "redTests" => [
           %{
             "testName" => "rejects SQL injection in search",
-            "testCode" => "response = client.post('/search', {'q': \"admin'; DROP TABLE users;--\"})\nassert response.status_code == 400",
+            "testCode" =>
+              "response = client.post('/search', {'q': \"admin'; DROP TABLE users;--\"})\nassert response.status_code == 400",
             "attackVector" => "admin'; DROP TABLE users;--"
           }
         ]
@@ -174,7 +176,9 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
       assert String.contains?(integrated_code, "test_rejects_sql_injection_in_search")
       assert String.contains?(integrated_code, "class TestSecurity")
       assert String.contains?(integrated_code, "admin'; DROP TABLE users;--")
-      assert String.contains?(integrated_code, "test_create_user"), "Should preserve original test"
+
+      assert String.contains?(integrated_code, "test_create_user"),
+             "Should preserve original test"
     end
 
     test "integrates test with multiple RED tests in pytest" do
@@ -408,7 +412,8 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
         "redTests" => [
           %{
             "testName" => "prevents XSS attack",
-            "testCode" => "result = render('<script>alert(\"XSS\")</script>')\nexpect(result).not_to include('<script>')",
+            "testCode" =>
+              "result = render('<script>alert(\"XSS\")</script>')\nexpect(result).not_to include('<script>')",
             "attackVector" => "<script>alert(\"XSS\")</script>"
           }
         ]
@@ -433,7 +438,8 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
         "redTests" => [
           %{
             "testName" => "prevents XSS attack",
-            "testCode" => "result = render('<script>alert(\"XSS\")</script>')\nassert '<script>' not in result",
+            "testCode" =>
+              "result = render('<script>alert(\"XSS\")</script>')\nassert '<script>' not in result",
             "attackVector" => "<script>alert(\"XSS\")</script>"
           }
         ]

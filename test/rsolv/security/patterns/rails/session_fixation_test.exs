@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.Patterns.Rails.SessionFixation
   alias Rsolv.Security.Pattern
 
   describe "session_fixation pattern" do
     test "returns correct pattern structure" do
       pattern = SessionFixation.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "rails-session-fixation"
       assert pattern.name == "Session Fixation Vulnerability"
@@ -17,7 +17,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
       assert pattern.frameworks == ["rails"]
       assert pattern.cwe_id == "CWE-384"
       assert pattern.owasp_category == "A07:2021"
-      
+
       assert is_binary(pattern.description)
       assert is_binary(pattern.recommendation)
       assert is_list(pattern.regex)
@@ -26,14 +26,14 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "detects login method without session regeneration" do
       pattern = SessionFixation.pattern()
-      
+
       vulnerable_code = [
         "def login\n  if user.authenticate(params[:password])\n    session[:user_id] = user.id\n  end\nend",
         "def sign_in\n  user = User.find(params[:id])\n  session[:user_id] = user.id\nend",
         "def authenticate\n  if valid_credentials?\n    session[:current_user_id] = user.id\n  end\nend",
         "def create\n  user = User.authenticate(params[:email], params[:password])\n  if user\n    session[:user_id] = user.id\n    redirect_to dashboard_path\n  end\nend"
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect: #{code}"
@@ -42,7 +42,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "detects session assignment with admin flags" do
       pattern = SessionFixation.pattern()
-      
+
       vulnerable_code = [
         "def admin_login\n  if admin.valid_password?(params[:password])\n    session[:admin] = true\n  end\nend",
         "def create\n  if params[:admin_key] == ADMIN_KEY\n    session[:admin] = true\n  end\nend",
@@ -50,7 +50,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
         "session[:admin_user] = true",
         "session[:super_user] = true"
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect: #{code}"
@@ -59,7 +59,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "detects direct session user_id assignment without reset" do
       pattern = SessionFixation.pattern()
-      
+
       vulnerable_code = [
         "session[:user_id] = user.id",
         "session[:user_id] = params[:user_id]",
@@ -68,7 +68,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
         "session['user_id'] = user.id",
         "session[\"user_id\"] = user.id"
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect: #{code}"
@@ -77,7 +77,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "detects multiline login methods without session reset" do
       pattern = SessionFixation.pattern()
-      
+
       vulnerable_code = [
         """
         def login
@@ -107,7 +107,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
         end
         """
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect: #{code}"
@@ -116,7 +116,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "detects authentication without session regeneration in controllers" do
       pattern = SessionFixation.pattern()
-      
+
       vulnerable_code = [
         """
         class SessionsController < ApplicationController
@@ -138,7 +138,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
         end
         """
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect: #{code}"
@@ -147,7 +147,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "does not detect safe authentication with session reset" do
       pattern = SessionFixation.pattern()
-      
+
       safe_code = [
         "def login\n  if user.authenticate(params[:password])\n    reset_session\n    session[:user_id] = user.id\n  end\nend",
         "def sign_in\n  user = User.find(params[:id])\n  session.regenerate\n  session[:user_id] = user.id\nend",
@@ -167,7 +167,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
         end
         """
       ]
-      
+
       for code <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "False positive detected for: #{code}"
@@ -176,10 +176,10 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "includes comprehensive vulnerability metadata" do
       metadata = SessionFixation.vulnerability_metadata()
-      
+
       assert metadata.description
       assert metadata.attack_vectors
-      assert metadata.business_impact  
+      assert metadata.business_impact
       assert metadata.technical_impact
       assert metadata.likelihood
       assert metadata.cve_examples
@@ -192,13 +192,13 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "vulnerability metadata contains session fixation specific information" do
       metadata = SessionFixation.vulnerability_metadata()
-      
+
       assert String.contains?(String.downcase(metadata.description), "session")
       assert String.contains?(String.downcase(metadata.attack_vectors), "fixation")
       assert String.contains?(String.downcase(metadata.business_impact), "hijack")
       assert String.contains?(metadata.safe_alternatives, "reset_session")
       assert String.contains?(String.downcase(metadata.prevention_tips), "regenerat")
-      
+
       # Check for Rails-specific content
       assert String.contains?(String.downcase(metadata.description), "rails")
       assert String.contains?(String.downcase(metadata.remediation_steps), "reset_session")
@@ -206,7 +206,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "includes AST enhancement rules" do
       enhancement = SessionFixation.ast_enhancement()
-      
+
       assert enhancement.min_confidence
       assert enhancement.context_rules
       assert enhancement.confidence_rules
@@ -215,7 +215,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "AST enhancement has authentication specific rules" do
       enhancement = SessionFixation.ast_enhancement()
-      
+
       assert enhancement.context_rules.authentication_methods
       assert enhancement.context_rules.session_fields
       assert enhancement.ast_rules.authentication_analysis
@@ -224,7 +224,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "enhanced pattern integrates AST rules" do
       enhanced = SessionFixation.enhanced_pattern()
-      
+
       assert enhanced.id == "rails-session-fixation"
       assert enhanced.ast_enhancement.min_confidence
       assert is_float(enhanced.ast_enhancement.min_confidence)
@@ -232,7 +232,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "pattern includes educational test cases" do
       pattern = SessionFixation.pattern()
-      
+
       assert pattern.test_cases.vulnerable
       assert pattern.test_cases.safe
       assert length(pattern.test_cases.vulnerable) > 0
@@ -241,7 +241,11 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "applies to Ruby files" do
       assert SessionFixation.applies_to_file?("app/controllers/sessions_controller.rb", nil)
-      assert SessionFixation.applies_to_file?("app/controllers/authentication_controller.rb", ["rails"])
+
+      assert SessionFixation.applies_to_file?("app/controllers/authentication_controller.rb", [
+               "rails"
+             ])
+
       assert SessionFixation.applies_to_file?("lib/auth/login.rb", ["rails"])
       refute SessionFixation.applies_to_file?("test.js", nil)
       refute SessionFixation.applies_to_file?("script.py", nil)
@@ -249,7 +253,11 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixationTest do
 
     test "applies to ruby files with Rails framework" do
       assert SessionFixation.applies_to_file?("app/controllers/sessions_controller.rb", ["rails"])
-      refute SessionFixation.applies_to_file?("app/controllers/sessions_controller.rb", ["sinatra"])
+
+      refute SessionFixation.applies_to_file?("app/controllers/sessions_controller.rb", [
+               "sinatra"
+             ])
+
       refute SessionFixation.applies_to_file?("app/controllers/sessions_controller.py", ["rails"])
     end
   end

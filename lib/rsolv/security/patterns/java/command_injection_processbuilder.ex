@@ -1,46 +1,47 @@
 defmodule Rsolv.Security.Patterns.Java.CommandInjectionProcessbuilder do
   @moduledoc """
   Command Injection via ProcessBuilder pattern for Java code.
-  
+
   Detects command injection vulnerabilities where user input is passed to ProcessBuilder
   with shell invocation. ProcessBuilder is generally safer than Runtime.exec(), but can
   still be vulnerable when used with shell programs like sh -c or cmd /c.
-  
+
   ## Vulnerability Details
-  
+
   ProcessBuilder is Java's preferred API for creating operating system processes. While it's
   safer than Runtime.exec() when used properly (with separate arguments), it becomes vulnerable
   when developers pass shell programs (sh, bash, cmd) with the -c flag, which causes the shell
   to interpret the entire command string, including any injected shell metacharacters.
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable code
   String userInput = request.getParameter("command");
   ProcessBuilder pb = new ProcessBuilder("sh", "-c", "echo " + userInput);
   Process p = pb.start();
-  
+
   // Attack: userInput = "hello; cat /etc/passwd"
   // Results in: sh -c "echo hello; cat /etc/passwd"
   // Executes both echo and cat commands
   ```
-  
+
   ## References
-  
+
   - CWE-78: Improper Neutralization of Special Elements used in an OS Command
   - OWASP A03:2021 - Injection
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "java-command-injection-processbuilder",
       name: "Command Injection via ProcessBuilder",
-      description: "String concatenation in ProcessBuilder.command() can lead to command injection",
+      description:
+        "String concatenation in ProcessBuilder.command() can lead to command injection",
       type: :command_injection,
       severity: :high,
       languages: ["java"],
@@ -79,7 +80,7 @@ ProcessBuilder pb = new ProcessBuilder(command);|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -89,11 +90,11 @@ ProcessBuilder pb = new ProcessBuilder(command);|
       inherently safer than Runtime.exec() because it doesn't invoke a shell by default,
       developers often explicitly invoke shells (sh, bash, cmd) to gain access to shell
       features like pipes, redirections, and command chaining.
-      
+
       The vulnerability arises when using shell programs with their command execution flags:
       - Unix/Linux: sh -c, bash -c, /bin/sh -c
       - Windows: cmd /c, cmd.exe /c, powershell -Command
-      
+
       When these patterns are combined with string concatenation of user input, attackers
       can inject arbitrary commands that will be executed with the application's privileges.
       """,
@@ -101,7 +102,8 @@ ProcessBuilder pb = new ProcessBuilder(command);|
         %{
           type: :cwe,
           id: "CWE-78",
-          title: "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
           url: "https://cwe.mitre.org/data/definitions/78.html"
         },
         %{
@@ -114,7 +116,8 @@ ProcessBuilder pb = new ProcessBuilder(command);|
           type: :research,
           id: "processbuilder_security",
           title: "On Command Injection over Java's ProcessBuilder",
-          url: "https://medium.com/codex/on-command-injection-over-javas-processbuilder-8d9f833c808c"
+          url:
+            "https://medium.com/codex/on-command-injection-over-javas-processbuilder-8d9f833c808c"
         },
         %{
           type: :research,
@@ -157,10 +160,12 @@ ProcessBuilder pb = new ProcessBuilder(command);|
         },
         %{
           id: "CVE-2022-22965",
-          description: "Spring Framework RCE (Spring4Shell) could chain to ProcessBuilder execution",
+          description:
+            "Spring Framework RCE (Spring4Shell) could chain to ProcessBuilder execution",
           severity: "critical",
           cvss: 9.8,
-          note: "While primarily a different vulnerability, often exploited via ProcessBuilder command injection"
+          note:
+            "While primarily a different vulnerability, often exploited via ProcessBuilder command injection"
         }
       ],
       detection_notes: """
@@ -169,7 +174,7 @@ ProcessBuilder pb = new ProcessBuilder(command);|
       - Shell invocation patterns (sh -c, cmd /c) with user input
       - List-based command construction with dynamic elements
       - Common shell programs and their execution flags
-      
+
       The pattern specifically looks for the combination of ProcessBuilder method calls
       and string concatenation operators that could introduce user input.
       """,
@@ -207,15 +212,15 @@ ProcessBuilder pb = new ProcessBuilder(command);|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual command injection vulnerabilities
   and safe ProcessBuilder usage patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.CommandInjectionProcessbuilder.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
@@ -241,7 +246,16 @@ ProcessBuilder pb = new ProcessBuilder(command);|
         },
         shell_detection: %{
           check_shell_programs: true,
-          shell_programs: ["sh", "bash", "ksh", "zsh", "cmd", "cmd.exe", "powershell", "powershell.exe"],
+          shell_programs: [
+            "sh",
+            "bash",
+            "ksh",
+            "zsh",
+            "cmd",
+            "cmd.exe",
+            "powershell",
+            "powershell.exe"
+          ],
           shell_flags: ["-c", "/c", "-Command", "/Command"],
           high_risk_combination: true
         },
@@ -254,8 +268,14 @@ ProcessBuilder pb = new ProcessBuilder(command);|
         variable_analysis: %{
           check_user_input_sources: true,
           input_sources: [
-            "getParameter", "getHeader", "getCookie", "getQueryString",
-            "getInputStream", "getReader", "readLine", "Scanner"
+            "getParameter",
+            "getHeader",
+            "getCookie",
+            "getQueryString",
+            "getInputStream",
+            "getReader",
+            "readLine",
+            "Scanner"
           ],
           check_variable_flow: true
         }

@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
   @moduledoc """
   Pattern for detecting weak SHA1 hash usage in Python code.
-  
+
   Detects usage of hashlib.sha1() which is considered weak for security purposes
   due to known collision attacks. SHA1 should not be used for cryptographic security.
   """
@@ -10,9 +10,9 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
 
   @doc """
   Returns the complete pattern for detecting weak SHA1 hash usage.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.WeakHashSha1.pattern()
       iex> pattern.id
       "python-weak-hash-sha1"
@@ -25,7 +25,8 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
     %Pattern{
       id: "python-weak-hash-sha1",
       name: "Weak Cryptographic Hash - SHA1",
-      description: "Detects usage of SHA1 hash algorithm which is vulnerable to collision attacks",
+      description:
+        "Detects usage of SHA1 hash algorithm which is vulnerable to collision attacks",
       type: :weak_crypto,
       severity: :medium,
       languages: ["python"],
@@ -111,7 +112,7 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
       vulnerable: %{
         "Digital signature with SHA1" => """
         import hashlib
-        
+
         def sign_document(document, key):
             h = hashlib.sha1()
             h.update(document.encode())
@@ -125,7 +126,7 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
         "HMAC with SHA1" => """
         import hmac
         import hashlib
-        
+
         def create_hmac(message, secret):
             return hmac.new(secret.encode(), message.encode(), hashlib.sha1).hexdigest()
         """
@@ -133,7 +134,7 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
       fixed: %{
         "Use SHA-256 for signatures" => """
         import hashlib
-        
+
         def sign_document(document, key):
             h = hashlib.sha256()
             h.update(document.encode())
@@ -147,7 +148,7 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
         "Use HMAC-SHA256" => """
         import hmac
         import hashlib
-        
+
         def create_hmac(message, secret):
             return hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
         """
@@ -175,31 +176,31 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
     """
     SHA1 is a cryptographic hash function that is no longer considered secure for
     cryptographic purposes. It has known vulnerabilities:
-    
+
     1. **Collision Attacks**: Researchers have demonstrated practical collision attacks
        against SHA1, creating two different files with the same SHA1 hash.
-    
+
     2. **SHAttered Attack (2017)**: Google and CWI Amsterdam demonstrated the first
        practical SHA1 collision, creating two different PDF files with the same hash.
-    
+
     3. **Theoretical Weaknesses**: SHA1's 160-bit output is too small by modern
        standards, making it vulnerable to brute force attacks.
-    
+
     ## Real-World Impact
-    
+
     - **Certificate Forgery**: SHA1 certificates can be forged
     - **Git Vulnerabilities**: Git's use of SHA1 has required mitigation strategies
     - **Digital Signatures**: SHA1 signatures can be compromised
-    
+
     ## Migration Timeline
-    
+
     - 2005: First theoretical attacks published
     - 2017: First practical collision demonstrated (SHAttered)
     - 2020: Most browsers reject SHA1 certificates
     - 2022: NIST formally deprecated SHA1
-    
+
     ## Safe Alternatives
-    
+
     - **SHA-256/SHA-3**: For general hashing needs
     - **SHA-512**: For higher security requirements
     - **BLAKE2**: Modern, fast alternative
@@ -209,7 +210,7 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
 
   @doc """
   Comprehensive vulnerability metadata for weak SHA-1 hashing in Python.
-  
+
   This metadata documents the specific risks of using SHA-1 in Python applications
   and provides authoritative guidance for secure alternatives.
   """
@@ -222,14 +223,14 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
       hashlib.sha1() remains available but should never be used for security 
       purposes. Modern attacks can find SHA-1 collisions for as little as $45,000 
       worth of cloud computing, making it accessible to well-funded attackers.
-      
+
       Python developers commonly misuse SHA-1 for:
       1. Password hashing (critically vulnerable to rainbow tables)
       2. Digital signatures and certificates (forgeable)
       3. File integrity verification (bypassable)
       4. Git commits (vulnerable to collision attacks)
       5. API authentication tokens (forgeable)
-      
+
       The 2017 SHAttered attack demonstrated practical collision generation, and 
       the 2020 chosen-prefix collision attack reduced costs even further. Major 
       browsers have deprecated SHA-1 certificates, and Git has moved to hardened 
@@ -314,7 +315,8 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
           description: "Infineon RSA library generated keys with SHA-1 weaknesses",
           severity: "critical",
           cvss: 9.8,
-          note: "Weak random number generation combined with SHA-1 compromised millions of devices"
+          note:
+            "Weak random number generation combined with SHA-1 compromised millions of devices"
         },
         %{
           id: "CVE-2005-4900",
@@ -326,12 +328,12 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
       ],
       detection_notes: """
       This pattern detects SHA-1 usage in Python through:
-      
+
       1. hashlib.sha1() calls with various import styles
       2. SHA1() constructor from legacy crypto libraries
       3. Direct sha1.new() calls (Python 2 style)
       4. Variable assignments suggesting SHA-1 usage
-      
+
       The pattern is case-insensitive to catch variations and focuses on
       actual SHA-1 hash creation rather than comments or documentation.
       Special attention is given to security contexts like password, token,
@@ -390,9 +392,9 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
 
   @doc """
   Returns AST enhancement rules for improved detection.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.WeakHashSha1.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]

