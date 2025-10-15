@@ -1,18 +1,18 @@
 defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
   @moduledoc """
   Pattern for detecting weak random number generation in Ruby applications.
-  
+
   This pattern identifies when applications use cryptographically weak random
   number generators like rand(), Random.rand(), or srand() for security-sensitive
   operations such as generating tokens, session IDs, passwords, or API keys.
-  
+
   ## Vulnerability Details
-  
+
   Weak random number generation occurs when applications use predictable or
   insufficient random number generators for security-critical purposes. Ruby's
   built-in rand() and Random.rand() functions use the Mersenne Twister algorithm,
   which is statistically strong but cryptographically weak and predictable.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable session token generation
@@ -22,21 +22,21 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
       session_token = rand(10**16).to_s(36)  # Predictable sequence
       session[:token] = session_token
       cookies[:session_id] = session_token
-      
+
       # VULNERABLE: API key generation with weak randomness
       api_key = (0...32).map { rand(65..90).chr }.join  # Mersenne Twister
-      
+
       # VULNERABLE: Password reset token
       reset_token = rand(2**64).to_s(16)  # Predictable with known seed
-      
+
       user.update(api_key: api_key, reset_token: reset_token)
     end
   end
-  
+
   # Attack scenario: If attacker can predict the seed or observe sequence,
   # they can predict future "random" values and hijack sessions/accounts
   ```
-  
+
   **Safe Alternative:**
   ```ruby
   # SECURE: Using SecureRandom for cryptographic purposes
@@ -45,28 +45,34 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
   reset_token = SecureRandom.uuid             # Industry standard
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "ruby-weak-random",
       name: "Weak Random Number Generation",
-      description: "Detects use of predictable random number generators for security-sensitive operations",
+      description:
+        "Detects use of predictable random number generators for security-sensitive operations",
       type: :cryptographic_failure,
       severity: :medium,
       languages: ["ruby"],
       regex: [
-        ~r/(?<!SecureRandom\.)\brand\s*\(/,  # rand(n) but not SecureRandom.rand or related methods
-        ~r/\bRandom\.rand/,                 # Random.rand calls (not SecureRandom.random_*)
-        ~r/\bsrand\b/,                      # srand seeding (with or without parentheses)
-        ~r/Kernel\.rand/                    # Kernel.rand explicit calls
+        # rand(n) but not SecureRandom.rand or related methods
+        ~r/(?<!SecureRandom\.)\brand\s*\(/,
+        # Random.rand calls (not SecureRandom.random_*)
+        ~r/\bRandom\.rand/,
+        # srand seeding (with or without parentheses)
+        ~r/\bsrand\b/,
+        # Kernel.rand explicit calls
+        ~r/Kernel\.rand/
       ],
       cwe_id: "CWE-330",
       owasp_category: "A02:2021",
-      recommendation: "Use SecureRandom.hex(), SecureRandom.uuid(), or SecureRandom.urlsafe_base64() for cryptographic purposes",
+      recommendation:
+        "Use SecureRandom.hex(), SecureRandom.uuid(), or SecureRandom.urlsafe_base64() for cryptographic purposes",
       test_cases: %{
         vulnerable: [
           ~S|token = rand(100000)|,
@@ -86,7 +92,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -95,7 +101,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
       applications use predictable or statistically weak random number generators for
       security-sensitive operations. This vulnerability can lead to session hijacking,
       authentication bypass, and cryptographic attacks.
-      
+
       **How Weak Random Generation Works:**
       Ruby's built-in random functions (rand, Random.rand) use the Mersenne Twister
       algorithm, which is excellent for statistical applications but inappropriate for
@@ -104,19 +110,19 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
       - **Seed Vulnerability**: If the seed is known or guessable, entire sequence is compromised
       - **State Recovery**: Internal state can be recovered from 624 consecutive outputs
       - **Reproducible**: Same seed always produces same sequence across Ruby versions
-      
+
       **Ruby-Specific Vulnerabilities:**
       The GitHub Security Lab research identified CWE-338 vulnerabilities in Ruby applications
       where developers used rand() for security tokens. The Mersenne Twister period of 2^19937-1
       provides statistical strength but zero cryptographic security.
-      
+
       **Critical Security Impact:**
       - **Session Hijacking**: Predictable session tokens allow account takeover
       - **API Key Prediction**: Weak API keys can be brute-forced or predicted
       - **Password Reset Bypass**: Predictable reset tokens enable unauthorized access
       - **CSRF Token Bypass**: Weak CSRF tokens can be predicted and bypassed
       - **Authentication Bypass**: Predictable challenge tokens compromise auth flows
-      
+
       **Common Vulnerable Patterns:**
       - Using rand() for session IDs, API keys, or authentication tokens
       - Seeding with predictable values (timestamps, PIDs, simple integers)
@@ -159,7 +165,8 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
           type: :research,
           id: "securerandom_vs_rand",
           title: "What is so 'secure' about SecureRandom?",
-          url: "https://medium.com/@christ.blais/what-is-so-secure-about-securerandom-776254f1ce1c"
+          url:
+            "https://medium.com/@christ.blais/what-is-so-secure-about-securerandom-776254f1ce1c"
         },
         %{
           type: :research,
@@ -201,7 +208,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
         %{
           id: "CVE-2011-2686",
           description: "Ruby random number generator denial of service through improper forking",
-          severity: "medium", 
+          severity: "medium",
           cvss: 4.3,
           note: "Improper initialization of random generator in forked processes"
         },
@@ -216,26 +223,26 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
       detection_notes: """
       This pattern detects weak random number generation by identifying Ruby's
       built-in random functions that are inappropriate for cryptographic use:
-      
+
       **Primary Detection Points:**
       - rand() function calls: Global Kernel method for basic randomness
       - Random.rand(): Class method calls on Random class
       - srand() seeding: Setting predictable seeds makes randomness even weaker
       - Kernel.rand(): Explicit namespace calls to weak random function
-      
+
       **Context-Aware Detection:**
       The AST enhancement analyzes usage context to reduce false positives:
       - **Security Context**: Detects when rand() is used for tokens, keys, sessions
       - **Variable Names**: Identifies security-related variable names (token, key, session)
       - **Assignment Context**: Checks if random values are assigned to security variables
       - **Method Context**: Analyzes containing methods for authentication/session logic
-      
+
       **False Positive Considerations:**
       - Non-security uses (games, simulations, testing) are lower priority
       - Comments and documentation containing "rand" should be excluded
       - Test files using rand() for fixtures are generally safe
       - Math/statistical operations using rand() may be acceptable
-      
+
       **Ruby-Specific Patterns:**
       - Range mapping: (0...n).map { rand(65..90).chr }.join for string generation
       - Base conversion: rand(n).to_s(36) for alphanumeric tokens
@@ -255,7 +262,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
       additional_context: %{
         common_mistakes: [
           "Using rand() for session tokens, API keys, or passwords",
-          "Believing rand() is 'random enough' for security purposes", 
+          "Believing rand() is 'random enough' for security purposes",
           "Seeding srand() with predictable values like timestamps",
           "Not understanding the difference between statistical and cryptographic randomness",
           "Using rand() in production while SecureRandom in development/testing",
@@ -296,19 +303,19 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between cryptographically dangerous rand()
   usage and acceptable non-security uses.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakRandom.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakRandom.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
@@ -328,7 +335,16 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
           check_security_context: true,
           detect_token_generation: true,
           check_variable_assignment: true,
-          security_indicators: ["token", "key", "session", "api", "auth", "password", "reset", "csrf"]
+          security_indicators: [
+            "token",
+            "key",
+            "session",
+            "api",
+            "auth",
+            "password",
+            "reset",
+            "csrf"
+          ]
         }
       },
       context_rules: %{
@@ -343,17 +359,34 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
         ],
         check_cryptographic_context: true,
         safe_libraries: [
-          "SecureRandom", "OpenSSL::Random", "BCrypt",
-          "Digest::SHA", "OpenSSL::Digest"
+          "SecureRandom",
+          "OpenSSL::Random",
+          "BCrypt",
+          "Digest::SHA",
+          "OpenSSL::Digest"
         ],
         dangerous_contexts: [
-          "session_token", "api_key", "auth_token", "csrf_token",
-          "password_reset", "verification_code", "access_token",
-          "refresh_token", "nonce", "salt", "iv"
+          "session_token",
+          "api_key",
+          "auth_token",
+          "csrf_token",
+          "password_reset",
+          "verification_code",
+          "access_token",
+          "refresh_token",
+          "nonce",
+          "salt",
+          "iv"
         ],
         security_variable_patterns: [
-          ~r/token/i, ~r/key/i, ~r/session/i, ~r/auth/i,
-          ~r/password/i, ~r/secret/i, ~r/csrf/i, ~r/nonce/i
+          ~r/token/i,
+          ~r/key/i,
+          ~r/session/i,
+          ~r/auth/i,
+          ~r/password/i,
+          ~r/secret/i,
+          ~r/csrf/i,
+          ~r/nonce/i
         ],
         acceptable_uses: %{
           games_simulation: true,

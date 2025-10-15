@@ -1,28 +1,28 @@
 defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
   @moduledoc """
   Cross-Site Scripting (XSS) via document.write in JavaScript
-  
+
   Detects dangerous patterns like:
     document.write(userInput)
     document.write('<div>' + data + '</div>')
     document.writeln(untrustedContent)
-    
+
   Safe alternatives:
     element.textContent = userInput
     element.insertAdjacentHTML('beforeend', DOMPurify.sanitize(html))
     Use createElement() and appendChild() for dynamic content
-    
+
   document.write() is a dangerous DOM sink that directly writes HTML to the
   document stream during parsing. It can execute embedded scripts and is
   particularly dangerous because it bypasses many modern XSS protections.
-  
+
   ## Vulnerability Details
-  
+
   document.write() writes directly to the document's HTML parser while the page
   is loading. After page load, it replaces the entire document. This makes it
   both a security risk and a performance problem. Modern web development has
   moved away from document.write() entirely.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable code
@@ -32,28 +32,27 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
   // Executes: alert(document.domain)
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Structured vulnerability metadata for XSS via document.write.
-  
+
   This metadata documents the specific risks of using document.write with
   untrusted data, including parser blocking and security implications.
   """
   def vulnerability_metadata do
     %{
       description: """
-      Cross-Site Scripting (XSS) via document.write occurs when untrusted data is passed 
-      to the document.write() or document.writeln() methods without proper sanitization. 
-      These methods write raw HTML directly to the document stream during parsing, executing 
-      any embedded scripts immediately. This is a particularly dangerous DOM XSS sink because 
-      it bypasses Content Security Policy (CSP) in some configurations and can break modern 
-      web applications. Additionally, document.write() blocks the HTML parser and is 
+      Cross-Site Scripting (XSS) via document.write occurs when untrusted data is passed
+      to the document.write() or document.writeln() methods without proper sanitization.
+      These methods write raw HTML directly to the document stream during parsing, executing
+      any embedded scripts immediately. This is a particularly dangerous DOM XSS sink because
+      it bypasses Content Security Policy (CSP) in some configurations and can break modern
+      web applications. Additionally, document.write() blocks the HTML parser and is
       deprecated in modern web development due to severe performance implications.
       """,
-      
       references: [
         %{
           type: :cwe,
@@ -82,11 +81,11 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
         %{
           type: :portswigger,
           id: "dom_xss_document_write",
-          url: "https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-document-write-sink",
+          url:
+            "https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-document-write-sink",
           title: "PortSwigger - DOM XSS in document.write sink"
         }
       ],
-      
       attack_vectors: [
         "Script injection: document.write('<script>alert(1)</script>')",
         "Event handler injection: document.write('<img src=x onerror=alert(1)>')",
@@ -97,7 +96,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
         "Base tag injection: document.write('<base href=http://evil.com/>')",
         "Style-based XSS: document.write('<style>@import\"javascript:alert(1)\"</style>')"
       ],
-      
       real_world_impact: [
         "Complete page replacement after load (destroying user state)",
         "Parser blocking causing severe performance degradation",
@@ -108,7 +106,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
         "Breaking browser optimizations and causing reflows",
         "Potential for stored XSS if output is cached"
       ],
-      
       cve_examples: [
         %{
           id: "CVE-2023-23956",
@@ -132,7 +129,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
           note: "Common in legacy WordPress plugins"
         }
       ],
-      
       detection_notes: """
       This pattern detects calls to document.write() and document.writeln() with
       potentially untrusted data. Key indicators:
@@ -140,11 +136,10 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
       2. Window.document.write variations
       3. Common patterns of string concatenation or template literals
       4. Variable names suggesting user input
-      
+
       The pattern should match all document.write usage since it's deprecated
       and should be replaced with modern DOM manipulation methods.
       """,
-      
       safe_alternatives: [
         "Use element.textContent for plain text (automatically escapes HTML)",
         "Use element.insertAdjacentHTML() with DOMPurify.sanitize()",
@@ -154,7 +149,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
         "For HTML templates, use <template> elements and cloneNode()",
         "Replace document.write() analytics scripts with async alternatives"
       ],
-      
       additional_context: %{
         parser_blocking: [
           "document.write() blocks the HTML parser completely",
@@ -163,7 +157,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
           "Prevents browser optimization like speculative parsing",
           "Incompatible with async/defer script loading"
         ],
-        
         deprecation_status: [
           "Removed from XHTML and XML documents entirely",
           "Throws exception in deferred or async scripts",
@@ -171,7 +164,6 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
           "Not supported in Web Workers or Service Workers",
           "Many modern tools (Lighthouse) flag it as severe issue"
         ],
-        
         common_legitimate_uses: [
           "Legacy third-party scripts (ads, analytics)",
           "Old-style JavaScript loaders and polyfills",
@@ -182,12 +174,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
       }
     }
   end
-  
+
   @doc """
   Returns the pattern definition for XSS via document.write.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.pattern()
       iex> pattern.id
       "js-xss-document-write"
@@ -208,7 +200,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
       regex: ~r/(?:window\.)?document\.write(?:ln)?\s*\(/,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
-      recommendation: "Replace document.write with modern DOM manipulation methods like createElement, textContent, or insertAdjacentHTML with sanitization.",
+      recommendation:
+        "Replace document.write with modern DOM manipulation methods like createElement, textContent, or insertAdjacentHTML with sanitization.",
       test_cases: %{
         vulnerable: [
           ~S|document.write(userInput)|,
@@ -226,53 +219,55 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Handles JavaScript/TypeScript files and HTML files with embedded JavaScript.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx)$/i) ->
+        true
+
       # HTML files with script tags
       String.match?(file_path, ~r/\.html?$/i) && content != nil ->
         String.contains?(content, "<script")
-        
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XSS vulnerabilities and:
   - document.write with escaped/encoded content
   - Static content only (no user input)
   - Build tools and polyfills that legitimately use document.write
   - Development environment scripts
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> enhancement.ast_rules.callee.property
       "write"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> "static_content_only" in Map.keys(enhancement.confidence_rules.adjustments)
       true
@@ -297,8 +292,10 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/legacy/, ~r/vendor/],
         exclude_if_sanitized: true,
         exclude_if_static_only: true,
-        exclude_if_dev_environment: true,    # document.write often in dev tools
-        deprecated_warning: true             # document.write is deprecated anyway
+        # document.write often in dev tools
+        exclude_if_dev_environment: true,
+        # document.write is deprecated anyway
+        deprecated_warning: true
       },
       confidence_rules: %{
         base: 0.5,
@@ -308,8 +305,10 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
           "uses_escape_function" => -0.8,
           "uses_encode_function" => -0.7,
           "static_content_only" => -1.0,
-          "in_build_script" => -0.9,         # Build tools use document.write
-          "in_polyfill" => -0.8              # Polyfills often use it
+          # Build tools use document.write
+          "in_build_script" => -0.9,
+          # Polyfills often use it
+          "in_polyfill" => -0.8
         }
       },
       min_confidence: 0.8

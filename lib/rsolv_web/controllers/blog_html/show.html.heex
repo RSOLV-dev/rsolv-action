@@ -7,26 +7,41 @@
           <div class="xl:relative">
             <div class="mx-auto max-w-2xl">
               <!-- Back button -->
-              <a href="/blog" 
-                 class="group mb-8 flex h-10 w-10 items-center justify-center rounded-full card shadow-md ring-1 shadow-gray-800/5 ring-border-subtle transition hover:shadow-lg lg:absolute lg:-left-5 lg:-mt-2 lg:mb-0 xl:-top-1.5 xl:left-0 xl:mt-0"
-                 aria-label="Go back to articles">
-                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" class="h-4 w-4 stroke-gray-500 dark:stroke-gray-400 transition group-hover:stroke-gray-700 dark:group-hover:stroke-gray-200">
-                  <path d="M7.25 11.25 3.75 8m0 0 3.5-3.25M3.75 8h8.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              <a
+                href="/blog"
+                class="group mb-8 flex h-10 w-10 items-center justify-center rounded-full card shadow-md ring-1 shadow-gray-800/5 ring-border-subtle transition hover:shadow-lg lg:absolute lg:-left-5 lg:-mt-2 lg:mb-0 xl:-top-1.5 xl:left-0 xl:mt-0"
+                aria-label="Go back to articles"
+              >
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden="true"
+                  class="h-4 w-4 stroke-gray-500 dark:stroke-gray-400 transition group-hover:stroke-gray-700 dark:group-hover:stroke-gray-200"
+                >
+                  <path
+                    d="M7.25 11.25 3.75 8m0 0 3.5-3.25M3.75 8h8.5"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </a>
-              
+
               <article>
                 <header class="flex flex-col">
                   <h1 class="mt-6 text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-300 sm:text-5xl">
-                    <%= @post.title %>
+                    {@post.title}
                   </h1>
-                  <time datetime={@post.published_at} class="order-first flex items-center text-base text-muted">
+                  <time
+                    datetime={@post.published_at}
+                    class="order-first flex items-center text-base text-muted"
+                  >
                     <span class="h-4 w-0.5 rounded-full bg-border-DEFAULT"></span>
-                    <span class="ml-3"><%= format_date(@post.published_at) %></span>
+                    <span class="ml-3">{format_date(@post.published_at)}</span>
                   </time>
                 </header>
                 
-                <!-- Article content with enhanced prose styling -->
+<!-- Article content with enhanced prose styling -->
                 <div class="mt-8 prose prose-lg max-w-none
                             prose-headings:font-bold 
                             prose-h2:text-3xl prose-h2:mt-12 prose-h2:mb-6
@@ -34,24 +49,37 @@
                             prose-h4:text-xl prose-h4:mt-8 prose-h4:mb-3
                             prose-p:leading-relaxed
                             prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline">
-                  <%= raw(@post.html) %>
+                  {raw(@post.html)}
                 </div>
               </article>
               
-              <!-- Call to Action -->
+<!-- Call to Action -->
               <div class="mt-16 rounded-2xl bg-subtle px-8 py-10">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Ready to secure your codebase?
                 </h3>
                 <p class="mt-3 text-muted">
-                  RSOLV finds security vulnerabilities you didn't know existed and fixes them automatically. 
+                  RSOLV finds security vulnerabilities you didn't know existed and fixes them automatically.
                   Join teams using our 180+ growing library of production-tested security patterns.
                 </p>
                 <div class="mt-6">
-                  <a href="/#early-access" class="inline-flex items-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-emphasis focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent transition-colors">
+                  <a
+                    href="/#early-access"
+                    class="inline-flex items-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-emphasis focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent transition-colors"
+                  >
                     Get Early Access
-                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" class="ml-2 h-4 w-4 stroke-current">
-                      <path d="M6.75 5.75 9.25 8l-2.5 2.25" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <svg
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                      class="ml-2 h-4 w-4 stroke-current"
+                    >
+                      <path
+                        d="M6.75 5.75 9.25 8l-2.5 2.25"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </a>
                 </div>
@@ -68,24 +96,24 @@
 
 <%= if assigns[:page_type] == "article" do %>
   <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": "<%= @post.title %>",
-    "description": "<%= @post.excerpt %>",
-    "datePublished": "<%= @post.published_at %>",
-    "author": {
-      "@type": "Organization",
-      "name": "RSOLV"
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "RSOLV",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://rsolv.dev/images/rsolv_logo_transparent.png"
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "<%= @post.title %>",
+      "description": "<%= @post.excerpt %>",
+      "datePublished": "<%= @post.published_at %>",
+      "author": {
+        "@type": "Organization",
+        "name": "RSOLV"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "RSOLV",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://rsolv.dev/images/rsolv_logo_transparent.png"
+        }
       }
     }
-  }
   </script>
 <% end %>

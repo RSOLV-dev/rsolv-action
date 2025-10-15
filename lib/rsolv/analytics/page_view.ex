@@ -2,10 +2,10 @@ defmodule Rsolv.Analytics.PageView do
   @moduledoc """
   Schema for tracking page views with UTM parameters and user context.
   """
-  
+
   use Ecto.Schema
   import Ecto.Changeset
-  
+
   schema "analytics_page_views" do
     field :path, :string
     field :user_ip, :string
@@ -17,17 +17,26 @@ defmodule Rsolv.Analytics.PageView do
     field :session_id, :string
     field :user_agent, :string
     field :referrer, :string
-    
+
     belongs_to :customer, Rsolv.Customers.Customer
-    
+
     timestamps(type: :utc_datetime)
   end
-  
+
   def changeset(page_view, attrs) do
     page_view
     |> cast(attrs, [
-      :path, :user_ip, :utm_source, :utm_medium, :utm_campaign,
-      :utm_term, :utm_content, :customer_id, :session_id, :user_agent, :referrer
+      :path,
+      :user_ip,
+      :utm_source,
+      :utm_medium,
+      :utm_campaign,
+      :utm_term,
+      :utm_content,
+      :customer_id,
+      :session_id,
+      :user_agent,
+      :referrer
     ])
     |> validate_required([:path])
     |> validate_length(:path, max: 2048)

@@ -2,12 +2,18 @@
   <div class="mb-6">
     <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Customers</h1>
   </div>
-  
+
   <div class="mb-4 flex items-center justify-between">
     <div class="flex items-center space-x-4">
       <form id="filter-form" phx-change="filter" class="flex items-center space-x-4">
-        <label for="status" class="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</label>
-        <select name="status" id="status" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+        <label for="status" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Status:
+        </label>
+        <select
+          name="status"
+          id="status"
+          class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+        >
           <option value="all" selected={@status_filter == "all"}>All</option>
           <option value="active" selected={@status_filter == "active"}>Active</option>
           <option value="inactive" selected={@status_filter == "inactive"}>Inactive</option>
@@ -17,7 +23,7 @@
       <%= if MapSet.size(@selected_ids) > 0 do %>
         <div class="flex items-center space-x-2">
           <span class="text-sm text-gray-600 dark:text-gray-400">
-            <%= MapSet.size(@selected_ids) %> selected
+            {MapSet.size(@selected_ids)} selected
           </span>
           <form phx-change="bulk-action">
             <select
@@ -35,24 +41,38 @@
         </div>
       <% end %>
 
-      <button phx-click="new" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+      <button
+        phx-click="new"
+        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+      >
         New Customer
       </button>
     </div>
 
     <div class="text-sm text-gray-700 dark:text-gray-300">
-      Showing <%= (@current_page - 1) * @per_page + 1 %> to <%= min(@current_page * @per_page, @total_count) %> of <%= @total_count %> customers
+      Showing {(@current_page - 1) * @per_page + 1} to {min(
+        @current_page * @per_page,
+        @total_count
+      )} of {@total_count} customers
     </div>
   </div>
-  
+
   <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
       <thead class="bg-gray-50 dark:bg-gray-700">
         <tr>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-            <input type="checkbox" phx-click="toggle-all" class="rounded border-gray-300 dark:border-gray-600" />
+            <input
+              type="checkbox"
+              phx-click="toggle-all"
+              class="rounded border-gray-300 dark:border-gray-600"
+            />
           </th>
-          <th phx-click="sort" phx-value-field="name" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">
+          <th
+            phx-click="sort"
+            phx-value-field="name"
+            class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+          >
             Name
             <%= if @sort_by == :name do %>
               <%= if @sort_order == :asc do %>
@@ -62,7 +82,11 @@
               <% end %>
             <% end %>
           </th>
-          <th phx-click="sort" phx-value-field="email" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">
+          <th
+            phx-click="sort"
+            phx-value-field="email"
+            class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+          >
             Email
             <%= if @sort_by == :email do %>
               <%= if @sort_order == :asc do %>
@@ -78,7 +102,11 @@
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
             Plan
           </th>
-          <th phx-click="sort" phx-value-field="current_usage" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">
+          <th
+            phx-click="sort"
+            phx-value-field="current_usage"
+            class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+          >
             Usage
             <%= if @sort_by == :current_usage do %>
               <%= if @sort_order == :asc do %>
@@ -88,7 +116,11 @@
               <% end %>
             <% end %>
           </th>
-          <th phx-click="sort" phx-value-field="inserted_at" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">
+          <th
+            phx-click="sort"
+            phx-value-field="inserted_at"
+            class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+          >
             Created
             <%= if @sort_by == :inserted_at do %>
               <%= if @sort_order == :asc do %>
@@ -116,10 +148,10 @@
               />
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-              <%= customer.name %>
+              {customer.name}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-              <%= customer.email %>
+              {customer.email}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <%= if customer.active do %>
@@ -133,23 +165,34 @@
               <% end %>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-              <%= customer.subscription_plan %>
+              {customer.subscription_plan}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-              <%= customer.current_usage %> / <%= customer.monthly_limit %>
+              {customer.current_usage} / {customer.monthly_limit}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-              <%= Calendar.strftime(customer.inserted_at, "%b %d, %Y") %>
+              {Calendar.strftime(customer.inserted_at, "%b %d, %Y")}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
               <div class="flex items-center space-x-2">
-                <a href={"/admin/customers/#{customer.id}"} class="text-green-600 hover:text-green-800">
+                <a
+                  href={"/admin/customers/#{customer.id}"}
+                  class="text-green-600 hover:text-green-800"
+                >
                   View
                 </a>
-                <a phx-click="edit" phx-value-id={customer.id} class="text-blue-600 hover:text-blue-800 cursor-pointer">
+                <a
+                  phx-click="edit"
+                  phx-value-id={customer.id}
+                  class="text-blue-600 hover:text-blue-800 cursor-pointer"
+                >
                   Edit
                 </a>
-                <button phx-click="delete" phx-value-id={customer.id} class="text-red-600 hover:text-red-800">
+                <button
+                  phx-click="delete"
+                  phx-value-id={customer.id}
+                  class="text-red-600 hover:text-red-800"
+                >
                   Delete
                 </button>
               </div>
@@ -159,47 +202,56 @@
       </tbody>
     </table>
   </div>
-  
+
   <div class="mt-4 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
     <div class="flex justify-between items-center">
       <div class="text-sm text-gray-700 dark:text-gray-300">
-        Showing <%= (@current_page - 1) * @per_page + 1 %> to <%= min(@current_page * @per_page, @total_count) %> of <%= @total_count %>
+        Showing {(@current_page - 1) * @per_page + 1} to {min(
+          @current_page * @per_page,
+          @total_count
+        )} of {@total_count}
       </div>
       <%= if @total_pages > 1 do %>
-      <nav class="flex items-center space-x-2">
-        <%= if @current_page > 1 do %>
-          <.link
-            patch={~p"/admin/customers?#{[page: @current_page - 1, status: @status_filter, sort_by: @sort_by, sort_order: @sort_order]}"}
-            class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
-          >
-            Previous
-          </.link>
-        <% end %>
-        
-        <%= for page <- 1..@total_pages do %>
-          <%= if page == @current_page do %>
-            <span class="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
-              <%= page %>
-            </span>
-          <% else %>
+        <nav class="flex items-center space-x-2">
+          <%= if @current_page > 1 do %>
             <.link
-              patch={~p"/admin/customers?#{[page: page, status: @status_filter, sort_by: @sort_by, sort_order: @sort_order]}"}
+              patch={
+                ~p"/admin/customers?#{[page: @current_page - 1, status: @status_filter, sort_by: @sort_by, sort_order: @sort_order]}"
+              }
               class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
             >
-              <%= page %>
+              Previous
             </.link>
           <% end %>
-        <% end %>
-        
-        <%= if @current_page < @total_pages do %>
-          <.link
-            patch={~p"/admin/customers?#{[page: @current_page + 1, status: @status_filter, sort_by: @sort_by, sort_order: @sort_order]}"}
-            class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
-          >
-            Next
-          </.link>
-        <% end %>
-      </nav>
+
+          <%= for page <- 1..@total_pages do %>
+            <%= if page == @current_page do %>
+              <span class="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
+                {page}
+              </span>
+            <% else %>
+              <.link
+                patch={
+                  ~p"/admin/customers?#{[page: page, status: @status_filter, sort_by: @sort_by, sort_order: @sort_order]}"
+                }
+                class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+              >
+                {page}
+              </.link>
+            <% end %>
+          <% end %>
+
+          <%= if @current_page < @total_pages do %>
+            <.link
+              patch={
+                ~p"/admin/customers?#{[page: @current_page + 1, status: @status_filter, sort_by: @sort_by, sort_order: @sort_order]}"
+              }
+              class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+            >
+              Next
+            </.link>
+          <% end %>
+        </nav>
       <% end %>
     </div>
   </div>
@@ -272,12 +324,15 @@
         <%= if @modal_action == :new || @modal_action == :edit do %>
           <div>
             <h3 class="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100 mb-4">
-              <%= if @modal_action == :new, do: "New Customer", else: "Edit Customer" %>
+              {if @modal_action == :new, do: "New Customer", else: "Edit Customer"}
             </h3>
             <form id="customer-form" phx-submit="save">
               <div class="space-y-4">
                 <div>
-                  <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label
+                    for="name"
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
                     Name
                   </label>
                   <input
@@ -291,7 +346,10 @@
                 </div>
 
                 <div>
-                  <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label
+                    for="email"
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
                     Email
                   </label>
                   <input
@@ -306,7 +364,10 @@
 
                 <%= if @modal_action == :new do %>
                   <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label
+                      for="password"
+                      class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
                       Password
                     </label>
                     <input
@@ -320,7 +381,10 @@
                 <% end %>
 
                 <div>
-                  <label for="subscription_plan" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label
+                    for="subscription_plan"
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
                     Plan
                   </label>
                   <select
@@ -328,15 +392,32 @@
                     id="subscription_plan"
                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm"
                   >
-                    <option value="trial" selected={@customer.subscription_plan == "trial"}>Trial</option>
-                    <option value="pro" selected={@customer.subscription_plan == "pro"}>Pro</option>
-                    <option value="pay_as_you_go" selected={@customer.subscription_plan == "pay_as_you_go"}>Pay As You Go</option>
-                    <option value="enterprise" selected={@customer.subscription_plan == "enterprise"}>Enterprise</option>
+                    <option value="trial" selected={@customer.subscription_plan == "trial"}>
+                      Trial
+                    </option>
+                    <option value="pro" selected={@customer.subscription_plan == "pro"}>
+                      Pro
+                    </option>
+                    <option
+                      value="pay_as_you_go"
+                      selected={@customer.subscription_plan == "pay_as_you_go"}
+                    >
+                      Pay As You Go
+                    </option>
+                    <option
+                      value="enterprise"
+                      selected={@customer.subscription_plan == "enterprise"}
+                    >
+                      Enterprise
+                    </option>
                   </select>
                 </div>
 
                 <div>
-                  <label for="monthly_limit" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label
+                    for="monthly_limit"
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
                     Monthly Limit
                   </label>
                   <input

@@ -30,13 +30,13 @@ defmodule RsolvWeb.ConnCase do
       import RsolvWeb.ConnCase
     end
   end
-  
+
   @doc """
   Logs in a customer for testing.
   """
   def log_in_customer(conn, customer) do
     token = Rsolv.Customers.generate_customer_session_token(customer)
-    
+
     conn
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_session(:customer_token, token)
@@ -45,24 +45,24 @@ defmodule RsolvWeb.ConnCase do
   setup tags do
     # Ensure the application is started
     Application.ensure_all_started(:rsolv)
-    
+
     # Wait for endpoint to be ready (it creates an ETS table internally)
     ensure_endpoint_started()
-    
+
     # Clear Mnesia customer sessions table to prevent test interference
     try do
       :mnesia.clear_table(:customer_sessions_mnesia)
     rescue
       _ -> :ok
     end
-    
+
     # Ensure the repo is started before trying to use sandbox
     try do
       pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
       on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
-      
+
       # No longer need to reset test customers since LegacyAccounts is removed
-      
+
       {:ok, conn: Phoenix.ConnTest.build_conn()}
     rescue
       error in RuntimeError ->
@@ -81,26 +81,28 @@ defmodule RsolvWeb.ConnCase do
         end
     end
   end
-  
+
   # Helper to ensure endpoint is fully started and ready
   defp ensure_endpoint_started do
     # Try to access the endpoint's config which uses its ETS table
     # If the ETS table doesn't exist, this will fail
     max_attempts = 50
-    retry_delay = 10 # milliseconds
-    
+    # milliseconds
+    retry_delay = 10
+
     Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
       try do
         # This will fail if the ETS table isn't created yet
         RsolvWeb.Endpoint.config(:secret_key_base)
         {:halt, :ok}
       rescue
-        ArgumentError ->
+        _e in ArgumentError ->
           if attempt < max_attempts do
             Process.sleep(retry_delay)
             {:cont, nil}
           else
-            raise "Endpoint ETS table not available after #{max_attempts * retry_delay}ms"
+            reraise "Endpoint ETS table not available after #{max_attempts * retry_delay}ms",
+                    __STACKTRACE__
           end
       end
     end)

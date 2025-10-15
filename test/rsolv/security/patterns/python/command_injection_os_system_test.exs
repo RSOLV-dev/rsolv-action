@@ -2,18 +2,18 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
   use ExUnit.Case
   alias Rsolv.Security.Patterns.Python.CommandInjectionOsSystem
   alias Rsolv.Security.Pattern
-  
+
   # Helper functions for cleaner test code
   defp assert_vulnerable(pattern, code_samples) do
     for code <- code_samples do
-      assert Regex.match?(pattern.regex, code), 
+      assert Regex.match?(pattern.regex, code),
              "Should match vulnerable code: #{code}"
     end
   end
 
   defp assert_safe(pattern, code_samples) do
     for code <- code_samples do
-      refute Regex.match?(pattern.regex, code), 
+      refute Regex.match?(pattern.regex, code),
              "Should NOT match safe code: #{code}"
     end
   end
@@ -21,7 +21,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
   describe "pattern/0" do
     test "returns correct pattern structure" do
       pattern = CommandInjectionOsSystem.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "python-command-injection-os-system"
       assert pattern.name == "Command Injection via os.system"
@@ -114,7 +114,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
   describe "vulnerability_metadata/0" do
     test "returns comprehensive vulnerability metadata" do
       metadata = CommandInjectionOsSystem.vulnerability_metadata()
-      
+
       assert is_map(metadata)
       assert is_binary(metadata.description)
       assert is_list(metadata.references)
@@ -129,11 +129,11 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
 
     test "includes relevant CWE and OWASP references" do
       metadata = CommandInjectionOsSystem.vulnerability_metadata()
-      
+
       cwe_ref = Enum.find(metadata.references, &(&1.type == :cwe))
       assert cwe_ref
       assert cwe_ref.id == "CWE-78"
-      
+
       owasp_ref = Enum.find(metadata.references, &(&1.type == :owasp))
       assert owasp_ref
       assert owasp_ref.id == "A03:2021"
@@ -143,7 +143,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
   describe "ast_enhancement/0" do
     test "returns AST enhancement rules" do
       enhancement = CommandInjectionOsSystem.ast_enhancement()
-      
+
       assert is_map(enhancement)
       assert Map.has_key?(enhancement, :ast_rules)
       assert Map.has_key?(enhancement, :context_rules)
@@ -153,7 +153,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
 
     test "AST rules target appropriate node types" do
       enhancement = CommandInjectionOsSystem.ast_enhancement()
-      
+
       assert enhancement.ast_rules.node_type == "Call"
       assert enhancement.ast_rules.module == "os"
       assert enhancement.ast_rules.function == "system"
@@ -162,7 +162,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
 
     test "includes command injection context detection" do
       enhancement = CommandInjectionOsSystem.ast_enhancement()
-      
+
       assert enhancement.context_rules.dangerous_patterns
       assert enhancement.context_rules.exclude_if_literal == true
       assert enhancement.context_rules.check_input_validation == true
@@ -170,7 +170,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
 
     test "confidence scoring reduces false positives" do
       enhancement = CommandInjectionOsSystem.ast_enhancement()
-      
+
       assert enhancement.min_confidence == 0.6
       assert enhancement.confidence_rules.base == 0.6
       assert enhancement.confidence_rules.adjustments["has_user_input"] == 0.3
@@ -181,7 +181,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
   describe "enhanced_pattern/0" do
     test "uses AST enhancement" do
       enhanced = CommandInjectionOsSystem.enhanced_pattern()
-      
+
       assert enhanced.id == "python-command-injection-os-system"
       assert enhanced.ast_rules
       assert enhanced.min_confidence == 0.6
@@ -193,7 +193,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystemTest do
       assert CommandInjectionOsSystem.applies_to_file?("script.py", nil)
       assert CommandInjectionOsSystem.applies_to_file?("utils/helper.py", nil)
       assert CommandInjectionOsSystem.applies_to_file?("src/main.py", nil)
-      
+
       refute CommandInjectionOsSystem.applies_to_file?("script.js", nil)
       refute CommandInjectionOsSystem.applies_to_file?("config.rb", nil)
       refute CommandInjectionOsSystem.applies_to_file?("README.md", nil)

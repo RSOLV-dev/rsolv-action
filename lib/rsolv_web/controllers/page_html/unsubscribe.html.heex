@@ -8,31 +8,40 @@
         We're sorry to see you go. Please confirm your email address below to unsubscribe from all RSOLV marketing communications.
       </p>
     </div>
-    
+
     <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
       <form method="post" action="/unsubscribe">
         <div class="mb-6">
           <label for="email" class="block text-gray-700 font-medium mb-2">Email Address</label>
-          <input 
-            type="email" 
-            id="email" 
-            name="email" 
+          <input
+            type="email"
+            id="email"
+            name="email"
             value={@email}
             class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-blue"
             placeholder="your.email@example.com"
             required
           />
         </div>
-        
+
         <div class="flex justify-center">
-          <button type="submit" class="bg-brand-blue text-white font-semibold py-2 px-6 rounded-md hover:bg-brand-dark transition-colors">
+          <button
+            type="submit"
+            class="bg-brand-blue text-white font-semibold py-2 px-6 rounded-md hover:bg-brand-dark transition-colors"
+          >
             Unsubscribe
           </button>
         </div>
       </form>
-      
+
       <div class="mt-6 text-center text-gray-600 text-sm">
-        <p>If you're having any issues or want to provide feedback about our emails, you can <a href="mailto:support@rsolv.dev" class="text-brand-blue hover:underline">contact us</a> directly.</p>
+        <p>
+          If you're having any issues or want to provide feedback about our emails, you can
+          <a href="mailto:support@rsolv.dev" class="text-brand-blue hover:underline">
+            contact us
+          </a>
+          directly.
+        </p>
       </div>
     </div>
   </div>

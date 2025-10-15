@@ -1,18 +1,18 @@
 defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
   @moduledoc """
   Detects SQL injection vulnerabilities via string interpolation in Elixir/Ecto code.
-  
+
   This pattern identifies dangerous string interpolation in SQL queries that can lead
   to SQL injection attacks. It focuses on Ecto's raw query methods where user input
   is directly interpolated into SQL strings without proper parameterization.
-  
+
   ## Vulnerability Details
-  
+
   SQL injection occurs when untrusted user input is directly interpolated into SQL
   query strings. In Elixir/Ecto applications, this typically happens when developers
-  use `Repo.query/2`, `Repo.query!/2`, `Ecto.Adapters.SQL.query/3`, or `fragment/1` 
+  use `Repo.query/2`, `Repo.query!/2`, `Ecto.Adapters.SQL.query/3`, or `fragment/1`
   with string interpolation instead of parameterized queries.
-  
+
   ### Attack Example
   ```elixir
   # Vulnerable - direct interpolation
@@ -20,21 +20,21 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
   Repo.query!("SELECT * FROM users WHERE id = \#{user_id}")
   # Results in: SELECT * FROM users WHERE id = 1 OR 1=1--
   ```
-  
+
   ### Safe Alternative
   ```elixir
   # Safe - parameterized query
   user_id = params["user_id"]
   Repo.query!("SELECT * FROM users WHERE id = $1", [user_id])
-  
+
   # Or using Ecto query DSL
   from(u in User, where: u.id == ^user_id)
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -45,10 +45,12 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
       severity: :critical,
       languages: ["elixir"],
       frameworks: ["ecto"],
-      regex: ~r/(?:(?:\w+\.)*\w*[Rr]epo\.query!?|Ecto\.Adapters\.SQL\.query!?|fragment)\s*\(.*?#\{.*?\}/,
+      regex:
+        ~r/(?:(?:\w+\.)*\w*[Rr]epo\.query!?|Ecto\.Adapters\.SQL\.query!?|fragment)\s*\(.*?#\{.*?\}/,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries with Ecto. Use ^variable syntax or pass parameters separately",
+      recommendation:
+        "Use parameterized queries with Ecto. Use ^variable syntax or pass parameters separately",
       test_cases: %{
         vulnerable: [
           ~S|Repo.query!("SELECT * FROM users WHERE name = '#{name}'")|,
@@ -65,14 +67,14 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
       description: """
-      SQL injection via string interpolation occurs when user input is directly embedded 
+      SQL injection via string interpolation occurs when user input is directly embedded
       into SQL query strings using Elixir's string interpolation syntax (\#{variable}).
-      This bypasses Ecto's built-in parameterization and allows attackers to execute 
+      This bypasses Ecto's built-in parameterization and allows attackers to execute
       arbitrary SQL commands, potentially leading to data breaches, unauthorized access,
       and system compromise.
       """,
@@ -80,7 +82,8 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -105,7 +108,8 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
           type: :documentation,
           id: "ecto_security_guide",
           title: "Common Web Application Vulnerabilities - EEF Security WG",
-          url: "https://security.erlef.org/web_app_security_best_practices_beam/common_web_application_vulnerabilities.html"
+          url:
+            "https://security.erlef.org/web_app_security_best_practices_beam/common_web_application_vulnerabilities.html"
         }
       ],
       attack_vectors: [
@@ -125,7 +129,8 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
       cve_examples: [
         %{
           id: "CVE-2023-1234",
-          description: "Elixir Phoenix application SQL injection via Repo.query string interpolation",
+          description:
+            "Elixir Phoenix application SQL injection via Repo.query string interpolation",
           severity: "critical",
           cvss: 9.8,
           note: "Demonstrates real-world impact of unparameterized Ecto queries"
@@ -133,7 +138,7 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
         %{
           id: "CVE-2022-5678",
           description: "Ecto fragment SQL injection allowing data extraction",
-          severity: "high", 
+          severity: "high",
           cvss: 8.1,
           note: "Shows vulnerability in fragment() usage with user input"
         },
@@ -180,27 +185,27 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SQL injection vulnerabilities
   and safe usage patterns, such as logging, comments, or proper parameterization.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation.ast_enhancement()
       iex> Enum.sort(Map.keys(enhancement))
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "StringLiteral"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.ast_rules.sql_analysis.check_query_methods
       true

@@ -1,7 +1,7 @@
 defmodule Rsolv.AST.ASTErrorHandler do
   @moduledoc """
   Standardizes error handling across all AST parsers.
-  
+
   Provides a unified error format and recovery strategies for different
   types of parsing failures across all supported languages.
   """
@@ -13,11 +13,12 @@ defmodule Rsolv.AST.ASTErrorHandler do
   """
   def standardize_error(error, language, source_code) do
     # For unsupported language errors, ensure the language is available in the error
-    enriched_error = if Map.get(error, :type) == :unsupported_language and not Map.has_key?(error, :language) do
-      Map.put(error, :language, language)
-    else
-      error
-    end
+    enriched_error =
+      if Map.get(error, :type) == :unsupported_language and not Map.has_key?(error, :language) do
+        Map.put(error, :language, language)
+      else
+        error
+      end
 
     standardized = %{
       type: normalize_error_type(enriched_error),
@@ -31,11 +32,12 @@ defmodule Rsolv.AST.ASTErrorHandler do
       timestamp: DateTime.utc_now()
     }
 
-    enhanced = standardized
-    |> add_language_specific_fields(error, language)
-    |> add_severity()
-    |> add_recovery_suggestions()
-    |> add_recoverability()
+    enhanced =
+      standardized
+      |> add_language_specific_fields(error, language)
+      |> add_severity()
+      |> add_recovery_suggestions()
+      |> add_recoverability()
 
     {:error, enhanced}
   end
@@ -45,7 +47,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
   """
   def extract_source_snippet(source, line, column, opts \\ []) do
     context_lines = Keyword.get(opts, :context_lines, 2)
-    
+
     lines = String.split(source, "\n")
     total_lines = length(lines)
 
@@ -54,20 +56,21 @@ defmodule Rsolv.AST.ASTErrorHandler do
     else
       start_line = max(1, line - context_lines)
       end_line = min(total_lines, line + context_lines)
-      
-      relevant_lines = lines
-      |> Enum.with_index(1)
-      |> Enum.filter(fn {_line_content, line_num} -> 
-          line_num >= start_line and line_num <= end_line 
+
+      relevant_lines =
+        lines
+        |> Enum.with_index(1)
+        |> Enum.filter(fn {_line_content, line_num} ->
+          line_num >= start_line and line_num <= end_line
         end)
-      |> Enum.map(fn {line_content, line_num} ->
+        |> Enum.map(fn {line_content, line_num} ->
           if line_num == line do
             "#{line_content}     <-- Error here"
           else
             line_content
           end
         end)
-      |> Enum.reject(&(&1 == ""))
+        |> Enum.reject(&(&1 == ""))
 
       %{
         lines: relevant_lines,
@@ -82,6 +85,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
       %{line: line, column: column} when not is_nil(line) ->
         # Ensure line is within source bounds
         source_lines = String.split(source, "\n")
+
         if line <= length(source_lines) do
           extract_source_snippet(source, line, column)
         else
@@ -92,6 +96,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
             error_column: column
           }
         end
+
       _ ->
         nil
     end
@@ -119,16 +124,30 @@ defmodule Rsolv.AST.ASTErrorHandler do
     case error.type do
       :syntax_error ->
         syntax_error_suggestions(error)
+
       :timeout ->
         timeout_suggestions(error)
+
       :parser_crash ->
         crash_suggestions(error)
+
       :unsupported_language ->
-        ["Language '#{error.language}' is not supported. Supported languages: #{Enum.join(@supported_languages, ", ")}"]
+        [
+          "Language '#{error.language}' is not supported. Supported languages: #{Enum.join(@supported_languages, ", ")}"
+        ]
+
       :parser_not_available ->
-        ["Parser for #{error.language} is not currently available.", "Please check parser installation and dependencies."]
+        [
+          "Parser for #{error.language} is not currently available.",
+          "Please check parser installation and dependencies."
+        ]
+
       :unknown_error ->
-        ["Unknown error occurred. Consider using fallback parsing strategy.", "Check if source code is valid #{error.language} syntax."]
+        [
+          "Unknown error occurred. Consider using fallback parsing strategy.",
+          "Check if source code is valid #{error.language} syntax."
+        ]
+
       _ ->
         ["Try using a fallback parsing strategy."]
     end
@@ -166,17 +185,23 @@ defmodule Rsolv.AST.ASTErrorHandler do
 
   defp extract_error_message(error) do
     cond do
-      Map.has_key?(error, :message) -> error.message
-      Map.has_key?(error, :type) and error.type == :timeout -> 
+      Map.has_key?(error, :message) ->
+        error.message
+
+      Map.has_key?(error, :type) and error.type == :timeout ->
         "Parser timeout after #{Map.get(error, :duration_ms, "unknown")}ms"
+
       Map.has_key?(error, :type) and error.type == :parser_crash ->
         "Parser crashed: #{Map.get(error, :reason, "unknown")} (exit code: #{Map.get(error, :exit_code, "unknown")})"
+
       Map.has_key?(error, :type) and error.type == :unsupported_language ->
         error_lang = Map.get(error, :language, "unknown")
         "Language '#{error_lang}' is not supported"
+
       Map.has_key?(error, :type) and error.type == :parser_not_available ->
         "Parser for #{Map.get(error, :language, "unknown")} is not available"
-      true -> 
+
+      true ->
         "Unknown parsing error occurred"
     end
   end
@@ -190,7 +215,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
           column: error.column,
           offset: Map.get(error, :offset)
         }
-      
+
       # Python format
       Map.has_key?(error, :lineno) && Map.has_key?(error, :offset) ->
         %{
@@ -198,7 +223,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
           column: error.offset,
           offset: error.offset
         }
-      
+
       # Ruby format
       Map.has_key?(error, :location) && is_map(error.location) ->
         %{
@@ -206,7 +231,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
           column: error.location.column,
           offset: Map.get(error.location, :offset)
         }
-      
+
       # Go format
       Map.has_key?(error, :pos) && is_map(error.pos) ->
         %{
@@ -214,7 +239,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
           column: error.pos.column,
           offset: error.pos.offset
         }
-      
+
       true ->
         nil
     end
@@ -222,25 +247,25 @@ defmodule Rsolv.AST.ASTErrorHandler do
 
   defp add_language_specific_fields(standardized, error, language) do
     error_type = Map.get(error, :type, :unknown_error)
-    
+
     case {error_type, language} do
       {:timeout, _} ->
         Map.put(standardized, :duration_ms, Map.get(error, :duration_ms))
-      
+
       {:parser_crash, _} ->
         standardized
         |> Map.put(:reason, Map.get(error, :reason))
         |> Map.put(:exit_code, Map.get(error, :exit_code))
-      
+
       {:unsupported_language, _} ->
         Map.put(standardized, :supported_languages, @supported_languages)
-      
+
       {:parser_not_available, _} ->
         Map.put(standardized, :required_dependencies, extract_dependencies(error))
-      
+
       {:unknown_error, _} ->
         Map.put(standardized, :original_error, error)
-      
+
       _ ->
         standardized
     end
@@ -268,22 +293,29 @@ defmodule Rsolv.AST.ASTErrorHandler do
       "Ensure variable names are valid identifiers"
     ]
 
-    language_specific = case error.language do
-      "javascript" ->
-        ["Check for missing semicolons or commas", "Verify ES6+ syntax compatibility"]
-      "python" ->
-        ["Check indentation consistency", "Verify colon placement in control structures"]
-      "ruby" ->
-        ["Check for missing 'end' keywords", "Verify block syntax (do/end vs {}"]
-      "php" ->
-        ["Check for missing semicolons", "Verify PHP opening/closing tags"]
-      "java" ->
-        ["Check for missing semicolons", "Verify class and method declarations"]
-      "go" ->
-        ["Check for missing package declaration", "Verify brace placement"]
-      _ ->
-        []
-    end
+    language_specific =
+      case error.language do
+        "javascript" ->
+          ["Check for missing semicolons or commas", "Verify ES6+ syntax compatibility"]
+
+        "python" ->
+          ["Check indentation consistency", "Verify colon placement in control structures"]
+
+        "ruby" ->
+          ["Check for missing 'end' keywords", "Verify block syntax (do/end vs {}"]
+
+        "php" ->
+          ["Check for missing semicolons", "Verify PHP opening/closing tags"]
+
+        "java" ->
+          ["Check for missing semicolons", "Verify class and method declarations"]
+
+        "go" ->
+          ["Check for missing package declaration", "Verify brace placement"]
+
+        _ ->
+          []
+      end
 
     if String.contains?(error.message || "", "semicolon") do
       ["Check semicolon placement and usage" | base_suggestions] ++ language_specific
@@ -295,14 +327,20 @@ defmodule Rsolv.AST.ASTErrorHandler do
   defp timeout_suggestions(error) do
     [
       "Reduce source code complexity or size",
-      "Increase parser timeout limit if possible", 
+      "Increase parser timeout limit if possible",
       "Split large files into smaller modules",
       "Consider using a streaming parser for large files"
-    ] ++ case error.language do
-      "javascript" -> ["Consider using a faster JavaScript parser", "Minimize deeply nested structures"]
-      "python" -> ["Reduce deeply nested functions or classes", "Consider breaking into multiple modules"]
-      _ -> []
-    end
+    ] ++
+      case error.language do
+        "javascript" ->
+          ["Consider using a faster JavaScript parser", "Minimize deeply nested structures"]
+
+        "python" ->
+          ["Reduce deeply nested functions or classes", "Consider breaking into multiple modules"]
+
+        _ ->
+          []
+      end
   end
 
   defp crash_suggestions(_error) do
@@ -313,7 +351,7 @@ defmodule Rsolv.AST.ASTErrorHandler do
       "Consider preprocessing the source code to identify problematic patterns"
     ]
   end
-  
+
   defp extract_dependencies(error) do
     # Extract dependency info from error message if available
     if Map.has_key?(error, :message) and String.contains?(error.message || "", "Maven") do

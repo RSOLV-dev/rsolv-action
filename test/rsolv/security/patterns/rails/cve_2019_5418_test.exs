@@ -7,11 +7,14 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
   describe "pattern/0" do
     test "returns valid pattern structure" do
       pattern = Cve20195418.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "rails-cve-2019-5418"
       assert pattern.name == "CVE-2019-5418 - File Content Disclosure"
-      assert pattern.description == "Path traversal vulnerability in render file allowing arbitrary file disclosure"
+
+      assert pattern.description ==
+               "Path traversal vulnerability in render file allowing arbitrary file disclosure"
+
       assert pattern.type == :path_traversal
       assert pattern.severity == :critical
       assert pattern.languages == ["ruby"]
@@ -26,7 +29,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
   describe "vulnerability_metadata/0" do
     test "returns comprehensive metadata" do
       metadata = Cve20195418.vulnerability_metadata()
-      
+
       assert is_map(metadata)
       assert Map.has_key?(metadata, :description)
       assert Map.has_key?(metadata, :attack_vectors)
@@ -37,7 +40,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
       assert Map.has_key?(metadata, :remediation_steps)
       assert Map.has_key?(metadata, :detection_methods)
       assert Map.has_key?(metadata, :prevention_tips)
-      
+
       assert String.contains?(metadata.description, "CVE-2019-5418")
       assert String.contains?(metadata.description, "file content disclosure")
       assert String.contains?(metadata.cve_details, "CVSS")
@@ -48,22 +51,22 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
   describe "ast_enhancement/0" do
     test "returns AST enhancement configuration" do
       ast = Cve20195418.ast_enhancement()
-      
+
       assert is_map(ast)
       assert Map.has_key?(ast, :context_rules)
       assert Map.has_key?(ast, :confidence_rules)
       assert Map.has_key?(ast, :ast_rules)
-      
+
       # Check context rules
       assert is_map(ast.context_rules)
       assert is_list(ast.context_rules.render_methods)
       assert "render" in ast.context_rules.render_methods
-      
+
       # Check confidence rules
       assert is_map(ast.confidence_rules)
       assert is_map(ast.confidence_rules.adjustments)
       assert ast.confidence_rules.adjustments.params_in_file_path == +0.7
-      
+
       # Check AST rules
       assert is_map(ast.ast_rules)
       assert ast.ast_rules.render_analysis.detect_file_option == true
@@ -73,7 +76,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
   describe "enhanced_pattern/0" do
     test "includes AST enhancement in pattern" do
       pattern = Cve20195418.enhanced_pattern()
-      
+
       assert %Pattern{} = pattern
       assert Map.has_key?(pattern, :ast_enhancement)
       assert pattern.ast_enhancement == Cve20195418.ast_enhancement()
@@ -89,12 +92,12 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         end
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects render file with Rails.root and params interpolation" do
@@ -106,12 +109,12 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         end
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects render template with params path" do
@@ -121,12 +124,12 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         render template: template_name
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects render partial with directory traversal" do
@@ -138,12 +141,12 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         end
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
 
     test "detects complex path construction" do
@@ -155,12 +158,12 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         render file: full_path
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       assert Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, vulnerable_code)
-      end)
+               Regex.match?(regex, vulnerable_code)
+             end)
     end
   end
 
@@ -173,19 +176,19 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         end
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
 
     test "does not flag render with whitelisted templates" do
       safe_code = """
       class TemplatesController < ApplicationController
         ALLOWED_TEMPLATES = %w[user admin guest].freeze
-        
+
         def show
           template = params[:type]
           if ALLOWED_TEMPLATES.include?(template)
@@ -196,12 +199,12 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         end
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
 
     test "does not flag render without file option" do
@@ -211,19 +214,19 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
           @user = User.find(params[:id])
           render :show
         end
-        
+
         def index
           @users = User.all
           render
         end
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
 
     test "does not flag commented vulnerable code" do
@@ -232,18 +235,18 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         def display
           # DEPRECATED: This was vulnerable to CVE-2019-5418
           # render file: params[:template]
-          
+
           # Now using safe approach
           render :display
         end
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
 
     test "does not flag render json or other safe formats" do
@@ -252,29 +255,33 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         def data
           render json: { status: params[:status] }
         end
-        
+
         def xml_data
           render xml: @data.to_xml
         end
-        
+
         def plain_text
           render plain: "Hello World"
         end
       end
       """
-      
+
       pattern = Cve20195418.pattern()
-      
+
       refute Enum.any?(pattern.regex, fn regex ->
-        Regex.match?(regex, safe_code)
-      end)
+               Regex.match?(regex, safe_code)
+             end)
     end
   end
 
   describe "applies_to_file?/2" do
     test "applies to Rails controller files" do
       assert Cve20195418.applies_to_file?("app/controllers/reports_controller.rb", ["rails"])
-      assert Cve20195418.applies_to_file?("app/controllers/admin/documents_controller.rb", ["rails"])
+
+      assert Cve20195418.applies_to_file?("app/controllers/admin/documents_controller.rb", [
+               "rails"
+             ])
+
       assert Cve20195418.applies_to_file?("app/controllers/api/v1/files_controller.rb", ["rails"])
     end
 

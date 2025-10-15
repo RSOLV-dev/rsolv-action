@@ -1,29 +1,29 @@
 defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
   @moduledoc """
   Path Traversal via path.join in JavaScript/Node.js
-  
+
   Detects dangerous patterns like:
     path.join("/uploads", req.params.filename)
     const file = path.join(baseDir, userInput)
     fs.readFile(path.join("./data", req.query.file))
-    
+
   Safe alternatives:
     const safePath = path.join("/uploads", path.basename(filename))
     if (resolvedPath.startsWith(baseDir)) { /* safe */ }
     const file = path.join(baseDir, sanitize(userInput))
-    
+
   The path.join() function in Node.js combines path segments using the platform-specific
   separator, but it does not validate that the resulting path stays within intended
   boundaries. Attackers can use relative path sequences like "../" to escape the
   intended directory and access files anywhere on the filesystem.
-  
+
   ## Vulnerability Details
-  
+
   The path.join() method concatenates path segments but performs minimal validation.
   It normalizes the path (removing redundant separators and resolving "." and "..")
   but does not prevent directory traversal attacks. When user input contains "../"
   sequences, the resulting path can escape the intended base directory.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable code
@@ -34,18 +34,17 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
     res.send(data); // Leaks sensitive system files
   });
   ```
-  
+
   ### Recent Vulnerability Context (2024)
-  
+
   Node.js has seen multiple path traversal CVEs in recent years, including
   CVE-2024-21896 and CVE-2023-39331, demonstrating that even built-in path
-  handling functions can have vulnerabilities. The research shows an 85% 
+  handling functions can have vulnerabilities. The research shows an 85%
   increase in closed-source path traversal incidents in 2024 alone.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
 
   def pattern do
     %Pattern{
@@ -55,10 +54,12 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
       type: :path_traversal,
       severity: :high,
       languages: ["javascript", "typescript"],
-      regex: ~r/(?:path\.)?join\s*\([^)]*,\s*(?:req\.|request\.|params\.|query\.|body\.|user[A-Z]|userInput|input(?!.*sanitize)|data)/i,
+      regex:
+        ~r/(?:path\.)?join\s*\([^)]*,\s*(?:req\.|request\.|params\.|query\.|body\.|user[A-Z]|userInput|input(?!.*sanitize)|data)/i,
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
-      recommendation: "Validate and sanitize file paths. Use path.resolve and check if result is within expected directory.",
+      recommendation:
+        "Validate and sanitize file paths. Use path.resolve and check if result is within expected directory.",
       test_cases: %{
         vulnerable: [
           ~S|path.join("/uploads", req.params.filename)|,
@@ -79,30 +80,30 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for path traversal via path.join.
-  
+
   This metadata documents the specific risks of using path.join() with user input,
   including recent CVE examples and comprehensive attack vectors discovered in 2024 research.
   """
   def vulnerability_metadata do
     %{
       description: """
-      Path traversal via path.join() occurs when user input is passed directly to the 
-      path.join() function without proper validation. While path.join() normalizes paths 
-      by resolving "." and ".." segments, it does not prevent directory traversal attacks. 
-      Attackers can use relative path sequences like "../" to escape the intended base 
+      Path traversal via path.join() occurs when user input is passed directly to the
+      path.join() function without proper validation. While path.join() normalizes paths
+      by resolving "." and ".." segments, it does not prevent directory traversal attacks.
+      Attackers can use relative path sequences like "../" to escape the intended base
       directory and access files anywhere on the filesystem.
-      
-      The vulnerability is particularly dangerous because path.join() is often perceived 
-      as "safe" due to its path normalization features. However, normalization alone is 
-      insufficient to prevent traversal attacks. The function will happily resolve 
-      "../../../etc/passwd" relative to any base directory, potentially exposing 
+
+      The vulnerability is particularly dangerous because path.join() is often perceived
+      as "safe" due to its path normalization features. However, normalization alone is
+      insufficient to prevent traversal attacks. The function will happily resolve
+      "../../../etc/passwd" relative to any base directory, potentially exposing
       sensitive system files.
-      
-      Recent research (2024) shows an 85% increase in path traversal incidents, with 
-      attackers increasingly targeting Node.js applications due to the prevalence of 
+
+      Recent research (2024) shows an 85% increase in path traversal incidents, with
+      attackers increasingly targeting Node.js applications due to the prevalence of
       file serving functionality in web applications.
       """,
       references: [
@@ -160,14 +161,16 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
       cve_examples: [
         %{
           id: "CVE-2024-21896",
-          description: "Node.js path traversal via Buffer.prototype.utf8Write manipulation affecting path.resolve()",
+          description:
+            "Node.js path traversal via Buffer.prototype.utf8Write manipulation affecting path.resolve()",
           severity: "high",
           cvss: 7.5,
           note: "Demonstrates that even Node.js core path functions can have vulnerabilities"
         },
         %{
           id: "CVE-2023-39331",
-          description: "Path traversal vulnerability from overwriting built-in Node.js utility functions",
+          description:
+            "Path traversal vulnerability from overwriting built-in Node.js utility functions",
           severity: "medium",
           cvss: 6.5,
           note: "Shows how attackers can manipulate path normalization behavior"
@@ -190,18 +193,18 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
       detection_notes: """
       This pattern detects calls to path.join() where user input appears to be passed
       as one of the path segments. Key detection indicators:
-      
+
       1. Function calls to path.join() with multiple arguments
       2. Second or later arguments that match user input patterns:
          - req.params.*, req.query.*, req.body.*
          - request.* variants
          - Variables named userInput, userData, input, etc.
       3. Exclusion of obviously sanitized inputs (input.*sanitize patterns)
-      
+
       The regex specifically looks for path.join calls with comma-separated arguments
       where subsequent arguments match common user input patterns. This approach
       minimizes false positives while catching the most common vulnerable patterns.
-      
+
       False positives may occur when:
       - Static string literals are used that happen to match variable patterns
       - Input is properly validated before reaching path.join()
@@ -242,54 +245,56 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Applies to JavaScript/TypeScript files or any file containing path operations.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files always apply
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) ->
+        true
+
       # If content is provided, check for path operations
       content != nil ->
         String.contains?(content, "path.join") || String.contains?(content, ".join(")
-        
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual path traversal vulnerabilities and:
   - path.join() with validated/sanitized input
   - Static paths or hardcoded values
   - Paths that are checked against a base directory after join
   - Use of path.basename() or similar sanitization functions
   - Sandboxed environments (Docker, chroot)
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> enhancement.ast_rules.callee.property
       "join"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> "uses_path_validation" in Map.keys(enhancement.confidence_rules.adjustments)
       true
@@ -308,16 +313,22 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
         argument_analysis: %{
           has_user_controlled_path: true,
           not_validated: true,
-          contains_traversal_sequences: true  # ../ or ..\
+          # ../ or ..\
+          contains_traversal_sequences: true
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/build/],
-        exclude_if_validated: true,           # Path validation before join
-        exclude_if_sandboxed: true,          # chroot, Docker, etc.
-        exclude_if_allowlist_checked: true,   # Checked against allowed paths
-        exclude_if_normalized_and_checked: true,  # path.normalize() + startsWith check
-        safe_path_functions: ["path.basename", "path.extname"]  # These are safer
+        # Path validation before join
+        exclude_if_validated: true,
+        # chroot, Docker, etc.
+        exclude_if_sandboxed: true,
+        # Checked against allowed paths
+        exclude_if_allowlist_checked: true,
+        # path.normalize() + startsWith check
+        exclude_if_normalized_and_checked: true,
+        # These are safer
+        safe_path_functions: ["path.basename", "path.extname"]
       },
       confidence_rules: %{
         base: 0.3,
@@ -326,10 +337,14 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
           "url_param_to_filesystem" => 0.4,
           "has_dot_dot_sequences" => 0.3,
           "uses_path_validation" => -0.8,
-          "checks_resolved_path" => -0.7,     # Checks if within allowed directory
-          "uses_basename_only" => -0.9,       # path.basename() removes directory
-          "static_base_path" => -0.3,         # Less risky with fixed base
-          "in_config_loader" => -0.6          # Config files often use path.join safely
+          # Checks if within allowed directory
+          "checks_resolved_path" => -0.7,
+          # path.basename() removes directory
+          "uses_basename_only" => -0.9,
+          # Less risky with fixed base
+          "static_base_path" => -0.3,
+          # Config files often use path.join safely
+          "in_config_loader" => -0.6
         }
       },
       min_confidence: 0.8

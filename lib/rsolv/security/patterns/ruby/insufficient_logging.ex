@@ -1,17 +1,17 @@
 defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
   @moduledoc """
   Detects insufficient security logging in Ruby applications.
-  
+
   Security logging is critical for detecting attacks, investigating incidents, and maintaining
   audit trails. This pattern identifies common scenarios where security-relevant events
   are not properly logged, making attacks harder to detect and investigate.
-  
+
   ## Vulnerability Details
-  
+
   Insufficient logging can prevent organizations from detecting security incidents in time
   to respond effectively. Missing logs for authentication, authorization, and sensitive
   operations create blind spots that attackers can exploit.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable - no logging for failed authentication
@@ -25,7 +25,7 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
       render :new
     end
   end
-  
+
   # Secure - logs authentication attempts
   def login
     user = User.find_by(email: params[:email])
@@ -40,33 +40,33 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
     end
   end
   ```
-  
+
   ### Real-World Impact
   - Delayed detection of security breaches
   - Inability to investigate incident scope and timeline
   - Compliance violations and regulatory penalties
   - Difficulty in forensic analysis and evidence gathering
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the insufficient security logging pattern for Ruby applications.
-  
+
   Detects missing security event logging for authentication, authorization,
   exception handling, and sensitive operations.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsufficientLogging.pattern()
       iex> pattern.id
       "ruby-insufficient-logging"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsufficientLogging.pattern()
       iex> pattern.severity
       :medium
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsufficientLogging.pattern()
       iex> vulnerable = "rescue StandardError"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable))
@@ -77,7 +77,8 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
     %Pattern{
       id: "ruby-insufficient-logging",
       name: "Insufficient Security Logging",
-      description: "Detects missing security event logging that could prevent incident detection and investigation",
+      description:
+        "Detects missing security event logging that could prevent incident detection and investigation",
       type: :information_disclosure,
       severity: :medium,
       languages: ["ruby"],
@@ -86,41 +87,43 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
         ~r/rescue\s*(?:[\w:]+)?(?:\s*=>\s*\w+)?\s*(?:\n|\\n)(?!.*(?:logger|log|puts|audit)).*?(?:nil|false|end|#)/ms,
         ~r/rescue\s*(?:[\w:]+)?(?:\s*=>\s*\w+)?\s*$/,
         ~r/rescue\s*$/,
-        ~r/rescue\s*=>\s*\w+\s*(?:\n|\\n)\s*#\s*No\s+logging/s,  # rescue with "No logging" comment
-        
+        # rescue with "No logging" comment
+        ~r/rescue\s*=>\s*\w+\s*(?:\n|\\n)\s*#\s*No\s+logging/s,
+
         # Authentication methods without logging
         ~r/def\s+(?:login|authenticate|sign_in).*?(?:redirect_to|session\[)/m,
         ~r/def\s+(?:logout|sign_out|destroy)(?!.*(?:logger|log|audit)).*?session\.clear/m,
         ~r/def\s+reset_password.*?user\.update\(password:/ms,
-        
-        # Authorization failures without logging  
+
+        # Authorization failures without logging
         ~r/redirect_to.*?unless.*?(?:current_user|admin\?|can\?)/,
         ~r/unless\s+can\?\(.*?render\s+:unauthorized.*?end/ms,
         ~r/raise\s+PermissionDenied\s+unless/,
         ~r/return\s+false\s+unless.*?current_user/,
-        
+
         # Sensitive operations without logging
         ~r/def\s+(?:update_user_role|delete_account|transfer_funds|change_permissions).*?end/m,
         ~r/\.destroy(?!\s*$)/,
         ~r/\.update_all\(/,
         ~r/\.update_columns\(/,
-        
+
         # Failed operations without proper logging
         ~r/if\s+\w+\.save.*?else.*?render/m,
         ~r/unless\s+\w+\.process.*?flash\[:error\]/m,
         ~r/return\s+unless.*?flash\[:error\]/,
         ~r/raise\s+".*?"\s+if.*?blank\?/,
-        
+
         # Bulk operations without audit trail
         ~r/params\[:users\]\.each.*?destroy/,
         ~r/execute\s*\(\s*"DELETE\s+FROM\s+users/,
-        
+
         # Comment detection (for limitation test)
         ~r/#.*rescue/
       ],
       cwe_id: "CWE-778",
       owasp_category: "A09:2021",
-      recommendation: "Implement comprehensive security logging for authentication, authorization, and sensitive operations. Log security events with appropriate detail and context.",
+      recommendation:
+        "Implement comprehensive security logging for authentication, authorization, and sensitive operations. Log security events with appropriate detail and context.",
       test_cases: %{
         vulnerable: [
           "rescue StandardError",
@@ -191,17 +194,20 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
       cve_examples: [
         %{
           id: "CVE-2025-27111",
-          description: "Rack Ruby Framework log injection vulnerability allowing manipulation of log content",
+          description:
+            "Rack Ruby Framework log injection vulnerability allowing manipulation of log content",
           severity: "medium",
           cvss: 6.5,
           note: "Demonstrates importance of secure logging practices in Ruby applications"
         },
         %{
           id: "CWE-778-Related",
-          description: "Multiple applications affected by insufficient logging leading to delayed breach detection",
+          description:
+            "Multiple applications affected by insufficient logging leading to delayed breach detection",
           severity: "high",
           cvss: 7.5,
-          note: "Target breach (2013) and other major incidents linked to insufficient security monitoring"
+          note:
+            "Target breach (2013) and other major incidents linked to insufficient security monitoring"
         }
       ],
       detection_notes: """
@@ -211,7 +217,7 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
       - Sensitive operations like account deletion without logging
       - Failed operations without error logging
       - Bulk data operations without audit trails
-      
+
       AST enhancement provides additional context analysis by checking for logging statements
       within method bodies and exception handlers.
       """,
@@ -237,7 +243,8 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
           "Use consistent log formats for automated analysis"
         ],
         framework_notes: %{
-          rails: "Use Rails.logger with appropriate levels, consider audit gems like Audited or PaperTrail",
+          rails:
+            "Use Rails.logger with appropriate levels, consider audit gems like Audited or PaperTrail",
           sinatra: "Implement custom logging middleware for security events",
           general: "Follow OWASP Logging Cheat Sheet guidelines for secure logging practices"
         }
@@ -256,15 +263,15 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsufficientLogging.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsufficientLogging.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsufficientLogging.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodDefinition"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsufficientLogging.ast_enhancement()
       iex> "logger" in enhancement.ast_rules.logging_analysis.logging_methods
       true
@@ -277,7 +284,12 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
         security_method_analysis: %{
           authentication_methods: ["login", "authenticate", "sign_in", "logout", "sign_out"],
           authorization_methods: ["authorize", "check_permission", "require_admin", "can?"],
-          sensitive_operations: ["delete_account", "update_role", "transfer_funds", "change_permissions"]
+          sensitive_operations: [
+            "delete_account",
+            "update_role",
+            "transfer_funds",
+            "change_permissions"
+          ]
         },
         exception_analysis: %{
           rescue_blocks: true,
@@ -285,7 +297,15 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
           exception_types: ["StandardError", "Exception", "SecurityError", "PermissionDenied"]
         },
         logging_analysis: %{
-          logging_methods: ["logger", "Rails.logger", "audit_log", "security_log", "log", "puts", "p"],
+          logging_methods: [
+            "logger",
+            "Rails.logger",
+            "audit_log",
+            "security_log",
+            "log",
+            "puts",
+            "p"
+          ],
           log_levels: ["info", "warn", "error", "debug"],
           check_within_method_body: true
         }

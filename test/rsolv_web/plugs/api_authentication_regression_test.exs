@@ -15,33 +15,37 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationRegressionTest do
 
   setup do
     # Create multiple customers with different API keys to test recognition
-    {:ok, customer1} = Customers.create_customer(%{
-      name: "Customer One",
-      email: "customer1@example.com",
-      monthly_limit: 100,
-      current_usage: 0
-    })
+    {:ok, customer1} =
+      Customers.create_customer(%{
+        name: "Customer One",
+        email: "customer1@example.com",
+        monthly_limit: 100,
+        current_usage: 0
+      })
 
-    {:ok, customer2} = Customers.create_customer(%{
-      name: "Customer Two",
-      email: "customer2@example.com",
-      monthly_limit: 200,
-      current_usage: 50
-    })
+    {:ok, customer2} =
+      Customers.create_customer(%{
+        name: "Customer Two",
+        email: "customer2@example.com",
+        monthly_limit: 200,
+        current_usage: 50
+      })
 
     # Create API keys with different patterns
     api_key1 = "rsolv_test_#{:crypto.strong_rand_bytes(16) |> Base.encode64()}"
     api_key2 = "rsolv_prod_#{:crypto.strong_rand_bytes(16) |> Base.encode64()}"
 
-    {:ok, api_key_record1} = Customers.create_api_key(customer1, %{
-      key: api_key1,
-      name: "Test API Key 1"
-    })
+    {:ok, api_key_record1} =
+      Customers.create_api_key(customer1, %{
+        key: api_key1,
+        name: "Test API Key 1"
+      })
 
-    {:ok, api_key_record2} = Customers.create_api_key(customer2, %{
-      key: api_key2,
-      name: "Production API Key 2"
-    })
+    {:ok, api_key_record2} =
+      Customers.create_api_key(customer2, %{
+        key: api_key2,
+        name: "Production API Key 2"
+      })
 
     {:ok,
      customer1: customer1,
@@ -49,8 +53,7 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationRegressionTest do
      api_key1: api_key1,
      api_key2: api_key2,
      api_key_record1: api_key_record1,
-     api_key_record2: api_key_record2
-    }
+     api_key_record2: api_key_record2}
   end
 
   describe "regression: api key recognition issues" do
@@ -247,10 +250,12 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationRegressionTest do
     } do
       # Create an inactive API key
       inactive_key = "rsolv_inactive_#{:crypto.strong_rand_bytes(16) |> Base.encode64()}"
-      {:ok, inactive_api_key} = Customers.create_api_key(customer1, %{
-        key: inactive_key,
-        name: "Inactive Key"
-      })
+
+      {:ok, inactive_api_key} =
+        Customers.create_api_key(customer1, %{
+          key: inactive_key,
+          name: "Inactive Key"
+        })
 
       # Deactivate it
       Customers.update_api_key(inactive_api_key, %{active: false})

@@ -1,20 +1,20 @@
 defmodule Rsolv.Security.Patterns.Elixir.UnsafeAtomCreation do
   @moduledoc """
   Detects unsafe atom creation from user input in Elixir.
-  
+
   This pattern identifies dynamic atom creation using String.to_atom/1, :erlang.binary_to_atom/2,
   or List.to_atom/1 with user-provided data. These operations can lead to atom table exhaustion
   attacks since atoms are never garbage collected in the BEAM VM.
-  
+
   ## Vulnerability Details
-  
+
   The BEAM VM (Erlang/Elixir runtime) has a finite atom table that stores all atoms created
   during the lifetime of the VM. By default, this table is limited to about 1 million atoms.
   Once exhausted, the VM crashes. Atoms are never garbage collected, making dynamic atom
   creation from user input a serious denial-of-service vulnerability.
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   # Controller accepting user input
@@ -23,11 +23,11 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeAtomCreation do
     apply(__MODULE__, atom_action, [conn])
   end
   ```
-  
+
   An attacker can send millions of requests with different action values, exhausting the atom table.
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   # Use String.to_existing_atom/1 or pattern matching
@@ -41,10 +41,10 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeAtomCreation do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -68,7 +68,8 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeAtomCreation do
       ],
       cwe_id: "CWE-400",
       owasp_category: "A05:2021",
-      recommendation: "Use String.to_existing_atom/1 or pattern matching instead of dynamic atom creation",
+      recommendation:
+        "Use String.to_existing_atom/1 or pattern matching instead of dynamic atom creation",
       test_cases: %{
         vulnerable: [
           ~S|String.to_atom(params["key"])|,
@@ -91,7 +92,7 @@ end|,
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -191,19 +192,19 @@ end|,
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities and false positives
   by analyzing context and usage patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.UnsafeAtomCreation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.UnsafeAtomCreation.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -220,14 +221,29 @@ end|,
           check_input_source: true
         },
         input_analysis: %{
-          user_input_indicators: ["params", "conn.params", "user", "input", "data", "request", "body"],
+          user_input_indicators: [
+            "params",
+            "conn.params",
+            "user",
+            "input",
+            "data",
+            "request",
+            "body"
+          ],
           check_variable_flow: true,
           check_function_arguments: true
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/_test\.exs$/],
-        user_input_sources: ["params", "conn.params", "conn.body_params", "socket.assigns", "args", "input"],
+        user_input_sources: [
+          "params",
+          "conn.params",
+          "conn.body_params",
+          "socket.assigns",
+          "args",
+          "input"
+        ],
         safe_contexts: ["migration", "seed", "config", "compile"],
         exclude_hardcoded_strings: true
       },

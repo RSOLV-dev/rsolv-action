@@ -1,7 +1,7 @@
 defmodule Rsolv.AccountsTest do
   use Rsolv.DataCase
   import Rsolv.TestHelpers, only: [unique_email: 0, unique_email: 1]
-  
+
   alias Rsolv.Accounts
   alias Rsolv.Customers
 
@@ -14,50 +14,56 @@ defmodule Rsolv.AccountsTest do
 
     test "returns customer for valid database API key" do
       # Create a customer with an API key
-      {:ok, customer} = Customers.create_customer(%{
-        name: "Test Customer",
-        email: unique_email(),
-        subscription_plan: "enterprise",
-        metadata: %{"flags" => ["ai_access", "enterprise_access"]},
-        monthly_limit: 100,
-        active: true
-      })
-      
-      {:ok, api_key} = Customers.create_api_key(customer, %{
-        name: "Test API Key",
-        permissions: ["full_access"]
-      })
-      
+      {:ok, customer} =
+        Customers.create_customer(%{
+          name: "Test Customer",
+          email: unique_email(),
+          subscription_plan: "enterprise",
+          metadata: %{"flags" => ["ai_access", "enterprise_access"]},
+          monthly_limit: 100,
+          active: true
+        })
+
+      {:ok, api_key} =
+        Customers.create_api_key(customer, %{
+          name: "Test API Key",
+          permissions: ["full_access"]
+        })
+
       # Should return the customer when using the valid key
       found_customer = Accounts.get_customer_by_api_key(api_key.key)
       assert found_customer != nil
       assert found_customer.id == customer.id
       assert found_customer.name == "Test Customer"
-      assert found_customer.email == customer.email  # Use actual email from created customer
+      # Use actual email from created customer
+      assert found_customer.email == customer.email
       assert found_customer.subscription_plan == "enterprise"
       assert found_customer.metadata["flags"] == ["ai_access", "enterprise_access"]
       assert found_customer.monthly_limit == 100
       assert found_customer.active == true
     end
 
-    @tag :skip  # revoke_api_key function not implemented yet
+    # revoke_api_key function not implemented yet
+    @tag :skip
     test "returns nil for revoked API key" do
       # Skip - revoke_api_key function not implemented yet
     end
 
     test "returns nil for inactive customer" do
       # Create an inactive customer
-      {:ok, customer} = Customers.create_customer(%{
-        name: "Inactive Customer",
-        email: unique_email("inactive"),
-        active: false
-      })
-      
-      {:ok, api_key} = Customers.create_api_key(customer, %{
-        name: "Test API Key",
-        permissions: ["full_access"]
-      })
-      
+      {:ok, customer} =
+        Customers.create_customer(%{
+          name: "Inactive Customer",
+          email: unique_email("inactive"),
+          active: false
+        })
+
+      {:ok, api_key} =
+        Customers.create_api_key(customer, %{
+          name: "Test API Key",
+          permissions: ["full_access"]
+        })
+
       # Should return nil for inactive customer
       assert Accounts.get_customer_by_api_key(api_key.key) == nil
     end

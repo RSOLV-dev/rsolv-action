@@ -7,10 +7,16 @@
           View metrics and insights about your RSOLV landing page performance.
         </p>
         <div class="mt-3 inline-flex">
-          <a href={~p"/dashboard/analytics"} class="inline-flex items-center rounded-l-md bg-blue-50 px-2.5 py-1.5 text-sm font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+          <a
+            href={~p"/dashboard/analytics"}
+            class="inline-flex items-center rounded-l-md bg-blue-50 px-2.5 py-1.5 text-sm font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10"
+          >
             General Analytics
           </a>
-          <a href={~p"/dashboard/signup-metrics"} class="inline-flex items-center rounded-r-md bg-white px-2.5 py-1.5 text-sm font-medium text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+          <a
+            href={~p"/dashboard/signup-metrics"}
+            class="inline-flex items-center rounded-r-md bg-white px-2.5 py-1.5 text-sm font-medium text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          >
             Signup Metrics
           </a>
         </div>
@@ -19,7 +25,10 @@
         <div class="flex space-x-2">
           <div>
             <form phx-change="change-period">
-              <select name="period" class="rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6">
+              <select
+                name="period"
+                class="rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+              >
                 <option value="1d" selected={@period == "1d"}>Last 24 hours</option>
                 <option value="7d" selected={@period == "7d"}>Last 7 days</option>
                 <option value="30d" selected={@period == "30d"}>Last 30 days</option>
@@ -33,33 +42,53 @@
               Export
             </button>
             <div class="dropdown-content">
-              <a href={~p"/dashboard/report?type=#{@tab}&format=csv&period=#{@period}"}>Download CSV</a>
-              <a href={~p"/dashboard/report?type=#{@tab}&format=json&period=#{@period}"}>Download JSON</a>
+              <a href={~p"/dashboard/report?type=#{@tab}&format=csv&period=#{@period}"}>
+                Download CSV
+              </a>
+              <a href={~p"/dashboard/report?type=#{@tab}&format=json&period=#{@period}"}>
+                Download JSON
+              </a>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Error Alert - only displayed when there's a data error -->
+    
+<!-- Error Alert - only displayed when there's a data error -->
     <%= if @data_error do %>
       <div class="mt-6 rounded-md bg-red-50 p-4">
         <div class="flex">
           <div class="flex-shrink-0">
             <!-- Heroicon name: mini/x-circle -->
-            <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+            <svg
+              class="h-5 w-5 text-red-400"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                clip-rule="evenodd"
+              />
             </svg>
           </div>
           <div class="ml-3">
             <h3 class="text-sm font-medium text-red-800">Dashboard Error</h3>
             <div class="mt-2 text-sm text-red-700">
-              <p><%= @data_error %></p>
-              <p class="mt-1">Please try refreshing the page or selecting a different time period.</p>
+              <p>{@data_error}</p>
+              <p class="mt-1">
+                Please try refreshing the page or selecting a different time period.
+              </p>
             </div>
             <div class="mt-4">
               <div class="-mx-2 -my-1.5 flex">
-                <button type="button" phx-click="refresh-data" class="rounded-md bg-red-50 px-2 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50">
+                <button
+                  type="button"
+                  phx-click="refresh-data"
+                  class="rounded-md bg-red-50 px-2 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+                >
                   Retry Loading
                 </button>
               </div>
@@ -72,103 +101,135 @@
     <div class="mt-6">
       <div class="mb-4">
         <nav class="flex space-x-4" aria-label="Tabs">
-          <a 
-            href="#" 
-            phx-click="change-tab" 
-            phx-value-tab="overview" 
-            class={"px-3 py-2 text-sm font-medium rounded-md #{if @tab == "overview", do: "bg-blue-100 text-blue-700", else: "text-gray-500 hover:text-gray-700"}"} 
+          <a
+            href="#"
+            phx-click="change-tab"
+            phx-value-tab="overview"
+            class={"px-3 py-2 text-sm font-medium rounded-md #{if @tab == "overview", do: "bg-blue-100 text-blue-700", else: "text-gray-500 hover:text-gray-700"}"}
             aria-current={if @tab == "overview", do: "page", else: nil}
           >
             Overview
           </a>
-          <a 
-            href="#" 
-            phx-click="change-tab" 
-            phx-value-tab="conversions" 
-            class={"px-3 py-2 text-sm font-medium rounded-md #{if @tab == "conversions", do: "bg-blue-100 text-blue-700", else: "text-gray-500 hover:text-gray-700"}"} 
+          <a
+            href="#"
+            phx-click="change-tab"
+            phx-value-tab="conversions"
+            class={"px-3 py-2 text-sm font-medium rounded-md #{if @tab == "conversions", do: "bg-blue-100 text-blue-700", else: "text-gray-500 hover:text-gray-700"}"}
             aria-current={if @tab == "conversions", do: "page", else: nil}
           >
             Conversions
           </a>
-          <a 
-            href="#" 
-            phx-click="change-tab" 
-            phx-value-tab="traffic" 
-            class={"px-3 py-2 text-sm font-medium rounded-md #{if @tab == "traffic", do: "bg-blue-100 text-blue-700", else: "text-gray-500 hover:text-gray-700"}"} 
+          <a
+            href="#"
+            phx-click="change-tab"
+            phx-value-tab="traffic"
+            class={"px-3 py-2 text-sm font-medium rounded-md #{if @tab == "traffic", do: "bg-blue-100 text-blue-700", else: "text-gray-500 hover:text-gray-700"}"}
             aria-current={if @tab == "traffic", do: "page", else: nil}
           >
             Traffic
           </a>
-          <a 
-            href="#" 
-            phx-click="change-tab" 
-            phx-value-tab="engagement" 
-            class={"px-3 py-2 text-sm font-medium rounded-md #{if @tab == "engagement", do: "bg-blue-100 text-blue-700", else: "text-gray-500 hover:text-gray-700"}"} 
+          <a
+            href="#"
+            phx-click="change-tab"
+            phx-value-tab="engagement"
+            class={"px-3 py-2 text-sm font-medium rounded-md #{if @tab == "engagement", do: "bg-blue-100 text-blue-700", else: "text-gray-500 hover:text-gray-700"}"}
             aria-current={if @tab == "engagement", do: "page", else: nil}
           >
             Engagement
           </a>
         </nav>
       </div>
-
-      <!-- Metric Cards - Only show if no data_error -->
+      
+<!-- Metric Cards - Only show if no data_error -->
       <%= if !@data_error do %>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
           <!-- Visitors -->
           <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
             <h2 class="text-sm font-medium text-gray-500">Unique Visitors</h2>
-            <p class="mt-1 text-3xl font-semibold text-gray-900"><%= @total_visitors %></p>
+            <p class="mt-1 text-3xl font-semibold text-gray-900">{@total_visitors}</p>
           </div>
           
-          <!-- Conversions -->
+<!-- Conversions -->
           <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
             <h2 class="text-sm font-medium text-gray-500">Total Conversions</h2>
-            <p class="mt-1 text-3xl font-semibold text-gray-900"><%= @total_conversions %></p>
+            <p class="mt-1 text-3xl font-semibold text-gray-900">{@total_conversions}</p>
           </div>
           
-          <!-- Conversion Rate -->
+<!-- Conversion Rate -->
           <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
             <h2 class="text-sm font-medium text-gray-500">Conversion Rate</h2>
-            <p class="mt-1 text-3xl font-semibold text-gray-900"><%= @conversion_rate %>%</p>
+            <p class="mt-1 text-3xl font-semibold text-gray-900">{@conversion_rate}%</p>
           </div>
           
-          <!-- Avg. Session Duration -->
+<!-- Avg. Session Duration -->
           <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
             <h2 class="text-sm font-medium text-gray-500">Avg. Session Duration</h2>
-            <p class="mt-1 text-3xl font-semibold text-gray-900"><%= format_duration(@average_session_duration) %></p>
+            <p class="mt-1 text-3xl font-semibold text-gray-900">
+              {format_duration(@average_session_duration)}
+            </p>
           </div>
         </div>
-
-        <!-- Tab Content -->
+        
+<!-- Tab Content -->
         <%= cond do %>
           <% @data_error -> %>
             <div class="rounded-md bg-white p-6 shadow-sm border border-gray-200 text-center py-12">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                class="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               <h3 class="mt-2 text-sm font-medium text-gray-900">Data Unavailable</h3>
-              <p class="mt-1 text-sm text-gray-500">We're having trouble loading your dashboard data.</p>
+              <p class="mt-1 text-sm text-gray-500">
+                We're having trouble loading your dashboard data.
+              </p>
               <div class="mt-6">
-                <button type="button" phx-click="refresh-data" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <button
+                  type="button"
+                  phx-click="refresh-data"
+                  class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
                   Retry
                 </button>
               </div>
             </div>
-          
           <% @tab == "overview" && Map.has_key?(@data, :error) -> %>
             <div class="rounded-md bg-white p-6 shadow-sm border border-gray-200 text-center py-12">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              <svg
+                class="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                />
               </svg>
               <h3 class="mt-2 text-sm font-medium text-gray-900">Overview Data Error</h3>
-              <p class="mt-1 text-sm text-gray-500">The overview data is temporarily unavailable.</p>
+              <p class="mt-1 text-sm text-gray-500">
+                The overview data is temporarily unavailable.
+              </p>
               <div class="mt-6">
-                <button type="button" phx-click="refresh-data" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <button
+                  type="button"
+                  phx-click="refresh-data"
+                  class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
                   Try Again
                 </button>
               </div>
             </div>
-            
           <% @tab == "overview" -> %>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <!-- Visitor Trend -->
@@ -179,11 +240,18 @@
                     <p>No visitor data available for this period</p>
                   </div>
                 <% else %>
-                  <div id="visitor-chart" class="h-64" phx-update="ignore" phx-hook="SimpleChart" data-chartdata={Jason.encode!(@data.visitor_trend)}></div>
+                  <div
+                    id="visitor-chart"
+                    class="h-64"
+                    phx-update="ignore"
+                    phx-hook="SimpleChart"
+                    data-chartdata={Jason.encode!(@data.visitor_trend)}
+                  >
+                  </div>
                 <% end %>
               </div>
               
-              <!-- Conversion Trend -->
+<!-- Conversion Trend -->
               <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
                 <h3 class="text-base font-medium text-gray-900 mb-4">Conversion Trend</h3>
                 <%= if Enum.empty?(@data.conversion_trend) do %>
@@ -191,11 +259,18 @@
                     <p>No conversion data available for this period</p>
                   </div>
                 <% else %>
-                  <div id="conversion-chart" class="h-64" phx-update="ignore" phx-hook="SimpleChart" data-chartdata={Jason.encode!(@data.conversion_trend)}></div>
+                  <div
+                    id="conversion-chart"
+                    class="h-64"
+                    phx-update="ignore"
+                    phx-hook="SimpleChart"
+                    data-chartdata={Jason.encode!(@data.conversion_trend)}
+                  >
+                  </div>
                 <% end %>
               </div>
               
-              <!-- Traffic Sources -->
+<!-- Traffic Sources -->
               <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
                 <h3 class="text-base font-medium text-gray-900 mb-4">Top Traffic Sources</h3>
                 <%= if Enum.empty?(@data.utm_sources) do %>
@@ -203,25 +278,46 @@
                     <p>No traffic source data available</p>
                   </div>
                 <% else %>
-                  <div id="source-chart" class="h-64" phx-update="ignore" phx-hook="PieChart" data-chartdata={Jason.encode!(@data.utm_sources)}></div>
+                  <div
+                    id="source-chart"
+                    class="h-64"
+                    phx-update="ignore"
+                    phx-hook="PieChart"
+                    data-chartdata={Jason.encode!(@data.utm_sources)}
+                  >
+                  </div>
                 <% end %>
               </div>
             </div>
-            
           <% @tab == "conversions" && Map.has_key?(@data, :error) -> %>
             <div class="rounded-md bg-white p-6 shadow-sm border border-gray-200 text-center py-12">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              <svg
+                class="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                />
               </svg>
               <h3 class="mt-2 text-sm font-medium text-gray-900">Conversion Data Error</h3>
-              <p class="mt-1 text-sm text-gray-500">The conversion data is temporarily unavailable.</p>
+              <p class="mt-1 text-sm text-gray-500">
+                The conversion data is temporarily unavailable.
+              </p>
               <div class="mt-6">
-                <button type="button" phx-click="refresh-data" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <button
+                  type="button"
+                  phx-click="refresh-data"
+                  class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
                   Try Again
                 </button>
               </div>
             </div>
-            
           <% @tab == "conversions" -> %>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <!-- Conversion by Type -->
@@ -232,11 +328,18 @@
                     <p>No conversion type data available</p>
                   </div>
                 <% else %>
-                  <div id="conversion-type-chart" class="h-64" phx-update="ignore" phx-hook="BarChart" data-chartdata={Jason.encode!(@data.conversion_by_type)}></div>
+                  <div
+                    id="conversion-type-chart"
+                    class="h-64"
+                    phx-update="ignore"
+                    phx-hook="BarChart"
+                    data-chartdata={Jason.encode!(@data.conversion_by_type)}
+                  >
+                  </div>
                 <% end %>
               </div>
               
-              <!-- Conversion by Source -->
+<!-- Conversion by Source -->
               <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
                 <h3 class="text-base font-medium text-gray-900 mb-4">Conversions by Source</h3>
                 <%= if Enum.empty?(@data.conversion_by_source) do %>
@@ -244,43 +347,76 @@
                     <p>No conversion source data available</p>
                   </div>
                 <% else %>
-                  <div id="conversion-source-chart" class="h-64" phx-update="ignore" phx-hook="BarChart" data-chartdata={Jason.encode!(@data.conversion_by_source)}></div>
+                  <div
+                    id="conversion-source-chart"
+                    class="h-64"
+                    phx-update="ignore"
+                    phx-hook="BarChart"
+                    data-chartdata={Jason.encode!(@data.conversion_by_source)}
+                  >
+                  </div>
                 <% end %>
               </div>
               
-              <!-- Recent Conversions -->
+<!-- Recent Conversions -->
               <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200 lg:col-span-2">
                 <h3 class="text-base font-medium text-gray-900 mb-4">Recent Conversions</h3>
                 <div class="overflow-x-auto">
                   <table class="min-w-full divide-y divide-gray-300">
                     <thead>
                       <tr>
-                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Time</th>
-                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
-                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Source</th>
-                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Domain</th>
+                        <th
+                          scope="col"
+                          class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900"
+                        >
+                          Time
+                        </th>
+                        <th
+                          scope="col"
+                          class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                        >
+                          Type
+                        </th>
+                        <th
+                          scope="col"
+                          class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                        >
+                          Source
+                        </th>
+                        <th
+                          scope="col"
+                          class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                        >
+                          Domain
+                        </th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                       <%= for conversion <- @data.recent_conversions do %>
                         <tr>
                           <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
-                            <%= format_datetime(conversion.timestamp) %>
+                            {format_datetime(conversion.timestamp)}
                           </td>
                           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            <%= conversion.conversion_type %>
+                            {conversion.conversion_type}
                           </td>
                           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            <%= conversion.utm_source || "direct" %>
+                            {conversion.utm_source || "direct"}
                           </td>
                           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            <%= Map.get(try_parse_additional_data(conversion.additional_data), "email_domain", "-") %>
+                            {Map.get(
+                              try_parse_additional_data(conversion.additional_data),
+                              "email_domain",
+                              "-"
+                            )}
                           </td>
                         </tr>
                       <% end %>
                       <%= if Enum.empty?(@data.recent_conversions) do %>
                         <tr>
-                          <td colspan="4" class="py-4 text-center text-sm text-gray-500">No conversion data available for this period</td>
+                          <td colspan="4" class="py-4 text-center text-sm text-gray-500">
+                            No conversion data available for this period
+                          </td>
                         </tr>
                       <% end %>
                     </tbody>
@@ -288,21 +424,35 @@
                 </div>
               </div>
             </div>
-            
           <% @tab == "traffic" && Map.has_key?(@data, :error) -> %>
             <div class="rounded-md bg-white p-6 shadow-sm border border-gray-200 text-center py-12">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              <svg
+                class="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                />
               </svg>
               <h3 class="mt-2 text-sm font-medium text-gray-900">Traffic Data Error</h3>
-              <p class="mt-1 text-sm text-gray-500">The traffic data is temporarily unavailable.</p>
+              <p class="mt-1 text-sm text-gray-500">
+                The traffic data is temporarily unavailable.
+              </p>
               <div class="mt-6">
-                <button type="button" phx-click="refresh-data" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <button
+                  type="button"
+                  phx-click="refresh-data"
+                  class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
                   Try Again
                 </button>
               </div>
             </div>
-            
           <% @tab == "traffic" -> %>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <!-- Traffic by Source -->
@@ -313,11 +463,18 @@
                     <p>No traffic source data available</p>
                   </div>
                 <% else %>
-                  <div id="traffic-source-chart" class="h-64" phx-update="ignore" phx-hook="BarChart" data-chartdata={Jason.encode!(@data.traffic_by_source)}></div>
+                  <div
+                    id="traffic-source-chart"
+                    class="h-64"
+                    phx-update="ignore"
+                    phx-hook="BarChart"
+                    data-chartdata={Jason.encode!(@data.traffic_by_source)}
+                  >
+                  </div>
                 <% end %>
               </div>
               
-              <!-- Traffic by Page -->
+<!-- Traffic by Page -->
               <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
                 <h3 class="text-base font-medium text-gray-900 mb-4">Traffic by Page</h3>
                 <%= if Enum.empty?(@data.traffic_by_page) do %>
@@ -325,25 +482,46 @@
                     <p>No page traffic data available</p>
                   </div>
                 <% else %>
-                  <div id="traffic-page-chart" class="h-64" phx-update="ignore" phx-hook="BarChart" data-chartdata={Jason.encode!(@data.traffic_by_page)}></div>
+                  <div
+                    id="traffic-page-chart"
+                    class="h-64"
+                    phx-update="ignore"
+                    phx-hook="BarChart"
+                    data-chartdata={Jason.encode!(@data.traffic_by_page)}
+                  >
+                  </div>
                 <% end %>
               </div>
             </div>
-            
           <% @tab == "engagement" && Map.has_key?(@data, :error) -> %>
             <div class="rounded-md bg-white p-6 shadow-sm border border-gray-200 text-center py-12">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              <svg
+                class="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                />
               </svg>
               <h3 class="mt-2 text-sm font-medium text-gray-900">Engagement Data Error</h3>
-              <p class="mt-1 text-sm text-gray-500">The engagement data is temporarily unavailable.</p>
+              <p class="mt-1 text-sm text-gray-500">
+                The engagement data is temporarily unavailable.
+              </p>
               <div class="mt-6">
-                <button type="button" phx-click="refresh-data" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <button
+                  type="button"
+                  phx-click="refresh-data"
+                  class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
                   Try Again
                 </button>
               </div>
             </div>
-            
           <% @tab == "engagement" -> %>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <!-- Section Engagement -->
@@ -354,23 +532,38 @@
                     <p>No section engagement data available</p>
                   </div>
                 <% else %>
-                  <div id="section-chart" class="h-64" phx-update="ignore" phx-hook="BarChart" data-chartdata={Jason.encode!(@data.section_engagement)}></div>
+                  <div
+                    id="section-chart"
+                    class="h-64"
+                    phx-update="ignore"
+                    phx-hook="BarChart"
+                    data-chartdata={Jason.encode!(@data.section_engagement)}
+                  >
+                  </div>
                 <% end %>
               </div>
               
-              <!-- Scroll Depth -->
+<!-- Scroll Depth -->
               <div class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
-                <h3 class="text-base font-medium text-gray-900 mb-4">Scroll Depth Distribution</h3>
+                <h3 class="text-base font-medium text-gray-900 mb-4">
+                  Scroll Depth Distribution
+                </h3>
                 <%= if Enum.empty?(@data.scroll_depths) do %>
                   <div class="flex items-center justify-center h-64 bg-gray-50 rounded text-gray-500">
                     <p>No scroll depth data available</p>
                   </div>
                 <% else %>
-                  <div id="scroll-chart" class="h-64" phx-update="ignore" phx-hook="BarChart" data-chartdata={Jason.encode!(@data.scroll_depths)}></div>
+                  <div
+                    id="scroll-chart"
+                    class="h-64"
+                    phx-update="ignore"
+                    phx-hook="BarChart"
+                    data-chartdata={Jason.encode!(@data.scroll_depths)}
+                  >
+                  </div>
                 <% end %>
               </div>
             </div>
-            
           <% true -> %>
             <div class="text-center py-12 rounded-md bg-white p-6 shadow-sm border border-gray-200">
               <p class="text-gray-500">Select a tab to view analytics data</p>
@@ -378,13 +571,28 @@
         <% end %>
       <% end %>
     </div>
-    
+
     <div class="mt-6 text-right text-xs text-gray-500">
-      Last updated: <%= format_datetime(@last_updated) %>
+      Last updated: {format_datetime(@last_updated)}
       <%= if !@data_error do %>
-        <button phx-click="refresh-data" class="ml-2 text-blue-500 hover:text-blue-700" title="Refresh data">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        <button
+          phx-click="refresh-data"
+          class="ml-2 text-blue-500 hover:text-blue-700"
+          title="Refresh data"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-3 w-3 inline"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
           </svg>
         </button>
       <% end %>
@@ -413,7 +621,7 @@
     position: relative;
     display: inline-block;
   }
-  
+
   .dropdown-content {
     display: none;
     position: absolute;
@@ -424,18 +632,18 @@
     z-index: 1;
     border-radius: 0.375rem;
   }
-  
+
   .dropdown-content a {
     color: black;
     padding: 12px 16px;
     text-decoration: none;
     display: block;
   }
-  
+
   .dropdown-content a:hover {
     background-color: #f1f1f1;
   }
-  
+
   .dropdown:hover .dropdown-content {
     display: block;
   }

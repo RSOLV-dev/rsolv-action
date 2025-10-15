@@ -2,29 +2,34 @@ defmodule RsolvWeb.Admin.LoginLiveIntegrationTest do
   use RsolvWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
   alias Rsolv.Customers
-  
+
   describe "admin login integration" do
     setup do
       # Create a staff user with password
-      {:ok, staff_user} = Customers.create_customer(%{
-        email: "admin@rsolv.com",
-        name: "Admin User",
-        is_staff: true,
-        password: "TestPassword123!"
-      })
-      
+      {:ok, staff_user} =
+        Customers.create_customer(%{
+          email: "admin@rsolv.com",
+          name: "Admin User",
+          is_staff: true,
+          password: "TestPassword123!"
+        })
+
       # Create a non-staff user
-      {:ok, regular_user} = Customers.create_customer(%{
-        email: "user@example.com",
-        name: "Regular User",
-        is_staff: false,
-        password: "UserPassword123!"
-      })
-      
+      {:ok, regular_user} =
+        Customers.create_customer(%{
+          email: "user@example.com",
+          name: "Regular User",
+          is_staff: false,
+          password: "UserPassword123!"
+        })
+
       %{staff_user: staff_user, regular_user: regular_user}
     end
-    
-    test "successful staff login redirects to auth endpoint", %{conn: conn, staff_user: _staff_user} do
+
+    test "successful staff login redirects to auth endpoint", %{
+      conn: conn,
+      staff_user: _staff_user
+    } do
       {:ok, view, _html} = live(conn, "/admin/login")
 
       # Fill in the form
@@ -44,7 +49,7 @@ defmodule RsolvWeb.Admin.LoginLiveIntegrationTest do
       assert_push_event(view, "redirect", %{to: redirect_url})
       assert redirect_url =~ ~r"/admin/auth\?token=.+"
     end
-    
+
     test "non-staff user login shows error", %{conn: conn, regular_user: _regular_user} do
       {:ok, view, _html} = live(conn, "/admin/login")
 
@@ -66,7 +71,7 @@ defmodule RsolvWeb.Admin.LoginLiveIntegrationTest do
       # Should stay on login page
       assert view |> element("#admin-login")
     end
-    
+
     test "invalid credentials shows error", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/admin/login")
 
@@ -88,33 +93,33 @@ defmodule RsolvWeb.Admin.LoginLiveIntegrationTest do
       # Should stay on login page
       assert view |> element("#admin-login")
     end
-    
+
     test "form shows processing state during submission", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/admin/login")
-      
+
       # Fill in the form
       view
       |> element("form")
       |> render_change(%{email: "admin@rsolv.com", password: "TestPassword123!"})
-      
+
       # The button should change to "Signing in..." during processing
       # This is handled by the @processing assign in the template
       html = render(view)
       assert html =~ "Sign In"
       refute html =~ "Signing in..."
     end
-    
+
     test "error messages are displayed correctly", %{conn: conn} do
       {:ok, view, html} = live(conn, "/admin/login")
-      
+
       # Initially no error message
       refute html =~ "bg-red-50"
-      
+
       # Submit with invalid credentials
       view
       |> element("form")
       |> render_submit(%{email: "nonexistent@example.com", password: "wrong"})
-      
+
       # Error message should be displayed
       html = render(view)
       assert html =~ "bg-red-50"

@@ -1,18 +1,18 @@
 defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
   @moduledoc """
   Pattern for detecting weak password storage vulnerabilities in Ruby applications.
-  
+
   This pattern identifies when passwords are stored using weak or insecure hashing
   algorithms, or stored in plaintext, which can lead to account compromise when
   databases are breached.
-  
+
   ## Vulnerability Details
-  
+
   Weak password storage occurs when applications use cryptographically weak hashing
   algorithms (MD5, SHA1), store passwords in plaintext, or use inadequate security
   measures for protecting user credentials. This makes passwords vulnerable to
   brute force attacks and rainbow table lookups when databases are compromised.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable password storage implementations
@@ -20,35 +20,35 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
     def create_user
       # VULNERABLE: MD5 password hashing
       user.password = Digest::MD5.hexdigest(params[:password])
-      
+
       # VULNERABLE: SHA1 password hashing with salt
       user.encrypted_password = Digest::SHA1.hexdigest(params[:password] + salt)
-      
+
       # VULNERABLE: SHA256 without proper salt
       user.password_digest = Digest::SHA256.hexdigest(params[:password])
-      
+
       # VULNERABLE: Plaintext password storage
       user.password = params[:password]
-      
+
       # VULNERABLE: Simple string operations
       user.encrypted_password = Base64.encode64(params[:password])
-      
+
       user.save!
     end
   end
-  
+
   # Attack scenarios:
   # - Rainbow table lookups for MD5/SHA1 hashes
   # - Brute force attacks on weak hashing algorithms
   # - Dictionary attacks on unsalted hashes
   # - Direct credential theft from plaintext storage
   ```
-  
+
   **Real-world Impact:**
   CVE-2024-47529 demonstrated clear text password storage leading to massive
   credential theft. Many applications store passwords using MD5 or SHA1,
   making them vulnerable to rainbow table attacks and brute force.
-  
+
   **Safe Alternative:**
   ```ruby
   # SECURE: Use bcrypt for password hashing
@@ -56,46 +56,47 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
     def create_user
       # SECURE: bcrypt with automatic salt generation
       user.password = BCrypt::Password.create(params[:password])
-      
+
       # SECURE: Rails has_secure_password (uses bcrypt internally)
       user.password = params[:password]  # with has_secure_password in model
-      
+
       # SECURE: Argon2 for even stronger security
       user.password_digest = Argon2::Password.create(params[:password])
-      
+
       # SECURE: scrypt with proper configuration
       user.encrypted_password = SCrypt::Password.create(
-        params[:password], 
-        cost: 16384, 
-        block_size: 8, 
+        params[:password],
+        cost: 16384,
+        block_size: 8,
         parallelization: 1
       )
-      
+
       user.save!
     end
   end
-  
+
   # Model with secure password handling
   class User < ApplicationRecord
     has_secure_password  # Automatically uses bcrypt
-    
-    validates :password, 
-      presence: true, 
+
+    validates :password,
+      presence: true,
       length: { minimum: 8 },
       format: { with: /\A(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/ }
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "ruby-weak-password-storage",
       name: "Weak Password Storage",
-      description: "Detects insecure password storage methods including weak hashing algorithms and plaintext storage",
+      description:
+        "Detects insecure password storage methods including weak hashing algorithms and plaintext storage",
       type: :cryptographic_failure,
       severity: :critical,
       languages: ["ruby"],
@@ -105,36 +106,39 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
         ~r/(?:password|encrypted_password|password_digest|password_hash)\s*=\s*MD5\.(hexdigest|digest)/,
         ~r/hash\s*=\s*Digest::MD5\.(new\.)?(hexdigest|digest)\s*\(\s*(?:user_password|password)/,
         ~r/Digest::MD5\.(hexdigest|digest)\s*\(\s*(?:params\[.*?password|password|plain_password)/,
-        
-        # SHA1 password hashing patterns - assignment and hash calculation  
+
+        # SHA1 password hashing patterns - assignment and hash calculation
         ~r/(?:password|encrypted_password|password_digest|password_hash)\s*=\s*Digest::SHA1\.(hexdigest|digest)/,
         ~r/(?:password|encrypted_password|password_digest|password_hash)\s*=\s*SHA1\.(hexdigest|digest)/,
         ~r/hash\s*=\s*Digest::SHA1\.(new\.)?(hexdigest|digest)\s*\(\s*(?:user_password|password)/,
         ~r/Digest::SHA1\.(hexdigest|digest)\s*\(\s*(?:params\[.*?password|password|plain_password)/,
-        
+
         # SHA256 without proper implementation (vulnerable when used alone)
         ~r/(?:password|encrypted_password|password_digest|password_hash)\s*=\s*Digest::SHA256\.(hexdigest|digest)/,
         ~r/(?:password|encrypted_password|password_digest|password_hash)\s*=\s*SHA256\.(hexdigest|digest)/,
         ~r/hash\s*=\s*SHA256\.(hexdigest|digest)\s*\(\s*(?:user_password|password)/,
         ~r/Digest::SHA256\.(hexdigest|digest)\s*\(\s*(?:params\[.*?password|password|plain_password)/,
-        
+
         # Plaintext password assignment patterns
         ~r/(?:password|encrypted_password|password_digest)\s*=\s*params\[:password\]/,
         ~r/(?:password|encrypted_password|password_digest)\s*=\s*plain_password/,
         ~r/(?:password|encrypted_password|password_digest)\s*=\s*user_input/,
-        ~r/(?:password|encrypted_password|password_digest)\s*=\s*password(?!\w)/,  # Direct assignment like "user.password_digest = password"
+        # Direct assignment like "user.password_digest = password"
+        ~r/(?:password|encrypted_password|password_digest)\s*=\s*password(?!\w)/,
         ~r/password_field\s*=\s*(?:params|user_input|plain_password)/,
-        
-        # Simple/weak encoding patterns  
+
+        # Simple/weak encoding patterns
         ~r/(?:password|encrypted_password|password_digest|encrypted)\s*=\s*Base64\.encode64\s*\(\s*password/,
         ~r/(?:password|encrypted_password|password_digest)\s*=.*?\.crypt\s*\(/,
         ~r/(?:password|encrypted_password|password_digest)\s*=.*?\.to_s\s*\+\s*["']salt["']/,
-        ~r/hash\s*=\s*password\.to_s\s*\+\s*["']salt["']/,  # String concatenation hashing
+        # String concatenation hashing
+        ~r/hash\s*=\s*password\.to_s\s*\+\s*["']salt["']/,
         ~r/(?:password|encrypted_password|password_digest)\s*=\s*password\.crypt\s*\(/
       ],
       cwe_id: "CWE-256",
       owasp_category: "A02:2021",
-      recommendation: "Use bcrypt, argon2, or scrypt for password hashing. Rails provides has_secure_password for secure password handling.",
+      recommendation:
+        "Use bcrypt, argon2, or scrypt for password hashing. Rails provides has_secure_password for secure password handling.",
       test_cases: %{
         vulnerable: [
           ~S|user.password = Digest::MD5.hexdigest(params[:password])|,
@@ -152,7 +156,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -162,7 +166,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
       includes using cryptographically weak hashing algorithms (MD5, SHA1), storing
       passwords in plaintext, or using unsalted hashes that are vulnerable to
       rainbow table attacks.
-      
+
       **How Weak Password Storage Works:**
       Passwords are one of the most sensitive pieces of user data, yet many applications
       store them insecurely:
@@ -170,7 +174,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
       - **Weak Hashing**: Using MD5, SHA1, or SHA256 without proper salting
       - **Unsalted Hashes**: Hashes without unique salts for each password
       - **Fast Hashing**: Using algorithms not designed for password security
-      
+
       **Ruby-Specific Vulnerabilities:**
       Ruby applications commonly make these password storage mistakes:
       - Using Digest::MD5 or Digest::SHA1 from the standard library
@@ -178,7 +182,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
       - Direct assignment of plaintext passwords to database fields
       - Using crypt() function without understanding its limitations
       - SHA256 without proper salting and key stretching
-      
+
       **Critical Security Impact:**
       Weak password storage enables various attack vectors:
       - **Rainbow Table Attacks**: Pre-computed hash lookups for common passwords
@@ -186,14 +190,14 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
       - **Dictionary Attacks**: Testing common passwords against weak hashes
       - **Credential Reuse**: Compromised passwords used across other services
       - **Account Takeover**: Direct access to user accounts with compromised credentials
-      
+
       **Rails-Specific Considerations:**
       Rails provides built-in secure password handling, but developers often bypass it:
       - has_secure_password automatically uses bcrypt with proper salting
       - Many developers implement custom password handling incorrectly
       - Legacy Rails applications may use outdated password storage methods
       - Migration from older systems may retain weak password storage
-      
+
       **Common Attack Scenarios:**
       - Database breaches exposing weak password hashes
       - Insider threats with database access
@@ -302,28 +306,28 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
       detection_notes: """
       This pattern detects weak password storage vulnerabilities by identifying
       insecure password handling methods in Ruby code:
-      
+
       **Primary Detection Points:**
       - MD5/SHA1/SHA256 usage for password hashing
       - Plaintext password assignment to database fields
       - Base64 encoding used for password "encryption"
       - Simple string operations on password data
       - Direct assignment of user input to password fields
-      
+
       **Ruby-Specific Patterns:**
       - Digest::MD5, Digest::SHA1, Digest::SHA256 usage with passwords
       - Direct assignment patterns: password = params[:password]
       - Common password field names: password, encrypted_password, password_digest
       - Simple encoding methods: Base64.encode64, crypt(), to_s operations
       - User input sources: params[:password], plain_password, user_input
-      
+
       **False Positive Considerations:**
       - Secure password libraries (BCrypt, Argon2, SCrypt) usage
       - Rails has_secure_password implementation
       - Test code and fixtures with dummy passwords
       - Non-password fields using similar naming patterns
       - Commented out insecure implementations
-      
+
       **Detection Enhancements:**
       The AST enhancement provides sophisticated analysis:
       - Password field identification and context analysis
@@ -390,19 +394,19 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual weak password storage
   and acceptable password handling patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakPasswordStorage.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakPasswordStorage.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -414,7 +418,13 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
         node_type: "AssignmentExpression",
         password_field_analysis: %{
           check_password_fields: true,
-          password_field_names: ["password", "encrypted_password", "password_digest", "password_hash", "password_field"],
+          password_field_names: [
+            "password",
+            "encrypted_password",
+            "password_digest",
+            "password_hash",
+            "password_field"
+          ],
           require_password_context: true
         },
         weak_hashing_analysis: %{

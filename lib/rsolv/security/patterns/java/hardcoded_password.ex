@@ -1,78 +1,78 @@
 defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
   @moduledoc """
   Hardcoded Credentials pattern for Java code.
-  
+
   Detects hardcoded passwords, API keys, tokens, and other sensitive credentials in Java
   applications. Hardcoded credentials represent a critical security vulnerability as they
   cannot be changed without code modification and are visible to anyone with access to
   the source code or decompiled bytecode.
-  
+
   ## Vulnerability Details
-  
+
   Hardcoded credentials occur when developers embed sensitive authentication information
   directly in source code. This practice creates numerous security risks including:
-  
+
   - Credentials exposed in version control systems
   - No ability to rotate credentials without code changes
   - Same credentials used across all environments
   - Credentials visible through code decompilation
   - Potential for accidental credential disclosure
-  
+
   Common vulnerable patterns:
   - Password variables assigned literal string values
   - Database connection strings with embedded credentials
   - API keys and tokens hardcoded in configuration
   - Authentication logic with hardcoded comparisons
   - Service account credentials in source code
-  
+
   ### Attack Examples
-  
+
   ```java
   // Vulnerable code - hardcoded database password
   String password = "admin123";
   Connection conn = DriverManager.getConnection(url, "admin", password);
-  
+
   // Vulnerable code - hardcoded API key
   String apiKey = "sk-1234567890abcdef";
-  
+
   // Vulnerable code - hardcoded authentication
   if (password.equals("master_password")) {
       // Authentication logic
   }
   ```
-  
+
   ## References
-  
+
   - CWE-798: Use of Hard-coded Credentials
   - OWASP A07:2021 - Identification and Authentication Failures
   - CVE-2024-28987: SolarWinds Web Help Desk hardcoded credential vulnerability
   - CVE-2022-34462: Dell EMC SCG Policy Manager hardcoded password vulnerability
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Pattern detects hardcoded credentials in Java code.
-  
+
   Identifies hardcoded passwords, API keys, tokens, and other sensitive credentials
   that pose significant security risks through exposure and inability to rotate.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Java.HardcodedPassword.pattern()
       iex> pattern.id
       "java-hardcoded-password"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.HardcodedPassword.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.HardcodedPassword.pattern()
       iex> vulnerable = "String password = \\\"admin123\\\";"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, vulnerable) end)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.HardcodedPassword.pattern()
       iex> safe = "String password = System.getenv(\\\"DB_PASSWORD\\\");"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, safe) end)
@@ -111,7 +111,8 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
       ],
       cwe_id: "CWE-798",
       owasp_category: "A07:2021",
-      recommendation: "Use environment variables, configuration files, or secure credential management services to store sensitive credentials",
+      recommendation:
+        "Use environment variables, configuration files, or secure credential management services to store sensitive credentials",
       test_cases: %{
         vulnerable: [
           ~S|String password = "admin123";|,
@@ -130,7 +131,7 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -139,21 +140,21 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
       passwords, API keys, tokens, or other secrets are embedded directly in source code. This practice
       creates significant security risks as credentials become immutable, visible to all developers,
       and potentially exposed through version control systems, decompiled bytecode, or accidental disclosure.
-      
+
       Hardcoded credentials can lead to:
       - Unauthorized access to systems, databases, or APIs
       - Inability to rotate credentials without code changes
       - Same credentials used across all environments (dev, staging, production)
       - Credential exposure through source code repositories
       - Compromise of multiple systems using shared hardcoded credentials
-      
+
       The vulnerability is particularly dangerous because:
       - Java bytecode can be easily decompiled to reveal hardcoded strings
       - Credentials cannot be changed without recompiling and redeploying code
       - Version control systems preserve historical credential values
       - Developers often use the same credentials across multiple projects
       - Automated scanners can easily detect hardcoded credential patterns
-      
+
       Historical context:
       - Hardcoded credentials have been a persistent issue since early software development
       - Featured prominently in OWASP Top 10 2021 under A07 (Identification and Authentication Failures)
@@ -171,7 +172,7 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
         %{
           type: :owasp,
           id: "A07:2021",
-          title: "OWASP Top 10 2021 - A07 Identification and Authentication Failures", 
+          title: "OWASP Top 10 2021 - A07 Identification and Authentication Failures",
           url: "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/"
         },
         %{
@@ -184,7 +185,8 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
           type: :research,
           id: "owasp_secrets_management",
           title: "OWASP Secrets Management Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -214,42 +216,48 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
       cve_examples: [
         %{
           id: "CVE-2024-28987",
-          description: "SolarWinds Web Help Desk hardcoded credential vulnerability allowing admin access",
+          description:
+            "SolarWinds Web Help Desk hardcoded credential vulnerability allowing admin access",
           severity: "critical",
           cvss: 9.1,
-          note: "Remote unauthenticated attackers can login with hardcoded credentials to gain admin privileges"
+          note:
+            "Remote unauthenticated attackers can login with hardcoded credentials to gain admin privileges"
         },
         %{
           id: "CVE-2022-34462",
-          description: "Dell EMC SCG Policy Manager hardcoded password vulnerability enabling privilege escalation",
+          description:
+            "Dell EMC SCG Policy Manager hardcoded password vulnerability enabling privilege escalation",
           severity: "high",
           cvss: 8.4,
-          note: "Knowledge of hardcoded credentials allows attackers to login and gain admin privileges"
+          note:
+            "Knowledge of hardcoded credentials allows attackers to login and gain admin privileges"
         },
         %{
           id: "CVE-2019-13466",
-          description: "Western Digital SSD Utility hardcoded password protecting customer reports archive",
+          description:
+            "Western Digital SSD Utility hardcoded password protecting customer reports archive",
           severity: "medium",
           cvss: 6.2,
-          note: "Hardcoded password used to encrypt customer support report archives can be extracted"
+          note:
+            "Hardcoded password used to encrypt customer support report archives can be extracted"
         }
       ],
       detection_notes: """
       This pattern detects insecure credential handling by identifying:
-      
+
       1. Variable assignments with credential-like names (password, secret, key, token) and string literal values
       2. Database connection methods with hardcoded username/password parameters
       3. Property setters and configuration methods with hardcoded credential values
       4. Authentication method calls containing hardcoded password parameters
       5. API key and token assignments with typical credential formats
       6. Map and Properties operations with credential keys and hardcoded values
-      
+
       The pattern uses multiple regex approaches to catch various Java credential patterns:
       - Direct variable assignments (String password = "value")
       - Method calls with credential parameters (authenticate("user", "password"))
       - Property configuration (setPassword("hardcoded"), setProperty("password", "value"))
       - API key patterns (apiKey = "sk-...", authToken = "bearer_...")
-      
+
       Key detection criteria:
       - Looks for credential-related variable names and method calls
       - Requires string literals with sufficient length (6+ characters) to avoid false positives
@@ -314,23 +322,23 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual hardcoded credential vulnerabilities
   and legitimate string assignments that happen to match credential patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.HardcodedPassword.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.HardcodedPassword.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.HardcodedPassword.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "VariableDeclaration"
@@ -343,12 +351,31 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
         credential_analysis: %{
           check_hardcoded_values: true,
           credential_patterns: [
-            "password", "pwd", "passwd", "secret", "key", "token", "credential", "auth",
-            "apiKey", "accessToken", "authToken", "clientSecret", "privateKey"
+            "password",
+            "pwd",
+            "passwd",
+            "secret",
+            "key",
+            "token",
+            "credential",
+            "auth",
+            "apiKey",
+            "accessToken",
+            "authToken",
+            "clientSecret",
+            "privateKey"
           ],
           check_string_literals: true,
           minimum_length: 6,
-          exclude_common_placeholders: ["password", "secret", "key", "token", "changeme", "admin", "test"]
+          exclude_common_placeholders: [
+            "password",
+            "secret",
+            "key",
+            "token",
+            "changeme",
+            "admin",
+            "test"
+          ]
         },
         auth_analysis: %{
           check_authentication_context: true,
@@ -376,7 +403,7 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
         check_environment_usage: true,
         safe_credential_sources: [
           "System.getenv",
-          "System.getProperty", 
+          "System.getProperty",
           "config.getString",
           "properties.getProperty",
           "@Value",
@@ -393,7 +420,12 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
         ],
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/example/, ~r/demo/, ~r/sample/],
         check_test_code: true,
-        high_risk_contexts: ["authentication", "database_connection", "api_authorization", "encryption_keys"],
+        high_risk_contexts: [
+          "authentication",
+          "database_connection",
+          "api_authorization",
+          "encryption_keys"
+        ],
         safe_if_uses_configuration: true
       },
       confidence_rules: %{

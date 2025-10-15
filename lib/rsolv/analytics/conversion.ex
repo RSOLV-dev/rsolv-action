@@ -2,21 +2,22 @@ defmodule Rsolv.Analytics.Conversion do
   @moduledoc """
   Schema for tracking conversion events (signups, subscriptions, purchases, etc.).
   """
-  
+
   use Ecto.Schema
   import Ecto.Changeset
-  
+
   schema "analytics_conversions" do
     field :event_name, :string
     field :properties, :map, default: %{}
     field :session_id, :string
-    field :value, :decimal  # For tracking monetary value of conversions
-    
+    # For tracking monetary value of conversions
+    field :value, :decimal
+
     belongs_to :customer, Rsolv.Customers.Customer
-    
+
     timestamps(type: :utc_datetime)
   end
-  
+
   def changeset(conversion, attrs) do
     conversion
     |> cast(attrs, [:event_name, :properties, :customer_id, :session_id, :value])

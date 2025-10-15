@@ -1,12 +1,12 @@
 defmodule Rsolv.Security.Patterns.Elixir do
   @moduledoc """
   Elixir security patterns for detecting vulnerabilities.
-  
+
   This module contains 28 security patterns specifically designed for Elixir
-  and Phoenix code. Each pattern includes detection rules, test cases, and 
+  and Phoenix code. Each pattern includes detection rules, test cases, and
   educational documentation.
   """
-  
+
   alias Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation
   alias Rsolv.Security.Patterns.Elixir.SqlInjectionFragment
   alias Rsolv.Security.Patterns.Elixir.CommandInjectionSystem
@@ -35,12 +35,12 @@ defmodule Rsolv.Security.Patterns.Elixir do
   alias Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls
   alias Rsolv.Security.Patterns.Elixir.MissingSslVerification
   alias Rsolv.Security.Patterns.Elixir.WeakPasswordHashing
-  
+
   @doc """
   Returns all Elixir security patterns.
-  
+
   ## Examples
-  
+
       iex> patterns = Rsolv.Security.Patterns.Elixir.all()
       iex> length(patterns)
       28
@@ -79,41 +79,40 @@ defmodule Rsolv.Security.Patterns.Elixir do
       weak_password_hashing()
     ]
   end
-  
+
   # Delegate to the SqlInjectionInterpolation module
   defdelegate sql_injection_interpolation(), to: SqlInjectionInterpolation, as: :pattern
-  
+
   # Delegate to the SqlInjectionFragment module
   defdelegate sql_injection_fragment(), to: SqlInjectionFragment, as: :pattern
-  
-  # Delegate to the CommandInjectionSystem module  
+
+  # Delegate to the CommandInjectionSystem module
   defdelegate command_injection_system(), to: CommandInjectionSystem, as: :pattern
-  
+
   # Delegate to the XssRawHtml module
   defdelegate xss_raw_html(), to: XssRawHtml, as: :pattern
-  
+
   # Delegate to the InsecureRandom module
   defdelegate insecure_random(), to: InsecureRandom, as: :pattern
-  
+
   # Delegate to the UnsafeAtomCreation module
   defdelegate unsafe_atom_creation(), to: UnsafeAtomCreation, as: :pattern
-  
+
   # Delegate to the CodeInjectionEval module
   defdelegate code_injection_eval(), to: CodeInjectionEval, as: :pattern
-  
+
   # Delegate to the DeserializationErlang module
   defdelegate deserialization_erlang(), to: DeserializationErlang, as: :pattern
-  
+
   # Delegate to the PathTraversal module
   defdelegate path_traversal(), to: PathTraversal, as: :pattern
-  
+
   # Delegate to the SsrfHttpoison module
   defdelegate ssrf_httpoison(), to: SsrfHttpoison, as: :pattern
-  
-  
+
   # Delegate to the WeakCryptoMd5 module
   defdelegate weak_crypto_md5(), to: WeakCryptoMd5, as: :pattern
-  
+
   # Delegate to the WeakCryptoSha1 module
   defdelegate weak_crypto_sha1(), to: WeakCryptoSha1, as: :pattern
 
@@ -143,25 +142,25 @@ defmodule Rsolv.Security.Patterns.Elixir do
 
   # Delegate to the UnsafeJsonDecode module
   defdelegate unsafe_json_decode(), to: UnsafeJsonDecode, as: :pattern
-  
+
   # Delegate to the CookieSecurity module
   defdelegate cookie_security(), to: CookieSecurity, as: :pattern
-  
+
   # Delegate to the UnsafeFileUpload module
   defdelegate unsafe_file_upload(), to: UnsafeFileUpload, as: :pattern
-  
+
   # Delegate to the InsufficientInputValidation module
   defdelegate insufficient_input_validation(), to: InsufficientInputValidation, as: :pattern
-  
+
   # Delegate to the ExposedErrorDetails module
   defdelegate exposed_error_details(), to: ExposedErrorDetails, as: :pattern
-  
+
   # Delegate to the UnsafeGenserverCalls module
   defdelegate unsafe_genserver_calls(), to: UnsafeGenserverCalls, as: :pattern
-  
+
   # Delegate to the MissingSslVerification module
   defdelegate missing_ssl_verification(), to: MissingSslVerification, as: :pattern
-  
+
   # Delegate to the WeakPasswordHashing module
   defdelegate weak_password_hashing(), to: WeakPasswordHashing, as: :pattern
 end

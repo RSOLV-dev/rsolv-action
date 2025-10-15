@@ -30,7 +30,7 @@ defmodule Rsolv.DataCase do
   setup tags do
     # Ensure the application is started FIRST
     Application.ensure_all_started(:rsolv)
-    
+
     # Wait for Repo to be available
     case Process.whereis(Rsolv.Repo) do
       nil ->
@@ -40,16 +40,19 @@ defmodule Rsolv.DataCase do
             nil when attempt < 30 ->
               Process.sleep(100)
               {:cont, nil}
+
             nil ->
               raise "Rsolv.Repo process never started after 3 seconds"
+
             _pid ->
               {:halt, :ok}
           end
         end)
+
       _pid ->
         :ok
     end
-    
+
     # Clear Mnesia tables to prevent flaky tests from data persistence
     # These tables are not transactional like SQL, so they persist between tests
     try do
@@ -57,17 +60,17 @@ defmodule Rsolv.DataCase do
     rescue
       _ -> :ok
     end
-    
+
     try do
       :mnesia.clear_table(:customer_sessions_mnesia)
     rescue
       _ -> :ok
     end
-    
+
     # Now start the sandbox
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Rsolv.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
-    
+
     # No longer need to reset test customers since LegacyAccounts is removed
     :ok
   end

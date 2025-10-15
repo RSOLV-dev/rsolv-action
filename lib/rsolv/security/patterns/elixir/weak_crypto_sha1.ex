@@ -1,21 +1,21 @@
 defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
   @moduledoc """
   Detects usage of SHA1 hashing algorithm which is deprecated for security purposes.
-  
+
   This pattern identifies instances where SHA1 is used for cryptographic purposes,
   which is insecure due to its vulnerability to collision attacks and NIST deprecation.
-  
+
   ## Vulnerability Details
-  
+
   SHA-1 (Secure Hash Algorithm 1) was designed as a cryptographic hash function but
   is now considered deprecated for security purposes. Key issues include:
   - Collision attacks: Practical attacks demonstrated (SHAttered, 2017)
   - NIST deprecation: Officially deprecated in 2011, retirement by 2030
   - Fast computation: Modern hardware can compute billions of SHA1 hashes per second
   - Erlang/OTP deprecation: ssh-rsa deprecated due to SHA1 usage
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   # Password hashing with SHA1 - NEVER DO THIS!
@@ -23,44 +23,44 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
     :crypto.hash(:sha, password)
     |> Base.encode16()
   end
-  
+
   # Token generation with SHA1 - INSECURE!
   def generate_token(user_id) do
     :crypto.hash(:sha, "\#{user_id}:\#{System.system_time()}")
     |> Base.encode16()
   end
-  
+
   # HMAC with SHA1 - DEPRECATED!
   def sign_message(key, message) do
     :crypto.hmac(:sha, key, message)
   end
   ```
-  
+
   An attacker could:
   - Generate hash collisions to bypass security checks
   - Crack SHA1 password hashes using rainbow tables
   - Exploit collision attacks like SHAttered
   - Predict or forge tokens/signatures
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   # Password hashing with Argon2 (recommended)
   def hash_password(password) do
     Argon2.hash_pwd_salt(password)
   end
-  
+
   # For general hashing (non-passwords)
   def hash_data(data) do
     :crypto.hash(:sha256, data)
   end
-  
+
   # HMAC with SHA-256
   def sign_message(key, message) do
     :crypto.mac(:hmac, :sha256, key, message)
   end
-  
+
   # For Git/checksums (where SHA1 might be acceptable)
   def git_hash(content) do
     # SHA1 is still used by Git for compatibility
@@ -68,16 +68,17 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "elixir-weak-crypto-sha1",
       name: "Weak Cryptography - SHA1",
-      description: "SHA-1 is deprecated for security purposes and vulnerable to collision attacks",
+      description:
+        "SHA-1 is deprecated for security purposes and vulnerable to collision attacks",
       type: :weak_crypto,
       severity: :medium,
       languages: ["elixir"],
@@ -103,7 +104,8 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
       ],
       cwe_id: "CWE-327",
       owasp_category: "A02:2021",
-      recommendation: "Use :crypto.hash(:sha256, data) or stronger algorithms. For passwords use Argon2/Bcrypt.",
+      recommendation:
+        "Use :crypto.hash(:sha256, data) or stronger algorithms. For passwords use Argon2/Bcrypt.",
       test_cases: %{
         vulnerable: [
           ":crypto.hash(:sha, password)",
@@ -122,7 +124,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -130,17 +132,17 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
       SHA-1 (Secure Hash Algorithm 1) is a cryptographic hash function that produces a 160-bit
       hash value. However, SHA-1 is now considered broken for security applications due to
       vulnerability to collision attacks and has been officially deprecated by NIST.
-      
+
       In the Elixir/Erlang ecosystem, SHA-1 is available through :crypto.hash(:sha, data),
       :crypto.sha/1, :erlang.sha/1, and HMAC functions. The BEAM VM's efficiency actually
       makes SHA-1 even less suitable for security purposes where slow computation is desirable.
-      
+
       Key deprecation milestones:
       - 2011: NIST officially deprecated SHA-1 for security purposes
       - 2017: Google/CWI demonstrated practical collision attacks (SHAttered)
       - OTP-24: Erlang/OTP deprecated ssh-rsa due to SHA-1 usage
       - 2030: NIST complete retirement deadline
-      
+
       SHA-1 should never be used for:
       - Password hashing or storage
       - Digital signatures or certificates
@@ -148,7 +150,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
       - Session tokens or API keys
       - HMAC for security purposes
       - Any security-critical application
-      
+
       Note: SHA-1 may still be acceptable for non-security purposes like Git commits,
       file checksums, or legacy compatibility where collision resistance is not critical.
       """,
@@ -175,7 +177,8 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
           type: :nist,
           id: "nist_sha1_retirement",
           title: "NIST Retires SHA-1 Cryptographic Algorithm",
-          url: "https://www.nist.gov/news-events/news/2022/12/nist-retires-sha-1-cryptographic-algorithm"
+          url:
+            "https://www.nist.gov/news-events/news/2022/12/nist-retires-sha-1-cryptographic-algorithm"
         },
         %{
           type: :research,
@@ -208,7 +211,8 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
           description: "OpenSSH SHA-1 deprecation and security implications",
           severity: "medium",
           cvss: 5.9,
-          note: "Related to SSH key algorithms using SHA-1, similar to Erlang/OTP ssh-rsa deprecation"
+          note:
+            "Related to SSH key algorithms using SHA-1, similar to Erlang/OTP ssh-rsa deprecation"
         },
         %{
           id: "CVE-2017-15361",
@@ -231,7 +235,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
       """,
       safe_alternatives: [
         "Use Argon2 for password hashing: Argon2.hash_pwd_salt/1",
-        "Use Bcrypt for password hashing: Bcrypt.hash_pwd_salt/1", 
+        "Use Bcrypt for password hashing: Bcrypt.hash_pwd_salt/1",
         "Use SHA-256 for general hashing: :crypto.hash(:sha256, data)",
         "Use SHA-512 for higher security: :crypto.hash(:sha512, data)",
         "Use BLAKE2 for performance: :crypto.hash(:blake2b, data)",
@@ -264,19 +268,19 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between security-critical SHA-1 usage
   and legitimate non-security uses like Git operations or checksums.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.WeakCryptoSha1.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.WeakCryptoSha1.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -294,18 +298,47 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoSha1 do
         },
         context_analysis: %{
           check_variable_names: true,
-          security_indicators: ["password", "pwd", "secret", "token", "key", "auth",
-                               "credential", "session", "api_key", "private", "sign", "verify"],
+          security_indicators: [
+            "password",
+            "pwd",
+            "secret",
+            "token",
+            "key",
+            "auth",
+            "credential",
+            "session",
+            "api_key",
+            "private",
+            "sign",
+            "verify"
+          ],
           git_indicators: ["git", "commit", "blob", "tree", "repo", "revision"],
           checksum_indicators: ["checksum", "hash", "digest", "fingerprint", "etag", "integrity"]
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/_test\.exs$/, ~r/benchmarks/],
-        legitimate_uses: ["git", "checksum", "file_integrity", "cache_key", "etag", 
-                         "non_cryptographic", "legacy_compatibility", "torrent", "p2p"],
-        security_contexts: ["password", "authentication", "token", "session", "api", 
-                           "signature", "certificate", "hmac"],
+        legitimate_uses: [
+          "git",
+          "checksum",
+          "file_integrity",
+          "cache_key",
+          "etag",
+          "non_cryptographic",
+          "legacy_compatibility",
+          "torrent",
+          "p2p"
+        ],
+        security_contexts: [
+          "password",
+          "authentication",
+          "token",
+          "session",
+          "api",
+          "signature",
+          "certificate",
+          "hmac"
+        ],
         exclude_if_git: true,
         exclude_if_checksum: true
       },

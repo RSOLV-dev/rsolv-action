@@ -1,34 +1,34 @@
 defmodule Rsolv.Security.Patterns.Php.OpenRedirect do
   @moduledoc """
   Pattern for detecting open redirect vulnerabilities in PHP.
-  
+
   This pattern identifies when PHP applications redirect users to URLs
   controlled by user input without proper validation, potentially allowing
   attackers to redirect victims to malicious sites.
-  
+
   ## Vulnerability Details
-  
+
   Open redirect vulnerabilities occur when a web application accepts a user-controlled
   input that specifies a link to an external site, and uses that link in a redirect.
   This can be leveraged by attackers for phishing attacks, bypassing security controls,
   or stealing credentials.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
   header("Location: " . $_GET['url']);
-  
+
   // Attack: https://trusted.com/redirect.php?url=http://evil.com/phishing
   // User thinks they're on trusted.com but gets redirected to evil.com
   ```
-  
+
   The vulnerability is particularly dangerous because users trust the initial domain
   and may not notice they've been redirected to a malicious site.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -38,7 +38,8 @@ defmodule Rsolv.Security.Patterns.Php.OpenRedirect do
       type: :open_redirect,
       severity: :medium,
       languages: ["php"],
-      regex: ~r/(header\s*\(\s*["']Location:\s*[^"']*["']?\s*\.\s*\$_(GET|POST|REQUEST|COOKIE))|(wp_redirect\s*\(\s*\$_(GET|POST|REQUEST|COOKIE))/i,
+      regex:
+        ~r/(header\s*\(\s*["']Location:\s*[^"']*["']?\s*\.\s*\$_(GET|POST|REQUEST|COOKIE))|(wp_redirect\s*\(\s*\$_(GET|POST|REQUEST|COOKIE))/i,
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
       recommendation: "Validate redirect URLs against an allowlist",
@@ -61,7 +62,7 @@ if (in_array($redirect, $allowed_urls)) {
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -70,28 +71,28 @@ if (in_array($redirect, $allowed_urls)) {
       site to any external URL. This is commonly exploited in phishing attacks where
       users trust the initial domain and don't realize they've been redirected to a
       malicious site.
-      
+
       The vulnerability occurs when applications use user-controlled input to determine
       redirect destinations without proper validation. While browsers show the final
       URL, many users don't check the address bar after clicking a trusted link.
-      
+
       ### How Open Redirects Work
-      
+
       **Basic Attack Flow**:
       1. Attacker crafts URL: `https://trusted.com/redirect.php?url=http://evil.com`
       2. Victim receives link appearing to be from trusted.com
       3. Victim clicks link, trusting the domain
       4. Application redirects to attacker's site
       5. Attacker's site mimics trusted site to steal credentials
-      
+
       **Common Redirect Methods in PHP**:
       - `header("Location: " . $url)` - HTTP header redirect
       - `wp_redirect($url)` - WordPress redirect function
       - `<meta http-equiv="refresh" content="0;url=$url">` - HTML meta redirect
       - `echo "<script>window.location='$url'</script>"` - JavaScript redirect
-      
+
       ### Attack Scenarios
-      
+
       **Phishing Attacks**:
       ```
       1. Email: "Your account needs verification: https://bank.com/verify?url=http://attacker.com"
@@ -99,14 +100,14 @@ if (in_array($redirect, $allowed_urls)) {
       3. Redirected to attacker.com that looks like bank.com
       4. User enters credentials on fake site
       ```
-      
+
       **OAuth Token Theft**:
       ```
       1. OAuth flow: https://app.com/oauth/callback?redirect_uri=http://attacker.com
       2. After authentication, tokens sent to attacker's URL
       3. Attacker gains access to user's account
       ```
-      
+
       **Bypassing Security Warnings**:
       - Many security tools trust redirects from known good domains
       - Spam filters may allow emails with trusted domains
@@ -129,7 +130,8 @@ if (in_array($redirect, $allowed_urls)) {
           type: :owasp_cheatsheet,
           id: "unvalidated_redirects",
           title: "OWASP Unvalidated Redirects and Forwards Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -188,21 +190,21 @@ if (in_array($redirect, $allowed_urls)) {
       ],
       detection_notes: """
       This pattern detects open redirect vulnerabilities by identifying:
-      
+
       1. **Header Redirects**: PHP header() function with Location header
          - Direct concatenation: header("Location: " . $_GET['url'])
          - Case insensitive: header("location: " . $_POST['redirect'])
-      
+
       2. **WordPress Redirects**: wp_redirect() with user input
          - Direct parameter: wp_redirect($_GET['redirect_to'])
          - Request array: wp_redirect($_REQUEST['url'])
-      
+
       3. **User Input Sources**: All PHP superglobals
          - $_GET - URL parameters
          - $_POST - Form data
          - $_REQUEST - Combined GET/POST/COOKIE
          - $_COOKIE - Cookie values
-      
+
       The regex uses case-insensitive matching and handles various spacing patterns.
       It looks for concatenation operators (.) connecting user input to redirect functions.
       """,
@@ -249,13 +251,13 @@ if (in_array($redirect, $allowed_urls)) {
 
   @doc """
   Returns test cases for the open redirect pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.OpenRedirect.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.OpenRedirect.test_cases()
       iex> length(test_cases.negative)
       6
@@ -327,9 +329,9 @@ if (in_array($redirect, $allowed_urls)) {
 
   @doc """
   Returns examples of vulnerable and fixed code.
-  
+
   ## Examples
-  
+
       iex> examples = Rsolv.Security.Patterns.Php.OpenRedirect.examples()
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
@@ -343,7 +345,7 @@ if (in_array($redirect, $allowed_urls)) {
             header("Location: " . $_GET['redirect']);
             exit();
         }
-        
+
         // Attack: site.com/login.php?redirect=http://evil.com/phishing
         """,
         "WordPress redirect" => """
@@ -351,14 +353,14 @@ if (in_array($redirect, $allowed_urls)) {
         $redirect_to = $_REQUEST['redirect_to'] ?: home_url();
         wp_redirect($redirect_to);
         exit;
-        
+
         // Attacker can redirect anywhere
         """,
         "Domain concatenation" => """
         // VULNERABLE: User controls part of URL
         $subdomain = $_GET['site'];
         header("Location: https://" . $subdomain . ".example.com");
-        
+
         // Attack: ?site=evil.com/path#@real
         // Redirects to: https://evil.com/path#@real.example.com
         """
@@ -368,17 +370,17 @@ if (in_array($redirect, $allowed_urls)) {
         // SECURE: Validate against allowlist
         $allowed_redirects = [
             '/dashboard',
-            '/profile', 
+            '/profile',
             '/settings',
             '/logout'
         ];
-        
+
         $redirect = $_GET['redirect'] ?? '/dashboard';
-        
+
         if (!in_array($redirect, $allowed_redirects)) {
             $redirect = '/dashboard'; // Default safe location
         }
-        
+
         header("Location: " . $redirect);
         exit();
         """,
@@ -387,7 +389,7 @@ if (in_array($redirect, $allowed_urls)) {
         function safe_redirect($url) {
             // Remove whitespace
             $url = trim($url);
-            
+
             // Only allow URLs starting with single /
             if (preg_match('#^/[^/]#', $url)) {
                 header("Location: " . $url);
@@ -396,27 +398,27 @@ if (in_array($redirect, $allowed_urls)) {
             }
             exit();
         }
-        
+
         safe_redirect($_GET['redirect'] ?? '/');
         """,
         "URL validation" => """
         // SECURE: Validate URL belongs to our domain
         function is_safe_redirect($url) {
             $parsed = parse_url($url);
-            
+
             // Only allow our domain or relative URLs
             $allowed_hosts = ['example.com', 'www.example.com'];
-            
+
             if (!isset($parsed['host'])) {
                 // Relative URL - check it starts with /
                 return strpos($url, '/') === 0 && strpos($url, '//') !== 0;
             }
-            
+
             return in_array($parsed['host'], $allowed_hosts);
         }
-        
+
         $redirect = $_GET['url'] ?? '/';
-        
+
         if (is_safe_redirect($redirect)) {
             header("Location: " . $redirect);
         } else {
@@ -430,63 +432,63 @@ if (in_array($redirect, $allowed_urls)) {
 
   @doc """
   Returns educational description of the vulnerability.
-  
+
   ## Examples
-  
+
       iex> desc = Rsolv.Security.Patterns.Php.OpenRedirect.vulnerability_description()
       iex> desc =~ "redirect"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.OpenRedirect.vulnerability_description()
       iex> desc =~ "phishing"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.OpenRedirect.vulnerability_description()
       iex> desc =~ "validation"
       true
   """
   def vulnerability_description do
     """
-    Open redirect vulnerabilities occur when a web application accepts untrusted 
-    input that could cause the application to redirect users to an unintended 
+    Open redirect vulnerabilities occur when a web application accepts untrusted
+    input that could cause the application to redirect users to an unintended
     external URL, enabling phishing attacks and credential theft.
-    
-    Attackers exploit open redirects by crafting malicious URLs that appear to 
-    originate from a trusted domain but redirect victims to attacker-controlled 
+
+    Attackers exploit open redirects by crafting malicious URLs that appear to
+    originate from a trusted domain but redirect victims to attacker-controlled
     sites designed to steal credentials or distribute malware.
-    
+
     ## Security Impact
-    
-    **Phishing Attacks**: Users trust links from known domains, making them more 
+
+    **Phishing Attacks**: Users trust links from known domains, making them more
     likely to enter credentials on the redirected phishing site.
-    
-    **Credential Theft**: Fake login pages that look identical to the real site 
+
+    **Credential Theft**: Fake login pages that look identical to the real site
     can capture usernames, passwords, and 2FA codes.
-    
-    **Trust Exploitation**: Bypasses spam filters and security warnings that would 
+
+    **Trust Exploitation**: Bypasses spam filters and security warnings that would
     normally block direct links to malicious sites.
-    
+
     ## Attack Scenarios
-    
+
     1. **Email Phishing**:
        - Attacker sends: "Reset password at https://bank.com/reset?url=evil.com"
        - Victim trusts bank.com domain
        - Gets redirected to convincing fake site
-    
+
     2. **OAuth Hijacking**:
        - Manipulate OAuth redirect_uri parameter
        - Steal authorization codes or tokens
        - Gain access to user accounts
-    
+
     3. **Filter Bypass**:
        - Use trusted domain to bypass email filters
        - Evade browser security warnings
        - Circumvent corporate firewalls
-    
+
     ## Prevention
-    
-    Implement strict validation using allowlists of acceptable redirect 
-    destinations, validate that URLs are relative or belong to your domain, 
+
+    Implement strict validation using allowlists of acceptable redirect
+    destinations, validate that URLs are relative or belong to your domain,
     and never trust user input for determining redirect locations.
     """
   end
@@ -502,11 +504,11 @@ if (in_array($redirect, $allowed_urls)) {
       iex> enhancement = Rsolv.Security.Patterns.Php.OpenRedirect.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.OpenRedirect.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.OpenRedirect.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4
@@ -520,12 +522,19 @@ if (in_array($redirect, $allowed_urls)) {
           type: "redirect_functions",
           description: "Identify PHP redirect functions",
           functions: [
-            "header", "wp_redirect", "wp_safe_redirect",
-            "redirect", "Redirect", "http_redirect"
+            "header",
+            "wp_redirect",
+            "wp_safe_redirect",
+            "redirect",
+            "Redirect",
+            "http_redirect"
           ],
           location_patterns: [
-            "Location:", "location:", "LOCATION:",
-            "Content-Location:", "Refresh:"
+            "Location:",
+            "location:",
+            "LOCATION:",
+            "Content-Location:",
+            "Refresh:"
           ]
         },
         %{
@@ -539,24 +548,41 @@ if (in_array($redirect, $allowed_urls)) {
           type: "validation_patterns",
           description: "Check for URL validation attempts",
           validation_functions: [
-            "parse_url", "filter_var", "preg_match",
-            "in_array", "array_key_exists", "strpos"
+            "parse_url",
+            "filter_var",
+            "preg_match",
+            "in_array",
+            "array_key_exists",
+            "strpos"
           ],
           safe_patterns: [
-            "FILTER_VALIDATE_URL", "allowed_redirect_hosts",
-            "safe_redirect", "is_allowed_host"
+            "FILTER_VALIDATE_URL",
+            "allowed_redirect_hosts",
+            "safe_redirect",
+            "is_allowed_host"
           ]
         },
         %{
           type: "context_analysis",
           description: "Analyze redirect context for safety",
           exclude_patterns: [
-            "test", "mock", "example", "documentation",
-            "// header", "/* header", "* header("
+            "test",
+            "mock",
+            "example",
+            "documentation",
+            "// header",
+            "/* header",
+            "* header("
           ],
           high_risk_indicators: [
-            "login", "auth", "oauth", "callback",
-            "return", "next", "continue", "redirect"
+            "login",
+            "auth",
+            "oauth",
+            "callback",
+            "return",
+            "next",
+            "continue",
+            "redirect"
           ]
         }
       ]

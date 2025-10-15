@@ -69,19 +69,29 @@ defmodule Rsolv.AST.TestIntegrator do
   """
   def generate_integration(target_content, test_suite, language, framework) do
     Logger.info("TestIntegrator: Starting integration for #{language}/#{framework}")
-    Logger.debug("Target content length: #{byte_size(target_content)}, test suite: #{inspect(test_suite)}")
+
+    Logger.debug(
+      "Target content length: #{byte_size(target_content)}, test suite: #{inspect(test_suite)}"
+    )
 
     with {:ok, ast} <- parse_code(target_content, language),
          {:ok, insertion_point} <- find_insertion_point(ast, framework),
-         {:ok, integrated_code} <- insert_test(ast, test_suite, language, framework, insertion_point, target_content) do
+         {:ok, integrated_code} <-
+           insert_test(ast, test_suite, language, framework, insertion_point, target_content) do
       Logger.info("TestIntegrator: Successfully integrated test using AST")
       {:ok, integrated_code, insertion_point, "ast"}
     else
       error ->
-        Logger.warning("TestIntegrator: AST integration failed (#{inspect(error)}), falling back to append")
+        Logger.warning(
+          "TestIntegrator: AST integration failed (#{inspect(error)}), falling back to append"
+        )
+
         # For fallback, use default insertion_point (module level, no parent)
         fallback_insertion_point = %{parent: "module"}
-        fallback_content = "#{target_content}\n\n#{format_test_code(test_suite, language, framework, fallback_insertion_point)}"
+
+        fallback_content =
+          "#{target_content}\n\n#{format_test_code(test_suite, language, framework, fallback_insertion_point)}"
+
         {:ok, fallback_content, nil, "append"}
     end
   end
@@ -91,12 +101,14 @@ defmodule Rsolv.AST.TestIntegrator do
     Logger.debug("TestIntegrator: Parsing #{language} code")
 
     with {:ok, session} <- SessionManager.create_session("test-integrator"),
-         {:ok, %{ast: ast, error: nil}} <- ParserRegistry.parse_code(session.id, "test-integrator", language, content) do
+         {:ok, %{ast: ast, error: nil}} <-
+           ParserRegistry.parse_code(session.id, "test-integrator", language, content) do
       Logger.debug("TestIntegrator: Successfully parsed code")
       # Debug: write AST to file for inspection
       if language in ["ruby", "python"] do
         File.write!("/tmp/ast_debug_#{language}.json", JSON.encode!(ast))
       end
+
       {:ok, ast}
     else
       {:ok, %{error: error}} ->
@@ -138,21 +150,24 @@ defmodule Rsolv.AST.TestIntegrator do
           nil ->
             Logger.warning("TestIntegrator: No test blocks found in describe")
             # Insert at the end of describe block, before closing brace
-            {:ok, %{
-              line: get_node_end_line(describe_node) - 1,
-              strategy: "inside_describe_block",
-              parent: "describe_block"
-            }}
+            {:ok,
+             %{
+               line: get_node_end_line(describe_node) - 1,
+               strategy: "inside_describe_block",
+               parent: "describe_block"
+             }}
 
           last_test ->
             # Insert after the last test block
             line = get_node_end_line(last_test) + 1
             Logger.debug("TestIntegrator: Found insertion point at line #{line}")
-            {:ok, %{
-              line: line,
-              strategy: "after_last_it_block",
-              parent: "describe_block"
-            }}
+
+            {:ok,
+             %{
+               line: line,
+               strategy: "after_last_it_block",
+               parent: "describe_block"
+             }}
         end
     end
   end
@@ -170,20 +185,24 @@ defmodule Rsolv.AST.TestIntegrator do
         case find_ruby_last_test_block(describe_node) do
           nil ->
             Logger.warning("TestIntegrator: No test blocks found in describe")
-            {:ok, %{
-              line: get_node_end_line(describe_node) - 1,
-              strategy: "inside_describe_block",
-              parent: "describe_block"
-            }}
+
+            {:ok,
+             %{
+               line: get_node_end_line(describe_node) - 1,
+               strategy: "inside_describe_block",
+               parent: "describe_block"
+             }}
 
           last_test ->
             line = get_node_end_line(last_test) + 1
             Logger.debug("TestIntegrator: Found RSpec insertion point at line #{line}")
-            {:ok, %{
-              line: line,
-              strategy: "after_last_it_block",
-              parent: "describe_block"
-            }}
+
+            {:ok,
+             %{
+               line: line,
+               strategy: "after_last_it_block",
+               parent: "describe_block"
+             }}
         end
     end
   end
@@ -198,13 +217,21 @@ defmodule Rsolv.AST.TestIntegrator do
         {:error, :no_test_container}
 
       {container_type, container_node, last_test} ->
-        line = if last_test, do: get_node_end_line(last_test) + 1, else: get_node_end_line(container_node) - 1
-        Logger.debug("TestIntegrator: Found pytest insertion point at line #{line} (#{container_type})")
-        {:ok, %{
-          line: line,
-          strategy: "after_last_test_function",
-          parent: container_type
-        }}
+        line =
+          if last_test,
+            do: get_node_end_line(last_test) + 1,
+            else: get_node_end_line(container_node) - 1
+
+        Logger.debug(
+          "TestIntegrator: Found pytest insertion point at line #{line} (#{container_type})"
+        )
+
+        {:ok,
+         %{
+           line: line,
+           strategy: "after_last_test_function",
+           parent: container_type
+         }}
     end
   end
 
@@ -229,10 +256,14 @@ defmodule Rsolv.AST.TestIntegrator do
   defp find_describe_in_statement(_), do: nil
 
   # Find describe in call expression
-  defp find_describe_in_expression(%{
-    "type" => "CallExpression",
-    "callee" => %{"type" => "Identifier", "name" => name}
-  } = node) when name in @describe_function_names, do: node
+  defp find_describe_in_expression(
+         %{
+           "type" => "CallExpression",
+           "callee" => %{"type" => "Identifier", "name" => name}
+         } = node
+       )
+       when name in @describe_function_names,
+       do: node
 
   defp find_describe_in_expression(_), do: nil
 
@@ -240,7 +271,8 @@ defmodule Rsolv.AST.TestIntegrator do
   defp find_last_test_block(%{"arguments" => arguments}) when is_list(arguments) do
     # The second argument should be the function containing test blocks
     case Enum.at(arguments, 1) do
-      %{"type" => type, "body" => body} when type in ["FunctionExpression", "ArrowFunctionExpression"] ->
+      %{"type" => type, "body" => body}
+      when type in ["FunctionExpression", "ArrowFunctionExpression"] ->
         find_last_test_in_body(body)
 
       _ ->
@@ -251,7 +283,8 @@ defmodule Rsolv.AST.TestIntegrator do
   defp find_last_test_block(_), do: nil
 
   # Find last test in function body
-  defp find_last_test_in_body(%{"type" => "BlockStatement", "body" => statements}) when is_list(statements) do
+  defp find_last_test_in_body(%{"type" => "BlockStatement", "body" => statements})
+       when is_list(statements) do
     statements
     |> Enum.reverse()
     |> Enum.find_value(&find_test_in_statement/1)
@@ -261,12 +294,15 @@ defmodule Rsolv.AST.TestIntegrator do
 
   # Find test in statement
   defp find_test_in_statement(%{
-    "type" => "ExpressionStatement",
-    "expression" => %{
-      "type" => "CallExpression",
-      "callee" => %{"type" => "Identifier", "name" => name}
-    } = node
-  }) when name in @test_function_names, do: node
+         "type" => "ExpressionStatement",
+         "expression" =>
+           %{
+             "type" => "CallExpression",
+             "callee" => %{"type" => "Identifier", "name" => name}
+           } = node
+       })
+       when name in @test_function_names,
+       do: node
 
   defp find_test_in_statement(_), do: nil
 
@@ -287,8 +323,9 @@ defmodule Rsolv.AST.TestIntegrator do
   # Ruby parser returns:
   # - "begin" node with children array when file has multiple statements (e.g., require + describe)
   # - "block" node directly when file has only the describe block
-  defp find_ruby_outermost_describe(%{"type" => "begin", "children" => children}) when is_list(children),
-    do: Enum.find_value(children, &find_ruby_describe_in_node/1)
+  defp find_ruby_outermost_describe(%{"type" => "begin", "children" => children})
+       when is_list(children),
+       do: Enum.find_value(children, &find_ruby_describe_in_node/1)
 
   defp find_ruby_outermost_describe(%{"type" => "block"} = node),
     do: find_ruby_describe_in_node(node)
@@ -298,10 +335,15 @@ defmodule Rsolv.AST.TestIntegrator do
   # Find describe/context block - it's a "block" node with "send" as first child
   defp find_ruby_describe_in_node(%{"type" => "block", "children" => [send_node | _]} = node) do
     case send_node do
-      %{"type" => "send", "children" => [%{"type" => "const", "children" => [nil, "RSpec"]}, "describe" | _]} ->
+      %{
+        "type" => "send",
+        "children" => [%{"type" => "const", "children" => [nil, "RSpec"]}, "describe" | _]
+      } ->
         node
+
       %{"type" => "send", "children" => [nil, name | _]} when name in @ruby_describe_names ->
         node
+
       _ ->
         nil
     end
@@ -311,7 +353,8 @@ defmodule Rsolv.AST.TestIntegrator do
 
   # Find last it/specify/example block in Ruby describe
   # Ruby parser returns block with exactly 3 children: [send_node, args_node, body_node]
-  defp find_ruby_last_test_block(%{"type" => "block", "children" => children}) when is_list(children) and length(children) >= 3 do
+  defp find_ruby_last_test_block(%{"type" => "block", "children" => children})
+       when is_list(children) and length(children) >= 3 do
     # Third child (index 2) is the body - usually a "begin" node with multiple children
     body_node = Enum.at(children, 2)
 
@@ -335,6 +378,7 @@ defmodule Rsolv.AST.TestIntegrator do
     case send_node do
       %{"type" => "send", "children" => [nil, name | _]} when name in @ruby_test_names ->
         node
+
       _ ->
         nil
     end
@@ -351,7 +395,9 @@ defmodule Rsolv.AST.TestIntegrator do
   defp find_python_test_container(%{"type" => "Module", "body" => body}) when is_list(body) do
     # Look for test class first, then fall back to module-level test functions
     case find_python_test_class(body) do
-      {class_node, last_test} -> {"test_class", class_node, last_test}
+      {class_node, last_test} ->
+        {"test_class", class_node, last_test}
+
       nil ->
         case find_python_last_module_test(body) do
           nil -> nil
@@ -365,14 +411,19 @@ defmodule Rsolv.AST.TestIntegrator do
   # Find test class (class starting with Test or containing test_ methods)
   # Python parser returns "ClassDef" with name as direct string
   defp find_python_test_class(statements) do
-    test_class = Enum.find(statements, fn
-      %{"type" => "ClassDef", "name" => name} when is_binary(name) ->
-        String.starts_with?(name, "Test")
-      _ -> false
-    end)
+    test_class =
+      Enum.find(statements, fn
+        %{"type" => "ClassDef", "name" => name} when is_binary(name) ->
+          String.starts_with?(name, "Test")
+
+        _ ->
+          false
+      end)
 
     case test_class do
-      nil -> nil
+      nil ->
+        nil
+
       %{"body" => body} when is_list(body) ->
         last_test = find_python_last_test_in_class(body)
         {test_class, last_test}
@@ -396,9 +447,10 @@ defmodule Rsolv.AST.TestIntegrator do
   # Check if node is a test function (starts with test_)
   # Python parser returns "FunctionDef" or "AsyncFunctionDef" with name as direct string
   defp is_python_test_function(%{
-    "type" => type,
-    "name" => name
-  }) when type in ["FunctionDef", "AsyncFunctionDef"] and is_binary(name) do
+         "type" => type,
+         "name" => name
+       })
+       when type in ["FunctionDef", "AsyncFunctionDef"] and is_binary(name) do
     String.starts_with?(name, @python_test_prefix)
   end
 
@@ -501,7 +553,7 @@ defmodule Rsolv.AST.TestIntegrator do
 
   # Format test code for Jest/Vitest/Mocha
   defp format_test_code(%{"redTests" => red_tests}, _language, framework, _insertion_point)
-      when framework in ~w(vitest jest mocha) do
+       when framework in ~w(vitest jest mocha) do
     red_tests
     |> Enum.map(&format_single_js_test/1)
     |> wrap_in_js_describe_block()
@@ -542,7 +594,11 @@ defmodule Rsolv.AST.TestIntegrator do
   end
 
   # Format a single RSpec test block
-  defp format_single_rspec_test(%{"testName" => name, "testCode" => code, "attackVector" => vector}) do
+  defp format_single_rspec_test(%{
+         "testName" => name,
+         "testCode" => code,
+         "attackVector" => vector
+       }) do
     """
     it '#{name}' do
       # Attack vector: #{vector}
@@ -552,9 +608,14 @@ defmodule Rsolv.AST.TestIntegrator do
   end
 
   # Format a single pytest test function
-  defp format_single_pytest_test(%{"testName" => name, "testCode" => code, "attackVector" => vector}) do
+  defp format_single_pytest_test(%{
+         "testName" => name,
+         "testCode" => code,
+         "attackVector" => vector
+       }) do
     # Check if code is already a complete function definition
-    if String.starts_with?(String.trim(code), "def ") or String.starts_with?(String.trim(code), "async def ") do
+    if String.starts_with?(String.trim(code), "def ") or
+         String.starts_with?(String.trim(code), "async def ") do
       # Code is already a complete method - use it directly with attack vector comment
       """
       # Attack vector: #{vector}
@@ -563,11 +624,12 @@ defmodule Rsolv.AST.TestIntegrator do
     else
       # Code is just test body - wrap in function definition
       # Convert test name to valid Python function name
-      func_name = name
-      |> String.downcase()
-      |> String.replace(~r/[^a-z0-9_]/, "_")
-      |> String.replace(~r/_+/, "_")
-      |> String.trim("_")
+      func_name =
+        name
+        |> String.downcase()
+        |> String.replace(~r/[^a-z0-9_]/, "_")
+        |> String.replace(~r/_+/, "_")
+        |> String.trim("_")
 
       """
       def test_#{func_name}(self):

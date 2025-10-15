@@ -1,30 +1,41 @@
 defmodule Rsolv.Security.ASTPattern do
   @moduledoc """
   Simple AST-enhanced pattern format that dramatically reduces false positives.
-  
+
   Instead of complex infrastructure, we just extend our Pattern struct
   with AST matching rules that the client interprets.
   """
-  
+
   alias Rsolv.Security.Pattern
-  
+
   defstruct [
     # All existing Pattern fields
-    :id, :name, :type, :severity, :description,
-    :regex,  # Keep for pre-filtering - FAST!
-    :languages, :frameworks,
-    :cwe_id, :owasp_category,
+    :id,
+    :name,
+    :type,
+    :severity,
+    :description,
+    # Keep for pre-filtering - FAST!
+    :regex,
+    :languages,
+    :frameworks,
+    :cwe_id,
+    :owasp_category,
     :recommendation,
     :default_tier,
     :test_cases,
-    
+
     # New AST enhancement fields
-    :ast_rules,        # AST node matching configuration
-    :context_rules,    # Path exclusions, framework checks
-    :confidence_rules, # Dynamic confidence scoring
-    :min_confidence    # Threshold for reporting (default 0.7)
+    # AST node matching configuration
+    :ast_rules,
+    # Path exclusions, framework checks
+    :context_rules,
+    # Dynamic confidence scoring
+    :confidence_rules,
+    # Threshold for reporting (default 0.7)
+    :min_confidence
   ]
-  
+
   @doc """
   Convert standard patterns to AST-enhanced patterns.
   This is where we fix the false positive problem!
@@ -35,7 +46,7 @@ defmodule Rsolv.Security.ASTPattern do
     |> enhance_by_type()
     |> then(&struct(__MODULE__, &1))
   end
-  
+
   # JavaScript SQL Injection via String Concatenation
   defp enhance_by_type(%{id: "js-sql-injection-concat"} = pattern) do
     pattern
@@ -51,32 +62,44 @@ defmodule Rsolv.Security.ASTPattern do
       # Parent must be a database query call
       ancestor_requirements: %{
         has_db_method_call: ~r/\.(query|execute|exec|run|all|get)/,
-        max_depth: 3  # How far up to look for DB call
+        # How far up to look for DB call
+        max_depth: 3
       }
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/fixtures/, ~r/mocks/],
-      exclude_if_parameterized: true,      # Using ? or $1 placeholders
-      exclude_if_uses_orm_builder: true,   # Query builders are safer
-      exclude_if_logging_only: true,       # Just logging SQL, not executing
-      safe_if_input_validated: true        # Has input sanitization
+      # Using ? or $1 placeholders
+      exclude_if_parameterized: true,
+      # Query builders are safer
+      exclude_if_uses_orm_builder: true,
+      # Just logging SQL, not executing
+      exclude_if_logging_only: true,
+      # Has input sanitization
+      safe_if_input_validated: true
     })
     |> Map.put(:confidence_rules, %{
       base: 0.3,
       adjustments: %{
-        "direct_req_param_concat" => 0.5,   # req.params.id directly concatenated
-        "within_db_query_call" => 0.3,      # Inside db.query() call
-        "has_sql_keywords" => 0.2,          # Contains SELECT/INSERT/etc
-        "uses_parameterized_query" => -0.9, # Has ?, $1, :param placeholders
-        "uses_orm_query_builder" => -0.8,   # Using Knex, Sequelize builders
-        "is_console_log" => -1.0,           # Just logging, not querying
-        "has_input_validation" => -0.7,     # Input is sanitized/escaped
-        "in_test_file" => -0.9              # Test code
+        # req.params.id directly concatenated
+        "direct_req_param_concat" => 0.5,
+        # Inside db.query() call
+        "within_db_query_call" => 0.3,
+        # Contains SELECT/INSERT/etc
+        "has_sql_keywords" => 0.2,
+        # Has ?, $1, :param placeholders
+        "uses_parameterized_query" => -0.9,
+        # Using Knex, Sequelize builders
+        "uses_orm_query_builder" => -0.8,
+        # Just logging, not querying
+        "is_console_log" => -1.0,
+        # Input is sanitized/escaped
+        "has_input_validation" => -0.7,
+        # Test code
+        "in_test_file" => -0.9
       }
     })
     |> Map.put(:min_confidence, 0.8)
   end
-
 
   # Fix generic SQL injection false positives (was matching console.log!)
   defp enhance_by_type(%{type: :sql_injection} = pattern) do
@@ -95,7 +118,8 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/],
-      exclude_if_parameterized: true  # Big FP reducer!
+      # Big FP reducer!
+      exclude_if_parameterized: true
     })
     |> Map.put(:confidence_rules, %{
       base: 0.7,
@@ -107,15 +131,6 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:min_confidence, 0.7)
   end
-  
-
-
-
-
-
-
-
-
 
   # Fix logging false positives (was matching 37/57 findings!)
   defp enhance_by_type(%{type: :logging} = pattern) do
@@ -130,20 +145,25 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/spec/, ~r/mock/, ~r/stub/],
-      exclude_if_delegates: true,  # Don't flag wrapper functions
-      require_modifies_data: true  # Only flag if actually does something
+      # Don't flag wrapper functions
+      exclude_if_delegates: true,
+      # Only flag if actually does something
+      require_modifies_data: true
     })
     |> Map.put(:confidence_rules, %{
-      base: 0.5,  # Start lower
+      # Start lower
+      base: 0.5,
       adjustments: %{
-        "is_test_code" => -1.0,  # Never flag tests
+        # Never flag tests
+        "is_test_code" => -1.0,
         "has_error_handling" => 0.2,
         "modifies_database" => 0.3
       }
     })
-    |> Map.put(:min_confidence, 0.75)  # Higher threshold
+    # Higher threshold
+    |> Map.put(:min_confidence, 0.75)
   end
-  
+
   # Fix NoSQL injection false positives
   defp enhance_by_type(%{type: :nosql_injection} = pattern) do
     pattern
@@ -187,15 +207,18 @@ defmodule Rsolv.Security.ASTPattern do
       safe_in_context: ["CLI", "email_template"]
     })
     |> Map.put(:confidence_rules, %{
-      base: 0.3,  # Start low since echo is common
+      # Start low since echo is common
+      base: 0.3,
       adjustments: %{
         "direct_user_input" => 0.4,
         "no_escaping_function" => 0.3,
         "in_html_context" => 0.2,
-        "has_escaping" => -0.8  # Big reduction if escaped
+        # Big reduction if escaped
+        "has_escaping" => -0.8
       }
     })
-    |> Map.put(:min_confidence, 0.8)  # High threshold
+    # High threshold
+    |> Map.put(:min_confidence, 0.8)
   end
 
   # PHP XSS Print - Similar to echo
@@ -235,7 +258,7 @@ defmodule Rsolv.Security.ASTPattern do
       django_version_check: %{
         vulnerable_ranges: [
           ">=2.2,<2.2.24",
-          ">=3.0,<3.1.12", 
+          ">=3.0,<3.1.12",
           ">=3.2,<3.2.4"
         ]
       }
@@ -243,10 +266,12 @@ defmodule Rsolv.Security.ASTPattern do
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/migrations/],
       require_django_project: true,
-      check_requirements: true  # Look at requirements.txt for version
+      # Look at requirements.txt for version
+      check_requirements: true
     })
     |> Map.put(:confidence_rules, %{
-      base: 0.1,  # Very low unless version matches
+      # Very low unless version matches
+      base: 0.1,
       adjustments: %{
         "vulnerable_django_version" => 0.8,
         "has_validation" => -0.3,
@@ -330,7 +355,8 @@ defmodule Rsolv.Security.ASTPattern do
           "secure" => false,
           "httponly" => false,
           "expire_after" => nil,
-          "key" => ["_session", "session_id"]  # Default/weak keys
+          # Default/weak keys
+          "key" => ["_session", "session_id"]
         }
       }
     })
@@ -370,7 +396,8 @@ defmodule Rsolv.Security.ASTPattern do
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/vendor/, ~r/public/],
       only_post_forms: true,
-      exclude_ajax_forms: true,  # Different CSRF handling
+      # Different CSRF handling
+      exclude_ajax_forms: true,
       exclude_if_has_custom_protection: true
     })
     |> Map.put(:confidence_rules, %{
@@ -399,18 +426,25 @@ defmodule Rsolv.Security.ASTPattern do
       # Check that logging is NOT present in function body
       body_analysis: %{
         missing_logging_calls: [
-          "log", "logger", "audit", "track",
-          "console.log", "error_log", "syslog"
+          "log",
+          "logger",
+          "audit",
+          "track",
+          "console.log",
+          "error_log",
+          "syslog"
         ]
       }
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/spec/, ~r/mock/],
-      exclude_if_delegates: true,  # Wrapper functions are OK
+      # Wrapper functions are OK
+      exclude_if_delegates: true,
       only_security_critical: true
     })
     |> Map.put(:confidence_rules, %{
-      base: 0.1,  # Very low base
+      # Very low base
+      base: 0.1,
       adjustments: %{
         "is_auth_function" => 0.3,
         "modifies_sensitive_data" => 0.3,
@@ -436,23 +470,23 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/vendor/],
-      check_php_version: ">= 5.4",  # register_globals removed in 5.4
+      # register_globals removed in 5.4
+      check_php_version: ">= 5.4",
       only_if_no_input_sanitization: true
     })
     |> Map.put(:confidence_rules, %{
-      base: 0.1,  # Very low unless clear dependency
+      # Very low unless clear dependency
+      base: 0.1,
       adjustments: %{
         "direct_request_usage" => 0.3,
         "no_validation" => 0.3,
         "old_php_patterns" => 0.3,
-        "modern_php_version" => -0.8  # Almost certainly FP on modern PHP
+        # Almost certainly FP on modern PHP
+        "modern_php_version" => -0.8
       }
     })
     |> Map.put(:min_confidence, 0.8)
   end
-
-
-
 
   # Python Command Injection (os.system)
   defp enhance_by_type(%{id: "python-command-injection-os-system"} = pattern) do
@@ -469,7 +503,8 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/tests/, ~r/__pycache__/, ~r/venv/, ~r/\.env/],
-      safe_if_uses_shlex: true,         # shlex.quote() makes it safer
+      # shlex.quote() makes it safer
+      safe_if_uses_shlex: true,
       require_user_input_trace: true
     })
     |> Map.put(:confidence_rules, %{
@@ -490,7 +525,12 @@ defmodule Rsolv.Security.ASTPattern do
     pattern
     |> Map.put(:ast_rules, %{
       node_type: "CallExpression",
-      module_function: ["subprocess.run", "subprocess.call", "subprocess.check_call", "subprocess.Popen"],
+      module_function: [
+        "subprocess.run",
+        "subprocess.call",
+        "subprocess.check_call",
+        "subprocess.Popen"
+      ],
       # Must have shell=True AND string command (not array)
       keyword_analysis: %{
         has_shell_true: true,
@@ -500,8 +540,10 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/tests/, ~r/__pycache__/, ~r/venv/],
-      safe_if_array_command: true,      # subprocess.run(['cmd', 'arg']) is safe
-      safe_if_no_shell: true            # shell=False is safer
+      # subprocess.run(['cmd', 'arg']) is safe
+      safe_if_array_command: true,
+      # shell=False is safer
+      safe_if_no_shell: true
     })
     |> Map.put(:confidence_rules, %{
       base: 0.4,
@@ -531,7 +573,8 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/src\/test/, ~r/target/],
-      safe_if_array_args: true,         # exec(String[]) is safer than exec(String)
+      # exec(String[]) is safer than exec(String)
+      safe_if_array_args: true,
       require_user_input_source: true
     })
     |> Map.put(:confidence_rules, %{
@@ -561,7 +604,8 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/src\/test/, ~r/target/],
-      safe_if_string_array: true,       # command(String...) is safer
+      # command(String...) is safer
+      safe_if_string_array: true,
       exclude_if_static_only: true
     })
     |> Map.put(:confidence_rules, %{
@@ -591,7 +635,8 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/spec/, ~r/vendor/],
-      safe_if_array_args: true,         # system('cmd', 'arg1', 'arg2') is safer
+      # system('cmd', 'arg1', 'arg2') is safer
+      safe_if_array_args: true,
       require_user_input_trace: true
     })
     |> Map.put(:confidence_rules, %{
@@ -626,7 +671,8 @@ defmodule Rsolv.Security.ASTPattern do
       require_superglobal_usage: true
     })
     |> Map.put(:confidence_rules, %{
-      base: 0.6,  # Higher base since PHP superglobals are clearly user input
+      # Higher base since PHP superglobals are clearly user input
+      base: 0.6,
       adjustments: %{
         "uses_superglobals" => 0.3,
         "has_string_concat" => 0.2,
@@ -652,7 +698,8 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:context_rules, %{
       exclude_paths: [~r/test/, ~r/mix\/tasks/, ~r/priv\/scripts/],
-      safe_if_uses_shell_split: true,   # Using proper argument parsing
+      # Using proper argument parsing
+      safe_if_uses_shell_split: true,
       exclude_if_static_only: true
     })
     |> Map.put(:confidence_rules, %{
@@ -666,7 +713,7 @@ defmodule Rsolv.Security.ASTPattern do
     })
     |> Map.put(:min_confidence, 0.8)
   end
-  
+
   # Default enhancement for other patterns
   defp enhance_by_type(pattern) do
     # Try to find a pattern module with AST enhancement
@@ -678,11 +725,12 @@ defmodule Rsolv.Security.ASTPattern do
         |> Map.put(:context_rules, Map.get(enhancement, :context_rules, %{}))
         |> Map.put(:confidence_rules, Map.get(enhancement, :confidence_rules, %{}))
         |> Map.put(:min_confidence, Map.get(enhancement, :min_confidence, 0.7))
-      
+
       :error ->
         # No AST enhancement available, use default
         pattern
-        |> Map.put(:ast_rules, nil)  # Explicitly set to nil for patterns without AST rules yet
+        # Explicitly set to nil for patterns without AST rules yet
+        |> Map.put(:ast_rules, nil)
         |> Map.put(:context_rules, %{
           exclude_paths: [~r/test/, ~r/node_modules/]
         })
@@ -690,133 +738,140 @@ defmodule Rsolv.Security.ASTPattern do
         |> Map.put(:min_confidence, 0.7)
     end
   end
-  
+
   # Helper function to find pattern modules with AST enhancements
   defp find_pattern_module_with_ast_enhancement(pattern_id) do
     # Try dynamic module resolution based on pattern ID
-    module = case pattern_id do
-      "js-" <> rest -> 
-        module_name = rest
-        |> String.split("-")
-        |> Enum.map(&Macro.camelize/1)
-        |> Enum.join("")
-        
-        try do
-          Module.safe_concat([Rsolv.Security.Patterns.Javascript, module_name])
-        rescue
-          ArgumentError -> nil
-        end
-        
-      "python-" <> rest ->
-        module_name = rest
-        |> String.split("-")
-        |> Enum.map(&Macro.camelize/1)
-        |> Enum.join("")
-        
-        try do
-          Module.safe_concat([Rsolv.Security.Patterns.Python, module_name])
-        rescue
-          ArgumentError -> nil
-        end
-        
-      "elixir-" <> rest ->
-        module_name = rest
-        |> String.split("-")
-        |> Enum.map(&Macro.camelize/1)
-        |> Enum.join("")
-        
-        try do
-          Module.safe_concat([Rsolv.Security.Patterns.Elixir, module_name])
-        rescue
-          ArgumentError -> nil
-        end
-        
-      "ruby-" <> rest ->
-        module_name = rest
-        |> String.split("-")
-        |> Enum.map(&Macro.camelize/1)
-        |> Enum.join("")
-        
-        try do
-          Module.safe_concat([Rsolv.Security.Patterns.Ruby, module_name])
-        rescue
-          ArgumentError -> nil
-        end
-        
-      "java-" <> rest ->
-        module_name = rest
-        |> String.split("-")
-        |> Enum.map(&Macro.camelize/1)
-        |> Enum.join("")
-        
-        try do
-          Module.safe_concat([Rsolv.Security.Patterns.Java, module_name])
-        rescue
-          ArgumentError -> nil
-        end
-        
-      "php-" <> rest ->
-        module_name = rest
-        |> String.split("-")
-        |> Enum.map(&Macro.camelize/1)
-        |> Enum.join("")
-        
-        try do
-          Module.safe_concat([Rsolv.Security.Patterns.Php, module_name])
-        rescue
-          ArgumentError -> nil
-        end
-        
-      _ ->
-        nil
-    end
-    
+    module =
+      case pattern_id do
+        "js-" <> rest ->
+          module_name =
+            rest
+            |> String.split("-")
+            |> Enum.map(&Macro.camelize/1)
+            |> Enum.join("")
+
+          try do
+            Module.safe_concat([Rsolv.Security.Patterns.Javascript, module_name])
+          rescue
+            ArgumentError -> nil
+          end
+
+        "python-" <> rest ->
+          module_name =
+            rest
+            |> String.split("-")
+            |> Enum.map(&Macro.camelize/1)
+            |> Enum.join("")
+
+          try do
+            Module.safe_concat([Rsolv.Security.Patterns.Python, module_name])
+          rescue
+            ArgumentError -> nil
+          end
+
+        "elixir-" <> rest ->
+          module_name =
+            rest
+            |> String.split("-")
+            |> Enum.map(&Macro.camelize/1)
+            |> Enum.join("")
+
+          try do
+            Module.safe_concat([Rsolv.Security.Patterns.Elixir, module_name])
+          rescue
+            ArgumentError -> nil
+          end
+
+        "ruby-" <> rest ->
+          module_name =
+            rest
+            |> String.split("-")
+            |> Enum.map(&Macro.camelize/1)
+            |> Enum.join("")
+
+          try do
+            Module.safe_concat([Rsolv.Security.Patterns.Ruby, module_name])
+          rescue
+            ArgumentError -> nil
+          end
+
+        "java-" <> rest ->
+          module_name =
+            rest
+            |> String.split("-")
+            |> Enum.map(&Macro.camelize/1)
+            |> Enum.join("")
+
+          try do
+            Module.safe_concat([Rsolv.Security.Patterns.Java, module_name])
+          rescue
+            ArgumentError -> nil
+          end
+
+        "php-" <> rest ->
+          module_name =
+            rest
+            |> String.split("-")
+            |> Enum.map(&Macro.camelize/1)
+            |> Enum.join("")
+
+          try do
+            Module.safe_concat([Rsolv.Security.Patterns.Php, module_name])
+          rescue
+            ArgumentError -> nil
+          end
+
+        _ ->
+          nil
+      end
+
     if module && function_exported?(module, :ast_enhancement, 0) do
       {:ok, apply(module, :ast_enhancement, [])}
     else
       :error
     end
   end
-  
+
   @doc """
   Get patterns in AST-enhanced format when requested.
   """
   def get_patterns(language, tier, format \\ :standard)
-  
+
   def get_patterns(language, tier, :enhanced) do
     # Get standard patterns
     patterns = apply(pattern_module(language), :all, [])
-    
+
     # Enhance them
     patterns
     |> Enum.map(&enhance/1)
     |> filter_by_tier(tier)
   end
-  
+
   def get_patterns(language, tier, :standard) do
     # Existing behavior unchanged
     apply(pattern_module(language), :all, [])
     |> filter_by_tier(tier)
   end
-  
+
   @doc """
   Get all patterns for a language regardless of tier.
   Used for tier-less access with API keys.
   """
   def get_all_patterns_for_language(language, format \\ :standard)
-  
+
   def get_all_patterns_for_language(language, :enhanced) do
     # Get all patterns without tier filtering
     apply(pattern_module(language), :all, [])
     |> Enum.map(&enhance/1)
     |> Enum.map(&convert_regex_to_strings/1)
   end
-  
+
   def get_all_patterns_for_language(language, :standard) do
     # Get all patterns without tier filtering
     apply(pattern_module(language), :all, [])
   end
-  
+
   defp pattern_module("javascript"), do: Rsolv.Security.Patterns.Javascript
   defp pattern_module("python"), do: Rsolv.Security.Patterns.Python
   defp pattern_module("ruby"), do: Rsolv.Security.Patterns.Ruby
@@ -824,7 +879,7 @@ defmodule Rsolv.Security.ASTPattern do
   defp pattern_module("elixir"), do: Rsolv.Security.Patterns.Elixir
   defp pattern_module("php"), do: Rsolv.Security.Patterns.Php
   defp pattern_module(_), do: Rsolv.Security.Patterns.Javascript
-  
+
   # Convert all regex objects to strings for JSON serialization
   defp convert_regex_to_strings(%__MODULE__{} = pattern) do
     pattern
@@ -832,7 +887,7 @@ defmodule Rsolv.Security.ASTPattern do
     |> convert_regex_in_map()
     |> then(&struct(__MODULE__, &1))
   end
-  
+
   defp convert_regex_in_map(map) when is_map(map) do
     map
     |> Enum.map(fn
@@ -843,7 +898,7 @@ defmodule Rsolv.Security.ASTPattern do
     end)
     |> Enum.into(%{})
   end
-  
+
   defp convert_regex_in_list(list) when is_list(list) do
     Enum.map(list, fn
       %Regex{} = v -> Regex.source(v)
@@ -852,33 +907,33 @@ defmodule Rsolv.Security.ASTPattern do
       v -> v
     end)
   end
-  
+
   defp filter_by_tier(patterns, tier) when is_atom(tier) do
     # Convert atom to string for comparison
     filter_by_tier(patterns, to_string(tier))
   end
-  
+
   defp filter_by_tier(patterns, tier) when is_binary(tier) do
-    # For now, since patterns don't have tier information yet, 
+    # For now, since patterns don't have tier information yet,
     # we'll be permissive and return all patterns for any tier.
     # This can be refined later when tier information is added to patterns.
     case tier do
       "enterprise" ->
         # Enterprise gets everything
         patterns
-      
+
       "ai" ->
-        # AI tier gets most patterns 
+        # AI tier gets most patterns
         patterns
-      
+
       "protected" ->
         # Protected tier gets most patterns
         patterns
-      
+
       "public" ->
         # Public tier gets most patterns (for now)
         patterns
-      
+
       _ ->
         # Unknown tier - default to all patterns
         patterns

@@ -4,7 +4,7 @@ defmodule RsolvWeb.HealthController do
 
   alias RsolvWeb.Schemas.Health.HealthResponse
 
-  tags ["Health"]
+  tags(["Health"])
 
   operation(:index,
     summary: "Health check endpoint",
@@ -51,24 +51,26 @@ defmodule RsolvWeb.HealthController do
 
     # Check database connectivity
     db_status = check_database()
-    
+
     # Check external services
     services_status = %{
       database: db_status,
       ai_providers: check_ai_providers()
     }
 
-    overall_status = if all_healthy?(services_status) do
-      "healthy"
-    else
-      "degraded"
-    end
+    overall_status =
+      if all_healthy?(services_status) do
+        "healthy"
+      else
+        "degraded"
+      end
 
-    response = Map.merge(health_status, %{
-      status: overall_status,
-      services: services_status,
-      clustering: clustering_info()
-    })
+    response =
+      Map.merge(health_status, %{
+        status: overall_status,
+        services: services_status,
+        clustering: clustering_info()
+      })
 
     conn
     |> put_status(if overall_status == "healthy", do: :ok, else: :service_unavailable)
@@ -84,7 +86,6 @@ defmodule RsolvWeb.HealthController do
     end
   end
 
-
   defp check_ai_providers do
     %{
       anthropic: "healthy",
@@ -98,9 +99,11 @@ defmodule RsolvWeb.HealthController do
     |> Map.values()
     |> Enum.all?(&(&1 == "healthy" || is_map(&1)))
   end
-  
+
   defp clustering_info do
-    if Code.ensure_loaded?(Rsolv.Cluster) && function_exported?(Rsolv.Cluster, :clustering_enabled?, 0) && Rsolv.Cluster.clustering_enabled?() do
+    if Code.ensure_loaded?(Rsolv.Cluster) &&
+         function_exported?(Rsolv.Cluster, :clustering_enabled?, 0) &&
+         Rsolv.Cluster.clustering_enabled?() do
       %{
         enabled: true,
         current_node: Node.self() |> to_string(),

@@ -12,8 +12,24 @@ defmodule Rsolv.Notifications.SlackIntegration do
   @webhook_url_key "SLACK_WEBHOOK_URL"
 
   defmodule FixAlert do
-    @enforce_keys [:repo_name, :vulnerability_type, :severity, :impact, :fix_summary, :dashboard_url]
-    defstruct [:repo_name, :vulnerability_type, :severity, :impact, :fix_summary, :dashboard_url, :pr_url, :stats]
+    @enforce_keys [
+      :repo_name,
+      :vulnerability_type,
+      :severity,
+      :impact,
+      :fix_summary,
+      :dashboard_url
+    ]
+    defstruct [
+      :repo_name,
+      :vulnerability_type,
+      :severity,
+      :impact,
+      :fix_summary,
+      :dashboard_url,
+      :pr_url,
+      :stats
+    ]
   end
 
   @doc """
@@ -22,7 +38,7 @@ defmodule Rsolv.Notifications.SlackIntegration do
   """
   def send_fix_alert(%FixAlert{} = alert) do
     Logger.info("Starting send_fix_alert for #{alert.repo_name}")
-    
+
     with {:ok, _} <- check_throttle(alert.repo_name),
          {:ok, message} <- format_alert_message(alert),
          {:ok, response} <- post_to_slack(message),
@@ -33,7 +49,7 @@ defmodule Rsolv.Notifications.SlackIntegration do
       {:error, :throttle_exceeded} ->
         Logger.info("Slack alert throttled for #{alert.repo_name}")
         {:error, :throttled}
-      
+
       error ->
         Logger.error("Failed to send Slack alert: #{inspect(error)}")
         error
@@ -60,12 +76,13 @@ defmodule Rsolv.Notifications.SlackIntegration do
   end
 
   defp format_alert_message(%FixAlert{} = alert) do
-    severity_emoji = case alert.severity do
-      :critical -> "🚨"
-      :high -> "🔴"
-      :medium -> "🟡"
-      :low -> "🟢"
-    end
+    severity_emoji =
+      case alert.severity do
+        :critical -> "🚨"
+        :high -> "🔴"
+        :medium -> "🟡"
+        :low -> "🟢"
+      end
 
     blocks = [
       %{
@@ -79,7 +96,8 @@ defmodule Rsolv.Notifications.SlackIntegration do
         type: "section",
         text: %{
           type: "mrkdwn",
-          text: "*#{severity_emoji} #{String.capitalize(to_string(alert.severity))} #{alert.vulnerability_type} Fixed* in `#{alert.repo_name}`"
+          text:
+            "*#{severity_emoji} #{String.capitalize(to_string(alert.severity))} #{alert.vulnerability_type} Fixed* in `#{alert.repo_name}`"
         }
       },
       %{
@@ -112,36 +130,41 @@ defmodule Rsolv.Notifications.SlackIntegration do
     ]
 
     # Add PR link if available
-    blocks = if alert.pr_url do
-      blocks ++ [
-        %{
-          type: "section",
-          text: %{
-            type: "mrkdwn",
-            text: "*Pull Request:* <#{alert.pr_url}|View PR>"
-          }
-        }
-      ]
-    else
-      blocks
-    end
-
-    # Add stats if available
-    blocks = if alert.stats do
-      blocks ++ [
-        %{
-          type: "context",
-          elements: [
+    blocks =
+      if alert.pr_url do
+        blocks ++
+          [
             %{
-              type: "mrkdwn",
-              text: "_Your team has fixed #{alert.stats.weekly_fixes} vulnerabilities this week (#{alert.stats.security_posture_change})_"
+              type: "section",
+              text: %{
+                type: "mrkdwn",
+                text: "*Pull Request:* <#{alert.pr_url}|View PR>"
+              }
             }
           ]
-        }
-      ]
-    else
-      blocks
-    end
+      else
+        blocks
+      end
+
+    # Add stats if available
+    blocks =
+      if alert.stats do
+        blocks ++
+          [
+            %{
+              type: "context",
+              elements: [
+                %{
+                  type: "mrkdwn",
+                  text:
+                    "_Your team has fixed #{alert.stats.weekly_fixes} vulnerabilities this week (#{alert.stats.security_posture_change})_"
+                }
+              ]
+            }
+          ]
+      else
+        blocks
+      end
 
     {:ok, %{blocks: blocks}}
   end
@@ -187,18 +210,18 @@ defmodule Rsolv.Notifications.SlackIntegration do
 
   defp post_to_slack(message) do
     webhook_url = System.get_env(@webhook_url_key)
-    
+
     if webhook_url do
       headers = [{"Content-Type", "application/json"}]
       body = JSON.encode!(message)
-      
+
       case HTTPoison.post(webhook_url, body, headers) do
         {:ok, %HTTPoison.Response{status_code: 200}} ->
           {:ok, %{timestamp: :os.system_time(:millisecond)}}
-        
+
         {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
           {:error, "Slack API error: #{status_code} - #{body}"}
-        
+
         {:error, %HTTPoison.Error{reason: reason}} ->
           {:error, "HTTP error: #{reason}"}
       end

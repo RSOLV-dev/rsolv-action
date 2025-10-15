@@ -1,19 +1,19 @@
 defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
   @moduledoc """
   Command Injection via Python subprocess with shell=True
-  
+
   Detects dangerous patterns like:
     subprocess.run(cmd, shell=True)
     subprocess.call("echo " + user_input, shell=True)
     subprocess.Popen(f"grep {pattern} file.txt", shell=True)
-    
+
   Safe alternatives:
     subprocess.run(["echo", user_input], shell=False)
     subprocess.call(["grep", pattern, "file.txt"])
     subprocess.Popen(["ls", "-la", directory])
-    
+
   ## Vulnerability Details
-  
+
   The subprocess module's shell=True parameter is dangerous because it invokes
   the system shell to execute commands. This enables shell features like:
   - Command chaining with ; && ||
@@ -21,10 +21,10 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
   - Command substitution $() ``
   - Glob expansion * ? []
   - Environment variable expansion $VAR
-  
+
   When user input is incorporated into commands executed with shell=True,
   attackers can inject arbitrary commands that will be executed by the shell.
-  
+
   The vulnerability is particularly dangerous because:
   - It's a common pattern in Python scripts for convenience
   - Developers often underestimate the attack surface
@@ -32,41 +32,41 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
   - It provides full command execution capabilities
   - Many Python applications run with elevated privileges
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the command injection via subprocess shell=True pattern.
-  
+
   This pattern detects usage of subprocess functions with shell=True
   which can lead to arbitrary command execution.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> pattern.id
       "python-command-injection-subprocess-shell"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> pattern.severity
       :critical
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> vulnerable = ~S|subprocess.run(cmd, shell=True)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> safe = ~S|subprocess.run(["ls", "-la"], shell=False)|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> popen_vuln = ~S|subprocess.Popen(f"tail -f {logfile}", shell=True)|
       iex> Regex.match?(pattern.regex, popen_vuln)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> list_safe = ~S|subprocess.call(["ping", "-c", "4", host])|
       iex> Regex.match?(pattern.regex, list_safe)
@@ -108,7 +108,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -116,13 +116,13 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
       Command injection vulnerability through Python's subprocess module with shell=True.
       When shell=True is used, commands are executed through the system shell (sh on Unix,
       cmd.exe on Windows), which interprets shell metacharacters and enables command chaining.
-      
+
       This vulnerability occurs when:
       1. subprocess functions are called with shell=True
       2. User input is incorporated into the command string
       3. No proper input validation or sanitization is performed
       4. The shell interprets special characters in the user input
-      
+
       The shell=True parameter is dangerous because it enables:
       - Command chaining with ; && ||
       - Pipes and redirections | > >> <
@@ -208,7 +208,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
       1. Use of subprocess module functions (run, call, check_call, check_output, Popen)
       2. Presence of shell=True parameter in the function call
       3. Any subprocess call regardless of how the command is constructed
-      
+
       Key indicators:
       - subprocess. prefix indicating subprocess module usage
       - Function names that execute commands
@@ -242,19 +242,19 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual command injection vulnerabilities
   and legitimate uses of subprocess with proper input validation.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.ast_enhancement()
       iex> enhancement.min_confidence
       0.8

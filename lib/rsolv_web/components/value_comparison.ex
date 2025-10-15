@@ -5,7 +5,7 @@ defmodule RsolvWeb.Components.ValueComparison do
     ~H"""
     <div class="bg-gradient-to-r from-brand-red to-brand-orange p-8 rounded-xl shadow-xl">
       <h3 class="text-2xl font-bold text-white mb-6 text-center">The RSOLV Advantage</h3>
-      
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Manual Fix -->
         <div class="bg-white p-6 rounded-lg">
@@ -30,7 +30,7 @@ defmodule RsolvWeb.Components.ValueComparison do
           </ul>
         </div>
         
-        <!-- RSOLV Fix -->
+    <!-- RSOLV Fix -->
         <div class="bg-white p-6 rounded-lg border-2 border-brand-green">
           <h4 class="text-lg font-semibold text-brand-green mb-4">RSOLV Automated Fix</h4>
           <ul class="space-y-3">
@@ -53,7 +53,7 @@ defmodule RsolvWeb.Components.ValueComparison do
           </ul>
         </div>
       </div>
-      
+
       <div class="mt-8 text-center">
         <p class="text-white text-xl font-bold">
           Save <span class="text-yellow-300">95%</span> on every fix

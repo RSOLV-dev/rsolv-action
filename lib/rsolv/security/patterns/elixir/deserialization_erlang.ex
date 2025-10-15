@@ -1,21 +1,21 @@
 defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
   @moduledoc """
   Detects unsafe Erlang term deserialization vulnerabilities in Elixir.
-  
+
   This pattern identifies the use of :erlang.binary_to_term/1 and :erlang.binary_to_term/2
   which can lead to remote code execution when deserializing untrusted data. Even when
   using the [:safe] option, the function can still execute anonymous functions embedded
   in the serialized data.
-  
+
   ## Vulnerability Details
-  
+
   The External Term Format (ETF) used by Erlang can represent any Erlang/Elixir term,
   including functions. When binary_to_term deserializes data containing functions,
   those functions can be executed. This poses a severe security risk when processing
   untrusted input, as attackers can embed malicious code.
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   # Web handler deserializing user data
@@ -25,11 +25,11 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
     # Attacker can execute arbitrary code
   end
   ```
-  
+
   An attacker can serialize malicious functions and execute them on the server.
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   # Use JSON for data exchange
@@ -39,7 +39,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
       {:error, _} -> {:error, "Invalid JSON"}
     end
   end
-  
+
   # Or if ETF is required, use [:safe] and validate no functions
   def deserialize_safe(binary) do
     try do
@@ -56,10 +56,10 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -83,7 +83,8 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
       ],
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
-      recommendation: "Use JSON for data serialization or validate deserialized data contains no functions",
+      recommendation:
+        "Use JSON for data serialization or validate deserialized data contains no functions",
       test_cases: %{
         vulnerable: [
           ~S|:erlang.binary_to_term(user_data)|,
@@ -98,7 +99,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -107,7 +108,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
       occurs when :erlang.binary_to_term/1 or :erlang.binary_to_term/2 is used with untrusted
       input. The ETF format can encode any Erlang/Elixir term, including anonymous functions.
       When these functions are deserialized, they can be executed, leading to remote code execution.
-      
+
       Even the [:safe] option only prevents atom exhaustion attacks - it does NOT prevent function
       execution. This makes binary_to_term inherently unsafe for untrusted data, regardless of
       options used. Attackers can craft malicious payloads that execute arbitrary code with the
@@ -130,7 +131,8 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
           type: :research,
           id: "erlef_serialization",
           title: "ErlEF Security WG - Serialisation and Deserialisation",
-          url: "https://security.erlef.org/secure_coding_and_deployment_hardening/serialisation.html"
+          url:
+            "https://security.erlef.org/secure_coding_and_deployment_hardening/serialisation.html"
         },
         %{
           type: :research,
@@ -198,19 +200,19 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities and false positives
   by analyzing context and usage patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.DeserializationErlang.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.DeserializationErlang.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
@@ -227,16 +229,35 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
           check_input_source: true
         },
         input_analysis: %{
-          user_input_indicators: ["params", "conn", "socket", "request", "body", "data", 
-                                 "encoded", "payload", "input", "user", "client"],
+          user_input_indicators: [
+            "params",
+            "conn",
+            "socket",
+            "request",
+            "body",
+            "data",
+            "encoded",
+            "payload",
+            "input",
+            "user",
+            "client"
+          ],
           check_base64_decode: true,
           check_network_sources: true
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/_test\.exs$/, ~r/fixture/],
-        user_input_sources: ["params", "conn.params", "conn.body_params", "socket.assigns",
-                            "request", "Base.decode64!", "File.read!", "HTTPoison.get!"],
+        user_input_sources: [
+          "params",
+          "conn.params",
+          "conn.body_params",
+          "socket.assigns",
+          "request",
+          "Base.decode64!",
+          "File.read!",
+          "HTTPoison.get!"
+        ],
         safe_sources: ["Application.get_env", "Config.get", ":ets.lookup"],
         exclude_if_trusted_source: true
       },
@@ -244,7 +265,8 @@ defmodule Rsolv.Security.Patterns.Elixir.DeserializationErlang do
         base: 0.7,
         adjustments: %{
           "has_user_input" => 0.3,
-          "uses_safe_option" => -0.2,  # Still vulnerable but slightly lower confidence
+          # Still vulnerable but slightly lower confidence
+          "uses_safe_option" => -0.2,
           "from_trusted_source" => -0.8,
           "in_test_code" => -1.0,
           "has_validation" => -0.3

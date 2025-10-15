@@ -1,21 +1,21 @@
 defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
   @moduledoc """
   Enhanced JavaScript patterns with AST configuration and reduced false positives.
-  
+
   These patterns use the enhanced pattern format with:
   - AST matching rules
   - Context requirements
   - Confidence scoring
   - AI review configuration
   """
-  
+
   alias Rsolv.Security.EnhancedPattern
-  
+
   @doc """
   Returns enhanced JavaScript patterns for the specified tier.
-  
+
   ## Examples
-  
+
       iex> patterns = JavascriptEnhanced.all(:public)
       iex> Enum.all?(patterns, &match?(%EnhancedPattern{}, &1))
       true
@@ -25,7 +25,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
     |> filter_by_tier(tier)
     |> Enum.map(&struct(EnhancedPattern, &1))
   end
-  
+
   defp all_patterns do
     [
       sql_injection_enhanced(),
@@ -35,28 +35,28 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
       xss_enhanced()
     ]
   end
-  
+
   defp filter_by_tier(patterns, :public) do
     # Public tier gets only high-confidence patterns
     patterns
-    |> Enum.filter(fn pattern -> 
+    |> Enum.filter(fn pattern ->
       # Check if pattern has ai_review with min_confidence
       confidence = get_in(pattern, [:ai_review, :min_confidence]) || 1.0
       confidence >= 0.8
     end)
     |> Enum.take(2)
   end
-  
+
   defp filter_by_tier(patterns, :protected) do
     # Protected tier gets more patterns
     Enum.take(patterns, 4)
   end
-  
+
   defp filter_by_tier(patterns, tier) when tier in [:ai, :enterprise] do
     # AI and Enterprise get all patterns with AI review
     patterns
   end
-  
+
   defp sql_injection_enhanced do
     %{
       id: "js-sql-injection-enhanced",
@@ -80,38 +80,40 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           "const stmt = db.prepare('SELECT * FROM users WHERE name = ?')"
         ]
       },
-      
+
       # Traditional regex for pre-filtering
       regex: ~r/\.(query|execute|exec|run)\s*\(/i,
-      
+
       # AST configuration
-      ast_rules: [%{
-        node_type: :call_expression,
-        properties: %{
-          callee: %{
-            type: "MemberExpression",
-            property_names: ["query", "execute", "exec", "run", "prepare"]
-          },
-          arguments: [
-          %{
-            position: 0,
-            checks: [
+      ast_rules: [
+        %{
+          node_type: :call_expression,
+          properties: %{
+            callee: %{
+              type: "MemberExpression",
+              property_names: ["query", "execute", "exec", "run", "prepare"]
+            },
+            arguments: [
               %{
-                type: "TemplateLiteral",
-                contains_pattern: ~r/\b(SELECT|INSERT|UPDATE|DELETE|DROP)\b/i,
-                has_expressions: true
-              },
-              %{
-                type: "BinaryExpression",
-                operator: "+",
-                contains_user_input: true
+                position: 0,
+                checks: [
+                  %{
+                    type: "TemplateLiteral",
+                    contains_pattern: ~r/\b(SELECT|INSERT|UPDATE|DELETE|DROP)\b/i,
+                    has_expressions: true
+                  },
+                  %{
+                    type: "BinaryExpression",
+                    operator: "+",
+                    contains_user_input: true
+                  }
+                ]
               }
             ]
           }
-        ]
         }
-      }],
-      
+      ],
+
       # Context requirements
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/\.test\./],
@@ -125,7 +127,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           ~r/body\./
         ]
       },
-      
+
       # Confidence rules
       confidence_rules: %{
         base_score: 0.7,
@@ -137,7 +139,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           %{condition: "has_validation", adjustment: -0.3}
         ]
       },
-      
+
       # Enhanced recommendation
       recommendation: %{
         summary: "Use parameterized queries to prevent SQL injection",
@@ -162,7 +164,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
         ]
       },
-      
+
       # Enhanced recommendation with additional details
       enhanced_recommendation: %{
         quick_fix: "Replace string concatenation with parameterized queries",
@@ -179,28 +181,28 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           "https://bobby-tables.com/"
         ]
       },
-      
+
       # AI review configuration (for ai/enterprise tiers)
       ai_review: %{
         enabled: true,
         min_confidence: 0.6,
         prompt_template: """
         Analyze this potential SQL injection vulnerability:
-        
+
         Code: {{code}}
         Context: {{context}}
         Detected pattern: {{pattern}}
-        
+
         Questions to consider:
         1. Is the user input actually reaching the SQL query?
         2. Are there any framework protections in place?
         3. Is the input validated or sanitized before use?
         4. Could this be exploited in a real attack?
-        
+
         Provide a confidence score (0-1) and explanation.
         """
       },
-      
+
       # Telemetry configuration
       telemetry: %{
         track_matches: true,
@@ -209,7 +211,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
       }
     }
   end
-  
+
   defp nosql_injection_enhanced do
     %{
       id: "js-nosql-injection-enhanced",
@@ -233,14 +235,23 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           "db.collection.find({_id: ObjectId(req.params.id)})"
         ]
       },
-      
       regex: ~r/\.(find|findOne|update|delete|aggregate)\s*\(/,
-      
       ast_rules: %{
         node_type: "CallExpression",
         callee: %{
           type: "MemberExpression",
-          property_names: ["find", "findOne", "findById", "update", "updateOne", "updateMany", "delete", "deleteOne", "deleteMany", "aggregate"]
+          property_names: [
+            "find",
+            "findOne",
+            "findById",
+            "update",
+            "updateOne",
+            "updateMany",
+            "delete",
+            "deleteOne",
+            "deleteMany",
+            "aggregate"
+          ]
         },
         arguments: [
           %{
@@ -255,7 +266,6 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           }
         ]
       },
-      
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/],
         framework_protections: %{
@@ -263,7 +273,6 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           mongodb: ["sanitize"]
         }
       },
-      
       confidence_scoring: %{
         base_score: 0.75,
         modifiers: [
@@ -273,7 +282,6 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           %{condition: "direct_parse_json", adjustment: 0.3}
         ]
       },
-      
       recommendation: %{
         summary: "Validate input types and avoid dangerous MongoDB operators",
         steps: [
@@ -299,7 +307,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
       }
     }
   end
-  
+
   defp missing_logging_enhanced do
     %{
       id: "js-missing-logging-enhanced",
@@ -323,13 +331,14 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
         ]
       },
       description: "Security-critical operations without audit logging",
-      
+
       # Only match actual function definitions
-      regex: ~r/function\s+(login|authenticate|authorize|payment|transfer|delete\w+|reset\w+)\s*\(/,
-      
+      regex:
+        ~r/function\s+(login|authenticate|authorize|payment|transfer|delete\w+|reset\w+)\s*\(/,
       ast_rules: %{
         node_type: "FunctionDeclaration",
-        name_pattern: ~r/^(login|authenticate|authorize|process.*Payment|delete.*|reset.*Password|transfer.*)/,
+        name_pattern:
+          ~r/^(login|authenticate|authorize|process.*Payment|delete.*|reset.*Password|transfer.*)/,
         body_checks: %{
           must_not_contain: [
             %{type: "CallExpression", callee_pattern: ~r/log|logger|audit|console\.log/}
@@ -339,13 +348,11 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           ]
         }
       },
-      
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/mock/, ~r/stub/],
         exclude_if_contains: ["@skip", "TODO", "FIXME"],
         require_production_code: true
       },
-      
       confidence_scoring: %{
         base_score: 0.6,
         modifiers: [
@@ -355,7 +362,6 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           %{condition: "modifies_user_data", adjustment: 0.2}
         ]
       },
-      
       recommendation: %{
         summary: "Add audit logging for security-critical operations",
         steps: [
@@ -385,7 +391,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
       }
     }
   end
-  
+
   defp command_injection_enhanced do
     %{
       id: "js-command-injection-enhanced",
@@ -409,9 +415,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
         ]
       },
       description: "System command execution with user input",
-      
       regex: ~r/(exec|spawn|execFile|execSync|spawnSync)\s*\(/,
-      
       ast_rules: %{
         node_type: "CallExpression",
         callee: %{
@@ -426,14 +430,12 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           }
         ]
       },
-      
       context_rules: %{
         severity_upgrade_if: %{
           runs_as_root: true,
           in_web_handler: true
         }
       },
-      
       confidence_scoring: %{
         base_score: 0.85,
         modifiers: [
@@ -442,7 +444,6 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           %{condition: "whitelist_validation", adjustment: -0.7}
         ]
       },
-      
       recommendation: %{
         summary: "Avoid system commands or use safe alternatives",
         steps: [
@@ -454,7 +455,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
       }
     }
   end
-  
+
   defp xss_enhanced do
     %{
       id: "js-xss-enhanced",
@@ -478,9 +479,7 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
         ]
       },
       description: "DOM XSS with framework awareness",
-      
       regex: ~r/\.innerHTML\s*=|document\.write\s*\(/,
-      
       ast_rules: %{
         checks: [
           %{
@@ -495,7 +494,6 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           }
         ]
       },
-      
       context_rules: %{
         framework_safe_methods: %{
           react: ["setState", "useState"],
@@ -503,7 +501,6 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           angular: ["[innerText]", "{{}}"]
         }
       },
-      
       confidence_scoring: %{
         base_score: 0.8,
         modifiers: [
@@ -512,7 +509,6 @@ defmodule Rsolv.Security.Patterns.JavascriptEnhanced do
           %{condition: "from_url_params", adjustment: 0.2}
         ]
       },
-      
       recommendation: %{
         summary: "Use safe DOM manipulation methods",
         steps: [

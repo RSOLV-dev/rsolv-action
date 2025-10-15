@@ -1,53 +1,54 @@
 defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
   @moduledoc """
   XXE via DocumentBuilder pattern for Java code.
-  
+
   Detects XML External Entity (XXE) vulnerabilities in DocumentBuilderFactory and DocumentBuilder
   usage where secure processing features are not enabled. XXE attacks allow attackers to access
   local files, perform server-side request forgery, or cause denial of service attacks.
-  
+
   ## Vulnerability Details
-  
+
   XML External Entity (XXE) attacks occur when XML input containing references to external
   entities is processed by a weakly configured XML parser. The DocumentBuilderFactory in Java
   is vulnerable by default and requires explicit secure configuration to prevent XXE attacks.
-  
+
   Common vulnerable patterns:
   - DocumentBuilderFactory.newInstance().newDocumentBuilder() without secure features
   - DocumentBuilder created without disabling external entity processing
   - Missing XMLConstants.FEATURE_SECURE_PROCESSING configuration
-  
+
   ### Attack Examples
-  
+
   ```java
   // Vulnerable code - no secure processing
   DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
   DocumentBuilder db = dbf.newDocumentBuilder();
   Document doc = db.parse(xmlInput); // Can process malicious XXE
-  
+
   // Attack payload example:
   // <?xml version="1.0" encoding="UTF-8"?>
   // <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
   // <root>&xxe;</root>
   ```
-  
+
   ## References
-  
+
   - CWE-611: Improper Restriction of XML External Entity Reference
   - OWASP A05:2021 - Security Misconfiguration
   - CVE-2025-23195: XXE vulnerability in popular Java libraries
   - OWASP XXE Prevention Cheat Sheet
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "java-xxe-documentbuilder",
       name: "XXE via DocumentBuilder",
-      description: "DocumentBuilderFactory without secure processing configuration allows XXE attacks",
+      description:
+        "DocumentBuilderFactory without secure processing configuration allows XXE attacks",
       type: :xxe,
       severity: :high,
       languages: ["java"],
@@ -65,7 +66,8 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
       ],
       cwe_id: "CWE-611",
       owasp_category: "A05:2021",
-      recommendation: "Enable secure processing and disable external entity processing by setting XMLConstants.FEATURE_SECURE_PROCESSING to true and disabling external entity features",
+      recommendation:
+        "Enable secure processing and disable external entity processing by setting XMLConstants.FEATURE_SECURE_PROCESSING to true and disabling external entity features",
       test_cases: %{
         vulnerable: [
           ~S|DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance(); DocumentBuilder db = dbf.newDocumentBuilder();|,
@@ -81,7 +83,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -90,21 +92,21 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
       external entities is processed by a weakly configured XML parser. The DocumentBuilderFactory
       in Java creates parsers that are vulnerable to XXE attacks by default, requiring explicit
       secure configuration to prevent these attacks.
-      
+
       XXE attacks can lead to:
       - Disclosure of confidential data (file://, http://, ftp:// schemes)
       - Server-side request forgery (SSRF) to internal systems
       - Denial of service through billion laughs or quadratic blowup attacks
       - Remote code execution in certain configurations
       - Port scanning and service enumeration
-      
+
       The DocumentBuilderFactory is particularly dangerous because:
       - External entity processing is enabled by default
       - No built-in protection against recursive entity expansion
       - Supports file:// URLs allowing local file access
       - Can make HTTP requests to arbitrary URLs
       - Common in enterprise applications processing XML data
-      
+
       Historical context:
       - XXE has been in OWASP Top 10 since 2013 (A04:2013, A04:2017, A05:2021)
       - Affects most XML parsers across languages, not just Java
@@ -121,14 +123,15 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
         %{
           type: :owasp,
           id: "A05:2021",
-          title: "OWASP Top 10 2021 - A05 Security Misconfiguration", 
+          title: "OWASP Top 10 2021 - A05 Security Misconfiguration",
           url: "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/"
         },
         %{
           type: :research,
           id: "owasp_xxe_prevention",
           title: "OWASP XXE Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -145,7 +148,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
       ],
       attack_vectors: [
         "Local file disclosure: <!ENTITY xxe SYSTEM \"file:///etc/passwd\"> to read system files",
-        "Server-side request forgery: <!ENTITY xxe SYSTEM \"http://internal-server/admin\"> to probe internal networks", 
+        "Server-side request forgery: <!ENTITY xxe SYSTEM \"http://internal-server/admin\"> to probe internal networks",
         "Denial of service: Billion laughs attack using recursive entity expansion",
         "Remote code execution: Entity expansion leading to memory exhaustion and system compromise",
         "Data exfiltration: Combining file disclosure with HTTP requests to external servers",
@@ -169,7 +172,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
           note: "DocumentBuilderFactory used without secure processing in OOXML parsing"
         },
         %{
-          id: "CVE-2024-38374", 
+          id: "CVE-2024-38374",
           description: "XXE in Spring Framework's XML processing components",
           severity: "high",
           cvss: 8.1,
@@ -178,23 +181,23 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
         %{
           id: "CVE-2021-44228",
           description: "Log4Shell vulnerability partially exploitable via XXE injection vectors",
-          severity: "critical", 
+          severity: "critical",
           cvss: 10.0,
           note: "XXE used as attack vector for LDAP injection in logging contexts"
         }
       ],
       detection_notes: """
       This pattern detects insecure DocumentBuilderFactory usage by identifying:
-      
+
       1. Direct method chaining: DocumentBuilderFactory.newInstance().newDocumentBuilder()
       2. Variable-based factory usage without secure configuration
       3. DocumentBuilder instantiation without preceding secure feature configuration
       4. Method chaining patterns that bypass security settings
-      
+
       The pattern uses negative lookahead to avoid false positives when secure processing
       is properly configured. It checks for XMLConstants.FEATURE_SECURE_PROCESSING and
       other XXE prevention features within the same code block.
-      
+
       Key detection criteria:
       - Looks for newDocumentBuilder() calls
       - Ensures no setFeature() calls for FEATURE_SECURE_PROCESSING
@@ -251,23 +254,23 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XXE vulnerabilities and safe
   DocumentBuilder usage patterns that have proper security configuration.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.XxeDocumentbuilder.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.XxeDocumentbuilder.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.XxeDocumentbuilder.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"
@@ -281,14 +284,23 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
           check_documentbuilder_usage: true,
           documentbuilder_methods: ["newDocumentBuilder", "parse", "setErrorHandler"],
           check_secure_processing: true,
-          secure_features: ["XMLConstants.FEATURE_SECURE_PROCESSING", "disallow-doctype-decl", "external-general-entities", "external-parameter-entities"],
+          secure_features: [
+            "XMLConstants.FEATURE_SECURE_PROCESSING",
+            "disallow-doctype-decl",
+            "external-general-entities",
+            "external-parameter-entities"
+          ],
           check_factory_configuration: true
         },
         factory_analysis: %{
           check_factory_instantiation: true,
           documentbuilder_factory_methods: ["newInstance", "newDocumentBuilder"],
           check_feature_configuration: true,
-          secure_configuration_methods: ["setFeature", "setXIncludeAware", "setExpandEntityReferences"]
+          secure_configuration_methods: [
+            "setFeature",
+            "setXIncludeAware",
+            "setExpandEntityReferences"
+          ]
         },
         parsing_analysis: %{
           check_parse_methods: true,
@@ -302,7 +314,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
         secure_features: [
           "XMLConstants.FEATURE_SECURE_PROCESSING",
           "http://apache.org/xml/features/disallow-doctype-decl",
-          "http://xml.org/sax/features/external-general-entities", 
+          "http://xml.org/sax/features/external-general-entities",
           "http://xml.org/sax/features/external-parameter-entities",
           "http://apache.org/xml/features/nonvalidating/load-external-dtd"
         ],
@@ -314,7 +326,13 @@ defmodule Rsolv.Security.Patterns.Java.XxeDocumentbuilder do
         ],
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/example/, ~r/demo/],
         check_xml_processing_context: true,
-        high_risk_contexts: ["web service", "API endpoint", "file upload", "data import", "configuration parsing"]
+        high_risk_contexts: [
+          "web service",
+          "API endpoint",
+          "file upload",
+          "data import",
+          "configuration parsing"
+        ]
       },
       confidence_rules: %{
         base: 0.9,

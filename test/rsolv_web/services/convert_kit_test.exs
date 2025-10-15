@@ -1,5 +1,6 @@
 defmodule RsolvWeb.Services.ConvertKitTest do
-  use Rsolv.DataCase, async: false  # Tests modify global Application config
+  # Tests modify global Application config
+  use Rsolv.DataCase, async: false
   import Mox
   alias RsolvWeb.Services.ConvertKit
   alias Rsolv.HTTPClientMock
@@ -10,13 +11,13 @@ defmodule RsolvWeb.Services.ConvertKitTest do
   # Setup test environment
   setup do
     # Set ConvertKit test config
-    Application.put_env(:rsolv, :convertkit, [
+    Application.put_env(:rsolv, :convertkit,
       api_key: "test_api_key",
       form_id: "test_form_id",
       early_access_tag_id: "test_tag_id",
       api_base_url: "https://api.convertkit.com/v3"
-    ])
-    
+    )
+
     # Configure the HTTP client to use the mock
     Application.put_env(:rsolv, :http_client, Rsolv.HTTPClientMock)
 
@@ -44,10 +45,13 @@ defmodule RsolvWeb.Services.ConvertKitTest do
       # Assert on the result
       assert {:ok, response} = result
       assert response.status_code == 200
-      assert response.subscription_id == 123456789
+      assert response.subscription_id == 123_456_789
     end
 
-    test "falls back to form-specific endpoint if subscribers endpoint fails", %{fixtures: fixtures, test_email: email} do
+    test "falls back to form-specific endpoint if subscribers endpoint fails", %{
+      fixtures: fixtures,
+      test_email: email
+    } do
       # Mock HTTP calls, expecting 2 calls - one that fails and one that succeeds
       expect(HTTPClientMock, :post, 2, fn url, _body, _headers, _options ->
         if String.contains?(url, "/subscribers") do
@@ -67,12 +71,12 @@ defmodule RsolvWeb.Services.ConvertKitTest do
 
     test "handles network errors", %{fixtures: fixtures, test_email: email} do
       # Set up ConvertKit config with API key to ensure HTTP calls are made
-      Application.put_env(:rsolv, :convertkit, 
+      Application.put_env(:rsolv, :convertkit,
         api_key: "test_api_key",
         form_id: "test_form_id",
         api_base_url: "https://api.convertkit.com/v3"
       )
-      
+
       # Mock all HTTP calls to fail
       expect(HTTPClientMock, :post, 2, fn _url, _body, _headers, _options ->
         fixtures.network_error
@@ -110,10 +114,11 @@ defmodule RsolvWeb.Services.ConvertKitTest do
         assert fields["utm_content"] == "banner_ad"
 
         # Return success
-        {:ok, %HTTPoison.Response{
-          status_code: 200,
-          body: Jason.encode!(%{"subscription" => %{"id" => 123456789}})
-        }}
+        {:ok,
+         %HTTPoison.Response{
+           status_code: 200,
+           body: Jason.encode!(%{"subscription" => %{"id" => 123_456_789}})
+         }}
       end)
 
       # Call the function with UTM params
@@ -146,7 +151,11 @@ defmodule RsolvWeb.Services.ConvertKitTest do
   end
 
   describe "add_tag_to_subscriber/2" do
-    test "successfully adds a tag to a subscriber", %{fixtures: fixtures, test_email: email, test_tag_id: tag_id} do
+    test "successfully adds a tag to a subscriber", %{
+      fixtures: fixtures,
+      test_email: email,
+      test_tag_id: tag_id
+    } do
       # Mock the HTTP call to return success
       expect(HTTPClientMock, :post, fn _url, _body, _headers, _options ->
         {:ok, fixtures.tag_success}
@@ -161,7 +170,11 @@ defmodule RsolvWeb.Services.ConvertKitTest do
       assert response.message == "Tagged successfully"
     end
 
-    test "queues tag when API call fails", %{fixtures: fixtures, test_email: email, test_tag_id: tag_id} do
+    test "queues tag when API call fails", %{
+      fixtures: fixtures,
+      test_email: email,
+      test_tag_id: tag_id
+    } do
       # Mock the HTTP call to fail twice (once for immediate attempt, once for queued job)
       expect(HTTPClientMock, :post, 2, fn _url, _body, _headers, _options ->
         fixtures.network_error
@@ -239,7 +252,10 @@ defmodule RsolvWeb.Services.ConvertKitTest do
       assert response.message == "Subscriber not found"
     end
 
-    test "creates fallback record when unsubscribe fails", %{fixtures: fixtures, test_email: email} do
+    test "creates fallback record when unsubscribe fails", %{
+      fixtures: fixtures,
+      test_email: email
+    } do
       # Mock the HTTP calls - subscriber lookup success but unsubscribe fails
       expect(HTTPClientMock, :get, fn _url, _headers, _options ->
         {:ok, fixtures.subscriber_lookup_success}

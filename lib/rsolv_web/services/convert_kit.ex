@@ -44,6 +44,7 @@ defmodule RsolvWeb.Services.ConvertKit do
   # Try the subscribers endpoint first (recommended by ConvertKit)
   defp try_subscribers_endpoint(email, api_key, form_id, api_base_url, fields) do
     url = "#{api_base_url}/subscribers"
+
     headers = [
       {"Content-Type", "application/json"},
       {"Accept", "application/json"}
@@ -52,19 +53,20 @@ defmodule RsolvWeb.Services.ConvertKit do
     # Build the request body
 
     # Now we're only focusing on adding the subscriber, not tagging
-    body = Jason.encode!(%{
-      api_key: api_key,
-      email: email,
-      first_name: "RSOLV Subscriber",
-      form_id: form_id,
-      fields: fields
-    })
-
+    body =
+      Jason.encode!(%{
+        api_key: api_key,
+        email: email,
+        first_name: "RSOLV Subscriber",
+        form_id: form_id,
+        fields: fields
+      })
 
     case make_api_request(url, body, headers) do
       {:ok, response} ->
         Logger.info("ConvertKit: Successfully added subscriber", metadata: %{email: email})
         {:ok, response}
+
       {:error, reason} ->
         Logger.warning("ConvertKit: Failed to add subscriber via primary endpoint",
           metadata: %{
@@ -72,6 +74,7 @@ defmodule RsolvWeb.Services.ConvertKit do
             error: inspect(reason)
           }
         )
+
         # If the subscribers endpoint fails, try the form-specific endpoint as fallback
         Logger.info("ConvertKit: Trying fallback to form-specific endpoint")
         try_form_specific_endpoint(email, api_key, form_id, api_base_url, fields)
@@ -82,6 +85,7 @@ defmodule RsolvWeb.Services.ConvertKit do
   defp try_form_specific_endpoint(email, api_key, form_id, api_base_url, fields) do
     # The form-specific endpoint
     url = "#{api_base_url}/forms/#{form_id}/subscribe"
+
     headers = [
       {"Content-Type", "application/json"},
       {"Accept", "application/json"}
@@ -91,20 +95,22 @@ defmodule RsolvWeb.Services.ConvertKit do
     Logger.info("ConvertKit: Using form-specific endpoint as fallback for #{email}")
 
     # Simple request focused on just adding the subscriber
-    body = Jason.encode!(%{
-      api_key: api_key,
-      email: email,
-      first_name: "RSOLV Subscriber",
-      fields: fields
-    })
-
+    body =
+      Jason.encode!(%{
+        api_key: api_key,
+        email: email,
+        first_name: "RSOLV Subscriber",
+        fields: fields
+      })
 
     case make_api_request(url, body, headers) do
       {:ok, response} ->
         Logger.info("ConvertKit: Successfully added subscriber via fallback endpoint",
           metadata: %{email: email}
         )
+
         {:ok, response}
+
       {:error, reason} ->
         Logger.error("ConvertKit: Failed to add subscriber via fallback endpoint",
           metadata: %{
@@ -112,6 +118,7 @@ defmodule RsolvWeb.Services.ConvertKit do
             error: inspect(reason)
           }
         )
+
         {:error, reason}
     end
   end
@@ -136,12 +143,12 @@ defmodule RsolvWeb.Services.ConvertKit do
 
   # Helper function to make the API request with error handling
   defp make_api_request(url, body, headers) do
-
     # Get the configured HTTP client or default to HTTPoison
     http_client = Application.get_env(:rsolv, :http_client, HTTPoison)
 
-    case http_client.post(url, body, headers, [recv_timeout: 10000]) do
-      {:ok, %HTTPoison.Response{status_code: status_code} = response} when status_code in 200..299 ->
+    case http_client.post(url, body, headers, recv_timeout: 10_000) do
+      {:ok, %HTTPoison.Response{status_code: status_code} = response}
+      when status_code in 200..299 ->
         Logger.info("ConvertKit API request successful",
           metadata: %{
             status_code: status_code,
@@ -150,21 +157,25 @@ defmodule RsolvWeb.Services.ConvertKit do
         )
 
         # Try to extract subscription ID for analytics
-        subscription_id = case Jason.decode(response.body) do
-          {:ok, decoded} ->
-            get_in(decoded, ["subscription", "id"])
-          {:error, error} ->
-            Logger.warning("Failed to parse ConvertKit response JSON",
-              metadata: %{error: inspect(error)}
-            )
-            nil
-        end
+        subscription_id =
+          case Jason.decode(response.body) do
+            {:ok, decoded} ->
+              get_in(decoded, ["subscription", "id"])
 
-        {:ok, %{
-          status_code: status_code,
-          body: response.body,
-          subscription_id: subscription_id
-        }}
+            {:error, error} ->
+              Logger.warning("Failed to parse ConvertKit response JSON",
+                metadata: %{error: inspect(error)}
+              )
+
+              nil
+          end
+
+        {:ok,
+         %{
+           status_code: status_code,
+           body: response.body,
+           subscription_id: subscription_id
+         }}
 
       {:ok, %HTTPoison.Response{status_code: status_code} = response} ->
         Logger.warning("ConvertKit API request failed with HTTP error",
@@ -174,6 +185,7 @@ defmodule RsolvWeb.Services.ConvertKit do
             error_body: response.body
           }
         )
+
         {:error, %{status_code: status_code, body: response.body}}
 
       {:error, %HTTPoison.Error{reason: reason}} ->
@@ -183,6 +195,7 @@ defmodule RsolvWeb.Services.ConvertKit do
             reason: inspect(reason)
           }
         )
+
         {:error, %{reason: reason}}
     end
   end
@@ -216,14 +229,17 @@ defmodule RsolvWeb.Services.ConvertKit do
       # Attempt direct tagging first
       api_base_url = config[:api_base_url]
       url = "#{api_base_url}/tags/#{tag_id}/subscribe"
+
       headers = [
         {"Content-Type", "application/json"},
         {"Accept", "application/json"}
       ]
-      body = Jason.encode!(%{
-        api_key: api_key,
-        email: email
-      })
+
+      body =
+        Jason.encode!(%{
+          api_key: api_key,
+          email: email
+        })
 
       # Log attempt
       Logger.info("ConvertKit: Attempting to tag #{email} with tag #{tag_id}")
@@ -232,7 +248,7 @@ defmodule RsolvWeb.Services.ConvertKit do
       http_client = Application.get_env(:rsolv, :http_client, HTTPoison)
 
       # Try immediate tagging
-      case http_client.post(url, body, headers, [recv_timeout: 10000]) do
+      case http_client.post(url, body, headers, recv_timeout: 10_000) do
         {:ok, %HTTPoison.Response{status_code: status_code}} when status_code in 200..299 ->
           Logger.info("ConvertKit: Successfully tagged #{email}")
           {:ok, %{status_code: status_code, message: "Tagged successfully"}}
@@ -247,7 +263,6 @@ defmodule RsolvWeb.Services.ConvertKit do
             tag_id: tag_id,
             timestamp: DateTime.utc_now() |> DateTime.to_string()
           }
-
 
           # Queue the tagging job with Oban
           %{email: email, tag_id: tag_id, api_key: api_key}
@@ -293,6 +308,7 @@ defmodule RsolvWeb.Services.ConvertKit do
           Logger.info("ConvertKit: Subscriber not found for unsubscribe",
             metadata: %{email: email}
           )
+
           {:ok, %{status_code: 200, message: "Subscriber not found"}}
 
         id ->
@@ -305,7 +321,9 @@ defmodule RsolvWeb.Services.ConvertKit do
   # Helper to get subscriber ID by email
   defp get_subscriber_id(email, api_key, api_base_url) do
     # Subscribers endpoint for lookup
-    url = "#{api_base_url}/subscribers?api_key=#{api_key}&email_address=#{URI.encode_www_form(email)}"
+    url =
+      "#{api_base_url}/subscribers?api_key=#{api_key}&email_address=#{URI.encode_www_form(email)}"
+
     headers = [
       {"Accept", "application/json"}
     ]
@@ -313,14 +331,15 @@ defmodule RsolvWeb.Services.ConvertKit do
     # Get the configured HTTP client or default to HTTPoison
     http_client = Application.get_env(:rsolv, :http_client, HTTPoison)
 
-
-    case http_client.get(url, headers, [recv_timeout: 10000]) do
-      {:ok, %HTTPoison.Response{status_code: status_code, body: body}} when status_code in 200..299 ->
+    case http_client.get(url, headers, recv_timeout: 10_000) do
+      {:ok, %HTTPoison.Response{status_code: status_code, body: body}}
+      when status_code in 200..299 ->
         # Try to extract subscriber ID from response
         case Jason.decode(body) do
           {:ok, decoded} ->
             # Extract the first subscriber from the list (should be only one)
             subscribers = get_in(decoded, ["subscribers"])
+
             if subscribers && length(subscribers) > 0 do
               subscriber = List.first(subscribers)
               Map.get(subscriber, "id")
@@ -328,8 +347,10 @@ defmodule RsolvWeb.Services.ConvertKit do
               Logger.info("ConvertKit: No subscribers found for email",
                 metadata: %{email: email}
               )
+
               nil
             end
+
           {:error, error} ->
             Logger.warning("ConvertKit: Failed to parse subscriber lookup response",
               metadata: %{
@@ -337,6 +358,7 @@ defmodule RsolvWeb.Services.ConvertKit do
                 error: inspect(error)
               }
             )
+
             nil
         end
 
@@ -345,6 +367,7 @@ defmodule RsolvWeb.Services.ConvertKit do
         Logger.warning("ConvertKit: Failed to look up subscriber",
           metadata: %{email: email}
         )
+
         nil
     end
   end
@@ -353,13 +376,16 @@ defmodule RsolvWeb.Services.ConvertKit do
   defp unsubscribe_subscriber(subscriber_id, api_key, api_base_url, email) do
     # Unsubscribe endpoint
     url = "#{api_base_url}/subscribers/#{subscriber_id}/unsubscribe"
+
     headers = [
       {"Content-Type", "application/json"},
       {"Accept", "application/json"}
     ]
-    body = Jason.encode!(%{
-      api_key: api_key
-    })
+
+    body =
+      Jason.encode!(%{
+        api_key: api_key
+      })
 
     # Log attempt
     Logger.info("ConvertKit: Attempting to unsubscribe subscriber",
@@ -372,14 +398,16 @@ defmodule RsolvWeb.Services.ConvertKit do
     # Get the configured HTTP client or default to HTTPoison
     http_client = Application.get_env(:rsolv, :http_client, HTTPoison)
 
-    case http_client.post(url, body, headers, [recv_timeout: 10000]) do
-      {:ok, %HTTPoison.Response{status_code: status_code} = _response} when status_code in 200..299 ->
+    case http_client.post(url, body, headers, recv_timeout: 10_000) do
+      {:ok, %HTTPoison.Response{status_code: status_code} = _response}
+      when status_code in 200..299 ->
         Logger.info("ConvertKit: Successfully unsubscribed user",
           metadata: %{
             email: email,
             subscriber_id: subscriber_id
           }
         )
+
         {:ok, %{status_code: status_code, message: "Unsubscribed successfully"}}
 
       error ->

@@ -2,16 +2,16 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
   @moduledoc """
   Exposed Error Details vulnerability pattern for Elixir/Phoenix applications.
 
-  This pattern detects error handling that exposes sensitive information through 
-  detailed error messages, stack traces, or internal system details in HTTP 
+  This pattern detects error handling that exposes sensitive information through
+  detailed error messages, stack traces, or internal system details in HTTP
   responses, enabling information disclosure attacks.
 
   ## Vulnerability Details
 
-  Exposed error details occur when applications include sensitive information 
+  Exposed error details occur when applications include sensitive information
   in error messages returned to clients:
   - Database error messages revealing connection details or query structures
-  - Stack traces exposing internal file paths and system architecture  
+  - Stack traces exposing internal file paths and system architecture
   - Exception details showing configuration values or sensitive data
   - Debug information leaking in production error responses
 
@@ -20,7 +20,7 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
   Security risks through information disclosure:
   - System fingerprinting via detailed error messages and stack traces
   - Path traversal attack vectors revealed through file path exposure
-  - Database schema inference from SQL error messages  
+  - Database schema inference from SQL error messages
   - Configuration discovery through debug output and exception details
 
   ## Examples
@@ -29,13 +29,13 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
   ```elixir
   # VULNERABLE - Database error exposed to client
   send_resp(conn, 500, "Database error: \#{error.message}")
-  
+
   # VULNERABLE - Stack trace information in response
   json(conn, %{error: "Failed: \#{inspect(exception)}"})
-  
+
   # VULNERABLE - Internal details in error message
   text(conn, "Processing error: \#{changeset.errors}")
-  
+
   # VULNERABLE - Detailed exception information
   render(conn, "error.html", message: "Error: \#{error}")
   ```
@@ -45,29 +45,29 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
   # SAFE - Generic error message with logging
   Logger.error("Database error: \#{inspect(error)}")
   send_resp(conn, 500, "Internal server error")
-  
+
   # SAFE - User-friendly error without details
   json(conn, %{error: "Something went wrong, please try again"})
-  
+
   # SAFE - Structured error handling
   case result do
-    {:error, _reason} -> 
+    {:error, _reason} ->
       Logger.error("Processing failed: \#{inspect(reason)}")
       text(conn, "Unable to process request")
-    {:ok, data} -> 
+    {:ok, data} ->
       json(conn, data)
   end
   ```
 
   ## Attack Scenarios
 
-  1. **System Fingerprinting**: Attacker triggers errors to gather information 
+  1. **System Fingerprinting**: Attacker triggers errors to gather information
      about database versions, file paths, and system configuration
 
-  2. **Path Traversal Reconnaissance**: Error messages revealing file paths 
+  2. **Path Traversal Reconnaissance**: Error messages revealing file paths
      enable attackers to map system structure for further attacks
 
-  3. **SQL Injection Intelligence**: Database error details help attackers 
+  3. **SQL Injection Intelligence**: Database error details help attackers
      refine injection payloads and understand schema structure
 
   ## References
@@ -85,7 +85,8 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
     %Rsolv.Security.Pattern{
       id: "elixir-exposed-error-details",
       name: "Exposed Error Details",
-      description: "Error responses containing sensitive system information enable information disclosure attacks",
+      description:
+        "Error responses containing sensitive system information enable information disclosure attacks",
       type: :information_disclosure,
       severity: :low,
       languages: ["elixir"],
@@ -93,25 +94,26 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
       regex: [
         # send_resp with error interpolation - exclude comments
         ~r/^(?!\s*#).*send_resp\s*\(\s*[^,]+\s*,\s*[45]\d\d\s*,\s*[^,)]*#\{[^}]*(?:error|exception|inspect|message)/m,
-        
+
         # put_resp with error interpolation - exclude comments
         ~r/^(?!\s*#).*put_resp\s*\(\s*[^,]+\s*,\s*[45]\d\d\s*,\s*[^,)]*#\{[^}]*(?:error|exception|inspect|message)/m,
-        
+
         # Phoenix.Controller.json/text with error interpolation - exclude comments
         ~r/^(?!\s*#).*Phoenix\.Controller\.(?:json|text)\s*\(\s*[^,]+\s*,\s*[^,)]*#\{[^}]*(?:error|exception|inspect)/m,
-        
-        # json/text functions with error interpolation - exclude comments  
+
+        # json/text functions with error interpolation - exclude comments
         ~r/^(?!\s*#).*(?:json|text)\s*\(\s*[^,]+\s*,\s*[^,)]*#\{[^}]*(?:error|exception|inspect|message)/m,
-        
+
         # render with error interpolation - exclude comments
         ~r/^(?!\s*#).*render\s*\([^)]*(?:message|error)[^)]*#\{[^}]*(?:error|exception|inspect)/m,
-        
+
         # Pipeline syntax with error responses - exclude comments
         ~r/^(?!\s*#).*\|>\s*(?:json|text|put_resp|send_resp)\s*\([^)]*#\{[^}]*(?:error|exception|inspect)/m
       ],
       cwe_id: "CWE-209",
       owasp_category: "A05:2021",
-      recommendation: "Use generic error messages for client responses and log detailed errors server-side only",
+      recommendation:
+        "Use generic error messages for client responses and log detailed errors server-side only",
       test_cases: %{
         vulnerable: [
           ~S|send_resp(conn, 500, "Database error: #{error.message}")|,
@@ -158,7 +160,8 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
       - Attack surface mapping via internal system architecture exposure
       - Social engineering attacks using leaked organizational and technical information
       """,
-      likelihood: "Medium: Common oversight in development where error handling prioritizes debugging over security",
+      likelihood:
+        "Medium: Common oversight in development where error handling prioritizes debugging over security",
       cve_examples: [
         "CWE-209: Generation of Error Message Containing Sensitive Information",
         "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor",
@@ -168,7 +171,7 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
       compliance_standards: [
         "OWASP Top 10 2021 - A05: Security Misconfiguration",
         "NIST Cybersecurity Framework - PR.DS: Data Security",
-        "ISO 27001 - A.13.1: Network security management", 
+        "ISO 27001 - A.13.1: Network security management",
         "PCI DSS - Requirement 2: Do not use vendor-supplied defaults for system passwords"
       ],
       remediation_steps: """
@@ -205,26 +208,47 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.6,
       context_rules: %{
         response_functions: [
-          "send_resp", "put_resp", "json", "text", "render",
-          "Phoenix.Controller.json", "Phoenix.Controller.text",
+          "send_resp",
+          "put_resp",
+          "json",
+          "text",
+          "render",
+          "Phoenix.Controller.json",
+          "Phoenix.Controller.text",
           "Phoenix.Controller.render"
         ],
         error_interpolation_patterns: [
-          "error.message", "error", "exception", "inspect(error)",
-          "inspect(exception)", "changeset.errors", "exception.message"
+          "error.message",
+          "error",
+          "exception",
+          "inspect(error)",
+          "inspect(exception)",
+          "changeset.errors",
+          "exception.message"
         ],
         http_error_codes: [
-          "400", "401", "403", "404", "422", "500", "502", "503"
+          "400",
+          "401",
+          "403",
+          "404",
+          "422",
+          "500",
+          "502",
+          "503"
         ],
         safe_error_messages: [
-          "Internal server error", "Something went wrong", "Please try again",
-          "An error occurred", "Unable to process", "Service unavailable"
+          "Internal server error",
+          "Something went wrong",
+          "Please try again",
+          "An error occurred",
+          "Unable to process",
+          "Service unavailable"
         ]
       },
       confidence_rules: %{

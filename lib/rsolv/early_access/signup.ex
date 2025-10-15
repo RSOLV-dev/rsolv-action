@@ -17,7 +17,15 @@ defmodule Rsolv.EarlyAccess.Signup do
   @doc false
   def changeset(signup, attrs) do
     signup
-    |> cast(attrs, [:email, :name, :company, :referral_source, :utm_source, :utm_medium, :utm_campaign])
+    |> cast(attrs, [
+      :email,
+      :name,
+      :company,
+      :referral_source,
+      :utm_source,
+      :utm_medium,
+      :utm_campaign
+    ])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
     |> unique_constraint(:email)

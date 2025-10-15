@@ -3,7 +3,7 @@ defmodule Rsolv.Billing.FixAttempt do
   Tracks RSOLV-generated pull requests for billing purposes.
   Records PR creation, merge status, and billing state.
   """
-  
+
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -12,9 +12,11 @@ defmodule Rsolv.Billing.FixAttempt do
     field :repo_name, :string
     field :issue_number, :integer
     field :pr_number, :integer
-    field :status, :string  # pending, merged, rejected, timeout
+    # pending, merged, rejected, timeout
+    field :status, :string
     field :merged_at, :utc_datetime_usec
-    field :billing_status, :string, default: "not_billed"  # not_billed, billed, refunded, disputed
+    # not_billed, billed, refunded, disputed
+    field :billing_status, :string, default: "not_billed"
     field :requires_manual_approval, :boolean, default: true
     field :approved_by, :string
     field :approved_at, :utc_datetime_usec
@@ -38,7 +40,7 @@ defmodule Rsolv.Billing.FixAttempt do
   end
 
   @required_fields ~w(github_org repo_name pr_number status)a
-  @optional_fields ~w(issue_number merged_at billing_status 
+  @optional_fields ~w(issue_number merged_at billing_status
                      requires_manual_approval approved_by approved_at approval_notes
                      platform customer_id api_key_used pr_title pr_url issue_title
                      issue_url commit_sha merged_by metadata amount currency

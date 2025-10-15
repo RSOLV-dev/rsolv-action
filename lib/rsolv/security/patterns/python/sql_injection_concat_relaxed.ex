@@ -2,10 +2,10 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatRelaxed do
   @moduledoc """
   Relaxed version of SQL injection pattern for testing
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   def pattern do
     %Pattern{
       id: "python-sql-injection-concat-relaxed",
@@ -30,7 +30,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatRelaxed do
       }
     }
   end
-  
+
   @impl true
   def ast_enhancement do
     %{
@@ -51,16 +51,19 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatRelaxed do
         sql_keywords: ["SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "JOIN", "UNION"]
       },
       confidence_rules: %{
-        base: 0.4,  # Lower base since we're more permissive
+        # Lower base since we're more permissive
+        base: 0.4,
         adjustments: %{
           "has_sql_keywords" => 0.3,
-          "in_database_method_call" => 0.3,  # Bonus if we find db call
+          # Bonus if we find db call
+          "in_database_method_call" => 0.3,
           "uses_plus_operator" => 0.1,
           "in_test_code" => -1.0,
           "is_logging_statement" => -0.5
         }
       },
-      min_confidence: 0.6  # Lower threshold for testing
+      # Lower threshold for testing
+      min_confidence: 0.6
     }
   end
 end

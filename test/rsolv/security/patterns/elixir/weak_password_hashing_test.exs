@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.Patterns.Elixir.WeakPasswordHashing
   alias Rsolv.Security.Pattern
 
   describe "weak_password_hashing pattern" do
     test "returns correct pattern structure" do
       pattern = WeakPasswordHashing.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "elixir-weak-password-hashing"
       assert pattern.name == "Weak Password Hashing"
@@ -16,7 +16,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
       assert pattern.languages == ["elixir"]
       assert pattern.cwe_id == "CWE-916"
       assert pattern.owasp_category == "A02:2021"
-      
+
       assert is_binary(pattern.description)
       assert is_binary(pattern.recommendation)
       assert is_list(pattern.regex)
@@ -25,7 +25,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "detects crypto.hash with password" do
       pattern = WeakPasswordHashing.pattern()
-      
+
       test_cases = [
         ~S|:crypto.hash(:sha256, password <> salt)|,
         ~S|:crypto.hash(:sha, password)|,
@@ -33,7 +33,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
         ~S|:crypto.hash(:sha512, user_password <> salt)|,
         ~S|:crypto.hash(:sha224, password_plain)|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -42,7 +42,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "detects Base.encode with password hashing" do
       pattern = WeakPasswordHashing.pattern()
-      
+
       test_cases = [
         ~S|Base.encode16(:crypto.hash(:sha256, password))|,
         ~S|Base.encode64(:crypto.hash(:sha, user_password))|,
@@ -50,7 +50,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
         ~S|Base.url_encode64(:crypto.hash(:sha512, password))|,
         ~S|Base.hex_encode32(:crypto.hash(:sha256, pass <> salt))|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -59,7 +59,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "detects simple hashing assignments" do
       pattern = WeakPasswordHashing.pattern()
-      
+
       test_cases = [
         ~S|password_hash = :crypto.hash(:sha256, password)|,
         ~S|pwd_hash = :crypto.hash(:sha, plain_password)|,
@@ -67,7 +67,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
         ~S|pass_hash = :crypto.hash(:sha512, password_string)|,
         ~S|user_password_hash = :crypto.hash(:sha256, pwd)|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -76,10 +76,10 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "detects multi-line password hashing" do
       pattern = WeakPasswordHashing.pattern()
-      
+
       test_cases = [
         ~S"""
-        hashed = 
+        hashed =
           :crypto.hash(:sha256, password)
           |> Base.encode16()
         """,
@@ -95,7 +95,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
         end
         """
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -104,7 +104,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "detects legacy crypto functions" do
       pattern = WeakPasswordHashing.pattern()
-      
+
       test_cases = [
         ~S|:crypto.sha256(password)|,
         ~S|:crypto.sha(password <> salt)|,
@@ -112,7 +112,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
         ~S|:crypto.sha512(password_plain)|,
         ~S|:erlang.md5(password)|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -121,7 +121,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "does not detect secure password hashing" do
       pattern = WeakPasswordHashing.pattern()
-      
+
       safe_code = [
         # Argon2
         ~S|Argon2.hash_pwd_salt(password)|,
@@ -137,7 +137,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
         # Comments
         ~S|# :crypto.hash(:sha256, password)|
       ]
-      
+
       for safe <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, safe)),
                "False positive detected for: #{safe}"
@@ -146,7 +146,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "does not detect comments or documentation" do
       pattern = WeakPasswordHashing.pattern()
-      
+
       safe_code = [
         ~S|# :crypto.hash(:sha256, password)|,
         ~S|@doc "Never use :crypto.hash(:sha256, password)"|,
@@ -156,7 +156,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
         # :crypto.hash(:sha256, password)
         """
       ]
-      
+
       for safe <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, safe)),
                "False positive detected for: #{safe}"
@@ -165,9 +165,9 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "includes comprehensive vulnerability metadata" do
       metadata = WeakPasswordHashing.vulnerability_metadata()
-      
+
       assert metadata.attack_vectors
-      assert metadata.business_impact  
+      assert metadata.business_impact
       assert metadata.technical_impact
       assert metadata.likelihood
       assert metadata.cve_examples
@@ -180,7 +180,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "vulnerability metadata contains password hashing specific information" do
       metadata = WeakPasswordHashing.vulnerability_metadata()
-      
+
       assert String.contains?(metadata.attack_vectors, "brute")
       assert String.contains?(metadata.business_impact, "credential")
       assert String.contains?(metadata.technical_impact, "rainbow")
@@ -190,7 +190,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "includes AST enhancement rules" do
       enhancement = WeakPasswordHashing.ast_enhancement()
-      
+
       assert enhancement.min_confidence
       assert enhancement.context_rules
       assert enhancement.confidence_rules
@@ -199,7 +199,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "AST enhancement has password hashing specific rules" do
       enhancement = WeakPasswordHashing.ast_enhancement()
-      
+
       assert enhancement.context_rules.weak_algorithms
       assert enhancement.context_rules.strong_algorithms
       assert enhancement.ast_rules.password_analysis
@@ -208,7 +208,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "enhanced pattern integrates AST rules" do
       enhanced = WeakPasswordHashing.enhanced_pattern()
-      
+
       assert enhanced.id == "elixir-weak-password-hashing"
       assert enhanced.ast_enhancement.min_confidence
       assert is_float(enhanced.ast_enhancement.min_confidence)
@@ -216,7 +216,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
     test "pattern includes educational test cases" do
       pattern = WeakPasswordHashing.pattern()
-      
+
       assert pattern.test_cases.vulnerable
       assert pattern.test_cases.safe
       assert length(pattern.test_cases.vulnerable) > 0

@@ -56,7 +56,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
         },
         example: %{
           "testName" => "rejects SQL injection in search endpoint",
-          "testCode" => "post('/search', { q: \"admin'; DROP TABLE users;--\" })\\nexpect(response.status).toBe(400)",
+          "testCode" =>
+            "post('/search', { q: \"admin'; DROP TABLE users;--\" })\\nexpect(response.status).toBe(400)",
           "attackVector" => "admin'; DROP TABLE users;--",
           "expectedBehavior" => "should_fail_on_vulnerable_code"
         }
@@ -124,8 +125,15 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
         required: [:requestId, :integratedContent, :method],
         properties: %{
           requestId: %Schema{type: :string},
-          integratedContent: %Schema{type: :string, description: "Complete integrated file content"},
-          method: %Schema{type: :string, enum: ["ast", "append"], description: "Integration method used"},
+          integratedContent: %Schema{
+            type: :string,
+            description: "Complete integrated file content"
+          },
+          method: %Schema{
+            type: :string,
+            enum: ["ast", "append"],
+            description: "Integration method used"
+          },
           insertionPoint: InsertionPoint,
           timing: %Schema{
             type: :object,
@@ -181,13 +189,19 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
         required: [:vulnerableFile, :candidateTestFiles, :framework],
         properties: %{
           vulnerableFile: %Schema{type: :string, description: "Path to vulnerable source file"},
-          vulnerabilityType: %Schema{type: :string, description: "Type of vulnerability (optional)"},
+          vulnerabilityType: %Schema{
+            type: :string,
+            description: "Type of vulnerability (optional)"
+          },
           candidateTestFiles: %Schema{
             type: :array,
             items: %Schema{type: :string},
             description: "Array of candidate test file paths"
           },
-          framework: %Schema{type: :string, enum: ["rspec", "vitest", "jest", "pytest", "mocha", "minitest"]}
+          framework: %Schema{
+            type: :string,
+            enum: ["rspec", "vitest", "jest", "pytest", "mocha", "minitest"]
+          }
         },
         example: %{
           "vulnerableFile" => "app/controllers/users_controller.rb",
@@ -278,7 +292,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
             }
           },
           requestId: %Schema{type: :string},
-          retryAfter: %Schema{type: :integer, description: "Retry after seconds (for rate limits)"}
+          retryAfter: %Schema{
+            type: :integer,
+            description: "Retry after seconds (for rate limits)"
+          }
         }
       })
     end
@@ -489,7 +506,9 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
     request_id = params["requestId"] || generate_request_id()
     customer = conn.assigns.customer
 
-    Logger.info("TestIntegrationController: Received generate request from customer #{customer.id}")
+    Logger.info(
+      "TestIntegrationController: Received generate request from customer #{customer.id}"
+    )
 
     with :ok <- check_rate_limit(customer),
          :ok <- validate_generate_request(params),
@@ -501,7 +520,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
              params["framework"]
            ) do
       total_time = System.monotonic_time(:millisecond) - start_time
-      Logger.info("TestIntegrationController: Successfully generated integration (method: #{method}, time: #{total_time}ms)")
+
+      Logger.info(
+        "TestIntegrationController: Successfully generated integration (method: #{method}, time: #{total_time}ms)"
+      )
 
       json(conn, %{
         requestId: request_id,
@@ -627,22 +649,37 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
   defp handle_generate_error(conn, error, request_id) do
     case error do
       {:error, :rate_limited} ->
-        send_error_response(conn, 429, "RATE_LIMITED",
+        send_error_response(
+          conn,
+          429,
+          "RATE_LIMITED",
           "Rate limit exceeded. Please try again later.",
-          request_id, %{retryAfter: 60})
+          request_id,
+          %{retryAfter: 60}
+        )
 
       {:error, {:validation, message}} ->
         send_error_response(conn, 400, "INVALID_REQUEST", message, request_id)
 
       {:error, {:unsupported_framework, framework}} ->
-        send_error_response(conn, 422, "UNSUPPORTED_FRAMEWORK",
+        send_error_response(
+          conn,
+          422,
+          "UNSUPPORTED_FRAMEWORK",
           "Framework '#{framework}' is not supported. Supported: #{Enum.join(@supported_frameworks, ", ")}",
-          request_id)
+          request_id
+        )
 
       {:error, reason} ->
         Logger.error("TestIntegrationController: Integration failed: #{inspect(reason)}")
-        send_error_response(conn, 500, "INTEGRATION_FAILED",
-          "Failed to integrate test", request_id)
+
+        send_error_response(
+          conn,
+          500,
+          "INTEGRATION_FAILED",
+          "Failed to integrate test",
+          request_id
+        )
     end
   end
 
@@ -650,10 +687,15 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
     conn
     |> maybe_add_retry_after(status)
     |> put_status(status)
-    |> json(Map.merge(%{
-      error: %{code: code, message: message},
-      requestId: request_id
-    }, extra))
+    |> json(
+      Map.merge(
+        %{
+          error: %{code: code, message: message},
+          requestId: request_id
+        },
+        extra
+      )
+    )
   end
 
   defp maybe_add_retry_after(conn, 429), do: put_resp_header(conn, "retry-after", "60")
@@ -667,7 +709,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
   end
 
   defp validate_generate_request(params) do
-    with :ok <- validate_required_fields(params, ~w(targetFileContent testSuite framework language)),
+    with :ok <-
+           validate_required_fields(params, ~w(targetFileContent testSuite framework language)),
          :ok <- validate_field_type(params["targetFileContent"], :binary, "targetFileContent"),
          :ok <- validate_field_type(params["testSuite"], :map, "testSuite"),
          :ok <- validate_field_type(params["testSuite"]["redTests"], :list, "testSuite.redTests"),
@@ -680,6 +723,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
 
   defp validate_required_fields(params, required_fields) do
     missing = required_fields -- Map.keys(params)
+
     if Enum.empty?(missing),
       do: :ok,
       else: {:error, {:validation, "Missing required fields: #{Enum.join(missing, ", ")}"}}
@@ -688,6 +732,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
   defp validate_field_type(value, :binary, _field) when is_binary(value), do: :ok
   defp validate_field_type(value, :map, _field) when is_map(value), do: :ok
   defp validate_field_type(value, :list, _field) when is_list(value), do: :ok
+
   defp validate_field_type(_value, type, field) do
     type_name = type |> to_string() |> String.replace("_", " ")
     {:error, {:validation, "#{field} must be a #{type_name}"}}
@@ -712,7 +757,9 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
       not Enum.empty?(required_test_fields -- Map.keys(test))
     end)
     |> case do
-      nil -> :ok
+      nil ->
+        :ok
+
       test ->
         missing = required_test_fields -- Map.keys(test)
         {:error, {:validation, "Test missing required fields: #{Enum.join(missing, ", ")}"}}
@@ -723,11 +770,12 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
     with {:ok, vulnerable_file} <- extract_param(params, "vulnerableFile", :vulnerableFile),
          {:ok, type} <- extract_param(params, "type", :type),
          {:ok, framework} <- extract_param(params, "framework", :framework) do
-      {:ok, %{
-        vulnerable_file: vulnerable_file,
-        type: type,
-        framework: String.downcase(framework)
-      }}
+      {:ok,
+       %{
+         vulnerable_file: vulnerable_file,
+         type: type,
+         framework: String.downcase(framework)
+       }}
     end
   end
 
@@ -743,12 +791,16 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
     do: Naming.generate_test_name(file, type, framework)
 
   defp generate_request_id,
-    do: "test-int-#{System.system_time(:millisecond)}-#{:rand.uniform(999999)}"
+    do: "test-int-#{System.system_time(:millisecond)}-#{:rand.uniform(999_999)}"
 
   # Analyze endpoint validation helpers
 
   defp validate_analyze_request(params) do
-    with :ok <- validate_required_fields_analyze(params, ~w(vulnerableFile candidateTestFiles framework)),
+    with :ok <-
+           validate_required_fields_analyze(
+             params,
+             ~w(vulnerableFile candidateTestFiles framework)
+           ),
          :ok <- validate_candidate_files(params["candidateTestFiles"]),
          :ok <- validate_analyze_framework(params["framework"]) do
       {:ok, params}
@@ -757,14 +809,19 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
 
   defp validate_required_fields_analyze(params, required_fields) do
     missing = required_fields -- Map.keys(params)
+
     if Enum.empty?(missing),
       do: :ok,
       else: {:error, {:validation, "Missing required fields: #{Enum.join(missing, ", ")}"}}
   end
 
   defp validate_candidate_files(nil), do: {:error, {:validation, "candidateTestFiles required"}}
-  defp validate_candidate_files([]), do: {:error, {:validation, "at least one candidate test file required"}}
-  defp validate_candidate_files(files) when not is_list(files), do: {:error, {:validation, "candidateTestFiles must be an array"}}
+
+  defp validate_candidate_files([]),
+    do: {:error, {:validation, "at least one candidate test file required"}}
+
+  defp validate_candidate_files(files) when not is_list(files),
+    do: {:error, {:validation, "candidateTestFiles must be an array"}}
 
   defp validate_candidate_files(files) when is_list(files) do
     if Enum.all?(files, &is_binary/1),
@@ -772,9 +829,13 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
       else: {:error, {:validation, "candidateTestFiles must be an array of strings"}}
   end
 
-  defp validate_analyze_framework(framework) when framework in @analyze_supported_frameworks, do: :ok
+  defp validate_analyze_framework(framework) when framework in @analyze_supported_frameworks,
+    do: :ok
+
   defp validate_analyze_framework(nil), do: {:error, {:validation, "framework required"}}
-  defp validate_analyze_framework(framework) when not is_binary(framework), do: {:error, {:validation, "framework must be a string"}}
+
+  defp validate_analyze_framework(framework) when not is_binary(framework),
+    do: {:error, {:validation, "framework must be a string"}}
 
   defp validate_analyze_framework(framework) when is_binary(framework) do
     supported_list = Enum.join(@analyze_supported_frameworks, ", ")

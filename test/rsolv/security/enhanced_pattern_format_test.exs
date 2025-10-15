@@ -1,9 +1,9 @@
 defmodule Rsolv.Security.EnhancedPatternFormatTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.EnhancedPattern
   alias Rsolv.Security.Pattern
-  
+
   describe "Enhanced format serialization" do
     test "to_enhanced_api_format includes all enhanced fields" do
       pattern = %EnhancedPattern{
@@ -66,9 +66,9 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
           tags: ["database", "injection", "owasp-top-10"]
         }
       }
-      
+
       formatted = EnhancedPattern.to_enhanced_api_format(pattern)
-      
+
       # Check all fields are present
       assert formatted[:id] == "test-enhanced"
       assert formatted[:name] == "Test Enhanced Pattern"
@@ -79,7 +79,7 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
       assert is_map(formatted[:confidence_rules])
       assert is_map(formatted[:enhanced_recommendation])
       assert is_map(formatted[:metadata])
-      
+
       # Check nested structures
       assert formatted[:context_rules][:exclude_paths] == ["test/", "spec/"]
       assert formatted[:confidence_rules][:base_confidence] == 0.7
@@ -87,7 +87,7 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
       assert formatted[:enhanced_recommendation][:quick_fix] != nil
       assert length(formatted[:enhanced_recommendation][:detailed_steps]) == 3
     end
-    
+
     test "to_enhanced_api_format handles patterns without AST rules" do
       pattern = %EnhancedPattern{
         id: "regex-only",
@@ -109,15 +109,15 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
         enhanced_recommendation: nil,
         metadata: nil
       }
-      
+
       formatted = EnhancedPattern.to_enhanced_api_format(pattern)
-      
+
       assert formatted[:supports_ast] == false
       assert formatted[:ast_rules] == nil
       assert formatted[:regex] != nil
     end
   end
-  
+
   describe "Backward compatibility" do
     test "enhanced pattern can be used as standard pattern" do
       enhanced = %EnhancedPattern{
@@ -146,21 +146,21 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
           }
         ]
       }
-      
+
       # Convert to standard pattern
       standard = EnhancedPattern.to_pattern(enhanced)
-      
+
       # Verify it's a valid Pattern struct
       assert %Pattern{} = standard
       assert Pattern.valid?(standard)
-      
+
       # Check fields match
       assert standard.id == enhanced.id
       assert standard.name == enhanced.name
       assert standard.regex == enhanced.regex
       assert standard.test_cases == enhanced.test_cases
     end
-    
+
     test "AST-only pattern generates fallback regex" do
       pattern = %EnhancedPattern{
         id: "ast-only-fallback",
@@ -175,7 +175,8 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
           vulnerable: ["exec(userInput)"],
           safe: ["spawn('ls', ['-la'])"]
         },
-        regex: nil,  # No regex provided
+        # No regex provided
+        regex: nil,
         ast_rules: [
           %{
             node_type: :call_expression,
@@ -195,104 +196,129 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
           }
         ]
       }
-      
+
       standard = EnhancedPattern.to_pattern(pattern)
-      
+
       # Should have generated a regex
       assert standard.regex != nil
       assert Regex.regex?(standard.regex)
-      
+
       # Should match the function names from AST rules
       assert Regex.match?(standard.regex, "exec(something)")
       assert Regex.match?(standard.regex, "eval(code)")
     end
   end
-  
+
   describe "Validation enhancements" do
     test "validates AST rule node types" do
-      valid_pattern = build_pattern(ast_rules: [
-        %{
-          node_type: :call_expression,
-          properties: %{},
-          parent_context: nil,
-          child_must_contain: nil
-        }
-      ])
-      
+      valid_pattern =
+        build_pattern(
+          ast_rules: [
+            %{
+              node_type: :call_expression,
+              properties: %{},
+              parent_context: nil,
+              child_must_contain: nil
+            }
+          ]
+        )
+
       assert EnhancedPattern.valid?(valid_pattern)
-      
+
       # Invalid node type (should be atom)
-      invalid_pattern = build_pattern(ast_rules: [
-        %{
-          node_type: "call_expression",  # String instead of atom
-          properties: %{},
-          parent_context: nil,
-          child_must_contain: nil
-        }
-      ])
-      
+      invalid_pattern =
+        build_pattern(
+          ast_rules: [
+            %{
+              # String instead of atom
+              node_type: "call_expression",
+              properties: %{},
+              parent_context: nil,
+              child_must_contain: nil
+            }
+          ]
+        )
+
       refute EnhancedPattern.valid?(invalid_pattern)
     end
-    
+
     test "validates confidence rules structure" do
-      valid_pattern = build_pattern(confidence_rules: %{
-        base_confidence: 0.5,
-        increase_if: [
-          %{condition: "test", amount: 0.1}
-        ],
-        decrease_if: []
-      })
-      
+      valid_pattern =
+        build_pattern(
+          confidence_rules: %{
+            base_confidence: 0.5,
+            increase_if: [
+              %{condition: "test", amount: 0.1}
+            ],
+            decrease_if: []
+          }
+        )
+
       assert EnhancedPattern.valid?(valid_pattern)
-      
+
       # Invalid base confidence (out of range)
-      invalid_pattern1 = build_pattern(confidence_rules: %{
-        base_confidence: 1.5,  # > 1.0
-        increase_if: [],
-        decrease_if: []
-      })
-      
+      invalid_pattern1 =
+        build_pattern(
+          confidence_rules: %{
+            # > 1.0
+            base_confidence: 1.5,
+            increase_if: [],
+            decrease_if: []
+          }
+        )
+
       refute EnhancedPattern.valid?(invalid_pattern1)
-      
+
       # Missing required fields in modifiers
-      invalid_pattern2 = build_pattern(confidence_rules: %{
-        base_confidence: 0.5,
-        increase_if: [
-          %{condition: "test"}  # Missing amount
-        ],
-        decrease_if: []
-      })
-      
+      invalid_pattern2 =
+        build_pattern(
+          confidence_rules: %{
+            base_confidence: 0.5,
+            increase_if: [
+              # Missing amount
+              %{condition: "test"}
+            ],
+            decrease_if: []
+          }
+        )
+
       refute EnhancedPattern.valid?(invalid_pattern2)
     end
-    
+
     test "validates context rules keys" do
-      valid_pattern = build_pattern(context_rules: %{
-        exclude_paths: ["test/"],
-        require_imports: ["express"],
-        exclude_if_contains: nil,
-        require_context: nil
-      })
-      
+      valid_pattern =
+        build_pattern(
+          context_rules: %{
+            exclude_paths: ["test/"],
+            require_imports: ["express"],
+            exclude_if_contains: nil,
+            require_context: nil
+          }
+        )
+
       assert EnhancedPattern.valid?(valid_pattern)
-      
+
       # Invalid key in context rules
-      invalid_pattern = build_pattern(context_rules: %{
-        exclude_paths: ["test/"],
-        invalid_key: "value"  # Not allowed
-      })
-      
+      invalid_pattern =
+        build_pattern(
+          context_rules: %{
+            exclude_paths: ["test/"],
+            # Not allowed
+            invalid_key: "value"
+          }
+        )
+
       refute EnhancedPattern.valid?(invalid_pattern)
     end
   end
-  
+
   describe "Format conversion" do
     test "preserves all data through round-trip conversion" do
       original = build_complete_pattern()
-      
+
       # Convert to API format and back
       api_format = EnhancedPattern.to_enhanced_api_format(original)
-      
+
       # Verify all fields are preserved
       assert api_format[:id] == original.id
       assert api_format[:ast_rules] == original.ast_rules
@@ -301,7 +327,7 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
       assert api_format[:enhanced_recommendation] == original.enhanced_recommendation
       assert api_format[:metadata] == original.metadata
     end
-    
+
     test "handles nil optional fields gracefully" do
       minimal = %EnhancedPattern{
         id: "minimal",
@@ -315,9 +341,9 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
         test_cases: %{vulnerable: ["<div>"], safe: ["&lt;div&gt;"]},
         regex: ~r/<script>/
       }
-      
+
       api_format = EnhancedPattern.to_enhanced_api_format(minimal)
-      
+
       assert api_format[:supports_ast] == false
       assert api_format[:ast_rules] == nil
       assert api_format[:context_rules] == nil
@@ -325,9 +351,9 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
       assert api_format[:enhanced_recommendation] == nil
     end
   end
-  
+
   # Helper functions
-  
+
   defp build_pattern(overrides \\ []) do
     base = %{
       id: "test",
@@ -341,10 +367,10 @@ defmodule Rsolv.Security.EnhancedPatternFormatTest do
       test_cases: %{vulnerable: ["bad"], safe: ["good"]},
       regex: ~r/test/
     }
-    
+
     struct(EnhancedPattern, Enum.into(overrides, base))
   end
-  
+
   defp build_complete_pattern do
     %EnhancedPattern{
       id: "complete",

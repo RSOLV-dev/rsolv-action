@@ -1,20 +1,20 @@
 defmodule Rsolv.Security.Patterns.Ruby.MissingAuthentication do
   @moduledoc """
   Pattern for detecting missing authentication in Rails controllers.
-  
+
   This pattern identifies Rails controllers that lack authentication filters like
   `before_action :authenticate_user!` or `before_filter :authenticate_admin`. These
   missing authentication checks can lead to unauthorized access to sensitive data
   and functionality.
-  
+
   ## Vulnerability Details
-  
+
   Authentication is a fundamental security control that verifies user identity before
   granting access to resources. In Rails applications, authentication is typically
   implemented using before_action filters (formerly before_filter in older versions).
   When controllers lack these filters, any user can access the actions, potentially
   exposing sensitive data or administrative functions.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable controller
@@ -22,21 +22,21 @@ defmodule Rsolv.Security.Patterns.Ruby.MissingAuthentication do
     def users
       @users = User.all  # Anyone can access this!
     end
-    
+
     def delete_user
       User.find(params[:id]).destroy  # No auth check!
     end
   end
-  
+
   # Attack: Direct access to admin endpoints
   GET /admin/users     # Lists all users
   DELETE /admin/users/1 # Deletes user without authentication
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -46,7 +46,8 @@ defmodule Rsolv.Security.Patterns.Ruby.MissingAuthentication do
       type: :authentication,
       severity: :high,
       languages: ["ruby"],
-      regex: ~r/class\s+\w+Controller\s*<\s*ApplicationController(?:(?!before_action|before_filter|authenticate).)*end/s,
+      regex:
+        ~r/class\s+\w+Controller\s*<\s*ApplicationController(?:(?!before_action|before_filter|authenticate).)*end/s,
       cwe_id: "CWE-862",
       owasp_category: "A01:2021",
       recommendation: "Add before_action :authenticate_user! to protect sensitive actions",
@@ -62,7 +63,7 @@ end|
           ~S|class AdminController < ApplicationController
   before_action :authenticate_user!
   before_action :require_admin
-  
+
   def users
     @users = User.all
   end
@@ -71,7 +72,7 @@ end|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -80,20 +81,20 @@ end|
       applications. When Rails controllers lack proper authentication filters, they allow
       unrestricted access to potentially sensitive functionality. This can lead to data
       breaches, unauthorized modifications, and complete system compromise.
-      
+
       In Rails applications, authentication is typically enforced using before_action
       filters (or before_filter in older versions). These filters run before controller
       actions and can halt execution if authentication fails. Common authentication
       libraries like Devise provide helpers such as `authenticate_user!` that integrate
       seamlessly with this pattern.
-      
+
       The vulnerability is particularly dangerous in:
       - Admin controllers exposing user management functions
       - API controllers returning sensitive data
       - Controllers handling financial transactions
       - Settings or configuration controllers
       - Report generation endpoints
-      
+
       Even if routes are "hidden" or unpublished, attackers can discover them through
       various means including directory brute-forcing, leaked documentation, or source
       code analysis.
@@ -178,11 +179,11 @@ end|
       - Controller classes inheriting from ApplicationController
       - Absence of authentication-related before_action/before_filter declarations
       - The pattern uses negative lookahead to ensure no auth methods are present
-      
+
       The regex searches for the entire controller definition and fails to match
       if it finds authentication keywords like 'before_action', 'before_filter',
       or 'authenticate' anywhere within the controller.
-      
+
       Note: This pattern may have false positives for:
       - Public controllers that intentionally lack authentication
       - Controllers using alternative authentication methods
@@ -224,19 +225,19 @@ end|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities and
   intentionally public controllers or alternative authentication methods.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.MissingAuthentication.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.MissingAuthentication.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -247,7 +248,11 @@ end|
       ast_rules: %{
         node_type: "ClassDefinition",
         class_name_patterns: ["Controller$"],
-        inheritance_patterns: ["ApplicationController", "ActionController::Base", "ActionController::API"],
+        inheritance_patterns: [
+          "ApplicationController",
+          "ActionController::Base",
+          "ActionController::API"
+        ],
         method_analysis: %{
           look_for_actions: true,
           action_patterns: ["index", "show", "new", "create", "edit", "update", "destroy"],

@@ -1,68 +1,68 @@
 defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
   @moduledoc """
   Code Injection via Python eval() Function
-  
+
   Detects dangerous patterns like:
     result = eval(user_input)
     value = eval(request.args.get('expression'))
     computed = eval(f"2 + {user_number}")
-    
+
   Safe alternatives:
     result = ast.literal_eval(user_input)  # Only literals
     value = int(request.args.get('number', 0))
     data = json.loads(json_string)
-    
+
   Python's eval() function executes arbitrary Python code from a string,
   making it one of the most dangerous functions when used with untrusted
   input. Unlike other languages, Python's eval() has full access to the
   Python runtime and can execute any valid Python expression.
-  
+
   ## Vulnerability Details
-  
+
   The eval() function takes a string and evaluates it as a Python expression.
   This means attackers can execute arbitrary code including:
   - Importing modules: __import__('os').system('command')
   - Accessing built-ins: __builtins__.__import__('os').system('command')
   - File operations: open('/etc/passwd').read()
   - Network operations: __import__('urllib').request.urlopen('http://evil.com')
-  
+
   Even with restricted globals/locals, eval() is often bypassable through
   Python's introspection capabilities.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the unsafe eval detection pattern.
-  
+
   This pattern detects usage of Python's eval() function which can lead
   to arbitrary code execution vulnerabilities.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> pattern.id
       "python-unsafe-eval"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> pattern.severity
       :critical
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> pattern.cwe_id
       "CWE-95"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> vulnerable = "result = eval(user_input)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> safe = "result = ast.literal_eval(user_input)"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> pattern.recommendation
       "Use ast.literal_eval() for safe evaluation of literals or custom parsers for complex expressions"
@@ -79,7 +79,8 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
       regex: ~r/\beval\s*\(/,
       cwe_id: "CWE-95",
       owasp_category: "A03:2021",
-      recommendation: "Use ast.literal_eval() for safe evaluation of literals or custom parsers for complex expressions",
+      recommendation:
+        "Use ast.literal_eval() for safe evaluation of literals or custom parsers for complex expressions",
       test_cases: %{
         vulnerable: [
           "result = eval(user_input)",
@@ -96,10 +97,10 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for Python eval() injection.
-  
+
   This metadata documents the severe security implications of using eval()
   with untrusted data and provides guidance for secure alternatives.
   """
@@ -110,7 +111,7 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
       one of the most critical security issues in Python applications. The eval()
       function executes arbitrary Python code passed as a string, providing
       attackers with complete control over the Python runtime.
-      
+
       Unlike more limited evaluation functions in other languages, Python's eval()
       has access to the full Python environment, including:
       - All built-in functions and modules
@@ -119,14 +120,14 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
       - Network access through urllib, requests, and socket modules
       - Process execution through os.system() and subprocess
       - Access to environment variables and system information
-      
+
       The vulnerability is particularly dangerous because:
       1. It requires only the ability to control the input to eval()
       2. Python's introspection makes sandbox escapes trivial
       3. Even restricted eval() with custom globals/locals is often bypassable
       4. The attack surface includes the entire Python standard library
       5. Successful exploitation grants the attacker full code execution
-      
+
       Common attack patterns include using __import__() to access modules,
       traversing __builtins__ to find useful functions, and using Python's
       object model to access restricted functionality through introspection.
@@ -160,7 +161,8 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
           type: :research,
           id: "eval_exploitation",
           title: "Exploiting Python's eval()",
-          url: "https://realpython.com/python-eval-function/#minimizing-the-security-risks-of-eval"
+          url:
+            "https://realpython.com/python-eval-function/#minimizing-the-security-risks-of-eval"
         }
       ],
       attack_vectors: [
@@ -169,7 +171,8 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
         "[x for x in ().__class__.__base__.__subclasses__() if x.__name__ == 'Popen'][0](['ls'])",
         "__builtins__.__import__('os').system('id')",
         "open('/etc/passwd').read()",
-        "[a:=__import__('os'),a.system('id')]",  # Walrus operator exploit
+        # Walrus operator exploit
+        "[a:=__import__('os'),a.system('id')]",
         "compile('import os; os.system(\"id\")', 'string', 'exec')",
         "globals()['__builtins__']['__import__']('os').system('pwd')"
       ],
@@ -218,7 +221,7 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
       1. Direct eval() function calls
       2. eval() with any parameter type
       3. Both immediate calls and stored references
-      
+
       The pattern uses word boundary (\\b) to avoid matching:
       - ast.literal_eval() (safe alternative)
       - evaluate() or other function names containing 'eval'
@@ -261,27 +264,27 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities
   and safe usage patterns or comments.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeEval.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeEval.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "Call"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeEval.ast_enhancement()
       iex> "eval" in enhancement.ast_rules.function_names
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeEval.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -292,13 +295,15 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
         node_type: "Call",
         function_names: [
           "eval",
-          "eval()"  # Sometimes appears in AST
+          # Sometimes appears in AST
+          "eval()"
         ],
         exclude_functions: [
           "literal_eval",
           "ast.literal_eval",
           "safe_eval",
-          "evaluate"  # Common safe wrapper name
+          # Common safe wrapper name
+          "evaluate"
         ]
       },
       context_rules: %{
@@ -321,18 +326,29 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
         check_data_source: true
       },
       confidence_rules: %{
-        base: 0.85,  # Start high - eval() is almost always dangerous
+        # Start high - eval() is almost always dangerous
+        base: 0.85,
         adjustments: %{
-          "user_controlled_input" => 0.15,    # Definite vulnerability
-          "request_data" => 0.1,              # Web input
-          "input_function" => 0.1,            # User input
-          "f_string" => 0.05,                 # Format strings with user data
-          "concatenation" => 0.05,            # String building
-          "hardcoded_string" => -0.4,         # Less likely exploitable
-          "literal_only" => -0.5,             # Only literals
-          "test_code" => -0.8,                # Test files
-          "example_code" => -0.6,             # Documentation
-          "commented_out" => -0.9             # Commented code
+          # Definite vulnerability
+          "user_controlled_input" => 0.15,
+          # Web input
+          "request_data" => 0.1,
+          # User input
+          "input_function" => 0.1,
+          # Format strings with user data
+          "f_string" => 0.05,
+          # String building
+          "concatenation" => 0.05,
+          # Less likely exploitable
+          "hardcoded_string" => -0.4,
+          # Only literals
+          "literal_only" => -0.5,
+          # Test files
+          "test_code" => -0.8,
+          # Documentation
+          "example_code" => -0.6,
+          # Commented code
+          "commented_out" => -0.9
         }
       },
       min_confidence: 0.7

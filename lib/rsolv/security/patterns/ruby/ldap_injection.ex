@@ -1,19 +1,19 @@
 defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
   @moduledoc """
   Pattern for detecting LDAP injection vulnerabilities in Ruby applications.
-  
+
   This pattern identifies when user input is directly interpolated into LDAP
   queries or distinguished names, allowing attackers to manipulate LDAP
   operations and potentially bypass authentication or access unauthorized data.
-  
+
   ## Vulnerability Details
-  
+
   LDAP injection occurs when applications construct LDAP queries using
   unsanitized user input. This vulnerability is particularly dangerous in
   authentication systems where LDAP is commonly used for user verification.
   Unlike databases, LDAP systems often lack robust access controls, making
   successful injection attacks highly impactful.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable LDAP authentication
@@ -21,29 +21,29 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
     def authenticate
       username = params[:username]  # User input: "admin)(|(objectClass=*"
       password = params[:password]  # User input: "anything"
-      
+
       # VULNERABLE: Direct interpolation into LDAP filter
       filter = "(\\&(uid=\#{username})(userPassword=\#{password}))"
       # Results in: (&(uid=admin)(|(objectClass=*)(userPassword=anything))
       # This changes query logic to match any object class, bypassing auth
-      
+
       ldap = Net::LDAP.new(host: 'ldap.company.com')
       result = ldap.search(filter: filter)
-      
+
       if result.any?
         session[:user_id] = result.first.uid
         redirect_to dashboard_path
       end
     end
   end
-  
+
   # Attack result: Authentication bypass without valid credentials
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -63,7 +63,8 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
       ],
       cwe_id: "CWE-90",
       owasp_category: "A03:2021",
-      recommendation: "Use Net::LDAP::Filter.escape() to sanitize user input or Net::LDAP::Filter.eq() for safe filter construction",
+      recommendation:
+        "Use Net::LDAP::Filter.escape() to sanitize user input or Net::LDAP::Filter.eq() for safe filter construction",
       test_cases: %{
         vulnerable: [
           ~S|Net::LDAP::Filter.construct("(uid=#{username})")|,
@@ -80,7 +81,7 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -89,19 +90,19 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
       constructs LDAP queries using unsanitized user input. This allows attackers
       to modify the intended LDAP query logic and potentially bypass authentication,
       access unauthorized data, or modify directory information.
-      
+
       **How LDAP Injection Works:**
       LDAP (Lightweight Directory Access Protocol) uses a specific filter syntax
       for querying directory services. When user input is directly interpolated
       into LDAP filters or distinguished names, attackers can inject malicious
       LDAP syntax that changes the query behavior.
-      
+
       **Ruby LDAP Libraries Affected:**
       - **Net::LDAP**: Most popular Ruby LDAP library
       - **ruby-ldap**: Older Ruby LDAP bindings
       - **ActiveLdap**: ActiveRecord-style LDAP library
       - **Ladle**: LDAP server implementation in Ruby
-      
+
       **Why LDAP Injection is Critical:**
       LDAP systems are commonly used for authentication and authorization,
       making successful attacks particularly severe:
@@ -109,13 +110,13 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
       - **Privilege Escalation**: Access admin accounts or elevated permissions
       - **Data Extraction**: Retrieve sensitive directory information
       - **Directory Modification**: In some cases, modify or delete LDAP entries
-      
+
       **Common Attack Patterns:**
       - **Boolean logic manipulation**: Use `)(|(objectClass=*` to create OR conditions
       - **Comment injection**: Use `#` or null bytes to terminate filters early
       - **Wildcard abuse**: Use `*` to match any value in authentication
       - **Parenthesis manipulation**: Close/open filters to change query structure
-      
+
       **Ruby-Specific Vulnerabilities:**
       The FluidAttacks research demonstrates how Ruby applications using Net::LDAP
       are particularly vulnerable when constructing filters with string interpolation.
@@ -126,7 +127,8 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
         %{
           type: :cwe,
           id: "CWE-90",
-          title: "Improper Neutralization of Special Elements used in an LDAP Query ('LDAP Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an LDAP Query ('LDAP Injection')",
           url: "https://cwe.mitre.org/data/definitions/90.html"
         },
         %{
@@ -139,7 +141,8 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
           type: :research,
           id: "owasp_ldap_injection_prevention",
           title: "OWASP LDAP Injection Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -202,25 +205,25 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
       detection_notes: """
       This pattern detects LDAP injection by looking for Ruby LDAP libraries
       combined with string interpolation in filter construction:
-      
+
       **Primary Detection Points:**
       - Net::LDAP::Filter.construct() with interpolated strings
       - .search() method calls with filter: parameter and interpolation
       - .auth() and .authenticate() method calls with DN interpolation
       - Custom LDAP search functions with interpolation
-      
+
       **Ruby Libraries Covered:**
       - Net::LDAP (most common): Filter construction and search operations
       - Custom LDAP wrapper functions: ldap_search, find_ldap_entry, etc.
       - Authentication methods: .auth(), .authenticate()
       - Search operations: .search() with filter parameters
-      
+
       **False Positive Considerations:**
       - Static LDAP filters without user input (lower risk)
       - Properly escaped input using Net::LDAP::Filter.escape()
       - Safe filter construction using Net::LDAP::Filter.eq()
       - LDAP operations in test files (excluded by AST enhancement)
-      
+
       **Detection Limitations:**
       - Complex filter building across multiple lines
       - LDAP queries built through method chaining
@@ -281,19 +284,19 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual LDAP injection vulnerabilities
   and safe LDAP usage patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.LdapInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.LdapInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.75
@@ -304,8 +307,14 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
       ast_rules: %{
         node_type: "CallExpression",
         method_names: [
-          "construct", "search", "auth", "authenticate", "ldap_search", 
-          "search_ldap", "find_ldap_entry", "perform_ldap_search"
+          "construct",
+          "search",
+          "auth",
+          "authenticate",
+          "ldap_search",
+          "search_ldap",
+          "find_ldap_entry",
+          "perform_ldap_search"
         ],
         receiver_analysis: %{
           check_ldap_context: true,
@@ -330,13 +339,24 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
         ],
         check_ldap_context: true,
         safe_functions: [
-          "Net::LDAP::Filter.escape", "Net::LDAP::Filter.eq", 
-          "Net::LDAP::Filter.present", "Net::LDAP::Filter.substring",
-          "Net::LDAP::Filter.ge", "Net::LDAP::Filter.le"
+          "Net::LDAP::Filter.escape",
+          "Net::LDAP::Filter.eq",
+          "Net::LDAP::Filter.present",
+          "Net::LDAP::Filter.substring",
+          "Net::LDAP::Filter.ge",
+          "Net::LDAP::Filter.le"
         ],
         dangerous_sources: [
-          "params", "request", "cookies", "session", "ENV",
-          "gets", "ARGV", "user_input", "form_data", "query_params"
+          "params",
+          "request",
+          "cookies",
+          "session",
+          "ENV",
+          "gets",
+          "ARGV",
+          "user_input",
+          "form_data",
+          "query_params"
         ],
         ldap_specific: %{
           safe_methods_preferred: true,

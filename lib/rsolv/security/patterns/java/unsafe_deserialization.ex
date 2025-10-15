@@ -1,46 +1,46 @@
 defmodule Rsolv.Security.Patterns.Java.UnsafeDeserialization do
   @moduledoc """
   Unsafe Deserialization pattern for Java code.
-  
+
   Detects the use of Java's ObjectInputStream.readObject() and related deserialization
   methods that can lead to remote code execution when processing untrusted data.
   Deserialization of untrusted data is one of the most critical vulnerabilities in Java.
-  
+
   ## Vulnerability Details
-  
+
   Java's native serialization mechanism allows arbitrary objects to be converted to
   byte streams and back. When deserializing untrusted data, attackers can craft
   malicious serialized objects that execute code during the deserialization process.
   This happens through "gadget chains" - sequences of existing classes that, when
   deserialized in a specific order, result in arbitrary code execution.
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable code
   ObjectInputStream ois = new ObjectInputStream(request.getInputStream());
   Object obj = ois.readObject(); // Arbitrary code execution here!
-  
+
   // Attacker sends a crafted serialized object containing a gadget chain
   // that executes system commands during deserialization
   ```
-  
+
   ### Real-World Impact
-  
+
   This vulnerability has been exploited in numerous high-profile breaches:
   - Equifax breach (CVE-2017-9805 in Apache Struts)
   - PayPal remote code execution
   - Jenkins, WebLogic, JBoss, and many other enterprise applications
-  
+
   ## References
-  
+
   - CWE-502: Deserialization of Untrusted Data
   - OWASP A08:2021 - Software and Data Integrity Failures
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -73,7 +73,8 @@ defmodule Rsolv.Security.Patterns.Java.UnsafeDeserialization do
       ],
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
-      recommendation: "Never deserialize untrusted data. Use JSON/XML with schema validation instead",
+      recommendation:
+        "Never deserialize untrusted data. Use JSON/XML with schema validation instead",
       test_cases: %{
         vulnerable: [
           ~S|ObjectInputStream ois = new ObjectInputStream(input);
@@ -92,7 +93,7 @@ ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;max
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -101,7 +102,7 @@ ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;max
       When Java deserializes an object, it can invoke methods during the deserialization process.
       Attackers exploit this by crafting malicious serialized objects containing "gadget chains" -
       sequences of method invocations on existing classes that ultimately lead to arbitrary code execution.
-      
+
       The vulnerability exists because ObjectInputStream.readObject() will deserialize any serializable
       class found in the classpath, and many common libraries contain classes that can be chained
       together to achieve code execution. Tools like ysoserial can automatically generate these
@@ -199,7 +200,7 @@ ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;max
       - XMLDecoder.readObject() for XML-based deserialization
       - Externalizable.readExternal() implementations
       - ObjectInput interface usage
-      
+
       False positives may occur in custom readObject() implementations that
       properly validate input, but these are rare and still risky.
       """,
@@ -237,23 +238,23 @@ ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;max
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between dangerous deserialization of untrusted
   data and potentially safe internal deserialization with proper validation.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.UnsafeDeserialization.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.UnsafeDeserialization.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.UnsafeDeserialization.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"
@@ -266,28 +267,52 @@ ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;max
         deserialization_analysis: %{
           check_method_name: true,
           unsafe_methods: [
-            "readObject", "readUnshared", "readExternal",
-            "defaultReadObject", "readResolve", "readObjectNoData"
+            "readObject",
+            "readUnshared",
+            "readExternal",
+            "defaultReadObject",
+            "readResolve",
+            "readObjectNoData"
           ],
           check_receiver_type: true,
           unsafe_types: [
-            "ObjectInputStream", "ObjectInput", "XMLDecoder",
-            "XStream", "Hessian", "Kryo", "FST"
+            "ObjectInputStream",
+            "ObjectInput",
+            "XMLDecoder",
+            "XStream",
+            "Hessian",
+            "Kryo",
+            "FST"
           ]
         },
         input_tracking: %{
           check_data_source: true,
           untrusted_sources: [
-            "request", "socket", "network", "user", "external",
-            "client", "remote", "upload", "input"
+            "request",
+            "socket",
+            "network",
+            "user",
+            "external",
+            "client",
+            "remote",
+            "upload",
+            "input"
           ],
           safe_sources: [
-            "resource", "classpath", "internal", "trusted",
-            "signed", "validated"
+            "resource",
+            "classpath",
+            "internal",
+            "trusted",
+            "signed",
+            "validated"
           ],
           stream_sources: [
-            "getInputStream", "getReader", "getParameter",
-            "getBody", "getData", "receive"
+            "getInputStream",
+            "getReader",
+            "getParameter",
+            "getBody",
+            "getData",
+            "receive"
           ]
         },
         class_loading: %{
@@ -306,7 +331,9 @@ ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;max
         ],
         check_input_filtering: true,
         filter_patterns: [
-          "ObjectInputFilter", "SerialFilter", "InputValidation"
+          "ObjectInputFilter",
+          "SerialFilter",
+          "InputValidation"
         ],
         safe_patterns: [
           "JSON deserialization only",

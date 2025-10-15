@@ -37,7 +37,8 @@ defmodule RsolvWeb.Validators.EmailValidatorTest do
     end
 
     test "returns error for missing @" do
-      assert {:error, "Email must contain @"} = EmailValidator.validate_with_feedback("userexample.com")
+      assert {:error, "Email must contain @"} =
+               EmailValidator.validate_with_feedback("userexample.com")
     end
 
     test "returns error for invalid format" do
@@ -45,33 +46,58 @@ defmodule RsolvWeb.Validators.EmailValidatorTest do
     end
 
     test "catches common TLD typos" do
-      assert {:error, "Did you mean .com?"} = EmailValidator.validate_with_feedback("user@example.con")
-      assert {:error, "Did you mean .com?"} = EmailValidator.validate_with_feedback("user@example.cmo")
-      assert {:error, "Did you mean .com?"} = EmailValidator.validate_with_feedback("user@example.xom")
-      assert {:error, "Did you mean .net?"} = EmailValidator.validate_with_feedback("user@example.ney")
-      assert {:error, "Did you mean .org?"} = EmailValidator.validate_with_feedback("user@example.ogr")
+      assert {:error, "Did you mean .com?"} =
+               EmailValidator.validate_with_feedback("user@example.con")
+
+      assert {:error, "Did you mean .com?"} =
+               EmailValidator.validate_with_feedback("user@example.cmo")
+
+      assert {:error, "Did you mean .com?"} =
+               EmailValidator.validate_with_feedback("user@example.xom")
+
+      assert {:error, "Did you mean .net?"} =
+               EmailValidator.validate_with_feedback("user@example.ney")
+
+      assert {:error, "Did you mean .org?"} =
+               EmailValidator.validate_with_feedback("user@example.ogr")
     end
 
     test "catches consecutive dots" do
-      assert {:error, "Email contains consecutive dots"} = EmailValidator.validate_with_feedback("user@example..com")
+      assert {:error, "Email contains consecutive dots"} =
+               EmailValidator.validate_with_feedback("user@example..com")
     end
 
     test "catches leading dot" do
-      assert {:error, "Email can't start with a dot"} = EmailValidator.validate_with_feedback(".user@example.com")
+      assert {:error, "Email can't start with a dot"} =
+               EmailValidator.validate_with_feedback(".user@example.com")
     end
 
     test "validates domain format" do
-      assert {:error, "Domain contains consecutive hyphens"} = EmailValidator.validate_with_feedback("user@ex--ample.com")
-      assert {:error, "Domain can't start with a hyphen"} = EmailValidator.validate_with_feedback("user@-example.com")
-      assert {:error, "Domain can't end with a hyphen"} = EmailValidator.validate_with_feedback("user@example-.com")
-      assert {:error, "Domain can't start with a dot"} = EmailValidator.validate_with_feedback("user@.example.com")
-      assert {:error, "Domain can't end with a dot"} = EmailValidator.validate_with_feedback("user@example.com.")
+      assert {:error, "Domain contains consecutive hyphens"} =
+               EmailValidator.validate_with_feedback("user@ex--ample.com")
+
+      assert {:error, "Domain can't start with a hyphen"} =
+               EmailValidator.validate_with_feedback("user@-example.com")
+
+      assert {:error, "Domain can't end with a hyphen"} =
+               EmailValidator.validate_with_feedback("user@example-.com")
+
+      assert {:error, "Domain can't start with a dot"} =
+               EmailValidator.validate_with_feedback("user@.example.com")
+
+      assert {:error, "Domain can't end with a dot"} =
+               EmailValidator.validate_with_feedback("user@example.com.")
     end
 
     test "validates TLD" do
-      assert {:error, "Domain must include a TLD (e.g., .com, .org)"} = EmailValidator.validate_with_feedback("user@example")
-      assert {:error, "TLD is too short"} = EmailValidator.validate_with_feedback("user@example.c")
-      assert {:error, "TLD should only contain letters"} = EmailValidator.validate_with_feedback("user@example.123")
+      assert {:error, "Domain must include a TLD (e.g., .com, .org)"} =
+               EmailValidator.validate_with_feedback("user@example")
+
+      assert {:error, "TLD is too short"} =
+               EmailValidator.validate_with_feedback("user@example.c")
+
+      assert {:error, "TLD should only contain letters"} =
+               EmailValidator.validate_with_feedback("user@example.123")
     end
   end
 

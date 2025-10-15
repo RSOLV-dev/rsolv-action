@@ -60,14 +60,16 @@ defmodule Rsolv.Feedback do
   """
   def export_to_csv do
     entries = list_entries()
-    
+
     header = "email,message,rating,tags,inserted_at\n"
-    
-    rows = Enum.map(entries, fn entry ->
-      tags = Enum.join(entry.tags || [], ";")
-      ~s("#{entry.email}","#{entry.message || ""}","#{entry.rating || ""}","#{tags}","#{entry.inserted_at}")
-    end)
-    
+
+    rows =
+      Enum.map(entries, fn entry ->
+        tags = Enum.join(entry.tags || [], ";")
+
+        ~s("#{entry.email}","#{entry.message || ""}","#{entry.rating || ""}","#{tags}","#{entry.inserted_at}")
+      end)
+
     header <> Enum.join(rows, "\n")
   end
 end

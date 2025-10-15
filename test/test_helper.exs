@@ -7,7 +7,7 @@ defmodule TestTracer do
   end
 
   def init(_) do
-    IO.puts "TestTracer: Starting at #{DateTime.utc_now()}"
+    IO.puts("TestTracer: Starting at #{DateTime.utc_now()}")
     Process.send_after(self(), :check_14s, 14_000)
     Process.send_after(self(), :check_15s, 15_000)
     Process.send_after(self(), :check_16s, 16_000)
@@ -15,17 +15,17 @@ defmodule TestTracer do
   end
 
   def handle_info(:check_14s, state) do
-    IO.puts "TestTracer: 14 seconds since ExUnit start"
+    IO.puts("TestTracer: 14 seconds since ExUnit start")
     {:noreply, state}
   end
 
   def handle_info(:check_15s, state) do
-    IO.puts "TestTracer: 15 seconds since ExUnit start - CRITICAL POINT"
+    IO.puts("TestTracer: 15 seconds since ExUnit start - CRITICAL POINT")
     {:noreply, state}
   end
 
   def handle_info(:check_16s, state) do
-    IO.puts "TestTracer: 16 seconds - SURVIVED!"
+    IO.puts("TestTracer: 16 seconds - SURVIVED!")
     {:noreply, state}
   end
 end
@@ -37,7 +37,8 @@ end
 
 # Wait for the repo to be ready
 max_retries = 30
-retry_delay = 100 # milliseconds
+# milliseconds
+retry_delay = 100
 
 # First, ensure the repo process is started
 case Process.whereis(Rsolv.Repo) do
@@ -48,12 +49,15 @@ case Process.whereis(Rsolv.Repo) do
         nil when attempt < max_retries ->
           Process.sleep(retry_delay)
           {:cont, nil}
+
         nil ->
           raise "Rsolv.Repo process never started after #{max_retries * retry_delay}ms"
+
         _pid ->
           {:halt, :ok}
       end
     end)
+
   _pid ->
     :ok
 end
@@ -65,12 +69,12 @@ Enum.reduce_while(1..max_retries, nil, fn attempt, _ ->
     Ecto.Adapters.SQL.query!(Rsolv.Repo, "SELECT 1", [])
     {:halt, :ok}
   rescue
-    _ ->
+    e ->
       if attempt < max_retries do
         Process.sleep(retry_delay)
         {:cont, nil}
       else
-        raise "Failed to connect to Rsolv.Repo after #{max_retries} attempts"
+        reraise "Failed to connect to Rsolv.Repo after #{max_retries} attempts", __STACKTRACE__
       end
   end
 end)
@@ -79,11 +83,12 @@ end)
 Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, :manual)
 
 # Exclude integration tests when using mock parsers
-exclude_tags = if Application.get_env(:rsolv, :use_mock_parsers, false) do
-  [:integration]
-else
-  []
-end
+exclude_tags =
+  if Application.get_env(:rsolv, :use_mock_parsers, false) do
+    [:integration]
+  else
+    []
+  end
 
 ExUnit.start(exclude: exclude_tags)
 

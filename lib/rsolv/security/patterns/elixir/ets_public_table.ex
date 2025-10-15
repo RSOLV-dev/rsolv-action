@@ -29,13 +29,13 @@ defmodule Rsolv.Security.Patterns.Elixir.EtsPublicTable do
   ```elixir
   # VULNERABLE - public access to sensitive session data
   :ets.new(:user_sessions, [:public, :named_table])
-  
+
   # VULNERABLE - authentication tokens accessible by any process
   :ets.new(:auth_tokens, [:public, :set])
-  
+
   # VULNERABLE - user data with unrestricted access
   :ets.new(:user_profiles, [:public, :bag, :named_table])
-  
+
   # VULNERABLE - API keys in public table
   :ets.new(:api_keys, [:public])
   ```
@@ -44,13 +44,13 @@ defmodule Rsolv.Security.Patterns.Elixir.EtsPublicTable do
   ```elixir
   # SAFE - protected access (default, owner can write, others can read)
   :ets.new(:cache, [:protected, :named_table])
-  
+
   # SAFE - private access (only owner can read/write)
   :ets.new(:sensitive_data, [:private])
-  
+
   # SAFE - protected with explicit access control
   :ets.new(:user_sessions, [:protected, :set, :named_table])
-  
+
   # SAFE - public only for truly public read-only data
   :ets.new(:public_config, [:public, :read_concurrency])  # With careful consideration
   ```
@@ -85,7 +85,8 @@ defmodule Rsolv.Security.Patterns.Elixir.EtsPublicTable do
     %Rsolv.Security.Pattern{
       id: "elixir-ets-public-table",
       name: "Public ETS Table Security Risk",
-      description: "ETS tables with public access can be read and modified by any process, exposing sensitive data",
+      description:
+        "ETS tables with public access can be read and modified by any process, exposing sensitive data",
       type: :authentication,
       severity: :medium,
       languages: ["elixir"],
@@ -93,27 +94,28 @@ defmodule Rsolv.Security.Patterns.Elixir.EtsPublicTable do
       regex: [
         # Basic public ETS table patterns
         ~r/:ets\.new\s*\([^,]+,\s*\[[^\]]*:public[^\]]*\]/,
-        
+
         # Public with specific table types
         ~r/:ets\.new\s*\([^,]+,\s*\[:public,\s*:set[^\]]*\]/,
         ~r/:ets\.new\s*\([^,]+,\s*\[:public,\s*:bag[^\]]*\]/,
         ~r/:ets\.new\s*\([^,]+,\s*\[:public,\s*:ordered_set[^\]]*\]/,
         ~r/:ets\.new\s*\([^,]+,\s*\[:public,\s*:duplicate_bag[^\]]*\]/,
-        
+
         # Public with named_table (globally accessible)
         ~r/:ets\.new\s*\([^,]+,\s*\[[^\]]*:public[^\]]*:named_table[^\]]*\]/,
         ~r/:ets\.new\s*\([^,]+,\s*\[[^\]]*:named_table[^\]]*:public[^\]]*\]/,
-        
+
         # Various option arrangements with public
         ~r/:ets\.new\s*\([^,]+,\s*\[:named_table,\s*:public[^\]]*\]/,
         ~r/:ets\.new\s*\([^,]+,\s*\[:public\s*\|\s*\w+\]/,
-        
+
         # Sensitive table names with public access
         ~r/:ets\.new\s*\(:[a-z_]*(?:session|auth|token|password|key|user|credential)[a-z_]*,\s*\[[^\]]*:public[^\]]*\]/i
       ],
       cwe_id: "CWE-732",
       owasp_category: "A01:2021",
-      recommendation: "Use :protected (default) or :private access for sensitive data. Reserve :public only for truly public read-only data.",
+      recommendation:
+        "Use :protected (default) or :private access for sensitive data. Reserve :public only for truly public read-only data.",
       test_cases: %{
         vulnerable: [
           ~S|:ets.new(:sessions, [:public, :named_table])|,
@@ -136,7 +138,7 @@ defmodule Rsolv.Security.Patterns.Elixir.EtsPublicTable do
     %{
       attack_vectors: """
       1. Data Theft: Unauthorized access to sensitive data in public ETS tables
-      2. Session Hijacking: Access to authentication tokens for user impersonation  
+      2. Session Hijacking: Access to authentication tokens for user impersonation
       3. Data Manipulation: Unauthorized modification of application state and user data
       4. Information Disclosure: Reading confidential business data or user credentials
       """,
@@ -156,7 +158,8 @@ defmodule Rsolv.Security.Patterns.Elixir.EtsPublicTable do
       - Data corruption from uncontrolled concurrent access
       - Potential escalation to more serious vulnerabilities
       """,
-      likelihood: "Medium: Common when developers don't understand ETS access control implications",
+      likelihood:
+        "Medium: Common when developers don't understand ETS access control implications",
       cve_examples: [
         "CWE-732: Incorrect Permission Assignment for Critical Resource",
         "OWASP Top 10 A01:2021 - Broken Access Control",
@@ -201,7 +204,7 @@ defmodule Rsolv.Security.Patterns.Elixir.EtsPublicTable do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
@@ -218,7 +221,7 @@ defmodule Rsolv.Security.Patterns.Elixir.EtsPublicTable do
           "token",
           "password",
           "key",
-          "user", 
+          "user",
           "credential",
           "api_key",
           "secret"

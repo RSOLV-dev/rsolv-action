@@ -1,21 +1,21 @@
 defmodule RsolvWeb.Plugs.DashboardAuthEnhanced do
   @moduledoc """
   Enhanced dashboard authentication that checks auth BEFORE feature flags.
-  
+
   This solves the chicken-and-egg problem where feature flags were checked
   before authentication, preventing admins from accessing the admin UI
   even with valid credentials.
   """
-  
+
   import Plug.Conn
   import Phoenix.Controller
   alias Rsolv.FeatureFlags
-  
+
   def init(opts), do: opts
-  
+
   def call(conn, opts) do
     feature = Keyword.get(opts, :require_feature)
-    
+
     # First, check authentication
     case authenticate(conn) do
       {:ok, user_email} ->
@@ -30,7 +30,7 @@ defmodule RsolvWeb.Plugs.DashboardAuthEnhanced do
           conn
           |> assign(:current_user_email, user_email)
         end
-        
+
       {:error, _reason} ->
         # Authentication failed
         conn
@@ -39,12 +39,12 @@ defmodule RsolvWeb.Plugs.DashboardAuthEnhanced do
         |> halt()
     end
   end
-  
+
   defp authenticate(conn) do
     username = Application.get_env(:rsolv, :admin_username, "admin")
     password = Application.get_env(:rsolv, :admin_password)
     admin_emails = Application.get_env(:rsolv, :admin_emails, ["admin@rsolv.dev"])
-    
+
     with ["Basic " <> encoded] <- get_req_header(conn, "authorization"),
          {:ok, decoded} <- Base.decode64(encoded),
          [provided_username, provided_password] <- String.split(decoded, ":", parts: 2),

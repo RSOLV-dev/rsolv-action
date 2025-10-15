@@ -1,94 +1,108 @@
 defmodule Rsolv.Security.Patterns.Ruby.DebugModeEnabled do
   @moduledoc """
   Pattern for detecting debug mode enabled in Ruby applications.
-  
-  This pattern identifies when debugging code or debugging libraries are left 
-  enabled in production Ruby applications, which can lead to information 
+
+  This pattern identifies when debugging code or debugging libraries are left
+  enabled in production Ruby applications, which can lead to information
   disclosure, remote code execution, and security bypasses.
-  
+
   ## Vulnerability Details
-  
+
   Debug mode enabled vulnerabilities occur when development debugging tools,
   breakpoints, or verbose logging are left active in production environments.
   These tools can expose sensitive information, provide unauthorized access
   to application internals, or even enable remote code execution.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable Rails application with debug code
   class UsersController < ApplicationController
     def show
       user = User.find(params[:id])
-      
+
       # VULNERABLE: Pry breakpoint left in production
       binding.pry if Rails.env.production?
-      
+
       # VULNERABLE: Sensitive data logged in debug mode
       Rails.logger.debug "User password hash: \#{user.password_digest}"
       Rails.logger.debug "API keys: \#{user.api_keys.pluck(:key)}"
-      
+
       # VULNERABLE: Capybara debugging helpers
       save_and_open_page if Rails.env.development?
-      
+
       render json: user
     end
   end
-  
+
   # Attack scenarios:
   # 1. Attacker triggers pry breakpoint, gains REPL access to production
   # 2. Debug logs leak passwords, API keys, session tokens
   # 3. Capybara saves sensitive page content to public directories
   ```
-  
+
   **Real-world Impact:**
   CVE-2019-5420 demonstrated how Rails development mode with debug enabled
   could lead to remote code execution through secret_key_base exposure.
-  
+
   **Safe Alternative:**
   ```ruby
   # SECURE: No debug code in production
-  class UsersController < ApplicationController 
+  class UsersController < ApplicationController
     def show
       user = User.find(params[:id])
-      
+
       # SECURE: Proper logging without sensitive data
       Rails.logger.info "User \#{user.id} accessed profile"
-      
+
       render json: user.as_json(except: [:password_digest])
     end
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "ruby-debug-mode",
       name: "Debug Mode Enabled",
-      description: "Detects debugging code that might leak information or provide unauthorized access",
+      description:
+        "Detects debugging code that might leak information or provide unauthorized access",
       type: :information_disclosure,
       severity: :medium,
       languages: ["ruby"],
       regex: [
-        ~r/require\s+['\"]pry['\"]/,           # require 'pry'
-        ~r/binding\.pry/,                     # binding.pry breakpoints
-        ~r/\bpry\b/,                          # pry calls
-        ~r/\bbyebug\b/,                       # byebug debugger
-        ~r/\bdebugger\b/,                     # debugger statements
-        ~r/save_and_open_page/,               # Capybara debugging
-        ~r/save_and_open_screenshot/,         # Capybara screenshot debug
-        ~r/\bsave_page\b/,                    # Capybara save_page
-        ~r/\bsave_screenshot\b/,              # Capybara save_screenshot
-        ~r/Rails\.logger\.debug.*?(password|secret|key|token|credential)/i,  # Sensitive debug logs
-        ~r/logger\.(?:debug|info|warn).*?(password|secret|key|token|credential|credit|card|cc_)/i,  # Other logger sensitive logs
-        ~r/puts.*?(password|secret|key|token|credential)/i  # Print statements with sensitive data
+        # require 'pry'
+        ~r/require\s+['\"]pry['\"]/,
+        # binding.pry breakpoints
+        ~r/binding\.pry/,
+        # pry calls
+        ~r/\bpry\b/,
+        # byebug debugger
+        ~r/\bbyebug\b/,
+        # debugger statements
+        ~r/\bdebugger\b/,
+        # Capybara debugging
+        ~r/save_and_open_page/,
+        # Capybara screenshot debug
+        ~r/save_and_open_screenshot/,
+        # Capybara save_page
+        ~r/\bsave_page\b/,
+        # Capybara save_screenshot
+        ~r/\bsave_screenshot\b/,
+        # Sensitive debug logs
+        ~r/Rails\.logger\.debug.*?(password|secret|key|token|credential)/i,
+        # Other logger sensitive logs
+        ~r/logger\.(?:debug|info|warn).*?(password|secret|key|token|credential|credit|card|cc_)/i,
+        # Print statements with sensitive data
+        ~r/puts.*?(password|secret|key|token|credential)/i
       ],
       cwe_id: "CWE-489",
       owasp_category: "A05:2021",
-      recommendation: "Remove all debugging code, breakpoints, and sensitive logging before deploying to production",
+      recommendation:
+        "Remove all debugging code, breakpoints, and sensitive logging before deploying to production",
       test_cases: %{
         vulnerable: [
           ~S|require 'pry'|,
@@ -108,7 +122,7 @@ defmodule Rsolv.Security.Patterns.Ruby.DebugModeEnabled do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -117,7 +131,7 @@ defmodule Rsolv.Security.Patterns.Ruby.DebugModeEnabled do
       development debugging tools, breakpoints, verbose logging, or testing utilities
       are left active in production environments. This can lead to sensitive information
       exposure, unauthorized access to application internals, or remote code execution.
-      
+
       **How Debug Mode Vulnerabilities Work:**
       Ruby applications commonly use debugging gems like Pry, Byebug, or built-in
       debugger statements during development. When these tools remain active in
@@ -126,14 +140,14 @@ defmodule Rsolv.Security.Patterns.Ruby.DebugModeEnabled do
       - Log sensitive information like passwords, API keys, and session tokens
       - Save debugging artifacts (screenshots, page dumps) containing sensitive data
       - Provide REPL access to attackers who can trigger breakpoints
-      
+
       **Ruby-Specific Debug Tools:**
       - **Pry**: Interactive Ruby debugger with REPL capabilities
       - **Byebug**: Step-through debugger for Ruby 2.x and 3.x
       - **Debugger**: Built-in Ruby debugging functionality
       - **Capybara**: Testing framework with debugging helpers like save_and_open_page
       - **Rails.logger**: Framework logging that can leak sensitive data
-      
+
       **Critical Security Impact:**
       Debug mode vulnerabilities are particularly dangerous because they can:
       - **Remote Code Execution**: Interactive debuggers provide shell access
@@ -141,13 +155,13 @@ defmodule Rsolv.Security.Patterns.Ruby.DebugModeEnabled do
       - **Session Hijacking**: Debug output may expose session identifiers
       - **Business Logic Exposure**: Application internals revealed through debugging
       - **Compliance Violations**: Sensitive data logged in plain text
-      
+
       **Rails-Specific Vulnerabilities:**
       The Accorian security research and CVE-2019-5420 demonstrate how Rails
       development mode with debugging enabled can lead to remote code execution.
       The Rails console and debugging tools provide full application access,
       making these vulnerabilities extremely severe.
-      
+
       **Common Attack Scenarios:**
       - Triggering pry breakpoints to gain interactive access to production systems
       - Harvesting credentials from debug logs written to files or stdout
@@ -177,7 +191,8 @@ defmodule Rsolv.Security.Patterns.Ruby.DebugModeEnabled do
           type: :research,
           id: "accorian_rails_rce",
           title: "Debugging Misconfiguration: Ruby on Rails Remote Code Execution",
-          url: "https://medium.com/@accorian/debugging-misconfiguration-ruby-on-rails-remote-code-execution-e15d9c34ef0a"
+          url:
+            "https://medium.com/@accorian/debugging-misconfiguration-ruby-on-rails-remote-code-execution-e15d9c34ef0a"
         },
         %{
           type: :research,
@@ -248,27 +263,27 @@ defmodule Rsolv.Security.Patterns.Ruby.DebugModeEnabled do
       detection_notes: """
       This pattern detects debug mode vulnerabilities by identifying Ruby debugging
       tools, breakpoints, and sensitive information logging:
-      
+
       **Primary Detection Points:**
       - Pry debugging: require 'pry', binding.pry statements
-      - Byebug debugging: byebug statements and require statements  
+      - Byebug debugging: byebug statements and require statements
       - Debugger statements: Ruby's built-in debugger calls
       - Capybara helpers: save_and_open_page, save_and_open_screenshot
       - Sensitive logging: Rails.logger or other loggers with sensitive data
-      
+
       **Ruby-Specific Patterns:**
       - Pry breakpoints: Most common Ruby debugging tool
       - Byebug statements: Step-through debugging
       - Rails.logger.debug: Framework-specific logging
       - Capybara testing helpers: Integration test debugging tools
       - puts statements: Simple print debugging with sensitive data
-      
+
       **False Positive Considerations:**
       - Commented out debug statements (should be excluded)
       - Debug statements in test files (lower severity)
       - Non-sensitive debug logging (request IDs, timestamps)
       - Method names containing "debug" (false positives)
-      
+
       **Detection Enhancements:**
       The AST enhancement provides context-aware analysis:
       - Environment detection (production vs development context)
@@ -332,19 +347,19 @@ defmodule Rsolv.Security.Patterns.Ruby.DebugModeEnabled do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual security issues and
   acceptable debug patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.DebugModeEnabled.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.DebugModeEnabled.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -354,15 +369,29 @@ defmodule Rsolv.Security.Patterns.Ruby.DebugModeEnabled do
     %{
       ast_rules: %{
         node_type: "CallExpression",
-        method_names: ["pry", "byebug", "debugger", "save_and_open_page", "save_and_open_screenshot"],
+        method_names: [
+          "pry",
+          "byebug",
+          "debugger",
+          "save_and_open_page",
+          "save_and_open_screenshot"
+        ],
         require_names: ["pry", "byebug", "debugger"],
         logging_analysis: %{
           check_logger_calls: true,
           logger_methods: ["debug", "info", "warn", "error"],
           logger_objects: ["Rails.logger", "logger", "Logger"],
           sensitive_data_patterns: [
-            "password", "secret", "key", "token", "credential",
-            "auth", "session", "cookie", "api_key", "access_token"
+            "password",
+            "secret",
+            "key",
+            "token",
+            "credential",
+            "auth",
+            "session",
+            "cookie",
+            "api_key",
+            "access_token"
           ]
         },
         statement_analysis: %{

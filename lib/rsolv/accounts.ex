@@ -1,7 +1,7 @@
 defmodule Rsolv.Accounts do
   @moduledoc """
   The Accounts context.
-  
+
   This module serves as a compatibility layer, delegating to the new Customers context.
   All User-based functionality has been removed as part of RFC-049.
   """

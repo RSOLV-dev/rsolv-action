@@ -30,12 +30,19 @@ defmodule Mix.Tasks.Dev.EnvSetup do
     {opts, _, _} = OptionParser.parse(args, switches: [force: :boolean])
     force = Keyword.get(opts, :force, false)
 
-    IO.puts("\n🔧 " <> IO.ANSI.bright() <> "RSOLV Environment Setup Wizard" <> IO.ANSI.reset() <> "\n")
+    IO.puts(
+      "\n🔧 " <> IO.ANSI.bright() <> "RSOLV Environment Setup Wizard" <> IO.ANSI.reset() <> "\n"
+    )
 
     cond do
       File.exists?(@env_file) and not force ->
         IO.puts("✅ Found existing .env file")
-        IO.puts("\n💡 Run with --force to overwrite: " <> IO.ANSI.cyan() <> "mix dev.env.setup --force" <> IO.ANSI.reset())
+
+        IO.puts(
+          "\n💡 Run with --force to overwrite: " <>
+            IO.ANSI.cyan() <> "mix dev.env.setup --force" <> IO.ANSI.reset()
+        )
+
         IO.puts("   Or edit .env manually\n")
 
       not File.exists?(@env_example) ->
@@ -91,23 +98,26 @@ defmodule Mix.Tasks.Dev.EnvSetup do
 
     case prompt_yes_no("Would you like to configure AI providers now?", true) do
       true ->
-        anthropic_configured = prompt_for_api_key(
-          "Anthropic",
-          "ANTHROPIC_API_KEY",
-          "https://console.anthropic.com/"
-        )
+        anthropic_configured =
+          prompt_for_api_key(
+            "Anthropic",
+            "ANTHROPIC_API_KEY",
+            "https://console.anthropic.com/"
+          )
 
-        openai_configured = prompt_for_api_key(
-          "OpenAI",
-          "OPENAI_API_KEY",
-          "https://platform.openai.com/api-keys"
-        )
+        openai_configured =
+          prompt_for_api_key(
+            "OpenAI",
+            "OPENAI_API_KEY",
+            "https://platform.openai.com/api-keys"
+          )
 
-        openrouter_configured = prompt_for_api_key(
-          "OpenRouter",
-          "OPENROUTER_API_KEY",
-          "https://openrouter.ai/keys"
-        )
+        openrouter_configured =
+          prompt_for_api_key(
+            "OpenRouter",
+            "OPENROUTER_API_KEY",
+            "https://openrouter.ai/keys"
+          )
 
         IO.puts("")
         anthropic_configured or openai_configured or openrouter_configured
@@ -125,6 +135,7 @@ defmodule Mix.Tasks.Dev.EnvSetup do
     case IO.gets("   Enter API key (or press Enter to skip): ") do
       key when is_binary(key) ->
         key = String.trim(key)
+
         if key == "" do
           IO.puts("   ⏭️  Skipping #{provider_name}")
           false
@@ -221,16 +232,23 @@ defmodule Mix.Tasks.Dev.EnvSetup do
       choice when is_binary(choice) ->
         choice = String.trim(choice)
 
-        new_url = case choice do
-          "1" -> "postgresql://postgres:postgres@localhost/rsolv_dev"
-          "2" -> "postgresql://localhost/rsolv_dev"
-          "3" ->
-            case IO.gets("   Enter database URL: ") do
-              url when is_binary(url) -> String.trim(url)
-              _ -> nil
-            end
-          _ -> nil
-        end
+        new_url =
+          case choice do
+            "1" ->
+              "postgresql://postgres:postgres@localhost/rsolv_dev"
+
+            "2" ->
+              "postgresql://localhost/rsolv_dev"
+
+            "3" ->
+              case IO.gets("   Enter database URL: ") do
+                url when is_binary(url) -> String.trim(url)
+                _ -> nil
+              end
+
+            _ ->
+              nil
+          end
 
         if new_url do
           update_env_value("DATABASE_URL", new_url)
@@ -268,11 +286,12 @@ defmodule Mix.Tasks.Dev.EnvSetup do
     escaped_key = Regex.escape(key)
 
     # Replace the value for this key
-    new_content = Regex.replace(
-      ~r/^#{escaped_key}=.*$/m,
-      content,
-      "#{key}=#{value}"
-    )
+    new_content =
+      Regex.replace(
+        ~r/^#{escaped_key}=.*$/m,
+        content,
+        "#{key}=#{value}"
+      )
 
     File.write!(@env_file, new_content)
   end
@@ -297,23 +316,53 @@ defmodule Mix.Tasks.Dev.EnvSetup do
   end
 
   defp display_summary(ai_configured, db_valid, email_configured) do
-    IO.puts("\n" <> IO.ANSI.bright() <> "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" <> IO.ANSI.reset())
+    IO.puts(
+      "\n" <> IO.ANSI.bright() <> "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" <> IO.ANSI.reset()
+    )
+
     IO.puts(IO.ANSI.green() <> IO.ANSI.bright() <> "✅ Environment configured!" <> IO.ANSI.reset())
-    IO.puts(IO.ANSI.bright() <> "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" <> IO.ANSI.reset() <> "\n")
+
+    IO.puts(
+      IO.ANSI.bright() <> "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" <> IO.ANSI.reset() <> "\n"
+    )
 
     IO.puts("Configuration Status:")
     IO.puts("  🔒 Required variables:  " <> status_icon(true) <> " Configured")
-    IO.puts("  🗄️  Database:           " <> status_icon(db_valid) <> if db_valid, do: " Connected", else: " Not tested")
-    IO.puts("  🤖 AI providers:        " <> status_icon(ai_configured) <> if ai_configured, do: " Configured", else: " Not configured")
-    IO.puts("  📧 Email (Postmark):    " <> status_icon(email_configured) <> if email_configured, do: " Configured", else: " Not configured (optional)")
+
+    IO.puts(
+      "  🗄️  Database:           " <>
+        status_icon(db_valid) <> if(db_valid, do: " Connected", else: " Not tested")
+    )
+
+    IO.puts(
+      "  🤖 AI providers:        " <>
+        status_icon(ai_configured) <>
+        if(ai_configured, do: " Configured", else: " Not configured")
+    )
+
+    IO.puts(
+      "  📧 Email (Postmark):    " <>
+        status_icon(email_configured) <>
+        if(email_configured, do: " Configured", else: " Not configured (optional)")
+    )
 
     IO.puts("\n" <> IO.ANSI.bright() <> "Next Steps:" <> IO.ANSI.reset())
     IO.puts("  1. Review and edit .env if needed")
-    IO.puts("  2. Run: " <> IO.ANSI.cyan() <> "mix setup" <> IO.ANSI.reset() <> " to complete project setup")
+
+    IO.puts(
+      "  2. Run: " <>
+        IO.ANSI.cyan() <> "mix setup" <> IO.ANSI.reset() <> " to complete project setup"
+    )
+
     IO.puts("  3. Start the server: " <> IO.ANSI.cyan() <> "mix phx.server" <> IO.ANSI.reset())
 
     unless ai_configured do
-      IO.puts("\n" <> IO.ANSI.yellow() <> "⚠️  Note: AI features require at least one provider API key" <> IO.ANSI.reset())
+      IO.puts(
+        "\n" <>
+          IO.ANSI.yellow() <>
+          "⚠️  Note: AI features require at least one provider API key" <> IO.ANSI.reset()
+      )
+
       IO.puts("   Add keys to .env to enable full functionality")
     end
 

@@ -1,29 +1,37 @@
 defmodule Rsolv.Phase4DeploymentTest do
   use ExUnit.Case
-  
-  @moduletag :skip  # Skip deployment tests - require kubectl and staging environment
-  
+
+  # Skip deployment tests - require kubectl and staging environment
+  @moduletag :skip
+
   @moduledoc """
   Phase 4 deployment tests to verify staging deployment and end-to-end functionality.
   These tests define the expected behavior after deploying to staging environment.
   """
-  
+
   describe "staging deployment validation" do
     @tag :staging_deployment
     test "unified Kubernetes manifests are valid" do
       # Test that the unified K8s manifests can be validated
-      {result, exit_code} = System.cmd("kubectl", ["apply", "--dry-run=client", "-k", "RSOLV-infrastructure/services/unified/overlays/staging/"])
+      {result, exit_code} =
+        System.cmd("kubectl", [
+          "apply",
+          "--dry-run=client",
+          "-k",
+          "RSOLV-infrastructure/services/unified/overlays/staging/"
+        ])
+
       assert exit_code == 0, "Kubernetes manifests should be valid: #{result}"
     end
-    
-    @tag :staging_deployment 
+
+    @tag :staging_deployment
     test "staging environment health checks pass" do
       # This test will verify staging deployment after it's deployed
       # Skip for now until staging is deployed
       :skip
     end
   end
-  
+
   describe "web interface integration testing" do
     @tag :web_integration
     test "landing page loads correctly" do
@@ -31,15 +39,15 @@ defmodule Rsolv.Phase4DeploymentTest do
       # Skip for now until staging is deployed
       :skip
     end
-    
-    @tag :web_integration  
+
+    @tag :web_integration
     test "user registration and customer creation flow works" do
       # This will test the complete user journey
       # Skip for now until staging is deployed
       :skip
     end
   end
-  
+
   describe "API integration testing" do
     @tag :api_integration
     test "pattern API endpoints respond correctly" do
@@ -47,14 +55,14 @@ defmodule Rsolv.Phase4DeploymentTest do
       # Skip for now until staging is deployed
       :skip
     end
-    
+
     @tag :api_integration
     test "credential vending API works" do
       # This will test credential vending functionality
-      # Skip for now until staging is deployed  
+      # Skip for now until staging is deployed
       :skip
     end
-    
+
     @tag :api_integration
     test "GitHub webhook integration works" do
       # This will test webhook functionality
@@ -62,7 +70,7 @@ defmodule Rsolv.Phase4DeploymentTest do
       :skip
     end
   end
-  
+
   describe "end-to-end customer journey" do
     @tag :e2e_validation
     test "complete customer flow works end-to-end" do

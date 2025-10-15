@@ -1,21 +1,21 @@
 defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
   @moduledoc """
   Rails Insecure Session Data Storage Pattern.
-  
+
   Detects storage of sensitive information in Rails session cookies, which can lead
   to data exposure, compliance violations, and security breaches.
-  
+
   ## Vulnerability Details
-  
+
   Rails sessions are typically stored in cookies (CookieStore) which, while encrypted,
   are transmitted with every request and stored on the client side. Storing sensitive
   data in sessions creates several risks:
-  
+
   1. **Data Exposure**: Session cookies can be intercepted or leaked
   2. **Compliance Violations**: Violates PCI DSS, GDPR, HIPAA requirements
   3. **Client-Side Storage**: Sensitive data leaves server control
   4. **Session Replay**: Old session cookies may contain outdated sensitive data
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable: Storing sensitive data in session
@@ -28,9 +28,9 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
     end
   end
   ```
-  
+
   ### Safe Example
-  ```ruby  
+  ```ruby
   # Safe: Only store non-sensitive identifiers
   def login
     if user.authenticate(params[:password])
@@ -41,9 +41,9 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   def pattern do
     %Rsolv.Security.Pattern{
       id: "rails-insecure-session-data",
@@ -61,7 +61,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
         ~r/^(?!.*#).*session\[:user_password\]/,
         ~r/^(?!.*#).*session\[:admin_password\]/,
         ~r/^(?!.*#).*session\[:current_password\]/,
-        
+
         # Financial information (exclude commented lines)
         ~r/^(?!.*#).*session\[:credit_card\]/,
         ~r/^(?!.*#).*session\['credit_card'\]/,
@@ -75,7 +75,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
         ~r/^(?!.*#).*session\[:iban\]/,
         ~r/^(?!.*#).*session\[:financial_data\]/,
         ~r/^(?!.*#).*session\[:balance\]/,
-        
+
         # Personal identifiers (exclude commented lines)
         ~r/^(?!.*#).*session\[:ssn\]/,
         ~r/^(?!.*#).*session\['ssn'\]/,
@@ -83,7 +83,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
         ~r/^(?!.*#).*session\[:social_security\]/,
         ~r/^(?!.*#).*session\[:tax_id\]/,
         ~r/^(?!.*#).*session\[:national_id\]/,
-        
+
         # API keys and tokens (exclude commented lines)
         ~r/^(?!.*#).*session\[:api_key\]/,
         ~r/^(?!.*#).*session\['api_key'\]/,
@@ -91,7 +91,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
         ~r/^(?!.*#).*session\[:secret_token\]/,
         ~r/^(?!.*#).*session\[:auth_token\]/,
         ~r/^(?!.*#).*session\[:access_token\]/,
-        
+
         # Private keys and certificates (exclude commented lines)
         ~r/^(?!.*#).*session\[:private_key\]/,
         ~r/^(?!.*#).*session\['private_key'\]/,
@@ -99,7 +99,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
         ~r/^(?!.*#).*session\[:ssl_key\]/,
         ~r/^(?!.*#).*session\[:encryption_key\]/,
         ~r/^(?!.*#).*session\[:cert_key\]/,
-        
+
         # Medical and health information (exclude commented lines)
         ~r/^(?!.*#).*session\[:medical_record\]/,
         ~r/^(?!.*#).*session\[:health_info\]/,
@@ -110,7 +110,8 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
       ],
       cwe_id: "CWE-200",
       owasp_category: "A02:2021",
-      recommendation: "Store only non-sensitive identifiers in Rails sessions. Keep sensitive data in secure server-side storage, not Rails session cookies.",
+      recommendation:
+        "Store only non-sensitive identifiers in Rails sessions. Keep sensitive data in secure server-side storage, not Rails session cookies.",
       test_cases: %{
         vulnerable: [
           "session[:password] = params[:password]",
@@ -127,15 +128,15 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
       }
     }
   end
-  
+
   def vulnerability_metadata do
     %{
       description: """
-      Insecure Session Data Storage in Rails applications occurs when sensitive 
-      information such as passwords, credit card numbers, SSNs, API keys, or 
-      private keys are stored in Rails session cookies. Even though Rails 
-      encrypts session cookies, storing sensitive data in sessions violates 
-      security best practices and compliance requirements, creating multiple 
+      Insecure Session Data Storage in Rails applications occurs when sensitive
+      information such as passwords, credit card numbers, SSNs, API keys, or
+      private keys are stored in Rails session cookies. Even though Rails
+      encrypts session cookies, storing sensitive data in sessions violates
+      security best practices and compliance requirements, creating multiple
       attack vectors and regulatory violations.
       """,
       attack_vectors: """
@@ -163,7 +164,8 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
       - Potential for credential stuffing and account takeover
       - Violation of data minimization and privacy principles
       """,
-      likelihood: "High - Storing sensitive data in sessions is a common mistake in Rails applications, especially in custom authentication implementations",
+      likelihood:
+        "High - Storing sensitive data in sessions is a common mistake in Rails applications, especially in custom authentication implementations",
       cve_examples: """
       CVE-2024-26144 - Rails Active Storage sensitive session information leak
       CVE-2022-23633 - Rails information exposure vulnerability in Action Pack
@@ -213,16 +215,16 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
             reset_session  # Prevent session fixation
             session[:user_id] = user.id  # Safe - just an ID
             session[:role] = user.role   # Safe - not sensitive
-            
+
             # Store sensitive data server-side with session reference
             Rails.cache.write("user_session_\#{session.id}", {
               encrypted_data: user.sensitive_data.encrypt
             }, expires_in: 30.minutes)
-            
+
             redirect_to dashboard_path
           end
         end
-      
+
       # Retrieve sensitive data when needed
       def get_user_sensitive_data
         session_data = Rails.cache.read("user_session_\#{session.id}")
@@ -231,40 +233,67 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
       """
     }
   end
-  
+
   def ast_enhancement do
     %{
       min_confidence: 0.8,
-      
       context_rules: %{
         # Patterns that indicate sensitive data
         sensitive_data_patterns: [
-          ~r/password/i, ~r/credit_card/i, ~r/ssn/i, ~r/social_security/i,
-          ~r/api_key/i, ~r/secret_token/i, ~r/private_key/i, ~r/bank_account/i,
-          ~r/medical/i, ~r/health/i, ~r/diagnosis/i, ~r/financial/i
+          ~r/password/i,
+          ~r/credit_card/i,
+          ~r/ssn/i,
+          ~r/social_security/i,
+          ~r/api_key/i,
+          ~r/secret_token/i,
+          ~r/private_key/i,
+          ~r/bank_account/i,
+          ~r/medical/i,
+          ~r/health/i,
+          ~r/diagnosis/i,
+          ~r/financial/i
         ],
-        
+
         # Session fields that are typically safe
         safe_session_fields: [
-          "user_id", "username", "role", "permissions", "locale", "timezone",
-          "theme", "preferences", "last_login", "visited_pages", "cart_id",
-          "current_page", "referrer", "flash_messages"
+          "user_id",
+          "username",
+          "role",
+          "permissions",
+          "locale",
+          "timezone",
+          "theme",
+          "preferences",
+          "last_login",
+          "visited_pages",
+          "cart_id",
+          "current_page",
+          "referrer",
+          "flash_messages"
         ],
-        
+
         # Context patterns that reduce false positives
         safe_patterns: [
-          ~r/session\[:user_id\]/,                    # User ID is safe
-          ~r/session\[:role\]/,                       # User role is safe
-          ~r/session\[:preferences\]/,                # User preferences
-          ~r/session\[:theme\]/,                      # UI theme
-          ~r/session\[:locale\]/,                     # Language setting
-          ~r/session\[:timezone\]/,                   # Timezone setting
-          ~r/#.*session\[:/,                          # Commented code
-          ~r/flash\[:/,                               # Flash messages
-          ~r/cookies\[:/                              # Cookies, not sessions
+          # User ID is safe
+          ~r/session\[:user_id\]/,
+          # User role is safe
+          ~r/session\[:role\]/,
+          # User preferences
+          ~r/session\[:preferences\]/,
+          # UI theme
+          ~r/session\[:theme\]/,
+          # Language setting
+          ~r/session\[:locale\]/,
+          # Timezone setting
+          ~r/session\[:timezone\]/,
+          # Commented code
+          ~r/#.*session\[:/,
+          # Flash messages
+          ~r/flash\[:/,
+          # Cookies, not sessions
+          ~r/cookies\[:/
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence indicators
@@ -272,20 +301,19 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
           multiple_sensitive_fields: +0.3,
           financial_data_pattern: +0.5,
           authentication_data_pattern: +0.5,
-          
+
           # Lower confidence adjustments
           safe_session_field: -0.6,
           commented_code: -1.0,
           test_file_context: -0.7,
           configuration_context: -0.5,
-          
+
           # Context-based adjustments
           in_authentication_controller: +0.2,
           in_payment_controller: +0.4,
           in_admin_controller: +0.3
         }
       },
-      
       ast_rules: %{
         # Session usage analysis
         session_analysis: %{
@@ -294,7 +322,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
           validate_data_classification: true,
           check_compliance_requirements: true
         },
-        
+
         # Data sensitivity analysis
         data_sensitivity: %{
           check_pii_patterns: true,
@@ -305,6 +333,4 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
       }
     }
   end
-  
 end
-

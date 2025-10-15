@@ -1,47 +1,47 @@
 defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
   @moduledoc """
   Cross-Site Scripting (XSS) via React dangerouslySetInnerHTML
-  
+
   Detects dangerous patterns like:
     <div dangerouslySetInnerHTML={{__html: userInput}} />
     <span dangerouslySetInnerHTML={{__html: req.body.content}} />
     React.createElement('div', {dangerouslySetInnerHTML: {__html: params.html}})
-    
+
   Safe alternatives:
     <div>{userInput}</div>
     <div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(userInput)}} />
     <div dangerouslySetInnerHTML={{__html: sanitizeHtml(content)}} />
-    
+
   React's dangerouslySetInnerHTML is explicitly named to warn developers about the
   XSS risk. It's React's equivalent to using innerHTML directly and bypasses React's
   built-in XSS protection. When used with untrusted user input, it creates severe
   XSS vulnerabilities that can compromise user sessions and data.
-  
+
   ## Vulnerability Details
-  
+
   React normally escapes all values before rendering them to the DOM, providing
   automatic XSS protection. The dangerouslySetInnerHTML prop intentionally bypasses
   this protection to allow raw HTML insertion. This is necessary for certain use
   cases (like rendering markdown or rich text editor content), but creates severe
   security risks when used with untrusted input.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Direct user input to dangerouslySetInnerHTML
   function Comment({content}) {
     return <div dangerouslySetInnerHTML={{__html: content}} />;
   }
-  
+
   // Attack: content = "<img src=x onerror='alert(document.cookie)'>"
   // Result: Script executes and can steal session cookies
-  
+
   // Also vulnerable: Server-side rendered content
   const Page = () => (
     <div dangerouslySetInnerHTML={{__html: window.__INITIAL_STATE__.html}} />
   );
   // If __INITIAL_STATE__ contains user input, XSS is possible
   ```
-  
+
   ### React-Specific Risks
   React's popularity and the explicit nature of dangerouslySetInnerHTML create
   unique risks. Developers know they're doing something "dangerous" but often
@@ -53,50 +53,50 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
   - Legacy HTML content migration
   Each use case requires careful sanitization to prevent XSS.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the XSS React dangerouslySetInnerHTML detection pattern.
-  
+
   This pattern detects usage of React's dangerouslySetInnerHTML prop with
   user-controlled input, which can lead to XSS vulnerabilities.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> pattern.id
       "js-xss-react-dangerously"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> pattern.cwe_id
       "CWE-79"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> vulnerable = ~S|<div dangerouslySetInnerHTML={{__html: userInput}} />|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> safe = ~S|<div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(userInput)}} />|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> safe = ~S|<div>{userInput}</div>|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> vulnerable = ~S|React.createElement('div', {dangerouslySetInnerHTML: {__html: input}})|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> pattern.recommendation
       "Avoid dangerouslySetInnerHTML. Use React's default escaping or sanitize with DOMPurify."
@@ -105,7 +105,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
     %Pattern{
       id: "js-xss-react-dangerously",
       name: "XSS via React dangerouslySetInnerHTML",
-      description: "React's dangerouslySetInnerHTML with user input can execute malicious scripts",
+      description:
+        "React's dangerouslySetInnerHTML with user input can execute malicious scripts",
       type: :xss,
       severity: :high,
       languages: ["javascript", "typescript", "jsx", "tsx"],
@@ -113,10 +114,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
       # Note: AST enhancement is used to filter out false positives from sanitized content
       # Match dangerouslySetInnerHTML with common user input patterns
       # Note: This regex is intentionally broad - AST enhancement filters false positives
-      regex: ~r/^(?!.*\/\/).*dangerouslySetInnerHTML\s*[=:]\s*\{\s*\{?\s*__html\s*:\s*(?!(?:DOMPurify\.sanitize|sanitizeHtml|escapeHtml|purify)\s*\(|["'][^"']*["']\s*\}\}|(?:SAFE_|STATIC_))(?:.*\+.*[a-zA-Z_$][\w.$]*|`[^`]*\$\{|[a-zA-Z_$][\w.$]*)/im,
+      regex:
+        ~r/^(?!.*\/\/).*dangerouslySetInnerHTML\s*[=:]\s*\{\s*\{?\s*__html\s*:\s*(?!(?:DOMPurify\.sanitize|sanitizeHtml|escapeHtml|purify)\s*\(|["'][^"']*["']\s*\}\}|(?:SAFE_|STATIC_))(?:.*\+.*[a-zA-Z_$][\w.$]*|`[^`]*\$\{|[a-zA-Z_$][\w.$]*)/im,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
-      recommendation: "Avoid dangerouslySetInnerHTML. Use React's default escaping or sanitize with DOMPurify.",
+      recommendation:
+        "Avoid dangerouslySetInnerHTML. Use React's default escaping or sanitize with DOMPurify.",
       test_cases: %{
         vulnerable: [
           ~S|<div dangerouslySetInnerHTML={{__html: userInput}} />|,
@@ -135,10 +138,10 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for React dangerouslySetInnerHTML XSS.
-  
+
   This metadata documents the security implications of using React's
   dangerouslySetInnerHTML prop with untrusted input and provides guidance
   for secure HTML rendering in React applications.
@@ -150,25 +153,25 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
       prop represent one of the most common security issues in React applications.
       The prop name itself is a warning - it literally tells developers they're doing
       something dangerous by bypassing React's built-in XSS protection.
-      
+
       React automatically escapes all values before rendering them to the DOM, which
       provides excellent default protection against XSS attacks. However, there are
       legitimate use cases where raw HTML needs to be rendered - markdown content,
       rich text editor output, or legacy HTML content. The dangerouslySetInnerHTML
       prop enables these use cases but requires developers to handle sanitization.
-      
+
       When user-controlled input is passed to dangerouslySetInnerHTML without proper
       sanitization, attackers can inject arbitrary JavaScript that executes in the
       context of other users' browsers. This can lead to session hijacking, data
       theft, phishing attacks, and complete account compromise.
-      
+
       The vulnerability is particularly dangerous because:
       1. React's popularity means millions of applications potentially at risk
       2. The explicit "dangerous" naming creates false confidence
       3. Sanitization is often forgotten in some code paths
       4. Server-side rendering (SSR) introduces additional attack vectors
       5. Rich text and markdown are common requirements in modern apps
-      
+
       Modern React applications must implement proper sanitization strategies,
       typically using libraries like DOMPurify or isomorphic-dompurify for SSR.
       The rise of Content Security Policy (CSP) provides defense in depth, but
@@ -178,7 +181,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
         %{
           type: :cwe,
           id: "CWE-79",
-          title: "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+          title:
+            "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
           url: "https://cwe.mitre.org/data/definitions/79.html"
         },
         %{
@@ -191,7 +195,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
           type: :vendor,
           id: "react_dangerously",
           title: "React Documentation - dangerouslySetInnerHTML",
-          url: "https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html"
+          url:
+            "https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html"
         },
         %{
           type: :research,
@@ -250,7 +255,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
         },
         %{
           id: "CVE-2021-32677",
-          description: "Gatsby framework XSS via dangerouslySetInnerHTML in static site generation",
+          description:
+            "Gatsby framework XSS via dangerouslySetInnerHTML in static site generation",
           severity: "medium",
           cvss: 6.1,
           note: "Static site generator vulnerable during build process"
@@ -266,19 +272,19 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
       detection_notes: """
       This pattern detects dangerouslySetInnerHTML usage that includes user-controlled
       input. The detection covers:
-      
+
       1. JSX syntax: <element dangerouslySetInnerHTML={{__html: userInput}} />
       2. React.createElement: createElement('div', {dangerouslySetInnerHTML: {__html: input}})
       3. Spread props: <div {...{dangerouslySetInnerHTML: {__html: data}}} />
       4. Various user input patterns: req.*, params.*, query.*, user*, input, data
-      
+
       The pattern excludes safe usage where sanitization functions are detected:
       - DOMPurify.sanitize()
       - sanitizeHtml()
       - escapeHtml()
       - Other common sanitization patterns
       - Static content patterns (SAFE_*, STATIC_*)
-      
+
       Note that the pattern is case-insensitive to catch variations in naming.
       """,
       safe_alternatives: [
@@ -319,28 +325,27 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
       }
     }
   end
-  
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XSS vulnerabilities
   and safe usage of dangerouslySetInnerHTML with proper sanitization.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssReactDangerously.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssReactDangerously.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "JSXAttribute"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssReactDangerously.ast_enhancement()
       iex> enhancement.ast_rules.attribute_name
       "dangerouslySetInnerHTML"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssReactDangerously.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -358,9 +363,20 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
             value_analysis: %{
               contains_user_input: true,
               user_input_patterns: [
-                "req.", "request.", "params.", "query.",
-                "body.", "user", "input", "data", "content",
-                "form.", "args.", "ctx.", "props.", "state."
+                "req.",
+                "request.",
+                "params.",
+                "query.",
+                "body.",
+                "user",
+                "input",
+                "data",
+                "content",
+                "form.",
+                "args.",
+                "ctx.",
+                "props.",
+                "state."
               ]
             }
           }
@@ -379,7 +395,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
           ~r/__tests__/,
           ~r/fixtures/,
           ~r/mocks/,
-          ~r/stories/,    # Storybook files
+          # Storybook files
+          ~r/stories/,
           ~r/examples/,
           ~r/docs/,
           ~r/node_modules/
@@ -395,40 +412,65 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
           "htmlSanitizer",
           "createDOMPurifier",
           "sanitizer.sanitize",
-          "marked.parseInline"  # Marked with built-in sanitization
+          # Marked with built-in sanitization
+          "marked.parseInline"
         ],
         safe_variable_patterns: [
-          "SAFE_",          # SAFE_HTML, SAFE_CONTENT
-          "STATIC_",        # STATIC_HTML, STATIC_CONTENT
-          "SANITIZED_",     # SANITIZED_HTML
-          "TRUSTED_",       # TRUSTED_CONTENT
-          "CONST_",         # CONST_TEMPLATE
-          "HARDCODED_"      # HARDCODED_HTML
+          # SAFE_HTML, SAFE_CONTENT
+          "SAFE_",
+          # STATIC_HTML, STATIC_CONTENT
+          "STATIC_",
+          # SANITIZED_HTML
+          "SANITIZED_",
+          # TRUSTED_CONTENT
+          "TRUSTED_",
+          # CONST_TEMPLATE
+          "CONST_",
+          # HARDCODED_HTML
+          "HARDCODED_"
         ],
         framework_safe_patterns: [
-          "renderToStaticMarkup",    # React server rendering
-          "renderToString",          # React server rendering
-          "__NEXT_DATA__",          # Next.js static props
-          "getStaticProps",         # Next.js static generation
-          "gatsby-transformer"      # Gatsby build-time transform
+          # React server rendering
+          "renderToStaticMarkup",
+          # React server rendering
+          "renderToString",
+          # Next.js static props
+          "__NEXT_DATA__",
+          # Next.js static generation
+          "getStaticProps",
+          # Gatsby build-time transform
+          "gatsby-transformer"
         ]
       },
       confidence_rules: %{
         base: 0.6,
         adjustments: %{
-          "user_input" => 0.4,                  # Direct user input
-          "request_data" => 0.4,                # Request data usage
-          "template_literal" => 0.3,            # Template literals with variables
-          "no_sanitization" => 0.3,             # No sanitization detected
-          "markdown_content" => 0.2,            # Common use case but risky
-          "sanitized" => -0.8,                  # Sanitization function used
-          "static_content" => -0.7,             # Hardcoded HTML
-          "server_rendered" => -0.3,            # SSR with proper escaping
-          "test_code" => -0.6,                  # Test files
-          "safe_library" => -0.5,               # Using safe markdown library
-          "csp_protected" => -0.4,              # CSP headers detected
-          "trusted_source" => -0.3,             # From trusted API/source
-          "escaped_server" => -0.4              # Server-side escaped
+          # Direct user input
+          "user_input" => 0.4,
+          # Request data usage
+          "request_data" => 0.4,
+          # Template literals with variables
+          "template_literal" => 0.3,
+          # No sanitization detected
+          "no_sanitization" => 0.3,
+          # Common use case but risky
+          "markdown_content" => 0.2,
+          # Sanitization function used
+          "sanitized" => -0.8,
+          # Hardcoded HTML
+          "static_content" => -0.7,
+          # SSR with proper escaping
+          "server_rendered" => -0.3,
+          # Test files
+          "test_code" => -0.6,
+          # Using safe markdown library
+          "safe_library" => -0.5,
+          # CSP headers detected
+          "csp_protected" => -0.4,
+          # From trusted API/source
+          "trusted_source" => -0.3,
+          # Server-side escaped
+          "escaped_server" => -0.4
         }
       },
       min_confidence: 0.7

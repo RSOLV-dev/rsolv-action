@@ -1,38 +1,38 @@
 defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
   @moduledoc """
   Pattern for detecting dangerous extract() usage in PHP.
-  
+
   This pattern identifies when PHP applications use the extract() function with
   user input, potentially allowing attackers to overwrite internal variables and
   manipulate application behavior.
-  
+
   ## Vulnerability Details
-  
+
   The extract() function in PHP imports variables from an array into the current
   symbol table. When used with user-controlled arrays like $_GET, $_POST, or
   $_REQUEST, it can lead to severe security issues by allowing attackers to
   overwrite existing variables, including security-critical ones.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
   $is_admin = false;
   extract($_POST); // Attacker sends POST: is_admin=1
-  
+
   if ($is_admin) {
       // Attacker gains admin access!
       delete_all_users();
   }
   ```
-  
+
   The extract() function essentially provides the same dangerous functionality
   as the deprecated register_globals, allowing external input to directly
   create or overwrite variables in the current scope.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -61,7 +61,7 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -70,24 +70,24 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
       function to import variables from user-controlled arrays into the current symbol
       table. This can lead to critical security issues including authentication bypass,
       privilege escalation, and arbitrary code execution.
-      
+
       The extract() function takes an associative array and creates variables in the
       current scope using the array keys as variable names and array values as variable
       values. When applied to superglobal arrays like $_POST, $_GET, $_REQUEST, or
       $_COOKIE, attackers can inject arbitrary variables into the application's execution
       context.
-      
+
       ### How Variable Overwriting Works
-      
+
       **Basic Overwrite Attack**:
       ```php
       // Application code
       $authenticated = false;
       $user_role = 'guest';
-      
+
       // Dangerous extract
       extract($_POST); // POST: authenticated=1&user_role=admin
-      
+
       // Now $authenticated = '1' and $user_role = 'admin'
       if ($authenticated) {
           if ($user_role === 'admin') {
@@ -95,40 +95,40 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
           }
       }
       ```
-      
+
       **Configuration Override**:
       ```php
       $db_host = 'localhost';
       $db_user = 'app_user';
       $debug_mode = false;
-      
+
       extract($_REQUEST); // REQUEST: db_host=evil.com&debug_mode=1
-      
+
       // Attacker can redirect database connections or enable debug mode
       ```
-      
+
       ### Register Globals Revival
-      
+
       The extract() function essentially recreates the dangerous register_globals
       functionality that was deprecated and removed from PHP due to security concerns.
       It allows external input to directly create variables, leading to:
-      
+
       - **Authentication Bypass**: Overwriting authentication flags
       - **Privilege Escalation**: Changing user roles or permissions
       - **Configuration Tampering**: Modifying application settings
       - **Logic Manipulation**: Altering control flow variables
       - **Session Hijacking**: Overwriting session variables
-      
+
       ### Extract Flags and Their Risks
-      
+
       PHP provides several flags for extract(), but many are still dangerous:
-      
+
       - **EXTR_OVERWRITE** (default): Overwrites existing variables - DANGEROUS
       - **EXTR_IF_EXISTS**: Only overwrites if variable exists - STILL DANGEROUS
       - **EXTR_PREFIX_SAME**: Prefixes collisions - Can still pollute namespace
       - **EXTR_PREFIX_ALL**: Prefixes all - Safer but still risky
       - **EXTR_SKIP**: Skips existing variables - RECOMMENDED if extract is necessary
-      
+
       Even with EXTR_SKIP, new variables can still be injected, potentially affecting
       application logic that checks for variable existence.
       """,
@@ -155,7 +155,8 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
           type: :research,
           id: "extract_vulnerability",
           title: "External Variable Modification via extract()",
-          url: "https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/External%20Variable%20Modification/README.md"
+          url:
+            "https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/External%20Variable%20Modification/README.md"
         },
         %{
           type: :research,
@@ -185,10 +186,12 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
       cve_examples: [
         %{
           id: "CVE-2006-7079",
-          description: "PHP app uses extract for register_globals compatibility enabling path traversal",
+          description:
+            "PHP app uses extract for register_globals compatibility enabling path traversal",
           severity: "high",
           cvss: 7.5,
-          note: "Chain attack: extract() enables variable overwrite leading to directory traversal"
+          note:
+            "Chain attack: extract() enables variable overwrite leading to directory traversal"
         },
         %{
           id: "CVE-2025-1949",
@@ -214,23 +217,23 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
       ],
       detection_notes: """
       This pattern detects extract() usage vulnerabilities by identifying PHP code that:
-      
+
       1. **Function Analysis**: Matches the extract() function call
       2. **Parameter Inspection**: Looks for user input superglobals as parameters:
          - Direct usage: extract($_POST)
          - Array access: extract($_GET['data'])
          - With flags: extract($_REQUEST, EXTR_OVERWRITE)
-      
+
       3. **Safe Usage Detection**: Excludes patterns with EXTR_SKIP flag:
          - extract($_POST, EXTR_SKIP) is considered safer
          - Still not recommended but less dangerous
-      
+
       4. **Input Sources**: Detects all PHP superglobals:
          - $_GET - URL parameters
          - $_POST - Form data
          - $_REQUEST - Combined GET/POST/COOKIE
          - $_COOKIE - Cookie values
-      
+
       The pattern uses a negative lookahead to exclude EXTR_SKIP usage:
       extract\\s*\\(\\s*\\$_(GET|POST|REQUEST|COOKIE)(?!.*EXTR_SKIP)
       """,
@@ -274,13 +277,13 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
 
   @doc """
   Returns test cases for the extract usage pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.ExtractUsage.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.ExtractUsage.test_cases()
       iex> length(test_cases.negative)
       6
@@ -352,9 +355,9 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
 
   @doc """
   Returns examples of vulnerable and fixed code.
-  
+
   ## Examples
-  
+
       iex> examples = Rsolv.Security.Patterns.Php.ExtractUsage.examples()
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
@@ -366,10 +369,10 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
         // VULNERABLE: Direct extract allows variable injection
         $is_authenticated = false;
         $user_role = 'guest';
-        
+
         extract($_POST);
         // Attacker sends: POST is_authenticated=1&user_role=admin
-        
+
         if ($is_authenticated) {
             if ($user_role === 'admin') {
                 show_admin_panel(); // Unauthorized access!
@@ -381,19 +384,19 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
         $db_host = 'localhost';
         $db_name = 'myapp';
         $debug = false;
-        
+
         extract($_REQUEST); // REQUEST: db_host=attacker.com&debug=1
-        
+
         $connection = new PDO("mysql:host=$db_host;dbname=$db_name", $user, $pass);
         // Connects to attacker's server!
         """,
         "Variable pollution" => """
         // VULNERABLE: New variables can be injected
         extract($_GET);
-        
+
         // Attacker can inject any variable
         // GET: admin_mode=1&bypass_checks=1&error_reporting=0
-        
+
         if (isset($admin_mode)) {
             // Variable didn't exist before but does now!
             grant_admin_access();
@@ -406,7 +409,7 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
         $username = $_POST['username'] ?? '';
         $password = $_POST['password'] ?? '';
         $remember = isset($_POST['remember']) ? true : false;
-        
+
         // Variables are explicitly defined and typed
         if (authenticate($username, $password)) {
             login_user($username, $remember);
@@ -416,10 +419,10 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
         // SAFER: Use EXTR_SKIP to prevent overwriting
         $is_admin = false;
         $user_role = 'guest';
-        
+
         // EXTR_SKIP won't overwrite existing variables
         extract($_POST, EXTR_SKIP);
-        
+
         // $is_admin and $user_role remain unchanged
         // But new variables can still be injected!
         """,
@@ -428,19 +431,19 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
         function get_safe_user_data($input) {
             $allowed_fields = ['name', 'email', 'phone'];
             $safe_data = [];
-            
+
             foreach ($allowed_fields as $field) {
                 if (isset($input[$field])) {
                     $safe_data[$field] = filter_var(
-                        $input[$field], 
+                        $input[$field],
                         FILTER_SANITIZE_STRING
                     );
                 }
             }
-            
+
             return $safe_data;
         }
-        
+
         // Only extract validated data
         $user_data = get_safe_user_data($_POST);
         extract($user_data, EXTR_SKIP);
@@ -451,61 +454,61 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
 
   @doc """
   Returns educational description of the vulnerability.
-  
+
   ## Examples
-  
+
       iex> desc = Rsolv.Security.Patterns.Php.ExtractUsage.vulnerability_description()
       iex> desc =~ "extract"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.ExtractUsage.vulnerability_description()
       iex> desc =~ "variable"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.ExtractUsage.vulnerability_description()
       iex> desc =~ "overwrite"
       true
   """
   def vulnerability_description do
     """
-    Variable extraction vulnerabilities occur when PHP applications use the extract() 
-    function on user-controlled input, allowing attackers to inject or overwrite 
+    Variable extraction vulnerabilities occur when PHP applications use the extract()
+    function on user-controlled input, allowing attackers to inject or overwrite
     variables in the current scope and potentially bypass security controls.
-    
-    The extract() function imports variables from an array into the current symbol 
-    table, using array keys as variable names. When used with superglobals like 
-    $_POST, $_GET, or $_REQUEST, it essentially recreates the dangerous 
+
+    The extract() function imports variables from an array into the current symbol
+    table, using array keys as variable names. When used with superglobals like
+    $_POST, $_GET, or $_REQUEST, it essentially recreates the dangerous
     register_globals functionality.
-    
+
     ## Security Impact
-    
-    **Authentication Bypass**: Attackers can overwrite authentication flags or 
+
+    **Authentication Bypass**: Attackers can overwrite authentication flags or
     user role variables to gain unauthorized access to protected functionality.
-    
-    **Configuration Tampering**: Critical configuration variables like database 
+
+    **Configuration Tampering**: Critical configuration variables like database
     credentials, API keys, or debug flags can be overwritten by user input.
-    
-    **Logic Manipulation**: Control flow variables can be injected or modified, 
+
+    **Logic Manipulation**: Control flow variables can be injected or modified,
     allowing attackers to bypass validation checks or alter application behavior.
-    
+
     ## Attack Scenarios
-    
+
     1. **Variable Injection**: Creating new variables that affect logic
        - Setting $is_admin when it doesn't exist
        - Injecting $skip_validation flags
-    
+
     2. **Variable Overwriting**: Replacing existing values
        - Changing $user_role from 'guest' to 'admin'
        - Overwriting $authenticated from false to true
-    
+
     3. **Namespace Pollution**: Flooding the scope with variables
        - Creating numerous variables to exhaust memory
        - Interfering with normal variable usage
-    
+
     ## Prevention
-    
-    The safest approach is to avoid extract() entirely, especially with user input. 
-    Access array elements directly, use proper input validation, and leverage 
+
+    The safest approach is to avoid extract() entirely, especially with user input.
+    Access array elements directly, use proper input validation, and leverage
     modern PHP frameworks that provide secure request handling mechanisms.
     """
   end
@@ -521,11 +524,11 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
       iex> enhancement = Rsolv.Security.Patterns.Php.ExtractUsage.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.ExtractUsage.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.ExtractUsage.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4
@@ -539,7 +542,9 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
           type: "extract_functions",
           description: "Identify extract and similar variable import functions",
           functions: [
-            "extract", "import_request_variables", "parse_str"
+            "extract",
+            "import_request_variables",
+            "parse_str"
           ]
         },
         %{
@@ -559,12 +564,22 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
           type: "context_validation",
           description: "Validate extraction context and scope",
           exclude_patterns: [
-            "test", "mock", "example", "demo",
-            "// extract", "/* extract", "template"
+            "test",
+            "mock",
+            "example",
+            "demo",
+            "// extract",
+            "/* extract",
+            "template"
           ],
           high_risk_contexts: [
-            "authentication", "authorization", "session",
-            "config", "database", "admin", "privilege"
+            "authentication",
+            "authorization",
+            "session",
+            "config",
+            "database",
+            "admin",
+            "privilege"
           ]
         }
       ]

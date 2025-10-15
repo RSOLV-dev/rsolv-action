@@ -62,7 +62,7 @@ defmodule Rsolv.Marketing do
         %EmailSubscription{}
         |> EmailSubscription.changeset(attrs)
         |> Repo.insert()
-      
+
       subscription ->
         # Reactivate if previously unsubscribed
         if subscription.status != "active" do
@@ -107,7 +107,7 @@ defmodule Rsolv.Marketing do
     case get_email_subscription_by_email(email) do
       nil ->
         {:error, :not_found}
-      
+
       subscription ->
         update_email_subscription(subscription, %{
           status: "unsubscribed",

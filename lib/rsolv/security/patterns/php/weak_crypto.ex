@@ -1,42 +1,42 @@
 defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
   @moduledoc """
   Pattern for detecting weak cryptography vulnerabilities in PHP.
-  
+
   This pattern identifies when PHP applications use deprecated cryptographic functions
-  (mcrypt extension), weak algorithms (DES, 3DES), or insecure modes (ECB) that 
+  (mcrypt extension), weak algorithms (DES, 3DES), or insecure modes (ECB) that
   compromise data confidentiality and integrity.
-  
+
   ## Vulnerability Details
-  
+
   Weak cryptography encompasses several critical security issues in PHP applications:
-  
+
   1. **Deprecated mcrypt Extension**: The mcrypt extension was deprecated in PHP 7.1
      and removed in PHP 7.2 due to security vulnerabilities and lack of maintenance.
   2. **Weak Algorithms**: DES and 3DES are cryptographically broken with known attacks.
   3. **Insecure Modes**: ECB mode reveals patterns in encrypted data.
   4. **Legacy Functions**: Using outdated cryptographic implementations.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code - using deprecated mcrypt with weak DES algorithm
   $encrypted = mcrypt_encrypt(MCRYPT_DES, $key, $data, MCRYPT_MODE_ECB);
-  
+
   // Also vulnerable - weak 3DES algorithm
   $cipher = mcrypt_encrypt(MCRYPT_3DES, $key, $plaintext, MCRYPT_MODE_CBC);
-  
+
   // Vulnerable - ECB mode in OpenSSL (reveals patterns)
   $encrypted = openssl_encrypt($data, 'aes-128-ecb', $key);
   ```
-  
+
   The mcrypt extension has multiple known vulnerabilities including improper
   key derivation, weak random number generation, and susceptibility to
   padding oracle attacks. Modern applications should use the OpenSSL
   extension with strong algorithms and secure modes.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -46,7 +46,8 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
       type: :weak_crypto,
       severity: :medium,
       languages: ["php"],
-      regex: ~r/(mcrypt_[a-zA-Z_]+|MCRYPT_(?:DES|3DES|MODE_ECB)|(?:openssl_(?:en|de)crypt|\w+)\s*\([^,]*,?\s*['"][^'"]*(?:des|ecb)[^'"]*['"]|['"][^'"]*(?:des|ecb)[^'"]*['"])/i,
+      regex:
+        ~r/(mcrypt_[a-zA-Z_]+|MCRYPT_(?:DES|3DES|MODE_ECB)|(?:openssl_(?:en|de)crypt|\w+)\s*\([^,]*,?\s*['"][^'"]*(?:des|ecb)[^'"]*['"]|['"][^'"]*(?:des|ecb)[^'"]*['"])/i,
       cwe_id: "CWE-327",
       owasp_category: "A02:2021",
       recommendation: "Use OpenSSL extension with AES-256-GCM or ChaCha20-Poly1305",
@@ -66,63 +67,63 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
       description: """
-      Weak cryptography vulnerabilities occur when PHP applications use deprecated, broken, or 
-      insufficiently secure cryptographic algorithms, functions, or configurations. This encompasses 
+      Weak cryptography vulnerabilities occur when PHP applications use deprecated, broken, or
+      insufficiently secure cryptographic algorithms, functions, or configurations. This encompasses
       several critical issues that can compromise data confidentiality, integrity, and authentication.
-      
+
       The most common weak cryptography issues in PHP include:
-      
+
       ### 1. Deprecated mcrypt Extension
-      
-      The mcrypt library was officially deprecated in PHP 7.1 and completely removed in PHP 7.2 
-      due to numerous security vulnerabilities and lack of active maintenance. Applications still 
+
+      The mcrypt library was officially deprecated in PHP 7.1 and completely removed in PHP 7.2
+      due to numerous security vulnerabilities and lack of active maintenance. Applications still
       using mcrypt functions are inherently vulnerable and cannot receive security updates.
-      
+
       Key problems with mcrypt:
       - **Improper Key Derivation**: mcrypt doesn't provide secure key derivation functions
-      - **Weak Random Number Generation**: Uses predictable randomness in some configurations  
+      - **Weak Random Number Generation**: Uses predictable randomness in some configurations
       - **Padding Oracle Vulnerabilities**: Susceptible to padding oracle attacks in CBC mode
       - **No Authenticated Encryption**: Provides no integrity protection
       - **Unmaintained Codebase**: No security patches or updates since 2007
-      
+
       ### 2. Cryptographically Broken Algorithms
-      
+
       **Data Encryption Standard (DES)**:
       - 56-bit effective key size is trivially broken by modern hardware
       - Can be brute-forced in hours using commodity hardware
       - Officially deprecated by NIST since 2005
       - Vulnerable to differential and linear cryptanalysis
-      
+
       **Triple DES (3DES)**:
       - Effective 112-bit security reduced to 80 bits due to meet-in-the-middle attacks
       - Slow performance compared to modern algorithms like AES
       - Deprecated by NIST, with complete phase-out mandated by 2023
       - Vulnerable to Sweet32 attacks when processing large amounts of data
-      
+
       ### 3. Insecure Cipher Modes
-      
+
       **Electronic Codebook (ECB) Mode**:
       - Encrypts identical plaintext blocks to identical ciphertext blocks
       - Reveals patterns in encrypted data (the "penguin problem")
       - Provides no semantic security for structured data
       - Vulnerable to known-plaintext and chosen-plaintext attacks
       - Should never be used for any real-world encryption
-      
+
       ### 4. Implementation Vulnerabilities
-      
+
       Even when using strong algorithms, improper implementation can introduce vulnerabilities:
       - **Missing Authentication**: Encryption without integrity protection enables tampering
       - **IV Reuse**: Reusing initialization vectors breaks semantic security
       - **Weak Key Generation**: Using predictable or low-entropy keys
       - **Side-Channel Attacks**: Timing attacks against string comparisons
-      
+
       ### Real-World Impact
-      
+
       Weak cryptography vulnerabilities have led to numerous high-profile breaches:
       - **Data Exposure**: Encrypted databases become readable when weak crypto is broken
       - **Session Hijacking**: Weak session encryption enables account takeover
@@ -172,7 +173,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
       ],
       real_world_impact: [
         "Complete data exposure when encrypted databases are compromised",
-        "Session hijacking enabling unauthorized access to user accounts", 
+        "Session hijacking enabling unauthorized access to user accounts",
         "Financial fraud through manipulation of encrypted payment data",
         "Compliance violations (PCI DSS, HIPAA, GDPR) due to insufficient encryption",
         "Intellectual property theft when weak crypto protects sensitive business data",
@@ -188,7 +189,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
           note: "Demonstrates why mcrypt extension was deprecated and removed"
         },
         %{
-          id: "CVE-2017-9618", 
+          id: "CVE-2017-9618",
           description: "DES algorithm implementation vulnerability in OpenSSL",
           severity: "medium",
           cvss: 5.9,
@@ -197,7 +198,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
         %{
           id: "CVE-2019-1547",
           description: "Side-channel attack against ECDSA with timing information",
-          severity: "medium", 
+          severity: "medium",
           cvss: 4.7,
           note: "Example of implementation vulnerabilities in cryptographic code"
         },
@@ -218,20 +219,20 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
       ],
       detection_notes: """
       This pattern detects several categories of weak cryptography in PHP code:
-      
+
       1. **mcrypt Function Usage**: Any use of mcrypt_ functions indicates deprecated cryptography
-      2. **Weak Algorithm Constants**: MCRYPT_DES, MCRYPT_3DES indicate broken algorithms  
+      2. **Weak Algorithm Constants**: MCRYPT_DES, MCRYPT_3DES indicate broken algorithms
       3. **Insecure Mode Constants**: MCRYPT_MODE_ECB indicates insecure cipher mode
       4. **OpenSSL Weak Algorithms**: Detection of DES variants in openssl_encrypt/decrypt
       5. **ECB Mode in OpenSSL**: Detection of ECB mode usage in modern OpenSSL functions
-      
+
       The regex pattern matches:
       - mcrypt function calls (mcrypt_encrypt, mcrypt_decrypt, etc.)
-      - Weak algorithm constants (MCRYPT_DES, MCRYPT_3DES)  
+      - Weak algorithm constants (MCRYPT_DES, MCRYPT_3DES)
       - Insecure mode constants (MCRYPT_MODE_ECB)
       - OpenSSL functions with weak algorithms ('des-cbc', 'des-ecb', etc.)
       - OpenSSL functions using ECB mode ('aes-128-ecb', etc.)
-      
+
       Special attention is paid to:
       - Case-insensitive matching for algorithm names
       - Various quote styles for OpenSSL cipher names
@@ -278,13 +279,13 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
 
   @doc """
   Returns test cases for the weak cryptography pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.WeakCrypto.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.WeakCrypto.test_cases()
       iex> length(test_cases.negative)
       6
@@ -356,9 +357,9 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
 
   @doc """
   Returns examples of vulnerable and fixed code.
-  
+
   ## Examples
-  
+
       iex> examples = Rsolv.Security.Patterns.Php.WeakCrypto.examples()
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
@@ -410,41 +411,41 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
 
   @doc """
   Returns educational description of the vulnerability.
-  
+
   ## Examples
-  
+
       iex> desc = Rsolv.Security.Patterns.Php.WeakCrypto.vulnerability_description()
       iex> desc =~ "Weak cryptography"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.WeakCrypto.vulnerability_description()
       iex> desc =~ "mcrypt"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.WeakCrypto.vulnerability_description()
       iex> desc =~ "deprecated"
       true
   """
   def vulnerability_description do
     """
-    Weak cryptography vulnerabilities occur when applications use deprecated, broken, or 
+    Weak cryptography vulnerabilities occur when applications use deprecated, broken, or
     insufficiently secure cryptographic algorithms, implementations, or configurations.
-    
+
     In PHP, this commonly manifests as:
-    
-    1. **mcrypt Extension Usage**: The mcrypt library was deprecated in PHP 7.1 and 
+
+    1. **mcrypt Extension Usage**: The mcrypt library was deprecated in PHP 7.1 and
        removed in PHP 7.2 due to security vulnerabilities and lack of maintenance.
-       
-    2. **Weak Algorithms**: DES (56-bit keys) and 3DES are cryptographically broken 
+
+    2. **Weak Algorithms**: DES (56-bit keys) and 3DES are cryptographically broken
        and can be attacked with modern computing power.
-       
-    3. **Insecure Modes**: ECB mode reveals patterns in encrypted data and should 
+
+    3. **Insecure Modes**: ECB mode reveals patterns in encrypted data and should
        never be used for real-world encryption.
-       
-    4. **Implementation Issues**: Poor key management, IV reuse, and missing 
+
+    4. **Implementation Issues**: Poor key management, IV reuse, and missing
        authentication enable various attacks.
-    
-    Modern PHP applications should use the OpenSSL extension with strong algorithms 
+
+    Modern PHP applications should use the OpenSSL extension with strong algorithms
     like AES-256-GCM or the Sodium extension for authenticated encryption.
     """
   end
@@ -460,11 +461,11 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakCrypto.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakCrypto.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakCrypto.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4
@@ -478,13 +479,18 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
           type: "weak_crypto_functions",
           description: "Identify deprecated mcrypt and weak OpenSSL usage",
           functions: [
-            "mcrypt_encrypt", "mcrypt_decrypt", "mcrypt_generic", 
-            "mdecrypt_generic", "mcrypt_module_open", "mcrypt_module_close",
-            "openssl_encrypt", "openssl_decrypt"
+            "mcrypt_encrypt",
+            "mcrypt_decrypt",
+            "mcrypt_generic",
+            "mdecrypt_generic",
+            "mcrypt_module_open",
+            "mcrypt_module_close",
+            "openssl_encrypt",
+            "openssl_decrypt"
           ]
         },
         %{
-          type: "crypto_algorithm_analysis", 
+          type: "crypto_algorithm_analysis",
           description: "Analyze cryptographic algorithm strength",
           weak_algorithms: ["DES", "3DES", "MCRYPT_DES", "MCRYPT_3DES"],
           weak_modes: ["ECB", "MCRYPT_MODE_ECB"],
@@ -494,8 +500,14 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
           type: "context_validation",
           description: "Validate cryptographic implementation context",
           exclude_patterns: [
-            "test", "mock", "example", "demo", "benchmark",
-            "migration", "legacy_support", "compatibility"
+            "test",
+            "mock",
+            "example",
+            "demo",
+            "benchmark",
+            "migration",
+            "legacy_support",
+            "compatibility"
           ]
         },
         %{

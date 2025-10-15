@@ -1,70 +1,70 @@
 defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
   @moduledoc """
   Detects Cross-Site Scripting (XSS) vulnerabilities in Ruby ERB templates.
-  
+
   XSS vulnerabilities in ERB templates occur when user-controlled data is rendered directly
   into HTML without proper escaping. This commonly happens when using `raw`, `html_safe`,
   or the `<%==` syntax with untrusted input, allowing attackers to inject malicious scripts.
-  
+
   ## Vulnerability Details
-  
+
   Rails provides automatic HTML escaping by default, but certain methods and syntaxes bypass
   this protection. When developers use these unsafe methods with user input, they create
   XSS vulnerabilities that can lead to session hijacking, data theft, and malicious actions.
-  
+
   ### Attack Example
   ```erb
   <!-- Vulnerable - raw bypasses HTML escaping -->
   <div class="content">
     <%= raw params[:content] %>
   </div>
-  
+
   <!-- Vulnerable - html_safe marks string as safe -->
   <p>Welcome <%= params[:name].html_safe %>!</p>
-  
+
   <!-- Vulnerable - double equals syntax bypasses escaping -->
   <span><%== user_input %></span>
-  
+
   <!-- Secure - default HTML escaping -->
   <div class="content">
     <%= params[:content] %>
   </div>
-  
+
   <!-- Secure - explicit sanitization -->
   <p>Welcome <%= sanitize(params[:name]) %>!</p>
   ```
-  
+
   ### Real-World Impact
   - Session hijacking through stolen authentication cookies
   - Defacement of web pages and content manipulation
   - Phishing attacks and credential harvesting
   - Malware distribution and drive-by downloads
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the XSS in ERB Templates pattern for Ruby applications.
-  
+
   Detects unsafe usage of raw, html_safe, and double equals syntax in ERB
   templates that can lead to XSS vulnerabilities when used with user input.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.XssErbRaw.pattern()
       iex> pattern.id
       "ruby-xss-erb-raw"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.XssErbRaw.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.XssErbRaw.pattern()
       iex> vulnerable = "<%= raw params[:content] %>"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable))
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.XssErbRaw.pattern()
       iex> safe = "<%= params[:content] %>"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, safe))
@@ -75,7 +75,8 @@ defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
     %Pattern{
       id: "ruby-xss-erb-raw",
       name: "XSS in ERB Templates",
-      description: "Detects Cross-Site Scripting vulnerabilities in ERB templates through unsafe usage of raw, html_safe, and unescaped output",
+      description:
+        "Detects Cross-Site Scripting vulnerabilities in ERB templates through unsafe usage of raw, html_safe, and unescaped output",
       type: :xss,
       severity: :high,
       languages: ["ruby"],
@@ -83,23 +84,24 @@ defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
         # raw with user input - various user input patterns
         ~r/<%=\s*raw\s+(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+)/,
         ~r/<%=\s*raw\s+@?\w*\[['"]?\w*['"]?\]/,
-        
+
         # html_safe with any content - simplified to catch more cases
         ~r/<%=\s*.*\.html_safe\s*%>/,
-        
+
         # Double equals syntax (unescaped output)
         ~r/<%==\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|@?\w*)/,
-        
+
         # String concatenation or interpolation with html_safe
         ~r/<%=\s*\([^)]*(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+)[^)]*\)\.html_safe/,
         ~r/<%=\s*["'][^"']*#\{[^}]*(?:params|request\.(?:params|parameters)|user_[\w_]*|@\w+)[^}]*\}[^"']*["']\.html_safe/,
-        
+
         # Comment detection for limitation testing
         ~r/#.*<%=\s*raw\s+params/
       ],
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
-      recommendation: "Use Rails' default HTML escaping. If HTML content is needed, use sanitize() helper or validate/allowlist the content.",
+      recommendation:
+        "Use Rails' default HTML escaping. If HTML content is needed, use sanitize() helper or validate/allowlist the content.",
       test_cases: %{
         vulnerable: [
           "<%= raw params[:content] %>",
@@ -179,28 +181,34 @@ defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
       cve_examples: [
         %{
           id: "CVE-2024-26143",
-          description: "XSS vulnerability in Rails translation helpers when using keys ending in '_html' with untrusted user input",
+          description:
+            "XSS vulnerability in Rails translation helpers when using keys ending in '_html' with untrusted user input",
           severity: "medium",
           cvss: 6.1,
-          note: "Affects Rails >= 7.0.0, demonstrates template-level XSS vulnerabilities in Rails applications"
+          note:
+            "Affects Rails >= 7.0.0, demonstrates template-level XSS vulnerabilities in Rails applications"
         },
         %{
           id: "CVE-2024-39308",
-          description: "XSS vulnerability in RailsAdmin list view through improperly-escaped HTML title attribute",
+          description:
+            "XSS vulnerability in RailsAdmin list view through improperly-escaped HTML title attribute",
           severity: "medium",
           cvss: 5.4,
-          note: "Shows how template escaping failures can affect admin interfaces and management tools"
+          note:
+            "Shows how template escaping failures can affect admin interfaces and management tools"
         },
         %{
           id: "CVE-2015-3226",
-          description: "XSS vulnerability in ActiveSupport JSON encoding allowing script injection via crafted Hash",
+          description:
+            "XSS vulnerability in ActiveSupport JSON encoding allowing script injection via crafted Hash",
           severity: "medium",
           cvss: 4.3,
           note: "Demonstrates how data serialization can lead to XSS when rendered in templates"
         },
         %{
           id: "CVE-2022-32209",
-          description: "XSS vulnerability in Rails::Html::Sanitizer allowing bypass of sanitization",
+          description:
+            "XSS vulnerability in Rails::Html::Sanitizer allowing bypass of sanitization",
           severity: "medium",
           cvss: 6.1,
           note: "Shows importance of proper sanitization even when using Rails security helpers"
@@ -213,7 +221,7 @@ defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
       - Double equals (<%==) syntax for unescaped output
       - String concatenation and interpolation with html_safe()
       - Method chaining ending in html_safe() on user input
-      
+
       The pattern focuses on user input sources like params, request parameters, and instance variables
       that commonly contain user data. AST enhancement provides additional context analysis.
       """,
@@ -239,8 +247,10 @@ defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
           "Use CSP headers to limit script execution sources"
         ],
         framework_notes: %{
-          rails: "Rails auto-escapes by default. Avoid raw(), html_safe(), and <%== unless necessary",
-          erb: "ERB itself doesn't provide XSS protection - rely on Rails helpers and proper escaping",
+          rails:
+            "Rails auto-escapes by default. Avoid raw(), html_safe(), and <%== unless necessary",
+          erb:
+            "ERB itself doesn't provide XSS protection - rely on Rails helpers and proper escaping",
           general: "Template security depends on consistent use of framework escaping mechanisms"
         }
       }
@@ -258,15 +268,15 @@ defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XssErbRaw.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XssErbRaw.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XssErbRaw.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "ERBNode"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XssErbRaw.ast_enhancement()
       iex> enhancement.ast_rules.erb_analysis.unsafe_methods
       true
@@ -284,7 +294,14 @@ defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
           expression_type_analysis: true
         },
         user_input_analysis: %{
-          input_sources: ["params", "request", "user_input", "user_data", "@user", "@current_user"],
+          input_sources: [
+            "params",
+            "request",
+            "user_input",
+            "user_data",
+            "@user",
+            "@current_user"
+          ],
           check_direct_usage: true,
           check_method_chaining: true,
           check_string_interpolation: true,

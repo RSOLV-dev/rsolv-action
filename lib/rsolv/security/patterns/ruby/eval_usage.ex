@@ -1,18 +1,18 @@
 defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
   @moduledoc """
   Pattern for detecting dangerous eval usage in Ruby applications.
-  
+
   This pattern identifies when code evaluation methods like eval(), instance_eval(),
   class_eval(), module_eval(), and dynamic method calling are used with user-controlled
   input, which can lead to remote code execution vulnerabilities.
-  
+
   ## Vulnerability Details
-  
+
   Eval injection vulnerabilities occur when applications use Ruby's code evaluation
   functions with untrusted user input. These functions execute arbitrary Ruby code
   at runtime, providing attackers with complete control over the application when
   exploited successfully.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable code evaluation
@@ -20,32 +20,32 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
     def execute
       # VULNERABLE: Direct eval with user input
       result = eval(params[:code])
-      
+
       # VULNERABLE: instance_eval with user data
       user.instance_eval(params[:method_definition])
-      
+
       # VULNERABLE: Dynamic method calling
       model.send(params[:action], params[:args])
-      
+
       # VULNERABLE: Dynamic constant access
       klass = Object.const_get(params[:class_name])
-      
+
       render json: { result: result }
     end
   end
-  
+
   # Attack payloads:
   # params[:code] = "system('rm -rf /')"
   # params[:method_definition] = "def admin?; true; end"
   # params[:action] = "destroy!"
   # params[:class_name] = "User; system('cat /etc/passwd')"
   ```
-  
+
   **Real-world Impact:**
   CVE-2019-16255 demonstrated eval injection in Ruby's Shell library leading to
   remote code execution. Many Rails applications have been compromised through
   eval-related vulnerabilities in dynamic code generation features.
-  
+
   **Safe Alternative:**
   ```ruby
   # SECURE: No dynamic code evaluation
@@ -54,7 +54,7 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       # SECURE: Predefined allowed actions
       allowed_actions = ['show', 'update', 'create']
       action = params[:action]
-      
+
       if allowed_actions.include?(action)
         case action
         when 'show'
@@ -68,19 +68,19 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
         render json: { error: 'Invalid action' }, status: 400
       end
     end
-    
+
     private
-    
+
     def permitted_params
       params.require(:model).permit(:name, :email, :description)
     end
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -91,24 +91,39 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       severity: :critical,
       languages: ["ruby"],
       regex: [
-        ~r/eval\s*\(\s*(?:params|request|user_\w+|user\w*)/,      # eval(params[:code])
-        ~r/eval\s+(?:params|request|user_\w+|user\w*)/,           # eval params[:code]
-        ~r/eval\s*\(\s*["'].*?#\{.*?(?:params|request|user_\w+|user\w*)/,  # eval("#{user_input}")
-        ~r/instance_eval\s*\(\s*(?:params|request|user_\w+|user\w*)/,  # instance_eval(params[:method])
-        ~r/instance_eval\s+(?:params|request|user_\w+|user\w*)/,  # instance_eval params[:code]
-        ~r/class_eval\s*\(\s*(?:params|request|user_\w+|user\w*)/,  # class_eval(params[:code])
-        ~r/class_eval\s+(?:params|request|user_\w+|user\w*)/,     # class_eval params[:code]
-        ~r/module_eval\s*\(\s*(?:params|request|user_\w+|user\w*)/,  # module_eval(params[:code])
-        ~r/module_eval\s+(?:params|request|user_\w+|user\w*)/,    # module_eval params[:code]
-        ~r/\.send\s*\(\s*(?:params|request|user_\w+|user\w*)/,    # obj.send(params[:method])
-        ~r/\bsend\s*\(\s*(?:params|request|user_\w+|user\w*)/,    # send(params[:method])
-        ~r/const_get\s*\(\s*(?:params|request|user_\w+|user\w*)/,  # const_get(params[:class])
-        ~r/Object\.const_get\s*\(\s*(?:params|request|user_\w+|user\w*)/,  # Object.const_get(params[:class])
-        ~r/Module\.const_get\s*\(\s*(?:params|request|user_\w+|user\w*)/   # Module.const_get(params[:class])
+        # eval(params[:code])
+        ~r/eval\s*\(\s*(?:params|request|user_\w+|user\w*)/,
+        # eval params[:code]
+        ~r/eval\s+(?:params|request|user_\w+|user\w*)/,
+        # eval("#{user_input}")
+        ~r/eval\s*\(\s*["'].*?#\{.*?(?:params|request|user_\w+|user\w*)/,
+        # instance_eval(params[:method])
+        ~r/instance_eval\s*\(\s*(?:params|request|user_\w+|user\w*)/,
+        # instance_eval params[:code]
+        ~r/instance_eval\s+(?:params|request|user_\w+|user\w*)/,
+        # class_eval(params[:code])
+        ~r/class_eval\s*\(\s*(?:params|request|user_\w+|user\w*)/,
+        # class_eval params[:code]
+        ~r/class_eval\s+(?:params|request|user_\w+|user\w*)/,
+        # module_eval(params[:code])
+        ~r/module_eval\s*\(\s*(?:params|request|user_\w+|user\w*)/,
+        # module_eval params[:code]
+        ~r/module_eval\s+(?:params|request|user_\w+|user\w*)/,
+        # obj.send(params[:method])
+        ~r/\.send\s*\(\s*(?:params|request|user_\w+|user\w*)/,
+        # send(params[:method])
+        ~r/\bsend\s*\(\s*(?:params|request|user_\w+|user\w*)/,
+        # const_get(params[:class])
+        ~r/const_get\s*\(\s*(?:params|request|user_\w+|user\w*)/,
+        # Object.const_get(params[:class])
+        ~r/Object\.const_get\s*\(\s*(?:params|request|user_\w+|user\w*)/,
+        # Module.const_get(params[:class])
+        ~r/Module\.const_get\s*\(\s*(?:params|request|user_\w+|user\w*)/
       ],
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
-      recommendation: "Avoid eval with user input. Use safer alternatives like JSON parsing, whitelisted method calls, or predefined action mappings",
+      recommendation:
+        "Avoid eval with user input. Use safer alternatives like JSON parsing, whitelisted method calls, or predefined action mappings",
       test_cases: %{
         vulnerable: [
           ~S|eval(params[:code])|,
@@ -125,7 +140,7 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -134,7 +149,7 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       applications use Ruby's dynamic code evaluation functions with untrusted user input.
       These functions execute arbitrary Ruby code at runtime, providing attackers with
       complete control over the application when exploited successfully.
-      
+
       **How Eval Injection Works:**
       Ruby provides several methods for dynamic code evaluation:
       - **eval()**: Executes a string containing Ruby source code
@@ -142,10 +157,10 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       - **class_eval()/module_eval()**: Evaluates code in the context of a class or module
       - **send()**: Dynamically calls methods by name
       - **const_get()**: Dynamically accesses constants and classes
-      
+
       When any of these methods receive user-controlled input, attackers can inject
       arbitrary Ruby code that executes with the application's privileges.
-      
+
       **Ruby-Specific Evaluation Methods:**
       - **eval()**: Direct string-to-code execution, most dangerous
       - **instance_eval()**: Context-aware evaluation on object instances
@@ -153,7 +168,7 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       - **module_eval()**: Module context evaluation, can modify module behavior
       - **send()**: Dynamic method dispatch, can call private methods
       - **const_get()**: Dynamic constant resolution, can access any class
-      
+
       **Critical Security Impact:**
       Eval injection vulnerabilities are extremely dangerous because they provide:
       - **Complete System Access**: Execute any Ruby code with app privileges
@@ -161,7 +176,7 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       - **System Compromise**: Execute system commands, install backdoors
       - **Privilege Escalation**: Access internal methods and sensitive functionality
       - **Business Logic Bypass**: Modify application behavior at runtime
-      
+
       **Rails-Specific Vulnerabilities:**
       Rails applications are particularly vulnerable to eval injection through:
       - Dynamic method generation in controllers and models
@@ -169,7 +184,7 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       - Configuration parsing with eval-based DSLs
       - Plugin and gem loading mechanisms
       - Serialization/deserialization with code execution
-      
+
       **Common Attack Scenarios:**
       - Code execution through dynamic method definitions
       - System command injection via Ruby's backtick operator
@@ -187,7 +202,8 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
         %{
           type: :cwe,
           id: "CWE-95",
-          title: "Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')",
+          title:
+            "Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')",
           url: "https://cwe.mitre.org/data/definitions/95.html"
         },
         %{
@@ -206,7 +222,8 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
           type: :research,
           id: "akamai_rails_injection",
           title: "Rails Without Derails: Thwarting Code Injection Attacks",
-          url: "https://www.akamai.com/blog/security/2024-october-ruby-on-rails-waf-code-injection-protection"
+          url:
+            "https://www.akamai.com/blog/security/2024-october-ruby-on-rails-waf-code-injection-protection"
         },
         %{
           type: :research,
@@ -278,28 +295,28 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       detection_notes: """
       This pattern detects eval injection vulnerabilities by identifying Ruby evaluation
       methods that receive user-controlled input:
-      
+
       **Primary Detection Points:**
       - eval() with params, request, or user_input variables
       - instance_eval() with dynamic user-controlled strings
       - class_eval()/module_eval() with user input
       - send() method calls with dynamic method names from user input
       - const_get() with user-controlled class/module names
-      
+
       **Ruby-Specific Patterns:**
       - Multiple eval syntax forms: eval(expr) and eval expr
       - Context-aware evaluation methods: instance_eval, class_eval, module_eval
       - Dynamic method dispatch: send() and public_send()
       - Constant resolution: const_get() on Object and Module
       - Both parenthesized and space-separated argument forms
-      
+
       **False Positive Considerations:**
       - Static string evaluation (acceptable in some contexts)
       - Block-based evaluation ({ } and do..end blocks)
       - Symbol-based method calling with send()
       - Hardcoded constant names with const_get()
       - Commented out evaluation code
-      
+
       **Detection Enhancements:**
       The AST enhancement provides sophisticated analysis:
       - User input source detection (params, request, cookies, etc.)
@@ -370,19 +387,19 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual security issues and
   acceptable eval usage patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.EvalUsage.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.EvalUsage.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
@@ -392,7 +409,15 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
     %{
       ast_rules: %{
         node_type: "CallExpression",
-        method_names: ["eval", "instance_eval", "class_eval", "module_eval", "send", "public_send", "const_get"],
+        method_names: [
+          "eval",
+          "instance_eval",
+          "class_eval",
+          "module_eval",
+          "send",
+          "public_send",
+          "const_get"
+        ],
         receiver_analysis: %{
           check_object_context: true,
           built_in_receivers: ["Object", "Module", "Kernel"],

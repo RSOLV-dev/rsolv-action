@@ -1,16 +1,16 @@
 defmodule RsolvWeb.Plugs.DashboardAuth do
   @moduledoc """
   Dashboard authentication plug that verifies HTTP Basic Auth credentials.
-  
+
   This plug only handles authentication. Feature flag checking is done
   separately by FeatureFlagPlug in the router pipeline, ensuring proper
   separation of concerns.
   """
-  
+
   import Plug.Conn
-  
+
   def init(opts), do: opts
-  
+
   def call(conn, _opts) do
     # Only check authentication - feature flags are handled by FeatureFlagPlug in the pipeline
     case authenticate(conn) do
@@ -18,7 +18,7 @@ defmodule RsolvWeb.Plugs.DashboardAuth do
         # Authentication successful
         conn
         |> assign(:current_user_email, user_email)
-        
+
       {:error, _reason} ->
         # Authentication failed
         conn
@@ -28,12 +28,12 @@ defmodule RsolvWeb.Plugs.DashboardAuth do
         |> halt()
     end
   end
-  
+
   defp authenticate(conn) do
     username = Application.get_env(:rsolv, :admin_username, "admin")
     password = Application.get_env(:rsolv, :admin_password)
     admin_emails = Application.get_env(:rsolv, :admin_emails, ["admin@rsolv.dev"])
-    
+
     with ["Basic " <> encoded] <- get_req_header(conn, "authorization"),
          {:ok, decoded} <- Base.decode64(encoded),
          [provided_username, provided_password] <- String.split(decoded, ":", parts: 2),

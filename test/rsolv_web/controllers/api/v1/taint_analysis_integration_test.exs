@@ -1,15 +1,15 @@
 defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
   use RsolvWeb.ConnCase, async: false
-  
+
   import Mock
-  
+
   alias Rsolv.Accounts
   alias Rsolv.Cache.ValidationCache
-  
+
   setup do
     # Clear cache before each test
     ValidationCache.clear()
-    
+
     # Mock customer for testing
     customer = %{
       id: "test_customer_1",
@@ -24,13 +24,13 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
       trial: true,
       created_at: DateTime.utc_now()
     }
-    
+
     {:ok, customer: customer}
   end
-  
+
   describe "taint analysis integration" do
     test "detects direct user input with high confidence", %{conn: conn, customer: customer} do
-      with_mock Accounts, [get_customer_by_api_key: fn("test_api_key_123") -> customer end] do
+      with_mock Accounts, get_customer_by_api_key: fn "test_api_key_123" -> customer end do
         request_body = %{
           "vulnerabilities" => [
             %{
@@ -51,25 +51,27 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             """
           }
         }
-        
-        conn = conn
-        |> put_req_header("x-api-key", "test_api_key_123")
-        |> put_req_header("content-type", "application/json")
-        |> post("/api/v1/vulnerabilities/validate", request_body)
-        
+
+        conn =
+          conn
+          |> put_req_header("x-api-key", "test_api_key_123")
+          |> put_req_header("content-type", "application/json")
+          |> post("/api/v1/vulnerabilities/validate", request_body)
+
         response = json_response(conn, 200)
-        
+
         assert length(response["validated"]) == 1
         vuln = hd(response["validated"])
         assert vuln["isValid"] == true
-        assert vuln["confidence"] == 0.95  # Direct input gets 95% confidence
+        # Direct input gets 95% confidence
+        assert vuln["confidence"] == 0.95
         assert vuln["astContext"]["directInput"] == true
         assert vuln["astContext"]["taintLevel"] == 1
       end
     end
-    
+
     test "detects single-hop tainted flow", %{conn: conn, customer: customer} do
-      with_mock Accounts, [get_customer_by_api_key: fn("test_api_key_123") -> customer end] do
+      with_mock Accounts, get_customer_by_api_key: fn "test_api_key_123" -> customer end do
         request_body = %{
           "vulnerabilities" => [
             %{
@@ -91,26 +93,31 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             """
           }
         }
-        
-        conn = conn
-        |> put_req_header("x-api-key", "test_api_key_123")
-        |> put_req_header("content-type", "application/json")
-        |> post("/api/v1/vulnerabilities/validate", request_body)
-        
+
+        conn =
+          conn
+          |> put_req_header("x-api-key", "test_api_key_123")
+          |> put_req_header("content-type", "application/json")
+          |> post("/api/v1/vulnerabilities/validate", request_body)
+
         response = json_response(conn, 200)
-        
+
         assert length(response["validated"]) == 1
         vuln = hd(response["validated"])
         assert vuln["isValid"] == true
-        assert vuln["confidence"] == 0.85  # Single-hop gets 85% confidence
+        # Single-hop gets 85% confidence
+        assert vuln["confidence"] == 0.85
         assert vuln["astContext"]["taintedFlow"] == true
         assert vuln["astContext"]["taintLevel"] == 2
         assert vuln["astContext"]["taintHops"] == 0
       end
     end
-    
-    test "detects multi-hop tainted flow with reduced confidence", %{conn: conn, customer: customer} do
-      with_mock Accounts, [get_customer_by_api_key: fn("test_api_key_123") -> customer end] do
+
+    test "detects multi-hop tainted flow with reduced confidence", %{
+      conn: conn,
+      customer: customer
+    } do
+      with_mock Accounts, get_customer_by_api_key: fn "test_api_key_123" -> customer end do
         request_body = %{
           "vulnerabilities" => [
             %{
@@ -130,25 +137,27 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             """
           }
         }
-        
-        conn = conn
-        |> put_req_header("x-api-key", "test_api_key_123")
-        |> put_req_header("content-type", "application/json")
-        |> post("/api/v1/vulnerabilities/validate", request_body)
-        
+
+        conn =
+          conn
+          |> put_req_header("x-api-key", "test_api_key_123")
+          |> put_req_header("content-type", "application/json")
+          |> post("/api/v1/vulnerabilities/validate", request_body)
+
         response = json_response(conn, 200)
-        
+
         assert length(response["validated"]) == 1
         vuln = hd(response["validated"])
         assert vuln["isValid"] == true
-        assert vuln["confidence"] == 0.75  # Multi-hop gets 75% confidence
+        # Multi-hop gets 75% confidence
+        assert vuln["confidence"] == 0.75
         assert vuln["astContext"]["taintedFlow"] == true
         assert vuln["astContext"]["taintLevel"] == 3
       end
     end
-    
+
     test "detects suspicious variable names", %{conn: conn, customer: customer} do
-      with_mock Accounts, [get_customer_by_api_key: fn("test_api_key_123") -> customer end] do
+      with_mock Accounts, get_customer_by_api_key: fn "test_api_key_123" -> customer end do
         request_body = %{
           "vulnerabilities" => [
             %{
@@ -166,25 +175,27 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             """
           }
         }
-        
-        conn = conn
-        |> put_req_header("x-api-key", "test_api_key_123")
-        |> put_req_header("content-type", "application/json")
-        |> post("/api/v1/vulnerabilities/validate", request_body)
-        
+
+        conn =
+          conn
+          |> put_req_header("x-api-key", "test_api_key_123")
+          |> put_req_header("content-type", "application/json")
+          |> post("/api/v1/vulnerabilities/validate", request_body)
+
         response = json_response(conn, 200)
-        
+
         assert length(response["validated"]) == 1
         vuln = hd(response["validated"])
         assert vuln["isValid"] == true
-        assert vuln["confidence"] == 0.60  # Suspicious name gets 60% confidence
+        # Suspicious name gets 60% confidence
+        assert vuln["confidence"] == 0.60
         assert vuln["astContext"]["suspiciousName"] == true
         assert vuln["astContext"]["taintLevel"] == 3
       end
     end
-    
+
     test "reduces confidence when sanitization is detected", %{conn: conn, customer: customer} do
-      with_mock Accounts, [get_customer_by_api_key: fn("test_api_key_123") -> customer end] do
+      with_mock Accounts, get_customer_by_api_key: fn "test_api_key_123" -> customer end do
         request_body = %{
           "vulnerabilities" => [
             %{
@@ -205,14 +216,15 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             """
           }
         }
-        
-        conn = conn
-        |> put_req_header("x-api-key", "test_api_key_123")
-        |> put_req_header("content-type", "application/json")
-        |> post("/api/v1/vulnerabilities/validate", request_body)
-        
+
+        conn =
+          conn
+          |> put_req_header("x-api-key", "test_api_key_123")
+          |> put_req_header("content-type", "application/json")
+          |> post("/api/v1/vulnerabilities/validate", request_body)
+
         response = json_response(conn, 200)
-        
+
         assert length(response["validated"]) == 1
         vuln = hd(response["validated"])
         # Confidence should be reduced by 50% due to sanitization
@@ -221,9 +233,9 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
         assert vuln["astContext"]["hasSanitization"] == true
       end
     end
-    
+
     test "gives low confidence for unknown sources", %{conn: conn, customer: customer} do
-      with_mock Accounts, [get_customer_by_api_key: fn("test_api_key_123") -> customer end] do
+      with_mock Accounts, get_customer_by_api_key: fn "test_api_key_123" -> customer end do
         request_body = %{
           "vulnerabilities" => [
             %{
@@ -241,14 +253,15 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             """
           }
         }
-        
-        conn = conn
-        |> put_req_header("x-api-key", "test_api_key_123")
-        |> put_req_header("content-type", "application/json")
-        |> post("/api/v1/vulnerabilities/validate", request_body)
-        
+
+        conn =
+          conn
+          |> put_req_header("x-api-key", "test_api_key_123")
+          |> put_req_header("content-type", "application/json")
+          |> post("/api/v1/vulnerabilities/validate", request_body)
+
         response = json_response(conn, 200)
-        
+
         assert length(response["validated"]) == 1
         vuln = hd(response["validated"])
         # Unknown source gets 40% confidence
@@ -259,9 +272,9 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
         assert vuln["astContext"]["suspiciousName"] == false
       end
     end
-    
+
     test "taint analysis with file path multipliers", %{conn: conn, customer: customer} do
-      with_mock Accounts, [get_customer_by_api_key: fn("test_api_key_123") -> customer end] do
+      with_mock Accounts, get_customer_by_api_key: fn "test_api_key_123" -> customer end do
         request_body = %{
           "vulnerabilities" => [
             %{
@@ -279,14 +292,15 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             """
           }
         }
-        
-        conn = conn
-        |> put_req_header("x-api-key", "test_api_key_123")
-        |> put_req_header("content-type", "application/json")
-        |> post("/api/v1/vulnerabilities/validate", request_body)
-        
+
+        conn =
+          conn
+          |> put_req_header("x-api-key", "test_api_key_123")
+          |> put_req_header("content-type", "application/json")
+          |> post("/api/v1/vulnerabilities/validate", request_body)
+
         response = json_response(conn, 200)
-        
+
         assert length(response["validated"]) == 1
         vuln = hd(response["validated"])
         # Direct input (0.95) * vendor multiplier (0.1) = 0.095
@@ -296,9 +310,9 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
         assert vuln["reason"] =~ "vendor"
       end
     end
-    
+
     test "NodeGoat-style eval vulnerability detection", %{conn: conn, customer: customer} do
-      with_mock Accounts, [get_customer_by_api_key: fn("test_api_key_123") -> customer end] do
+      with_mock Accounts, get_customer_by_api_key: fn "test_api_key_123" -> customer end do
         # This mimics the actual NodeGoat vulnerability
         request_body = %{
           "vulnerabilities" => [
@@ -316,12 +330,12 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
               const preTax = req.body.preTax;
               const afterTax = req.body.afterTax;
               const roth = req.body.roth;
-              
+
               // Vulnerable: Server-side JavaScript injection
               const preTaxTotal = eval(preTax);
               const afterTaxTotal = eval(afterTax);
               const rothTotal = eval(roth);
-              
+
               res.json({
                 preTax: preTaxTotal,
                 afterTax: afterTaxTotal,
@@ -331,18 +345,20 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             """
           }
         }
-        
-        conn = conn
-        |> put_req_header("x-api-key", "test_api_key_123")
-        |> put_req_header("content-type", "application/json")
-        |> post("/api/v1/vulnerabilities/validate", request_body)
-        
+
+        conn =
+          conn
+          |> put_req_header("x-api-key", "test_api_key_123")
+          |> put_req_header("content-type", "application/json")
+          |> post("/api/v1/vulnerabilities/validate", request_body)
+
         response = json_response(conn, 200)
-        
+
         assert length(response["validated"]) == 1
         vuln = hd(response["validated"])
         assert vuln["isValid"] == true
-        assert vuln["confidence"] == 0.85  # Single-hop from req.body.preTax
+        # Single-hop from req.body.preTax
+        assert vuln["confidence"] == 0.85
         assert vuln["astContext"]["taintedFlow"] == true
         assert vuln["astContext"]["inUserInputFlow"] == true
       end

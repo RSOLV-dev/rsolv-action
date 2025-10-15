@@ -1,20 +1,20 @@
 defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
   @moduledoc """
   Detects NoSQL injection vulnerabilities in JavaScript/TypeScript code.
-  
+
   NoSQL databases like MongoDB are vulnerable to injection attacks when user input
   is directly used in queries without proper sanitization. Attackers can inject
   operators like $where, $ne, $gt to bypass authentication or extract data.
-  
+
   ## Vulnerability Details
-  
+
   NoSQL injection occurs when untrusted data is inserted into NoSQL database queries,
   allowing attackers to:
   - Bypass authentication (e.g., using {$ne: null})
   - Execute arbitrary JavaScript ($where operator)
   - Extract or manipulate data
   - Cause denial of service
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Direct use of req.body in MongoDB query
@@ -24,33 +24,33 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
       password: req.body.password   // {"$ne": null}
     });
   });
-  
+
   // Attacker sends: {"username": {"$ne": null}, "password": {"$ne": null}}
   // This matches any user, logging in as the first user found
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the pattern definition for NoSQL injection detection.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.NosqlInjection.pattern()
       iex> pattern.id
       "js-nosql-injection"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.NosqlInjection.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.NosqlInjection.pattern()
       iex> vulnerable = "db.users.find({username: req.body.username})"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.NosqlInjection.pattern()
       iex> safe = "db.users.find({username: sanitize(req.body.username)})"
       iex> Regex.match?(pattern.regex, safe)
@@ -61,7 +61,8 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
     %Pattern{
       id: "js-nosql-injection",
       name: "NoSQL Injection",
-      description: "NoSQL databases can be vulnerable to injection attacks when user input is used directly in queries",
+      description:
+        "NoSQL databases can be vulnerable to injection attacks when user input is used directly in queries",
       type: :nosql_injection,
       severity: :high,
       languages: ["javascript", "typescript"],
@@ -87,7 +88,8 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
       /x,
       cwe_id: "CWE-943",
       owasp_category: "A03:2021",
-      recommendation: "Sanitize and validate all user input before using in NoSQL queries. Use parameterized queries or ODM/ORM features that handle escaping.",
+      recommendation:
+        "Sanitize and validate all user input before using in NoSQL queries. Use parameterized queries or ODM/ORM features that handle escaping.",
       test_cases: %{
         vulnerable: [
           "db.users.find({username: req.body.username})",
@@ -108,7 +110,7 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
       }
     }
   end
-  
+
   @doc """
   Returns comprehensive vulnerability metadata for NoSQL injection.
   """
@@ -119,7 +121,7 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
       NoSQL injection is a vulnerability where attackers can inject malicious operators or
       JavaScript code into NoSQL database queries. Unlike SQL injection, NoSQL injection often
       involves manipulating query operators ($ne, $gt, $where) or injecting JavaScript code.
-      
+
       This is particularly dangerous in authentication systems where operators like {$ne: null}
       can bypass login checks entirely. MongoDB's $where operator is especially dangerous as
       it allows arbitrary JavaScript execution within the database engine.
@@ -141,7 +143,8 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
           type: :research,
           id: "nosql_injection_owasp",
           title: "OWASP NoSQL Injection",
-          url: "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection"
+          url:
+            "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection"
         },
         %{
           type: :research,
@@ -169,7 +172,8 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
       cve_examples: [
         %{
           id: "CVE-2019-2386",
-          description: "MongoDB injection vulnerability in multiple products allowing authentication bypass",
+          description:
+            "MongoDB injection vulnerability in multiple products allowing authentication bypass",
           severity: "critical",
           cvss: 9.8,
           note: "Demonstrates real-world NoSQL injection leading to complete system compromise"
@@ -195,7 +199,7 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
       2. Common MongoDB/Mongoose query methods with unsanitized input
       3. Usage of the dangerous $where operator with user input
       4. Model.where() calls with direct user input
-      
+
       The pattern uses alternation to catch various query patterns while avoiding false positives
       from safe parameterized queries or queries with proper validation.
       """,
@@ -238,35 +242,35 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual NoSQL injection vulnerabilities and:
   - Queries with proper input sanitization or validation
   - Use of MongoDB ObjectId validation
   - Parameterized queries or safe query builders
   - Static queries without user input
   - Test/mock database operations
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> enhancement.ast_rules.query_analysis.has_user_input
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> "uses_sanitization" in Map.keys(enhancement.confidence_rules.adjustments)
       true
@@ -284,15 +288,19 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
         # Query must contain user input
         query_analysis: %{
           has_user_input: true,
-          contains_query_operators: true,  # $ne, $gt, $where, etc.
+          # $ne, $gt, $where, etc.
+          contains_query_operators: true,
           not_parameterized: true
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/fixtures/, ~r/mocks/],
-        exclude_if_sanitized: true,         # Uses sanitization functions
-        exclude_if_parameterized: true,     # Parameterized query builders
-        exclude_if_validated: true,         # Input validation present
+        # Uses sanitization functions
+        exclude_if_sanitized: true,
+        # Parameterized query builders
+        exclude_if_parameterized: true,
+        # Input validation present
+        exclude_if_validated: true,
         safe_functions: ["sanitize", "escape", "validate", "ObjectId", "parseInt", "String"]
       },
       confidence_rules: %{
@@ -303,7 +311,8 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
           "where_operator_usage" => 0.4,
           "uses_sanitization" => -0.8,
           "uses_object_id" => -0.7,
-          "type_conversion" => -0.6,       # String(), parseInt()
+          # String(), parseInt()
+          "type_conversion" => -0.6,
           "schema_validation" => -0.7,
           "static_query_only" => -1.0
         }

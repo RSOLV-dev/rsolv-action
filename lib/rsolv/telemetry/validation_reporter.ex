@@ -8,7 +8,8 @@ defmodule Rsolv.Telemetry.ValidationReporter do
 
   alias Rsolv.Utils.MathHelpers
 
-  @metrics_interval :timer.seconds(60)  # Report metrics every 60 seconds
+  # Report metrics every 60 seconds
+  @metrics_interval :timer.seconds(60)
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -31,13 +32,14 @@ defmodule Rsolv.Telemetry.ValidationReporter do
     # Schedule periodic metric reporting
     Process.send_after(self(), :report_metrics, @metrics_interval)
 
-    {:ok, %{
-      requests: %{total: 0, success: 0, error: 0},
-      durations: [],
-      false_positives: %{total: 0, rejected: 0},
-      cache: %{hits: 0, misses: 0},
-      pattern_rejections: %{}
-    }}
+    {:ok,
+     %{
+       requests: %{total: 0, success: 0, error: 0},
+       durations: [],
+       false_positives: %{total: 0, rejected: 0},
+       cache: %{hits: 0, misses: 0},
+       pattern_rejections: %{}
+     }}
   end
 
   def handle_event([:rsolv, :validation, :request], measurements, metadata, _config) do
@@ -57,23 +59,27 @@ defmodule Rsolv.Telemetry.ValidationReporter do
   end
 
   def handle_cast({:request, measurements, metadata}, state) do
-    new_state = state
-    |> update_in([:requests, :total], &(&1 + 1))
-    |> update_in([:requests, metadata.result], &((&1 || 0) + 1))
-    |> update_in([:durations], &([measurements.duration | &1] |> Enum.take(1000)))  # Keep last 1000
+    new_state =
+      state
+      |> update_in([:requests, :total], &(&1 + 1))
+      |> update_in([:requests, metadata.result], &((&1 || 0) + 1))
+      # Keep last 1000
+      |> update_in([:durations], &([measurements.duration | &1] |> Enum.take(1000)))
 
     {:noreply, new_state}
   end
 
   def handle_cast({:false_positive, measurements, metadata}, state) do
-    new_state = state
-    |> update_in([:false_positives, :total], &(&1 + measurements.total_count))
-    |> update_in([:false_positives, :rejected], &(&1 + measurements.rejected_count))
+    new_state =
+      state
+      |> update_in([:false_positives, :total], &(&1 + measurements.total_count))
+      |> update_in([:false_positives, :rejected], &(&1 + measurements.rejected_count))
 
     # Track which patterns are being rejected
-    pattern_state = Enum.reduce(metadata.pattern_ids || [], new_state.pattern_rejections, fn pattern_id, acc ->
-      Map.update(acc, pattern_id, 1, &(&1 + 1))
-    end)
+    pattern_state =
+      Enum.reduce(metadata.pattern_ids || [], new_state.pattern_rejections, fn pattern_id, acc ->
+        Map.update(acc, pattern_id, 1, &(&1 + 1))
+      end)
 
     {:noreply, %{new_state | pattern_rejections: pattern_state}}
   end
@@ -96,17 +102,19 @@ defmodule Rsolv.Telemetry.ValidationReporter do
       p99 = percentile(durations, 0.99)
 
       # Calculate rates
-      false_positive_rate = if state.false_positives.total > 0 do
-        (state.false_positives.rejected / state.false_positives.total) * 100
-      else
-        0.0
-      end
+      false_positive_rate =
+        if state.false_positives.total > 0 do
+          state.false_positives.rejected / state.false_positives.total * 100
+        else
+          0.0
+        end
 
-      cache_hit_rate = if (state.cache.hits + state.cache.misses) > 0 do
-        (state.cache.hits / (state.cache.hits + state.cache.misses)) * 100
-      else
-        0.0
-      end
+      cache_hit_rate =
+        if state.cache.hits + state.cache.misses > 0 do
+          state.cache.hits / (state.cache.hits + state.cache.misses) * 100
+        else
+          0.0
+        end
 
       # Log metrics
       Logger.info("""
@@ -120,11 +128,12 @@ defmodule Rsolv.Telemetry.ValidationReporter do
 
       # Log top rejected patterns
       if map_size(state.pattern_rejections) > 0 do
-        top_patterns = state.pattern_rejections
-        |> Enum.sort_by(fn {_, count} -> -count end)
-        |> Enum.take(5)
-        |> Enum.map(fn {pattern, count} -> "  #{pattern}: #{count}" end)
-        |> Enum.join("\n")
+        top_patterns =
+          state.pattern_rejections
+          |> Enum.sort_by(fn {_, count} -> -count end)
+          |> Enum.take(5)
+          |> Enum.map(fn {pattern, count} -> "  #{pattern}: #{count}" end)
+          |> Enum.join("\n")
 
         Logger.info("Top Rejected Patterns:\n#{top_patterns}")
       end
@@ -141,17 +150,20 @@ defmodule Rsolv.Telemetry.ValidationReporter do
 
     # Reset counters for next interval
     Process.send_after(self(), :report_metrics, @metrics_interval)
-    
-    {:noreply, %{state | 
-      requests: %{total: 0, success: 0, error: 0},
-      durations: [],
-      false_positives: %{total: 0, rejected: 0},
-      cache: %{hits: 0, misses: 0},
-      pattern_rejections: %{}
-    }}
+
+    {:noreply,
+     %{
+       state
+       | requests: %{total: 0, success: 0, error: 0},
+         durations: [],
+         false_positives: %{total: 0, rejected: 0},
+         cache: %{hits: 0, misses: 0},
+         pattern_rejections: %{}
+     }}
   end
 
   defp percentile([], _), do: 0
+
   defp percentile(sorted_list, p) do
     k = round(p * (length(sorted_list) - 1))
     Enum.at(sorted_list, k, 0)

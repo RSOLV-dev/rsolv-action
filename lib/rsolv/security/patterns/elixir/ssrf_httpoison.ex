@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
   @moduledoc """
   Detects Server-Side Request Forgery (SSRF) vulnerabilities via HTTPoison and other HTTP clients.
-  
+
   This pattern identifies instances where user-controlled input is used directly in HTTP
   requests without proper validation, potentially allowing attackers to make requests to
   internal services or arbitrary external URLs.
-  
+
   ## Vulnerability Details
-  
+
   SSRF vulnerabilities occur when an application makes HTTP requests to URLs provided by
   users without proper validation. This can lead to:
   - Access to internal services (localhost, internal IPs)
@@ -15,9 +15,9 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
   - Interaction with cloud metadata services (169.254.169.254)
   - Bypass of firewalls and access controls
   - Data exfiltration through controlled endpoints
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   def fetch_webhook(conn, %{"url" => url}) do
@@ -29,21 +29,21 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
     end
   end
   ```
-  
+
   An attacker could:
   - Access internal services: `http://localhost:9200/_cat/indices`
   - Read cloud metadata: `http://169.254.169.254/latest/meta-data/`
   - Scan internal network: `http://192.168.1.1:22`
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   @allowed_hosts ["api.example.com", "webhook.partner.com"]
-  
+
   def fetch_webhook(conn, %{"url" => url}) do
     uri = URI.parse(url)
-    
+
     if uri.host in @allowed_hosts and uri.scheme in ["https"] do
       case HTTPoison.get(url, [], timeout: 5000, recv_timeout: 5000) do
         {:ok, %{status_code: 200, body: body}} ->
@@ -57,10 +57,10 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -106,7 +106,7 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -115,13 +115,13 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
       user-controlled input is used to make HTTP requests without proper validation. This
       is particularly dangerous in Elixir/Phoenix applications that integrate with webhooks,
       external APIs, or implement proxy functionality.
-      
+
       HTTPoison, being the most popular HTTP client in the Elixir ecosystem, is frequently
       involved in SSRF vulnerabilities. Other clients like Tesla, Req, Finch, and direct
       :hackney usage are also susceptible. The vulnerability allows attackers to use the
       application as a proxy to access internal resources, cloud metadata services, or
       perform port scanning.
-      
+
       The BEAM VM's robust networking capabilities make it an attractive target for SSRF
       attacks, as compromised applications can efficiently make many concurrent requests.
       """,
@@ -148,7 +148,8 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
           type: :research,
           id: "ssrf_bible",
           title: "SSRF Bible - A collection of SSRF attack vectors",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"
         }
       ],
       attack_vectors: [
@@ -229,19 +230,19 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SSRF vulnerabilities and
   legitimate HTTP client usage.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SsrfHttpoison.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SsrfHttpoison.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -257,9 +258,24 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
           check_req: true,
           check_finch: true,
           check_hackney: true,
-          http_functions: ["get", "get!", "post", "post!", "put", "put!", 
-                          "delete", "delete!", "request", "request!",
-                          "patch", "patch!", "head", "head!", "options", "options!"]
+          http_functions: [
+            "get",
+            "get!",
+            "post",
+            "post!",
+            "put",
+            "put!",
+            "delete",
+            "delete!",
+            "request",
+            "request!",
+            "patch",
+            "patch!",
+            "head",
+            "head!",
+            "options",
+            "options!"
+          ]
         },
         url_analysis: %{
           check_literal_urls: true,
@@ -269,11 +285,28 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/_test\.exs$/, ~r/factories/],
-        user_input_sources: ["params", "conn.params", "conn.body_params", 
-                            "socket.assigns", "args", "user", "input", "request",
-                            "url", "endpoint", "webhook", "callback", "target"],
-        safe_patterns: ["URI.parse", "@allowed_hosts", "in @whitelist", 
-                       "validate_url", "sanitize_url"],
+        user_input_sources: [
+          "params",
+          "conn.params",
+          "conn.body_params",
+          "socket.assigns",
+          "args",
+          "user",
+          "input",
+          "request",
+          "url",
+          "endpoint",
+          "webhook",
+          "callback",
+          "target"
+        ],
+        safe_patterns: [
+          "URI.parse",
+          "@allowed_hosts",
+          "in @whitelist",
+          "validate_url",
+          "sanitize_url"
+        ],
         exclude_if_validated: true
       },
       confidence_rules: %{

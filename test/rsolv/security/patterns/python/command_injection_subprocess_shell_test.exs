@@ -6,7 +6,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShellTest do
   describe "pattern/0" do
     test "returns correct pattern structure" do
       pattern = CommandInjectionSubprocessShell.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "python-command-injection-subprocess-shell"
       assert pattern.name == "Command Injection via subprocess with shell=True"
@@ -29,9 +29,9 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShellTest do
         ~S|subprocess.run("ls " + user_input, shell=True)|,
         ~S|subprocess.run(f"ping {host}", shell=True)|
       ]
-      
+
       for code <- vulnerable_code do
-        assert Regex.match?(pattern.regex, code), 
+        assert Regex.match?(pattern.regex, code),
                "Should match vulnerable code: #{code}"
       end
     end
@@ -52,9 +52,9 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShellTest do
         ~S|subprocess.run(["echo", message], shell=False)|,
         ~S|subprocess.call(["ping", "-c", "4", host])|
       ]
-      
+
       for code <- safe_code do
-        refute Regex.match?(pattern.regex, code), 
+        refute Regex.match?(pattern.regex, code),
                "Should NOT match safe code: #{code}"
       end
     end
@@ -63,7 +63,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShellTest do
   describe "vulnerability_metadata/0" do
     test "returns comprehensive vulnerability metadata" do
       metadata = CommandInjectionSubprocessShell.vulnerability_metadata()
-      
+
       assert is_map(metadata)
       assert is_binary(metadata.description)
       assert is_list(metadata.references)
@@ -80,7 +80,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShellTest do
   describe "ast_enhancement/0" do
     test "returns AST enhancement rules" do
       enhancement = CommandInjectionSubprocessShell.ast_enhancement()
-      
+
       assert is_map(enhancement)
       assert Map.has_key?(enhancement, :ast_rules)
       assert Map.has_key?(enhancement, :context_rules)
@@ -90,7 +90,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShellTest do
 
     test "confidence scoring reduces false positives" do
       enhancement = CommandInjectionSubprocessShell.ast_enhancement()
-      
+
       assert enhancement.min_confidence == 0.8
       assert enhancement.confidence_rules.base == 0.5
       assert enhancement.confidence_rules.adjustments["has_shell_true"] == 0.4
@@ -101,7 +101,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShellTest do
   describe "enhanced_pattern/0" do
     test "uses AST enhancement" do
       enhanced = CommandInjectionSubprocessShell.enhanced_pattern()
-      
+
       assert enhanced.id == "python-command-injection-subprocess-shell"
       assert enhanced.ast_rules
       assert enhanced.min_confidence == 0.8
@@ -113,7 +113,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShellTest do
       assert CommandInjectionSubprocessShell.applies_to_file?("script.py", nil)
       assert CommandInjectionSubprocessShell.applies_to_file?("utils/helper.py", nil)
       assert CommandInjectionSubprocessShell.applies_to_file?("src/main.py", nil)
-      
+
       refute CommandInjectionSubprocessShell.applies_to_file?("script.js", nil)
       refute CommandInjectionSubprocessShell.applies_to_file?("config.rb", nil)
       refute CommandInjectionSubprocessShell.applies_to_file?("README.md", nil)

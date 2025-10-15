@@ -1,30 +1,30 @@
 defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
   @moduledoc """
   Open Redirect Vulnerability in JavaScript/TypeScript
-  
+
   Detects dangerous patterns like:
     res.redirect(req.query.url)
     window.location.href = params.redirect
     location.replace(userInput)
-    
+
   Safe alternatives:
     if (isValidRedirect(url)) { res.redirect(url) }
     res.redirect(ALLOWED_REDIRECTS[req.query.type])
     res.redirect('/dashboard')
-    
+
   Open redirect vulnerabilities occur when an application redirects users to a
   URL that is partially or fully controlled by an attacker. This can be exploited
   for phishing attacks, where users are redirected to malicious sites that appear
   legitimate because the initial URL was from a trusted domain.
-  
+
   ## Vulnerability Details
-  
+
   Open redirects are particularly dangerous because they abuse user trust in the
   legitimate domain. Attackers can craft URLs that start with the trusted domain
   but redirect to malicious sites, making phishing attacks more convincing. This
   is often used in combination with social engineering to steal credentials or
   deliver malware.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Direct redirect with user input
@@ -32,12 +32,12 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
     // Attacker can send: /redirect?url=https://evil.com
     res.redirect(req.query.url);
   });
-  
+
   // Attack URL:
   // https://trusted-site.com/redirect?url=https://phishing-site.com
   // User sees trusted-site.com and clicks, then gets redirected to phishing site
   ```
-  
+
   ### Modern Attack Scenarios
   Open redirect vulnerabilities can lead to:
   - Phishing attacks with increased success rates
@@ -45,7 +45,7 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
   - Cross-site scripting (XSS) via javascript: URLs
   - Server-side request forgery (SSRF) in some contexts
   - Bypassing security controls that check referrer headers
-  
+
   The vulnerability is particularly dangerous in:
   - Authentication flows (login/logout redirects)
   - OAuth authorization callbacks
@@ -53,57 +53,57 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
   - Marketing campaign tracking
   - Single sign-on (SSO) implementations
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the open redirect detection pattern.
-  
+
   This pattern detects unvalidated redirects to user-controlled URLs that can
   lead to phishing attacks. It covers server-side redirects (Express/Node.js),
   client-side redirects (window.location), and various framework-specific
   redirect mechanisms.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> pattern.id
       "js-open-redirect"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> pattern.severity
       :medium
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> pattern.cwe_id
       "CWE-601"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> vulnerable = "res.redirect(req.query.url)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> safe = "res.redirect('/dashboard')"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> vulnerable = "window.location.href = params.redirect"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> vulnerable = "location.replace(userInput)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> safe = "if (isValidRedirect(url)) { res.redirect(url) }"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> pattern.recommendation
       "Validate redirect URLs against a whitelist of allowed destinations."
@@ -138,10 +138,10 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for open redirect vulnerabilities.
-  
+
   This metadata documents the security implications of unvalidated redirects
   and provides authoritative guidance for preventing phishing attacks through
   proper URL validation.
@@ -155,26 +155,26 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
       where attackers craft URLs that appear to originate from a trusted site but
       redirect victims to malicious websites designed to steal credentials or
       deliver malware.
-      
+
       The vulnerability exploits user trust in the legitimate domain. When users
       see a URL starting with a trusted domain (e.g., https://bank.com/redirect?url=),
       they are more likely to click it, not realizing they will be redirected to
       an attacker-controlled site. This makes phishing campaigns significantly more
       effective.
-      
+
       In JavaScript applications, open redirects can occur in multiple contexts:
       1. Server-side redirects in Express/Node.js applications
       2. Client-side redirects using window.location or similar APIs
       3. Framework-specific routing mechanisms (React Router, Angular Router, etc.)
       4. Meta refresh tags dynamically generated with user input
       5. HTTP Location headers set with user-controlled values
-      
+
       Modern attack scenarios have evolved beyond simple phishing. Attackers now use
       open redirects to bypass security controls, steal OAuth tokens, chain with other
       vulnerabilities for XSS attacks, and even perform server-side request forgery
       in certain configurations. The rise of single-page applications and complex
       authentication flows has created new opportunities for exploitation.
-      
+
       The impact extends beyond individual users. Open redirects can damage an
       organization's reputation, lead to financial losses through successful phishing,
       and result in regulatory penalties under data protection laws. They are particularly
@@ -197,7 +197,8 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
           type: :owasp,
           id: "Unvalidated_Redirects_and_Forwards",
           title: "OWASP Unvalidated Redirects and Forwards Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -241,7 +242,8 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
       cve_examples: [
         %{
           id: "CVE-2021-44228",
-          description: "Log4j vulnerability included open redirect as attack vector for JNDI lookups",
+          description:
+            "Log4j vulnerability included open redirect as attack vector for JNDI lookups",
           severity: "critical",
           cvss: 10.0,
           note: "Demonstrates how open redirects can be chained with other vulnerabilities"
@@ -270,18 +272,18 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
       ],
       detection_notes: """
       This pattern detects various forms of open redirect vulnerabilities in JavaScript:
-      
+
       1. Server-side redirects (Express/Node.js) - res.redirect() with user input
       2. Client-side location manipulation - window.location.href = userInput
       3. Framework-specific routing - history.push(), router.navigate()
       4. HTTP header injection - Setting Location header with user input
       5. Meta refresh injection - Dynamically creating meta refresh tags
-      
+
       The pattern looks for redirect functions being called with common user input
       sources like req.query, req.params, req.body, or generic terms like userInput,
       params, data, etc. It attempts to avoid false positives by not matching when
       the redirect target appears to be a static string or validated input.
-      
+
       The detection is case-insensitive and handles various coding styles including
       method chaining and template literals.
       """,
@@ -325,79 +327,81 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
       }
     }
   end
-  
+
   # Private helper to build the complex regex pattern
   defp build_open_redirect_regex do
     # User input sources that indicate vulnerability
     # Modified to not match "url" when it's just a parameter name in validation contexts
-    user_inputs = "(?:req\\.(?:query|params|body)|request\\.(?:query|params|body)|params\\.|query\\.|body\\.|user(?:Input|Data|Provided|ProvidedUrl)?|input|data(?![\\w])|protocol|host|returnUrl|goto|next|redirect(?![\\w])|(?<!Valid|valid|allow|Allow|sanitize|Sanitize|validate|Validate)(?<!\\()url(?!Encoded))"
-    
+    user_inputs =
+      "(?:req\\.(?:query|params|body)|request\\.(?:query|params|body)|params\\.|query\\.|body\\.|user(?:Input|Data|Provided|ProvidedUrl)?|input|data(?![\\w])|protocol|host|returnUrl|goto|next|redirect(?![\\w])|(?<!Valid|valid|allow|Allow|sanitize|Sanitize|validate|Validate)(?<!\\()url(?!Encoded))"
+
     # Build individual pattern components
     patterns = [
       # Server-side redirects: res.redirect(userInput)
       "(?:res\\.redirect|response\\.redirect)\\s*\\(\\s*(?:[^)]*[\\+\\s])?(?:\\$\\{)?#{user_inputs}\\b",
-      
+
       # Location assignment: window.location = userInput
       "(?:(?:window\\.)?location(?:\\.href)?|document\\.location)\\s*=\\s*(?:[^;]*[\\+\\s])?(?:\\$\\{)?#{user_inputs}\\b",
-      
+
       # Template literal location: window.location = `${params.host}`
       "(?:(?:window\\.)?location(?:\\.href)?|document\\.location)\\s*=\\s*`[^`]*\\$\\{#{user_inputs}[^}]*\\}",
-      
+
       # Location methods: location.replace(userInput)
       "(?:window\\.)?location\\.(?:replace|assign)\\s*\\(\\s*(?:[^)]*[\\+\\s])?(?:\\$\\{)?#{user_inputs}\\b",
-      
+
       # Framework routing: router.navigate(userInput) or router.navigate([userInput])
       "(?:history\\.push|navigate|router\\.navigate|router\\.push|\\$location\\.path|this\\.\\$router\\.push)\\s*\\(\\s*(?:\\[)?(?:[^)\\]]*[\\+\\s])?(?:\\$\\{)?#{user_inputs}\\b",
-      
+
       # HTTP headers: res.header('Location', userInput)
       "(?:res\\.(?:header|setHeader)\\s*\\(\\s*['\"]Location['\"]|response\\.headers\\s*\\[\\s*['\"]Location['\"]\\s*\\])\\s*[,=]\\s*(?:[^;)]*[\\+\\s])?(?:\\$\\{)?#{user_inputs}\\b",
-      
+
       # Meta refresh: meta.content = '0; url=' + userInput
       "meta\\.content\\s*=\\s*['\"]?[^'\"]*url=.*?#{user_inputs}",
-      
+
       # Document.write meta refresh
       "document\\.write.*http-equiv.*refresh.*url=.*?#{user_inputs}",
-      
+
       # innerHTML meta refresh
       "innerHTML\\s*[+\\-]?=\\s*.*http-equiv.*refresh.*url=.*?#{user_inputs}"
     ]
-    
+
     # Join all patterns with OR operator and compile
-    pattern_string = patterns
+    pattern_string =
+      patterns
       |> Enum.map(&"(?:#{&1})")
       |> Enum.join("|")
-    
+
     Regex.compile!(pattern_string, "i")
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual open redirect vulnerabilities and:
   - URLs that are validated before redirect
   - Relative-only redirects (safe from open redirect)
   - Redirects checked against an allowlist
   - Same-origin validated redirects
   - Static/hardcoded redirect destinations
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> enhancement.ast_rules.callee.property
       "redirect"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> "allowlist_check" in Map.keys(enhancement.confidence_rules.adjustments)
       true
@@ -413,7 +417,8 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
           alternatives: [
             %{object: "response", property: "redirect"},
             %{object: "window", property: "location"},
-            %{property: "writeHead"}  # 302 redirects
+            # 302 redirects
+            %{property: "writeHead"}
           ]
         },
         # Argument must be user-controlled
@@ -424,10 +429,14 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/],
-        exclude_if_url_validated: true,       # URL validation/allowlist
-        exclude_if_relative_only: true,       # Only relative paths allowed
-        exclude_if_same_origin: true,         # Checked for same origin
-        safe_redirect_patterns: ["/login", "/home", "/dashboard"]  # Known safe redirects
+        # URL validation/allowlist
+        exclude_if_url_validated: true,
+        # Only relative paths allowed
+        exclude_if_relative_only: true,
+        # Checked for same origin
+        exclude_if_same_origin: true,
+        # Known safe redirects
+        safe_redirect_patterns: ["/login", "/home", "/dashboard"]
       },
       confidence_rules: %{
         base: 0.4,
@@ -444,5 +453,4 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
       min_confidence: 0.8
     }
   end
-  
 end

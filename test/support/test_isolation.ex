@@ -5,12 +5,12 @@ defmodule Rsolv.TestIsolation do
 
   @doc """
   Runs a function with isolated Application environment.
-  
+
   This ensures that any Application.put_env calls within the function
   are reverted after execution, preventing test pollution.
-  
+
   ## Example
-  
+
       with_isolated_env(fn ->
         Application.put_env(:rsolv, :some_key, :some_value)
         # ... test code ...
@@ -19,7 +19,7 @@ defmodule Rsolv.TestIsolation do
   """
   def with_isolated_env(app \\ :rsolv, fun) when is_atom(app) and is_function(fun, 0) do
     old_env = Application.get_all_env(app)
-    
+
     try do
       fun.()
     after
@@ -27,19 +27,19 @@ defmodule Rsolv.TestIsolation do
       for {key, _value} <- Application.get_all_env(app) do
         Application.delete_env(app, key)
       end
-      
+
       # Restore old env
       for {key, value} <- old_env do
         Application.put_env(app, key, value)
       end
     end
   end
-  
+
   @doc """
   Runs a function with multiple isolated Application environments.
-  
+
   ## Example
-  
+
       with_isolated_envs([:rsolv, :bamboo], fn ->
         Application.put_env(:rsolv, :key, :value)
         Application.put_env(:bamboo, :key, :value)
@@ -48,7 +48,7 @@ defmodule Rsolv.TestIsolation do
   """
   def with_isolated_envs(apps, fun) when is_list(apps) and is_function(fun, 0) do
     old_envs = Enum.map(apps, fn app -> {app, Application.get_all_env(app)} end)
-    
+
     try do
       fun.()
     after
@@ -58,7 +58,7 @@ defmodule Rsolv.TestIsolation do
         for {key, _value} <- Application.get_all_env(app) do
           Application.delete_env(app, key)
         end
-        
+
         # Restore old env
         for {key, value} <- old_env do
           Application.put_env(app, key, value)
@@ -69,35 +69,35 @@ defmodule Rsolv.TestIsolation do
 
   @doc """
   Creates a unique name for a test process to avoid naming conflicts.
-  
+
   ## Example
-  
+
       name = unique_process_name("my_genserver")
       {:ok, pid} = GenServer.start_link(MyModule, args, name: name)
   """
   def unique_process_name(base_name) when is_binary(base_name) do
     :"#{base_name}_test_#{System.unique_integer([:positive, :monotonic])}"
   end
-  
+
   def unique_process_name(base_name) when is_atom(base_name) do
     unique_process_name(Atom.to_string(base_name))
   end
 
   @doc """
   Waits for a GenServer to be ready with a custom check function.
-  
+
   ## Example
-  
+
       wait_for_genserver(MyServer, fn ->
         MyServer.ready?()
       end)
   """
   def wait_for_genserver(name, ready_check_fn, timeout \\ 5000) do
     deadline = System.monotonic_time(:millisecond) + timeout
-    
+
     wait_for_genserver_loop(name, ready_check_fn, deadline)
   end
-  
+
   defp wait_for_genserver_loop(name, ready_check_fn, deadline) do
     case Process.whereis(name) do
       nil ->
@@ -107,7 +107,7 @@ defmodule Rsolv.TestIsolation do
         else
           {:error, :timeout}
         end
-        
+
       _pid ->
         if ready_check_fn.() do
           :ok
@@ -129,15 +129,17 @@ defmodule Rsolv.TestIsolation do
   def wait_for_async_tasks(timeout \\ 1000) do
     Process.sleep(timeout)
   end
-  
+
   @doc """
   Clears specific ETS tables if they exist.
   """
   def clear_ets_tables(tables) when is_list(tables) do
     Enum.each(tables, fn table ->
       case :ets.info(table) do
-        :undefined -> :ok
-        _ -> 
+        :undefined ->
+          :ok
+
+        _ ->
           try do
             :ets.delete_all_objects(table)
           rescue

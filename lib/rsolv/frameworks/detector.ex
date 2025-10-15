@@ -55,18 +55,18 @@ defmodule Rsolv.Frameworks.Detector do
   require Logger
 
   @type package_files :: %{
-    optional(:package_json) => map() | nil,
-    optional(:gemfile) => String.t() | nil,
-    optional(:requirements_txt) => String.t() | nil,
-    optional(:config_files) => list(String.t())
-  }
+          optional(:package_json) => map() | nil,
+          optional(:gemfile) => String.t() | nil,
+          optional(:requirements_txt) => String.t() | nil,
+          optional(:config_files) => list(String.t())
+        }
 
   @type detection_result :: %{
-    framework: String.t(),
-    version: String.t() | nil,
-    test_dir: String.t(),
-    compatible_with: list(String.t())
-  }
+          framework: String.t(),
+          version: String.t() | nil,
+          test_dir: String.t(),
+          compatible_with: list(String.t())
+        }
 
   # Framework priorities (lower number = higher priority)
   @js_framework_priority %{
@@ -229,13 +229,16 @@ defmodule Rsolv.Frameworks.Detector do
 
   # Detect JavaScript/TypeScript frameworks from package.json
   defp detect_from_package_json(nil), do: []
+
   defp detect_from_package_json(package_json) when is_map(package_json) do
     dev_deps = Map.get(package_json, "devDependencies", %{})
 
     ["vitest", "jest", "mocha"]
     |> Enum.map(fn framework ->
       case Map.get(dev_deps, framework) do
-        nil -> nil
+        nil ->
+          nil
+
         version_spec ->
           %{
             name: framework,
@@ -249,6 +252,7 @@ defmodule Rsolv.Frameworks.Detector do
 
   # Detect Ruby frameworks from Gemfile
   defp detect_from_gemfile(nil), do: []
+
   defp detect_from_gemfile(gemfile_content) when is_binary(gemfile_content) do
     [
       detect_gem(gemfile_content, "rspec"),
@@ -270,6 +274,7 @@ defmodule Rsolv.Frameworks.Detector do
 
   # Detect Python frameworks from requirements.txt
   defp detect_from_requirements_txt(nil), do: []
+
   defp detect_from_requirements_txt(requirements_content) when is_binary(requirements_content) do
     [
       detect_requirement(requirements_content, "pytest"),
@@ -284,10 +289,13 @@ defmodule Rsolv.Frameworks.Detector do
     regex = ~r/^#{package_name}\b(?:==|>=|<=|~=)([^\s]+)/m
 
     case Regex.run(regex, requirements_content) do
-      [_, version] -> %{name: package_name, version: version, source: "requirements.txt"}
+      [_, version] ->
+        %{name: package_name, version: version, source: "requirements.txt"}
+
       nil ->
         # Also check for package name without version, using word boundary
         standalone_regex = ~r/^#{package_name}\b\s*$/m
+
         if Regex.match?(standalone_regex, requirements_content) do
           %{name: package_name, version: nil, source: "requirements.txt"}
         else
@@ -298,6 +306,7 @@ defmodule Rsolv.Frameworks.Detector do
 
   # Detect frameworks from config files
   defp detect_from_config_files(nil), do: []
+
   defp detect_from_config_files(config_files) when is_list(config_files) do
     @config_patterns
     |> Enum.flat_map(fn {framework, patterns} ->
@@ -341,12 +350,14 @@ defmodule Rsolv.Frameworks.Detector do
   defp get_custom_test_dir(_framework, _package_json), do: nil
 
   defp extract_test_dir(nil), do: nil
+
   defp extract_test_dir(paths) when is_list(paths) do
     # Extract directory from patterns like ["test/**/*.test.ts"]
     paths
     |> List.first()
     |> extract_test_dir()
   end
+
   defp extract_test_dir(path) when is_binary(path) do
     case Regex.run(~r/^([^*]+)/, path) do
       [_, dir] -> String.trim(dir)
@@ -358,5 +369,6 @@ defmodule Rsolv.Frameworks.Detector do
   defp clean_version(version_spec) when is_binary(version_spec) do
     String.replace(version_spec, ~r/^[\^~=><!]+/, "")
   end
+
   defp clean_version(nil), do: nil
 end

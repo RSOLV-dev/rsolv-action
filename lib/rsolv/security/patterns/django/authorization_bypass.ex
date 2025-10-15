@@ -1,58 +1,58 @@
 defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
   @moduledoc """
   Django Authorization Bypass pattern for Django applications.
-  
+
   This pattern detects missing or insufficient permission checks that could
   allow unauthorized users to access or modify resources they shouldn't have
   access to.
-  
+
   ## Background
-  
+
   Authorization bypass vulnerabilities occur when applications fail to properly
   verify that a user has the necessary permissions to perform an action or
   access a resource. In Django, this often manifests as:
-  
+
   - Views without permission checks
   - Direct object references without ownership validation
   - Queries that don't filter by user ownership
   - Missing object-level permission checks
-  
+
   ## Vulnerability Details
-  
+
   Django provides several mechanisms for authorization:
   - Function-based views: @permission_required decorator
   - Class-based views: PermissionRequiredMixin
   - Model-level: has_perm() method
   - Object-level: django-guardian or custom checks
-  
+
   Failing to use these mechanisms can lead to horizontal and vertical
   privilege escalation.
-  
+
   ## Examples
-  
+
       # VULNERABLE - No permission check
       def delete_document(request, doc_id):
           document = Document.objects.get(pk=doc_id)
           document.delete()
-          
+
       # VULNERABLE - get_object_or_404 without user check
       invoice = get_object_or_404(Invoice, pk=invoice_id)
-      
+
       # VULNERABLE - All objects exposed
       documents = Document.objects.all()
-      
+
       # SAFE - Permission decorator
       @permission_required('app.delete_document')
       def delete_document(request, doc_id):
           document = get_object_or_404(Document, pk=doc_id, user=request.user)
           document.delete()
-      
+
       # SAFE - Filtered by user
       documents = Document.objects.filter(user=request.user)
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   @impl true
   def pattern do
     %Rsolv.Security.Pattern{
@@ -66,28 +66,29 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
       regex: [
         # Views without permission decorators performing sensitive operations
         ~r/def\s+\w+\s*\(\s*request.*?\)(?!.*@permission_required)(?!.*@user_passes_test)(?!.*has_perm).*?(?:delete|update|create|modify)/s,
-        
+
         # get_object_or_404 without user parameter
         ~r/get_object_or_404\s*\(\s*\w+,\s*pk\s*=\s*\w+\)(?!.*user\s*=)/,
-        
+
         # Objects.filter() followed by delete/update without user constraint
         ~r/\.objects\.filter\s*\(\s*\)\.(?:delete|update)\s*\(/,
-        
+
         # Objects.all() without subsequent filtering
         ~r/\w+\.objects\.all\s*\(\s*\)(?!.*filter.*user)/,
-        
+
         # Direct pk access from request without validation
         ~r/\.objects\.get\s*\(\s*pk\s*=\s*request\./,
-        
+
         # Update/delete without ownership check
         ~r/\.objects\.filter\s*\([^)]*\)\.(?:delete|update)\s*\((?!.*user=request\.user)/,
-        
+
         # Raw SQL without user constraints
         ~r/\.raw\s*\(\s*['"]\s*(?:DELETE|UPDATE).*WHERE\s+(?!.*user_id)/i
       ],
       cwe_id: "CWE-862",
       owasp_category: "A01:2021",
-      recommendation: "Implement proper permission checks using @permission_required or check user.has_perm()",
+      recommendation:
+        "Implement proper permission checks using @permission_required or check user.has_perm()",
       test_cases: %{
         vulnerable: [
           "document = get_object_or_404(Document, pk=doc_id)",
@@ -105,7 +106,7 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -114,29 +115,28 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
       permission checks are missing, insufficient, or improperly implemented.
       This allows users to access or modify resources beyond their intended
       privileges.
-      
+
       Common authorization bypass patterns in Django include:
-      
+
       1. **Missing Permission Decorators**: Views handling sensitive operations
          without @permission_required or similar checks
-      
+
       2. **Direct Object References**: Accessing objects by ID without verifying
          the user has permission to view/modify them
-      
+
       3. **Unfiltered Querysets**: Using Model.objects.all() or broad filters
          that expose data from all users
-      
+
       4. **Missing Object-Level Permissions**: Checking only model-level permissions
          when object-level granularity is needed
-      
+
       5. **Improper Permission Logic**: Custom permission checks that can be
          bypassed through parameter manipulation
-      
+
       Django provides comprehensive authorization features including decorators,
       mixins, and permission methods. Using these consistently prevents most
       authorization bypass vulnerabilities.
       """,
-      
       references: [
         %{
           type: :cwe,
@@ -163,7 +163,6 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           url: "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
         }
       ],
-      
       attack_vectors: [
         "Direct object reference manipulation (changing IDs in URLs)",
         "Parameter manipulation to access unauthorized resources",
@@ -174,7 +173,6 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
         "API endpoint manipulation",
         "Mass assignment to modify protected fields"
       ],
-      
       real_world_impact: [
         "Unauthorized access to sensitive user data",
         "Data modification or deletion by unauthorized users",
@@ -185,7 +183,6 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
         "Account takeover through profile manipulation",
         "Competitive advantage loss through data exposure"
       ],
-      
       cve_examples: [
         %{
           id: "CVE-2023-31047",
@@ -216,27 +213,25 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           note: "Allowed accessing files outside intended directories"
         }
       ],
-      
       detection_notes: """
       This pattern detects authorization bypass by identifying:
-      
+
       1. Function definitions without permission decorators that perform
          sensitive operations (delete, update, create)
       2. get_object_or_404 calls without user ownership filtering
       3. Broad queries using filter().delete() or all() without constraints
       4. Direct object access using request parameters without validation
       5. Raw SQL queries without user_id constraints
-      
+
       The pattern uses negative lookahead to avoid false positives when
       permission checks are present. AST enhancement further reduces
       false positives by analyzing context.
       """,
-      
       safe_alternatives: [
         """
         # Use permission decorators
         from django.contrib.auth.decorators import permission_required
-        
+
         @permission_required('app.delete_document')
         def delete_document(request, doc_id):
             document = get_object_or_404(Document, pk=doc_id, user=request.user)
@@ -260,7 +255,7 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
         """
         # Use Django Guardian for object permissions
         from guardian.shortcuts import get_objects_for_user
-        
+
         def list_shared_documents(request):
             # Get all documents user has view permission for
             documents = get_objects_for_user(
@@ -270,17 +265,16 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
         """
         # Class-based view with PermissionRequiredMixin
         from django.contrib.auth.mixins import PermissionRequiredMixin
-        
+
         class DocumentDeleteView(PermissionRequiredMixin, DeleteView):
             model = Document
             permission_required = 'app.delete_document'
-            
+
             def get_queryset(self):
                 # Ensure users can only delete their own documents
                 return super().get_queryset().filter(user=self.request.user)
         """
       ],
-      
       additional_context: %{
         common_mistakes: [
           "Assuming authentication implies authorization",
@@ -292,23 +286,22 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           "Not checking permissions in API views",
           "Inconsistent permission checks across views"
         ],
-        
         secure_patterns: [
           """
           # Comprehensive permission checking
           from django.contrib.auth.decorators import login_required, permission_required
           from django.core.exceptions import PermissionDenied
-          
+
           @login_required
           @permission_required('app.change_document')
           def edit_document(request, doc_id):
               # Model-level permission checked by decorator
               document = get_object_or_404(Document, pk=doc_id)
-              
+
               # Object-level permission check
               if document.user != request.user and not request.user.is_staff:
                   raise PermissionDenied
-              
+
               # Safe to proceed
               if request.method == 'POST':
                   # Process form
@@ -318,7 +311,7 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           # Secure queryset filtering
           class DocumentViewSet(viewsets.ModelViewSet):
               permission_classes = [IsAuthenticated]
-              
+
               def get_queryset(self):
                   user = self.request.user
                   if user.is_staff:
@@ -333,7 +326,7 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
               def __init__(self, *args, user=None, **kwargs):
                   super().__init__(*args, **kwargs)
                   self.user = user
-                  
+
               def clean(self):
                   cleaned_data = super().clean()
                   if self.instance.pk:
@@ -342,7 +335,6 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
                   return cleaned_data
           """
         ],
-        
         framework_specific_notes: [
           "Django's permission system is tied to models by default",
           "Use django-guardian for object-level permissions",
@@ -356,12 +348,11 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
       }
     }
   end
-  
+
   @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
-      
       context_rules: %{
         permission_decorators: [
           "@permission_required",
@@ -372,7 +363,6 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           "@require_POST",
           "@require_GET"
         ],
-        
         permission_methods: [
           "has_perm",
           "has_perms",
@@ -382,7 +372,6 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           "get_group_permissions",
           "get_all_permissions"
         ],
-        
         sensitive_operations: [
           "delete",
           "update",
@@ -396,7 +385,6 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           "edit",
           "add"
         ],
-        
         safe_patterns: [
           "filter(user=request.user)",
           "filter(owner=request.user)",
@@ -406,17 +394,15 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           "if user.has_perm",
           "PermissionDenied"
         ],
-        
         public_models: [
           "Article",
-          "BlogPost", 
+          "BlogPost",
           "NewsItem",
           "PublicDocument",
           "FAQ",
           "StaticPage"
         ]
       },
-      
       confidence_rules: %{
         adjustments: %{
           # High confidence patterns
@@ -426,19 +412,19 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           get_object_without_user: +0.8,
           all_objects_exposed: +0.85,
           raw_sql_without_user: +0.9,
-          
+
           # Medium confidence
           read_without_permission: +0.6,
           filter_without_user: +0.5,
           generic_view_operations: +0.4,
-          
+
           # Lower confidence
           public_model_access: -0.8,
           has_permission_check: -0.9,
           in_test_file: -0.95,
           in_migration: -0.98,
           list_view_only: -0.4,
-          
+
           # Context adjustments
           has_permission_decorator: -0.95,
           has_user_filter: -0.85,
@@ -446,7 +432,6 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           is_staff_only_view: -0.3
         }
       },
-      
       ast_rules: %{
         permission_analysis: %{
           detect_decorators: true,
@@ -456,21 +441,18 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           detect_raw_queries: true,
           analyze_view_purpose: true
         },
-        
         queryset_analysis: %{
           check_filter_params: true,
           detect_user_constraints: true,
           analyze_all_usage: true,
           check_select_related: true
         },
-        
         context_analysis: %{
           check_file_path: true,
           analyze_imports: true,
           detect_model_type: true,
           check_view_name: true
         },
-        
         security_analysis: %{
           check_object_access: true,
           detect_id_params: true,

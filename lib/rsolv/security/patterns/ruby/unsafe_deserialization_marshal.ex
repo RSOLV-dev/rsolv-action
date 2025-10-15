@@ -1,17 +1,17 @@
 defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
   @moduledoc """
   Pattern for detecting unsafe deserialization vulnerabilities using Ruby's Marshal library.
-  
+
   This pattern identifies when applications use Marshal.load() with untrusted user input,
   which can lead to remote code execution through deserialization gadget chains.
-  
+
   ## Vulnerability Details
-  
+
   Marshal deserialization is one of the most dangerous vulnerabilities in Ruby applications.
   The Marshal library can deserialize arbitrary Ruby objects, including those that execute
   code during instantiation. When user-controlled data is passed to Marshal.load(), attackers
   can craft malicious payloads that execute arbitrary code on the server.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable Marshal deserialization in various contexts
@@ -19,21 +19,21 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
     def restore_session
       # VULNERABLE: Direct Marshal.load with user params
       session_data = Marshal.load(params[:session])
-      
+
       # VULNERABLE: Marshal.load with Base64 decoding
       user_data = Marshal.load(Base64.decode64(params[:data]))
-      
+
       # VULNERABLE: Marshal.load with cookies
       auth_token = Marshal.load(cookies[:auth])
-      
+
       # VULNERABLE: Marshal.load with request body
       payload = Marshal.load(request.body.read)
-      
+
       # VULNERABLE: ActiveStorage deserialization (CVE-2019-5420)
       blob = Marshal.load(URI.decode(signed_blob_id))
     end
   end
-  
+
   # Example exploit payload (simplified)
   # This creates a gadget chain for remote code execution:
   exploit_payload = Marshal.dump(
@@ -42,15 +42,15 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       spec.instance_variable_set(:@loaded_gems, {'system' => 'rm -rf /'})
     end
   )
-  
+
   # When Marshal.load(exploit_payload) is called, it executes the system command
   ```
-  
+
   **Real-world Impact:**
-  CVE-2019-5420 and CVE-2020-8165 demonstrated critical Marshal deserialization 
+  CVE-2019-5420 and CVE-2020-8165 demonstrated critical Marshal deserialization
   vulnerabilities in Rails, leading to remote code execution in production applications.
   The elttam universal gadget chain works across Ruby versions 2.x and 3.x.
-  
+
   **Safe Alternative:**
   ```ruby
   # SECURE: Use JSON for data serialization
@@ -58,24 +58,24 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
     def restore_session
       # SECURE: JSON parsing instead of Marshal
       session_data = JSON.parse(params[:session])
-      
+
       # SECURE: Strong parameters with validation
       user_data = user_params.to_h
-      
+
       # SECURE: Rails encrypted cookies (automatic security)
       auth_token = cookies.encrypted[:auth]
-      
+
       # SECURE: Structured data parsing with validation
       payload = JSON.parse(request.body.read)
       validate_payload_structure!(payload)
     end
-    
+
     private
-    
+
     def user_params
       params.require(:user).permit(:id, :name, :email)
     end
-    
+
     def validate_payload_structure!(payload)
       required_keys = %w[action data timestamp]
       raise ArgumentError unless required_keys.all? { |key| payload.key?(key) }
@@ -83,16 +83,17 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "ruby-unsafe-deserialization-marshal",
       name: "Unsafe Deserialization - Marshal",
-      description: "Detects unsafe use of Marshal.load with user-controlled input that can lead to remote code execution",
+      description:
+        "Detects unsafe use of Marshal.load with user-controlled input that can lead to remote code execution",
       type: :deserialization,
       severity: :critical,
       languages: ["ruby"],
@@ -101,35 +102,35 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
         ~r/Marshal\.load\s*\(\s*params\[/,
         ~r/Marshal\.load\s*\(\s*params\./,
         ~r/Marshal\.load\s*\(\s*params\s*\[/,
-        
+
         # Marshal.load with request data
         ~r/Marshal\.load\s*\(\s*request\./,
         ~r/Marshal\.load\s*\(\s*request\s*\./,
         ~r/Marshal\.load\s*\(\s*request\.body/,
         ~r/Marshal\.load\s*\(\s*request\.raw_post/,
-        
+
         # Marshal.load with cookies
         ~r/Marshal\.load\s*\(\s*cookies\[/,
         ~r/Marshal\.load\s*\(\s*cookies\./,
         ~r/Marshal\.load\s*\(\s*cookies\.signed/,
         ~r/Marshal\.load\s*\(\s*cookies\.encrypted/,
-        
+
         # Marshal.load with Base64 decoding (common pattern)
         ~r/Marshal\.load\s*\(\s*Base64\.(decode64|strict_decode64|urlsafe_decode64)/,
-        
+
         # Marshal.load with user input variables
         ~r/Marshal\.load\s*\(\s*user_input/,
         ~r/Marshal\.load\s*\(\s*untrusted_data/,
         ~r/Marshal\.load\s*\(\s*external_data/,
         ~r/Marshal\.load\s*\(\s*client_data/,
         ~r/Marshal\.load\s*\(\s*uploaded_file/,
-        
+
         # ActiveStorage-specific patterns (CVE-2019-5420)
         ~r/Marshal\.load\s*\(\s*URI\.decode/,
         ~r/Marshal\.load\s*\(\s*.*?\.verify\s*\(/,
         ~r/Marshal\.load\s*\(\s*Rails\.application\.message_verifier/,
         ~r/Marshal\.load\s*\(\s*ActiveStorage::Verifier/,
-        
+
         # Rails session and cache patterns
         ~r/Marshal\.load\s*\(\s*session\[/,
         ~r/Marshal\.load\s*\(\s*cache\.read/,
@@ -137,7 +138,8 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       ],
       cwe_id: "CWE-502",
       owasp_category: "A08:2021",
-      recommendation: "Never use Marshal.load with untrusted data. Use JSON.parse or other safe serialization formats. For Rails, use encrypted cookies and strong parameters.",
+      recommendation:
+        "Never use Marshal.load with untrusted data. Use JSON.parse or other safe serialization formats. For Rails, use encrypted cookies and strong parameters.",
       test_cases: %{
         vulnerable: [
           ~S|data = Marshal.load(params[:data])|,
@@ -154,7 +156,7 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -163,14 +165,14 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       applications. The Marshal library is Ruby's native binary serialization format that
       can deserialize arbitrary Ruby objects, including those that execute code during
       instantiation or initialization.
-      
+
       **How Marshal Deserialization Works:**
       Ruby's Marshal library can serialize and deserialize almost any Ruby object:
       - **Complete Object Reconstruction**: Recreates objects with their exact state
       - **Code Execution During Deserialization**: Objects can execute code in initialize methods
       - **Gadget Chain Exploitation**: Chaining objects to achieve arbitrary code execution
       - **No Built-in Security**: Marshal provides no protection against malicious objects
-      
+
       **Ruby-Specific Exploitation Techniques:**
       Marshal deserialization attacks rely on "gadget chains" - sequences of Ruby objects
       that, when deserialized together, execute arbitrary code:
@@ -179,7 +181,7 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       - **ERB Template Gadgets**: Using ERB for code execution
       - **ActiveSupport Gadgets**: Leveraging Rails framework objects
       - **Custom Application Gadgets**: Using application-specific classes
-      
+
       **Critical Security Impact:**
       Marshal deserialization provides complete remote code execution:
       - **System Command Execution**: Full shell access on the target server
@@ -187,7 +189,7 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       - **Database Compromise**: Access to database credentials and sensitive data
       - **Network Pivot**: Use compromised server to attack internal systems
       - **Persistent Access**: Install backdoors and maintain persistence
-      
+
       **Rails-Specific Vulnerabilities:**
       Rails applications are particularly vulnerable due to:
       - **Session Storage**: Historical use of Marshal for session serialization
@@ -195,7 +197,7 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       - **ActiveStorage**: File upload handling with signed URLs (CVE-2019-5420)
       - **ActionCable**: WebSocket message deserialization
       - **Background Jobs**: Job queue payload deserialization
-      
+
       **Common Attack Scenarios:**
       - **Session Hijacking**: Crafting malicious session cookies
       - **File Upload Exploitation**: Malicious file metadata deserialization
@@ -237,8 +239,10 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
         %{
           type: :research,
           id: "zdi_activestorage",
-          title: "Remote Code Execution via Ruby on Rails Active Storage Insecure Deserialization",
-          url: "https://www.thezdi.com/blog/2019/6/20/remote-code-execution-via-ruby-on-rails-active-storage-insecure-deserialization"
+          title:
+            "Remote Code Execution via Ruby on Rails Active Storage Insecure Deserialization",
+          url:
+            "https://www.thezdi.com/blog/2019/6/20/remote-code-execution-via-ruby-on-rails-active-storage-insecure-deserialization"
         },
         %{
           type: :research,
@@ -277,7 +281,8 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
           description: "Rails development mode secret key vulnerability",
           severity: "critical",
           cvss: 9.8,
-          note: "Predictable secret_key_base in development mode allows Marshal deserialization attacks"
+          note:
+            "Predictable secret_key_base in development mode allows Marshal deserialization attacks"
         },
         %{
           id: "CVE-2020-8165",
@@ -304,28 +309,28 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       detection_notes: """
       This pattern detects unsafe Marshal deserialization by identifying Marshal.load()
       calls that receive user-controlled input:
-      
+
       **Primary Detection Points:**
       - Marshal.load() with params, request, or cookies as arguments
       - Marshal.load() with Base64 decoding of user input
       - Marshal.load() with user input variables or external data sources
       - ActiveStorage-specific patterns like URI.decode with Marshal.load
       - Rails session and cache patterns using Marshal deserialization
-      
+
       **Ruby-Specific Patterns:**
       - Direct parameter access: Marshal.load(params[:data])
       - Request body access: Marshal.load(request.body.read)
       - Cookie manipulation: Marshal.load(cookies[:session])
       - Base64 encoding: Marshal.load(Base64.decode64(user_input))
       - File upload handling: Marshal.load(uploaded_file.read)
-      
+
       **False Positive Considerations:**
       - Marshal.load with trusted file sources (acceptable in some contexts)
       - Marshal.load with hardcoded constants or application-controlled data
       - Commented out Marshal.load statements
       - Marshal.dump operations (serialization, not deserialization)
       - Test code with Marshal operations on known safe data
-      
+
       **Detection Enhancements:**
       The AST enhancement provides sophisticated analysis:
       - User input flow tracking from HTTP requests to Marshal.load
@@ -395,19 +400,19 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual security issues and
   acceptable Marshal usage patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal.ast_enhancement()
       iex> enhancement.min_confidence
       0.9
@@ -429,7 +434,14 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
         },
         user_input_analysis: %{
           check_user_input_sources: true,
-          input_sources: ["params", "request", "cookies", "session", "user_input", "uploaded_file"],
+          input_sources: [
+            "params",
+            "request",
+            "cookies",
+            "session",
+            "user_input",
+            "uploaded_file"
+          ],
           dangerous_patterns: [
             "params[",
             "request.",
@@ -457,7 +469,11 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
         },
         rails_specific: %{
           check_activestorage_patterns: true,
-          activestorage_methods: ["URI.decode", "message_verifier.verify", "ActiveStorage::Verifier"],
+          activestorage_methods: [
+            "URI.decode",
+            "message_verifier.verify",
+            "ActiveStorage::Verifier"
+          ],
           check_cache_patterns: true,
           cache_methods: ["Rails.cache", "cache.read", "MemCacheStore", "RedisCacheStore"]
         }

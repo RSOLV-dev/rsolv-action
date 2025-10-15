@@ -1,19 +1,19 @@
 defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionFragment do
   @moduledoc """
   Detects unsafe usage of Ecto fragments that can lead to SQL injection vulnerabilities.
-  
+
   This pattern identifies dangerous usage of `fragment/1` and `unsafe_fragment/1` functions
   in Ecto queries where user input or dynamic SQL construction could lead to SQL injection.
   While fragments are powerful tools for complex SQL operations, they require careful handling
   to avoid security vulnerabilities.
-  
+
   ## Vulnerability Details
-  
+
   Ecto fragments allow developers to inject raw SQL into queries, which can be dangerous
   when combined with user input or dynamic SQL construction. Unlike Ecto's query DSL,
   fragments bypass automatic parameterization and escaping, making them vulnerable to
   SQL injection if not used carefully.
-  
+
   ### Attack Example
   ```elixir
   # Vulnerable - direct user input in fragment
@@ -21,21 +21,21 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionFragment do
   from(u in User, where: fragment("? = ANY(?)", field, values))
   # Could allow injection if field contains malicious SQL
   ```
-  
+
   ### Safe Alternative
   ```elixir
   # Safe - use pinned variables or Ecto query DSL
   field = params["field"]
   from(u in User, where: field(u, ^String.to_existing_atom(field)) in ^values)
-  
+
   # Or safe fragment usage with proper validation
   from(u in User, where: fragment("? = ANY(?)", ^validated_field, ^values))
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -51,7 +51,8 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionFragment do
       regex: ~r/^[^#]*(?:unsafe_fragment\s*\(|fragment\s*\()/m,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use Ecto query DSL instead of fragments when possible. When fragments are necessary, ensure all parameters are properly validated and use pinned variables",
+      recommendation:
+        "Use Ecto query DSL instead of fragments when possible. When fragments are necessary, ensure all parameters are properly validated and use pinned variables",
       test_cases: %{
         vulnerable: [
           ~S|fragment("? = ANY(?)", field, values)|,
@@ -69,7 +70,7 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionFragment do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -84,7 +85,8 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionFragment do
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -97,7 +99,8 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionFragment do
           type: :research,
           id: "ecto_fragment_injection",
           title: "Ecto's fragment allowing SQL injection - Stack Overflow",
-          url: "https://stackoverflow.com/questions/67521090/ectos-fragment-allowing-sql-injection"
+          url:
+            "https://stackoverflow.com/questions/67521090/ectos-fragment-allowing-sql-injection"
         },
         %{
           type: :research,
@@ -135,7 +138,7 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionFragment do
           note: "Demonstrates fragment vulnerability with PostgreSQL array operators"
         },
         %{
-          id: "CVE-2022-2222", 
+          id: "CVE-2022-2222",
           description: "Ecto fragment injection in JSON path queries",
           severity: "high",
           cvss: 7.8,
@@ -185,27 +188,27 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionFragment do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between safe and unsafe fragment usage by
   analyzing the context, parameters, and SQL construction patterns within fragments.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionFragment.ast_enhancement()
       iex> Enum.sort(Map.keys(enhancement))
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionFragment.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionFragment.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionFragment.ast_enhancement()
       iex> enhancement.ast_rules.fragment_analysis.check_fragment_usage
       true
@@ -222,7 +225,7 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionFragment do
         },
         sql_analysis: %{
           check_dynamic_sql: true,
-          concatenation_patterns: [~r/<>/,  ~r/\+\+/, ~r/Enum\.join/],
+          concatenation_patterns: [~r/<>/, ~r/\+\+/, ~r/Enum\.join/],
           injection_indicators: ["?", "ANY", "->", "->>", "@>"]
         },
         parameter_analysis: %{

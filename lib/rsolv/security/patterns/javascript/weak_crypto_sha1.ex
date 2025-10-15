@@ -1,57 +1,57 @@
 defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
   @moduledoc """
   Weak Cryptography - SHA1 in JavaScript/Node.js
-  
+
   Detects dangerous patterns like:
     crypto.createHash('sha1')
     const hash = crypto.createHash("sha1").update(data).digest()
     crypto.createHash('SHA1')
-    
+
   Safe alternatives:
     crypto.createHash('sha256')
     crypto.createHash('sha3-256')
     crypto.createHash('sha512')
-    
-  SHA1 (Secure Hash Algorithm 1) is a cryptographic hash function that has been 
-  deprecated due to collision vulnerabilities. While not as severely broken as MD5, 
-  SHA1 has been successfully attacked in practice, most notably by Google's 
+
+  SHA1 (Secure Hash Algorithm 1) is a cryptographic hash function that has been
+  deprecated due to collision vulnerabilities. While not as severely broken as MD5,
+  SHA1 has been successfully attacked in practice, most notably by Google's
   demonstration in 2017 that showed practical collision attacks are feasible.
-  
+
   ## Vulnerability Details
-  
-  SHA1 suffers from several cryptographic weaknesses that make it unsuitable for 
+
+  SHA1 suffers from several cryptographic weaknesses that make it unsuitable for
   security-critical applications:
-  
-  1. **Collision Attacks**: Google demonstrated the first practical SHA1 collision 
+
+  1. **Collision Attacks**: Google demonstrated the first practical SHA1 collision
      in 2017 with the SHAttered attack, requiring 2^63.1 operations
-  2. **Chosen-prefix Collisions**: More advanced attacks that allow meaningful 
+  2. **Chosen-prefix Collisions**: More advanced attacks that allow meaningful
      content control in both colliding documents
-  3. **Length Extension Attacks**: SHA1's Merkle-Damgård construction remains 
+  3. **Length Extension Attacks**: SHA1's Merkle-Damgård construction remains
      vulnerable to length extension attacks
-  4. **Deprecation by Standards Bodies**: NIST deprecated SHA1 for digital 
+  4. **Deprecation by Standards Bodies**: NIST deprecated SHA1 for digital
      signatures in 2011, and major browsers stopped accepting SHA1 certificates
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: SHA1 for digital signatures
   const signature = crypto.createHash('sha1').update(document).digest('hex');
   // This signature can potentially be forged through collision attacks
-  
+
   // Vulnerable: SHA1 for password hashing
   const passwordHash = crypto.createHash('sha1').update(password + salt).digest('hex');
   // While better than MD5, still vulnerable to rainbow tables and collision attacks
   ```
-  
+
   ### SHAttered Impact (2017)
-  Google's SHAttered attack demonstrated that SHA1 collisions are not just 
-  theoretical but practically achievable. This breakthrough showed that two 
-  different PDF files could be crafted with identical SHA1 hashes, proving 
+  Google's SHAttered attack demonstrated that SHA1 collisions are not just
+  theoretical but practically achievable. This breakthrough showed that two
+  different PDF files could be crafted with identical SHA1 hashes, proving
   that SHA1 can no longer be trusted for integrity verification or digital signatures.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   def pattern do
     %Pattern{
       id: "js-weak-crypto-sha1",
@@ -60,7 +60,8 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
       type: :weak_crypto,
       severity: :medium,
       languages: ["javascript", "typescript"],
-      regex: ~r/(?:crypto|require\s*\(\s*['"`]crypto['"`]\s*\))\.createHash\s*\(\s*['"`]sha-?1['"`]\s*\)/i,
+      regex:
+        ~r/(?:crypto|require\s*\(\s*['"`]crypto['"`]\s*\))\.createHash\s*\(\s*['"`]sha-?1['"`]\s*\)/i,
       cwe_id: "CWE-328",
       owasp_category: "A02:2021",
       recommendation: "Use SHA-256 or SHA-3 instead of SHA1.",
@@ -89,33 +90,33 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for weak cryptography using SHA1.
-  
-  This metadata documents the specific cryptographic weaknesses of SHA1 and the 
+
+  This metadata documents the specific cryptographic weaknesses of SHA1 and the
   practical attacks that have been demonstrated, particularly Google's SHAttered attack in 2017.
   """
   def vulnerability_metadata do
     %{
       description: """
-      SHA1 (Secure Hash Algorithm 1) is a cryptographic hash function that has been 
-      deprecated due to demonstrated collision vulnerabilities. While initially considered 
-      secure, advances in cryptanalysis and computational power have made collision attacks 
-      against SHA1 practically feasible. The most significant breakthrough was Google's 
+      SHA1 (Secure Hash Algorithm 1) is a cryptographic hash function that has been
+      deprecated due to demonstrated collision vulnerabilities. While initially considered
+      secure, advances in cryptanalysis and computational power have made collision attacks
+      against SHA1 practically feasible. The most significant breakthrough was Google's
       SHAttered attack in 2017, which demonstrated the first practical SHA1 collision.
-      
-      Unlike MD5, which has been completely broken for decades, SHA1 maintained theoretical 
-      security until recent years. However, the combination of improved attack techniques 
-      and increased computational resources has made SHA1 collisions achievable within 
-      reasonable time and budget constraints. This has led to widespread deprecation of 
+
+      Unlike MD5, which has been completely broken for decades, SHA1 maintained theoretical
+      security until recent years. However, the combination of improved attack techniques
+      and increased computational resources has made SHA1 collisions achievable within
+      reasonable time and budget constraints. This has led to widespread deprecation of
       SHA1 across the industry.
-      
-      The vulnerability is particularly concerning for digital signatures, file integrity 
-      verification, and certificate validation, where collision attacks can be used to 
-      create malicious content with valid signatures or certificates. While password 
-      hashing with SHA1 is less immediately vulnerable to collision attacks, it remains 
-      susceptible to rainbow table attacks and lacks the computational hardness required 
+
+      The vulnerability is particularly concerning for digital signatures, file integrity
+      verification, and certificate validation, where collision attacks can be used to
+      create malicious content with valid signatures or certificates. While password
+      hashing with SHA1 is less immediately vulnerable to collision attacks, it remains
+      susceptible to rainbow table attacks and lacks the computational hardness required
       for secure password storage.
       """,
       references: [
@@ -146,13 +147,15 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
         %{
           type: :nist,
           id: "SP_800-131A",
-          title: "NIST Transitions: Recommendation for Transitioning the Use of Cryptographic Algorithms",
+          title:
+            "NIST Transitions: Recommendation for Transitioning the Use of Cryptographic Algorithms",
           url: "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar2.pdf"
         },
         %{
           type: :rfc,
           id: "RFC_6194",
-          title: "RFC 6194: Security Considerations for the SHA-0 and SHA-1 Message-Digest Algorithms",
+          title:
+            "RFC 6194: Security Considerations for the SHA-0 and SHA-1 Message-Digest Algorithms",
           url: "https://tools.ietf.org/rfc/rfc6194.txt"
         }
       ],
@@ -199,7 +202,7 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
           note: "Demonstrates practical exploitation of SHA1 weaknesses"
         },
         %{
-          id: "CVE-2018-18623", 
+          id: "CVE-2018-18623",
           description: "Grafana SHA1-based password reset token vulnerability",
           severity: "medium",
           cvss: 6.5,
@@ -209,14 +212,14 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
       detection_notes: """
       This pattern detects calls to crypto.createHash() with 'sha1' or 'sha-1' as the algorithm parameter.
       The detection covers various variations and cases:
-      
+
       1. Standard naming: 'sha1', 'SHA1'
-      2. Hyphenated form: 'sha-1', 'SHA-1'  
+      2. Hyphenated form: 'sha-1', 'SHA-1'
       3. Quote styles: single quotes, double quotes, template literals
       4. Module patterns: crypto.createHash() and require('crypto').createHash()
       5. Case insensitive matching to catch all variations
-      
-      The pattern specifically targets the crypto.createHash() API to minimize false 
+
+      The pattern specifically targets the crypto.createHash() API to minimize false
       positives while ensuring comprehensive coverage of SHA1 usage patterns in Node.js applications.
       """,
       safe_alternatives: [
@@ -272,48 +275,50 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Applies to JavaScript/TypeScript files or any file containing crypto operations.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files always apply
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) ->
+        true
+
       # If content is provided, check for crypto operations
       content != nil ->
-        String.contains?(content, "crypto.createHash") || 
-        String.contains?(content, "createHash") ||
-        String.contains?(content, "crypto.")
-        
+        String.contains?(content, "crypto.createHash") ||
+          String.contains?(content, "createHash") ||
+          String.contains?(content, "crypto.")
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual security vulnerabilities
   and legitimate uses of SHA1 for non-cryptographic purposes.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoSha1.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoSha1.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoSha1.ast_enhancement()
       iex> enhancement.ast_rules.callee.object
       "crypto"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoSha1.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -327,10 +332,13 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
           object: "crypto",
           property: "createHash"
         },
-        algorithm_check: true,  # Check the algorithm argument
+        # Check the algorithm argument
+        algorithm_check: true,
         argument_analysis: %{
-          position: 0,  # First argument is the algorithm
-          value_pattern: ~r/^sha-?1$/i  # AST value doesn't include quotes
+          # First argument is the algorithm
+          position: 0,
+          # AST value doesn't include quotes
+          value_pattern: ~r/^sha-?1$/i
         }
       },
       context_rules: %{
@@ -340,31 +348,50 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
         safe_alternatives: ["sha256", "sha3-256", "sha512", "sha384", "blake2b512"],
         check_usage_context: true,
         non_security_contexts: [
-          "git",           # Git uses SHA1 for commits
-          "checksum",      # Non-security checksums
-          "cache",         # Cache keys
-          "identifier",    # Non-security identifiers
-          "webpack",       # Build tools often use SHA1
-          "test",          # Test fixtures
-          "example"        # Example code
+          # Git uses SHA1 for commits
+          "git",
+          # Non-security checksums
+          "checksum",
+          # Cache keys
+          "cache",
+          # Non-security identifiers
+          "identifier",
+          # Build tools often use SHA1
+          "webpack",
+          # Test fixtures
+          "test",
+          # Example code
+          "example"
         ]
       },
       confidence_rules: %{
-        base: 0.5,  # Medium base - SHA1 has some legitimate uses
+        # Medium base - SHA1 has some legitimate uses
+        base: 0.5,
         adjustments: %{
-          "password_hashing" => 0.5,           # Clear vulnerability
-          "security_context" => 0.4,           # Used in security function
-          "signature_generation" => 0.5,       # Digital signatures vulnerable
-          "certificate_validation" => 0.5,     # Certificate usage dangerous
-          "in_test_code" => -0.6,              # Test code is OK
-          "git_sha_usage" => -0.7,             # Git SHA1 usage is expected
-          "build_tool_context" => -0.5,       # Webpack, rollup, etc.
-          "legacy_compatibility" => -0.3,      # Legacy support might be valid
-          "non_security_hash" => -0.4,         # Non-security use cases
-          "has_migration_comment" => -0.3      # Developer planning to migrate
+          # Clear vulnerability
+          "password_hashing" => 0.5,
+          # Used in security function
+          "security_context" => 0.4,
+          # Digital signatures vulnerable
+          "signature_generation" => 0.5,
+          # Certificate usage dangerous
+          "certificate_validation" => 0.5,
+          # Test code is OK
+          "in_test_code" => -0.6,
+          # Git SHA1 usage is expected
+          "git_sha_usage" => -0.7,
+          # Webpack, rollup, etc.
+          "build_tool_context" => -0.5,
+          # Legacy support might be valid
+          "legacy_compatibility" => -0.3,
+          # Non-security use cases
+          "non_security_hash" => -0.4,
+          # Developer planning to migrate
+          "has_migration_comment" => -0.3
         }
       },
-      min_confidence: 0.7  # Report only confident matches
+      # Report only confident matches
+      min_confidence: 0.7
     }
   end
 end

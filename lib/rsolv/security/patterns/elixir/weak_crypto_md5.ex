@@ -1,20 +1,20 @@
 defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoMd5 do
   @moduledoc """
   Detects usage of MD5 hashing algorithm which is cryptographically broken.
-  
+
   This pattern identifies instances where MD5 is used for cryptographic purposes,
   which is insecure due to its vulnerability to collision attacks and fast computation.
-  
+
   ## Vulnerability Details
-  
+
   MD5 (Message Digest Algorithm 5) was designed as a cryptographic hash function but
   is now considered broken for security purposes. Its vulnerabilities include:
   - Collision attacks: Finding two different inputs that produce the same hash
   - Fast computation: Modern hardware can compute billions of MD5 hashes per second
   - Preimage attacks: In some cases, finding an input that produces a specific hash
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   # Password hashing with MD5 - NEVER DO THIS!
@@ -22,33 +22,33 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoMd5 do
     :crypto.hash(:md5, password)
     |> Base.encode16()
   end
-  
+
   # API key generation with MD5 - INSECURE!
   def generate_api_key(user_id) do
     :crypto.hash(:md5, "\#{user_id}:\#{System.system_time()}")
     |> Base.encode16()
   end
   ```
-  
+
   An attacker could:
   - Crack MD5 password hashes using rainbow tables or brute force
   - Generate hash collisions to bypass security checks
   - Predict or forge API keys
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   # Password hashing with Argon2 (recommended)
   def hash_password(password) do
     Argon2.hash_pwd_salt(password)
   end
-  
+
   # For general hashing (non-passwords)
   def hash_data(data) do
     :crypto.hash(:sha256, data)
   end
-  
+
   # For checksums (where MD5 might be acceptable)
   def file_checksum(content) do
     # MD5 is OK for non-security checksums
@@ -56,10 +56,10 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoMd5 do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -106,7 +106,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoMd5 do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -114,7 +114,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoMd5 do
       MD5 (Message Digest Algorithm 5) is a widely known cryptographic hash function that
       produces a 128-bit hash value. However, MD5 is no longer considered secure against
       well-funded opponents due to its vulnerability to collision attacks.
-      
+
       In the Elixir/Erlang ecosystem, MD5 is available through :crypto.hash(:md5, data),
       :crypto.md5/1, and :erlang.md5/1. While it may still be acceptable for non-security
       purposes like checksums, it should never be used for:
@@ -123,7 +123,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoMd5 do
       - Cryptographic authentication
       - Session tokens or API keys
       - Any security-critical application
-      
+
       The BEAM VM makes it easy to compute MD5 hashes quickly, which ironically makes
       MD5 even less suitable for password hashing where slow computation is desirable.
       """,
@@ -220,19 +220,19 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoMd5 do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between security-critical MD5 usage
   and legitimate non-security uses like checksums.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.WeakCryptoMd5.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.WeakCryptoMd5.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
@@ -250,15 +250,31 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakCryptoMd5 do
         },
         context_analysis: %{
           check_variable_names: true,
-          security_indicators: ["password", "pwd", "secret", "token", "key", "auth",
-                               "credential", "session", "api_key", "private"],
+          security_indicators: [
+            "password",
+            "pwd",
+            "secret",
+            "token",
+            "key",
+            "auth",
+            "credential",
+            "session",
+            "api_key",
+            "private"
+          ],
           checksum_indicators: ["checksum", "hash", "digest", "fingerprint", "etag"]
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/_test\.exs$/, ~r/benchmarks/],
-        legitimate_uses: ["checksum", "file_integrity", "cache_key", "etag", 
-                         "non_cryptographic", "legacy_compatibility"],
+        legitimate_uses: [
+          "checksum",
+          "file_integrity",
+          "cache_key",
+          "etag",
+          "non_cryptographic",
+          "legacy_compatibility"
+        ],
         security_contexts: ["password", "authentication", "token", "session", "api"],
         exclude_if_checksum: true
       },

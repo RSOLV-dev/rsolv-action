@@ -229,7 +229,8 @@ defmodule Rsolv.AST.TestScorer do
   defp remove_extension(segment) do
     segment
     |> Path.rootname()
-    |> Path.rootname()  # Handle .test.js, .spec.ts, etc.
+    # Handle .test.js, .spec.ts, etc.
+    |> Path.rootname()
   end
 
   # Strongly-paired prefixes (Ruby/Elixir conventions) get no penalty
@@ -354,7 +355,8 @@ defmodule Rsolv.AST.TestScorer do
     if norm1 != norm2, do: 0.0, else: prefix_penalty(dirs1, dirs2)
   end
 
-  defp prefix_penalty([first1 | _], [first2 | _]) when first1 in @all_prefixes and first2 in @all_prefixes do
+  defp prefix_penalty([first1 | _], [first2 | _])
+       when first1 in @all_prefixes and first2 in @all_prefixes do
     if {first1, first2} in @strong_pairs, do: 0.0, else: 0.01
   end
 
@@ -364,6 +366,7 @@ defmodule Rsolv.AST.TestScorer do
   defp remove_first_if_prefix(segments), do: segments
 
   defp split_dirs_and_file([]), do: {[], ""}
+
   defp split_dirs_and_file(segments) do
     {Enum.drop(segments, -1), List.last(segments)}
   end

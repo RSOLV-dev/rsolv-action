@@ -23,7 +23,8 @@ defmodule Rsolv.EmailManagementTest do
     test "is_unsubscribed?/1 returns true for unsubscribed email" do
       EmailManagement.create_unsubscribe(%{email: "unsub@example.com"})
       assert EmailManagement.is_unsubscribed?("unsub@example.com")
-      assert EmailManagement.is_unsubscribed?("UNSUB@EXAMPLE.COM") # case insensitive
+      # case insensitive
+      assert EmailManagement.is_unsubscribed?("UNSUB@EXAMPLE.COM")
     end
 
     test "is_unsubscribed?/1 returns false for non-unsubscribed email" do
@@ -49,7 +50,11 @@ defmodule Rsolv.EmailManagementTest do
     end
 
     test "export_unsubscribes_to_csv/0 returns CSV formatted data" do
-      EmailManagement.create_unsubscribe(%{email: "test1@example.com", reason: "No longer interested"})
+      EmailManagement.create_unsubscribe(%{
+        email: "test1@example.com",
+        reason: "No longer interested"
+      })
+
       EmailManagement.create_unsubscribe(%{email: "test2@example.com"})
 
       csv = EmailManagement.export_unsubscribes_to_csv()
@@ -89,10 +94,11 @@ defmodule Rsolv.EmailManagementTest do
     end
 
     test "increment_failed_email_attempts/1 increments the attempt count" do
-      {:ok, failed_email} = EmailManagement.create_failed_email(%{
-        to_email: unique_email(),
-        error_message: "Initial error"
-      })
+      {:ok, failed_email} =
+        EmailManagement.create_failed_email(%{
+          to_email: unique_email(),
+          error_message: "Initial error"
+        })
 
       assert failed_email.attempts == 1
 

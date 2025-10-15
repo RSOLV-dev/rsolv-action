@@ -6,12 +6,12 @@ defmodule RsolvWeb.Services.EmailBroadcastTest do
     # Use test environment so test adapter is allowed
     setup do
       # Set ConvertKit test config
-      Application.put_env(:rsolv, :convertkit, [
+      Application.put_env(:rsolv, :convertkit,
         api_key: "test_api_key",
         form_id: "test_form_id",
         early_access_tag_id: "test_tag_id",
         api_base_url: "https://api.convertkit.com/v3"
-      ])
+      )
 
       # Set up Bamboo test adapter for email delivery
       Application.put_env(:rsolv, Rsolv.Mailer, adapter: Bamboo.TestAdapter)

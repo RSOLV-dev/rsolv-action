@@ -1,70 +1,70 @@
 defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
   @moduledoc """
   SQL Injection via Python String Concatenation
-  
+
   Detects dangerous patterns like:
     cursor.execute("SELECT * FROM users WHERE id = " + user_id)
     db.execute("DELETE FROM posts WHERE author = '" + username + "'")
     query = "UPDATE users SET status = '" + status + "'"; conn.execute(query)
-    
+
   Safe alternatives:
     cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
     db.execute("DELETE FROM posts WHERE author = ?", [username])
     cursor.execute("UPDATE users SET status = :status", {"status": status})
-    
+
   ## Vulnerability Details
-  
+
   String concatenation using the + operator is one of the most common and dangerous
   ways to construct SQL queries in Python. When user input is concatenated directly
   into SQL query strings, it creates a direct SQL injection vulnerability.
-  
+
   The vulnerability occurs when:
   1. SQL query strings are built using the + operator
   2. User-controlled input is concatenated into the query
   3. No escaping or parameterization is performed
   4. The resulting string is executed as SQL
-  
+
   This pattern is particularly dangerous because:
   - It's intuitive for beginners who may not understand the security implications
   - Python's string concatenation is straightforward, making it tempting to use
   - The vulnerability is often introduced when "quickly" adding a feature
   - It bypasses all database security mechanisms
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the SQL injection via string concatenation pattern.
-  
+
   This pattern detects usage of Python string concatenation with +
   operator in SQL queries which can lead to SQL injection vulnerabilities.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> pattern.id
       "python-sql-injection-concat"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> vulnerable = ~S|cursor.execute("SELECT * FROM users WHERE id = " + user_id)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> safe = ~S|cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> query_assignment = ~S|query = "DELETE FROM posts WHERE author = '" + username + "'"|
       iex> Regex.match?(pattern.regex, query_assignment)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> normal_concat = ~S|message = "Hello " + username + "!"|
       iex> Regex.match?(pattern.regex, normal_concat)
@@ -84,14 +84,15 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
         \.execute\s*\([^)]*["'].*\+|
         # String concatenation used in execute call
         ["'].*\+.*["'].*\.execute|
-        # SQL variable assignment with concatenation  
+        # SQL variable assignment with concatenation
         (query|sql|cmd|statement)\s*=\s*.*["'].*\+|
         # SQL concatenation in parentheses
         \(["'].*\+.*["']\)
       /ix,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",
+      recommendation:
+        "Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))",
       test_cases: %{
         vulnerable: [
           ~S|cursor.execute("SELECT * FROM users WHERE id = " + user_id)|,
@@ -108,7 +109,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -117,7 +118,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
       This is one of the most common and easily exploitable SQL injection patterns. When
       developers concatenate user input directly into SQL query strings, attackers can
       inject arbitrary SQL commands.
-      
+
       The vulnerability is widespread because:
       - String concatenation is the most basic string operation in Python
       - Many tutorials and legacy code examples use this insecure pattern
@@ -129,7 +130,8 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -196,7 +198,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
       2. String concatenation followed by database execute methods
       3. Variable assignments using concatenation for SQL queries
       4. Common SQL query variable names (query, sql, cmd) with concatenation
-      
+
       Key indicators:
       - The + operator between quoted strings and variables
       - Proximity to SQL keywords (SELECT, INSERT, UPDATE, DELETE)
@@ -228,19 +230,19 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SQL injection vulnerabilities
   and legitimate uses of string concatenation in non-SQL contexts.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionConcat.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionConcat.ast_enhancement()
       iex> enhancement.min_confidence
       0.4
@@ -268,10 +270,12 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
         safe_patterns: ["logging", "print", "format", "message", "url", "path", "filename"]
       },
       confidence_rules: %{
-        base: 0.5,  # Slightly higher base for string concat SQL patterns
+        # Slightly higher base for string concat SQL patterns
+        base: 0.5,
         adjustments: %{
           "has_sql_keywords" => 0.3,
-          "in_database_method_call" => 0.3,  # Higher bonus if we do find db call
+          # Higher bonus if we do find db call
+          "in_database_method_call" => 0.3,
           "has_user_input" => 0.2,
           "uses_plus_operator" => 0.1,
           "in_test_code" => -1.0,
@@ -281,7 +285,8 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
           "has_parameterized_query_nearby" => -0.3
         }
       },
-      min_confidence: 0.4  # Lower threshold since pattern is quite specific
+      # Lower threshold since pattern is quite specific
+      min_confidence: 0.4
     }
   end
 end

@@ -1,30 +1,30 @@
 defmodule Rsolv.Security.Patterns.Php.XssEcho do
   @moduledoc """
   Pattern for detecting Cross-Site Scripting (XSS) vulnerabilities via echo in PHP.
-  
+
   This pattern identifies when user input from PHP superglobals ($_GET, $_POST, $_REQUEST, $_COOKIE)
   is directly echoed without proper escaping. This is one of the most common XSS vulnerabilities
   in PHP applications.
-  
+
   ## Vulnerability Details
-  
+
   XSS occurs when user-controlled input is output to HTML without proper encoding. In PHP,
   the `echo` statement is frequently used to output dynamic content, making it a common
   source of XSS vulnerabilities when used with unescaped user input.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
   echo $_GET['name'];
-  
+
   // Attack: ?name=<script>alert('XSS')</script>
   // Result: Browser executes the JavaScript
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -34,7 +34,8 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
       type: :xss,
       severity: :high,
       languages: ["php"],
-      regex: ~r/echo\s+(?!htmlspecialchars)(?!.*htmlspecialchars\s*\().*\$_(GET|POST|REQUEST|COOKIE)/,
+      regex:
+        ~r/echo\s+(?!htmlspecialchars)(?!.*htmlspecialchars\s*\().*\$_(GET|POST|REQUEST|COOKIE)/,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
       recommendation: "Use htmlspecialchars() with ENT_QUOTES flag",
@@ -50,7 +51,7 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -59,7 +60,7 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
       to inject malicious scripts into web pages viewed by other users. In PHP, the echo
       statement is a primary output method, and when used with unescaped user input, it
       creates a direct path for XSS attacks.
-      
+
       The impact of XSS vulnerabilities includes:
       - Session hijacking and cookie theft
       - Defacement of websites
@@ -67,7 +68,7 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
       - Keylogging and form hijacking
       - Cryptocurrency mining
       - Drive-by malware downloads
-      
+
       PHP's echo statement outputs data directly to the browser, making proper escaping
       critical for security.
       """,
@@ -75,7 +76,8 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
         %{
           type: :cwe,
           id: "CWE-79",
-          title: "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+          title:
+            "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
           url: "https://cwe.mitre.org/data/definitions/79.html"
         },
         %{
@@ -94,7 +96,8 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
           type: :research,
           id: "owasp_xss_prevention",
           title: "OWASP XSS Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html"
         }
       ],
       attack_vectors: [
@@ -149,7 +152,7 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
       - Concatenation of user input in echo statements
       - Variable interpolation with user input
       - Missing htmlspecialchars() function calls
-      
+
       The pattern uses negative lookahead to exclude properly escaped output.
       """,
       safe_alternatives: [
@@ -186,16 +189,16 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.XssEcho.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.XssEcho.test_cases()
       iex> length(test_cases.negative) > 0
       true
@@ -248,7 +251,7 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -258,14 +261,14 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
         "Basic reflected XSS" => ~S"""
         // User profile page - VULNERABLE
         <h1>Welcome <?php echo $_GET['username']; ?>!</h1>
-        
+
         // Attack: ?username=<script>alert(document.cookie)</script>
         // Result: JavaScript executes and can steal cookies
         """,
         "XSS in HTML attributes" => ~S"""
         // Search form - VULNERABLE
         <input type="text" value="<?php echo $_GET['q']; ?>" />
-        
+
         // Attack: ?q=" onmouseover="alert('XSS')
         // Result: Breaks out of attribute and injects event handler
         """,
@@ -276,7 +279,7 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
             <p><?php echo $_POST['comment']; ?></p>
             <span>Posted on <?php echo $_POST['date']; ?></span>
         </div>
-        
+
         // Multiple XSS vectors in one form
         """
       },
@@ -284,44 +287,44 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
         "Using htmlspecialchars()" => ~S"""
         // User profile page - SECURE
         <h1>Welcome <?php echo htmlspecialchars($_GET['username'], ENT_QUOTES, 'UTF-8'); ?>!</h1>
-        
+
         // Escapes all special HTML characters including quotes
         """,
         "Context-aware escaping" => ~S"""
         // Different contexts require different escaping
-        
+
         // HTML context
         <p><?php echo htmlspecialchars($userInput, ENT_QUOTES, 'UTF-8'); ?></p>
-        
+
         // HTML attribute context
         <div id="<?php echo htmlspecialchars($id, ENT_QUOTES, 'UTF-8'); ?>">
-        
+
         // JavaScript context
         <script>
         var userData = <?php echo json_encode($data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
         </script>
-        
+
         // URL context
         <a href="<?php echo htmlspecialchars($url, ENT_QUOTES, 'UTF-8'); ?>">Link</a>
         """,
         "Using template engine" => ~S"""
         // Using Twig template engine - SECURE
         // Auto-escapes by default
-        
+
         <h1>Welcome {{ username }}!</h1>
         <p>{{ comment }}</p>
-        
+
         // Or with PHP template function
         function h($str) {
             return htmlspecialchars($str, ENT_QUOTES, 'UTF-8');
         }
-        
+
         <h1>Welcome <?= h($_GET['username']) ?>!</h1>
         """
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -330,11 +333,11 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
     Cross-Site Scripting (XSS) is one of the most prevalent web application vulnerabilities,
     particularly in PHP applications. XSS occurs when an attacker can inject malicious
     scripts into web pages that are viewed by other users, enabling cross-site scripting
-    attacks. The echo statement in PHP is a primary vector for XSS when used with 
+    attacks. The echo statement in PHP is a primary vector for XSS when used with
     unescaped user input.
-    
+
     ## Why It's Dangerous
-    
+
     XSS vulnerabilities allow attackers to:
     - Execute arbitrary JavaScript in victims' browsers
     - Steal session cookies and authentication tokens
@@ -342,60 +345,60 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
     - Redirect users to malicious websites
     - Deface websites
     - Install keyloggers
-    
+
     ## PHP Echo and XSS
-    
+
     The `echo` statement outputs data directly to the browser without any encoding:
-    
+
     ```php
     echo $_GET['input'];  // Direct XSS vulnerability
     ```
-    
+
     ## Types of XSS
-    
+
     1. **Reflected XSS** - Malicious script comes from current HTTP request
     2. **Stored XSS** - Malicious script is stored on server (database, files)
     3. **DOM-based XSS** - Vulnerability exists in client-side code
-    
+
     ## Real-World Impact
-    
+
     - **Session Hijacking**: Steal cookies to impersonate users
     - **Phishing**: Create fake login forms to steal credentials
     - **Malware Distribution**: Redirect to exploit kits
     - **Data Theft**: Access sensitive information
     - **Defacement**: Damage brand reputation
-    
+
     ## Prevention with htmlspecialchars()
-    
+
     The `htmlspecialchars()` function is PHP's primary defense:
-    
+
     ```php
     // Basic usage (incomplete protection)
     echo htmlspecialchars($input);
-    
+
     // Recommended usage (complete protection)
     echo htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
     ```
-    
+
     ### Why ENT_QUOTES is Critical
-    
+
     Without ENT_QUOTES, single quotes are not escaped:
     - `<` becomes `&lt;`
     - `>` becomes `&gt;`
     - `"` becomes `&quot;`
     - `'` remains `'` (DANGEROUS in attributes!)
-    
+
     ## Context-Aware Escaping
-    
+
     Different output contexts require different escaping:
-    
+
     1. **HTML Context**: `htmlspecialchars()`
     2. **JavaScript Context**: `json_encode()`
     3. **URL Context**: `urlencode()` or `rawurlencode()`
     4. **CSS Context**: Validate against whitelist only
-    
+
     ## Defense in Depth
-    
+
     1. **Input Validation** - Validate all input server-side
     2. **Output Encoding** - Always encode when outputting
     3. **Content Security Policy** - Add CSP headers
@@ -403,20 +406,20 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
     5. **Template Engines** - Use auto-escaping templates
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.XssEcho.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.XssEcho.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.XssEcho.ast_enhancement()
       iex> length(enhancement.ast_rules)
       3
@@ -445,8 +448,10 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
             "htmlentities",
             "strip_tags",
             "filter_var",
-            "esc_html",  # WordPress
-            "e"          # Laravel
+            # WordPress
+            "esc_html",
+            # Laravel
+            "e"
           ],
           note: "htmlspecialchars with ENT_QUOTES is preferred"
         },
@@ -454,12 +459,18 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
           type: "safe_patterns",
           description: "Patterns that indicate safe usage",
           patterns: [
-            "json_encode",     # JSON context
-            "intval",          # Integer casting
-            "floatval",        # Float casting
-            "(int)",           # Type casting
-            "number_format",   # Number formatting
-            "date"             # Date formatting
+            # JSON context
+            "json_encode",
+            # Integer casting
+            "intval",
+            # Float casting
+            "floatval",
+            # Type casting
+            "(int)",
+            # Number formatting
+            "number_format",
+            # Date formatting
+            "date"
           ]
         }
       ],

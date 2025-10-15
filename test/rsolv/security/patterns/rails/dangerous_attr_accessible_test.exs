@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.Patterns.Rails.DangerousAttrAccessible
   alias Rsolv.Security.Pattern
 
   describe "dangerous_attr_accessible pattern" do
     test "returns correct pattern structure" do
       pattern = DangerousAttrAccessible.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "rails-dangerous-attr-accessible"
       assert pattern.name == "Dangerous attr_accessible Usage"
@@ -17,7 +17,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
       assert pattern.frameworks == ["rails"]
       assert pattern.cwe_id == "CWE-915"
       assert pattern.owasp_category == "A01:2021"
-      
+
       assert is_binary(pattern.description)
       assert is_binary(pattern.recommendation)
       assert is_list(pattern.regex)
@@ -26,7 +26,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "detects dangerous attr_accessible with admin/role fields" do
       pattern = DangerousAttrAccessible.pattern()
-      
+
       vulnerable_code = [
         "attr_accessible :name, :email, :admin",
         "attr_accessible :role, :username",
@@ -36,7 +36,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
         "attr_accessible :name, :email, :role",
         "attr_accessible :permissions, :title"
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect: #{code}"
@@ -45,14 +45,14 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "detects dangerous attr_accessible with as: :admin option" do
       pattern = DangerousAttrAccessible.pattern()
-      
+
       vulnerable_code = [
         "attr_accessible :name, :email, as: :admin",
         "attr_accessible :profile, :as => :admin",
         "attr_accessible :data, as: :administrator",
         "attr_accessible :settings, :as => :superuser"
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect: #{code}"
@@ -61,21 +61,21 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "detects missing attr_accessible in ActiveRecord models" do
       pattern = DangerousAttrAccessible.pattern()
-      
+
       vulnerable_code = """
       class User < ActiveRecord::Base
         has_many :posts
         validates :email, presence: true
       end
       """
-      
+
       assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
              "Failed to detect model without attr_accessible"
     end
 
     test "detects overly permissive attr_accessible patterns" do
       pattern = DangerousAttrAccessible.pattern()
-      
+
       vulnerable_code = [
         "attr_accessible :password_digest",
         "attr_accessible :encrypted_password",
@@ -83,7 +83,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
         "attr_accessible :authentication_token",
         "attr_accessible :session_token"
       ]
-      
+
       for code <- vulnerable_code do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "Failed to detect: #{code}"
@@ -92,7 +92,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "does not detect safe attr_accessible usage" do
       pattern = DangerousAttrAccessible.pattern()
-      
+
       safe_code = [
         "attr_accessible :name, :email, :bio",
         "attr_accessible :title, :content, :published",
@@ -101,7 +101,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
         "# attr_accessible :admin # commented out",
         "validates :admin, inclusion: { in: [true, false] }"
       ]
-      
+
       for code <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, code)),
                "False positive detected for: #{code}"
@@ -110,10 +110,10 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "includes comprehensive vulnerability metadata" do
       metadata = DangerousAttrAccessible.vulnerability_metadata()
-      
+
       assert metadata.description
       assert metadata.attack_vectors
-      assert metadata.business_impact  
+      assert metadata.business_impact
       assert metadata.technical_impact
       assert metadata.likelihood
       assert metadata.cve_examples
@@ -126,7 +126,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "vulnerability metadata contains mass assignment specific information" do
       metadata = DangerousAttrAccessible.vulnerability_metadata()
-      
+
       assert String.contains?(String.downcase(metadata.description), "mass assignment")
       assert String.contains?(String.downcase(metadata.attack_vectors), "privilege")
       assert String.contains?(metadata.business_impact, "privilege escalation")
@@ -136,7 +136,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "includes AST enhancement rules" do
       enhancement = DangerousAttrAccessible.ast_enhancement()
-      
+
       assert enhancement.min_confidence
       assert enhancement.context_rules
       assert enhancement.confidence_rules
@@ -145,7 +145,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "AST enhancement has Rails 2/3 specific rules" do
       enhancement = DangerousAttrAccessible.ast_enhancement()
-      
+
       assert enhancement.context_rules.rails_version_checks
       assert enhancement.context_rules.model_indicators
       assert enhancement.ast_rules.attribute_analysis
@@ -154,7 +154,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "enhanced pattern integrates AST rules" do
       enhanced = DangerousAttrAccessible.enhanced_pattern()
-      
+
       assert enhanced.id == "rails-dangerous-attr-accessible"
       assert enhanced.ast_enhancement.min_confidence
       assert is_float(enhanced.ast_enhancement.min_confidence)
@@ -162,7 +162,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessibleTest do
 
     test "pattern includes educational test cases" do
       pattern = DangerousAttrAccessible.pattern()
-      
+
       assert pattern.test_cases.vulnerable
       assert pattern.test_cases.safe
       assert length(pattern.test_cases.vulnerable) > 0

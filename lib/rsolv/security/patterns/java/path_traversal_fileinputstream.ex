@@ -1,45 +1,46 @@
 defmodule Rsolv.Security.Patterns.Java.PathTraversalFileinputstream do
   @moduledoc """
   Path Traversal via FileInputStream pattern for Java code.
-  
+
   Detects path traversal vulnerabilities where user input is used to construct file paths
   for FileInputStream operations, potentially allowing access to files outside the
   intended directory.
-  
+
   ## Vulnerability Details
-  
+
   FileInputStream path traversal occurs when untrusted user input is used to construct
   file paths without proper validation. Unlike the File constructor which is primarily
   used for file metadata operations, FileInputStream directly opens files for reading,
   making successful path traversal attacks immediately impactful for data theft.
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable code
   String filename = request.getParameter("file");
   FileInputStream fis = new FileInputStream("/var/uploads/" + filename);
-  
+
   // Attack: filename = "../../etc/passwd"
   // Results in: /var/uploads/../../etc/passwd -> /etc/passwd
   // Attacker can read system password file directly
   ```
-  
+
   ## References
-  
+
   - CWE-22: Improper Limitation of a Pathname to a Restricted Directory
   - OWASP A01:2021 - Broken Access Control
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "java-path-traversal-fileinputstream",
       name: "Path Traversal via FileInputStream",
-      description: "Unsanitized file paths in FileInputStream constructor can lead to directory traversal",
+      description:
+        "Unsanitized file paths in FileInputStream constructor can lead to directory traversal",
       type: :path_traversal,
       severity: :high,
       languages: ["java"],
@@ -61,7 +62,8 @@ defmodule Rsolv.Security.Patterns.Java.PathTraversalFileinputstream do
       ],
       cwe_id: "CWE-22",
       owasp_category: "A01:2021",
-      recommendation: "Validate and sanitize file paths, use Files.newInputStream() with proper validation",
+      recommendation:
+        "Validate and sanitize file paths, use Files.newInputStream() with proper validation",
       test_cases: %{
         vulnerable: [
           ~S|FileInputStream fis = new FileInputStream(baseDir + filename);|,
@@ -78,7 +80,7 @@ FileInputStream fis = new FileInputStream(new File(uploadDir, safeFilename));|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -87,13 +89,13 @@ FileInputStream fis = new FileInputStream(new File(uploadDir, safeFilename));|
       to construct file paths without proper validation. The FileInputStream constructor
       directly opens files for reading, making this vulnerability particularly dangerous
       as successful attacks immediately provide access to sensitive file contents.
-      
+
       The vulnerability is especially concerning because:
       - FileInputStream provides direct file access without protection mechanisms
       - Successful attacks can immediately read sensitive files like passwords, configs
       - Unlike file metadata operations, this directly exposes file contents to attackers
       - The stream can be used to read entire files, enabling large-scale data theft
-      
+
       Common vulnerable patterns include:
       - Direct concatenation: new FileInputStream(baseDir + userInput)
       - Path separator joining: new FileInputStream(dir + File.separator + file)
@@ -116,7 +118,8 @@ FileInputStream fis = new FileInputStream(new File(uploadDir, safeFilename));|
           type: :research,
           id: "java_fileinputstream_security",
           title: "Preventing Path Traversal Vulnerabilities in Java Applications",
-          url: "https://medium.com/@fabionoth/real-world-example-preventing-path-traversal-vulnerabilities-in-java-applications-4d0f911b232f"
+          url:
+            "https://medium.com/@fabionoth/real-world-example-preventing-path-traversal-vulnerabilities-in-java-applications-4d0f911b232f"
         },
         %{
           type: :research,
@@ -156,19 +159,22 @@ FileInputStream fis = new FileInputStream(new File(uploadDir, safeFilename));|
           description: "Apache Struts path traversal vulnerability in file upload mechanism",
           severity: "critical",
           cvss: 9.1,
-          note: "Path traversal via file upload parameters allowing RCE through malicious file upload"
+          note:
+            "Path traversal via file upload parameters allowing RCE through malicious file upload"
         },
         %{
           id: "CVE-2024-38816",
-          description: "Spring Framework path traversal vulnerability in static resource handling",
+          description:
+            "Spring Framework path traversal vulnerability in static resource handling",
           severity: "high",
           cvss: 7.5,
-          note: "Affected WebMvc.fn and WebFlux.fn frameworks allowing access to files outside web root"
+          note:
+            "Affected WebMvc.fn and WebFlux.fn frameworks allowing access to files outside web root"
         },
         %{
           id: "CVE-2024-38819",
           description: "Path traversal vulnerability in Spring functional web frameworks",
-          severity: "high", 
+          severity: "high",
           cvss: 7.5,
           note: "Applications serving static resources vulnerable to path traversal attacks"
         }
@@ -180,7 +186,7 @@ FileInputStream fis = new FileInputStream(new File(uploadDir, safeFilename));|
       - Method calls that return paths concatenated with user input
       - Variable assignments followed by FileInputStream construction
       - Try-with-resources patterns with concatenated paths
-      
+
       The pattern looks for the dangerous combination of FileInputStream instantiation
       and string concatenation that could introduce user-controlled paths.
       """,
@@ -221,23 +227,23 @@ FileInputStream fis = new FileInputStream(new File(uploadDir, safeFilename));|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual path traversal vulnerabilities
   and safe FileInputStream operations.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.PathTraversalFileinputstream.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.PathTraversalFileinputstream.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.PathTraversalFileinputstream.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "NewExpression"
@@ -257,7 +263,13 @@ FileInputStream fis = new FileInputStream(new File(uploadDir, safeFilename));|
           check_operators: true,
           dangerous_operators: ["+", "concat", "StringBuilder.append", "String.format"],
           check_method_calls: true,
-          method_patterns: ["getParameter", "getHeader", "getCookie", "getPathInfo", "getRequestURI"]
+          method_patterns: [
+            "getParameter",
+            "getHeader",
+            "getCookie",
+            "getPathInfo",
+            "getRequestURI"
+          ]
         },
         path_analysis: %{
           check_separators: true,
@@ -268,9 +280,15 @@ FileInputStream fis = new FileInputStream(new File(uploadDir, safeFilename));|
         variable_analysis: %{
           check_user_input_flow: true,
           input_methods: [
-            "getParameter", "getHeader", "getQueryString",
-            "getInputStream", "getReader", "getPathInfo",
-            "getRequestURI", "getServletPath", "readLine"
+            "getParameter",
+            "getHeader",
+            "getQueryString",
+            "getInputStream",
+            "getReader",
+            "getPathInfo",
+            "getRequestURI",
+            "getServletPath",
+            "readLine"
           ],
           check_variable_usage: true
         },

@@ -108,12 +108,12 @@ defmodule Rsolv.Analytics do
   """
   def ensure_partition_exists(datetime) do
     date = DateTime.to_date(datetime)
-    
+
     Repo.query!(
       "SELECT create_analytics_partition_if_not_exists($1::date)",
       [date]
     )
-    
+
     :ok
   end
 
@@ -123,19 +123,21 @@ defmodule Rsolv.Analytics do
   """
   def count_events(filters \\ []) do
     query = Event
-    
-    query = if filters[:event_type] do
-      where(query, [e], e.event_type == ^filters[:event_type])
-    else
-      query
-    end
-    
-    query = if filters[:since] do
-      where(query, [e], e.inserted_at >= ^filters[:since])
-    else
-      query
-    end
-    
+
+    query =
+      if filters[:event_type] do
+        where(query, [e], e.event_type == ^filters[:event_type])
+      else
+        query
+      end
+
+    query =
+      if filters[:since] do
+        where(query, [e], e.inserted_at >= ^filters[:since])
+      else
+        query
+      end
+
     Repo.aggregate(query, :count, :id)
   end
 
@@ -154,7 +156,7 @@ defmodule Rsolv.Analytics do
 
   defp get_daily_stats_from_view(date) do
     query = """
-    SELECT 
+    SELECT
       date,
       SUM(event_count) as total_events,
       SUM(unique_visitors) as unique_visitors,
@@ -164,7 +166,7 @@ defmodule Rsolv.Analytics do
     WHERE date = $1
     GROUP BY date
     """
-    
+
     case Repo.query(query, [date]) do
       {:ok, %{rows: [[date, total, visitors, pageviews, conversions]]}} ->
         %{
@@ -174,22 +176,24 @@ defmodule Rsolv.Analytics do
           pageviews: pageviews,
           conversions: conversions
         }
-      _ -> nil
+
+      _ ->
+        nil
     end
   end
 
   defp calculate_daily_stats_live(date) do
     start_time = DateTime.new!(date, ~T[00:00:00])
     end_time = DateTime.new!(date, ~T[23:59:59])
-    
+
     events = list_events_in_range(start_time, end_time)
-    
+
     %{
       date: date,
       total_events: length(events),
       unique_visitors: events |> Enum.map(& &1.visitor_id) |> Enum.uniq() |> length(),
-      pageviews: Enum.count(events, & &1.event_type == "pageview"),
-      conversions: Enum.count(events, & &1.event_type == "conversion")
+      pageviews: Enum.count(events, &(&1.event_type == "pageview")),
+      conversions: Enum.count(events, &(&1.event_type == "conversion"))
     }
   end
 
@@ -199,7 +203,7 @@ defmodule Rsolv.Analytics do
   def events_between(start_date, end_date) do
     start_datetime = DateTime.new!(start_date, ~T[00:00:00])
     end_datetime = DateTime.new!(end_date, ~T[23:59:59])
-    
+
     Event
     |> where([e], e.inserted_at >= ^start_datetime and e.inserted_at <= ^end_datetime)
     |> order_by([e], desc: e.inserted_at)
@@ -224,68 +228,70 @@ defmodule Rsolv.Analytics do
     since = Keyword.get(opts, :since, Date.add(Date.utc_today(), -30))
     until = Keyword.get(opts, :until, Date.utc_today())
     group_by = Keyword.get(opts, :group_by)
-    
-    query = case data_type do
-      :page_views -> 
-        Event
-        |> where([e], e.event_type == "page_view")
-        |> where([e], fragment("?::date", e.inserted_at) >= ^since)
-        |> where([e], fragment("?::date", e.inserted_at) <= ^until)
-        
-      :conversions ->
-        Event
-        |> where([e], e.event_type == "conversion")
-        |> where([e], fragment("?::date", e.inserted_at) >= ^since)
-        |> where([e], fragment("?::date", e.inserted_at) <= ^until)
-        
-      :form_events ->
-        Event
-        |> where([e], e.event_type == "form_submit")
-        |> where([e], fragment("?::date", e.inserted_at) >= ^since)
-        |> where([e], fragment("?::date", e.inserted_at) <= ^until)
-        
-      :events ->
-        Event
-        |> where([e], fragment("?::date", e.inserted_at) >= ^since)
-        |> where([e], fragment("?::date", e.inserted_at) <= ^until)
-        
-      :sessions ->
-        # For sessions, we'll use visitor_id as a proxy
-        Event
-        |> where([e], fragment("?::date", e.inserted_at) >= ^since)
-        |> where([e], fragment("?::date", e.inserted_at) <= ^until)
-        |> distinct([e], e.visitor_id)
-    end
-    
-    result = case group_by do
-      :timestamp ->
-        query
-        |> group_by([e], fragment("date(?)", e.inserted_at))
-        |> select([e], %{
-          date: fragment("date(?)", e.inserted_at),
-          count: count(e.id),
-          unique_visitors: fragment("count(distinct ?)", e.visitor_id)
-        })
-        |> Repo.all()
-        |> Enum.map(fn row -> {row.date, row} end)
-        |> Map.new()
-        
-      :utm_source ->
-        query
-        |> group_by([e], e.utm_source)
-        |> select([e], %{
-          source: e.utm_source,
-          count: count(e.id),
-          unique_visitors: fragment("count(distinct ?)", e.visitor_id)
-        })
-        |> Repo.all()
-        |> Enum.map(fn row -> {row.source || "direct", row} end)
-        |> Map.new()
-        
-      _ ->
-        Repo.all(query)
-    end
-    
+
+    query =
+      case data_type do
+        :page_views ->
+          Event
+          |> where([e], e.event_type == "page_view")
+          |> where([e], fragment("?::date", e.inserted_at) >= ^since)
+          |> where([e], fragment("?::date", e.inserted_at) <= ^until)
+
+        :conversions ->
+          Event
+          |> where([e], e.event_type == "conversion")
+          |> where([e], fragment("?::date", e.inserted_at) >= ^since)
+          |> where([e], fragment("?::date", e.inserted_at) <= ^until)
+
+        :form_events ->
+          Event
+          |> where([e], e.event_type == "form_submit")
+          |> where([e], fragment("?::date", e.inserted_at) >= ^since)
+          |> where([e], fragment("?::date", e.inserted_at) <= ^until)
+
+        :events ->
+          Event
+          |> where([e], fragment("?::date", e.inserted_at) >= ^since)
+          |> where([e], fragment("?::date", e.inserted_at) <= ^until)
+
+        :sessions ->
+          # For sessions, we'll use visitor_id as a proxy
+          Event
+          |> where([e], fragment("?::date", e.inserted_at) >= ^since)
+          |> where([e], fragment("?::date", e.inserted_at) <= ^until)
+          |> distinct([e], e.visitor_id)
+      end
+
+    result =
+      case group_by do
+        :timestamp ->
+          query
+          |> group_by([e], fragment("date(?)", e.inserted_at))
+          |> select([e], %{
+            date: fragment("date(?)", e.inserted_at),
+            count: count(e.id),
+            unique_visitors: fragment("count(distinct ?)", e.visitor_id)
+          })
+          |> Repo.all()
+          |> Enum.map(fn row -> {row.date, row} end)
+          |> Map.new()
+
+        :utm_source ->
+          query
+          |> group_by([e], e.utm_source)
+          |> select([e], %{
+            source: e.utm_source,
+            count: count(e.id),
+            unique_visitors: fragment("count(distinct ?)", e.visitor_id)
+          })
+          |> Repo.all()
+          |> Enum.map(fn row -> {row.source || "direct", row} end)
+          |> Map.new()
+
+        _ ->
+          Repo.all(query)
+      end
+
     {:ok, result}
   end
 end

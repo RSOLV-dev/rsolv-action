@@ -8,17 +8,29 @@
         We were unable to process your unsubscribe request.
       </p>
     </div>
-    
+
     <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
       <div class="text-center">
         <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
-          <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          <svg
+            class="w-8 h-8 text-red-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            >
+            </path>
           </svg>
         </div>
-        
+
         <h3 class="text-xl font-bold mb-4">Unable to Process Request</h3>
-        
+
         <p class="text-gray-600 mb-6">
           <%= if @email && @email != "" do %>
             We couldn't unsubscribe <span class="font-semibold"><%= @email %></span>. Please check that you've entered a valid email address.
@@ -26,17 +38,26 @@
             Please provide a valid email address to unsubscribe.
           <% end %>
         </p>
-        
+
         <div class="mt-6">
-          <a href="/unsubscribe" class="bg-brand-blue text-white font-semibold py-2 px-6 rounded-md hover:bg-brand-dark transition-colors">
+          <a
+            href="/unsubscribe"
+            class="bg-brand-blue text-white font-semibold py-2 px-6 rounded-md hover:bg-brand-dark transition-colors"
+          >
             Try Again
           </a>
         </div>
       </div>
     </div>
-    
+
     <div class="mt-8 text-center text-gray-600">
-      <p>If you continue to have issues, please <a href="mailto:support@rsolv.dev" class="text-brand-blue hover:underline">contact our support team</a> for assistance.</p>
+      <p>
+        If you continue to have issues, please
+        <a href="mailto:support@rsolv.dev" class="text-brand-blue hover:underline">
+          contact our support team
+        </a>
+        for assistance.
+      </p>
     </div>
   </div>
 </section>

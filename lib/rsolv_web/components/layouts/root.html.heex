@@ -5,37 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <.live_title suffix=" · Automatic Security Detection">
-      <%= assigns[:page_title] || "RSOLV" %>
+      {assigns[:page_title] || "RSOLV"}
     </.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>
-    <meta name="description" content="RSOLV finds security vulnerabilities you didn't know existed and fixes them automatically. 170+ production-tested security patterns across 6 languages and 2 frameworks. Zero configuration. Pay only for fixes you deploy. Works with GitHub, Jira, Linear." />
-    <meta name="keywords" content="automatic security detection, vulnerability remediation, SQL injection detection, XSS vulnerability scanner, security vulnerability detection, zero-config security scanner, GitHub security, Jira security, Linear security, Rails security, Django security, Phoenix security" />
-    <meta property="og:title" content="RSOLV - Finds & Fixes Security Vulnerabilities Automatically" />
-    <meta property="og:description" content="Zero-configuration vulnerability detection with 170+ production-tested security patterns across 6 languages and 2 frameworks. Finds SQL injection, XSS, authentication bypasses, CVE-specific vulnerabilities, and generates production-ready fixes. Pay only when fixes deploy." />
+    <meta
+      name="description"
+      content="RSOLV finds security vulnerabilities you didn't know existed and fixes them automatically. 170+ production-tested security patterns across 6 languages and 2 frameworks. Zero configuration. Pay only for fixes you deploy. Works with GitHub, Jira, Linear."
+    />
+    <meta
+      name="keywords"
+      content="automatic security detection, vulnerability remediation, SQL injection detection, XSS vulnerability scanner, security vulnerability detection, zero-config security scanner, GitHub security, Jira security, Linear security, Rails security, Django security, Phoenix security"
+    />
+    <meta
+      property="og:title"
+      content="RSOLV - Finds & Fixes Security Vulnerabilities Automatically"
+    />
+    <meta
+      property="og:description"
+      content="Zero-configuration vulnerability detection with 170+ production-tested security patterns across 6 languages and 2 frameworks. Finds SQL injection, XSS, authentication bypasses, CVE-specific vulnerabilities, and generates production-ready fixes. Pay only when fixes deploy."
+    />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://rsolv.dev" />
     <meta property="og:image" content="https://rsolv.dev/images/rsolv_logo_transparent.png" />
     <link rel="icon" type="image/png" href={~p"/images/rsolv_logo_transparent.png"} />
     
-    <!-- Mastodon/Fediverse attribution for blog posts -->
+<!-- Mastodon/Fediverse attribution for blog posts -->
     <%= if assigns[:page_type] == "article" do %>
       <meta name="fediverse:creator" content="@rsolv@infosec.exchange" />
     <% end %>
     
-    <!-- Theme color for mobile browsers -->
+<!-- Theme color for mobile browsers -->
     <meta name="theme-color" content="#ffffff" />
     
-    <!-- SimpleAnalytics - Privacy-first analytics -->
-    <script data-collect-dnt="true" async src="https://sa.arborealstudios.com/latest.js"></script>
-    <noscript><img src="https://sa.arborealstudios.com/noscript.gif?collect-dnt=true" alt="" referrerpolicy="no-referrer-when-downgrade"/></noscript>
+<!-- SimpleAnalytics - Privacy-first analytics -->
+    <script data-collect-dnt="true" async src="https://sa.arborealstudios.com/latest.js">
+    </script>
+    <noscript>
+      <img
+        src="https://sa.arborealstudios.com/noscript.gif?collect-dnt=true"
+        alt=""
+        referrerpolicy="no-referrer-when-downgrade"
+      />
+    </noscript>
     
-    <!-- Plausible Analytics -->
-    <script defer data-domain="rsolv.dev" src="https://plausible.io/js/script.hash.outbound-links.js"></script>
-    <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
+<!-- Plausible Analytics -->
+    <script
+      defer
+      data-domain="rsolv.dev"
+      src="https://plausible.io/js/script.hash.outbound-links.js"
+    >
+    </script>
+    <script>
+      window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }
+    </script>
     
-    <!-- Theme initialization -->
+<!-- Theme initialization -->
     <script>
       // Apply theme immediately to prevent flash
       (function() {
@@ -53,8 +79,13 @@
     <div id="vibe-kanban-root"></div>
     <div class="flash-messages">
       <%= if flash = Phoenix.Flash.get(@flash, :info) do %>
-        <div class="bg-brand-green bg-opacity-90 text-white py-4 px-6 flex justify-between items-center" role="alert" phx-click="lv:clear-flash" phx-value-key="info">
-          <p><%= flash %></p>
+        <div
+          class="bg-brand-green bg-opacity-90 text-white py-4 px-6 flex justify-between items-center"
+          role="alert"
+          phx-click="lv:clear-flash"
+          phx-value-key="info"
+        >
+          <p>{flash}</p>
           <button type="button" class="text-white" aria-label="Close">
             <span class="hero-mini-x-mark w-5 h-5"></span>
           </button>
@@ -62,8 +93,13 @@
       <% end %>
 
       <%= if flash = Phoenix.Flash.get(@flash, :error) do %>
-        <div class="bg-red-500 bg-opacity-90 text-white py-4 px-6 flex justify-between items-center" role="alert" phx-click="lv:clear-flash" phx-value-key="error">
-          <p><%= flash %></p>
+        <div
+          class="bg-red-500 bg-opacity-90 text-white py-4 px-6 flex justify-between items-center"
+          role="alert"
+          phx-click="lv:clear-flash"
+          phx-value-key="error"
+        >
+          <p>{flash}</p>
           <button type="button" class="text-white" aria-label="Close">
             <span class="hero-mini-x-mark w-5 h-5"></span>
           </button>
@@ -71,7 +107,7 @@
       <% end %>
     </div>
 
-    <%= @inner_content %>
+    {@inner_content}
     <footer class="bg-subtle border-t border-DEFAULT text-DEFAULT py-12">
       <div class="container mx-auto px-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -84,50 +120,114 @@
           <div>
             <h3 class="text-lg font-medium mb-4">Features</h3>
             <ul class="space-y-2">
-              <li><a href="/#features" class="text-muted hover:text-DEFAULT transition-colors">Security-First Solutions</a></li>
-              <li><a href="/#features" class="text-muted hover:text-DEFAULT transition-colors">Cross-Platform Integration</a></li>
-              <li><a href="/#features" class="text-muted hover:text-DEFAULT transition-colors">Team Education</a></li>
-              <li><a href="/#pricing" class="text-muted hover:text-DEFAULT transition-colors">Pricing</a></li>
+              <li>
+                <a href="/#features" class="text-muted hover:text-DEFAULT transition-colors">
+                  Security-First Solutions
+                </a>
+              </li>
+              <li>
+                <a href="/#features" class="text-muted hover:text-DEFAULT transition-colors">
+                  Cross-Platform Integration
+                </a>
+              </li>
+              <li>
+                <a href="/#features" class="text-muted hover:text-DEFAULT transition-colors">
+                  Team Education
+                </a>
+              </li>
+              <li>
+                <a href="/#pricing" class="text-muted hover:text-DEFAULT transition-colors">
+                  Pricing
+                </a>
+              </li>
             </ul>
           </div>
           <div>
             <h3 class="text-lg font-medium mb-4">Resources</h3>
             <ul class="space-y-2">
-              <li><a href="/blog" class="text-muted hover:text-DEFAULT transition-colors">Blog</a></li>
-              <li><a href="https://github.com/rsolv-dev/rsolv-action" class="text-muted hover:text-DEFAULT transition-colors" target="_blank">GitHub Action</a></li>
+              <li>
+                <a href="/blog" class="text-muted hover:text-DEFAULT transition-colors">Blog</a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/rsolv-dev/rsolv-action"
+                  class="text-muted hover:text-DEFAULT transition-colors"
+                  target="_blank"
+                >
+                  GitHub Action
+                </a>
+              </li>
             </ul>
           </div>
           <div>
             <h3 class="text-lg font-medium mb-4">Legal</h3>
             <ul class="space-y-2">
-              <li><a href="/docs/terms" class="text-muted hover:text-DEFAULT transition-colors">Terms of Service</a></li>
-              <li><a href="/docs/privacy" class="text-muted hover:text-DEFAULT transition-colors">Privacy Policy</a></li>
+              <li>
+                <a href="/docs/terms" class="text-muted hover:text-DEFAULT transition-colors">
+                  Terms of Service
+                </a>
+              </li>
+              <li>
+                <a href="/docs/privacy" class="text-muted hover:text-DEFAULT transition-colors">
+                  Privacy Policy
+                </a>
+              </li>
             </ul>
             <h3 class="text-lg font-medium mb-2 mt-4">Connect</h3>
             <ul class="space-y-2">
-              <li><a rel="me" href="https://infosec.exchange/@rsolv" class="text-muted hover:text-DEFAULT transition-colors" target="_blank">Mastodon</a></li>
-              <li><a href="mailto:security@rsolv.dev" class="text-muted hover:text-DEFAULT transition-colors">Email</a></li>
+              <li>
+                <a
+                  rel="me"
+                  href="https://infosec.exchange/@rsolv"
+                  class="text-muted hover:text-DEFAULT transition-colors"
+                  target="_blank"
+                >
+                  Mastodon
+                </a>
+              </li>
+              <li>
+                <a
+                  href="mailto:security@rsolv.dev"
+                  class="text-muted hover:text-DEFAULT transition-colors"
+                >
+                  Email
+                </a>
+              </li>
             </ul>
           </div>
         </div>
         <div class="border-t border-muted mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4">
-            <p class="text-subtle">&copy; <%= DateTime.utc_now().year %> RSOLV. All rights reserved.</p>
-            <p class="text-subtle">Built with ❤️ in Colorado 
+            <p class="text-subtle">
+              &copy; {DateTime.utc_now().year} RSOLV. All rights reserved.
+            </p>
+            <p class="text-subtle">
+              Built with ❤️ in Colorado
               <span class="inline-flex items-center ml-1" style="width:20px; height:15px;">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1200" width="20" height="15" aria-labelledby="colorado-flag-title">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 1800 1200"
+                  width="20"
+                  height="15"
+                  aria-labelledby="colorado-flag-title"
+                >
                   <title id="colorado-flag-title">Colorado State Flag</title>
-                  <rect width="1800" height="1200" fill="#002868"/>
-                  <rect width="1800" height="400" y="400" fill="white"/>
-                  <circle cx="580" cy="600" r="300" fill="#BF0A30"/>
-                  <circle cx="580" cy="600" r="200" fill="#FFD700"/>
+                  <rect width="1800" height="1200" fill="#002868" />
+                  <rect width="1800" height="400" y="400" fill="white" />
+                  <circle cx="580" cy="600" r="300" fill="#BF0A30" />
+                  <circle cx="580" cy="600" r="200" fill="#FFD700" />
                 </svg>
               </span>
             </p>
             <p class="text-subtle text-xs">v2025.07</p>
           </div>
           <div class="mt-4 md:mt-0 flex space-x-4">
-            <a rel="me" href="https://infosec.exchange/@rsolv" class="text-subtle hover:text-DEFAULT transition-colors" target="_blank">
+            <a
+              rel="me"
+              href="https://infosec.exchange/@rsolv"
+              class="text-subtle hover:text-DEFAULT transition-colors"
+              target="_blank"
+            >
               <span class="hero-solid-chat-bubble-left-right w-6 h-6"></span>
             </a>
           </div>
@@ -135,7 +235,7 @@
       </div>
     </footer>
     
-    <!-- Global theme toggle handler -->
+<!-- Global theme toggle handler -->
     <script>
       document.addEventListener('click', function(e) {
         const button = e.target.closest('[data-theme-toggle]');
@@ -159,7 +259,7 @@
           });
         }
       });
-      
+
       // Icons are now controlled by CSS classes (hidden dark:block and block dark:hidden)
       // No JavaScript initialization needed!
     </script>

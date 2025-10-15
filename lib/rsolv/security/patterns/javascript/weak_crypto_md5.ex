@@ -1,55 +1,54 @@
 defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
   @moduledoc """
   Weak Cryptography - MD5 in JavaScript/Node.js
-  
+
   Detects dangerous patterns like:
     crypto.createHash('md5')
     const hash = crypto.createHash("md5").update(password).digest("hex")
     require('crypto').createHash('MD5')
-    
+
   Safe alternatives:
     crypto.createHash('sha256')
     await bcrypt.hash(password, 10)
     crypto.createHash('sha3-256')
-    
-  MD5 (Message Digest Algorithm 5) is a cryptographic hash function that has been 
-  proven to be fundamentally broken due to collision vulnerabilities. First 
-  demonstrated in 2004, MD5 collisions can now be generated in seconds on 
+
+  MD5 (Message Digest Algorithm 5) is a cryptographic hash function that has been
+  proven to be fundamentally broken due to collision vulnerabilities. First
+  demonstrated in 2004, MD5 collisions can now be generated in seconds on
   commodity hardware, making it unsuitable for any security-critical applications.
-  
+
   ## Vulnerability Details
-  
+
   MD5 suffers from several critical weaknesses that make it cryptographically insecure:
-  
-  1. **Collision Attacks**: It's computationally feasible to find two different 
+
+  1. **Collision Attacks**: It's computationally feasible to find two different
      inputs that produce the same MD5 hash
-  2. **Preimage Attacks**: While theoretically difficult, advances in cryptanalysis 
+  2. **Preimage Attacks**: While theoretically difficult, advances in cryptanalysis
      continue to weaken MD5's resistance
-  3. **Length Extension Attacks**: MD5's Merkle-Damgård construction is vulnerable 
+  3. **Length Extension Attacks**: MD5's Merkle-Damgård construction is vulnerable
      to length extension attacks
   4. **Rainbow Tables**: Extensive precomputed tables exist for common MD5 hashes
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: MD5 for password hashing
   const password = req.body.password;
   const hash = crypto.createHash('md5').update(password).digest('hex');
   // This hash can be cracked in seconds using rainbow tables
-  
+
   // Vulnerable: MD5 for file integrity
   const fileHash = crypto.createHash('md5').update(fileData).digest('hex');
   // Attackers can craft malicious files with the same hash
   ```
-  
+
   ### Modern Attack Capabilities
-  As of 2024, MD5 collisions can be generated in under 1 second on modern GPUs, 
-  and chosen-prefix collisions (where attackers control meaningful content in 
+  As of 2024, MD5 collisions can be generated in under 1 second on modern GPUs,
+  and chosen-prefix collisions (where attackers control meaningful content in
   both files) are practical for targeted attacks against file integrity systems.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
 
   def pattern do
     %Pattern{
@@ -59,10 +58,12 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
       type: :weak_crypto,
       severity: :medium,
       languages: ["javascript", "typescript"],
-      regex: ~r/(?:crypto|require\s*\(\s*['"`]crypto['"`]\s*\))\.createHash\s*\(\s*['"`]md5['"`]\s*\)/i,
+      regex:
+        ~r/(?:crypto|require\s*\(\s*['"`]crypto['"`]\s*\))\.createHash\s*\(\s*['"`]md5['"`]\s*\)/i,
       cwe_id: "CWE-328",
       owasp_category: "A02:2021",
-      recommendation: "Use SHA-256 or SHA-3 for hashing. For passwords, use bcrypt, scrypt, or argon2.",
+      recommendation:
+        "Use SHA-256 or SHA-3 for hashing. For passwords, use bcrypt, scrypt, or argon2.",
       test_cases: %{
         vulnerable: [
           ~S|crypto.createHash('md5')|,
@@ -87,30 +88,30 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for weak cryptography using MD5.
-  
-  This metadata documents the specific cryptographic weaknesses of MD5 and the 
+
+  This metadata documents the specific cryptographic weaknesses of MD5 and the
   practical attacks that have been demonstrated against it since 2004.
   """
   def vulnerability_metadata do
     %{
       description: """
-      MD5 (Message Digest Algorithm 5) is a cryptographic hash function that has been 
-      fundamentally broken since 2004. The algorithm suffers from collision vulnerabilities 
-      that allow attackers to generate different inputs producing identical hash outputs 
-      in practical time. Modern hardware can generate MD5 collisions in seconds, making 
+      MD5 (Message Digest Algorithm 5) is a cryptographic hash function that has been
+      fundamentally broken since 2004. The algorithm suffers from collision vulnerabilities
+      that allow attackers to generate different inputs producing identical hash outputs
+      in practical time. Modern hardware can generate MD5 collisions in seconds, making
       it completely unsuitable for security applications.
-      
-      The vulnerability is particularly dangerous because MD5 remains widely used despite 
-      being cryptographically broken for over two decades. Developers often choose MD5 
-      for its speed and familiarity, not realizing that these apparent advantages are 
+
+      The vulnerability is particularly dangerous because MD5 remains widely used despite
+      being cryptographically broken for over two decades. Developers often choose MD5
+      for its speed and familiarity, not realizing that these apparent advantages are
       vastly outweighed by its security weaknesses.
-      
-      Beyond collision attacks, MD5 is vulnerable to length extension attacks, has 
-      reduced preimage resistance compared to modern algorithms, and extensive rainbow 
-      tables exist for common MD5 hashes. The algorithm's 128-bit output size is also 
+
+      Beyond collision attacks, MD5 is vulnerable to length extension attacks, has
+      reduced preimage resistance compared to modern algorithms, and extensive rainbow
+      tables exist for common MD5 hashes. The algorithm's 128-bit output size is also
       considered insufficient by modern standards.
       """,
       references: [
@@ -141,7 +142,8 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
         %{
           type: :nist,
           id: "SP_800-131A",
-          title: "NIST Transitions: Recommendation for Transitioning the Use of Cryptographic Algorithms",
+          title:
+            "NIST Transitions: Recommendation for Transitioning the Use of Cryptographic Algorithms",
           url: "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar2.pdf"
         },
         %{
@@ -174,7 +176,8 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
       cve_examples: [
         %{
           id: "CVE-2008-4609",
-          description: "MD5 collision vulnerability in X.509 certificates allowing certificate forgery",
+          description:
+            "MD5 collision vulnerability in X.509 certificates allowing certificate forgery",
           severity: "high",
           cvss: 7.5,
           note: "Demonstrated practical attack against certificate authorities using MD5"
@@ -204,15 +207,15 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
       detection_notes: """
       This pattern detects calls to crypto.createHash() with 'md5' as the algorithm parameter.
       The detection covers various quote styles and case variations:
-      
+
       1. Single quotes: crypto.createHash('md5')
       2. Double quotes: crypto.createHash("md5")
       3. Template literals: crypto.createHash(`md5`)
       4. Case variations: 'MD5', 'Md5', etc.
       5. Whitespace tolerance around parentheses and quotes
-      
-      The pattern is designed to minimize false positives by specifically matching 
-      the crypto.createHash() API call pattern. Comments or strings mentioning MD5 
+
+      The pattern is designed to minimize false positives by specifically matching
+      the crypto.createHash() API call pattern. Comments or strings mentioning MD5
       without actually using the algorithm will not trigger the detection.
       """,
       safe_alternatives: [
@@ -259,48 +262,50 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
       }
     }
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Applies to JavaScript/TypeScript files or any file containing crypto operations.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files always apply
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) ->
+        true
+
       # If content is provided, check for crypto operations
       content != nil ->
-        String.contains?(content, "crypto.createHash") || 
-        String.contains?(content, "createHash") ||
-        String.contains?(content, "crypto.")
-        
+        String.contains?(content, "crypto.createHash") ||
+          String.contains?(content, "createHash") ||
+          String.contains?(content, "crypto.")
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual security vulnerabilities
   and legitimate uses of MD5 for non-cryptographic purposes.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoMd5.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoMd5.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoMd5.ast_enhancement()
       iex> enhancement.ast_rules.callee.object
       "crypto"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoMd5.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -314,10 +319,13 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
           object: "crypto",
           property: "createHash"
         },
-        algorithm_check: true,  # Check the algorithm argument
+        # Check the algorithm argument
+        algorithm_check: true,
         argument_analysis: %{
-          position: 0,  # First argument is the algorithm
-          value_pattern: ~r/^md5$/i  # AST value doesn't include quotes
+          # First argument is the algorithm
+          position: 0,
+          # AST value doesn't include quotes
+          value_pattern: ~r/^md5$/i
         }
       },
       context_rules: %{
@@ -327,30 +335,48 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoMd5 do
         safe_alternatives: ["sha256", "sha3-256", "sha512", "bcrypt", "argon2", "scrypt"],
         check_usage_context: true,
         non_security_contexts: [
-          "checksum",       # File checksums (non-security)
-          "etag",          # HTTP ETags
-          "cache",         # Cache keys
-          "filename",      # Filename generation
-          "non_crypto",    # Explicitly marked non-crypto
-          "integrity",     # When not for security
-          "identifier"     # Non-security identifiers
+          # File checksums (non-security)
+          "checksum",
+          # HTTP ETags
+          "etag",
+          # Cache keys
+          "cache",
+          # Filename generation
+          "filename",
+          # Explicitly marked non-crypto
+          "non_crypto",
+          # When not for security
+          "integrity",
+          # Non-security identifiers
+          "identifier"
         ]
       },
       confidence_rules: %{
-        base: 0.5,  # Medium base - MD5 has legitimate non-crypto uses
+        # Medium base - MD5 has legitimate non-crypto uses
+        base: 0.5,
         adjustments: %{
-          "password_hashing" => 0.5,           # Clear vulnerability
-          "security_context" => 0.4,           # Used in security function
-          "auth_context" => 0.4,               # Authentication related
-          "token_generation" => 0.4,           # Token/secret generation
-          "in_test_code" => -0.6,              # Test code is OK
-          "legacy_compatibility" => -0.4,      # Legacy support might be valid
-          "non_security_hash" => -0.5,         # Checksum, cache key, etc.
-          "has_security_comment" => -0.3,     # Developer aware of risks
-          "using_hmac" => -0.2                 # HMAC-MD5 is less problematic
+          # Clear vulnerability
+          "password_hashing" => 0.5,
+          # Used in security function
+          "security_context" => 0.4,
+          # Authentication related
+          "auth_context" => 0.4,
+          # Token/secret generation
+          "token_generation" => 0.4,
+          # Test code is OK
+          "in_test_code" => -0.6,
+          # Legacy support might be valid
+          "legacy_compatibility" => -0.4,
+          # Checksum, cache key, etc.
+          "non_security_hash" => -0.5,
+          # Developer aware of risks
+          "has_security_comment" => -0.3,
+          # HMAC-MD5 is less problematic
+          "using_hmac" => -0.2
         }
       },
-      min_confidence: 0.7  # Report only confident matches
+      # Report only confident matches
+      min_confidence: 0.7
     }
   end
 end

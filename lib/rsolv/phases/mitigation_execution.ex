@@ -13,16 +13,24 @@ defmodule Rsolv.Phases.MitigationExecution do
     field :started_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
     field :error_message, :string
-    
+
     belongs_to :repository, Rsolv.Phases.Repository
     belongs_to :api_key, Rsolv.Customers.ApiKey
-    
+
     timestamps(type: :utc_datetime_usec)
   end
 
   @required_fields [:repository_id, :issue_number, :commit_sha, :data]
-  @optional_fields [:status, :pr_url, :pr_number, :files_changed, :started_at, 
-                    :completed_at, :error_message, :api_key_id]
+  @optional_fields [
+    :status,
+    :pr_url,
+    :pr_number,
+    :files_changed,
+    :started_at,
+    :completed_at,
+    :error_message,
+    :api_key_id
+  ]
 
   def changeset(mitigation_execution, attrs) do
     mitigation_execution
@@ -46,6 +54,7 @@ defmodule Rsolv.Phases.MitigationExecution do
 
   defp put_completed_at_if_done(changeset) do
     status = get_change(changeset, :status)
+
     if status in [:completed, :failed] and get_field(changeset, :completed_at) == nil do
       put_change(changeset, :completed_at, DateTime.utc_now() |> DateTime.truncate(:microsecond))
     else
@@ -55,11 +64,13 @@ defmodule Rsolv.Phases.MitigationExecution do
 
   defp extract_pr_info(changeset) do
     case get_change(changeset, :data) do
-      %{"pr_url" => pr_url, "pr_number" => pr_number, "files_modified" => files} when is_list(files) ->
+      %{"pr_url" => pr_url, "pr_number" => pr_number, "files_modified" => files}
+      when is_list(files) ->
         changeset
         |> put_change(:pr_url, pr_url)
         |> put_change(:pr_number, pr_number)
         |> put_change(:files_changed, length(files))
+
       _ ->
         changeset
     end

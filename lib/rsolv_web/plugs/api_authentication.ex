@@ -59,6 +59,7 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
       [api_key | _] when is_binary(api_key) and api_key != "" ->
         Logger.info("[ApiAuthentication] Found API key: #{String.slice(api_key, 0..15)}...")
         {:ok, api_key}
+
       _ ->
         Logger.info("[ApiAuthentication] No API key found in x-api-key header")
         :no_key
@@ -75,9 +76,13 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
         handle_invalid_key(conn, optional?)
 
       customer ->
-        Logger.info("[ApiAuthentication] ✅ Authenticated customer: #{customer.name} (ID: #{customer.id})")
+        Logger.info(
+          "[ApiAuthentication] ✅ Authenticated customer: #{customer.name} (ID: #{customer.id})"
+        )
+
         # Also get the full API key record for phase storage access control
         api_key_record = Rsolv.Customers.get_api_key_by_key(api_key)
+
         conn
         |> assign(:customer, customer)
         |> assign(:api_key, api_key_record)

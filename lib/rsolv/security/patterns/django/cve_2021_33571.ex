@@ -1,42 +1,42 @@
 defmodule Rsolv.Security.Patterns.Django.Cve202133571 do
   @moduledoc """
   Django CVE-2021-33571 - IPv4 Address Validation Bypass via Leading Zeros
-  
-  This pattern detects Django applications vulnerable to CVE-2021-33571, where 
-  URLValidator, validate_ipv4_address, and validate_ipv46_address functions do not 
-  prohibit leading zero characters in octal literals, potentially allowing bypass 
+
+  This pattern detects Django applications vulnerable to CVE-2021-33571, where
+  URLValidator, validate_ipv4_address, and validate_ipv46_address functions do not
+  prohibit leading zero characters in octal literals, potentially allowing bypass
   of IP address-based access control.
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability affects Django versions:
   - 2.2 before 2.2.24
-  - 3.x before 3.1.12  
+  - 3.x before 3.1.12
   - 3.2 before 3.2.4
-  
-  Leading zeros in IPv4 addresses can be interpreted as octal literals by some 
+
+  Leading zeros in IPv4 addresses can be interpreted as octal literals by some
   systems, causing validation bypass. For example:
   - `0177.0.0.1` = `127.0.0.1` (localhost)
   - `0300.0.0.1` = `192.0.0.1`
-  
+
   ### Attack Example
   ```python
   from django.core.validators import URLValidator, validate_ipv4_address
-  
+
   # Vulnerable: Accepts octal IP addresses
   validator = URLValidator()
   validator('http://0177.0.0.1/admin/')  # Bypasses localhost restrictions
-  
+
   # Vulnerable: Direct validation bypass
   ip = request.GET.get('ip_address')  # User provides "0177.0.0.1"
   validate_ipv4_address(ip)  # Passes validation but resolves to 127.0.0.1
   ```
-  
+
   ### Safe Example
   ```python
   # Safe: Updated Django versions handle this correctly
   from django.core.validators import URLValidator, validate_ipv4_address
-  
+
   # Django 3.2.4+ rejects leading zeros in IP addresses
   validator = URLValidator()
   try:
@@ -46,7 +46,7 @@ defmodule Rsolv.Security.Patterns.Django.Cve202133571 do
       pass
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
 
@@ -55,7 +55,8 @@ defmodule Rsolv.Security.Patterns.Django.Cve202133571 do
     %Pattern{
       id: "django-cve-2021-33571",
       name: "Django CVE-2021-33571 - IPv4 Validation Bypass",
-      description: "IPv4 addresses with leading zeros can bypass validation in URLValidator and validate_ipv4_address",
+      description:
+        "IPv4 addresses with leading zeros can bypass validation in URLValidator and validate_ipv4_address",
       type: :input_validation,
       severity: :high,
       languages: ["python"],
@@ -70,7 +71,8 @@ defmodule Rsolv.Security.Patterns.Django.Cve202133571 do
       ],
       cwe_id: "CWE-20",
       owasp_category: "A03:2021",
-      recommendation: "Update Django to 3.2.4+, 3.1.12+, or 2.2.24+ and validate IP addresses properly",
+      recommendation:
+        "Update Django to 3.2.4+, 3.1.12+, or 2.2.24+ and validate IP addresses properly",
       test_cases: %{
         vulnerable: [
           ~s|URLValidator()(user_url)|,
@@ -97,13 +99,13 @@ validator = URLValidator()
   def vulnerability_metadata do
     %{
       description: """
-      CVE-2021-33571 affects Django's URLValidator, validate_ipv4_address, and validate_ipv46_address 
-      functions which do not prohibit leading zero characters in octal literals. This allows attackers 
-      to potentially bypass IP address-based access control by using octal notation for IP addresses 
+      CVE-2021-33571 affects Django's URLValidator, validate_ipv4_address, and validate_ipv46_address
+      functions which do not prohibit leading zero characters in octal literals. This allows attackers
+      to potentially bypass IP address-based access control by using octal notation for IP addresses
       (e.g., 0177.0.0.1 = 127.0.0.1).
-      
-      The vulnerability can lead to Server-Side Request Forgery (SSRF), Remote File Inclusion (RFI), 
-      and Local File Inclusion (LFI) attacks when applications rely on IP address validation for 
+
+      The vulnerability can lead to Server-Side Request Forgery (SSRF), Remote File Inclusion (RFI),
+      and Local File Inclusion (LFI) attacks when applications rely on IP address validation for
       access control or URL filtering.
       """,
       references: [
@@ -141,7 +143,7 @@ validator = URLValidator()
       ],
       real_world_impact: [
         "Access control bypass allowing unauthorized network access",
-        "Internal network scanning and enumeration capabilities", 
+        "Internal network scanning and enumeration capabilities",
         "Potential data exfiltration via SSRF attacks",
         "Administrative interface access via localhost bypass",
         "Cloud metadata service access in cloud environments"
@@ -149,8 +151,9 @@ validator = URLValidator()
       cve_examples: [
         %{
           id: "CVE-2021-33571",
-          description: "Django URLValidator and IP validation functions allow leading zeros in IPv4 addresses",
-          severity: "high", 
+          description:
+            "Django URLValidator and IP validation functions allow leading zeros in IPv4 addresses",
+          severity: "high",
           cvss: 7.5,
           note: "NIST CVSS 3.x score. GitHub Advisory Database rates it as 8.7/10"
         }
@@ -162,8 +165,8 @@ validator = URLValidator()
       3. validate_ipv46_address with request data
       4. Direct import of vulnerable validator functions
       5. Octal IP address patterns with leading zero notation in code
-      
-      The pattern focuses on Django applications using these validators with user-controlled input, 
+
+      The pattern focuses on Django applications using these validators with user-controlled input,
       particularly in contexts where IP address validation is used for access control.
       """,
       safe_alternatives: [
@@ -210,7 +213,7 @@ validator = URLValidator()
           description: "Exclude if schemes parameter is used or Django version is patched"
         },
         %{
-          type: :validation, 
+          type: :validation,
           context: %{
             required_imports: ["django.core.validators"],
             file_patterns: ["*.py"],

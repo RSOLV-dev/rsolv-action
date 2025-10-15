@@ -7,7 +7,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
 
   ## Vulnerability Details
 
-  Unsafe JSON decoding occurs when applications use decode! functions that raise 
+  Unsafe JSON decoding occurs when applications use decode! functions that raise
   exceptions on invalid input instead of returning error tuples:
   - `Jason.decode!` raises on invalid JSON instead of returning `{:error, reason}`
   - `Poison.decode!` raises on parsing errors
@@ -31,13 +31,13 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
     parsed_data = Jason.decode!(json_string)  # Crashes on invalid JSON
     process_data(parsed_data)
   end
-  
+
   # VULNERABLE - Poison.decode! with user input
   def parse_user_input(user_input) do
     result = Poison.decode!(user_input)  # Process crash on malformed JSON
     {:ok, result}
   end
-  
+
   # VULNERABLE - decode! in pipelines
   def process_request(params) do
     params["json"]
@@ -51,13 +51,13 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
   # SAFE - Using Jason.decode with pattern matching
   def handle_request(conn, %{"data" => json_string}) do
     case Jason.decode(json_string) do
-      {:ok, parsed_data} -> 
+      {:ok, parsed_data} ->
         process_data(parsed_data)
-      {:error, _reason} -> 
+      {:error, _reason} ->
         {:error, "Invalid JSON format"}
     end
   end
-  
+
   # SAFE - Using with statement for error handling
   def parse_user_input(user_input) do
     with {:ok, parsed} <- Jason.decode(user_input) do
@@ -66,7 +66,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
       {:error, reason} -> {:error, "JSON parsing failed"}
     end
   end
-  
+
   # SAFE - Graceful error handling in pipelines
   def process_request(params) do
     case Jason.decode(params["json"]) do
@@ -89,7 +89,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
 
   ## References
 
-  - CWE-20: Improper Input Validation  
+  - CWE-20: Improper Input Validation
   - OWASP Top 10 2021 - A05: Security Misconfiguration
   - Jason documentation: https://hexdocs.pm/jason/
   - Elixir error handling best practices
@@ -102,7 +102,8 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
     %Rsolv.Security.Pattern{
       id: "elixir-unsafe-json-decode",
       name: "Unsafe JSON Decoding",
-      description: "decode! functions can crash the process on invalid JSON input, leading to denial of service",
+      description:
+        "decode! functions can crash the process on invalid JSON input, leading to denial of service",
       type: :dos,
       severity: :medium,
       languages: ["elixir"],
@@ -110,19 +111,20 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
       regex: [
         # decode! with common user input patterns (params, conn, request, etc)
         ~r/(?:Jason|Poison|JSON)\.decode!\s*\(\s*(?:params|conn\.|request|socket\.|args|query|body|external_|user_|untrusted_)[^)]+\)/,
-        
+
         # decode! with array/map access (potential user input)
         ~r/(?:Jason|Poison|JSON)\.decode!\s*\(\s*\w+\[[^\]]+\]\s*\)/,
-        
+
         # decode! functions in pipelines with user input indicators
         ~r/(?:user_|params|conn\.|request|input|external|untrusted)[^|]*\|\>\s*\w*\.decode!\s*\(\)/,
-        
+
         # decode! with specific variable names suggesting user input
         ~r/(?:Jason|Poison|JSON)\.decode!\s*\(\s*(?:user_input|external_json|request_body|payload|raw_data|raw_json|json_string|data|input)\s*\)/
       ],
       cwe_id: "CWE-20",
       owasp_category: "A05:2021",
-      recommendation: "Use Jason.decode/1 with proper error handling instead of Jason.decode!/1 to prevent process crashes",
+      recommendation:
+        "Use Jason.decode/1 with proper error handling instead of Jason.decode!/1 to prevent process crashes",
       test_cases: %{
         vulnerable: [
           ~S|Jason.decode!(user_input)|,
@@ -152,7 +154,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
       business_impact: """
       Medium: Unsafe JSON decoding can result in:
       - Service availability issues affecting customer experience and revenue
-      - Increased infrastructure costs from resource consumption during attacks  
+      - Increased infrastructure costs from resource consumption during attacks
       - Potential SLA violations and customer dissatisfaction
       - Reduced system reliability and operational stability
       - Support overhead from investigating and resolving crash incidents
@@ -165,10 +167,11 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
       - Availability degradation for legitimate users and requests
       - Potential memory leaks from incomplete request processing
       """,
-      likelihood: "Medium: Common pattern when developers prioritize convenience over error handling",
+      likelihood:
+        "Medium: Common pattern when developers prioritize convenience over error handling",
       cve_examples: [
         "CWE-20: Improper Input Validation",
-        "CWE-754: Improper Check for Unusual or Exceptional Conditions", 
+        "CWE-754: Improper Check for Unusual or Exceptional Conditions",
         "CVE-2023-5072: DoS vulnerability in JSON-Java through malformed input",
         "OWASP Top 10 A05:2021 - Security Misconfiguration"
       ],
@@ -212,7 +215,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
@@ -239,7 +242,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
           "static",
           "config",
           "Application.get_env",
-          "System.get_env", 
+          "System.get_env",
           "File.read!",
           "@",
           "\"",
@@ -252,7 +255,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
         ],
         safe_functions: [
           "Jason.decode",
-          "Poison.decode", 
+          "Poison.decode",
           "JSON.decode"
         ]
       },

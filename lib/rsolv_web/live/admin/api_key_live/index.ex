@@ -43,11 +43,12 @@ defmodule RsolvWeb.Admin.ApiKeyLive.Index do
 
   @impl true
   def handle_event("search", %{"search" => search_query}, socket) do
-    api_keys = if search_query == "" do
-      socket.assigns.original_api_keys
-    else
-      Customers.search_api_keys(search_query)
-    end
+    api_keys =
+      if search_query == "" do
+        socket.assigns.original_api_keys
+      else
+        Customers.search_api_keys(search_query)
+      end
 
     {:noreply,
      socket

@@ -16,11 +16,11 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 200) == %{
-        "framework" => "vitest",
-        "version" => "1.0.0",
-        "testDir" => "test/",
-        "compatibleWith" => []
-      }
+               "framework" => "vitest",
+               "version" => "1.0.0",
+               "testDir" => "test/",
+               "compatibleWith" => []
+             }
     end
 
     test "detects Jest from package.json", %{conn: conn} do
@@ -37,11 +37,11 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 200) == %{
-        "framework" => "jest",
-        "version" => "29.0.0",
-        "testDir" => "__tests__/",
-        "compatibleWith" => []
-      }
+               "framework" => "jest",
+               "version" => "29.0.0",
+               "testDir" => "__tests__/",
+               "compatibleWith" => []
+             }
     end
 
     test "detects Mocha from package.json", %{conn: conn} do
@@ -58,11 +58,11 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 200) == %{
-        "framework" => "mocha",
-        "version" => "10.0.0",
-        "testDir" => "test/",
-        "compatibleWith" => []
-      }
+               "framework" => "mocha",
+               "version" => "10.0.0",
+               "testDir" => "test/",
+               "compatibleWith" => []
+             }
     end
 
     test "prioritizes Vitest when multiple frameworks present", %{conn: conn} do
@@ -98,11 +98,11 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 200) == %{
-        "framework" => "rspec",
-        "version" => "~> 3.0",
-        "testDir" => "spec/",
-        "compatibleWith" => []
-      }
+               "framework" => "rspec",
+               "version" => "~> 3.0",
+               "testDir" => "spec/",
+               "compatibleWith" => []
+             }
     end
 
     test "detects Minitest from Gemfile", %{conn: conn} do
@@ -118,11 +118,11 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 200) == %{
-        "framework" => "minitest",
-        "version" => "~> 5.0",
-        "testDir" => "test/",
-        "compatibleWith" => []
-      }
+               "framework" => "minitest",
+               "version" => "~> 5.0",
+               "testDir" => "test/",
+               "compatibleWith" => []
+             }
     end
 
     test "detects pytest from requirements.txt", %{conn: conn} do
@@ -139,11 +139,11 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 200) == %{
-        "framework" => "pytest",
-        "version" => "7.0.0",
-        "testDir" => "tests/",
-        "compatibleWith" => []
-      }
+               "framework" => "pytest",
+               "version" => "7.0.0",
+               "testDir" => "tests/",
+               "compatibleWith" => []
+             }
     end
 
     test "detects framework from config files", %{conn: conn} do
@@ -157,11 +157,11 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 200) == %{
-        "framework" => "vitest",
-        "version" => nil,
-        "testDir" => "test/",
-        "compatibleWith" => []
-      }
+               "framework" => "vitest",
+               "version" => nil,
+               "testDir" => "test/",
+               "compatibleWith" => []
+             }
     end
 
     test "combines package.json and config files", %{conn: conn} do
@@ -198,9 +198,9 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 422) == %{
-        "error" => "No test framework detected",
-        "details" => "Could not detect test framework from provided files"
-      }
+               "error" => "No test framework detected",
+               "details" => "Could not detect test framework from provided files"
+             }
     end
 
     test "returns error when all inputs are nil", %{conn: conn} do
@@ -213,9 +213,9 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 400) == %{
-        "error" => "At least one package file must be provided",
-        "details" => "Provide packageJson, gemfile, requirementsTxt, or configFiles"
-      }
+               "error" => "At least one package file must be provided",
+               "details" => "Provide packageJson, gemfile, requirementsTxt, or configFiles"
+             }
     end
 
     test "returns error when all inputs are empty", %{conn: conn} do
@@ -229,9 +229,9 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 400) == %{
-        "error" => "At least one package file must be provided",
-        "details" => "Provide packageJson, gemfile, requirementsTxt, or configFiles"
-      }
+               "error" => "At least one package file must be provided",
+               "details" => "Provide packageJson, gemfile, requirementsTxt, or configFiles"
+             }
     end
 
     test "handles malformed JSON gracefully", %{conn: conn} do
@@ -277,9 +277,9 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 422) == %{
-        "error" => "No test framework detected",
-        "details" => "Could not detect test framework from provided files"
-      }
+               "error" => "No test framework detected",
+               "details" => "Could not detect test framework from provided files"
+             }
     end
 
     test "handles package.json without devDependencies", %{conn: conn} do
@@ -294,9 +294,9 @@ defmodule RsolvWeb.Api.V1.FrameworkControllerTest do
       conn = post(conn, ~p"/api/v1/framework/detect", request_body)
 
       assert json_response(conn, 422) == %{
-        "error" => "No test framework detected",
-        "details" => "Could not detect test framework from provided files"
-      }
+               "error" => "No test framework detected",
+               "details" => "Could not detect test framework from provided files"
+             }
     end
   end
 end

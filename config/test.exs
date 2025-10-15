@@ -21,7 +21,8 @@ config :rsolv, Rsolv.Repo,
 # you can enable the server option below.
 config :rsolv, RsolvWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
-  secret_key_base: "test-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789",
+  secret_key_base:
+    "test-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789",
   server: false,
   live_view: [signing_salt: "test-liveview-salt"]
 
@@ -32,8 +33,7 @@ config :logger, level: :debug
 config :phoenix, :plug_init_mode, :runtime
 
 # Configure Bamboo mailer for test environment
-config :rsolv, Rsolv.Mailer,
-  adapter: Bamboo.TestAdapter
+config :rsolv, Rsolv.Mailer, adapter: Bamboo.TestAdapter
 
 # Configure ConvertKit for test environment
 config :rsolv, :convertkit,
@@ -52,7 +52,8 @@ config :rsolv, :use_mock_parsers, true
 
 # Shorter timeouts for tests
 config :rsolv, :parser_timeout, 5_000
-config :rsolv, :session_timeout, 300_000  # 5 minutes
+# 5 minutes
+config :rsolv, :session_timeout, 300_000
 
 # Disable parser pool pre-warming in test
 config :rsolv, Rsolv.AST.ParserPool,

@@ -1,22 +1,22 @@
 defmodule Rsolv.Security.Patterns.Cve do
   @moduledoc """
   Cross-language vulnerability patterns for detecting specific CVEs (Common Vulnerabilities and Exposures).
-  
+
   CVEs are standardized identifiers for publicly known security vulnerabilities that can
   affect software regardless of programming language. This module contains patterns to detect
   specific high-profile CVEs that have broad impact across multiple languages and frameworks.
-  
+
   These patterns focus on detecting vulnerable configurations, dependencies, or code patterns
   that indicate the presence of these well-known vulnerabilities.
   """
-  
+
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns all CVE and critical vulnerability patterns.
-  
+
   ## Examples
-  
+
       iex> patterns = Rsolv.Security.Patterns.Cve.all()
       iex> length(patterns)
       4
@@ -31,14 +31,14 @@ defmodule Rsolv.Security.Patterns.Cve do
       missing_security_event_logging()
     ]
   end
-  
+
   @doc """
   Log4Shell Vulnerability (CVE-2021-44228) pattern.
-  
+
   Detects potentially vulnerable Log4j versions.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Cve.log4shell_detection()
       iex> pattern.id
       "log4shell-detection"
@@ -53,7 +53,8 @@ defmodule Rsolv.Security.Patterns.Cve do
       type: :cve,
       severity: :critical,
       languages: ["java", "kotlin", "groovy", "scala", "xml", "gradle", "maven"],
-      regex: ~r/(log4j.*2\.(0|1[0-6])\.\d|log4j-core.*2\.(0|1[0-6])\.\d|<artifactId>log4j-core<\/artifactId>[\s\S]*?<version>2\.(0|1[0-6])\.\d<\/version>)/i,
+      regex:
+        ~r/(log4j.*2\.(0|1[0-6])\.\d|log4j-core.*2\.(0|1[0-6])\.\d|<artifactId>log4j-core<\/artifactId>[\s\S]*?<version>2\.(0|1[0-6])\.\d<\/version>)/i,
       cwe_id: "CWE-502",
       owasp_category: "A06:2021",
       recommendation: "Update Log4j to version 2.17.0 or later to patch Log4Shell vulnerability",
@@ -77,14 +78,14 @@ defmodule Rsolv.Security.Patterns.Cve do
       }
     }
   end
-  
+
   @doc """
   Spring4Shell Vulnerability (CVE-2022-22965) pattern.
-  
+
   Detects potentially vulnerable Spring Framework versions.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Cve.spring4shell_detection()
       iex> vulnerable = ~S|implementation "org.springframework:spring-webmvc:5.3.17"|
       iex> Regex.match?(pattern.regex, vulnerable)
@@ -94,15 +95,18 @@ defmodule Rsolv.Security.Patterns.Cve do
     %Pattern{
       id: "spring4shell-detection",
       name: "Spring4Shell Vulnerability (CVE-2022-22965)",
-      description: "Detects potentially vulnerable Spring Framework versions (CVE-2022-22965 - Spring4Shell)",
+      description:
+        "Detects potentially vulnerable Spring Framework versions (CVE-2022-22965 - Spring4Shell)",
       type: :cve,
       severity: :critical,
       languages: ["java", "kotlin", "xml", "gradle", "maven"],
       frameworks: ["spring"],
-      regex: ~r/(spring-webmvc|spring-boot-starter-web)[\s\S]*?(?:5\.[0-2]\.\d{1,2}|5\.3\.(?:[0-9]|1[0-7])(?:\D|$))/i,
+      regex:
+        ~r/(spring-webmvc|spring-boot-starter-web)[\s\S]*?(?:5\.[0-2]\.\d{1,2}|5\.3\.(?:[0-9]|1[0-7])(?:\D|$))/i,
       cwe_id: "CWE-94",
       owasp_category: "A06:2021",
-      recommendation: "Update Spring Framework to 5.3.18+ or 5.2.20+ to patch Spring4Shell vulnerability",
+      recommendation:
+        "Update Spring Framework to 5.3.18+ or 5.2.20+ to patch Spring4Shell vulnerability",
       test_cases: %{
         vulnerable: [
           ~S|implementation "org.springframework:spring-webmvc:5.3.17"|,
@@ -119,14 +123,14 @@ defmodule Rsolv.Security.Patterns.Cve do
       }
     }
   end
-  
+
   @doc """
   Weak JWT Secret Detection pattern.
-  
+
   Detects weak JWT secrets that are too short or predictable.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Cve.weak_jwt_secret()
       iex> vulnerable = ~S|jwt.sign(payload, "secret")|
       iex> Regex.match?(pattern.regex, vulnerable)
@@ -143,7 +147,8 @@ defmodule Rsolv.Security.Patterns.Cve do
       regex: ~r/jwt\.sign\([^,]+,\s*["']([^"']{1,16})["']/i,
       cwe_id: "CWE-326",
       owasp_category: "A07:2021",
-      recommendation: "Use a strong, randomly generated secret of at least 256 bits (32 characters)",
+      recommendation:
+        "Use a strong, randomly generated secret of at least 256 bits (32 characters)",
       test_cases: %{
         vulnerable: [
           ~S|jwt.sign(payload, "secret")|,
@@ -158,14 +163,14 @@ defmodule Rsolv.Security.Patterns.Cve do
       }
     }
   end
-  
+
   @doc """
   Missing Security Event Logging pattern.
-  
+
   Detects security-critical operations without proper logging.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Cve.missing_security_event_logging()
       iex> vulnerable = "function login(username, password) { if (checkCredentials(username, password)) return createSession(username); }"
       iex> Regex.match?(pattern.regex, vulnerable)
@@ -178,16 +183,19 @@ defmodule Rsolv.Security.Patterns.Cve do
       description: "Detects security-critical operations without proper logging",
       type: :logging,
       severity: :medium,
-      languages: [], # Applies to all languages
-      regex: ~r/(?:def|function)\s+(?:login|authenticate|authorize|(?:process_)?payment|transfer|delete)\b/i,
+      # Applies to all languages
+      languages: [],
+      regex:
+        ~r/(?:def|function)\s+(?:login|authenticate|authorize|(?:process_)?payment|transfer|delete)\b/i,
       cwe_id: "CWE-778",
       owasp_category: "A09:2021",
-      recommendation: "Add comprehensive logging for all security-critical operations including authentication, authorization, and sensitive data access",
+      recommendation:
+        "Add comprehensive logging for all security-critical operations including authentication, authorization, and sensitive data access",
       test_cases: %{
         vulnerable: [
-          ~S|function login(username, password) { 
-  if (checkCredentials(username, password)) 
-    return createSession(username); 
+          ~S|function login(username, password) {
+  if (checkCredentials(username, password))
+    return createSession(username);
 }|,
           ~S|def process_payment(amount, card_number):
     charge_card(card_number, amount)

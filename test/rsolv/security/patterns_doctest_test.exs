@@ -1,11 +1,11 @@
 defmodule Rsolv.Security.PatternsDoctestTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.Pattern
 
   # Test JavaScript patterns
   doctest Rsolv.Security.Patterns.Javascript
-  
+
   # Test Python patterns
   doctest Rsolv.Security.Patterns.Python
   doctest Rsolv.Security.Patterns.Python.UnsafePickle
@@ -20,7 +20,7 @@ defmodule Rsolv.Security.PatternsDoctestTest do
   doctest Rsolv.Security.Patterns.Python.WeakHashSha1
   doctest Rsolv.Security.Patterns.Python.DebugTrue
   doctest Rsolv.Security.Patterns.Python.UnsafeYamlLoad
-  
+
   # Test Java patterns
   doctest Rsolv.Security.Patterns.Java
   doctest Rsolv.Security.Patterns.Java.PathTraversalFileinputstream
@@ -33,7 +33,7 @@ defmodule Rsolv.Security.PatternsDoctestTest do
   doctest Rsolv.Security.Patterns.Java.HardcodedPassword
   doctest Rsolv.Security.Patterns.Java.WeakRandom
   doctest Rsolv.Security.Patterns.Java.TrustAllCerts
-  
+
   # Test Elixir patterns
   doctest Rsolv.Security.Patterns.Elixir
   doctest Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation
@@ -64,17 +64,17 @@ defmodule Rsolv.Security.PatternsDoctestTest do
   doctest Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls
   doctest Rsolv.Security.Patterns.Elixir.MissingSslVerification
   doctest Rsolv.Security.Patterns.Elixir.WeakPasswordHashing
-  
+
   # Test PHP patterns
   doctest Rsolv.Security.Patterns.Php
   doctest Rsolv.Security.Patterns.Php.SqlInjectionConcat
   doctest Rsolv.Security.Patterns.Php.SqlInjectionInterpolation
   doctest Rsolv.Security.Patterns.Php.CommandInjection
   doctest Rsolv.Security.Patterns.Php.XssEcho
-  
+
   # Test CVE patterns
   doctest Rsolv.Security.Patterns.Cve
-  
+
   # Test Ruby patterns
   doctest Rsolv.Security.Patterns.Ruby
   doctest Rsolv.Security.Patterns.Ruby.MissingAuthentication

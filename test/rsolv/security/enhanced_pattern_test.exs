@@ -1,10 +1,10 @@
 defmodule Rsolv.Security.EnhancedPatternTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.EnhancedPattern
   alias Rsolv.Security.Pattern
   alias Rsolv.Security.Patterns.JavascriptEnhanced
-  
+
   describe "EnhancedPattern" do
     test "creates valid enhanced pattern with AST rules" do
       pattern = %EnhancedPattern{
@@ -54,28 +54,28 @@ defmodule Rsolv.Security.EnhancedPatternTest do
         enhanced_recommendation: nil,
         metadata: nil
       }
-      
+
       assert EnhancedPattern.valid?(pattern)
     end
-    
+
     test "converts enhanced pattern to standard pattern" do
       # Get all patterns and take the first one (sql_injection)
       [enhanced | _] = JavascriptEnhanced.all(:public)
       standard = EnhancedPattern.to_pattern(enhanced)
-      
+
       assert %Pattern{} = standard
       assert standard.id == enhanced.id
       assert standard.name == enhanced.name
       assert standard.regex == enhanced.regex
       assert standard.test_cases == enhanced.test_cases
     end
-    
+
     test "formats enhanced pattern for API with AST rules" do
       # Get all patterns from enterprise tier (includes all patterns)
       patterns = JavascriptEnhanced.all(:enterprise)
       enhanced = Enum.find(patterns, &(&1.id == "js-sql-injection-enhanced"))
       formatted = EnhancedPattern.to_enhanced_api_format(enhanced)
-      
+
       assert formatted[:id] == "js-sql-injection-enhanced"
       assert formatted[:supports_ast] == true
       assert is_list(formatted[:ast_rules])
@@ -84,7 +84,7 @@ defmodule Rsolv.Security.EnhancedPatternTest do
       assert is_map(formatted[:confidence_rules])
       assert is_map(formatted[:enhanced_recommendation])
     end
-    
+
     test "validates AST rules structure" do
       invalid_pattern = %EnhancedPattern{
         id: "invalid",
@@ -97,13 +97,14 @@ defmodule Rsolv.Security.EnhancedPatternTest do
         recommendation: "Fix it",
         test_cases: %{vulnerable: ["bad"], safe: ["good"]},
         ast_rules: [
-          %{invalid_key: "value"}  # Missing required fields
+          # Missing required fields
+          %{invalid_key: "value"}
         ]
       }
-      
+
       refute EnhancedPattern.valid?(invalid_pattern)
     end
-    
+
     test "generates fallback regex from AST rules" do
       pattern = %EnhancedPattern{
         id: "ast-only",
@@ -112,7 +113,8 @@ defmodule Rsolv.Security.EnhancedPatternTest do
         type: :xss,
         severity: :high,
         languages: ["javascript"],
-        regex: nil,  # No regex provided
+        # No regex provided
+        regex: nil,
         default_tier: :protected,
         recommendation: "Fix it",
         test_cases: %{vulnerable: ["bad"], safe: ["good"]},
@@ -127,24 +129,25 @@ defmodule Rsolv.Security.EnhancedPatternTest do
           }
         ]
       }
-      
+
       standard = EnhancedPattern.to_pattern(pattern)
       assert standard.regex != nil
     end
   end
-  
+
   describe "JavascriptEnhanced patterns" do
     test "sql_injection_enhanced has complete AST rules" do
       # Get all enterprise patterns to access sql_injection
       patterns = JavascriptEnhanced.all(:enterprise)
       pattern = Enum.find(patterns, fn p -> String.contains?(p.id, "sql-injection") end)
-      
+
       assert pattern.id == "js-sql-injection-enhanced"
       assert is_map(pattern.ast_rules) || is_list(pattern.ast_rules)
       assert pattern.context_rules != nil
       # JavascriptEnhanced uses confidence_scoring instead of confidence_rules
-      assert Map.get(pattern, :confidence_scoring) != nil || Map.get(pattern, :confidence_rules) != nil
-      
+      assert Map.get(pattern, :confidence_scoring) != nil ||
+               Map.get(pattern, :confidence_rules) != nil
+
       # Check AST rule structure (can be map or list)
       if is_list(pattern.ast_rules) do
         first_rule = hd(pattern.ast_rules)
@@ -154,24 +157,25 @@ defmodule Rsolv.Security.EnhancedPatternTest do
         assert pattern.ast_rules[:node_type] != nil
       end
     end
-    
+
     test "missing_error_logging_enhanced detects catch blocks" do
-      # Get all enterprise patterns to access missing_error_logging  
+      # Get all enterprise patterns to access missing_error_logging
       patterns = JavascriptEnhanced.all(:enterprise)
       pattern = Enum.find(patterns, fn p -> String.contains?(p.id, "logging") end)
-      
+
       assert pattern.id == "js-missing-logging-enhanced"
       assert is_map(pattern.ast_rules) || is_list(pattern.ast_rules)
-      
+
       # Check AST rules exist
       assert pattern.ast_rules != nil
     end
-    
+
     test "all patterns can be converted to standard format" do
       enhanced_patterns = JavascriptEnhanced.all(:enterprise)
       patterns = Enum.map(enhanced_patterns, &EnhancedPattern.to_pattern/1)
-      
+
       assert length(patterns) > 0
+
       Enum.each(patterns, fn pattern ->
         assert %Pattern{} = pattern
         assert Pattern.valid?(pattern)

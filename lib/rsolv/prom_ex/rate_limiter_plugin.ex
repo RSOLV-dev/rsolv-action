@@ -15,14 +15,14 @@ defmodule Rsolv.PromEx.RateLimiterPlugin do
         description: "Total number of rate limit exceeded events",
         tags: [:customer_id, :action]
       ),
-      
+
       # Requests allowed counter
       counter("rsolv.rate_limiter.requests_allowed.total",
         event_name: [:rsolv, :rate_limiter, :request_allowed],
         description: "Total number of requests allowed by rate limiter",
         tags: [:customer_id, :action]
       ),
-      
+
       # Current count gauge (shows current usage within window)
       last_value("rsolv.rate_limiter.current_count",
         event_name: [:rsolv, :rate_limiter, :request_allowed],

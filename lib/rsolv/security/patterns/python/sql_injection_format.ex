@@ -1,58 +1,58 @@
 defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
   @moduledoc """
   SQL Injection via Python String Formatting
-  
+
   Detects dangerous patterns like:
     cursor.execute("SELECT * FROM users WHERE id = %s" % user_id)
     db.execute("DELETE FROM posts WHERE author = '%s'" % username)
     query = "UPDATE accounts SET balance = %s" % amount; cursor.execute(query)
-    
+
   Safe alternatives:
     cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
     db.execute("DELETE FROM posts WHERE author = %s", [username])
     cursor.execute("UPDATE accounts SET balance = %s", (amount,))
-    
+
   ## Vulnerability Details
-  
+
   Python's % string formatting operator creates SQL queries by directly inserting
   values into the query string. This bypasses the database driver's escaping
   mechanisms and allows attackers to inject malicious SQL code.
-  
+
   The vulnerability occurs when:
   1. SQL query strings use % formatting placeholders
   2. User input is passed via the % operator instead of as query parameters
   3. The formatted string is then executed as SQL
-  
+
   This pattern is particularly dangerous because:
   - It looks similar to safe parameterized queries but isn't
   - Python's % formatting doesn't escape SQL metacharacters
   - Attackers can break out of quoted strings and inject arbitrary SQL
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the SQL injection via string formatting pattern.
-  
+
   This pattern detects usage of Python's % string formatting in SQL queries
   which can lead to SQL injection vulnerabilities.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFormat.pattern()
       iex> pattern.id
       "python-sql-injection-format"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFormat.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFormat.pattern()
       iex> vulnerable = ~S|cursor.execute("SELECT * FROM users WHERE id = %s" % user_id)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFormat.pattern()
       iex> safe = ~S|cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))|
       iex> Regex.match?(pattern.regex, safe)
@@ -70,7 +70,8 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
       regex: ~r/["'`].*%[sdif].*["'`]\s*%.*execute|execute.*["'`].*%[sdif].*["'`]\s*%/s,
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized queries with execute() method parameters: cursor.execute(query, (param,))",
+      recommendation:
+        "Use parameterized queries with execute() method parameters: cursor.execute(query, (param,))",
       test_cases: %{
         vulnerable: [
           ~S|cursor.execute("SELECT * FROM users WHERE id = %s" % user_id)|,
@@ -89,7 +90,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -98,7 +99,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
       When SQL queries are constructed using % formatting, user input is directly
       interpolated into the query string without proper escaping, allowing attackers
       to inject malicious SQL code.
-      
+
       This vulnerability is particularly dangerous in Python because:
       - The % operator performs simple string substitution without SQL-aware escaping
       - Single quotes in user input can break out of SQL string literals
@@ -109,7 +110,8 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -142,7 +144,8 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
       cve_examples: [
         %{
           id: "CVE-2019-9193",
-          description: "PostgreSQL driver SQL injection via % formatting in several Python applications",
+          description:
+            "PostgreSQL driver SQL injection via % formatting in several Python applications",
           severity: "critical",
           cvss: 9.8,
           note: "Multiple applications vulnerable due to unsafe % formatting in SQL queries"
@@ -160,7 +163,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
       1. Database execute methods (execute, executemany, executescript)
       2. SQL query strings containing % format specifiers (%s, %d, %i, %f)
       3. The % operator followed by parentheses containing the parameters
-      
+
       This distinguishes unsafe formatting from safe parameterized queries where
       parameters are passed as a separate argument to the execute method.
       """,
@@ -186,19 +189,19 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual SQL injection vulnerabilities
   and false positives like logging or non-SQL string formatting.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionFormat.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionFormat.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

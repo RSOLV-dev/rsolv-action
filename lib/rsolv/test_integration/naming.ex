@@ -129,10 +129,12 @@ defmodule Rsolv.TestIntegration.Naming do
     camel_vuln = to_camel_case(vulnerability_type)
 
     # Preserve original extension (.js, .ts, .jsx, .tsx)
-    test_ext = case extension do
-      ext when ext in [".ts", ".tsx", ".js", ".jsx"] -> ext
-      _ -> ".js"  # Default to .js if unknown
-    end
+    test_ext =
+      case extension do
+        ext when ext in [".ts", ".tsx", ".js", ".jsx"] -> ext
+        # Default to .js if unknown
+        _ -> ".js"
+      end
 
     file_name = "#{pascal_module}.#{camel_vuln}.test#{test_ext}"
     test_path = "__tests__/security/#{file_name}"
@@ -194,9 +196,11 @@ defmodule Rsolv.TestIntegration.Naming do
   def extract_module_name(file_path) do
     file_path
     |> Path.basename()
-    |> Path.rootname()  # Remove extension
+    # Remove extension
+    |> Path.rootname()
     |> String.split(".")
-    |> List.first()  # Take only the first part before any dots
+    # Take only the first part before any dots
+    |> List.first()
   end
 
   @doc """
@@ -220,11 +224,15 @@ defmodule Rsolv.TestIntegration.Naming do
   # Convert string to snake_case
   defp to_snake_case(string) do
     string
-    |> String.replace(~r/([A-Z])/, "_\\1")  # Insert _ before capitals
+    # Insert _ before capitals
+    |> String.replace(~r/([A-Z])/, "_\\1")
     |> String.downcase()
-    |> String.replace(~r/^_/, "")  # Remove leading underscore
-    |> String.replace(~r/__+/, "_")  # Collapse multiple underscores
-    |> String.replace("-", "_")  # Replace hyphens with underscores
+    # Remove leading underscore
+    |> String.replace(~r/^_/, "")
+    # Collapse multiple underscores
+    |> String.replace(~r/__+/, "_")
+    # Replace hyphens with underscores
+    |> String.replace("-", "_")
   end
 
   # Convert string to PascalCase
@@ -235,8 +243,10 @@ defmodule Rsolv.TestIntegration.Naming do
     with_underscores = String.replace(string, ~r/([a-z])([A-Z])/, "\\1_\\2")
 
     with_underscores
-    |> String.split(~r/[_\-]/)  # Split on _ and - only
-    |> Enum.filter(&(&1 != ""))  # Remove empty strings
+    # Split on _ and - only
+    |> String.split(~r/[_\-]/)
+    # Remove empty strings
+    |> Enum.filter(&(&1 != ""))
     |> Enum.map(&String.capitalize/1)
     |> Enum.join("")
   end

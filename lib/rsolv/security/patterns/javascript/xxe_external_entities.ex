@@ -1,36 +1,36 @@
 defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
   @moduledoc """
   XML External Entity (XXE) Injection in JavaScript/TypeScript
-  
+
   Detects dangerous XML parsing patterns like:
     new DOMParser()
     parser.parseFromString(xmlData, 'text/xml')
     $.parseXML(userXml)
-    
+
   Safe alternatives:
     JSON.parse(jsonData)  // Use JSON instead of XML
     const safeParser = createSafeXmlParser()  // With external entities disabled
-    
+
   XXE vulnerabilities occur when XML parsers process untrusted XML documents that
   contain external entity references. These can be exploited to:
   - Read local files from the server
   - Perform Server-Side Request Forgery (SSRF) attacks
   - Cause Denial of Service through entity expansion
   - Exfiltrate data to attacker-controlled servers
-  
+
   ## Vulnerability Details
-  
+
   JavaScript XML parsers in browsers are generally safe from XXE by default, but
   Node.js XML parsing libraries may be vulnerable if they enable external entity
   processing. The vulnerability is particularly dangerous because it can lead to
   complete server compromise through file disclosure and SSRF.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Parsing untrusted XML
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(userXml, "text/xml");
-  
+
   // Attack payload:
   // <?xml version="1.0"?>
   // <!DOCTYPE data [
@@ -38,56 +38,56 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
   // ]>
   // <data>&file;</data>
   ```
-  
+
   ### Node.js Specific Risks
   In Node.js environments, XML parsing libraries like:
   - xmldom
   - libxmljs
   - xml2js (with certain configurations)
   - fast-xml-parser (older versions)
-  
+
   May process external entities by default, leading to file disclosure and SSRF.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the XXE detection pattern.
-  
+
   This pattern detects XML parsing operations that may be vulnerable to XXE attacks,
   including DOMParser usage, parseFromString calls, jQuery parseXML, and various
   Node.js XML parsing libraries.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> pattern.id
       "js-xxe-external-entities"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> pattern.cwe_id
       "CWE-611"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> vulnerable = "parser = new DOMParser()"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> vulnerable = "$.parseXML(xmlData)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> safe = "JSON.parse(jsonData)"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> pattern.recommendation
       "Disable external entity processing in XML parsers or use JSON instead."
@@ -121,10 +121,10 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for XXE injection vulnerabilities.
-  
+
   This metadata documents the security implications of XML external entity processing
   and provides authoritative guidance for preventing XXE attacks through proper
   parser configuration and alternative data formats.
@@ -137,26 +137,26 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
       references can be exploited to read local files, perform server-side request
       forgery (SSRF), cause denial of service, or exfiltrate data to attacker-controlled
       servers.
-      
+
       While browser-based JavaScript XML parsers (like DOMParser) are generally safe
       from XXE attacks due to security restrictions, Node.js XML parsing libraries may
       be vulnerable if they enable external entity processing. This creates a significant
       security risk in server-side JavaScript applications.
-      
+
       The vulnerability exploits the XML standard's external entity feature, which allows
       XML documents to reference external resources. When parsers process these references
       without proper security controls, attackers can:
-      
+
       1. Read local files using file:// protocol entities
       2. Access internal network resources via http:// entities (SSRF)
       3. Cause denial of service through recursive entity expansion (Billion Laughs)
       4. Exfiltrate data by including file contents in outbound requests
-      
+
       XXE vulnerabilities are particularly dangerous because they often provide direct
       access to sensitive files like configuration files, source code, or system files
       containing credentials. In cloud environments, XXE can be used to access metadata
       endpoints and compromise cloud credentials.
-      
+
       The rise of microservices and API-driven architectures has increased XXE risks as
       XML is still commonly used for data exchange, especially in enterprise environments
       and legacy system integrations.
@@ -178,7 +178,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
           type: :owasp,
           id: "XXE_Prevention",
           title: "OWASP XXE Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -253,7 +254,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
       detection_notes: """
       This pattern detects various forms of XML parsing in JavaScript that may be
       vulnerable to XXE attacks:
-      
+
       1. Browser DOMParser usage - Generally safe but included for completeness
       2. parseFromString with XML content types - May process external entities
       3. jQuery parseXML - Depends on underlying parser implementation
@@ -262,7 +263,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
          - libxmljs - Vulnerable in older versions
          - xml2js - Can be vulnerable with expandEntities option
          - fast-xml-parser - Older versions process external entities
-      
+
       The pattern focuses on identifying XML parsing operations rather than
       configuration checks, as vulnerable configurations are often the default.
       """,
@@ -301,54 +302,56 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
       }
     }
   end
-  
+
   defp build_xxe_regex do
     ~r/new\s+(?:window\.)?(?:DOMParser|XMLParser)\s*\(|\.parseFromString\s*\([^,]+,\s*['"](?:text\/xml|application\/xml)|(?:\$|jQuery)\.parseXML\s*\(|(?:xmldom|libxmljs|xml2js|fast-xml-parser)\.(?:DOMParser|parseXml|parseString|XMLParser)\s*\(/i
   end
-  
+
   @doc """
   Check if this pattern applies to a file based on its path and content.
-  
+
   Applies to JavaScript/TypeScript files or any file containing XML parsing operations.
   """
-  def applies_to_file?(file_path, content ) do
+  def applies_to_file?(file_path, content) do
     cond do
       # JavaScript/TypeScript files always apply
-      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) -> true
-      
+      String.match?(file_path, ~r/\.(js|jsx|ts|tsx|mjs)$/i) ->
+        true
+
       # If content is provided, check for XML parsing operations
       content != nil ->
-        String.contains?(content, "DOMParser") || 
-        String.contains?(content, "parseXML") ||
-        String.contains?(content, "parseFromString") ||
-        String.contains?(content, "xml2js") ||
-        String.contains?(content, "libxmljs")
-        
+        String.contains?(content, "DOMParser") ||
+          String.contains?(content, "parseXML") ||
+          String.contains?(content, "parseFromString") ||
+          String.contains?(content, "xml2js") ||
+          String.contains?(content, "libxmljs")
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XXE vulnerabilities
   and safe XML parsing configurations or browser-safe DOMParser usage.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "NewExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.ast_enhancement()
       iex> "DOMParser" in enhancement.ast_rules.parser_names
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -358,11 +361,15 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
     %{
       ast_rules: %{
         node_type: "NewExpression",
-        alternate_nodes: ["CallExpression"],  # parseXML calls
+        # parseXML calls
+        alternate_nodes: ["CallExpression"],
         parser_names: [
-          "DOMParser",          # Browser/Node.js parser
-          "XMLParser",          # Generic XML parser
-          "window.DOMParser"    # Browser-specific
+          # Browser/Node.js parser
+          "DOMParser",
+          # Generic XML parser
+          "XMLParser",
+          # Browser-specific
+          "window.DOMParser"
         ],
         method_patterns: %{
           parse_methods: [
@@ -374,18 +381,26 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
           content_types: [
             "text/xml",
             "application/xml",
-            "text/html",       # Can also process external entities
+            # Can also process external entities
+            "text/html",
             "application/xhtml+xml"
           ]
         },
         library_patterns: [
-          "xmldom",            # Node.js library
-          "libxmljs",          # Node.js library  
-          "xml2js",            # Node.js library
-          "fast-xml-parser",   # Node.js library
-          "node-xml2js",       # Node.js library
-          "xml-js",            # Node.js library
-          "sax"                # SAX parser
+          # Node.js library
+          "xmldom",
+          # Node.js library
+          "libxmljs",
+          # Node.js library
+          "xml2js",
+          # Node.js library
+          "fast-xml-parser",
+          # Node.js library
+          "node-xml2js",
+          # Node.js library
+          "xml-js",
+          # SAX parser
+          "sax"
         ]
       },
       context_rules: %{
@@ -401,52 +416,88 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
           ~r/node_modules/
         ],
         safe_configurations: [
-          "noent: false",                    # Disables entities
-          "expandEntities: false",           # xml2js safe option
-          "entityResolver: () => ''",        # Empty resolver
-          "disallow-doctype-decl",           # DTD disabled
-          "resolveExternalDTDs: false",      # No external DTDs
-          "loadExternalDTD: false",          # No external loading
-          "ignoreDeclaration: true",         # Ignore XML declaration
-          "processEntities: false",          # Don't process entities
-          "prohibitDTD: true"                # Prohibit DTD entirely
+          # Disables entities
+          "noent: false",
+          # xml2js safe option
+          "expandEntities: false",
+          # Empty resolver
+          "entityResolver: () => ''",
+          # DTD disabled
+          "disallow-doctype-decl",
+          # No external DTDs
+          "resolveExternalDTDs: false",
+          # No external loading
+          "loadExternalDTD: false",
+          # Ignore XML declaration
+          "ignoreDeclaration: true",
+          # Don't process entities
+          "processEntities: false",
+          # Prohibit DTD entirely
+          "prohibitDTD: true"
         ],
         safe_patterns: [
-          "JSON.parse",                      # Using JSON instead
-          "DOMPurify.sanitize",              # Sanitized XML
-          "createSafeParser",                # Custom safe parser
-          "disableExternalEntities",         # Explicit disabling
-          "secureXmlParser",                 # Security-focused parser
-          "sanitizeXml"                      # XML sanitization
+          # Using JSON instead
+          "JSON.parse",
+          # Sanitized XML
+          "DOMPurify.sanitize",
+          # Custom safe parser
+          "createSafeParser",
+          # Explicit disabling
+          "disableExternalEntities",
+          # Security-focused parser
+          "secureXmlParser",
+          # XML sanitization
+          "sanitizeXml"
         ],
         browser_indicators: [
-          "window.",                         # Browser context
-          "document.",                       # Browser DOM
-          "navigator.",                      # Browser API
-          "localStorage",                    # Browser storage
-          "fetch(",                          # Browser fetch API
-          "XMLHttpRequest"                   # Browser AJAX
+          # Browser context
+          "window.",
+          # Browser DOM
+          "document.",
+          # Browser API
+          "navigator.",
+          # Browser storage
+          "localStorage",
+          # Browser fetch API
+          "fetch(",
+          # Browser AJAX
+          "XMLHttpRequest"
         ]
       },
       confidence_rules: %{
-        base: 0.5,  # Medium base - browser parsers are often safe
+        # Medium base - browser parsers are often safe
+        base: 0.5,
         adjustments: %{
-          "node_xml_parser" => 0.4,          # Node.js parsers more risky
-          "external_entity_enabled" => 0.5,   # Explicit entity processing
-          "user_controlled_xml" => 0.4,       # User input XML
-          "file_protocol" => 0.4,             # File:// protocol usage
-          "dtd_processing" => 0.4,            # DTD processing enabled
-          "browser_domparser" => -0.6,        # Browser DOMParser safer
-          "safe_configuration" => -0.8,       # Safe options present
-          "test_code" => -0.7,                # Test files
-          "json_alternative" => -0.9,         # Using JSON instead
-          "sanitization_present" => -0.5,     # XML sanitization
-          "secure_defaults" => -0.4,          # Library with secure defaults
-          "static_xml" => -0.3,               # Hardcoded XML
-          "no_external_source" => -0.4        # No external XML input
+          # Node.js parsers more risky
+          "node_xml_parser" => 0.4,
+          # Explicit entity processing
+          "external_entity_enabled" => 0.5,
+          # User input XML
+          "user_controlled_xml" => 0.4,
+          # File:// protocol usage
+          "file_protocol" => 0.4,
+          # DTD processing enabled
+          "dtd_processing" => 0.4,
+          # Browser DOMParser safer
+          "browser_domparser" => -0.6,
+          # Safe options present
+          "safe_configuration" => -0.8,
+          # Test files
+          "test_code" => -0.7,
+          # Using JSON instead
+          "json_alternative" => -0.9,
+          # XML sanitization
+          "sanitization_present" => -0.5,
+          # Library with secure defaults
+          "secure_defaults" => -0.4,
+          # Hardcoded XML
+          "static_xml" => -0.3,
+          # No external XML input
+          "no_external_source" => -0.4
         }
       },
-      min_confidence: 0.7  # Medium-high threshold
+      # Medium-high threshold
+      min_confidence: 0.7
     }
   end
 end

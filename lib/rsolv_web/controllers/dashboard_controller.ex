@@ -1,6 +1,6 @@
 defmodule RsolvWeb.DashboardController do
   use RsolvWeb, :controller
-  
+
   @doc """
   Redirect to the LiveView dashboard for analytics
   """

@@ -1,33 +1,33 @@
 defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
   @moduledoc """
   Pattern for detecting unsafe deserialization vulnerabilities in PHP.
-  
+
   This pattern identifies when the PHP unserialize() function is used with user-controlled
   input, which can lead to PHP Object Injection attacks and Remote Code Execution (RCE).
-  
+
   ## Vulnerability Details
-  
+
   PHP's unserialize() function converts a serialized string back into PHP values and objects.
   When untrusted user input is passed to unserialize(), it creates a dangerous attack vector
   where malicious serialized objects can be injected to achieve arbitrary code execution.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code - user controls the serialized data
   $user_prefs = unserialize($_COOKIE['preferences']);
-  
+
   // Attacker can inject malicious serialized objects:
   // O:8:"EvilClass":1:{s:4:"file";s:10:"/etc/passwd";}
   ```
-  
+
   The attack works by exploiting PHP magic methods like __destruct(), __wakeup(),
   __toString(), and others that are automatically called during object creation
   and destruction, allowing arbitrary code execution.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -56,7 +56,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -65,35 +65,35 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
       the unserialize() function processes untrusted user input. This vulnerability enables
       PHP Object Injection attacks, where malicious serialized objects can be crafted to
       execute arbitrary code during the deserialization process.
-      
+
       The core issue stems from PHP's object lifecycle management and magic methods.
       When unserialize() reconstructs objects from serialized data, it automatically
       triggers various magic methods (__construct, __destruct, __wakeup, __toString, etc.)
       during object creation, property access, and destruction. Attackers can exploit
       these automatic method invocations by crafting malicious serialized payloads.
-      
+
       ### The Deserialization Process
-      
+
       PHP serialization creates a string representation of objects that preserves:
       - Object class name and properties
       - Property values and types
       - Object relationships and references
       - Magic method triggers during reconstruction
-      
+
       When unserialize() processes this data, it:
       1. Creates instances of the specified classes
       2. Sets object properties to stored values
       3. Calls __wakeup() if defined
       4. Eventually calls __destruct() when objects are garbage collected
-      
+
       ### Attack Mechanics
-      
+
       Successful exploitation typically requires:
       1. **Gadget Classes**: Existing classes with exploitable magic methods
       2. **Property Control**: Ability to control object property values
       3. **Chain Construction**: Linking gadgets to achieve desired effects
       4. **Payload Delivery**: Injecting malicious serialized data via user input
-      
+
       Common gadget patterns include:
       - File operations in __destruct() methods
       - System commands in __toString() methods
@@ -123,7 +123,8 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
           type: :research,
           id: "sjoerd_unserialize_rce",
           title: "Remote code execution through unsafe unserialize in PHP",
-          url: "https://www.sjoerdlangkemper.nl/2021/04/04/remote-code-execution-through-unsafe-unserialize/"
+          url:
+            "https://www.sjoerdlangkemper.nl/2021/04/04/remote-code-execution-through-unsafe-unserialize/"
         },
         %{
           type: :research,
@@ -194,12 +195,12 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
       - Direct calls to unserialize() with user input variables ($_GET, $_POST, $_REQUEST, $_COOKIE)
       - Function patterns that process user-controlled serialized data
       - Common injection points where serialized data enters the application
-      
+
       The regex specifically looks for:
       - unserialize function calls with various whitespace patterns
       - Immediate access to superglobal variables containing user input
       - Common parameter names used for serialized data transport
-      
+
       False positives may occur when:
       - unserialize() is used with validated or internal data
       - Proper input validation is performed before deserialization
@@ -248,20 +249,20 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.UnsafeDeserialization.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.UnsafeDeserialization.test_cases()
       iex> length(test_cases.negative) > 0
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Php.UnsafeDeserialization.pattern()
       iex> pattern.id
       "php-unsafe-deserialization"
@@ -320,7 +321,8 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
           description: "Restricted unserialize with allowed classes"
         },
         %{
-          code: ~S|$validated = filter_var($_POST['data'], FILTER_SANITIZE_STRING); $obj = unserialize($validated);|,
+          code:
+            ~S|$validated = filter_var($_POST['data'], FILTER_SANITIZE_STRING); $obj = unserialize($validated);|,
           description: "Validated input before unserialize"
         },
         %{
@@ -334,7 +336,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -344,12 +346,12 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         "Session Management" => ~S"""
         // Session data storage - VULNERABLE
         session_start();
-        
+
         // Store user preferences in session
         if ($_POST['save_prefs']) {
             $_SESSION['user_prefs'] = serialize($_POST['preferences']);
         }
-        
+
         // Load user preferences - DANGEROUS
         if (isset($_COOKIE['backup_prefs'])) {
             $prefs = unserialize($_COOKIE['backup_prefs']);
@@ -357,7 +359,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
                 $_SESSION[$key] = $value;
             }
         }
-        
+
         // Attacker can inject malicious objects via cookie
         """,
         "Configuration Loading" => ~S"""
@@ -365,7 +367,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         class Config {
             public $debug_mode = false;
             public $log_file = '/var/log/app.log';
-            
+
             public function __destruct() {
                 if ($this->debug_mode) {
                     // DANGEROUS: File operations in destructor
@@ -373,13 +375,13 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
                 }
             }
         }
-        
+
         // Load configuration from user input
         if (isset($_POST['config'])) {
             $config = unserialize($_POST['config']);
             $GLOBALS['app_config'] = $config;
         }
-        
+
         // Attacker controls log_file path and debug_mode flag
         """,
         "Cache Management" => ~S"""
@@ -388,7 +390,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
             public $key;
             public $data;
             public $file_path;
-            
+
             public function __toString() {
                 // DANGEROUS: File inclusion in magic method
                 if (file_exists($this->file_path)) {
@@ -397,14 +399,14 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
                 return $this->data;
             }
         }
-        
+
         // Restore cache from user input
         if (isset($_GET['restore_cache'])) {
             $cache_data = base64_decode($_GET['restore_cache']);
             $cache_entry = unserialize($cache_data);
             echo "Cache restored: " . $cache_entry;
         }
-        
+
         // Attacker can read arbitrary files via file_path property
         """,
         "User Profile" => ~S"""
@@ -413,7 +415,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
             public $username;
             public $avatar_path;
             public $settings;
-            
+
             public function __wakeup() {
                 // DANGEROUS: Automatic file operations
                 if ($this->avatar_path && !file_exists($this->avatar_path)) {
@@ -421,14 +423,14 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
                 }
             }
         }
-        
+
         // Import user profile from backup
         if (isset($_FILES['profile_backup'])) {
             $backup_data = file_get_contents($_FILES['profile_backup']['tmp_name']);
             $profile = unserialize($backup_data);
             $_SESSION['user_profile'] = $profile;
         }
-        
+
         // Attacker can trigger file operations via avatar_path
         """
       },
@@ -436,7 +438,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         "Using JSON instead" => ~S"""
         // Session data storage - SECURE
         session_start();
-        
+
         // Store user preferences as JSON
         if ($_POST['save_prefs']) {
             $prefs = [
@@ -446,12 +448,12 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
             ];
             $_SESSION['user_prefs'] = json_encode($prefs);
         }
-        
+
         // Load user preferences safely
         if (isset($_COOKIE['backup_prefs'])) {
             $prefs_json = filter_var($_COOKIE['backup_prefs'], FILTER_SANITIZE_STRING);
             $prefs = json_decode($prefs_json, true);
-            
+
             if (is_array($prefs)) {
                 foreach ($prefs as $key => $value) {
                     if (in_array($key, ['theme', 'language', 'timezone'])) {
@@ -466,28 +468,28 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         class SafeConfig {
             public $theme = 'default';
             public $language = 'en';
-            
+
             // No dangerous magic methods
             public function validate() {
                 $allowed_themes = ['default', 'dark', 'light'];
                 $allowed_languages = ['en', 'es', 'fr', 'de'];
-                
+
                 if (!in_array($this->theme, $allowed_themes)) {
                     $this->theme = 'default';
                 }
-                
+
                 if (!in_array($this->language, $allowed_languages)) {
                     $this->language = 'en';
                 }
             }
         }
-        
+
         // Only allow specific safe classes
         if (isset($_POST['config'])) {
             $config = unserialize($_POST['config'], [
                 'allowed_classes' => ['SafeConfig']
             ]);
-            
+
             if ($config instanceof SafeConfig) {
                 $config->validate();
                 $GLOBALS['app_config'] = $config;
@@ -502,36 +504,36 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
                 'data' => $data,
                 'timestamp' => time()
             ];
-            
+
             $serialized = json_encode($cache_array);
             $mac = hash_hmac('sha256', $serialized, SECRET_KEY);
-            
+
             return base64_encode($serialized . '.' . $mac);
         }
-        
+
         function loadSecureCache($cache_token) {
             $decoded = base64_decode($cache_token);
             $parts = explode('.', $decoded, 2);
-            
+
             if (count($parts) !== 2) {
                 return false;
             }
-            
+
             [$data, $mac] = $parts;
             $expected_mac = hash_hmac('sha256', $data, SECRET_KEY);
-            
+
             if (!hash_equals($expected_mac, $mac)) {
                 return false; // MAC verification failed
             }
-            
+
             $cache_array = json_decode($data, true);
             if (!is_array($cache_array)) {
                 return false;
             }
-            
+
             return $cache_array;
         }
-        
+
         // Secure cache restoration
         if (isset($_GET['restore_cache'])) {
             $cache_data = loadSecureCache($_GET['restore_cache']);
@@ -545,21 +547,21 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         class SecureUserProfile {
             private $allowed_fields = ['username', 'email', 'theme', 'language'];
             private $data = [];
-            
+
             public function setField($field, $value) {
                 if (in_array($field, $this->allowed_fields)) {
                     $this->data[$field] = filter_var($value, FILTER_SANITIZE_STRING);
                 }
             }
-            
+
             public function getField($field) {
                 return $this->data[$field] ?? null;
             }
-            
+
             public function toArray() {
                 return $this->data;
             }
-            
+
             public static function fromArray($data) {
                 $profile = new self();
                 if (is_array($data)) {
@@ -570,12 +572,12 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
                 return $profile;
             }
         }
-        
+
         // Import user profile securely
         if (isset($_FILES['profile_backup'])) {
             $backup_json = file_get_contents($_FILES['profile_backup']['tmp_name']);
             $profile_data = json_decode($backup_json, true);
-            
+
             if (is_array($profile_data)) {
                 $profile = SecureUserProfile::fromArray($profile_data);
                 $_SESSION['user_profile'] = $profile->toArray();
@@ -585,7 +587,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -596,188 +598,188 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
     vulnerability occurs when the unserialize() function processes untrusted user input,
     allowing attackers to inject malicious PHP objects that execute arbitrary code through
     PHP object injection attacks.
-    
+
     ## Understanding PHP Object Injection
-    
+
     ### The Serialization Process
-    
+
     PHP serialization converts complex data structures into string representations:
-    
+
     ```php
     $user = new User();
     $user->name = "John";
     $user->role = "admin";
-    
+
     $serialized = serialize($user);
     // O:4:"User":2:{s:4:"name";s:4:"John";s:4:"role";s:5:"admin";}
     ```
-    
+
     The serialized format contains:
     - **O:4:"User"**: Object of class "User" with 4 characters in name
     - **:2**: Object has 2 properties
     - **{...}**: Property definitions with names and values
-    
+
     ### The Vulnerability Mechanism
-    
+
     When unserialize() processes malicious data, it can:
     1. **Instantiate arbitrary classes** available in the application
     2. **Set object properties** to attacker-controlled values
     3. **Trigger magic methods** automatically during object lifecycle
     4. **Execute code** through method chaining and property manipulation
-    
+
     ### Magic Method Exploitation
-    
+
     PHP's magic methods provide numerous exploitation vectors:
-    
+
     #### __destruct() - Destructor Method
     Called when objects are destroyed or script ends:
     ```php
     class FileLogger {
         public $logFile = '/var/log/app.log';
-        
+
         public function __destruct() {
             file_put_contents($this->logFile, "Session ended\n", FILE_APPEND);
         }
     }
-    
+
     // Attacker payload: O:10:"FileLogger":1:{s:7:"logFile";s:17:"/var/www/shell.php";}
     // Result: Creates web shell at controlled location
     ```
-    
+
     #### __wakeup() - Called After Unserialization
     Executed immediately when object is unserialized:
     ```php
     class ConfigLoader {
         public $configFile = 'config.php';
-        
+
         public function __wakeup() {
             include $this->configFile;
         }
     }
-    
+
     // Attacker can trigger arbitrary file inclusion
     ```
-    
+
     #### __toString() - String Conversion
     Called when object is used as string:
     ```php
     class TemplateEngine {
         public $template = '';
-        
+
         public function __toString() {
             return eval("return \"$this->template\";");
         }
     }
-    
+
     // Direct code execution when object is echoed
     ```
-    
+
     ## Advanced Attack Techniques
-    
+
     ### Property-Oriented Programming (POP) Chains
-    
+
     Complex attacks chain multiple objects together:
-    
+
     ```php
     // Step 1: Object with file write in destructor
     class Logger {
         public $file;
         public $data;
-        
+
         public function __destruct() {
             file_put_contents($this->file, $this->data);
         }
     }
-    
+
     // Step 2: Object that triggers string conversion
     class Template {
         public $content;
-        
+
         public function __toString() {
             return $this->content->process();
         }
     }
-    
+
     // Step 3: Object with method call
     class Processor {
         public $logger;
-        
+
         public function process() {
             return (string) $this->logger;
         }
     }
-    
+
     // Chain: Processor -> Template -> Logger -> file_put_contents()
     ```
-    
+
     ### Gadget Discovery
-    
+
     Attackers search for "gadgets" - classes with exploitable magic methods:
     - **File operations**: read, write, delete, include
     - **Network requests**: HTTP calls, email sending
     - **Command execution**: system(), exec(), shell_exec()
     - **Database operations**: SQL queries, data modification
-    
+
     ## Real-World Attack Scenarios
-    
+
     ### Session Hijacking
     ```php
     // Vulnerable session restoration
     if (isset($_COOKIE['session_backup'])) {
         $_SESSION = unserialize($_COOKIE['session_backup']);
     }
-    
+
     // Attacker injects admin session:
     // a:1:{s:4:"role";s:5:"admin";}
     ```
-    
+
     ### Configuration Manipulation
     ```php
     // Vulnerable config loading
     $config = unserialize($_POST['settings']);
-    
+
     // Attacker overwrites critical settings:
     // O:6:"Config":1:{s:8:"database";s:20:"mysql://evil.com/db";}
     ```
-    
+
     ### File System Attacks
     ```php
     // Vulnerable cache system
     class CacheEntry {
         public $file;
-        
+
         public function __destruct() {
             unlink($this->file); // Delete file
         }
     }
-    
+
     // Attacker deletes critical files:
     // O:10:"CacheEntry":1:{s:4:"file";s:15:"/etc/passwd";}
     ```
-    
+
     ## Detection and Prevention
-    
+
     ### Immediate Actions
     1. **Replace unserialize() with json_decode()** for data exchange
     2. **Use allowed_classes parameter** if unserialize() is necessary
     3. **Validate all input** before any deserialization
     4. **Implement data integrity checks** using MAC or signatures
-    
+
     ### Secure Alternatives
     ```php
     // JSON instead of serialization
     $data = json_decode($_POST['data'], true);
-    
+
     // Restricted unserialize
     $obj = unserialize($data, ['allowed_classes' => ['SafeClass']]);
-    
+
     // Integrity verification
     $mac = hash_hmac('sha256', $data, $secret_key);
     if (hash_equals($expected_mac, $mac)) {
         $obj = unserialize($data);
     }
     ```
-    
+
     ### Code Review Checklist
     - [ ] No unserialize() calls with user input
     - [ ] All serialization uses JSON or other safe formats
@@ -785,28 +787,28 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
     - [ ] Input validation implemented before any deserialization
     - [ ] Data integrity verification in place for serialized data
     - [ ] Session handling doesn't use unserialize() with user data
-    
+
     Remember: Unsafe deserialization can lead to complete application compromise.
     The best defense is avoiding unserialize() with user input entirely.
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities and false positives
   by analyzing the context of unserialize() usage and checking for safety measures.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.UnsafeDeserialization.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.UnsafeDeserialization.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.UnsafeDeserialization.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4
@@ -820,8 +822,10 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
           description: "PHP deserialization functions with security implications",
           functions: [
             "unserialize",
-            "wakeup",      # Magic method that can be exploited
-            "destruct"     # Destructor method exploitation
+            # Magic method that can be exploited
+            "wakeup",
+            # Destructor method exploitation
+            "destruct"
           ],
           contexts: [
             "user_input_processing",
@@ -873,7 +877,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
           description: "Identify sources of user-controlled data",
           dangerous_sources: [
             "$_GET",
-            "$_POST", 
+            "$_POST",
             "$_REQUEST",
             "$_COOKIE",
             "$_FILES",

@@ -1,70 +1,70 @@
 defmodule Rsolv.Security.Patterns.Java.LdapInjection do
   @moduledoc """
   LDAP Injection pattern for Java code.
-  
+
   Detects LDAP injection vulnerabilities in Java applications where user input is directly
   concatenated into LDAP queries without proper sanitization or escaping. LDAP injection
   attacks can lead to authentication bypass, information disclosure, and unauthorized
   access to directory services.
-  
+
   ## Vulnerability Details
-  
+
   LDAP injection occurs when an application constructs LDAP queries by directly concatenating
   user input without proper validation or escaping. This allows attackers to manipulate
   LDAP queries to bypass authentication, access unauthorized data, or modify directory
   information.
-  
+
   Common vulnerable patterns:
   - String concatenation in LDAP search filters
   - Unsafe DN (Distinguished Name) construction
   - Direct user input in bind operations
   - Filter construction without escaping special characters
-  
+
   ### Attack Examples
-  
+
   ```java
   // Vulnerable code - direct concatenation
   String filter = "(uid=" + username + ")";
   ctx.search("ou=users,dc=example,dc=com", filter, controls);
-  
+
   // Attack payload examples:
   // username = "*)(objectClass=*))(|(uid=*" -> Bypass authentication
   // username = "admin)(&(password=*" -> Password enumeration
   // username = "*)(mail=*))%00" -> Information disclosure
   ```
-  
+
   ## References
-  
+
   - CWE-90: Improper Neutralization of Special Elements used in an LDAP Query
   - OWASP A03:2021 - Injection
   - CVE-2022-46337: Apache Derby LDAP injection vulnerability
   - OWASP LDAP Injection Prevention Cheat Sheet
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Pattern detects LDAP injection vulnerabilities in Java code.
-  
+
   Identifies unsafe string concatenation in LDAP operations that could allow
   attackers to manipulate LDAP queries and bypass security controls.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Java.LdapInjection.pattern()
       iex> pattern.id
       "java-ldap-injection"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.LdapInjection.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.LdapInjection.pattern()
       iex> vulnerable = "ctx.search(\\\"cn=\\\" + username + \\\",ou=users\\\", filter, controls);"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, vulnerable) end)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.LdapInjection.pattern()
       iex> safe = "// ctx.search(\\\"cn=\\\" + username + \\\",ou=users\\\", filter, controls);"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, safe) end)
@@ -96,7 +96,8 @@ defmodule Rsolv.Security.Patterns.Java.LdapInjection do
       ],
       cwe_id: "CWE-90",
       owasp_category: "A03:2021",
-      recommendation: "Use parameterized LDAP queries, escape user input with LdapEncoder.filterEncode(), and validate input against allowlists",
+      recommendation:
+        "Use parameterized LDAP queries, escape user input with LdapEncoder.filterEncode(), and validate input against allowlists",
       test_cases: %{
         vulnerable: [
           ~S|ctx.search("cn=" + username + ",ou=users", filter, controls);|,
@@ -112,7 +113,7 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -121,21 +122,21 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
       concatenating user input without proper validation, sanitization, or escaping. This allows
       attackers to manipulate LDAP queries to bypass authentication, access unauthorized data,
       or modify directory information.
-      
+
       LDAP injection attacks can lead to:
       - Authentication bypass through filter manipulation
       - Information disclosure via blind injection techniques
       - Unauthorized access to directory data
       - Privilege escalation through group membership manipulation
       - Denial of service through malformed queries
-      
+
       The vulnerability is particularly dangerous because:
       - LDAP is commonly used for authentication and authorization
       - Directory services often contain sensitive organizational data
       - Many applications trust LDAP authentication results
       - LDAP syntax allows complex boolean logic manipulation
       - Error messages can reveal directory structure information
-      
+
       Historical context:
       - LDAP injection has been recognized since the early 2000s
       - Included in OWASP Top 10 2021 under A03 (Injection)
@@ -153,14 +154,15 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
         %{
           type: :owasp,
           id: "A03:2021",
-          title: "OWASP Top 10 2021 - A03 Injection", 
+          title: "OWASP Top 10 2021 - A03 Injection",
           url: "https://owasp.org/Top10/A03_2021-Injection/"
         },
         %{
           type: :research,
           id: "owasp_ldap_prevention",
           title: "OWASP LDAP Injection Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -195,42 +197,47 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
       cve_examples: [
         %{
           id: "CVE-2022-46337",
-          description: "Apache Derby LDAP injection vulnerability in authenticator allowing authentication bypass",
+          description:
+            "Apache Derby LDAP injection vulnerability in authenticator allowing authentication bypass",
           severity: "critical",
           cvss: 9.1,
-          note: "LDAP filter manipulation enables viewing and corrupting sensitive data and executing database functions"
+          note:
+            "LDAP filter manipulation enables viewing and corrupting sensitive data and executing database functions"
         },
         %{
-          id: "CVE-2021-23335", 
-          description: "LDAP injection in is-user-valid package leading to authentication bypass or information exposure",
+          id: "CVE-2021-23335",
+          description:
+            "LDAP injection in is-user-valid package leading to authentication bypass or information exposure",
           severity: "high",
           cvss: 8.5,
           note: "All versions vulnerable to LDAP injection through improper input sanitization"
         },
         %{
           id: "CVE-2024-10127",
-          description: "Authentication bypass in M-Files server LDAP authentication configuration",
-          severity: "high", 
+          description:
+            "Authentication bypass in M-Files server LDAP authentication configuration",
+          severity: "high",
           cvss: 7.8,
-          note: "OpenLDAP configuration vulnerability allowing unauthorized access to file management system"
+          note:
+            "OpenLDAP configuration vulnerability allowing unauthorized access to file management system"
         }
       ],
       detection_notes: """
       This pattern detects insecure LDAP operations by identifying:
-      
+
       1. LDAP search methods with string concatenation in filters or distinguished names
       2. Filter construction using direct string concatenation with user input
       3. LDAP bind operations concatenating user input into authentication parameters
       4. Distinguished Name (DN) construction without proper escaping
       5. Other LDAP directory operations using unsafe string concatenation
-      
+
       The pattern uses negative lookahead to avoid false positives when code is commented out.
       It targets common LDAP injection vectors including:
       - Search filter manipulation
       - DN injection in bind operations
       - Boolean logic manipulation in complex filters
       - Method chaining with unsafe concatenation
-      
+
       Key detection criteria:
       - Looks for .search(), .bind(), .lookup() and other LDAP methods
       - Identifies string concatenation patterns with + operator
@@ -294,23 +301,23 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual LDAP injection vulnerabilities and safe
   LDAP usage patterns that have proper input sanitization and escaping.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.LdapInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.LdapInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.LdapInjection.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"
@@ -322,7 +329,17 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
         node_type: "MethodInvocation",
         ldap_analysis: %{
           check_ldap_operations: true,
-          ldap_methods: ["search", "bind", "lookup", "createSubcontext", "destroySubcontext", "modifyAttributes", "rename", "list", "listBindings"],
+          ldap_methods: [
+            "search",
+            "bind",
+            "lookup",
+            "createSubcontext",
+            "destroySubcontext",
+            "modifyAttributes",
+            "rename",
+            "list",
+            "listBindings"
+          ],
           check_string_concatenation: true,
           dangerous_concatenation_patterns: ["\\+", "String.format", "StringBuilder.append"],
           check_context_types: true
@@ -330,7 +347,12 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
         context_analysis: %{
           check_directory_context: true,
           context_types: ["DirContext", "LdapContext", "InitialDirContext", "InitialLdapContext"],
-          dangerous_operations: ["authentication", "authorization", "user_lookup", "group_membership"],
+          dangerous_operations: [
+            "authentication",
+            "authorization",
+            "user_lookup",
+            "group_membership"
+          ],
           check_naming_context: true
         },
         filter_analysis: %{
@@ -352,7 +374,7 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
         check_input_sanitization: true,
         escape_functions: [
           "LdapEncoder.filterEncode",
-          "LdapEncoder.nameEncode", 
+          "LdapEncoder.nameEncode",
           "LdapUtils.escapeLdapSearchFilter",
           "StringEscapeUtils.escapeLdap",
           "escapeLDAPSearchFilter",
@@ -367,7 +389,13 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
         exclude_paths: [~r/test/, ~r/spec/, ~r/__tests__/, ~r/example/, ~r/demo/],
         check_framework_usage: true,
         safe_frameworks: ["Spring LDAP", "Apache Directory", "UnboundID LDAP SDK"],
-        high_risk_contexts: ["authentication", "authorization", "user management", "directory search", "access control"]
+        high_risk_contexts: [
+          "authentication",
+          "authorization",
+          "user management",
+          "directory search",
+          "access control"
+        ]
       },
       confidence_rules: %{
         base: 0.9,

@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 defmodule Mix.Tasks.AddForgeAccount do
   use Mix.Task
   alias Rsolv.Repo
@@ -18,13 +19,14 @@ defmodule Mix.Tasks.AddForgeAccount do
   def run(args) do
     Mix.Task.run("app.start")
 
-    {opts, _} = OptionParser.parse!(args,
-      strict: [
-        api_key: :string,
-        namespace: :string,
-        forge_type: :string
-      ]
-    )
+    {opts, _} =
+      OptionParser.parse!(args,
+        strict: [
+          api_key: :string,
+          namespace: :string,
+          forge_type: :string
+        ]
+      )
 
     api_key = opts[:api_key] || raise "Missing required --api-key argument"
     namespace = opts[:namespace] || raise "Missing required --namespace argument"
@@ -32,6 +34,7 @@ defmodule Mix.Tasks.AddForgeAccount do
 
     # Get the API key record and customer
     api_key_record = Rsolv.Customers.get_api_key_by_key(api_key)
+
     if !api_key_record do
       raise "API key '#{String.slice(api_key, 0..15)}...' not found"
     end
@@ -41,11 +44,12 @@ defmodule Mix.Tasks.AddForgeAccount do
     IO.puts("Found API key for customer: #{customer.name} (#{customer.email})")
 
     # Check if forge_account already exists
-    existing = Repo.get_by(ForgeAccount,
-      customer_id: customer.id,
-      forge_type: forge_type,
-      namespace: namespace
-    )
+    existing =
+      Repo.get_by(ForgeAccount,
+        customer_id: customer.id,
+        forge_type: forge_type,
+        namespace: namespace
+      )
 
     if existing do
       if existing.verified_at do
@@ -55,11 +59,13 @@ defmodule Mix.Tasks.AddForgeAccount do
       else
         # Verify existing forge account
         changeset = ForgeAccount.changeset(existing, %{verified_at: DateTime.utc_now()})
+
         case Repo.update(changeset) do
           {:ok, updated} ->
             IO.puts("✅ Existing forge account verified successfully")
             IO.puts("   Namespace: #{namespace}")
             IO.puts("   Verified at: #{updated.verified_at}")
+
           {:error, changeset} ->
             IO.puts("❌ Failed to verify forge account:")
             IO.inspect(changeset.errors)
@@ -67,17 +73,18 @@ defmodule Mix.Tasks.AddForgeAccount do
       end
     else
       # Create new forge account
-      changeset = ForgeAccount.changeset(%ForgeAccount{}, %{
-        customer_id: customer.id,
-        forge_type: forge_type,
-        namespace: namespace,
-        verified_at: DateTime.utc_now(),
-        metadata: %{
-          type: "manual_addition",
-          created_by: "mix_task",
-          created_at: DateTime.utc_now()
-        }
-      })
+      changeset =
+        ForgeAccount.changeset(%ForgeAccount{}, %{
+          customer_id: customer.id,
+          forge_type: forge_type,
+          namespace: namespace,
+          verified_at: DateTime.utc_now(),
+          metadata: %{
+            type: "manual_addition",
+            created_by: "mix_task",
+            created_at: DateTime.utc_now()
+          }
+        })
 
       case Repo.insert(changeset) do
         {:ok, forge_account} ->
@@ -101,6 +108,7 @@ defmodule Mix.Tasks.AddForgeAccount do
   defp test_platform_storage_access(api_key, namespace) do
     # Try to store and retrieve test phase data
     test_repo = "#{namespace}/test-repo"
+
     test_attrs = %{
       repo: test_repo,
       commit_sha: "test-commit-#{System.os_time(:second)}",
@@ -111,8 +119,10 @@ defmodule Mix.Tasks.AddForgeAccount do
       {:ok, _scan} ->
         IO.puts("✅ Platform storage test successful!")
         IO.puts("   Can now store phase data for #{namespace}/* repositories")
+
       {:error, :unauthorized} ->
         IO.puts("❌ Platform storage still unauthorized - may need database refresh")
+
       {:error, error} ->
         IO.puts("⚠️  Platform storage test failed with: #{inspect(error)}")
     end

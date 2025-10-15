@@ -7,7 +7,7 @@ defmodule RsolvWeb.Services.BlogService do
   require Logger
 
   @site_url "https://rsolv.dev"
-  
+
   defp blog_dir do
     Application.app_dir(:rsolv, "priv/blog")
   end
@@ -18,19 +18,21 @@ defmodule RsolvWeb.Services.BlogService do
   def get_post(slug) do
     # Sanitize slug to prevent path traversal
     sanitized_slug = sanitize_slug(slug)
-    
+
     if sanitized_slug != slug do
       {:error, :not_found}
     else
       file_path = Path.join([blog_dir(), "#{sanitized_slug}.md"])
-      
+
       case File.read(file_path) do
         {:ok, content} ->
           # parse_frontmatter always returns {:ok, metadata, markdown}
           {:ok, metadata, markdown} = parse_frontmatter(content)
           {:ok, build_post(sanitized_slug, metadata, markdown)}
+
         {:error, :enoent} ->
           {:error, :not_found}
+
         {:error, reason} ->
           Logger.error("Failed to read blog post #{slug}: #{inspect(reason)}")
           {:error, :read_error}
@@ -51,6 +53,7 @@ defmodule RsolvWeb.Services.BlogService do
         |> Enum.filter(&String.ends_with?(&1, ".md"))
         |> Enum.map(fn filename ->
           slug = String.replace_suffix(filename, ".md", "")
+
           case get_post(slug) do
             {:ok, post} -> post
             _ -> nil
@@ -59,9 +62,11 @@ defmodule RsolvWeb.Services.BlogService do
         |> Enum.reject(&is_nil/1)
         |> Enum.filter(&should_show_post?/1)
         |> Enum.sort_by(& &1.published_at, {:desc, Date})
+
       {:error, :enoent} ->
         # Blog directory doesn't exist yet
         []
+
       {:error, reason} ->
         Logger.error("Failed to list blog posts: #{inspect(reason)}")
         []
@@ -73,10 +78,10 @@ defmodule RsolvWeb.Services.BlogService do
   RSS feeds should only include published content regardless of environment.
   """
   def generate_rss do
-    posts = 
+    posts =
       list_all_posts()
       |> Enum.filter(&(&1.status == "published"))
-    
+
     """
     <?xml version="1.0" encoding="UTF-8"?>
     <rss version="2.0">
@@ -86,7 +91,7 @@ defmodule RsolvWeb.Services.BlogService do
         <description>AI Security Insights and Vulnerability Analysis</description>
         <language>en-us</language>
         <lastBuildDate>#{format_rss_date(DateTime.utc_now())}</lastBuildDate>
-        #{Enum.map(posts, &format_rss_item/1) |> Enum.join("\n")}
+        #{Enum.map_join(posts, "\n", &format_rss_item/1)}
       </channel>
     </rss>
     """
@@ -108,6 +113,7 @@ defmodule RsolvWeb.Services.BlogService do
         |> Enum.filter(&String.ends_with?(&1, ".md"))
         |> Enum.map(fn filename ->
           slug = String.replace_suffix(filename, ".md", "")
+
           case get_post(slug) do
             {:ok, post} -> post
             _ -> nil
@@ -115,8 +121,10 @@ defmodule RsolvWeb.Services.BlogService do
         end)
         |> Enum.reject(&is_nil/1)
         |> Enum.sort_by(& &1.published_at, {:desc, Date})
+
       {:error, :enoent} ->
         []
+
       {:error, reason} ->
         Logger.error("Failed to list all blog posts: #{inspect(reason)}")
         []
@@ -144,7 +152,7 @@ defmodule RsolvWeb.Services.BlogService do
       ...> title: "Test Post"
       ...> status: "draft"
       ...> ---
-      ...> 
+      ...>
       ...> Content here
       ...> \"\"\"
       iex> {:ok, metadata, markdown} = RsolvWeb.Services.BlogService.parse_frontmatter(content)
@@ -169,10 +177,12 @@ defmodule RsolvWeb.Services.BlogService do
         case YamlElixir.read_from_string(frontmatter) do
           {:ok, metadata} ->
             {:ok, metadata, String.trim(markdown)}
+
           {:error, reason} ->
             Logger.warning("Failed to parse YAML frontmatter: #{inspect(reason)}")
             {:ok, %{}, content}
         end
+
       _ ->
         # No frontmatter
         {:ok, %{}, content}
@@ -187,7 +197,7 @@ defmodule RsolvWeb.Services.BlogService do
   defp parse_simple_frontmatter(content) do
     case String.split(content, "---", parts: 3) do
       ["", frontmatter, markdown] ->
-        metadata = 
+        metadata =
           frontmatter
           |> String.split("\n")
           |> Enum.map(&String.trim/1)
@@ -197,12 +207,14 @@ defmodule RsolvWeb.Services.BlogService do
               [key, value] ->
                 parsed_value = parse_yaml_value(String.trim(value))
                 Map.put(acc, String.trim(key), parsed_value)
+
               _ ->
                 acc
             end
           end)
-        
+
         {:ok, metadata, String.trim(markdown)}
+
       _ ->
         {:ok, %{}, content}
     end
@@ -217,25 +229,25 @@ defmodule RsolvWeb.Services.BlogService do
         |> String.split(",")
         |> Enum.map(&String.trim/1)
         |> Enum.map(&String.trim(&1, "\""))
-      
+
       # Handle quoted strings
       String.starts_with?(value, "\"") and String.ends_with?(value, "\"") ->
         String.slice(value, 1..-2//1)
-      
+
       # Handle dates
       String.match?(value, ~r/^\d{4}-\d{2}-\d{2}$/) ->
         case Date.from_iso8601(value) do
           {:ok, date} -> date
           _ -> value
         end
-      
+
       # Handle numbers
       String.match?(value, ~r/^\d+$/) ->
         case Integer.parse(value) do
           {int_value, ""} -> int_value
           _ -> value
         end
-      
+
       # Default string
       true ->
         value
@@ -246,39 +258,41 @@ defmodule RsolvWeb.Services.BlogService do
     slug
     |> String.downcase()
     |> String.replace(~r/[^a-z0-9\-]/, "")
-    |> String.slice(0, 100)  # Limit length
+    # Limit length
+    |> String.slice(0, 100)
   end
-  
+
   defp remove_duplicate_title(markdown, title) when is_binary(title) do
     # Match H1 at the beginning of the content (after optional whitespace)
     # that matches the title from metadata
     pattern = ~r/^\s*#\s+#{Regex.escape(title)}\s*\n/
-    
+
     case Regex.match?(pattern, markdown) do
       true -> Regex.replace(pattern, markdown, "", global: false)
       false -> markdown
     end
   end
-  
+
   defp remove_duplicate_title(markdown, _), do: markdown
 
   defp build_post(slug, metadata, markdown) do
     # Remove duplicate H1 if it matches the title
     markdown_cleaned = remove_duplicate_title(markdown, Map.get(metadata, "title"))
-    
+
     # Convert markdown to HTML with MDEx - includes syntax highlighting
-    html = MDEx.to_html!(markdown_cleaned, 
-      extension: [
-        strikethrough: true,
-        table: true,
-        autolink: true,
-        tasklist: true,
-        footnotes: true,
-        shortcodes: true
-      ],
-      parse: [smart: true],
-      render: [unsafe_: true]
-    )
+    html =
+      MDEx.to_html!(markdown_cleaned,
+        extension: [
+          strikethrough: true,
+          table: true,
+          autolink: true,
+          tasklist: true,
+          footnotes: true,
+          shortcodes: true
+        ],
+        parse: [smart: true],
+        render: [unsafe_: true]
+      )
 
     %{
       slug: slug,
@@ -290,35 +304,40 @@ defmodule RsolvWeb.Services.BlogService do
       tags: Map.get(metadata, "tags", []),
       category: Map.get(metadata, "category", "general"),
       published_at: parse_date(Map.get(metadata, "published_at")),
-      reading_time: parse_reading_time(Map.get(metadata, "reading_time", estimate_reading_time(markdown)))
+      reading_time:
+        parse_reading_time(Map.get(metadata, "reading_time", estimate_reading_time(markdown)))
     }
   end
 
   defp parse_date(nil), do: Date.utc_today()
   defp parse_date(%Date{} = date), do: date
+
   defp parse_date(date_string) when is_binary(date_string) do
     case Date.from_iso8601(date_string) do
       {:ok, date} -> date
       _ -> Date.utc_today()
     end
   end
+
   defp parse_date(_), do: Date.utc_today()
 
   defp parse_reading_time(time) when is_integer(time), do: time
+
   defp parse_reading_time(time) when is_binary(time) do
     case Integer.parse(time) do
       {int_time, _} -> int_time
       :error -> 1
     end
   end
+
   defp parse_reading_time(_), do: 1
 
   defp estimate_reading_time(content) do
-    word_count = 
+    word_count =
       content
       |> String.split()
       |> length()
-    
+
     # Average reading speed: 200 words per minute
     max(1, div(word_count, 200))
   end

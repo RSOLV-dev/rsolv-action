@@ -1,36 +1,36 @@
 defmodule Rsolv.Security.Patterns.Php.EvalUsage do
   @moduledoc """
   Pattern for detecting dangerous eval() usage in PHP.
-  
+
   This pattern identifies when PHP applications use the eval() function with
   user input, potentially allowing attackers to execute arbitrary PHP code
   and achieve remote code execution (RCE).
-  
+
   ## Vulnerability Details
-  
+
   The eval() function in PHP executes a string as PHP code, making it one of the
   most dangerous functions when used with user input. Attackers can inject arbitrary
   PHP code that will be executed with the same privileges as the web application,
   potentially leading to complete system compromise.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code - user input directly passed to eval()
   $code = $_POST['code']; // Attacker input: "system('rm -rf /');"
   eval($code);
-  
+
   // Results in execution of arbitrary system commands
   // This can lead to data theft, system compromise, or destruction
   ```
-  
+
   The eval() function bypasses all PHP security mechanisms and executes the
   provided string as if it were written directly in the source code. This makes
   it impossible to safely use with any form of user input.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -58,7 +58,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -67,7 +67,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
       applications. The eval() function executes a string as PHP code, and when user input
       is passed to this function without any validation or sanitization, attackers can execute
       arbitrary PHP code on the server, leading to complete system compromise.
-      
+
       The eval() function treats its input as PHP code and executes it with the same privileges
       as the web application. This means attackers can:
       - Execute system commands
@@ -77,54 +77,54 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
       - Steal sensitive data including database credentials
       - Modify application behavior
       - Delete or corrupt data
-      
+
       ### Why eval() is Dangerous
-      
+
       **Complete Code Execution**: Unlike other injection vulnerabilities that may be limited
       to specific contexts (like SQL queries), eval() allows execution of any valid PHP code.
       This includes calling system functions, manipulating files, or even modifying the
       running application itself.
-      
+
       **Bypasses All Security Mechanisms**: Code executed through eval() runs with the same
       privileges as the application and bypasses any security measures implemented at higher
       levels. Web Application Firewalls (WAFs) often cannot protect against eval() injection
       once the malicious input reaches the function.
-      
+
       **Difficult to Sanitize**: There is no reliable way to sanitize user input for eval().
       Even with extensive filtering, attackers can use various encoding techniques, PHP
       features, and creative syntax to bypass filters.
-      
+
       ### Common Attack Vectors
-      
+
       **Direct Code Execution**: The simplest attack involves directly injecting PHP code:
       ```php
       // Vulnerable code
       eval($_POST['expression']);
-      
+
       // Attack payload
       $_POST['expression'] = "system('cat /etc/passwd');";
       ```
-      
+
       **Obfuscated Payloads**: Attackers often obfuscate their payloads to bypass simple filters:
       ```php
       // Using base64 encoding
       $_POST['code'] = "c3lzdGVtKCdpZCcpOw=="; // base64 of "system('id');"
       eval(base64_decode($_POST['code']));
-      
+
       // Using PHP functions
       $_POST['code'] = "\\x73\\x79\\x73\\x74\\x65\\x6d('id');"; // hex encoded
       ```
-      
+
       **Variable Function Calls**: PHP's variable functions can be exploited:
       ```php
       // Vulnerable pattern
       eval("\\$func = \\$_GET['func']; \\$func();");
-      
+
       // Attack: $_GET['func'] = "phpinfo"
       ```
-      
+
       ### Real-World Impact
-      
+
       Eval() injection has been responsible for numerous high-profile breaches:
       - **Complete Server Takeover**: Attackers gain shell access to execute any command
       - **Data Exfiltration**: Sensitive data including user credentials and payment information
@@ -136,7 +136,8 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
         %{
           type: :cwe,
           id: "CWE-95",
-          title: "Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')",
+          title:
+            "Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')",
           url: "https://cwe.mitre.org/data/definitions/95.html"
         },
         %{
@@ -149,7 +150,8 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
           type: :owasp,
           id: "Eval_Injection",
           title: "OWASP - Direct Dynamic Code Evaluation ('Eval Injection')",
-          url: "https://owasp.org/www-community/attacks/Direct_Dynamic_Code_Evaluation_Eval%20Injection"
+          url:
+            "https://owasp.org/www-community/attacks/Direct_Dynamic_Code_Evaluation_Eval%20Injection"
         },
         %{
           type: :php_manual,
@@ -194,7 +196,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
         %{
           id: "CVE-2022-31628",
           description: "PHP eval injection in OPNsense firewall",
-          severity: "critical", 
+          severity: "critical",
           cvss: 9.8,
           note: "Remote code execution through eval() in system configuration"
         },
@@ -222,23 +224,23 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
       ],
       detection_notes: """
       This pattern detects eval() usage vulnerabilities by identifying PHP code that:
-      
+
       1. **Function Analysis**: Matches the eval() function call
       2. **Parameter Inspection**: Looks for user input variables within eval():
          - Direct usage: eval(\\$_POST['code'])
          - Concatenation: eval("code" . \\$_GET['input'])
          - Variable assignment: \\$code = \\$_POST['x']; eval(\\$code)
          - Function composition: eval(base64_decode(\\$_POST['data']))
-      
+
       3. **Input Sources**: Detects all PHP superglobals:
          - \\$_GET - URL parameters
          - \\$_POST - Form data
          - \\$_REQUEST - Combined GET/POST/COOKIE
          - \\$_COOKIE - Cookie values
-      
+
       The pattern uses a regex that matches:
       eval\\s*\\(\\s*(?:[^)]*\\$_(GET|POST|REQUEST|COOKIE)|.*\\$_(GET|POST|REQUEST|COOKIE))
-      
+
       This covers both direct usage and complex expressions containing user input.
       """,
       safe_alternatives: [
@@ -285,13 +287,13 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
 
   @doc """
   Returns test cases for the eval usage pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.EvalUsage.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.EvalUsage.test_cases()
       iex> length(test_cases.negative)
       6
@@ -355,9 +357,9 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
 
   @doc """
   Returns examples of vulnerable and fixed code.
-  
+
   ## Examples
-  
+
       iex> examples = Rsolv.Security.Patterns.Php.EvalUsage.examples()
       iex> Map.keys(examples)
       [:vulnerable, :fixed]
@@ -369,7 +371,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
         // VULNERABLE: Direct eval() of user input
         $code = $_POST['php_code'];
         eval($code);
-        
+
         // Attacker payload: $_POST['php_code'] = "system('cat /etc/passwd');"
         // Results in arbitrary command execution
         """,
@@ -377,7 +379,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
         // VULNERABLE: Using eval() for math
         $expression = $_GET['calc'];
         $result = eval("return $expression;");
-        
+
         // Attacker payload: $_GET['calc'] = "1; system('id')"
         // Executes system command after calculation
         """,
@@ -386,7 +388,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
         $varname = $_POST['var'];
         $value = $_POST['val'];
         eval("\\$$varname = '$value';");
-        
+
         // Attacker can overwrite any variable or execute code
         """
       },
@@ -414,19 +416,19 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
             if (!preg_match('/^[0-9+\\-*\\/\\s()]+$/', $expr)) {
                 throw new InvalidArgumentException('Invalid expression');
             }
-            
+
             // Use a proper math parser library
             $parser = new MathParser();
             return $parser->evaluate($expr);
         }
-        
+
         $result = safe_math($_GET['calc']);
         """,
         "Variable variables" => """
         // SECURE: Use variable variables instead of eval()
         $allowed_vars = ['user_name', 'user_email', 'user_id'];
         $varname = $_POST['var'];
-        
+
         if (in_array($varname, $allowed_vars)) {
             $$varname = filter_var($_POST['val'], FILTER_SANITIZE_STRING);
         } else {
@@ -439,49 +441,49 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
 
   @doc """
   Returns educational description of the vulnerability.
-  
+
   ## Examples
-  
+
       iex> desc = Rsolv.Security.Patterns.Php.EvalUsage.vulnerability_description()
       iex> desc =~ "eval"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.EvalUsage.vulnerability_description()
       iex> desc =~ "code injection"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.EvalUsage.vulnerability_description()
       iex> desc =~ "remote code execution"
       true
   """
   def vulnerability_description do
     """
-    Code injection via eval() occurs when applications execute user-controlled strings 
-    as PHP code, allowing attackers to run arbitrary commands and achieve remote code execution 
+    Code injection via eval() occurs when applications execute user-controlled strings
+    as PHP code, allowing attackers to run arbitrary commands and achieve remote code execution
     on the server.
-    
+
     In PHP, eval() is one of the most dangerous functions because:
-    
+
     1. **Complete Code Execution**: Any valid PHP code can be executed, including
        system commands, file operations, and network connections.
-       
+
     2. **No Safe Usage**: There is no way to safely use eval() with user input.
        Even extensive filtering cannot prevent all attack vectors.
-       
+
     3. **Bypasses Security**: Code executed via eval() runs with full application
        privileges and bypasses web application firewalls.
-    
+
     ## Attack Impact
-    
+
     Successful eval() injection can lead to:
     - **System Compromise**: Full control over the web server
-    - **Data Theft**: Access to databases, files, and credentials  
+    - **Data Theft**: Access to databases, files, and credentials
     - **Backdoor Installation**: Persistent access through web shells
     - **Network Pivot**: Access to internal systems
     - **Service Disruption**: Deletion or encryption of data
-    
+
     ## Prevention
-    
+
     The only safe approach is to never use eval() with any user input. Replace eval()
     usage with safe alternatives like specific parsing functions, whitelisted operations,
     or proper template engines.
@@ -499,11 +501,11 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
       iex> enhancement = Rsolv.Security.Patterns.Php.EvalUsage.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.EvalUsage.ast_enhancement()
       iex> enhancement.min_confidence
       0.9
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.EvalUsage.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4
@@ -517,8 +519,12 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
           type: "eval_functions",
           description: "Identify eval and eval-like functions",
           functions: [
-            "eval", "assert", "create_function", "call_user_func",
-            "call_user_func_array", "preg_replace"
+            "eval",
+            "assert",
+            "create_function",
+            "call_user_func",
+            "call_user_func_array",
+            "preg_replace"
           ]
         },
         %{
@@ -528,7 +534,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
           safe_sources: ["$config", "$constants", "$static_code"]
         },
         %{
-          type: "obfuscation_detection", 
+          type: "obfuscation_detection",
           description: "Detect obfuscated eval patterns",
           deobfuscation_functions: ["base64_decode", "gzinflate", "str_rot13", "hex2bin"],
           suspicious_patterns: ["chr(", "\\x", "\\\\", "$$"]
@@ -537,8 +543,15 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
           type: "context_validation",
           description: "Validate eval() context and exclude false positives",
           exclude_patterns: [
-            "test", "mock", "example", "comment", "disabled",
-            "// eval", "/* eval", "* eval", "return false"
+            "test",
+            "mock",
+            "example",
+            "comment",
+            "disabled",
+            "// eval",
+            "/* eval",
+            "* eval",
+            "return false"
           ]
         }
       ]

@@ -2,18 +2,18 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
   use ExUnit.Case
   alias Rsolv.Security.Patterns.Python.SqlInjectionConcat
   alias Rsolv.Security.Pattern
-  
+
   # Helper functions for cleaner test code
   defp assert_vulnerable(pattern, code_samples) do
     for code <- code_samples do
-      assert Regex.match?(pattern.regex, code), 
+      assert Regex.match?(pattern.regex, code),
              "Should match vulnerable code: #{code}"
     end
   end
 
   defp assert_safe(pattern, code_samples) do
     for code <- code_samples do
-      refute Regex.match?(pattern.regex, code), 
+      refute Regex.match?(pattern.regex, code),
              "Should NOT match safe code: #{code}"
     end
   end
@@ -21,7 +21,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
   describe "pattern/0" do
     test "returns correct pattern structure" do
       pattern = SqlInjectionConcat.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "python-sql-injection-concat"
       assert pattern.name == "SQL Injection via String Concatenation"
@@ -86,7 +86,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
   describe "vulnerability_metadata/0" do
     test "returns comprehensive vulnerability metadata" do
       metadata = SqlInjectionConcat.vulnerability_metadata()
-      
+
       assert is_map(metadata)
       assert is_binary(metadata.description)
       assert is_list(metadata.references)
@@ -101,11 +101,11 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
 
     test "includes relevant CWE and OWASP references" do
       metadata = SqlInjectionConcat.vulnerability_metadata()
-      
+
       cwe_ref = Enum.find(metadata.references, &(&1.type == :cwe))
       assert cwe_ref
       assert cwe_ref.id == "CWE-89"
-      
+
       owasp_ref = Enum.find(metadata.references, &(&1.type == :owasp))
       assert owasp_ref
       assert owasp_ref.id == "A03:2021"
@@ -115,7 +115,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
   describe "ast_enhancement/0" do
     test "returns AST enhancement rules" do
       enhancement = SqlInjectionConcat.ast_enhancement()
-      
+
       assert is_map(enhancement)
       assert Map.has_key?(enhancement, :ast_rules)
       assert Map.has_key?(enhancement, :context_rules)
@@ -125,7 +125,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
 
     test "AST rules target appropriate node types" do
       enhancement = SqlInjectionConcat.ast_enhancement()
-      
+
       assert enhancement.ast_rules.node_type == "BinOp"
       assert enhancement.ast_rules.op == "Add"
       assert is_map(enhancement.ast_rules.sql_context)
@@ -133,14 +133,19 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
 
     test "includes database context detection" do
       enhancement = SqlInjectionConcat.ast_enhancement()
-      
-      assert enhancement.context_rules.database_methods == ["execute", "executemany", "executescript"]
+
+      assert enhancement.context_rules.database_methods == [
+               "execute",
+               "executemany",
+               "executescript"
+             ]
+
       assert enhancement.context_rules.exclude_if_parameterized == true
     end
 
     test "confidence scoring reduces false positives" do
       enhancement = SqlInjectionConcat.ast_enhancement()
-      
+
       assert enhancement.min_confidence == 0.4
       assert enhancement.confidence_rules.base == 0.5
       assert enhancement.confidence_rules.adjustments["has_sql_keywords"] == 0.3
@@ -151,7 +156,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
   describe "enhanced_pattern/0" do
     test "uses AST enhancement" do
       enhanced = SqlInjectionConcat.enhanced_pattern()
-      
+
       assert enhanced.id == "python-sql-injection-concat"
       assert enhanced.ast_rules
       assert enhanced.min_confidence == 0.4
@@ -163,7 +168,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcatTest do
       assert SqlInjectionConcat.applies_to_file?("app.py", nil)
       assert SqlInjectionConcat.applies_to_file?("models/user.py", nil)
       assert SqlInjectionConcat.applies_to_file?("src/database.py", nil)
-      
+
       refute SqlInjectionConcat.applies_to_file?("app.js", nil)
       refute SqlInjectionConcat.applies_to_file?("config.rb", nil)
       refute SqlInjectionConcat.applies_to_file?("README.md", nil)

@@ -118,7 +118,11 @@ defmodule ScoringWalkthrough do
     IO.puts(colorize("Step 9: Calculate Bonuses", :blue))
     IO.puts("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     IO.puts("  Module match? \"user_service\" == \"user_service\" → YES (+0.3)")
-    IO.puts("  Directory structure match? [\"app\", \"services\"] == [\"app\", \"services\"] → YES (+0.2)")
+
+    IO.puts(
+      "  Directory structure match? [\"app\", \"services\"] == [\"app\", \"services\"] → YES (+0.2)"
+    )
+
     IO.puts("")
 
     # Step 10: Final score
@@ -156,8 +160,15 @@ defmodule ScoringWalkthrough do
     IO.puts("")
 
     IO.puts("2. Split directories and filename:")
-    IO.puts("   Vulnerable: dirs=[\"src\", \"controllers\", \"api\", \"v1\"], file=\"users_controller\"")
-    IO.puts("   Candidate:  dirs=[\"test\", \"controllers\", \"api\", \"v1\"], file=\"users_controller\"")
+
+    IO.puts(
+      "   Vulnerable: dirs=[\"src\", \"controllers\", \"api\", \"v1\"], file=\"users_controller\""
+    )
+
+    IO.puts(
+      "   Candidate:  dirs=[\"test\", \"controllers\", \"api\", \"v1\"], file=\"users_controller\""
+    )
+
     IO.puts("")
 
     IO.puts("3. File score: 0.5 (match)")
@@ -191,7 +202,11 @@ defmodule ScoringWalkthrough do
     IO.puts("")
 
     actual_score = TestScorer.calculate_score(vulnerable, candidate)
-    IO.puts("   ✓ Verified: TestScorer.calculate_score = #{:erlang.float_to_binary(actual_score, decimals: 2)}")
+
+    IO.puts(
+      "   ✓ Verified: TestScorer.calculate_score = #{:erlang.float_to_binary(actual_score, decimals: 2)}"
+    )
+
     IO.puts("")
   end
 
@@ -248,7 +263,10 @@ defmodule ScoringWalkthrough do
     IO.puts("   ✓ Verified: TestScorer.calculate_score = #{actual_score}")
     IO.puts("")
 
-    IO.puts("   #{colorize("→", :yellow)} Frontend should use fallback path or create new test file")
+    IO.puts(
+      "   #{colorize("→", :yellow)} Frontend should use fallback path or create new test file"
+    )
+
     IO.puts("")
   end
 

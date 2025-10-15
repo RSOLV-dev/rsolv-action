@@ -1,51 +1,51 @@
 defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
   @moduledoc """
   Cross-Site Scripting (XSS) via DOM Manipulation Methods
-  
+
   Detects dangerous patterns like:
     element.insertAdjacentHTML('beforeend', userInput)
     $(element).append(userData)
     node.outerHTML = req.body.content
     $('#content').prepend(params.html)
-    
+
   Safe alternatives:
     element.textContent = userInput
     $(element).text(userData)
     element.insertAdjacentHTML('beforeend', DOMPurify.sanitize(userInput))
     $(element).append(escapeHtml(userData))
-    
+
   DOM manipulation methods that accept HTML strings are prime XSS vectors.
   These methods parse and execute HTML, including any embedded scripts.
   jQuery's methods like .html(), .append(), .prepend() are particularly
   dangerous as they're commonly used and accept raw HTML by default.
-  
+
   ## Vulnerability Details
-  
+
   Modern JavaScript applications frequently manipulate the DOM dynamically.
   Methods that accept HTML strings bypass the browser's built-in XSS
   protections and can execute malicious scripts when given untrusted input.
   This is especially dangerous in single-page applications where DOM
   manipulation is central to the user experience.
-  
+
   ### Attack Example
   ```javascript
   // Vulnerable: Direct user input to DOM manipulation
   function addComment(comment) {
     $('#comments').append('<div>' + comment + '</div>');
   }
-  
+
   // Attack: comment = "<img src=x onerror='alert(document.cookie)'>"
   // Result: Script executes when image fails to load
-  
+
   // Also vulnerable: insertAdjacentHTML
   function addNotification(message) {
-    document.body.insertAdjacentHTML('beforeend', 
+    document.body.insertAdjacentHTML('beforeend',
       '<div class="notification">' + message + '</div>'
     );
   }
   // Attack: Embedded script tags or event handlers execute
   ```
-  
+
   ### Method-Specific Risks
   Different DOM manipulation methods have varying levels of risk:
   - insertAdjacentHTML: Parses full HTML, very dangerous
@@ -55,45 +55,45 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
   - .replaceWith(): Replaces elements with parsed HTML
   Each requires careful handling of user input.
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @doc """
   Returns the XSS DOM Manipulation detection pattern.
-  
+
   This pattern detects usage of DOM manipulation methods that accept
   HTML strings with user-controlled input, leading to XSS vulnerabilities.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> pattern.id
       "js-xss-dom-manipulation"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> pattern.cwe_id
       "CWE-79"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> vulnerable = ~S|element.insertAdjacentHTML('beforeend', userInput)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> vulnerable = ~S|$(element).append(userData)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> safe = ~S|element.textContent = userInput|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> pattern.recommendation
       "Use safe DOM methods like textContent or sanitize HTML with DOMPurify before DOM manipulation."
@@ -118,7 +118,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
       /imx,
       cwe_id: "CWE-79",
       owasp_category: "A03:2021",
-      recommendation: "Use safe DOM methods like textContent or sanitize HTML with DOMPurify before DOM manipulation.",
+      recommendation:
+        "Use safe DOM methods like textContent or sanitize HTML with DOMPurify before DOM manipulation.",
       test_cases: %{
         vulnerable: [
           ~S|element.insertAdjacentHTML('beforeend', userInput)|,
@@ -137,10 +138,10 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
       }
     }
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for DOM Manipulation XSS.
-  
+
   This metadata documents the security implications of using DOM
   manipulation methods with untrusted input and provides guidance
   for secure dynamic content insertion.
@@ -152,26 +153,26 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
       are among the most common security issues in modern JavaScript applications.
       These methods bypass the browser's built-in XSS protections by directly
       parsing and executing HTML strings, including any embedded scripts.
-      
+
       The rise of dynamic web applications has made DOM manipulation ubiquitous.
       Methods like insertAdjacentHTML, jQuery's append/prepend, and direct
       innerHTML/outerHTML assignment are powerful but dangerous when used with
       untrusted input. They're designed to parse HTML, which means they'll
       execute any scripts embedded in the input.
-      
+
       jQuery's popularity has made its DOM manipulation methods particularly
       widespread attack vectors. Methods like .html(), .append(), .prepend(),
       .after(), and .before() all accept HTML strings by default. Developers
       often don't realize these methods parse HTML rather than treating input
       as text.
-      
+
       The vulnerability is severe because:
       1. DOM manipulation is fundamental to modern web apps
       2. Many developers don't understand the security implications
       3. The methods are convenient and widely used
       4. Sanitization is often forgotten or incorrectly implemented
       5. Framework migrations often introduce these vulnerabilities
-      
+
       Modern mitigation strategies include using safe methods (textContent),
       HTML sanitization libraries (DOMPurify), Content Security Policy (CSP),
       and framework-specific protections. However, proper input handling
@@ -181,7 +182,8 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
         %{
           type: :cwe,
           id: "CWE-79",
-          title: "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+          title:
+            "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
           url: "https://cwe.mitre.org/data/definitions/79.html"
         },
         %{
@@ -194,13 +196,15 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
           type: :mdn,
           id: "insertAdjacentHTML",
           title: "MDN - Element.insertAdjacentHTML() Security Considerations",
-          url: "https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML#security_considerations"
+          url:
+            "https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML#security_considerations"
         },
         %{
           type: :research,
           id: "dom_xss_prevention",
           title: "DOM-based XSS Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :jquery,
@@ -268,18 +272,18 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
       ],
       detection_notes: """
       This pattern detects DOM manipulation methods that accept HTML with user input:
-      
+
       1. insertAdjacentHTML with positions: beforebegin, afterbegin, beforeend, afterend
       2. jQuery methods: append(), prepend(), after(), before(), html()
       3. Direct assignment: outerHTML = userInput
       4. Various user input patterns: req.*, params.*, query.*, user*, input, data
-      
+
       The pattern uses AST enhancement to reduce false positives by:
       - Detecting sanitization functions (DOMPurify, escapeHtml, etc.)
       - Identifying static content vs dynamic user input
       - Checking for safe method usage (text(), textContent)
       - Analyzing the data flow to the vulnerable sink
-      
+
       Note that the regex is intentionally broad to catch variations.
       """,
       safe_alternatives: [
@@ -327,28 +331,27 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
       }
     }
   end
-  
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XSS vulnerabilities
   and safe usage of DOM manipulation methods with proper sanitization.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDomManipulation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDomManipulation.ast_enhancement()
       iex> is_list(enhancement.ast_rules.method_names)
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDomManipulation.ast_enhancement()
       iex> "insertAdjacentHTML" in enhancement.ast_rules.method_names
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDomManipulation.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -374,9 +377,19 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
         argument_analysis: %{
           check_for_user_input: true,
           user_input_patterns: [
-            "req.", "request.", "params.", "query.",
-            "body.", "user", "input", "data", "content",
-            "form.", "args.", "ctx.", "event.target.value"
+            "req.",
+            "request.",
+            "params.",
+            "query.",
+            "body.",
+            "user",
+            "input",
+            "data",
+            "content",
+            "form.",
+            "args.",
+            "ctx.",
+            "event.target.value"
           ]
         }
       },
@@ -414,28 +427,45 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
           ".classList."
         ],
         static_content_patterns: [
-          ~r/^['"`]<[^>]+>['"`]$/,    # Static HTML strings
-          ~r/SAFE_/,                    # SAFE_ prefixed constants
-          ~r/STATIC_/,                  # STATIC_ prefixed constants
-          ~r/TEMPLATE_/,                # Template constants
-          ~r/CONST_/                    # Const prefixed variables
+          # Static HTML strings
+          ~r/^['"`]<[^>]+>['"`]$/,
+          # SAFE_ prefixed constants
+          ~r/SAFE_/,
+          # STATIC_ prefixed constants
+          ~r/STATIC_/,
+          # Template constants
+          ~r/TEMPLATE_/,
+          # Const prefixed variables
+          ~r/CONST_/
         ]
       },
       confidence_rules: %{
         base: 0.6,
         adjustments: %{
-          "user_input" => 0.4,                  # Direct user input detected
-          "request_data" => 0.4,                # Request data usage
-          "dynamic_content" => 0.3,             # Dynamic content insertion
-          "no_sanitization" => 0.3,             # No sanitization detected
-          "jquery_method" => 0.2,               # jQuery method usage
-          "sanitized" => -0.8,                  # Sanitization function used
-          "static_content" => -0.7,             # Hardcoded content
-          "safe_method" => -0.6,                # Safe method used instead
-          "test_code" => -0.6,                  # Test files
-          "escaped_content" => -0.5,            # Proper escaping detected
-          "framework_safe" => -0.4,             # Framework safe rendering
-          "csp_protected" => -0.3               # CSP headers detected
+          # Direct user input detected
+          "user_input" => 0.4,
+          # Request data usage
+          "request_data" => 0.4,
+          # Dynamic content insertion
+          "dynamic_content" => 0.3,
+          # No sanitization detected
+          "no_sanitization" => 0.3,
+          # jQuery method usage
+          "jquery_method" => 0.2,
+          # Sanitization function used
+          "sanitized" => -0.8,
+          # Hardcoded content
+          "static_content" => -0.7,
+          # Safe method used instead
+          "safe_method" => -0.6,
+          # Test files
+          "test_code" => -0.6,
+          # Proper escaping detected
+          "escaped_content" => -0.5,
+          # Framework safe rendering
+          "framework_safe" => -0.4,
+          # CSP headers detected
+          "csp_protected" => -0.3
         }
       },
       min_confidence: 0.7

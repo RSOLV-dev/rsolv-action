@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls
   alias Rsolv.Security.Pattern
 
   describe "unsafe_genserver_calls pattern" do
     test "returns correct pattern structure" do
       pattern = UnsafeGenserverCalls.pattern()
-      
+
       assert %Pattern{} = pattern
       assert pattern.id == "elixir-unsafe-genserver-calls"
       assert pattern.name == "Unsafe GenServer Calls"
@@ -16,7 +16,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
       assert pattern.languages == ["elixir"]
       assert pattern.cwe_id == "CWE-94"
       assert pattern.owasp_category == "A03:2021"
-      
+
       assert is_binary(pattern.description)
       assert is_binary(pattern.recommendation)
       assert is_list(pattern.regex)
@@ -25,7 +25,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "detects GenServer.call with execute command" do
       pattern = UnsafeGenserverCalls.pattern()
-      
+
       test_cases = [
         ~S|GenServer.call(pid, {:execute, user_command})|,
         ~S|GenServer.call(server, {:execute, params["cmd"]})|,
@@ -33,7 +33,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
         ~S|GenServer.call(worker, {:execute, command_string})|,
         ~S|GenServer.call(process, {:execute, untrusted_data})|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -42,7 +42,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "detects GenServer.call with run or eval commands" do
       pattern = UnsafeGenserverCalls.pattern()
-      
+
       test_cases = [
         ~S|GenServer.call(pid, {:run, user_code})|,
         ~S|GenServer.call(server, {:eval, params["code"]})|,
@@ -50,7 +50,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
         ~S|GenServer.call(worker, {:eval_string, code})|,
         ~S|GenServer.call(process, {:run_command, cmd})|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -59,7 +59,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "detects GenServer.call with dynamic command interpolation" do
       pattern = UnsafeGenserverCalls.pattern()
-      
+
       test_cases = [
         ~S|GenServer.call(pid, {:"#{cmd}", data})|,
         ~S|GenServer.call(server, {String.to_atom(cmd), args})|,
@@ -67,7 +67,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
         ~S|GenServer.call(worker, request)|,
         ~S|GenServer.call(process, untrusted_message)|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -76,7 +76,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "detects multi-line GenServer.call patterns" do
       pattern = UnsafeGenserverCalls.pattern()
-      
+
       test_cases = [
         ~S"""
         GenServer.call(
@@ -96,7 +96,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
         GenServer.call(pid, request)
         """
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -105,7 +105,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "detects handle_call with execute pattern" do
       pattern = UnsafeGenserverCalls.pattern()
-      
+
       test_cases = [
         ~S|def handle_call({:execute, cmd}, _from, state) do|,
         ~S|def handle_call({:run, code}, from, state) do|,
@@ -113,7 +113,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
         ~S|def handle_call({:run_command, command}, _, state) do|,
         ~S|def handle_call({:execute_code, code}, _from, state) do|
       ]
-      
+
       for vulnerable_code <- test_cases do
         assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code)),
                "Failed to detect: #{vulnerable_code}"
@@ -122,7 +122,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "does not detect safe GenServer patterns" do
       pattern = UnsafeGenserverCalls.pattern()
-      
+
       safe_code = [
         # Safe predefined commands
         ~S|GenServer.call(pid, :get_state)|,
@@ -141,7 +141,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
         # Comments
         ~S|# GenServer.call(pid, {:execute, user_command})|
       ]
-      
+
       for safe <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, safe)),
                "False positive detected for: #{safe}"
@@ -150,7 +150,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "does not detect comments or documentation" do
       pattern = UnsafeGenserverCalls.pattern()
-      
+
       safe_code = [
         ~S|# GenServer.call(pid, {:execute, cmd})|,
         ~S|@doc "Never use GenServer.call(pid, {:execute, user_input})"|,
@@ -160,7 +160,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
         # GenServer.call(pid, {:execute, user_command})
         """
       ]
-      
+
       for safe <- safe_code do
         refute Enum.any?(pattern.regex, &Regex.match?(&1, safe)),
                "False positive detected for: #{safe}"
@@ -169,9 +169,9 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "includes comprehensive vulnerability metadata" do
       metadata = UnsafeGenserverCalls.vulnerability_metadata()
-      
+
       assert metadata.attack_vectors
-      assert metadata.business_impact  
+      assert metadata.business_impact
       assert metadata.technical_impact
       assert metadata.likelihood
       assert metadata.cve_examples
@@ -184,7 +184,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "vulnerability metadata contains GenServer specific information" do
       metadata = UnsafeGenserverCalls.vulnerability_metadata()
-      
+
       assert String.contains?(metadata.attack_vectors, "GenServer")
       assert String.contains?(metadata.business_impact, "execution")
       assert String.contains?(metadata.technical_impact, "process")
@@ -194,7 +194,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "includes AST enhancement rules" do
       enhancement = UnsafeGenserverCalls.ast_enhancement()
-      
+
       assert enhancement.min_confidence
       assert enhancement.context_rules
       assert enhancement.confidence_rules
@@ -203,7 +203,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "AST enhancement has GenServer specific rules" do
       enhancement = UnsafeGenserverCalls.ast_enhancement()
-      
+
       assert enhancement.context_rules.unsafe_commands
       assert enhancement.context_rules.genserver_functions
       assert enhancement.ast_rules.genserver_analysis
@@ -212,7 +212,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "enhanced pattern integrates AST rules" do
       enhanced = UnsafeGenserverCalls.enhanced_pattern()
-      
+
       assert enhanced.id == "elixir-unsafe-genserver-calls"
       assert enhanced.ast_enhancement.min_confidence
       assert is_float(enhanced.ast_enhancement.min_confidence)
@@ -220,7 +220,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCallsTest do
 
     test "pattern includes educational test cases" do
       pattern = UnsafeGenserverCalls.pattern()
-      
+
       assert pattern.test_cases.vulnerable
       assert pattern.test_cases.safe
       assert length(pattern.test_cases.vulnerable) > 0

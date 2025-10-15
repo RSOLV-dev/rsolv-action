@@ -2,13 +2,13 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
   @moduledoc """
   Missing SSL Certificate Verification vulnerability pattern for Elixir applications.
 
-  This pattern detects HTTP client configurations that disable SSL/TLS certificate 
-  verification, enabling man-in-the-middle (MITM) attacks and compromising the 
+  This pattern detects HTTP client configurations that disable SSL/TLS certificate
+  verification, enabling man-in-the-middle (MITM) attacks and compromising the
   confidentiality and integrity of communications.
 
   ## Vulnerability Details
 
-  Missing SSL verification occurs when applications disable certificate validation 
+  Missing SSL verification occurs when applications disable certificate validation
   for HTTPS connections:
   - Using verify: :verify_none in SSL options
   - Using hackney: [:insecure] flag
@@ -29,13 +29,13 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
   ```elixir
   # VULNERABLE - Disabled certificate verification
   HTTPoison.get!(url, [], ssl: [verify: :verify_none])
-  
+
   # VULNERABLE - Insecure hackney option
   HTTPoison.post(url, body, headers, hackney: [:insecure])
-  
+
   # VULNERABLE - Tesla with disabled verification
   Tesla.get(client, url, opts: [adapter: [ssl_options: [verify: :verify_none]]])
-  
+
   # VULNERABLE - Req with disabled verification
   Req.get!(url, connect_options: [verify: :verify_none])
   ```
@@ -44,16 +44,16 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
   ```elixir
   # SAFE - Default secure configuration
   HTTPoison.get!(url)
-  
+
   # SAFE - Explicit peer verification
   HTTPoison.get!(url, [], ssl: [verify: :verify_peer])
-  
+
   # SAFE - With custom CA certificates
   HTTPoison.get!(url, [], ssl: [
     verify: :verify_peer,
     cacerts: :certifi.cacerts()
   ])
-  
+
   # SAFE - Development-only insecure option
   # if Mix.env() == :dev do
   #   HTTPoison.get!(url, [], hackney: [:insecure])
@@ -64,13 +64,13 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
 
   ## Attack Scenarios
 
-  1. **MITM Attack**: Attacker intercepts HTTPS traffic between client and server, 
+  1. **MITM Attack**: Attacker intercepts HTTPS traffic between client and server,
      presenting their own certificate which is accepted due to disabled verification
 
-  2. **Credential Theft**: Attacker sets up fake API endpoint, steals authentication 
+  2. **Credential Theft**: Attacker sets up fake API endpoint, steals authentication
      tokens and sensitive data sent by clients with disabled SSL verification
 
-  3. **Data Manipulation**: Attacker modifies API responses in transit, injecting 
+  3. **Data Manipulation**: Attacker modifies API responses in transit, injecting
      malicious data or commands without detection
 
   ## References
@@ -88,7 +88,8 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
     %Rsolv.Security.Pattern{
       id: "elixir-missing-ssl-verification",
       name: "Missing SSL Certificate Verification",
-      description: "Disabled SSL verification enables MITM attacks compromising communication security",
+      description:
+        "Disabled SSL verification enables MITM attacks compromising communication security",
       type: :authentication,
       severity: :high,
       languages: ["elixir"],
@@ -96,28 +97,28 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
       regex: [
         # SSL options with verify_none - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*ssl:\s*\[.*verify:\s*:verify_none/m,
-        
+
         # hackney insecure option - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*hackney:\s*\[:insecure/m,
-        
+
         # hackney ssl_options with verify_none - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*hackney:\s*\[.*ssl_options:\s*\[.*verify:\s*:verify_none/m,
-        
+
         # Tesla adapter with verify_none - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*adapter:\s*\[.*ssl_options:\s*\[.*verify:\s*:verify_none/m,
-        
+
         # Tesla adapter module syntax - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*adapter\s+.*ssl_options:\s*\[.*verify:\s*:verify_none/m,
-        
+
         # Tesla middleware syntax - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*middleware\s+.*ssl_options:\s*\[.*verify:\s*:verify_none/m,
-        
+
         # Req connect_options with verify_none - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*connect_options:\s*\[.*verify:\s*:verify_none/m,
-        
+
         # Config with verify_none - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*config\s+.*ssl:\s*\[.*verify:\s*:verify_none/m,
-        
+
         # Multi-line SSL options with verify_none - exclude comments and @doc
         ~r/^(?!\s*#)(?!\s*@doc).*verify:\s*:verify_none/m
       ],
@@ -167,7 +168,8 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
       - Code injection through modified API responses containing malicious payloads
       - Data exfiltration via redirected connections to attacker-controlled servers
       """,
-      likelihood: "Medium: Common in development environments but critical if deployed to production",
+      likelihood:
+        "Medium: Common in development environments but critical if deployed to production",
       cve_examples: [
         "CWE-295: Improper Certificate Validation",
         "CVE-2020-26262: Coturn TURN server certificate validation bypass",
@@ -214,26 +216,43 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
       context_rules: %{
         http_libraries: [
-          "HTTPoison", "Tesla", "hackney", "Req", "Finch", 
-          "Mint", "Gun", ":httpc"
+          "HTTPoison",
+          "Tesla",
+          "hackney",
+          "Req",
+          "Finch",
+          "Mint",
+          "Gun",
+          ":httpc"
         ],
         insecure_options: [
-          "verify_none", "insecure", "verify: false", 
-          "verify_peer: false", "ssl: false"
+          "verify_none",
+          "insecure",
+          "verify: false",
+          "verify_peer: false",
+          "ssl: false"
         ],
         secure_options: [
-          "verify_peer", "verify: true", "cacerts", 
-          "verify_fun", "depth", "crl_check"
+          "verify_peer",
+          "verify: true",
+          "cacerts",
+          "verify_fun",
+          "depth",
+          "crl_check"
         ],
         config_contexts: [
-          "config", "Application.put_env", "System.put_env",
-          "conn_opts", "adapter_opts", "client_options"
+          "config",
+          "Application.put_env",
+          "System.put_env",
+          "conn_opts",
+          "adapter_opts",
+          "client_options"
         ]
       },
       confidence_rules: %{

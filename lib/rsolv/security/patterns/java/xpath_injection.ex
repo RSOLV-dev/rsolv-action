@@ -1,42 +1,42 @@
 defmodule Rsolv.Security.Patterns.Java.XpathInjection do
   @moduledoc """
   XPath Injection pattern for Java code.
-  
+
   Detects XPath injection vulnerabilities where user input is concatenated directly
   into XPath queries. This can lead to authentication bypass, data extraction, and
   in some cases (like JXPath) remote code execution.
-  
+
   ## Vulnerability Details
-  
+
   XPath injection occurs when untrusted user input is incorporated into XPath queries
   through string concatenation. Attackers can inject XPath syntax to:
   - Bypass authentication (e.g., injecting `' or '1'='1`)
   - Extract sensitive data from XML documents
   - Perform blind data extraction through boolean/time-based techniques
   - In cases like JXPath (CVE-2022-41852), achieve remote code execution
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable authentication check
   String xpath = "//user[username='" + username + "' and password='" + password + "']";
   XPath xPath = XPathFactory.newInstance().newXPath();
   Node user = (Node) xPath.evaluate(xpath, doc, XPathConstants.NODE);
-  
+
   // Attack: username = admin' or '1'='1
   // Results in: //user[username='admin' or '1'='1' and password='...']
   // Returns first user, bypassing authentication
   ```
-  
+
   ## References
-  
+
   - CWE-643: Improper Neutralization of Data within XPath Expressions
   - OWASP A03:2021 - Injection
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -89,7 +89,7 @@ xpath.evaluate("//users/user[@role='admin']", document);|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -99,7 +99,7 @@ xpath.evaluate("//users/user[@role='admin']", document);|
       SQL queries databases. When user input is directly embedded in XPath expressions,
       attackers can manipulate the query logic to bypass security controls, extract sensitive
       data, or in some implementations like JXPath, execute arbitrary code.
-      
+
       The vulnerability is particularly dangerous in authentication systems where XPath is
       used to validate credentials against XML-based user stores. Attackers can inject
       boolean logic to bypass authentication entirely.
@@ -167,7 +167,8 @@ xpath.evaluate("//users/user[@role='admin']", document);|
           description: "Remote code execution in Apache Commons JXPath",
           severity: "critical",
           cvss: 9.8,
-          note: "All JXPathContext methods processing XPath strings allow arbitrary code execution"
+          note:
+            "All JXPathContext methods processing XPath strings allow arbitrary code execution"
         },
         %{
           id: "CVE-2024-36401",
@@ -191,7 +192,7 @@ xpath.evaluate("//users/user[@role='admin']", document);|
       - JXPath usage which is particularly dangerous (allows RCE)
       - Blind injection patterns using text(), count(), position() functions
       - Variable assignments building dynamic XPath expressions
-      
+
       The pattern looks for the + operator near XPath-specific syntax to identify
       concatenation of user input into queries.
       """,
@@ -229,23 +230,23 @@ xpath.evaluate("//users/user[@role='admin']", document);|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual XPath injection vulnerabilities
   and safe XPath usage patterns like static queries or properly parameterized expressions.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.XpathInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.XpathInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.XpathInjection.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"
@@ -258,8 +259,13 @@ xpath.evaluate("//users/user[@role='admin']", document);|
         xpath_analysis: %{
           check_method_name: true,
           xpath_methods: [
-            "evaluate", "compile", "selectNodes", "selectSingleNode",
-            "getValue", "iterate", "getPointer"
+            "evaluate",
+            "compile",
+            "selectNodes",
+            "selectSingleNode",
+            "getValue",
+            "iterate",
+            "getPointer"
           ],
           check_string_concatenation: true,
           check_parameterization: true
@@ -273,8 +279,13 @@ xpath.evaluate("//users/user[@role='admin']", document);|
         variable_analysis: %{
           check_user_input_sources: true,
           input_sources: [
-            "getParameter", "getHeader", "getCookie", "getQueryString",
-            "getInputStream", "getReader", "getUserInput"
+            "getParameter",
+            "getHeader",
+            "getCookie",
+            "getQueryString",
+            "getInputStream",
+            "getReader",
+            "getUserInput"
           ],
           check_variable_flow: true
         }
@@ -287,8 +298,10 @@ xpath.evaluate("//users/user[@role='admin']", document);|
           "$variable"
         ],
         parameterized_xpath_indicators: [
-          ~r/\$\w+/,  # XPath variables like $username
-          ~r/:\w+/    # Named parameters
+          # XPath variables like $username
+          ~r/\$\w+/,
+          # Named parameters
+          ~r/:\w+/
         ],
         exclude_static_xpath: true,
         static_indicators: [
@@ -308,7 +321,8 @@ xpath.evaluate("//users/user[@role='admin']", document);|
           "has_string_concatenation" => 0.3,
           "has_user_input_source" => 0.3,
           "contains_xpath_syntax" => 0.2,
-          "uses_jxpath" => 0.4,  # Higher risk due to RCE
+          # Higher risk due to RCE
+          "uses_jxpath" => 0.4,
           "has_variable_resolver" => -0.6,
           "uses_parameterized_xpath" => -0.7,
           "is_static_expression" => -0.8,

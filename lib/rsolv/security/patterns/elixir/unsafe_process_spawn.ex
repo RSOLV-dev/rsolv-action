@@ -3,7 +3,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeProcessSpawn do
   Unsafe Process Spawning vulnerability pattern for Elixir applications.
 
   This pattern detects potentially dangerous process spawning that lacks proper
-  supervision and error handling, which can lead to resource exhaustion and 
+  supervision and error handling, which can lead to resource exhaustion and
   system instability.
 
   ## Vulnerability Details
@@ -30,13 +30,13 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeProcessSpawn do
   ```elixir
   # VULNERABLE - unlinked process can crash silently
   spawn(fn -> process_user_data(untrusted_input) end)
-  
+
   # VULNERABLE - no supervision for critical work
   spawn(UserModule, :handle_request, [request])
-  
+
   # VULNERABLE - Task.start creates unsupervised process
   Task.start(fn -> expensive_computation() end)
-  
+
   # VULNERABLE - remote spawn without linking
   Node.spawn(remote_node, fn -> critical_work() end)
   ```
@@ -45,26 +45,26 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeProcessSpawn do
   ```elixir
   # SAFE - linked process will propagate failures
   spawn_link(fn -> process_user_data(untrusted_input) end)
-  
+
   # SAFE - supervised task with proper error handling
   Task.start_link(fn -> process_user_data(untrusted_input) end)
-  
+
   # SAFE - supervised by Task.Supervisor
   Task.Supervisor.start_child(MySupervisor, fn -> work() end)
-  
+
   # SAFE - proper GenServer with supervision
   GenServer.start_link(MyWorker, initial_state)
   ```
 
   ## Attack Scenarios
 
-  1. **Resource Exhaustion**: Attacker triggers creation of many unsupervised 
+  1. **Resource Exhaustion**: Attacker triggers creation of many unsupervised
      processes that consume system resources without cleanup
 
   2. **System Instability**: Critical processes crash without supervision,
      causing degraded functionality or complete service failure
 
-  3. **Memory Leaks**: Crashed processes leave behind leaked memory and 
+  3. **Memory Leaks**: Crashed processes leave behind leaked memory and
      file descriptors that gradually exhaust system resources
 
   4. **Silent Failures**: Important operations fail without proper error
@@ -86,7 +86,8 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeProcessSpawn do
     %Rsolv.Security.Pattern{
       id: "elixir-unsafe-process-spawn",
       name: "Unsafe Process Spawning",
-      description: "Unsafe process spawning without proper supervision that can lead to resource exhaustion and system instability",
+      description:
+        "Unsafe process spawning without proper supervision that can lead to resource exhaustion and system instability",
       type: :resource_exhaustion,
       severity: :medium,
       languages: ["elixir"],
@@ -96,28 +97,29 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeProcessSpawn do
         ~r/\bspawn\s*\(\s*fn\s*->/,
         ~r/\bspawn\s+fn\s*->/,
         ~r/\bspawn\s*\(\s*[A-Z]\w*\s*,\s*:\w+\s*,/,
-        
+
         # Process.spawn patterns
         ~r/Process\.spawn\s*\(/,
-        
+
         # Node.spawn patterns (remote spawning)
         ~r/Node\.spawn\s*\(/,
-        
+
         # Task.start patterns (unsupervised)
         ~r/Task\.start\s*\(/,
         ~r/Task\.async\s*\(/,
-        
+
         # General spawn patterns with dangerous operations
         ~r/spawn\s*\([^)]*(?:System\.shell|File\.write|:os\.cmd|Code\.eval)/,
         ~r/spawn\s+fn[^)]*(?:System\.shell|File\.write|:os\.cmd|Code\.eval)/,
-        
+
         # Spawn with user input or external data
         ~r/spawn\s*\([^)]*(?:user_|input|params|request|data)/i,
         ~r/spawn\s+fn[^)]*(?:user_|input|params|request|data)/i
       ],
       cwe_id: "CWE-400",
       owasp_category: "A05:2021",
-      recommendation: "Use spawn_link/1, Task.start_link/1, or proper supervision trees instead of unlinked spawn calls",
+      recommendation:
+        "Use spawn_link/1, Task.start_link/1, or proper supervision trees instead of unlinked spawn calls",
       test_cases: %{
         vulnerable: [
           ~S|spawn(fn -> execute_user_code(input) end)|,
@@ -203,7 +205,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeProcessSpawn do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.7,
@@ -216,7 +218,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeProcessSpawn do
         ],
         supervision_indicators: [
           "Supervisor",
-          "DynamicSupervisor", 
+          "DynamicSupervisor",
           "Task.Supervisor",
           "GenServer",
           "start_link"

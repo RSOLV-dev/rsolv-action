@@ -1,37 +1,37 @@
 defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
   @moduledoc """
   CVE-2021-22881 - Host Authorization Open Redirect vulnerability in Rails.
-  
+
   Detects open redirect vulnerabilities in Rails Host Authorization middleware where
   specially crafted Host headers can be used to redirect users to malicious websites.
-  
+
   ## Vulnerability Details
-  
+
   This vulnerability affects Rails applications using the Host Authorization middleware
-  in Action Pack before versions 6.1.2.1 and 6.0.3.5. When an allowed host contains 
-  a leading dot, specially crafted Host headers in combination with certain "allowed host" 
+  in Action Pack before versions 6.1.2.1 and 6.0.3.5. When an allowed host contains
+  a leading dot, specially crafted Host headers in combination with certain "allowed host"
   formats can cause the Host Authorization middleware to redirect users to a malicious website.
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable: Using request.host in redirects
   redirect_to request.protocol + request.host + "/callback"
-  
+
   # Vulnerable: Host header injection
   config.hosts << ".\#{params[:domain]}"
-  
+
   # Safe: Static redirect URLs
   redirect_to "/dashboard"
   ```
-  
+
   ## Real-World Impact
-  
+
   - Phishing attacks through trusted domain redirects
   - Session hijacking via malicious redirects
   - OAuth/authentication flow manipulation
   - Business logic bypass through URL manipulation
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
 
@@ -39,7 +39,8 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
     %Pattern{
       id: "rails-cve-2021-22881",
       name: "CVE-2021-22881 - Host Authorization Open Redirect",
-      description: "Open redirect vulnerability in Host Authorization middleware allowing malicious redirects via Host header injection",
+      description:
+        "Open redirect vulnerability in Host Authorization middleware allowing malicious redirects via Host header injection",
       type: :open_redirect,
       severity: :medium,
       languages: ["ruby"],
@@ -47,7 +48,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
       regex: [
         # Direct usage of request.host/protocol in redirects (exclude commented lines)
         ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?request\.(?:protocol|host|url|original_url)/,
-        # Host header string interpolation in redirects  
+        # Host header string interpolation in redirects
         ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?#\{request\.(?:protocol|host)\}/,
         # url_for with request.host parameter (broader pattern)
         ~r/^(?!\s*#)(?!\s*\/\/).*url_for\s*\([^)]*host:\s*request\.host(?:_with_port)?/,
@@ -55,7 +56,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
         ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?url_for\s*\([^)]*host:\s*params\[/,
         # root_url with host parameter from params
         ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?root_url\s*\([^)]*host:\s*params\[/,
-        # Dynamic host configuration with user input (broader pattern)  
+        # Dynamic host configuration with user input (broader pattern)
         ~r/config\.hosts.*?=.*?\[.*?"\#\{request\.host\}/,
         # Host configuration with user input append
         ~r/config\.hosts.*?<<.*?"\.\#\{(?:params|request)\[/,
@@ -70,7 +71,8 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
       ],
       cwe_id: "CWE-601",
       owasp_category: "A01:2021",
-      recommendation: "Use static redirect URLs or validate Host headers against an allowlist. Never use user-controlled Host headers directly in redirects.",
+      recommendation:
+        "Use static redirect URLs or validate Host headers against an allowlist. Never use user-controlled Host headers directly in redirects.",
       test_cases: %{
         vulnerable: [
           "redirect_to request.protocol + request.host + \"/path\"",
@@ -91,10 +93,10 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
   def vulnerability_metadata do
     %{
       description: """
-      CVE-2021-22881 is a Host Authorization open redirect vulnerability in Rails Action Pack 
-      that affects applications using the Host Authorization middleware. The vulnerability occurs 
-      when specially crafted Host headers are used in combination with certain allowed host formats, 
-      particularly when allowed hosts contain leading dots. This can cause the Host Authorization 
+      CVE-2021-22881 is a Host Authorization open redirect vulnerability in Rails Action Pack
+      that affects applications using the Host Authorization middleware. The vulnerability occurs
+      when specially crafted Host headers are used in combination with certain allowed host formats,
+      particularly when allowed hosts contain leading dots. This can cause the Host Authorization
       middleware to redirect users to malicious websites, enabling phishing attacks and session hijacking.
       """,
       references: [
@@ -126,7 +128,8 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
           type: :research,
           id: "rails_host_header_injection",
           title: "Rails Host Header Injection Guide",
-          url: "https://guides.rubyonrails.org/security.html#dns-rebinding-and-host-header-attacks"
+          url:
+            "https://guides.rubyonrails.org/security.html#dns-rebinding-and-host-header-attacks"
         }
       ],
       attack_vectors: [
@@ -149,7 +152,8 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
           description: "Host Authorization open redirect in Rails Action Pack middleware",
           severity: "medium",
           cvss: 6.1,
-          note: "Specially crafted Host headers can redirect to malicious websites when allowed hosts contain leading dots"
+          note:
+            "Specially crafted Host headers can redirect to malicious websites when allowed hosts contain leading dots"
         }
       ],
       detection_notes: """
@@ -159,7 +163,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
       3. url_for calls that use request.host with user-controlled parameters
       4. Dynamic host configuration that includes user input
       5. Usage of X-Forwarded-Host headers in redirects
-      
+
       The detection excludes commented code and focuses on actual vulnerable redirect patterns.
       """,
       safe_alternatives: [
@@ -192,7 +196,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
   @doc """
   Returns AST enhancement rules to reduce false positives.
 
-  This enhancement helps distinguish between actual Host Authorization vulnerabilities 
+  This enhancement helps distinguish between actual Host Authorization vulnerabilities
   and safe redirect patterns in Rails applications.
 
   ## Examples
@@ -200,15 +204,15 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
       iex> enhancement = Rsolv.Security.Patterns.Rails.Cve202122881.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Rails.Cve202122881.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Rails.Cve202122881.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Rails.Cve202122881.ast_enhancement()
       iex> "redirect_to" in enhancement.ast_rules.redirect_analysis.redirect_methods
       true
@@ -245,9 +249,12 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
         ],
         exclude_if_validated: true,
         safe_redirect_patterns: [
-          ~r/redirect_to\s+['"]\/[^"']*['"]/,  # Static relative URLs
-          ~r/redirect_to\s+\w+_path/,          # Rails path helpers
-          ~r/redirect_to\s+\w+_url/            # Rails URL helpers (when not using request.host)
+          # Static relative URLs
+          ~r/redirect_to\s+['"]\/[^"']*['"]/,
+          # Rails path helpers
+          ~r/redirect_to\s+\w+_path/,
+          # Rails URL helpers (when not using request.host)
+          ~r/redirect_to\s+\w+_url/
         ]
       },
       confidence_rules: %{
@@ -265,6 +272,4 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
       min_confidence: 0.7
     }
   end
-
 end
-

@@ -20,7 +20,15 @@ defmodule Rsolv.Marketing.EmailSubscription do
   @doc false
   def changeset(email_subscription, attrs) do
     email_subscription
-    |> cast(attrs, [:email, :user_id, :source, :status, :tags, :convertkit_subscriber_id, :unsubscribed_at])
+    |> cast(attrs, [
+      :email,
+      :user_id,
+      :source,
+      :status,
+      :tags,
+      :convertkit_subscriber_id,
+      :unsubscribed_at
+    ])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
     |> validate_inclusion(:status, ["active", "unsubscribed", "bounced"])

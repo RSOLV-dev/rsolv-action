@@ -13,25 +13,30 @@
               Technical deep-dives on vulnerability detection, AI-generated code security, and automated remediation from our research team.
             </p>
             
-            <!-- RSS Feed Link -->
+<!-- RSS Feed Link -->
             <div class="mt-6">
-              <a href="/blog/rss.xml" class="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+              <a
+                href="/blog/rss.xml"
+                class="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+              >
                 <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3.429 2.571v2.286q5.714 0 9.714 4.036t4 9.679h2.286q0-6.857-4.875-11.679t-11.125-4.321zM3.429 7.143v2.286q2.286 0 3.911 1.625t1.625 3.911h2.286q0-3.429-2.446-5.875t-5.375-2.446zM6.857 15.429q0 1.071-0.75 1.821t-1.821 0.75-1.821-0.75-0.75-1.821 0.75-1.821 1.821-0.75 1.821 0.75 0.75 1.821z"/>
+                  <path d="M3.429 2.571v2.286q5.714 0 9.714 4.036t4 9.679h2.286q0-6.857-4.875-11.679t-11.125-4.321zM3.429 7.143v2.286q2.286 0 3.911 1.625t1.625 3.911h2.286q0-3.429-2.446-5.875t-5.375-2.446zM6.857 15.429q0 1.071-0.75 1.821t-1.821 0.75-1.821-0.75-0.75-1.821 0.75-1.821 1.821-0.75 1.821 0.75 0.75 1.821z" />
                 </svg>
                 Subscribe via RSS
               </a>
             </div>
           </header>
           
-          <!-- Articles section -->
+<!-- Articles section -->
           <div class="mt-16 sm:mt-20">
             <div class="md:border-l md:border-subtle md:pl-6">
               <div class="flex max-w-3xl flex-col space-y-16">
                 <%= if length(@posts) == 0 do %>
                   <div class="text-center py-12">
                     <h3 class="text-lg font-medium text-DEFAULT">No blog posts yet</h3>
-                    <p class="mt-2 text-subtle">Check back soon for AI security insights and vulnerability analysis.</p>
+                    <p class="mt-2 text-subtle">
+                      Check back soon for AI security insights and vulnerability analysis.
+                    </p>
                   </div>
                 <% else %>
                   <div class="grid gap-8 md:gap-12">
@@ -40,14 +45,14 @@
                         <div class="flex flex-1 flex-col justify-between p-6">
                           <div class="flex-1">
                             <p class="text-sm font-medium text-accent">
-                              <%= format_date(post.published_at) %>
+                              {format_date(post.published_at)}
                             </p>
                             <a href={"/blog/#{post.slug}"} class="mt-2 block">
                               <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                <%= post.title %>
+                                {post.title}
                               </h3>
                               <p class="mt-3 text-base text-gray-600 dark:text-gray-300 line-clamp-3">
-                                <%= post.excerpt %>
+                                {post.excerpt}
                               </p>
                             </a>
                           </div>

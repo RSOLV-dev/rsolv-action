@@ -14,7 +14,11 @@ defmodule RsolvWeb.Admin.ApiKeyModalTest do
   end
 
   describe "Delete modal" do
-    test "uses LiveView modal component with proper classes", %{conn: conn, staff: staff, api_key: api_key} do
+    test "uses LiveView modal component with proper classes", %{
+      conn: conn,
+      staff: staff,
+      api_key: api_key
+    } do
       conn = log_in_customer(conn, staff)
       {:ok, view, _html} = live(conn, "/admin/api-keys")
 
@@ -63,7 +67,11 @@ defmodule RsolvWeb.Admin.ApiKeyModalTest do
   end
 
   describe "Edit modal" do
-    test "uses LiveView modal component with proper classes", %{conn: conn, staff: staff, api_key: api_key} do
+    test "uses LiveView modal component with proper classes", %{
+      conn: conn,
+      staff: staff,
+      api_key: api_key
+    } do
       conn = log_in_customer(conn, staff)
       {:ok, view, _html} = live(conn, "/admin/api-keys")
 

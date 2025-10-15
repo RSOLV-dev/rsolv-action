@@ -1,22 +1,22 @@
 defmodule Rsolv.Security.Patterns.Django.Cve201914234 do
   @moduledoc """
   Django CVE-2019-14234 - SQL Injection in JSONField/HStoreField Key Transforms
-  
-  This pattern detects Django applications vulnerable to CVE-2019-14234, a critical 
-  SQL injection vulnerability in JSONField and HStoreField key transforms due to 
+
+  This pattern detects Django applications vulnerable to CVE-2019-14234, a critical
+  SQL injection vulnerability in JSONField and HStoreField key transforms due to
   shallow key transformation error that allows direct injection into SQL queries.
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability affects Django versions:
   - 2.1 before 2.1.11
   - 2.2 before 2.2.4
   - 1.11 before 1.11.23
-  
+
   The issue occurs in Django's ORM when using JSONField or HStoreField key lookups,
   where user-provided keys are not properly escaped when building SQL queries for
   key transforms like `__key=value` or `__contains` operations.
-  
+
   ### Attack Example
   ```python
   # Vulnerable: Direct user input in JSONField key lookup
@@ -24,18 +24,18 @@ defmodule Rsolv.Security.Patterns.Django.Cve201914234 do
       key = request.GET.get('key')  # Could be "'; DROP TABLE users; --"
       results = Model.objects.filter(data__key=key)  # SQL injection
       return results
-  
+
   # Generated SQL (vulnerable):
   # SELECT * FROM model WHERE (data -> 'key_from_user_input') = %s
   # If key_from_user_input = "'; DROP TABLE users; --"
   # Result: SELECT * FROM model WHERE (data -> ''; DROP TABLE users; --') = %s
-  
+
   # Attack scenarios:
   # 1. Data extraction: data__key="' UNION SELECT password FROM auth_user--"
   # 2. Data manipulation: data__key="'; UPDATE auth_user SET is_superuser=true--"
   # 3. Table deletion: data__key="'; DROP TABLE sensitive_data--"
   ```
-  
+
   ### Safe Example
   ```python
   # Safe: Validate and sanitize input before use
@@ -45,14 +45,14 @@ defmodule Rsolv.Security.Patterns.Django.Cve201914234 do
       allowed_keys = ['name', 'email', 'status']
       if key not in allowed_keys:
           raise ValueError("Invalid key")
-      
+
       results = Model.objects.filter(data__key=key)
       return results
-  
+
   # Or use Django 2.2.4+ which properly escapes keys
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
 
@@ -61,7 +61,8 @@ defmodule Rsolv.Security.Patterns.Django.Cve201914234 do
     %Pattern{
       id: "django-cve-2019-14234",
       name: "Django CVE-2019-14234 - SQL Injection in JSONField",
-      description: "SQL injection via JSONField/HStoreField key transforms due to shallow key transformation error",
+      description:
+        "SQL injection via JSONField/HStoreField key transforms due to shallow key transformation error",
       type: :sql_injection,
       severity: :critical,
       languages: ["python"],
@@ -93,7 +94,8 @@ defmodule Rsolv.Security.Patterns.Django.Cve201914234 do
       ],
       cwe_id: "CWE-89",
       owasp_category: "A03:2021",
-      recommendation: "Update Django to 2.2.4+, 2.1.11+, or 1.11.23+. Validate input and sanitize key parameters before JSONField operations.",
+      recommendation:
+        "Update Django to 2.2.4+, 2.1.11+, or 1.11.23+. Validate input and sanitize key parameters before JSONField operations.",
       test_cases: %{
         vulnerable: [
           ~s|Model.objects.filter(data__key=request.GET['key'])|,
@@ -120,18 +122,18 @@ Model.objects.extra(where=["data->%s = %s"], params=[safe_key, value])|
   def vulnerability_metadata do
     %{
       description: """
-      CVE-2019-14234 is a critical SQL injection vulnerability affecting Django's JSONField 
-      and HStoreField key transform operations. The vulnerability occurs due to a shallow key transformation error where user-provided keys in database lookups are not properly 
+      CVE-2019-14234 is a critical SQL injection vulnerability affecting Django's JSONField
+      and HStoreField key transform operations. The vulnerability occurs due to a shallow key transformation error where user-provided keys in database lookups are not properly
       escaped when building SQL queries.
-      
-      This affects PostgreSQL-specific field types (JSONField, HStoreField) where key lookups 
-      like `data__user_key=value` translate to SQL operations that include the key name directly 
-      in the query without proper escaping. Attackers can inject malicious SQL through the key 
+
+      This affects PostgreSQL-specific field types (JSONField, HStoreField) where key lookups
+      like `data__user_key=value` translate to SQL operations that include the key name directly
+      in the query without proper escaping. Attackers can inject malicious SQL through the key
       parameter, leading to full database compromise.
-      
-      The vulnerability was discovered during Django's security audit and affects millions of 
-      Django applications using PostgreSQL with JSON or HStore data types. The impact is 
-      particularly severe because these fields are commonly used for storing user preferences, 
+
+      The vulnerability was discovered during Django's security audit and affects millions of
+      Django applications using PostgreSQL with JSON or HStore data types. The impact is
+      particularly severe because these fields are commonly used for storing user preferences,
       metadata, and dynamic content.
       """,
       references: [
@@ -144,7 +146,8 @@ Model.objects.extra(where=["data->%s = %s"], params=[safe_key, value])|
         %{
           type: :cwe,
           id: "CWE-89",
-          title: "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
           url: "https://cwe.mitre.org/data/definitions/89.html"
         },
         %{
@@ -168,7 +171,7 @@ Model.objects.extra(where=["data->%s = %s"], params=[safe_key, value])|
       ],
       attack_vectors: [
         "SQL injection through JSONField key parameters in ORM queries",
-        "HStoreField key manipulation leading to database command execution", 
+        "HStoreField key manipulation leading to database command execution",
         "Index-based JSONField lookups allowing nested SQL injection",
         "Chained key transforms enabling complex SQL payload injection",
         "PostgreSQL-specific function injection via malformed JSON keys"
@@ -183,7 +186,8 @@ Model.objects.extra(where=["data->%s = %s"], params=[safe_key, value])|
       cve_examples: [
         %{
           id: "CVE-2019-14234",
-          description: "Django SQL injection vulnerability in JSONField/HStoreField key transforms allowing remote code execution",
+          description:
+            "Django SQL injection vulnerability in JSONField/HStoreField key transforms allowing remote code execution",
           severity: "critical",
           cvss: 9.8,
           note: "NIST CVSS 3.1 score - critical severity with network exploitability"
@@ -196,9 +200,9 @@ Model.objects.extra(where=["data->%s = %s"], params=[safe_key, value])|
       3. Index-based JSON array lookups with user-controlled indices
       4. Nested key transforms where user input flows into key parameters
       5. PostgreSQL-specific JSON operations containing user data
-      
-      The pattern specifically looks for Django ORM filter operations where user-controllable 
-      data (typically from request objects) is used directly in field lookup key parameters 
+
+      The pattern specifically looks for Django ORM filter operations where user-controllable
+      data (typically from request objects) is used directly in field lookup key parameters
       without proper validation or escaping.
       """,
       safe_alternatives: [
@@ -244,14 +248,20 @@ Model.objects.extra(where=["data->%s = %s"], params=[safe_key, value])|
             ~r/whitelist\s*=|ALLOWED_KEYS\s*=/,
             ~r/\.extra\s*\(\s*where\s*=.*params\s*=/
           ],
-          description: "Exclude if using patched Django versions, key whitelisting, or parameterized queries"
+          description:
+            "Exclude if using patched Django versions, key whitelisting, or parameterized queries"
         },
         %{
           type: :validation,
           context: %{
             required_imports: ["django.db", "django.contrib.postgres"],
             file_patterns: ["*.py"],
-            framework_indicators: ["JSONField", "HStoreField", "django.db.models", "objects.filter"]
+            framework_indicators: [
+              "JSONField",
+              "HStoreField",
+              "django.db.models",
+              "objects.filter"
+            ]
           },
           description: "Validate Django ORM context with PostgreSQL field usage"
         },

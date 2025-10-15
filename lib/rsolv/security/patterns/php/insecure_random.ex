@@ -1,33 +1,33 @@
 defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
   @moduledoc """
   Pattern for detecting insecure random number generation in PHP.
-  
+
   This pattern identifies when weak random number functions like rand(), mt_rand(),
   or their seeding functions (srand(), mt_srand()) are used for security-sensitive
   purposes. These functions are predictable and should not be used for cryptographic
   or security-critical random values.
-  
+
   ## Vulnerability Details
-  
+
   PHP's rand() and mt_rand() functions use predictable algorithms that are unsuitable
   for security purposes. Attackers can predict future values by observing previous
   outputs, making tokens, session IDs, and passwords generated with these functions
   vulnerable to attack.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
   $session_id = mt_rand(100000, 999999);
   $token = bin2hex(rand());
-  
+
   // These values can be predicted by attackers who observe
   // a few previous outputs from the same process
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -55,7 +55,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -65,13 +65,13 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
       designed for statistical purposes, not cryptographic security. These functions
       produce predictable sequences that attackers can exploit to compromise tokens,
       session IDs, passwords, and other security-critical values.
-      
+
       The core problems with these functions:
       - Mersenne Twister (mt_rand) has a period of 2^19937-1 but is completely predictable
       - Linear Congruential Generators (rand) are even weaker and easily reversed
       - Both functions can be seeded predictably using timestamps or process IDs
       - Future values can be calculated once the internal state is known
-      
+
       Modern attacks can predict the next values after observing just a few outputs,
       making any security mechanism based on these functions fundamentally broken.
       """,
@@ -157,7 +157,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
       - mt_rand() function calls which use predictable Mersenne Twister
       - srand() and mt_srand() seeding functions with predictable seeds
       - Any usage context where these functions might generate security values
-      
+
       The regex matches function calls but context analysis is needed to determine
       if the usage is security-sensitive vs. statistical/gaming purposes.
       """,
@@ -197,20 +197,20 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.InsecureRandom.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.InsecureRandom.test_cases()
       iex> length(test_cases.negative) > 0
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Php.InsecureRandom.pattern()
       iex> pattern.id
       "php-insecure-random"
@@ -275,7 +275,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -290,24 +290,24 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
             $_SESSION['user_id'] = mt_rand(100000, 999999);
             $_SESSION['session_token'] = md5(mt_rand() . time());
         }
-        
+
         // These values are predictable and can be guessed by attackers
         // who observe a few previous session IDs from the same server
         """,
         "Password reset tokens" => ~S"""
-        // Password reset - VULNERABLE  
+        // Password reset - VULNERABLE
         function generateResetToken($user_id) {
             // Seed with predictable values
             srand(time() + $user_id);
-            
+
             $token = '';
             for ($i = 0; $i < 32; $i++) {
                 $token .= dechex(rand(0, 15));
             }
-            
+
             return $token;
         }
-        
+
         $reset_token = generateResetToken($user['id']);
         // Token can be predicted by knowing user ID and approximate time
         """,
@@ -317,19 +317,19 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
             public function generateKey() {
                 $prefix = 'sk_';
                 $timestamp = time();
-                
+
                 // Use timestamp as seed
                 mt_srand($timestamp);
-                
+
                 $random_part = '';
                 for ($i = 0; $i < 24; $i++) {
                     $random_part .= chr(65 + mt_rand(0, 25)); // A-Z
                 }
-                
+
                 return $prefix . $timestamp . '_' . $random_part;
             }
         }
-        
+
         // Attacker can predict keys by knowing generation time
         """,
         "CSRF token generation" => ~S"""
@@ -338,11 +338,11 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
             // Simple but predictable token
             return md5(uniqid(rand(), true));
         }
-        
+
         // Include in forms
-        echo '<input type="hidden" name="csrf_token" value="' . 
+        echo '<input type="hidden" name="csrf_token" value="' .
              generateCSRFToken() . '">';
-        
+
         // uniqid() with rand() seed is predictable
         """
       },
@@ -355,7 +355,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
             $_SESSION['user_id'] = random_int(100000, 999999);
             $_SESSION['session_token'] = bin2hex(random_bytes(32));
         }
-        
+
         // These values are unpredictable and cryptographically secure
         """,
         "Using random_bytes()" => ~S"""
@@ -363,14 +363,14 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
         function generateResetToken($user_id) {
             // Generate cryptographically secure token
             $token = bin2hex(random_bytes(32));
-            
+
             // Store with expiration
             $expires = time() + 3600; // 1 hour
             storeResetToken($user_id, $token, $expires);
-            
+
             return $token;
         }
-        
+
         $reset_token = generateResetToken($user['id']);
         // Token is unpredictable and secure
         """,
@@ -379,19 +379,19 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
         class SecureApiKeyGenerator {
             public function generateKey() {
                 $prefix = 'sk_';
-                
+
                 // Generate truly random component
                 $random_bytes = random_bytes(32);
                 $random_part = base64_encode($random_bytes);
-                
+
                 // Make URL-safe
                 $random_part = strtr($random_part, '+/', '-_');
                 $random_part = rtrim($random_part, '=');
-                
+
                 return $prefix . $random_part;
             }
         }
-        
+
         // Keys are unpredictable and secure
         """,
         "Secure CSRF tokens" => ~S"""
@@ -400,21 +400,21 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
             // Generate cryptographically secure token
             return bin2hex(random_bytes(32));
         }
-        
+
         function verifyCSRFToken($token) {
             $expected = $_SESSION['csrf_token'] ?? '';
-            
+
             // Constant-time comparison to prevent timing attacks
             return hash_equals($expected, $token);
         }
-        
+
         // Store in session
         $_SESSION['csrf_token'] = generateCSRFToken();
-        
+
         // Include in forms
-        echo '<input type="hidden" name="csrf_token" value="' . 
+        echo '<input type="hidden" name="csrf_token" value="' .
              $_SESSION['csrf_token'] . '">';
-        
+
         // Verify on form submission
         if (!verifyCSRFToken($_POST['csrf_token'])) {
             die('CSRF token verification failed');
@@ -423,7 +423,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -433,32 +433,32 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
     undermines the foundation of many security mechanisms. When applications use
     predictable random number generators for security-sensitive values, they
     create opportunities for attackers to predict and manipulate these values.
-    
+
     ## The Problem with Predictable Randomness
-    
+
     ### PHP's Weak Random Functions
-    
+
     #### rand() Function
     - Based on Linear Congruential Generator (LCG)
     - Completely deterministic sequence once state is known
     - Period varies by system but typically 2^31-1
     - Can be broken with just a few observed outputs
-    
+
     #### mt_rand() Function
     - Based on Mersenne Twister algorithm
     - 19,937-bit internal state with period 2^19,937-1
     - Designed for statistical simulation, not cryptography
     - State can be recovered from 624 consecutive outputs
     - Predictable seeding makes it vulnerable even with fewer outputs
-    
+
     #### Seeding Functions
     - srand() and mt_srand() with predictable seeds
     - Common seeds: time(), getmypid(), combination of both
     - Attackers can guess seeds within reasonable ranges
     - Once seed is known, entire sequence is predictable
-    
+
     ## Attack Scenarios
-    
+
     ### Session Hijacking
     ```php
     // Vulnerable session ID generation
@@ -469,7 +469,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
     2. Determine the mt_rand() internal state
     3. Predict future session IDs
     4. Hijack other users' sessions
-    
+
     ### Token Prediction
     ```php
     // Vulnerable password reset token
@@ -480,7 +480,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
     - rand() adds predictable component
     - MD5 doesn't add security, just obfuscates
     - Attackers can predict tokens for other users
-    
+
     ### Cryptographic Key Compromise
     ```php
     // Vulnerable encryption key
@@ -494,59 +494,59 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
     - Encryption keys become predictable
     - All encrypted data can be decrypted
     - Long-term compromise of confidentiality
-    
+
     ## Real-World Impact
-    
+
     ### Historical Vulnerabilities
     - **Debian OpenSSL** (2008): Weak random seeding led to predictable keys
     - **Android Bitcoin wallets** (2013): Weak random numbers caused key reuse
     - **Casino fraud**: Predictable slot machine outcomes
     - **Gaming exploits**: Predictable loot boxes and card shuffles
-    
+
     ### Modern Attack Techniques
     1. **State Recovery**: Analyze outputs to recover generator state
     2. **Seed Prediction**: Guess seeds based on timestamps/PIDs
     3. **Statistical Analysis**: Detect patterns in supposedly random data
     4. **Timing Correlation**: Link randomness to observable events
-    
+
     ## Cryptographically Secure Alternatives
-    
+
     ### PHP 7.0+ Solutions
     ```php
     // Secure integer generation
     $secure_int = random_int($min, $max);
-    
+
     // Secure byte generation
     $secure_bytes = random_bytes($length);
-    
+
     // Secure token generation
     $token = bin2hex(random_bytes(32));
     $url_safe_token = base64url_encode(random_bytes(32));
     ```
-    
+
     ### Legacy PHP Support
     ```php
     // For PHP < 7.0 with OpenSSL
     $secure_bytes = openssl_random_pseudo_bytes($length);
-    
+
     // Check for secure generation
     $bytes = openssl_random_pseudo_bytes(16, $strong);
     if (!$strong) {
         throw new Exception('Unable to generate secure random bytes');
     }
     ```
-    
+
     ### Best Practices
-    
+
     1. **Always use cryptographic functions** for security purposes
     2. **Never seed secure generators** with predictable values
     3. **Generate sufficient entropy** (minimum 128 bits for tokens)
     4. **Use constant-time comparison** for token verification
     5. **Implement proper token expiration** and rotation
     6. **Monitor for prediction attacks** in security logs
-    
+
     ## Defense Strategies
-    
+
     ### Code Review Checklist
     - [ ] No usage of rand() or mt_rand() for security values
     - [ ] All tokens use random_int() or random_bytes()
@@ -554,7 +554,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
     - [ ] Sufficient token length (32+ bytes for high security)
     - [ ] Proper token verification with hash_equals()
     - [ ] Token expiration and rotation implemented
-    
+
     ### Testing for Randomness
     ```php
     // Test for predictability
@@ -563,31 +563,31 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
         for ($i = 0; $i < $samples; $i++) {
             $values[] = $generator();
         }
-        
+
         // Check for patterns, duplicates, statistical biases
         return analyzeRandomness($values);
     }
     ```
-    
+
     Remember: Any security mechanism is only as strong as its weakest component.
     Predictable randomness can compromise the entire security architecture of
     an application, making all other security measures ineffective.
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.InsecureRandom.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.InsecureRandom.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.InsecureRandom.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4
@@ -602,14 +602,16 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
           functions: [
             "rand",
             "mt_rand",
-            "srand", 
+            "srand",
             "mt_srand",
-            "array_rand",  # Can be predictable if underlying PRNG is weak
-            "str_shuffle"  # Uses internal PRNG
+            # Can be predictable if underlying PRNG is weak
+            "array_rand",
+            # Uses internal PRNG
+            "str_shuffle"
           ],
           contexts: [
             "token_generation",
-            "session_id_creation", 
+            "session_id_creation",
             "password_generation",
             "api_key_creation",
             "csrf_token_generation",
@@ -623,16 +625,18 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
             "random_int",
             "random_bytes",
             "openssl_random_pseudo_bytes",
-            "mcrypt_create_iv",  # Deprecated but was secure
-            "password_hash"      # Includes secure salt generation
+            # Deprecated but was secure
+            "mcrypt_create_iv",
+            # Includes secure salt generation
+            "password_hash"
           ]
         },
         %{
-          type: "context_analysis", 
+          type: "context_analysis",
           description: "Usage context determines security relevance",
           security_sensitive: [
             "session",
-            "token", 
+            "token",
             "password",
             "key",
             "secret",
@@ -657,7 +661,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
           description: "Analyze variable names for security context",
           high_risk_variables: [
             "session_id",
-            "csrf_token", 
+            "csrf_token",
             "api_key",
             "reset_token",
             "auth_token",

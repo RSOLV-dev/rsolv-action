@@ -45,13 +45,14 @@ defmodule Rsolv.EmailManagement do
   """
   def export_unsubscribes_to_csv do
     unsubscribes = list_unsubscribes()
-    
+
     header = "email,reason,unsubscribed_at\n"
-    
-    rows = Enum.map(unsubscribes, fn unsub ->
-      ~s("#{unsub.email}","#{unsub.reason || ""}","#{unsub.inserted_at}")
-    end)
-    
+
+    rows =
+      Enum.map(unsubscribes, fn unsub ->
+        ~s("#{unsub.email}","#{unsub.reason || ""}","#{unsub.inserted_at}")
+      end)
+
     header <> Enum.join(rows, "\n")
   end
 

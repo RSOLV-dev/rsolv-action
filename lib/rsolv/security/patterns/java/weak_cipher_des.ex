@@ -1,45 +1,45 @@
 defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
   @moduledoc """
   Weak Cryptography - DES pattern for Java code.
-  
+
   Detects usage of DES (Data Encryption Standard) and 3DES (Triple DES) cipher algorithms
   which are cryptographically weak and deprecated. DES uses a 56-bit key size making it
   vulnerable to brute-force attacks, while 3DES is vulnerable to Sweet32 birthday attacks
   due to its 64-bit block size.
-  
+
   ## Vulnerability Details
-  
+
   DES (Data Encryption Standard) is a symmetric-key block cipher that was once widely used
   but is now considered insecure due to its small key size (56 bits). Modern computing power
   can break DES encryption in hours or days using brute force attacks. Triple DES (3DES)
   was developed as a stopgap measure but is also deprecated due to Sweet32 birthday attacks.
-  
+
   ### Attack Examples
-  
+
   ```java
   // Vulnerable code - DES cipher
   Cipher cipher = Cipher.getInstance("DES");
   cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-  
+
   // Vulnerable code - Triple DES
   Cipher tripleDes = Cipher.getInstance("DESede/ECB/PKCS5Padding");
-  
+
   // Attack vectors:
   // 1. Brute force attack on 56-bit DES key space (2^56 = ~72 quadrillion keys)
   // 2. Sweet32 birthday attack on 3DES 64-bit blocks after ~32GB of data
   ```
-  
+
   ## References
-  
+
   - CWE-327: Use of a Broken or Risky Cryptographic Algorithm
   - OWASP A02:2021 - Cryptographic Failures
   - CVE-2016-2183: Sweet32 birthday attack on 3DES
   - NIST deprecation of 3DES effective 2024
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -63,7 +63,8 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
       ],
       cwe_id: "CWE-327",
       owasp_category: "A02:2021",
-      recommendation: "Use AES with 256-bit keys (AES/GCM/NoPadding) or other modern encryption algorithms instead of DES/3DES",
+      recommendation:
+        "Use AES with 256-bit keys (AES/GCM/NoPadding) or other modern encryption algorithms instead of DES/3DES",
       test_cases: %{
         vulnerable: [
           ~S|Cipher cipher = Cipher.getInstance("DES");|,
@@ -80,7 +81,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -88,20 +89,20 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
       DES (Data Encryption Standard) is a symmetric-key block cipher that uses a 56-bit key size,
       making it vulnerable to brute-force attacks. Modern computing power, including specialized
       hardware and distributed computing, can break DES encryption in a matter of hours or days.
-      
+
       Triple DES (3DES/DESede) was developed as an interim solution by applying DES three times
       with different keys, but it is also deprecated due to several weaknesses:
       - Sweet32 birthday attack exploiting 64-bit block size
       - Performance issues compared to modern algorithms
       - NIST official deprecation as of 2024
-      
+
       Key vulnerabilities:
       - DES: 56-bit key space allows brute force attacks (2^56 ≈ 72 quadrillion keys)
       - 3DES: Sweet32 birthday attack after processing ~32GB of data with same key
       - Both use 64-bit block size making them vulnerable to block collision attacks
       - Performance penalties compared to AES
       - No longer meet modern security standards
-      
+
       Common vulnerable usage patterns:
       - Legacy system encryption without key rotation
       - Payment card industry systems (deprecated in PCI DSS)
@@ -138,7 +139,8 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
           type: :research,
           id: "des_security_analysis",
           title: "DES and Triple DES are now insecure - Datadog Security",
-          url: "https://docs.datadoghq.com/security/code_security/static_analysis/static_analysis_rules/go-security/import-des/"
+          url:
+            "https://docs.datadoghq.com/security/code_security/static_analysis/static_analysis_rules/go-security/import-des/"
         }
       ],
       attack_vectors: [
@@ -164,10 +166,11 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
           description: "Sweet32 birthday attack against 3DES in TLS, SSH, and IPSec protocols",
           severity: "medium",
           cvss: 5.9,
-          note: "Birthday attack allows recovery of plaintext from long-duration encrypted sessions"
+          note:
+            "Birthday attack allows recovery of plaintext from long-duration encrypted sessions"
         },
         %{
-          id: "CVE-2016-6329", 
+          id: "CVE-2016-6329",
           description: "Sweet32 birthday attack vulnerability in OpenVPN using 3DES",
           severity: "medium",
           cvss: 5.9,
@@ -178,11 +181,11 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
       This pattern detects DES/3DES usage in various contexts:
       - Cipher.getInstance() calls with DES, DESede, TripleDES, or 3DES
       - String literals containing DES algorithm identifiers
-      - Variable assignments specifying DES as encryption algorithm  
+      - Variable assignments specifying DES as encryption algorithm
       - KeyGenerator, SecretKeySpec, and SecretKeyFactory with DES algorithms
       - Method calls passing DES algorithms as parameters
       - Cipher transformation strings including DES with modes/padding
-      
+
       The pattern covers both basic DES and Triple DES variants, including
       their common naming conventions and usage patterns in Java cryptography.
       """,
@@ -237,23 +240,23 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual cryptographic usage of DES
   and acceptable references in comments, documentation, or legacy compatibility code.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakCipherDes.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakCipherDes.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakCipherDes.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"
@@ -275,7 +278,13 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
           weak_algorithm_patterns: ["DES", "DESede", "TripleDES", "3DES"],
           check_variable_assignments: true,
           check_method_parameters: true,
-          algorithm_variable_names: ["algorithm", "cipher", "transformation", "cipherType", "encryptionMethod"]
+          algorithm_variable_names: [
+            "algorithm",
+            "cipher",
+            "transformation",
+            "cipherType",
+            "encryptionMethod"
+          ]
         },
         key_analysis: %{
           check_key_generation: true,
@@ -289,7 +298,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
         check_cryptographic_context: true,
         high_risk_contexts: [
           "data encryption",
-          "file encryption", 
+          "file encryption",
           "network encryption",
           "payment processing",
           "authentication systems",

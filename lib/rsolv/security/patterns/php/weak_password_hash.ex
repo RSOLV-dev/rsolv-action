@@ -1,31 +1,31 @@
 defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
   @moduledoc """
   Pattern for detecting weak password hashing algorithms in PHP.
-  
+
   This pattern identifies when weak cryptographic functions like MD5, SHA1, or
   improperly configured crypt() are used for password hashing. These algorithms
   are vulnerable to rainbow table attacks and brute force attacks.
-  
+
   ## Vulnerability Details
-  
+
   Weak password hashing algorithms like MD5 and SHA1 were designed for speed,
   not security. They can be cracked quickly using modern hardware, making them
   unsuitable for password storage. Even with salt, these algorithms are too fast
   to provide adequate protection against brute-force attacks.
-  
+
   ### Attack Example
   ```php
   // Vulnerable code
   $password_hash = md5($_POST['password']);
-  
+
   // Attack: Rainbow tables can reverse MD5 hashes in seconds
   // Online databases contain billions of pre-computed MD5 hashes
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -35,7 +35,8 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
       type: :crypto,
       severity: :critical,
       languages: ["php"],
-      regex: ~r/(md5|sha1)\s*\(\s*.*(?:password|pass|pwd)|crypt\s*\(\s*.*(?:password|pass|pwd)(?!.*\$2[abxy]\$)|hash\s*\(\s*['"](md5|sha1)['"]\s*,\s*.*(?:password|pass|pwd)/i,
+      regex:
+        ~r/(md5|sha1)\s*\(\s*.*(?:password|pass|pwd)|crypt\s*\(\s*.*(?:password|pass|pwd)(?!.*\$2[abxy]\$)|hash\s*\(\s*['"](md5|sha1)['"]\s*,\s*.*(?:password|pass|pwd)/i,
       cwe_id: "CWE-916",
       owasp_category: "A02:2021",
       recommendation: "Use password_hash() with PASSWORD_BCRYPT or PASSWORD_ARGON2I",
@@ -53,7 +54,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -61,12 +62,12 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
       Weak password hashing is one of the most critical security vulnerabilities.
       Using algorithms like MD5, SHA1, or improperly configured crypt() for password
       storage leaves user accounts vulnerable to various attacks.
-      
+
       Why these algorithms are weak:
       - MD5: Can be computed at 200 billion hashes per second on modern GPUs
       - SHA1: Only slightly slower than MD5, still far too fast
       - Plain crypt(): Often defaults to DES, which is extremely weak
-      
+
       These fast algorithms allow attackers to try billions of password combinations
       per second, making even complex passwords vulnerable to brute-force attacks.
       """,
@@ -158,7 +159,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
       - crypt() without bcrypt/argon2 algorithm prefixes
       - hash() function with MD5/SHA1 algorithms on passwords
       - Case-insensitive matching for password variations
-      
+
       The regex uses negative lookahead to exclude proper bcrypt usage
       with crypt() function when it includes algorithm identifiers.
       """,
@@ -198,20 +199,20 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
       }
     }
   end
-  
+
   @doc """
   Returns test cases for the pattern.
-  
+
   ## Examples
-  
+
       iex> test_cases = Rsolv.Security.Patterns.Php.WeakPasswordHash.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.WeakPasswordHash.test_cases()
       iex> length(test_cases.negative) > 0
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Php.WeakPasswordHash.pattern()
       iex> pattern.id
       "php-weak-password-hash"
@@ -280,7 +281,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
       ]
     }
   end
-  
+
   @doc """
   Returns examples of vulnerable and fixed code.
   """
@@ -291,14 +292,14 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
         // User registration - VULNERABLE
         $username = $_POST['username'];
         $password = $_POST['password'];
-        
+
         // MD5 is completely broken for passwords
         $password_hash = md5($password);
-        
+
         $sql = "INSERT INTO users (username, password) VALUES (?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$username, $password_hash]);
-        
+
         // This hash can be cracked in seconds
         """,
         "SHA1 with salt still vulnerable" => ~S"""
@@ -307,22 +308,22 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
             $salt = 'myapp_salt_12345';  // Static salt
             return sha1($salt . $password);
         }
-        
+
         // SHA1 is too fast even with salt
         $hashed = hashPassword($_POST['password']);
-        
+
         // Modern GPUs can test billions of SHA1 hashes/second
         """,
         "Weak crypt() usage" => ~S"""
         // Password update - VULNERABLE
         $new_password = $_POST['new_password'];
-        
+
         // crypt() without algorithm defaults to weak DES
         $hash = crypt($new_password);
-        
+
         // Or with weak algorithm
         $hash = crypt($new_password, 'aa');  // DES
-        
+
         // DES is limited to 8 characters!
         """,
         "Custom double hashing" => ~S"""
@@ -331,9 +332,9 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
             // Double hashing doesn't add security
             return md5(sha1($password));
         }
-        
+
         $pwd_hash = superSecureHash($_POST['pwd']);
-        
+
         // Still vulnerable to same attacks
         """
       },
@@ -342,16 +343,16 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
         // User registration - SECURE
         $username = $_POST['username'];
         $password = $_POST['password'];
-        
+
         // password_hash() handles everything securely
         $password_hash = password_hash($password, PASSWORD_BCRYPT, [
             'cost' => 12  // Adjust based on your server
         ]);
-        
+
         $sql = "INSERT INTO users (username, password) VALUES (?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$username, $password_hash]);
-        
+
         // Verification later:
         if (password_verify($password, $stored_hash)) {
             // Password is correct
@@ -361,7 +362,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
         // Migrating from legacy MD5 - SECURE
         function authenticateUser($username, $password) {
             $user = getUserByUsername($username);
-            
+
             if (substr($user['password'], 0, 3) === 'md5') {
                 // Legacy MD5 hash
                 $md5_hash = substr($user['password'], 4);
@@ -375,7 +376,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
                 // Modern password_hash
                 return password_verify($password, $user['password']);
             }
-            
+
             return false;
         }
         """,
@@ -384,29 +385,29 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
         class PasswordManager {
             private const MIN_PASSWORD_LENGTH = 12;
             private const BCRYPT_COST = 12;
-            
+
             public function hashPassword(string $password): string {
                 // Validate password strength
                 if (strlen($password) < self::MIN_PASSWORD_LENGTH) {
                     throw new Exception('Password too short');
                 }
-                
+
                 // Use bcrypt with appropriate cost
                 return password_hash($password, PASSWORD_BCRYPT, [
                     'cost' => self::BCRYPT_COST
                 ]);
             }
-            
+
             public function verifyPassword(string $password, string $hash): bool {
                 return password_verify($password, $hash);
             }
-            
+
             public function needsRehash(string $hash): bool {
                 return password_needs_rehash($hash, PASSWORD_BCRYPT, [
                     'cost' => self::BCRYPT_COST
                 ]);
             }
-            
+
             public function authenticate(string $username, string $password): bool {
                 $user = $this->getUserByUsername($username);
                 if (!$user) {
@@ -414,7 +415,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
                     password_verify('dummy', '$2y$12$dummy.hash.to.prevent.timing');
                     return false;
                 }
-                
+
                 if ($this->verifyPassword($password, $user['password_hash'])) {
                     // Check if rehash needed
                     if ($this->needsRehash($user['password_hash'])) {
@@ -423,7 +424,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
                     }
                     return true;
                 }
-                
+
                 return false;
             }
         }
@@ -431,7 +432,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
       }
     }
   end
-  
+
   @doc """
   Returns detailed vulnerability description.
   """
@@ -440,63 +441,63 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
     Weak password hashing is a critical security vulnerability that exposes user
     credentials to theft. Using fast hashing algorithms like MD5 or SHA1 for
     passwords allows attackers to crack them quickly using modern hardware.
-    
+
     ## Why MD5 and SHA1 Are Broken
-    
+
     These algorithms were designed for speed, not security:
-    
+
     ### MD5 (Message Digest 5)
     - Computation speed: 200+ billion hashes/second on modern GPUs
     - Rainbow tables: Pre-computed for billions of common passwords
     - Collision vulnerabilities: Different inputs produce same hash
     - Online databases: MD5 hashes instantly reversible
-    
+
     ### SHA1 (Secure Hash Algorithm 1)
     - Only marginally slower than MD5
     - Still vulnerable to brute force attacks
     - Deprecated by NIST since 2011
     - Google demonstrated collision attacks in 2017
-    
+
     ## Attack Methods
-    
+
     ### Rainbow Tables
     Pre-computed tables mapping hashes to passwords:
     ```
     5f4dcc3bf5aa765d61d832448ddb3dc -> password
     098fa6bcd4621db373cad4e83269b2c -> test
     ```
-    
+
     ### GPU Cracking
     Modern GPUs can test billions of combinations:
     - RTX 4090: 164 billion MD5 hashes/second
     - 8-character passwords: Cracked in minutes
     - Even with salt: Still too fast
-    
+
     ### Online Services
     Sites like CrackStation have databases of billions of pre-cracked hashes.
-    
+
     ## Proper Password Hashing
-    
+
     ### Key Requirements
     1. **Slow by design**: Should take ~100ms per hash
     2. **Memory-hard**: Resist GPU/ASIC optimization
     3. **Salt automatically**: Unique salt per password
     4. **Future-proof**: Easy to upgrade algorithms
-    
+
     ### PHP's password_hash()
     ```php
     // Automatic salt, secure defaults
     $hash = password_hash($password, PASSWORD_BCRYPT);
-    
+
     // With custom cost factor
     $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-    
+
     // Future-proof with PASSWORD_DEFAULT
     $hash = password_hash($password, PASSWORD_DEFAULT);
     ```
-    
+
     ### Algorithm Comparison
-    
+
     | Algorithm | Hashes/sec (GPU) | Time to crack 8-char | Suitable for passwords |
     |-----------|------------------|---------------------|----------------------|
     | MD5       | 164 billion      | 2 minutes           | ❌ Never             |
@@ -504,43 +505,43 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
     | SHA256    | 23 billion       | 14 minutes          | ❌ Still too fast    |
     | bcrypt    | 105 thousand     | 2 years             | ✅ Yes               |
     | Argon2    | 30 thousand      | 7 years             | ✅ Yes (best)        |
-    
+
     ## Migration Strategy
-    
+
     If you have legacy weak hashes:
-    
+
     1. **Don't panic**: Plan careful migration
     2. **Dual support**: Check both old and new formats
     3. **Upgrade on login**: Re-hash with strong algorithm
     4. **Force reset**: For high-security accounts
     5. **Set deadline**: Eventually disable weak hashes
-    
+
     ## Best Practices
-    
+
     1. **Use password_hash()**: Let PHP handle the complexity
     2. **Cost tuning**: Adjust cost for 50-100ms computation
     3. **Regular updates**: Use password_needs_rehash()
     4. **Length requirements**: Minimum 12 characters
     5. **Additional measures**: 2FA, rate limiting, lockouts
-    
+
     Remember: Password security is critical. A single breach can compromise
     your entire user base and destroy trust permanently.
     """
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakPasswordHash.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakPasswordHash.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakPasswordHash.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4
@@ -603,16 +604,24 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
           type: "algorithm_detection",
           description: "Detect algorithm usage in crypt()",
           safe_prefixes: [
-            "$2y$",    # bcrypt
-            "$2a$",    # bcrypt
-            "$2b$",    # bcrypt  
-            "$argon2i$", # Argon2i
-            "$argon2id$" # Argon2id
+            # bcrypt
+            "$2y$",
+            # bcrypt
+            "$2a$",
+            # bcrypt
+            "$2b$",
+            # Argon2i
+            "$argon2i$",
+            # Argon2id
+            "$argon2id$"
           ],
           weak_prefixes: [
-            "$1$",     # MD5
-            "",        # DES (no prefix)
-            "_"        # Extended DES
+            # MD5
+            "$1$",
+            # DES (no prefix)
+            "",
+            # Extended DES
+            "_"
           ]
         }
       ],

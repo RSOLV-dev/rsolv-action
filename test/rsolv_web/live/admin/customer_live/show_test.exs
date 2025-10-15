@@ -7,14 +7,17 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
 
   setup do
     staff = staff_customer_fixture()
-    customer = customer_fixture(
-      email: unique_email(),
-      name: "Test Customer",
-      subscription_plan: "pro",
-      monthly_limit: 1000,
-      current_usage: 250,
-      active: true
-    )
+
+    customer =
+      customer_fixture(
+        email: unique_email(),
+        name: "Test Customer",
+        subscription_plan: "pro",
+        monthly_limit: 1000,
+        current_usage: 250,
+        active: true
+      )
+
     %{staff: staff, customer: customer}
   end
 
@@ -64,7 +67,11 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
       assert html =~ String.slice(api_key2.key, 0, 8)
     end
 
-    test "generates new API key and displays full key in modal", %{conn: conn, staff: staff, customer: customer} do
+    test "generates new API key and displays full key in modal", %{
+      conn: conn,
+      staff: staff,
+      customer: customer
+    } do
       conn = log_in_customer(conn, staff)
       {:ok, view, _html} = live(conn, "/admin/customers/#{customer.id}")
 
@@ -92,7 +99,11 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
       assert view |> element("button[phx-click=\"close-api-key-modal\"]") |> has_element?()
     end
 
-    test "closes API key modal when Done is clicked", %{conn: conn, staff: staff, customer: customer} do
+    test "closes API key modal when Done is clicked", %{
+      conn: conn,
+      staff: staff,
+      customer: customer
+    } do
       conn = log_in_customer(conn, staff)
       {:ok, view, _html} = live(conn, "/admin/customers/#{customer.id}")
 
@@ -116,7 +127,11 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
       refute html =~ "Copy this API key now"
     end
 
-    test "modal has proper fixed positioning classes", %{conn: conn, staff: staff, customer: customer} do
+    test "modal has proper fixed positioning classes", %{
+      conn: conn,
+      staff: staff,
+      customer: customer
+    } do
       conn = log_in_customer(conn, staff)
       {:ok, view, _html} = live(conn, "/admin/customers/#{customer.id}")
 
@@ -152,12 +167,13 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
 
       # Try to access without login
       assert {:error, {:redirect, %{to: "/admin/login"}}} =
-        live(conn, "/admin/customers/#{customer.id}")
+               live(conn, "/admin/customers/#{customer.id}")
 
       # Try to access as non-staff
       conn = log_in_customer(conn, regular_customer)
+
       assert {:error, {:redirect, %{to: "/"}}} =
-        live(conn, "/admin/customers/#{customer.id}")
+               live(conn, "/admin/customers/#{customer.id}")
     end
   end
 end

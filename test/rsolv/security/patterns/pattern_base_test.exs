@@ -1,12 +1,12 @@
 defmodule Rsolv.Security.Patterns.PatternBaseTest do
   use ExUnit.Case, async: true
-  
+
   alias Rsolv.Security.Pattern
-  
+
   # Create a test module to verify PatternBase behavior
   defmodule TestPattern do
     use Rsolv.Security.Patterns.PatternBase
-    
+
     @impl true
     def pattern do
       %Pattern{
@@ -24,7 +24,7 @@ defmodule Rsolv.Security.Patterns.PatternBaseTest do
         }
       }
     end
-    
+
     # Define vulnerability_metadata as a public function
     def vulnerability_metadata do
       %{
@@ -35,51 +35,51 @@ defmodule Rsolv.Security.Patterns.PatternBaseTest do
       }
     end
   end
-  
+
   describe "PatternBase macro" do
     test "exports pattern/0 function" do
       assert function_exported?(TestPattern, :pattern, 0)
     end
-    
+
     test "exports vulnerability_metadata/0 function" do
       assert function_exported?(TestPattern, :vulnerability_metadata, 0)
     end
-    
+
     test "exports applies_to_file?/1 function" do
       assert function_exported?(TestPattern, :applies_to_file?, 1)
     end
-    
+
     test "exports applies_to_file?/2 function" do
       assert function_exported?(TestPattern, :applies_to_file?, 2)
     end
-    
+
     test "pattern/0 returns expected structure" do
       pattern = TestPattern.pattern()
       assert %Pattern{} = pattern
       assert pattern.id == "test-pattern"
     end
-    
+
     test "vulnerability_metadata/0 returns expected structure" do
       metadata = TestPattern.vulnerability_metadata()
       assert is_map(metadata)
       assert metadata.description == "Test metadata"
     end
-    
+
     test "applies_to_file?/2 works with file extensions" do
       assert TestPattern.applies_to_file?("test.js", nil)
       refute TestPattern.applies_to_file?("test.py", nil)
     end
-    
+
     test "applies_to_file?/1 works with file extensions" do
       assert TestPattern.applies_to_file?("test.js")
       refute TestPattern.applies_to_file?("test.py")
     end
   end
-  
+
   describe "applies_to_file? with cross-language patterns" do
     defmodule CrossLanguagePattern do
       use Rsolv.Security.Patterns.PatternBase
-      
+
       @impl true
       def pattern do
         %Pattern{
@@ -94,10 +94,10 @@ defmodule Rsolv.Security.Patterns.PatternBaseTest do
           test_cases: %{vulnerable: ["test"], safe: ["test"]}
         }
       end
-      
+
       def vulnerability_metadata, do: %{}
     end
-    
+
     test "cross-language patterns apply to all files" do
       assert CrossLanguagePattern.applies_to_file?("test.js", nil)
       assert CrossLanguagePattern.applies_to_file?("test.py", nil)

@@ -128,13 +128,14 @@ defmodule Rsolv.Billing do
 
   """
   def get_customer_stats(customer_id) do
-    stats = FixAttempt
-    |> where([f], f.customer_id == ^customer_id)
-    |> group_by([f], f.status)
-    |> select([f], {f.status, count(f.id)})
-    |> Repo.all()
-    |> Enum.into(%{})
-    
+    stats =
+      FixAttempt
+      |> where([f], f.customer_id == ^customer_id)
+      |> group_by([f], f.status)
+      |> select([f], {f.status, count(f.id)})
+      |> Repo.all()
+      |> Enum.into(%{})
+
     %{
       total_attempts: Map.values(stats) |> Enum.sum(),
       successful: Map.get(stats, "merged", 0),

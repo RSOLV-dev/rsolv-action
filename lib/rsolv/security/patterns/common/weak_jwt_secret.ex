@@ -1,31 +1,31 @@
 defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
   @moduledoc """
   Weak JWT Secret Detection - Cross-Language Pattern
-  
+
   Detects hardcoded or weak JWT secrets across all languages.
   JWT vulnerabilities are language-agnostic since JWT is a standard
   that can be used in any programming language.
-  
+
   Vulnerable patterns:
   - Hardcoded secrets: jwt.sign(data, "secret123")
   - Weak secrets: SECRET_KEY = "password"
   - Common defaults: process.env.JWT_SECRET || "changeme"
-  
+
   Safe patterns:
   - Strong secrets from environment: process.env.JWT_SECRET (with proper validation)
   - Cryptographically secure secrets: crypto.randomBytes(64).toString('hex')
   - Key rotation mechanisms
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
-  
+
   @doc """
   Returns the pattern definition for weak JWT secrets.
-  
+
   This pattern applies to ALL languages since JWT usage is cross-language.
-  
+
   ## Examples
-  
+
       iex> pattern = Rsolv.Security.Patterns.Common.WeakJwtSecret.pattern()
       iex> pattern.languages
       ["all"]
@@ -36,11 +36,14 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
     %Rsolv.Security.Pattern{
       id: "weak-jwt-secret",
       name: "Weak or Hardcoded JWT Secret",
-      description: "Detects weak, hardcoded, or default JWT secrets that compromise token security",
+      description:
+        "Detects weak, hardcoded, or default JWT secrets that compromise token security",
       type: :jwt,
       severity: :critical,
-      languages: ["all"],  # Applies to all languages
-      frameworks: nil,     # Framework-agnostic
+      # Applies to all languages
+      languages: ["all"],
+      # Framework-agnostic
+      frameworks: nil,
       regex: [
         # Hardcoded secrets in JWT operations
         ~r/jwt\.(?:sign|verify)\s*\([^,]+,\s*["'](?:secret|password|123|admin|default|changeme)/i,
@@ -53,7 +56,8 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
       ],
       cwe_id: "CWE-798",
       owasp_category: "A02:2021",
-      recommendation: "Use strong, randomly generated secrets of at least 256 bits. Store secrets in secure environment variables or key management systems. Implement key rotation.",
+      recommendation:
+        "Use strong, randomly generated secrets of at least 256 bits. Store secrets in secure environment variables or key management systems. Implement key rotation.",
       test_cases: %{
         vulnerable: [
           ~S|jwt.sign(payload, "secret123")|,
@@ -73,41 +77,41 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
       }
     }
   end
-  
+
   @doc """
   Override to handle multi-language files and embedded JWT usage.
   """
-  def applies_to_file?(_file_path, _content ) do
+  def applies_to_file?(_file_path, _content) do
     # This pattern applies to ALL files since JWT can be used anywhere
     true
   end
-  
+
   @doc """
   Comprehensive vulnerability metadata for weak JWT secrets.
-  
+
   This metadata documents the critical security implications of using weak,
   hardcoded, or default JWT secrets across all programming languages.
   """
   def vulnerability_metadata do
     %{
       description: """
-      JSON Web Tokens (JWT) rely on cryptographic signatures to ensure authenticity 
-      and integrity. When weak, hardcoded, or default secrets are used to sign JWTs, 
-      attackers can forge valid tokens, completely bypassing authentication and 
-      authorization mechanisms. This vulnerability is particularly severe because JWTs 
+      JSON Web Tokens (JWT) rely on cryptographic signatures to ensure authenticity
+      and integrity. When weak, hardcoded, or default secrets are used to sign JWTs,
+      attackers can forge valid tokens, completely bypassing authentication and
+      authorization mechanisms. This vulnerability is particularly severe because JWTs
       are often used for stateless authentication across distributed systems.
-      
+
       The vulnerability manifests in several ways:
       1. Hardcoded secrets in source code (e.g., jwt.sign(data, "secret123"))
       2. Default fallback values (e.g., process.env.JWT_SECRET || "changeme")
       3. Weak secrets that can be brute-forced (e.g., common words, short strings)
       4. Secrets stored in public repositories or client-side code
-      
+
       Modern JWT cracking tools can test millions of weak secrets per second, making
       short or predictable secrets completely insecure. Once an attacker discovers
       the secret, they can forge tokens with arbitrary claims, impersonate any user,
       escalate privileges, and maintain persistent access to the system.
-      
+
       This vulnerability is language-agnostic and affects any system using JWT,
       regardless of the programming language or framework.
       """,
@@ -128,7 +132,8 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
           type: :owasp,
           id: "jwt_cheat_sheet",
           title: "JSON Web Token for Java Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html"
         },
         %{
           type: :research,
@@ -173,7 +178,8 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
         },
         %{
           id: "CVE-2018-0114",
-          description: "PyJWT library vulnerability allowing authentication bypass via weak secrets",
+          description:
+            "PyJWT library vulnerability allowing authentication bypass via weak secrets",
           severity: "high",
           cvss: 7.5,
           note: "Popular Python JWT library vulnerable to weak secret exploitation"
@@ -195,12 +201,12 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
       ],
       detection_notes: """
       This pattern detects weak JWT secrets through multiple regex patterns:
-      
+
       1. Direct hardcoded secrets in JWT operations (jwt.sign with literal strings)
       2. Weak secret assignments to common variable names (JWT_SECRET, SECRET_KEY)
       3. Default fallback patterns using OR operators (|| "changeme")
       4. Short secrets (less than 16 characters) assigned to JWT-related variables
-      
+
       The pattern is language-agnostic and searches for common JWT library usage
       patterns across all major programming languages. It focuses on detecting
       obviously weak secrets that violate security best practices.
@@ -259,19 +265,19 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual weak JWT secrets and
   legitimate uses of JWT libraries with proper secret management.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Common.WeakJwtSecret.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Common.WeakJwtSecret.ast_enhancement()
       iex> enhancement.min_confidence
       0.9
@@ -297,32 +303,57 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
         ],
         # Check for weak secret patterns
         weak_secret_indicators: [
-          "secret", "password", "123", "admin", "default", "changeme",
-          "test", "demo", "example", "sample", "temp", "todo"
+          "secret",
+          "password",
+          "123",
+          "admin",
+          "default",
+          "changeme",
+          "test",
+          "demo",
+          "example",
+          "sample",
+          "temp",
+          "todo"
         ]
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/examples/, ~r/docs/],
         exclude_if_contains: ["// not for production", "# development only"],
         high_risk_indicators: [
-          "production", "prod", "live", "release",
-          "authentication", "auth", "security"
+          "production",
+          "prod",
+          "live",
+          "release",
+          "authentication",
+          "auth",
+          "security"
         ]
       },
       confidence_rules: %{
-        base: 0.8,  # High base - weak secrets are critical
+        # High base - weak secrets are critical
+        base: 0.8,
         adjustments: %{
-          "hardcoded_literal" => 0.2,      # Direct string literals
-          "weak_secret_pattern" => 0.15,   # Contains weak patterns
-          "short_secret" => 0.2,           # Less than 16 chars
-          "in_production_code" => 0.1,     # Production indicators
-          "has_fallback" => 0.15,          # OR operator fallbacks
-          "environment_variable" => -0.7,  # Proper env var usage
-          "from_key_store" => -0.8,        # Key management system
-          "strong_secret_pattern" => -0.6  # Looks cryptographically strong
+          # Direct string literals
+          "hardcoded_literal" => 0.2,
+          # Contains weak patterns
+          "weak_secret_pattern" => 0.15,
+          # Less than 16 chars
+          "short_secret" => 0.2,
+          # Production indicators
+          "in_production_code" => 0.1,
+          # OR operator fallbacks
+          "has_fallback" => 0.15,
+          # Proper env var usage
+          "environment_variable" => -0.7,
+          # Key management system
+          "from_key_store" => -0.8,
+          # Looks cryptographically strong
+          "strong_secret_pattern" => -0.6
         }
       },
-      min_confidence: 0.9  # High threshold - only report very likely issues
+      # High threshold - only report very likely issues
+      min_confidence: 0.9
     }
   end
 end

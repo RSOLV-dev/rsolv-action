@@ -1,25 +1,25 @@
 defmodule Rsolv.AST.IntegrationTest do
   use Rsolv.IntegrationCase
-  
+
   alias Rsolv.AST.{AnalysisService, SessionManager, PortSupervisor}
   alias Rsolv.Security.PatternRegistry
-  
+
   setup do
     # Start required services if not running
     if Process.whereis(Rsolv.Security.PatternServer) == nil do
       {:ok, _} = start_supervised(Rsolv.Security.PatternServer)
     end
-    
+
     if Process.whereis(Rsolv.AST.AnalysisService) == nil do
       {:ok, _} = start_supervised(Rsolv.AST.AnalysisService)
     end
-    
+
     # Create a session
     {:ok, session} = SessionManager.create_session("test-customer")
-    
+
     {:ok, session: session}
   end
-  
+
   describe "full analysis flow" do
     test "detects SQL injection in JavaScript using AST patterns", %{session: _session} do
       # Create a JavaScript file with SQL injection vulnerability
@@ -33,22 +33,23 @@ defmodule Rsolv.AST.IntegrationTest do
         }
         """
       }
-      
+
       # Analyze with security patterns enabled
       options = %{"includeSecurityPatterns" => true}
-      
+
       {:ok, findings} = AnalysisService.analyze_file(file, options)
-      
+
       # Should detect SQL injection
       assert length(findings) > 0
-      
+
       sql_injection = Enum.find(findings, &(&1.type == "js-sql-injection-concat"))
       assert sql_injection != nil
       assert sql_injection.severity == "high"
       assert sql_injection.confidence >= 0.7
-      assert sql_injection.location.startLine == 2  # Line with concatenation
+      # Line with concatenation
+      assert sql_injection.location.startLine == 2
     end
-    
+
     test "skips vendor files", %{session: _session} do
       # Create a vendor file
       file = %{
@@ -59,15 +60,15 @@ defmodule Rsolv.AST.IntegrationTest do
         const query = "SELECT * FROM users WHERE id = " + userId;
         """
       }
-      
+
       options = %{"includeSecurityPatterns" => true}
-      
+
       {:ok, findings} = AnalysisService.analyze_file(file, options)
-      
+
       # Should skip vendor files
       assert findings == []
     end
-    
+
     test "respects confidence thresholds", %{session: _session} do
       # Create a file with potential false positive
       file = %{
@@ -79,15 +80,15 @@ defmodule Rsolv.AST.IntegrationTest do
         console.log(message + userChoice);
         """
       }
-      
+
       options = %{"includeSecurityPatterns" => true}
-      
+
       {:ok, findings} = AnalysisService.analyze_file(file, options)
-      
+
       # Should not report low-confidence matches
-      assert length(findings) == 0
+      assert Enum.empty?(findings)
     end
-    
+
     test "includes context information in findings", %{session: _session} do
       file = %{
         path: "app.js",
@@ -99,34 +100,35 @@ defmodule Rsolv.AST.IntegrationTest do
         }
         """
       }
-      
+
       options = %{"includeSecurityPatterns" => true}
-      
+
       {:ok, findings} = AnalysisService.analyze_file(file, options)
-      
+
       assert length(findings) > 0
-      
+
       eval_finding = Enum.find(findings, &String.contains?(&1.type, "eval"))
       assert eval_finding != nil
       assert eval_finding.context.nodeType != nil
       assert eval_finding.context.inTestFile == false
     end
-    
+
     test "handles syntax errors gracefully", %{session: _session} do
       file = %{
         path: "broken.js",
         language: "javascript",
-        content: "function broken( {"  # Invalid syntax
+        # Invalid syntax
+        content: "function broken( {"
       }
-      
+
       options = %{"includeSecurityPatterns" => true}
-      
+
       result = AnalysisService.analyze_file(file, options)
       assert {:error, {:parser_error, %{type: "ParseError", message: message}}} = result
       assert message.type == :syntax_error
       assert message.message != nil
     end
-    
+
     test "works with multiple languages", %{session: _session} do
       # Test Python file
       python_file = %{
@@ -138,54 +140,56 @@ defmodule Rsolv.AST.IntegrationTest do
             return db.execute(query)
         """
       }
-      
+
       options = %{"includeSecurityPatterns" => true}
-      
+
       {:ok, findings} = AnalysisService.analyze_file(python_file, options)
-      
+
       # Should detect SQL injection in Python
       assert length(findings) > 0
       sql_finding = Enum.find(findings, &String.contains?(&1.type, "sql"))
       assert sql_finding != nil
     end
   end
-  
+
   describe "performance" do
     test "analyzes files within performance budget", %{session: _session} do
       # Create 10 test files
-      files = for i <- 1..10 do
-        %{
-          path: "file#{i}.js",
-          language: "javascript",
-          content: """
-          function process#{i}(data) {
-            // Some code
-            const result = data.map(x => x * 2);
-            return result;
+      files =
+        for i <- 1..10 do
+          %{
+            path: "file#{i}.js",
+            language: "javascript",
+            content: """
+            function process#{i}(data) {
+              // Some code
+              const result = data.map(x => x * 2);
+              return result;
+            }
+            """
           }
-          """
-        }
-      end
-      
+        end
+
       options = %{"includeSecurityPatterns" => true}
-      
+
       start_time = System.monotonic_time(:millisecond)
-      
+
       # Analyze all files
-      results = Enum.map(files, fn file ->
-        AnalysisService.analyze_file(file, options)
-      end)
-      
+      results =
+        Enum.map(files, fn file ->
+          AnalysisService.analyze_file(file, options)
+        end)
+
       end_time = System.monotonic_time(:millisecond)
       total_time = end_time - start_time
-      
+
       # Should complete within 2 seconds
       assert total_time < 2000
-      
+
       # All should succeed
       assert Enum.all?(results, fn result ->
-        match?({:ok, _}, result)
-      end)
+               match?({:ok, _}, result)
+             end)
     end
   end
 end

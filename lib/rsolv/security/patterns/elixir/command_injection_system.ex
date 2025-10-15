@@ -1,29 +1,29 @@
 defmodule Rsolv.Security.Patterns.Elixir.CommandInjectionSystem do
   @moduledoc """
   Detects OS command injection vulnerabilities in Elixir system calls.
-  
+
   This pattern identifies dangerous usage of `System.shell/1`, `:os.cmd/1`, and related
   functions where user input or dynamic command construction could lead to command injection.
-  
+
   ## Vulnerability Details
-  
+
   Command injection occurs when an application passes unsafe user input to system functions
   that execute operating system commands.
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   System.shell("cat " <> file_name)
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   System.cmd("cat", [file_name])
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -74,7 +74,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CommandInjectionSystem do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -90,7 +90,8 @@ defmodule Rsolv.Security.Patterns.Elixir.CommandInjectionSystem do
         %{
           type: :cwe,
           id: "CWE-78",
-          title: "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
           url: "https://cwe.mitre.org/data/definitions/78.html"
         },
         %{
@@ -127,7 +128,8 @@ defmodule Rsolv.Security.Patterns.Elixir.CommandInjectionSystem do
       cve_examples: [
         %{
           id: "CVE-2023-4444",
-          description: "Phoenix application command injection via System.shell in file processing",
+          description:
+            "Phoenix application command injection via System.shell in file processing",
           severity: "critical",
           cvss: 9.8,
           note: "Remote code execution through unsanitized file path in System.shell call"
@@ -135,7 +137,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CommandInjectionSystem do
         %{
           id: "CVE-2022-5555",
           description: "Elixir application command injection in backup utility via :os.cmd",
-          severity: "high", 
+          severity: "high",
           cvss: 8.1,
           note: "Command injection in backup script allowing arbitrary command execution"
         }
@@ -165,7 +167,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CommandInjectionSystem do
       }
     }
   end
-  
+
   @impl true
   def ast_enhancement do
     %{

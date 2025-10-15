@@ -1,39 +1,39 @@
 defmodule Rsolv.Security.Patterns.Java.CommandInjectionRuntimeExec do
   @moduledoc """
   Command Injection via Runtime.exec pattern for Java code.
-  
+
   Detects command injection vulnerabilities where user input is concatenated directly
   into commands executed via Runtime.exec(). This can lead to arbitrary command execution
   with the privileges of the Java application.
-  
+
   ## Vulnerability Details
-  
+
   Command injection occurs when untrusted user input is incorporated into system commands
   without proper sanitization. In Java, Runtime.exec() is commonly used to execute
   external programs. When user input is concatenated directly into the command string,
   attackers can inject additional commands or modify the intended command behavior.
-  
+
   ### Attack Example
-  
+
   ```java
   // Vulnerable code
   String hostname = request.getParameter("host");
   Runtime.getRuntime().exec("ping " + hostname);
-  
+
   // Attack: hostname = "127.0.0.1; rm -rf /"
   // Results in: ping 127.0.0.1; rm -rf /
   // Executes both ping and rm commands
   ```
-  
+
   ## References
-  
+
   - CWE-78: Improper Neutralization of Special Elements used in an OS Command
   - OWASP A03:2021 - Injection
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -81,7 +81,7 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -89,12 +89,12 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
       Command injection is a critical security vulnerability that occurs when an application
       passes unsafe user-supplied data to a system shell. In Java, this commonly happens
       through Runtime.exec() when commands are constructed using string concatenation.
-      
+
       The vulnerability allows attackers to execute arbitrary commands on the host operating
       system with the privileges of the Java application. This can lead to complete system
       compromise, data theft, service disruption, or using the compromised system as a
       pivot point for further attacks.
-      
+
       Runtime.exec() is particularly dangerous because it passes the command string to the
       system shell, which interprets special characters like semicolons, pipes, and
       redirections as command separators and operators.
@@ -103,7 +103,8 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
         %{
           type: :cwe,
           id: "CWE-78",
-          title: "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+          title:
+            "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
           url: "https://cwe.mitre.org/data/definitions/78.html"
         },
         %{
@@ -122,7 +123,8 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
           type: :research,
           id: "java_secure_coding",
           title: "IDS07-J. Sanitize untrusted data passed to the Runtime.exec() method",
-          url: "https://wiki.sei.cmu.edu/confluence/display/java/IDS07-J.+Sanitize+untrusted+data+passed+to+the+Runtime.exec%28%29+method"
+          url:
+            "https://wiki.sei.cmu.edu/confluence/display/java/IDS07-J.+Sanitize+untrusted+data+passed+to+the+Runtime.exec%28%29+method"
         },
         %{
           type: :tool,
@@ -160,7 +162,8 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
         },
         %{
           id: "CVE-2021-44228",
-          description: "Log4Shell - While primarily JNDI injection, often chained with command injection",
+          description:
+            "Log4Shell - While primarily JNDI injection, often chained with command injection",
           severity: "critical",
           cvss: 10.0,
           note: "Widespread impact, used Runtime.exec() in exploit chains"
@@ -188,7 +191,7 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
       - Shell invocation patterns (sh -c, cmd /c) with user input
       - StringBuilder/StringBuffer patterns building commands
       - Pipeline and redirection operators with concatenation
-      
+
       The pattern looks for concatenation operators (+) near command execution
       contexts and common command names to identify potential injection points.
       """,
@@ -229,23 +232,23 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual command injection vulnerabilities
   and safe command execution patterns like static commands or properly parameterized calls.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Java.CommandInjectionRuntimeExec.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.CommandInjectionRuntimeExec.ast_enhancement()
       iex> enhancement.min_confidence
       0.75
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.CommandInjectionRuntimeExec.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"
@@ -276,8 +279,14 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
         variable_analysis: %{
           check_user_input_sources: true,
           input_sources: [
-            "getParameter", "getHeader", "getCookie", "getQueryString",
-            "getInputStream", "getReader", "readLine", "nextLine"
+            "getParameter",
+            "getHeader",
+            "getCookie",
+            "getQueryString",
+            "getInputStream",
+            "getReader",
+            "readLine",
+            "nextLine"
           ],
           check_variable_flow: true
         }
@@ -285,8 +294,10 @@ ProcessBuilder pb = new ProcessBuilder(cmd);|
       context_rules: %{
         check_constant_commands: true,
         safe_exec_patterns: [
-          "exec(String[])",  # Array-based exec
-          "exec(new String[])",  # Explicit array construction
+          # Array-based exec
+          "exec(String[])",
+          # Explicit array construction
+          "exec(new String[])",
           "No concatenation in command"
         ],
         processbuilder_usage: [

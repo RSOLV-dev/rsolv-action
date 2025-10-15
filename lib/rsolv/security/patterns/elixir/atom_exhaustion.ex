@@ -29,13 +29,13 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
   ```elixir
   # VULNERABLE - direct user input to atom conversion
   String.to_atom(user_input)
-  
+
   # VULNERABLE - JSON decode with atom keys from untrusted source
   Jason.decode!(user_json, keys: :atoms)
-  
-  # VULNERABLE - interpolation with user data  
+
+  # VULNERABLE - interpolation with user data
   String.to_atom("prefix_\#{user_controlled_value}")
-  
+
   # VULNERABLE - pattern matching with dynamic atoms
   case String.to_atom(user_role) do
     :admin -> :ok
@@ -47,15 +47,15 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
   ```elixir
   # SAFE - only use existing atoms
   String.to_existing_atom(validated_input)
-  
+
   # SAFE - JSON decode with string keys (default)
   Jason.decode!(user_json)
-  
+
   # SAFE - validate against known atoms first
   if user_role in ["admin", "user", "guest"] do
     String.to_existing_atom(user_role)
   end
-  
+
   # SAFE - use :atoms! for known static keys only
   Jason.decode!(trusted_config, keys: :atoms!)
   ```
@@ -90,7 +90,8 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
     %Rsolv.Security.Pattern{
       id: "elixir-atom-exhaustion",
       name: "Atom Table Exhaustion Risk",
-      description: "Unsafe atom creation from user input that can exhaust the atom table and crash the VM",
+      description:
+        "Unsafe atom creation from user input that can exhaust the atom table and crash the VM",
       type: :resource_exhaustion,
       severity: :high,
       languages: ["elixir"],
@@ -100,28 +101,29 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
         ~r/Jason\.decode!?\s*\([^,]+,\s*keys:\s*:atoms\s*\)/,
         ~r/Poison\.decode!?\s*\([^,]+,\s*keys:\s*:atoms\s*\)/,
         ~r/JSON\.decode!?\s*\([^,]+,\s*keys:\s*:atoms\s*\)/,
-        
+
         # Direct atom creation from user input patterns
         ~r/String\.to_atom\s*\(\s*[^)]*(?:user_|input|param|request|data)/i,
         ~r/binary_to_atom\s*\(\s*[^)]*(?:user_|input|param|request|data)/i,
         ~r/List\.to_atom\s*\(\s*[^)]*(?:user_|input|param|request|data)/i,
-        
+
         # Atom creation with interpolation that might include user data
         ~r/String\.to_atom\s*\(\s*["'][^"']*#\{[^}]*\}/,
         ~r/binary_to_atom\s*\(\s*["'][^"']*#\{[^}]*\}/,
-        
+
         # Pattern matching or case statements with dynamic atoms
         ~r/case\s+String\.to_atom\s*\(/,
         ~r/with\s+[^<]*<-\s*String\.to_atom\s*\(/,
         ~r/String\.to_atom\s*\([^)]+\)\s+do/,
-        
+
         # Function calls that might create atoms from external input
         ~r/String\.to_atom\s*\(\s*(?!["']\w+["'])[^)]+\)/,
         ~r/binary_to_atom\s*\(\s*(?!["']\w+["'])[^)]+\)/
       ],
       cwe_id: "CWE-400",
       owasp_category: "A05:2021",
-      recommendation: "Use String.to_existing_atom/1, Jason.decode/1 without :atoms, or validate input against known atom lists",
+      recommendation:
+        "Use String.to_existing_atom/1, Jason.decode/1 without :atoms, or validate input against known atom lists",
       test_cases: %{
         vulnerable: [
           ~S|Jason.decode!(user_input, keys: :atoms)|,
@@ -151,7 +153,7 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
       business_impact: """
       Critical: Atom table exhaustion can cause:
       - Complete system crash and unavailability
-      - Cascading failures in distributed systems  
+      - Cascading failures in distributed systems
       - Data loss from ungraceful shutdowns
       - Emergency restarts and service interruption
       - Potential for targeted DoS with minimal attacker resources
@@ -164,7 +166,8 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
       - Inability to recover without full system restart
       - Potential distributed system failure propagation
       """,
-      likelihood: "Medium: Common when processing untrusted JSON or user input without proper validation",
+      likelihood:
+        "Medium: Common when processing untrusted JSON or user input without proper validation",
       cve_examples: [
         "GHSA-mj35-2rgf-cv8p: OpenID Connect client Atom Exhaustion vulnerability",
         "CWE-400: Uncontrolled Resource Consumption patterns",
@@ -209,7 +212,7 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
     }
   end
 
-  @impl true  
+  @impl true
   def ast_enhancement do
     %{
       min_confidence: 0.8,
@@ -232,7 +235,7 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
         check_user_input_context: true,
         json_libraries: [
           "Jason",
-          "Poison", 
+          "Poison",
           "JSON"
         ],
         unsafe_atom_functions: [

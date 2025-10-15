@@ -13,7 +13,7 @@ defmodule RsolvWeb.Api.V1.PatternController do
   plug RsolvWeb.Plugs.ApiAuthentication, optional: true
   plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
 
-  tags ["Patterns"]
+  tags(["Patterns"])
 
   operation(:index,
     summary: "List security patterns",
@@ -32,7 +32,8 @@ defmodule RsolvWeb.Api.V1.PatternController do
     parameters: [
       language: [
         in: :query,
-        description: "Programming language (javascript, typescript, python, ruby, java, php, go, elixir)",
+        description:
+          "Programming language (javascript, typescript, python, ruby, java, php, go, elixir)",
         type: :string,
         example: "javascript"
       ],
@@ -128,53 +129,53 @@ defmodule RsolvWeb.Api.V1.PatternController do
           {DemoPatterns.get_demo_patterns(language), true}
         end
 
-        Logger.info("Retrieved #{length(patterns)} patterns")
+      Logger.info("Retrieved #{length(patterns)} patterns")
 
-        # Convert patterns to API format (removing tier information)
-        formatted_patterns =
-          Enum.map(patterns, fn pattern ->
-            Logger.debug("Formatting pattern: #{inspect(pattern.id)}")
-            # Demo patterns should never have enhanced format
-            effective_format = if is_demo, do: :standard, else: format
-            formatted = format_pattern_without_tier(pattern, effective_format)
-            Logger.debug("Formatted pattern keys: #{inspect(Map.keys(formatted))}")
+      # Convert patterns to API format (removing tier information)
+      formatted_patterns =
+        Enum.map(patterns, fn pattern ->
+          Logger.debug("Formatting pattern: #{inspect(pattern.id)}")
+          # Demo patterns should never have enhanced format
+          effective_format = if is_demo, do: :standard, else: format
+          formatted = format_pattern_without_tier(pattern, effective_format)
+          Logger.debug("Formatted pattern keys: #{inspect(Map.keys(formatted))}")
 
-            # Add vulnerability metadata if requested
-            if include_metadata do
-              add_vulnerability_metadata(formatted, pattern)
-            else
-              formatted
-            end
-          end)
-
-        # Build metadata without tier information
-        metadata = %{
-          language: language,
-          format: to_string(format),
-          count: length(formatted_patterns),
-          enhanced: format == :enhanced,
-          access_level: if(customer, do: "full", else: "demo")
-        }
-
-        # Prepare the response data for JSON encoding
-        response_data = %{
-          patterns: formatted_patterns,
-          metadata: metadata
-        }
-
-        # Use JSONSerializer for enhanced format to handle regex objects
-        json_data =
-          if format == :enhanced do
-            JSONSerializer.encode!(response_data)
+          # Add vulnerability metadata if requested
+          if include_metadata do
+            add_vulnerability_metadata(formatted, pattern)
           else
-            # Standard format doesn't have regex, so native JSON is fine
-            JSON.encode!(response_data)
+            formatted
           end
+        end)
 
-        conn
-        |> put_resp_header("x-pattern-version", "2.0")
-        |> put_resp_header("content-type", "application/json")
-        |> send_resp(200, json_data)
+      # Build metadata without tier information
+      metadata = %{
+        language: language,
+        format: to_string(format),
+        count: length(formatted_patterns),
+        enhanced: format == :enhanced,
+        access_level: if(customer, do: "full", else: "demo")
+      }
+
+      # Prepare the response data for JSON encoding
+      response_data = %{
+        patterns: formatted_patterns,
+        metadata: metadata
+      }
+
+      # Use JSONSerializer for enhanced format to handle regex objects
+      json_data =
+        if format == :enhanced do
+          JSONSerializer.encode!(response_data)
+        else
+          # Standard format doesn't have regex, so native JSON is fine
+          JSON.encode!(response_data)
+        end
+
+      conn
+      |> put_resp_header("x-pattern-version", "2.0")
+      |> put_resp_header("content-type", "application/json")
+      |> send_resp(200, json_data)
     rescue
       e ->
         # Log the error for debugging
@@ -290,7 +291,8 @@ defmodule RsolvWeb.Api.V1.PatternController do
       ]
     ],
     responses: [
-      ok: {"Patterns retrieved successfully (enhanced format)", "application/json", PatternResponse},
+      ok:
+        {"Patterns retrieved successfully (enhanced format)", "application/json", PatternResponse},
       unauthorized: {"Invalid API key", "application/json", ErrorResponse}
     ],
     security: [%{}, %{"ApiKeyAuth" => []}]
@@ -304,7 +306,6 @@ defmodule RsolvWeb.Api.V1.PatternController do
     enhanced_params = Map.put(params, "format", "enhanced")
     index(conn, enhanced_params)
   end
-
 
   # Handle ASTPattern structs (returned by enhanced format)
   defp format_pattern_without_tier(%Rsolv.Security.ASTPattern{} = ast_pattern, :enhanced) do
@@ -463,10 +464,11 @@ defmodule RsolvWeb.Api.V1.PatternController do
 
     Map.put(formatted_pattern, "vulnerability_metadata", vulnerability_metadata)
   end
-  
+
   operation(:metadata,
     summary: "Get pattern metadata",
-    description: "Get detailed metadata for a specific pattern including references and attack vectors",
+    description:
+      "Get detailed metadata for a specific pattern including references and attack vectors",
     parameters: [
       id: [
         in: :path,
@@ -477,7 +479,8 @@ defmodule RsolvWeb.Api.V1.PatternController do
       ]
     ],
     responses: [
-      ok: {"Pattern metadata retrieved successfully", "application/json", PatternMetadataResponse},
+      ok:
+        {"Pattern metadata retrieved successfully", "application/json", PatternMetadataResponse},
       not_found: {"Pattern not found", "application/json", ErrorResponse}
     ],
     security: [%{}, %{"ApiKeyAuth" => []}]
@@ -490,12 +493,12 @@ defmodule RsolvWeb.Api.V1.PatternController do
         conn
         |> put_status(:not_found)
         |> json(%{error: "Pattern not found"})
-      
+
       metadata ->
         json(conn, metadata)
     end
   end
-  
+
   defp get_pattern_metadata("js-sql-injection-concat") do
     %{
       pattern_id: "js-sql-injection-concat",
@@ -514,7 +517,7 @@ defmodule RsolvWeb.Api.V1.PatternController do
       cve_examples: []
     }
   end
-  
+
   defp get_pattern_metadata("js-sql-injection-interpolation") do
     %{
       pattern_id: "js-sql-injection-interpolation",
@@ -533,7 +536,8 @@ defmodule RsolvWeb.Api.V1.PatternController do
         %{
           type: "article",
           id: "sql-injection-prevention",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
         },
         %{
           type: "nist",
@@ -563,7 +567,7 @@ defmodule RsolvWeb.Api.V1.PatternController do
       }
     }
   end
-  
+
   defp get_pattern_metadata("js-xss-document-write") do
     %{
       pattern_id: "js-xss-document-write",
@@ -582,7 +586,8 @@ defmodule RsolvWeb.Api.V1.PatternController do
         %{
           type: "article",
           id: "dom-xss-prevention",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html"
         },
         %{
           type: "mdn",
@@ -613,7 +618,7 @@ defmodule RsolvWeb.Api.V1.PatternController do
       }
     }
   end
-  
+
   defp get_pattern_metadata("js-xss-innerhtml") do
     %{
       pattern_id: "js-xss-innerhtml",
@@ -631,7 +636,7 @@ defmodule RsolvWeb.Api.V1.PatternController do
       cve_examples: []
     }
   end
-  
+
   defp get_pattern_metadata("js-command-injection-exec") do
     %{
       pattern_id: "js-command-injection-exec",
@@ -653,7 +658,7 @@ defmodule RsolvWeb.Api.V1.PatternController do
       ]
     }
   end
-  
+
   defp get_pattern_metadata("js-xss-dom"), do: nil
   defp get_pattern_metadata(_), do: nil
 end

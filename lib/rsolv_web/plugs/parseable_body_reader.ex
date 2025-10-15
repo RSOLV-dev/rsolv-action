@@ -10,7 +10,7 @@ defmodule RsolvWeb.Plugs.ParseableBodyReader do
         # Store the raw body for webhook signature verification
         conn = Plug.Conn.assign(conn, :raw_body, body)
         {:ok, body, conn}
-      
+
       other ->
         other
     end

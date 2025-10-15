@@ -1,26 +1,26 @@
 defmodule Rsolv.Security.Patterns.Django.Cve202013254 do
   @moduledoc """
   Django CVE-2020-13254 - Cache Key Injection Leading to Data Leakage
-  
-  This pattern detects Django applications vulnerable to CVE-2020-13254, where 
-  malformed cache keys can result in key collision and potential data leakage 
+
+  This pattern detects Django applications vulnerable to CVE-2020-13254, where
+  malformed cache keys can result in key collision and potential data leakage
   when using memcached backends that do not perform key validation.
-  
+
   ## Vulnerability Details
-  
+
   The vulnerability affects Django versions:
   - 2.2 before 2.2.13
   - 3.0 before 3.0.7
-  
-  When using memcached backends that don't validate cache keys, passing malformed 
-  keys (containing spaces, control characters, or other invalid characters) can 
-  result in key collisions, leading to data leakage where one user's cached data 
+
+  When using memcached backends that don't validate cache keys, passing malformed
+  keys (containing spaces, control characters, or other invalid characters) can
+  result in key collisions, leading to data leakage where one user's cached data
   could be retrieved by another user.
-  
+
   ### Attack Example
   ```python
   from django.core.cache import cache
-  
+
   # Vulnerable: User-controlled cache key without validation
   def get_user_data(request):
       cache_key = request.GET.get('key')  # Could be "user:123\\nuser:456"
@@ -29,19 +29,19 @@ defmodule Rsolv.Security.Patterns.Django.Cve202013254 do
           cached_data = expensive_operation()
           cache.set(cache_key, cached_data)  # Key collision possible
       return cached_data
-  
+
   # Attack scenario:
   # 1. Legitimate user: cache.set("user:123", sensitive_data)
-  # 2. Attacker: cache.get("user:123\\x00user:456") 
+  # 2. Attacker: cache.get("user:123\\x00user:456")
   #    - In some memcached configs, this could collide with "user:123"
   #    - Attacker retrieves sensitive_data meant for user 123
   ```
-  
+
   ### Safe Example
   ```python
   import hashlib
   from django.core.cache import cache
-  
+
   # Safe: Hash user input to create valid cache keys
   def get_user_data(request):
       raw_key = request.GET.get('key', '')
@@ -53,7 +53,7 @@ defmodule Rsolv.Security.Patterns.Django.Cve202013254 do
       return cached_data
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
 
@@ -62,7 +62,8 @@ defmodule Rsolv.Security.Patterns.Django.Cve202013254 do
     %Pattern{
       id: "django-cve-2020-13254",
       name: "Django CVE-2020-13254 - Cache Key Injection",
-      description: "Malformed cache keys can lead to data leakage via key collision in memcached backend",
+      description:
+        "Malformed cache keys can lead to data leakage via key collision in memcached backend",
       type: :information_disclosure,
       severity: :medium,
       languages: ["python"],
@@ -80,7 +81,8 @@ defmodule Rsolv.Security.Patterns.Django.Cve202013254 do
       ],
       cwe_id: "CWE-74",
       owasp_category: "A03:2021",
-      recommendation: "Update Django to 3.0.7+ or 2.2.13+. Validate and sanitize cache keys before use.",
+      recommendation:
+        "Update Django to 3.0.7+ or 2.2.13+. Validate and sanitize cache keys before use.",
       test_cases: %{
         vulnerable: [
           ~s|cache.set(request.GET['key'], value)|,
@@ -106,17 +108,17 @@ cache.set(f"prefix_{safe_key}", value)|
   def vulnerability_metadata do
     %{
       description: """
-      CVE-2020-13254 affects Django applications using memcached backends that do not perform 
-      proper memcached key validation. When malformed cache keys containing spaces, control characters, 
-      or other invalid memcached key characters are passed to cache operations, it can result 
+      CVE-2020-13254 affects Django applications using memcached backends that do not perform
+      proper memcached key validation. When malformed cache keys containing spaces, control characters,
+      or other invalid memcached key characters are passed to cache operations, it can result
       in key collisions and potential data leakage.
-      
-      The vulnerability occurs because some memcached configurations interpret certain character 
-      sequences as key separators or terminators, causing different user-provided keys to map 
-      to the same internal cache key. This allows attackers to access cached data intended for 
+
+      The vulnerability occurs because some memcached configurations interpret certain character
+      sequences as key separators or terminators, causing different user-provided keys to map
+      to the same internal cache key. This allows attackers to access cached data intended for
       other users or sessions.
-      
-      Dan Palmer, who discovered this vulnerability, demonstrated that malformed keys could lead 
+
+      Dan Palmer, who discovered this vulnerability, demonstrated that malformed keys could lead
       to cache pollution and unauthorized data access in production Django applications.
       """,
       references: [
@@ -129,7 +131,8 @@ cache.set(f"prefix_{safe_key}", value)|
         %{
           type: :cwe,
           id: "CWE-74",
-          title: "Improper Neutralization of Special Elements in Output Used by a Downstream Component ('Injection')",
+          title:
+            "Improper Neutralization of Special Elements in Output Used by a Downstream Component ('Injection')",
           url: "https://cwe.mitre.org/data/definitions/74.html"
         },
         %{
@@ -168,7 +171,8 @@ cache.set(f"prefix_{safe_key}", value)|
       cve_examples: [
         %{
           id: "CVE-2020-13254",
-          description: "Django cache key injection vulnerability allowing data leakage via memcached key collision",
+          description:
+            "Django cache key injection vulnerability allowing data leakage via memcached key collision",
           severity: "medium",
           cvss: 5.9,
           note: "NIST CVSS 3.1 score - impacts confidentiality with medium severity"
@@ -181,8 +185,8 @@ cache.set(f"prefix_{safe_key}", value)|
       3. User input incorporated into cache key construction
       4. Patterns where Django cache operations use unsanitized user input
       5. Cache operations in views that don't validate key formats
-      
-      The pattern focuses on identifying code where user-controllable data flows directly 
+
+      The pattern focuses on identifying code where user-controllable data flows directly
       into cache key parameters without proper sanitization or validation.
       """,
       safe_alternatives: [
@@ -227,7 +231,8 @@ cache.set(f"prefix_{safe_key}", value)|
             ~r/re\.sub\s*\(\s*.*,\s*.*,\s*.*key/,
             ~r/Django.*3\.0\.7|Django.*2\.2\.13/
           ],
-          description: "Exclude if using static keys, hashing, sanitization, or patched Django versions"
+          description:
+            "Exclude if using static keys, hashing, sanitization, or patched Django versions"
         },
         %{
           type: :validation,

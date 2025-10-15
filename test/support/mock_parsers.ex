@@ -3,7 +3,7 @@ defmodule Rsolv.AST.MockParsers do
   Mock parsers for testing without external dependencies.
   Returns pre-defined AST structures for known test cases.
   """
-  
+
   def python_ast(:simple) do
     %{
       "_type" => "Module",
@@ -40,7 +40,7 @@ defmodule Rsolv.AST.MockParsers do
       }
     }
   end
-  
+
   def python_ast(:sql_injection_vulnerable) do
     %{
       "_type" => "Module",
@@ -66,10 +66,16 @@ defmodule Rsolv.AST.MockParsers do
                       "_lineno" => 6,
                       "_fields" => %{
                         "values" => [
-                          %{"_type" => "Constant", "_fields" => %{"value" => "SELECT * FROM users WHERE id = "}},
-                          %{"_type" => "FormattedValue", "_fields" => %{
-                            "value" => %{"_type" => "Name", "_fields" => %{"id" => "user_id"}}
-                          }}
+                          %{
+                            "_type" => "Constant",
+                            "_fields" => %{"value" => "SELECT * FROM users WHERE id = "}
+                          },
+                          %{
+                            "_type" => "FormattedValue",
+                            "_fields" => %{
+                              "value" => %{"_type" => "Name", "_fields" => %{"id" => "user_id"}}
+                            }
+                          }
                         ]
                       }
                     }
@@ -100,7 +106,7 @@ defmodule Rsolv.AST.MockParsers do
       }
     }
   end
-  
+
   def python_ast(:command_injection_vulnerable) do
     %{
       "_type" => "Module",
@@ -137,9 +143,15 @@ defmodule Rsolv.AST.MockParsers do
                             "_fields" => %{
                               "values" => [
                                 %{"_type" => "Constant", "_fields" => %{"value" => "cat "}},
-                                %{"_type" => "FormattedValue", "_fields" => %{
-                                  "value" => %{"_type" => "Name", "_fields" => %{"id" => "filename"}}
-                                }}
+                                %{
+                                  "_type" => "FormattedValue",
+                                  "_fields" => %{
+                                    "value" => %{
+                                      "_type" => "Name",
+                                      "_fields" => %{"id" => "filename"}
+                                    }
+                                  }
+                                }
                               ]
                             }
                           }
@@ -155,7 +167,7 @@ defmodule Rsolv.AST.MockParsers do
       }
     }
   end
-  
+
   def javascript_ast(:simple) do
     %{
       "type" => "Program",
@@ -183,7 +195,7 @@ defmodule Rsolv.AST.MockParsers do
       ]
     }
   end
-  
+
   def javascript_ast(:sql_injection_vulnerable) do
     %{
       "type" => "Program",
@@ -245,7 +257,7 @@ defmodule Rsolv.AST.MockParsers do
       ]
     }
   end
-  
+
   def ruby_ast(:simple) do
     %{
       type: :def,
@@ -256,7 +268,7 @@ defmodule Rsolv.AST.MockParsers do
       ]
     }
   end
-  
+
   def php_ast(:simple) do
     %{
       "nodeType" => "Stmt_Function",
@@ -272,7 +284,7 @@ defmodule Rsolv.AST.MockParsers do
       ]
     }
   end
-  
+
   def java_ast(:simple) do
     %{
       "type" => "CompilationUnit",
@@ -304,17 +316,18 @@ defmodule Rsolv.AST.MockParsers do
       ]
     }
   end
-  
+
   def elixir_ast(:simple) do
     {:defmodule, [line: 1],
      [
        {:__aliases__, [line: 1], [:Hello]},
        [
-         do: {:def, [line: 2],
-          [
-            {:hello, [line: 2], nil},
-            [do: "Hello, World!"]
-          ]}
+         do:
+           {:def, [line: 2],
+            [
+              {:hello, [line: 2], nil},
+              [do: "Hello, World!"]
+            ]}
        ]
      ]}
   end

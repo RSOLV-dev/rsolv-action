@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
   @moduledoc """
   Pattern for detecting hardcoded secrets, passwords, API keys, and credentials in Ruby applications.
-  
+
   This pattern identifies when sensitive credentials are hardcoded directly in source code
   instead of being stored securely in environment variables, key management systems,
   or encrypted configuration files.
-  
+
   ## Vulnerability Details
-  
+
   Hardcoded credentials represent one of the most dangerous security vulnerabilities because
   they expose sensitive information directly in source code. This practice puts applications
   at extreme risk since source code is often:
@@ -15,14 +15,14 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
   - Shared among development teams
   - Deployed to multiple environments
   - Potentially exposed through code leaks or breaches
-  
+
   ### Attack Example
   ```ruby
   # Vulnerable credential storage
   class DatabaseConfig
     PASSWORD = "super_secret_pass123"
     API_KEY = "sk_live_abcdef1234567890"
-    
+
     def connect
       ActiveRecord::Base.establish_connection(
         adapter: "postgresql",
@@ -32,15 +32,15 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
       )
     end
   end
-  
+
   # Attack: Source code access reveals credentials
   # Result: Complete system compromise
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -89,23 +89,23 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
       description: """
-      Hardcoded credentials are sensitive information such as passwords, API keys, 
+      Hardcoded credentials are sensitive information such as passwords, API keys,
       encryption keys, or access tokens that are embedded directly in source code
       rather than stored securely. This practice creates significant security risks
       because:
-      
+
       **Primary Security Risks:**
       - **Source Code Exposure**: Credentials become visible to anyone with code access
       - **Version Control History**: Secrets persist in Git history even after removal
       - **Environment Propagation**: Same credentials used across dev/staging/production
       - **No Rotation Capability**: Hardcoded secrets cannot be easily rotated
       - **Privilege Escalation**: Exposed credentials often have elevated permissions
-      
+
       **Common Hardcoded Credential Types:**
       - Database passwords and connection strings
       - API keys and authentication tokens
@@ -113,7 +113,7 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
       - Cloud service credentials (AWS, Azure, GCP)
       - Third-party service credentials (Stripe, GitHub, etc.)
       - JWT signing secrets and session keys
-      
+
       **Attack Vectors:**
       Attackers can discover hardcoded credentials through:
       - Public code repositories (GitHub, GitLab leaks)
@@ -122,7 +122,7 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
       - CI/CD pipeline artifacts and logs
       - Docker images and container layers
       - Error messages and debug output
-      
+
       **Real-World Impact:**
       The CVE-2013-0156 Rails vulnerability demonstrated how hardcoded secret tokens
       combined with other vulnerabilities can lead to complete system compromise.
@@ -196,7 +196,7 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
         %{
           id: "CVE-2019-5418",
           description: "Rails file content disclosure with path traversal",
-          severity: "high", 
+          severity: "high",
           cvss: 7.5,
           note: "Could expose configuration files containing hardcoded credentials"
         },
@@ -224,30 +224,30 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
       ],
       detection_notes: """
       This pattern detects hardcoded credentials through multiple regex patterns targeting:
-      
+
       **Variable Assignment Patterns:**
       - password, pwd, pass assignments with string literals
       - api_key, apikey, key assignments with alphanumeric strings
       - secret, secret_key assignments with complex string values
-      
+
       **Cloud Provider Credentials:**
       - AWS_ACCESS_KEY_ID with AKIA prefix pattern
       - AWS_SECRET_ACCESS_KEY with base64-like 40-character strings
       - Other cloud service credential patterns
-      
+
       **Authentication Tokens:**
       - Bearer tokens, auth tokens, access tokens
       - GitHub personal access tokens (ghp_, gho_, etc.)
       - Stripe API keys (sk_, pk_ prefixes)
-      
+
       **Database and Service URLs:**
       - Connection strings with embedded credentials
       - Redis URLs with authentication
-      
+
       **Cryptographic Material:**
       - Private key headers (-----BEGIN PRIVATE KEY-----)
       - Certificate and key file content
-      
+
       **False Positive Considerations:**
       - Environment variable references (ENV['KEY'])
       - Method calls that generate dynamic values
@@ -311,19 +311,19 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual hardcoded credentials
   and safe credential management practices.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.HardcodedSecrets.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.HardcodedSecrets.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
@@ -334,9 +334,22 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
       ast_rules: %{
         node_type: "Assignment",
         variable_patterns: [
-          "password", "pwd", "pass", "secret", "key", "token", "credential",
-          "api_key", "apikey", "auth_token", "access_token", "private_key",
-          "aws_access_key", "aws_secret", "database_url", "redis_url"
+          "password",
+          "pwd",
+          "pass",
+          "secret",
+          "key",
+          "token",
+          "credential",
+          "api_key",
+          "apikey",
+          "auth_token",
+          "access_token",
+          "private_key",
+          "aws_access_key",
+          "aws_secret",
+          "database_url",
+          "redis_url"
         ],
         assignment_analysis: %{
           check_right_hand_side: true,
@@ -357,18 +370,48 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
         ],
         check_assignment_context: true,
         safe_sources: [
-          "ENV", "ARGV", "gets", "readline", "SecureRandom", "Random",
-          "Rails.application.credentials", "Rails.application.secrets",
-          "Vault", "KeyVault", "AWS::SecretsManager", "Azure::KeyVault"
+          "ENV",
+          "ARGV",
+          "gets",
+          "readline",
+          "SecureRandom",
+          "Random",
+          "Rails.application.credentials",
+          "Rails.application.secrets",
+          "Vault",
+          "KeyVault",
+          "AWS::SecretsManager",
+          "Azure::KeyVault"
         ],
         safe_methods: [
-          "fetch", "dig", "read", "get", "generate", "create", "new",
-          "chomp", "strip", "gsub", "upcase", "downcase"
+          "fetch",
+          "dig",
+          "read",
+          "get",
+          "generate",
+          "create",
+          "new",
+          "chomp",
+          "strip",
+          "gsub",
+          "upcase",
+          "downcase"
         ],
         danger_indicators: [
-          "sk_live_", "pk_live_", "AKIA", "-----BEGIN", "ghp_", "gho_",
-          "postgres://", "mysql://", "mongodb://", "redis://",
-          "Bearer ", "Basic ", "AWS_ACCESS_KEY", "AWS_SECRET"
+          "sk_live_",
+          "pk_live_",
+          "AKIA",
+          "-----BEGIN",
+          "ghp_",
+          "gho_",
+          "postgres://",
+          "mysql://",
+          "mongodb://",
+          "redis://",
+          "Bearer ",
+          "Basic ",
+          "AWS_ACCESS_KEY",
+          "AWS_SECRET"
         ]
       },
       confidence_rules: %{

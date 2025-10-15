@@ -17,22 +17,24 @@ else
 end
 
 # Check if analytics_events table exists
-{:ok, %{rows: tables}} = Repo.query("""
-  SELECT table_name
-  FROM information_schema.tables
-  WHERE table_name = 'analytics_events'
-""")
+{:ok, %{rows: tables}} =
+  Repo.query("""
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_name = 'analytics_events'
+  """)
 
 if length(tables) > 0 do
   IO.puts("\n✅ Table analytics_events exists")
 
   # Check columns
-  {:ok, %{rows: columns}} = Repo.query("""
-    SELECT column_name
-    FROM information_schema.columns
-    WHERE table_name = 'analytics_events'
-    ORDER BY ordinal_position
-  """)
+  {:ok, %{rows: columns}} =
+    Repo.query("""
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'analytics_events'
+      ORDER BY ordinal_position
+    """)
 
   IO.puts("Current columns: #{Enum.map(columns, fn [c] -> c end) |> Enum.join(", ")}")
 else

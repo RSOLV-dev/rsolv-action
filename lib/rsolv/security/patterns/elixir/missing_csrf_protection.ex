@@ -1,13 +1,13 @@
 defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
   @moduledoc """
   Detects missing CSRF (Cross-Site Request Forgery) protection in Phoenix forms.
-  
+
   This pattern identifies instances where CSRF protection is explicitly disabled
   or missing in Phoenix forms, which can lead to unauthorized actions being performed
   on behalf of authenticated users.
-  
+
   ## Vulnerability Details
-  
+
   CSRF attacks occur when a malicious website tricks an authenticated user's browser
   into submitting a request to a vulnerable application. Without proper CSRF protection,
   attackers can perform unauthorized actions such as:
@@ -15,19 +15,19 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
   - Transferring money or making purchases
   - Modifying user settings or data
   - Performing any state-changing action the user is authorized to do
-  
+
   Phoenix provides excellent CSRF protection by default, but developers can accidentally
   disable it or forget to include it in manual forms.
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   # Form with CSRF protection explicitly disabled
   form_for(@changeset, Routes.user_path(@conn, :update), [csrf_token: false], fn f ->
     # form fields...
   end)
-  
+
   # Manual form without CSRF token
   <form action="/transfer-money" method="post">
     <input name="amount" value="1000">
@@ -35,7 +35,7 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
     <button>Transfer</button>
   </form>
   ```
-  
+
   An attacker could create a malicious page:
   ```html
   <!-- Malicious page that tricks user into submitting the form -->
@@ -45,16 +45,16 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
   </form>
   <script>document.forms[0].submit();</script>
   ```
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   # Phoenix forms include CSRF protection by default
   form_for(@changeset, Routes.user_path(@conn, :update), fn f ->
     # CSRF token automatically included
   end)
-  
+
   # Manual form with CSRF token
   <form action="/transfer-money" method="post">
     <input type="hidden" name="_csrf_token" value="<%= csrf_token %>">
@@ -62,23 +62,24 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
     <input name="to_account" value="user_account">
     <button>Transfer</button>
   </form>
-  
+
   # Form with explicit CSRF protection
   form_for(@changeset, Routes.user_path(@conn, :update), [csrf_token: true], fn f ->
     # form fields...
   end)
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
       id: "elixir-missing-csrf-protection",
       name: "Missing CSRF Protection",
-      description: "Forms without CSRF tokens are vulnerable to cross-site request forgery attacks",
+      description:
+        "Forms without CSRF tokens are vulnerable to cross-site request forgery attacks",
       type: :csrf,
       severity: :medium,
       languages: ["elixir"],
@@ -103,7 +104,8 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
       ],
       cwe_id: "CWE-352",
       owasp_category: "A01:2021",
-      recommendation: "Enable CSRF protection in all state-changing forms. Phoenix includes it by default.",
+      recommendation:
+        "Enable CSRF protection in all state-changing forms. Phoenix includes it by default.",
       test_cases: %{
         vulnerable: [
           ~S|form_for(@changeset, Routes.user_path(@conn, :create), [csrf_token: false], fn f ->|,
@@ -122,7 +124,7 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -130,18 +132,18 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
       Cross-Site Request Forgery (CSRF) is a web security vulnerability that allows an attacker
       to induce users to perform actions that they do not intend to perform. In the context of
       Phoenix applications, this typically occurs when forms lack proper CSRF token protection.
-      
+
       Phoenix provides excellent CSRF protection by default through the Plug.CSRFProtection plug,
       which automatically generates and validates CSRF tokens. However, developers can accidentally
       disable this protection or forget to include it in manually constructed forms.
-      
+
       CSRF attacks are particularly dangerous because they:
       - Exploit the trust a website has in a user's browser
       - Can be executed without the user's knowledge
       - Use the user's existing authentication/session
       - Can perform any action the user is authorized to do
       - Often leave no trace in server logs
-      
+
       In Phoenix applications, CSRF vulnerabilities commonly occur when:
       - Setting csrf_token: false in form_for or form_with helpers
       - Creating manual HTML forms without including _csrf_token
@@ -165,7 +167,8 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
           type: :owasp,
           id: "csrf_prevention",
           title: "OWASP CSRF Prevention Cheat Sheet",
-          url: "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
+          url:
+            "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
         },
         %{
           type: :framework,
@@ -201,7 +204,8 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
       cve_examples: [
         %{
           id: "CVE-2022-42975",
-          description: "Phoenix Origin Validation Error in socket/transport check_origin wildcarding",
+          description:
+            "Phoenix Origin Validation Error in socket/transport check_origin wildcarding",
           severity: "medium",
           cvss: 6.5,
           note: "Related to Phoenix security but focused on WebSocket origin validation"
@@ -260,19 +264,19 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between legitimate cases where CSRF might
   be disabled (like API endpoints) and actual security vulnerabilities.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.MissingCsrfProtection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.MissingCsrfProtection.ast_enhancement()
       iex> enhancement.min_confidence
       0.8

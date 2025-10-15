@@ -1,20 +1,20 @@
 defmodule Rsolv.Security.Patterns.Elixir.CodeInjectionEval do
   @moduledoc """
   Detects code injection vulnerabilities via eval functions in Elixir.
-  
+
   This pattern identifies the use of dangerous evaluation functions like Code.eval_string/1,
   Code.eval_file/1, Code.eval_quoted/1, and EEx eval functions that can execute arbitrary
   code when given untrusted input.
-  
+
   ## Vulnerability Details
-  
+
   Dynamic code evaluation is one of the most dangerous operations in any programming language.
   In Elixir, functions that evaluate strings or files as code can lead to complete system
   compromise if user input reaches them. An attacker can execute any Elixir code, including
   system commands, file operations, or network requests.
-  
+
   ### Attack Example
-  
+
   Vulnerable code:
   ```elixir
   # Controller accepting user code
@@ -23,11 +23,11 @@ defmodule Rsolv.Security.Patterns.Elixir.CodeInjectionEval do
     json(conn, %{result: result})
   end
   ```
-  
+
   An attacker could send: `System.cmd("rm", ["-rf", "/"])` or steal secrets.
-  
+
   ### Safe Alternative
-  
+
   Safe code:
   ```elixir
   # Use pattern matching for specific commands
@@ -41,10 +41,10 @@ defmodule Rsolv.Security.Patterns.Elixir.CodeInjectionEval do
   end
   ```
   """
-  
+
   use Rsolv.Security.Patterns.PatternBase
   alias Rsolv.Security.Pattern
-  
+
   @impl true
   def pattern do
     %Pattern{
@@ -77,7 +77,8 @@ defmodule Rsolv.Security.Patterns.Elixir.CodeInjectionEval do
       ],
       cwe_id: "CWE-94",
       owasp_category: "A03:2021",
-      recommendation: "Never evaluate user input as code. Use pattern matching or predefined commands instead",
+      recommendation:
+        "Never evaluate user input as code. Use pattern matching or predefined commands instead",
       test_cases: %{
         vulnerable: [
           ~S|Code.eval_string(params["code"])|,
@@ -104,7 +105,7 @@ end|
       }
     }
   end
-  
+
   @impl true
   def vulnerability_metadata do
     %{
@@ -140,7 +141,8 @@ end|
           type: :research,
           id: "guardrails_eval",
           title: "GuardRails - Insecure Use of Dangerous Function",
-          url: "https://docs.guardrails.io/docs/vulnerabilities/elixir/insecure_use_of_dangerous_function"
+          url:
+            "https://docs.guardrails.io/docs/vulnerabilities/elixir/insecure_use_of_dangerous_function"
         }
       ],
       attack_vectors: [
@@ -202,19 +204,19 @@ end|
       }
     }
   end
-  
+
   @doc """
   Returns AST enhancement rules to reduce false positives.
-  
+
   This enhancement helps distinguish between actual vulnerabilities and false positives
   by analyzing context and usage patterns.
-  
+
   ## Examples
-  
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.CodeInjectionEval.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.CodeInjectionEval.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
@@ -226,21 +228,44 @@ end|
         node_type: "CallExpression",
         eval_analysis: %{
           check_eval_functions: true,
-          dangerous_functions: ["Code.eval_string", "Code.eval_file", "Code.eval_quoted", 
-                               "Code.eval_quoted_with_env", "EEx.eval_string", "EEx.eval_file"],
+          dangerous_functions: [
+            "Code.eval_string",
+            "Code.eval_file",
+            "Code.eval_quoted",
+            "Code.eval_quoted_with_env",
+            "EEx.eval_string",
+            "EEx.eval_file"
+          ],
           check_input_source: true,
           check_template_usage: true
         },
         input_analysis: %{
-          user_input_indicators: ["params", "conn", "socket", "args", "input", "request", "body", "query"],
+          user_input_indicators: [
+            "params",
+            "conn",
+            "socket",
+            "args",
+            "input",
+            "request",
+            "body",
+            "query"
+          ],
           check_variable_flow: true,
           check_function_arguments: true
         }
       },
       context_rules: %{
         exclude_paths: [~r/test/, ~r/spec/, ~r/_test\.exs$/, ~r/seeds\.exs$/],
-        user_input_sources: ["params", "conn.params", "conn.body_params", "socket.assigns", 
-                            "args", "input", "user_input", "request_data"],
+        user_input_sources: [
+          "params",
+          "conn.params",
+          "conn.body_params",
+          "socket.assigns",
+          "args",
+          "input",
+          "user_input",
+          "request_data"
+        ],
         safe_contexts: ["compile", "macro", "__using__", "defmacro"],
         exclude_compile_time: true
       },
