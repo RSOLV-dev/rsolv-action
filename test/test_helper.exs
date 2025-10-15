@@ -69,12 +69,12 @@ Enum.reduce_while(1..max_retries, nil, fn attempt, _ ->
     Ecto.Adapters.SQL.query!(Rsolv.Repo, "SELECT 1", [])
     {:halt, :ok}
   rescue
-    _ ->
+    e ->
       if attempt < max_retries do
         Process.sleep(retry_delay)
         {:cont, nil}
       else
-        raise "Failed to connect to Rsolv.Repo after #{max_retries} attempts"
+        reraise "Failed to connect to Rsolv.Repo after #{max_retries} attempts", __STACKTRACE__
       end
   end
 end)

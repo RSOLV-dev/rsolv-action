@@ -86,7 +86,7 @@ defmodule Rsolv.AST.IntegrationTest do
       {:ok, findings} = AnalysisService.analyze_file(file, options)
 
       # Should not report low-confidence matches
-      assert length(findings) == 0
+      assert Enum.empty?(findings)
     end
 
     test "includes context information in findings", %{session: _session} do

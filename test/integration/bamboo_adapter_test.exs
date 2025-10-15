@@ -50,7 +50,7 @@ defmodule Rsolv.Integration.BambooAdapterTest do
     rescue
       e ->
         IO.inspect(e, label: "Error during delivery")
-        raise e
+        reraise e, __STACKTRACE__
     end
   end
 end

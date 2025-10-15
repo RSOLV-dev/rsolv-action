@@ -181,7 +181,7 @@ defmodule Rsolv.AST.AuditLoggerTest do
           end
         end)
 
-      assert length(our_events_after) == 0, "Our events should be flushed"
+      assert Enum.empty?(our_events_after), "Our events should be flushed"
     end
 
     test "handles storage failures gracefully" do

@@ -50,7 +50,7 @@ defmodule Rsolv.AST.AnalysisServiceIntegrationTest do
 
       # Should not find SQL injection in parameterized query
       sql_findings = Enum.filter(findings, &String.contains?(&1.patternId, "sql"))
-      assert length(sql_findings) == 0
+      assert Enum.empty?(sql_findings)
     end
 
     test "detects SQL injection in Python", %{session: _session} do
@@ -105,7 +105,7 @@ defmodule Rsolv.AST.AnalysisServiceIntegrationTest do
 
       # textContent is safe, should not trigger XSS
       xss_findings = Enum.filter(findings, &String.contains?(&1.type, "xss"))
-      assert length(xss_findings) == 0
+      assert Enum.empty?(xss_findings)
     end
   end
 
@@ -194,7 +194,7 @@ defmodule Rsolv.AST.AnalysisServiceIntegrationTest do
       {:ok, findings} = AnalysisService.analyze_file(file, %{"includeSecurityPatterns" => true})
 
       # Pure arithmetic should not trigger any security findings
-      assert length(findings) == 0
+      assert Enum.empty?(findings)
     end
 
     test "does not flag safe string concatenation", %{session: _session} do
@@ -214,7 +214,7 @@ defmodule Rsolv.AST.AnalysisServiceIntegrationTest do
 
       # Simple string concatenation without security context should be safe
       injection_findings = Enum.filter(findings, &String.contains?(&1.type, "injection"))
-      assert length(injection_findings) == 0
+      assert Enum.empty?(injection_findings)
     end
   end
 

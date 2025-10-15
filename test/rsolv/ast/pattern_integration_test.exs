@@ -191,7 +191,7 @@ defmodule Rsolv.AST.PatternIntegrationTest do
       assert length(php_patterns) > 0
       assert length(java_patterns) > 0
       # Go patterns not yet implemented
-      assert length(go_patterns) == 0
+      assert Enum.empty?(go_patterns)
 
       # Each pattern should have all required fields
       all_patterns = python_patterns ++ ruby_patterns ++ js_patterns

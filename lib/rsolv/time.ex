@@ -80,7 +80,7 @@ defmodule Rsolv.Time do
       iex> Rsolv.Time.utc_now()
       ~U[2024-01-01 12:00:00Z]
   """
-  def freeze(datetime = %DateTime{}) do
+  def freeze(%DateTime{} = datetime) do
     Process.put(:rsolv_frozen_time, datetime)
     :ok
   end

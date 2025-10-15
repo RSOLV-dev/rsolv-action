@@ -96,12 +96,12 @@ defmodule RsolvWeb.ConnCase do
         RsolvWeb.Endpoint.config(:secret_key_base)
         {:halt, :ok}
       rescue
-        ArgumentError ->
+        e in ArgumentError ->
           if attempt < max_attempts do
             Process.sleep(retry_delay)
             {:cont, nil}
           else
-            raise "Endpoint ETS table not available after #{max_attempts * retry_delay}ms"
+            reraise "Endpoint ETS table not available after #{max_attempts * retry_delay}ms", __STACKTRACE__
           end
       end
     end)

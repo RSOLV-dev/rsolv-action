@@ -106,7 +106,7 @@ defmodule Rsolv.AST.ASTPatternMatcherTest do
 
       {:ok, matches} = ASTPatternMatcher.match(ast, pattern, "python")
 
-      assert length(matches) == 0
+      assert Enum.empty?(matches)
     end
 
     test "detects XSS in Ruby ERB template" do

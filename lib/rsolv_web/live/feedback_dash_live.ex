@@ -211,7 +211,7 @@ defmodule RsolvWeb.FeedbackDashLive do
   defp calculate_average_rating(entries) do
     rated_entries = Enum.filter(entries, & &1.rating)
 
-    if length(rated_entries) == 0 do
+    if Enum.empty?(rated_entries) do
       "N/A"
     else
       sum = Enum.reduce(rated_entries, 0, fn entry, acc -> acc + entry.rating end)

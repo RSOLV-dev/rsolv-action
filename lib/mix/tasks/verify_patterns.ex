@@ -161,7 +161,7 @@ defmodule Mix.Tasks.VerifyPatterns do
             is_map(pattern.test_cases) and
             Map.has_key?(pattern.test_cases, :vulnerable)
 
-        valid = length(missing_fields) == 0 and regex_valid and has_test_cases
+        valid = Enum.empty?(missing_fields) and regex_valid and has_test_cases
 
         if valid do
           IO.puts("  ✅ #{name}")

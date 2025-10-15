@@ -58,7 +58,7 @@ defmodule Rsolv.AST.MultiLanguageParsingTest do
       # Safe code should use different pattern
       joined_strs_safe = find_nodes(safe_ast, "JoinedStr")
       # Safe version uses parameterized query, no f-string in SQL
-      assert length(joined_strs_safe) == 0
+      assert Enum.empty?(joined_strs_safe)
     end
 
     test "handles Python syntax errors gracefully", %{session: session, customer_id: customer_id} do
