@@ -1,7 +1,7 @@
 defmodule Rsolv.Repo.Migrations.CreateAnalyticsEventsPartitioned do
   use Ecto.Migration
 
-  def change do
+  def up do
     # Create the parent partitioned table
     execute """
     CREATE TABLE analytics_events (
@@ -23,8 +23,6 @@ defmodule Rsolv.Repo.Migrations.CreateAnalyticsEventsPartitioned do
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
       PRIMARY KEY (id, inserted_at)
     ) PARTITION BY RANGE (inserted_at);
-    """, """
-    DROP TABLE IF EXISTS analytics_events CASCADE;
     """
 
     # Create indexes on the parent table (will be inherited by partitions)
@@ -32,11 +30,11 @@ defmodule Rsolv.Repo.Migrations.CreateAnalyticsEventsPartitioned do
     create index(:analytics_events, [:visitor_id, :inserted_at])
     create index(:analytics_events, [:inserted_at])
     create index(:analytics_events, [:page_path, :inserted_at])
-    
+
     # Create partitions for current and next month
     current_year = Date.utc_today().year
     current_month = Date.utc_today().month
-    
+
     # Current month partition
     execute """
     CREATE TABLE analytics_events_#{current_year}_#{String.pad_leading(to_string(current_month), 2, "0")}
@@ -50,7 +48,7 @@ defmodule Rsolv.Repo.Migrations.CreateAnalyticsEventsPartitioned do
     next_year = next_date.year
     next_month = next_date.month
     end_date = next_date |> Date.add(31) |> Date.beginning_of_month()
-    
+
     execute """
     CREATE TABLE analytics_events_#{next_year}_#{String.pad_leading(to_string(next_month), 2, "0")}
     PARTITION OF analytics_events
@@ -70,9 +68,9 @@ defmodule Rsolv.Repo.Migrations.CreateAnalyticsEventsPartitioned do
       partition_name := 'analytics_events_' || to_char(partition_date, 'YYYY_MM');
       start_date := date_trunc('month', partition_date);
       end_date := start_date + interval '1 month';
-      
+
       IF NOT EXISTS (
-        SELECT 1 FROM pg_tables 
+        SELECT 1 FROM pg_tables
         WHERE tablename = partition_name
       ) THEN
         EXECUTE format(
@@ -84,14 +82,12 @@ defmodule Rsolv.Repo.Migrations.CreateAnalyticsEventsPartitioned do
       END IF;
     END;
     $$ LANGUAGE plpgsql;
-    """, """
-    DROP FUNCTION IF EXISTS create_analytics_partition_if_not_exists(DATE);
     """
 
     # Create a materialized view for daily stats
     execute """
     CREATE MATERIALIZED VIEW analytics_daily_stats AS
-    SELECT 
+    SELECT
       DATE(inserted_at) as date,
       event_type,
       COUNT(*) as event_count,
@@ -100,13 +96,39 @@ defmodule Rsolv.Repo.Migrations.CreateAnalyticsEventsPartitioned do
     FROM analytics_events
     GROUP BY DATE(inserted_at), event_type
     WITH DATA;
-    """, """
-    DROP MATERIALIZED VIEW IF EXISTS analytics_daily_stats;
     """
 
     # Create index on the materialized view
     execute """
     CREATE INDEX idx_analytics_daily_stats_date ON analytics_daily_stats(date DESC);
+    """
+  end
+
+  def down do
+    # Drop the index on materialized view
+    execute """
+    DROP INDEX IF EXISTS idx_analytics_daily_stats_date;
+    """
+
+    # Drop the materialized view
+    execute """
+    DROP MATERIALIZED VIEW IF EXISTS analytics_daily_stats;
+    """
+
+    # Drop the partition creation function
+    execute """
+    DROP FUNCTION IF EXISTS create_analytics_partition_if_not_exists(DATE);
+    """
+
+    # Drop indexes (will be dropped with table, but explicit for clarity)
+    drop_if_exists index(:analytics_events, [:page_path, :inserted_at])
+    drop_if_exists index(:analytics_events, [:inserted_at])
+    drop_if_exists index(:analytics_events, [:visitor_id, :inserted_at])
+    drop_if_exists index(:analytics_events, [:event_type, :inserted_at])
+
+    # Drop the parent table (CASCADE will drop all partitions)
+    execute """
+    DROP TABLE IF EXISTS analytics_events CASCADE;
     """
   end
 end
