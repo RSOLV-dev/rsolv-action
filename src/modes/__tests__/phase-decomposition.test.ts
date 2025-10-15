@@ -419,9 +419,20 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
 
   describe('Full Three-Phase Execution', () => {
     test('executeThreePhaseForIssue should run all phases sequentially', async () => {
-      // This method doesn't exist yet - RED phase
+      // Mock test validator to ensure fix validation passes
+      executor.gitBasedValidator = {
+        validateFixWithTests: vi.fn(() => Promise.resolve({
+          isValidFix: true,
+          fixedCommit: {
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
+        }))
+      } as any;
+
       const result = await executor.executeThreePhaseForIssue(mockIssue);
-      
+
       expect(result.success).toBe(true);
       expect(result.phase).toBe('three-phase');
       expect(result.data).toHaveProperty('scan');
