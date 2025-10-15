@@ -1,7 +1,7 @@
 defmodule Rsolv.Repo.Migrations.CreateSecurityPatterns do
   use Ecto.Migration
 
-  def change do
+  def up do
     # Create pattern tiers table for access control
     create table(:pattern_tiers) do
       add :name, :string, null: false
@@ -29,16 +29,16 @@ defmodule Rsolv.Repo.Migrations.CreateSecurityPatterns do
       add :remediation, :text
       add :confidence, :string, default: "medium"
       add :framework, :string # rails, django, express, etc.
-      
+
       # Pattern matching data
       add :regex_patterns, {:array, :string}, default: []
       add :safe_usage_patterns, {:array, :string}, default: []
       add :example_code, :text
       add :fix_template, :text
-      
+
       # Tier assignment
       add :tier_id, references(:pattern_tiers, on_delete: :restrict), null: false
-      
+
       # Metadata
       add :is_active, :boolean, default: true
       add :source, :string, default: "rsolv"
@@ -63,5 +63,21 @@ defmodule Rsolv.Repo.Migrations.CreateSecurityPatterns do
     ('ai', 'AI-specific vulnerability detection patterns', true, true, false, true, 3, NOW(), NOW()),
     ('enterprise', 'Custom enterprise patterns', true, true, true, false, 4, NOW(), NOW());
     """
+  end
+
+  def down do
+    # Drop indexes and tables in reverse order
+    drop unique_index(:security_patterns, [:name, :language, :type])
+    drop index(:security_patterns, [:language, :tier_id])
+    drop index(:security_patterns, [:is_active])
+    drop index(:security_patterns, [:tier_id])
+    drop index(:security_patterns, [:severity])
+    drop index(:security_patterns, [:type])
+    drop index(:security_patterns, [:language])
+
+    drop table(:security_patterns)
+
+    drop unique_index(:pattern_tiers, [:name])
+    drop table(:pattern_tiers)
   end
 end

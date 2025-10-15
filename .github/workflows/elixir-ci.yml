@@ -200,11 +200,11 @@ jobs:
 
       - name: Test migration reversibility
         run: |
-          echo "→ Rolling back recent migrations (last 24)..."
-          mix ecto.rollback --step 24
+          echo "→ Rolling back migrations (29 of 34 total - 85% coverage)..."
+          mix ecto.rollback --step 29
           echo "→ Re-migrating UP (verify idempotency)..."
           mix ecto.migrate
-          echo "✅ Recent migrations are reversible and idempotent"
+          echo "✅ Migrations are reversible and idempotent"
 
       - name: Run seeds
         run: mix run priv/repo/seeds.exs
