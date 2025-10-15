@@ -122,25 +122,152 @@ export const handlers = [
 
   // RSOLV Patterns endpoint
   http.get('https://api.rsolv.ai/api/v1/patterns', ({ request }) => {
+    // Accept any API key in tests (no auth check needed for mocks)
     const url = new URL(request.url);
     const language = url.searchParams.get('language') || 'javascript';
     const format = url.searchParams.get('format') || 'standard';
-    
-    const patterns: Record<string, string[]> = {
-      javascript: ['xss', 'sql_injection', 'path_traversal'],
-      typescript: ['xss', 'sql_injection', 'path_traversal'],
-      python: ['sql_injection', 'command_injection', 'path_traversal'],
-      php: ['xss', 'sql_injection', 'file_upload'],
-      ruby: ['sql_injection', 'command_injection', 'xss'],
-      java: ['sql_injection', 'xxe', 'deserialization'],
-      elixir: ['sql_injection', 'xss', 'csrf']
+
+    // Helper to generate mock patterns
+    const generatePattern = (id: string, type: string, lang: string) => ({
+      id: `${lang}-${id}`,
+      name: `Mock ${type.toUpperCase()} Detection`,
+      type,
+      description: `Mock pattern for ${type} detection in ${lang}`,
+      severity: 'high',
+      regex: [`(${type}|mock).*pattern`],
+      languages: [lang],
+      recommendation: `Avoid ${type} vulnerabilities`,
+      cwe_id: 'CWE-89',
+      owasp_category: 'A03:2021'
+    });
+
+    // Generate patterns based on language requirements from test
+    const patternsByLanguage: Record<string, any[]> = {
+      javascript: [
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'javascript')),
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'javascript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'javascript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`path-${i}`, 'path_traversal', 'javascript'))
+      ],
+      typescript: [
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'typescript')),
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'typescript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'typescript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`path-${i}`, 'path_traversal', 'typescript'))
+      ],
+      python: [
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'python')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'python')),
+        ...Array.from({ length: 3 }, (_, i) => generatePattern(`path-${i}`, 'path_traversal', 'python')),
+        ...Array.from({ length: 2 }, (_, i) => generatePattern(`deser-${i}`, 'insecure_deserialization', 'python'))
+      ],
+      ruby: [
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'ruby')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'ruby')),
+        ...Array.from({ length: 3 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'ruby'))
+      ],
+      php: [
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'php')),
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'php')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`upload-${i}`, 'file_upload', 'php'))
+      ],
+      java: [
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'java')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`xxe-${i}`, 'xxe', 'java')),
+        ...Array.from({ length: 4 }, (_, i) => generatePattern(`deser-${i}`, 'deserialization', 'java'))
+      ],
+      elixir: [
+        ...Array.from({ length: 3 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'elixir')),
+        ...Array.from({ length: 2 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'elixir')),
+        ...Array.from({ length: 2 }, (_, i) => generatePattern(`csrf-${i}`, 'csrf', 'elixir'))
+      ]
     };
-    
+
+    const patterns = patternsByLanguage[language] || patternsByLanguage.javascript;
+
     return HttpResponse.json({
-      patterns: patterns[language] || patterns.javascript,
-      language,
-      format,
-      count: 3
+      patterns,
+      metadata: {
+        count: patterns.length,
+        language,
+        format,
+        access_level: 'full'
+      }
+    });
+  }),
+
+  // RSOLV.dev API handlers (production default URL)
+  http.get('https://api.rsolv.dev/api/v1/patterns', ({ request }) => {
+    const url = new URL(request.url);
+    const language = url.searchParams.get('language') || 'javascript';
+    const format = url.searchParams.get('format') || 'standard';
+
+    // Helper to generate mock patterns
+    const generatePattern = (id: string, type: string, lang: string) => ({
+      id: `${lang}-${id}`,
+      name: `Mock ${type.toUpperCase()} Detection`,
+      type,
+      description: `Mock pattern for ${type} detection in ${lang}`,
+      severity: 'high',
+      regex: [`(${type}|mock).*pattern`],
+      languages: [lang],
+      recommendation: `Avoid ${type} vulnerabilities`,
+      cwe_id: 'CWE-89',
+      owasp_category: 'A03:2021'
+    });
+
+    // Generate patterns based on language requirements from test
+    const patternsByLanguage: Record<string, any[]> = {
+      javascript: [
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'javascript')),
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'javascript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'javascript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`path-${i}`, 'path_traversal', 'javascript'))
+      ],
+      typescript: [
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'typescript')),
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'typescript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'typescript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`path-${i}`, 'path_traversal', 'typescript'))
+      ],
+      python: [
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'python')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'python')),
+        ...Array.from({ length: 3 }, (_, i) => generatePattern(`path-${i}`, 'path_traversal', 'python')),
+        ...Array.from({ length: 2 }, (_, i) => generatePattern(`deser-${i}`, 'insecure_deserialization', 'python'))
+      ],
+      ruby: [
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'ruby')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'ruby')),
+        ...Array.from({ length: 3 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'ruby'))
+      ],
+      php: [
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'php')),
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'php')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`upload-${i}`, 'file_upload', 'php'))
+      ],
+      java: [
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'java')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`xxe-${i}`, 'xxe', 'java')),
+        ...Array.from({ length: 4 }, (_, i) => generatePattern(`deser-${i}`, 'deserialization', 'java'))
+      ],
+      elixir: [
+        ...Array.from({ length: 3 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'elixir')),
+        ...Array.from({ length: 2 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'elixir')),
+        ...Array.from({ length: 2 }, (_, i) => generatePattern(`csrf-${i}`, 'csrf', 'elixir'))
+      ]
+    };
+
+    const patterns = patternsByLanguage[language] || patternsByLanguage.javascript;
+
+    return HttpResponse.json({
+      patterns,
+      metadata: {
+        count: patterns.length,
+        language,
+        format,
+        access_level: 'full'
+      }
     });
   }),
 
@@ -173,22 +300,73 @@ export const handlers = [
     const url = new URL(request.url);
     const language = url.searchParams.get('language') || 'javascript';
     const format = url.searchParams.get('format') || 'standard';
-    
-    const patterns: Record<string, string[]> = {
-      javascript: ['xss', 'sql_injection', 'path_traversal'],
-      typescript: ['xss', 'sql_injection', 'path_traversal'],
-      python: ['sql_injection', 'command_injection', 'path_traversal'],
-      php: ['xss', 'sql_injection', 'file_upload'],
-      ruby: ['sql_injection', 'command_injection', 'xss'],
-      java: ['sql_injection', 'xxe', 'deserialization'],
-      elixir: ['sql_injection', 'xss', 'csrf']
+
+    // Helper to generate mock patterns
+    const generatePattern = (id: string, type: string, lang: string) => ({
+      id: `${lang}-${id}`,
+      name: `Mock ${type.toUpperCase()} Detection`,
+      type,
+      description: `Mock pattern for ${type} detection in ${lang}`,
+      severity: 'high',
+      regex: [`(${type}|mock).*pattern`],
+      languages: [lang],
+      recommendation: `Avoid ${type} vulnerabilities`,
+      cwe_id: 'CWE-89',
+      owasp_category: 'A03:2021'
+    });
+
+    // Generate patterns based on language requirements from test
+    const patternsByLanguage: Record<string, any[]> = {
+      javascript: [
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'javascript')),
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'javascript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'javascript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`path-${i}`, 'path_traversal', 'javascript'))
+      ],
+      typescript: [
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'typescript')),
+        ...Array.from({ length: 10 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'typescript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'typescript')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`path-${i}`, 'path_traversal', 'typescript'))
+      ],
+      python: [
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'python')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'python')),
+        ...Array.from({ length: 3 }, (_, i) => generatePattern(`path-${i}`, 'path_traversal', 'python')),
+        ...Array.from({ length: 2 }, (_, i) => generatePattern(`deser-${i}`, 'insecure_deserialization', 'python'))
+      ],
+      ruby: [
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'ruby')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`cmd-${i}`, 'command_injection', 'ruby')),
+        ...Array.from({ length: 3 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'ruby'))
+      ],
+      php: [
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'php')),
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'php')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`upload-${i}`, 'file_upload', 'php'))
+      ],
+      java: [
+        ...Array.from({ length: 8 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'java')),
+        ...Array.from({ length: 5 }, (_, i) => generatePattern(`xxe-${i}`, 'xxe', 'java')),
+        ...Array.from({ length: 4 }, (_, i) => generatePattern(`deser-${i}`, 'deserialization', 'java'))
+      ],
+      elixir: [
+        ...Array.from({ length: 3 }, (_, i) => generatePattern(`sql-${i}`, 'sql_injection', 'elixir')),
+        ...Array.from({ length: 2 }, (_, i) => generatePattern(`xss-${i}`, 'xss', 'elixir')),
+        ...Array.from({ length: 2 }, (_, i) => generatePattern(`csrf-${i}`, 'csrf', 'elixir'))
+      ]
     };
-    
+
+    const patterns = patternsByLanguage[language] || patternsByLanguage.javascript;
+
     return HttpResponse.json({
-      patterns: patterns[language] || patterns.javascript,
-      language,
-      format,
-      count: 3
+      patterns,
+      metadata: {
+        count: patterns.length,
+        language,
+        format,
+        access_level: 'full'
+      }
     });
   }),
 

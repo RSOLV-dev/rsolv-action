@@ -17,7 +17,7 @@ export default defineConfig({
     
     // Global setup
     globals: true,
-    setupFiles: ['./test/setup.ts'],
+    setupFiles: ['./test/vitest-setup.ts'],
     
     // Performance settings based on environment
     // Use forks with single process to avoid worker overhead memory issues
