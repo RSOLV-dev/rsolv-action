@@ -101,7 +101,8 @@ defmodule RsolvWeb.ConnCase do
             Process.sleep(retry_delay)
             {:cont, nil}
           else
-            reraise "Endpoint ETS table not available after #{max_attempts * retry_delay}ms", __STACKTRACE__
+            reraise "Endpoint ETS table not available after #{max_attempts * retry_delay}ms",
+                    __STACKTRACE__
           end
       end
     end)
