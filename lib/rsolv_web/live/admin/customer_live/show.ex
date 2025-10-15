@@ -77,22 +77,62 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
 
   @impl true
   def handle_event("generate-api-key", _, socket) do
-    case Customers.create_api_key(socket.assigns.customer, %{name: "API Key"}) do
+    require Logger
+    customer = socket.assigns.customer
+    Logger.info("🔑 [LiveView] Generate API key request for customer_id: #{customer.id}, customer email: #{customer.email}")
+
+    case Customers.create_api_key(customer, %{name: "API Key"}) do
       {:ok, api_key} ->
-        api_keys = Customers.list_api_keys(socket.assigns.customer)
+        Logger.info("🔑 [LiveView] API key created successfully")
+        Logger.info("🔑 [LiveView] Displaying key to user: #{api_key.key}")
+        Logger.info("🔑 [LiveView] API key database ID: #{api_key.id}")
+
+        # Double-check the key can be retrieved (defensive programming)
+        case Customers.get_api_key_by_key(api_key.key) do
+          nil ->
+            Logger.error("🔑 [LiveView] CRITICAL ERROR: Key created but not retrievable!")
+            Logger.error("🔑 [LiveView] Key that failed: #{api_key.key}")
+
+            {:noreply,
+             socket
+             |> put_flash(
+               :error,
+               "API key creation failed - key not found in database. Please contact support."
+             )}
+
+          _found ->
+            Logger.info("🔑 [LiveView] ✅ Verified key is retrievable")
+
+            api_keys = Customers.list_api_keys(customer)
+            Logger.info("🔑 [LiveView] Found #{length(api_keys)} total API keys for customer after creation")
+
+            # Log the IDs of all keys to help debugging
+            key_ids = Enum.map(api_keys, & &1.id)
+            Logger.info("🔑 [LiveView] API key IDs: #{inspect(key_ids)}")
+
+            {:noreply,
+             socket
+             |> put_flash(
+               :info,
+               "API key generated successfully. Copy it now - it won't be shown again!"
+             )
+             |> assign(:api_keys, api_keys)
+             |> assign(:new_api_key, api_key.key)}
+        end
+
+      {:error, changeset} ->
+        Logger.error("🔑 [LiveView] Failed to generate API key: #{inspect(changeset.errors)}")
 
         {:noreply,
          socket
-         |> put_flash(
-           :info,
-           "API key generated successfully. Copy it now - it won't be shown again!"
-         )
-         |> assign(:api_keys, api_keys)
-         |> assign(:new_api_key, api_key.key)}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to generate API key")}
+         |> put_flash(:error, "Failed to generate API key: #{format_changeset_errors(changeset)}")}
     end
+  end
+
+  defp format_changeset_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+    |> Enum.map(fn {field, errors} -> "#{field}: #{Enum.join(errors, ", ")}" end)
+    |> Enum.join("; ")
   end
 
   @impl true
