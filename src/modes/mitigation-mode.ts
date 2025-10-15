@@ -121,8 +121,8 @@ export class MitigationMode {
         return false;
       }
 
-      // Check if branch exists locally
-      const localBranchExists = this.doesLocalBranchExist(branchName);
+      // Check if branch exists locally BEFORE any checkout attempts
+      const localBranchExisted = this.doesLocalBranchExist(branchName);
 
       // Fetch the branch from remote (best effort)
       try {
@@ -136,13 +136,13 @@ export class MitigationMode {
       const remoteBranchExists = this.doesRemoteBranchExist(branchName);
 
       // If branch doesn't exist locally or remotely, return false without changing branches
-      if (!localBranchExists && !remoteBranchExists) {
+      if (!localBranchExisted && !remoteBranchExists) {
         logger.info(`Validation branch ${branchName} does not exist locally or remotely, staying on current branch`);
         return false;
       }
 
       // Try to checkout local branch first
-      if (localBranchExists) {
+      if (localBranchExisted) {
         try {
           execSync(`git checkout ${branchName}`, { cwd: this.repoPath, stdio: 'pipe' });
           logger.info(`Checked out local validation branch: ${branchName}`);
@@ -161,7 +161,9 @@ export class MitigationMode {
       // If local checkout failed or branch not local, try remote
       if (remoteBranchExists) {
         try {
-          execSync(`git checkout -b ${branchName} origin/${branchName}`, { cwd: this.repoPath, stdio: 'pipe' });
+          // Use -t (track) without -b to avoid creating branch if remote doesn't actually exist
+          // This will create local branch AND set up tracking in one command
+          execSync(`git checkout -t origin/${branchName}`, { cwd: this.repoPath, stdio: 'pipe' });
           logger.info(`Checked out remote validation branch: origin/${branchName}`);
           return true;
         } catch (remoteError) {
@@ -173,6 +175,25 @@ export class MitigationMode {
             // Ignore restoration errors
           }
           return false;
+        }
+      }
+
+      // RFC-060: If we get here, the branch didn't exist locally or remotely,
+      // or checkout failed. Check if git accidentally created a branch anyway.
+      const branchExistsNow = this.doesLocalBranchExist(branchName);
+      if (!localBranchExisted && branchExistsNow) {
+        logger.warn(`Branch ${branchName} was created accidentally, cleaning up`);
+        try {
+          // Make sure we're back on original branch
+          const currentBranch = this.getCurrentBranch();
+          if (currentBranch !== originalBranch) {
+            execSync(`git checkout ${originalBranch}`, { cwd: this.repoPath, stdio: 'pipe' });
+          }
+          // Delete the accidentally created branch
+          execSync(`git branch -D ${branchName}`, { cwd: this.repoPath, stdio: 'pipe' });
+          logger.info(`Deleted accidentally created branch: ${branchName}`);
+        } catch (cleanupError) {
+          logger.debug(`Could not clean up accidentally created branch: ${cleanupError}`);
         }
       }
 

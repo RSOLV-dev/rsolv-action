@@ -14,14 +14,15 @@ import { initTestRepo } from '../helpers/git-test-utils.js';
 describe('Three-Phase Workflow Integration', () => {
   let testRepoPath: string;
   let mockIssue: IssueContext;
+  let testCounter = 0;
 
   beforeEach(async () => {
     // Reset mock git state for fresh test
     const { resetMockGitState } = await import('../../../test-fixtures/mock-claude-code-sdk.js');
     resetMockGitState();
 
-    // Create a temporary test repository
-    testRepoPath = '/tmp/integration-test-' + Date.now();
+    // Create a temporary test repository with unique counter to avoid collisions
+    testRepoPath = '/tmp/integration-test-' + Date.now() + '-' + (testCounter++);
     fs.mkdirSync(testRepoPath, { recursive: true });
 
     // Initialize git repo with consistent branch name
