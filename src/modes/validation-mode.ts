@@ -550,37 +550,69 @@ export class ValidationMode {
     const maxAttempts = 3;
     const baseDelay = 1000; // 1 second
 
+    if (!this.testIntegrationClient) {
+      throw new Error('TestIntegrationClient not initialized - check API key configuration');
+    }
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         logger.debug(`Backend integration attempt ${attempt}/${maxAttempts}...`);
 
-        // TODO Phase 3: Implement TestIntegrationClient
-        // const client = new TestIntegrationClient(this.config.rsolvApiKey);
-        //
-        // // Step 1: Analyze test files to find best target
-        // const analysis = await client.analyze({
-        //   vulnerableFile: issue?.file || 'unknown',
-        //   vulnerabilityType: issue?.title || 'unknown',
-        //   candidateTestFiles: await this.scanForTestFiles(),
-        //   framework: await this.detectFrameworkType()
-        // });
-        //
-        // // Step 2: Generate AST-integrated test
-        // const generated = await client.generate({
-        //   targetFileContent: fs.readFileSync(analysis.recommendations[0].path, 'utf8'),
-        //   testSuite: this.formatTestSuite(testContent, issue),
-        //   framework: analysis.framework,
-        //   language: this.detectLanguage(analysis.recommendations[0].path)
-        // });
-        //
-        // // Step 3: Return integrated result
-        // return {
-        //   targetFile: analysis.recommendations[0].path,
-        //   content: generated.integratedContent
-        // };
+        // Step 1: Scan for test files
+        const candidateTestFiles = await this.scanTestFiles();
+        if (candidateTestFiles.length === 0) {
+          throw new Error('No test files found in repository');
+        }
 
-        // Placeholder: Backend not implemented yet
-        throw new Error('Backend not implemented (Phase 3)');
+        // Step 2: Detect framework from vulnerable file
+        const framework = this.detectFrameworkFromFile(issue?.file || '');
+
+        // Step 3: Analyze test files to find best target
+        const analysis = await this.testIntegrationClient.analyze({
+          vulnerableFile: issue?.file || 'unknown',
+          vulnerabilityType: issue?.title || 'unknown',
+          candidateTestFiles,
+          framework
+        });
+
+        if (!analysis.recommendations || analysis.recommendations.length === 0) {
+          throw new Error('Backend returned no test file recommendations');
+        }
+
+        const targetPath = analysis.recommendations[0].path;
+        logger.info(`Backend recommended target file: ${targetPath} (score: ${analysis.recommendations[0].score})`);
+
+        // Step 4: Read target file content
+        const targetFilePath = path.join(this.repoPath, targetPath);
+        if (!fs.existsSync(targetFilePath)) {
+          throw new Error(`Recommended target file does not exist: ${targetPath}`);
+        }
+        const targetFileContent = fs.readFileSync(targetFilePath, 'utf8');
+
+        // Step 5: Format test suite for backend API
+        const testSuite = this.formatTestSuite(testContent);
+
+        // Step 6: Detect language from target file
+        const language = this.detectLanguage(targetPath);
+
+        // Step 7: Generate AST-integrated test
+        const generated = await this.testIntegrationClient.generate({
+          targetFileContent,
+          testSuite,
+          framework,
+          language
+        });
+
+        logger.info(`Backend integration succeeded using ${generated.method} method`);
+        if (generated.insertionPoint) {
+          logger.debug(`Insertion point: line ${generated.insertionPoint.line}, strategy: ${generated.insertionPoint.strategy}`);
+        }
+
+        // Step 8: Return integrated result
+        return {
+          targetFile: targetPath,
+          content: generated.integratedContent
+        };
 
       } catch (error) {
         const isLastAttempt = attempt === maxAttempts;
@@ -603,6 +635,8 @@ export class ValidationMode {
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
+
+    throw new Error('Backend integration failed after all retry attempts');
   }
 
   /**
@@ -1007,10 +1041,13 @@ export class ValidationMode {
     }
 
     // Convert to our TestSuite format
+    const redTests = result.generatedTests.testSuite.redTests
+      || (result.generatedTests.testSuite.red ? [result.generatedTests.testSuite.red] : []);
+
     return {
       framework: framework.name,
       testFile: targetTestFile.path,
-      redTests: result.generatedTests.testSuite.redTests || [result.generatedTests.testSuite.red]
+      redTests
     };
   }
 
@@ -1297,5 +1334,73 @@ CWE: CWE-22`
     }
 
     return testFiles;
+  }
+
+  /**
+   * Format test suite for backend API
+   */
+  private formatTestSuite(testContent: any): any {
+    // If already in correct format, return as-is
+    if (testContent.redTests && Array.isArray(testContent.redTests)) {
+      return testContent;
+    }
+
+    // If it has a single 'red' test, wrap it in redTests array
+    if (testContent.red) {
+      return {
+        redTests: [testContent.red]
+      };
+    }
+
+    // If it's a raw test suite object with testName/testCode, wrap it
+    if (testContent.testName && testContent.testCode) {
+      return {
+        redTests: [testContent]
+      };
+    }
+
+    // Fallback: return as-is and let backend handle it
+    return testContent;
+  }
+
+  /**
+   * Detect programming language from file path
+   */
+  private detectLanguage(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+
+    const languageMap: Record<string, string> = {
+      '.rb': 'ruby',
+      '.js': 'javascript',
+      '.ts': 'typescript',
+      '.py': 'python',
+      '.java': 'java',
+      '.php': 'php',
+      '.ex': 'elixir',
+      '.exs': 'elixir'
+    };
+
+    return languageMap[ext] || 'javascript'; // Default to JavaScript
+  }
+
+  /**
+   * Detect test framework from source file extension
+   */
+  private detectFrameworkFromFile(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+
+    // Map source file extensions to likely test frameworks
+    const frameworkMap: Record<string, string> = {
+      '.rb': 'rspec',
+      '.js': 'vitest',
+      '.ts': 'vitest',
+      '.py': 'pytest',
+      '.java': 'junit5',
+      '.php': 'phpunit',
+      '.ex': 'exunit',
+      '.exs': 'exunit'
+    };
+
+    return frameworkMap[ext] || 'vitest'; // Default to vitest for JS/TS projects
   }
 }

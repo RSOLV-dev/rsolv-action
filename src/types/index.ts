@@ -54,6 +54,7 @@ export interface IssueContext {
   body: string;
   labels: string[];
   assignees: string[];
+  file?: string; // Primary file associated with the issue (e.g., from issue body parsing)
   repository: {
     owner: string;
     name: string;
