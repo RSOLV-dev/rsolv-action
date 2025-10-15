@@ -377,6 +377,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
   - 500: Internal error
   """
   def analyze(conn, params) do
+    start_time = System.monotonic_time(:millisecond)
     customer = conn.assigns.customer
 
     with :ok <- check_rate_limit(customer),
@@ -389,9 +390,36 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
           request["framework"]
         )
 
+      # Emit telemetry for successful analysis
+      duration = System.monotonic_time(:millisecond) - start_time
+      language = infer_language_from_framework(request["framework"])
+
+      :telemetry.execute(
+        [:rsolv, :test_integration, :analyze],
+        %{
+          duration: duration,
+          candidate_count: length(request["candidateTestFiles"]),
+          recommendation_count: length(result.recommendations || [])
+        },
+        %{
+          customer_id: customer.id,
+          language: language,
+          framework: request["framework"],
+          status: "completed"
+        }
+      )
+
       json(conn, result)
     else
       {:error, :rate_limited} ->
+        duration = System.monotonic_time(:millisecond) - start_time
+
+        :telemetry.execute(
+          [:rsolv, :test_integration, :analyze],
+          %{duration: duration},
+          %{customer_id: customer.id, status: "rate_limited"}
+        )
+
         conn
         |> put_resp_header("retry-after", "60")
         |> put_status(429)
@@ -404,6 +432,14 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
         })
 
       {:error, {:validation, message}} ->
+        duration = System.monotonic_time(:millisecond) - start_time
+
+        :telemetry.execute(
+          [:rsolv, :test_integration, :analyze],
+          %{duration: duration},
+          %{customer_id: customer.id, status: "validation_error"}
+        )
+
         conn
         |> put_status(400)
         |> json(%{
@@ -414,7 +450,14 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
         })
 
       {:error, reason} ->
+        duration = System.monotonic_time(:millisecond) - start_time
         Logger.error("Test integration analysis error: #{inspect(reason)}")
+
+        :telemetry.execute(
+          [:rsolv, :test_integration, :analyze],
+          %{duration: duration},
+          %{customer_id: customer.id, status: "error"}
+        )
 
         conn
         |> put_status(500)
@@ -523,6 +566,27 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
 
       Logger.info(
         "TestIntegrationController: Successfully generated integration (method: #{method}, time: #{total_time}ms)"
+      )
+
+      # Emit telemetry for successful generation
+      language = params["language"]
+      framework = params["framework"]
+      lines_integrated = count_lines(integrated_content)
+
+      :telemetry.execute(
+        [:rsolv, :test_integration, :generate],
+        %{
+          duration: total_time,
+          lines_integrated: lines_integrated,
+          tests_count: length(params["testSuite"]["redTests"] || [])
+        },
+        %{
+          customer_id: customer.id,
+          language: language,
+          framework: framework,
+          method: to_string(method),
+          status: "completed"
+        }
       )
 
       json(conn, %{
@@ -647,6 +711,23 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
   # Private functions
 
   defp handle_generate_error(conn, error, request_id) do
+    customer = conn.assigns.customer
+
+    # Emit telemetry for errors
+    status =
+      case error do
+        {:error, :rate_limited} -> "rate_limited"
+        {:error, {:validation, _}} -> "validation_error"
+        {:error, {:unsupported_framework, _}} -> "unsupported_framework"
+        _ -> "error"
+      end
+
+    :telemetry.execute(
+      [:rsolv, :test_integration, :generate],
+      %{duration: 0},
+      %{customer_id: customer.id, status: status}
+    )
+
     case error do
       {:error, :rate_limited} ->
         send_error_response(
@@ -841,4 +922,27 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
     supported_list = Enum.join(@analyze_supported_frameworks, ", ")
     {:error, {:validation, "unsupported framework: #{framework}. Supported: #{supported_list}"}}
   end
+
+  # Telemetry helper functions
+
+  defp infer_language_from_framework(framework) do
+    case String.downcase(framework) do
+      "rspec" -> "ruby"
+      "minitest" -> "ruby"
+      "vitest" -> "javascript"
+      "jest" -> "javascript"
+      "mocha" -> "javascript"
+      "pytest" -> "python"
+      "unittest" -> "python"
+      _ -> "unknown"
+    end
+  end
+
+  defp count_lines(content) when is_binary(content) do
+    content
+    |> String.split("\n")
+    |> length()
+  end
+
+  defp count_lines(_), do: 0
 end
