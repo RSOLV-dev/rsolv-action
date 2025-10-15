@@ -499,7 +499,7 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
       prompt += `Fixed commit - RED tests: ${validationResult.fixedCommit.allPassed ? 'PASSED (expected)' : 'FAILED (problem!)'}\n`;
 
       // Show individual test results if multiple RED tests
-      if (validationResult.fixedCommit.redTestsPassed.length > 1) {
+      if (validationResult.fixedCommit.redTestsPassed && validationResult.fixedCommit.redTestsPassed.length > 1) {
         prompt += '\nIndividual RED test results on fixed code:\n';
         validationResult.fixedCommit.redTestsPassed.forEach((passed: boolean, index: number) => {
           prompt += `  - RED test ${index + 1}: ${passed ? 'PASSED' : 'FAILED'}\n`;
