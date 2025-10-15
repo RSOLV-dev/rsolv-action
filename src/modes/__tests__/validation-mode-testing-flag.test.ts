@@ -107,8 +107,20 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
-          success: true, // Tests pass = no vulnerability
-          output: 'All tests passed'
+          success: true,
+          output: 'All tests passed',
+          vulnerableCommit: {
+            allPassed: true, // Tests pass = no vulnerability
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          },
+          fixedCommit: {
+            allPassed: true,
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
         })
       };
       GitBasedTestValidator.prototype.validateFixWithTests =
@@ -140,8 +152,20 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
-          success: false, // Tests fail = vulnerability exists
-          output: 'Test failed: XSS vulnerability detected'
+          success: false,
+          output: 'Test failed: XSS vulnerability detected',
+          vulnerableCommit: {
+            allPassed: false, // Tests fail = vulnerability exists
+            redTestPassed: false,
+            greenTestPassed: false,
+            refactorTestPassed: true
+          },
+          fixedCommit: {
+            allPassed: true,
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
         })
       };
       GitBasedTestValidator.prototype.validateFixWithTests =
@@ -179,8 +203,20 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
-          success: true, // Tests pass - would normally be false positive
-          output: 'All tests passed'
+          success: true,
+          output: 'All tests passed',
+          vulnerableCommit: {
+            allPassed: true, // Tests pass - would normally be false positive
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          },
+          fixedCommit: {
+            allPassed: true,
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
         })
       };
       GitBasedTestValidator.prototype.validateFixWithTests =
@@ -214,8 +250,20 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
-          success: false, // Tests fail = vulnerability exists
-          output: 'Test failed: XSS vulnerability detected'
+          success: false,
+          output: 'Test failed: XSS vulnerability detected',
+          vulnerableCommit: {
+            allPassed: false, // Tests fail = vulnerability exists
+            redTestPassed: false,
+            greenTestPassed: false,
+            refactorTestPassed: true
+          },
+          fixedCommit: {
+            allPassed: true,
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
         })
       };
       GitBasedTestValidator.prototype.validateFixWithTests =
@@ -248,8 +296,20 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
-          success: true, // Tests pass
-          output: 'All tests passed'
+          success: true,
+          output: 'All tests passed',
+          vulnerableCommit: {
+            allPassed: true, // Tests pass
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          },
+          fixedCommit: {
+            allPassed: true,
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
         })
       };
       GitBasedTestValidator.prototype.validateFixWithTests =
@@ -291,8 +351,20 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
       const mockValidator = {
         validateFixWithTests: vi.fn().mockResolvedValue({
-          success: true, // Tests pass
-          output: 'All tests passed'
+          success: true,
+          output: 'All tests passed',
+          vulnerableCommit: {
+            allPassed: true, // Tests pass
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          },
+          fixedCommit: {
+            allPassed: true,
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
         })
       };
       GitBasedTestValidator.prototype.validateFixWithTests =

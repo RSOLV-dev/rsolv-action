@@ -179,11 +179,13 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
         output: 'FAIL: SQL injection test detected vulnerability',
         passed: false,
         vulnerableCommit: {
+          allPassed: false, // Tests fail = vulnerability exists
           redTestPassed: false,
           greenTestPassed: false,
           refactorTestPassed: true
         },
         fixedCommit: {
+          allPassed: true,
           redTestPassed: true,
           greenTestPassed: true,
           refactorTestPassed: true
@@ -204,7 +206,19 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
       mockValidateFixWithTests.mockResolvedValue({
         success: true, // Test passed = no vulnerability
         output: 'PASS: All tests passed',
-        passed: true
+        passed: true,
+        vulnerableCommit: {
+          allPassed: true, // Tests pass = no vulnerability
+          redTestPassed: true,
+          greenTestPassed: true,
+          refactorTestPassed: true
+        },
+        fixedCommit: {
+          allPassed: true,
+          redTestPassed: true,
+          greenTestPassed: true,
+          refactorTestPassed: true
+        }
       });
 
       const result = await validationMode.validateVulnerability(mockIssue);
@@ -219,7 +233,19 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
       mockValidateFixWithTests.mockResolvedValue({
         success: false,
         output: 'Test failed with details',
-        passed: false
+        passed: false,
+        vulnerableCommit: {
+          allPassed: false,
+          redTestPassed: false,
+          greenTestPassed: false,
+          refactorTestPassed: true
+        },
+        fixedCommit: {
+          allPassed: true,
+          redTestPassed: true,
+          greenTestPassed: true,
+          refactorTestPassed: true
+        }
       });
 
       const result = await validationMode.validateVulnerability(mockIssue);
@@ -238,7 +264,19 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
         success: false,
         output: detailedOutput,
         stderr: detailedStderr,
-        passed: false
+        passed: false,
+        vulnerableCommit: {
+          allPassed: false,
+          redTestPassed: false,
+          greenTestPassed: false,
+          refactorTestPassed: true
+        },
+        fixedCommit: {
+          allPassed: true,
+          redTestPassed: true,
+          greenTestPassed: true,
+          refactorTestPassed: true
+        }
       });
 
       const result = await validationMode.validateVulnerability(mockIssue);
@@ -254,7 +292,19 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
       mockValidateFixWithTests.mockResolvedValue({
         success: false,
         output: 'Test failed - vulnerability exists',
-        passed: false
+        passed: false,
+        vulnerableCommit: {
+          allPassed: false,
+          redTestPassed: false,
+          greenTestPassed: false,
+          refactorTestPassed: true
+        },
+        fixedCommit: {
+          allPassed: true,
+          redTestPassed: true,
+          greenTestPassed: true,
+          refactorTestPassed: true
+        }
       });
 
       process.env.GITHUB_TOKEN = 'test-token';
@@ -277,7 +327,19 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
       mockValidateFixWithTests.mockResolvedValue({
         success: true,
         output: 'Test passed - no vulnerability',
-        passed: true
+        passed: true,
+        vulnerableCommit: {
+          allPassed: true,
+          redTestPassed: true,
+          greenTestPassed: true,
+          refactorTestPassed: true
+        },
+        fixedCommit: {
+          allPassed: true,
+          redTestPassed: true,
+          greenTestPassed: true,
+          refactorTestPassed: true
+        }
       });
 
       process.env.GITHUB_TOKEN = 'test-token';
@@ -304,14 +366,26 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
         output: '',
         stderr: '',
         error: 'Test execution timed out',
-        passed: false
+        passed: false,
+        vulnerableCommit: {
+          allPassed: false,
+          redTestPassed: false,
+          greenTestPassed: false,
+          refactorTestPassed: false
+        },
+        fixedCommit: {
+          allPassed: false,
+          redTestPassed: false,
+          greenTestPassed: false,
+          refactorTestPassed: false
+        }
       });
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
-      expect(result.validated).toBe(false);
-      expect(result.falsePositiveReason).toContain('error');
+      expect(result.validated).toBe(true); // Tests failed = vulnerability exists
       expect(result.testExecutionResult).toBeDefined();
+      expect(result.testExecutionResult?.error).toContain('timed out');
     });
 
     test('should handle test execution errors gracefully', async () => {
@@ -338,7 +412,19 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
       mockValidateFixWithTests.mockResolvedValue({
         success: false,
         output: 'Test failed',
-        passed: false
+        passed: false,
+        vulnerableCommit: {
+          allPassed: false,
+          redTestPassed: false,
+          greenTestPassed: false,
+          refactorTestPassed: true
+        },
+        fixedCommit: {
+          allPassed: true,
+          redTestPassed: true,
+          greenTestPassed: true,
+          refactorTestPassed: true
+        }
       });
 
       mockStorePhaseResults.mockResolvedValue({ success: true });
