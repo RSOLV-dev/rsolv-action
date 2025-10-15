@@ -26,8 +26,9 @@ defmodule Rsolv.Repo.Migrations.AddAuthFieldsToCustomers do
     # Drop the staff index
     drop index(:customers, [:is_staff])
 
-    # Drop the unique email index (only if we created it)
-    drop_if_exists unique_index(:customers, [:email])
+    # Don't drop the unique email index - it was created by the original
+    # 20240525000001_create_customers migration, not by this one.
+    # We used create_if_not_exists so it already existed.
 
     # Remove the added columns
     alter table(:customers) do
