@@ -132,16 +132,20 @@ export class PhaseDataClient {
       // Use the client-side key names (validate/mitigate, not validation/mitigation)
       const phaseIssueData = (data as any)[phase];
 
-      if (phaseIssueData && metadata.issueNumber) {
-        // Extract just the data for this specific issue using the issue number as key
-        const issueKey = String(metadata.issueNumber);
-        phaseSpecificData = phaseIssueData[issueKey];
+      if (!metadata.issueNumber) {
+        throw new Error(`Issue number is required for ${phase} phase`);
+      }
 
-        // If no data found for this specific issue, throw validation error
-        if (!phaseSpecificData) {
-          throw new Error(`No ${phase} data found for issue ${metadata.issueNumber}`);
-        }
-      } else {
+      if (!phaseIssueData) {
+        throw new Error(`No ${phase} data found for issue ${metadata.issueNumber}`);
+      }
+
+      // Extract just the data for this specific issue using the issue number as key
+      const issueKey = String(metadata.issueNumber);
+      phaseSpecificData = phaseIssueData[issueKey];
+
+      // If no data found for this specific issue, throw validation error
+      if (!phaseSpecificData) {
         throw new Error(`No ${phase} data found for issue ${metadata.issueNumber}`);
       }
     }
