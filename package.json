@@ -28,6 +28,7 @@
     "test:e2e:pattern-api": "vitest run src/__tests__/pattern-api-e2e.test.ts",
     "test:e2e:integration": "vitest run tests/e2e/pattern-api-integration.test.ts",
     "test:e2e:docker": "cd .. && ./run-e2e-docker.sh",
+    "test:e2e:ruby": "RUN_E2E=true vitest run tests/e2e/railsgoat-ruby-rspec.test.ts",
     "test:integration": "vitest run src/modes/__tests__/test-integration-client.test.ts src/modes/__tests__/validation-mode-test-integration.test.ts"
   },
   "dependencies": {
