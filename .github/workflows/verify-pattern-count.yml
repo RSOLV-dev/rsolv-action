@@ -85,9 +85,9 @@ jobs:
             exit 1
           fi
 
-          # Also check docs directory if it exists
+          # Also check docs directory if it exists (excluding archived docs)
           if [ -d "docs" ]; then
-            if grep -rqE "(448|80)\+" docs/ 2>/dev/null; then
+            if grep -rqE "(448|80)\+" docs/ --exclude-dir=archived 2>/dev/null; then
               echo "❌ Found inflated pattern count (448+ or 80+) in docs/"
               echo "Should be 170+ (API patterns)"
               exit 1
