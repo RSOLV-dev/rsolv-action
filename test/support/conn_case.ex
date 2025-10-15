@@ -96,7 +96,7 @@ defmodule RsolvWeb.ConnCase do
         RsolvWeb.Endpoint.config(:secret_key_base)
         {:halt, :ok}
       rescue
-        e in ArgumentError ->
+        _e in ArgumentError ->
           if attempt < max_attempts do
             Process.sleep(retry_delay)
             {:cont, nil}
