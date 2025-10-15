@@ -31,7 +31,7 @@ defmodule RsolvWeb.TrackController do
     # Get IP address (will be anonymized)
     ip_address = to_string(:inet_parse.ntoa(conn.remote_ip))
 
-    # Add request metadata 
+    # Add request metadata
     tracking_data =
       Map.merge(
         %{

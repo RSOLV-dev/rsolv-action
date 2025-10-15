@@ -24,7 +24,7 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
   # Attack: POST with malicious parameters
   params[:user] = {
     name: "attacker",
-    email: "attacker@evil.com", 
+    email: "attacker@evil.com",
     admin: true,                    # Escalate privileges
     account_id: 1                   # Access other accounts
   }
@@ -229,7 +229,7 @@ defmodule Rsolv.Security.Patterns.Ruby.MassAssignment do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.MassAssignment.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.MassAssignment.ast_enhancement()
       iex> enhancement.min_confidence
       0.75

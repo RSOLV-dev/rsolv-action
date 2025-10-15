@@ -41,16 +41,16 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
       iex> pattern = Rsolv.Security.Patterns.Javascript.NosqlInjection.pattern()
       iex> pattern.id
       "js-nosql-injection"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.NosqlInjection.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.NosqlInjection.pattern()
       iex> vulnerable = "db.users.find({username: req.body.username})"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.NosqlInjection.pattern()
       iex> safe = "db.users.find({username: sanitize(req.body.username)})"
       iex> Regex.match?(pattern.regex, safe)
@@ -258,19 +258,19 @@ defmodule Rsolv.Security.Patterns.Javascript.NosqlInjection do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> enhancement.ast_rules.query_analysis.has_user_input
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.NosqlInjection.ast_enhancement()
       iex> "uses_sanitization" in Map.keys(enhancement.confidence_rules.adjustments)
       true

@@ -55,7 +55,7 @@ defmodule Rsolv.ProductionVerificationTest do
       SELECT column_name
       FROM information_schema.columns
       WHERE table_name = 'customers'
-      AND column_name IN ('trial_fixes_used', 'trial_fixes_limit', 'trial_expired', 
+      AND column_name IN ('trial_fixes_used', 'trial_fixes_limit', 'trial_expired',
                           'subscription_plan', 'rollover_fixes', 'stripe_customer_id');
       """
 

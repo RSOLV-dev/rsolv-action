@@ -9,7 +9,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
 
   Debug mode can expose sensitive information in several ways:
   - Configuration files with `debug: true` enable verbose error messages
-  - `IO.inspect/2` calls can leak sensitive data to logs  
+  - `IO.inspect/2` calls can leak sensitive data to logs
   - Phoenix debug annotations reveal internal application structure
   - Debug-level logging can expose credentials and internal state
   - `dbg/1` calls (introduced in Elixir 1.14) for debugging
@@ -18,7 +18,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
 
   Information disclosure through:
   - Detailed error messages revealing application internals
-  - Sensitive data logged via `IO.inspect/2` or `dbg/1` 
+  - Sensitive data logged via `IO.inspect/2` or `dbg/1`
   - Stack traces exposing code structure and file paths
   - Phoenix debug annotations showing template information
   - Debug logs containing credentials or session tokens
@@ -39,7 +39,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
   def create_user(params) do
     IO.inspect(params, label: "User creation")
     user_data |> dbg()
-    User.create(params)  
+    User.create(params)
   end
   ```
 
@@ -64,10 +64,10 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
 
   2. **Sensitive Data Logging**: `IO.inspect/2` calls can log user credentials,
      session tokens, and personal information to application logs
-     
+
   3. **Stack Trace Information Disclosure**: Debug mode stack traces reveal
      file paths, function names, and application architecture
-     
+
   4. **Phoenix Template Information**: Debug annotations expose template structure
      and variable names that can aid in further attacks
 
@@ -100,7 +100,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
         # Phoenix LiveView debug annotations
         ~r/debug_heex_annotations:\s*true/,
 
-        # IO.inspect patterns  
+        # IO.inspect patterns
         ~r/IO\.inspect\s*\(|IO\.inspect\s+[^(]/,
 
         # dbg/1 patterns (Elixir 1.14+)
@@ -148,7 +148,7 @@ defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabled do
       business_impact: """
       High: Information disclosure can lead to:
       - Exposure of user credentials and sensitive data
-      - Revelation of application architecture aiding further attacks  
+      - Revelation of application architecture aiding further attacks
       - Compliance violations (GDPR, CCPA) due to data leakage
       - Loss of customer trust from security incidents
       """,

@@ -2,9 +2,9 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
   @moduledoc """
   Rails Template XSS pattern for Rails applications.
 
-  This pattern detects Cross-Site Scripting (XSS) vulnerabilities in Rails 
-  templates through unsafe output methods like raw(), html_safe(), and 
-  unescaped ERB tags. XSS is one of the most common web application 
+  This pattern detects Cross-Site Scripting (XSS) vulnerabilities in Rails
+  templates through unsafe output methods like raw(), html_safe(), and
+  unescaped ERB tags. XSS is one of the most common web application
   vulnerabilities and can lead to account takeover, data theft, and malware distribution.
 
   ## Background
@@ -34,19 +34,19 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
 
       # Critical - raw() with user input
       <%= raw params[:content] %>
-      
-      # Critical - html_safe with user input  
+
+      # Critical - html_safe with user input
       <%= params[:description].html_safe %>
-      
+
       # Critical - unescaped ERB output
       <%== params[:content] %>
-      
+
       # Critical - link_to with raw user input
       <%= link_to raw(params[:text]), user_path %>
-      
+
       # Safe - default Rails escaping
       <%= params[:content] %>
-      
+
       # Safe - sanitized content
       <%= sanitize(params[:content]) %>
   """
@@ -135,11 +135,11 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
   def vulnerability_metadata do
     %{
       description: """
-      Cross-Site Scripting (XSS) in Rails templates is a critical web security 
-      vulnerability that occurs when user-controlled data is output to HTML pages 
-      without proper escaping or sanitization. While Rails provides automatic HTML 
-      escaping by default, developers can bypass this protection using methods like 
-      raw(), html_safe(), or unescaped ERB output tags, creating XSS vulnerabilities 
+      Cross-Site Scripting (XSS) in Rails templates is a critical web security
+      vulnerability that occurs when user-controlled data is output to HTML pages
+      without proper escaping or sanitization. While Rails provides automatic HTML
+      escaping by default, developers can bypass this protection using methods like
+      raw(), html_safe(), or unescaped ERB output tags, creating XSS vulnerabilities
       when user input reaches these methods.
 
       The vulnerability is particularly dangerous because:
@@ -213,7 +213,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          <%= raw params[:content] %>              # DANGEROUS
          <%= params[:text].html_safe %>          # DANGEROUS
          <%== user_input %>                      # DANGEROUS
-         
+
          # Always use Rails' default escaping
          <%= params[:content] %>                 # SAFE - Auto-escaped
          ```
@@ -223,7 +223,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          # For user content that may contain HTML
          <%= sanitize(params[:content]) %>       # Whitelist safe tags
          <%= sanitize(params[:content], tags: %w[p br strong em]) %>
-         
+
          # For plain text content
          <%= strip_tags(params[:content]) %>     # Remove all HTML
          <%= h(params[:content]) %>              # Explicit HTML escaping
@@ -233,7 +233,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          ```ruby
          # Bad - Direct user input in href
          <%= link_to "Visit", @user.website %>   # VULNERABLE to href injection
-         
+
          # Good - Validate URLs first
          def safe_url(url)
            uri = URI.parse(url)
@@ -243,7 +243,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          rescue URI::InvalidURIError
            nil
          end
-         
+
          <%= link_to "Visit", safe_url(@user.website) if safe_url(@user.website) %>
          ```
 
@@ -251,11 +251,11 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          ```ruby
          # In ApplicationController
          before_action :set_content_security_policy
-         
+
          private
-         
+
          def set_content_security_policy
-           response.headers['Content-Security-Policy'] = 
+           response.headers['Content-Security-Policy'] =
              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
          end
          ```
@@ -264,11 +264,11 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
          ```ruby
          class User < ApplicationRecord
            validates :bio, length: { maximum: 1000 }
-           validates :website, format: { 
-             with: URI::regexp(%w[http https]), 
-             message: "must be a valid URL" 
+           validates :website, format: {
+             with: URI::regexp(%w[http https]),
+             message: "must be a valid URL"
            }
-           
+
            def safe_bio
              ActionController::Base.helpers.sanitize(bio)
            end
@@ -325,7 +325,7 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       # 5. Safe URL handling
       class UrlValidator
         ALLOWED_SCHEMES = %w[http https].freeze
-        
+
         def self.safe_url?(url)
           return false if url.blank?
           uri = URI.parse(url)
@@ -352,13 +352,13 @@ defmodule Rsolv.Security.Patterns.Rails.TemplateXss do
       # 8. Custom sanitizer with strict whitelist
       class StrictSanitizer
         include ActionView::Helpers::SanitizeHelper
-        
+
         ALLOWED_TAGS = %w[p br strong em].freeze
         ALLOWED_ATTRIBUTES = %w[].freeze
-        
+
         def self.clean(content)
           ActionController::Base.helpers.sanitize(
-            content, 
+            content,
             tags: ALLOWED_TAGS,
             attributes: ALLOWED_ATTRIBUTES
           )

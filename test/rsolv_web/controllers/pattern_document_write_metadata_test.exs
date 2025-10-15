@@ -23,7 +23,7 @@ defmodule RsolvWeb.PatternDocumentWriteMetadataTest do
       assert attack_vector_text =~ "script"
       assert attack_vector_text =~ "onerror"
 
-      # Check for parser blocking warnings  
+      # Check for parser blocking warnings
       assert Map.has_key?(json, "additional_context")
       assert Map.has_key?(json["additional_context"], "parser_blocking")
       assert is_list(json["additional_context"]["parser_blocking"])

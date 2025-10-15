@@ -210,11 +210,11 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       iex> test_cases = Rsolv.Security.Patterns.Php.HardcodedCredentials.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.HardcodedCredentials.test_cases()
       iex> length(test_cases.negative) > 0
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Php.HardcodedCredentials.pattern()
       iex> pattern.id
       "php-hardcoded-credentials"
@@ -306,7 +306,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
         class PaymentGateway {
             private $api_key = 'sk-live-4eC39HqLyjWDarjtT1zdp7dc';
             private $secret = 'whsec_VfKbDlhWQWq0p5qDVHqFd7L7';
-            
+
             public function processPayment($amount) {
                 $headers = [
                     'Authorization: Bearer ' . $this->api_key,
@@ -370,22 +370,22 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
         // Secure configuration management
         class Config {
             private $secrets;
-            
+
             public function __construct() {
                 // Load from secure location outside web root
                 $config_file = '/etc/myapp/secrets.json';
-                
+
                 if (!file_exists($config_file)) {
                     throw new Exception('Configuration file not found');
                 }
-                
+
                 $contents = file_get_contents($config_file);
                 $this->secrets = json_decode($contents, true);
-                
+
                 // Clear from memory after parsing
                 unset($contents);
             }
-            
+
             public function get($key) {
                 return $this->secrets[$key] ?? null;
             }
@@ -429,30 +429,30 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
         class SecretManager {
             private $client;
             private $cache = [];
-            
+
             public function __construct() {
                 $this->client = new SecretsManagerClient([
                     'version' => 'latest',
                     'region' => $_ENV['AWS_REGION']
                 ]);
             }
-            
+
             public function getSecret($secretName) {
                 // Check cache first
                 if (isset($this->cache[$secretName])) {
                     return $this->cache[$secretName];
                 }
-                
+
                 try {
                     $result = $this->client->getSecretValue([
                         'SecretId' => $secretName
                     ]);
-                    
+
                     $secret = json_decode($result['SecretString'], true);
-                    
+
                     // Cache for this request only
                     $this->cache[$secretName] = $secret;
-                    
+
                     return $secret;
                 } catch (Exception $e) {
                     error_log('Failed to retrieve secret: ' . $secretName);
@@ -506,7 +506,7 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
 
     ### Database Passwords
     ```php
-    $conn = new PDO('mysql:host=localhost;dbname=prod', 
+    $conn = new PDO('mysql:host=localhost;dbname=prod',
                     'root', 'admin123');  // NEVER DO THIS!
     ```
 
@@ -625,11 +625,11 @@ defmodule Rsolv.Security.Patterns.Php.HardcodedCredentials do
       iex> enhancement = Rsolv.Security.Patterns.Php.HardcodedCredentials.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.HardcodedCredentials.ast_enhancement()
       iex> enhancement.min_confidence
       0.85
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.HardcodedCredentials.ast_enhancement()
       iex> length(enhancement.ast_rules)
       5

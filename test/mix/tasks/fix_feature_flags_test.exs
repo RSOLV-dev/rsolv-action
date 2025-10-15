@@ -10,7 +10,7 @@ defmodule Mix.Tasks.FixFeatureFlagsTest do
       # The group gate is what's causing the issue in production
       Rsolv.Repo.query!("""
       INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled)
-      VALUES 
+      VALUES
         ('metrics_dashboard', 'boolean', NULL, false),
         ('metrics_dashboard', 'group', 'admin', true)
       ON CONFLICT DO NOTHING
@@ -24,7 +24,7 @@ defmodule Mix.Tasks.FixFeatureFlagsTest do
       # Verify the flag is now enabled globally
       {:ok, result} =
         Rsolv.Repo.query("""
-        SELECT enabled FROM fun_with_flags_toggles 
+        SELECT enabled FROM fun_with_flags_toggles
         WHERE flag_name = 'metrics_dashboard' AND gate_type = 'boolean'
         ORDER BY id DESC
         LIMIT 1
@@ -35,7 +35,7 @@ defmodule Mix.Tasks.FixFeatureFlagsTest do
       # Verify group gates were removed
       {:ok, result} =
         Rsolv.Repo.query("""
-        SELECT COUNT(*) FROM fun_with_flags_toggles 
+        SELECT COUNT(*) FROM fun_with_flags_toggles
         WHERE flag_name = 'metrics_dashboard' AND gate_type = 'group'
         """)
 
@@ -46,10 +46,10 @@ defmodule Mix.Tasks.FixFeatureFlagsTest do
       # Ensure flags have disabled boolean gates initially
       Rsolv.Repo.query!("""
       INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled)
-      VALUES 
+      VALUES
         ('admin_dashboard', 'boolean', NULL, false),
         ('metrics_dashboard', 'boolean', NULL, false)
-      ON CONFLICT (flag_name, gate_type, target) 
+      ON CONFLICT (flag_name, gate_type, target)
       DO UPDATE SET enabled = false
       """)
 
@@ -61,9 +61,9 @@ defmodule Mix.Tasks.FixFeatureFlagsTest do
       # Verify both flags are enabled in the database
       {:ok, result} =
         Rsolv.Repo.query("""
-        SELECT DISTINCT ON (flag_name) flag_name, enabled 
-        FROM fun_with_flags_toggles 
-        WHERE flag_name IN ('admin_dashboard', 'metrics_dashboard') 
+        SELECT DISTINCT ON (flag_name) flag_name, enabled
+        FROM fun_with_flags_toggles
+        WHERE flag_name IN ('admin_dashboard', 'metrics_dashboard')
         AND gate_type = 'boolean'
         ORDER BY flag_name, id DESC
         """)

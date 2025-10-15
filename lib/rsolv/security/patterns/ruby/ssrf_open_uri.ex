@@ -25,7 +25,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
   def fetch_data
     url = params[:url]
     uri = URI.parse(url)
-    
+
     allowed_hosts = ['api.example.com', 'trusted.service.com']
     if allowed_hosts.include?(uri.host) && uri.scheme.in?(['http', 'https'])
       data = open(url).read
@@ -57,16 +57,16 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
       iex> pattern = Rsolv.Security.Patterns.Ruby.SsrfOpenUri.pattern()
       iex> pattern.id
       "ruby-ssrf-open-uri"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.SsrfOpenUri.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.SsrfOpenUri.pattern()
       iex> vulnerable = "open(params[:url])"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable))
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.SsrfOpenUri.pattern()
       iex> safe = "open('https://api.trusted.com/data')"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, safe))
@@ -97,7 +97,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
         ~r/(?:^|[^#])\s*HTTParty\.(?:get|post|put|patch|delete|head|options)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*HTTParty\.request\s*\(\s*:?\w+\s*,\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
 
-        # Faraday patterns with user input  
+        # Faraday patterns with user input
         ~r/(?:^|[^#])\s*Faraday\.(?:get|post|put|patch|delete|head|options)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*Faraday\.new\s*\(\s*(?:url|base_url):\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
         ~r/(?:^|[^#])\s*(?:faraday|connection)\.(?:get|post|put|patch|delete|head|options)\s*\(\s*(?:params|request\.(?:params|parameters)|user_[\w_]*|[\w_]*_input)/,
@@ -219,7 +219,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
       detection_notes: """
       This pattern detects common Ruby HTTP libraries used with user-controlled input:
       - open-uri: Built-in Ruby library for opening URIs
-      - Net::HTTP: Standard library HTTP client 
+      - Net::HTTP: Standard library HTTP client
       - HTTParty: Popular gem for HTTP requests
       - Faraday: HTTP/REST API client library
       - RestClient: Simple HTTP and REST client
@@ -268,15 +268,15 @@ defmodule Rsolv.Security.Patterns.Ruby.SsrfOpenUri do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.SsrfOpenUri.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.SsrfOpenUri.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.SsrfOpenUri.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.SsrfOpenUri.ast_enhancement()
       iex> enhancement.ast_rules.http_library_analysis.open_uri_methods
       true

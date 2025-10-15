@@ -3,7 +3,7 @@ defmodule Rsolv.Security.Patterns.Elixir.PathTraversal do
   Detects path traversal vulnerabilities in Elixir file operations.
 
   This pattern identifies instances where user-controlled input is used in file paths
-  without proper validation, potentially allowing attackers to access files outside 
+  without proper validation, potentially allowing attackers to access files outside
   intended directories using sequences like "../" or absolute paths.
 
   ## Vulnerability Details
@@ -36,7 +36,7 @@ defmodule Rsolv.Security.Patterns.Elixir.PathTraversal do
     safe_name = Path.basename(filename)  # Remove directory components
     base_dir = "/uploads"
     full_path = Path.expand(safe_name, base_dir)
-    
+
     # Ensure the resolved path is within allowed directory
     if String.starts_with?(full_path, base_dir <> "/") do
       case File.read(full_path) do
@@ -211,7 +211,7 @@ end|,
       iex> enhancement = Rsolv.Security.Patterns.Elixir.PathTraversal.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.PathTraversal.ast_enhancement()
       iex> enhancement.min_confidence
       0.75

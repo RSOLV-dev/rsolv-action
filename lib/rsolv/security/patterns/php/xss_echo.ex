@@ -198,7 +198,7 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
       iex> test_cases = Rsolv.Security.Patterns.Php.XssEcho.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.XssEcho.test_cases()
       iex> length(test_cases.negative) > 0
       true
@@ -333,7 +333,7 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
     Cross-Site Scripting (XSS) is one of the most prevalent web application vulnerabilities,
     particularly in PHP applications. XSS occurs when an attacker can inject malicious
     scripts into web pages that are viewed by other users, enabling cross-site scripting
-    attacks. The echo statement in PHP is a primary vector for XSS when used with 
+    attacks. The echo statement in PHP is a primary vector for XSS when used with
     unescaped user input.
 
     ## Why It's Dangerous
@@ -415,11 +415,11 @@ defmodule Rsolv.Security.Patterns.Php.XssEcho do
       iex> enhancement = Rsolv.Security.Patterns.Php.XssEcho.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.XssEcho.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.XssEcho.ast_enhancement()
       iex> length(enhancement.ast_rules)
       3

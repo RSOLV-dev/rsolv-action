@@ -34,7 +34,7 @@ defmodule Rsolv.AST.ASTNormalizer do
       iex> js_ast = %{"type" => "Program", "body" => []}
       iex> ASTNormalizer.normalize_ast(js_ast, "javascript")
       {:ok, %{type: :program, children: %{body: []}, ...}}
-      
+
       iex> ASTNormalizer.normalize_ast(%{}, "unknown")
       {:error, :unsupported_language}
   """

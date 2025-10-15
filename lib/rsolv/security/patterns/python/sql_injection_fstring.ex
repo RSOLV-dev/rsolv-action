@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
     cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")
     db.execute(f"DELETE FROM posts WHERE id = {post_id}")
     query = f"UPDATE users SET status = '{status}'"; conn.execute(query)
-    
+
   Safe alternatives:
     cursor.execute("SELECT * FROM users WHERE name = %s", (name,))
     db.execute("DELETE FROM posts WHERE id = ?", [post_id])
     cursor.execute("UPDATE users SET status = :status", {"status": status})
-    
+
   ## Vulnerability Details
 
   Python f-strings (formatted string literals) introduced in Python 3.6 provide
@@ -45,16 +45,16 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFstring.pattern()
       iex> pattern.id
       "python-sql-injection-fstring"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFstring.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFstring.pattern()
       iex> vulnerable = ~S|cursor.execute(f"SELECT * FROM users WHERE name = '{name}'")|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFstring.pattern()
       iex> safe = ~S|cursor.execute("SELECT * FROM users WHERE name = %s", (name,))|
       iex> Regex.match?(pattern.regex, safe)
@@ -209,7 +209,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFstring do
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionFstring.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionFstring.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

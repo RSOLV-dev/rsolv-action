@@ -16,7 +16,7 @@ defmodule Rsolv.Customers do
 
       iex> get_api_key_by_key("test_abc123")
       %ApiKey{}
-      
+
       iex> get_api_key_by_key("invalid")
       nil
   """
@@ -300,7 +300,7 @@ defmodule Rsolv.Customers do
 
       iex> register_customer(%{email: "test@example.com", password: "SecureP@ss123!", name: "Test"})
       {:ok, %Customer{}}
-      
+
       iex> register_customer(%{email: "bad", password: "weak"})
       {:error, %Ecto.Changeset{}}
   """
@@ -326,10 +326,10 @@ defmodule Rsolv.Customers do
 
       iex> authenticate_customer_by_email_and_password("test@example.com", "correct_password")
       {:ok, %Customer{}}
-      
+
       iex> authenticate_customer_by_email_and_password("test@example.com", "wrong_password")
       {:error, :invalid_credentials}
-      
+
       iex> # After too many attempts
       iex> authenticate_customer_by_email_and_password("test@example.com", "any_password")
       {:error, :too_many_attempts}

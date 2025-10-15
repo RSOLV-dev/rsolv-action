@@ -28,18 +28,18 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
       # VULNERABLE - User controls template name
       template_name = request.GET.get('template')
       return render_to_string(template_name, context)
-      
+
       # VULNERABLE - User provides template code
       template_string = request.POST.get('template_code')
       template = Template(template_string)
-      
+
       # VULNERABLE - Dynamic template path
       report_type = request.GET['type']
       return render(request, f"reports/{report_type}.html", context)
-      
+
       # SAFE - Static template name
       return render_to_string('reports/summary.html', context)
-      
+
       # SAFE - Whitelisted templates
       ALLOWED_TEMPLATES = ['report1.html', 'report2.html']
       template = request.GET.get('template', 'report1.html')
@@ -130,8 +130,8 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
       description: """
       Server-Side Template Injection (SSTI) is a critical vulnerability that occurs when
       an attacker can inject malicious code into server-side templates. In Django applications,
-      this template injection vulnerability typically happens when user input is used to 
-      determine which template to render or when user input is passed directly to the 
+      this template injection vulnerability typically happens when user input is used to
+      determine which template to render or when user input is passed directly to the
       Template() constructor, enabling code execution.
 
       Django's template engine, while safer than some others (like Jinja2 in unsafe mode),
@@ -232,7 +232,7 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
          # NEVER DO THIS - User controls template
          template_name = request.GET.get('template')
          return render_to_string(template_name, context)
-         
+
          # SAFE - Static template name
          return render_to_string('reports/summary.html', {
              'data': user_data
@@ -247,13 +247,13 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
              'summary': 'reports/summary_report.html',
              'detail': 'reports/detail_report.html'
          }
-         
+
          def generate_report(request):
              report_type = request.GET.get('type', 'report')
-             
+
              # Use whitelisted template only
              template_name = ALLOWED_TEMPLATES.get(report_type, ALLOWED_TEMPLATES['report'])
-             
+
              return render(request, template_name, {
                  'report_data': get_report_data(request.user)
              })
@@ -263,14 +263,14 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
          ```python
          # NEVER DO THIS - RCE vulnerability!
          from django.template import Template, Context
-         
+
          user_template = request.POST.get('template')
          template = Template(user_template)  # DANGEROUS!
          output = template.render(Context({'user': request.user}))
-         
+
          # SAFE - Use predefined templates with variable data
          from django.template.loader import get_template
-         
+
          template = get_template('emails/notification.html')
          output = template.render({
              'user': request.user,
@@ -293,17 +293,17 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
                  'monthly': 'reports/monthly.html'
              }
          }
-         
+
          def render_document(request, doc_type):
              template_style = request.GET.get('style', 'standard')
-             
+
              # Safely resolve template path
              templates = TEMPLATE_MAPPING.get(doc_type, {})
              template_path = templates.get(template_style)
-             
+
              if not template_path:
                  return HttpResponseBadRequest('Invalid template selection')
-             
+
              return render(request, template_path, context)
          ```
 
@@ -311,17 +311,17 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
          ```python
          # NEVER DO THIS - Path injection risk
          template_path = f"emails/{request.GET['template_name']}.html"
-         
+
          # NEVER DO THIS EITHER
          template_path = "emails/{}.html".format(user_input)
-         
+
          # SAFE - Use dictionary lookup
          EMAIL_TEMPLATES = {
              'welcome': 'emails/welcome.html',
              'reset': 'emails/password_reset.html',
              'confirm': 'emails/confirmation.html'
          }
-         
+
          email_type = request.GET.get('type', 'welcome')
          template_path = EMAIL_TEMPLATES.get(email_type, EMAIL_TEMPLATES['welcome'])
          ```
@@ -335,12 +335,12 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
                      os.path.join(settings.BASE_DIR, 'templates'),
                      os.path.join(settings.BASE_DIR, 'app_templates')
                  ]
-             
+
              def __call__(self, request):
                  # Hook into template loading to validate paths
                  response = self.get_response(request)
                  return response
-             
+
              def validate_template_path(self, template_path):
                  # Ensure template is within allowed directories
                  abs_path = os.path.abspath(template_path)
@@ -350,13 +350,13 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
       7. **Disable Dangerous Template Features**:
          ```python
          # In production settings.py
-         
+
          # Disable debug mode
          DEBUG = False
-         
+
          # Remove dangerous template tags if not needed
          # Custom template tag libraries should be carefully reviewed
-         
+
          # If using django.contrib.admindocs, ensure it's protected
          # The {% ssi %} tag should never be enabled in production
          ```
@@ -366,7 +366,7 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
          # Add CSP headers to prevent XSS from template injection
          SECURE_CONTENT_TYPE_NOSNIFF = True
          SECURE_BROWSER_XSS_FILTER = True
-         
+
          # In middleware or view
          response['Content-Security-Policy'] = "default-src 'self'; script-src 'self'"
          ```
@@ -426,13 +426,13 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
               'order_confirmation': 'emails/order_confirmation.html',
               'newsletter': 'emails/newsletter.html'
           }
-          
+
           @classmethod
           def render_email(cls, template_key, context):
               template_path = cls.TEMPLATES.get(template_key)
               if not template_path:
                   raise ValueError(f"Unknown email template: {template_key}")
-              
+
               template = get_template(template_path)
               return template.render(context)
 
@@ -456,7 +456,7 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
               ReportType.DETAILED: 'reports/detailed.html',
               ReportType.EXECUTIVE: 'reports/executive.html'
           }
-          
+
           def generate(self, report_type: ReportType, data):
               template_path = self.TEMPLATE_MAP[report_type]
               return render_to_string(template_path, {'data': data})
@@ -467,14 +467,14 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
       def get_localized_template(base_name):
           # Safe template resolution based on language
           lang = get_language()
-          
+
           # Whitelist of available templates
           available = {
               'en': f'templates/en/{base_name}.html',
               'es': f'templates/es/{base_name}.html',
               'fr': f'templates/fr/{base_name}.html'
           }
-          
+
           return available.get(lang, available['en'])
 
       # 5. Template Caching for Performance
@@ -487,14 +487,14 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjection do
               # Only allow specific templates
               if template_name not in ALLOWED_TEMPLATES:
                   raise ValueError("Invalid template")
-              
+
               cache_key = f"template_{template_name}"
               template = cache.get(cache_key)
-              
+
               if not template:
                   template = get_template(template_name)
                   cache.set(cache_key, template, 3600)
-              
+
               return template.render(context)
       """
     }

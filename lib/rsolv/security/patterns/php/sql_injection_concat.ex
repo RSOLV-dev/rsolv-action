@@ -63,8 +63,8 @@ $stmt->bind_param("s", $_POST['author']);|
   def vulnerability_metadata do
     %{
       description: """
-      SQL injection via string concatenation is a critical vulnerability that occurs when 
-      user-controlled input is directly concatenated into SQL query strings. PHP's concatenation 
+      SQL injection via string concatenation is a critical vulnerability that occurs when
+      user-controlled input is directly concatenated into SQL query strings. PHP's concatenation
       operator (.) makes it trivial to accidentally create vulnerable code.
 
       This vulnerability can lead to complete database compromise, including:
@@ -197,7 +197,7 @@ $stmt->bind_param("s", $_POST['author']);|
       iex> test_cases = Rsolv.Security.Patterns.Php.SqlInjectionConcat.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.SqlInjectionConcat.test_cases()
       iex> length(test_cases.negative) > 0
       true
@@ -263,7 +263,7 @@ $stmt->bind_param("s", $_POST['author']);|
         $query = "SELECT * FROM users WHERE username = '" . $username . "' AND password = '" . $password . "'";
         $result = mysqli_query($conn, $query);
 
-        // Attack: username = admin' -- 
+        // Attack: username = admin' --
         // Results in: SELECT * FROM users WHERE username = 'admin' -- ' AND password = ''
         """,
         "DELETE injection with ID" => ~S"""
@@ -389,11 +389,11 @@ $stmt->bind_param("s", $_POST['author']);|
       iex> enhancement = Rsolv.Security.Patterns.Php.SqlInjectionConcat.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.SqlInjectionConcat.ast_enhancement()
       iex> enhancement.min_confidence
       0.9
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.SqlInjectionConcat.ast_enhancement()
       iex> length(enhancement.ast_rules)
       3

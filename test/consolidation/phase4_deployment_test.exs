@@ -59,7 +59,7 @@ defmodule Rsolv.Phase4DeploymentTest do
     @tag :api_integration
     test "credential vending API works" do
       # This will test credential vending functionality
-      # Skip for now until staging is deployed  
+      # Skip for now until staging is deployed
       :skip
     end
 

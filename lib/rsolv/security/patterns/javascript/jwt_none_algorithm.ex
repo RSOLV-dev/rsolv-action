@@ -42,16 +42,16 @@ defmodule Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm do
       iex> pattern = Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm.pattern()
       iex> pattern.id
       "js-jwt-none-algorithm"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm.pattern()
       iex> vulnerable = "jwt.verify(token, secret)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm.pattern()
       iex> safe = "jwt.verify(token, secret, {algorithms: ['HS256']})"
       iex> Regex.match?(pattern.regex, safe)
@@ -283,19 +283,19 @@ defmodule Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm.ast_enhancement()
       iex> enhancement.ast_rules.callee_pattern
       "jwt.verify"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.JwtNoneAlgorithm.ast_enhancement()
       iex> "has_algorithms_option" in Map.keys(enhancement.confidence_rules.adjustments)
       true

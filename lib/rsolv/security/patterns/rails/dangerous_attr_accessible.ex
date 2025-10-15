@@ -2,7 +2,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
   @moduledoc """
   Dangerous attr_accessible usage pattern for Rails applications.
 
-  This pattern detects overly permissive attr_accessible declarations in Rails 2.x 
+  This pattern detects overly permissive attr_accessible declarations in Rails 2.x
   and 3.x applications that can lead to mass assignment vulnerabilities. This was
   Rails' primary defense against mass assignment before Strong Parameters in Rails 4.
 
@@ -32,15 +32,15 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
 
       # Vulnerable - admin field exposed
       attr_accessible :name, :email, :admin
-      
+
       # Vulnerable - no protection at all
       class User < ActiveRecord::Base
         # No attr_accessible means all fields are assignable!
       end
-      
+
       # Vulnerable - role escalation possible
       attr_accessible :name, :email, as: :admin
-      
+
       # Safe - only safe fields exposed
       attr_accessible :name, :email, :bio
       attr_protected :admin, :role, :permissions
@@ -104,7 +104,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       """,
       attack_vectors: """
       1. **Direct Privilege Escalation**: POST user[admin]=true or user[role]=admin
-      2. **Account Takeover**: Modifying user_id or email to hijack accounts  
+      2. **Account Takeover**: Modifying user_id or email to hijack accounts
       3. **Password Override**: Setting password_digest directly to bypass hashing
       4. **Token Theft**: Accessing or modifying API keys and session tokens
       5. **Association Manipulation**: Changing foreign keys to access other users' data
@@ -142,10 +142,10 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
          ```ruby
          # Remove dangerous fields from attr_accessible
          attr_accessible :name, :email, :bio
-         
+
          # Explicitly protect sensitive fields
          attr_protected :admin, :role, :permissions
-         
+
          # Or use role-based accessible attributes
          attr_accessible :name, :email
          attr_accessible :name, :email, :admin, as: :admin
@@ -168,7 +168,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
          ```ruby
          # Start with attr_protected for critical fields
          attr_protected :id, :admin, :created_at, :updated_at
-         
+
          # Then implement proper attr_accessible
          attr_accessible :name, :email, :profile_attributes
          ```
@@ -194,10 +194,10 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       class User < ActiveRecord::Base
         # Whitelist only safe attributes
         attr_accessible :name, :email, :bio, :avatar
-        
+
         # Different accessible attributes for admins
         attr_accessible :name, :email, :bio, :avatar, :featured, as: :admin
-        
+
         # Explicitly protect dangerous fields
         attr_protected :admin, :role, :confirmed_at
       end
@@ -215,11 +215,11 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousAttrAccessible do
       # Form objects for complex scenarios
       class UserRegistrationForm
         include ActiveModel::Model
-        
+
         attr_accessor :name, :email, :terms_accepted
-        
+
         validates :terms_accepted, acceptance: true
-        
+
         def save
           User.create!(name: name, email: email)
         end

@@ -169,7 +169,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881Test do
                ref.type == :cve and ref.id == "CVE-2021-22881"
              end)
 
-      # Check for CWE reference  
+      # Check for CWE reference
       assert Enum.any?(metadata.references, fn ref ->
                ref.type == :cwe and ref.id == "CWE-601"
              end)

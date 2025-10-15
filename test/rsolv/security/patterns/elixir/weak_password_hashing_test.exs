@@ -79,7 +79,7 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashingTest do
 
       test_cases = [
         ~S"""
-        hashed = 
+        hashed =
           :crypto.hash(:sha256, password)
           |> Base.encode16()
         """,

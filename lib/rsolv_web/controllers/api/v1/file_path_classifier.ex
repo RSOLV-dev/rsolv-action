@@ -45,10 +45,10 @@ defmodule RsolvWeb.Api.V1.FilePathClassifier do
 
       iex> FilePathClassifier.classify("/node_modules/react/index.js")
       :vendor
-      
+
       iex> FilePathClassifier.classify("/test/unit/app_test.js")
       :test
-      
+
       iex> FilePathClassifier.classify("/app/routes/index.js")
       :application
   """
@@ -162,7 +162,7 @@ defmodule RsolvWeb.Api.V1.FilePathClassifier do
 
       iex> FilePathClassifier.confidence_multiplier(:vendor)
       0.1
-      
+
       iex> FilePathClassifier.confidence_multiplier(:application)
       1.0
   """
@@ -181,10 +181,10 @@ defmodule RsolvWeb.Api.V1.FilePathClassifier do
 
       iex> FilePathClassifier.should_filter?(:vendor, 0.25)
       true
-      
+
       iex> FilePathClassifier.should_filter?(:vendor, 0.35)
       false
-      
+
       iex> FilePathClassifier.should_filter?(:application, 0.1)
       false
   """

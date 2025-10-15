@@ -35,16 +35,16 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
       iex> pattern = Rsolv.Security.Patterns.Javascript.XpathInjection.pattern()
       iex> pattern.id
       "js-xpath-injection"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XpathInjection.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XpathInjection.pattern()
       iex> vulnerable = ~S|xpath.select("//user[name='" + username + "']")|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XpathInjection.pattern()
       iex> safe = ~S|xpath.select("//user[name=$username]", {username: sanitizeInput(username)})|
       iex> Regex.match?(pattern.regex, safe)
@@ -108,7 +108,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
       description: """
       XPath injection is a vulnerability where attackers can inject malicious XPath
       expressions into applications that construct XPath queries from user input.
-      This can lead to unauthorized data access, authentication bypass, and 
+      This can lead to unauthorized data access, authentication bypass, and
       information disclosure from XML documents.
 
       XPath uses special characters and functions that must be properly handled:
@@ -242,19 +242,19 @@ defmodule Rsolv.Security.Patterns.Javascript.XpathInjection do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XpathInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XpathInjection.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XpathInjection.ast_enhancement()
       iex> enhancement.ast_rules.argument_analysis.has_xpath_expression
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XpathInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XpathInjection.ast_enhancement()
       iex> "uses_parameterized_xpath" in Map.keys(enhancement.confidence_rules.adjustments)
       true

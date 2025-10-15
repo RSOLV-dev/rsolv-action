@@ -34,13 +34,13 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
 
       # Vulnerable - string interpolation
       User.where("name = '\#{params[:name]}'")
-      
+
       # Vulnerable - direct interpolation without quotes
       Post.where("id = \#{params[:id]}")
-      
+
       # Vulnerable - raw SQL methods
       User.find_by_sql("SELECT * FROM users WHERE email = '\#{email}'")
-      
+
       # Safe - parameterized queries
       User.where("name = ?", params[:name])
       User.where(name: params[:name])
@@ -159,10 +159,10 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
          ```ruby
          # Instead of string interpolation
          User.where("name = '\#{params[:name]}'")  # VULNERABLE
-         
+
          # Use placeholder with separate parameter
          User.where("name = ?", params[:name])    # SAFE
-         
+
          # For multiple parameters
          User.where("name = ? AND age > ?", params[:name], params[:age])
          ```
@@ -172,15 +172,15 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
          # Hash syntax - Rails automatically parameterizes
          User.where(name: params[:name])
          User.where(name: params[:name], active: true)
-         
+
          # For IN clauses
          User.where(status: ['active', 'pending'])
          ```
 
       3. **Use Named Placeholders**:
          ```ruby
-         User.where("name = :name AND email = :email", 
-                   name: params[:name], 
+         User.where("name = :name AND email = :email",
+                   name: params[:name],
                    email: params[:email])
          ```
 
@@ -188,10 +188,10 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
          ```ruby
          # NEVER do this
          User.order("\#{params[:sort]} DESC")  # VULNERABLE
-         
+
          # Use an allowlist instead
          ALLOWED_SORT_COLUMNS = %w[name created_at updated_at]
-         sort_column = ALLOWED_SORT_COLUMNS.include?(params[:sort]) ? 
+         sort_column = ALLOWED_SORT_COLUMNS.include?(params[:sort]) ?
                       params[:sort] : 'created_at'
          User.order("\#{sort_column} DESC")   # SAFE
          ```
@@ -203,7 +203,7 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
            "SELECT * FROM users WHERE name = ?", params[:name]
          ])
          User.find_by_sql(query)
-         
+
          # Or use connection.quote
          name = ActiveRecord::Base.connection.quote(params[:name])
          User.find_by_sql("SELECT * FROM users WHERE name = \#{name}")
@@ -264,7 +264,7 @@ defmodule Rsolv.Security.Patterns.Rails.ActiverecordInjection do
       # 6. Raw SQL with proper quoting
       connection.select_all(
         sanitize_sql_array([
-          "SELECT * FROM users WHERE email = ?", 
+          "SELECT * FROM users WHERE email = ?",
           params[:email]
         ])
       )

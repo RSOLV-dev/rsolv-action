@@ -110,7 +110,7 @@ defmodule Rsolv.AST.ASTNormalizerTest do
     end
 
     test "normalizes Ruby AST from parser gem format" do
-      # Red phase: Test Ruby AST normalization  
+      # Red phase: Test Ruby AST normalization
       ruby_ast = %{
         "type" => "lvasgn",
         "_loc" => %{

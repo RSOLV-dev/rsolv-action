@@ -276,7 +276,7 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingCsrfProtection do
       iex> enhancement = Rsolv.Security.Patterns.Elixir.MissingCsrfProtection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.MissingCsrfProtection.ast_enhancement()
       iex> enhancement.min_confidence
       0.8

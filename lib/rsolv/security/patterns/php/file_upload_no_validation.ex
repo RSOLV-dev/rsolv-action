@@ -213,7 +213,7 @@ if (in_array($ext, $allowed)) {
       iex> test_cases = Rsolv.Security.Patterns.Php.FileUploadNoValidation.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.FileUploadNoValidation.test_cases()
       iex> length(test_cases.negative) > 0
       true
@@ -278,7 +278,7 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
         if (isset($_FILES['upload'])) {
             $uploadDir = 'uploads/';
             $uploadFile = $uploadDir . $_FILES['upload']['name'];
-            
+
             if (move_uploaded_file($_FILES['upload']['tmp_name'], $uploadFile)) {
                 echo "File uploaded successfully!";
             }
@@ -324,11 +324,11 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
             $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
             $file_info = pathinfo($_FILES['upload']['name']);
             $extension = strtolower($file_info['extension']);
-            
+
             if (!in_array($extension, $allowed_extensions)) {
                 die("Invalid file type");
             }
-            
+
             // 2. Validate MIME type
             $allowed_mimes = [
                 'image/jpeg', 'image/png', 'image/gif', 'application/pdf'
@@ -336,25 +336,25 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mime = finfo_file($finfo, $_FILES['upload']['tmp_name']);
             finfo_close($finfo);
-            
+
             if (!in_array($mime, $allowed_mimes)) {
                 die("Invalid file content");
             }
-            
+
             // 3. Validate file size (5MB max)
             if ($_FILES['upload']['size'] > 5 * 1024 * 1024) {
                 die("File too large");
             }
-            
+
             // 4. Generate safe filename
             $new_filename = uniqid() . '.' . $extension;
             $upload_path = '/var/uploads/' . $new_filename; // Outside web root
-            
+
             // 5. Move file
             if (move_uploaded_file($_FILES['upload']['tmp_name'], $upload_path)) {
                 // 6. Set permissions (no execute)
                 chmod($upload_path, 0644);
-                
+
                 echo "File uploaded successfully!";
             }
         }
@@ -366,29 +366,29 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
             if ($file['error'] !== UPLOAD_ERR_OK) {
                 throw new Exception('Upload failed');
             }
-            
+
             // Verify it's an actual image
             $imageInfo = getimagesize($file['tmp_name']);
             if ($imageInfo === false) {
                 throw new Exception('Invalid image file');
             }
-            
+
             // Check image type
             $allowedTypes = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_GIF];
             if (!in_array($imageInfo[2], $allowedTypes)) {
                 throw new Exception('Invalid image type');
             }
-            
+
             // Generate safe filename
             $extension = image_type_to_extension($imageInfo[2]);
             $filename = 'avatar_' . uniqid() . $extension;
-            
+
             // Process image (removes any embedded malicious code)
             $image = imagecreatefromstring(file_get_contents($file['tmp_name']));
             if (!$image) {
                 throw new Exception('Failed to process image');
             }
-            
+
             // Save processed image
             $savePath = '/var/www/avatars/' . $filename;
             switch ($imageInfo[2]) {
@@ -402,7 +402,7 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
                     imagegif($image, $savePath);
                     break;
             }
-            
+
             imagedestroy($image);
             return $filename;
         }
@@ -413,39 +413,39 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
             private $allowedExtensions = ['pdf', 'doc', 'docx', 'txt'];
             private $maxFileSize = 10 * 1024 * 1024; // 10MB
             private $uploadPath = '/secure/uploads/'; // Outside web root
-            
+
             public function upload($file) {
                 // Validate upload
                 if ($file['error'] !== UPLOAD_ERR_OK) {
                     throw new Exception('Upload failed: ' . $file['error']);
                 }
-                
+
                 // Check size
                 if ($file['size'] > $this->maxFileSize) {
                     throw new Exception('File too large');
                 }
-                
+
                 // Validate extension
                 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                 if (!in_array($ext, $this->allowedExtensions)) {
                     throw new Exception('Invalid file type');
                 }
-                
+
                 // Generate unique filename
                 $newName = $this->generateFilename($ext);
                 $fullPath = $this->uploadPath . $newName;
-                
+
                 // Move file
                 if (!move_uploaded_file($file['tmp_name'], $fullPath)) {
                     throw new Exception('Failed to move file');
                 }
-                
+
                 // Store metadata in database
                 $this->storeFileMetadata($newName, $file['name'], $file['size']);
-                
+
                 return $newName;
             }
-            
+
             private function generateFilename($extension) {
                 return date('Y/m/d/') . bin2hex(random_bytes(16)) . '.' . $extension;
             }
@@ -608,11 +608,11 @@ move_uploaded_file($_FILES['file']['tmp_name'], $newname);|,
       iex> enhancement = Rsolv.Security.Patterns.Php.FileUploadNoValidation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.FileUploadNoValidation.ast_enhancement()
       iex> enhancement.min_confidence
       0.75
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.FileUploadNoValidation.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

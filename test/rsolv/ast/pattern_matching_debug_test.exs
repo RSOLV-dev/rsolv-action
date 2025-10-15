@@ -78,9 +78,9 @@ defmodule Rsolv.AST.PatternMatchingDebugTest do
       IO.inspect(ast, label: "Raw Python AST")
 
       # Expected structure based on Python AST:
-      # Module(body=[Assign(targets=[Name(id='query')], 
-      #                    value=BinOp(left=Constant(value="SELECT..."), 
-      #                                op=Add(), 
+      # Module(body=[Assign(targets=[Name(id='query')],
+      #                    value=BinOp(left=Constant(value="SELECT..."),
+      #                                op=Add(),
       #                                right=Name(id='user_id')))])
 
       assert ast["type"] == "Module"

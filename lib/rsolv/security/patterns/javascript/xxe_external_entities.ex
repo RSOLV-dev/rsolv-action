@@ -6,11 +6,11 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
     new DOMParser()
     parser.parseFromString(xmlData, 'text/xml')
     $.parseXML(userXml)
-    
+
   Safe alternatives:
     JSON.parse(jsonData)  // Use JSON instead of XML
     const safeParser = createSafeXmlParser()  // With external entities disabled
-    
+
   XXE vulnerabilities occur when XML parsers process untrusted XML documents that
   contain external entity references. These can be exploited to:
   - Read local files from the server
@@ -64,30 +64,30 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> pattern.id
       "js-xxe-external-entities"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> pattern.cwe_id
       "CWE-611"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> vulnerable = "parser = new DOMParser()"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> vulnerable = "$.parseXML(xmlData)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> safe = "JSON.parse(jsonData)"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.pattern()
       iex> pattern.recommendation
       "Disable external entity processing in XML parsers or use JSON instead."
@@ -343,15 +343,15 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "NewExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.ast_enhancement()
       iex> "DOMParser" in enhancement.ast_rules.parser_names
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XxeExternalEntities.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
@@ -389,7 +389,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XxeExternalEntities do
         library_patterns: [
           # Node.js library
           "xmldom",
-          # Node.js library  
+          # Node.js library
           "libxmljs",
           # Node.js library
           "xml2js",

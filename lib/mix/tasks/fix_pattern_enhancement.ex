@@ -48,13 +48,13 @@ defmodule Mix.Tasks.FixPatternEnhancement do
     defp format_pattern_without_tier(%Pattern{} = pattern, :enhanced) do
       base_format = Pattern.to_api_format(pattern)
       |> Map.delete(:tier)
-      
+
       # Get enhancement from pattern module
       pattern_module = pattern_id_to_module(pattern.id)
-      
+
       if pattern_module && function_exported?(pattern_module, :ast_enhancement, 0) do
         enhancement = apply(pattern_module, :ast_enhancement, [])
-        
+
         base_format
         |> Map.put(:ast_rules, enhancement[:ast_rules])
         |> Map.put(:context_rules, enhancement[:context_rules])

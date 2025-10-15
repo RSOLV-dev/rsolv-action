@@ -73,7 +73,7 @@ defmodule Rsolv.AST.PatternIntegrationTest do
 
       confidence = ConfidenceScorer.calculate_confidence(context, "python", %{})
 
-      # Should be high confidence when using ConfidenceScorer with full context 
+      # Should be high confidence when using ConfidenceScorer with full context
       assert confidence >= 0.8
 
       # For AST pattern matching, f-string SQL injection gets base confidence

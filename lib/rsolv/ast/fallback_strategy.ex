@@ -753,7 +753,7 @@ defmodule Rsolv.AST.FallbackStrategy do
         recommendations
       end
 
-    # Command Injection recommendations  
+    # Command Injection recommendations
     recommendations =
       if grouped["command_injection"] do
         [
@@ -949,8 +949,8 @@ defmodule Rsolv.AST.FallbackStrategy do
 
     # Check for suspicious patterns
     warnings =
-      if metrics.line_count > 10000 do
-        ["Very large file (>10000 lines)" | warnings]
+      if metrics.line_count > 10_000 do
+        ["Very large file (>10_000 lines)" | warnings]
       else
         warnings
       end

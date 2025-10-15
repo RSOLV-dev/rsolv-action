@@ -6,15 +6,15 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
     open("/uploads/" + filename)
     open(f"/tmp/{user_file}")
     open("/data/%s" % request.file)
-    
+
   Safe alternatives:
     safe_name = os.path.basename(filename)
     open(os.path.join("/uploads", safe_name))
-    
+
     # Validate path stays within intended directory
     if os.path.commonpath([base_dir, requested_path]) == base_dir:
         open(requested_path)
-    
+
   ## Vulnerability Details
 
   Path traversal (directory traversal) vulnerabilities occur when user-controlled
@@ -44,26 +44,26 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
       iex> pattern = Rsolv.Security.Patterns.Python.PathTraversalOpen.pattern()
       iex> pattern.id
       "python-path-traversal-open"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.PathTraversalOpen.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.PathTraversalOpen.pattern()
       iex> vulnerable = ~S|open("/uploads/" + filename)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.PathTraversalOpen.pattern()
       iex> safe = ~S|open("config.json")|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.PathTraversalOpen.pattern()
       iex> fstring_vuln = ~S|open(f"/tmp/{user_file}")|
       iex> Regex.match?(pattern.regex, fstring_vuln)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.PathTraversalOpen.pattern()
       iex> validated = ~S|safe_name = os.path.basename(filename); open(os.path.join("/uploads", safe_name))|
       iex> Regex.match?(pattern.regex, validated)
@@ -259,7 +259,7 @@ defmodule Rsolv.Security.Patterns.Python.PathTraversalOpen do
       iex> enhancement = Rsolv.Security.Patterns.Python.PathTraversalOpen.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.PathTraversalOpen.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

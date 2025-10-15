@@ -100,8 +100,8 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetailsTest do
       test_cases = [
         ~S"""
         send_resp(
-          conn, 
-          500, 
+          conn,
+          500,
           "Database error: #{error.message}"
         )
         """,

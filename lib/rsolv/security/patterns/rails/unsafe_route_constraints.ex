@@ -2,9 +2,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
   @moduledoc """
   Rails Unsafe Route Constraints pattern for Rails applications.
 
-  This pattern detects broken access control vulnerabilities in Rails route 
-  constraints that can be bypassed or allow code execution. Route constraints 
-  are intended to restrict access to routes based on request properties, but 
+  This pattern detects broken access control vulnerabilities in Rails route
+  constraints that can be bypassed or allow code execution. Route constraints
+  are intended to restrict access to routes based on request properties, but
   unsafe implementations can lead to security bypasses or even remote code execution.
 
   ## Background
@@ -39,19 +39,19 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
 
       # Critical - Overly permissive regex
       constraints: { id: /.*/ }
-      
+
       # Critical - User input in constraint regex
       constraints: { slug: /\#{params[:pattern]}/ }
-      
+
       # Critical - Lambda with eval
       constraints: lambda { |req| eval(req.params[:code]) }
-      
+
       # Critical - Always returns true
       constraints: lambda { |req| true }
-      
+
       # Safe - Specific pattern
       constraints: { id: /\\d+/ }
-      
+
       # Safe - Proper validation
       constraints: lambda { |req| ALLOWED_IDS.include?(req.params[:id]) }
   """
@@ -157,9 +157,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
   def vulnerability_metadata do
     %{
       description: """
-      Unsafe Route Constraints in Rails applications represent a critical broken access control vulnerability where route constraints intended to restrict 
-      access can be bypassed or exploited for code execution. Route constraints 
-      are Rails' mechanism for controlling which requests can access specific routes 
+      Unsafe Route Constraints in Rails applications represent a critical broken access control vulnerability where route constraints intended to restrict
+      access can be bypassed or exploited for code execution. Route constraints
+      are Rails' mechanism for controlling which requests can access specific routes
       based on request properties like parameters, subdomains, or headers.
 
       The vulnerability manifests in several dangerous patterns:
@@ -234,7 +234,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
          ```ruby
          # NEVER do this - matches everything
          constraints: { id: /.*/ }                    # DANGEROUS
-         
+
          # Always use specific patterns
          constraints: { id: /\\d+/ }                   # SAFE - Only digits
          constraints: { slug: /[a-z0-9-]+/ }          # SAFE - Alphanumeric with dashes
@@ -245,14 +245,14 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
          ```ruby
          # NEVER interpolate user input into constraints
          constraints: { param: /\#{params[:pattern]}/ } # DANGEROUS
-         
+
          # Use predefined whitelists instead
          ALLOWED_PATTERNS = {
            'strict' => /\\A[a-z]+\\z/,
            'numeric' => /\\A\\d+\\z/,
            'mixed' => /\\A[a-z0-9_-]+\\z/
          }.freeze
-         
+
          pattern_key = params[:pattern_type]
          if ALLOWED_PATTERNS.key?(pattern_key)
            constraints: { param: ALLOWED_PATTERNS[pattern_key] }
@@ -265,16 +265,16 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
          constraints: lambda { |req| eval(req.params[:code]) }    # DANGEROUS
          constraints: lambda { |req| req.send(params[:method]) }  # DANGEROUS
          constraints: lambda { |req| true }                       # DANGEROUS
-         
+
          # Use safe, specific validation
-         constraints: lambda { |req| 
+         constraints: lambda { |req|
            req.subdomain == 'api' && req.format.symbol == :json
          }
-         
+
          # Use whitelisting for dynamic behavior
          ADMIN_SUBDOMAINS = %w[admin dashboard management].freeze
-         constraints: lambda { |req| 
-           ADMIN_SUBDOMAINS.include?(req.subdomain) && 
+         constraints: lambda { |req|
+           ADMIN_SUBDOMAINS.include?(req.subdomain) &&
            req.headers['Authorization'].present?
          }
          ```
@@ -284,14 +284,14 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
          # Bad - Overly permissive
          constraints subdomain: /.*/                   # DANGEROUS
          constraints: { host: /.*/ }                   # DANGEROUS
-         
+
          # Good - Specific validation
          constraints subdomain: 'api'                  # SAFE - Static string
          constraints: { subdomain: /\\A(api|admin)\\z/ } # SAFE - Specific options
-         
+
          # For dynamic subdomains, use validation
          ALLOWED_SUBDOMAINS = %w[api admin dashboard].freeze
-         constraints: lambda { |req| 
+         constraints: lambda { |req|
            ALLOWED_SUBDOMAINS.include?(req.subdomain)
          }
          ```
@@ -300,12 +300,12 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
          ```ruby
          # Add validation at model/controller level
          class User < ApplicationRecord
-           validates :slug, format: { 
-             with: /\\A[a-z0-9-]+\\z/, 
-             message: "only allows lowercase letters, numbers, and dashes" 
+           validates :slug, format: {
+             with: /\\A[a-z0-9-]+\\z/,
+             message: "only allows lowercase letters, numbers, and dashes"
            }
          end
-         
+
          # Use strong parameters
          def user_params
            params.require(:user).permit(:name, :email).tap do |p|
@@ -331,7 +331,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       - Static analysis with Brakeman scanner (detects most unsafe constraint patterns)
       - Manual code review focusing on route.rb files and constraint definitions
       - Grep/ripgrep patterns: constraints.*\\\\\\*, lambda.*eval, constraints.*true
-      - Dynamic testing with bypass payloads: /.*/, \#{system('id')}, always-true conditions  
+      - Dynamic testing with bypass payloads: /.*/, \#{system('id')}, always-true conditions
       - Penetration testing targeting route constraint bypass
       - Automated security scanning with custom rules for Rails constraints
       - Route enumeration and constraint testing tools
@@ -353,17 +353,17 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       class RouteConstraints
         ALLOWED_FORMATS = %w[json xml html csv].freeze
         ALLOWED_SUBDOMAINS = %w[api admin dashboard].freeze
-        
+
         def self.valid_format?(format)
           ALLOWED_FORMATS.include?(format.to_s)
         end
-        
+
         def self.valid_subdomain?(subdomain)
           ALLOWED_SUBDOMAINS.include?(subdomain.to_s)
         end
 
       # Usage
-      constraints: lambda { |req| 
+      constraints: lambda { |req|
         RouteConstraints.valid_format?(req.format.symbol)
       }
 
@@ -372,14 +372,14 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
         def matches?(request)
           return false unless request.subdomain == 'admin'
           return false unless request.headers['Authorization'].present?
-          
+
           # Add additional validation logic
           user = authenticate_from_token(request.headers['Authorization'])
           user&.admin?
         end
-        
+
         private
-        
+
         def authenticate_from_token(token)
           # Safe token validation logic
         end
@@ -396,7 +396,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
       end
 
       constraints format: :json do
-        # JSON-only routes  
+        # JSON-only routes
       end
 
       # 5. Implement custom constraint validation
@@ -404,11 +404,11 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
         def self.secure_id_constraint
           { id: /\\A\\d{1,10}\\z/ }  # Max 10 digits
         end
-        
-        def self.secure_slug_constraint  
+
+        def self.secure_slug_constraint
           { slug: /\\A[a-z0-9][a-z0-9-]{0,48}[a-z0-9]\\z/ }  # 2-50 chars
         end
-        
+
         def self.api_constraint
           lambda { |req|
             req.subdomain == 'api' &&
@@ -474,7 +474,7 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeRouteConstraints do
         safe_patterns: [
           # Anchored patterns
           ~r/\\A.*\\z/,
-          # Digit patterns  
+          # Digit patterns
           ~r/\\d+/,
           # Alphanumeric patterns
           ~r/[a-z0-9-]+/,

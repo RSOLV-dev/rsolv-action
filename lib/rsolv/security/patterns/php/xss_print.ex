@@ -182,7 +182,7 @@ defmodule Rsolv.Security.Patterns.Php.XssPrint do
       iex> test_cases = Rsolv.Security.Patterns.Php.XssPrint.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.XssPrint.test_cases()
       iex> length(test_cases.negative) > 0
       true
@@ -391,11 +391,11 @@ defmodule Rsolv.Security.Patterns.Php.XssPrint do
       iex> enhancement = Rsolv.Security.Patterns.Php.XssPrint.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.XssPrint.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.XssPrint.ast_enhancement()
       iex> length(enhancement.ast_rules)
       3

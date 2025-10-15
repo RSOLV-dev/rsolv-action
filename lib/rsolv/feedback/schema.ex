@@ -149,14 +149,14 @@ defmodule Rsolv.Feedback.Schema do
       """
       defmodule Rsolv.Repo.Migrations.Create#{String.capitalize(to_string(schema_name))}Table do
         use Ecto.Migration
-        
+
         def change do
           create table(:#{schema_name}s, primary_key: false) do
       #{Enum.join(fields, "\n")}
-            
+
             timestamps()
           end
-          
+
           create index(:#{schema_name}s, [:id])
           # Additional indexes would be defined here
         end

@@ -173,7 +173,7 @@ defmodule Rsolv.AST.PatternAdapter do
         base_pattern
       end
 
-    # Add value analysis for hardcoded secrets  
+    # Add value analysis for hardcoded secrets
     base_pattern =
       if value_analysis = rules[:value_analysis] do
         Map.put(base_pattern, "_value_analysis", value_analysis)

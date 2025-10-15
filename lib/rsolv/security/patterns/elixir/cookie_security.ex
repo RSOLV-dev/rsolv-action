@@ -65,19 +65,19 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurity do
 
   ## Attack Scenarios
 
-  1. **Session Hijacking**: Attackers intercept cookies transmitted over HTTP due to missing 
+  1. **Session Hijacking**: Attackers intercept cookies transmitted over HTTP due to missing
      `secure` flag, then use stolen session tokens to impersonate users
 
-  2. **XSS Cookie Theft**: Malicious JavaScript in XSS attacks accesses session cookies 
+  2. **XSS Cookie Theft**: Malicious JavaScript in XSS attacks accesses session cookies
      due to missing `http_only` flag, enabling account takeover
 
-  3. **CSRF Attacks**: Missing `same_site` protection allows attackers to include cookies 
+  3. **CSRF Attacks**: Missing `same_site` protection allows attackers to include cookies
      in cross-site requests, enabling unauthorized actions
 
   ## References
 
   - CWE-614: Sensitive Cookie in HTTPS Session Without 'Secure' Attribute
-  - OWASP Top 10 2021 - A05: Security Misconfiguration  
+  - OWASP Top 10 2021 - A05: Security Misconfiguration
   - OWASP Session Management Cheat Sheet
   - Phoenix Security Guidelines
   """
@@ -105,7 +105,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurity do
         # Pipeline syntax with 4+ params for sensitive cookies missing any required flag
         ~r/\|>\s*put_resp_cookie\s*\(\s*"(?:session|auth|csrf|login|token|user|data)[^"]*"\s*,\s*[^,)]+\s*,(?!(?=.*secure:\s*true)(?=.*http_only:\s*true)(?=.*same_site:\s*"(?:Strict|Lax|None)"))[^)]*\)/ms,
 
-        # put_resp_cookie with 4+ params for sensitive cookies missing any required flag  
+        # put_resp_cookie with 4+ params for sensitive cookies missing any required flag
         ~r/put_resp_cookie\s*\(\s*[^,]+\s*,\s*"(?:session|auth|csrf|login|token|user|data)[^"]*"\s*,\s*[^,)]+\s*,(?!(?=.*secure:\s*true)(?=.*http_only:\s*true)(?=.*same_site:\s*"(?:Strict|Lax|None)"))[^)]*\)/ms
       ],
       cwe_id: "CWE-614",
@@ -134,7 +134,7 @@ defmodule Rsolv.Security.Patterns.Elixir.CookieSecurity do
     %{
       attack_vectors: """
       1. Session hijacking via man-in-the-middle attacks on HTTP connections due to missing secure flag
-      2. XSS attacks accessing session cookies through JavaScript due to missing http_only flag  
+      2. XSS attacks accessing session cookies through JavaScript due to missing http_only flag
       3. CSRF attacks exploiting missing same_site protection for cross-origin requests
       4. Network interception of cookies transmitted over unencrypted connections
       """,

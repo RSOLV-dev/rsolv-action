@@ -2,8 +2,8 @@ defmodule Rsolv.Security.Patterns.Php.XpathInjection do
   @moduledoc """
   Pattern for detecting XPath injection vulnerabilities in PHP.
 
-  This pattern identifies when PHP applications construct XPath queries using 
-  unsanitized user input, potentially allowing attackers to manipulate XML 
+  This pattern identifies when PHP applications construct XPath queries using
+  unsanitized user input, potentially allowing attackers to manipulate XML
   queries and gain unauthorized access to data.
 
   ## Vulnerability Details
@@ -74,10 +74,10 @@ defmodule Rsolv.Security.Patterns.Php.XpathInjection do
   def vulnerability_metadata do
     %{
       description: """
-      XPath injection is a critical security vulnerability that allows attackers to manipulate 
-      XPath (XML Path Language) queries by injecting malicious input into XPath expressions. 
-      This vulnerability occurs when applications construct XPath queries using unsanitized 
-      user input, enabling attackers to bypass authentication, extract sensitive XML data, 
+      XPath injection is a critical security vulnerability that allows attackers to manipulate
+      XPath (XML Path Language) queries by injecting malicious input into XPath expressions.
+      This vulnerability occurs when applications construct XPath queries using unsanitized
+      user input, enabling attackers to bypass authentication, extract sensitive XML data,
       and potentially compromise entire XML-based data stores.
 
       XPath injection attacks exploit the special syntax and operators used in XPath expressions.
@@ -133,7 +133,7 @@ defmodule Rsolv.Security.Patterns.Php.XpathInjection do
       XPath injection attacks can have severe consequences for XML-based applications:
 
       - **Data Exfiltration**: Access to sensitive information stored in XML documents
-      - **Authentication Bypass**: Complete circumvention of XML-based login mechanisms  
+      - **Authentication Bypass**: Complete circumvention of XML-based login mechanisms
       - **Structure Discovery**: Enumeration of XML schema and data organization
       - **Privilege Escalation**: Access to administrative or restricted XML nodes
       - **Service Disruption**: Malformed queries can cause XML parser performance issues
@@ -314,7 +314,7 @@ defmodule Rsolv.Security.Patterns.Php.XpathInjection do
       iex> test_cases = Rsolv.Security.Patterns.Php.XpathInjection.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.XpathInjection.test_cases()
       iex> length(test_cases.negative)
       6
@@ -478,29 +478,29 @@ defmodule Rsolv.Security.Patterns.Php.XpathInjection do
       iex> desc = Rsolv.Security.Patterns.Php.XpathInjection.vulnerability_description()
       iex> desc =~ "XPath injection"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.XpathInjection.vulnerability_description()
       iex> desc =~ "xpath"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.XpathInjection.vulnerability_description()
       iex> desc =~ "query"
       true
   """
   def vulnerability_description do
     """
-    XPath injection occurs when applications construct xpath query expressions using 
-    unsanitized user input, allowing attackers to manipulate XML queries and 
+    XPath injection occurs when applications construct xpath query expressions using
+    unsanitized user input, allowing attackers to manipulate XML queries and
     potentially bypass authentication or extract sensitive XML data.
 
     In PHP, this commonly happens when:
 
     1. **Direct Input Usage**: User input from $_GET, $_POST, $_REQUEST, or $_COOKIE
        is directly concatenated into xpath expression strings without escaping.
-       
+
     2. **Missing Validation**: No validation or sanitization is performed on user
        input before constructing xpath queries.
-       
+
     3. **Improper Escaping**: Custom or incorrect escaping methods are used instead
        of proper xpath character encoding.
 
@@ -509,7 +509,7 @@ defmodule Rsolv.Security.Patterns.Php.XpathInjection do
     **Authentication Bypass**: Attackers inject xpath operators to create always-true
     conditions, bypassing username/password verification in XML-based systems.
 
-    **Information Disclosure**: Malicious xpath expressions can extract more data than 
+    **Information Disclosure**: Malicious xpath expressions can extract more data than
     intended, including sensitive XML document content and structure.
 
     **Privilege Escalation**: In systems using XML for authorization, attackers can
@@ -534,11 +534,11 @@ defmodule Rsolv.Security.Patterns.Php.XpathInjection do
       iex> enhancement = Rsolv.Security.Patterns.Php.XpathInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.XpathInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.XpathInjection.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

@@ -22,7 +22,7 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
   class DatabaseConfig
     PASSWORD = "super_secret_pass123"
     API_KEY = "sk_live_abcdef1234567890"
-    
+
     def connect
       ActiveRecord::Base.establish_connection(
         adapter: "postgresql",
@@ -94,7 +94,7 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
   def vulnerability_metadata do
     %{
       description: """
-      Hardcoded credentials are sensitive information such as passwords, API keys, 
+      Hardcoded credentials are sensitive information such as passwords, API keys,
       encryption keys, or access tokens that are embedded directly in source code
       rather than stored securely. This practice creates significant security risks
       because:
@@ -323,7 +323,7 @@ defmodule Rsolv.Security.Patterns.Ruby.HardcodedSecrets do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.HardcodedSecrets.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.HardcodedSecrets.ast_enhancement()
       iex> enhancement.min_confidence
       0.8

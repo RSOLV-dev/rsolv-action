@@ -33,7 +33,7 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
   def logout_safe
     safe_urls = [root_path, login_path, dashboard_path]
     return_url = params[:return_url]
-    
+
     if safe_urls.include?(return_url)
       redirect_to return_url
     else
@@ -64,16 +64,16 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
       iex> pattern = Rsolv.Security.Patterns.Ruby.OpenRedirect.pattern()
       iex> pattern.id
       "ruby-open-redirect"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.OpenRedirect.pattern()
       iex> pattern.severity
       :medium
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.OpenRedirect.pattern()
       iex> vulnerable = "redirect_to params[:return_url]"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable))
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.OpenRedirect.pattern()
       iex> safe = "redirect_to root_path"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, safe))
@@ -271,15 +271,15 @@ defmodule Rsolv.Security.Patterns.Ruby.OpenRedirect do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.OpenRedirect.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.OpenRedirect.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.OpenRedirect.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.OpenRedirect.ast_enhancement()
       iex> enhancement.ast_rules.redirect_analysis.check_redirect_methods
       true

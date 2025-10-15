@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
     subprocess.run(cmd, shell=True)
     subprocess.call("echo " + user_input, shell=True)
     subprocess.Popen(f"grep {pattern} file.txt", shell=True)
-    
+
   Safe alternatives:
     subprocess.run(["echo", user_input], shell=False)
     subprocess.call(["grep", pattern, "file.txt"])
     subprocess.Popen(["ls", "-la", directory])
-    
+
   ## Vulnerability Details
 
   The subprocess module's shell=True parameter is dangerous because it invokes
@@ -47,26 +47,26 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> pattern.id
       "python-command-injection-subprocess-shell"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> pattern.severity
       :critical
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> vulnerable = ~S|subprocess.run(cmd, shell=True)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> safe = ~S|subprocess.run(["ls", "-la"], shell=False)|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> popen_vuln = ~S|subprocess.Popen(f"tail -f {logfile}", shell=True)|
       iex> Regex.match?(pattern.regex, popen_vuln)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.pattern()
       iex> list_safe = ~S|subprocess.call(["ping", "-c", "4", host])|
       iex> Regex.match?(pattern.regex, list_safe)
@@ -254,7 +254,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell do
       iex> enhancement = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.CommandInjectionSubprocessShell.ast_enhancement()
       iex> enhancement.min_confidence
       0.8

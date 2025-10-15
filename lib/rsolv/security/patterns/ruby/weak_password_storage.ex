@@ -20,19 +20,19 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
     def create_user
       # VULNERABLE: MD5 password hashing
       user.password = Digest::MD5.hexdigest(params[:password])
-      
+
       # VULNERABLE: SHA1 password hashing with salt
       user.encrypted_password = Digest::SHA1.hexdigest(params[:password] + salt)
-      
+
       # VULNERABLE: SHA256 without proper salt
       user.password_digest = Digest::SHA256.hexdigest(params[:password])
-      
+
       # VULNERABLE: Plaintext password storage
       user.password = params[:password]
-      
+
       # VULNERABLE: Simple string operations
       user.encrypted_password = Base64.encode64(params[:password])
-      
+
       user.save!
     end
   end
@@ -56,21 +56,21 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
     def create_user
       # SECURE: bcrypt with automatic salt generation
       user.password = BCrypt::Password.create(params[:password])
-      
+
       # SECURE: Rails has_secure_password (uses bcrypt internally)
       user.password = params[:password]  # with has_secure_password in model
-      
+
       # SECURE: Argon2 for even stronger security
       user.password_digest = Argon2::Password.create(params[:password])
-      
+
       # SECURE: scrypt with proper configuration
       user.encrypted_password = SCrypt::Password.create(
-        params[:password], 
-        cost: 16384, 
-        block_size: 8, 
+        params[:password],
+        cost: 16384,
+        block_size: 8,
         parallelization: 1
       )
-      
+
       user.save!
     end
   end
@@ -78,9 +78,9 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
   # Model with secure password handling
   class User < ApplicationRecord
     has_secure_password  # Automatically uses bcrypt
-    
-    validates :password, 
-      presence: true, 
+
+    validates :password,
+      presence: true,
       length: { minimum: 8 },
       format: { with: /\A(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/ }
   end
@@ -107,7 +107,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
         ~r/hash\s*=\s*Digest::MD5\.(new\.)?(hexdigest|digest)\s*\(\s*(?:user_password|password)/,
         ~r/Digest::MD5\.(hexdigest|digest)\s*\(\s*(?:params\[.*?password|password|plain_password)/,
 
-        # SHA1 password hashing patterns - assignment and hash calculation  
+        # SHA1 password hashing patterns - assignment and hash calculation
         ~r/(?:password|encrypted_password|password_digest|password_hash)\s*=\s*Digest::SHA1\.(hexdigest|digest)/,
         ~r/(?:password|encrypted_password|password_digest|password_hash)\s*=\s*SHA1\.(hexdigest|digest)/,
         ~r/hash\s*=\s*Digest::SHA1\.(new\.)?(hexdigest|digest)\s*\(\s*(?:user_password|password)/,
@@ -127,7 +127,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
         ~r/(?:password|encrypted_password|password_digest)\s*=\s*password(?!\w)/,
         ~r/password_field\s*=\s*(?:params|user_input|plain_password)/,
 
-        # Simple/weak encoding patterns  
+        # Simple/weak encoding patterns
         ~r/(?:password|encrypted_password|password_digest|encrypted)\s*=\s*Base64\.encode64\s*\(\s*password/,
         ~r/(?:password|encrypted_password|password_digest)\s*=.*?\.crypt\s*\(/,
         ~r/(?:password|encrypted_password|password_digest)\s*=.*?\.to_s\s*\+\s*["']salt["']/,
@@ -406,7 +406,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakPasswordStorage do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakPasswordStorage.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakPasswordStorage.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

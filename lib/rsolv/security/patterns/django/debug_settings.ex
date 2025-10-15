@@ -30,20 +30,20 @@ defmodule Rsolv.Security.Patterns.Django.DebugSettings do
       # VULNERABLE - Debug enabled in production
       DEBUG = True
       ALLOWED_HOSTS = []
-      
+
       # VULNERABLE - Debug propagation enabled
       DEBUG_PROPAGATE_EXCEPTIONS = True
-      
+
       # VULNERABLE - Template debugging enabled
       TEMPLATE_DEBUG = True
-      
+
       # SAFE - Debug disabled for production
       DEBUG = False
       ALLOWED_HOSTS = ['mysite.com']
-      
+
       # SAFE - Environment-based with proper defaults
       DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
-      
+
       # SAFE - Conditional debug for development only
       if 'runserver' in sys.argv:
           DEBUG = True
@@ -213,11 +213,11 @@ defmodule Rsolv.Security.Patterns.Django.DebugSettings do
          # settings.py or production_settings.py
          # SECURITY WARNING: don't run with debug turned on in production!
          DEBUG = False
-         
+
          # Also ensure these are disabled
          DEBUG_PROPAGATE_EXCEPTIONS = False
          TEMPLATE_DEBUG = False
-         
+
          # Set proper allowed hosts
          ALLOWED_HOSTS = ['yourdomain.com', 'www.yourdomain.com']
          ```
@@ -226,17 +226,17 @@ defmodule Rsolv.Security.Patterns.Django.DebugSettings do
          ```python
          import os
          from distutils.util import strtobool
-         
+
          # Method 1: Using environment variables with safe defaults
          DEBUG = bool(strtobool(os.environ.get('DEBUG', 'False')))
-         
+
          # Method 2: Using django-environ
          import environ
          env = environ.Env(
              DEBUG=(bool, False)  # Default to False
          )
          DEBUG = env('DEBUG')
-         
+
          # Method 3: Using python-decouple
          from decouple import config
          DEBUG = config('DEBUG', default=False, cast=bool)
@@ -246,17 +246,17 @@ defmodule Rsolv.Security.Patterns.Django.DebugSettings do
          ```python
          # settings/base.py
          DEBUG = False  # Default to False
-         
+
          # settings/development.py
          from .base import *
          DEBUG = True
          EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-         
+
          # settings/production.py
          from .base import *
          DEBUG = False
          ALLOWED_HOSTS = ['yourdomain.com']
-         
+
          # In manage.py and wsgi.py
          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings.production')
          ```
@@ -264,12 +264,12 @@ defmodule Rsolv.Security.Patterns.Django.DebugSettings do
       4. **Conditional Debug Settings**:
          ```python
          import sys
-         
+
          # Only enable debug during local development
          DEBUG = False
          if 'runserver' in sys.argv and 'localhost' in sys.argv:
              DEBUG = True
-         
+
          # Or check for development indicators
          DEVELOPMENT_MODE = os.path.exists('/app/.development')
          DEBUG = DEVELOPMENT_MODE and os.environ.get('DJANGO_DEBUG', 'False').lower() == 'true'
@@ -279,7 +279,7 @@ defmodule Rsolv.Security.Patterns.Django.DebugSettings do
          ```python
          # Add to your CI/CD pipeline
          python manage.py check --deploy
-         
+
          # This will warn about:
          # - DEBUG = True
          # - Missing ALLOWED_HOSTS
@@ -291,11 +291,11 @@ defmodule Rsolv.Security.Patterns.Django.DebugSettings do
          ```python
          # settings/production.py
          DEBUG = False
-         
+
          # Configure proper error pages
          ADMINS = [('Admin', 'admin@yourdomain.com')]
          SERVER_EMAIL = 'server@yourdomain.com'
-         
+
          # Log errors instead of displaying them
          LOGGING = {
              'version': 1,
@@ -333,7 +333,7 @@ defmodule Rsolv.Security.Patterns.Django.DebugSettings do
              'django.contrib.messages.middleware.MessageMiddleware',
              'django.middleware.clickjacking.XFrameOptionsMiddleware',
          ]
-         
+
          # Security settings
          SECURE_BROWSER_XSS_FILTER = True
          SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -344,16 +344,16 @@ defmodule Rsolv.Security.Patterns.Django.DebugSettings do
          ```bash
          # Add to your deployment pipeline
          #!/bin/bash
-         
+
          # Check for debug mode
          if grep -r "DEBUG = True" . --include="*.py"; then
              echo "ERROR: DEBUG = True found in codebase"
              exit 1
          fi
-         
+
          # Run Django deployment checks
          python manage.py check --deploy --fail-level ERROR
-         
+
          # Security-specific checks
          python manage.py check --tag security
          ```

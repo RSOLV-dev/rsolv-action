@@ -2,8 +2,8 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
   @moduledoc """
   Rails Session Fixation Vulnerability Detection Pattern.
 
-  Session fixation attacks occur when an application authenticates a user without 
-  regenerating the session identifier. This allows attackers to hijack authenticated 
+  Session fixation attacks occur when an application authenticates a user without
+  regenerating the session identifier. This allows attackers to hijack authenticated
   sessions by pre-setting session IDs.
 
   ## Vulnerability Details
@@ -26,7 +26,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
   ```
 
   ### Safe Example
-  ```ruby  
+  ```ruby
   # Safe: Session regenerated before setting user data
   def login
     user = User.find_by(email: params[:email])
@@ -91,11 +91,11 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
   def vulnerability_metadata do
     %{
       description: """
-      Session Fixation vulnerability in Rails applications occurs when user 
-      authentication does not regenerate the session identifier. This vulnerability 
-      allows attackers to hijack authenticated sessions by forcing victims to use 
-      pre-determined session IDs. The attack is particularly dangerous because it 
-      bypasses many traditional authentication protections by exploiting the session 
+      Session Fixation vulnerability in Rails applications occurs when user
+      authentication does not regenerate the session identifier. This vulnerability
+      allows attackers to hijack authenticated sessions by forcing victims to use
+      pre-determined session IDs. The attack is particularly dangerous because it
+      bypasses many traditional authentication protections by exploiting the session
       management layer itself.
       """,
       attack_vectors: """
@@ -224,7 +224,7 @@ defmodule Rsolv.Security.Patterns.Rails.SessionFixation do
         safe_patterns: [
           # Proper session reset
           ~r/reset_session/,
-          # Session regeneration  
+          # Session regeneration
           ~r/session\.regenerate/,
           # Shopping cart data
           ~r/session\[:cart_items\]/,

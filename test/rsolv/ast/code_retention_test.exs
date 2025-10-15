@@ -174,7 +174,7 @@ defmodule Rsolv.AST.CodeRetentionTest do
 
     @tag :slow
     test "batch analysis doesn't retain any code from the batch", %{session: session} do
-      # Create multiple code samples with unique markers  
+      # Create multiple code samples with unique markers
       # Reduced from 5 to 3
       code_samples =
         for i <- 1..3 do

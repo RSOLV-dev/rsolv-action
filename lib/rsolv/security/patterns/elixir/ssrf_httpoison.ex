@@ -43,7 +43,7 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
 
   def fetch_webhook(conn, %{"url" => url}) do
     uri = URI.parse(url)
-    
+
     if uri.host in @allowed_hosts and uri.scheme in ["https"] do
       case HTTPoison.get(url, [], timeout: 5000, recv_timeout: 5000) do
         {:ok, %{status_code: 200, body: body}} ->
@@ -242,7 +242,7 @@ defmodule Rsolv.Security.Patterns.Elixir.SsrfHttpoison do
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SsrfHttpoison.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SsrfHttpoison.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

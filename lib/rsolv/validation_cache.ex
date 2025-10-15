@@ -15,7 +15,7 @@ defmodule Rsolv.ValidationCache do
   ## Features
 
   - Forge-account scoped caching for security isolation
-  - Automatic TTL of 90 days  
+  - Automatic TTL of 90 days
   - File hash validation for cache invalidation
   - Upsert semantics for cache updates
   """
@@ -41,7 +41,7 @@ defmodule Rsolv.ValidationCache do
 
     - attrs: Map containing validation data including:
       - forge_account_id: Integer ID of the forge account
-      - repository: String repository identifier  
+      - repository: String repository identifier
       - locations: List of location maps with :file_path and :line
       - vulnerability_type: String vulnerability type
       - file_hashes: Map of file paths to SHA-256 hashes
@@ -167,10 +167,10 @@ defmodule Rsolv.ValidationCache do
       # Basic retrieval without file hash checking
       iex> ValidationCache.get(1, "org/repo", [%{file_path: "app.js", line: 42}], "xss")
       {:ok, %CachedValidation{...}}
-      
+
       # With file hash validation
       iex> ValidationCache.get(
-      ...>   1, "org/repo", 
+      ...>   1, "org/repo",
       ...>   [%{file_path: "app.js", line: 42}],
       ...>   "xss",
       ...>   %{"app.js" => "sha256:abc123"}
@@ -284,7 +284,7 @@ defmodule Rsolv.ValidationCache do
 
       iex> ValidationCache.invalidate(123, :file_change)
       {:ok, %CachedValidation{invalidated_at: ~U[...], invalidation_reason: "file_change"}}
-      
+
       iex> ValidationCache.invalidate(999999, :manual)
       {:error, :not_found}
   """
@@ -332,7 +332,7 @@ defmodule Rsolv.ValidationCache do
 
       iex> ValidationCache.invalidate_by_file(1, "org/repo", "app.js")
       {:ok, 3}  # Invalidated 3 cache entries containing app.js
-      
+
       iex> ValidationCache.invalidate_by_file(1, "org/repo", "nonexistent.js")
       {:ok, 0}  # No entries to invalidate
 

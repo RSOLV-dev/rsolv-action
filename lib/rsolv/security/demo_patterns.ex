@@ -431,7 +431,7 @@ defmodule Rsolv.Security.DemoPatterns do
         }
       },
 
-      # Elixir pattern (1) 
+      # Elixir pattern (1)
       %Pattern{
         id: "elixir-sql-injection-interpolation",
         name: "Ecto SQL Injection via String Interpolation",

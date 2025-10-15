@@ -32,10 +32,10 @@ defmodule Rsolv.Security.Patterns.Rails.DynamicFinderInjection do
 
       # Vulnerable - dynamic method construction
       User.send("find_by_\#{params[:field]}", params[:value])
-      
+
       # Vulnerable - arbitrary method invocation
       model.send(params[:method], params[:args])
-      
+
       # Safe - whitelist validation
       allowed_fields = ["name", "email"]
       if allowed_fields.include?(params[:field])
@@ -153,10 +153,10 @@ defmodule Rsolv.Security.Patterns.Rails.DynamicFinderInjection do
          ```ruby
          # Instead of dynamic finders
          User.send("find_by_\#{params[:field]}", params[:value])  # VULNERABLE
-         
+
          # Use ActiveRecord where with hash
          User.where(params[:field] => params[:value])            # STILL RISKY
-         
+
          # Better - validate field names first
          allowed_fields = %w[name email created_at]
          field = params[:field]
@@ -173,7 +173,7 @@ defmodule Rsolv.Security.Patterns.Rails.DynamicFinderInjection do
              'by_email' => :find_by_email,
              'active' => :active_users
            }.freeze
-           
+
            def self.find(method_key, *args)
              method = ALLOWED_METHODS[method_key]
              return nil unless method
@@ -200,7 +200,7 @@ defmodule Rsolv.Security.Patterns.Rails.DynamicFinderInjection do
          ```ruby
          # NEVER do this
          object.send(params[:method], params[:args])
-         
+
          # If you must use metaprogramming, use public_send with whitelist
          SAFE_METHODS = [:to_s, :name, :email].freeze
          method = params[:method].to_sym
@@ -214,18 +214,18 @@ defmodule Rsolv.Security.Patterns.Rails.DynamicFinderInjection do
          # Use strong parameters and query objects
          class UserQuery
            include ActiveModel::Model
-           
+
            attr_accessor :search_field, :search_value
-           
+
            SEARCHABLE_FIELDS = %w[name email username].freeze
-           
+
            validates :search_field, inclusion: { in: SEARCHABLE_FIELDS }
-           
+
            def results
              return User.none unless valid?
              User.where(search_field => search_value)
            end
-         
+
          # In controller
          query = UserQuery.new(search_params)
          @users = query.results
@@ -264,14 +264,14 @@ defmodule Rsolv.Security.Patterns.Rails.DynamicFinderInjection do
           @field = params[:field]
           @value = params[:value]
         end
-        
+
         def execute
           return User.none unless valid_field?
           User.where(@field => @value)
         end
-        
+
         private
-        
+
         def valid_field?
           # Use a whitelist of allowed fields to prevent dynamic method calls
           %w[name email username].include?(@field)
@@ -285,15 +285,15 @@ defmodule Rsolv.Security.Patterns.Rails.DynamicFinderInjection do
           'name' => :by_name,
           'email' => :by_email
         }.freeze
-        
+
         def self.by_name(name)
           User.where(name: name)
         end
-        
+
         def self.by_email(email)
           User.where(email: email)
         end
-        
+
         def self.find(field, value)
           # Use whitelist validation before method dispatch
           method = ALLOWED_METHODS[field]
@@ -315,14 +315,14 @@ defmodule Rsolv.Security.Patterns.Rails.DynamicFinderInjection do
       # 5. Form objects with explicit whitelist validation
       class SearchForm
         include ActiveModel::Model
-        
+
         # Define a whitelist of searchable fields
         ALLOWED_FIELDS = %w[name email].freeze
-        
+
         attr_accessor :field, :value
-        
+
         validates :field, inclusion: { in: ALLOWED_FIELDS }
-        
+
         def search
           return User.none unless valid?
           User.where(field => value)

@@ -146,7 +146,7 @@ defmodule RsolvWeb.Services.ConvertKit do
     # Get the configured HTTP client or default to HTTPoison
     http_client = Application.get_env(:rsolv, :http_client, HTTPoison)
 
-    case http_client.post(url, body, headers, recv_timeout: 10000) do
+    case http_client.post(url, body, headers, recv_timeout: 10_000) do
       {:ok, %HTTPoison.Response{status_code: status_code} = response}
       when status_code in 200..299 ->
         Logger.info("ConvertKit API request successful",
@@ -248,7 +248,7 @@ defmodule RsolvWeb.Services.ConvertKit do
       http_client = Application.get_env(:rsolv, :http_client, HTTPoison)
 
       # Try immediate tagging
-      case http_client.post(url, body, headers, recv_timeout: 10000) do
+      case http_client.post(url, body, headers, recv_timeout: 10_000) do
         {:ok, %HTTPoison.Response{status_code: status_code}} when status_code in 200..299 ->
           Logger.info("ConvertKit: Successfully tagged #{email}")
           {:ok, %{status_code: status_code, message: "Tagged successfully"}}
@@ -331,7 +331,7 @@ defmodule RsolvWeb.Services.ConvertKit do
     # Get the configured HTTP client or default to HTTPoison
     http_client = Application.get_env(:rsolv, :http_client, HTTPoison)
 
-    case http_client.get(url, headers, recv_timeout: 10000) do
+    case http_client.get(url, headers, recv_timeout: 10_000) do
       {:ok, %HTTPoison.Response{status_code: status_code, body: body}}
       when status_code in 200..299 ->
         # Try to extract subscriber ID from response
@@ -398,7 +398,7 @@ defmodule RsolvWeb.Services.ConvertKit do
     # Get the configured HTTP client or default to HTTPoison
     http_client = Application.get_env(:rsolv, :http_client, HTTPoison)
 
-    case http_client.post(url, body, headers, recv_timeout: 10000) do
+    case http_client.post(url, body, headers, recv_timeout: 10_000) do
       {:ok, %HTTPoison.Response{status_code: status_code} = _response}
       when status_code in 200..299 ->
         Logger.info("ConvertKit: Successfully unsubscribed user",

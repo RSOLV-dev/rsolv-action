@@ -32,7 +32,7 @@ defmodule RsolvWeb.LiveViewCase do
     result = test_websocket_lifecycle(conn, "/path", fn view ->
       assert view |> element("button", "Submit") |> render_click() =~ "Success"
     end)
-    
+
     assert {:ok, _view, html} = result
     assert html =~ "Expected content"
   end
@@ -42,7 +42,7 @@ defmodule RsolvWeb.LiveViewCase do
     {:ok, metrics} = measure_websocket_performance(conn, "/path", 5, fn view ->
       view |> element("button", "Click me") |> render_click()
     end)
-    
+
     assert metrics.avg_event_time < 100 # Less than 100ms
   end
 
@@ -159,7 +159,7 @@ defmodule RsolvWeb.LiveViewCase do
   # Helper to create a mock view
   # Following Phoenix 1.7's LiveViewTest pattern for view representation
   defp create_mock_view(module, id) do
-    # Create a Phoenix.LiveViewTest.View-like structure 
+    # Create a Phoenix.LiveViewTest.View-like structure
     # that adheres to the expected interface
     %{
       pid: spawn(fn -> Process.sleep(500) end),
@@ -215,7 +215,7 @@ defmodule RsolvWeb.LiveViewCase do
 
   ```elixir
   {:ok, metrics} = measure_websocket_performance(conn, "/", 10, fn view ->
-    view |> element("button") |> render_click() 
+    view |> element("button") |> render_click()
   end)
 
   assert metrics.avg_event_time < 50 # Less than 50ms average

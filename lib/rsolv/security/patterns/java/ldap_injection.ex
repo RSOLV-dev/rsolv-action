@@ -55,16 +55,16 @@ defmodule Rsolv.Security.Patterns.Java.LdapInjection do
       iex> pattern = Rsolv.Security.Patterns.Java.LdapInjection.pattern()
       iex> pattern.id
       "java-ldap-injection"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.LdapInjection.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.LdapInjection.pattern()
       iex> vulnerable = "ctx.search(\\\"cn=\\\" + username + \\\",ou=users\\\", filter, controls);"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, vulnerable) end)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.LdapInjection.pattern()
       iex> safe = "// ctx.search(\\\"cn=\\\" + username + \\\",ou=users\\\", filter, controls);"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, safe) end)
@@ -313,11 +313,11 @@ ctx.search("cn=" + escapedUsername + ",ou=users", filter, controls);|,
       iex> enhancement = Rsolv.Security.Patterns.Java.LdapInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.LdapInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.LdapInjection.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"

@@ -31,7 +31,7 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
   def download_safe
     filename = File.basename(params[:file])
     safe_path = File.join(Rails.root, 'public', 'downloads', filename)
-    
+
     # Ensure the final path is within allowed directory
     if safe_path.start_with?(File.join(Rails.root, 'public', 'downloads'))
       send_file safe_path
@@ -63,16 +63,16 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
       iex> pattern = Rsolv.Security.Patterns.Ruby.PathTraversal.pattern()
       iex> pattern.id
       "ruby-path-traversal"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.PathTraversal.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.PathTraversal.pattern()
       iex> vulnerable = "File.read(params[:file])"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable))
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.PathTraversal.pattern()
       iex> safe = "File.read('config/static.yml')"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, safe))
@@ -268,15 +268,15 @@ defmodule Rsolv.Security.Patterns.Ruby.PathTraversal do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.PathTraversal.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.PathTraversal.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.PathTraversal.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.PathTraversal.ast_enhancement()
       iex> enhancement.ast_rules.file_operations.check_file_methods
       true

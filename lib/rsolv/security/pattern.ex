@@ -182,7 +182,7 @@ defmodule Rsolv.Security.Pattern do
       iex> Pattern.to_api_format(pattern)
       %{
         id: "js-sql-injection",
-        name: "SQL Injection", 
+        name: "SQL Injection",
         severity: "high",
         # ...
       }

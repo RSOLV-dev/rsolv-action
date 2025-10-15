@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
     path.join("/uploads", req.params.filename)
     const file = path.join(baseDir, userInput)
     fs.readFile(path.join("./data", req.query.file))
-    
+
   Safe alternatives:
     const safePath = path.join("/uploads", path.basename(filename))
     if (resolvedPath.startsWith(baseDir)) { /* safe */ }
     const file = path.join(baseDir, sanitize(userInput))
-    
+
   The path.join() function in Node.js combines path segments using the platform-specific
   separator, but it does not validate that the resulting path stays within intended
   boundaries. Attackers can use relative path sequences like "../" to escape the
@@ -39,7 +39,7 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
 
   Node.js has seen multiple path traversal CVEs in recent years, including
   CVE-2024-21896 and CVE-2023-39331, demonstrating that even built-in path
-  handling functions can have vulnerabilities. The research shows an 85% 
+  handling functions can have vulnerabilities. The research shows an 85%
   increase in closed-source path traversal incidents in 2024 alone.
   """
 
@@ -90,20 +90,20 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
   def vulnerability_metadata do
     %{
       description: """
-      Path traversal via path.join() occurs when user input is passed directly to the 
-      path.join() function without proper validation. While path.join() normalizes paths 
-      by resolving "." and ".." segments, it does not prevent directory traversal attacks. 
-      Attackers can use relative path sequences like "../" to escape the intended base 
+      Path traversal via path.join() occurs when user input is passed directly to the
+      path.join() function without proper validation. While path.join() normalizes paths
+      by resolving "." and ".." segments, it does not prevent directory traversal attacks.
+      Attackers can use relative path sequences like "../" to escape the intended base
       directory and access files anywhere on the filesystem.
 
-      The vulnerability is particularly dangerous because path.join() is often perceived 
-      as "safe" due to its path normalization features. However, normalization alone is 
-      insufficient to prevent traversal attacks. The function will happily resolve 
-      "../../../etc/passwd" relative to any base directory, potentially exposing 
+      The vulnerability is particularly dangerous because path.join() is often perceived
+      as "safe" due to its path normalization features. However, normalization alone is
+      insufficient to prevent traversal attacks. The function will happily resolve
+      "../../../etc/passwd" relative to any base directory, potentially exposing
       sensitive system files.
 
-      Recent research (2024) shows an 85% increase in path traversal incidents, with 
-      attackers increasingly targeting Node.js applications due to the prevalence of 
+      Recent research (2024) shows an 85% increase in path traversal incidents, with
+      attackers increasingly targeting Node.js applications due to the prevalence of
       file serving functionality in web applications.
       """,
       references: [
@@ -282,19 +282,19 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalJoin do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> enhancement.ast_rules.callee.property
       "join"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalJoin.ast_enhancement()
       iex> "uses_path_validation" in Map.keys(enhancement.confidence_rules.adjustments)
       true

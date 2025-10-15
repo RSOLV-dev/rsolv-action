@@ -51,7 +51,7 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollutionTest do
       "Object.assign(settings, request.data)",
       "Object.assign(options, req.params)",
 
-      # Object.assign with multiple user sources  
+      # Object.assign with multiple user sources
       "Object.assign(config, req.body, req.query)",
       "Object.assign(target, input, defaults)",
       "Object.assign(state, payload.data)",
@@ -61,7 +61,7 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollutionTest do
 
   defp merge_utility_patterns do
     [
-      # Common merge utilities vulnerable to prototype pollution  
+      # Common merge utilities vulnerable to prototype pollution
       "_.merge(target, req.body)",
       "lodash.merge(config, userInput)",
       "jQuery.extend(target, userData)",

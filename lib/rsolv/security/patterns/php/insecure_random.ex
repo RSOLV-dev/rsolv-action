@@ -206,11 +206,11 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
       iex> test_cases = Rsolv.Security.Patterns.Php.InsecureRandom.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.InsecureRandom.test_cases()
       iex> length(test_cases.negative) > 0
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Php.InsecureRandom.pattern()
       iex> pattern.id
       "php-insecure-random"
@@ -295,16 +295,16 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
         // who observe a few previous session IDs from the same server
         """,
         "Password reset tokens" => ~S"""
-        // Password reset - VULNERABLE  
+        // Password reset - VULNERABLE
         function generateResetToken($user_id) {
             // Seed with predictable values
             srand(time() + $user_id);
-            
+
             $token = '';
             for ($i = 0; $i < 32; $i++) {
                 $token .= dechex(rand(0, 15));
             }
-            
+
             return $token;
         }
 
@@ -317,15 +317,15 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
             public function generateKey() {
                 $prefix = 'sk_';
                 $timestamp = time();
-                
+
                 // Use timestamp as seed
                 mt_srand($timestamp);
-                
+
                 $random_part = '';
                 for ($i = 0; $i < 24; $i++) {
                     $random_part .= chr(65 + mt_rand(0, 25)); // A-Z
                 }
-                
+
                 return $prefix . $timestamp . '_' . $random_part;
             }
         }
@@ -340,7 +340,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
         }
 
         // Include in forms
-        echo '<input type="hidden" name="csrf_token" value="' . 
+        echo '<input type="hidden" name="csrf_token" value="' .
              generateCSRFToken() . '">';
 
         // uniqid() with rand() seed is predictable
@@ -363,11 +363,11 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
         function generateResetToken($user_id) {
             // Generate cryptographically secure token
             $token = bin2hex(random_bytes(32));
-            
+
             // Store with expiration
             $expires = time() + 3600; // 1 hour
             storeResetToken($user_id, $token, $expires);
-            
+
             return $token;
         }
 
@@ -379,15 +379,15 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
         class SecureApiKeyGenerator {
             public function generateKey() {
                 $prefix = 'sk_';
-                
+
                 // Generate truly random component
                 $random_bytes = random_bytes(32);
                 $random_part = base64_encode($random_bytes);
-                
+
                 // Make URL-safe
                 $random_part = strtr($random_part, '+/', '-_');
                 $random_part = rtrim($random_part, '=');
-                
+
                 return $prefix . $random_part;
             }
         }
@@ -403,7 +403,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
 
         function verifyCSRFToken($token) {
             $expected = $_SESSION['csrf_token'] ?? '';
-            
+
             // Constant-time comparison to prevent timing attacks
             return hash_equals($expected, $token);
         }
@@ -412,7 +412,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
         $_SESSION['csrf_token'] = generateCSRFToken();
 
         // Include in forms
-        echo '<input type="hidden" name="csrf_token" value="' . 
+        echo '<input type="hidden" name="csrf_token" value="' .
              $_SESSION['csrf_token'] . '">';
 
         // Verify on form submission
@@ -563,7 +563,7 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
         for ($i = 0; $i < $samples; $i++) {
             $values[] = $generator();
         }
-        
+
         // Check for patterns, duplicates, statistical biases
         return analyzeRandomness($values);
     }
@@ -583,11 +583,11 @@ defmodule Rsolv.Security.Patterns.Php.InsecureRandom do
       iex> enhancement = Rsolv.Security.Patterns.Php.InsecureRandom.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.InsecureRandom.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.InsecureRandom.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

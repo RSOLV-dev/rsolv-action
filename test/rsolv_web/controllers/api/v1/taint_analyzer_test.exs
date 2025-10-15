@@ -302,10 +302,10 @@ defmodule RsolvWeb.Api.V1.TaintAnalyzerTest do
         const preTax = req.body.preTax;
         const afterTax = req.body.afterTax;
         const roth = req.body.roth;
-        
+
         // Vulnerable line
         const result = eval(preTax);
-        
+
         res.json({ result });
       });
       """

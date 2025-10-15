@@ -5,11 +5,11 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
   Detects dangerous patterns like:
     const query = `SELECT * FROM users WHERE id = ${userId}`
     db.query(`DELETE FROM posts WHERE author = '${username}'`)
-    
+
   Safe patterns:
     db.query("SELECT * FROM users WHERE id = ?", [userId])
     db.query("SELECT * FROM users WHERE id = $1", [userId])
-    
+
   Template literals using backticks (`) with ${} interpolation are just as vulnerable
   as string concatenation when used to build SQL queries.
 
@@ -41,11 +41,11 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
   def vulnerability_metadata do
     %{
       description: """
-      SQL injection via template literals occurs when JavaScript ES6 template strings 
-      (using backticks ` and ${} interpolation) are used to construct SQL queries with 
-      untrusted user input. Despite common misconceptions, template literals provide 
-      NO protection against SQL injection - they are merely syntactic sugar for string 
-      concatenation. The interpolated values are inserted directly into the string 
+      SQL injection via template literals occurs when JavaScript ES6 template strings
+      (using backticks ` and ${} interpolation) are used to construct SQL queries with
+      untrusted user input. Despite common misconceptions, template literals provide
+      NO protection against SQL injection - they are merely syntactic sugar for string
+      concatenation. The interpolated values are inserted directly into the string
       without any escaping or parameterization.
       """,
       references: [
@@ -208,19 +208,19 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "TemplateLiteral"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.ast_rules.has_expressions
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionInterpolation.ast_enhancement()
       iex> "uses_tagged_template" in Map.keys(enhancement.confidence_rules.adjustments)
       true

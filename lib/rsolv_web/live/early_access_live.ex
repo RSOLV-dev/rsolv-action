@@ -22,7 +22,7 @@ defmodule RsolvWeb.EarlyAccessLive do
               required
               class={"email-input #{cond do
                         @error_message -> "border-red-500 focus:ring-red-500"
-                        @email_valid == true -> "border-green-500 focus:ring-green-500" 
+                        @email_valid == true -> "border-green-500 focus:ring-green-500"
                         true -> ""
                       end}"}
               phx-hook="FocusInput"
@@ -540,7 +540,7 @@ defmodule RsolvWeb.EarlyAccessLive do
         })
 
       # Make the actual API call with error handling
-      case HTTPoison.post(url, body, headers, recv_timeout: 10000) do
+      case HTTPoison.post(url, body, headers, recv_timeout: 10_000) do
         {:ok, %HTTPoison.Response{status_code: status_code} = response}
         when status_code in 200..299 ->
           # Successfully added to Kit.com

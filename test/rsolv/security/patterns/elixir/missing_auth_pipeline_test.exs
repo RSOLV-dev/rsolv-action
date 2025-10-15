@@ -74,10 +74,10 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipelineTest do
       vulnerable_code = """
       defmodule MyAppWeb.AdminController do
         use MyAppWeb, :controller
-        
+
         # Some comments
         alias MyApp.Users
-        
+
         def index(conn, _params) do
           users = Users.list_all()
           render(conn, :index, users: users)

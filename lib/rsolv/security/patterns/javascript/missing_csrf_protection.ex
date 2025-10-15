@@ -59,16 +59,16 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
       iex> pattern = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.pattern()
       iex> pattern.id
       "js-missing-csrf"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.pattern()
       iex> vulnerable = ~S|app.post('/transfer', (req, res) => { transfer(req.body) })|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.pattern()
       iex> safe = ~S|app.post('/transfer', csrfProtection, (req, res) => {})|
       iex> Regex.match?(pattern.regex, safe)
@@ -294,15 +294,15 @@ defmodule Rsolv.Security.Patterns.Javascript.MissingCsrfProtection do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.ast_enhancement()
       iex> Enum.sort(Map.keys(enhancement))
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.MissingCsrfProtection.ast_enhancement()
       iex> "has_global_csrf" in Map.keys(enhancement.confidence_rules.adjustments)
       true

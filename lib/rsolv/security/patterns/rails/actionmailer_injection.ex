@@ -79,10 +79,10 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
   def vulnerability_metadata do
     %{
       description: """
-      ActionMailer Injection in Rails applications occurs when unvalidated user 
-      input is directly used in ActionMailer method calls, particularly in email 
-      headers like to, from, subject, cc, and bcc fields. This vulnerability 
-      allows attackers to inject arbitrary email headers through CRLF injection, 
+      ActionMailer Injection in Rails applications occurs when unvalidated user
+      input is directly used in ActionMailer method calls, particularly in email
+      headers like to, from, subject, cc, and bcc fields. This vulnerability
+      allows attackers to inject arbitrary email headers through CRLF injection,
       leading to email spoofing, spam injection, and phishing attacks.
       """,
       attack_vectors: """
@@ -118,7 +118,7 @@ defmodule Rsolv.Security.Patterns.Rails.ActionmailerInjection do
       ],
       remediation_steps: """
       1. Validate and sanitize all email addresses before using in mail() methods
-      2. Use allowlists for template names and email types  
+      2. Use allowlists for template names and email types
       3. Implement proper CRLF filtering for email headers
       4. Use model attributes instead of raw request parameters
       5. Implement email rate limiting to prevent abuse

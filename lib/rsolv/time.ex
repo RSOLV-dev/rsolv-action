@@ -9,7 +9,7 @@ defmodule Rsolv.Time do
 
       # Instead of DateTime.utc_now()
       Rsolv.Time.utc_now()
-      
+
       # Or with dependency injection
       def my_function(current_time \\ Rsolv.Time.utc_now()) do
         # ...
@@ -19,10 +19,10 @@ defmodule Rsolv.Time do
 
       # Freeze time in a test
       Rsolv.Time.freeze(~U[2024-01-01 12:00:00Z])
-      
+
       # Advance time
       Rsolv.Time.advance(seconds: 30)
-      
+
       # Unfreeze (usually in test cleanup)
       Rsolv.Time.unfreeze()
   """

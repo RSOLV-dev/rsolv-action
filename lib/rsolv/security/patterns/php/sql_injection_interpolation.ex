@@ -2,8 +2,8 @@ defmodule Rsolv.Security.Patterns.Php.SqlInjectionInterpolation do
   @moduledoc """
   Pattern for detecting SQL injection via variable interpolation in PHP.
 
-  This pattern identifies when PHP variables ($_GET, $_POST, $_REQUEST, $_COOKIE) are 
-  directly interpolated into SQL query strings using double quotes. PHP's variable 
+  This pattern identifies when PHP variables ($_GET, $_POST, $_REQUEST, $_COOKIE) are
+  directly interpolated into SQL query strings using double quotes. PHP's variable
   interpolation feature makes it trivial to accidentally create SQL injection vulnerabilities.
 
   ## Vulnerability Details
@@ -207,7 +207,7 @@ $stmt->execute(['name' => $_GET['name']]);|
       iex> test_cases = Rsolv.Security.Patterns.Php.SqlInjectionInterpolation.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.SqlInjectionInterpolation.test_cases()
       iex> length(test_cases.negative) > 0
       true
@@ -271,11 +271,11 @@ $stmt->execute(['name' => $_GET['name']]);|
         $query = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
         $result = mysqli_query($conn, $query);
 
-        // Attack: username = admin' -- 
+        // Attack: username = admin' --
         // Results in: SELECT * FROM users WHERE username = 'admin' -- ' AND password = ''
         """,
         "Numeric field injection" => ~S"""
-        // Product lookup - VULNERABLE  
+        // Product lookup - VULNERABLE
         $product_id = $_GET['id'];
         $sql = "SELECT * FROM products WHERE id = $product_id AND status = 'active'";
         $result = $db->query($sql);
@@ -401,11 +401,11 @@ $stmt->execute(['name' => $_GET['name']]);|
       iex> enhancement = Rsolv.Security.Patterns.Php.SqlInjectionInterpolation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.min_confidence
       0.9
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.SqlInjectionInterpolation.ast_enhancement()
       iex> length(enhancement.ast_rules)
       3

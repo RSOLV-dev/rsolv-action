@@ -272,19 +272,19 @@ defmodule Rsolv.Emails do
     """
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h1 style="color: #2C3E50; margin-bottom: 20px;">Welcome to RSOLV!</h1>
-      
+
       <p>Hi #{first_name},</p>
-      
+
       <p>Thanks for trying RSOLV! You're just a few minutes away from automating away your backlog.</p>
-      
+
       <p>Here's how to get started:</p>
-      
+
       <ol>
         <li>Install our GitHub Action (copy & paste the code below)</li>
         <li>Set up your repository secrets</li>
         <li>Tag your first issues with "rsolv:automate"</li>
       </ol>
-      
+
       <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
         <pre style="margin: 0; overflow-x: auto; white-space: pre-wrap; font-family: monospace;">name: RSOLV AutoFix
     on:
@@ -301,13 +301,13 @@ defmodule Rsolv.Emails do
               github-token: ${{ secrets.GITHUB_TOKEN }}
               rsolv-api-key: ${{ secrets.RSOLV_API_KEY }}</pre>
       </div>
-      
+
       <p>Need help? Contact us at <a href="mailto:support@rsolv.dev">support@rsolv.dev</a> and we'll personally assist you.</p>
-      
+
       <p>Your first 10 fixes are free! After that, you only pay $15 per fix that gets deployed - no credit card required to start.</p>
-      
+
       <p>Best,<br>The RSOLV Team</p>
-      
+
       <div class="footer" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 0.9em; color: #666;">
         <p>
           P.S. Here's a <a href="https://rsolv.dev/docs/getting-started">2-minute video walkthrough</a> if you prefer.
@@ -327,21 +327,21 @@ defmodule Rsolv.Emails do
     """
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h1 style="color: #2C3E50; margin-bottom: 20px;">Getting Started with RSOLV</h1>
-      
+
       <p>Hi #{first_name},</p>
-      
+
       <p>We hope you're enjoying RSOLV so far. Here's a quick overview of what you can do:</p>
-      
+
       <ul>
         <li>🔒 <strong>Security-First Approach</strong> - Every fix is analyzed for security vulnerabilities</li>
         <li>🚀 <strong>AI-Powered Solutions</strong> - Generate PRs for issues with a single "rsolv:automate" tag</li>
         <li>💰 <strong>Success-Based Billing</strong> - Only pay $15 when fixes are merged (after 10 free fixes)</li>
       </ul>
-      
+
       <p>For detailed instructions, check out our <a href="https://rsolv.dev/docs/getting-started">documentation</a>.</p>
-      
+
       <p>If you have any questions, just reply to this email.</p>
-      
+
       <p>Best,<br>The RSOLV Team</p>
 
       <div class="footer" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 0.9em; color: #666;">
@@ -647,7 +647,7 @@ defmodule Rsolv.Emails do
 
     Perfect First Issues to Try:
     - Documentation fixes: "Fix typo in README.md"
-    - Code cleanup: "Remove unused imports in UserService.js"  
+    - Code cleanup: "Remove unused imports in UserService.js"
     - Dependency updates: "Update lodash to latest version"
     - Bug fixes: "Fix null pointer exception in login function"
     - Security issues: "Remove hardcoded API key from config"
@@ -660,7 +660,7 @@ defmodule Rsolv.Emails do
     The payment processor in `src/services/PaymentService.js` is using deprecated function `calculateTax()` which was replaced with `computeTax()` in version 2.0.
 
     **Expected behavior:** Use the new `computeTax()` function
-    **Current behavior:** Uses deprecated `calculateTax()` function  
+    **Current behavior:** Uses deprecated `calculateTax()` function
     **File location:** `src/services/PaymentService.js` lines 45-67
 
     Labels: rsolv:automate
@@ -878,13 +878,13 @@ defmodule Rsolv.Emails do
           <h1 style="margin: 0; font-size: 24px;">🎉 New RSOLV Signup!</h1>
           <p style="margin: 5px 0 0 0; opacity: 0.9;">#{format_timestamp(signup_data.timestamp)}</p>
         </div>
-        
+
         <div class="content">
           <div class="metric">
             <div class="metric-label">Email</div>
             <div class="metric-value">#{signup_data.email}</div>
           </div>
-          
+
           #{if Map.get(signup_data, :company) do
       ~s(<div class="metric">
               <div class="metric-label">Company</div>
@@ -893,10 +893,10 @@ defmodule Rsolv.Emails do
     else
       ""
     end}
-          
+
           <div class="details">
             <h3 style="margin-top: 0;">Signup Details</h3>
-            
+
             <div class="detail-row">
               <span class="detail-label">Source</span>
               <span class="detail-value">
@@ -904,7 +904,7 @@ defmodule Rsolv.Emails do
                 #{if Map.get(signup_data, :utm_source), do: ~s(<span class="utm-badge">#{signup_data.utm_source}</span>), else: ""}
               </span>
             </div>
-            
+
             #{if Map.get(signup_data, :utm_medium) do
       ~s(<div class="detail-row">
                 <span class="detail-label">Medium</span>
@@ -913,7 +913,7 @@ defmodule Rsolv.Emails do
     else
       ""
     end}
-            
+
             #{if Map.get(signup_data, :utm_campaign) do
       ~s(<div class="detail-row">
                 <span class="detail-label">Campaign</span>
@@ -922,7 +922,7 @@ defmodule Rsolv.Emails do
     else
       ""
     end}
-            
+
             #{if Map.get(signup_data, :referrer) do
       ~s(<div class="detail-row">
                 <span class="detail-label">Referrer</span>
@@ -932,7 +932,7 @@ defmodule Rsolv.Emails do
       ""
     end}
           </div>
-          
+
           <div style="margin-top: 20px; text-align: center;">
             <a href="https://rsolv.dev/live/dashboard" style="display: inline-block; background: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
               View Dashboard
@@ -1016,35 +1016,35 @@ defmodule Rsolv.Emails do
           <h1 style="margin: 0; font-size: 24px;">🏢 New Contact Form Submission</h1>
           <p style="margin: 5px 0 0 0; opacity: 0.9;">#{format_timestamp(contact_data.timestamp)}</p>
         </div>
-        
+
         <div class="content">
           <div class="field">
             <div class="field-label">Name</div>
             <div class="field-value">#{contact_data.name}</div>
           </div>
-          
+
           <div class="field">
             <div class="field-label">Email</div>
             <div class="field-value">
               <a href="mailto:#{contact_data.email}" style="color: #2563eb;">#{contact_data.email}</a>
             </div>
           </div>
-          
+
           <div class="field">
             <div class="field-label">Company</div>
             <div class="field-value">#{contact_data.company}</div>
           </div>
-          
+
           <div class="field">
             <div class="field-label">Team Size</div>
             <div class="field-value">#{contact_data.team_size}</div>
           </div>
-          
+
           <div class="message">
             <div class="field-label" style="margin-bottom: 10px;">Message</div>
             <div style="white-space: pre-wrap;">#{contact_data.message}</div>
           </div>
-          
+
           <div class="actions">
             <a href="mailto:#{contact_data.email}" class="btn">Reply to #{contact_data.name}</a>
           </div>

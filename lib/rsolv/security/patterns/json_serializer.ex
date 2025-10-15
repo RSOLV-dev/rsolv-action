@@ -11,7 +11,7 @@ defmodule Rsolv.Security.Patterns.JSONSerializer do
 
       iex> prepare_for_json(~r/test/)
       %{"__type__" => "regex", "source" => "test", "flags" => []}
-      
+
       iex> prepare_for_json(~r/test/i)
       %{"__type__" => "regex", "source" => "test", "flags" => ["i"]}
   """

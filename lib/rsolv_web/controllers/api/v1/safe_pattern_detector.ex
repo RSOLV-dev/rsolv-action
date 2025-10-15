@@ -19,7 +19,7 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
 
       iex> SafePatternDetector.is_safe_pattern?(:timing_attack, "e.code === DOMException.QUOTA_EXCEEDED_ERR", %{language: "javascript"})
       true
-      
+
       iex> SafePatternDetector.is_safe_pattern?(:sql_injection, "query('SELECT * FROM users WHERE id = $1', [id])", %{language: "javascript"})
       true
   """
@@ -580,7 +580,7 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     do: [
       # SELECT with concatenation
       ~r/SELECT.*\+\s*\w+/i,
-      # WHERE with concatenation  
+      # WHERE with concatenation
       ~r/WHERE.*\+\s*\w+/i,
       # VALUES with concatenation
       ~r/VALUES.*\+\s*\w+/i,

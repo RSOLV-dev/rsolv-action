@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
     cursor.execute("SELECT * FROM users WHERE id = " + user_id)
     db.execute("DELETE FROM posts WHERE author = '" + username + "'")
     query = "UPDATE users SET status = '" + status + "'"; conn.execute(query)
-    
+
   Safe alternatives:
     cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
     db.execute("DELETE FROM posts WHERE author = ?", [username])
     cursor.execute("UPDATE users SET status = :status", {"status": status})
-    
+
   ## Vulnerability Details
 
   String concatenation using the + operator is one of the most common and dangerous
@@ -45,26 +45,26 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> pattern.id
       "python-sql-injection-concat"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> vulnerable = ~S|cursor.execute("SELECT * FROM users WHERE id = " + user_id)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> safe = ~S|cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> query_assignment = ~S|query = "DELETE FROM posts WHERE author = '" + username + "'"|
       iex> Regex.match?(pattern.regex, query_assignment)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionConcat.pattern()
       iex> normal_concat = ~S|message = "Hello " + username + "!"|
       iex> Regex.match?(pattern.regex, normal_concat)
@@ -84,7 +84,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
         \.execute\s*\([^)]*["'].*\+|
         # String concatenation used in execute call
         ["'].*\+.*["'].*\.execute|
-        # SQL variable assignment with concatenation  
+        # SQL variable assignment with concatenation
         (query|sql|cmd|statement)\s*=\s*.*["'].*\+|
         # SQL concatenation in parentheses
         \(["'].*\+.*["']\)
@@ -242,7 +242,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionConcat do
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionConcat.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionConcat.ast_enhancement()
       iex> enhancement.min_confidence
       0.4

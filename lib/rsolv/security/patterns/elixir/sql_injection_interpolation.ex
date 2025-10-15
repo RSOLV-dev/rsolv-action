@@ -10,7 +10,7 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
 
   SQL injection occurs when untrusted user input is directly interpolated into SQL
   query strings. In Elixir/Ecto applications, this typically happens when developers
-  use `Repo.query/2`, `Repo.query!/2`, `Ecto.Adapters.SQL.query/3`, or `fragment/1` 
+  use `Repo.query/2`, `Repo.query!/2`, `Ecto.Adapters.SQL.query/3`, or `fragment/1`
   with string interpolation instead of parameterized queries.
 
   ### Attack Example
@@ -72,9 +72,9 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
   def vulnerability_metadata do
     %{
       description: """
-      SQL injection via string interpolation occurs when user input is directly embedded 
+      SQL injection via string interpolation occurs when user input is directly embedded
       into SQL query strings using Elixir's string interpolation syntax (\#{variable}).
-      This bypasses Ecto's built-in parameterization and allows attackers to execute 
+      This bypasses Ecto's built-in parameterization and allows attackers to execute
       arbitrary SQL commands, potentially leading to data breaches, unauthorized access,
       and system compromise.
       """,
@@ -197,15 +197,15 @@ defmodule Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation do
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation.ast_enhancement()
       iex> Enum.sort(Map.keys(enhancement))
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "StringLiteral"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Elixir.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.ast_rules.sql_analysis.check_query_methods
       true

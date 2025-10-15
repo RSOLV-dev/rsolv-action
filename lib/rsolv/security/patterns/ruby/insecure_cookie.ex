@@ -57,16 +57,16 @@ defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsecureCookie.pattern()
       iex> pattern.id
       "ruby-insecure-cookie"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsecureCookie.pattern()
       iex> pattern.severity
       :medium
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsecureCookie.pattern()
       iex> vulnerable = "cookies[:auth_token] = token"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable))
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsecureCookie.pattern()
       iex> safe = "cookies[:auth] = { value: token, secure: true, httponly: true, same_site: :strict }"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, safe))
@@ -265,15 +265,15 @@ defmodule Rsolv.Security.Patterns.Ruby.InsecureCookie do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsecureCookie.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsecureCookie.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsecureCookie.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsecureCookie.ast_enhancement()
       iex> enhancement.ast_rules.cookie_analysis.check_cookie_methods
       true

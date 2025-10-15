@@ -14,9 +14,9 @@ defmodule Rsolv.MigrationTest do
   test "schema introspection shows expected tables" do
     # Query information_schema to verify tables exist
     query = """
-    SELECT table_name 
-    FROM information_schema.tables 
-    WHERE table_schema = 'public' 
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
     AND table_type = 'BASE TABLE'
     ORDER BY table_name
     """

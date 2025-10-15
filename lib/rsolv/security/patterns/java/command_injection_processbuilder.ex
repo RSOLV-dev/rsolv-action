@@ -224,11 +224,11 @@ ProcessBuilder pb = new ProcessBuilder(command);|
       iex> enhancement = Rsolv.Security.Patterns.Java.CommandInjectionProcessbuilder.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.CommandInjectionProcessbuilder.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.CommandInjectionProcessbuilder.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"

@@ -7,7 +7,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
 
   ## Vulnerability Details
 
-  Unsafe JSON decoding occurs when applications use decode! functions that raise 
+  Unsafe JSON decoding occurs when applications use decode! functions that raise
   exceptions on invalid input instead of returning error tuples:
   - `Jason.decode!` raises on invalid JSON instead of returning `{:error, reason}`
   - `Poison.decode!` raises on parsing errors
@@ -51,9 +51,9 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
   # SAFE - Using Jason.decode with pattern matching
   def handle_request(conn, %{"data" => json_string}) do
     case Jason.decode(json_string) do
-      {:ok, parsed_data} -> 
+      {:ok, parsed_data} ->
         process_data(parsed_data)
-      {:error, _reason} -> 
+      {:error, _reason} ->
         {:error, "Invalid JSON format"}
     end
   end
@@ -89,7 +89,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
 
   ## References
 
-  - CWE-20: Improper Input Validation  
+  - CWE-20: Improper Input Validation
   - OWASP Top 10 2021 - A05: Security Misconfiguration
   - Jason documentation: https://hexdocs.pm/jason/
   - Elixir error handling best practices
@@ -154,7 +154,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecode do
       business_impact: """
       Medium: Unsafe JSON decoding can result in:
       - Service availability issues affecting customer experience and revenue
-      - Increased infrastructure costs from resource consumption during attacks  
+      - Increased infrastructure costs from resource consumption during attacks
       - Potential SLA violations and customer dissatisfaction
       - Reduced system reliability and operational stability
       - Support overhead from investigating and resolving crash incidents

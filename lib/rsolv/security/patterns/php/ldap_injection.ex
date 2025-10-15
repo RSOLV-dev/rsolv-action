@@ -72,10 +72,10 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
   def vulnerability_metadata do
     %{
       description: """
-      LDAP injection is a critical security vulnerability that allows attackers to manipulate 
-      LDAP (Lightweight Directory Access Protocol) queries by injecting malicious input into 
-      LDAP search filters. This vulnerability occurs when applications construct LDAP queries 
-      using unsanitized user input, enabling attackers to bypass authentication, extract 
+      LDAP injection is a critical security vulnerability that allows attackers to manipulate
+      LDAP (Lightweight Directory Access Protocol) queries by injecting malicious input into
+      LDAP search filters. This vulnerability occurs when applications construct LDAP queries
+      using unsanitized user input, enabling attackers to bypass authentication, extract
       sensitive directory information, and potentially compromise entire directory services.
 
       LDAP injection attacks exploit the special syntax and operators used in LDAP search filters.
@@ -314,7 +314,7 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
       iex> test_cases = Rsolv.Security.Patterns.Php.LdapInjection.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.LdapInjection.test_cases()
       iex> length(test_cases.negative)
       6
@@ -469,29 +469,29 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
       iex> desc = Rsolv.Security.Patterns.Php.LdapInjection.vulnerability_description()
       iex> desc =~ "LDAP injection"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.LdapInjection.vulnerability_description()
       iex> desc =~ "ldap_escape"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.LdapInjection.vulnerability_description()
       iex> desc =~ "filter"
       true
   """
   def vulnerability_description do
     """
-    LDAP injection occurs when applications construct LDAP search filters using 
-    unsanitized user input, allowing attackers to manipulate LDAP queries and 
+    LDAP injection occurs when applications construct LDAP search filters using
+    unsanitized user input, allowing attackers to manipulate LDAP queries and
     potentially bypass authentication or extract sensitive directory information.
 
     In PHP, this commonly happens when:
 
     1. **Direct Input Usage**: User input from $_GET, $_POST, $_REQUEST, or $_COOKIE
        is directly concatenated into LDAP filter strings without escaping.
-       
+
     2. **Missing Validation**: No validation or sanitization is performed on user
        input before constructing LDAP filters.
-       
+
     3. **Improper Escaping**: Custom or incorrect escaping methods are used instead
        of the proper ldap_escape() function with LDAP_ESCAPE_FILTER flag.
 
@@ -525,11 +525,11 @@ defmodule Rsolv.Security.Patterns.Php.LdapInjection do
       iex> enhancement = Rsolv.Security.Patterns.Php.LdapInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.LdapInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.LdapInjection.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

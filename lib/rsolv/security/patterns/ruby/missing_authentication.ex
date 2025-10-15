@@ -22,7 +22,7 @@ defmodule Rsolv.Security.Patterns.Ruby.MissingAuthentication do
     def users
       @users = User.all  # Anyone can access this!
     end
-    
+
     def delete_user
       User.find(params[:id]).destroy  # No auth check!
     end
@@ -63,7 +63,7 @@ end|
           ~S|class AdminController < ApplicationController
   before_action :authenticate_user!
   before_action :require_admin
-  
+
   def users
     @users = User.all
   end
@@ -237,7 +237,7 @@ end|
       iex> enhancement = Rsolv.Security.Patterns.Ruby.MissingAuthentication.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.MissingAuthentication.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

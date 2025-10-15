@@ -91,7 +91,7 @@ defmodule RsolvWeb.Services.BlogService do
         <description>AI Security Insights and Vulnerability Analysis</description>
         <language>en-us</language>
         <lastBuildDate>#{format_rss_date(DateTime.utc_now())}</lastBuildDate>
-        #{Enum.map(posts, &format_rss_item/1) |> Enum.join("\n")}
+        #{Enum.map_join(posts, "\n", &format_rss_item/1)}
       </channel>
     </rss>
     """
@@ -152,7 +152,7 @@ defmodule RsolvWeb.Services.BlogService do
       ...> title: "Test Post"
       ...> status: "draft"
       ...> ---
-      ...> 
+      ...>
       ...> Content here
       ...> \"\"\"
       iex> {:ok, metadata, markdown} = RsolvWeb.Services.BlogService.parse_frontmatter(content)

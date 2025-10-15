@@ -2,7 +2,7 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
   @moduledoc """
   Missing Authentication Pipeline vulnerability pattern for Elixir/Phoenix applications.
 
-  This pattern detects Phoenix controllers that handle sensitive operations without 
+  This pattern detects Phoenix controllers that handle sensitive operations without
   proper authentication pipelines or plugs, leading to broken access control vulnerabilities.
 
   ## Vulnerability Details
@@ -30,7 +30,7 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
   # VULNERABLE - Admin controller without authentication
   defmodule MyAppWeb.AdminController do
     use MyAppWeb, :controller
-    
+
     def index(conn, _params) do
       # Administrative functions without auth
     end
@@ -39,7 +39,7 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
   # VULNERABLE - User management without protection
   defmodule AppWeb.UserController do
     use AppWeb, :controller
-    
+
     def delete(conn, %{"id" => id}) do
       # User deletion without verification
     end
@@ -48,7 +48,7 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
   # VULNERABLE - Account settings accessible to anyone
   defmodule WebApp.AccountController do
     use WebApp, :controller
-    
+
     def update_password(conn, params) do
       # Password changes without authentication
     end
@@ -60,9 +60,9 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
   # SAFE - Proper authentication plug
   defmodule MyAppWeb.AdminController do
     use MyAppWeb, :controller
-    
+
     plug :authenticate_admin
-    
+
     def index(conn, _params) do
       # Protected administrative functions
     end
@@ -71,9 +71,9 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
   # SAFE - Pipeline-level authentication
   defmodule AppWeb.UserController do
     use AppWeb, :controller
-    
+
     pipe_through [:browser, :require_authenticated_user]
-    
+
     def show(conn, _params) do
       # Protected user operations
     end
@@ -82,10 +82,10 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
   # SAFE - Multiple authentication layers
   defmodule WebApp.AccountController do
     use WebApp, :controller
-    
+
     plug MyApp.AuthPlug
     plug :require_owner_or_admin
-    
+
     def edit(conn, _params) do
       # Doubly protected account operations
     end
@@ -109,7 +109,7 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
   ## References
 
   - CWE-306: Missing Authentication for Critical Function
-  - OWASP Top 10 2021 - A01: Broken Access Control  
+  - OWASP Top 10 2021 - A01: Broken Access Control
   - Phoenix Security Guide: https://hexdocs.pm/phoenix/security.html
   - Phoenix Authentication: https://hexdocs.pm/phoenix/Mix.Tasks.Phx.Gen.Auth.html
   - Pow Authentication Library: https://powauth.com/
@@ -161,9 +161,9 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
         safe: [
           ~S|defmodule MyAppWeb.AdminController do
   use MyAppWeb, :controller
-  
+
   plug :authenticate_admin
-  
+
   def index(conn, _params) do|,
           ~S|defmodule AppWeb.UserController do
   use AppWeb, :controller
@@ -171,9 +171,9 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingAuthPipeline do
   def show(conn, _params) do|,
           ~S|defmodule WebApp.AccountController do
   use WebApp, :controller
-  
+
   pipe_through [:browser, :require_authenticated_user]
-  
+
   def edit(conn, _params) do|
         ]
       }

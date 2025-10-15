@@ -1,7 +1,7 @@
 defmodule RsolvWeb.Services.FunnelMetrics do
   @moduledoc """
   Implementation of Prometheus metrics specifically for the signup funnel.
-  This module defines and tracks metrics for the entire signup funnel process from 
+  This module defines and tracks metrics for the entire signup funnel process from
   initial page visit to completed signup.
   """
   require Logger

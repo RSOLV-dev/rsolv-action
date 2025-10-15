@@ -7,13 +7,13 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
     $(element).append(userData)
     node.outerHTML = req.body.content
     $('#content').prepend(params.html)
-    
+
   Safe alternatives:
     element.textContent = userInput
     $(element).text(userData)
     element.insertAdjacentHTML('beforeend', DOMPurify.sanitize(userInput))
     $(element).append(escapeHtml(userData))
-    
+
   DOM manipulation methods that accept HTML strings are prime XSS vectors.
   These methods parse and execute HTML, including any embedded scripts.
   jQuery's methods like .html(), .append(), .prepend() are particularly
@@ -39,7 +39,7 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
 
   // Also vulnerable: insertAdjacentHTML
   function addNotification(message) {
-    document.body.insertAdjacentHTML('beforeend', 
+    document.body.insertAdjacentHTML('beforeend',
       '<div class="notification">' + message + '</div>'
     );
   }
@@ -70,30 +70,30 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> pattern.id
       "js-xss-dom-manipulation"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> pattern.cwe_id
       "CWE-79"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> vulnerable = ~S|element.insertAdjacentHTML('beforeend', userInput)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> vulnerable = ~S|$(element).append(userData)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> safe = ~S|element.textContent = userInput|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssDomManipulation.pattern()
       iex> pattern.recommendation
       "Use safe DOM methods like textContent or sanitize HTML with DOMPurify before DOM manipulation."
@@ -343,15 +343,15 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDomManipulation do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDomManipulation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDomManipulation.ast_enhancement()
       iex> is_list(enhancement.ast_rules.method_names)
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDomManipulation.ast_enhancement()
       iex> "insertAdjacentHTML" in enhancement.ast_rules.method_names
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDomManipulation.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

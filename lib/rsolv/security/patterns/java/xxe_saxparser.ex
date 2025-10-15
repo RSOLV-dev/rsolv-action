@@ -3,7 +3,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
   XXE via SAXParser pattern for Java code.
 
   Detects XML External Entity (XXE) vulnerabilities in SAXParserFactory and SAXParser
-  usage where secure processing features are not enabled. SAXParser is particularly 
+  usage where secure processing features are not enabled. SAXParser is particularly
   vulnerable because it processes XML using event-based parsing but lacks secure defaults,
   making it susceptible to XXE attacks, SSRF, file disclosure, and DoS attacks.
 
@@ -11,7 +11,7 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
 
   XML External Entity (XXE) attacks occur when XML input containing references to external
   entities is processed by a weakly configured XML parser. The SAXParserFactory in Java
-  creates SAXParser instances that are vulnerable by default and require explicit secure 
+  creates SAXParser instances that are vulnerable by default and require explicit secure
   configuration to prevent XXE attacks.
 
   Common vulnerable patterns:
@@ -56,16 +56,16 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
       iex> pattern = Rsolv.Security.Patterns.Java.XxeSaxparser.pattern()
       iex> pattern.id
       "java-xxe-saxparser"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.XxeSaxparser.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.XxeSaxparser.pattern()
       iex> vulnerable = "SAXParserFactory spf = SAXParserFactory.newInstance(); SAXParser parser = spf.newSAXParser();"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, vulnerable) end)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.XxeSaxparser.pattern()
       iex> safe = "// SAXParserFactory spf = SAXParserFactory.newInstance();"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, safe) end)
@@ -310,11 +310,11 @@ defmodule Rsolv.Security.Patterns.Java.XxeSaxparser do
       iex> enhancement = Rsolv.Security.Patterns.Java.XxeSaxparser.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.XxeSaxparser.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.XxeSaxparser.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"

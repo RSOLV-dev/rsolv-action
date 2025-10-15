@@ -188,7 +188,7 @@ defmodule Rsolv.Workers.EmailWorker do
 
           # Skip immediate emails (day 0) as they're sent directly
           if email_config.days > 0 do
-            scheduled_at = DateTime.add(DateTime.utc_now(), email_config.days * 86400, :second)
+            scheduled_at = DateTime.add(DateTime.utc_now(), email_config.days * 86_400, :second)
 
             Logger.info("[EmailWorker] Scheduling email",
               template: email_config.template,

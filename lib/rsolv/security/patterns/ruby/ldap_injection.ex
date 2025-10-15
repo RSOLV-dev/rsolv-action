@@ -21,15 +21,15 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
     def authenticate
       username = params[:username]  # User input: "admin)(|(objectClass=*"
       password = params[:password]  # User input: "anything"
-      
+
       # VULNERABLE: Direct interpolation into LDAP filter
       filter = "(\\&(uid=\#{username})(userPassword=\#{password}))"
       # Results in: (&(uid=admin)(|(objectClass=*)(userPassword=anything))
       # This changes query logic to match any object class, bypassing auth
-      
+
       ldap = Net::LDAP.new(host: 'ldap.company.com')
       result = ldap.search(filter: filter)
-      
+
       if result.any?
         session[:user_id] = result.first.uid
         redirect_to dashboard_path
@@ -296,7 +296,7 @@ defmodule Rsolv.Security.Patterns.Ruby.LdapInjection do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.LdapInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.LdapInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.75

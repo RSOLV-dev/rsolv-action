@@ -208,7 +208,7 @@ if (in_array($page, $allowed)) {
       iex> test_cases = Rsolv.Security.Patterns.Php.FileInclusion.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.FileInclusion.test_cases()
       iex> length(test_cases.negative) > 0
       true
@@ -334,7 +334,7 @@ if (in_array($_GET['page'], $allowed)) {
                 'about' => 'controllers/AboutController.php',
                 'contact' => 'controllers/ContactController.php'
             ];
-            
+
             public function route($page) {
                 if (isset($this->routes[$page])) {
                     require_once($this->routes[$page]);
@@ -466,11 +466,11 @@ if (in_array($_GET['page'], $allowed)) {
       iex> enhancement = Rsolv.Security.Patterns.Php.FileInclusion.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.FileInclusion.ast_enhancement()
       iex> enhancement.min_confidence
       0.85
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.FileInclusion.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

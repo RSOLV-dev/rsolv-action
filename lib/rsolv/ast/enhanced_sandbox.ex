@@ -89,7 +89,7 @@ defmodule Rsolv.AST.EnhancedSandbox do
           # Start small
           min_heap_size: 233,
           # Binary heap control
-          min_bin_vheap_size: 46422,
+          min_bin_vheap_size: 46_422,
           # Aggressive GC
           fullsweep_after: 10
         ]

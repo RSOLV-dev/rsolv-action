@@ -210,7 +210,7 @@ $files = scandir($directory);|
       iex> test_cases = Rsolv.Security.Patterns.Php.CommandInjection.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.CommandInjection.test_cases()
       iex> length(test_cases.negative) > 0
       true
@@ -304,7 +304,7 @@ $files = scandir($directory);|
         $host = $_GET['host'];
 
         // Validate input first
-        if (!filter_var($host, FILTER_VALIDATE_IP) && 
+        if (!filter_var($host, FILTER_VALIDATE_IP) &&
             !filter_var($host, FILTER_VALIDATE_DOMAIN)) {
             die("Invalid host");
         }
@@ -421,11 +421,11 @@ $files = scandir($directory);|
       iex> enhancement = Rsolv.Security.Patterns.Php.CommandInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.CommandInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.95
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.CommandInjection.ast_enhancement()
       iex> length(enhancement.ast_rules)
       3

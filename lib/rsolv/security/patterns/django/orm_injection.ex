@@ -26,17 +26,17 @@ defmodule Rsolv.Security.Patterns.Django.OrmInjection do
 
       # VULNERABLE - String formatting in filter
       User.objects.filter("name = '%s'" % username)
-      
+
       # VULNERABLE - F-string in raw query
       User.objects.raw(f"SELECT * FROM users WHERE id = {user_id}")
-      
+
       # VULNERABLE - Format method
       query = "DELETE FROM table WHERE id = {}".format(id)
       cursor.execute(query)
-      
+
       # SAFE - Parameterized ORM query
       User.objects.filter(name=username)
-      
+
       # SAFE - Parameterized raw query
       User.objects.raw("SELECT * FROM users WHERE name = %s", [username])
   """
@@ -96,7 +96,7 @@ defmodule Rsolv.Security.Patterns.Django.OrmInjection do
         # annotate() with **kwargs
         ~r/\.annotate\s*\(\s*\*\*\w+\)/,
 
-        # aggregate() with **kwargs  
+        # aggregate() with **kwargs
         ~r/\.aggregate\s*\(\s*\*\*\w+\)/
       ],
       cwe_id: "CWE-89",
@@ -214,11 +214,11 @@ defmodule Rsolv.Security.Patterns.Django.OrmInjection do
          # NEVER DO THIS - String formatting
          users = User.objects.filter("name = '%s'" % username)  # VULNERABLE!
          users = User.objects.filter(f"age > {min_age}")       # VULNERABLE!
-         
+
          # SAFE - Use field lookups
          users = User.objects.filter(name=username)
          users = User.objects.filter(age__gt=min_age)
-         
+
          # SAFE - Use Q objects for complex queries
          from django.db.models import Q
          users = User.objects.filter(
@@ -231,13 +231,13 @@ defmodule Rsolv.Security.Patterns.Django.OrmInjection do
          # NEVER DO THIS - String concatenation
          query = "SELECT * FROM users WHERE name = '%s'" % name
          users = User.objects.raw(query)  # VULNERABLE!
-         
+
          # SAFE - Use parameterized queries
          users = User.objects.raw(
              "SELECT * FROM users WHERE name = %s",
              [name]  # Parameters passed separately
          )
-         
+
          # SAFE - Multiple parameters
          users = User.objects.raw(
              "SELECT * FROM users WHERE name = %s AND age > %s",
@@ -248,12 +248,12 @@ defmodule Rsolv.Security.Patterns.Django.OrmInjection do
       3. **Secure Cursor Operations**:
          ```python
          from django.db import connection
-         
+
          # NEVER DO THIS
          with connection.cursor() as cursor:
              query = f"DELETE FROM logs WHERE user_id = {user_id}"
              cursor.execute(query)  # VULNERABLE!
-         
+
          # SAFE - Parameterized cursor execution
          with connection.cursor() as cursor:
              cursor.execute(
@@ -268,14 +268,14 @@ defmodule Rsolv.Security.Patterns.Django.OrmInjection do
          Model.objects.extra(
              where=[f"status = '{status}'"]  # VULNERABLE!
          )
-         
+
          # NEVER DO THIS - CVE-2022-28346 pattern
          def build_query(**kwargs):
              return Model.objects.extra(**kwargs)  # VULNERABLE!
-         
+
          # SAFE - Use ORM methods instead
          Model.objects.filter(status=status)
-         
+
          # If extra() is necessary, use parameters
          Model.objects.extra(
              where=["status = %s"],
@@ -287,11 +287,11 @@ defmodule Rsolv.Security.Patterns.Django.OrmInjection do
          ```python
          # Whitelist allowed values
          ALLOWED_SORT_FIELDS = ['name', 'created_at', 'updated_at']
-         
+
          def get_sorted_users(sort_field):
              if sort_field not in ALLOWED_SORT_FIELDS:
                  sort_field = 'name'  # Default safe value
-             
+
              return User.objects.order_by(sort_field)
          ```
       """,
@@ -354,7 +354,7 @@ defmodule Rsolv.Security.Patterns.Django.OrmInjection do
               filters['status'] = request.GET['status']
           if request.GET.get('category'):
               filters['category__name'] = request.GET['category']
-          
+
           return Product.objects.filter(**filters)
 
       # 6. Raw Queries When Necessary
@@ -368,7 +368,7 @@ defmodule Rsolv.Security.Patterns.Django.OrmInjection do
                   WHERE user_id = %s
                   AND status = %s
               ''', [user_id, 'completed'])
-              
+
               return cursor.fetchone()
       """
     }

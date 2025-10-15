@@ -2,10 +2,10 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
   @moduledoc """
   Rails Dangerous Production Configuration pattern for Rails applications.
 
-  This pattern detects development settings that are incorrectly enabled in 
-  production environments, leading to information disclosure, performance 
-  issues, and security vulnerabilities. These misconfigurations can expose 
-  sensitive debugging information, application internals, and create attack 
+  This pattern detects development settings that are incorrectly enabled in
+  production environments, leading to information disclosure, performance
+  issues, and security vulnerabilities. These misconfigurations can expose
+  sensitive debugging information, application internals, and create attack
   vectors for malicious actors.
 
   ## Background
@@ -37,17 +37,17 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
 
       # Critical - Development settings in production
       config.consider_all_requests_local = true
-      
+
       # Critical - Debug logging in production
       config.log_level = :debug
-      
+
       # Critical - Caching disabled
       config.action_controller.perform_caching = false
-      
+
       # Critical - Development gems in production
       gem 'byebug'
       gem 'pry'
-      
+
       # Safe - Production settings
       config.consider_all_requests_local = false
       config.log_level = :info
@@ -136,13 +136,13 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
   def vulnerability_metadata do
     %{
       description: """
-      Dangerous Production Configuration in Rails applications occurs when 
-      development-specific settings are incorrectly enabled in production 
-      environments. This misconfiguration can lead to serious security 
-      vulnerabilities including information disclosure, performance degradation, 
-      and potential remote code execution. Development settings like detailed 
-      error pages, debug logging, and development gems should never be enabled 
-      in production as they expose sensitive application internals and create 
+      Dangerous Production Configuration in Rails applications occurs when
+      development-specific settings are incorrectly enabled in production
+      environments. This misconfiguration can lead to serious security
+      vulnerabilities including information disclosure, performance degradation,
+      and potential remote code execution. Development settings like detailed
+      error pages, debug logging, and development gems should never be enabled
+      in production as they expose sensitive application internals and create
       attack vectors.
 
       The vulnerability is particularly dangerous because:
@@ -217,14 +217,14 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
       1. **Production Environment Configuration (Critical)**:
          ```ruby
          # config/environments/production.rb
-         
+
          # NEVER do this in production - Dangerous misconfigurations
          config.consider_all_requests_local = true          # DANGEROUS
          config.log_level = :debug                          # DANGEROUS
          config.action_controller.perform_caching = false   # DANGEROUS
          config.eager_load = false                          # DANGEROUS
          config.cache_classes = false                       # DANGEROUS
-         
+
          # Always use these settings in production
          Rails.application.configure do
            config.consider_all_requests_local = false       # Hide detailed errors
@@ -242,12 +242,12 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
       2. **Gemfile Management**:
          ```ruby
          # Gemfile - Properly group development gems
-         
+
          # NEVER do this - Development gems in all environments
          gem 'byebug'                                       # DANGEROUS
          gem 'pry'                                          # DANGEROUS
          gem 'web-console'                                  # DANGEROUS
-         
+
          # Always group development/debugging gems properly
          group :development do
            gem 'byebug', platforms: [:mri, :mingw, :x64_mingw]
@@ -256,14 +256,14 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
            gem 'spring'
            gem 'spring-watcher-listen', '~> 2.0.0'
          end
-         
+
          group :development, :test do
            gem 'pry-rails'
            gem 'pry-byebug'
            gem 'better_errors'
            gem 'binding_of_caller'
          end
-         
+
          group :test do
            gem 'rspec-rails'
            gem 'factory_bot_rails'
@@ -278,7 +278,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
              # Use environment-specific settings
              config.consider_all_requests_local = Rails.env.development?
              config.action_controller.perform_caching = !Rails.env.development?
-             
+
              # Set appropriate log levels
              config.log_level = case Rails.env
                                when 'development' then :debug
@@ -298,11 +298,11 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
              unless Rails.application.config.consider_all_requests_local == false
                raise "consider_all_requests_local must be false in production!"
              end
-             
+
              unless Rails.application.config.action_controller.perform_caching == true
                raise "Caching must be enabled in production!"
              end
-             
+
              if Rails.application.config.log_level == :debug
                Rails.logger.warn "WARNING: Debug logging enabled in production!"
              end
@@ -314,14 +314,14 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
          # app/controllers/application_controller.rb
          class ApplicationController < ActionController::Base
            rescue_from StandardError, with: :handle_standard_error if Rails.env.production?
-           
+
            private
-           
+
            def handle_standard_error(exception)
              # Log the error for debugging
              Rails.logger.error "Application Error: \#{exception.message}"
              Rails.logger.error exception.backtrace.join("\\\\n")
-             
+
              # Show generic error page to users
              render template: "errors/500", status: 500, layout: 'error'
            end
@@ -361,30 +361,30 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
         config.consider_all_requests_local = false
         config.action_dispatch.show_exceptions = false
         config.action_dispatch.show_detailed_exceptions = false
-        
+
         # Performance settings
         config.action_controller.perform_caching = true
         config.cache_classes = true
         config.eager_load = true
-        
+
         # Asset settings
         config.assets.compile = false
         config.assets.debug = false
         config.assets.compress = true
         config.assets.css_compressor = :sass
         config.assets.js_compressor = :terser
-        
+
         # Logging
         config.log_level = :info
         config.log_tags = [:request_id]
-        
+
         # SSL/Security
         config.force_ssl = true
         config.ssl_options = {
           secure_cookies: true,
           hsts: { expires: 1.year, subdomains: true }
         }
-        
+
         # Error handling
         config.exceptions_app = self.routes
       end
@@ -393,18 +393,18 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
       class EnvironmentValidator
         def self.validate_production!
           return unless Rails.env.production?
-          
+
           dangerous_settings = []
-          
-          dangerous_settings << "consider_all_requests_local is true" if 
+
+          dangerous_settings << "consider_all_requests_local is true" if
             Rails.application.config.consider_all_requests_local
-          
-          dangerous_settings << "caching is disabled" unless 
+
+          dangerous_settings << "caching is disabled" unless
             Rails.application.config.action_controller.perform_caching
-          
-          dangerous_settings << "debug logging is enabled" if 
+
+          dangerous_settings << "debug logging is enabled" if
             Rails.application.config.log_level == :debug
-          
+
           if dangerous_settings.any?
             raise "Production configuration errors: \#{dangerous_settings.join(', ')}"
           end
@@ -416,7 +416,7 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
           # Log detailed error for developers
           Rails.logger.error "Error in \#{request.path}: \#{exception.message}"
           Rails.logger.error exception.backtrace.first(10).join("\n")
-          
+
           # Return generic error response
           {
             status: 500,
@@ -429,16 +429,16 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
       class ConfigurationMonitor
         def self.check_production_settings
           return unless Rails.env.production?
-          
+
           checks = {
             consider_all_requests_local: Rails.application.config.consider_all_requests_local,
             perform_caching: Rails.application.config.action_controller.perform_caching,
             log_level: Rails.application.config.log_level,
             force_ssl: Rails.application.config.force_ssl
           }
-          
+
           Rails.logger.info "Production configuration check: \#{checks}"
-          
+
           # Alert if dangerous settings detected
           if checks[:consider_all_requests_local] || !checks[:perform_caching]
             Rails.logger.error "SECURITY WARNING: Dangerous production configuration detected!"
@@ -457,9 +457,9 @@ defmodule Rsolv.Security.Patterns.Rails.DangerousProductionConfig do
               assert config.force_ssl, "SSL should be forced"
             end
         end
-        
+
         private
-        
+
         def with_env(env)
           old_env = ENV.to_hash
           ENV.update(env)

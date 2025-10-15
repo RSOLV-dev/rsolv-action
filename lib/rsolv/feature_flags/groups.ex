@@ -28,13 +28,13 @@ defmodule Rsolv.FeatureFlags.Groups do
 
       iex> in?(:admin, %{id: "admin@rsolv.dev"})
       true
-      
+
       iex> in?(:vip, %{id: "user@example.com", tags: ["vip"]})
       true
-      
+
       iex> in?(:phase_1, %{id: "user@example.com", tags: ["phase_1"]})
       true
-      
+
       iex> in?(:early_access, %{id: "anyone@example.com"})
       true
   """
@@ -101,7 +101,7 @@ defmodule Rsolv.FeatureFlags.Groups do
 
       iex> to_actor(%{email: "user@example.com", tags: ["vip"]})
       %{id: "user@example.com", tags: ["vip"]}
-      
+
       iex> to_actor(%{email: "user@example.com"})
       %{id: "user@example.com", tags: []}
   """

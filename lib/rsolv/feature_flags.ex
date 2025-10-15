@@ -127,13 +127,13 @@ defmodule Rsolv.FeatureFlags do
 
       iex> FeatureFlags.enabled?(:interactive_roi_calculator)
       true
-      
+
       iex> FeatureFlags.enabled?(:admin_dashboard, user: %{email: "admin@rsolv.dev"})
       true
-      
+
       iex> FeatureFlags.enabled?(:advanced_analytics, user: %{email: "user@example.com", tags: ["vip"]})
       true
-      
+
       iex> FeatureFlags.enabled?(:api_access, email: "regular@example.com")
       false
   """

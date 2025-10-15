@@ -8,11 +8,11 @@ defmodule RsolvWeb.Components.DarkModeHelpers do
   Returns classes for standard card/panel styling with dark mode support.
 
   ## Examples
-      
+
       <div class={card_classes()}>
         Content here
       </div>
-      
+
       <div class={card_classes("border-t-4 border-red-500")}>
         Card with additional classes
       </div>

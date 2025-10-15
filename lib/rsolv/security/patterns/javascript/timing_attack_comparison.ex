@@ -50,16 +50,16 @@ defmodule Rsolv.Security.Patterns.Javascript.TimingAttackComparison do
       iex> pattern = Rsolv.Security.Patterns.Javascript.TimingAttackComparison.pattern()
       iex> pattern.id
       "js-timing-attack"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.TimingAttackComparison.pattern()
       iex> pattern.severity
       :low
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.TimingAttackComparison.pattern()
       iex> vulnerable = "if (userToken === secretToken)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.TimingAttackComparison.pattern()
       iex> safe = "if (username === 'admin')"
       iex> Regex.match?(pattern.regex, safe)
@@ -288,19 +288,19 @@ defmodule Rsolv.Security.Patterns.Javascript.TimingAttackComparison do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.TimingAttackComparison.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.TimingAttackComparison.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "BinaryExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.TimingAttackComparison.ast_enhancement()
       iex> "===" in enhancement.ast_rules.operators
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.TimingAttackComparison.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.TimingAttackComparison.ast_enhancement()
       iex> "compares_secret_variable" in Map.keys(enhancement.confidence_rules.adjustments)
       true

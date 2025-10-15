@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
     result = eval(user_input)
     value = eval(request.args.get('expression'))
     computed = eval(f"2 + {user_number}")
-    
+
   Safe alternatives:
     result = ast.literal_eval(user_input)  # Only literals
     value = int(request.args.get('number', 0))
     data = json.loads(json_string)
-    
+
   Python's eval() function executes arbitrary Python code from a string,
   making it one of the most dangerous functions when used with untrusted
   input. Unlike other languages, Python's eval() has full access to the
@@ -44,25 +44,25 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> pattern.id
       "python-unsafe-eval"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> pattern.severity
       :critical
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> pattern.cwe_id
       "CWE-95"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> vulnerable = "result = eval(user_input)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> safe = "result = ast.literal_eval(user_input)"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafeEval.pattern()
       iex> pattern.recommendation
       "Use ast.literal_eval() for safe evaluation of literals or custom parsers for complex expressions"
@@ -276,15 +276,15 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeEval do
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeEval.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeEval.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "Call"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeEval.ast_enhancement()
       iex> "eval" in enhancement.ast_rules.function_names
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeEval.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

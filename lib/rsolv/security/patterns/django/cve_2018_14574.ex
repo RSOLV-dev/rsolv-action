@@ -2,8 +2,8 @@ defmodule Rsolv.Security.Patterns.Django.Cve201814574 do
   @moduledoc """
   Django CVE-2018-14574 - Open Redirect in CommonMiddleware via APPEND_SLASH
 
-  This pattern detects Django applications vulnerable to CVE-2018-14574, an open redirect 
-  vulnerability in CommonMiddleware when APPEND_SLASH setting is enabled and the application 
+  This pattern detects Django applications vulnerable to CVE-2018-14574, an open redirect
+  vulnerability in CommonMiddleware when APPEND_SLASH setting is enabled and the application
   has URL patterns that accept paths ending in slashes.
 
   ## Vulnerability Details
@@ -12,8 +12,8 @@ defmodule Rsolv.Security.Patterns.Django.Cve201814574 do
   - 1.11.x before 1.11.15
   - 2.0.x before 2.0.8
 
-  When CommonMiddleware and APPEND_SLASH setting are both enabled, and the project has 
-  a URL pattern that accepts any path ending in a slash, an attacker can craft malicious 
+  When CommonMiddleware and APPEND_SLASH setting are both enabled, and the project has
+  a URL pattern that accepts any path ending in a slash, an attacker can craft malicious
   URLs that redirect users to external sites, enabling phishing attacks and social engineering.
 
   ### Attack Example
@@ -128,19 +128,19 @@ if redirect_url in ALLOWED_REDIRECTS:
   def vulnerability_metadata do
     %{
       description: """
-      CVE-2018-14574 is an open redirect vulnerability affecting Django's CommonMiddleware 
-      when used with the APPEND_SLASH setting. The vulnerability occurs when Django 
-      automatically appends slashes to URLs and performs redirects without proper validation 
+      CVE-2018-14574 is an open redirect vulnerability affecting Django's CommonMiddleware
+      when used with the APPEND_SLASH setting. The vulnerability occurs when Django
+      automatically appends slashes to URLs and performs redirects without proper validation
       of the destination URL.
 
-      This vulnerability specifically affects applications that have both CommonMiddleware 
-      enabled and URL patterns that accept paths ending with slashes. Attackers can craft 
-      malicious URLs that exploit Django's URL normalization process to redirect users to 
+      This vulnerability specifically affects applications that have both CommonMiddleware
+      enabled and URL patterns that accept paths ending with slashes. Attackers can craft
+      malicious URLs that exploit Django's URL normalization process to redirect users to
       external malicious sites.
 
-      The issue was discovered as part of Django's security audit and affects a significant 
-      number of Django applications since CommonMiddleware and APPEND_SLASH are default 
-      settings. The vulnerability is particularly dangerous because it allows attackers to 
+      The issue was discovered as part of Django's security audit and affects a significant
+      number of Django applications since CommonMiddleware and APPEND_SLASH are default
+      settings. The vulnerability is particularly dangerous because it allows attackers to
       create legitimate-looking URLs that redirect to phishing sites.
       """,
       references: [
@@ -208,8 +208,8 @@ if redirect_url in ALLOWED_REDIRECTS:
       4. Unsafe redirect patterns without URL validation
       5. HTTP_REFERER usage in redirect operations
 
-      The pattern focuses on identifying configurations and code patterns that create 
-      open redirect vulnerabilities, particularly those related to Django's automatic 
+      The pattern focuses on identifying configurations and code patterns that create
+      open redirect vulnerabilities, particularly those related to Django's automatic
       slash appending behavior and unsafe user input handling in redirect operations.
       """,
       safe_alternatives: [

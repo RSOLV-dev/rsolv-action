@@ -95,10 +95,10 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
   def vulnerability_metadata do
     %{
       description: """
-      JSON Web Tokens (JWT) rely on cryptographic signatures to ensure authenticity 
-      and integrity. When weak, hardcoded, or default secrets are used to sign JWTs, 
-      attackers can forge valid tokens, completely bypassing authentication and 
-      authorization mechanisms. This vulnerability is particularly severe because JWTs 
+      JSON Web Tokens (JWT) rely on cryptographic signatures to ensure authenticity
+      and integrity. When weak, hardcoded, or default secrets are used to sign JWTs,
+      attackers can forge valid tokens, completely bypassing authentication and
+      authorization mechanisms. This vulnerability is particularly severe because JWTs
       are often used for stateless authentication across distributed systems.
 
       The vulnerability manifests in several ways:
@@ -277,7 +277,7 @@ defmodule Rsolv.Security.Patterns.Common.WeakJwtSecret do
       iex> enhancement = Rsolv.Security.Patterns.Common.WeakJwtSecret.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Common.WeakJwtSecret.ast_enhancement()
       iex> enhancement.min_confidence
       0.9

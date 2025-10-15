@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssJqueryHtml do
     $("#output").html(userInput)
     $('.content').html(req.body.content)
     jQuery("#div").html(params.message)
-    
+
   Safe alternatives:
     $("#output").text(userInput)
     $('.content').html(DOMPurify.sanitize(userInput))
     $("#div").html(escapeHtml(params.message))
-    
+
   jQuery's html() method is similar to innerHTML in that it interprets the string
   as HTML and can execute embedded scripts. When used with untrusted user input,
   it creates XSS vulnerabilities that allow attackers to inject malicious scripts
@@ -58,35 +58,35 @@ defmodule Rsolv.Security.Patterns.Javascript.XssJqueryHtml do
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.pattern()
       iex> pattern.id
       "js-xss-jquery-html"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.pattern()
       iex> pattern.cwe_id
       "CWE-79"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.pattern()
       iex> vulnerable = ~S|$("#output").html(userInput)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.pattern()
       iex> safe = ~S|$("#output").html(DOMPurify.sanitize(userInput))|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.pattern()
       iex> safe = ~S|$("#output").text(userInput)|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.pattern()
       iex> vulnerable = ~S|$('.content').html(req.body.content)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.pattern()
       iex> pattern.recommendation
       "Use jQuery text() for plain text, or sanitize HTML with DOMPurify before using html()."
@@ -348,15 +348,15 @@ defmodule Rsolv.Security.Patterns.Javascript.XssJqueryHtml do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.ast_enhancement()
       iex> "$" in enhancement.ast_rules.callee_patterns
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssJqueryHtml.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

@@ -254,7 +254,7 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
       iex> test_cases = Rsolv.Security.Patterns.Php.RegisterGlobals.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.RegisterGlobals.test_cases()
       iex> length(test_cases.negative)
       6
@@ -357,13 +357,13 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
         // VULNERABLE: Several uninitialized variables
         if ($logged_in) {
             echo "User ID: $user_id";
-            
+
             if ($admin) {
                 show_admin_menu();
             }
-            
+
             if ($moderator) {
-                show_mod_tools();  
+                show_mod_tools();
             }
         }
         // Attacker can set all via: ?logged_in=1&user_id=1&admin=1
@@ -394,7 +394,7 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
 
         if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
             echo "Welcome " . htmlspecialchars($_SESSION['username']);
-            
+
             if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                 show_admin_panel();
             }
@@ -404,18 +404,18 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
         // SECURE: Using a proper authentication class
         class Auth {
             private $user = null;
-            
+
             public function __construct() {
                 session_start();
                 if (isset($_SESSION['user'])) {
                     $this->user = $_SESSION['user'];
                 }
             }
-            
+
             public function isAuthenticated(): bool {
                 return $this->user !== null;
             }
-            
+
             public function isAdmin(): bool {
                 return $this->user && $this->user['role'] === 'admin';
             }
@@ -438,34 +438,34 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
       iex> desc = Rsolv.Security.Patterns.Php.RegisterGlobals.vulnerability_description()
       iex> desc =~ "register_globals"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.RegisterGlobals.vulnerability_description()
       iex> desc =~ "variable"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.RegisterGlobals.vulnerability_description()
       iex> desc =~ "initialization"
       true
   """
   def vulnerability_description do
     """
-    Register globals vulnerabilities occur when PHP applications use uninitialized 
-    variables that could be controlled by user input, mimicking the dangerous 
+    Register globals vulnerabilities occur when PHP applications use uninitialized
+    variables that could be controlled by user input, mimicking the dangerous
     behavior of PHP's deprecated register_globals directive.
 
-    The register_globals feature automatically created variables from GET, POST, 
-    COOKIE, and SERVER data. While removed in PHP 5.4, legacy code patterns 
+    The register_globals feature automatically created variables from GET, POST,
+    COOKIE, and SERVER data. While removed in PHP 5.4, legacy code patterns
     still create similar vulnerabilities through poor variable initialization.
 
     ## Security Impact
 
-    **Authentication Bypass**: Attackers can set authentication flags by adding 
+    **Authentication Bypass**: Attackers can set authentication flags by adding
     parameters to URLs, completely bypassing login systems.
 
-    **Privilege Escalation**: User roles and permissions stored in uninitialized 
+    **Privilege Escalation**: User roles and permissions stored in uninitialized
     variables can be manipulated to gain administrative access.
 
-    **Application Control**: Critical configuration variables can be overwritten, 
+    **Application Control**: Critical configuration variables can be overwritten,
     allowing attackers to modify application behavior.
 
     ## Attack Scenarios
@@ -487,8 +487,8 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
 
     ## Prevention
 
-    Always initialize variables before use, utilize PHP's superglobal arrays 
-    directly ($_SESSION, $_POST, etc.), and enable error reporting to catch 
+    Always initialize variables before use, utilize PHP's superglobal arrays
+    directly ($_SESSION, $_POST, etc.), and enable error reporting to catch
     undefined variable usage during development.
     """
   end
@@ -504,11 +504,11 @@ defmodule Rsolv.Security.Patterns.Php.RegisterGlobals do
       iex> enhancement = Rsolv.Security.Patterns.Php.RegisterGlobals.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.RegisterGlobals.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.RegisterGlobals.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

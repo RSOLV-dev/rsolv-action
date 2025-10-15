@@ -55,16 +55,16 @@ defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
       iex> pattern = Rsolv.Security.Patterns.Ruby.XssErbRaw.pattern()
       iex> pattern.id
       "ruby-xss-erb-raw"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.XssErbRaw.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.XssErbRaw.pattern()
       iex> vulnerable = "<%= raw params[:content] %>"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable))
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.XssErbRaw.pattern()
       iex> safe = "<%= params[:content] %>"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, safe))
@@ -268,15 +268,15 @@ defmodule Rsolv.Security.Patterns.Ruby.XssErbRaw do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XssErbRaw.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XssErbRaw.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XssErbRaw.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "ERBNode"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XssErbRaw.ast_enhancement()
       iex> enhancement.ast_rules.erb_analysis.unsafe_methods
       true

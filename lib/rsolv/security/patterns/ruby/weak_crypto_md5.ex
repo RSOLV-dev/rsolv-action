@@ -224,7 +224,7 @@ hash = Digest::MD5.hexdigest(data)|
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakCryptoMd5.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakCryptoMd5.ast_enhancement()
       iex> enhancement.min_confidence
       0.6

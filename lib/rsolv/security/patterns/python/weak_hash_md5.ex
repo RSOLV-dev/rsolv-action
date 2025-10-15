@@ -216,10 +216,10 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
   def vulnerability_metadata do
     %{
       description: """
-      MD5 (Message Digest Algorithm 5) is a cryptographic hash function that has been 
-      fundamentally broken since 2004. In Python, the hashlib.md5() function remains 
-      available for backward compatibility, but its use in security contexts creates 
-      severe vulnerabilities. Modern attacks can generate MD5 collisions in seconds, 
+      MD5 (Message Digest Algorithm 5) is a cryptographic hash function that has been
+      fundamentally broken since 2004. In Python, the hashlib.md5() function remains
+      available for backward compatibility, but its use in security contexts creates
+      severe vulnerabilities. Modern attacks can generate MD5 collisions in seconds,
       making it completely unsuitable for any security-critical applications.
 
       Python developers often use MD5 through:
@@ -228,9 +228,9 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
       3. API token generation using MD5 (easily forgeable)
       4. Session ID generation with MD5 (predictable and collisionable)
 
-      The Python 3.9+ hashlib module includes a 'usedforsecurity' parameter to 
-      discourage security usage, but many developers ignore this warning. The 
-      availability of rainbow tables, GPU-accelerated cracking, and collision 
+      The Python 3.9+ hashlib module includes a 'usedforsecurity' parameter to
+      discourage security usage, but many developers ignore this warning. The
+      availability of rainbow tables, GPU-accelerated cracking, and collision
       attacks makes MD5 usage a critical security vulnerability.
 
       Real-world attacks have demonstrated that MD5 collisions can be used to:
@@ -331,7 +331,7 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
       4. Variable names suggesting MD5 usage (md5_hash, md5sum, etc.)
 
       The pattern matches case-insensitively to catch variations like MD5, md5, Md5.
-      It's designed to catch the most common Python MD5 usage patterns while 
+      It's designed to catch the most common Python MD5 usage patterns while
       minimizing false positives from comments or documentation.
       """,
       safe_alternatives: [
@@ -392,11 +392,11 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashMd5 do
       iex> enhancement = Rsolv.Security.Patterns.Python.WeakHashMd5.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.WeakHashMd5.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.WeakHashMd5.ast_enhancement()
       iex> length(enhancement.ast_rules)
       2

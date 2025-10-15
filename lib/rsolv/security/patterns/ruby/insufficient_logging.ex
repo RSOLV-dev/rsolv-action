@@ -62,11 +62,11 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsufficientLogging.pattern()
       iex> pattern.id
       "ruby-insufficient-logging"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsufficientLogging.pattern()
       iex> pattern.severity
       :medium
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.InsufficientLogging.pattern()
       iex> vulnerable = "rescue StandardError"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable))
@@ -95,7 +95,7 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
         ~r/def\s+(?:logout|sign_out|destroy)(?!.*(?:logger|log|audit)).*?session\.clear/m,
         ~r/def\s+reset_password.*?user\.update\(password:/ms,
 
-        # Authorization failures without logging  
+        # Authorization failures without logging
         ~r/redirect_to.*?unless.*?(?:current_user|admin\?|can\?)/,
         ~r/unless\s+can\?\(.*?render\s+:unauthorized.*?end/ms,
         ~r/raise\s+PermissionDenied\s+unless/,
@@ -263,15 +263,15 @@ defmodule Rsolv.Security.Patterns.Ruby.InsufficientLogging do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsufficientLogging.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsufficientLogging.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsufficientLogging.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodDefinition"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.InsufficientLogging.ast_enhancement()
       iex> "logger" in enhancement.ast_rules.logging_analysis.logging_methods
       true

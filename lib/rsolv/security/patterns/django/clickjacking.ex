@@ -29,20 +29,20 @@ defmodule Rsolv.Security.Patterns.Django.Clickjacking do
 
       # VULNERABLE - Allows all sites to embed this page
       X_FRAME_OPTIONS = 'ALLOWALL'
-      
+
       # VULNERABLE - Removes protection from view
       @xframe_options_exempt
       def payment_form(request):
           return render(request, 'payment.html')
-          
+
       # VULNERABLE - Still allows same-origin attacks
       @xframe_options_sameorigin
       def sensitive_action(request):
           return render(request, 'sensitive.html')
-      
+
       # SAFE - Denies all framing
       X_FRAME_OPTIONS = 'DENY'
-      
+
       # SAFE - Protected by default middleware
       def secure_view(request):
           # XFrameOptionsMiddleware adds header
@@ -97,7 +97,7 @@ def sensitive_view(request):|
       to deceive users into clicking on concealed elements. This can lead to
       unintended actions being performed on the legitimate site.
 
-      Django provides built-in clickjacking protection through the 
+      Django provides built-in clickjacking protection through the
       XFrameOptionsMiddleware, which sets the X-Frame-Options HTTP header to
       control whether a browser should be allowed to render a page in a frame
       or iframe.
@@ -281,16 +281,16 @@ def sensitive_view(request):|
         class DynamicFrameOptionsMiddleware:
             def __init__(self, get_response):
                 self.get_response = get_response
-            
+
             def __call__(self, request):
                 response = self.get_response(request)
-                
+
                 # Allow framing only for specific paths
                 if request.path.startswith('/embed/'):
                     response['X-Frame-Options'] = 'SAMEORIGIN'
                 else:
                     response['X-Frame-Options'] = 'DENY'
-                
+
                 return response
         """
       ],
@@ -352,19 +352,19 @@ def sensitive_view(request):|
           class ContentSecurityPolicyMiddleware:
               def __init__(self, get_response):
                   self.get_response = get_response
-                  
+
               def __call__(self, request):
                   response = self.get_response(request)
-                  
+
                   # Build CSP based on view requirements
                   if hasattr(request, 'csp_frame_ancestors'):
                       ancestors = request.csp_frame_ancestors
                   else:
                       ancestors = "'none'"
-                  
+
                   csp = f"frame-ancestors {ancestors}; "
                   csp += "default-src 'self'; "
-                  
+
                   response['Content-Security-Policy'] = csp
                   return response
           """

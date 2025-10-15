@@ -4,7 +4,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
 
   This pattern detects session configuration vulnerabilities in Rails applications
   where session cookies are configured without proper security flags. Insecure
-  session configurations can lead to session hijacking, cookie theft, and 
+  session configurations can lead to session hijacking, cookie theft, and
   man-in-the-middle attacks.
 
   ## Background
@@ -34,16 +34,16 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
 
       # Critical - No security flags
       config.session_store :cookie_store, key: '_app_session'
-      
+
       # Critical - Explicit secure: false
       config.session_store :cookie_store, secure: false
-      
+
       # Critical - Explicit httponly: false
       config.session_store :cookie_store, httponly: false
-      
+
       # Critical - same_site: :none (dangerous for CSRF)
       config.session_store :cookie_store, same_site: :none
-      
+
       # Safe - Proper security flags
       config.session_store :cookie_store, key: '_app_session', secure: true, httponly: true, same_site: :strict
   """
@@ -117,12 +117,12 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
   def vulnerability_metadata do
     %{
       description: """
-      Insecure Session Configuration in Rails applications represents a security 
-      misconfiguration vulnerability where session cookies are configured without 
-      proper security flags. This exposes applications to session hijacking, 
-      cookie theft, and man-in-the-middle attacks. Rails session cookies without 
-      the `secure` flag can be transmitted over unencrypted HTTP connections, 
-      while cookies without the `httponly` flag can be accessed via JavaScript, 
+      Insecure Session Configuration in Rails applications represents a security
+      misconfiguration vulnerability where session cookies are configured without
+      proper security flags. This exposes applications to session hijacking,
+      cookie theft, and man-in-the-middle attacks. Rails session cookies without
+      the `secure` flag can be transmitted over unencrypted HTTP connections,
+      while cookies without the `httponly` flag can be accessed via JavaScript,
       making them vulnerable to XSS attacks.
 
       The vulnerability is particularly dangerous because:
@@ -194,20 +194,20 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
       1. **Configure Secure Session Flags (Critical)**:
          ```ruby
          # In config/application.rb or config/environments/production.rb
-         
+
          # NEVER do this - Vulnerable session configuration
          config.session_store :cookie_store, key: '_app_session'          # DANGEROUS
          config.session_store :cookie_store, secure: false               # DANGEROUS
          config.session_store :cookie_store, httponly: false             # DANGEROUS
          config.session_store :cookie_store, same_site: :none            # DANGEROUS
-         
+
          # Always configure with proper security flags
-         config.session_store :cookie_store, 
+         config.session_store :cookie_store,
            key: '_app_session',
            secure: Rails.env.production?,  # true in production, false in development
            httponly: true,                 # Prevent JavaScript access
            same_site: :strict              # CSRF protection
-         
+
          # Production-only secure configuration
          config.session_store :cookie_store,
            key: '_app_session',
@@ -228,7 +228,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
              same_site: :strict,
              expire_after: 30.minutes      # Short session timeout
          end
-         
+
          # config/environments/development.rb
          Rails.application.configure do
            config.session_store :cookie_store,
@@ -237,7 +237,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
              httponly: true,               # Still protect from XSS
              same_site: :lax               # More lenient for development
          end
-         
+
          # config/environments/test.rb
          Rails.application.configure do
            config.session_store :active_record_store,  # Use database for tests
@@ -256,18 +256,18 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
              session[:login_time] = Time.current
              session[:ip_address] = request.remote_ip
            end
-           
+
            # Secure logout
            def secure_logout
              reset_session                 # Clear all session data
              redirect_to login_path
            end
-           
+
            # Session security validation
            before_action :validate_session_security
-           
+
            private
-           
+
            def validate_session_security
              if session[:user_id].present?
                # Check session age
@@ -276,7 +276,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
                  redirect_to login_path, alert: 'Session expired'
                  return
                end
-               
+
                # Check IP address (optional, can be problematic with NAT)
                # if session[:ip_address] != request.remote_ip
                #   reset_session
@@ -292,15 +292,15 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
          # NEVER hardcode secrets
          # BAD:
          config.session_store :cookie_store, secret: 'hardcoded_secret'
-         
+
          # GOOD: Use Rails credentials
-         config.session_store :cookie_store, 
+         config.session_store :cookie_store,
            secret_key_base: Rails.application.credentials.secret_key_base
-         
+
          # Or use environment variables
          config.session_store :cookie_store,
            secret_key_base: ENV['SECRET_KEY_BASE']
-         
+
          # Generate strong secrets
          # rails secret
          # Store in config/credentials.yml.enc (Rails 5.2+)
@@ -417,7 +417,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionConfig do
         def self.validate_production_config!
           store = Rails.application.config.session_store
           options = Rails.application.config.session_options || {}
-          
+
           if Rails.env.production?
             raise "Production session must be secure!" unless options[:secure]
             raise "Production session must be httponly!" unless options[:httponly]

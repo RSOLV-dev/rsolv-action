@@ -38,7 +38,7 @@ defmodule RsolvWeb.Services.Metrics do
         name: @http_request_duration,
         help: "HTTP request duration in milliseconds",
         labels: [:method, :path],
-        buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
+        buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000, 10_000]
       )
 
       # Business metrics

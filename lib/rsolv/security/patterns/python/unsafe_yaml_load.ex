@@ -234,10 +234,10 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
   def vulnerability_metadata do
     %{
       description: """
-      YAML deserialization in Python using yaml.load() without SafeLoader can execute 
-      arbitrary code, making it one of the most dangerous vulnerabilities in Python 
-      applications. This is not a bug but a documented feature of YAML that allows 
-      instantiation of arbitrary Python objects, including those that execute code 
+      YAML deserialization in Python using yaml.load() without SafeLoader can execute
+      arbitrary code, making it one of the most dangerous vulnerabilities in Python
+      applications. This is not a bug but a documented feature of YAML that allows
+      instantiation of arbitrary Python objects, including those that execute code
       upon creation.
 
       The vulnerability occurs because:
@@ -416,11 +416,11 @@ defmodule Rsolv.Security.Patterns.Python.UnsafeYamlLoad do
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeYamlLoad.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeYamlLoad.ast_enhancement()
       iex> enhancement.min_confidence
       0.85
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafeYamlLoad.ast_enhancement()
       iex> length(enhancement.ast_rules)
       2

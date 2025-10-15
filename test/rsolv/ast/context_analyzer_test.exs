@@ -74,7 +74,7 @@ defmodule Rsolv.AST.ContextAnalyzerTest do
       ruby_code = """
       class User < ApplicationRecord
         has_many :posts
-        
+
         def self.find_by_name(name)
           where(name: name).first
         end
@@ -94,7 +94,7 @@ defmodule Rsolv.AST.ContextAnalyzerTest do
       class User(models.Model):
           name = models.CharField(max_length=100)
           email = models.EmailField()
-          
+
           def get_posts(self):
               return self.post_set.all()
       """
@@ -142,7 +142,7 @@ defmodule Rsolv.AST.ContextAnalyzerTest do
       def get_user(user_id)
         # Input validation
         return nil unless user_id.match?(/^\\d+$/)
-        
+
         # Parameterized query
         User.where(id: user_id).first
       end

@@ -7,12 +7,12 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
     yaml.load(userInput)
     deserialize(req.body)
     eval('(' + req.body + ')')
-    
+
   Safe alternatives:
     try { const data = JSON.parse(req.body.data); validateSchema(data) } catch(e) {}
     yaml.safeLoad(userInput)
     JSON.parse(sanitizeJson(req.body))
-    
+
   Insecure deserialization occurs when untrusted data is used to reconstruct objects
   without proper validation. In JavaScript, this can lead to remote code execution
   through various attack vectors including prototype pollution, code injection via
@@ -76,50 +76,50 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> pattern.id
       "js-insecure-deserialization"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> pattern.cwe_id
       "CWE-502"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> vulnerable = "JSON.parse(req.body.data)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> safe = "JSON.parse(hardcodedString)"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> vulnerable = "yaml.load(userInput)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> vulnerable = "eval(req.body)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> vulnerable = "vm.runInContext(req.body)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> safe = "yaml.safeLoad(userInput)"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> vulnerable = "new Function('return ' + userInput)()"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.pattern()
       iex> pattern.recommendation
       "Validate data structure before deserialization. Use safe parsing methods."
@@ -396,15 +396,15 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureDeserialization do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.ast_enhancement()
       iex> is_list(enhancement.ast_rules.callee_patterns.json_parsers)
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureDeserialization.ast_enhancement()
       iex> enhancement.min_confidence
       0.8

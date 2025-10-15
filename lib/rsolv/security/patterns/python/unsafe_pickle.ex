@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
     data = pickle.loads(user_data)
     with open('data.pkl', 'rb') as f: obj = pickle.load(f)
     result = pickle.loads(base64.b64decode(encoded_data))
-    
+
   Safe alternatives:
     data = json.loads(user_data)
     result = yaml.safe_load(content)
     obj = msgpack.loads(bytes_data, strict_map_key=False)
-    
+
   Python's pickle module can execute arbitrary code during deserialization.
   When pickle deserializes an object, it can invoke any callable Python
   object, allowing attackers to execute arbitrary commands by crafting
@@ -63,25 +63,25 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafePickle.pattern()
       iex> pattern.id
       "python-unsafe-pickle"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafePickle.pattern()
       iex> pattern.severity
       :critical
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafePickle.pattern()
       iex> pattern.cwe_id
       "CWE-502"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafePickle.pattern()
       iex> vulnerable = "data = pickle.loads(user_data)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafePickle.pattern()
       iex> safe = "data = json.loads(user_data)"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.UnsafePickle.pattern()
       iex> pattern.recommendation
       "Use json.loads() or implement custom deserialization with validation"
@@ -300,15 +300,15 @@ defmodule Rsolv.Security.Patterns.Python.UnsafePickle do
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafePickle.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafePickle.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "Call"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafePickle.ast_enhancement()
       iex> "pickle.loads" in enhancement.ast_rules.function_names
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.UnsafePickle.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

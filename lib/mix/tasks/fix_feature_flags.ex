@@ -10,9 +10,9 @@ defmodule Mix.Tasks.FixFeatureFlags do
 
     # Check all gates for metrics_dashboard
     query = """
-    SELECT flag_name, gate_type, target, enabled 
-    FROM fun_with_flags_toggles 
-    WHERE flag_name = 'metrics_dashboard' 
+    SELECT flag_name, gate_type, target, enabled
+    FROM fun_with_flags_toggles
+    WHERE flag_name = 'metrics_dashboard'
     ORDER BY gate_type, target
     """
 
@@ -34,7 +34,7 @@ defmodule Mix.Tasks.FixFeatureFlags do
 
       {:ok, _} =
         Rsolv.Repo.query("""
-        DELETE FROM fun_with_flags_toggles 
+        DELETE FROM fun_with_flags_toggles
         WHERE flag_name = 'metrics_dashboard' AND gate_type = 'group'
         """)
 
@@ -48,7 +48,7 @@ defmodule Mix.Tasks.FixFeatureFlags do
       Rsolv.Repo.query("""
       INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled)
       VALUES ('metrics_dashboard', 'boolean', NULL, true)
-      ON CONFLICT (flag_name, gate_type, target) 
+      ON CONFLICT (flag_name, gate_type, target)
       DO UPDATE SET enabled = true
       """)
 
@@ -57,7 +57,7 @@ defmodule Mix.Tasks.FixFeatureFlags do
       Rsolv.Repo.query("""
       INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled)
       VALUES ('admin_dashboard', 'boolean', NULL, true)
-      ON CONFLICT (flag_name, gate_type, target) 
+      ON CONFLICT (flag_name, gate_type, target)
       DO UPDATE SET enabled = true
       """)
 

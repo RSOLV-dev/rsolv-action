@@ -208,11 +208,11 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
       iex> test_cases = Rsolv.Security.Patterns.Php.WeakPasswordHash.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.WeakPasswordHash.test_cases()
       iex> length(test_cases.negative) > 0
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Php.WeakPasswordHash.pattern()
       iex> pattern.id
       "php-weak-password-hash"
@@ -362,7 +362,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
         // Migrating from legacy MD5 - SECURE
         function authenticateUser($username, $password) {
             $user = getUserByUsername($username);
-            
+
             if (substr($user['password'], 0, 3) === 'md5') {
                 // Legacy MD5 hash
                 $md5_hash = substr($user['password'], 4);
@@ -376,7 +376,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
                 // Modern password_hash
                 return password_verify($password, $user['password']);
             }
-            
+
             return false;
         }
         """,
@@ -385,29 +385,29 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
         class PasswordManager {
             private const MIN_PASSWORD_LENGTH = 12;
             private const BCRYPT_COST = 12;
-            
+
             public function hashPassword(string $password): string {
                 // Validate password strength
                 if (strlen($password) < self::MIN_PASSWORD_LENGTH) {
                     throw new Exception('Password too short');
                 }
-                
+
                 // Use bcrypt with appropriate cost
                 return password_hash($password, PASSWORD_BCRYPT, [
                     'cost' => self::BCRYPT_COST
                 ]);
             }
-            
+
             public function verifyPassword(string $password, string $hash): bool {
                 return password_verify($password, $hash);
             }
-            
+
             public function needsRehash(string $hash): bool {
                 return password_needs_rehash($hash, PASSWORD_BCRYPT, [
                     'cost' => self::BCRYPT_COST
                 ]);
             }
-            
+
             public function authenticate(string $username, string $password): bool {
                 $user = $this->getUserByUsername($username);
                 if (!$user) {
@@ -415,7 +415,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
                     password_verify('dummy', '$2y$12$dummy.hash.to.prevent.timing');
                     return false;
                 }
-                
+
                 if ($this->verifyPassword($password, $user['password_hash'])) {
                     // Check if rehash needed
                     if ($this->needsRehash($user['password_hash'])) {
@@ -424,7 +424,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
                     }
                     return true;
                 }
-                
+
                 return false;
             }
         }
@@ -537,11 +537,11 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakPasswordHash.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakPasswordHash.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakPasswordHash.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4
@@ -608,7 +608,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakPasswordHash do
             "$2y$",
             # bcrypt
             "$2a$",
-            # bcrypt  
+            # bcrypt
             "$2b$",
             # Argon2i
             "$argon2i$",

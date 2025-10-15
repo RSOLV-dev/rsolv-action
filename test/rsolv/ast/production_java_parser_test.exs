@@ -56,7 +56,7 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
           public void processRequest(String userInput) {
               // VULNERABLE: Runtime.exec usage
               Runtime.getRuntime().exec(userInput);
-              
+
               // VULNERABLE: SQL injection
               String sql = "SELECT * FROM users WHERE name = '" + userInput + "'";
               Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/db");
@@ -103,23 +103,23 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
 
       public class SecurityScanner {
           private List<String> findings;
-          
+
           public SecurityScanner() {
               this.findings = new ArrayList<>();
           }
-          
+
           public void scanCode(String userCode) throws SQLException {
               // VULNERABLE: Dynamic SQL construction
               String query = "SELECT * FROM code WHERE content = '" + userCode + "'";
-              
+
               // VULNERABLE: Process execution
               ProcessBuilder pb = new ProcessBuilder("sh", "-c", userCode);
               Process proc = pb.start();
-              
+
               findings.add("SQL injection risk detected");
               findings.add("Command injection risk detected");
           }
-          
+
           public List<String> getFindings() {
               return Collections.unmodifiableList(findings);
           }
@@ -205,11 +205,11 @@ defmodule Rsolv.AST.ProductionJavaParserTest do
 
       @Component
       public class ReflectionService {
-          
+
           @Autowired
           private DataSource dataSource;
-          
-          public Object invokeMethod(String className, String methodName, Object[] args) 
+
+          public Object invokeMethod(String className, String methodName, Object[] args)
               throws Exception {
               // VULNERABLE: Reflection usage
               Class<?> clazz = Class.forName(className);

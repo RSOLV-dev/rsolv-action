@@ -12,7 +12,7 @@ defmodule Rsolv.Security.Patterns.Elixir.InsecureRandom do
   security. They use predictable algorithms that can be reverse-engineered or predicted by
   attackers, making them unsuitable for:
   - Session tokens
-  - Password reset tokens  
+  - Password reset tokens
   - API keys
   - Cryptographic nonces
   - Any security-sensitive random values

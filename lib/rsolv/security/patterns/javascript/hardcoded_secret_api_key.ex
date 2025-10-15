@@ -6,16 +6,16 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey do
     const apiKey = "sk-1234567890abcdef"
     const API_KEY = "abcd1234efgh5678ijkl"
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-    
+
   Safe alternatives:
     const apiKey = process.env.API_KEY
     const token = await keyManager.getKey('api-secret')
     const apiSecret = config.get('stripe.apiKey')
-    
-  Hardcoded API keys and tokens represent one of the most frequently exploited 
-  security vulnerabilities in modern software development. Unlike passwords which 
-  may be used for human authentication, API keys are designed for automated 
-  service-to-service communication and often carry extensive permissions for 
+
+  Hardcoded API keys and tokens represent one of the most frequently exploited
+  security vulnerabilities in modern software development. Unlike passwords which
+  may be used for human authentication, API keys are designed for automated
+  service-to-service communication and often carry extensive permissions for
   accessing external services, databases, and cloud resources.
 
   ## Vulnerability Details
@@ -44,10 +44,10 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey do
   ```
 
   ### Modern Attack Landscape
-  Automated tools continuously scan public repositories for exposed API keys, 
-  often leading to exploitation within minutes of code commits. Cloud providers 
-  and service vendors actively monitor for their keys in public repositories, 
-  but this reactive approach cannot prevent the window of vulnerability that 
+  Automated tools continuously scan public repositories for exposed API keys,
+  often leading to exploitation within minutes of code commits. Cloud providers
+  and service vendors actively monitor for their keys in public repositories,
+  but this reactive approach cannot prevent the window of vulnerability that
   exists between exposure and detection.
   """
 
@@ -103,32 +103,32 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey do
   @doc """
   Comprehensive vulnerability metadata for hardcoded API keys.
 
-  This metadata documents the critical security and business risks of embedding 
+  This metadata documents the critical security and business risks of embedding
   API keys in source code, with specific focus on service abuse and financial impact.
   """
   def vulnerability_metadata do
     %{
       description: """
-      Hardcoded API keys represent a critical vulnerability class that combines high 
-      exploitability with severe business impact. Unlike traditional authentication 
-      credentials, API keys are designed for programmatic access and often carry 
+      Hardcoded API keys represent a critical vulnerability class that combines high
+      exploitability with severe business impact. Unlike traditional authentication
+      credentials, API keys are designed for programmatic access and often carry
       broad permissions for external services, cloud resources, and payment processing.
 
-      The vulnerability is particularly dangerous because API keys are frequently 
-      associated with billable services, sensitive data access, and infrastructure 
-      control. A single exposed API key can lead to immediate financial damage, 
-      data breaches, and service disruption. The automated nature of API key usage 
+      The vulnerability is particularly dangerous because API keys are frequently
+      associated with billable services, sensitive data access, and infrastructure
+      control. A single exposed API key can lead to immediate financial damage,
+      data breaches, and service disruption. The automated nature of API key usage
       also means that exploitation can occur at scale and with minimal human intervention.
 
-      Modern development practices have made API key exposure increasingly common, 
-      with developers working across multiple environments, integrating numerous 
-      third-party services, and sharing code through public repositories. The rise 
-      of cloud services and microservices architectures has multiplied both the 
+      Modern development practices have made API key exposure increasingly common,
+      with developers working across multiple environments, integrating numerous
+      third-party services, and sharing code through public repositories. The rise
+      of cloud services and microservices architectures has multiplied both the
       number of API keys used in applications and their potential for abuse.
 
-      The persistence of API keys in version control systems creates long-term 
-      exposure risks, as keys remain accessible even after being removed from 
-      current code. This creates ongoing vulnerability to repository compromise, 
+      The persistence of API keys in version control systems creates long-term
+      exposure risks, as keys remain accessible even after being removed from
+      current code. This creates ongoing vulnerability to repository compromise,
       insider threats, and historical data mining attacks.
       """,
       references: [
@@ -220,8 +220,8 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey do
         }
       ],
       detection_notes: """
-      This pattern detects variable assignments where API key-related identifiers 
-      (api_key, apiKey, api-key, api_secret, token) are assigned string literals 
+      This pattern detects variable assignments where API key-related identifiers
+      (api_key, apiKey, api-key, api_secret, token) are assigned string literals
       of 16 or more characters. The detection covers:
 
       1. Variable declarations: const apiKey = "value"
@@ -233,8 +233,8 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey do
       7. Quote styles: single quotes, double quotes, template literals
       8. Minimum length filtering: 16+ characters to reduce false positives
 
-      The pattern uses a 16-character minimum length to balance detection sensitivity 
-      with false positive reduction, as most production API keys are significantly 
+      The pattern uses a 16-character minimum length to balance detection sensitivity
+      with false positive reduction, as most production API keys are significantly
       longer than common test values or placeholder strings.
       """,
       safe_alternatives: [
@@ -335,15 +335,15 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "VariableDeclarator"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey.ast_enhancement()
       iex> "Literal" in enhancement.ast_rules.value_types
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.HardcodedSecretApiKey.ast_enhancement()
       iex> enhancement.min_confidence
       0.85

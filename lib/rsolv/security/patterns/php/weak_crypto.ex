@@ -3,7 +3,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
   Pattern for detecting weak cryptography vulnerabilities in PHP.
 
   This pattern identifies when PHP applications use deprecated cryptographic functions
-  (mcrypt extension), weak algorithms (DES, 3DES), or insecure modes (ECB) that 
+  (mcrypt extension), weak algorithms (DES, 3DES), or insecure modes (ECB) that
   compromise data confidentiality and integrity.
 
   ## Vulnerability Details
@@ -72,21 +72,21 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
   def vulnerability_metadata do
     %{
       description: """
-      Weak cryptography vulnerabilities occur when PHP applications use deprecated, broken, or 
-      insufficiently secure cryptographic algorithms, functions, or configurations. This encompasses 
+      Weak cryptography vulnerabilities occur when PHP applications use deprecated, broken, or
+      insufficiently secure cryptographic algorithms, functions, or configurations. This encompasses
       several critical issues that can compromise data confidentiality, integrity, and authentication.
 
       The most common weak cryptography issues in PHP include:
 
       ### 1. Deprecated mcrypt Extension
 
-      The mcrypt library was officially deprecated in PHP 7.1 and completely removed in PHP 7.2 
-      due to numerous security vulnerabilities and lack of active maintenance. Applications still 
+      The mcrypt library was officially deprecated in PHP 7.1 and completely removed in PHP 7.2
+      due to numerous security vulnerabilities and lack of active maintenance. Applications still
       using mcrypt functions are inherently vulnerable and cannot receive security updates.
 
       Key problems with mcrypt:
       - **Improper Key Derivation**: mcrypt doesn't provide secure key derivation functions
-      - **Weak Random Number Generation**: Uses predictable randomness in some configurations  
+      - **Weak Random Number Generation**: Uses predictable randomness in some configurations
       - **Padding Oracle Vulnerabilities**: Susceptible to padding oracle attacks in CBC mode
       - **No Authenticated Encryption**: Provides no integrity protection
       - **Unmaintained Codebase**: No security patches or updates since 2007
@@ -221,14 +221,14 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
       This pattern detects several categories of weak cryptography in PHP code:
 
       1. **mcrypt Function Usage**: Any use of mcrypt_ functions indicates deprecated cryptography
-      2. **Weak Algorithm Constants**: MCRYPT_DES, MCRYPT_3DES indicate broken algorithms  
+      2. **Weak Algorithm Constants**: MCRYPT_DES, MCRYPT_3DES indicate broken algorithms
       3. **Insecure Mode Constants**: MCRYPT_MODE_ECB indicates insecure cipher mode
       4. **OpenSSL Weak Algorithms**: Detection of DES variants in openssl_encrypt/decrypt
       5. **ECB Mode in OpenSSL**: Detection of ECB mode usage in modern OpenSSL functions
 
       The regex pattern matches:
       - mcrypt function calls (mcrypt_encrypt, mcrypt_decrypt, etc.)
-      - Weak algorithm constants (MCRYPT_DES, MCRYPT_3DES)  
+      - Weak algorithm constants (MCRYPT_DES, MCRYPT_3DES)
       - Insecure mode constants (MCRYPT_MODE_ECB)
       - OpenSSL functions with weak algorithms ('des-cbc', 'des-ecb', etc.)
       - OpenSSL functions using ECB mode ('aes-128-ecb', etc.)
@@ -285,7 +285,7 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
       iex> test_cases = Rsolv.Security.Patterns.Php.WeakCrypto.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.WeakCrypto.test_cases()
       iex> length(test_cases.negative)
       6
@@ -417,35 +417,35 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
       iex> desc = Rsolv.Security.Patterns.Php.WeakCrypto.vulnerability_description()
       iex> desc =~ "Weak cryptography"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.WeakCrypto.vulnerability_description()
       iex> desc =~ "mcrypt"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.WeakCrypto.vulnerability_description()
       iex> desc =~ "deprecated"
       true
   """
   def vulnerability_description do
     """
-    Weak cryptography vulnerabilities occur when applications use deprecated, broken, or 
+    Weak cryptography vulnerabilities occur when applications use deprecated, broken, or
     insufficiently secure cryptographic algorithms, implementations, or configurations.
 
     In PHP, this commonly manifests as:
 
-    1. **mcrypt Extension Usage**: The mcrypt library was deprecated in PHP 7.1 and 
+    1. **mcrypt Extension Usage**: The mcrypt library was deprecated in PHP 7.1 and
        removed in PHP 7.2 due to security vulnerabilities and lack of maintenance.
-       
-    2. **Weak Algorithms**: DES (56-bit keys) and 3DES are cryptographically broken 
+
+    2. **Weak Algorithms**: DES (56-bit keys) and 3DES are cryptographically broken
        and can be attacked with modern computing power.
-       
-    3. **Insecure Modes**: ECB mode reveals patterns in encrypted data and should 
+
+    3. **Insecure Modes**: ECB mode reveals patterns in encrypted data and should
        never be used for real-world encryption.
-       
-    4. **Implementation Issues**: Poor key management, IV reuse, and missing 
+
+    4. **Implementation Issues**: Poor key management, IV reuse, and missing
        authentication enable various attacks.
 
-    Modern PHP applications should use the OpenSSL extension with strong algorithms 
+    Modern PHP applications should use the OpenSSL extension with strong algorithms
     like AES-256-GCM or the Sodium extension for authenticated encryption.
     """
   end
@@ -461,11 +461,11 @@ defmodule Rsolv.Security.Patterns.Php.WeakCrypto do
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakCrypto.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakCrypto.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.WeakCrypto.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

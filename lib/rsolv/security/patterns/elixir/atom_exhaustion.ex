@@ -33,7 +33,7 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
   # VULNERABLE - JSON decode with atom keys from untrusted source
   Jason.decode!(user_json, keys: :atoms)
 
-  # VULNERABLE - interpolation with user data  
+  # VULNERABLE - interpolation with user data
   String.to_atom("prefix_\#{user_controlled_value}")
 
   # VULNERABLE - pattern matching with dynamic atoms
@@ -153,7 +153,7 @@ defmodule Rsolv.Security.Patterns.Elixir.AtomExhaustion do
       business_impact: """
       Critical: Atom table exhaustion can cause:
       - Complete system crash and unavailability
-      - Cascading failures in distributed systems  
+      - Cascading failures in distributed systems
       - Data loss from ungraceful shutdowns
       - Emergency restarts and service interruption
       - Potential for targeted DoS with minimal attacker resources

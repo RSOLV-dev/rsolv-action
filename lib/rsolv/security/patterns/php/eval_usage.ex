@@ -293,7 +293,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
       iex> test_cases = Rsolv.Security.Patterns.Php.EvalUsage.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.EvalUsage.test_cases()
       iex> length(test_cases.negative)
       6
@@ -416,7 +416,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
             if (!preg_match('/^[0-9+\\-*\\/\\s()]+$/', $expr)) {
                 throw new InvalidArgumentException('Invalid expression');
             }
-            
+
             // Use a proper math parser library
             $parser = new MathParser();
             return $parser->evaluate($expr);
@@ -447,29 +447,29 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
       iex> desc = Rsolv.Security.Patterns.Php.EvalUsage.vulnerability_description()
       iex> desc =~ "eval"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.EvalUsage.vulnerability_description()
       iex> desc =~ "code injection"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.EvalUsage.vulnerability_description()
       iex> desc =~ "remote code execution"
       true
   """
   def vulnerability_description do
     """
-    Code injection via eval() occurs when applications execute user-controlled strings 
-    as PHP code, allowing attackers to run arbitrary commands and achieve remote code execution 
+    Code injection via eval() occurs when applications execute user-controlled strings
+    as PHP code, allowing attackers to run arbitrary commands and achieve remote code execution
     on the server.
 
     In PHP, eval() is one of the most dangerous functions because:
 
     1. **Complete Code Execution**: Any valid PHP code can be executed, including
        system commands, file operations, and network connections.
-       
+
     2. **No Safe Usage**: There is no way to safely use eval() with user input.
        Even extensive filtering cannot prevent all attack vectors.
-       
+
     3. **Bypasses Security**: Code executed via eval() runs with full application
        privileges and bypasses web application firewalls.
 
@@ -477,7 +477,7 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
 
     Successful eval() injection can lead to:
     - **System Compromise**: Full control over the web server
-    - **Data Theft**: Access to databases, files, and credentials  
+    - **Data Theft**: Access to databases, files, and credentials
     - **Backdoor Installation**: Persistent access through web shells
     - **Network Pivot**: Access to internal systems
     - **Service Disruption**: Deletion or encryption of data
@@ -501,11 +501,11 @@ defmodule Rsolv.Security.Patterns.Php.EvalUsage do
       iex> enhancement = Rsolv.Security.Patterns.Php.EvalUsage.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.EvalUsage.ast_enhancement()
       iex> enhancement.min_confidence
       0.9
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.EvalUsage.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

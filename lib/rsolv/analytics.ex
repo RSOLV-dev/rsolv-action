@@ -156,7 +156,7 @@ defmodule Rsolv.Analytics do
 
   defp get_daily_stats_from_view(date) do
     query = """
-    SELECT 
+    SELECT
       date,
       SUM(event_count) as total_events,
       SUM(unique_visitors) as unique_visitors,

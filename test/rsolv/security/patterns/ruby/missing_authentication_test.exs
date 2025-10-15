@@ -43,7 +43,7 @@ end|,
   def index
     @users = User.all
   end
-  
+
   def show
     @user = User.find(params[:id])
   end
@@ -51,7 +51,7 @@ end|,
         # Controller with other methods but no auth
         ~S|class AccountController < ApplicationController
   helper_method :current_user
-  
+
   def profile
     @account = Account.find(params[:id])
   end
@@ -69,7 +69,7 @@ end|
         # With before_action
         ~S|class AdminController < ApplicationController
   before_action :authenticate_user!
-  
+
   def users
     @users = User.all
   end
@@ -77,7 +77,7 @@ end|,
         # With before_filter (older Rails)
         ~S|class AdminController < ApplicationController
   before_filter :authenticate_admin
-  
+
   def users
     @users = User.all
   end
@@ -86,7 +86,7 @@ end|,
         ~S|class SecureController < ApplicationController
   before_action :authenticate_user!
   before_action :require_admin
-  
+
   def sensitive_data
     @data = SecretData.all
   end
@@ -103,13 +103,13 @@ end|
       # Should match - no auth
       vulnerable = ~S|class DashboardController < ApplicationController
   layout 'admin'
-  
+
   def stats
     @stats = calculate_stats
   end
-  
+
   private
-  
+
   def calculate_stats
     # some logic
   end
@@ -121,7 +121,7 @@ end|
       safe = ~S|class DashboardController < ApplicationController
   before_action :authenticate_user!
   layout 'admin'
-  
+
   def stats
     @stats = calculate_stats
   end

@@ -914,7 +914,7 @@ defmodule Rsolv.Security.ASTPattern do
   end
 
   defp filter_by_tier(patterns, tier) when is_binary(tier) do
-    # For now, since patterns don't have tier information yet, 
+    # For now, since patterns don't have tier information yet,
     # we'll be permissive and return all patterns for any tier.
     # This can be refined later when tier information is added to patterns.
     case tier do
@@ -923,7 +923,7 @@ defmodule Rsolv.Security.ASTPattern do
         patterns
 
       "ai" ->
-        # AI tier gets most patterns 
+        # AI tier gets most patterns
         patterns
 
       "protected" ->

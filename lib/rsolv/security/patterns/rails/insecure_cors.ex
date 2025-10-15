@@ -3,7 +3,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
   Rails Insecure CORS Configuration pattern for Rails applications.
 
   This pattern detects insecure Cross-Origin Resource Sharing (CORS) configurations
-  in Rails applications that could lead to security vulnerabilities. CORS 
+  in Rails applications that could lead to security vulnerabilities. CORS
   misconfigurations are a common source of vulnerabilities that allow unauthorized
   cross-origin requests and can expose sensitive data to malicious websites.
 
@@ -38,17 +38,17 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
         origins '*'
         credentials true
       end
-      
+
       # Critical - Wildcard headers/methods
       allow do
         origins '*'
         headers :any
         methods :any
       end
-      
+
       # Critical - Overly permissive regex
       origins /.*\\.domain\\.com/
-      
+
       # Safe - Specific origins with credentials
       allow do
         origins 'https://example.com'
@@ -71,7 +71,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
         # Wildcard origins with any configuration (exclude comments)
         ~r/^(?!.*#).*origins\s+["']?\*["']?/,
 
-        # Wildcard headers configuration  
+        # Wildcard headers configuration
         ~r/headers\s+:any/,
         ~r/headers\s+["']?\*["']?/,
         ~r/headers:\s*:any/,
@@ -135,13 +135,13 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
   def vulnerability_metadata do
     %{
       description: """
-      Insecure CORS Configuration in Rails applications represents a critical 
-      security misconfiguration where Cross-Origin Resource Sharing policies 
-      are configured too permissively, allowing unauthorized cross-origin 
-      requests. This vulnerability most commonly occurs when using wildcard 
-      origins ("*") combined with credentials, or when allowing any headers 
-      or methods without proper restrictions. Such misconfigurations can lead 
-      to unauthorized data access, credential theft, and bypass of same-origin 
+      Insecure CORS Configuration in Rails applications represents a critical
+      security misconfiguration where Cross-Origin Resource Sharing policies
+      are configured too permissively, allowing unauthorized cross-origin
+      requests. This vulnerability most commonly occurs when using wildcard
+      origins ("*") combined with credentials, or when allowing any headers
+      or methods without proper restrictions. Such misconfigurations can lead
+      to unauthorized data access, credential theft, and bypass of same-origin
       policy protections.
 
       The vulnerability is particularly dangerous because:
@@ -213,7 +213,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       1. **Secure CORS Configuration (Critical)**:
          ```ruby
          # In config/initializers/cors.rb
-         
+
          # NEVER do this - Dangerous CORS misconfigurations
          Rails.application.config.middleware.insert_before 0, Rack::Cors do
            allow do
@@ -223,7 +223,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
              methods :any                   # DANGEROUS - Any methods
            end
          end
-         
+
          # Always use explicit, secure CORS configuration
          Rails.application.config.middleware.insert_before 0, Rack::Cors do
            allow do
@@ -266,7 +266,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
                headers: %w[Content-Type],
                methods: %w[GET]
            end
-           
+
            # Authenticated API endpoints
            allow do
              origins 'https://trusted-app.com'
@@ -285,7 +285,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
            https://app.example.com
            https://staging.example.com
          ].freeze
-         
+
          Rails.application.config.middleware.insert_before 0, Rack::Cors do
            allow do
              origins ->(source, env) {
@@ -303,16 +303,16 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
          # In ApplicationController or specific controllers
          class ApplicationController < ActionController::Base
            before_action :set_cors_headers, if: :cors_request?
-           
+
            private
-           
+
            def cors_request?
              request.headers['Origin'].present?
            end
-           
+
            def set_cors_headers
              origin = request.headers['Origin']
-             
+
              # Validate origin against allowlist
              if valid_origin?(origin)
                response.headers['Access-Control-Allow-Origin'] = origin
@@ -321,7 +321,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE'
              end
            end
-           
+
            def valid_origin?(origin)
              allowed_origins = %w[
                https://example.com
@@ -381,9 +381,9 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
               methods allowed_methods
             end
           end
-        
+
         private
-        
+
         def self.allowed_origins
           case Rails.env
           when 'development'
@@ -396,11 +396,11 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
             []
           end
         end
-        
+
         def self.allowed_headers
           %w[Content-Type Authorization X-Requested-With Accept]
         end
-        
+
         def self.allowed_methods
           %w[GET POST PUT PATCH DELETE OPTIONS]
         end
@@ -415,16 +415,16 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
           app.yourdomain.com
           api.yourdomain.com
         ].freeze
-        
+
         def self.call(source, env)
           return false unless source
-          
+
           uri = URI.parse(source) rescue nil
           return false unless uri
-          
+
           # Only allow HTTPS in production
           return false if Rails.env.production? && uri.scheme != 'https'
-          
+
           # Check against explicit domain allowlist
           ALLOWED_DOMAINS.include?(uri.host)
         end
@@ -447,7 +447,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
             headers: %w[Content-Type],
             methods: %w[GET OPTIONS]
         end
-        
+
         # Authenticated API - with credentials
         allow do
           origins 'https://app.yourdomain.com'
@@ -456,7 +456,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
             methods: %w[GET POST PUT DELETE OPTIONS],
             credentials: true
         end
-        
+
         # Admin API - highly restricted
         allow do
           origins 'https://admin.yourdomain.com'
@@ -471,14 +471,14 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureCors do
       class CorsSecurityValidator
         def self.validate_configuration!
           # Ensure no wildcard origins with credentials
-          if Rails.application.config.middleware.any? { |m| 
+          if Rails.application.config.middleware.any? { |m|
             m.klass == Rack::Cors && has_wildcard_with_credentials?(m)
           }
             raise "SECURITY ERROR: Wildcard origins with credentials detected!"
           end
-        
+
         private
-        
+
         def self.has_wildcard_with_credentials?(middleware)
           # Implementation would check middleware configuration
           # This is a simplified example

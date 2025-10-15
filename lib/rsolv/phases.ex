@@ -22,7 +22,7 @@ defmodule Rsolv.Phases do
   ## Parameters
     - attrs: Map containing repo, commit_sha, branch, data, started_at, completed_at
     - api_key: The API key used for authentication
-    
+
   ## Returns
     - {:ok, scan_execution} on success
     - {:error, changeset} on validation failure
@@ -45,7 +45,7 @@ defmodule Rsolv.Phases do
   ## Parameters
     - attrs: Map containing repo, issue_number, commit_sha, data
     - api_key: The API key used for authentication
-    
+
   ## Returns
     - {:ok, validation_execution} on success
     - {:error, changeset} on validation failure
@@ -71,7 +71,7 @@ defmodule Rsolv.Phases do
   ## Parameters
     - attrs: Map containing repo, issue_number, commit_sha, data (with pr_url, pr_number, files_changed)
     - api_key: The API key used for authentication
-    
+
   ## Returns
     - {:ok, mitigation_execution} on success
     - {:error, changeset} on validation failure

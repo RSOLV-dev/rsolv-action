@@ -68,7 +68,7 @@ defmodule RsolvWeb.CredentialControllerTest do
       assert is_binary(api_key)
       assert String.starts_with?(api_key, "sk-ant-")
 
-      # Verify openai credentials  
+      # Verify openai credentials
       assert %{
                "api_key" => api_key,
                "expires_at" => expires_at

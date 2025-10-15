@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
     document.write(userInput)
     document.write('<div>' + data + '</div>')
     document.writeln(untrustedContent)
-    
+
   Safe alternatives:
     element.textContent = userInput
     element.insertAdjacentHTML('beforeend', DOMPurify.sanitize(html))
     Use createElement() and appendChild() for dynamic content
-    
+
   document.write() is a dangerous DOM sink that directly writes HTML to the
   document stream during parsing. It can execute embedded scripts and is
   particularly dangerous because it bypasses many modern XSS protections.
@@ -45,12 +45,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
   def vulnerability_metadata do
     %{
       description: """
-      Cross-Site Scripting (XSS) via document.write occurs when untrusted data is passed 
-      to the document.write() or document.writeln() methods without proper sanitization. 
-      These methods write raw HTML directly to the document stream during parsing, executing 
-      any embedded scripts immediately. This is a particularly dangerous DOM XSS sink because 
-      it bypasses Content Security Policy (CSP) in some configurations and can break modern 
-      web applications. Additionally, document.write() blocks the HTML parser and is 
+      Cross-Site Scripting (XSS) via document.write occurs when untrusted data is passed
+      to the document.write() or document.writeln() methods without proper sanitization.
+      These methods write raw HTML directly to the document stream during parsing, executing
+      any embedded scripts immediately. This is a particularly dangerous DOM XSS sink because
+      it bypasses Content Security Policy (CSP) in some configurations and can break modern
+      web applications. Additionally, document.write() blocks the HTML parser and is
       deprecated in modern web development due to severe performance implications.
       """,
       references: [
@@ -255,19 +255,19 @@ defmodule Rsolv.Security.Patterns.Javascript.XssDocumentWrite do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> enhancement.ast_rules.callee.property
       "write"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssDocumentWrite.ast_enhancement()
       iex> "static_content_only" in Map.keys(enhancement.confidence_rules.adjustments)
       true

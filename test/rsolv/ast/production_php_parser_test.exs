@@ -30,11 +30,11 @@ defmodule Rsolv.AST.ProductionPhpParserTest do
       <?php
       class User {
           private $name;
-          
+
           public function __construct($name) {
               $this->name = $name;
           }
-          
+
           public function greet() {
               echo "Hello, " . $this->name . "!";
           }
@@ -68,14 +68,14 @@ defmodule Rsolv.AST.ProductionPhpParserTest do
           public function processRequest($userInput) {
               // VULNERABLE: eval usage
               eval($userInput);
-              
+
               // VULNERABLE: system command
               system("rm -rf " . $userInput);
-              
+
               // VULNERABLE: SQL injection
               $sql = "SELECT * FROM users WHERE name = '" . $userInput . "'";
               mysql_query($sql);
-              
+
               // VULNERABLE: file inclusion
               include $userInput;
           }
@@ -126,28 +126,28 @@ defmodule Rsolv.AST.ProductionPhpParserTest do
       class Scanner {
           private $findings = [];
           private $config;
-          
+
           public function __construct(array $config = []) {
               $this->config = $config;
           }
-          
+
           public function scanCode($code) {
               // VULNERABLE: Dynamic SQL construction
               $query = "SELECT * FROM code WHERE content = '" . $code . "'";
-              
+
               // VULNERABLE: Command execution
               $result = shell_exec($code);
-              
+
               $this->findings[] = ['type' => 'sql_injection', 'query' => $query];
               $this->findings[] = ['type' => 'command_injection', 'code' => $code];
-              
+
               return $this->findings;
           }
-          
+
           public function getFindings() {
               return $this->findings;
           }
-          
+
           private function sanitize($input) {
               return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
           }

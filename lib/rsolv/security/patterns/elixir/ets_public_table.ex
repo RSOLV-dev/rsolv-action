@@ -138,7 +138,7 @@ defmodule Rsolv.Security.Patterns.Elixir.EtsPublicTable do
     %{
       attack_vectors: """
       1. Data Theft: Unauthorized access to sensitive data in public ETS tables
-      2. Session Hijacking: Access to authentication tokens for user impersonation  
+      2. Session Hijacking: Access to authentication tokens for user impersonation
       3. Data Manipulation: Unauthorized modification of application state and user data
       4. Information Disclosure: Reading confidential business data or user credentials
       """,

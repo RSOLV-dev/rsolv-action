@@ -29,16 +29,16 @@ defmodule Rsolv.Security.Patterns.Django.BrokenAuth do
       def admin_dashboard(request):
           users = User.objects.all()
           return render(request, 'admin/dashboard.html', {'users': users})
-          
+
       # VULNERABLE - Authentication data from GET parameters
       user = authenticate(username=request.GET['username'])
-      
+
       # SAFE - Protected with @login_required
       @login_required
       def admin_dashboard(request):
           users = User.objects.all()
           return render(request, 'admin/dashboard.html', {'users': users})
-      
+
       # SAFE - Class-based view with LoginRequiredMixin
       class AdminDashboard(LoginRequiredMixin, View):
           def get(self, request):
@@ -114,7 +114,7 @@ defmodule Rsolv.Security.Patterns.Django.BrokenAuth do
   def vulnerability_metadata do
     %{
       description: """
-      Broken authentication vulnerabilities in Django applications occur when 
+      Broken authentication vulnerabilities in Django applications occur when
       authentication mechanisms are missing, misconfigured, or improperly implemented.
       This can lead to unauthorized access to sensitive data and functionality.
 

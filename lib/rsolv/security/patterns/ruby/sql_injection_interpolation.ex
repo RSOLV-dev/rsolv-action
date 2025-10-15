@@ -23,11 +23,11 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
   class UserController < ApplicationController
     def search
       name = params[:name]  # User input: "'; DROP TABLE users; --"
-      
+
       # VULNERABLE: Direct interpolation into SQL
       users = User.where("name = '\#{name}'")
       # Results in: SELECT * FROM users WHERE name = ''; DROP TABLE users; --'
-      
+
       # VULNERABLE: Even with ActiveRecord methods
       User.find_by_sql("SELECT * FROM users WHERE status = \#{params[:status]}")
       # Attack: params[:status] = "1; INSERT INTO admin_users..."
@@ -306,7 +306,7 @@ defmodule Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.SqlInjectionInterpolation.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

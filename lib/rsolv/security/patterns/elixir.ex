@@ -3,7 +3,7 @@ defmodule Rsolv.Security.Patterns.Elixir do
   Elixir security patterns for detecting vulnerabilities.
 
   This module contains 28 security patterns specifically designed for Elixir
-  and Phoenix code. Each pattern includes detection rules, test cases, and 
+  and Phoenix code. Each pattern includes detection rules, test cases, and
   educational documentation.
   """
 
@@ -86,7 +86,7 @@ defmodule Rsolv.Security.Patterns.Elixir do
   # Delegate to the SqlInjectionFragment module
   defdelegate sql_injection_fragment(), to: SqlInjectionFragment, as: :pattern
 
-  # Delegate to the CommandInjectionSystem module  
+  # Delegate to the CommandInjectionSystem module
   defdelegate command_injection_system(), to: CommandInjectionSystem, as: :pattern
 
   # Delegate to the XssRawHtml module

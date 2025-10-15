@@ -37,16 +37,16 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
       iex> pattern = Rsolv.Security.Patterns.Javascript.Ssrf.pattern()
       iex> pattern.id
       "js-ssrf"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.Ssrf.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.Ssrf.pattern()
       iex> vulnerable = ~S|axios.get(req.body.url)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.Ssrf.pattern()
       iex> safe = ~S|axios.get("https://api.example.com/data")|
       iex> Regex.match?(pattern.regex, safe)
@@ -73,7 +73,7 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
           # Standalone fetch function
           \bfetch\s*\(
           |
-          # Standalone request function  
+          # Standalone request function
           \brequest\s*\(
         )
         \s*
@@ -270,19 +270,19 @@ defmodule Rsolv.Security.Patterns.Javascript.Ssrf do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.Ssrf.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.Ssrf.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.Ssrf.ast_enhancement()
       iex> enhancement.ast_rules.argument_analysis.has_url_parameter
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.Ssrf.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.Ssrf.ast_enhancement()
       iex> "uses_url_validation" in Map.keys(enhancement.confidence_rules.adjustments)
       true

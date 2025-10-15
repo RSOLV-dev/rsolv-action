@@ -93,7 +93,7 @@ defmodule Rsolv.ValidationCacheHelpers do
         ValidationCache.get(...),  # Returns {:ok, cached}
         ValidationCache.get(...)   # Returns {:invalidated, nil}
       ]
-      
+
       stats = calculate_cache_stats(operations)
       # => %{hits: 1, misses: 1, invalidated: 1, expired: 0, hit_rate: 33.33}
   """

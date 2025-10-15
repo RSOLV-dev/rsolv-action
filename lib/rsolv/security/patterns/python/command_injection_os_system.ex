@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
     os.system("ls " + user_input)
     os.system(f"ping {host}")
     os.system("echo %s" % message)
-    
+
   Safe alternatives:
     subprocess.run(["ls", user_input], shell=False)
     subprocess.call(["ping", "-c", "4", host])
     import shlex; subprocess.run(shlex.split(f"ls {shlex.quote(user_input)}"))
-    
+
   ## Vulnerability Details
 
   The os.system() function executes commands through the system shell, making it
@@ -45,26 +45,26 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.pattern()
       iex> pattern.id
       "python-command-injection-os-system"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.pattern()
       iex> pattern.severity
       :critical
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.pattern()
       iex> vulnerable = ~S|os.system("ls " + user_input)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.pattern()
       iex> safe = ~S|subprocess.run(["ls", user_input], shell=False)|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.pattern()
       iex> fstring_vuln = ~S|os.system(f"ping {host}")|
       iex> Regex.match?(pattern.regex, fstring_vuln)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.pattern()
       iex> hardcoded = ~S|os.system("clear")|
       iex> Regex.match?(pattern.regex, hardcoded)
@@ -243,7 +243,7 @@ defmodule Rsolv.Security.Patterns.Python.CommandInjectionOsSystem do
       iex> enhancement = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.CommandInjectionOsSystem.ast_enhancement()
       iex> enhancement.min_confidence
       0.6

@@ -342,11 +342,11 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       iex> test_cases = Rsolv.Security.Patterns.Php.SessionFixation.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.SessionFixation.test_cases()
       iex> length(test_cases.negative) > 0
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Php.SessionFixation.pattern()
       iex> pattern.id
       "php-session-fixation"
@@ -449,7 +449,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
             if (authenticate($_POST['username'], $_POST['password'])) {
                 $_SESSION['authenticated'] = true;
                 $_SESSION['user_id'] = get_user_id($_POST['username']);
-                
+
                 // BUG: Session ID not regenerated after successful login
                 // Attacker can use the known session ID to hijack the session
                 redirect('/dashboard');
@@ -466,7 +466,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
             public function initialize() {
                 // Accept session ID from multiple sources
                 $session_id = null;
-                
+
                 if (isset($_POST['session_token'])) {
                     $session_id = $_POST['session_token'];
                 } elseif (isset($_COOKIE['custom_session'])) {
@@ -474,15 +474,15 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
                 } elseif (isset($_GET['sid'])) {
                     $session_id = $_GET['sid'];
                 }
-                
+
                 // VULNERABLE: Using user-provided session ID
                 if ($session_id) {
                     session_id($session_id);
                 }
-                
+
                 session_start();
             }
-            
+
             public function authenticate($username, $password) {
                 if ($this->validateCredentials($username, $password)) {
                     $_SESSION['user'] = $username;
@@ -520,7 +520,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         // User registration/login during checkout
         if ($_POST['create_account']) {
             $user_id = create_user_account($_POST['email'], $_POST['password']);
-            
+
             // VULNERABLE: Session not regenerated when transitioning from guest to user
             $_SESSION['user_id'] = $user_id;
             $_SESSION['authenticated'] = true;
@@ -537,15 +537,15 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
             public function handleRequest() {
                 // Accept session ID from various headers
                 $headers = getallheaders();
-                
+
                 if (isset($headers['X-Session-ID'])) {
                     session_id($headers['X-Session-ID']);
                 } elseif (isset($_GET['api_session'])) {
                     session_id($_GET['api_session']);
                 }
-                
+
                 session_start();
-                
+
                 // API authentication
                 if ($this->authenticateApiKey($_POST['api_key'])) {
                     $_SESSION['api_authenticated'] = true;
@@ -553,7 +553,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
                     // VULNERABLE: No session regeneration for API authentication
                 }
             }
-            
+
             public function processApiRequest() {
                 if ($_SESSION['api_authenticated']) {
                     // Process authenticated API request
@@ -578,15 +578,15 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
             if (authenticate($_POST['username'], $_POST['password'])) {
                 // SECURE: Regenerate session ID after successful authentication
                 session_regenerate_id(true);
-                
+
                 $_SESSION['authenticated'] = true;
                 $_SESSION['user_id'] = get_user_id($_POST['username']);
                 $_SESSION['login_time'] = time();
-                
+
                 // Optional: Additional security measures
                 $_SESSION['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
                 $_SESSION['ip_address'] = $_SERVER['REMOTE_ADDR'];
-                
+
                 redirect('/dashboard');
             } else {
                 // Regenerate session ID even after failed login attempts
@@ -607,11 +607,11 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
                 ini_set('session.cookie_secure', 1);
                 ini_set('session.cookie_samesite', 'Strict');
             }
-            
+
             public function startSession() {
                 // SECURE: Never accept external session IDs
                 session_start();
-                
+
                 // Regenerate session ID periodically
                 if (!isset($_SESSION['created'])) {
                     $_SESSION['created'] = time();
@@ -621,52 +621,52 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
                     $_SESSION['created'] = time();
                 }
             }
-            
+
             public function authenticate($username, $password) {
                 if ($this->validateCredentials($username, $password)) {
                     // SECURE: Always regenerate session ID after authentication
                     session_regenerate_id(true);
-                    
+
                     $_SESSION['authenticated'] = true;
                     $_SESSION['user_id'] = $this->getUserId($username);
                     $_SESSION['login_time'] = time();
                     $_SESSION['created'] = time();
-                    
+
                     // Security fingerprinting
                     $_SESSION['fingerprint'] = $this->generateFingerprint();
-                    
+
                     return true;
                 }
-                
+
                 // Regenerate session ID even after failed attempts
                 session_regenerate_id(true);
                 return false;
             }
-            
+
             public function validateSession() {
                 if (!isset($_SESSION['authenticated'])) {
                     return false;
                 }
-                
+
                 // Validate session fingerprint
                 if (!$this->validateFingerprint()) {
                     $this->logout();
                     return false;
                 }
-                
+
                 // Check session timeout
                 if (time() - $_SESSION['login_time'] > 3600) {
                     $this->logout();
                     return false;
                 }
-                
+
                 return true;
             }
-            
+
             public function logout() {
                 // Secure logout process
                 $_SESSION = array();
-                
+
                 if (ini_get("session.use_cookies")) {
                     $params = session_get_cookie_params();
                     setcookie(session_name(), '', time() - 42000,
@@ -674,22 +674,22 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
                         $params["secure"], $params["httponly"]
                     );
                 }
-                
+
                 session_destroy();
                 session_start();
                 session_regenerate_id(true);
             }
-            
+
             private function generateFingerprint() {
-                return hash('sha256', 
-                    $_SERVER['HTTP_USER_AGENT'] . 
-                    $_SERVER['REMOTE_ADDR'] . 
+                return hash('sha256',
+                    $_SERVER['HTTP_USER_AGENT'] .
+                    $_SERVER['REMOTE_ADDR'] .
                     $_SERVER['HTTP_ACCEPT_LANGUAGE']
                 );
             }
-            
+
             private function validateFingerprint() {
-                return isset($_SESSION['fingerprint']) && 
+                return isset($_SESSION['fingerprint']) &&
                        $_SESSION['fingerprint'] === $this->generateFingerprint();
             }
         }
@@ -699,42 +699,42 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         <?php
         class SecureApiController {
             private $sessionManager;
-            
+
             public function __construct() {
                 $this->sessionManager = new SecureSessionManager();
             }
-            
+
             public function handleRequest() {
                 // SECURE: Never accept session IDs from external sources
                 $this->sessionManager->startSession();
-                
+
                 // Use proper API authentication
                 if ($this->authenticateApiRequest()) {
                     return $this->processApiRequest();
                 }
-                
+
                 return $this->sendUnauthorizedResponse();
             }
-            
+
             private function authenticateApiRequest() {
                 $api_key = $this->getApiKeyFromHeaders();
                 $user_data = $this->validateApiKey($api_key);
-                
+
                 if ($user_data) {
                     // SECURE: Regenerate session for new API authentication
                     session_regenerate_id(true);
-                    
+
                     $_SESSION['api_authenticated'] = true;
                     $_SESSION['api_user_id'] = $user_data['user_id'];
                     $_SESSION['api_permissions'] = $user_data['permissions'];
                     $_SESSION['auth_time'] = time();
-                    
+
                     return true;
                 }
-                
+
                 return false;
             }
-            
+
             private function getApiKeyFromHeaders() {
                 $headers = getallheaders();
                 return $headers['Authorization'] ?? null;
@@ -762,9 +762,9 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
             if (!isset($_SESSION['csrf_token'])) {
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             }
-            
+
             // Regenerate CSRF token periodically
-            if (!isset($_SESSION['csrf_created']) || 
+            if (!isset($_SESSION['csrf_created']) ||
                 time() - $_SESSION['csrf_created'] > 300) {
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                 $_SESSION['csrf_created'] = time();
@@ -985,7 +985,7 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
 
     // If custom session management is needed, use mapping
     $allowed_sessions = get_valid_session_mapping();
-    if (isset($_GET['app_token']) && 
+    if (isset($_GET['app_token']) &&
         isset($allowed_sessions[$_GET['app_token']])) {
         $internal_session = $allowed_sessions[$_GET['app_token']];
         // Use internal mapping instead of direct session ID
@@ -998,25 +998,25 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
         if (!isset($_SESSION['created'])) {
             return false;
         }
-        
+
         // Check session age
         if (time() - $_SESSION['created'] > 3600) {
             session_destroy();
             return false;
         }
-        
+
         // Validate session fingerprint
-        $current_fingerprint = hash('sha256', 
+        $current_fingerprint = hash('sha256',
             $_SERVER['HTTP_USER_AGENT'] . $_SERVER['REMOTE_ADDR']
         );
-        
+
         if (!isset($_SESSION['fingerprint'])) {
             $_SESSION['fingerprint'] = $current_fingerprint;
         } elseif ($_SESSION['fingerprint'] !== $current_fingerprint) {
             session_destroy();
             return false;
         }
-        
+
         return true;
     }
     ```
@@ -1090,11 +1090,11 @@ defmodule Rsolv.Security.Patterns.Php.SessionFixation do
       iex> enhancement = Rsolv.Security.Patterns.Php.SessionFixation.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.SessionFixation.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.SessionFixation.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

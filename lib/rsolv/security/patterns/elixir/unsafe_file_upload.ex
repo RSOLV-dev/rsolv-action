@@ -58,19 +58,19 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeFileUpload do
 
   ## Attack Scenarios
 
-  1. **Path Traversal**: Attacker uploads file with filename "../../../etc/passwd" 
+  1. **Path Traversal**: Attacker uploads file with filename "../../../etc/passwd"
      to overwrite system files or access sensitive data outside upload directory
 
-  2. **Web Shell Upload**: Upload executable file (.php, .jsp) that provides 
+  2. **Web Shell Upload**: Upload executable file (.php, .jsp) that provides
      remote command execution capabilities on the server
 
-  3. **Configuration Overwrite**: Upload malicious config files to alter 
+  3. **Configuration Overwrite**: Upload malicious config files to alter
      application behavior or gain elevated privileges
 
   ## References
 
   - CWE-434: Unrestricted Upload of File with Dangerous Type
-  - CWE-22: Improper Limitation of a Pathname to a Restricted Directory  
+  - CWE-22: Improper Limitation of a Pathname to a Restricted Directory
   - OWASP Top 10 2021 - A01: Broken Access Control
   - Sobelow Security Scanner - Path Traversal Detection
   """

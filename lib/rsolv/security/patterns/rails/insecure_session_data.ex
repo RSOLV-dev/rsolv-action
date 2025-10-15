@@ -30,7 +30,7 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
   ```
 
   ### Safe Example
-  ```ruby  
+  ```ruby
   # Safe: Only store non-sensitive identifiers
   def login
     if user.authenticate(params[:password])
@@ -132,11 +132,11 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
   def vulnerability_metadata do
     %{
       description: """
-      Insecure Session Data Storage in Rails applications occurs when sensitive 
-      information such as passwords, credit card numbers, SSNs, API keys, or 
-      private keys are stored in Rails session cookies. Even though Rails 
-      encrypts session cookies, storing sensitive data in sessions violates 
-      security best practices and compliance requirements, creating multiple 
+      Insecure Session Data Storage in Rails applications occurs when sensitive
+      information such as passwords, credit card numbers, SSNs, API keys, or
+      private keys are stored in Rails session cookies. Even though Rails
+      encrypts session cookies, storing sensitive data in sessions violates
+      security best practices and compliance requirements, creating multiple
       attack vectors and regulatory violations.
       """,
       attack_vectors: """
@@ -215,12 +215,12 @@ defmodule Rsolv.Security.Patterns.Rails.InsecureSessionData do
             reset_session  # Prevent session fixation
             session[:user_id] = user.id  # Safe - just an ID
             session[:role] = user.role   # Safe - not sensitive
-            
+
             # Store sensitive data server-side with session reference
             Rails.cache.write("user_session_\#{session.id}", {
               encrypted_data: user.sensitive_data.encrypt
             }, expires_in: 30.minutes)
-            
+
             redirect_to dashboard_path
           end
         end

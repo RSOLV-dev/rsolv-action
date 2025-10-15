@@ -19,16 +19,16 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
     def restore_session
       # VULNERABLE: Direct Marshal.load with user params
       session_data = Marshal.load(params[:session])
-      
+
       # VULNERABLE: Marshal.load with Base64 decoding
       user_data = Marshal.load(Base64.decode64(params[:data]))
-      
+
       # VULNERABLE: Marshal.load with cookies
       auth_token = Marshal.load(cookies[:auth])
-      
+
       # VULNERABLE: Marshal.load with request body
       payload = Marshal.load(request.body.read)
-      
+
       # VULNERABLE: ActiveStorage deserialization (CVE-2019-5420)
       blob = Marshal.load(URI.decode(signed_blob_id))
     end
@@ -47,7 +47,7 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
   ```
 
   **Real-world Impact:**
-  CVE-2019-5420 and CVE-2020-8165 demonstrated critical Marshal deserialization 
+  CVE-2019-5420 and CVE-2020-8165 demonstrated critical Marshal deserialization
   vulnerabilities in Rails, leading to remote code execution in production applications.
   The elttam universal gadget chain works across Ruby versions 2.x and 3.x.
 
@@ -58,24 +58,24 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
     def restore_session
       # SECURE: JSON parsing instead of Marshal
       session_data = JSON.parse(params[:session])
-      
+
       # SECURE: Strong parameters with validation
       user_data = user_params.to_h
-      
+
       # SECURE: Rails encrypted cookies (automatic security)
       auth_token = cookies.encrypted[:auth]
-      
+
       # SECURE: Structured data parsing with validation
       payload = JSON.parse(request.body.read)
       validate_payload_structure!(payload)
     end
-    
+
     private
-    
+
     def user_params
       params.require(:user).permit(:id, :name, :email)
     end
-    
+
     def validate_payload_structure!(payload)
       required_keys = %w[action data timestamp]
       raise ArgumentError unless required_keys.all? { |key| payload.key?(key) }
@@ -412,7 +412,7 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.UnsafeDeserializationMarshal.ast_enhancement()
       iex> enhancement.min_confidence
       0.9

@@ -2,13 +2,13 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashing do
   @moduledoc """
   Weak Password Hashing vulnerability pattern for Elixir applications.
 
-  This pattern detects password hashing implementations using fast cryptographic 
-  hash functions (MD5, SHA1, SHA256, SHA512) instead of proper password hashing 
+  This pattern detects password hashing implementations using fast cryptographic
+  hash functions (MD5, SHA1, SHA256, SHA512) instead of proper password hashing
   algorithms designed to be computationally expensive.
 
   ## Vulnerability Details
 
-  Weak password hashing occurs when applications use general-purpose hash functions 
+  Weak password hashing occurs when applications use general-purpose hash functions
   for password storage:
   - Using :crypto.hash with MD5, SHA1, SHA256, SHA512
   - Simple salting without key stretching
@@ -57,13 +57,13 @@ defmodule Rsolv.Security.Patterns.Elixir.WeakPasswordHashing do
 
   ## Attack Scenarios
 
-  1. **Database Breach**: Attacker obtains password hashes and uses GPU clusters 
+  1. **Database Breach**: Attacker obtains password hashes and uses GPU clusters
      to crack SHA256 hashes at billions of attempts per second
 
-  2. **Rainbow Tables**: Pre-computed hash tables used to instantly reverse 
+  2. **Rainbow Tables**: Pre-computed hash tables used to instantly reverse
      common passwords hashed with MD5 or SHA1
 
-  3. **Targeted Attack**: Attacker focuses computational resources on high-value 
+  3. **Targeted Attack**: Attacker focuses computational resources on high-value
      accounts using weak hashing algorithms
 
   ## References

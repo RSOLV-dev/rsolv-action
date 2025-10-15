@@ -63,7 +63,7 @@ defmodule Rsolv.Security.Patterns.Python do
       "python-sql-injection-format"
       iex> pattern.severity
       :high
-      
+
   ## Detection Examples
 
       iex> pattern = Rsolv.Security.Patterns.Python.sql_injection_format()
@@ -90,7 +90,7 @@ defmodule Rsolv.Security.Patterns.Python do
       "python-sql-injection-fstring"
       iex> pattern.severity
       :high
-      
+
   ## Detection Examples
 
       iex> pattern = Rsolv.Security.Patterns.Python.sql_injection_fstring()

@@ -243,7 +243,7 @@ defmodule Rsolv.AST.BatchProcessor do
 
             {:ok,
              %{
-               # We'll parse in analysis phase  
+               # We'll parse in analysis phase
                ast: nil,
                path: file.path,
                language: file.language,
@@ -292,7 +292,7 @@ defmodule Rsolv.AST.BatchProcessor do
   end
 
   defp parse_file_content(file) do
-    # Since we're going to use AnalysisService anyway, 
+    # Since we're going to use AnalysisService anyway,
     # let's just return the file structure and let analyze_single_file handle parsing
     try do
       {:ok, file}

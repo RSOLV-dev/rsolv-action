@@ -27,20 +27,20 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
       # VULNERABLE - json.loads with user input in MongoDB
       filter_data = json.loads(request.body)
       results = collection.find(filter_data)
-      
+
       # VULNERABLE - $where injection
       query = {'$where': request.GET.get('filter')}
       products = db.products.find(query)
-      
+
       # VULNERABLE - Redis eval injection
       script = request.POST.get('script')
       redis_client.eval(script, 0)
-      
+
       # SAFE - Validated MongoDB query
       category = request.GET.get('category')
       if category in ALLOWED_CATEGORIES:
           products = collection.find({'category': category})
-      
+
       # SAFE - Structured Elasticsearch query
       query = {
           'query': {
@@ -213,7 +213,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
          # NEVER DO THIS - Direct json.loads
          filter_data = json.loads(request.body)
          results = collection.find(filter_data)  # VULNERABLE!
-         
+
          # SAFE - Validate structure
          try:
              data = json.loads(request.body)
@@ -223,7 +223,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
                  safe_filter['name'] = data['name']
              if 'age' in data and isinstance(data['age'], int):
                  safe_filter['age'] = data['age']
-             
+
              results = collection.find(safe_filter)
          except (json.JSONDecodeError, TypeError):
              return JsonResponse({'error': 'Invalid input'}, status=400)
@@ -233,7 +233,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
          ```python
          # NEVER DO THIS - $where with user input
          query = {'$where': f"this.price > {request.GET['min_price']}"}
-         
+
          # SAFE - Use native operators
          try:
              min_price = float(request.GET.get('min_price', 0))
@@ -247,11 +247,11 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
          ```python
          # Using MongoEngine (Django MongoDB ORM)
          from mongoengine import Document, StringField, IntField
-         
+
          class User(Document):
              username = StringField(required=True)
              age = IntField(min_value=0, max_value=150)
-         
+
          # Safe query with validation
          users = User.objects(
              username=request.GET.get('username'),
@@ -264,7 +264,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
          # NEVER DO THIS
          query = json.loads(request.body)
          results = es.search(body=query)  # VULNERABLE!
-         
+
          # SAFE - Build structured query
          search_term = request.GET.get('q', '')
          query = {
@@ -293,15 +293,15 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
          # NEVER DO THIS - eval with user input
          script = request.POST.get('script')
          redis_client.eval(script, 0)  # VULNERABLE!
-         
+
          # SAFE - Use predefined operations
          key = f"user:{request.user.id}:data"
          value = request.POST.get('value')
-         
+
          # Validate key format
          if not re.match(r'^user:\d+:data$', key):
              return JsonResponse({'error': 'Invalid key'}, status=400)
-         
+
          # Use safe Redis commands
          redis_client.set(key, value, ex=3600)  # With expiration
          ```
@@ -312,10 +312,10 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
              \"\"\"Validate and sanitize MongoDB query input\"\"\"
              if not isinstance(data, dict):
                  raise ValueError("Input must be a dictionary")
-             
+
              # Check for dangerous operators
              dangerous_ops = ['$where', '$function', '$accumulator', '$code']
-             
+
              def check_dict(d):
                  for key, value in d.items():
                      if key in dangerous_ops:
@@ -326,7 +326,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
                          for item in value:
                              if isinstance(item, dict):
                                  check_dict(item)
-             
+
              check_dict(data)
              return data
          ```
@@ -396,7 +396,7 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
               obj_id = ObjectId(user_id)
           except:
               return None
-          
+
           # Safe query
           return db.users.find_one({'_id': obj_id})
 
@@ -410,10 +410,10 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
           # Validate user_id is numeric
           if not str(user_id).isdigit():
               raise ValueError("Invalid user ID")
-          
+
           # Safe key construction
           key = f"user:{user_id}:profile"
-          
+
           # Serialize safely
           r.setex(key, 3600, json.dumps(data))
 
@@ -422,24 +422,24 @@ defmodule Rsolv.Security.Patterns.Django.NosqlInjection do
           def __init__(self, collection):
               self.collection = collection
               self.filters = {}
-          
+
           def add_filter(self, field, value, operator='$eq'):
               # Whitelist allowed fields and operators
               allowed_fields = ['name', 'age', 'category', 'price']
               allowed_ops = ['$eq', '$gt', '$gte', '$lt', '$lte', '$in']
-              
+
               if field not in allowed_fields:
                   raise ValueError(f"Field {field} not allowed")
               if operator not in allowed_ops:
                   raise ValueError(f"Operator {operator} not allowed")
-              
+
               if operator == '$eq':
                   self.filters[field] = value
               else:
                   self.filters[field] = {operator: value}
-              
+
               return self
-          
+
           def execute(self):
               return list(self.collection.find(self.filters))
       """

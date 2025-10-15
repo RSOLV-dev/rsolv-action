@@ -193,9 +193,9 @@ defmodule Rsolv.Security.Patterns.Cve do
         "Add comprehensive logging for all security-critical operations including authentication, authorization, and sensitive data access",
       test_cases: %{
         vulnerable: [
-          ~S|function login(username, password) { 
-  if (checkCredentials(username, password)) 
-    return createSession(username); 
+          ~S|function login(username, password) {
+  if (checkCredentials(username, password))
+    return createSession(username);
 }|,
           ~S|def process_payment(amount, card_number):
     charge_card(card_number, amount)

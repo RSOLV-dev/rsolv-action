@@ -60,16 +60,16 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
       iex> pattern = Rsolv.Security.Patterns.Java.TrustAllCerts.pattern()
       iex> pattern.id
       "java-trust-all-certs"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.TrustAllCerts.pattern()
       iex> pattern.severity
       :critical
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.TrustAllCerts.pattern()
       iex> vulnerable = "public void checkClientTrusted(X509Certificate[] chain, String authType) {}"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, vulnerable) end)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.TrustAllCerts.pattern()
       iex> safe = "public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException { validateCertificateChain(chain); }"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, safe) end)
@@ -313,11 +313,11 @@ defmodule Rsolv.Security.Patterns.Java.TrustAllCerts do
       iex> enhancement = Rsolv.Security.Patterns.Java.TrustAllCerts.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.TrustAllCerts.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.TrustAllCerts.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodDeclaration"

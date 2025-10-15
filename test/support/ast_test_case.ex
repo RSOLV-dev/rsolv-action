@@ -50,7 +50,7 @@ defmodule Rsolv.AST.TestCase do
         # VULNERABLE: System.cmd with user input
         System.cmd("sh", ["-c", user_input])
       end
-      
+
       def another_command(input) do
         # Also vulnerable
         Port.open({:spawn, input}, [:binary])

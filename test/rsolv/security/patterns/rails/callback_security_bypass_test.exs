@@ -87,7 +87,7 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypassTest do
       vulnerable_code = """
       class UsersController < ApplicationController
         skip_before_action :authenticate, if: -> { params[:skip] }
-        
+
         def show
           @user = User.find(params[:id])
         end
@@ -105,7 +105,7 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypassTest do
       vulnerable_code = """
       class AdminController < ApplicationController
         skip_around_action :admin_check, if: params[:bypass_admin]
-        
+
         def settings
           # Admin settings here
         end
@@ -123,7 +123,7 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypassTest do
       vulnerable_code = """
       class PaymentController < ApplicationController
         skip_after_action :log_payment, if: -> { eval(params[:condition]) }
-        
+
         def process_payment
           # Payment processing
         end
@@ -139,8 +139,8 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypassTest do
 
     test "detects complex bypass with user input" do
       vulnerable_code = """
-      skip_before_action :require_admin, if: -> { 
-        params[:user_type] == 'admin' || params[:override] 
+      skip_before_action :require_admin, if: -> {
+        params[:user_type] == 'admin' || params[:override]
       }
       """
 
@@ -171,9 +171,9 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypassTest do
       safe_code = """
       class PublicController < ApplicationController
         skip_before_action :authenticate, if: :public_action?
-        
+
         private
-        
+
         def public_action?
           action_name.in?(['about', 'contact', 'home'])
         end
@@ -193,9 +193,9 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypassTest do
         skip_before_action :verify_authenticity_token, if: :api_request?
         skip_around_action :set_locale, only: [:health_check]
         skip_after_action :track_activity, except: [:index, :show]
-        
+
         private
-        
+
         def api_request?
           request.format.json?
         end
@@ -213,7 +213,7 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypassTest do
       safe_code = """
       class HealthController < ApplicationController
         skip_before_action :authenticate_user
-        
+
         def status
           render json: { status: 'ok' }
         end
@@ -247,7 +247,7 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypassTest do
       class SecureController < ApplicationController
         # DEPRECATED: This was vulnerable
         # skip_before_action :authenticate, if: -> { params[:skip] }
-        
+
         # Now using proper authentication
         before_action :authenticate_user!
       end

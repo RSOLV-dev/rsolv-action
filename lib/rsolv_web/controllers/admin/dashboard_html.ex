@@ -23,12 +23,12 @@ defmodule RsolvWeb.Admin.DashboardHTML do
         minutes = div(diff_seconds, 60)
         "#{minutes} minute#{if minutes == 1, do: "", else: "s"} ago"
 
-      diff_seconds < 86400 ->
+      diff_seconds < 86_400 ->
         hours = div(diff_seconds, 3600)
         "#{hours} hour#{if hours == 1, do: "", else: "s"} ago"
 
       diff_seconds < 604_800 ->
-        days = div(diff_seconds, 86400)
+        days = div(diff_seconds, 86_400)
         "#{days} day#{if days == 1, do: "", else: "s"} ago"
 
       true ->

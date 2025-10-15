@@ -6,29 +6,29 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
     crypto.createHash('sha1')
     const hash = crypto.createHash("sha1").update(data).digest()
     crypto.createHash('SHA1')
-    
+
   Safe alternatives:
     crypto.createHash('sha256')
     crypto.createHash('sha3-256')
     crypto.createHash('sha512')
-    
-  SHA1 (Secure Hash Algorithm 1) is a cryptographic hash function that has been 
-  deprecated due to collision vulnerabilities. While not as severely broken as MD5, 
-  SHA1 has been successfully attacked in practice, most notably by Google's 
+
+  SHA1 (Secure Hash Algorithm 1) is a cryptographic hash function that has been
+  deprecated due to collision vulnerabilities. While not as severely broken as MD5,
+  SHA1 has been successfully attacked in practice, most notably by Google's
   demonstration in 2017 that showed practical collision attacks are feasible.
 
   ## Vulnerability Details
 
-  SHA1 suffers from several cryptographic weaknesses that make it unsuitable for 
+  SHA1 suffers from several cryptographic weaknesses that make it unsuitable for
   security-critical applications:
 
-  1. **Collision Attacks**: Google demonstrated the first practical SHA1 collision 
+  1. **Collision Attacks**: Google demonstrated the first practical SHA1 collision
      in 2017 with the SHAttered attack, requiring 2^63.1 operations
-  2. **Chosen-prefix Collisions**: More advanced attacks that allow meaningful 
+  2. **Chosen-prefix Collisions**: More advanced attacks that allow meaningful
      content control in both colliding documents
-  3. **Length Extension Attacks**: SHA1's Merkle-Damgård construction remains 
+  3. **Length Extension Attacks**: SHA1's Merkle-Damgård construction remains
      vulnerable to length extension attacks
-  4. **Deprecation by Standards Bodies**: NIST deprecated SHA1 for digital 
+  4. **Deprecation by Standards Bodies**: NIST deprecated SHA1 for digital
      signatures in 2011, and major browsers stopped accepting SHA1 certificates
 
   ### Attack Example
@@ -43,9 +43,9 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
   ```
 
   ### SHAttered Impact (2017)
-  Google's SHAttered attack demonstrated that SHA1 collisions are not just 
-  theoretical but practically achievable. This breakthrough showed that two 
-  different PDF files could be crafted with identical SHA1 hashes, proving 
+  Google's SHAttered attack demonstrated that SHA1 collisions are not just
+  theoretical but practically achievable. This breakthrough showed that two
+  different PDF files could be crafted with identical SHA1 hashes, proving
   that SHA1 can no longer be trusted for integrity verification or digital signatures.
   """
 
@@ -94,29 +94,29 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
   @doc """
   Comprehensive vulnerability metadata for weak cryptography using SHA1.
 
-  This metadata documents the specific cryptographic weaknesses of SHA1 and the 
+  This metadata documents the specific cryptographic weaknesses of SHA1 and the
   practical attacks that have been demonstrated, particularly Google's SHAttered attack in 2017.
   """
   def vulnerability_metadata do
     %{
       description: """
-      SHA1 (Secure Hash Algorithm 1) is a cryptographic hash function that has been 
-      deprecated due to demonstrated collision vulnerabilities. While initially considered 
-      secure, advances in cryptanalysis and computational power have made collision attacks 
-      against SHA1 practically feasible. The most significant breakthrough was Google's 
+      SHA1 (Secure Hash Algorithm 1) is a cryptographic hash function that has been
+      deprecated due to demonstrated collision vulnerabilities. While initially considered
+      secure, advances in cryptanalysis and computational power have made collision attacks
+      against SHA1 practically feasible. The most significant breakthrough was Google's
       SHAttered attack in 2017, which demonstrated the first practical SHA1 collision.
 
-      Unlike MD5, which has been completely broken for decades, SHA1 maintained theoretical 
-      security until recent years. However, the combination of improved attack techniques 
-      and increased computational resources has made SHA1 collisions achievable within 
-      reasonable time and budget constraints. This has led to widespread deprecation of 
+      Unlike MD5, which has been completely broken for decades, SHA1 maintained theoretical
+      security until recent years. However, the combination of improved attack techniques
+      and increased computational resources has made SHA1 collisions achievable within
+      reasonable time and budget constraints. This has led to widespread deprecation of
       SHA1 across the industry.
 
-      The vulnerability is particularly concerning for digital signatures, file integrity 
-      verification, and certificate validation, where collision attacks can be used to 
-      create malicious content with valid signatures or certificates. While password 
-      hashing with SHA1 is less immediately vulnerable to collision attacks, it remains 
-      susceptible to rainbow table attacks and lacks the computational hardness required 
+      The vulnerability is particularly concerning for digital signatures, file integrity
+      verification, and certificate validation, where collision attacks can be used to
+      create malicious content with valid signatures or certificates. While password
+      hashing with SHA1 is less immediately vulnerable to collision attacks, it remains
+      susceptible to rainbow table attacks and lacks the computational hardness required
       for secure password storage.
       """,
       references: [
@@ -214,12 +214,12 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
       The detection covers various variations and cases:
 
       1. Standard naming: 'sha1', 'SHA1'
-      2. Hyphenated form: 'sha-1', 'SHA-1'  
+      2. Hyphenated form: 'sha-1', 'SHA-1'
       3. Quote styles: single quotes, double quotes, template literals
       4. Module patterns: crypto.createHash() and require('crypto').createHash()
       5. Case insensitive matching to catch all variations
 
-      The pattern specifically targets the crypto.createHash() API to minimize false 
+      The pattern specifically targets the crypto.createHash() API to minimize false
       positives while ensuring comprehensive coverage of SHA1 usage patterns in Node.js applications.
       """,
       safe_alternatives: [
@@ -310,15 +310,15 @@ defmodule Rsolv.Security.Patterns.Javascript.WeakCryptoSha1 do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoSha1.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoSha1.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoSha1.ast_enhancement()
       iex> enhancement.ast_rules.callee.object
       "crypto"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.WeakCryptoSha1.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

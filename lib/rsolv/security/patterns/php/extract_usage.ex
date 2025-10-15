@@ -283,7 +283,7 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
       iex> test_cases = Rsolv.Security.Patterns.Php.ExtractUsage.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.ExtractUsage.test_cases()
       iex> length(test_cases.negative)
       6
@@ -431,16 +431,16 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
         function get_safe_user_data($input) {
             $allowed_fields = ['name', 'email', 'phone'];
             $safe_data = [];
-            
+
             foreach ($allowed_fields as $field) {
                 if (isset($input[$field])) {
                     $safe_data[$field] = filter_var(
-                        $input[$field], 
+                        $input[$field],
                         FILTER_SANITIZE_STRING
                     );
                 }
             }
-            
+
             return $safe_data;
         }
 
@@ -460,35 +460,35 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
       iex> desc = Rsolv.Security.Patterns.Php.ExtractUsage.vulnerability_description()
       iex> desc =~ "extract"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.ExtractUsage.vulnerability_description()
       iex> desc =~ "variable"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.ExtractUsage.vulnerability_description()
       iex> desc =~ "overwrite"
       true
   """
   def vulnerability_description do
     """
-    Variable extraction vulnerabilities occur when PHP applications use the extract() 
-    function on user-controlled input, allowing attackers to inject or overwrite 
+    Variable extraction vulnerabilities occur when PHP applications use the extract()
+    function on user-controlled input, allowing attackers to inject or overwrite
     variables in the current scope and potentially bypass security controls.
 
-    The extract() function imports variables from an array into the current symbol 
-    table, using array keys as variable names. When used with superglobals like 
-    $_POST, $_GET, or $_REQUEST, it essentially recreates the dangerous 
+    The extract() function imports variables from an array into the current symbol
+    table, using array keys as variable names. When used with superglobals like
+    $_POST, $_GET, or $_REQUEST, it essentially recreates the dangerous
     register_globals functionality.
 
     ## Security Impact
 
-    **Authentication Bypass**: Attackers can overwrite authentication flags or 
+    **Authentication Bypass**: Attackers can overwrite authentication flags or
     user role variables to gain unauthorized access to protected functionality.
 
-    **Configuration Tampering**: Critical configuration variables like database 
+    **Configuration Tampering**: Critical configuration variables like database
     credentials, API keys, or debug flags can be overwritten by user input.
 
-    **Logic Manipulation**: Control flow variables can be injected or modified, 
+    **Logic Manipulation**: Control flow variables can be injected or modified,
     allowing attackers to bypass validation checks or alter application behavior.
 
     ## Attack Scenarios
@@ -507,8 +507,8 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
 
     ## Prevention
 
-    The safest approach is to avoid extract() entirely, especially with user input. 
-    Access array elements directly, use proper input validation, and leverage 
+    The safest approach is to avoid extract() entirely, especially with user input.
+    Access array elements directly, use proper input validation, and leverage
     modern PHP frameworks that provide secure request handling mechanisms.
     """
   end
@@ -524,11 +524,11 @@ defmodule Rsolv.Security.Patterns.Php.ExtractUsage do
       iex> enhancement = Rsolv.Security.Patterns.Php.ExtractUsage.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.ExtractUsage.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.ExtractUsage.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

@@ -32,20 +32,20 @@ defmodule Rsolv.Security.Patterns.Django.MassAssignment do
           class Meta:
               model = User
               fields = '__all__'  # Dangerous!
-              
+
       # VULNERABLE - No validation on serializer
       serializer = UserSerializer(data=request.data)
       serializer.save()  # Can save any field!
-      
+
       # VULNERABLE - Direct assignment
       User.objects.create(**request.POST.dict())
-      
+
       # SAFE - Explicit field whitelist
       class UserForm(forms.ModelForm):
           class Meta:
               model = User
               fields = ['username', 'email', 'first_name']
-              
+
       # SAFE - Validated serializer
       serializer = UserSerializer(data=request.data)
       if serializer.is_valid():
@@ -273,7 +273,7 @@ if serializer.is_valid():
 
         class UserViewSet(viewsets.ModelViewSet):
             serializer_class = UserSerializer
-            
+
             def perform_create(self, serializer):
                 # Additional validation and field control
                 if serializer.is_valid():
@@ -297,18 +297,18 @@ if serializer.is_valid():
 
         def update_user_api(request):
             user = request.user
-            
+
             # Filter request data to allowed fields only
             update_data = {
-                field: value 
-                for field, value in request.POST.items() 
+                field: value
+                for field, value in request.POST.items()
                 if field in ALLOWED_USER_FIELDS
             }
-            
+
             # Update only allowed fields
             for field, value in update_data.items():
                 setattr(user, field, value)
-            
+
             user.full_clean()  # Validate before saving
             user.save(update_fields=ALLOWED_USER_FIELDS)
         """,
@@ -318,7 +318,7 @@ if serializer.is_valid():
             first_name = forms.CharField(max_length=30, required=False)
             last_name = forms.CharField(max_length=30, required=False)
             bio = forms.CharField(widget=forms.Textarea, required=False)
-            
+
             def save(self, user):
                 # Manually update only form fields
                 user.first_name = self.cleaned_data['first_name']
@@ -350,18 +350,18 @@ if serializer.is_valid():
           class AdminUserForm(forms.ModelForm):
               class Meta:
                   model = User
-                  fields = ['username', 'email', 'first_name', 'last_name', 
+                  fields = ['username', 'email', 'first_name', 'last_name',
                            'is_staff', 'is_active', 'groups']
 
           def edit_user(request, user_id):
               user = get_object_or_404(User, pk=user_id)
-              
+
               # Use different forms based on permissions
               if request.user.is_superuser:
                   form_class = AdminUserForm
               else:
                   form_class = UserForm
-                  
+
               form = form_class(request.POST or None, instance=user)
               if form.is_valid():
                   form.save()
@@ -376,11 +376,11 @@ if serializer.is_valid():
                   'is_staff': user.is_staff,
                   'is_superuser': user.is_superuser,
               }
-              
+
               form = UserForm(request.POST, instance=user)
               if form.is_valid():
                   user = form.save()
-                  
+
                   # Log any privilege changes
                   for field, old_value in old_values.items():
                       new_value = getattr(user, field)
@@ -406,9 +406,9 @@ if serializer.is_valid():
                           self.is_staff = old_user.is_staff
                           self.is_superuser = old_user.is_superuser
                           self.groups = old_user.groups
-                  
+
                   super().save(*args, **kwargs)
-              
+
               def set_privileged_fields(self, **kwargs):
                   # Controlled method for updating protected fields
                   self._privileged_update = True

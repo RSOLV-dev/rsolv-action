@@ -20,16 +20,16 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
     def execute
       # VULNERABLE: Direct eval with user input
       result = eval(params[:code])
-      
+
       # VULNERABLE: instance_eval with user data
       user.instance_eval(params[:method_definition])
-      
+
       # VULNERABLE: Dynamic method calling
       model.send(params[:action], params[:args])
-      
+
       # VULNERABLE: Dynamic constant access
       klass = Object.const_get(params[:class_name])
-      
+
       render json: { result: result }
     end
   end
@@ -54,7 +54,7 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       # SECURE: Predefined allowed actions
       allowed_actions = ['show', 'update', 'create']
       action = params[:action]
-      
+
       if allowed_actions.include?(action)
         case action
         when 'show'
@@ -68,9 +68,9 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
         render json: { error: 'Invalid action' }, status: 400
       end
     end
-    
+
     private
-    
+
     def permitted_params
       params.require(:model).permit(:name, :email, :description)
     end
@@ -399,7 +399,7 @@ defmodule Rsolv.Security.Patterns.Ruby.EvalUsage do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.EvalUsage.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.EvalUsage.ast_enhancement()
       iex> enhancement.min_confidence
       0.8

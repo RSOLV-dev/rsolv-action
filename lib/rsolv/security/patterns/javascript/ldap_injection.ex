@@ -38,16 +38,16 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
       iex> pattern = Rsolv.Security.Patterns.Javascript.LdapInjection.pattern()
       iex> pattern.id
       "js-ldap-injection"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.LdapInjection.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.LdapInjection.pattern()
       iex> vulnerable = ~S|ldap.search("(cn=" + username + ")")|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.LdapInjection.pattern()
       iex> safe = ~S|ldap.search("(cn=" + ldapEscape(username) + ")")|
       iex> Regex.match?(pattern.regex, safe)
@@ -276,19 +276,19 @@ defmodule Rsolv.Security.Patterns.Javascript.LdapInjection do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.LdapInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.LdapInjection.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.LdapInjection.ast_enhancement()
       iex> enhancement.ast_rules.argument_analysis.has_filter_string
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.LdapInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.LdapInjection.ast_enhancement()
       iex> "uses_ldap_escape" in Map.keys(enhancement.confidence_rules.adjustments)
       true

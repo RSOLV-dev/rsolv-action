@@ -8,8 +8,8 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
   ## Vulnerability Details
 
   This vulnerability affects Rails applications using the Host Authorization middleware
-  in Action Pack before versions 6.1.2.1 and 6.0.3.5. When an allowed host contains 
-  a leading dot, specially crafted Host headers in combination with certain "allowed host" 
+  in Action Pack before versions 6.1.2.1 and 6.0.3.5. When an allowed host contains
+  a leading dot, specially crafted Host headers in combination with certain "allowed host"
   formats can cause the Host Authorization middleware to redirect users to a malicious website.
 
   ### Attack Example
@@ -48,7 +48,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
       regex: [
         # Direct usage of request.host/protocol in redirects (exclude commented lines)
         ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?request\.(?:protocol|host|url|original_url)/,
-        # Host header string interpolation in redirects  
+        # Host header string interpolation in redirects
         ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?#\{request\.(?:protocol|host)\}/,
         # url_for with request.host parameter (broader pattern)
         ~r/^(?!\s*#)(?!\s*\/\/).*url_for\s*\([^)]*host:\s*request\.host(?:_with_port)?/,
@@ -56,7 +56,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
         ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?url_for\s*\([^)]*host:\s*params\[/,
         # root_url with host parameter from params
         ~r/^(?!\s*#)(?!\s*\/\/).*redirect_to.*?root_url\s*\([^)]*host:\s*params\[/,
-        # Dynamic host configuration with user input (broader pattern)  
+        # Dynamic host configuration with user input (broader pattern)
         ~r/config\.hosts.*?=.*?\[.*?"\#\{request\.host\}/,
         # Host configuration with user input append
         ~r/config\.hosts.*?<<.*?"\.\#\{(?:params|request)\[/,
@@ -93,10 +93,10 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
   def vulnerability_metadata do
     %{
       description: """
-      CVE-2021-22881 is a Host Authorization open redirect vulnerability in Rails Action Pack 
-      that affects applications using the Host Authorization middleware. The vulnerability occurs 
-      when specially crafted Host headers are used in combination with certain allowed host formats, 
-      particularly when allowed hosts contain leading dots. This can cause the Host Authorization 
+      CVE-2021-22881 is a Host Authorization open redirect vulnerability in Rails Action Pack
+      that affects applications using the Host Authorization middleware. The vulnerability occurs
+      when specially crafted Host headers are used in combination with certain allowed host formats,
+      particularly when allowed hosts contain leading dots. This can cause the Host Authorization
       middleware to redirect users to malicious websites, enabling phishing attacks and session hijacking.
       """,
       references: [
@@ -196,7 +196,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
   @doc """
   Returns AST enhancement rules to reduce false positives.
 
-  This enhancement helps distinguish between actual Host Authorization vulnerabilities 
+  This enhancement helps distinguish between actual Host Authorization vulnerabilities
   and safe redirect patterns in Rails applications.
 
   ## Examples
@@ -204,15 +204,15 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202122881 do
       iex> enhancement = Rsolv.Security.Patterns.Rails.Cve202122881.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Rails.Cve202122881.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Rails.Cve202122881.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Rails.Cve202122881.ast_enhancement()
       iex> "redirect_to" in enhancement.ast_rules.redirect_analysis.redirect_methods
       true

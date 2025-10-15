@@ -6,23 +6,23 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalConcat do
     fs.readFile("./uploads/" + filename)
     fs.writeFile("/tmp/" + req.body.name, data)
     const content = fs.readFileSync(`./data/${userFile}`)
-    
+
   Safe alternatives:
     fs.readFile(path.join("./uploads", path.basename(filename)))
     const safeName = sanitizeFilename(req.body.name); fs.writeFile(path.join("/tmp", safeName), data)
     if (isPathSafe(userFile)) { fs.readFile(path.join("./data", userFile)) }
-    
-  String concatenation to build file paths is one of the most common causes of 
-  path traversal vulnerabilities. Unlike path.join(), which provides some path 
-  normalization, raw string concatenation offers no protection against directory 
+
+  String concatenation to build file paths is one of the most common causes of
+  path traversal vulnerabilities. Unlike path.join(), which provides some path
+  normalization, raw string concatenation offers no protection against directory
   traversal sequences like "../".
 
   ## Vulnerability Details
 
-  When developers build file paths using string concatenation (+ operator) or 
-  template literals (${}) with user input, they create a direct vector for 
-  path traversal attacks. The concatenation happens at the string level with 
-  no validation or normalization, making it trivial for attackers to escape 
+  When developers build file paths using string concatenation (+ operator) or
+  template literals (${}) with user input, they create a direct vector for
+  path traversal attacks. The concatenation happens at the string level with
+  no validation or normalization, making it trivial for attackers to escape
   the intended directory structure.
 
   ### Attack Example
@@ -87,27 +87,27 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalConcat do
   @doc """
   Comprehensive vulnerability metadata for path traversal via string concatenation.
 
-  This metadata documents the specific risks of using string concatenation to build 
+  This metadata documents the specific risks of using string concatenation to build
   file paths, including attack vectors and recent vulnerability research.
   """
   def vulnerability_metadata do
     %{
       description: """
-      Path traversal via string concatenation occurs when file paths are constructed 
-      by directly concatenating user input with base directory paths using the + 
-      operator or template literals (${}) without proper validation. Unlike path.join() 
-      which provides some normalization, string concatenation offers no protection 
-      against directory traversal sequences like "../", making it one of the most 
+      Path traversal via string concatenation occurs when file paths are constructed
+      by directly concatenating user input with base directory paths using the +
+      operator or template literals (${}) without proper validation. Unlike path.join()
+      which provides some normalization, string concatenation offers no protection
+      against directory traversal sequences like "../", making it one of the most
       common and dangerous path traversal vectors.
 
-      This vulnerability type is particularly dangerous because it's intuitive for 
-      developers to write but provides zero built-in security. The concatenation 
-      happens at the string level with no awareness of filesystem semantics, allowing 
-      attackers to easily escape intended directory boundaries using relative path 
+      This vulnerability type is particularly dangerous because it's intuitive for
+      developers to write but provides zero built-in security. The concatenation
+      happens at the string level with no awareness of filesystem semantics, allowing
+      attackers to easily escape intended directory boundaries using relative path
       sequences.
 
-      Recent security research shows that string concatenation path vulnerabilities 
-      account for over 60% of path traversal CVEs in Node.js applications, making 
+      Recent security research shows that string concatenation path vulnerabilities
+      account for over 60% of path traversal CVEs in Node.js applications, making
       this pattern a critical security concern for any application handling file operations.
       """,
       references: [
@@ -195,7 +195,7 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalConcat do
         }
       ],
       detection_notes: """
-      This pattern detects file system operations where string concatenation or 
+      This pattern detects file system operations where string concatenation or
       template literals are used to build file paths. Key detection indicators:
 
       1. File system functions: readFile, writeFile, unlink, mkdir, rmdir, access, stat
@@ -287,19 +287,19 @@ defmodule Rsolv.Security.Patterns.Javascript.PathTraversalConcat do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalConcat.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalConcat.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "BinaryExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalConcat.ast_enhancement()
       iex> enhancement.ast_rules.operator
       "+"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalConcat.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PathTraversalConcat.ast_enhancement()
       iex> "building_url_not_path" in Map.keys(enhancement.confidence_rules.adjustments)
       true

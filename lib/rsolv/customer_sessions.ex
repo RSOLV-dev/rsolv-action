@@ -211,7 +211,7 @@ defmodule Rsolv.CustomerSessions do
           Logger.info("Successfully joined Mnesia cluster with nodes: #{inspect(nodes)}")
 
           # Wait for tables to sync
-          case :mnesia.wait_for_tables([:schema, @table_name], 10000) do
+          case :mnesia.wait_for_tables([:schema, @table_name], 10_000) do
             :ok ->
               Logger.info("Tables synced successfully")
 
@@ -323,7 +323,7 @@ defmodule Rsolv.CustomerSessions do
           add_table_copy_safe(:disc_copies)
 
         length(ram_nodes) > 0 ->
-          # Table uses ram_copies, add ourselves as ram_copies  
+          # Table uses ram_copies, add ourselves as ram_copies
           add_table_copy_safe(:ram_copies)
 
         length(disc_only_nodes) > 0 ->

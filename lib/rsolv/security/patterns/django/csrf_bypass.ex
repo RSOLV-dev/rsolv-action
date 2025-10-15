@@ -12,7 +12,7 @@ defmodule Rsolv.Security.Patterns.Django.CsrfBypass do
   a web application. Django provides built-in CSRF protection through:
 
   - CsrfViewMiddleware that validates tokens
-  - {% csrf_token %} template tag for forms  
+  - {% csrf_token %} template tag for forms
   - CSRF cookie and header validation
   - Secure cookie settings
 
@@ -35,20 +35,20 @@ defmodule Rsolv.Security.Patterns.Django.CsrfBypass do
           amount = request.POST.get('amount')
           recipient = request.POST.get('recipient')
           process_transfer(amount, recipient)
-          
+
       # VULNERABLE - Form without CSRF token
       <form method="post" action="/transfer">
           <input type="text" name="amount">
           <input type="submit" value="Transfer">
       </form>
-      
+
       # SAFE - CSRF protected by default
       def transfer_funds(request):
           # CsrfViewMiddleware validates token
           amount = request.POST.get('amount')
           recipient = request.POST.get('recipient')
           process_transfer(amount, recipient)
-      
+
       # SAFE - Form with CSRF token
       <form method="post" action="/transfer">
           {% csrf_token %}

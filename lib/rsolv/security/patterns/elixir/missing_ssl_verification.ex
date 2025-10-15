@@ -2,13 +2,13 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
   @moduledoc """
   Missing SSL Certificate Verification vulnerability pattern for Elixir applications.
 
-  This pattern detects HTTP client configurations that disable SSL/TLS certificate 
-  verification, enabling man-in-the-middle (MITM) attacks and compromising the 
+  This pattern detects HTTP client configurations that disable SSL/TLS certificate
+  verification, enabling man-in-the-middle (MITM) attacks and compromising the
   confidentiality and integrity of communications.
 
   ## Vulnerability Details
 
-  Missing SSL verification occurs when applications disable certificate validation 
+  Missing SSL verification occurs when applications disable certificate validation
   for HTTPS connections:
   - Using verify: :verify_none in SSL options
   - Using hackney: [:insecure] flag
@@ -64,13 +64,13 @@ defmodule Rsolv.Security.Patterns.Elixir.MissingSslVerification do
 
   ## Attack Scenarios
 
-  1. **MITM Attack**: Attacker intercepts HTTPS traffic between client and server, 
+  1. **MITM Attack**: Attacker intercepts HTTPS traffic between client and server,
      presenting their own certificate which is accepted due to disabled verification
 
-  2. **Credential Theft**: Attacker sets up fake API endpoint, steals authentication 
+  2. **Credential Theft**: Attacker sets up fake API endpoint, steals authentication
      tokens and sensitive data sent by clients with disabled SSL verification
 
-  3. **Data Manipulation**: Attacker modifies API responses in transit, injecting 
+  3. **Data Manipulation**: Attacker modifies API responses in transit, injecting
      malicious data or commands without detection
 
   ## References

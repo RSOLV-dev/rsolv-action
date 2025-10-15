@@ -6,20 +6,20 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
     const password = "admin123"
     let dbPassword = 'secretpass'
     var config = { password: "mysecret123" }
-    
+
   Safe alternatives:
     const password = process.env.DB_PASSWORD
     const password = await secretManager.getSecret('db-password')
     const password = config.get('database.password')
-    
-  Hardcoded passwords in source code represent one of the most critical security 
-  vulnerabilities in software development. This practice exposes sensitive 
-  authentication credentials to anyone with access to the codebase, including 
+
+  Hardcoded passwords in source code represent one of the most critical security
+  vulnerabilities in software development. This practice exposes sensitive
+  authentication credentials to anyone with access to the codebase, including
   developers, version control systems, code repositories, and potentially attackers.
 
   ## Vulnerability Details
 
-  Hardcoded passwords violate fundamental security principles and create multiple 
+  Hardcoded passwords violate fundamental security principles and create multiple
   attack vectors:
 
   1. **Source Code Exposure**: Passwords visible in plain text to anyone with code access
@@ -46,9 +46,9 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
   ```
 
   ### Modern Attack Scenarios
-  Hardcoded passwords enable numerous attack vectors including unauthorized database 
-  access, API abuse, privilege escalation, and lateral movement within systems. 
-  Attackers regularly scan public repositories for exposed credentials, making this 
+  Hardcoded passwords enable numerous attack vectors including unauthorized database
+  access, API abuse, privilege escalation, and lateral movement within systems.
+  Attackers regularly scan public repositories for exposed credentials, making this
   a high-priority target for both automated tools and manual exploitation.
   """
 
@@ -104,31 +104,31 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
   @doc """
   Comprehensive vulnerability metadata for hardcoded passwords.
 
-  This metadata documents the critical security risks of storing passwords directly 
+  This metadata documents the critical security risks of storing passwords directly
   in source code and provides authoritative guidance for secure credential management.
   """
   def vulnerability_metadata do
     %{
       description: """
-      Hardcoded passwords represent one of the most critical and easily exploitable 
-      security vulnerabilities in software development. This practice involves storing 
-      authentication credentials directly in source code, making them visible to anyone 
+      Hardcoded passwords represent one of the most critical and easily exploitable
+      security vulnerabilities in software development. This practice involves storing
+      authentication credentials directly in source code, making them visible to anyone
       with access to the codebase, version control history, or deployment artifacts.
 
-      The vulnerability is particularly dangerous because it combines high impact with 
-      trivial exploitation. Once discovered, hardcoded passwords provide immediate 
-      unauthorized access to systems, databases, APIs, and other sensitive resources. 
-      The exposure is persistent and difficult to remediate completely, as passwords 
+      The vulnerability is particularly dangerous because it combines high impact with
+      trivial exploitation. Once discovered, hardcoded passwords provide immediate
+      unauthorized access to systems, databases, APIs, and other sensitive resources.
+      The exposure is persistent and difficult to remediate completely, as passwords
       may remain in version control history even after being removed from current code.
 
-      Modern development practices, including public repositories, CI/CD pipelines, 
-      and automated code scanning, have made hardcoded passwords increasingly risky. 
-      Attackers routinely scan GitHub and other platforms for exposed credentials, 
-      often gaining access to production systems within hours of code commits containing 
+      Modern development practices, including public repositories, CI/CD pipelines,
+      and automated code scanning, have made hardcoded passwords increasingly risky.
+      Attackers routinely scan GitHub and other platforms for exposed credentials,
+      often gaining access to production systems within hours of code commits containing
       hardcoded passwords.
 
-      Beyond direct security risks, hardcoded passwords violate compliance requirements, 
-      complicate credential rotation, prevent proper access management, and create 
+      Beyond direct security risks, hardcoded passwords violate compliance requirements,
+      complicate credential rotation, prevent proper access management, and create
       operational challenges for teams managing multiple environments and deployment scenarios.
       """,
       references: [
@@ -215,7 +215,7 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
         }
       ],
       detection_notes: """
-      This pattern detects variable assignments where password-related identifiers 
+      This pattern detects variable assignments where password-related identifiers
       (password, passwd, pwd) are assigned string literals of 4 or more characters.
       The detection covers:
 
@@ -226,10 +226,10 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
       5. Case variations: password, PASSWORD, Password
       6. Common abbreviations: passwd, pwd
 
-      The pattern uses a minimum length of 4 characters to reduce false positives 
-      from test data or placeholder values while catching real passwords. The regex 
-      is designed to be sensitive enough to catch hardcoded credentials while 
-      avoiding matches on password validation logic, form field definitions, or 
+      The pattern uses a minimum length of 4 characters to reduce false positives
+      from test data or placeholder values while catching real passwords. The regex
+      is designed to be sensitive enough to catch hardcoded credentials while
+      avoiding matches on password validation logic, form field definitions, or
       comment text discussing password security.
       """,
       safe_alternatives: [
@@ -327,15 +327,15 @@ defmodule Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "VariableDeclarator"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword.ast_enhancement()
       iex> "Literal" in enhancement.ast_rules.value_types
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.HardcodedSecretPassword.ast_enhancement()
       iex> enhancement.min_confidence
       0.8

@@ -71,9 +71,9 @@ defmodule Rsolv.APIIntegrationTest do
 
     test "migrations are up to date" do
       query = """
-      SELECT version 
-      FROM schema_migrations 
-      ORDER BY version DESC 
+      SELECT version
+      FROM schema_migrations
+      ORDER BY version DESC
       LIMIT 5
       """
 

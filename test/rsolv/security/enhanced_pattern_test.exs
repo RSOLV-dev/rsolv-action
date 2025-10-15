@@ -159,7 +159,7 @@ defmodule Rsolv.Security.EnhancedPatternTest do
     end
 
     test "missing_error_logging_enhanced detects catch blocks" do
-      # Get all enterprise patterns to access missing_error_logging  
+      # Get all enterprise patterns to access missing_error_logging
       patterns = JavascriptEnhanced.all(:enterprise)
       pattern = Enum.find(patterns, fn p -> String.contains?(p.id, "logging") end)
 

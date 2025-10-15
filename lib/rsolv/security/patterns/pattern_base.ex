@@ -160,7 +160,7 @@ defmodule Rsolv.Security.Patterns.PatternBase do
                 _ -> []
               end
 
-            # If no frameworks provided but pattern requires Rails, 
+            # If no frameworks provided but pattern requires Rails,
             # apply Rails-specific file targeting
             if provided_frameworks == [] && "rails" in pattern_frameworks do
               applies_to_rails_file?(pattern_meta, file_path)
@@ -365,7 +365,7 @@ defmodule Rsolv.Security.Patterns.PatternBase do
                 String.contains?(file_path, "app/models/")
             end
 
-          # Parameter filtering patterns target controllers  
+          # Parameter filtering patterns target controllers
           :input_validation ->
             if String.contains?(pattern.id, "strong_param") do
               String.contains?(file_path, "controller") ||

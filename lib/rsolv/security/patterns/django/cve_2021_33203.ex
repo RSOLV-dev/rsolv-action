@@ -23,10 +23,10 @@ defmodule Rsolv.Security.Patterns.Django.Cve202133203 do
 
       # Vulnerable URL pattern
       path('admin/doc/', include('django.contrib.admindocs.urls'))
-      
+
       # Malicious request
       GET /admin/doc/templates//etc/passwd/
-      
+
       # This allows checking for file existence outside template directories
 
   ## Safe Implementation
@@ -34,7 +34,7 @@ defmodule Rsolv.Security.Patterns.Django.Cve202133203 do
       # Django 3.2.4+ includes proper path validation
       from django.utils._os import safe_join
       template_path = safe_join(template_dir, template_name)
-      
+
       # Or disable admindocs if not needed
       # Remove 'django.contrib.admindocs' from INSTALLED_APPS
   """
@@ -326,7 +326,7 @@ INSTALLED_APPS = [
                 # Resolve absolute paths
                 base = Path(base_dir).resolve()
                 target = Path(base_dir, template_path).resolve()
-                
+
                 # Check if target is within base directory
                 target.relative_to(base)
                 return str(target)
@@ -352,21 +352,21 @@ INSTALLED_APPS = [
         class AdminDocsSecurityMiddleware:
             def __init__(self, get_response):
                 self.get_response = get_response
-                
+
             def __call__(self, request):
                 # Block admindocs in production
                 if not settings.DEBUG and request.path.startswith('/admin/doc/'):
                     return HttpResponseForbidden("Admindocs disabled in production")
-                
+
                 # Additional IP restrictions for admindocs
                 if request.path.startswith('/admin/doc/'):
                     allowed_ips = getattr(settings, 'ADMINDOCS_ALLOWED_IPS', [])
                     client_ip = self.get_client_ip(request)
                     if allowed_ips and client_ip not in allowed_ips:
                         return HttpResponseForbidden("IP not allowed for admindocs")
-                
+
                 return self.get_response(request)
-            
+
             def get_client_ip(self, request):
                 x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
                 if x_forwarded_for:
@@ -427,11 +427,11 @@ INSTALLED_APPS = [
           class SecureTemplateDetailView(TemplateDetailView):
               def get_template(self):
                   template = self.kwargs.get('template', '')
-                  
+
                   # Validate template parameter
                   if not template or '..' in template:
                       raise Http404("Invalid template")
-                  
+
                   # Use safe_join for path operations
                   for template_dir in self.get_template_dirs():
                       try:
@@ -441,7 +441,7 @@ INSTALLED_APPS = [
                       except ValueError:
                           # safe_join detected path traversal
                           continue
-                  
+
                   raise Http404("Template not found")
           """,
           """
@@ -452,14 +452,14 @@ INSTALLED_APPS = [
           if 'django.contrib.admindocs' in settings.INSTALLED_APPS:
               # Restrict to superusers only
               settings.ADMINDOCS_REQUIRE_SUPERUSER = True
-              
+
               # IP whitelist for admindocs access
               settings.ADMINDOCS_ALLOWED_IPS = [
                   '127.0.0.1',
                   '::1',
                   # Add your office IPs
               ]
-              
+
               # Disable in production
               if not settings.DEBUG:
                   import warnings

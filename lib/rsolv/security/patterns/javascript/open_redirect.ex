@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
     res.redirect(req.query.url)
     window.location.href = params.redirect
     location.replace(userInput)
-    
+
   Safe alternatives:
     if (isValidRedirect(url)) { res.redirect(url) }
     res.redirect(ALLOWED_REDIRECTS[req.query.type])
     res.redirect('/dashboard')
-    
+
   Open redirect vulnerabilities occur when an application redirects users to a
   URL that is partially or fully controlled by an attacker. This can be exploited
   for phishing attacks, where users are redirected to malicious sites that appear
@@ -70,40 +70,40 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> pattern.id
       "js-open-redirect"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> pattern.severity
       :medium
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> pattern.cwe_id
       "CWE-601"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> vulnerable = "res.redirect(req.query.url)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> safe = "res.redirect('/dashboard')"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> vulnerable = "window.location.href = params.redirect"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> vulnerable = "location.replace(userInput)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> safe = "if (isValidRedirect(url)) { res.redirect(url) }"
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.OpenRedirect.pattern()
       iex> pattern.recommendation
       "Validate redirect URLs against a whitelist of allowed destinations."
@@ -389,19 +389,19 @@ defmodule Rsolv.Security.Patterns.Javascript.OpenRedirect do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> enhancement.ast_rules.callee.property
       "redirect"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.OpenRedirect.ast_enhancement()
       iex> "allowlist_check" in Map.keys(enhancement.confidence_rules.adjustments)
       true

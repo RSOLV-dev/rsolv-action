@@ -188,7 +188,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
       safe_code = """
       class TemplatesController < ApplicationController
         ALLOWED_TEMPLATES = %w[user admin guest].freeze
-        
+
         def show
           template = params[:type]
           if ALLOWED_TEMPLATES.include?(template)
@@ -214,7 +214,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
           @user = User.find(params[:id])
           render :show
         end
-        
+
         def index
           @users = User.all
           render
@@ -235,7 +235,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         def display
           # DEPRECATED: This was vulnerable to CVE-2019-5418
           # render file: params[:template]
-          
+
           # Now using safe approach
           render :display
         end
@@ -255,11 +255,11 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418Test do
         def data
           render json: { status: params[:status] }
         end
-        
+
         def xml_data
           render xml: @data.to_xml
         end
-        
+
         def plain_text
           render plain: "Hello World"
         end

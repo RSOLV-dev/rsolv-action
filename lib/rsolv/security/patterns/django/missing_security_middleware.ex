@@ -16,7 +16,7 @@ defmodule Rsolv.Security.Patterns.Django.MissingSecurityMiddleware do
      - Strict-Transport-Security header
      - X-Content-Type-Options header
      - X-Frame-Options header support
-     
+
   2. **CsrfViewMiddleware**: Protects against Cross-Site Request Forgery attacks
 
   3. **XFrameOptionsMiddleware**: Prevents clickjacking attacks
@@ -37,13 +37,13 @@ defmodule Rsolv.Security.Patterns.Django.MissingSecurityMiddleware do
           'django.middleware.common.CommonMiddleware',
           'django.contrib.sessions.middleware.SessionMiddleware',
       ]
-      
+
       # VULNERABLE - Missing SecurityMiddleware
       MIDDLEWARE = [
           'django.middleware.csrf.CsrfViewMiddleware',
           'django.middleware.common.CommonMiddleware',
       ]
-      
+
       # SAFE - Includes all security middleware
       MIDDLEWARE = [
           'django.middleware.security.SecurityMiddleware',
@@ -300,13 +300,13 @@ defmodule Rsolv.Security.Patterns.Django.MissingSecurityMiddleware do
           def test_security_middleware_present(self):
               from django.conf import settings
               middleware = settings.MIDDLEWARE
-              
+
               required = [
                   'django.middleware.security.SecurityMiddleware',
                   'django.middleware.csrf.CsrfViewMiddleware',
                   'django.middleware.clickjacking.XFrameOptionsMiddleware',
               ]
-              
+
               for mw in required:
                   self.assertIn(mw, middleware)
           """

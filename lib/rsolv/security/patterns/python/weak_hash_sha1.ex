@@ -217,11 +217,11 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
   def vulnerability_metadata do
     %{
       description: """
-      SHA-1 (Secure Hash Algorithm 1) is a cryptographic hash function that was 
-      officially deprecated by NIST in 2011 and has been practically broken since 
-      2017 when Google demonstrated the first public collision. In Python, 
-      hashlib.sha1() remains available but should never be used for security 
-      purposes. Modern attacks can find SHA-1 collisions for as little as $45,000 
+      SHA-1 (Secure Hash Algorithm 1) is a cryptographic hash function that was
+      officially deprecated by NIST in 2011 and has been practically broken since
+      2017 when Google demonstrated the first public collision. In Python,
+      hashlib.sha1() remains available but should never be used for security
+      purposes. Modern attacks can find SHA-1 collisions for as little as $45,000
       worth of cloud computing, making it accessible to well-funded attackers.
 
       Python developers commonly misuse SHA-1 for:
@@ -231,10 +231,10 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
       4. Git commits (vulnerable to collision attacks)
       5. API authentication tokens (forgeable)
 
-      The 2017 SHAttered attack demonstrated practical collision generation, and 
-      the 2020 chosen-prefix collision attack reduced costs even further. Major 
-      browsers have deprecated SHA-1 certificates, and Git has moved to hardened 
-      SHA-1 to mitigate risks. Any continued use of SHA-1 for security purposes 
+      The 2017 SHAttered attack demonstrated practical collision generation, and
+      the 2020 chosen-prefix collision attack reduced costs even further. Major
+      browsers have deprecated SHA-1 certificates, and Git has moved to hardened
+      SHA-1 to mitigate risks. Any continued use of SHA-1 for security purposes
       is a critical vulnerability.
       """,
       references: [
@@ -398,11 +398,11 @@ defmodule Rsolv.Security.Patterns.Python.WeakHashSha1 do
       iex> enhancement = Rsolv.Security.Patterns.Python.WeakHashSha1.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.WeakHashSha1.ast_enhancement()
       iex> enhancement.min_confidence
       0.75
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.WeakHashSha1.ast_enhancement()
       iex> length(enhancement.ast_rules)
       2

@@ -5,11 +5,11 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
   Detects dangerous patterns like:
     query = "SELECT * FROM users WHERE id = " + userId;
     db.query("SELECT * FROM users WHERE name = '" + userName + "'");
-    
+
   Safe patterns:
     query = db.prepare("SELECT * FROM users WHERE id = ?", [userId]);
     db.query("SELECT * FROM users WHERE id = $1", [userId]);
-    
+
   Note: This pattern can detect SQL injection in mixed-language files,
   such as JavaScript files that construct SQL queries.
 
@@ -44,9 +44,9 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
   def vulnerability_metadata do
     %{
       description: """
-      SQL injection is a web security vulnerability that allows an attacker to interfere 
-      with the queries that an application makes to its database. It generally allows an 
-      attacker to view data that they are not normally able to retrieve, modify or delete 
+      SQL injection is a web security vulnerability that allows an attacker to interfere
+      with the queries that an application makes to its database. It generally allows an
+      attacker to view data that they are not normally able to retrieve, modify or delete
       data, and in some cases execute administrative operations on the database.
       """,
       references: [
@@ -176,19 +176,19 @@ defmodule Rsolv.Security.Patterns.Javascript.SqlInjectionConcat do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "BinaryExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
       iex> enhancement.ast_rules.operator
       "+"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.SqlInjectionConcat.ast_enhancement()
       iex> "uses_parameterized_query" in Map.keys(enhancement.confidence_rules.adjustments)
       true

@@ -21,13 +21,13 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
     def search
       username = params[:username]  # User input: "admin' or '1'='1"
       password = params[:password]  # User input: "anything"
-      
+
       # VULNERABLE: Direct interpolation into XPath
       xpath = "//user[username='\#{username}' and password='\#{password}']"
       user = xml_doc.xpath(xpath).first
       # Results in: //user[username='admin' or '1'='1' and password='anything']
       # This bypasses authentication by making the condition always true
-      
+
       if user
         session[:user_id] = user.attribute('id').value
         redirect_to dashboard_path
@@ -97,7 +97,7 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
 
       **Common Ruby XML Libraries Affected:**
       - **Nokogiri**: Most popular Ruby HTML/XML parser
-      - **REXML**: Ruby's built-in XML library  
+      - **REXML**: Ruby's built-in XML library
       - **LibXML**: Ruby bindings for libxml2
       - **XPath**: Direct XPath parsing libraries
 
@@ -286,7 +286,7 @@ defmodule Rsolv.Security.Patterns.Ruby.XpathInjection do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XpathInjection.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.XpathInjection.ast_enhancement()
       iex> enhancement.min_confidence
       0.75

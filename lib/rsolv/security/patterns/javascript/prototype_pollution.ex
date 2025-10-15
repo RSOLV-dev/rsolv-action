@@ -6,24 +6,24 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollution do
     obj[key] = value
     Object.assign(config, req.body)
     merge(target, userInput)
-    
+
   Safe alternatives:
     if (!key.includes('__proto__')) { obj[key] = value }
     Object.assign(config, sanitize(req.body))
     const safe = Object.create(null); safe[key] = value
-    
-  Prototype pollution is a vulnerability specific to JavaScript that allows attackers 
-  to inject properties into existing JavaScript language construct prototypes, such as 
-  objects. An attacker manipulates these prototypes to cause the application to execute 
-  attacker-controlled property values, potentially leading to denial of service or 
+
+  Prototype pollution is a vulnerability specific to JavaScript that allows attackers
+  to inject properties into existing JavaScript language construct prototypes, such as
+  objects. An attacker manipulates these prototypes to cause the application to execute
+  attacker-controlled property values, potentially leading to denial of service or
   remote code execution.
 
   ## Vulnerability Details
 
-  Prototype pollution occurs when an application recursively merges or assigns user 
-  input to JavaScript objects without proper validation, particularly when handling 
-  nested objects that may contain special property names like `__proto__`, `constructor`, 
-  or `prototype`. This can allow attackers to modify the behavior of all objects 
+  Prototype pollution occurs when an application recursively merges or assigns user
+  input to JavaScript objects without proper validation, particularly when handling
+  nested objects that may contain special property names like `__proto__`, `constructor`,
+  or `prototype`. This can allow attackers to modify the behavior of all objects
   inheriting from the polluted prototype.
 
   ### Attack Example
@@ -56,10 +56,10 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollution do
   ```
 
   ### Modern Attack Scenarios
-  Prototype pollution vulnerabilities are particularly dangerous in Node.js applications 
-  where they can lead to privilege escalation, authentication bypass, denial of service, 
-  and in some cases remote code execution. Common attack vectors include manipulating 
-  Express.js middleware configuration, polluting template engine options, bypassing 
+  Prototype pollution vulnerabilities are particularly dangerous in Node.js applications
+  where they can lead to privilege escalation, authentication bypass, denial of service,
+  and in some cases remote code execution. Common attack vectors include manipulating
+  Express.js middleware configuration, polluting template engine options, bypassing
   security checks, and corrupting application state.
 
   The vulnerability is especially prevalent in applications that:
@@ -69,10 +69,10 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollution do
   - Use recursive assignment patterns without key validation
   - Process URL query parameters that get merged into objects
 
-  Modern frameworks and libraries have increasingly implemented protections against 
-  prototype pollution, but legacy code and custom implementations remain vulnerable. 
-  The attack surface has expanded with the popularity of JSON APIs, configuration 
-  management systems, and microservice architectures that frequently merge user-provided 
+  Modern frameworks and libraries have increasingly implemented protections against
+  prototype pollution, but legacy code and custom implementations remain vulnerable.
+  The attack surface has expanded with the popularity of JSON APIs, configuration
+  management systems, and microservice architectures that frequently merge user-provided
   data structures.
   """
 
@@ -87,21 +87,21 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollution do
       iex> pattern = Rsolv.Security.Patterns.Javascript.PrototypePollution.pattern()
       iex> pattern.id
       "js-prototype-pollution"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.PrototypePollution.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.PrototypePollution.pattern()
       iex> vulnerable = "obj[key] = value"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.PrototypePollution.pattern()
       iex> vulnerable = "Object.assign(config, req.body)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.PrototypePollution.pattern()
       iex> safe = "map.set(key, value)"
       iex> Regex.match?(pattern.regex, safe)
@@ -156,45 +156,45 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollution do
   @doc """
   Comprehensive vulnerability metadata for prototype pollution vulnerabilities.
 
-  This metadata documents the critical security implications of unsafe object 
-  property assignment patterns and provides authoritative guidance for secure 
+  This metadata documents the critical security implications of unsafe object
+  property assignment patterns and provides authoritative guidance for secure
   object manipulation in JavaScript applications.
   """
   def vulnerability_metadata do
     %{
       description: """
-      Prototype pollution represents a critical vulnerability class specific to 
-      JavaScript that exploits the language's prototype-based inheritance system 
-      to inject malicious properties into object prototypes. Unlike traditional 
-      injection attacks that target specific application components, prototype 
-      pollution can affect the global state of JavaScript applications, making 
+      Prototype pollution represents a critical vulnerability class specific to
+      JavaScript that exploits the language's prototype-based inheritance system
+      to inject malicious properties into object prototypes. Unlike traditional
+      injection attacks that target specific application components, prototype
+      pollution can affect the global state of JavaScript applications, making
       it an extremely powerful and dangerous attack vector.
 
-      The vulnerability stems from JavaScript's dynamic nature and prototype chain 
-      mechanism, where objects inherit properties from their prototypes. When 
-      applications merge or assign user-controlled data to objects without proper 
-      key validation, attackers can manipulate special property names like 
-      `__proto__`, `constructor`, or `prototype` to modify the behavior of all 
+      The vulnerability stems from JavaScript's dynamic nature and prototype chain
+      mechanism, where objects inherit properties from their prototypes. When
+      applications merge or assign user-controlled data to objects without proper
+      key validation, attackers can manipulate special property names like
+      `__proto__`, `constructor`, or `prototype` to modify the behavior of all
       objects inheriting from the polluted prototype.
 
-      Prototype pollution is particularly devastating in Node.js server-side 
-      applications where a single successful attack can compromise the entire 
-      application instance. The attack can lead to authentication bypass, privilege 
-      escalation, denial of service, and in sophisticated scenarios, remote code 
+      Prototype pollution is particularly devastating in Node.js server-side
+      applications where a single successful attack can compromise the entire
+      application instance. The attack can lead to authentication bypass, privilege
+      escalation, denial of service, and in sophisticated scenarios, remote code
       execution through template engine exploitation or configuration manipulation.
 
-      The complexity of modern JavaScript applications, with their extensive use 
-      of object merging utilities, JSON configuration processing, and dynamic 
-      property assignment, has significantly expanded the attack surface for 
-      prototype pollution. Popular libraries like lodash, jQuery, and numerous 
-      npm packages have historically contained prototype pollution vulnerabilities, 
+      The complexity of modern JavaScript applications, with their extensive use
+      of object merging utilities, JSON configuration processing, and dynamic
+      property assignment, has significantly expanded the attack surface for
+      prototype pollution. Popular libraries like lodash, jQuery, and numerous
+      npm packages have historically contained prototype pollution vulnerabilities,
       affecting millions of applications worldwide.
 
-      The subtlety of prototype pollution makes it particularly dangerous, as 
-      polluted properties may not immediately manifest their effects, leading to 
-      delayed exploitation and difficult-to-debug security issues. The global 
-      nature of prototype pollution means that a single vulnerable code path can 
-      compromise the security assumptions of entirely unrelated application 
+      The subtlety of prototype pollution makes it particularly dangerous, as
+      polluted properties may not immediately manifest their effects, leading to
+      delayed exploitation and difficult-to-debug security issues. The global
+      nature of prototype pollution means that a single vulnerable code path can
+      compromise the security assumptions of entirely unrelated application
       components, making comprehensive protection essential.
       """,
       references: [
@@ -295,7 +295,7 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollution do
         }
       ],
       detection_notes: """
-      This pattern detects unsafe object property assignment and merging operations 
+      This pattern detects unsafe object property assignment and merging operations
       that are susceptible to prototype pollution attacks. The detection covers:
 
       1. Dynamic property assignment: obj[key] = value patterns
@@ -304,15 +304,15 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollution do
       4. For-in loops: for (key in userInput) assignment patterns
       5. Direct user input merging: Functions receiving req.body, params, query data
 
-      The regex pattern identifies property assignment using bracket notation followed 
-      by assignment operators, Object.assign calls with user-controlled source objects, 
-      common merge utility invocations, and for-in iteration patterns that directly 
+      The regex pattern identifies property assignment using bracket notation followed
+      by assignment operators, Object.assign calls with user-controlled source objects,
+      common merge utility invocations, and for-in iteration patterns that directly
       assign user input to target objects.
 
-      The detection prioritizes high sensitivity to catch various object manipulation 
-      patterns while focusing on scenarios where user-controlled data flows into 
-      object property assignment operations. Special attention is given to Express.js 
-      request object properties (req.body, req.query, req.params) and other common 
+      The detection prioritizes high sensitivity to catch various object manipulation
+      patterns while focusing on scenarios where user-controlled data flows into
+      object property assignment operations. Special attention is given to Express.js
+      request object properties (req.body, req.query, req.params) and other common
       user input sources.
       """,
       safe_alternatives: [
@@ -399,19 +399,19 @@ defmodule Rsolv.Security.Patterns.Javascript.PrototypePollution do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PrototypePollution.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PrototypePollution.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "AssignmentExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PrototypePollution.ast_enhancement()
       iex> enhancement.ast_rules.left_side_analysis.is_computed_member_expression
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PrototypePollution.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.PrototypePollution.ast_enhancement()
       iex> "uses_map_not_object" in Map.keys(enhancement.confidence_rules.adjustments)
       true

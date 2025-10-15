@@ -10,9 +10,9 @@ defmodule RsolvWeb.FeatureFlagsHelper do
   specific features to be enabled.
 
   ## Examples
-      
+
       setup :enable_admin_dashboards
-      
+
       # Or manually with specific features
       setup do
         RsolvWeb.FeatureFlagsHelper.enable_features([:admin_dashboard, :metrics_dashboard])
@@ -48,7 +48,7 @@ defmodule RsolvWeb.FeatureFlagsHelper do
   This should be called in an `on_exit` callback to clean up after tests.
 
   ## Examples
-      
+
       setup do
         on_exit(fn -> RsolvWeb.FeatureFlagsHelper.reset_features() end)
         :ok

@@ -5,13 +5,13 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
   Detects dangerous patterns like:
     element.innerHTML = userInput
     document.getElementById('div').innerHTML = untrustedData
-    
+
   Safe alternatives:
     element.textContent = userInput
     element.innerText = userInput
     element.innerHTML = DOMPurify.sanitize(userInput)
     element.setHTML(userInput)  // New Sanitizer API
-    
+
   innerHTML is one of the most common DOM XSS sinks. It parses and executes
   any HTML/JavaScript in the assigned string, making it extremely dangerous
   when used with untrusted data.
@@ -44,12 +44,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
   def vulnerability_metadata do
     %{
       description: """
-      Cross-Site Scripting (XSS) via innerHTML occurs when untrusted data is assigned 
-      to an element's innerHTML property without proper sanitization. The innerHTML 
-      property parses the assigned string as HTML, executing any embedded JavaScript. 
-      This creates a DOM-based XSS vulnerability that can lead to session hijacking, 
-      data theft, and account takeover. DOM XSS is particularly dangerous because it 
-      happens entirely client-side, potentially bypassing server-side XSS filters and 
+      Cross-Site Scripting (XSS) via innerHTML occurs when untrusted data is assigned
+      to an element's innerHTML property without proper sanitization. The innerHTML
+      property parses the assigned string as HTML, executing any embedded JavaScript.
+      This creates a DOM-based XSS vulnerability that can lead to session hijacking,
+      data theft, and account takeover. DOM XSS is particularly dangerous because it
+      happens entirely client-side, potentially bypassing server-side XSS filters and
       Web Application Firewalls (WAFs).
       """,
       references: [
@@ -256,19 +256,19 @@ defmodule Rsolv.Security.Patterns.Javascript.XssInnerhtml do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "AssignmentExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
       iex> enhancement.ast_rules.left_side.property
       "innerHTML"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssInnerhtml.ast_enhancement()
       iex> "uses_dom_purify" in Map.keys(enhancement.confidence_rules.adjustments)
       true

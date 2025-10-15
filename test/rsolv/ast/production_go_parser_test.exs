@@ -77,10 +77,10 @@ defmodule Rsolv.AST.ProductionGoParserTest do
           // VULNERABLE: Command execution
           cmd := exec.Command("sh", "-c", userInput)
           cmd.Run()
-          
+
           // VULNERABLE: OS process start
           os.StartProcess("/bin/sh", []string{userInput}, nil)
-          
+
           // VULNERABLE: SQL query
           db, _ := sql.Open("mysql", "connection")
           query := "SELECT * FROM users WHERE name = '" + userInput + "'"
@@ -145,13 +145,13 @@ defmodule Rsolv.AST.ProductionGoParserTest do
       func (s *SecurityScanner) ScanCode(ctx context.Context, code string) error {
           // VULNERABLE: Dynamic SQL construction
           query := fmt.Sprintf("SELECT * FROM code WHERE content = '%s'", code)
-          
+
           // VULNERABLE: Process execution
           // exec.Command("sh", "-c", code).Run()
-          
+
           s.findings = append(s.findings, "SQL injection risk detected")
           s.findings = append(s.findings, "Command injection risk detected")
-          
+
           return nil
       }
 
@@ -250,7 +250,7 @@ defmodule Rsolv.AST.ProductionGoParserTest do
       func main() {
           ch := make(chan string, 10)
           go worker(ch)
-          
+
           ch <- "message1"
           ch <- "message2"
           close(ch)

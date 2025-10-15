@@ -17,7 +17,7 @@ defmodule Mix.Tasks.CreateStagingKey do
     {:ok, _} =
       Repo.query(
         """
-        INSERT INTO customers (name, email, api_key, monthly_limit, current_usage, active, plan, inserted_at, updated_at) 
+        INSERT INTO customers (name, email, api_key, monthly_limit, current_usage, active, plan, inserted_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         """,
         [
@@ -41,7 +41,7 @@ defmodule Mix.Tasks.CreateStagingKey do
     {:ok, _} =
       Repo.query(
         """
-        INSERT INTO api_keys (key, name, customer_id, permissions, active, inserted_at, updated_at) 
+        INSERT INTO api_keys (key, name, customer_id, permissions, active, inserted_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         """,
         [
@@ -61,7 +61,7 @@ defmodule Mix.Tasks.CreateStagingKey do
     {:ok, _} =
       Repo.query(
         """
-        INSERT INTO forge_accounts (customer_id, forge_type, namespace, verified_at, metadata, inserted_at, updated_at) 
+        INSERT INTO forge_accounts (customer_id, forge_type, namespace, verified_at, metadata, inserted_at, updated_at)
         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
         """,
         [
@@ -79,7 +79,7 @@ defmodule Mix.Tasks.CreateStagingKey do
     {:ok, _} =
       Repo.query(
         """
-        INSERT INTO forge_accounts (customer_id, forge_type, namespace, verified_at, metadata, inserted_at, updated_at) 
+        INSERT INTO forge_accounts (customer_id, forge_type, namespace, verified_at, metadata, inserted_at, updated_at)
         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
         """,
         [

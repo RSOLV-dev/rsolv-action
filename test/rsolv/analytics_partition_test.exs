@@ -149,9 +149,9 @@ defmodule Rsolv.AnalyticsPartitionTest do
 
       # Query for partitions
       query = """
-        SELECT tablename 
-        FROM pg_tables 
-        WHERE schemaname = 'public' 
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname = 'public'
           AND tablename LIKE 'analytics_events_%'
         ORDER BY tablename
       """
@@ -184,9 +184,9 @@ defmodule Rsolv.AnalyticsPartitionTest do
 
     query = """
       SELECT EXISTS (
-        SELECT 1 
-        FROM pg_tables 
-        WHERE schemaname = 'public' 
+        SELECT 1
+        FROM pg_tables
+        WHERE schemaname = 'public'
           AND tablename = $1
       )
     """

@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
     exec("ls " + userInput)
     execSync(`git clone ${repoUrl}`)
     child_process.exec("rm -rf " + directory)
-    
+
   Safe alternatives:
     execFile("ls", [userInput])
     spawn("git", ["clone", repoUrl])
     execFile("rm", ["-rf", directory], {cwd: "/safe/path"})
-    
+
   The exec() function spawns a shell and executes commands within that shell,
   passing any user input directly to the shell interpreter. This makes it
   extremely vulnerable to command injection attacks.
@@ -46,12 +46,12 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
   def vulnerability_metadata do
     %{
       description: """
-      Command injection via child_process.exec() occurs when user input is passed 
-      directly to the exec() or execSync() functions without proper sanitization. 
-      These functions spawn a shell to execute commands, interpreting shell metacharacters 
-      like ;, |, &, $, `, and others. Attackers can inject additional commands by 
-      including these metacharacters in their input, leading to arbitrary command 
-      execution with the privileges of the Node.js process. This is one of the most 
+      Command injection via child_process.exec() occurs when user input is passed
+      directly to the exec() or execSync() functions without proper sanitization.
+      These functions spawn a shell to execute commands, interpreting shell metacharacters
+      like ;, |, &, $, `, and others. Attackers can inject additional commands by
+      including these metacharacters in their input, leading to arbitrary command
+      execution with the privileges of the Node.js process. This is one of the most
       severe vulnerabilities as it can lead to complete system compromise.
       """,
       references: [
@@ -261,19 +261,19 @@ defmodule Rsolv.Security.Patterns.Javascript.CommandInjectionExec do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionExec.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionExec.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionExec.ast_enhancement()
       iex> enhancement.ast_rules.callee_names
       ["exec", "execSync"]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionExec.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.CommandInjectionExec.ast_enhancement()
       iex> "uses_array_args" in Map.keys(enhancement.confidence_rules.adjustments)
       true

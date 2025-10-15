@@ -27,16 +27,16 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypass do
 
       # VULNERABLE - User can bypass authentication
       skip_before_action :authenticate, if: -> { params[:skip] }
-      
+
       # VULNERABLE - Direct params usage
       skip_around_action :authorize, if: params[:bypass]
-      
+
       # VULNERABLE - eval with user input
       skip_after_action :log_action, if: -> { eval(params[:condition]) }
-      
+
       # SAFE - Predefined method
       skip_before_action :authenticate, if: :public_action?
-      
+
       # SAFE - No user input
       skip_before_action :authenticate, only: [:index, :show]
   """
@@ -176,14 +176,14 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypass do
            skip_before_action :authenticate, if: -> { params[:public] }  # VULNERABLE
            skip_before_action :authorize, if: -> { params[:skip_auth] }  # VULNERABLE
          end
-         
+
          # SAFE - Use predefined methods
          class UsersController < ApplicationController
            skip_before_action :authenticate, if: :public_endpoint?
            skip_before_action :authorize, only: [:index, :show]
-           
+
            private
-           
+
            def public_endpoint?
              %w[index show about].include?(action_name)
            end
@@ -196,7 +196,7 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypass do
            skip_before_action :authenticate_user, only: [:home, :about, :contact]
            skip_after_action :track_activity, except: [:download]
          end
-         
+
          # SAFE - Environment-based skips
          class DevelopmentController < ApplicationController
            skip_before_action :require_https, if: -> { Rails.env.development? }
@@ -209,11 +209,11 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypass do
          class PublicController < ApplicationController
            # No authentication required for any action
          end
-         
+
          class AuthenticatedController < ApplicationController
            before_action :authenticate_user!
          end
-         
+
          class Admin::BaseController < AuthenticatedController
            before_action :require_admin!
          end
@@ -226,19 +226,19 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypass do
            before_action :authenticate_user!
            before_action :check_authorization
            before_action :log_activity
-           
+
            protected
-           
+
            # Use method-based conditions, never params
            def requires_authentication?
              true  # Override in subclasses if needed
            end
-           
+
            def authenticate_user!
              return unless requires_authentication?
              # Authentication logic
            end
-         
+
          class PublicPagesController < ApplicationController
            # Override the method, not the callback
            def requires_authentication?
@@ -252,7 +252,7 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypass do
          # Search for vulnerable patterns
          # grep -r "skip_.*_action.*params" app/controllers/
          # grep -r "skip_.*_filter.*params" app/controllers/
-         
+
          # Use a security scanner
          # bundle exec brakeman -A
          ```
@@ -294,9 +294,9 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypass do
       # 2. Method-Based Conditions (Predefined Logic)
       class PostsController < SecureController
         skip_before_action :authenticate_user!, if: :public_post?
-        
+
         private
-        
+
         def public_post?
           # Check database with predefined conditions, not params
           @post = Post.find(params[:id])
@@ -312,11 +312,11 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypass do
       # 4. Explicit Public Actions
       class ApiController < ApplicationController
         PUBLIC_ACTIONS = %w[status health version].freeze
-        
+
         before_action :authenticate_api_user!, unless: :public_action?
-        
+
         private
-        
+
         def public_action?
           PUBLIC_ACTIONS.include?(action_name)
         end
@@ -325,12 +325,12 @@ defmodule Rsolv.Security.Patterns.Rails.CallbackSecurityBypass do
       # 5. Role-Based Conditions
       class AdminController < ApplicationController
         before_action :require_admin!
-        
+
         # Skip for super admins only - based on user role, not params
         skip_before_action :log_admin_action, if: :super_admin?
-        
+
         private
-        
+
         def super_admin?
           current_user&.super_admin?
         end

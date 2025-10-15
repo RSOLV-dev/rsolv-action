@@ -16,7 +16,7 @@ defmodule Rsolv.ReleaseTasks do
   ## Usage in release
 
       bin/rsolv eval "Rsolv.ReleaseTasks.migrate"
-      
+
   ## Usage in Kubernetes Job
 
       command: ["bin/rsolv", "eval", "Rsolv.ReleaseTasks.migrate"]
@@ -300,8 +300,8 @@ defmodule Rsolv.ReleaseTasks do
 
       query = """
         SELECT EXISTS (
-          SELECT 1 FROM pg_tables 
-          WHERE schemaname = 'public' 
+          SELECT 1 FROM pg_tables
+          WHERE schemaname = 'public'
             AND tablename = $1
         )
       """

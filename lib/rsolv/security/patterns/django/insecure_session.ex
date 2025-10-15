@@ -3,7 +3,7 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
   Django Insecure Session Configuration pattern for Django applications.
 
   This pattern detects insecure session cookie configurations in Django settings
-  that can lead to session hijacking, cross-site scripting (XSS), and 
+  that can lead to session hijacking, cross-site scripting (XSS), and
   man-in-the-middle attacks.
 
   ## Background
@@ -31,14 +31,14 @@ defmodule Rsolv.Security.Patterns.Django.InsecureSession do
       SESSION_COOKIE_HTTPONLY = False  # Accessible via JS
       CSRF_COOKIE_SECURE = False  # CSRF token over HTTP
       SESSION_COOKIE_SAMESITE = None  # No CSRF protection
-      
+
       # SAFE - Secure configuration
       SESSION_COOKIE_SECURE = True
       SESSION_COOKIE_HTTPONLY = True
       SESSION_COOKIE_SAMESITE = 'Strict'
       CSRF_COOKIE_SECURE = True
       CSRF_COOKIE_HTTPONLY = True
-      
+
       # SAFE - Production settings
       if not DEBUG:
           SESSION_COOKIE_SECURE = True

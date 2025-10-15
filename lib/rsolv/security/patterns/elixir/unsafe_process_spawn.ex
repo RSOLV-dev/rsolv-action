@@ -3,7 +3,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeProcessSpawn do
   Unsafe Process Spawning vulnerability pattern for Elixir applications.
 
   This pattern detects potentially dangerous process spawning that lacks proper
-  supervision and error handling, which can lead to resource exhaustion and 
+  supervision and error handling, which can lead to resource exhaustion and
   system instability.
 
   ## Vulnerability Details
@@ -58,13 +58,13 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeProcessSpawn do
 
   ## Attack Scenarios
 
-  1. **Resource Exhaustion**: Attacker triggers creation of many unsupervised 
+  1. **Resource Exhaustion**: Attacker triggers creation of many unsupervised
      processes that consume system resources without cleanup
 
   2. **System Instability**: Critical processes crash without supervision,
      causing degraded functionality or complete service failure
 
-  3. **Memory Leaks**: Crashed processes leave behind leaked memory and 
+  3. **Memory Leaks**: Crashed processes leave behind leaked memory and
      file descriptors that gradually exhaust system resources
 
   4. **Silent Failures**: Important operations fail without proper error

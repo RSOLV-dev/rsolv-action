@@ -330,12 +330,12 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
               const preTax = req.body.preTax;
               const afterTax = req.body.afterTax;
               const roth = req.body.roth;
-              
+
               // Vulnerable: Server-side JavaScript injection
               const preTaxTotal = eval(preTax);
               const afterTaxTotal = eval(afterTax);
               const rothTotal = eval(roth);
-              
+
               res.json({
                 preTax: preTaxTotal,
                 afterTax: afterTaxTotal,

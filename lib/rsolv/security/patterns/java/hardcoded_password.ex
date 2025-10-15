@@ -63,16 +63,16 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
       iex> pattern = Rsolv.Security.Patterns.Java.HardcodedPassword.pattern()
       iex> pattern.id
       "java-hardcoded-password"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.HardcodedPassword.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.HardcodedPassword.pattern()
       iex> vulnerable = "String password = \\\"admin123\\\";"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, vulnerable) end)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.HardcodedPassword.pattern()
       iex> safe = "String password = System.getenv(\\\"DB_PASSWORD\\\");"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, safe) end)
@@ -334,11 +334,11 @@ defmodule Rsolv.Security.Patterns.Java.HardcodedPassword do
       iex> enhancement = Rsolv.Security.Patterns.Java.HardcodedPassword.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.HardcodedPassword.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.HardcodedPassword.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "VariableDeclaration"

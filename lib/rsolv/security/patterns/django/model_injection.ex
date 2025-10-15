@@ -30,20 +30,20 @@ defmodule Rsolv.Security.Patterns.Django.ModelInjection do
       # VULNERABLE - Mass assignment with all POST data
       def create_user(request):
           user = User.objects.create(**request.POST)
-          
+
       # VULNERABLE - Dynamic attribute setting
       for field, value in request.POST.items():
           setattr(model, field, value)
-          
+
       # VULNERABLE - Unrestricted update
       Profile.objects.filter(id=id).update(**request.data)
-      
+
       # SAFE - Explicit field assignment
       user = User.objects.create(
           username=request.POST.get('username'),
           email=request.POST.get('email')
       )
-      
+
       # SAFE - Using ModelForm with fields restriction
       class UserForm(ModelForm):
           class Meta:
@@ -273,12 +273,12 @@ model.save(update_fields=[f for f in fields if f in allowed_fields])|,
 
         def update_profile_api(request):
             profile = request.user.profile
-            
+
             # Use fields whitelist before processing
             for field in ALLOWED_PROFILE_FIELDS:
                 if field in request.data:
                     setattr(profile, field, request.data[field])
-            
+
             profile.full_clean()  # Run model validation
             profile.save(update_fields=ALLOWED_PROFILE_FIELDS)
         """,
@@ -295,7 +295,7 @@ model.save(update_fields=[f for f in fields if f in allowed_fields])|,
 
         class UserViewSet(viewsets.ModelViewSet):
             serializer_class = UserSerializer
-            
+
             def perform_update(self, serializer):
                 # Additional validation before save
                 serializer.save()
@@ -304,16 +304,16 @@ model.save(update_fields=[f for f in fields if f in allowed_fields])|,
         # Property-based protection for sensitive fields
         class User(models.Model):
             _is_staff = models.BooleanField(default=False, db_column='is_staff')
-            
+
             @property
             def is_staff(self):
                 return self._is_staff
-            
+
             @is_staff.setter
             def is_staff(self, value):
                 # Only allow setting through specific methods
                 raise AttributeError("Cannot set is_staff directly")
-            
+
             def promote_to_staff(self, authorized_by):
                 # Controlled method with audit trail
                 if authorized_by.is_superuser:
@@ -341,18 +341,18 @@ model.save(update_fields=[f for f in fields if f in allowed_fields])|,
           class SecureModelMixin:
               # Define allowed fields per model
               ALLOWED_USER_FIELDS = []
-              
+
               @classmethod
               def create_from_request(cls, request, allowed_fields=None):
                   fields = allowed_fields or cls.ALLOWED_USER_FIELDS
                   kwargs = {}
-                  
+
                   for field in fields:
                       if field in request.POST:
                           # Validate field exists on model
                           if hasattr(cls, field):
                               kwargs[field] = request.POST[field]
-                  
+
                   instance = cls(**kwargs)
                   instance.full_clean()  # Validate before save
                   instance.save()
@@ -369,14 +369,14 @@ model.save(update_fields=[f for f in fields if f in allowed_fields])|,
                       return self.STAFF_FIELDS
                   else:
                       return self.USER_FIELDS
-              
+
               def update_from_request(self, request):
                   allowed = self.get_allowed_fields(request.user)
-                  
+
                   for field in allowed:
                       if field in request.POST:
                           setattr(self, field, request.POST[field])
-                  
+
                   self.save(update_fields=allowed)
           """,
           """
@@ -392,10 +392,10 @@ model.save(update_fields=[f for f in fields if f in allowed_fields])|,
                   if old_value != new_value:
                       changes.append(f"{field}: {old_value} → {new_value}")
                       setattr(model_instance, field, new_value)
-              
+
               if changes:
                   model_instance.save()
-                  
+
                   # Log the changes
                   LogEntry.objects.log_action(
                       user_id=user.pk,

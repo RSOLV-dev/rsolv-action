@@ -2,8 +2,8 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
   @moduledoc """
   CVE-2022-22577 - XSS Vulnerability in Rails Action Pack.
 
-  This vulnerability affects Rails Action Pack versions >= 5.2.0 where Content-Security-Policy 
-  (CSP) headers were only sent along with responses that Rails considered as "HTML" responses. 
+  This vulnerability affects Rails Action Pack versions >= 5.2.0 where Content-Security-Policy
+  (CSP) headers were only sent along with responses that Rails considered as "HTML" responses.
   This left API requests without CSP headers, and when user input is used to construct CSP headers,
   it could allow attackers to bypass CSP protections and inject malicious directives.
 
@@ -25,13 +25,13 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
   ```
 
   ### Safe Example
-  ```ruby  
+  ```ruby
   # Safe: Static CSP with allowlist validation
   def api_endpoint
     allowed_scripts = ['https://trusted-cdn.com', 'https://api.example.com']
     script_src = params[:script_source] if allowed_scripts.include?(params[:script_source])
     script_src ||= "'self'"
-    
+
     response.headers['Content-Security-Policy'] = "default-src 'self'; script-src \#{script_src}"
     render json: { data: data }
   end
@@ -107,11 +107,11 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
   def vulnerability_metadata do
     %{
       description: """
-      CVE-2022-22577 is a cross-site scripting (XSS) vulnerability in Rails Action Pack 
-      that occurs when Content-Security-Policy (CSP) headers are dynamically constructed 
-      using untrusted user input. This vulnerability affects Rails versions >= 5.2.0 
-      where CSP headers were only sent with HTML responses, leaving API responses vulnerable. 
-      When applications use user-controlled data to build CSP headers, attackers can inject 
+      CVE-2022-22577 is a cross-site scripting (XSS) vulnerability in Rails Action Pack
+      that occurs when Content-Security-Policy (CSP) headers are dynamically constructed
+      using untrusted user input. This vulnerability affects Rails versions >= 5.2.0
+      where CSP headers were only sent with HTML responses, leaving API responses vulnerable.
+      When applications use user-controlled data to build CSP headers, attackers can inject
       malicious directives to bypass CSP protections and execute arbitrary scripts.
       """,
       attack_vectors: """
@@ -195,16 +195,16 @@ defmodule Rsolv.Security.Patterns.Rails.Cve202222577 do
           "https://trusted-cdn.example.com",
           "https://api.googleapis.com"
         ].freeze
-        
+
         def api_endpoint
           # Validate against allowlist
           script_source = params[:script_source]
           validated_source = ALLOWED_SCRIPT_SOURCES.include?(script_source) ? script_source : "'self'"
-          
+
           # Use validated input in CSP
           csp = "default-src 'self'; script-src \#{validated_source}"
           response.headers['Content-Security-Policy'] = csp
-          
+
           render json: { data: data }
         end
 

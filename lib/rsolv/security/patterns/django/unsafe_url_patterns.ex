@@ -40,25 +40,25 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           path('admin/', admin.site.urls),
           path('', views.home),
       ]
-      
+
       # VULNERABLE - Wildcard catch-all
       urlpatterns = [
           path('api/', include('api.urls')),
           path('.*', views.catch_all),  # Dangerous!
       ]
-      
+
       # VULNERABLE - Debug toolbar in production
       urlpatterns = [
           path('', include('myapp.urls')),
           path('__debug__/', include('debug_toolbar.urls')),
       ]
-      
+
       # SAFE - Obscured admin URL
       urlpatterns = [
           path('secure-admin-portal/', admin.site.urls),
           path('', views.home),
       ]
-      
+
       # SAFE - Conditional debug inclusion
       if settings.DEBUG:
           urlpatterns += [
@@ -345,7 +345,7 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
         class AdminIPRestrictionMiddleware:
             def __init__(self, get_response):
                 self.get_response = get_response
-                
+
             def __call__(self, request):
                 if request.path.startswith('/secure-admin/'):
                     client_ip = self.get_client_ip(request)
@@ -400,18 +400,18 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
           class SecureAdminSite(admin.AdminSite):
               site_header = 'Secure Administration'
               site_title = 'Admin'
-              
+
               def has_permission(self, request):
                   # Additional permission checks
                   if not super().has_permission(request):
                       return False
-                  
+
                   # Check IP whitelist
                   if hasattr(settings, 'ADMIN_IP_WHITELIST'):
                       client_ip = self.get_client_ip(request)
                       if client_ip not in settings.ADMIN_IP_WHITELIST:
                           return False
-                  
+
                   return True
 
           secure_admin_site = SecureAdminSite(name='secure_admin')
@@ -429,14 +429,14 @@ defmodule Rsolv.Security.Patterns.Django.UnsafeUrlPatterns do
                       '/__debug__/',  # Block debug toolbar
                       '/silk/',  # Block silk profiler
                   ]
-                  
+
               def __call__(self, request):
                   # Block dangerous URLs in production
                   if not settings.DEBUG:
                       for pattern in self.dangerous_patterns:
                           if request.path.startswith(pattern):
                               return HttpResponseNotFound()
-                  
+
                   return self.get_response(request)
           """
         ],

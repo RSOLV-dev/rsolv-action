@@ -34,7 +34,7 @@ defmodule Rsolv.PromEx.ValidationPlugin do
           tags: [:repo, :language, :framework],
           tag_values: &extract_base_tags/1,
           unit: {:native, :millisecond},
-          reporter_options: [buckets: [1000, 5000, 10000, 30000, 60000, 120_000, 300_000]]
+          reporter_options: [buckets: [1000, 5000, 10_000, 30_000, 60_000, 120_000, 300_000]]
         ),
 
         # Mitigation counters

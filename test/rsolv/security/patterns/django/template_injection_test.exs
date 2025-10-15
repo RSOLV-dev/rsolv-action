@@ -186,7 +186,7 @@ defmodule Rsolv.Security.Patterns.Django.TemplateInjectionTest do
       def generate_invoice(request):
           invoice_template = request.session.get('custom_template', 'default.html')
           data = prepare_invoice_data(request.user)
-          
+
           # This is vulnerable - user controls template
           return render_to_string(invoice_template, {'invoice': data})
       """

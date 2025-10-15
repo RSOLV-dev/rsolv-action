@@ -3,7 +3,7 @@ defmodule Rsolv.Security.Patterns.Rails do
   Ruby on Rails framework-specific security patterns.
 
   This module contains 20 security patterns specifically designed for Rails
-  applications. These patterns detect Rails-specific vulnerabilities beyond 
+  applications. These patterns detect Rails-specific vulnerabilities beyond
   base Ruby patterns. All patterns are tagged with frameworks: ["rails"].
   """
 

@@ -40,16 +40,16 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureRandom.pattern()
       iex> pattern.id
       "js-insecure-random"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureRandom.pattern()
       iex> pattern.severity
       :medium
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureRandom.pattern()
       iex> vulnerable = "const token = Math.random().toString()"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.InsecureRandom.pattern()
       iex> safe = "const x = Math.random() * 100"
       iex> Regex.match?(pattern.regex, safe)
@@ -279,19 +279,19 @@ defmodule Rsolv.Security.Patterns.Javascript.InsecureRandom do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureRandom.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureRandom.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureRandom.ast_enhancement()
       iex> enhancement.ast_rules.callee_pattern
       "Math.random"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureRandom.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.InsecureRandom.ast_enhancement()
       iex> "assigned_to_security_var" in Map.keys(enhancement.confidence_rules.adjustments)
       true

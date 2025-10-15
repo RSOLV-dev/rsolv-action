@@ -103,21 +103,21 @@ defmodule Rsolv.AST.ProductionPythonParserTest do
           def __init__(self, config: Dict[str, str]):
               self.config = config
               self.dangerous_funcs = ['eval', 'exec', 'subprocess.call']
-          
+
           def analyze_code(self, code: str) -> Optional[List[str]]:
               findings = []
-              
+
               # This is potentially dangerous
               if 'eval(' in code:
                   findings.append("eval usage detected")
-              
+
               # String formatting could be SQL injection
               patterns = [
                   f"SELECT * FROM {table}" for table in self.config.get('tables', [])
               ]
-              
+
               return findings if findings else None
-          
+
           async def run_command(self, cmd: str) -> str:
               # Dangerous subprocess usage
               result = subprocess.run(cmd, shell=True, capture_output=True, text=True)

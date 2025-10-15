@@ -100,7 +100,7 @@ defmodule RsolvWeb.DashboardAuth do
             "rsolv_dashboard_auth",
             create_admin_token(Application.get_env(:rsolv, :admin_secret, "")),
             # 1 day
-            max_age: 86400,
+            max_age: 86_400,
             http_only: true,
             secure: true
           )

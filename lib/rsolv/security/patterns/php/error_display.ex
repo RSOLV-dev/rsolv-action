@@ -229,7 +229,7 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
       iex> test_cases = Rsolv.Security.Patterns.Php.ErrorDisplay.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.ErrorDisplay.test_cases()
       iex> length(test_cases.negative)
       8
@@ -372,7 +372,7 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
             error_log("Database error in users.php: " . mysqli_error($conn));
             error_log("Query: " . $query);
             error_log("User ID: " . $user_id);
-            
+
             // Show generic message to user
             die("An error occurred. Please try again later.");
         }
@@ -388,11 +388,11 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
         // SECURE: Custom error handler class
         class ErrorHandler {
             private $logger;
-            
+
             public function handleDatabaseError($error, $context = []) {
                 // Generate unique ID
                 $error_id = uniqid('ERR_', true);
-                
+
                 // Log with context
                 $this->logger->error("Database Error", [
                     'error_id' => $error_id,
@@ -401,7 +401,7 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
                     'line' => debug_backtrace()[0]['line'],
                     'context' => $context
                 ]);
-                
+
                 // Return user-friendly response
                 if (php_sapi_name() === 'cli') {
                     echo "Error: Operation failed. ID: $error_id\\n";
@@ -425,11 +425,11 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
         // SECURE: Environment-aware error handling
         class Application {
             private $debug = false;
-            
+
             public function __construct() {
                 $this->debug = ($_ENV['APP_ENV'] === 'development');
             }
-            
+
             public function handleError($exception) {
                 if ($this->debug) {
                     // Development: show detailed error
@@ -442,12 +442,12 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
                 } else {
                     // Production: log and show generic
                     error_log($exception->getMessage());
-                    
+
                     // Send to monitoring service
                     if ($this->sentry) {
                         $this->sentry->captureException($exception);
                     }
-                    
+
                     // Show error page
                     http_response_code(500);
                     include 'views/errors/500.php';
@@ -468,38 +468,38 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
       iex> desc = Rsolv.Security.Patterns.Php.ErrorDisplay.vulnerability_description()
       iex> desc =~ "error"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.ErrorDisplay.vulnerability_description()
       iex> desc =~ "information"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.ErrorDisplay.vulnerability_description()
       iex> desc =~ "sensitive"
       true
   """
   def vulnerability_description do
     """
-    Information disclosure through error messages occurs when applications reveal 
-    sensitive technical details to end users, providing attackers with valuable 
-    information about the system's architecture, configuration, and potential 
+    Information disclosure through error messages occurs when applications reveal
+    sensitive technical details to end users, providing attackers with valuable
+    information about the system's architecture, configuration, and potential
     vulnerabilities.
 
-    While detailed error messages are helpful during development, they become a 
-    security risk in production environments. Database errors, in particular, can 
-    expose table names, column structures, query syntax, and even data values that 
+    While detailed error messages are helpful during development, they become a
+    security risk in production environments. Database errors, in particular, can
+    expose table names, column structures, query syntax, and even data values that
     should remain confidential.
 
     ## Security Impact
 
-    **Information Leakage**: Error messages reveal internal system details that 
-    attackers can use to understand the application's structure and identify 
+    **Information Leakage**: Error messages reveal internal system details that
+    attackers can use to understand the application's structure and identify
     potential attack vectors.
 
-    **Attack Surface Mapping**: Technical errors help attackers enumerate the 
-    technology stack, database schema, and application endpoints, making targeted 
+    **Attack Surface Mapping**: Technical errors help attackers enumerate the
+    technology stack, database schema, and application endpoints, making targeted
     attacks more feasible.
 
-    **Vulnerability Discovery**: Error messages often reveal the exact nature of 
+    **Vulnerability Discovery**: Error messages often reveal the exact nature of
     input validation failures, making it easier to craft successful exploits.
 
     ## Common Scenarios
@@ -521,9 +521,9 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
 
     ## Prevention
 
-    Always log detailed errors for debugging purposes but display only generic 
-    messages to users, implement proper error handling with environment-specific 
-    behavior, use error monitoring services for production issues, and regularly 
+    Always log detailed errors for debugging purposes but display only generic
+    messages to users, implement proper error handling with environment-specific
+    behavior, use error monitoring services for production issues, and regularly
     audit your application for information disclosure vulnerabilities.
     """
   end
@@ -539,11 +539,11 @@ defmodule Rsolv.Security.Patterns.Php.ErrorDisplay do
       iex> enhancement = Rsolv.Security.Patterns.Php.ErrorDisplay.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.ErrorDisplay.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.ErrorDisplay.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

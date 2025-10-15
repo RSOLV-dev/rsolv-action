@@ -36,7 +36,7 @@ defmodule Rsolv.Workers.TaggingWorker do
 
       iex> TaggingWorker.schedule_tagging("user@example.com", "123456")
       {:ok, %Oban.Job{}}
-      
+
       iex> TaggingWorker.schedule_tagging("user@example.com", "123456", priority: 3)
       {:ok, %Oban.Job{}}
   """
@@ -82,7 +82,7 @@ defmodule Rsolv.Workers.TaggingWorker do
     Logger.debug("Using HTTP client: #{inspect(http_client)}")
 
     # Make the API request
-    case http_client.post(url, body, headers, recv_timeout: 10000) do
+    case http_client.post(url, body, headers, recv_timeout: 10_000) do
       {:ok, %HTTPoison.Response{status_code: status_code, body: response_body}}
       when status_code in 200..299 ->
         # Extract subscription ID from response

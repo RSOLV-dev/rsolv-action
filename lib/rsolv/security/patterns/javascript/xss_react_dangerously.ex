@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
     <div dangerouslySetInnerHTML={{__html: userInput}} />
     <span dangerouslySetInnerHTML={{__html: req.body.content}} />
     React.createElement('div', {dangerouslySetInnerHTML: {__html: params.html}})
-    
+
   Safe alternatives:
     <div>{userInput}</div>
     <div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(userInput)}} />
     <div dangerouslySetInnerHTML={{__html: sanitizeHtml(content)}} />
-    
+
   React's dangerouslySetInnerHTML is explicitly named to warn developers about the
   XSS risk. It's React's equivalent to using innerHTML directly and bypasses React's
   built-in XSS protection. When used with untrusted user input, it creates severe
@@ -68,35 +68,35 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> pattern.id
       "js-xss-react-dangerously"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> pattern.cwe_id
       "CWE-79"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> vulnerable = ~S|<div dangerouslySetInnerHTML={{__html: userInput}} />|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> safe = ~S|<div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(userInput)}} />|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> safe = ~S|<div>{userInput}</div>|
       iex> Regex.match?(pattern.regex, safe)
       false
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> vulnerable = ~S|React.createElement('div', {dangerouslySetInnerHTML: {__html: input}})|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.XssReactDangerously.pattern()
       iex> pattern.recommendation
       "Avoid dangerouslySetInnerHTML. Use React's default escaping or sanitize with DOMPurify."
@@ -337,15 +337,15 @@ defmodule Rsolv.Security.Patterns.Javascript.XssReactDangerously do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssReactDangerously.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssReactDangerously.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "JSXAttribute"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssReactDangerously.ast_enhancement()
       iex> enhancement.ast_rules.attribute_name
       "dangerouslySetInnerHTML"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.XssReactDangerously.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

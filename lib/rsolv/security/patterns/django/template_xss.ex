@@ -30,21 +30,21 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
 
       # VULNERABLE - Direct safe filter on user input
       {{ user_comment|safe }}
-      
+
       # VULNERABLE - Autoescape disabled
       {% autoescape off %}
           {{ user_content }}
       {% endautoescape %}
-      
+
       # VULNERABLE - mark_safe on request data
       return mark_safe(request.GET.get('message'))
-      
+
       # SAFE - Default escaping
       {{ user_comment }}
-      
+
       # SAFE - Explicit escaping
       {{ user_comment|escape }}
-      
+
       # SAFE - Sanitized then marked safe
       {{ bleach.clean(user_content)|safe }}
   """
@@ -218,13 +218,13 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
          ```django
          <!-- NEVER DO THIS with user input -->
          {{ user_comment|safe }}
-         
+
          <!-- SAFE - Automatic escaping -->
          {{ user_comment }}
-         
+
          <!-- SAFE - Explicit escaping -->
          {{ user_comment|escape }}
-         
+
          <!-- SAFE - Force escaping even in autoescape off -->
          {{ user_comment|force_escape }}
          ```
@@ -235,10 +235,10 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
          {% autoescape off %}
              {{ user_content }}
          {% endautoescape %}
-         
+
          <!-- SAFE - Keep autoescape on (default) -->
          {{ user_content }}
-         
+
          <!-- If you must disable, escape individual variables -->
          {% autoescape off %}
              {{ static_content }}
@@ -250,14 +250,14 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
          ```python
          # NEVER DO THIS
          from django.utils.safestring import mark_safe
-         
+
          def show_message(request):
              message = request.GET.get('message')
              return mark_safe(message)  # VULNERABLE!
-         
+
          # SAFE - Only mark safe after sanitization
          import bleach
-         
+
          def show_message(request):
              message = request.GET.get('message', '')
              # Define allowed tags and attributes
@@ -268,7 +268,7 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
                  strip=True
              )
              return mark_safe(cleaned)
-         
+
          # SAFER - Avoid HTML entirely
          def show_message(request):
              message = request.GET.get('message', '')
@@ -278,15 +278,15 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
       4. **Secure format_html() Usage**:
          ```python
          from django.utils.html import format_html
-         
+
          # NEVER DO THIS
          def greet_user(name):
              return format_html('<h1>{}</h1>', name)  # If name has HTML, it renders!
-         
+
          # SAFE - format_html escapes placeholders
          def greet_user(name):
              return format_html('<h1>{}</h1>', name)  # Actually safe - format_html escapes {}
-         
+
          # SAFE - Multiple placeholders
          def show_profile(name, bio):
              return format_html(
@@ -294,10 +294,10 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
                  name,  # Escaped
                  bio    # Escaped
              )
-         
+
          # Be careful with format_html_join
          from django.utils.html import format_html_join
-         
+
          items = [('item1', 'desc1'), ('item2', 'desc2')]
          result = format_html_join(
              '\n',
@@ -310,21 +310,21 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
          ```python
          # Install: pip install bleach
          import bleach
-         
+
          # Define allowed HTML
          ALLOWED_TAGS = [
              'p', 'br', 'span', 'div', 'h1', 'h2', 'h3',
              'strong', 'em', 'u', 'a', 'ul', 'ol', 'li',
              'blockquote', 'code', 'pre'
          ]
-         
+
          ALLOWED_ATTRIBUTES = {
              'a': ['href', 'title'],
              'span': ['class'],
              'div': ['class'],
              'code': ['class'],
          }
-         
+
          def clean_html(html_content):
              return bleach.clean(
                  html_content,
@@ -333,7 +333,7 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
                  strip=True,  # Strip disallowed tags
                  strip_comments=True
              )
-         
+
          # In view
          def save_comment(request):
              comment = request.POST.get('comment', '')
@@ -343,7 +343,7 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
                  content=cleaned_comment,
                  user=request.user
              )
-         
+
          # In template
          {{ comment.content|safe }}  <!-- Now actually safe -->
          ```
@@ -353,20 +353,20 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
          from django import template
          from django.utils.safestring import mark_safe
          import bleach
-         
+
          register = template.Library()
-         
+
          # NEVER DO THIS
          @register.filter(is_safe=True)  # Bypasses escaping!
          def format_user_content(value):
              return f'<div class="content">{value}</div>'
-         
+
          # SAFE - Let Django handle escaping
          @register.filter
          def format_user_content(value):
              # Return normal string, Django will escape
              return f'User said: {value}'
-         
+
          # SAFE - Sanitize if HTML needed
          @register.filter
          def sanitize_html(value):
@@ -380,7 +380,7 @@ defmodule Rsolv.Security.Patterns.Django.TemplateXss do
          CSP_DEFAULT_SRC = ("'self'",)
          CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'")  # Avoid unsafe-inline if possible
          CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
-         
+
          # Or use Django-CSP middleware
          MIDDLEWARE = [
              # ...

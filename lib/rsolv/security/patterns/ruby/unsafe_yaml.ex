@@ -25,7 +25,7 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeYaml do
 
   ### Real-World Impact
   - Remote Code Execution (RCE) with application privileges
-  - Data exfiltration and system compromise 
+  - Data exfiltration and system compromise
   - Privilege escalation and lateral movement
   - Denial of service through resource exhaustion
   """
@@ -44,16 +44,16 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeYaml do
       iex> pattern = Rsolv.Security.Patterns.Ruby.UnsafeYaml.pattern()
       iex> pattern.id
       "ruby-unsafe-yaml"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.UnsafeYaml.pattern()
       iex> pattern.severity
       :critical
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.UnsafeYaml.pattern()
       iex> vulnerable = "data = YAML.load(params[:config])"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable))
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Ruby.UnsafeYaml.pattern()
       iex> safe = "data = YAML.safe_load(params[:config])"
       iex> Enum.any?(pattern.regex, &Regex.match?(&1, safe))
@@ -125,7 +125,7 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeYaml do
   def vulnerability_metadata do
     %{
       description: """
-      Unsafe YAML deserialization allows attackers to execute arbitrary code by crafting malicious YAML payloads. 
+      Unsafe YAML deserialization allows attackers to execute arbitrary code by crafting malicious YAML payloads.
       Ruby's YAML.load and Psych.load can instantiate arbitrary objects, including those that execute code during deserialization.
       This vulnerability has been exploited in numerous Rails applications and can lead to complete system compromise.
       """,
@@ -246,15 +246,15 @@ defmodule Rsolv.Security.Patterns.Ruby.UnsafeYaml do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.UnsafeYaml.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.UnsafeYaml.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.UnsafeYaml.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.UnsafeYaml.ast_enhancement()
       iex> "YAML.load" in enhancement.ast_rules.yaml_analysis.unsafe_methods
       true

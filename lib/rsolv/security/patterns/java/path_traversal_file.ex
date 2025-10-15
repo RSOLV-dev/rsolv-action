@@ -2,8 +2,8 @@ defmodule Rsolv.Security.Patterns.Java.PathTraversalFile do
   @moduledoc """
   Path Traversal via File constructor pattern for Java code.
 
-  Detects path traversal vulnerabilities where user input is concatenated with 
-  file paths in the File constructor, potentially allowing access to files 
+  Detects path traversal vulnerabilities where user input is concatenated with
+  file paths in the File constructor, potentially allowing access to files
   outside the intended directory.
 
   ## Vulnerability Details
@@ -221,11 +221,11 @@ File file = new File(uploadDir, safeFilename);|
       iex> enhancement = Rsolv.Security.Patterns.Java.PathTraversalFile.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.PathTraversalFile.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.PathTraversalFile.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "NewExpression"

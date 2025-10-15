@@ -6,15 +6,15 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
     new RegExp("(a+)+$")
     /(x+x+)+y/.test(input)
     const pattern = /(a*)*b/
-    
+
   Safe alternatives:
     new RegExp("a+$")
     /x+y/.test(input)
     const pattern = /a*b/
-    
-  Regular Expression Denial of Service (ReDoS) is a security vulnerability that 
-  exploits catastrophic backtracking in regular expression engines. When maliciously 
-  crafted input is processed by vulnerable regex patterns, it can cause exponential 
+
+  Regular Expression Denial of Service (ReDoS) is a security vulnerability that
+  exploits catastrophic backtracking in regular expression engines. When maliciously
+  crafted input is processed by vulnerable regex patterns, it can cause exponential
   time complexity, leading to application freezes, CPU exhaustion, and denial of service.
 
   ## Vulnerability Details
@@ -30,7 +30,7 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
   ```javascript
   // Vulnerable: Nested quantifiers
   const emailRegex = /([a-zA-Z0-9_\.-]+)+@/;
-  const maliciousInput = "a".repeat(50000) + "X"; 
+  const maliciousInput = "a".repeat(50000) + "X";
   emailRegex.test(maliciousInput); // <- Causes infinite loop/CPU spike
 
   // Vulnerable: Alternation with overlap
@@ -40,13 +40,13 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
   ```
 
   ### Modern Attack Scenarios
-  ReDoS vulnerabilities are particularly dangerous in Node.js applications because 
-  JavaScript is single-threaded. A single ReDoS attack can freeze the entire 
-  application, affecting all users. Common targets include email validation, 
+  ReDoS vulnerabilities are particularly dangerous in Node.js applications because
+  JavaScript is single-threaded. A single ReDoS attack can freeze the entire
+  application, affecting all users. Common targets include email validation,
   URL parsing, input sanitization, log processing, and API parameter validation.
 
-  The attack vectors have evolved with modern web applications, targeting 
-  JSON parsing, GraphQL query validation, markdown processing, and route 
+  The attack vectors have evolved with modern web applications, targeting
+  JSON parsing, GraphQL query validation, markdown processing, and route
   matching systems where regex patterns process user-controlled input.
   """
 
@@ -109,46 +109,46 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
   @doc """
   Comprehensive vulnerability metadata for ReDoS vulnerabilities.
 
-  This metadata documents the critical security implications of regex patterns 
-  that can cause catastrophic backtracking and provides authoritative guidance 
+  This metadata documents the critical security implications of regex patterns
+  that can cause catastrophic backtracking and provides authoritative guidance
   for secure regular expression design.
   """
   def vulnerability_metadata do
     %{
       description: """
-      Regular Expression Denial of Service (ReDoS) represents a critical 
-      vulnerability class that exploits exponential time complexity in regex 
-      pattern matching to cause application-level denial of service. Unlike 
-      traditional DoS attacks that require high traffic volumes, ReDoS can be 
-      triggered by a single maliciously crafted input string, making it an 
+      Regular Expression Denial of Service (ReDoS) represents a critical
+      vulnerability class that exploits exponential time complexity in regex
+      pattern matching to cause application-level denial of service. Unlike
+      traditional DoS attacks that require high traffic volumes, ReDoS can be
+      triggered by a single maliciously crafted input string, making it an
       extremely efficient attack vector against web applications.
 
-      The vulnerability stems from the inherent design of backtracking regex 
-      engines used in JavaScript and most programming languages. When processing 
-      patterns with nested quantifiers or overlapping alternations, the engine 
-      explores exponentially increasing numbers of possible match paths. Attackers 
-      exploit this by providing input that maximizes backtracking without 
+      The vulnerability stems from the inherent design of backtracking regex
+      engines used in JavaScript and most programming languages. When processing
+      patterns with nested quantifiers or overlapping alternations, the engine
+      explores exponentially increasing numbers of possible match paths. Attackers
+      exploit this by providing input that maximizes backtracking without
       producing successful matches, forcing the engine into worst-case behavior.
 
-      ReDoS is particularly devastating in Node.js applications due to JavaScript's 
-      single-threaded event loop architecture. A single ReDoS attack can freeze 
-      the entire application, blocking all concurrent requests and effectively 
-      taking the service offline. This amplifies the impact beyond traditional 
+      ReDoS is particularly devastating in Node.js applications due to JavaScript's
+      single-threaded event loop architecture. A single ReDoS attack can freeze
+      the entire application, blocking all concurrent requests and effectively
+      taking the service offline. This amplifies the impact beyond traditional
       DoS scenarios, where load balancing might mitigate individual server failures.
 
-      Modern web applications are increasingly vulnerable due to the proliferation 
-      of regex usage in input validation, data parsing, route matching, and content 
-      processing. The complexity of contemporary regex patterns, combined with the 
-      need to handle diverse user input formats, creates extensive attack surface 
-      for ReDoS exploitation. Additionally, the adoption of microservices 
-      architectures means that a single vulnerable regex pattern can cascade 
+      Modern web applications are increasingly vulnerable due to the proliferation
+      of regex usage in input validation, data parsing, route matching, and content
+      processing. The complexity of contemporary regex patterns, combined with the
+      need to handle diverse user input formats, creates extensive attack surface
+      for ReDoS exploitation. Additionally, the adoption of microservices
+      architectures means that a single vulnerable regex pattern can cascade
       failures across entire application ecosystems.
 
-      The subtlety of ReDoS vulnerabilities makes them particularly insidious. 
-      Patterns that appear reasonable and perform well under normal conditions 
-      can exhibit catastrophic behavior when presented with specifically crafted 
-      malicious input. This unpredictability, combined with the difficulty of 
-      comprehensive testing against all possible input variations, makes ReDoS 
+      The subtlety of ReDoS vulnerabilities makes them particularly insidious.
+      Patterns that appear reasonable and perform well under normal conditions
+      can exhibit catastrophic behavior when presented with specifically crafted
+      malicious input. This unpredictability, combined with the difficulty of
+      comprehensive testing against all possible input variations, makes ReDoS
       a persistent and evolving threat in web application security.
       """,
       references: [
@@ -250,24 +250,24 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
         }
       ],
       detection_notes: """
-      This pattern detects regular expressions with nested quantifiers that are 
+      This pattern detects regular expressions with nested quantifiers that are
       susceptible to catastrophic backtracking. The detection covers:
 
       1. Nested plus quantifiers: (a+)+ patterns
-      2. Nested star quantifiers: (a*)* patterns  
+      2. Nested star quantifiers: (a*)* patterns
       3. Mixed nested quantifiers: (a+)* or (a*)+ patterns
       4. RegExp constructor with nested quantifiers
       5. Literal regex patterns with nested quantifiers
       6. Complex nested structures with multiple quantifier levels
 
-      The regex pattern looks for quantifier characters (+, *, {n,m}) followed by 
-      closing parentheses and then additional quantifiers, indicating nested 
-      quantification structures. It uses case-insensitive matching and handles 
+      The regex pattern looks for quantifier characters (+, *, {n,m}) followed by
+      closing parentheses and then additional quantifiers, indicating nested
+      quantification structures. It uses case-insensitive matching and handles
       both literal regex syntax (/pattern/) and RegExp constructor patterns.
 
-      The detection is designed for high sensitivity to catch potentially vulnerable 
-      patterns while minimizing false positives on legitimate bounded quantifiers 
-      and non-overlapping alternations. However, some complex ReDoS patterns may 
+      The detection is designed for high sensitivity to catch potentially vulnerable
+      patterns while minimizing false positives on legitimate bounded quantifiers
+      and non-overlapping alternations. However, some complex ReDoS patterns may
       require additional analysis beyond basic pattern matching.
       """,
       safe_alternatives: [
@@ -383,15 +383,15 @@ defmodule Rsolv.Security.Patterns.Javascript.UnsafeRegex do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.UnsafeRegex.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.UnsafeRegex.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "NewExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.UnsafeRegex.ast_enhancement()
       iex> enhancement.ast_rules.regex_analysis.check_nested_quantifiers
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.UnsafeRegex.ast_enhancement()
       iex> enhancement.min_confidence
       0.75

@@ -22,13 +22,13 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
       session_token = rand(10**16).to_s(36)  # Predictable sequence
       session[:token] = session_token
       cookies[:session_id] = session_token
-      
+
       # VULNERABLE: API key generation with weak randomness
       api_key = (0...32).map { rand(65..90).chr }.join  # Mersenne Twister
-      
+
       # VULNERABLE: Password reset token
       reset_token = rand(2**64).to_s(16)  # Predictable with known seed
-      
+
       user.update(api_key: api_key, reset_token: reset_token)
     end
   end
@@ -315,7 +315,7 @@ defmodule Rsolv.Security.Patterns.Ruby.WeakRandom do
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakRandom.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Ruby.WeakRandom.ast_enhancement()
       iex> enhancement.min_confidence
       0.6

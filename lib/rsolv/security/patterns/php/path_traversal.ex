@@ -280,11 +280,11 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
       iex> test_cases = Rsolv.Security.Patterns.Php.PathTraversal.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.PathTraversal.test_cases()
       iex> length(test_cases.negative) > 0
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Php.PathTraversal.pattern()
       iex> pattern.id
       "php-path-traversal"
@@ -385,7 +385,7 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         if (isset($_GET['file'])) {
             $filename = $_GET['file'];
             $filepath = './downloads/' . $filename;
-            
+
             if (file_exists($filepath)) {
                 header('Content-Type: application/octet-stream');
                 header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -420,7 +420,7 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         function viewLog() {
             $logfile = $_POST['logfile'] ?? 'application.log';
             $log_path = '/var/log/myapp/' . $logfile;
-            
+
             // Display log contents
             if (file_exists($log_path)) {
                 $contents = file_get_contents($log_path);
@@ -435,21 +435,21 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         // Configuration management - VULNERABLE
         class ConfigManager {
             private $config_dir = './config/';
-            
+
             public function loadConfig($env) {
                 $config_file = $this->config_dir . $env . '.php';
-                
+
                 if (file_exists($config_file)) {
                     return include $config_file;
                 }
-                
+
                 throw new Exception('Configuration file not found');
             }
-            
+
             public function saveConfig($env, $config) {
                 $config_file = $this->config_dir . $env . '.php';
                 $config_data = '<?php return ' . var_export($config, true) . ';';
-                
+
                 file_put_contents($config_file, $config_data);
             }
         }
@@ -467,18 +467,18 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         if (isset($_GET['file'])) {
             // Use basename to prevent directory traversal
             $filename = basename($_GET['file']);
-            
+
             // Additional validation: only allow alphanumeric, dots, dashes
             if (!preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
                 die('Invalid filename');
             }
-            
+
             $filepath = './downloads/' . $filename;
-            
+
             // Verify file exists and is within downloads directory
             $realpath = realpath($filepath);
             $downloads_dir = realpath('./downloads/');
-            
+
             if ($realpath && strpos($realpath, $downloads_dir) === 0 && file_exists($realpath)) {
                 header('Content-Type: application/octet-stream');
                 header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -530,16 +530,16 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
                 'access' => '/var/log/myapp/access.log',
                 'debug' => '/var/log/myapp/debug.log'
             ];
-            
+
             $requested_log = $_POST['logfile'] ?? 'app';
-            
+
             if (!array_key_exists($requested_log, $log_mapping)) {
                 echo "Invalid log file requested";
                 return;
             }
-            
+
             $log_path = $log_mapping[$requested_log];
-            
+
             // Verify file exists and is readable
             if (file_exists($log_path) && is_readable($log_path)) {
                 $contents = file_get_contents($log_path);
@@ -554,50 +554,50 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
         class SecureConfigManager {
             private $config_dir = './config/';
             private $allowed_environments = ['dev', 'staging', 'prod', 'test'];
-            
+
             public function loadConfig($env) {
                 // Validate environment name
                 if (!$this->isValidEnvironment($env)) {
                     throw new InvalidArgumentException('Invalid environment name');
                 }
-                
+
                 $config_file = $this->config_dir . $env . '.php';
-                
+
                 // Use realpath to resolve any symbolic links or relative paths
                 $real_config_path = realpath($config_file);
                 $real_config_dir = realpath($this->config_dir);
-                
+
                 // Ensure the resolved path is within the config directory
                 if (!$real_config_path || strpos($real_config_path, $real_config_dir) !== 0) {
                     throw new SecurityException('Path traversal attempt detected');
                 }
-                
+
                 if (file_exists($real_config_path)) {
                     return include $real_config_path;
                 }
-                
+
                 throw new Exception('Configuration file not found');
             }
-            
+
             public function saveConfig($env, $config) {
                 if (!$this->isValidEnvironment($env)) {
                     throw new InvalidArgumentException('Invalid environment name');
                 }
-                
+
                 $config_file = $this->config_dir . $env . '.php';
                 $real_config_path = realpath(dirname($config_file)) . '/' . basename($config_file);
                 $real_config_dir = realpath($this->config_dir);
-                
+
                 if (strpos($real_config_path, $real_config_dir) !== 0) {
                     throw new SecurityException('Path traversal attempt detected');
                 }
-                
+
                 $config_data = '<?php return ' . var_export($config, true) . ';';
                 file_put_contents($real_config_path, $config_data, LOCK_EX);
             }
-            
+
             private function isValidEnvironment($env) {
-                return in_array($env, $this->allowed_environments) && 
+                return in_array($env, $this->allowed_environments) &&
                        preg_match('/^[a-z]+$/', $env);
             }
         }
@@ -818,8 +818,8 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
     function isPathSafe($path, $allowed_dir) {
         $real_path = realpath($path);
         $real_allowed = realpath($allowed_dir);
-        
-        return $real_path && $real_allowed && 
+
+        return $real_path && $real_allowed &&
                strpos($real_path, $real_allowed) === 0;
     }
     ```
@@ -910,11 +910,11 @@ defmodule Rsolv.Security.Patterns.Php.PathTraversal do
       iex> enhancement = Rsolv.Security.Patterns.Php.PathTraversal.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.PathTraversal.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.PathTraversal.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

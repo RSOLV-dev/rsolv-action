@@ -32,7 +32,7 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
         def initialize(name)
           @name = name
         end
-        
+
         def greet
           puts "Hello, \#{@name}!"
         end
@@ -65,10 +65,10 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
         def update
           # VULNERABLE: eval usage
           eval(params[:code])
-          
+
           # VULNERABLE: system command
           system("rm -rf \#{params[:path]}")
-          
+
           # VULNERABLE: SQL injection
           User.where("name = '\#{params[:name]}'")
         end
@@ -109,33 +109,33 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
       module SecurityAnalyzer
         class Scanner
           include Enumerable
-          
+
           attr_reader :findings
-          
+
           def initialize(config = {})
             @config = config
             @findings = []
           end
-          
+
           def scan_code(code)
             # Template literal with potential injection
             query = "SELECT * FROM code WHERE content = '\\\#{code}'"
-            
+
             # Dangerous eval usage
             result = eval(code) if @config[:allow_eval]
-            
+
             @findings << { type: :sql_injection, query: query }
             @findings << { type: :code_injection, code: code } if result
-            
+
             yield findings if block_given?
           end
-          
+
           def each(&block)
             @findings.each(&block)
           end
-          
+
           private
-          
+
           def sanitize(input)
             input.gsub(/['"\\]/, '\\\\\\&')
           end

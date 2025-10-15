@@ -28,13 +28,13 @@ defmodule Rsolv.Security.Patterns.Rails.MissingStrongParameters do
 
       # Vulnerable - allows any parameter
       @user = User.create(params[:user])
-      
+
       # Vulnerable - dangerous permit!
       @user = User.create(params.permit!)
-      
+
       # Safe - explicitly permits only allowed fields
       @user = User.create(user_params)
-      
+
       def user_params
         params.require(:user).permit(:name, :email)
       end
@@ -134,7 +134,7 @@ defmodule Rsolv.Security.Patterns.Rails.MissingStrongParameters do
          def user_params
            params.require(:user).permit(:name, :email, :phone)
          end
-         
+
          @user = User.create(user_params)
          ```
 
@@ -193,11 +193,11 @@ defmodule Rsolv.Security.Patterns.Rails.MissingStrongParameters do
       # For complex scenarios, use form objects:
       class UserRegistrationForm
         include ActiveModel::Model
-        
+
         attr_accessor :name, :email, :terms_accepted
-        
+
         validates :terms_accepted, acceptance: true
-        
+
         def save
           return false unless valid?
           User.create!(name: name, email: email)
@@ -264,7 +264,7 @@ defmodule Rsolv.Security.Patterns.Rails.MissingStrongParameters do
         parameter_analysis: %{
           # Look for .permit usage
           check_permit_usage: true,
-          # Look for require usage  
+          # Look for require usage
           check_require_usage: true,
           # Flag permit! as always vulnerable
           flag_permit_bang: true,

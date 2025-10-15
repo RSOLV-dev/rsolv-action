@@ -40,7 +40,7 @@ defmodule Rsolv.Billing.FixAttempt do
   end
 
   @required_fields ~w(github_org repo_name pr_number status)a
-  @optional_fields ~w(issue_number merged_at billing_status 
+  @optional_fields ~w(issue_number merged_at billing_status
                      requires_manual_approval approved_by approved_at approval_notes
                      platform customer_id api_key_used pr_title pr_url issue_title
                      issue_url commit_sha merged_by metadata amount currency

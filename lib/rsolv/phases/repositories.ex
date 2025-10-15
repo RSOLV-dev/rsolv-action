@@ -14,7 +14,7 @@ defmodule Rsolv.Phases.Repositories do
   ## Parameters
     - attrs: Map with :forge_type, :namespace, and :name
     - customer: The customer attempting to access the repository
-    
+
   ## Returns
     - {:ok, repository} on success
     - {:error, :unauthorized} if customer doesn't own the namespace

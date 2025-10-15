@@ -181,7 +181,7 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
       This pattern detects DES/3DES usage in various contexts:
       - Cipher.getInstance() calls with DES, DESede, TripleDES, or 3DES
       - String literals containing DES algorithm identifiers
-      - Variable assignments specifying DES as encryption algorithm  
+      - Variable assignments specifying DES as encryption algorithm
       - KeyGenerator, SecretKeySpec, and SecretKeyFactory with DES algorithms
       - Method calls passing DES algorithms as parameters
       - Cipher transformation strings including DES with modes/padding
@@ -252,11 +252,11 @@ defmodule Rsolv.Security.Patterns.Java.WeakCipherDes do
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakCipherDes.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakCipherDes.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakCipherDes.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"

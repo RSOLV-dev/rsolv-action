@@ -6,16 +6,16 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
     eval(userInput)
     eval(req.body.code)
     const result = eval("2 + " + params.number)
-    
+
   Safe alternatives:
     JSON.parse(userInput)
     new Function("return " + sanitizedExpression)
     vm.runInContext(code, sandbox)
-    
-  The eval() function in JavaScript is one of the most dangerous language features 
-  when used with untrusted input. It provides direct access to the JavaScript 
-  interpreter, allowing arbitrary code execution with the full privileges of the 
-  running application. This makes eval() with user input a critical Remote Code 
+
+  The eval() function in JavaScript is one of the most dangerous language features
+  when used with untrusted input. It provides direct access to the JavaScript
+  interpreter, allowing arbitrary code execution with the full privileges of the
+  running application. This makes eval() with user input a critical Remote Code
   Execution (RCE) vulnerability.
 
   ## Vulnerability Details
@@ -44,10 +44,10 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
   ```
 
   ### Modern Attack Scenarios
-  Eval-based RCE vulnerabilities are among the most exploited in Node.js applications, 
-  particularly in template engines, expression evaluators, configuration processors, 
-  and dynamic code generators. Attackers can achieve complete system compromise, 
-  data exfiltration, cryptocurrency mining, botnet participation, and lateral 
+  Eval-based RCE vulnerabilities are among the most exploited in Node.js applications,
+  particularly in template engines, expression evaluators, configuration processors,
+  and dynamic code generators. Attackers can achieve complete system compromise,
+  data exfiltration, cryptocurrency mining, botnet participation, and lateral
   movement within infrastructure.
   """
 
@@ -109,39 +109,39 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
   @doc """
   Comprehensive vulnerability metadata for eval() with user input.
 
-  This metadata documents the extreme severity of eval-based RCE vulnerabilities 
+  This metadata documents the extreme severity of eval-based RCE vulnerabilities
   and provides authoritative guidance for secure code evaluation alternatives.
   """
   def vulnerability_metadata do
     %{
       description: """
-      Eval() with user input represents one of the most critical vulnerability classes 
-      in web application security, providing attackers with direct access to the 
-      JavaScript interpreter and complete control over the execution environment. 
-      This vulnerability combines maximum impact (complete system compromise) with 
+      Eval() with user input represents one of the most critical vulnerability classes
+      in web application security, providing attackers with direct access to the
+      JavaScript interpreter and complete control over the execution environment.
+      This vulnerability combines maximum impact (complete system compromise) with
       trivial exploitation (injection of arbitrary code strings).
 
-      The eval() function bypasses all normal security boundaries and executes code 
-      with the full privileges of the running application. Unlike other injection 
-      vulnerabilities that may be limited to specific subsystems, eval-based RCE 
-      provides unrestricted access to the entire runtime environment, including 
+      The eval() function bypasses all normal security boundaries and executes code
+      with the full privileges of the running application. Unlike other injection
+      vulnerabilities that may be limited to specific subsystems, eval-based RCE
+      provides unrestricted access to the entire runtime environment, including
       file systems, network interfaces, process control, and system resources.
 
-      Modern JavaScript environments amplify the risk through Node.js capabilities, 
-      allowing server-side code execution that can compromise entire applications, 
-      databases, and infrastructure. The vulnerability is particularly dangerous 
-      because it requires no special knowledge of application internals - any 
+      Modern JavaScript environments amplify the risk through Node.js capabilities,
+      allowing server-side code execution that can compromise entire applications,
+      databases, and infrastructure. The vulnerability is particularly dangerous
+      because it requires no special knowledge of application internals - any
       valid JavaScript code can be executed directly.
 
-      Eval-based vulnerabilities are especially common in template engines, 
-      expression evaluators, configuration processors, dynamic import systems, 
-      and developer tools. The widespread use of eval() in legacy codebases and 
-      third-party libraries creates ongoing exposure risks that are difficult to 
+      Eval-based vulnerabilities are especially common in template engines,
+      expression evaluators, configuration processors, dynamic import systems,
+      and developer tools. The widespread use of eval() in legacy codebases and
+      third-party libraries creates ongoing exposure risks that are difficult to
       identify and remediate systematically.
 
-      The persistence and stealth capabilities enabled by eval() RCE make it a 
-      preferred vector for advanced persistent threats, allowing attackers to 
-      establish backdoors, modify application logic, and maintain long-term access 
+      The persistence and stealth capabilities enabled by eval() RCE make it a
+      preferred vector for advanced persistent threats, allowing attackers to
+      establish backdoors, modify application logic, and maintain long-term access
       to compromised systems while evading traditional security controls.
       """,
       references: [
@@ -243,7 +243,7 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
         }
       ],
       detection_notes: """
-      This pattern detects eval() function calls that include user-controlled input 
+      This pattern detects eval() function calls that include user-controlled input
       identifiers. The detection covers:
 
       1. Direct eval() calls: eval(userInput)
@@ -254,14 +254,14 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       6. Nested property access: eval(req.body.nested.code)
       7. Template literals containing user input: eval(`code ${userInput}`)
 
-      The regex pattern looks for eval() followed by parentheses containing common 
-      user input identifiers. It uses case-insensitive matching to catch variations 
-      in naming conventions and includes common request/parameter patterns used in 
+      The regex pattern looks for eval() followed by parentheses containing common
+      user input identifiers. It uses case-insensitive matching to catch variations
+      in naming conventions and includes common request/parameter patterns used in
       web frameworks.
 
-      The pattern is designed to have high sensitivity for security scanning while 
-      avoiding false positives on static eval() usage or properly sanitized inputs. 
-      However, any eval() usage should be carefully reviewed as it represents a 
+      The pattern is designed to have high sensitivity for security scanning while
+      avoiding false positives on static eval() usage or properly sanitized inputs.
+      However, any eval() usage should be carefully reviewed as it represents a
       fundamental security risk.
       """,
       safe_alternatives: [
@@ -382,19 +382,19 @@ defmodule Rsolv.Security.Patterns.Javascript.EvalUserInput do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
       iex> enhancement.ast_rules.callee.name
       "eval"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.EvalUserInput.ast_enhancement()
       iex> "direct_req_body_to_eval" in Map.keys(enhancement.confidence_rules.adjustments)
       true

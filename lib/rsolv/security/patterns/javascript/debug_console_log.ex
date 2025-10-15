@@ -39,16 +39,16 @@ defmodule Rsolv.Security.Patterns.Javascript.DebugConsoleLog do
       iex> pattern = Rsolv.Security.Patterns.Javascript.DebugConsoleLog.pattern()
       iex> pattern.id
       "js-debug-console-log"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.DebugConsoleLog.pattern()
       iex> pattern.severity
       :low
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.DebugConsoleLog.pattern()
       iex> vulnerable = "console.log(password)"
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Javascript.DebugConsoleLog.pattern()
       iex> safe = "console.log('User logged in')"
       iex> Regex.match?(pattern.regex, safe)
@@ -277,19 +277,19 @@ defmodule Rsolv.Security.Patterns.Javascript.DebugConsoleLog do
       iex> enhancement = Rsolv.Security.Patterns.Javascript.DebugConsoleLog.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.DebugConsoleLog.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "CallExpression"
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.DebugConsoleLog.ast_enhancement()
       iex> "console.log" in enhancement.ast_rules.callee_patterns
       true
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.DebugConsoleLog.ast_enhancement()
       iex> enhancement.min_confidence
       0.6
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Javascript.DebugConsoleLog.ast_enhancement()
       iex> "wrapped_in_condition" in Map.keys(enhancement.confidence_rules.adjustments)
       true

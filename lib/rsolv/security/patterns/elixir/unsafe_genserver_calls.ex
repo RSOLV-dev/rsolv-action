@@ -2,8 +2,8 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls do
   @moduledoc """
   Unsafe GenServer Calls vulnerability pattern for Elixir/OTP applications.
 
-  This pattern detects GenServer calls that execute arbitrary commands or code 
-  based on user input, potentially enabling remote code execution and process 
+  This pattern detects GenServer calls that execute arbitrary commands or code
+  based on user input, potentially enabling remote code execution and process
   hijacking attacks in BEAM applications.
 
   ## Vulnerability Details
@@ -67,13 +67,13 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeGenserverCalls do
 
   ## Attack Scenarios
 
-  1. **Remote Code Execution**: Attacker sends malicious code through API that 
+  1. **Remote Code Execution**: Attacker sends malicious code through API that
      gets executed via GenServer.call(pid, {:execute, malicious_code})
 
-  2. **Process Hijacking**: Attacker injects commands to take control of 
+  2. **Process Hijacking**: Attacker injects commands to take control of
      GenServer processes and manipulate application state
 
-  3. **System Command Injection**: User input flows to GenServer handlers that 
+  3. **System Command Injection**: User input flows to GenServer handlers that
      execute system commands without validation
 
   ## References

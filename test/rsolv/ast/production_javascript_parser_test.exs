@@ -59,10 +59,10 @@ defmodule Rsolv.AST.ProductionJavaScriptParserTest do
       function updateContent(userInput) {
           // VULNERABLE: XSS via innerHTML
           document.getElementById('content').innerHTML = userInput;
-          
+
           // VULNERABLE: eval usage
           const result = eval(`alert('${userInput}')`);
-          
+
           return result;
       }
       """
@@ -115,32 +115,32 @@ defmodule Rsolv.AST.ProductionJavaScriptParserTest do
                   isLoading: false
               };
           }
-          
+
           async analyzeCode(code) {
               this.setState({ isLoading: true });
-              
+
               try {
                   // Template literal with potential injection
                   const query = `SELECT * FROM code WHERE content = '${code}'`;
-                  
+
                   const response = await axios.post('/api/analyze', {
                       code: code,
                       query: query
                   });
-                  
-                  this.setState({ 
+
+                  this.setState({
                       findings: response.data.findings,
-                      isLoading: false 
+                      isLoading: false
                   });
               } catch (error) {
                   console.error('Analysis failed:', error);
                   this.setState({ isLoading: false });
               }
           }
-          
+
           render() {
               const { findings, isLoading } = this.state;
-              
+
               return (
                   <div>
                       {isLoading ? (
@@ -336,14 +336,14 @@ defmodule Rsolv.AST.ProductionJavaScriptParserTest do
       code = """
       class DatabaseService {
           private connection: any;
-          
+
           async executeQuery(userInput: string): Promise<any[]> {
               // VULNERABLE: SQL injection via template literal
               const query = `SELECT * FROM users WHERE name = '${userInput}'`;
-              
+
               // VULNERABLE: eval usage
               const result = eval(`this.connection.query('${query}')`);
-              
+
               return result;
           }
       }

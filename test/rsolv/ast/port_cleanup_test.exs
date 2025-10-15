@@ -120,7 +120,7 @@ defmodule Rsolv.AST.PortCleanupTest do
           line = sys.stdin.readline()
           if not line:
               break
-          
+
           request = json.loads(line.strip())
           if request.get("command") == "INFINITE_LOOP":
               while True:

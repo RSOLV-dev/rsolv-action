@@ -542,7 +542,7 @@ defmodule Rsolv.AST.ParserRegistry do
             text: text
           }
 
-        # Ruby-style errors  
+        # Ruby-style errors
         %{"location" => location} = error ->
           %{
             type: :syntax_error,

@@ -34,19 +34,19 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
       def delete_document(request, doc_id):
           document = Document.objects.get(pk=doc_id)
           document.delete()
-          
+
       # VULNERABLE - get_object_or_404 without user check
       invoice = get_object_or_404(Invoice, pk=invoice_id)
-      
+
       # VULNERABLE - All objects exposed
       documents = Document.objects.all()
-      
+
       # SAFE - Permission decorator
       @permission_required('app.delete_document')
       def delete_document(request, doc_id):
           document = get_object_or_404(Document, pk=doc_id, user=request.user)
           document.delete()
-      
+
       # SAFE - Filtered by user
       documents = Document.objects.filter(user=request.user)
   """
@@ -269,7 +269,7 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
         class DocumentDeleteView(PermissionRequiredMixin, DeleteView):
             model = Document
             permission_required = 'app.delete_document'
-            
+
             def get_queryset(self):
                 # Ensure users can only delete their own documents
                 return super().get_queryset().filter(user=self.request.user)
@@ -297,11 +297,11 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           def edit_document(request, doc_id):
               # Model-level permission checked by decorator
               document = get_object_or_404(Document, pk=doc_id)
-              
+
               # Object-level permission check
               if document.user != request.user and not request.user.is_staff:
                   raise PermissionDenied
-              
+
               # Safe to proceed
               if request.method == 'POST':
                   # Process form
@@ -311,7 +311,7 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
           # Secure queryset filtering
           class DocumentViewSet(viewsets.ModelViewSet):
               permission_classes = [IsAuthenticated]
-              
+
               def get_queryset(self):
                   user = self.request.user
                   if user.is_staff:
@@ -326,7 +326,7 @@ defmodule Rsolv.Security.Patterns.Django.AuthorizationBypass do
               def __init__(self, *args, user=None, **kwargs):
                   super().__init__(*args, **kwargs)
                   self.user = user
-                  
+
               def clean(self):
                   cleaned_data = super().clean()
                   if self.instance.pk:

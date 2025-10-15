@@ -257,7 +257,7 @@ if (in_array($redirect, $allowed_urls)) {
       iex> test_cases = Rsolv.Security.Patterns.Php.OpenRedirect.test_cases()
       iex> length(test_cases.positive)
       8
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.OpenRedirect.test_cases()
       iex> length(test_cases.negative)
       6
@@ -370,7 +370,7 @@ if (in_array($redirect, $allowed_urls)) {
         // SECURE: Validate against allowlist
         $allowed_redirects = [
             '/dashboard',
-            '/profile', 
+            '/profile',
             '/settings',
             '/logout'
         ];
@@ -389,7 +389,7 @@ if (in_array($redirect, $allowed_urls)) {
         function safe_redirect($url) {
             // Remove whitespace
             $url = trim($url);
-            
+
             // Only allow URLs starting with single /
             if (preg_match('#^/[^/]#', $url)) {
                 header("Location: " . $url);
@@ -405,15 +405,15 @@ if (in_array($redirect, $allowed_urls)) {
         // SECURE: Validate URL belongs to our domain
         function is_safe_redirect($url) {
             $parsed = parse_url($url);
-            
+
             // Only allow our domain or relative URLs
             $allowed_hosts = ['example.com', 'www.example.com'];
-            
+
             if (!isset($parsed['host'])) {
                 // Relative URL - check it starts with /
                 return strpos($url, '/') === 0 && strpos($url, '//') !== 0;
             }
-            
+
             return in_array($parsed['host'], $allowed_hosts);
         }
 
@@ -438,34 +438,34 @@ if (in_array($redirect, $allowed_urls)) {
       iex> desc = Rsolv.Security.Patterns.Php.OpenRedirect.vulnerability_description()
       iex> desc =~ "redirect"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.OpenRedirect.vulnerability_description()
       iex> desc =~ "phishing"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.OpenRedirect.vulnerability_description()
       iex> desc =~ "validation"
       true
   """
   def vulnerability_description do
     """
-    Open redirect vulnerabilities occur when a web application accepts untrusted 
-    input that could cause the application to redirect users to an unintended 
+    Open redirect vulnerabilities occur when a web application accepts untrusted
+    input that could cause the application to redirect users to an unintended
     external URL, enabling phishing attacks and credential theft.
 
-    Attackers exploit open redirects by crafting malicious URLs that appear to 
-    originate from a trusted domain but redirect victims to attacker-controlled 
+    Attackers exploit open redirects by crafting malicious URLs that appear to
+    originate from a trusted domain but redirect victims to attacker-controlled
     sites designed to steal credentials or distribute malware.
 
     ## Security Impact
 
-    **Phishing Attacks**: Users trust links from known domains, making them more 
+    **Phishing Attacks**: Users trust links from known domains, making them more
     likely to enter credentials on the redirected phishing site.
 
-    **Credential Theft**: Fake login pages that look identical to the real site 
+    **Credential Theft**: Fake login pages that look identical to the real site
     can capture usernames, passwords, and 2FA codes.
 
-    **Trust Exploitation**: Bypasses spam filters and security warnings that would 
+    **Trust Exploitation**: Bypasses spam filters and security warnings that would
     normally block direct links to malicious sites.
 
     ## Attack Scenarios
@@ -487,8 +487,8 @@ if (in_array($redirect, $allowed_urls)) {
 
     ## Prevention
 
-    Implement strict validation using allowlists of acceptable redirect 
-    destinations, validate that URLs are relative or belong to your domain, 
+    Implement strict validation using allowlists of acceptable redirect
+    destinations, validate that URLs are relative or belong to your domain,
     and never trust user input for determining redirect locations.
     """
   end
@@ -504,11 +504,11 @@ if (in_array($redirect, $allowed_urls)) {
       iex> enhancement = Rsolv.Security.Patterns.Php.OpenRedirect.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.OpenRedirect.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.OpenRedirect.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

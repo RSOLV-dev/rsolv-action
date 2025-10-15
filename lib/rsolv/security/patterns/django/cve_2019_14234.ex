@@ -2,8 +2,8 @@ defmodule Rsolv.Security.Patterns.Django.Cve201914234 do
   @moduledoc """
   Django CVE-2019-14234 - SQL Injection in JSONField/HStoreField Key Transforms
 
-  This pattern detects Django applications vulnerable to CVE-2019-14234, a critical 
-  SQL injection vulnerability in JSONField and HStoreField key transforms due to 
+  This pattern detects Django applications vulnerable to CVE-2019-14234, a critical
+  SQL injection vulnerability in JSONField and HStoreField key transforms due to
   shallow key transformation error that allows direct injection into SQL queries.
 
   ## Vulnerability Details
@@ -45,7 +45,7 @@ defmodule Rsolv.Security.Patterns.Django.Cve201914234 do
       allowed_keys = ['name', 'email', 'status']
       if key not in allowed_keys:
           raise ValueError("Invalid key")
-      
+
       results = Model.objects.filter(data__key=key)
       return results
 
@@ -122,18 +122,18 @@ Model.objects.extra(where=["data->%s = %s"], params=[safe_key, value])|
   def vulnerability_metadata do
     %{
       description: """
-      CVE-2019-14234 is a critical SQL injection vulnerability affecting Django's JSONField 
-      and HStoreField key transform operations. The vulnerability occurs due to a shallow key transformation error where user-provided keys in database lookups are not properly 
+      CVE-2019-14234 is a critical SQL injection vulnerability affecting Django's JSONField
+      and HStoreField key transform operations. The vulnerability occurs due to a shallow key transformation error where user-provided keys in database lookups are not properly
       escaped when building SQL queries.
 
-      This affects PostgreSQL-specific field types (JSONField, HStoreField) where key lookups 
-      like `data__user_key=value` translate to SQL operations that include the key name directly 
-      in the query without proper escaping. Attackers can inject malicious SQL through the key 
+      This affects PostgreSQL-specific field types (JSONField, HStoreField) where key lookups
+      like `data__user_key=value` translate to SQL operations that include the key name directly
+      in the query without proper escaping. Attackers can inject malicious SQL through the key
       parameter, leading to full database compromise.
 
-      The vulnerability was discovered during Django's security audit and affects millions of 
-      Django applications using PostgreSQL with JSON or HStore data types. The impact is 
-      particularly severe because these fields are commonly used for storing user preferences, 
+      The vulnerability was discovered during Django's security audit and affects millions of
+      Django applications using PostgreSQL with JSON or HStore data types. The impact is
+      particularly severe because these fields are commonly used for storing user preferences,
       metadata, and dynamic content.
       """,
       references: [
@@ -201,8 +201,8 @@ Model.objects.extra(where=["data->%s = %s"], params=[safe_key, value])|
       4. Nested key transforms where user input flows into key parameters
       5. PostgreSQL-specific JSON operations containing user data
 
-      The pattern specifically looks for Django ORM filter operations where user-controllable 
-      data (typically from request objects) is used directly in field lookup key parameters 
+      The pattern specifically looks for Django ORM filter operations where user-controllable
+      data (typically from request objects) is used directly in field lookup key parameters
       without proper validation or escaping.
       """,
       safe_alternatives: [

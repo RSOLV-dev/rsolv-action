@@ -6,12 +6,12 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
     cursor.execute("SELECT * FROM users WHERE id = %s" % user_id)
     db.execute("DELETE FROM posts WHERE author = '%s'" % username)
     query = "UPDATE accounts SET balance = %s" % amount; cursor.execute(query)
-    
+
   Safe alternatives:
     cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
     db.execute("DELETE FROM posts WHERE author = %s", [username])
     cursor.execute("UPDATE accounts SET balance = %s", (amount,))
-    
+
   ## Vulnerability Details
 
   Python's % string formatting operator creates SQL queries by directly inserting
@@ -43,16 +43,16 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFormat.pattern()
       iex> pattern.id
       "python-sql-injection-format"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFormat.pattern()
       iex> pattern.severity
       :high
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFormat.pattern()
       iex> vulnerable = ~S|cursor.execute("SELECT * FROM users WHERE id = %s" % user_id)|
       iex> Regex.match?(pattern.regex, vulnerable)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Python.SqlInjectionFormat.pattern()
       iex> safe = ~S|cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))|
       iex> Regex.match?(pattern.regex, safe)
@@ -201,7 +201,7 @@ defmodule Rsolv.Security.Patterns.Python.SqlInjectionFormat do
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionFormat.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.SqlInjectionFormat.ast_enhancement()
       iex> enhancement.min_confidence
       0.7

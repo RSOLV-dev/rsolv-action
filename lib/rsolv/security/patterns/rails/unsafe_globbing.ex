@@ -2,9 +2,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
   @moduledoc """
   Rails Unsafe Globbing pattern for Rails applications.
 
-  This pattern detects path traversal vulnerabilities in Rails route globbing 
-  that can lead to arbitrary file disclosure. Glob routes use wildcard parameters 
-  like '*path' to capture multiple path segments, but without proper constraints 
+  This pattern detects path traversal vulnerabilities in Rails route globbing
+  that can lead to arbitrary file disclosure. Glob routes use wildcard parameters
+  like '*path' to capture multiple path segments, but without proper constraints
   they can be exploited to access files outside the intended directory.
 
   ## Background
@@ -34,16 +34,16 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
 
       # Critical - No constraints on glob route
       get "files/*path", to: "files#show"
-      
+
       # Critical - Generic catch-all route
       match "*anything" => "default#handler"
-      
+
       # Critical - Disabled format constraints
       get "download/*file", to: "download#serve", format: false
-      
+
       # Safe - Proper path constraints
       get "files/*path", to: "files#show", constraints: { path: /[^.]/ }
-      
+
       # Safe - Specific validation
       get "assets/*filename", to: "assets#serve", constraints: { filename: /\\A[\\w\\.-\\/]+\\z/ }
   """
@@ -128,10 +128,10 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
   def vulnerability_metadata do
     %{
       description: """
-      Unsafe Route Globbing in Rails applications represents a critical path traversal vulnerability where 
-      glob routes (using wildcard parameters like '*path') lack proper constraints, allowing attackers 
-      to access arbitrary files on the server. Glob routes are designed to capture multiple path 
-      segments into a single parameter, making them convenient for file serving or catch-all routes, 
+      Unsafe Route Globbing in Rails applications represents a critical path traversal vulnerability where
+      glob routes (using wildcard parameters like '*path') lack proper constraints, allowing attackers
+      to access arbitrary files on the server. Glob routes are designed to capture multiple path
+      segments into a single parameter, making them convenient for file serving or catch-all routes,
       but they become dangerous when the captured path is used directly in file operations.
 
       The vulnerability is particularly severe because:
@@ -205,14 +205,14 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
          ```ruby
          # NEVER do this - allows arbitrary file access
          get "files/*path", to: "files#show"           # DANGEROUS
-         
+
          # Always add path constraints
-         get "files/*path", to: "files#show", 
+         get "files/*path", to: "files#show",
              constraints: { path: /[^.]/ }             # Excludes dot files
-         
+
          get "files/*path", to: "files#show",
              constraints: { path: /\\A[\\w\\/-]+\\z/ }   # Alphanumeric + / and -
-         
+
          get "assets/*filename", to: "assets#serve",
              constraints: { filename: /\\A[\\w\\.\\-\\/]+\\z/ } # Specific file chars
          ```
@@ -222,35 +222,35 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
          class FilesController < ApplicationController
            SAFE_PATH_PATTERN = /\\A[\\w\\.\\/\\-]+\\z/.freeze
            ALLOWED_EXTENSIONS = %w[.jpg .png .pdf .txt].freeze
-           
+
            def show
              file_path = params[:path]
-             
+
              # Validate path format
              unless file_path.match?(SAFE_PATH_PATTERN)
                render status: :bad_request and return
              end
-             
+
              # Check for path traversal
              if file_path.include?('../') || file_path.include?('..\\\\')
                render status: :bad_request and return
              end
-             
+
              # Validate file extension
              extension = File.extname(file_path).downcase
              unless ALLOWED_EXTENSIONS.include?(extension)
                render status: :bad_request and return
              end
-             
+
              # Ensure file is within safe directory
              safe_path = Rails.root.join('public', 'files', file_path)
              canonical_path = File.expand_path(safe_path)
              safe_directory = File.expand_path(Rails.root.join('public', 'files'))
-             
+
              unless canonical_path.start_with?(safe_directory)
                render status: :bad_request and return
              end
-             
+
              if File.exist?(canonical_path) && File.file?(canonical_path)
                send_file(canonical_path)
              else
@@ -268,20 +268,20 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
              'privacy-policy' => 'public/legal/privacy.pdf',
              'terms' => 'public/legal/terms.pdf'
            }.freeze
-           
+
            def show
              file_key = params[:file]
              file_path = ALLOWED_FILES[file_key]
-             
+
              if file_path && File.exist?(Rails.root.join(file_path))
                send_file(Rails.root.join(file_path))
              else
                render status: :not_found
              end
          end
-         
+
          # Routes
-         get "files/:file", to: "files#show", 
+         get "files/:file", to: "files#show",
              constraints: { file: /\\\#{Regexp.union(ALLOWED_FILES.keys)}/ }
          ```
 
@@ -291,19 +291,19 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
            def secure_file_path(user_path, safe_directory)
              # Remove any path traversal attempts
              cleaned_path = user_path.gsub(/\\.\\.[\\/\\\\]/, '')
-             
+
              # Join with safe directory
              full_path = File.join(safe_directory, cleaned_path)
-             
+
              # Get canonical path
              canonical_path = File.expand_path(full_path)
              safe_dir = File.expand_path(safe_directory)
-             
+
              # Ensure it's within the safe directory
              return nil unless canonical_path.start_with?(safe_dir)
              return nil unless File.exist?(canonical_path)
              return nil unless File.file?(canonical_path)
-             
+
              canonical_path
            end
          end
@@ -342,9 +342,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
 
       # Good - Specific parameters
       get "files/:category/:filename", to: "files#show",
-          constraints: { 
-            category: /[a-z]+/, 
-            filename: /[\\w\\.\\-]+/ 
+          constraints: {
+            category: /[a-z]+/,
+            filename: /[\\w\\.\\-]+/
           }
 
       # 2. Implement secure file serving controller
@@ -354,35 +354,35 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
           'images' => Rails.root.join('public', 'images'),
           'downloads' => Rails.root.join('public', 'downloads')
         }.freeze
-        
+
         ALLOWED_EXTENSIONS = %w[.pdf .jpg .png .txt .doc].freeze
-        
+
         def show
           category = params[:category]
           filename = params[:filename]
-          
+
           safe_dir = SAFE_DIRECTORIES[category]
           return render_not_found unless safe_dir
-          
+
           extension = File.extname(filename).downcase
           return render_not_found unless ALLOWED_EXTENSIONS.include?(extension)
-          
+
           file_path = safe_dir.join(filename)
           canonical_path = file_path.realpath
-          
+
           # Ensure file is within safe directory
           unless canonical_path.to_s.start_with?(safe_dir.realpath.to_s)
             return render_not_found
           end
-          
+
           if File.exist?(canonical_path) && File.file?(canonical_path)
             send_file(canonical_path, disposition: 'inline')
           else
             render_not_found
           end
-        
+
         private
-        
+
         def render_not_found
           render status: :not_found, plain: 'File not found'
         end
@@ -390,18 +390,18 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
 
       # Routes
       get "files/:category/:filename", to: "secure_files#show",
-          constraints: { 
-            category: /docs|images|downloads/, 
-            filename: /[\\w\\.\\-]+/ 
+          constraints: {
+            category: /docs|images|downloads/,
+            filename: /[\\w\\.\\-]+/
           }
 
       # 3. Use Rails' Active Storage for file management
       class Document < ApplicationRecord
         has_one_attached :file
-        
+
         validates :category, inclusion: { in: %w[docs images downloads] }
         validates :file, presence: true
-        
+
         def self.find_by_public_id(public_id)
           find_by(public_id: public_id)
         end
@@ -411,20 +411,20 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
         def show
           document = Document.find_by_public_id(params[:id])
           return render_not_found unless document
-          
+
           redirect_to rails_blob_path(document.file, disposition: "inline")
         end
 
-      # Routes  
+      # Routes
       get "files/:id", to: "documents#show",
           constraints: { id: /[a-zA-Z0-9\\-]+/ }
 
       # 4. Environment-based file serving restrictions
       class FilesController < ApplicationController
         before_action :check_environment
-        
+
         private
-        
+
         def check_environment
           unless Rails.env.development?
             render status: :forbidden, plain: 'File serving disabled'
@@ -435,12 +435,12 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbing do
       class FilesController < ApplicationController
         def show
           file_id = params[:id]
-          
+
           # Validate file ID format
           unless file_id.match?(/\\A[a-zA-Z0-9\\-]+\\z/)
             return render status: :bad_request
           end
-          
+
           # Redirect to CDN
           cdn_url = "https://cdn.example.com/files/\#{file_id}"
           redirect_to cdn_url

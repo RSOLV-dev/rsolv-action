@@ -260,7 +260,7 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
       iex> test_cases = Rsolv.Security.Patterns.Php.MissingCsrfToken.test_cases()
       iex> length(test_cases.positive)
       7
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.MissingCsrfToken.test_cases()
       iex> length(test_cases.negative)
       7
@@ -299,7 +299,7 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
           description: "POST with double quotes"
         },
         %{
-          code: ~s|if ($_SERVER['REQUEST_METHOD'] === 'POST') { 
+          code: ~s|if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Process payment
     processPayment($_POST['card'], $_POST['amount']);
 }|,
@@ -366,7 +366,7 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = $_POST['email'];
             $password = $_POST['password'];
-            
+
             updateUserCredentials($email, $password);
             echo "Profile updated!";
         }
@@ -378,7 +378,7 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $to_account = $_POST['to_account'];
             $amount = $_POST['amount'];
-            
+
             // Transfer funds without verification!
             transferMoney($current_user, $to_account, $amount);
         }
@@ -409,12 +409,12 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate CSRF token
-            if (!isset($_POST['csrf_token']) || 
+            if (!isset($_POST['csrf_token']) ||
                 !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
                 http_response_code(403);
                 die('CSRF token validation failed');
             }
-            
+
             // Process the form safely
             updateUserCredentials($_POST['email'], $_POST['password']);
         }
@@ -427,14 +427,14 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $cookie_token = $_COOKIE['csrf_token'] ?? '';
             $post_token = $_POST['csrf_token'] ?? '';
-            
+
             // Verify tokens match and are not empty
-            if (empty($cookie_token) || empty($post_token) || 
+            if (empty($cookie_token) || empty($post_token) ||
                 !hash_equals($cookie_token, $post_token)) {
                 http_response_code(403);
                 die('CSRF validation failed');
             }
-            
+
             // Process request safely
             processPayment($_POST['amount'], $_POST['account']);
         }
@@ -449,18 +449,18 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
                 if ($request->method() === 'POST') {
                     $session_token = $_SESSION['csrf_token'] ?? '';
                     $request_token = $request->input('_token') ?? '';
-                    
+
                     if (!$this->tokensMatch($session_token, $request_token)) {
                         throw new TokenMismatchException('CSRF token mismatch');
                     }
                 }
-                
+
                 return $next($request);
             }
-            
+
             private function tokensMatch($session, $request) {
-                return !empty($session) && 
-                       !empty($request) && 
+                return !empty($session) &&
+                       !empty($request) &&
                        hash_equals($session, $request);
             }
         }
@@ -479,37 +479,37 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
       iex> desc = Rsolv.Security.Patterns.Php.MissingCsrfToken.vulnerability_description()
       iex> desc =~ "CSRF"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.MissingCsrfToken.vulnerability_description()
       iex> desc =~ "cross-site"
       true
-      
+
       iex> desc = Rsolv.Security.Patterns.Php.MissingCsrfToken.vulnerability_description()
       iex> desc =~ "token"
       true
   """
   def vulnerability_description do
     """
-    Cross-Site Request Forgery (CSRF) vulnerabilities occur when web applications 
-    process state-changing requests without verifying that the request was 
-    intentionally made by the authenticated user, allowing attackers to perform 
+    Cross-Site Request Forgery (CSRF) vulnerabilities occur when web applications
+    process state-changing requests without verifying that the request was
+    intentionally made by the authenticated user, allowing attackers to perform
     unauthorized actions on behalf of victims.
 
-    CSRF attacks exploit the trust that a site has in a user's browser. Since 
-    browsers automatically include credentials (cookies, session IDs) with every 
-    request, malicious sites can trigger actions on vulnerable applications 
+    CSRF attacks exploit the trust that a site has in a user's browser. Since
+    browsers automatically include credentials (cookies, session IDs) with every
+    request, malicious sites can trigger actions on vulnerable applications
     without the user's knowledge or consent.
 
     ## Security Impact
 
-    **Unauthorized Actions**: Attackers can perform any action the victim is 
-    authorized to do, including changing passwords, making purchases, or 
+    **Unauthorized Actions**: Attackers can perform any action the victim is
+    authorized to do, including changing passwords, making purchases, or
     modifying settings.
 
-    **Data Manipulation**: Forms can be submitted to create, update, or delete 
+    **Data Manipulation**: Forms can be submitted to create, update, or delete
     data, potentially causing data loss or corruption.
 
-    **Financial Loss**: Banking and e-commerce sites are particularly vulnerable, 
+    **Financial Loss**: Banking and e-commerce sites are particularly vulnerable,
     with attacks potentially transferring funds or making purchases.
 
     ## Attack Scenarios
@@ -531,9 +531,9 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
 
     ## Prevention
 
-    Implement CSRF tokens that are unique per session or request, validate them 
-    on every state-changing operation, use the SameSite cookie attribute, and 
-    consider implementing additional defenses like requiring re-authentication 
+    Implement CSRF tokens that are unique per session or request, validate them
+    on every state-changing operation, use the SameSite cookie attribute, and
+    consider implementing additional defenses like requiring re-authentication
     for sensitive actions.
     """
   end
@@ -549,11 +549,11 @@ defmodule Rsolv.Security.Patterns.Php.MissingCsrfToken do
       iex> enhancement = Rsolv.Security.Patterns.Php.MissingCsrfToken.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.MissingCsrfToken.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.MissingCsrfToken.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

@@ -51,7 +51,7 @@ defmodule RsolvWeb.ConvertKitIntegrationTest do
             # IO.puts("Mock received subscriber request: #{url}")
             {:ok, fixtures.subscription_success}
 
-          # Tag API call  
+          # Tag API call
           String.contains?(url, "/tags/") ->
             # Log for debugging
             # IO.puts("Mock received tag request: #{url}")

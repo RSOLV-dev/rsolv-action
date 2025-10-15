@@ -250,9 +250,9 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
   def vulnerability_metadata do
     %{
       description: """
-      Debug mode is a development feature in Python web frameworks that provides detailed 
-      error pages, stack traces, and debugging information. When accidentally left enabled 
-      in production environments, it creates severe security vulnerabilities by exposing 
+      Debug mode is a development feature in Python web frameworks that provides detailed
+      error pages, stack traces, and debugging information. When accidentally left enabled
+      in production environments, it creates severe security vulnerabilities by exposing
       sensitive internal application details to potential attackers.
 
       In Django (DEBUG = True):
@@ -444,11 +444,11 @@ defmodule Rsolv.Security.Patterns.Python.DebugTrue do
       iex> enhancement = Rsolv.Security.Patterns.Python.DebugTrue.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.DebugTrue.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Python.DebugTrue.ast_enhancement()
       iex> length(enhancement.ast_rules)
       2

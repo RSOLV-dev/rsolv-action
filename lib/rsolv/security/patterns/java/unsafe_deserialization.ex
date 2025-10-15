@@ -250,11 +250,11 @@ ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("maxdepth=5;max
       iex> enhancement = Rsolv.Security.Patterns.Java.UnsafeDeserialization.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.UnsafeDeserialization.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.UnsafeDeserialization.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"

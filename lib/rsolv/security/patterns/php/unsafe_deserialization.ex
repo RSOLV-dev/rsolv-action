@@ -258,11 +258,11 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
       iex> test_cases = Rsolv.Security.Patterns.Php.UnsafeDeserialization.test_cases()
       iex> length(test_cases.positive) > 0
       true
-      
+
       iex> test_cases = Rsolv.Security.Patterns.Php.UnsafeDeserialization.test_cases()
       iex> length(test_cases.negative) > 0
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Php.UnsafeDeserialization.pattern()
       iex> pattern.id
       "php-unsafe-deserialization"
@@ -367,7 +367,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         class Config {
             public $debug_mode = false;
             public $log_file = '/var/log/app.log';
-            
+
             public function __destruct() {
                 if ($this->debug_mode) {
                     // DANGEROUS: File operations in destructor
@@ -390,7 +390,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
             public $key;
             public $data;
             public $file_path;
-            
+
             public function __toString() {
                 // DANGEROUS: File inclusion in magic method
                 if (file_exists($this->file_path)) {
@@ -415,7 +415,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
             public $username;
             public $avatar_path;
             public $settings;
-            
+
             public function __wakeup() {
                 // DANGEROUS: Automatic file operations
                 if ($this->avatar_path && !file_exists($this->avatar_path)) {
@@ -453,7 +453,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         if (isset($_COOKIE['backup_prefs'])) {
             $prefs_json = filter_var($_COOKIE['backup_prefs'], FILTER_SANITIZE_STRING);
             $prefs = json_decode($prefs_json, true);
-            
+
             if (is_array($prefs)) {
                 foreach ($prefs as $key => $value) {
                     if (in_array($key, ['theme', 'language', 'timezone'])) {
@@ -468,16 +468,16 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         class SafeConfig {
             public $theme = 'default';
             public $language = 'en';
-            
+
             // No dangerous magic methods
             public function validate() {
                 $allowed_themes = ['default', 'dark', 'light'];
                 $allowed_languages = ['en', 'es', 'fr', 'de'];
-                
+
                 if (!in_array($this->theme, $allowed_themes)) {
                     $this->theme = 'default';
                 }
-                
+
                 if (!in_array($this->language, $allowed_languages)) {
                     $this->language = 'en';
                 }
@@ -489,7 +489,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
             $config = unserialize($_POST['config'], [
                 'allowed_classes' => ['SafeConfig']
             ]);
-            
+
             if ($config instanceof SafeConfig) {
                 $config->validate();
                 $GLOBALS['app_config'] = $config;
@@ -504,33 +504,33 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
                 'data' => $data,
                 'timestamp' => time()
             ];
-            
+
             $serialized = json_encode($cache_array);
             $mac = hash_hmac('sha256', $serialized, SECRET_KEY);
-            
+
             return base64_encode($serialized . '.' . $mac);
         }
 
         function loadSecureCache($cache_token) {
             $decoded = base64_decode($cache_token);
             $parts = explode('.', $decoded, 2);
-            
+
             if (count($parts) !== 2) {
                 return false;
             }
-            
+
             [$data, $mac] = $parts;
             $expected_mac = hash_hmac('sha256', $data, SECRET_KEY);
-            
+
             if (!hash_equals($expected_mac, $mac)) {
                 return false; // MAC verification failed
             }
-            
+
             $cache_array = json_decode($data, true);
             if (!is_array($cache_array)) {
                 return false;
             }
-            
+
             return $cache_array;
         }
 
@@ -547,21 +547,21 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         class SecureUserProfile {
             private $allowed_fields = ['username', 'email', 'theme', 'language'];
             private $data = [];
-            
+
             public function setField($field, $value) {
                 if (in_array($field, $this->allowed_fields)) {
                     $this->data[$field] = filter_var($value, FILTER_SANITIZE_STRING);
                 }
             }
-            
+
             public function getField($field) {
                 return $this->data[$field] ?? null;
             }
-            
+
             public function toArray() {
                 return $this->data;
             }
-            
+
             public static function fromArray($data) {
                 $profile = new self();
                 if (is_array($data)) {
@@ -577,7 +577,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
         if (isset($_FILES['profile_backup'])) {
             $backup_json = file_get_contents($_FILES['profile_backup']['tmp_name']);
             $profile_data = json_decode($backup_json, true);
-            
+
             if (is_array($profile_data)) {
                 $profile = SecureUserProfile::fromArray($profile_data);
                 $_SESSION['user_profile'] = $profile->toArray();
@@ -636,7 +636,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
     ```php
     class FileLogger {
         public $logFile = '/var/log/app.log';
-        
+
         public function __destruct() {
             file_put_contents($this->logFile, "Session ended\n", FILE_APPEND);
         }
@@ -651,7 +651,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
     ```php
     class ConfigLoader {
         public $configFile = 'config.php';
-        
+
         public function __wakeup() {
             include $this->configFile;
         }
@@ -665,7 +665,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
     ```php
     class TemplateEngine {
         public $template = '';
-        
+
         public function __toString() {
             return eval("return \"$this->template\";");
         }
@@ -685,7 +685,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
     class Logger {
         public $file;
         public $data;
-        
+
         public function __destruct() {
             file_put_contents($this->file, $this->data);
         }
@@ -694,7 +694,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
     // Step 2: Object that triggers string conversion
     class Template {
         public $content;
-        
+
         public function __toString() {
             return $this->content->process();
         }
@@ -703,7 +703,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
     // Step 3: Object with method call
     class Processor {
         public $logger;
-        
+
         public function process() {
             return (string) $this->logger;
         }
@@ -747,7 +747,7 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
     // Vulnerable cache system
     class CacheEntry {
         public $file;
-        
+
         public function __destruct() {
             unlink($this->file); // Delete file
         }
@@ -804,11 +804,11 @@ defmodule Rsolv.Security.Patterns.Php.UnsafeDeserialization do
       iex> enhancement = Rsolv.Security.Patterns.Php.UnsafeDeserialization.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.UnsafeDeserialization.ast_enhancement()
       iex> enhancement.min_confidence
       0.8
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Php.UnsafeDeserialization.ast_enhancement()
       iex> length(enhancement.ast_rules)
       4

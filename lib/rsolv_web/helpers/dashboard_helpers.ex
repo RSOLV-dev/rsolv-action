@@ -9,10 +9,10 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
   Format a DateTime or timestamp string for display.
 
   ## Examples
-      
+
       iex> format_datetime(~U[2023-05-20 12:34:56Z])
       "May 20, 2023 12:34 PM"
-      
+
       iex> format_datetime("2023-05-20T12:34:56Z")
       "May 20, 2023 12:34 PM"
   """
@@ -40,10 +40,10 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
   Format a duration in seconds as a human-readable string.
 
   ## Examples
-      
+
       iex> format_duration(65)
       "1m 5s"
-      
+
       iex> format_duration(3665)
       "1h 1m 5s"
   """
@@ -81,10 +81,10 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
 
       iex> is_empty_chart_data([])
       true
-      
+
       iex> is_empty_chart_data(nil)
       true
-      
+
       iex> is_empty_chart_data([%{count: 1}])
       false
   """
@@ -118,10 +118,10 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
 
       iex> safe_get(%{a: %{b: 1}}, [:a, :b], 0)
       1
-      
+
       iex> safe_get(%{a: %{c: 1}}, [:a, :b], 0)
       0
-      
+
       iex> safe_get(nil, [:a, :b], 0)
       0
   """

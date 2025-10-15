@@ -57,16 +57,16 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
       iex> pattern = Rsolv.Security.Patterns.Java.WeakRandom.pattern()
       iex> pattern.id
       "java-weak-random"
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.WeakRandom.pattern()
       iex> pattern.severity
       :medium
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.WeakRandom.pattern()
       iex> vulnerable = "Random rand = new Random();"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, vulnerable) end)
       true
-      
+
       iex> pattern = Rsolv.Security.Patterns.Java.WeakRandom.pattern()
       iex> safe = "SecureRandom secureRandom = new SecureRandom();"
       iex> Enum.any?(pattern.regex, fn r -> Regex.match?(r, safe) end)
@@ -314,11 +314,11 @@ defmodule Rsolv.Security.Patterns.Java.WeakRandom do
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakRandom.ast_enhancement()
       iex> Map.keys(enhancement) |> Enum.sort()
       [:ast_rules, :confidence_rules, :context_rules, :min_confidence]
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakRandom.ast_enhancement()
       iex> enhancement.min_confidence
       0.7
-      
+
       iex> enhancement = Rsolv.Security.Patterns.Java.WeakRandom.ast_enhancement()
       iex> enhancement.ast_rules.node_type
       "MethodInvocation"

@@ -2,9 +2,9 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
   @moduledoc """
   CVE-2019-5418 - File Content Disclosure vulnerability pattern for Rails applications.
 
-  This pattern detects the critical path traversal vulnerability in Rails Action View 
-  (versions <5.2.2.1, <5.1.6.2, <5.0.7.2, <4.2.11.1 and v3) where specially crafted 
-  Accept headers combined with render file: calls can expose arbitrary files from 
+  This pattern detects the critical path traversal vulnerability in Rails Action View
+  (versions <5.2.2.1, <5.1.6.2, <5.0.7.2, <4.2.11.1 and v3) where specially crafted
+  Accept headers combined with render file: calls can expose arbitrary files from
   the server's filesystem.
 
   ## Background
@@ -25,16 +25,16 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
 
       # VULNERABLE - Direct file path from params
       render file: params[:template]
-      
+
       # VULNERABLE - Path construction with user input
       render file: "\#{Rails.root}/public/\#{params[:file]}"
-      
+
       # VULNERABLE - Template path from params
       render template: params[:template_path]
-      
+
       # SAFE - Static file path
       render file: Rails.root.join('app', 'views', 'reports', 'annual.html.erb')
-      
+
       # SAFE - Whitelisted templates
       ALLOWED_TEMPLATES = %w[user admin guest]
       render template: "templates/\#{template}" if ALLOWED_TEMPLATES.include?(template)
@@ -102,10 +102,10 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
     %{
       description: """
       CVE-2019-5418 is a critical file content disclosure vulnerability in Rails Action View
-      that allows attackers to read arbitrary files from the server's filesystem. The 
-      vulnerability exists in Action View versions <5.2.2.1, <5.1.6.2, <5.0.7.2, <4.2.11.1 
-      and v3. By crafting a malicious Accept header and exploiting render file: calls with 
-      user-controlled input, attackers can traverse directories and access sensitive files 
+      that allows attackers to read arbitrary files from the server's filesystem. The
+      vulnerability exists in Action View versions <5.2.2.1, <5.1.6.2, <5.0.7.2, <4.2.11.1
+      and v3. By crafting a malicious Accept header and exploiting render file: calls with
+      user-controlled input, attackers can traverse directories and access sensitive files
       including database configurations, secrets, source code, and system files.
 
       The vulnerability is particularly dangerous because:
@@ -189,16 +189,16 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
          # Update Rails to patched versions
          # For Rails 5.2.x
          gem 'rails', '>= 5.2.2.1'
-         
+
          # For Rails 5.1.x
          gem 'rails', '>= 5.1.6.2'
-         
+
          # For Rails 5.0.x
          gem 'rails', '>= 5.0.7.2'
-         
+
          # For Rails 4.2.x
          gem 'rails', '>= 4.2.11.1'
-         
+
          # Then run
          bundle update rails
          ```
@@ -210,7 +210,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
            def show
              render file: params[:template]  # VULNERABLE!
            end
-         
+
          # SAFE - Use predefined templates
          class ReportsController < ApplicationController
            ALLOWED_REPORTS = {
@@ -218,7 +218,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
              'annual' => 'reports/annual',
              'quarterly' => 'reports/quarterly'
            }.freeze
-           
+
            def show
              report_type = params[:type]
              template = ALLOWED_REPORTS[report_type] || 'reports/default'
@@ -236,15 +236,15 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
              privacy_policy
              user_agreement
            ].freeze
-           
+
            def show
              doc_name = params[:document]
-             
+
              unless ALLOWED_DOCUMENTS.include?(doc_name)
                render plain: "Document not found", status: 404
                return
              end
-             
+
              # Safe to render from predefined location
              render file: Rails.root.join('app', 'views', 'documents', "\#{doc_name}.html.erb")
            end
@@ -259,7 +259,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
              @report = Report.monthly
              render :monthly  # Renders app/views/reports/monthly.html.erb
            end
-           
+
            def annual
              @report = Report.annual
              # Implicit render - Rails automatically renders annual.html.erb
@@ -271,9 +271,9 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
          ```ruby
          class SecureController < ApplicationController
            before_action :validate_template_param, only: [:show]
-           
+
            private
-           
+
            def validate_template_param
              # Strict validation - alphanumeric and underscores only
              unless params[:template] =~ /\\A[a-zA-Z0-9_]+\\z/
@@ -330,7 +330,7 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
           'tos' => 'documents/terms_of_service',
           'privacy' => 'documents/privacy_policy'
         }.freeze
-        
+
         def show
           template = TEMPLATES[params[:doc]] || 'documents/not_found'
           render template: template
@@ -341,15 +341,15 @@ defmodule Rsolv.Security.Patterns.Rails.Cve20195418 do
         def file
           # Use send_file with predefined paths
           filename = params[:file]
-          
+
           # Validate filename
           unless filename =~ /\\A[a-zA-Z0-9_-]+\\.pdf\\z/
             head :not_found
             return
           end
-          
+
           file_path = Rails.root.join('secure_downloads', filename)
-          
+
           if File.exist?(file_path)
             send_file file_path, disposition: 'attachment'
           else

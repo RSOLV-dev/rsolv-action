@@ -145,7 +145,7 @@ defmodule Rsolv.Security.Patterns.Elixir.UnsafeJsonDecodeTest do
       assert enhancement.context_rules.comment_patterns
       assert enhancement.confidence_rules.adjustments.comment_penalty == -1.0
 
-      # In production, AST enhancement will filter out comments, 
+      # In production, AST enhancement will filter out comments,
       # but regex patterns may match them initially
       assert length(enhancement.context_rules.comment_patterns) > 0
     end

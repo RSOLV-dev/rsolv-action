@@ -429,7 +429,7 @@ defmodule RsolvWeb.Api.V1.ASTController do
 
   defp cleanup_decrypted_files(_files) do
     # Clear sensitive data from memory
-    # In Erlang/Elixir, we can't force immediate GC, but we can 
+    # In Erlang/Elixir, we can't force immediate GC, but we can
     # ensure references are dropped
     :ok
   end

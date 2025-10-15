@@ -2,16 +2,16 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
   @moduledoc """
   Exposed Error Details vulnerability pattern for Elixir/Phoenix applications.
 
-  This pattern detects error handling that exposes sensitive information through 
-  detailed error messages, stack traces, or internal system details in HTTP 
+  This pattern detects error handling that exposes sensitive information through
+  detailed error messages, stack traces, or internal system details in HTTP
   responses, enabling information disclosure attacks.
 
   ## Vulnerability Details
 
-  Exposed error details occur when applications include sensitive information 
+  Exposed error details occur when applications include sensitive information
   in error messages returned to clients:
   - Database error messages revealing connection details or query structures
-  - Stack traces exposing internal file paths and system architecture  
+  - Stack traces exposing internal file paths and system architecture
   - Exception details showing configuration values or sensitive data
   - Debug information leaking in production error responses
 
@@ -20,7 +20,7 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
   Security risks through information disclosure:
   - System fingerprinting via detailed error messages and stack traces
   - Path traversal attack vectors revealed through file path exposure
-  - Database schema inference from SQL error messages  
+  - Database schema inference from SQL error messages
   - Configuration discovery through debug output and exception details
 
   ## Examples
@@ -51,23 +51,23 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
 
   # SAFE - Structured error handling
   case result do
-    {:error, _reason} -> 
+    {:error, _reason} ->
       Logger.error("Processing failed: \#{inspect(reason)}")
       text(conn, "Unable to process request")
-    {:ok, data} -> 
+    {:ok, data} ->
       json(conn, data)
   end
   ```
 
   ## Attack Scenarios
 
-  1. **System Fingerprinting**: Attacker triggers errors to gather information 
+  1. **System Fingerprinting**: Attacker triggers errors to gather information
      about database versions, file paths, and system configuration
 
-  2. **Path Traversal Reconnaissance**: Error messages revealing file paths 
+  2. **Path Traversal Reconnaissance**: Error messages revealing file paths
      enable attackers to map system structure for further attacks
 
-  3. **SQL Injection Intelligence**: Database error details help attackers 
+  3. **SQL Injection Intelligence**: Database error details help attackers
      refine injection payloads and understand schema structure
 
   ## References
@@ -101,7 +101,7 @@ defmodule Rsolv.Security.Patterns.Elixir.ExposedErrorDetails do
         # Phoenix.Controller.json/text with error interpolation - exclude comments
         ~r/^(?!\s*#).*Phoenix\.Controller\.(?:json|text)\s*\(\s*[^,]+\s*,\s*[^,)]*#\{[^}]*(?:error|exception|inspect)/m,
 
-        # json/text functions with error interpolation - exclude comments  
+        # json/text functions with error interpolation - exclude comments
         ~r/^(?!\s*#).*(?:json|text)\s*\(\s*[^,]+\s*,\s*[^,)]*#\{[^}]*(?:error|exception|inspect|message)/m,
 
         # render with error interpolation - exclude comments

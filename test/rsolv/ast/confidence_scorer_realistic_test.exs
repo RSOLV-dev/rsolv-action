@@ -157,7 +157,7 @@ defmodule Rsolv.AST.ConfidenceScorerRealisticTest do
     end
 
     test "test files should have very low confidence" do
-      # This is working correctly  
+      # This is working correctly
       context = %{
         pattern_type: :sql_injection,
         has_user_input: true,
