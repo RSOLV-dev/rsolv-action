@@ -232,8 +232,8 @@ describe('ApiPatternSource', () => {
   describe('getAllPatterns', () => {
     it('should fetch patterns for all supported languages', async () => {
       const calls: string[] = [];
-      
-      // Mock to track calls - capture the query params
+
+      // Mock to track calls - capture the query params and return at least one pattern
       global.fetch = vi.fn((url: string) => {
         const urlObj = new URL(url, 'http://example.com'); // Parse as URL
         const language = urlObj.searchParams.get('language');
@@ -242,14 +242,27 @@ describe('ApiPatternSource', () => {
         }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ patterns: [] })
+          json: () => Promise.resolve({
+            patterns: [{
+              id: `${language}-1`,
+              type: 'xss',
+              severity: 'high',
+              patterns: ['test'],
+              languages: [language || 'javascript'],
+              description: 'Test',
+              recommendation: 'Fix',
+              cwe_id: 'CWE-79',
+              owasp_category: 'A03:2021',
+              test_cases: { vulnerable: [], safe: [] }
+            }]
+          })
         });
       });
-      
+
       source = new ApiPatternSource('test-api-key');
       await source.getAllPatterns();
-      
-      // Should be called for each supported language  
+
+      // Should be called for each supported language
       expect(calls).toContain('javascript');
       expect(calls).toContain('python');
       expect(calls).toContain('ruby');
