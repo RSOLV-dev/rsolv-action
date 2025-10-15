@@ -1507,7 +1507,8 @@ export class PhaseExecutor {
         );
       }
       
-      const issueKey = `issue-${issue.number}`;
+      // RFC-060: Use numeric keys for PhaseDataClient compatibility
+      const issueKey = issue.number;
 
       // RFC-060 Phase 2.2: Execute generated RED tests
       let testExecutionResult: TestRunResult | undefined;
@@ -1530,7 +1531,7 @@ export class PhaseExecutor {
         }
       }
 
-      const validationResult: { [issueId: string]: PhaseDataClientValidationPhaseData } = {
+      const validationResult: { [issueId: number]: PhaseDataClientValidationPhaseData } = {
         [issueKey]: {
           validated: testResults?.generatedTests?.success || false,
           redTests: testResults?.generatedTests?.testSuite,
@@ -1544,19 +1545,19 @@ export class PhaseExecutor {
       const commitSha = this.getCurrentCommitSha();
       await this.phaseDataClient.storePhaseResults(
         'validate',
-        { validation: validationResult },
+        { validate: validationResult },
         {
           repo: `${issue.repository.owner}/${issue.repository.name}`,
           issueNumber: issue.number,
           commitSha
         }
       );
-      
+
       return {
         success: true,
         phase: 'validate',
-        message: validationResult[issueKey]?.validated ? 
-          'Tests generated successfully' : 
+        message: validationResult[issueKey]?.validated ?
+          'Tests generated successfully' :
           'Test generation skipped or failed',
         data: { validation: validationResult }
       };
@@ -1788,9 +1789,10 @@ export class PhaseExecutor {
       
       const processingTime = Date.now() - startTime;
       logger.info(`[MITIGATE] Successfully created PR in ${processingTime}ms`);
-      
+
       // Store mitigation results
-      const issueKey = `issue-${issue.number}`;
+      // RFC-060: Use numeric keys for PhaseDataClient compatibility
+      const issueKey = issue.number;
       const mitigationResult = {
         [issueKey]: {
           fixed: solution!.success || false,
@@ -1802,7 +1804,7 @@ export class PhaseExecutor {
       
       await this.phaseDataClient.storePhaseResults(
         'mitigate',
-        { mitigation: mitigationResult },
+        { mitigate: mitigationResult },
         {
           repo: `${issue.repository.owner}/${issue.repository.name}`,
           issueNumber: issue.number,

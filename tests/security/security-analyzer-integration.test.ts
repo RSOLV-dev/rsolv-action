@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SecurityAwareAnalyzer } from '../../src/ai/security-analyzer.js';
 import { IssueContext, ActionConfig } from '../../src/types/index.js';
 
@@ -12,6 +12,18 @@ describe('SecurityAwareAnalyzer Integration', () => {
   });
 
   const analyzer = new SecurityAwareAnalyzer();
+
+  // Mock AI client for testing
+  const mockAiClient = {
+    complete: vi.fn().mockResolvedValue(JSON.stringify({
+      issueType: 'security',
+      filesToModify: ['src/auth/login.js'],
+      estimatedComplexity: 'medium',
+      suggestedApproach: 'Fix SQL injection vulnerabilities using parameterized queries',
+      canBeFixed: true,
+      confidenceScore: 0.9
+    }))
+  };
   
   const mockIssue: IssueContext = {
     id: '123',
@@ -93,8 +105,8 @@ module.exports = { authenticateUser, getUserOrders };
 
   test('should return analysis with security vulnerabilities', async () => {
     const codebaseFiles = new Map([['src/auth/login.js', vulnerableCode]]);
-    
-    const result = await analyzer.analyzeWithSecurity(mockIssue, mockConfig, codebaseFiles);
+
+    const result = await analyzer.analyzeWithSecurity(mockIssue, mockConfig, codebaseFiles, mockAiClient);
     
     // Check standard analysis fields
     expect(result.issueType).toBe('security');
@@ -149,10 +161,10 @@ function greetUser(name) {
 
 module.exports = { greetUser };
 `;
-    
+
     const codebaseFiles = new Map([['src/utils/greeting.js', safeCode]]);
-    
-    const result = await analyzer.analyzeWithSecurity(mockIssue, mockConfig, codebaseFiles);
+
+    const result = await analyzer.analyzeWithSecurity(mockIssue, mockConfig, codebaseFiles, mockAiClient);
     
     expect(result.securityAnalysis).toBeDefined();
     expect(result.securityAnalysis!.hasSecurityIssues).toBe(false);
@@ -161,7 +173,7 @@ module.exports = { greetUser };
   });
   
   test('should work without codebase files', async () => {
-    const result = await analyzer.analyzeWithSecurity(mockIssue, mockConfig);
+    const result = await analyzer.analyzeWithSecurity(mockIssue, mockConfig, undefined, mockAiClient);
     
     expect(typeof result.issueType).toBe('string');
     expect(result.securityAnalysis).toBeUndefined();

@@ -6,7 +6,81 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PhaseExecutor } from '../phase-executor/index.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
-import * as childProcess from 'child_process';
+
+// Use vi.hoisted for mocks that need to be available during module initialization
+const { mockExecSync, mockAnalyzeIssue } = vi.hoisted(() => {
+  const execSync = vi.fn((cmd: string) => {
+    if (cmd.includes('git status')) {
+      return ''; // Clean status
+    }
+    if (cmd.includes('git rev-parse HEAD')) {
+      return 'abc123def456';
+    }
+    return '';
+  });
+
+  const analyzeIssue = vi.fn(() => Promise.resolve({
+    canBeFixed: true,
+    issueType: 'sql-injection',
+    filesToModify: ['user.js'],
+    suggestedApproach: 'Use parameterized queries',
+    estimatedComplexity: 'medium',
+    vulnerabilityType: 'SQL_INJECTION',
+    severity: 'high'
+  }));
+
+  return {
+    mockExecSync: execSync,
+    mockAnalyzeIssue: analyzeIssue
+  };
+});
+
+// Mock child_process at module level
+vi.mock('child_process', () => ({
+  execSync: mockExecSync,
+  exec: vi.fn((cmd: string, callback: any) => {
+    // Mock exec for TestRunner
+    callback(null, { stdout: '', stderr: '' });
+  })
+}));
+
+// Mock analyzer at module level
+vi.mock('../../ai/analyzer.js', () => ({
+  analyzeIssue: mockAnalyzeIssue
+}));
+
+// Mock GitBasedClaudeCodeAdapter
+vi.mock('../../ai/adapters/claude-code-git.js', () => ({
+  GitBasedClaudeCodeAdapter: class {
+    constructor() {}
+    async generateSolutionWithGit() {
+      return {
+        success: true,
+        commitHash: 'fix-commit-123',
+        summary: { title: 'Fix SQL injection' },
+        filesModified: ['user.js'],
+        diffStats: { insertions: 10, deletions: 5, filesChanged: 1 }
+      };
+    }
+  }
+}));
+
+// Mock PR creation functions
+vi.mock('../../github/pr-git-educational.js', () => ({
+  createEducationalPullRequest: vi.fn(() => Promise.resolve({
+    success: true,
+    pullRequestUrl: 'https://github.com/test/repo/pull/1',
+    pullRequestNumber: 1
+  }))
+}));
+
+vi.mock('../../github/pr-git.js', () => ({
+  createPullRequestFromGit: vi.fn(() => Promise.resolve({
+    success: true,
+    pullRequestUrl: 'https://github.com/test/repo/pull/1',
+    pullRequestNumber: 1
+  }))
+}));
 
 describe('Phase Decomposition - processIssueWithGit refactoring', () => {
   let executor: PhaseExecutor;
@@ -15,42 +89,19 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
 
   beforeEach(() => {
     // Reset mocks
-    vi.restoreAllMocks();
-    
-    // Mock analyzeIssue to return proper structure
-    vi.mock('../../ai/analyzer.js', () => ({
-      analyzeIssue: vi.fn(() => Promise.resolve({
-        canBeFixed: true,
-        issueType: 'sql-injection',
-        filesToModify: ['user.js'],
-        suggestedApproach: 'Use parameterized queries',
-        estimatedComplexity: 'medium',
-        vulnerabilityType: 'SQL_INJECTION',
-        severity: 'high'
-      }))
-    }));
-    
-    // Mock git status to be clean by default
-    vi.mock('child_process', async (importOriginal) => {
-      const actual = await importOriginal();
-      return {
-        ...actual,
-        execSync: vi.fn((cmd: string) => {
-          if (cmd.includes('git status')) {
-            return ''; // Clean status
-          }
-          if (cmd.includes('git rev-parse HEAD')) {
-            return 'abc123def456';
-          }
-          return '';
-        }),
-        exec: vi.fn((cmd: string, callback: any) => {
-          // Mock exec for TestRunner
-          callback(null, { stdout: '', stderr: '' });
-        })
-      };
+    vi.clearAllMocks();
+
+    // Reset the mock implementations
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes('git status')) {
+        return ''; // Clean status
+      }
+      if (cmd.includes('git rev-parse HEAD')) {
+        return 'abc123def456';
+      }
+      return '';
     });
-    
+
     mockConfig = {
       aiProvider: {
         provider: 'anthropic',
@@ -90,6 +141,9 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
     };
 
     executor = new PhaseExecutor(mockConfig);
+
+    // Mock phaseDataClient.storePhaseResults to avoid platform storage errors
+    executor.phaseDataClient.storePhaseResults = vi.fn(() => Promise.resolve());
   });
 
   afterEach(() => {
@@ -158,8 +212,8 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
       expect(result.success).toBe(true);
       expect(result.phase).toBe('validate');
       expect(result.data).toHaveProperty('validation');
-      // The validation is structured as { 'issue-123': { validated, redTests, testResults, ... } }
-      const issueKey = `issue-${mockIssue.number}`;
+      // RFC-060: The validation is structured with numeric keys { 123: { validated, redTests, testResults, ... } }
+      const issueKey = mockIssue.number;
       expect(result.data.validation).toHaveProperty(issueKey);
       expect(result.data.validation[issueKey]).toHaveProperty('validated');
       expect(result.data.validation[issueKey]).toHaveProperty('testResults');
@@ -189,10 +243,10 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
       };
       
       const result = await executor.executeValidateForIssue(mockIssue, scanData);
-      
+
       expect(mockAnalyzer.analyzeWithTestGeneration).toHaveBeenCalled();
-      // Check the validation structure
-      const issueKey = `issue-${mockIssue.number}`;
+      // Check the validation structure - RFC-060: numeric keys
+      const issueKey = mockIssue.number;
       expect(result.data.validation[issueKey]).toHaveProperty('validated');
       expect(result.data.validation[issueKey].testResults).toBeDefined();
     });
@@ -222,39 +276,6 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
 
   describe('Mitigate Phase Extraction', () => {
     test('executeMitigateForIssue should apply fix using Claude Code', async () => {
-      // Mock the Claude Code adapter
-      vi.mock('../../ai/adapters/claude-code-git.js', () => ({
-        GitBasedClaudeCodeAdapter: class {
-          constructor() {}
-          async generateSolutionWithGit() {
-            return {
-              success: true,
-              commitHash: 'fix-commit-123',
-              summary: { title: 'Fix SQL injection' },
-              filesModified: ['user.js'],
-              diffStats: { insertions: 10, deletions: 5, filesChanged: 1 }
-            };
-          }
-        }
-      }));
-      
-      // Mock PR creation
-      vi.mock('../../github/pr-git-educational.js', () => ({
-        createEducationalPullRequest: vi.fn(() => Promise.resolve({
-          success: true,
-          pullRequestUrl: 'https://github.com/test/repo/pull/1',
-          pullRequestNumber: 1
-        }))
-      }));
-      
-      vi.mock('../../github/pr-git.js', () => ({
-        createPullRequestFromGit: vi.fn(() => Promise.resolve({
-          success: true,
-          pullRequestUrl: 'https://github.com/test/repo/pull/1',
-          pullRequestNumber: 1
-        }))
-      }));
-      
       // Mock test validator directly on executor instance
       executor.gitBasedValidator = {
         validateFixWithTests: vi.fn(() => Promise.resolve({
@@ -313,8 +334,8 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
       }
       expect(result.success).toBe(true);
       expect(result.phase).toBe('mitigate');
-      // The data is structured as { 'issue-123': { fixed, prUrl, fixCommit, timestamp } }
-      const issueKey = `issue-${mockIssue.number}`;
+      // RFC-060: The data is structured with numeric keys { 123: { fixed, prUrl, fixCommit, timestamp } }
+      const issueKey = mockIssue.number;
       expect(result.data).toHaveProperty(issueKey);
       expect(result.data[issueKey]).toHaveProperty('fixed', true);
       expect(result.data[issueKey]).toHaveProperty('prUrl');
@@ -398,9 +419,20 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
 
   describe('Full Three-Phase Execution', () => {
     test('executeThreePhaseForIssue should run all phases sequentially', async () => {
-      // This method doesn't exist yet - RED phase
+      // Mock test validator to ensure fix validation passes
+      executor.gitBasedValidator = {
+        validateFixWithTests: vi.fn(() => Promise.resolve({
+          isValidFix: true,
+          fixedCommit: {
+            redTestPassed: true,
+            greenTestPassed: true,
+            refactorTestPassed: true
+          }
+        }))
+      } as any;
+
       const result = await executor.executeThreePhaseForIssue(mockIssue);
-      
+
       expect(result.success).toBe(true);
       expect(result.phase).toBe('three-phase');
       expect(result.data).toHaveProperty('scan');
