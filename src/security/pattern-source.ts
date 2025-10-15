@@ -192,6 +192,13 @@ export class ApiPatternSource implements PatternSource {
       }
     }
 
+    // If we failed to fetch any patterns at all, throw an error so hybrid source can fall back
+    if (allPatterns.length === 0) {
+      const error = new Error('Failed to fetch patterns for all languages from API');
+      logger.error('ApiPatternSource: No patterns retrieved from any language', error);
+      throw error;
+    }
+
     logger.info(`ApiPatternSource: Retrieved ${allPatterns.length} total patterns (${cacheHits} from cache, ${apiFetches} from API)`);
     return allPatterns;
   }
