@@ -11,8 +11,8 @@ describe('PatternAPIClient Authentication', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset fetch mock
-    (global.fetch as any).mockReset();
+    // Setup fresh fetch mock
+    (global.fetch as any) = vi.fn();
   });
 
   describe('x-api-key header usage', () => {
