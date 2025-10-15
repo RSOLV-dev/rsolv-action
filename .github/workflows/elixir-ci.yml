@@ -200,8 +200,8 @@ jobs:
 
       - name: Test migration reversibility
         run: |
-          echo "→ Rolling back recent migrations (last 14)..."
-          mix ecto.rollback --step 14
+          echo "→ Rolling back recent migrations (last 24)..."
+          mix ecto.rollback --step 24
           echo "→ Re-migrating UP (verify idempotency)..."
           mix ecto.migrate
           echo "✅ Recent migrations are reversible and idempotent"
