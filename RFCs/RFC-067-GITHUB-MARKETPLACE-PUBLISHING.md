@@ -61,9 +61,10 @@ runs:
 
 ## Features
 🔍 Automatic vulnerability detection
-✅ False positive validation
+✅ False positive validation with framework-native test integration
 🔧 Automated fix generation
 📊 Detailed reporting
+🧪 Tests integrated directly into your existing test directories (spec/, __tests__/, tests/)
 
 ## Quick Start
 1. Click "Use this action" above

@@ -270,6 +270,19 @@ defmodule RsolvWeb.CredentialController do
     end
   end
 
+  # Handle OpenApiSpex struct
+  defp validate_providers(%CredentialExchangeRequest{providers: providers})
+       when is_list(providers) do
+    valid_providers = ["anthropic", "openai", "openrouter", "ollama"]
+
+    if Enum.all?(providers, &(&1 in valid_providers)) do
+      {:ok, providers}
+    else
+      {:error, :invalid_providers}
+    end
+  end
+
+  # Fallback for map (backwards compatibility)
   defp validate_providers(%{"providers" => providers}) when is_list(providers) do
     valid_providers = ["anthropic", "openai", "openrouter", "ollama"]
 
@@ -282,11 +295,17 @@ defmodule RsolvWeb.CredentialController do
 
   defp validate_providers(_), do: {:error, :missing_parameters}
 
+  # Handle OpenApiSpex struct
+  defp validate_ttl(%CredentialExchangeRequest{ttl_minutes: ttl}) when is_integer(ttl) do
+    {:ok, min(ttl, @max_ttl_minutes)}
+  end
+
+  # Handle map (backwards compatibility)
   defp validate_ttl(%{"ttl_minutes" => ttl}) when is_integer(ttl) do
     {:ok, min(ttl, @max_ttl_minutes)}
   end
 
-  # Default 1 hour
+  # Default 1 hour (ttl_minutes is optional in the schema)
   defp validate_ttl(_), do: {:ok, 60}
 
   defp generate_credentials(customer, providers, ttl_minutes) do
@@ -366,7 +385,14 @@ defmodule RsolvWeb.CredentialController do
     |> DateTime.to_iso8601()
   end
 
+  # Handle OpenApiSpex struct
+  defp validate_credential_id(%CredentialRefreshRequest{credential_id: id}) when is_binary(id) do
+    {:ok, id}
+  end
+
+  # Handle map (backwards compatibility)
   defp validate_credential_id(%{"credential_id" => id}) when is_binary(id), do: {:ok, id}
+
   defp validate_credential_id(_), do: {:error, :missing_parameters}
 
   defp get_customer_credential(customer, credential_id) do
@@ -408,7 +434,27 @@ defmodule RsolvWeb.CredentialController do
     {:ok, new_credential}
   end
 
-  defp validate_usage_data(params) do
+  defp validate_usage_data(%UsageReportRequest{} = params) do
+    with {:ok, provider} <- validate_provider(params),
+         {:ok, tokens} <- validate_tokens(params),
+         {:ok, requests} <- validate_requests(params) do
+      # Access job_id from struct
+      job_id = Map.get(params, :job_id)
+
+      {:ok,
+       %{
+         provider: provider,
+         tokens_used: tokens,
+         request_count: requests,
+         job_id: job_id
+       }}
+    else
+      _ -> {:error, :invalid_usage_data}
+    end
+  end
+
+  # Fallback for map (backwards compatibility)
+  defp validate_usage_data(params) when is_map(params) do
     with {:ok, provider} <- validate_provider(params),
          {:ok, tokens} <- validate_tokens(params),
          {:ok, requests} <- validate_requests(params) do
@@ -424,13 +470,34 @@ defmodule RsolvWeb.CredentialController do
     end
   end
 
+  # Handle OpenApiSpex struct
+  defp validate_provider(%UsageReportRequest{provider: provider}) when is_binary(provider) do
+    {:ok, provider}
+  end
+
+  # Handle map (backwards compatibility)
   defp validate_provider(%{"provider" => provider}) when is_binary(provider), do: {:ok, provider}
+
   defp validate_provider(_), do: {:error, :missing_provider}
 
+  # Handle OpenApiSpex struct
+  defp validate_tokens(%UsageReportRequest{tokens_used: tokens}) when is_integer(tokens) do
+    {:ok, tokens}
+  end
+
+  # Handle map (backwards compatibility)
   defp validate_tokens(%{"tokens_used" => tokens}) when is_integer(tokens), do: {:ok, tokens}
+
   defp validate_tokens(_), do: {:error, :missing_tokens}
 
+  # Handle OpenApiSpex struct
+  defp validate_requests(%UsageReportRequest{request_count: count}) when is_integer(count) do
+    {:ok, count}
+  end
+
+  # Handle map (backwards compatibility)
   defp validate_requests(%{"request_count" => count}) when is_integer(count), do: {:ok, count}
+
   defp validate_requests(_), do: {:error, :missing_requests}
 
   defp record_usage(customer, usage_data) do

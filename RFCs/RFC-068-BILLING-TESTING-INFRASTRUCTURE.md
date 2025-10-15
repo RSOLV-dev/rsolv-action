@@ -27,6 +27,94 @@ Unit Tests → Integration Tests → Staging → Production
   Mocks         Test DB         Stripe Test   Monitoring
 ```
 
+## Monitoring & Telemetry Testing
+
+Following patterns established in RFC-060-MONITORING-COMPLETION-REPORT:
+
+### Required Test Cases
+
+```elixir
+test "emits telemetry on subscription creation"
+test "emits telemetry on payment success"
+test "emits telemetry on payment failure"
+test "tracks usage in Prometheus metrics"
+test "Grafana dashboard displays billing metrics"
+test "billing event metrics have correct tags"
+```
+
+### Implementation Pattern
+
+Use the same `:telemetry.execute/3` pattern established for test integration:
+
+```elixir
+:telemetry.execute(
+  [:rsolv, :billing, :subscription_created],
+  %{amount: amount, duration: duration},
+  %{customer_id: customer.id, plan: plan, status: "success"}
+)
+
+:telemetry.execute(
+  [:rsolv, :billing, :payment_processed],
+  %{amount_cents: amount, duration: duration},
+  %{customer_id: customer.id, status: status, payment_method: method}
+)
+
+:telemetry.execute(
+  [:rsolv, :billing, :usage_tracked],
+  %{quantity: quantity},
+  %{customer_id: customer.id, plan: plan, resource_type: "fix"}
+)
+```
+
+### Metric Definition Pattern
+
+Create `lib/rsolv/prom_ex/billing_plugin.ex` following the structure in `validation_plugin.ex`:
+
+```elixir
+defmodule Rsolv.PromEx.BillingPlugin do
+  use PromEx.Plugin
+
+  @impl true
+  def event_metrics(_opts) do
+    Event.build(:billing_metrics, [
+      counter(
+        [:rsolv, :billing, :subscription_created, :total],
+        event_name: [:rsolv, :billing, :subscription_created],
+        description: "Total subscriptions created",
+        tags: [:customer_id, :plan, :status]
+      ),
+      distribution(
+        [:rsolv, :billing, :payment_processed, :amount, :cents],
+        event_name: [:rsolv, :billing, :payment_processed],
+        measurement: :amount_cents,
+        description: "Payment amounts processed",
+        tags: [:customer_id, :status, :payment_method],
+        reporter_options: [buckets: [100, 500, 1500, 5000, 10_000, 50_000]]
+      )
+    ])
+  end
+end
+```
+
+### Dashboard Creation
+
+See `/tmp/rfc060-test-integration-dashboard.json` for Grafana dashboard JSON structure. Create similar dashboard for billing with panels:
+- Subscription creation rate
+- Payment success/failure rate
+- Revenue by plan
+- Usage tracking metrics
+- Customer conversion funnel
+
+### Test Coverage Requirements
+
+**Billing telemetry tests must achieve:**
+- 100% coverage of telemetry emission points
+- Verification that all billing events emit telemetry
+- Validation of tag completeness and correctness
+- Prometheus metric collection verification
+
+**Reference Implementation:** `lib/rsolv_web/controllers/api/v1/test_integration_controller.ex` lines 89-134 for telemetry emission patterns.
+
 ## 1. Docker Compose Setup
 
 ```yaml

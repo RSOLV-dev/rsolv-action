@@ -166,6 +166,56 @@ def track_fix(customer, fix) do
 end
 ```
 
+### 4. Phase Completion → Usage Tracking (RFC-060-AMENDMENT-001 Integration)
+
+```elixir
+# PhaseDataClient receives completion signal from GitHub Action
+# This is the integration point where validation/mitigation phases connect to billing
+def handle_phase_completion(%{phase: :mitigate, status: :success} = result) do
+  customer = Customers.get_customer(result.customer_id)
+
+  # This triggers billing for the successful fix
+  Billing.track_fix_deployed(customer, result)
+end
+
+# Alternative implementation via PubSub:
+def handle_info({:phase_completed, phase_result}, state) do
+  if billable_event?(phase_result) do
+    process_billing(phase_result)
+  end
+  {:noreply, state}
+end
+
+defp billable_event?(%{phase: :mitigate, status: :success}), do: true
+defp billable_event?(_), do: false
+```
+
+**Integration Notes:**
+
+1. **Test Integration API is used EARLIER in VALIDATE phase:**
+   - POST /api/v1/test-integration/analyze (scores test files)
+   - POST /api/v1/test-integration/generate (integrates tests)
+   - By the time `track_fix_deployed()` is called, tests have already been created and run
+
+2. **Billing only cares about FINAL deployment success:**
+   - Billing doesn't care HOW tests were generated (AST vs string matching)
+   - Billing doesn't care WHERE tests are located (spec/ vs .rsolv/tests/)
+   - Billing only cares: "Did a fix get successfully deployed?"
+
+3. **PhaseDataClient acts as the integration hub:**
+   - Receives completion signals from GitHub Action
+   - Stores phase results in database
+   - Emits events that trigger billing
+   - Provides loose coupling between phases and billing
+
+4. **Event Flow:**
+   ```
+   GitHub Action → PhaseDataClient → Phase Completion Event → Billing.track_fix_deployed()
+   ```
+
+**Why This Matters:**
+This clarifies that billing happens in response to phase completion EVENTS (received via PhaseDataClient), not directly from the GitHub Action. The test integration API (RFC-060-AMENDMENT-001) and billing (RFC-066) are loosely coupled through the event-driven phase completion mechanism. Changes to validation (like test location or integration method) don't affect the billing interface.
+
 ## Rollback Strategy
 
 ### Feature Flags
