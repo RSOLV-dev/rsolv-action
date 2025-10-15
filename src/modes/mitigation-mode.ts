@@ -105,8 +105,14 @@ export class MitigationMode {
   /**
    * RFC-058/RFC-060: Checkout validation branch for mitigation phase
    * Uses API (production) or local files (testing) based on PhaseDataClient presence
+   *
+   * IMPORTANT: This method should NEVER create a branch. It only checks out existing branches.
+   * Per RFC-060, validation branches are created by ValidationMode, not MitigationMode.
    */
   async checkoutValidationBranch(issue: IssueContext): Promise<boolean> {
+    // Save current branch so we can restore it if checkout fails
+    const originalBranch = this.getCurrentBranch();
+
     try {
       const branchName = await this.getValidationBranchName(issue);
 
@@ -115,32 +121,123 @@ export class MitigationMode {
         return false;
       }
 
+      // Check if branch exists locally BEFORE any checkout attempts
+      const localBranchExisted = this.doesLocalBranchExist(branchName);
+
       // Fetch the branch from remote (best effort)
       try {
-        execSync(`git fetch origin ${branchName}`, { cwd: this.repoPath });
+        execSync(`git fetch origin ${branchName}`, { cwd: this.repoPath, stdio: 'pipe' });
         logger.info(`Fetched validation branch from remote: ${branchName}`);
       } catch (fetchError) {
-        logger.warn(`Could not fetch validation branch from remote: ${fetchError}`);
+        logger.debug(`Could not fetch validation branch from remote: ${fetchError}`);
+      }
+
+      // Check if branch exists on remote after fetch
+      const remoteBranchExists = this.doesRemoteBranchExist(branchName);
+
+      // If branch doesn't exist locally or remotely, return false without changing branches
+      if (!localBranchExisted && !remoteBranchExists) {
+        logger.info(`Validation branch ${branchName} does not exist locally or remotely, staying on current branch`);
+        return false;
       }
 
       // Try to checkout local branch first
-      try {
-        execSync(`git checkout ${branchName}`, { cwd: this.repoPath });
-        logger.info(`Checked out local validation branch: ${branchName}`);
-        return true;
-      } catch {
-        // If local doesn't exist, try remote
+      if (localBranchExisted) {
         try {
-          execSync(`git checkout -b ${branchName} origin/${branchName}`, { cwd: this.repoPath });
+          execSync(`git checkout ${branchName}`, { cwd: this.repoPath, stdio: 'pipe' });
+          logger.info(`Checked out local validation branch: ${branchName}`);
+          return true;
+        } catch (checkoutError) {
+          logger.warn(`Failed to checkout local branch ${branchName}: ${checkoutError}`);
+          // Restore original branch
+          try {
+            execSync(`git checkout ${originalBranch}`, { cwd: this.repoPath, stdio: 'pipe' });
+          } catch {
+            // Ignore restoration errors
+          }
+        }
+      }
+
+      // If local checkout failed or branch not local, try remote
+      if (remoteBranchExists) {
+        try {
+          // Use -t (track) without -b to avoid creating branch if remote doesn't actually exist
+          // This will create local branch AND set up tracking in one command
+          execSync(`git checkout -t origin/${branchName}`, { cwd: this.repoPath, stdio: 'pipe' });
           logger.info(`Checked out remote validation branch: origin/${branchName}`);
           return true;
         } catch (remoteError) {
           logger.warn(`Failed to checkout validation branch from remote: ${remoteError}`);
+          // Restore original branch
+          try {
+            execSync(`git checkout ${originalBranch}`, { cwd: this.repoPath, stdio: 'pipe' });
+          } catch {
+            // Ignore restoration errors
+          }
           return false;
         }
       }
+
+      // RFC-060: If we get here, the branch didn't exist locally or remotely,
+      // or checkout failed. Check if git accidentally created a branch anyway.
+      const branchExistsNow = this.doesLocalBranchExist(branchName);
+
+      if (!localBranchExisted && branchExistsNow) {
+        logger.warn(`Branch ${branchName} was created accidentally, cleaning up`);
+        try {
+          // Make sure we're back on original branch
+          const currentBranch = this.getCurrentBranch();
+
+          if (currentBranch !== originalBranch) {
+            execSync(`git checkout ${originalBranch}`, { cwd: this.repoPath, stdio: 'pipe' });
+          }
+          // Delete the accidentally created branch
+          execSync(`git branch -D ${branchName}`, { cwd: this.repoPath, stdio: 'pipe' });
+          logger.info(`Deleted accidentally created branch: ${branchName}`);
+        } catch (cleanupError) {
+          logger.debug(`Could not clean up accidentally created branch: ${cleanupError}`);
+        }
+      }
+
+      return false;
     } catch (error) {
       logger.error(`Error checking out validation branch for issue #${issue.number}:`, error);
+      // Restore original branch on any error
+      try {
+        execSync(`git checkout ${originalBranch}`, { cwd: this.repoPath, stdio: 'pipe' });
+      } catch {
+        // Ignore restoration errors
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Check if a branch exists locally
+   */
+  private doesLocalBranchExist(branchName: string): boolean {
+    try {
+      const branches = execSync('git branch --list', { cwd: this.repoPath, encoding: 'utf8' })
+        .split('\n')
+        .map(b => b.trim().replace(/^\*\s+/, ''));
+      return branches.includes(branchName);
+    } catch (error) {
+      logger.debug(`Error checking local branches: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * Check if a branch exists on remote
+   */
+  private doesRemoteBranchExist(branchName: string): boolean {
+    try {
+      const remoteBranches = execSync('git branch -r', { cwd: this.repoPath, encoding: 'utf8', stdio: 'pipe' })
+        .split('\n')
+        .map(b => b.trim().replace(/^origin\//, ''));
+      return remoteBranches.includes(branchName);
+    } catch (error) {
+      logger.debug(`Error checking remote branches: ${error}`);
       return false;
     }
   }

@@ -49,7 +49,7 @@ export async function generateSolution(
       // Convert AiProviderConfig to AIConfig
       const aiConfig: AIConfig = {
         provider: config.aiProvider.provider as AIProvider,
-        apiKey: config.aiProvider.apiKey,
+        apiKey: config.aiProvider.providerApiKey,
         model: config.aiProvider.model,
         temperature: config.aiProvider.temperature,
         maxTokens: config.aiProvider.maxTokens,

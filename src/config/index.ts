@@ -7,7 +7,7 @@ import { logger } from '../utils/logger.js';
 // Zod schema for validating configuration
 const AiProviderConfigSchema = z.object({
   provider: z.string(),
-  apiKey: z.string().optional(),
+  providerApiKey: z.string().optional(),
   model: z.string(),
   baseUrl: z.string().optional(),
   maxTokens: z.number().optional(),
@@ -54,7 +54,7 @@ const FixValidationConfigSchema = z.object({
 });
 
 const ActionConfigSchema = z.object({
-  apiKey: z.string(),
+  rsolvApiKey: z.string(),
   configPath: z.string(),
   issueLabel: z.string(),
   scanLabel: z.string().optional(),  // Label for scan-detected issues
@@ -64,7 +64,6 @@ const ActionConfigSchema = z.object({
   aiProvider: AiProviderConfigSchema,
   containerConfig: ContainerConfigSchema,
   securitySettings: SecuritySettingsSchema,
-  rsolvApiKey: z.string().optional(), // For vended credentials
   maxIssues: z.number().min(1).optional(), // Maximum number of issues to process
   useGitBasedEditing: z.boolean().optional(), // Enable git-based in-place editing (ADR-012)
   useStructuredPhases: z.boolean().optional(), // Enable structured phased prompting (ADR-019)
@@ -237,18 +236,18 @@ async function loadConfigFromFile(configPath: string): Promise<Partial<ActionCon
  */
 function loadConfigFromEnv(): Partial<ActionConfig> {
   logger.info('Loading configuration from environment variables');
-  logger.info(`Environment RSOLV_API_KEY: ${process.env.RSOLV_API_KEY ? 'present' : 'not set'}`);
-  
+
   // Map GitHub Actions inputs to environment variables
   // GitHub Actions sets inputs as INPUT_<UPPERCASE_NAME>
-  const apiKey = process.env.RSOLV_API_KEY || 
-                  process.env.INPUT_API_KEY || 
-                  process.env.INPUT_RSOLVAPI_KEY || 
-                  process.env.INPUT_RSOLVAPIKEY;
-  
+  const rsolvApiKey = process.env.RSOLV_API_KEY ||
+                      process.env.INPUT_API_KEY ||
+                      process.env.INPUT_RSOLVAPI_KEY ||
+                      process.env.INPUT_RSOLVAPIKEY;
+
+  logger.info(`Environment RSOLV_API_KEY: ${rsolvApiKey ? 'present' : 'not set'}`);
+
   const envConfig: Partial<ActionConfig> = {
-    apiKey: apiKey,
-    rsolvApiKey: apiKey, // Same key used for vended credentials
+    rsolvApiKey: rsolvApiKey,
     configPath: process.env.RSOLV_CONFIG_PATH || process.env.INPUT_CONFIG_PATH,
     issueLabel: process.env.RSOLV_ISSUE_LABEL || process.env.INPUT_ISSUE_LABEL,
     repoToken: process.env.GITHUB_TOKEN
@@ -302,9 +301,11 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
   
   // AI Provider configuration from environment
   if (process.env.RSOLV_AI_PROVIDER) {
+    const providerApiKey = process.env.RSOLV_AI_API_KEY;
+
     envConfig.aiProvider = {
       provider: process.env.RSOLV_AI_PROVIDER,
-      apiKey: process.env.RSOLV_AI_API_KEY,
+      providerApiKey: providerApiKey,
       model: process.env.RSOLV_AI_MODEL || 'claude-sonnet-4-5-20250929',  // Default to Sonnet 4.5
       baseUrl: process.env.RSOLV_AI_BASE_URL,
       // CRITICAL: Preserve useVendedCredentials flag - default to true per RFC-012
@@ -351,19 +352,18 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
  */
 function validateConfig(config: any): ActionConfig {
   logger.debug('Validating configuration');
-  
+
   try {
     // Check required fields
-    // When using vended credentials, rsolvApiKey is used instead of apiKey
-    if (!config.apiKey && !config.rsolvApiKey) {
-      throw new Error('API key or RSOLV API key is required');
+    if (!config.rsolvApiKey) {
+      throw new Error('RSOLV API key is required (rsolvApiKey)');
     }
-    
+
     // Validate against schema
     const validatedConfig = ActionConfigSchema.parse(config);
-    
+
     logger.debug('Configuration validation successful');
-    
+
     return validatedConfig;
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -371,7 +371,7 @@ function validateConfig(config: any): ActionConfig {
       logger.error(`Configuration validation failed: ${errorMessages}`);
       throw new Error(`Invalid configuration: ${errorMessages}`);
     }
-    
+
     throw error;
   }
 }

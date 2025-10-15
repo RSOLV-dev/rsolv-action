@@ -25,13 +25,13 @@ setupTestEnvironment();
 afterEach(() => {
   // Clear all mocks
   vi.clearAllMocks();
-  
+
   // Clear all timers
   vi.clearAllTimers();
-  
+
   // Reset modules to prevent mock contamination between tests
   vi.resetModules();
-  
+
   // Force garbage collection if available (requires --expose-gc flag)
   if (global.gc) {
     global.gc();

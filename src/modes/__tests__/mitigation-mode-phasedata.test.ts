@@ -36,6 +36,17 @@ vi.mock('child_process', () => ({
     if (cmd.includes('git rev-parse HEAD')) {
       return 'abc123def456';
     }
+    if (cmd.includes('git branch --show-current')) {
+      return 'main';
+    }
+    if (cmd.includes('git branch --list')) {
+      // Return the validation branch as existing locally
+      return '* main\n  rsolv/validate/issue-789';
+    }
+    if (cmd.includes('git branch -r')) {
+      // Return empty for remote branches (no origin configured in tests)
+      return '';
+    }
     if (cmd.includes('git fetch')) {
       return '';
     }

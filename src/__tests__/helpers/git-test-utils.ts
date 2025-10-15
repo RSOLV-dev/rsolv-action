@@ -35,6 +35,19 @@ export function initTestRepo(path: string, branch = 'main'): string {
   execSync('git config user.email "test@example.com"', { cwd: path });
   execSync('git config user.name "Test User"', { cwd: path });
 
+  // RFC-060: Explicitly checkout the branch to ensure we're on it
+  // (workaround for any git hooks or config that might change branches)
+  try {
+    execSync(`git checkout -b ${branch}`, { cwd: path, stdio: 'pipe' });
+  } catch {
+    // Branch might already exist, just checkout
+    try {
+      execSync(`git checkout ${branch}`, { cwd: path, stdio: 'pipe' });
+    } catch {
+      // If both fail, we're probably already on the branch
+    }
+  }
+
   return branch;
 }
 

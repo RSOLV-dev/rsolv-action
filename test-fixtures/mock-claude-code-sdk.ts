@@ -57,6 +57,18 @@ export const mockQuery = vi.fn(async function* (options: any) {
   }
 });
 
+// Global state for mock git branches (persists across mock calls)
+const mockGitState = {
+  branches: new Set(['main']),
+  currentBranch: 'main'
+};
+
+// Reset git state between tests
+export function resetMockGitState() {
+  mockGitState.branches = new Set(['main']);
+  mockGitState.currentBranch = 'main';
+}
+
 // Mock the entire @anthropic-ai/claude-code module
 export function setupClaudeCodeMock() {
   vi.mock('@anthropic-ai/claude-code', () => ({
@@ -70,7 +82,7 @@ export function setupClaudeCodeMock() {
       }
     }
   }));
-  
+
   // Also mock child_process to prevent any subprocess spawning
   vi.mock('child_process', () => ({
     spawn: vi.fn(() => ({
@@ -95,7 +107,45 @@ export function setupClaudeCodeMock() {
       if (cmd.includes('git diff --name-only')) return 'src/vulnerable.js';
       if (cmd.includes('git diff --stat')) return '1 file changed, 5 insertions(+), 3 deletions(-)';
       if (cmd.includes('git rev-parse HEAD')) return 'abc123def456';
-      if (cmd.includes('git branch')) return '* main';
+
+      // Handle branch creation (git checkout -b)
+      if (cmd.includes('git checkout -b')) {
+        const match = cmd.match(/git checkout -b\s+["']?([^\s"']+)["']?/);
+        if (match) {
+          const branchName = match[1];
+          mockGitState.branches.add(branchName);
+          mockGitState.currentBranch = branchName;
+        }
+        return '';
+      }
+
+      // Handle branch switching (git checkout without -b)
+      if (cmd.includes('git checkout') && !cmd.includes('-b')) {
+        const match = cmd.match(/git checkout\s+["']?([^\s"']+)["']?/);
+        if (match) {
+          const branchName = match[1];
+          if (mockGitState.branches.has(branchName)) {
+            mockGitState.currentBranch = branchName;
+            return '';
+          } else {
+            // Git checkout to non-existent branch should fail
+            throw new Error(`error: pathspec '${branchName}' did not match any file(s) known to git`);
+          }
+        }
+        return '';
+      }
+
+      // Handle branch listing
+      if (cmd.includes('git branch')) {
+        if (cmd.includes('--show-current')) {
+          return mockGitState.currentBranch;
+        }
+        // Return list of branches with current branch marked
+        return Array.from(mockGitState.branches)
+          .map(b => b === mockGitState.currentBranch ? `* ${b}` : `  ${b}`)
+          .join('\n');
+      }
+
       if (cmd.includes('git config user.email')) return 'test@example.com';
       return '';
     })

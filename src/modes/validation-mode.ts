@@ -368,8 +368,11 @@ export class ValidationMode {
     const branchName = `rsolv/validate/issue-${issue.number}`;
 
     try {
-      // Create and checkout branch
-      execSync(`git checkout -b ${branchName}`, { cwd: this.repoPath });
+      // RFC-060: Create and checkout validation branch for test persistence
+      execSync(`git checkout -b ${branchName}`, {
+        cwd: this.repoPath
+      });
+
       logger.info(`Created validation branch: ${branchName}`);
 
       return branchName;

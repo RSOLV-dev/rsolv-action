@@ -1,5 +1,4 @@
 
-        apiKey: test-api-key
+        rsolvApiKey: test-api-key
         containerConfig:
           enabled: false
-      
