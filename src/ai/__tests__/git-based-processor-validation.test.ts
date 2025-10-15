@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { logger } from '../../utils/logger.js';
 import { processIssueWithGit } from '../git-based-processor.js';
 import { TestGeneratingSecurityAnalyzer } from '../test-generating-security-analyzer.js';
 import { GitBasedTestValidator } from '../git-based-test-validator.js';
@@ -735,7 +736,7 @@ describe('Git-based processor with fix validation', () => {
       mockConfig.fixValidation = {
         enabled: false
       };
-      
+
       // Mock test generation
       mockAnalyzeWithTestGeneration.mockResolvedValue({
         canBeFixed: true,
@@ -755,30 +756,33 @@ describe('Git-based processor with fix validation', () => {
         commitHash: 'abc123',
         message: 'Fixed',
         filesModified: ['file.js'],
-        summary: 'Fix applied',
-        diffStats: '+10 -5'
+        summary: {
+          title: 'Fix',
+          description: 'Fixed',
+          securityImpact: 'Fixed vulnerability',
+          tests: []
+        }
       });
-      
+
       mockCreatePullRequestFromGit.mockResolvedValue({
         success: true,
         pullRequestUrl: 'https://github.com/test/repo/pull/1',
         pullRequestNumber: 1
       });
 
-      // Import logger and spy on it directly
-      const { logger } = await import('../../utils/logger.js');
+      // Spy on logger that was imported at module level
       const loggerInfoSpy = vi.spyOn(logger, 'info');
 
-      // Act  
+      // Act
       await processIssueWithGit(mockIssue, mockConfig);
 
       // Assert - check that logger.info was called with the expected message
       const logCalls = loggerInfoSpy.mock.calls;
-      const hasSkipLog = logCalls.some((call: any[]) => 
-        call[0]?.includes('Skipping fix validation') || 
+      const hasSkipLog = logCalls.some((call: any[]) =>
+        call[0]?.includes('Skipping fix validation') ||
         call[0]?.includes('DISABLE_FIX_VALIDATION')
       );
-      
+
       expect(hasSkipLog).toBe(true);
 
       // Restore
