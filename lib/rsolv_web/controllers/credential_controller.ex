@@ -61,14 +61,16 @@ defmodule RsolvWeb.CredentialController do
     security: [%{"ApiKeyAuth" => []}]
   )
 
-  def exchange(conn, params) do
-    Logger.info("[CredentialController] Starting exchange with params: #{inspect(params)}")
+  def exchange(conn, _params) do
+    # OpenApiSpex.Plug.CastAndValidate puts request body in conn.body_params, not params
+    body_params = conn.body_params
+    Logger.info("[CredentialController] Starting exchange with body_params: #{inspect(body_params)}")
     customer = conn.assigns.customer
 
     with :ok <- check_rate_limit(customer),
          :ok <- check_usage_limits(customer),
-         {:ok, providers} <- validate_providers(params),
-         {:ok, ttl_minutes} <- validate_ttl(params) do
+         {:ok, providers} <- validate_providers(body_params),
+         {:ok, ttl_minutes} <- validate_ttl(body_params) do
       Logger.info("[CredentialController] About to call generate_credentials")
 
       result =
@@ -160,10 +162,12 @@ defmodule RsolvWeb.CredentialController do
     security: [%{"ApiKeyAuth" => []}]
   )
 
-  def refresh(conn, params) do
+  def refresh(conn, _params) do
+    # OpenApiSpex.Plug.CastAndValidate puts request body in conn.body_params, not params
+    body_params = conn.body_params
     customer = conn.assigns.customer
 
-    with {:ok, credential_id} <- validate_credential_id(params),
+    with {:ok, credential_id} <- validate_credential_id(body_params),
          {:ok, credential} <- get_customer_credential(customer, credential_id),
          :ok <- check_refresh_eligibility(credential),
          {:ok, new_credential} <- refresh_credential(credential) do
@@ -228,10 +232,12 @@ defmodule RsolvWeb.CredentialController do
     security: [%{"ApiKeyAuth" => []}]
   )
 
-  def report_usage(conn, params) do
+  def report_usage(conn, _params) do
+    # OpenApiSpex.Plug.CastAndValidate puts request body in conn.body_params, not params
+    body_params = conn.body_params
     customer = conn.assigns.customer
 
-    with {:ok, usage_data} <- validate_usage_data(params),
+    with {:ok, usage_data} <- validate_usage_data(body_params),
          :ok <- record_usage(customer, usage_data),
          :ok <- update_customer_usage(customer, usage_data) do
       conn
