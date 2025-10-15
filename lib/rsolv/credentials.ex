@@ -1,6 +1,30 @@
 defmodule Rsolv.Credentials do
   @moduledoc """
   The Credentials context for managing AI provider credentials.
+
+  ## Credential Vending Architecture
+
+  This module implements temporary credential vending for AI providers. When customers
+  request credentials via `/api/v1/credentials/exchange`, we return time-limited API keys
+  for the requested providers.
+
+  ## Graceful Fallback Behavior
+
+  **IMPORTANT**: This module uses graceful fallback to mock keys when provider API keys
+  are not configured in the environment:
+
+  - `ANTHROPIC_API_KEY` → falls back to `"sk-ant-mock-key"`
+  - `OPENAI_API_KEY` → falls back to `"sk-mock-key"`
+  - `OPENROUTER_API_KEY` → falls back to `"sk-or-mock-key"`
+
+  This design allows:
+  - ✅ Application continues running without all provider keys configured
+  - ✅ Anthropic-only deployments (primary use case) work without OpenAI/OpenRouter keys
+  - ⚠️ Credential exchange succeeds even with mock keys (no validation at vending time)
+  - ⚠️ Customers receive mock keys for unconfigured providers (will fail at AI provider API)
+
+  See `RSOLV-infrastructure/DEPLOYMENT.md` for operational guidance on which keys to populate.
+  See `RFCs/RFC-057-FIX-CREDENTIAL-VENDING.md` for architecture details.
   """
 
   require Logger
@@ -8,7 +32,7 @@ defmodule Rsolv.Credentials do
   # Storage for credential tracking
   @credentials_table {__MODULE__, :credentials}
 
-  # Get provider keys at runtime - generate temp keys for testing
+  # Get provider keys at runtime with graceful fallback to mock keys for testing/partial deployments
   defp get_provider_key(provider) do
     case provider do
       "anthropic" ->
