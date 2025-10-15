@@ -33,21 +33,18 @@ defmodule Rsolv.Repo.Migrations.ConsolidateCustomerSchema do
   end
 
   def down do
+    # Only remove columns that this migration actually added (not ones that already existed)
+    # The following columns already existed from 20250602000002_add_trial_tracking_to_customers:
+    # - trial_fixes_used, trial_fixes_limit, stripe_customer_id, subscription_plan
+    # - subscription_status, rollover_fixes, payment_method_added_at, trial_expired_at
+    # So we only remove the NEW columns this migration added:
     alter table(:customers) do
-      remove_if_exists :trial_fixes_used, :integer
-      remove_if_exists :trial_fixes_limit, :integer
-      remove_if_exists :stripe_customer_id, :string
-      remove_if_exists :subscription_plan, :string
-      remove_if_exists :subscription_status, :string
-      remove_if_exists :rollover_fixes, :integer
-      remove_if_exists :payment_method_added_at, :utc_datetime
-      remove_if_exists :trial_expired_at, :utc_datetime
       remove_if_exists :fixes_used_this_month, :integer
       remove_if_exists :fixes_quota_this_month, :integer
       remove_if_exists :has_payment_method, :boolean
     end
-    
-    drop_if_exists index(:customers, [:stripe_customer_id])
-    drop_if_exists index(:customers, [:subscription_status])
+
+    # Don't drop indexes - they were created by the earlier migration 20250602000002
+    # and will be dropped by that migration's rollback
   end
 end
