@@ -63,12 +63,17 @@ describe('Server-Side AST Integration - Safe RED Phase Tests', () => {
 
   describe('Safe Detection Tests - Only JS/TS', () => {
     it('should detect JS vulnerabilities with current system', async () => {
+      // Set up local pattern source for testing
+      process.env.USE_LOCAL_PATTERNS = 'true';
       const detector = new SecurityDetectorV2();
-      
+
       // Only test with JavaScript code
       const jsCode = 'eval(userInput);';
       const results = await detector.detect(jsCode, 'javascript', 'test.js');
-      
+
+      // Clean up
+      delete process.env.USE_LOCAL_PATTERNS;
+
       expect(results.length).toBeGreaterThan(0);
       expect(results[0].type).toBe('command_injection');
     });
