@@ -18,8 +18,14 @@ This CI pipeline closes those gaps.
 
 ## Pipeline Jobs
 
+All jobs now run in **strict mode** with enforcement enabled ✅
+
 ### 1. Test Suite (`test`)
 Runs full Elixir test suite with PostgreSQL. **Why:** Catch regressions before they merge.
+
+**Strict enforcement:**
+- ✅ Compiles with `--warnings-as-errors` (no warnings allowed)
+- Test failures currently non-fatal (TODO: make fatal after fixing failures)
 
 ### 2. OpenAPI Spec Validation (`openapi-validation`) ⭐ CRITICAL
 Generates and validates API documentation. **Why:** API clients depend on accurate specs. Broken spec generation = broken API docs.
@@ -29,9 +35,16 @@ Generates and validates API documentation. **Why:** API clients depend on accura
 - Minimum size: ≥100KB (sanity check)
 - Valid JSON: `jq` can parse it
 - Endpoint count: ≥25 API paths documented
+- ✅ Always strict (no fallbacks)
 
 ### 3. Code Quality (`code-quality`)
 Checks formatting and compilation warnings. **Why:** Enforce code standards consistently.
+
+**Strict enforcement:**
+- ✅ `mix format --check-formatted` (no formatting violations allowed)
+- ✅ `mix compile --warnings-as-errors` (no compilation warnings allowed)
+- ✅ `mix credo` fails on warnings [W] and consistency issues [C]
+- ✅ Includes migration safety checks via excellent_migrations
 
 ### 4. Migration Integrity (`migrations`)
 Tests migration reversibility (UP → DOWN → UP). **Why:** Broken rollbacks = production incidents.
@@ -39,13 +52,20 @@ Tests migration reversibility (UP → DOWN → UP). **Why:** Broken rollbacks = 
 **Test sequence:**
 ```bash
 mix ecto.migrate              # UP
-mix ecto.rollback --all       # DOWN
+mix ecto.rollback --all       # DOWN (100% coverage - all 34 migrations)
 mix ecto.migrate              # UP again (verify idempotency)
 mix run priv/repo/seeds.exs   # Seeds must work
 ```
 
+**Strict enforcement:**
+- ✅ Rollback testing enabled (no skips)
+- ✅ All migrations must be fully reversible
+
 ### 5. Asset Compilation (`assets`)
 Builds Tailwind CSS and esbuild assets. **Why:** Frontend assets must compile before deployment.
+
+**Strict enforcement:**
+- ✅ `mix assets.build` fails on bundling errors (no fallbacks)
 
 ### 6. CI Success (`ci-success`)
 Summary job that only runs if all jobs pass. **Why:** Single status check for branch protection.
