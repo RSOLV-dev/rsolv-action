@@ -9,6 +9,7 @@ import { IssueContext } from '../../types/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
+import { initTestRepo } from '../helpers/git-test-utils.js';
 
 describe('Three-Phase Workflow Integration', () => {
   let testRepoPath: string;
@@ -19,10 +20,8 @@ describe('Three-Phase Workflow Integration', () => {
     testRepoPath = '/tmp/integration-test-' + Date.now();
     fs.mkdirSync(testRepoPath, { recursive: true });
 
-    // Initialize git repo
-    execSync('git init', { cwd: testRepoPath });
-    execSync('git config user.email "test@example.com"', { cwd: testRepoPath });
-    execSync('git config user.name "Test User"', { cwd: testRepoPath });
+    // Initialize git repo with consistent branch name
+    initTestRepo(testRepoPath, 'main');
 
     // Create initial commit
     fs.writeFileSync(path.join(testRepoPath, 'README.md'), '# Test Repo');
