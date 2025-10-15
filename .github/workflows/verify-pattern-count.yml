@@ -24,20 +24,20 @@ jobs:
           
       - name: Count Patterns
         run: |
-          # This workflow verifies the minimal-patterns.ts fallback pattern count.
+          # This workflow verifies the minimal-patterns.ts test pattern count.
           # The actual pattern count (~170) is served via the RSOLV-platform API.
-          # These 26 patterns are fallback patterns for offline/local use only.
+          # These 26 patterns are for testing/CI purposes only.
 
-          # Count fallback patterns in minimal-patterns.ts
+          # Count test patterns in minimal-patterns.ts
           TOTAL=$(grep -o "^\s*id:" src/security/minimal-patterns.ts | wc -l)
           echo "TOTAL_PATTERNS=$TOTAL" >> $GITHUB_ENV
-          echo "Found $TOTAL fallback patterns in minimal-patterns.ts"
-          echo "Note: Real pattern count (~170) is served via API"
+          echo "Found $TOTAL test patterns in minimal-patterns.ts"
+          echo "Note: Production pattern count (~170) is served via API"
           
       - name: Verify README Claims
         run: |
           # Check if README contains the API pattern count (170+)
-          # Note: This is separate from the 26 fallback patterns verified above
+          # Note: This is separate from the 26 test patterns verified above
           README_COUNT=$(grep -oP "\d+(?=\+ Security Patterns)" README.md | head -1)
           if [ -z "$README_COUNT" ]; then
             echo "❌ Could not find pattern count in README.md"
@@ -48,7 +48,7 @@ jobs:
             exit 1
           fi
           echo "✅ README correctly claims $README_COUNT+ patterns (API count)"
-          echo "✅ Fallback patterns in minimal-patterns.ts: $TOTAL_PATTERNS"
+          echo "✅ Test patterns in minimal-patterns.ts: $TOTAL_PATTERNS"
           
       - name: Update Pattern Inventory
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -61,14 +61,15 @@ jobs:
 
           ## Pattern Counts
 
-          - **API Patterns**: ~170 patterns (served via RSOLV-platform API)
-          - **Fallback Patterns**: $TOTAL_PATTERNS patterns (in src/security/minimal-patterns.ts)
+          - **Production Patterns**: ~170 patterns (served via RSOLV-platform API)
+          - **Test Patterns**: $TOTAL_PATTERNS patterns (in src/security/minimal-patterns.ts)
 
           ## About the Counts
 
-          The 26 fallback patterns in minimal-patterns.ts are used for offline/local development only.
-          Production deployments use the full ~170 pattern set from the RSOLV-platform API for comprehensive
-          vulnerability detection across 8 languages.
+          The 26 patterns in minimal-patterns.ts are for testing and CI purposes only.
+          Production deployments require the full ~170 pattern set from the RSOLV-platform API for comprehensive
+          vulnerability detection across 8 languages. If the backend is unavailable, customers must wait for it
+          to come back online.
 
           ## Verification
 
