@@ -14,18 +14,20 @@ import { execSync } from 'child_process';
 import nock from 'nock';
 
 // Use vi.hoisted to define mock functions that need to be available during module initialization
-const { 
+const {
   mockAnalyzeWithTestGeneration,
-  mockValidateFixWithTests, 
+  mockValidateFixWithTests,
   mockGenerateSolutionWithGit,
   mockCreatePullRequestFromGit,
-  mockExecSync 
+  mockCreateEducationalPullRequest,
+  mockExecSync
 } = vi.hoisted(() => {
   return {
     mockAnalyzeWithTestGeneration: vi.fn(),
     mockValidateFixWithTests: vi.fn(),
     mockGenerateSolutionWithGit: vi.fn(),
     mockCreatePullRequestFromGit: vi.fn(),
+    mockCreateEducationalPullRequest: vi.fn(),
     mockExecSync: vi.fn()
   };
 });
@@ -51,6 +53,10 @@ vi.mock('../adapters/claude-code-git.js', () => ({
 
 vi.mock('../../github/pr-git.js', () => ({
   createPullRequestFromGit: mockCreatePullRequestFromGit
+}));
+
+vi.mock('../../github/pr-git-educational.js', () => ({
+  createEducationalPullRequest: mockCreateEducationalPullRequest
 }));
 
 // We'll use nock to mock GitHub API requests in the test setup
@@ -182,7 +188,7 @@ describe('Git-based processor with fix validation', () => {
 
     // Reset all mocks
     vi.clearAllMocks();
-    
+
     // Re-apply default execSync mock after clearing
     mockExecSync.mockImplementation((cmd: string) => {
       if (cmd.includes('git rev-parse HEAD')) {
@@ -195,6 +201,13 @@ describe('Git-based processor with fix validation', () => {
         return '';
       }
       return '';
+    });
+
+    // Set up default educational PR mock
+    mockCreateEducationalPullRequest.mockResolvedValue({
+      success: true,
+      pullRequestUrl: 'https://github.com/test/repo/pull/1',
+      pullRequestNumber: 1
     });
   });
   
@@ -532,9 +545,9 @@ describe('Git-based processor with fix validation', () => {
           }]
         }
       });
-      
+
       mockValidateFixWithTests.mockResolvedValue(mockValidationResult);
-      
+
       mockGenerateSolutionWithGit.mockResolvedValue({
         success: true,
         commitHash: 'abc123',
@@ -542,12 +555,12 @@ describe('Git-based processor with fix validation', () => {
         filesModified: ['file.js'],
         summary: { title: 'Fix', description: 'Fixed' }
       });
-      
-      // PR mock is already configured at module level
-      mockCreatePullRequestFromGit.mockResolvedValue({
+
+      // Mock the educational PR creation (used by default)
+      mockCreateEducationalPullRequest.mockResolvedValue({
         success: true,
-        pullRequestUrl: 'https://github.com/test/repo/pull/456',  // Match MSW handler
-        pullRequestNumber: 456  // Match MSW handler in src/test/mocks/handlers.ts
+        pullRequestUrl: 'https://github.com/test/repo/pull/456',
+        pullRequestNumber: 456
       });
 
       // Act
@@ -670,8 +683,8 @@ describe('Git-based processor with fix validation', () => {
         diffStats: '+10 -5'
       });
 
-      // Configure the PR creation mock
-      mockCreatePullRequestFromGit.mockResolvedValue({
+      // Mock the educational PR creation (used by default)
+      mockCreateEducationalPullRequest.mockResolvedValue({
         success: true,
         pullRequestNumber: 123,
         pullRequestUrl: 'https://github.com/test/repo/pull/123'
@@ -683,7 +696,6 @@ describe('Git-based processor with fix validation', () => {
       // Assert
       expect(mockValidateFixWithTests).not.toHaveBeenCalled();
       expect(mockGenerateSolutionWithGit).toHaveBeenCalledTimes(1);
-      // The PR creation mock might not be called if real implementation is used with nock
       expect(result.success).toBe(true);
       expect(result.pullRequestUrl).toBeDefined();
     });
