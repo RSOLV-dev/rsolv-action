@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RepositoryScanner } from '../../src/scanner/repository-scanner.js';
 import type { ScanConfig } from '../../src/scanner/types.js';
 
+// Mock all external dependencies
+vi.mock('../../src/github/api.js');
+vi.mock('../../src/security/safe-detector.js');
+vi.mock('../../src/vendor/vendor-detector.js');
+
 /**
  * Regression test for vendor file skipping issue
  *
@@ -18,17 +23,17 @@ describe('RepositoryScanner - Vendor File Skipping (Regression Test)', () => {
   let mockVendorDetector: any;
   let mockGitHub: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    const { getGitHubClient } = await import('../../src/github/api.js');
+    const { SafeDetector } = await import('../../src/security/safe-detector.js');
+    const { VendorDetector } = await import('../../src/vendor/vendor-detector.js');
 
     // Create mock detector that tracks detect() calls
     mockDetector = {
       detect: vi.fn().mockResolvedValue([]),
-<<<<<<< HEAD
       cleanup: vi.fn()
-=======
-      cleanup: vi.fn() // Add cleanup method to mock
->>>>>>> 1547f9aff618fd1c305a9cad12b4c4bec2006507
     };
 
     // Create mock vendor detector
@@ -44,12 +49,12 @@ describe('RepositoryScanner - Vendor File Skipping (Regression Test)', () => {
       }
     };
 
-    scanner = new RepositoryScanner();
+    // Setup mocks
+    vi.mocked(getGitHubClient).mockReturnValue(mockGitHub as any);
+    vi.mocked(SafeDetector).mockImplementation(() => mockDetector as any);
+    vi.mocked(VendorDetector).mockImplementation(() => mockVendorDetector as any);
 
-    // Override the scanner's internal dependencies
-    (scanner as any).detector = mockDetector;
-    (scanner as any).vendorDetector = mockVendorDetector;
-    (scanner as any).github = mockGitHub;
+    scanner = new RepositoryScanner();
   });
 
   it('should SKIP scanning vendor/minified files (not just flag them)', async () => {
