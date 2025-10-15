@@ -157,6 +157,38 @@ See [DEV_SETUP.md](DEV_SETUP.md) for comprehensive troubleshooting.
 
 ## Development Best Practices
 
+### Migration Safety
+
+**IMPORTANT**: Run migration safety checks before committing migrations to catch dangerous operations early.
+
+We use the `excellent_migrations` package to detect potentially unsafe migration operations that could cause production issues:
+
+```bash
+# Check all migrations for safety issues
+mix excellent_migrations.check_safety
+```
+
+**What It Detects:**
+- ✅ Adding columns with defaults (causes table locks on large tables)
+- ✅ Removing columns (reading from removed columns causes errors)
+- ✅ Adding foreign keys without validation (blocks writes)
+- ✅ Adding check constraints (blocks writes during validation)
+- ✅ Setting NOT NULL on existing columns (requires full table scan)
+- ✅ Changing column types (rewrites entire table)
+- ✅ Adding indexes non-concurrently (locks table during creation)
+- ✅ Missing reversible down/0 functions
+
+**Best Practices:**
+1. Always run safety checks on new migrations before committing
+2. For large tables, use `algorithm: :concurrently` when adding indexes
+3. Add columns without defaults, then backfill and add constraint separately
+4. Use `validate: false` when adding foreign keys, then validate separately
+5. Ensure all migrations have proper `down/0` functions for rollback
+
+**Resources:**
+- [excellent_migrations on Hex](https://hex.pm/packages/excellent_migrations)
+- [excellent_migrations on GitHub](https://github.com/Artur-Sulej/excellent_migrations)
+
 ### TypeScript Validation
 **IMPORTANT**: Always run `npx tsc --noEmit` after making changes to TypeScript files. This practice:
 - Catches method signature mismatches (e.g., `detectInFile()` vs `detect()`)
