@@ -21,7 +21,7 @@ RSOLV is a GitHub Action that helps software development teams address their mai
 
 RSOLV provides comprehensive security analysis and remediation:
 
-- **448+ Security Patterns**: Enterprise-grade vulnerability detection across 8 languages
+- **170+ Security Patterns**: Enterprise-grade vulnerability detection across 8 languages
 - **Dynamic Pattern Updates**: Patterns served via API for real-time security updates
 - **OWASP Top 10 Coverage**: Complete coverage of the most critical web application security risks
 - **Framework-Specific Patterns**: Specialized detection for Rails, Django, Phoenix, React, Express, and more
