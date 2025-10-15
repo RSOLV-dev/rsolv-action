@@ -321,7 +321,7 @@ expect(User.find(5).admin).to be_falsey  # Should not escalate to admin`,
 
       // Act & Assert - Should retry and eventually fail
       await expect(client.analyze(request)).rejects.toThrow();
-      expect(mockFetch).toHaveBeenCalledTimes(3); // Should retry 3 times
+      expect(mockFetch).toHaveBeenCalledTimes(4); // Initial attempt + 3 retries = 4 total
     });
   });
 
