@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 #!/usr/bin/env elixir
 
 # Quick test to verify enhanced format includes AST data

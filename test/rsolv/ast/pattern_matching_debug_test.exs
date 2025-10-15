@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 defmodule Rsolv.AST.PatternMatchingDebugTest do
   @moduledoc """
   TDD Red Phase: Tests to expose exactly where AST pattern matching breaks down.

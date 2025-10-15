@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 defmodule Rsolv.Security.Patterns.Elixir.DebugModeEnabledTest do
   use ExUnit.Case, async: true
 

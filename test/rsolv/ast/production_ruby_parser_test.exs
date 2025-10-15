@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 defmodule Rsolv.AST.ProductionRubyParserTest do
   use ExUnit.Case, async: true
 

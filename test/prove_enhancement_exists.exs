@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 #!/usr/bin/env elixir
 
 # Script to prove that pattern modules have AST enhancement data

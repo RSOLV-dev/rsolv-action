@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 defmodule Mix.Tasks.TestEnhancement do
   use Mix.Task
 

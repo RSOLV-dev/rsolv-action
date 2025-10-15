@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 #!/usr/bin/env elixir
 
 # RFC-032 Phase 3: Test enhanced patterns are returned correctly

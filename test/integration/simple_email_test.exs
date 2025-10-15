@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 defmodule Rsolv.Integration.SimpleEmailTest do
   use Rsolv.DataCase, async: false
   use Bamboo.Test

@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Warning.IoInspect
 defmodule RsolvWeb.ConvertKitIntegrationTest do
   use RsolvWeb.ConnCase
 
