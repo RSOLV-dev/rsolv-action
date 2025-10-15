@@ -1,15 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 
-// Mock fetch globally
-global.fetch = vi.fn();
-
 describe('Credential Lifecycle Issues - TDD', () => {
   let mockFetch: any;
-  
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockFetch = global.fetch as any;
+    // Create a fresh mock for each test
+    mockFetch = vi.fn();
+    global.fetch = mockFetch;
   });
 
   describe('Current Problem: Multiple credential exchanges', () => {
