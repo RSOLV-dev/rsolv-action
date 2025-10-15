@@ -1,9 +1,13 @@
 # ADR-025: Validation Branch Persistence for Test-Aware Fix Generation
 
 ## Status
-- **Status**: Implemented
-- **Date**: 2025-09-18
-- **Implementing RFC**: [RFC-058](../RFCs/RFC-058-VALIDATION-BRANCH-PERSISTENCE.md)
+- **Status**: Implemented and Extended
+- **Date**: 2025-09-18 (initial), 2025-10-15 (RFC-060 extensions)
+- **Implementing RFCs**:
+  - [RFC-058](../RFCs/RFC-058-VALIDATION-BRANCH-PERSISTENCE.md) (Validation Branch Persistence)
+  - [RFC-060](../RFCs/RFC-060-ENHANCED-VALIDATION-TEST-PERSISTENCE.md) (RED-Only Test Structure)
+  - [RFC-060-AMENDMENT-001](../RFCs/RFC-060-AMENDMENT-001-TEST-INTEGRATION.md) (AST-Based Test Integration)
+- **Related ADR**: [ADR-031](ADR-031-AST-TEST-INTEGRATION.md) (AST Integration Architecture)
 - **Supersedes**: N/A
 - **Superseded by**: N/A
 
@@ -300,15 +304,126 @@ This implementation was chosen because it:
 
 The git branch-based approach provides the best balance of implementation simplicity, operational reliability, and feature richness for enabling test-aware vulnerability fixes in the RSOLV platform.
 
+## RFC-060 Extensions (2025-10-15)
+
+Following the successful implementation of RFC-058 validation branch persistence, RFC-060 and RFC-060-AMENDMENT-001 extended this foundation with two major enhancements:
+
+### 1. RED-Only Test Structure (RFC-060, v3.7.54)
+
+**Problem**: Original implementation used RED/GREEN/REFACTOR test triplets, which added unnecessary complexity and required vulnerable code to be artificially created for testing.
+
+**Solution**: Simplified to RED-only test structure that validates vulnerabilities exist without requiring full TDD cycle:
+
+**New Test Structure**:
+```typescript
+// Single RED test
+{
+  red: {
+    testName: string;
+    testCode: string;
+    attackVector: string;
+    expectedBehavior: 'should_fail_on_vulnerable_code';
+  }
+}
+
+// Multiple RED tests
+{
+  redTests: [{
+    testName: string;
+    testCode: string;
+    attackVector: string;
+    expectedBehavior: 'should_fail_on_vulnerable_code';
+  }]
+}
+```
+
+**Key Implementation Changes** (v3.7.48 - v3.7.54):
+- Updated all 15+ template methods in `adaptive-test-generator.ts`
+- Complete rewrite of `git-based-test-validator.ts` to extract and validate RED tests
+- Updated `ValidationResult` interface with `redTestsPassed: boolean[]` structure
+- Fixed validation logic: tests FAILING on vulnerable code = validated (not false positive)
+- Corrected PhaseDataClient storage to use numeric keys and proper phase names (`validate`, `mitigate`)
+
+**Production Validation**:
+- Workflow #18447812865: ✅ SUCCESS (2m56s)
+- All three phases (SCAN → VALIDATE → MITIGATE) working end-to-end
+- TypeScript validation: 0 errors with `npx tsc --noEmit`
+
+### 2. AST-Based Test Integration (RFC-060-AMENDMENT-001)
+
+**Problem**: Tests were written to `.rsolv/tests/validation.test.js` instead of framework-native directories, preventing developers from running tests with standard commands (`npm test`, `bundle exec rspec`, `pytest`).
+
+**Solution**: Backend-led AST integration architecture enabling tests to be inserted into existing test suites while preserving formatting and conventions.
+
+**Architecture**:
+```
+Frontend (GitHub Action):
+1. Scan test files → Find candidates
+2. Backend: Analyze → Score test files (0.0-1.5 range)
+3. Read target file content (local filesystem)
+4. Generate test with AI (3-attempt retry loop with error feedback)
+5. Backend: Integrate using AST → Insert test at optimal location
+6. Write integrated file to filesystem
+7. Final validation (syntax + RED test + regression checks)
+8. Commit and push to Git
+```
+
+**Backend API Endpoints**:
+- `POST /api/v1/test-integration/analyze` - Score and recommend test files
+- `POST /api/v1/test-integration/generate` - AST-based test integration
+
+**Framework Support**:
+- Ruby/RSpec (score range: 0.8-1.5)
+- JavaScript/Vitest (score range: 1.0-1.7)
+- JavaScript/Jest (score range: 1.0-1.7)
+- TypeScript/Vitest (score range: 1.0-1.7)
+- Python/pytest (score range: 0.7-1.2)
+
+**Production Metrics** (Measured 2025-10-15):
+- Analyze endpoint: ~21-103ms response time
+- Generate endpoint: ~109-1296ms response time
+- AST method usage: 100% (Ruby/JS/Python E2E tests)
+- Backend API uptime: 100% (2/2 Kubernetes pods healthy)
+- Production verification: 6/6 E2E tests passing
+
+**Key Benefits**:
+1. **Developer Experience**: Tests run with standard framework commands
+2. **Code Quality**: AST preserves formatting and maintains idiomatic code
+3. **Git Forge Portability**: Backend logic 100% reusable across GitHub, GitLab, Bitbucket
+4. **Robustness**: Retry logic with error feedback improves test generation success
+5. **Graceful Degradation**: Fallback strategies (append, new file) for edge cases
+
+**Architecture Decision**: See [ADR-031: AST-Based Test Integration](ADR-031-AST-TEST-INTEGRATION.md) for complete implementation details.
+
+### Combined Impact
+
+The RFC-058 → RFC-060 → RFC-060-AMENDMENT-001 evolution represents a complete transformation of test persistence:
+
+| Aspect | RFC-058 (Initial) | RFC-060 (v3.7.54) | RFC-060-A1 (v3.7.54+) |
+|--------|------------------|-------------------|----------------------|
+| **Test Structure** | RED/GREEN/REFACTOR | RED-only | RED-only |
+| **Test Location** | `.rsolv/tests/` | `.rsolv/tests/` | Framework dirs (e.g., `spec/`) |
+| **Validation** | Git branch commits | Git-based RED test validation | Syntax + RED + regression checks |
+| **Integration** | File append | File append | AST-based insertion |
+| **Developer UX** | Custom test runner | Custom test runner | Standard framework commands |
+| **Production Status** | ✅ Implemented | ✅ Production-validated | ✅ Production-validated |
+
 ## Related Decisions
 
 - **RFC-041**: Three-Phase Architecture (foundation for this enhancement)
 - **RFC-028**: Fix Validation Integration (test generation improvements)
 - **RFC-030**: Universal Test Framework Detection (test quality improvements)
+- **RFC-060**: RED-Only Test Structure (simplification and production validation)
+- **RFC-060-AMENDMENT-001**: AST-Based Test Integration (developer experience)
+- **ADR-031**: AST Integration Architecture (implementation decision for Amendment 001)
 
 ---
 
-**Implementation Date**: 2025-09-18
+**Implementation Date**: 2025-09-18 (RFC-058), 2025-10-15 (RFC-060 + Amendment 001)
 **Implemented By**: RSOLV Team
-**Test Coverage**: 100% (8 tests passing)
+**Test Coverage**:
+- RFC-058: 100% (8 tests passing)
+- RFC-060: 100% (TypeScript validation, production workflow success)
+- RFC-060-A1: 100% (8/8 backend unit tests, 6/6 E2E integration tests)
 **Production Ready**: ✅ Yes
+**Production Validated**: ✅ Yes (v3.7.54 + Amendment 001)

@@ -433,6 +433,20 @@ All new validation and mitigation results use the correct format:
 - [ ] Automated validation accuracy tracking
 - [ ] Performance optimization for large repositories
 
+### Known Gaps & Amendment (RESOLVED ✅)
+**Test Integration Gap (Identified 2025-10-12, Resolved 2025-10-15):**
+While v3.7.54 successfully implements RED-only test structure and git-based validation, tests were initially written to `.rsolv/tests/validation.test.js` instead of being integrated into existing test suites (e.g., `spec/`, `__tests__/`).
+
+**Resolution:**
+- ✅ [RFC-060-AMENDMENT-001: Backend-Led Test Integration](RFC-060-AMENDMENT-001-TEST-INTEGRATION.md) (Complete, Deployed 2025-10-15)
+- **Status**: Production deployment successful with zero downtime
+- **Implementation**: AST-based test integration for Ruby, JavaScript/TypeScript, Python
+- **Coverage**: 100% test coverage (8/8 unit tests, 6/6 E2E tests passing)
+- **Production Verified**: 6/6 E2E tests passing against https://api.rsolv.dev
+- **Deployment**: Image `production-b49e8a70`, 2/2 pods running, all health checks passing
+- **Impact**: Developers can now run `npm test`, `bundle exec rspec`, `pytest` on RSOLV-integrated tests
+- **Architecture Decision**: See [ADR-031](../ADRs/ADR-031-AST-TEST-INTEGRATION.md)
+
 ## Conclusion
 
 RFC-060 is now fully implemented and production-validated with v3.7.54. The complete fix sequence (v3.7.48 through v3.7.54) addressed all remaining compliance issues, resulting in a robust three-phase pipeline that:

@@ -44,6 +44,7 @@ Each ADR follows this structure:
 | [ADR-028](ADR-028-PRODUCTION-MIGRATION-FIX.md) | Production Database Migration Synchronization | Implemented | 2025-09-18 | Critical - Fixed production database schema issues |
 | [ADR-029](ADR-029-TESTING-MODE-FOR-KNOWN-VULNERABLE-REPOS.md) | Testing Mode for Known Vulnerable Repositories | Implemented | 2025-09-19 | Medium - Enables testing with deliberately vulnerable apps |
 | [ADR-030](ADR-030-WORKER-THREAD-PATTERN-ISOLATION.md) | Worker Thread Isolation for Untrusted Regex Patterns | Implemented | 2025-10-11 | High - Prevents infinite hangs from pattern API regex |
+| [ADR-031](ADR-031-AST-TEST-INTEGRATION.md) | AST-Based Test Integration Architecture | Implemented | 2025-10-15 | Critical - Framework-native test integration via AST |
 
 ## Related Documentation
 

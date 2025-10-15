@@ -1,7 +1,7 @@
 # RFC-067: GitHub Marketplace Publishing
 
 **Status**: Draft
-**Created**: 2025-01-12
+**Created**: 2025-10-12
 **Timeline**: 2-3 weeks
 **Dependencies**: RSOLV-action v3 stable
 

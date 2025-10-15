@@ -81,16 +81,17 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 | 057 | [Fix Credential Vending](RFC-057-FIX-CREDENTIAL-VENDING.md) | Draft | 2025-09-18 | N/A |
 | 058 | [Validation Branch Persistence](RFC-058-VALIDATION-BRANCH-PERSISTENCE.md) | Implemented → [ADR-025](../ADRs/ADR-025-VALIDATION-BRANCH-PERSISTENCE.md) | 2025-09-18 | N/A |
 | 059 | [Local Testing with Act](RFC-059-act-local-testing.md) | Approved (Note: RFC-059-VALIDATION-TESTING-STRATEGY.md also exists) | 2025-01-24 | N/A |
-| 060 | [Executable Validation Test Integration](RFC-060-ENHANCED-VALIDATION-TEST-PERSISTENCE.md) | ✅ Complete (v3.7.54 - Production Validated) → [Completion Report](RFC-060-COMPLETION-REPORT.md) | 2025-09-30 | N/A |
+| 060 | [Executable Validation Test Integration](RFC-060-ENHANCED-VALIDATION-TEST-PERSISTENCE.md) | ✅ Complete (v3.7.54 + Amendment 001) → [ADR-031](../ADRs/ADR-031-AST-TEST-INTEGRATION.md) | 2025-09-30 | N/A |
+| 060-A1 | [Backend-Led Test Integration](RFC-060-AMENDMENT-001-TEST-INTEGRATION.md) | ✅ Complete (Deployed 2025-10-15) → [ADR-031](../ADRs/ADR-031-AST-TEST-INTEGRATION.md) | 2025-10-12 | N/A |
 | 061 | [Claude CLI Retry Reliability](RFC-061-CLAUDE-RETRY-RELIABILITY.md) | Draft | 2025-09-30 | N/A |
 | 062 | [CI Integration Testing Infrastructure](RFC-062-CI-INTEGRATION-TESTING.md) | Draft | 2025-10-06 | N/A |
 | 063 | [API Key Caching with Mnesia](RFC-063-API-KEY-CACHING.md) | Draft | 2025-10-07 | N/A |
-| 064 | [Billing & Provisioning Master Plan](RFC-064-BILLING-PROVISIONING-MASTER-PLAN.md) | Draft | 2025-01-12 | N/A |
-| 065 | [Automated Customer Provisioning](RFC-065-AUTOMATED-CUSTOMER-PROVISIONING.md) | Draft | 2025-01-12 | N/A |
-| 066 | [Stripe Billing Integration](RFC-066-STRIPE-BILLING-INTEGRATION.md) | Draft | 2025-01-12 | N/A |
-| 067 | [GitHub Marketplace Publishing](RFC-067-GITHUB-MARKETPLACE-PUBLISHING.md) | Draft | 2025-01-12 | N/A |
-| 068 | [Billing Testing Infrastructure](RFC-068-BILLING-TESTING-INFRASTRUCTURE.md) | Draft | 2025-01-12 | N/A |
-| 069 | [Integration Week Plan](RFC-069-INTEGRATION-WEEK.md) | Draft | 2025-01-12 | N/A |
+| 064 | [Billing & Provisioning Master Plan](RFC-064-BILLING-PROVISIONING-MASTER-PLAN.md) | Draft | 2025-10-12 | N/A |
+| 065 | [Automated Customer Provisioning](RFC-065-AUTOMATED-CUSTOMER-PROVISIONING.md) | Draft | 2025-10-12 | N/A |
+| 066 | [Stripe Billing Integration](RFC-066-STRIPE-BILLING-INTEGRATION.md) | Draft | 2025-10-12 | N/A |
+| 067 | [GitHub Marketplace Publishing](RFC-067-GITHUB-MARKETPLACE-PUBLISHING.md) | Draft | 2025-10-12 | N/A |
+| 068 | [Billing Testing Infrastructure](RFC-068-BILLING-TESTING-INFRASTRUCTURE.md) | Draft | 2025-10-12 | N/A |
+| 069 | [Integration Week Plan](RFC-069-INTEGRATION-WEEK.md) | Draft | 2025-10-12 | N/A |
 
 ## RFC Implementation Tracking
 

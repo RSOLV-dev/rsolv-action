@@ -1,7 +1,7 @@
 # RFC-065: Automated Customer Provisioning
 
 **Status**: Draft
-**Created**: 2025-01-12
+**Created**: 2025-10-12
 **Timeline**: 3 weeks
 **Dependencies**: None (can start immediately)
 

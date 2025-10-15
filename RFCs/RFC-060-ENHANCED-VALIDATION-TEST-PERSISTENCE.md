@@ -1,17 +1,26 @@
 # RFC-060: Executable Validation Test Integration
 
-**Status:** ✅ Complete - Production Validated (v3.7.54)
+**Status:** ✅ Complete - Production Validated (v3.7.54 + Amendment 001)
 **Created:** 2025-09-24
-**Updated:** 2025-10-12
-**Completed:** 2025-10-12
-**Final Version:** v3.7.54
+**Updated:** 2025-10-15
+**Completed:** 2025-10-15 (includes Amendment 001)
+**Final Version:** v3.7.54 (core) + Amendment 001 (AST integration)
 **Production Workflow:** #18447812865 (SUCCESS)
 **Author:** RSOLV Team
-**Reviewers:** Dylan (2025-09-30, 2025-10-01, 2025-10-05, 2025-10-08)
+**Reviewers:** Dylan (2025-09-30, 2025-10-01, 2025-10-05, 2025-10-08, 2025-10-15)
+**Architecture Decision:** [ADR-031: AST-Based Test Integration](../ADRs/ADR-031-AST-TEST-INTEGRATION.md)
+
+## Related Documents
+
+- **[RFC-060 Completion Report](RFC-060-COMPLETION-REPORT.md)** - Production validation results for v3.7.54
+- **[RFC-060-AMENDMENT-001](RFC-060-AMENDMENT-001-TEST-INTEGRATION.md)** - AST-based framework integration (Deployed 2025-10-15)
+- **[ADR-031](../ADRs/ADR-031-AST-TEST-INTEGRATION.md)** - Architecture decision record for test integration
 
 ## Abstract
 
 This RFC returns the VALIDATE phase to the originally intended architecture documented in ADR-025, correcting deviations from branch-based test persistence and backend API metadata storage. Instead of temporary in-tree JSON files that get deleted, this approach generates directly executable RED tests that prove vulnerabilities exist, persists them in validation branches, stores metadata via PhaseDataClient API, and validates that tests actually fail before proceeding to mitigation.
+
+**Amendment 001 (2025-10-15)**: Extended implementation to integrate tests into framework-native directories (spec/, __tests__/, test/) using AST-based code transformation, enabling developers to run tests with standard framework commands (`npm test`, `bundle exec rspec`, `pytest`).
 
 ## Implementation Sequence & Parallelization Map
 
