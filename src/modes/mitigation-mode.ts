@@ -181,11 +181,13 @@ export class MitigationMode {
       // RFC-060: If we get here, the branch didn't exist locally or remotely,
       // or checkout failed. Check if git accidentally created a branch anyway.
       const branchExistsNow = this.doesLocalBranchExist(branchName);
+
       if (!localBranchExisted && branchExistsNow) {
         logger.warn(`Branch ${branchName} was created accidentally, cleaning up`);
         try {
           // Make sure we're back on original branch
           const currentBranch = this.getCurrentBranch();
+
           if (currentBranch !== originalBranch) {
             execSync(`git checkout ${originalBranch}`, { cwd: this.repoPath, stdio: 'pipe' });
           }
