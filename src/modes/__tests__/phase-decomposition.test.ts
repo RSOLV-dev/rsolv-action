@@ -212,8 +212,8 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
       expect(result.success).toBe(true);
       expect(result.phase).toBe('validate');
       expect(result.data).toHaveProperty('validation');
-      // The validation is structured as { 'issue-123': { validated, redTests, testResults, ... } }
-      const issueKey = `issue-${mockIssue.number}`;
+      // RFC-060: The validation is structured with numeric keys { 123: { validated, redTests, testResults, ... } }
+      const issueKey = mockIssue.number;
       expect(result.data.validation).toHaveProperty(issueKey);
       expect(result.data.validation[issueKey]).toHaveProperty('validated');
       expect(result.data.validation[issueKey]).toHaveProperty('testResults');
@@ -243,10 +243,10 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
       };
       
       const result = await executor.executeValidateForIssue(mockIssue, scanData);
-      
+
       expect(mockAnalyzer.analyzeWithTestGeneration).toHaveBeenCalled();
-      // Check the validation structure
-      const issueKey = `issue-${mockIssue.number}`;
+      // Check the validation structure - RFC-060: numeric keys
+      const issueKey = mockIssue.number;
       expect(result.data.validation[issueKey]).toHaveProperty('validated');
       expect(result.data.validation[issueKey].testResults).toBeDefined();
     });
@@ -334,8 +334,8 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
       }
       expect(result.success).toBe(true);
       expect(result.phase).toBe('mitigate');
-      // The data is structured as { 'issue-123': { fixed, prUrl, fixCommit, timestamp } }
-      const issueKey = `issue-${mockIssue.number}`;
+      // RFC-060: The data is structured with numeric keys { 123: { fixed, prUrl, fixCommit, timestamp } }
+      const issueKey = mockIssue.number;
       expect(result.data).toHaveProperty(issueKey);
       expect(result.data[issueKey]).toHaveProperty('fixed', true);
       expect(result.data[issueKey]).toHaveProperty('prUrl');
