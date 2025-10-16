@@ -43,7 +43,7 @@ async function main() {
   
   // Create basic config for demo
   const config: ActionConfig = {
-    apiKey: process.env.RSOLV_API_KEY || 'demo-key',
+    rsolvApiKey: process.env.RSOLV_API_KEY || 'demo-key',
     configPath: 'rsolv.config.json',
     issueLabel: 'rsolv:fix',
     repoToken: GITHUB_TOKEN,
@@ -129,7 +129,7 @@ async function main() {
     
     // Create proper ActionConfig
     const config: ActionConfig = {
-      apiKey: process.env.RSOLV_API_KEY || 'demo-key',
+      rsolvApiKey: process.env.RSOLV_API_KEY || 'demo-key',
       configPath: '.github/rsolv.yml',
       issueLabel: 'rsolv:automate',
       enableSecurityAnalysis: true,

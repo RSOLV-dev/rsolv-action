@@ -8,8 +8,9 @@ export async function securityCheck(config: ActionConfig): Promise<boolean> {
   try {
     logger.info('Performing security checks');
     
-    // Check API key
-    if (!validateApiKey(config.apiKey)) {
+    // Check API key (use apiKey if present, otherwise rsolvApiKey)
+    const apiKey = config.apiKey || config.rsolvApiKey;
+    if (!validateApiKey(apiKey)) {
       throw new Error('Invalid API key');
     }
     logger.debug('API key validated');
