@@ -198,7 +198,14 @@ else
       passed: .numPassedTests,
       failed: .numFailedTests,
       skipped: (.numPendingTests + .numTodoTests),
-      passRate: ((.numPassedTests / .numTotalTests) * 100 | tostring + "%")
+      passRate: (
+        ((.numPassedTests + .numFailedTests) as $runnable |
+        if $runnable > 0 then
+          ((.numPassedTests / $runnable) * 100 | tostring + "%")
+        else
+          "100%"
+        end)
+      )
     }' 2>/dev/null || echo "(Unable to parse JSON report)"
   fi
 fi
