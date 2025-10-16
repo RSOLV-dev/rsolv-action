@@ -221,9 +221,14 @@ describe('PhaseDataClient', () => {
   describe('validatePhaseTransition', () => {
     test('should validate allowed phase transitions', async () => {
       // Arrange
+      // Set GITHUB_SHA to ensure consistent behavior in both local and CI environments
+      // This prevents the test from being affected by CI environment variables
+      const originalGithubSha = process.env.GITHUB_SHA;
+      process.env.GITHUB_SHA = 'abc123';
+
       client = new PhaseDataClient(mockApiKey);
 
-      // Mock git command to return current commit
+      // Mock git command to return current commit (used as fallback if GITHUB_SHA not set)
       // Mock child_process is already at module level, just change its return value
       const childProcess = await import('child_process');
       vi.mocked(childProcess.execSync).mockReturnValue('abc123\n' as any);
@@ -232,13 +237,24 @@ describe('PhaseDataClient', () => {
       expect(await client.validatePhaseTransition('scan', 'validate', 'abc123')).toBe(true);
       expect(await client.validatePhaseTransition('validate', 'mitigate', 'abc123')).toBe(true);
       expect(await client.validatePhaseTransition('mitigate', 'scan', 'abc123')).toBe(false);
+
+      // Cleanup - restore original GITHUB_SHA
+      if (originalGithubSha === undefined) {
+        delete process.env.GITHUB_SHA;
+      } else {
+        process.env.GITHUB_SHA = originalGithubSha;
+      }
     });
 
     test('should reject transition if commit has changed', async () => {
       // Arrange
+      // Set GITHUB_SHA to ensure consistent behavior in both local and CI environments
+      const originalGithubSha = process.env.GITHUB_SHA;
+      process.env.GITHUB_SHA = 'different-commit';
+
       client = new PhaseDataClient(mockApiKey);
 
-      // Mock git to return different commit
+      // Mock git to return different commit (used as fallback if GITHUB_SHA not set)
       // Mock child_process is already at module level, just change its return value
       const childProcess = await import('child_process');
       vi.mocked(childProcess.execSync).mockReturnValue('different-commit\n' as any);
@@ -248,6 +264,13 @@ describe('PhaseDataClient', () => {
 
       // Assert
       expect(result).toBe(false);
+
+      // Cleanup - restore original GITHUB_SHA
+      if (originalGithubSha === undefined) {
+        delete process.env.GITHUB_SHA;
+      } else {
+        process.env.GITHUB_SHA = originalGithubSha;
+      }
     });
 
     test('should use GITHUB_SHA when git is not available (act/Docker scenario)', async () => {
