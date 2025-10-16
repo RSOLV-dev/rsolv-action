@@ -109,7 +109,8 @@ describe('Three-Phase Workflow Integration', () => {
     // Verify we're on validation branch
     const currentBranch = execSync('git branch --show-current', { cwd: testRepoPath })
       .toString()
-      .trim();
+      .trim()
+      .replace(/^\*\s+/, '');
     expect(currentBranch).toBe(branchName);
 
     // Phase 3: Mitigation generates test-aware fix
@@ -142,7 +143,8 @@ describe('Three-Phase Workflow Integration', () => {
     // Should stay on main branch
     const currentBranch = execSync('git branch --show-current', { cwd: testRepoPath })
       .toString()
-      .trim();
+      .trim()
+      .replace(/^\*\s+/, '');
     expect(currentBranch).toBe('main');
 
     // Should still work but without test enhancement
