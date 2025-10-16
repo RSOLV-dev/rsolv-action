@@ -141,21 +141,21 @@ describe('ElixirASTAnalyzer - Encryption', () => {
       global.fetch = vi.fn(async (url: string, options: any) => {
         const bodyData = JSON.parse(options.body);
         return {
-        ok: true,
-        json: async () => ({
-          requestId: bodyData.requestId, // Use the actual request ID from the request
-          session: { sessionId: 'test-session' },
-          results: [{
-            file: 'test.js',
-            vulnerabilities: [{
-              type: 'command_injection',
-              severity: 'high',
-              message: 'Use of eval() detected',
-              line: 1
+          ok: true,
+          json: async () => ({
+            requestId: bodyData.requestId, // Use the actual request ID from the request
+            session: { sessionId: 'test-session' },
+            results: [{
+              file: 'test.js',
+              vulnerabilities: [{
+                type: 'command_injection',
+                severity: 'high',
+                message: 'Use of eval() detected',
+                line: 1
+              }]
             }]
-          }]
-        })
-      } as Response});
+          })
+        } as Response;});
 
       const result = await analyzer.analyze(
         [{ path: 'test.js', content: 'eval(x)' }]

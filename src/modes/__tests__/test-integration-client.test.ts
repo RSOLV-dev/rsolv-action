@@ -128,7 +128,7 @@ patch :update, params: {
 # Test expectations (FAILS on vulnerable code):
 expect(response.status).to eq(400)  # Should reject malicious input
 expect(User.find(5).admin).to be_falsey  # Should not escalate to admin`,
-            attackVector: "5') OR admin = 't' --'",
+            attackVector: '5\') OR admin = \'t\' --\'',
             expectedBehavior: 'should_fail_on_vulnerable_code',
             vulnerableCodePath: 'app/controllers/users_controller.rb:42',
             vulnerablePattern: 'User.where("id = \'#{params[:user][:id]}\'")'

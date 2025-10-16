@@ -72,7 +72,7 @@ describe('RFC-060 Blocker 2: AI Test Generator RED-only Tests', () => {
         red: {
           testName: 'should be vulnerable to SQL injection',
           testCode: 'test("SQL injection", () => { /* test code */ })',
-          attackVector: "'; DROP TABLE users; --",
+          attackVector: '\'; DROP TABLE users; --',
           expectedBehavior: 'should_fail_on_vulnerable_code'
         }
       });
@@ -93,13 +93,13 @@ describe('RFC-060 Blocker 2: AI Test Generator RED-only Tests', () => {
           {
             testName: 'should be vulnerable to SQL injection via id param',
             testCode: 'test("SQL injection via id", () => { /* test 1 */ })',
-            attackVector: "'; DROP TABLE users; --",
+            attackVector: '\'; DROP TABLE users; --',
             expectedBehavior: 'should_fail_on_vulnerable_code'
           },
           {
             testName: 'should be vulnerable to SQL injection via name param',
             testCode: 'test("SQL injection via name", () => { /* test 2 */ })',
-            attackVector: "admin'--",
+            attackVector: 'admin\'--',
             expectedBehavior: 'should_fail_on_vulnerable_code'
           }
         ]

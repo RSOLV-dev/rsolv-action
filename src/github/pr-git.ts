@@ -190,7 +190,7 @@ async function pushCommitToBranch(
     logger.info(`Pushed branch ${branchName} to origin`);
     
     // Switch back to main branch
-    execSync(`git checkout -`, {
+    execSync('git checkout -', {
       encoding: 'utf-8'
     });
     

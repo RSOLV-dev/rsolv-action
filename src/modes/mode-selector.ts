@@ -45,7 +45,7 @@ export class ModeSelector {
       skipCache
     };
     
-    logger.info(`Mode configuration:`, {
+    logger.info('Mode configuration:', {
       mode: config.mode,
       issueId: config.issueId,
       issueIds: config.issueIds,
@@ -63,32 +63,32 @@ export class ModeSelector {
     const normalized = mode.toLowerCase().trim();
     
     switch (normalized) {
-      case 'scan':
-      case 'detect':
-        return 'scan';
+    case 'scan':
+    case 'detect':
+      return 'scan';
       
-      case 'validate':
-      case 'validation':
-      case 'test':
-        return 'validate';
+    case 'validate':
+    case 'validation':
+    case 'test':
+      return 'validate';
       
-      case 'mitigate':
-      case 'mitigation':
-      case 'repair':
-        return 'mitigate';
+    case 'mitigate':
+    case 'mitigation':
+    case 'repair':
+      return 'mitigate';
       
-      case 'fix':
-      case 'auto':
-      case 'combined':
-        return 'fix';
+    case 'fix':
+    case 'auto':
+    case 'combined':
+      return 'fix';
       
-      case 'full':
-      case 'all':
-      case 'complete':
-        return 'full';
+    case 'full':
+    case 'all':
+    case 'complete':
+      return 'full';
       
-      default:
-        throw new Error(`Unknown mode '${mode}'. Valid options: scan, validate, mitigate, fix, full`);
+    default:
+      throw new Error(`Unknown mode '${mode}'. Valid options: scan, validate, mitigate, fix, full`);
     }
   }
   
@@ -125,18 +125,18 @@ export class ModeSelector {
    */
   static getModeDescription(mode: OperationMode): string {
     switch (mode) {
-      case 'scan':
-        return 'Scanning repository for vulnerabilities';
-      case 'validate':
-        return 'Validating vulnerabilities with RED tests';
-      case 'mitigate':
-        return 'Mitigating proven vulnerabilities';
-      case 'fix':
-        return 'Validating and fixing vulnerabilities (combined mode)';
-      case 'full':
-        return 'Running full pipeline: scan, validate, and mitigate';
-      default:
-        return `Running in ${mode} mode`;
+    case 'scan':
+      return 'Scanning repository for vulnerabilities';
+    case 'validate':
+      return 'Validating vulnerabilities with RED tests';
+    case 'mitigate':
+      return 'Mitigating proven vulnerabilities';
+    case 'fix':
+      return 'Validating and fixing vulnerabilities (combined mode)';
+    case 'full':
+      return 'Running full pipeline: scan, validate, and mitigate';
+    default:
+      return `Running in ${mode} mode`;
     }
   }
   

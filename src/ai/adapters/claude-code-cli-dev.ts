@@ -131,7 +131,7 @@ export class ClaudeCodeMaxAdapter extends RetryableClaudeCodeCLI {
       // Build changes map
       const changes: Record<string, string> = {};
       for (const file of modifiedFiles) {
-        changes[file] = `Modified by Claude Code Max`;
+        changes[file] = 'Modified by Claude Code Max';
       }
       
       return {

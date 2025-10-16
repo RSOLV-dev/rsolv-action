@@ -49,7 +49,7 @@ export class UpdateRecommender {
     };
   }
   
-  private async findFixedVersions(library: Library, vulnerability: { id: string; severity?: string }): Promise<string[]> {
+  private async findFixedVersions(library: Library, _vulnerability: { id: string; severity?: string }): Promise<string[]> {
     // In real implementation, would query npm registry or security advisories
     // Mock some known fixes
     
@@ -141,13 +141,13 @@ export class UpdateRecommender {
     
     if (packageManager === 'npm') {
       switch (updateType) {
-        case 'patch':
-          return `npm update ${name}`;
-        case 'minor':
-          // Use caret to allow minor updates
-          return `npm install ${name}@^${library.version}`;
-        case 'major':
-          return `npm install ${name}@latest`;
+      case 'patch':
+        return `npm update ${name}`;
+      case 'minor':
+        // Use caret to allow minor updates
+        return `npm install ${name}@^${library.version}`;
+      case 'major':
+        return `npm install ${name}@latest`;
       }
     }
     

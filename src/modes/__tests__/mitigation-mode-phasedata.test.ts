@@ -298,7 +298,7 @@ describe('MitigationMode - PhaseDataClient Integration', () => {
 
   describe('#buildTestAwarePrompt', () => {
     test('includes test content in prompt', async () => {
-      const testContent = `describe('SQL Injection', () => {})`;
+      const testContent = 'describe(\'SQL Injection\', () => {})';
       const testPath = '__tests__/security/rsolv-issue-789.test.js';
       const fs = await import('fs');
       const mockFsRead = vi.mocked(fs.readFileSync);

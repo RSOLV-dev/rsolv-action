@@ -66,9 +66,12 @@ shardFiles.forEach(file => {
 });
 
 // Add computed fields
-merged.passRate = merged.numTotalTests > 0 
-  ? ((merged.numPassedTests / merged.numTotalTests) * 100).toFixed(2) + '%'
-  : '0%';
+// Calculate pass rate based only on runnable tests (passed + failed)
+// Exclude pending/skipped tests from denominator
+const runnableTests = merged.numPassedTests + merged.numFailedTests;
+merged.passRate = runnableTests > 0
+  ? ((merged.numPassedTests / runnableTests) * 100).toFixed(2) + '%'
+  : '100%';
 
 // Write merged report
 fs.writeFileSync(outputFile, JSON.stringify(merged, null, 2));

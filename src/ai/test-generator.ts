@@ -754,7 +754,7 @@ export class VulnerabilityTestGenerator {
       isBrowser: options.testFramework === 'cypress'
     };
     
-    let template = this.templateEngine.loadTemplate(options.vulnerabilityType, 'red');
+    const template = this.templateEngine.loadTemplate(options.vulnerabilityType, 'red');
     let testCode = this.templateEngine.renderTemplate(template, context);
     
     // Convert to Python if needed
@@ -786,7 +786,7 @@ export class VulnerabilityTestGenerator {
       isBrowser: options.testFramework === 'cypress'
     };
     
-    let template = this.templateEngine.loadTemplate(options.vulnerabilityType, 'green');
+    const template = this.templateEngine.loadTemplate(options.vulnerabilityType, 'green');
     let testCode = this.templateEngine.renderTemplate(template, context);
     
     // Convert to target language if needed
@@ -819,7 +819,7 @@ export class VulnerabilityTestGenerator {
       functionalValidation
     };
     
-    let template = this.templateEngine.loadTemplate('GENERIC', 'refactor');
+    const template = this.templateEngine.loadTemplate('GENERIC', 'refactor');
     let testCode = this.templateEngine.renderTemplate(template, context);
     
     // Convert to target language if needed
@@ -843,28 +843,28 @@ export class VulnerabilityTestGenerator {
     const normalizedType = vulnerabilityType.toUpperCase().replace(/-/g, '_');
     
     switch (normalizedType) {
-      case 'SQL_INJECTION':
-        return "'; DROP TABLE users; --";
-      case 'XSS':
-        return '<script>window.xssTriggered=true;alert("XSS")</script>';
-      case 'COMMAND_INJECTION':
-        return '; cat /etc/passwd';
-      case 'PATH_TRAVERSAL':
-        return '../../../etc/passwd';
-      case 'BROKEN_AUTHENTICATION':
-        return 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpZCI6MSwiYWRtaW4iOnRydWV9.';
-      case 'CSRF':
-        return 'https://evil-site.com';
-      case 'SECURITY_MISCONFIGURATION':
-        return 'admin=true';
-      case 'INSECURE_DESERIALIZATION':
-        // This would execute process.exit(1337) if eval() is used
-        return 'process.exit(1337); 42';
-      case 'DENIAL_OF_SERVICE':
-      case 'REDOS':
-        return '(a+)+$'; // Regex that can cause exponential backtracking
-      default:
-        return 'malicious_input';
+    case 'SQL_INJECTION':
+      return '\'; DROP TABLE users; --';
+    case 'XSS':
+      return '<script>window.xssTriggered=true;alert("XSS")</script>';
+    case 'COMMAND_INJECTION':
+      return '; cat /etc/passwd';
+    case 'PATH_TRAVERSAL':
+      return '../../../etc/passwd';
+    case 'BROKEN_AUTHENTICATION':
+      return 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpZCI6MSwiYWRtaW4iOnRydWV9.';
+    case 'CSRF':
+      return 'https://evil-site.com';
+    case 'SECURITY_MISCONFIGURATION':
+      return 'admin=true';
+    case 'INSECURE_DESERIALIZATION':
+      // This would execute process.exit(1337) if eval() is used
+      return 'process.exit(1337); 42';
+    case 'DENIAL_OF_SERVICE':
+    case 'REDOS':
+      return '(a+)+$'; // Regex that can cause exponential backtracking
+    default:
+      return 'malicious_input';
     }
   }
   
@@ -873,75 +873,75 @@ export class VulnerabilityTestGenerator {
     const normalizedType = vulnerabilityType.toUpperCase().replace(/-/g, '_');
     
     switch (normalizedType) {
-      case 'SQL_INJECTION':
-        return 'validpassword123';
-      case 'XSS':
-        return 'Normal user content';
-      case 'COMMAND_INJECTION':
-        return 'normal_filename.txt';
-      case 'PATH_TRAVERSAL':
-        return 'documents/file.txt';
-      case 'BROKEN_AUTHENTICATION':
-        return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiYWRtaW4iOmZhbHNlfQ.valid_signature';
-      case 'CSRF':
-        return 'valid-csrf-token-from-server';
-      case 'SECURITY_MISCONFIGURATION':
-        return 'user=true';
-      case 'INSECURE_DESERIALIZATION':
-        // A valid numeric string that parseInt would correctly handle
-        return '42';
-      case 'DENIAL_OF_SERVICE':
-      case 'REDOS':
-        return 'normal_text';
-      default:
-        return 'valid_input';
+    case 'SQL_INJECTION':
+      return 'validpassword123';
+    case 'XSS':
+      return 'Normal user content';
+    case 'COMMAND_INJECTION':
+      return 'normal_filename.txt';
+    case 'PATH_TRAVERSAL':
+      return 'documents/file.txt';
+    case 'BROKEN_AUTHENTICATION':
+      return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiYWRtaW4iOmZhbHNlfQ.valid_signature';
+    case 'CSRF':
+      return 'valid-csrf-token-from-server';
+    case 'SECURITY_MISCONFIGURATION':
+      return 'user=true';
+    case 'INSECURE_DESERIALIZATION':
+      // A valid numeric string that parseInt would correctly handle
+      return '42';
+    case 'DENIAL_OF_SERVICE':
+    case 'REDOS':
+      return 'normal_text';
+    default:
+      return 'valid_input';
     }
   }
   
   private getFunctionalValidation(vulnerabilityType: string): string[] {
     switch (vulnerabilityType) {
-      case 'SQL_INJECTION':
-        return [
-          'Valid login should work',
-          'User data should be retrieved correctly',
-          'Sessions should be maintained',
-          'Special characters in names should be handled',
-          'Unicode characters should work'
-        ];
-      case 'XSS':
-        return [
-          'Content should be displayed',
-          'User input should be saved',
-          'HTML formatting should work',
-          'Markdown should render safely',
-          'Rich text editing should function'
-        ];
-      case 'COMMAND_INJECTION':
-        return [
-          'File operations should work',
-          'Valid commands should execute',
-          'Output should be returned',
-          'Error handling should work',
-          'Process timeouts should be enforced'
-        ];
-      case 'PATH_TRAVERSAL':
-        return [
-          'File downloads should work',
-          'Directory listing should function',
-          'Relative paths should resolve',
-          'Symlinks should be handled',
-          'Access controls should be enforced'
-        ];
-      case 'INSECURE_DESERIALIZATION':
-        return [
-          'Numeric inputs should be parsed correctly',
-          'Valid math operations should work',
-          'Data validation should function',
-          'Error handling for invalid input',
-          'Type conversions should be safe'
-        ];
-      default:
-        return ['Core functionality should work', 'Data should be processed', 'Output should be correct'];
+    case 'SQL_INJECTION':
+      return [
+        'Valid login should work',
+        'User data should be retrieved correctly',
+        'Sessions should be maintained',
+        'Special characters in names should be handled',
+        'Unicode characters should work'
+      ];
+    case 'XSS':
+      return [
+        'Content should be displayed',
+        'User input should be saved',
+        'HTML formatting should work',
+        'Markdown should render safely',
+        'Rich text editing should function'
+      ];
+    case 'COMMAND_INJECTION':
+      return [
+        'File operations should work',
+        'Valid commands should execute',
+        'Output should be returned',
+        'Error handling should work',
+        'Process timeouts should be enforced'
+      ];
+    case 'PATH_TRAVERSAL':
+      return [
+        'File downloads should work',
+        'Directory listing should function',
+        'Relative paths should resolve',
+        'Symlinks should be handled',
+        'Access controls should be enforced'
+      ];
+    case 'INSECURE_DESERIALIZATION':
+      return [
+        'Numeric inputs should be parsed correctly',
+        'Valid math operations should work',
+        'Data validation should function',
+        'Error handling for invalid input',
+        'Type conversions should be safe'
+      ];
+    default:
+      return ['Core functionality should work', 'Data should be processed', 'Output should be correct'];
     }
   }
   
@@ -957,8 +957,8 @@ export class VulnerabilityTestGenerator {
   
   private generateTestFile(testSuite: CompleteTestSuite, options: TestGenerationOptions): string {
     switch (options.language) {
-      case 'python':
-        return `import unittest
+    case 'python':
+      return `import unittest
 import asyncio
 
 class VulnerabilityTestSuite${options.vulnerabilityType}(unittest.TestCase):
@@ -971,8 +971,8 @@ class VulnerabilityTestSuite${options.vulnerabilityType}(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()`;
     
-      case 'ruby':
-        return `require 'rspec'
+    case 'ruby':
+      return `require 'rspec'
 
 describe 'Vulnerability Test Suite - ${options.vulnerabilityType}' do
   ${this.generateRubyTest(testSuite.red.testCode)}
@@ -982,8 +982,8 @@ describe 'Vulnerability Test Suite - ${options.vulnerabilityType}' do
   ${this.generateRubyTest(testSuite.refactor.testCode)}
 end`;
 
-      case 'php':
-        return `<?php
+    case 'php':
+      return `<?php
 use PHPUnit\\Framework\\TestCase;
 
 class VulnerabilityTestSuite${options.vulnerabilityType} extends TestCase {
@@ -996,8 +996,8 @@ class VulnerabilityTestSuite${options.vulnerabilityType} extends TestCase {
     }
     
     const imports = options.language === 'typescript' 
-      ? "import { describe, test, expect } from 'bun:test';"
-      : "const { describe, test, expect } = require('bun:test');";
+      ? 'import { describe, test, expect } from \'bun:test\';'
+      : 'const { describe, test, expect } = require(\'bun:test\');';
     
     return `${imports}
 
@@ -1012,7 +1012,7 @@ describe('Vulnerability Test Suite - ${options.vulnerabilityType}', () => {
   
   private convertToPython(testCode: string): string {
     // Enhanced Python test conversion
-    let pythonCode = testCode
+    const pythonCode = testCode
       // Convert test declaration
       .replace(/test\("([^"]+)",\s*async\s*\(\)\s*=>\s*\{/, (match, testName) => {
         const pythonTestName = String(testName)
@@ -1045,7 +1045,7 @@ describe('Vulnerability Test Suite - ${options.vulnerabilityType}', () => {
   
   private generateRubyTest(testCode: string): string {
     // Convert JavaScript test to Ruby RSpec
-    let rubyCode = testCode
+    const rubyCode = testCode
       .replace(/test\("([^"]+)",\s*async\s*\(\)\s*=>\s*\{/, 'it "$1" do')
       .replace(/const\s+(\w+)\s*=\s*"([^"]+)";/g, '$1 = "$2"')
       .replace(/const\s+(\w+)\s*=\s*await\s+(\w+)\(/g, '$1 = $2(')
@@ -1062,7 +1062,7 @@ describe('Vulnerability Test Suite - ${options.vulnerabilityType}', () => {
   
   private generatePHPTest(testCode: string): string {
     // Convert JavaScript test to PHPUnit
-    let phpCode = testCode
+    const phpCode = testCode
       .replace(/test\("([^"]+)",\s*async\s*\(\)\s*=>\s*\{/, (match, testName) => {
         const phpTestName = String(testName)
           .split(' ')

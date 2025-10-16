@@ -196,7 +196,7 @@ Focus on making THIS specific test pass, nothing more.`;
 function getExampleAttack(vulnerabilityType: string): string {
   const attacks: Record<string, string> = {
     'XSS': '<script>alert("XSS")</script>',
-    'SQL Injection': "' OR '1'='1",
+    'SQL Injection': '\' OR \'1\'=\'1',
     'Command Injection': '; cat /etc/passwd',
     'Path Traversal': '../../../etc/passwd',
     'SSRF': 'http://internal-server/admin',

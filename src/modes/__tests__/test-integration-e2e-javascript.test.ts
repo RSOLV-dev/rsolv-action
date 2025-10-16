@@ -408,7 +408,7 @@ describe('Users', () => {
   const result = await db.users.query({ id: testUser.id + "' OR '1'='1" });
   expect(result).toBeNull(); // Should reject malicious input
 });`,
-            attackVector: "1' OR '1'='1",
+            attackVector: '1\' OR \'1\'=\'1',
             expectedBehavior: 'should_fail_on_vulnerable_code'
           }]
         },

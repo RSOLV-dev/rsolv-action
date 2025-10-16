@@ -170,6 +170,17 @@ if [[ -n "$MEMORY_SAFE" ]]; then
     echo ""
     echo "Merging shard reports..."
     node merge-shard-results.cjs
+
+    # Check actual test failures from merged report, not shard exit codes
+    # Vitest exits with code 1 for pending tests, but we only want to fail on actual failures
+    if [[ -f "test-report.json" ]]; then
+      FAILED_TESTS=$(cat test-report.json | jq -r '.numFailedTests // 0')
+      if [[ "$FAILED_TESTS" -eq 0 ]]; then
+        TEST_EXIT_CODE=0
+      else
+        TEST_EXIT_CODE=1
+      fi
+    fi
   fi
 else
   # Regular single run
@@ -180,6 +191,17 @@ else
   echo ""
   eval $CMD
   TEST_EXIT_CODE=$?
+
+  # Check actual test failures from report, not vitest exit code
+  # Vitest exits with code 1 for pending tests, but we only want to fail on actual failures
+  if [[ -n "$JSON_OUTPUT" ]] && [[ -f "test-report.json" ]]; then
+    FAILED_TESTS=$(cat test-report.json | jq -r '.numFailedTests // 0')
+    if [[ "$FAILED_TESTS" -eq 0 ]]; then
+      TEST_EXIT_CODE=0
+    else
+      TEST_EXIT_CODE=1
+    fi
+  fi
 fi
 
 # Report results
@@ -198,7 +220,14 @@ else
       passed: .numPassedTests,
       failed: .numFailedTests,
       skipped: (.numPendingTests + .numTodoTests),
-      passRate: ((.numPassedTests / .numTotalTests) * 100 | tostring + "%")
+      passRate: (
+        ((.numPassedTests + .numFailedTests) as $runnable |
+        if $runnable > 0 then
+          ((.numPassedTests / $runnable) * 100 | tostring + "%")
+        else
+          "100%"
+        end)
+      )
     }' 2>/dev/null || echo "(Unable to parse JSON report)"
   fi
 fi

@@ -31,7 +31,7 @@ export class VendorDetectionIntegration {
    * Process a vulnerability that involves vendor files
    */
   async processVulnerability(vulnerability: any): Promise<any> {
-    console.log(`[VendorDetectionIntegration] Processing vendor vulnerability`);
+    console.log('[VendorDetectionIntegration] Processing vendor vulnerability');
     
     // Identify the library
     const vendorFiles = vulnerability.vendorFiles || [];
@@ -58,7 +58,7 @@ export class VendorDetectionIntegration {
    */
   private async identifyLibrary(filePath: string): Promise<any> {
     // Extract library name from path
-    const parts = filePath.split('/');
+    const _parts = filePath.split('/');
     let name = 'unknown';
     let version = 'unknown';
     

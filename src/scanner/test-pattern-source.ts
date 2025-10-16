@@ -35,7 +35,7 @@ async function testPatternSource() {
       
       if (patterns.length < 25) {
         console.error(`  ⚠️ WARNING: Only ${patterns.length} patterns available for ${language}`);
-        console.error(`  This will result in poor vulnerability detection!`);
+        console.error('  This will result in poor vulnerability detection!');
       }
       console.log('');
     }

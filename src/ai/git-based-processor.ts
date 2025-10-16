@@ -367,7 +367,7 @@ export async function processIssueWithGit(
       const issueAnalysis: IssueAnalysis = {
         summary: `${analysisData.issueType} issue analysis`,
         complexity: analysisData.estimatedComplexity === 'simple' ? 'low' : 
-                   analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
+          analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
         estimatedTime: 60, // default estimate
         potentialFixes: [analysisData.suggestedApproach],
         recommendedApproach: analysisData.suggestedApproach,
@@ -455,7 +455,7 @@ export async function processIssueWithGit(
           }
         } else if (testResults?.generatedTests?.success && testResults.generatedTests.testSuite) {
           // Use runtime test validation for other vulnerability types
-          logger.info(`Validating fix with pre-generated executable tests...`);
+          logger.info('Validating fix with pre-generated executable tests...');
           const validator = new GitBasedTestValidator();
 
           validationResult = await validator.validateFixWithTests(
@@ -495,7 +495,7 @@ export async function processIssueWithGit(
               : 'Fix validation failed - tests did not pass';
 
             // Don't rollback in test mode - keep the attempted fix
-            logger.info(`[TEST MODE] Keeping attempted fix for PR creation`);
+            logger.info('[TEST MODE] Keeping attempted fix for PR creation');
 
             // Store test mode information in solution for PR creation
             if (solution) {
@@ -604,7 +604,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
 
     const prResult = useEducationalPR && isGitSolutionResult(solution!)
       ? await createEducationalPullRequest(
-          issue,
+        issue,
           solution!.commitHash!,
           {
             ...solution!.summary!,
@@ -616,9 +616,9 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           },
           config,
           solution!.diffStats
-        )
+      )
       : isGitSolutionResult(solution!) ? await createPullRequestFromGit(
-          issue,
+        issue,
           solution!.commitHash!,
           {
             ...solution!.summary!,
@@ -626,7 +626,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           },
           config,
           solution!.diffStats
-        ) : null;
+      ) : null;
     
     if (!prResult || !prResult.success) {
       // Try to undo the commit if PR creation failed

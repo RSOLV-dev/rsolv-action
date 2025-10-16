@@ -129,7 +129,7 @@ describe('ValidationMode - Test Integration Workflow', () => {
         type: 'sql_injection',
         description: 'String interpolation in SQL WHERE clause (CWE-89)',
         location: 'app/controllers/users_controller.rb:42',
-        attackVector: "5') OR admin = 't' --'",  // Escalate to admin
+        attackVector: '5\') OR admin = \'t\' --\'',  // Escalate to admin
         vulnerablePattern: 'User.where("id = \'#{params[:user][:id]}\'")',
         source: 'RailsGoat'
       };
@@ -419,14 +419,14 @@ FAILED: FilesController shows file - undefined method 'create' for nil:NilClass`
         if (cmd.includes('ruby -c')) {
           attemptCount++;
           switch (attemptCount) {
-            case 1:
-              throw new Error('SyntaxError: unexpected end-of-input');
-            case 2:
-              return ''; // Syntax OK, but test will pass (wrong!)
-            case 3:
-              throw new Error('SyntaxError: unexpected token');
-            default:
-              return '';
+          case 1:
+            throw new Error('SyntaxError: unexpected end-of-input');
+          case 2:
+            return ''; // Syntax OK, but test will pass (wrong!)
+          case 3:
+            throw new Error('SyntaxError: unexpected token');
+          default:
+            return '';
           }
         }
         if (cmd.includes('bundle exec rspec')) {

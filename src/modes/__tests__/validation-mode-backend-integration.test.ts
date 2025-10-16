@@ -176,8 +176,8 @@ end`,
       const testContent = {
         redTests: [{
           testName: 'rejects SQL injection',
-          testCode: "post :search, params: { q: \"admin'; DROP TABLE users;--\" }\nexpect(response.status).to eq(400)",
-          attackVector: "admin'; DROP TABLE users;--"
+          testCode: 'post :search, params: { q: "admin\'; DROP TABLE users;--" }\nexpect(response.status).to eq(400)',
+          attackVector: 'admin\'; DROP TABLE users;--'
         }]
       };
 
@@ -188,7 +188,7 @@ end`,
       expect(result).toBeDefined();
       expect(result.targetFile).toBe('spec/controllers/users_controller_spec.rb');
       expect(result.content).toContain('rejects SQL injection');
-      expect(result.content).toContain("admin'; DROP TABLE users;--");
+      expect(result.content).toContain('admin\'; DROP TABLE users;--');
 
       // Verify backend API was called with correct parameters
       expect(mockTestIntegrationClient.analyze).toHaveBeenCalledWith({

@@ -186,7 +186,7 @@ describe('VulnerabilityTestGenerator (TDD - Green Phase)', () => {
     expect(redTest.testName).toContain('should be vulnerable to sql injection (RED)');
     expect(redTest.testCode).toContain('maliciousInput');
     expect(redTest.testCode).toContain('DROP TABLE');
-    expect(redTest.attackVector).toContain("'; DROP TABLE users; --");
+    expect(redTest.attackVector).toContain('\'; DROP TABLE users; --');
   });
 
   test('should generate green test that validates fix', async () => {
@@ -287,13 +287,13 @@ describe('TestTemplateEngine (TDD - Green Phase)', () => {
     const template = 'test("{{testName}}", async () => { const input = "{{attackVector}}"; });';
     const context = {
       testName: 'should be vulnerable to SQL injection',
-      attackVector: "'; DROP TABLE users; --"
+      attackVector: '\'; DROP TABLE users; --'
     };
     
     const rendered = templateEngine.renderTemplate(template, context);
     
     expect(rendered).toContain('should be vulnerable to SQL injection');
-    expect(rendered).toContain("'; DROP TABLE users; --");
+    expect(rendered).toContain('\'; DROP TABLE users; --');
     expect(rendered).not.toContain('{{');
   });
 
@@ -318,7 +318,7 @@ describe('TestExecutor (TDD - Green Phase)', () => {
       red: {
         testName: 'should be vulnerable to SQL injection (RED)',
         testCode: 'test("red", () => { expect(true).toBe(false); });', // Intentionally failing
-        attackVector: "'; DROP TABLE users; --",
+        attackVector: '\'; DROP TABLE users; --',
         expectedBehavior: 'should_fail_on_vulnerable_code'
       },
       green: {
@@ -434,7 +434,7 @@ This is a high severity issue that requires parameterized queries.`
             throw new Error('SQL injection vulnerability detected');
           }
         `,
-        attackVector: "' OR '1'='1",
+        attackVector: '\' OR \'1\'=\'1',
         expectedBehavior: 'should_fail_on_vulnerable_code'
       },
       green: {

@@ -13,9 +13,9 @@ describe('Pattern API Regex Reconstruction', () => {
     it('should fail to reconstruct regex from serialized format', () => {
       // This is the format we receive from the enhanced API
       const serializedRegex = {
-        "__type__": "regex",
-        "source": "eval\\s*\\(",
-        "flags": ["i"]
+        '__type__': 'regex',
+        'source': 'eval\\s*\\(',
+        'flags': ['i']
       };
 
       // Current implementation expects string patterns
@@ -29,32 +29,32 @@ describe('Pattern API Regex Reconstruction', () => {
 
     it('should fail to handle enhanced pattern response with serialized regex', () => {
       const enhancedPatternData: PatternData = {
-        id: "js-eval-usage",
-        name: "JavaScript eval() Usage",
-        type: "command_injection",
-        description: "Detects usage of eval() function",
-        severity: "high",
-        languages: ["javascript"],
-        recommendation: "Avoid using eval()",
+        id: 'js-eval-usage',
+        name: 'JavaScript eval() Usage',
+        type: 'command_injection',
+        description: 'Detects usage of eval() function',
+        severity: 'high',
+        languages: ['javascript'],
+        recommendation: 'Avoid using eval()',
         // This is what enhanced format returns
         regex_patterns: [
           {
-            "__type__": "regex",
-            "source": "eval\\s*\\(",
-            "flags": ["i"]
+            '__type__': 'regex',
+            'source': 'eval\\s*\\(',
+            'flags': ['i']
           },
           {
-            "__type__": "regex",
-            "source": "new\\s+Function\\s*\\(",
-            "flags": []
+            '__type__': 'regex',
+            'source': 'new\\s+Function\\s*\\(',
+            'flags': []
           }
         ] as any, // Type error because we expect string[]
         ast_rules: {
-          node_type: "CallExpression",
-          callee: { name: "eval" }
+          node_type: 'CallExpression',
+          callee: { name: 'eval' }
         },
         context_rules: {
-          safe_if_wrapped: ["sanitizeInput"]
+          safe_if_wrapped: ['sanitizeInput']
         }
       };
 
@@ -74,7 +74,7 @@ describe('Pattern API Regex Reconstruction', () => {
     it('should demonstrate the need for regex flag mapping', () => {
       // Elixir sends flags as ["i", "m", "s"]
       // JavaScript expects flags as "ims"
-      const elixirFlags = ["i", "m", "s"];
+      const elixirFlags = ['i', 'm', 's'];
       
       // We need a function to convert flag arrays to JS flag string
       // @ts-expect-error - convertRegexFlags does not exist yet
@@ -84,11 +84,11 @@ describe('Pattern API Regex Reconstruction', () => {
     it('should fail to handle nested regex in AST rules', () => {
       const patternWithNestedRegex = {
         ast_rules: {
-          node_type: "CallExpression",
+          node_type: 'CallExpression',
           callee: {
-            "__type__": "regex",
-            "source": "eval|Function",
-            "flags": ["i"]
+            '__type__': 'regex',
+            'source': 'eval|Function',
+            'flags': ['i']
           }
         }
       };
@@ -103,9 +103,9 @@ describe('Pattern API Regex Reconstruction', () => {
         context_rules: {
           exclude_paths: [
             {
-              "__type__": "regex",
-              "source": "node_modules/",
-              "flags": []
+              '__type__': 'regex',
+              'source': 'node_modules/',
+              'flags': []
             }
           ]
         }
@@ -120,9 +120,9 @@ describe('Pattern API Regex Reconstruction', () => {
   describe('Expected behavior after implementation', () => {
     it('should correctly reconstruct regex from serialized format', () => {
       const serializedRegex = {
-        "__type__": "regex",
-        "source": "eval\\s*\\(",
-        "flags": ["i"]
+        '__type__': 'regex',
+        'source': 'eval\\s*\\(',
+        'flags': ['i']
       };
 
       // After implementation, this should work:
@@ -135,12 +135,12 @@ describe('Pattern API Regex Reconstruction', () => {
     it('should handle complex patterns with multiple regex objects', () => {
       const complexPattern = {
         regex_patterns: [
-          { "__type__": "regex", "source": "eval\\s*\\(", "flags": ["i"] },
-          { "__type__": "regex", "source": "Function\\s*\\(", "flags": ["i", "m"] }
+          { '__type__': 'regex', 'source': 'eval\\s*\\(', 'flags': ['i'] },
+          { '__type__': 'regex', 'source': 'Function\\s*\\(', 'flags': ['i', 'm'] }
         ],
         ast_rules: {
-          node_type: "CallExpression",
-          name_pattern: { "__type__": "regex", "source": "^(eval|Function)$", "flags": [] }
+          node_type: 'CallExpression',
+          name_pattern: { '__type__': 'regex', 'source': '^(eval|Function)$', 'flags': [] }
         }
       };
 

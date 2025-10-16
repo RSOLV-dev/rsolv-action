@@ -119,41 +119,41 @@ export class CoverageAnalyzer {
           const value = data.join(':');
           
           switch (tag) {
-            case 'SF':
-              file.path = value;
-              break;
-            case 'FN':
-              const [fnLine, fnName] = value.split(',');
+          case 'SF':
+            file.path = value;
+            break;
+          case 'FN':
+            const [fnLine, fnName] = value.split(',');
               file.functions!.details!.push({
                 name: fnName,
                 line: parseInt(fnLine),
                 hits: 0
               });
-              break;
-            case 'FNF':
+            break;
+          case 'FNF':
               file.functions!.total = parseInt(value);
-              break;
-            case 'FNH':
+            break;
+          case 'FNH':
               file.functions!.covered = parseInt(value);
-              break;
-            case 'DA':
-              const [daLine, daHits] = value.split(',');
-              const lineNum = parseInt(daLine);
-              const hits = parseInt(daHits);
+            break;
+          case 'DA':
+            const [daLine, daHits] = value.split(',');
+            const lineNum = parseInt(daLine);
+            const hits = parseInt(daHits);
               file.lines!.details!.push({ line: lineNum, hits });
-              if (hits === 0 && !file.lines!.uncoveredLines) {
+            if (hits === 0 && !file.lines!.uncoveredLines) {
                 file.lines!.uncoveredLines = [];
-              }
-              if (hits === 0) {
+            }
+            if (hits === 0) {
                 file.lines!.uncoveredLines!.push(lineNum);
-              }
-              break;
-            case 'LF':
+            }
+            break;
+          case 'LF':
               file.lines!.total = parseInt(value);
-              break;
-            case 'LH':
+            break;
+          case 'LH':
               file.lines!.covered = parseInt(value);
-              break;
+            break;
           }
         }
         
@@ -628,16 +628,16 @@ export class CoverageAnalyzer {
 
   private getRecommendationReason(gap: CoverageGap): string {
     switch (gap.type) {
-      case 'uncovered-function':
-        return gap.priority === 'critical' 
-          ? 'Critical security function lacks coverage'
-          : `Function ${gap.name} has no test coverage`;
-      case 'uncovered-block':
-        return `Code block (${gap.lines?.length} lines) lacks coverage`;
-      case 'low-coverage':
-        return `File has only ${gap.coveragePercentage}% coverage`;
-      default:
-        return 'Insufficient test coverage';
+    case 'uncovered-function':
+      return gap.priority === 'critical' 
+        ? 'Critical security function lacks coverage'
+        : `Function ${gap.name} has no test coverage`;
+    case 'uncovered-block':
+      return `Code block (${gap.lines?.length} lines) lacks coverage`;
+    case 'low-coverage':
+      return `File has only ${gap.coveragePercentage}% coverage`;
+    default:
+      return 'Insufficient test coverage';
     }
   }
 
@@ -645,22 +645,22 @@ export class CoverageAnalyzer {
     const tests: string[] = [];
     
     switch (gap.type) {
-      case 'uncovered-function':
-        tests.push('Unit test for function behavior');
-        tests.push('Edge case tests');
-        if (gap.priority === 'critical') {
-          tests.push('Security validation tests');
-          tests.push('Error handling tests');
-        }
-        break;
-      case 'uncovered-block':
-        tests.push('Branch coverage tests');
-        tests.push('Conditional logic tests');
-        break;
-      case 'low-coverage':
-        tests.push('Comprehensive unit tests');
-        tests.push('Integration tests');
-        break;
+    case 'uncovered-function':
+      tests.push('Unit test for function behavior');
+      tests.push('Edge case tests');
+      if (gap.priority === 'critical') {
+        tests.push('Security validation tests');
+        tests.push('Error handling tests');
+      }
+      break;
+    case 'uncovered-block':
+      tests.push('Branch coverage tests');
+      tests.push('Conditional logic tests');
+      break;
+    case 'low-coverage':
+      tests.push('Comprehensive unit tests');
+      tests.push('Integration tests');
+      break;
     }
     
     return tests;

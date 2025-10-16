@@ -9,6 +9,7 @@ export interface ActionConfig {
   scanLabel?: string;  // Label for scan-detected issues (default: 'rsolv:detected')
   environmentVariables?: Record<string, string>;
   repoToken?: string;
+  apiKey?: string; // Alias for rsolvApiKey (for backwards compatibility)
   aiProvider: AiProviderConfig;
   containerConfig: ContainerConfig;
   securitySettings: SecuritySettings;
@@ -92,6 +93,7 @@ export interface AiProviderConfig {
 
   // AI Provider API Key (Anthropic, OpenAI, etc.)
   providerApiKey?: string;
+  apiKey?: string; // Alias for providerApiKey (for backwards compatibility)
 
   model: string;
   baseUrl?: string;

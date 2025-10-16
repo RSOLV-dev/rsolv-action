@@ -488,12 +488,12 @@ export class IssueInterpreter {
 
   private mapSeverityToUrgency(severity?: InterpretedIssue['severity']): InterpretedIssue['urgency'] {
     switch (severity) {
-      case 'critical': return 'immediate';
-      case 'high': return 'urgent';
-      case 'medium': return 'planned';
-      case 'low': return 'planned';
-      case 'info': return 'backlog';
-      default: return undefined;
+    case 'critical': return 'immediate';
+    case 'high': return 'urgent';
+    case 'medium': return 'planned';
+    case 'low': return 'planned';
+    case 'info': return 'backlog';
+    default: return undefined;
     }
   }
 

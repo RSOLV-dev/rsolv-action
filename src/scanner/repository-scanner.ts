@@ -94,7 +94,7 @@ export class RepositoryScanner {
     }
     
     // Log that we only scanned application code (vendor files were skipped)
-    logger.info(`Scanned application code only (vendor/minified files automatically excluded)`);
+    logger.info('Scanned application code only (vendor/minified files automatically excluded)');
 
     // Group vulnerabilities by type
     const groupedVulnerabilities = this.groupVulnerabilities(vulnerabilities);

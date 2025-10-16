@@ -107,31 +107,35 @@ export class DependencyAnalyzer {
     for (const manifest of manifests) {
       try {
         switch (manifest.type) {
-          case 'npm':
-            const packageContent = await fs.readFile(manifest.path, 'utf-8');
-            const packageJson = JSON.parse(packageContent);
-            const npmDeps = await this.parsePackageJson(packageJson);
-            allDependencies.set('npm', npmDeps);
-            break;
-            
-          case 'python':
-            const reqContent = await fs.readFile(manifest.path, 'utf-8');
-            const pipDeps = this.parseRequirementsTxt(reqContent);
-            allDependencies.set('pip', pipDeps);
-            break;
-            
-          case 'ruby':
-            const gemContent = await fs.readFile(manifest.path, 'utf-8');
-            const gemDeps = this.parseGemfile(gemContent);
-            allDependencies.set('gem', gemDeps);
-            break;
-            
-          case 'php':
-            const composerContent = await fs.readFile(manifest.path, 'utf-8');
-            const composerJson = JSON.parse(composerContent);
-            const composerDeps = this.parseComposerJson(composerJson);
-            allDependencies.set('composer', composerDeps);
-            break;
+        case 'npm': {
+          const packageContent = await fs.readFile(manifest.path, 'utf-8');
+          const packageJson = JSON.parse(packageContent);
+          const npmDeps = await this.parsePackageJson(packageJson);
+          allDependencies.set('npm', npmDeps);
+          break;
+        }
+
+        case 'python': {
+          const reqContent = await fs.readFile(manifest.path, 'utf-8');
+          const pipDeps = this.parseRequirementsTxt(reqContent);
+          allDependencies.set('pip', pipDeps);
+          break;
+        }
+
+        case 'ruby': {
+          const gemContent = await fs.readFile(manifest.path, 'utf-8');
+          const gemDeps = this.parseGemfile(gemContent);
+          allDependencies.set('gem', gemDeps);
+          break;
+        }
+
+        case 'php': {
+          const composerContent = await fs.readFile(manifest.path, 'utf-8');
+          const composerJson = JSON.parse(composerContent);
+          const composerDeps = this.parseComposerJson(composerJson);
+          allDependencies.set('composer', composerDeps);
+          break;
+        }
         }
       } catch (error) {
         console.error(`Error parsing ${manifest.type} manifest:`, error);

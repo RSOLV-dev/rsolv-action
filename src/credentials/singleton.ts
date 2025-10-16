@@ -16,13 +16,13 @@ export class CredentialManagerSingleton {
   static async getInstance(apiKey: string): Promise<RSOLVCredentialManager> {
     // Check if we already have an instance for this API key
     if (this.instances.has(apiKey)) {
-      logger.debug(`Reusing existing credential manager for API key`);
+      logger.debug('Reusing existing credential manager for API key');
       return this.instances.get(apiKey)!;
     }
     
     // Check if initialization is already in progress
     if (this.initPromises.has(apiKey)) {
-      logger.debug(`Waiting for in-progress initialization for API key`);
+      logger.debug('Waiting for in-progress initialization for API key');
       return this.initPromises.get(apiKey)!;
     }
     
@@ -44,7 +44,7 @@ export class CredentialManagerSingleton {
    */
   private static async createAndInitializeManager(apiKey: string): Promise<RSOLVCredentialManager> {
     // Create new instance
-    logger.info(`Creating new credential manager instance`);
+    logger.info('Creating new credential manager instance');
     const manager = new RSOLVCredentialManager();
     
     try {
@@ -94,7 +94,7 @@ export class CredentialManagerSingleton {
     if (manager) {
       manager.cleanup();
       this.instances.delete(apiKey);
-      logger.debug(`Cleared credential manager instance for API key`);
+      logger.debug('Cleared credential manager instance for API key');
     }
     // Also clear any pending init promise
     this.initPromises.delete(apiKey);

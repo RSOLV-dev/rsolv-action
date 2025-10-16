@@ -121,7 +121,7 @@ export class ClaudeCodeAdapter {
     analysis: IssueAnalysis,
     enhancedPrompt?: string
   ): Promise<{ success: boolean; message: string; changes?: Record<string, string>; error?: string; messages?: any[] }> {
-    let errorRetryCount = 0;
+    const errorRetryCount = 0;
     const maxRetries = this.claudeConfig.retryOptions?.maxRetries ?? 2;
     const timeout = this.claudeConfig.timeout ?? 1800000; // 30 minutes default for exploration
     

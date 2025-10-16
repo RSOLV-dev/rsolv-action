@@ -85,45 +85,45 @@ export function validateMode(mode: string): boolean {
  */
 export function getModeRequirements(mode: ExecutionMode): ModeRequirements {
   switch (mode) {
-    case 'scan':
-      return {
-        requiresIssue: false,
-        requiresScanData: false,
-        requiresValidation: false
-      };
+  case 'scan':
+    return {
+      requiresIssue: false,
+      requiresScanData: false,
+      requiresValidation: false
+    };
 
-    case 'validate':
-    case 'validate-only':
-      return {
-        requiresIssue: true, // Or scan data
-        requiresScanData: false, // Either/or with issue
-        requiresValidation: false
-      };
+  case 'validate':
+  case 'validate-only':
+    return {
+      requiresIssue: true, // Or scan data
+      requiresScanData: false, // Either/or with issue
+      requiresValidation: false
+    };
 
-    case 'mitigate':
-    case 'fix-only':
-      return {
-        requiresIssue: true,
-        requiresScanData: false,
-        requiresValidation: true
-      };
+  case 'mitigate':
+  case 'fix-only':
+    return {
+      requiresIssue: true,
+      requiresScanData: false,
+      requiresValidation: true
+    };
 
-    case 'validate-and-fix':
-      return {
-        requiresIssue: true,
-        requiresScanData: false,
-        requiresValidation: false // Will run validation then mitigation
-      };
+  case 'validate-and-fix':
+    return {
+      requiresIssue: true,
+      requiresScanData: false,
+      requiresValidation: false // Will run validation then mitigation
+    };
 
-    case 'full':
-      return {
-        requiresIssue: false, // Full mode does everything
-        requiresScanData: false,
-        requiresValidation: false
-      };
+  case 'full':
+    return {
+      requiresIssue: false, // Full mode does everything
+      requiresScanData: false,
+      requiresValidation: false
+    };
 
-    default:
-      throw new Error(`Unknown mode: ${mode}`);
+  default:
+    throw new Error(`Unknown mode: ${mode}`);
   }
 }
 
@@ -132,19 +132,19 @@ export function getModeRequirements(mode: ExecutionMode): ModeRequirements {
  */
 export function getModeDescription(mode: ExecutionMode): string {
   switch (mode) {
-    case 'scan':
-      return 'Scan for vulnerabilities and create issues';
-    case 'validate':
-    case 'validate-only':
-      return 'Validate vulnerabilities with failing tests';
-    case 'mitigate':
-    case 'fix-only':
-      return 'Fix validated vulnerabilities';
-    case 'validate-and-fix':
-      return 'Validate and fix vulnerabilities for specific issues';
-    case 'full':
-      return 'Run all phases: scan, validate, and mitigate';
-    default:
-      return 'Unknown mode';
+  case 'scan':
+    return 'Scan for vulnerabilities and create issues';
+  case 'validate':
+  case 'validate-only':
+    return 'Validate vulnerabilities with failing tests';
+  case 'mitigate':
+  case 'fix-only':
+    return 'Fix validated vulnerabilities';
+  case 'validate-and-fix':
+    return 'Validate and fix vulnerabilities for specific issues';
+  case 'full':
+    return 'Run all phases: scan, validate, and mitigate';
+  default:
+    return 'Unknown mode';
   }
 }

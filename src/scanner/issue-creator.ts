@@ -138,8 +138,8 @@ export class IssueCreator {
     const timestamp = new Date().toISOString();
     return `## 📊 Scan Update - ${timestamp}\n\n` +
            `**Updated vulnerability count**: ${group.count} instances in ${group.files.length} files\n\n` +
-           `This issue has been updated with the latest scan results. ` +
-           `The vulnerability details above reflect the current state of the codebase.`;
+           'This issue has been updated with the latest scan results. ' +
+           'The vulnerability details above reflect the current state of the codebase.';
   }
 
   private async createIssueForGroup(

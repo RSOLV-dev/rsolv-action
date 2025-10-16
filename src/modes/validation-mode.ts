@@ -62,12 +62,12 @@ export class ValidationMode {
 
     logger.info(`[VALIDATION MODE] Starting validation for issue #${issue.number}`);
     if (isTestingMode) {
-      logger.info(`[VALIDATION MODE] 🧪 TESTING MODE ENABLED - Will not filter based on test results`);
+      logger.info('[VALIDATION MODE] 🧪 TESTING MODE ENABLED - Will not filter based on test results');
     }
 
     // RFC-060 Phase 5.1: Feature flag check - skip validation if disabled
     if (!executableTestsEnabled) {
-      logger.info(`[VALIDATION MODE] Executable tests disabled - skipping validation`);
+      logger.info('[VALIDATION MODE] Executable tests disabled - skipping validation');
       return {
         issueId: issue.number,
         validated: true, // Mark as validated to allow mitigation phase to proceed
@@ -139,7 +139,7 @@ export class ValidationMode {
       }
       
       // Step 6: RFC-058 - Create validation branch and commit tests
-      logger.info(`Creating validation branch for test persistence`);
+      logger.info('Creating validation branch for test persistence');
       let branchName: string | null = null;
       const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
 
@@ -167,7 +167,7 @@ export class ValidationMode {
       }
 
       // Step 7: Run tests to verify they fail (proving vulnerability exists)
-      logger.info(`Running RED tests to prove vulnerability exists`);
+      logger.info('Running RED tests to prove vulnerability exists');
       const validator = new GitBasedTestValidator();
       const validationResult = await validator.validateFixWithTests(
         'HEAD',
@@ -200,7 +200,7 @@ export class ValidationMode {
 
       if (testsFailedOnVulnerableCode) {
         // RFC-060: Tests FAILED on vulnerable code = vulnerability EXISTS = validated!
-        logger.info(`✅ Vulnerability validated! RED tests failed as expected`);
+        logger.info('✅ Vulnerability validated! RED tests failed as expected');
 
         // RFC-058: Store validation result with branch reference
         if (branchName) {
@@ -230,7 +230,7 @@ export class ValidationMode {
       } else {
         // RFC-060: Tests PASSED on vulnerable code = no vulnerability = false positive (unless testing mode)
         if (isTestingMode) {
-          logger.info(`[TESTING MODE] Tests passed but proceeding anyway for known vulnerable repo`);
+          logger.info('[TESTING MODE] Tests passed but proceeding anyway for known vulnerable repo');
 
           // RFC-058: Store validation result with branch reference even in test mode
           if (branchName) {
@@ -258,7 +258,7 @@ export class ValidationMode {
             commitHash: this.getCurrentCommitHash()
           };
         } else {
-          logger.info(`Tests passed on vulnerable code - marking as false positive`);
+          logger.info('Tests passed on vulnerable code - marking as false positive');
           this.addToFalsePositiveCache(issue);
 
           // RFC-060 Phase 2.2: Add false-positive label
@@ -312,7 +312,7 @@ export class ValidationMode {
     const validated = results.filter(r => r.validated).length;
     const falsePositives = results.filter(r => !r.validated).length;
     
-    logger.info(`[VALIDATION MODE] Batch complete:`);
+    logger.info('[VALIDATION MODE] Batch complete:');
     logger.info(`  - Validated: ${validated}`);
     logger.info(`  - False positives: ${falsePositives}`);
     
@@ -414,7 +414,7 @@ export class ValidationMode {
         });
       } catch {
         // Branch operations failed, but continue with commit attempt
-        logger.debug(`Branch checkout failed, continuing with current branch`);
+        logger.debug('Branch checkout failed, continuing with current branch');
       }
 
       // Configure git identity
@@ -454,7 +454,7 @@ export class ValidationMode {
           stdio: 'pipe'
         });
       } catch {
-        logger.debug(`Push failed in test mode, but tests are committed locally`);
+        logger.debug('Push failed in test mode, but tests are committed locally');
       }
     } catch (error) {
       logger.error(`Force commit in test mode failed: ${error}`);
@@ -513,7 +513,7 @@ export class ValidationMode {
       // Commit to branch
       const commitPath = path.dirname(targetFile);
       execSync(`git add ${commitPath}`, { cwd: this.repoPath });
-      execSync(`git commit -m "Add validation tests for issue"`, { cwd: this.repoPath });
+      execSync('git commit -m "Add validation tests for issue"', { cwd: this.repoPath });
 
       logger.info(`Committed tests to branch ${branchName} (target: ${targetFile})`);
 
@@ -870,7 +870,7 @@ export class ValidationMode {
       );
       logger.info(`Stored test execution results in PhaseDataClient for issue #${issue.number}`);
     } catch (error) {
-      logger.warn(`Failed to store test execution in PhaseDataClient:`, error);
+      logger.warn('Failed to store test execution in PhaseDataClient:', error);
     }
   }
 
@@ -915,7 +915,7 @@ export class ValidationMode {
         // 3. Validate syntax
         try {
           await this.validateSyntax(tempFile, framework);
-          logger.info(`✓ Syntax validation passed`);
+          logger.info('✓ Syntax validation passed');
         } catch (syntaxError) {
           logger.warn(`✗ Syntax error on attempt ${attempt}:`, syntaxError);
           previousAttempts.push({
@@ -1093,7 +1093,7 @@ Generate test code that:
 5. Follows ${framework.name} conventions`;
 
     if (previousAttempts.length > 0) {
-      prompt += `\n\nPREVIOUS ATTEMPTS (learn from these errors):`;
+      prompt += '\n\nPREVIOUS ATTEMPTS (learn from these errors):';
       for (const attempt of previousAttempts) {
         prompt += `\n- Attempt ${attempt.attempt}: ${attempt.error} - ${attempt.errorMessage}`;
       }
@@ -1103,9 +1103,9 @@ Generate test code that:
       if (lastError === 'SyntaxError') {
         prompt += `\n\nIMPORTANT: Fix the syntax error. Ensure valid ${framework.name} syntax.`;
       } else if (lastError === 'TestPassedUnexpectedly') {
-        prompt += `\n\nIMPORTANT: Make the test MORE AGGRESSIVE. It must FAIL on vulnerable code.`;
+        prompt += '\n\nIMPORTANT: Make the test MORE AGGRESSIVE. It must FAIL on vulnerable code.';
       } else if (lastError === 'ExistingTestsRegression') {
-        prompt += `\n\nIMPORTANT: Don't break existing tests. Avoid modifying shared state or setup blocks.`;
+        prompt += '\n\nIMPORTANT: Don\'t break existing tests. Avoid modifying shared state or setup blocks.';
       }
     }
 
@@ -1296,7 +1296,7 @@ CWE: CWE-22`
     // For now, log the failure
     logger.error(`Failed to validate vulnerability after ${previousAttempts.length} attempts`);
     logger.error(`Vulnerability: ${vulnerability.type} at ${vulnerability.location}`);
-    logger.error(`Attempt history:`);
+    logger.error('Attempt history:');
     for (const attempt of previousAttempts) {
       logger.error(`  - Attempt ${attempt.attempt}: ${attempt.error} - ${attempt.errorMessage}`);
     }

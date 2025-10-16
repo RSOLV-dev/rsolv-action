@@ -88,7 +88,7 @@ describe('IssueBodyParser', () => {
     });
 
     test('should handle malformed issue body without crashing', () => {
-      const issueBody = `This is not a properly formatted issue body`;
+      const issueBody = 'This is not a properly formatted issue body';
 
       const result: ParsedIssueBody = parseIssueBody(issueBody);
 

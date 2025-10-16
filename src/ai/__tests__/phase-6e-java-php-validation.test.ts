@@ -70,7 +70,7 @@ public void testSQLInjectionVulnerability() {
             red: {
               testName: 'testSQLInjectionVulnerability',
               testCode: 'assertThrows test',
-              attackVector: "'; DROP TABLE users; --",
+              attackVector: '\'; DROP TABLE users; --',
               expectedBehavior: 'should_fail_on_vulnerable_code'
             },
             green: {
@@ -397,7 +397,7 @@ $stmt->execute();
         if (iterations !== expected) {
           console.log(`Test case: ${reason}`);
           console.log(`Expected: ${expected}, Got: ${iterations}`);
-          console.log(`Issue:`, mockIssue);
+          console.log('Issue:', mockIssue);
         }
         expect(iterations).toBe(expected);
       });

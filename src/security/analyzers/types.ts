@@ -31,7 +31,7 @@ export interface AnalysisFile {
     iv: string;
     
     // Algorithm used
-    algorithm: "aes-256-gcm";
+    algorithm: 'aes-256-gcm';
     
     // Auth tag for GCM mode (base64)
     authTag: string;
@@ -40,7 +40,7 @@ export interface AnalysisFile {
   // File metadata
   metadata: {
     // Language (auto-detected if not provided)
-    language?: "javascript" | "typescript" | "python" | "ruby" | "php" | "java" | "elixir";
+    language?: 'javascript' | 'typescript' | 'python' | 'ruby' | 'php' | 'java' | 'elixir';
     
     // File size in bytes (for validation)
     size: number;
@@ -52,7 +52,7 @@ export interface AnalysisFile {
 
 export interface AnalysisOptions {
   // Pattern format to use
-  patternFormat: "standard" | "enhanced";
+  patternFormat: 'standard' | 'enhanced';
   
   // Include security pattern detection
   includeSecurityPatterns: boolean;
@@ -117,7 +117,7 @@ export interface FileAnalysisResult {
   path?: string;
   
   // Analysis status
-  status: "success" | "error" | "timeout" | "skipped";
+  status: 'success' | 'error' | 'timeout' | 'skipped';
   
   // Error details if status is "error"
   error?: {
@@ -154,7 +154,7 @@ export interface SecurityFinding {
   
   // Vulnerability details
   type: string;
-  severity: "low" | "medium" | "high" | "critical";
+  severity: 'low' | 'medium' | 'high' | 'critical';
   
   // Location in file
   location: {
@@ -239,17 +239,17 @@ export interface ErrorResponse {
 
 // Error codes enum
 export enum ErrorCode {
-  AUTH_REQUIRED = "AUTH_REQUIRED",
-  INVALID_API_KEY = "INVALID_API_KEY",
-  SESSION_EXPIRED = "SESSION_EXPIRED",
-  RATE_LIMITED = "RATE_LIMITED",
-  INVALID_REQUEST = "INVALID_REQUEST",
-  FILE_TOO_LARGE = "FILE_TOO_LARGE",
-  TOO_MANY_FILES = "TOO_MANY_FILES",
-  PARSER_ERROR = "PARSER_ERROR",
-  TIMEOUT = "TIMEOUT",
-  INTERNAL_ERROR = "INTERNAL_ERROR",
-  UNKNOWN_ERROR = "UNKNOWN_ERROR"
+  AUTH_REQUIRED = 'AUTH_REQUIRED',
+  INVALID_API_KEY = 'INVALID_API_KEY',
+  SESSION_EXPIRED = 'SESSION_EXPIRED',
+  RATE_LIMITED = 'RATE_LIMITED',
+  INVALID_REQUEST = 'INVALID_REQUEST',
+  FILE_TOO_LARGE = 'FILE_TOO_LARGE',
+  TOO_MANY_FILES = 'TOO_MANY_FILES',
+  PARSER_ERROR = 'PARSER_ERROR',
+  TIMEOUT = 'TIMEOUT',
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR'
 }
 
 // Legacy alias for compatibility
@@ -353,7 +353,7 @@ export interface SecurityPattern {
   type: string;
   
   // Severity
-  severity: "low" | "medium" | "high" | "critical";
+  severity: 'low' | 'medium' | 'high' | 'critical';
   
   // CWE ID
   cwe?: string;

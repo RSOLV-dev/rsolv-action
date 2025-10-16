@@ -526,7 +526,7 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
     
     // Add iteration context
     if (iteration) {
-      prompt += `\n\n## Iteration Context\n`;
+      prompt += '\n\n## Iteration Context\n';
       prompt += `You have ${iteration.max - iteration.current} attempts remaining.\n`;
       if (iteration.current === iteration.max) {
         prompt += '**This is your final attempt.** Ensure the fix is comprehensive.\n';

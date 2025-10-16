@@ -159,40 +159,40 @@ export class ExtendedConversationHandler {
     };
     
     switch (this.config.conversationStrategy) {
-      case 'sequential':
-        // Process files one by one in sequence
-        plan.phases = files.map((file, index) => ({
-          phase: index + 1,
-          description: `Fix vulnerability in ${file}`,
-          files: [file],
-          dependencies: []
-        }));
-        break;
+    case 'sequential':
+      // Process files one by one in sequence
+      plan.phases = files.map((file, index) => ({
+        phase: index + 1,
+        description: `Fix vulnerability in ${file}`,
+        files: [file],
+        dependencies: []
+      }));
+      break;
         
-      case 'grouped':
-        // Group related files together
-        const groups = this.groupRelatedFiles(files, vulnerability);
-        plan.phases = groups.map((group, index) => ({
-          phase: index + 1,
-          description: `Fix vulnerability in ${group.name}`,
-          files: group.files,
-          dependencies: group.dependencies
-        }));
-        break;
+    case 'grouped':
+      // Group related files together
+      const groups = this.groupRelatedFiles(files, vulnerability);
+      plan.phases = groups.map((group, index) => ({
+        phase: index + 1,
+        description: `Fix vulnerability in ${group.name}`,
+        files: group.files,
+        dependencies: group.dependencies
+      }));
+      break;
         
-      case 'prioritized':
-        // Fix critical files first
-        const prioritized = this.prioritizeFiles(files, vulnerability);
-        plan.phases = [{
-          phase: 1,
-          description: 'Fix critical vulnerabilities',
-          files: prioritized.critical
-        }, {
-          phase: 2,
-          description: 'Fix remaining vulnerabilities',
-          files: prioritized.remaining
-        }];
-        break;
+    case 'prioritized':
+      // Fix critical files first
+      const prioritized = this.prioritizeFiles(files, vulnerability);
+      plan.phases = [{
+        phase: 1,
+        description: 'Fix critical vulnerabilities',
+        files: prioritized.critical
+      }, {
+        phase: 2,
+        description: 'Fix remaining vulnerabilities',
+        files: prioritized.remaining
+      }];
+      break;
     }
     
     return plan;

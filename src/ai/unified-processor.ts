@@ -110,7 +110,7 @@ async function processIssue(
           enhancedSolution: true
         };
       } catch (error) {
-        logger.error(`Git-based processing failed, falling back to standard processing`, error);
+        logger.error('Git-based processing failed, falling back to standard processing', error);
         // Continue with standard processing below
       }
     }
@@ -140,7 +140,7 @@ async function processIssue(
     
     // Step 2: Solution generation (with optional enhanced context)
     logger.info(`Generating solution for issue #${issue.number}`);
-    logger.info(`Config aiProvider:`, JSON.stringify(config.aiProvider));
+    logger.info('Config aiProvider:', JSON.stringify(config.aiProvider));
     
     let solution;
     let contextGatheringTime;
@@ -186,7 +186,7 @@ async function processIssue(
       const issueAnalysis: IssueAnalysis = {
         summary: `${analysisData.issueType} issue requiring ${analysisData.estimatedComplexity} fix`,
         complexity: analysisData.estimatedComplexity === 'simple' ? 'low' : 
-                   analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
+          analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
         estimatedTime: 60, // default estimate
         potentialFixes: [analysisData.suggestedApproach],
         recommendedApproach: analysisData.suggestedApproach,

@@ -35,7 +35,7 @@ describe('Pattern Factory', () => {
       
       // Test pattern matching
       const sqlPattern = sqlPatterns[0];
-      const vulnerableCode = `db.query("SELECT * FROM users WHERE id = " + req.params.id)`;
+      const vulnerableCode = 'db.query("SELECT * FROM users WHERE id = " + req.params.id)';
       
       let matched = false;
       if (sqlPattern.patterns.regex) {
@@ -63,7 +63,7 @@ describe('Pattern Factory', () => {
       expect(pattern.patterns.regex?.length).toBeGreaterThan(0);
       
       // Test Ruby SQL injection pattern
-      const vulnerableRuby = `user = User.where("id = '#{params[:user][:id]}'")[0]`;
+      const vulnerableRuby = 'user = User.where("id = \'#{params[:user][:id]}\'")[0]';
       
       let matched = false;
       if (pattern.patterns.regex) {

@@ -66,7 +66,7 @@ describe('ValidationMode - Fallback Strategies', () => {
         return JSON.stringify({ devDependencies: { vitest: '^1.0.0' } });
       }
       if (filePath.includes('Gemfile')) {
-        return "gem 'rspec'";
+        return 'gem \'rspec\'';
       }
       if (filePath.includes('.test.') || filePath.includes('_spec.')) {
         return 'describe("test", () => { it("works", () => {}) })';
@@ -253,7 +253,7 @@ end`;
       expect(content).toBeDefined();
       if (content) {
         expect(content).toContain('SQL injection');
-        expect(content).toContain("5') OR admin = 't' --'");
+        expect(content).toContain('5\') OR admin = \'t\' --\'');
       }
     });
   });
@@ -452,7 +452,7 @@ it('should escape XSS in profile bio', async () => {
   describe('Semantic file naming', () => {
     it('should generate framework-appropriate file names', async () => {
       // Test RSpec naming
-      const gemfile = "gem 'rspec'";
+      const gemfile = 'gem \'rspec\'';
       fs.writeFileSync(path.join(testRepoPath, 'Gemfile'), gemfile);
 
       const specDir = path.join(testRepoPath, 'spec');

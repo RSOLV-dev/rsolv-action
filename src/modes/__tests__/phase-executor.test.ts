@@ -245,7 +245,7 @@ describe('PhaseExecutor', () => {
       mockRetrievePhaseResults.mockImplementation(() => {
         return Promise.resolve({
           validation: {
-            "issue-123": {
+            'issue-123': {
               vulnerabilities: [
                 { type: 'sql-injection', file: 'test.js', line: 42 }
               ],

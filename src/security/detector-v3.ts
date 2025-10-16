@@ -163,7 +163,7 @@ export class SecurityDetectorV3 {
 
       return vulnerabilities;
     } catch (error) {
-      logger.error(`SecurityDetectorV3: Error during detection`, error);
+      logger.error('SecurityDetectorV3: Error during detection', error);
       return vulnerabilities;
     }
   }
