@@ -37,6 +37,10 @@ describe('PhaseDataClient', () => {
   beforeEach(() => {
     // Reset fetch mock
     global.fetch = vi.fn(async () => new Response());
+
+    // Ensure platform storage is enabled for tests (it's the default, but be explicit)
+    // Some tests may override this
+    process.env.USE_PLATFORM_STORAGE = 'true';
   });
 
   describe('storePhaseResults', () => {
