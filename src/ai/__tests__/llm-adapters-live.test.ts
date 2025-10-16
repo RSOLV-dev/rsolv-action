@@ -28,10 +28,14 @@ function getUser(username) {
 
 Provide a secure solution using parameterized queries.`;
 
-describe.skipIf(SKIP_LIVE)('Live LLM Adapter Tests', () => {
-  
-  describe.skipIf(!process.env.TEST_ANTHROPIC)('Anthropic Live Tests', () => {
-    test('should make real API call to Anthropic', async () => {
+describe('Live LLM Adapter Tests', () => {
+
+  describe('Anthropic Live Tests', () => {
+    test('should make real API call to Anthropic', async ({ skip }) => {
+      if (SKIP_LIVE || !process.env.TEST_ANTHROPIC) {
+        skip('Skipping - requires LIVE_LLM_TESTS=true and TEST_ANTHROPIC=true');
+        return;
+      }
       const config: AiProviderConfig = {
         provider: 'anthropic',
         apiKey: process.env.ANTHROPIC_API_KEY,
@@ -60,9 +64,14 @@ describe.skipIf(SKIP_LIVE)('Live LLM Adapter Tests', () => {
       expect(response).toContain('?'); // Should have parameterized query placeholder
     }, 30000);
 
-    test('should handle Anthropic with credential vending', async () => {
+    test('should handle Anthropic with credential vending', async ({ skip }) => {
+      if (SKIP_LIVE || !process.env.TEST_ANTHROPIC) {
+        skip('Skipping - requires LIVE_LLM_TESTS=true and TEST_ANTHROPIC=true');
+        return;
+      }
+
       if (!process.env.RSOLV_API_KEY) {
-        console.log('Skipping credential vending test - no RSOLV_API_KEY');
+        skip('Skipping - requires RSOLV_API_KEY for credential vending');
         return;
       }
 
@@ -84,8 +93,12 @@ describe.skipIf(SKIP_LIVE)('Live LLM Adapter Tests', () => {
     }, 20000);
   });
 
-  describe.skipIf(!process.env.TEST_OPENAI)('OpenAI Live Tests', () => {
-    test('should make real API call to OpenAI', async () => {
+  describe('OpenAI Live Tests', () => {
+    test('should make real API call to OpenAI', async ({ skip }) => {
+      if (SKIP_LIVE || !process.env.TEST_OPENAI) {
+        skip('Skipping - requires LIVE_LLM_TESTS=true and TEST_OPENAI=true');
+        return;
+      }
       const config: AiProviderConfig = {
         provider: 'openai',
         apiKey: process.env.OPENAI_API_KEY,
@@ -114,8 +127,12 @@ describe.skipIf(SKIP_LIVE)('Live LLM Adapter Tests', () => {
     }, 30000);
   });
 
-  describe.skipIf(!process.env.TEST_OLLAMA)('Ollama Live Tests', () => {
-    test('should make real API call to local Ollama', async () => {
+  describe('Ollama Live Tests', () => {
+    test('should make real API call to local Ollama', async ({ skip }) => {
+      if (SKIP_LIVE || !process.env.TEST_OLLAMA) {
+        skip('Skipping - requires LIVE_LLM_TESTS=true and TEST_OLLAMA=true');
+        return;
+      }
       const config: AiProviderConfig = {
         provider: 'ollama',
         model: 'deepseek-r1:14b', // Or whatever model you have locally
@@ -151,8 +168,12 @@ describe.skipIf(SKIP_LIVE)('Live LLM Adapter Tests', () => {
   });
 
   // Comparison test across providers
-  describe.skipIf(!process.env.TEST_ALL_PROVIDERS)('Provider Comparison', () => {
-    test('should compare responses across all available providers', async () => {
+  describe('Provider Comparison', () => {
+    test('should compare responses across all available providers', async ({ skip }) => {
+      if (SKIP_LIVE || !process.env.TEST_ALL_PROVIDERS) {
+        skip('Skipping - requires LIVE_LLM_TESTS=true and TEST_ALL_PROVIDERS=true');
+        return;
+      }
       const providers = [];
       
       if (process.env.ANTHROPIC_API_KEY) {

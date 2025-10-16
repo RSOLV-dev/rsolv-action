@@ -1,7 +1,7 @@
 /**
  * Live API tests for Claude Code adapter
  * These tests make real calls to Claude Code CLI
- * 
+ *
  * Run with: CLAUDE_CODE_LIVE_TEST=true vitest claude-code-live.test.ts
  * Or automatically enabled when Claude Max is available
  */
@@ -13,7 +13,6 @@ import { isClaudeMaxAvailable } from '../adapters/claude-code-cli-dev.js';
 
 // Detect Claude Max availability at module load time
 let canUseClaudeMax = false;
-let skipLiveTests = true;
 
 try {
   // Try to detect Claude Max, but handle any errors gracefully
@@ -22,10 +21,10 @@ try {
   canUseClaudeMax = false;
 }
 
-skipLiveTests = process.env.CLAUDE_CODE_LIVE_TEST !== 'true' && !canUseClaudeMax;
+const shouldSkipLiveTests = process.env.CLAUDE_CODE_LIVE_TEST !== 'true' && !canUseClaudeMax;
 
 // Only log when tests will actually run
-if (!skipLiveTests) {
+if (!shouldSkipLiveTests) {
   if (canUseClaudeMax) {
     console.log('🎉 Claude Max detected - enabling Claude Code live tests without API credits');
   } else {
@@ -33,7 +32,7 @@ if (!skipLiveTests) {
   }
 }
 
-describe.skipIf(skipLiveTests)('Claude Code Live API Tests', () => {
+describe('Claude Code Live API Tests', () => {
   const config: AIConfig = {
     provider: 'claude-code',
     model: 'claude-3-sonnet-20240229',
@@ -70,40 +69,50 @@ describe.skipIf(skipLiveTests)('Claude Code Live API Tests', () => {
     relatedFiles: ['src/auth/login.js']
   };
 
-  test('should check if Claude Code CLI is actually available', async () => {
+  test('should check if Claude Code CLI is actually available', async ({ skip }) => {
+    if (shouldSkipLiveTests) {
+      skip('Skipping - requires CLAUDE_CODE_LIVE_TEST=true or Claude Max');
+      return;
+    }
+
     const adapter = new ClaudeCodeAdapter(config);
     const available = await adapter.isAvailable();
-    
+
     if (!available) {
       console.log('Claude Code CLI not installed - skipping live tests');
       console.log('Install with: npm install -g @anthropic/claude-code');
     }
-    
+
     expect(typeof available).toBe('boolean');
   });
 
-  test.skipIf(!process.env.CLAUDE_CODE_AVAILABLE && !canUseClaudeMax)('should generate real solution using Claude Code', async () => {
+  test('should generate real solution using Claude Code', async ({ skip }) => {
+    if (shouldSkipLiveTests) {
+      skip('Skipping - requires CLAUDE_CODE_LIVE_TEST=true or Claude Max');
+      return;
+    }
+
     const adapter = new ClaudeCodeAdapter(config);
-    
+
     // First check if Claude Code is available
     const available = await adapter.isAvailable();
     if (!available) {
-      console.log('Skipping - Claude Code not available');
+      skip('Skipping - Claude Code CLI not available');
       return;
     }
 
     const solution = await adapter.generateSolution(issueContext, issueAnalysis);
-    
+
     console.log('Live API Response:', JSON.stringify(solution, null, 2));
-    
+
     expect(solution).toBeDefined();
     expect(solution.success).toBeDefined();
-    
+
     if (solution.success) {
       expect(solution.message).toBe('Solution generated with Claude Code');
       expect(solution.changes).toBeDefined();
       expect(Object.keys(solution.changes!).length).toBeGreaterThan(0);
-      
+
       // Check that the solution addresses SQL injection
       const fileContents = Object.values(solution.changes!).join('\n');
       expect(fileContents.toLowerCase()).toMatch(/(?:parameter|prepare|escape|sanitize)/);
@@ -114,12 +123,17 @@ describe.skipIf(skipLiveTests)('Claude Code Live API Tests', () => {
     }
   }, 30000); // 30 second timeout for live API call
 
-  test.skipIf(!process.env.CLAUDE_CODE_AVAILABLE && !canUseClaudeMax)('should work with enhanced prompts in live mode', async () => {
+  test('should work with enhanced prompts in live mode', async ({ skip }) => {
+    if (shouldSkipLiveTests) {
+      skip('Skipping - requires CLAUDE_CODE_LIVE_TEST=true or Claude Max');
+      return;
+    }
+
     const adapter = new ClaudeCodeAdapter(config);
-    
+
     const available = await adapter.isAvailable();
     if (!available) {
-      console.log('Skipping - Claude Code not available');
+      skip('Skipping - Claude Code CLI not available');
       return;
     }
 
@@ -130,14 +144,14 @@ describe.skipIf(skipLiveTests)('Claude Code Live API Tests', () => {
       3. Add logging for security events
       4. Include comprehensive error handling
     `;
-    
+
     const solution = await adapter.generateSolution(issueContext, issueAnalysis, enhancedPrompt);
-    
+
     console.log('Enhanced prompt response:', JSON.stringify(solution, null, 2));
-    
+
     if (solution.success && solution.changes) {
       const fileContents = Object.values(solution.changes).join('\n');
-      
+
       // Check that enhanced requirements are addressed
       expect(fileContents).toMatch(/(?:validate|validation)/i);
       expect(fileContents).toMatch(/(?:log|logger|logging)/i);
@@ -147,7 +161,7 @@ describe.skipIf(skipLiveTests)('Claude Code Live API Tests', () => {
 });
 
 // Integration test with real file system
-describe.skipIf(skipLiveTests)('Claude Code File System Integration', () => {
+describe('Claude Code File System Integration', () => {
   // Define test data for this describe block
   const issueContext = {
     id: '123',
@@ -178,7 +192,12 @@ describe.skipIf(skipLiveTests)('Claude Code File System Integration', () => {
     relatedFiles: ['src/auth/login.js']
   };
   
-  test('should handle real file operations', async () => {
+  test('should handle real file operations', async ({ skip }) => {
+    if (shouldSkipLiveTests) {
+      skip('Skipping - requires CLAUDE_CODE_LIVE_TEST=true or Claude Max');
+      return;
+    }
+
     const config: AIConfig = {
       provider: 'claude-code',
       model: 'claude-3-sonnet-20240229',
@@ -192,10 +211,10 @@ describe.skipIf(skipLiveTests)('Claude Code File System Integration', () => {
     };
 
     const adapter = new ClaudeCodeAdapter(config);
-    
+
     // This will create real temp files
     const prompt = (adapter as any).constructPrompt(issueContext, issueAnalysis);
-    
+
     expect(prompt).toBeDefined();
     expect(prompt.length).toBeGreaterThan(100);
   });
