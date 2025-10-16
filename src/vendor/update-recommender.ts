@@ -49,7 +49,7 @@ export class UpdateRecommender {
     };
   }
   
-  private async findFixedVersions(library: Library, vulnerability: { id: string; severity?: string }): Promise<string[]> {
+  private async findFixedVersions(library: Library, _vulnerability: { id: string; severity?: string }): Promise<string[]> {
     // In real implementation, would query npm registry or security advisories
     // Mock some known fixes
     

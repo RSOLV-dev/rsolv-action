@@ -58,7 +58,7 @@ export class VendorDetectionIntegration {
    */
   private async identifyLibrary(filePath: string): Promise<any> {
     // Extract library name from path
-    const parts = filePath.split('/');
+    const _parts = filePath.split('/');
     let name = 'unknown';
     let version = 'unknown';
     
