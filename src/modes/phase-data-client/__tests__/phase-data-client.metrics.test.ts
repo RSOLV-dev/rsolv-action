@@ -8,18 +8,32 @@
  * of extracting specific phase data for each issue.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PhaseDataClient } from '../index.js';
 import type { PhaseData } from '../index.js';
 
 describe('RFC-060 Metrics Fix - Phase Data Extraction', () => {
   let client: PhaseDataClient;
   let fetchMock: any;
+  let originalUsePlatformStorage: string | undefined;
 
   beforeEach(() => {
+    // Save original value and ensure platform storage is enabled for these tests
+    originalUsePlatformStorage = process.env.USE_PLATFORM_STORAGE;
+    delete process.env.USE_PLATFORM_STORAGE; // undefined means enabled (default)
+
     fetchMock = vi.fn();
     global.fetch = fetchMock;
     client = new PhaseDataClient('test-api-key', 'https://test.rsolv.dev');
+  });
+
+  afterEach(() => {
+    // Restore original value
+    if (originalUsePlatformStorage !== undefined) {
+      process.env.USE_PLATFORM_STORAGE = originalUsePlatformStorage;
+    } else {
+      delete process.env.USE_PLATFORM_STORAGE;
+    }
   });
 
   describe('SCAN phase data extraction', () => {
