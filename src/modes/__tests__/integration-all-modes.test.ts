@@ -383,7 +383,7 @@ describe('Three-Phase Integration', () => {
       expect(scanResult.data?.scan).toBeDefined();
       
       // Verify scan data was stored correctly
-      const scanKey = `test/webapp-abc123def456-scan`;
+      const scanKey = 'test/webapp-abc123def456-scan';
       const storedScanData = phaseDataStore.get(scanKey);
       expect(storedScanData).toBeDefined();
 
@@ -399,7 +399,7 @@ describe('Three-Phase Integration', () => {
       expect(validateResult.data?.validation).toBeDefined();
       
       // Verify validation data was stored
-      const validateKey = `test/webapp-999-validate`;
+      const validateKey = 'test/webapp-999-validate';
       const storedValidateData = phaseDataStore.get(validateKey);
       expect(storedValidateData).toBeDefined();
 

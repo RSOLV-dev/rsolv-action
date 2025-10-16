@@ -122,7 +122,7 @@ public class UserDAO {
           red: {
             testName: 'should be vulnerable to SQL injection (RED)',
             testCode: generatedTests.testCode,
-            attackVector: "'; DROP TABLE users; --",
+            attackVector: '\'; DROP TABLE users; --',
             expectedBehavior: 'should_fail_on_vulnerable_code'
           },
           green: {
@@ -279,8 +279,8 @@ class UserModel {
 
       // Create composer.json for framework detection
       const composerJson = JSON.stringify({
-        "require-dev": {
-          "phpunit/phpunit": "^9.5"
+        'require-dev': {
+          'phpunit/phpunit': '^9.5'
         }
       }, null, 2);
       await fs.writeFile(path.join(testDir, 'composer.json'), composerJson);
@@ -321,7 +321,7 @@ class UserModel {
           red: {
             testName: 'testSqlInjectionVulnerability',
             testCode: generatedTests.testCode,
-            attackVector: "' OR '1'='1",
+            attackVector: '\' OR \'1\'=\'1',
             expectedBehavior: 'should_fail_on_vulnerable_code'
           },
           green: {
@@ -403,7 +403,7 @@ class Database {
       expect(fixedCode).toContain(':email');
       expect(fixedCode).toContain('prepare');
       expect(fixedCode).toContain('execute');
-      expect(fixedCode).not.toContain("'$email'");
+      expect(fixedCode).not.toContain('\'$email\'');
     });
   });
 

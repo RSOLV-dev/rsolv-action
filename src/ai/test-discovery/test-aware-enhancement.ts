@@ -170,7 +170,7 @@ export class TestAwareEnhancement {
 
         if (contract.platformCompatibility.windowsSupport) {
           enhancement += '\n**Platform Compatibility:**\n';
-          enhancement += `- Windows support: Required\n`;
+          enhancement += '- Windows support: Required\n';
           enhancement += `- Command pattern: ${contract.platformCompatibility.commandPrefixPattern}\n`;
         }
 
@@ -359,21 +359,21 @@ export class TestAwareEnhancement {
       const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
 
       if (packageJson.scripts?.test) {
-        return `npm test`;
+        return 'npm test';
       }
 
       // Framework-specific defaults
       switch (testFramework) {
-        case 'jest':
-          return 'npx jest';
-        case 'vitest':
-          return 'npx vitest run';
-        case 'mocha':
-          return 'npx mocha';
-        case 'tap':
-          return 'npx tap';
-        default:
-          return 'npm test';
+      case 'jest':
+        return 'npx jest';
+      case 'vitest':
+        return 'npx vitest run';
+      case 'mocha':
+        return 'npx mocha';
+      case 'tap':
+        return 'npx tap';
+      default:
+        return 'npm test';
       }
     } catch (error) {
       return 'npm test'; // Safe default

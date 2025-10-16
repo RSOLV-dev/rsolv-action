@@ -208,17 +208,17 @@ export class ASTPatternInterpreter {
           const nodeEnd = path.node?.end;
 
           switch (patternType) {
-            case 'sql injection':
-              matches = self.checkSQLInjection(path, rules as ASTRules, pattern);
-              break;
-            case 'logging':
-              matches = self.checkMissingLogging(path, rules as ASTRules, pattern);
-              break;
-            case 'nosql injection':
-              matches = self.checkNoSQLInjection(path, rules as ASTRules, pattern);
-              break;
-            default:
-              matches = self.checkGenericPattern(path, rules as ASTRules, pattern);
+          case 'sql injection':
+            matches = self.checkSQLInjection(path, rules as ASTRules, pattern);
+            break;
+          case 'logging':
+            matches = self.checkMissingLogging(path, rules as ASTRules, pattern);
+            break;
+          case 'nosql injection':
+            matches = self.checkNoSQLInjection(path, rules as ASTRules, pattern);
+            break;
+          default:
+            matches = self.checkGenericPattern(path, rules as ASTRules, pattern);
           }
 
           if (matches) {

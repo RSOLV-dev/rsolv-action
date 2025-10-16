@@ -141,13 +141,13 @@ export class UpdateRecommender {
     
     if (packageManager === 'npm') {
       switch (updateType) {
-        case 'patch':
-          return `npm update ${name}`;
-        case 'minor':
-          // Use caret to allow minor updates
-          return `npm install ${name}@^${library.version}`;
-        case 'major':
-          return `npm install ${name}@latest`;
+      case 'patch':
+        return `npm update ${name}`;
+      case 'minor':
+        // Use caret to allow minor updates
+        return `npm install ${name}@^${library.version}`;
+      case 'major':
+        return `npm install ${name}@latest`;
       }
     }
     

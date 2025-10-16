@@ -572,7 +572,7 @@ The fix was generated using AI with access to validation tests, ensuring:
       };
 
     } catch (error) {
-      logger.error(`Failed to create PR from validation branch:`, error);
+      logger.error('Failed to create PR from validation branch:', error);
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }

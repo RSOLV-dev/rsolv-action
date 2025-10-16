@@ -118,159 +118,159 @@ export class PhaseExecutor {
     logger.info(`Executing in ${mode} mode`, options);
 
     switch (mode) {
-      case 'scan':
-        return this.executeScan(options);
+    case 'scan':
+      return this.executeScan(options);
 
-      case 'validate':
-      case 'validate-only':
-        // Support multiple validation modes
-        if (options.issues && options.issues.length > 0) {
-          // Standalone validation with issues
-          return this.executeValidateStandalone(options);
-        } else if (options.issueNumber || options.scanData) {
-          // Original validation mode
-          return this.executeValidate(options);
-        } else {
-          // Auto-detect issues by label when no specific issues provided
-          logger.info('[VALIDATE] No specific issues provided, detecting issues by label');
+    case 'validate':
+    case 'validate-only':
+      // Support multiple validation modes
+      if (options.issues && options.issues.length > 0) {
+        // Standalone validation with issues
+        return this.executeValidateStandalone(options);
+      } else if (options.issueNumber || options.scanData) {
+        // Original validation mode
+        return this.executeValidate(options);
+      } else {
+        // Auto-detect issues by label when no specific issues provided
+        logger.info('[VALIDATE] No specific issues provided, detecting issues by label');
 
-          // Pass max_issues to detection layer to avoid fetching too many
-          const maxIssues = this.config.maxIssues || 5;
-          logger.info(`[VALIDATE] Detecting up to ${maxIssues} issues with label '${this.config.issueLabel}'`);
+        // Pass max_issues to detection layer to avoid fetching too many
+        const maxIssues = this.config.maxIssues || 5;
+        logger.info(`[VALIDATE] Detecting up to ${maxIssues} issues with label '${this.config.issueLabel}'`);
 
-          const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
-          const detectedIssues = await detectIssuesFromAllPlatforms({ ...this.config, maxIssues });
+        const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
+        const detectedIssues = await detectIssuesFromAllPlatforms({ ...this.config, maxIssues });
 
-          if (detectedIssues.length === 0) {
-            throw new Error(`No issues found with label '${this.config.issueLabel}'`);
-          }
-
-          logger.info(`[VALIDATE] Found ${detectedIssues.length} issues to validate (limited by max_issues: ${maxIssues})`);
-
-          return this.executeValidateStandalone({ ...options, issues: detectedIssues });
+        if (detectedIssues.length === 0) {
+          throw new Error(`No issues found with label '${this.config.issueLabel}'`);
         }
 
-      case 'mitigate':
-      case 'fix-only':
-        // Support multiple mitigation modes (similar to validation)
-        if (options.issues && options.issues.length > 0) {
-          // Standalone mitigation with issues
-          return this.executeMitigateStandalone(options);
-        } else if (options.issueNumber) {
-          // Single issue mitigation
-          return this.executeMitigate(options);
-        } else {
-          // Auto-detect issues by label when no specific issues provided
-          logger.info('[MITIGATE] No specific issues provided, detecting issues by label');
+        logger.info(`[VALIDATE] Found ${detectedIssues.length} issues to validate (limited by max_issues: ${maxIssues})`);
 
-          // Use the configured label (should be 'rsolv:validated' for mitigation)
-          const labelToUse = this.config.issueLabel || 'rsolv:validated';
-          const maxIssues = this.config.maxIssues || 5;
-          logger.info(`[MITIGATE] Detecting up to ${maxIssues} issues with label '${labelToUse}'`);
+        return this.executeValidateStandalone({ ...options, issues: detectedIssues });
+      }
 
-          const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
-          const detectedIssues = await detectIssuesFromAllPlatforms({
-            ...this.config,
-            issueLabel: labelToUse,
-            maxIssues
-          });
+    case 'mitigate':
+    case 'fix-only':
+      // Support multiple mitigation modes (similar to validation)
+      if (options.issues && options.issues.length > 0) {
+        // Standalone mitigation with issues
+        return this.executeMitigateStandalone(options);
+      } else if (options.issueNumber) {
+        // Single issue mitigation
+        return this.executeMitigate(options);
+      } else {
+        // Auto-detect issues by label when no specific issues provided
+        logger.info('[MITIGATE] No specific issues provided, detecting issues by label');
 
-          if (detectedIssues.length === 0) {
-            logger.warn(`[MITIGATE] No issues found with label '${labelToUse}'`);
-            return {
-              success: false,
-              phase: 'mitigate',
-              error: `No validated issues found with label '${labelToUse}'. Please run validation phase first.`
-            };
-          }
+        // Use the configured label (should be 'rsolv:validated' for mitigation)
+        const labelToUse = this.config.issueLabel || 'rsolv:validated';
+        const maxIssues = this.config.maxIssues || 5;
+        logger.info(`[MITIGATE] Detecting up to ${maxIssues} issues with label '${labelToUse}'`);
 
-          logger.info(`[MITIGATE] Found ${detectedIssues.length} validated issues to mitigate`);
+        const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
+        const detectedIssues = await detectIssuesFromAllPlatforms({
+          ...this.config,
+          issueLabel: labelToUse,
+          maxIssues
+        });
 
-          return this.executeMitigateStandalone({
-            ...options,
-            issues: detectedIssues,
-            usePriorValidation: true
-          });
+        if (detectedIssues.length === 0) {
+          logger.warn(`[MITIGATE] No issues found with label '${labelToUse}'`);
+          return {
+            success: false,
+            phase: 'mitigate',
+            error: `No validated issues found with label '${labelToUse}'. Please run validation phase first.`
+          };
         }
+
+        logger.info(`[MITIGATE] Found ${detectedIssues.length} validated issues to mitigate`);
+
+        return this.executeMitigateStandalone({
+          ...options,
+          issues: detectedIssues,
+          usePriorValidation: true
+        });
+      }
       
-      case 'validate-and-fix':
-        // Run validate and mitigate for specific issues
-        // This mode is used when issue_number is provided with the selective workflow
-        if (options.issueNumber) {
-          // Fetch the specific issue
-          logger.info(`[VALIDATE-AND-FIX] Processing specific issue #${options.issueNumber}`);
-          const { getIssue } = await import('../../github/api.js');
-          const [owner, name] = process.env.GITHUB_REPOSITORY!.split('/');
-          const issue = await getIssue(owner, name, options.issueNumber);
+    case 'validate-and-fix':
+      // Run validate and mitigate for specific issues
+      // This mode is used when issue_number is provided with the selective workflow
+      if (options.issueNumber) {
+        // Fetch the specific issue
+        logger.info(`[VALIDATE-AND-FIX] Processing specific issue #${options.issueNumber}`);
+        const { getIssue } = await import('../../github/api.js');
+        const [owner, name] = process.env.GITHUB_REPOSITORY!.split('/');
+        const issue = await getIssue(owner, name, options.issueNumber);
 
-          if (!issue) {
-            throw new Error(`Issue #${options.issueNumber} not found`);
-          }
-
-          // First validate
-          const validateResult = await this.executeValidateStandalone({
-            ...options,
-            issues: [issue]
-          });
-
-          if (!validateResult.success) {
-            return validateResult;
-          }
-
-          // Then mitigate if validation succeeded
-          const mitigateResult = await this.executeMitigateStandalone({
-            ...options,
-            issues: [issue],
-            usePriorValidation: true
-          });
-
-          return {
-            success: mitigateResult.success,
-            phase: 'validate-and-fix',
-            message: `Processed issue #${options.issueNumber}: validation ${validateResult.success ? 'succeeded' : 'failed'}, mitigation ${mitigateResult.success ? 'succeeded' : 'failed'}`,
-            data: {
-              validation: validateResult.data,
-              mitigation: mitigateResult.data
-            }
-          };
-        } else {
-          // Auto-detect issues if no specific issue provided
-          logger.info('[VALIDATE-AND-FIX] No specific issue provided, detecting issues by label');
-          const maxIssues = this.config.maxIssues || 5;
-          const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
-          const detectedIssues = await detectIssuesFromAllPlatforms({ ...this.config, maxIssues });
-
-          if (detectedIssues.length === 0) {
-            throw new Error(`No issues found with label '${this.config.issueLabel}'`);
-          }
-
-          // Validate all
-          const validateResult = await this.executeValidateStandalone({ ...options, issues: detectedIssues });
-
-          // Mitigate validated ones
-          const mitigateResult = await this.executeMitigateStandalone({
-            ...options,
-            issues: detectedIssues,
-            usePriorValidation: true
-          });
-
-          return {
-            success: validateResult.success && mitigateResult.success,
-            phase: 'validate-and-fix',
-            message: `Processed ${detectedIssues.length} issues`,
-            data: {
-              validation: validateResult.data,
-              mitigation: mitigateResult.data
-            }
-          };
+        if (!issue) {
+          throw new Error(`Issue #${options.issueNumber} not found`);
         }
 
-      case 'full':
-        // Run all phases
-        return this.executeAllPhases(options);
+        // First validate
+        const validateResult = await this.executeValidateStandalone({
+          ...options,
+          issues: [issue]
+        });
 
-      default:
-        throw new Error(`Unknown mode: ${mode}`);
+        if (!validateResult.success) {
+          return validateResult;
+        }
+
+        // Then mitigate if validation succeeded
+        const mitigateResult = await this.executeMitigateStandalone({
+          ...options,
+          issues: [issue],
+          usePriorValidation: true
+        });
+
+        return {
+          success: mitigateResult.success,
+          phase: 'validate-and-fix',
+          message: `Processed issue #${options.issueNumber}: validation ${validateResult.success ? 'succeeded' : 'failed'}, mitigation ${mitigateResult.success ? 'succeeded' : 'failed'}`,
+          data: {
+            validation: validateResult.data,
+            mitigation: mitigateResult.data
+          }
+        };
+      } else {
+        // Auto-detect issues if no specific issue provided
+        logger.info('[VALIDATE-AND-FIX] No specific issue provided, detecting issues by label');
+        const maxIssues = this.config.maxIssues || 5;
+        const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
+        const detectedIssues = await detectIssuesFromAllPlatforms({ ...this.config, maxIssues });
+
+        if (detectedIssues.length === 0) {
+          throw new Error(`No issues found with label '${this.config.issueLabel}'`);
+        }
+
+        // Validate all
+        const validateResult = await this.executeValidateStandalone({ ...options, issues: detectedIssues });
+
+        // Mitigate validated ones
+        const mitigateResult = await this.executeMitigateStandalone({
+          ...options,
+          issues: detectedIssues,
+          usePriorValidation: true
+        });
+
+        return {
+          success: validateResult.success && mitigateResult.success,
+          phase: 'validate-and-fix',
+          message: `Processed ${detectedIssues.length} issues`,
+          data: {
+            validation: validateResult.data,
+            mitigation: mitigateResult.data
+          }
+        };
+      }
+
+    case 'full':
+      // Run all phases
+      return this.executeAllPhases(options);
+
+    default:
+      throw new Error(`Unknown mode: ${mode}`);
     }
   }
 
@@ -906,7 +906,7 @@ export class PhaseExecutor {
         
         if (result.success || result.chunked) {
           const message = useExtendedConversation
-            ? `Multi-file vulnerability fixed in single PR using extended conversation`
+            ? 'Multi-file vulnerability fixed in single PR using extended conversation'
             : `Multi-file vulnerability chunked into ${result.chunks} PRs for manageable fixes`;
           
           return {
@@ -931,7 +931,7 @@ export class PhaseExecutor {
       }
       
       // RFC-058/RFC-060: Check for validation branch and use test-aware mitigation
-      logger.info(`[MITIGATE] Step 4: Checking for RFC-058/RFC-060 validation branch...`);
+      logger.info('[MITIGATE] Step 4: Checking for RFC-058/RFC-060 validation branch...');
       const { MitigationMode } = await import('../mitigation-mode.js');
       const mitigationMode = new MitigationMode(this.config, process.cwd(), this.phaseDataClient);
 
@@ -1527,7 +1527,7 @@ export class PhaseExecutor {
 
           logger.info(`[VALIDATE] Test execution result: ${testExecutionResult.passed ? 'PASSED' : 'FAILED'}`);
         } catch (error) {
-          logger.warn(`[VALIDATE] Could not execute test:`, error);
+          logger.warn('[VALIDATE] Could not execute test:', error);
         }
       }
 
@@ -1639,7 +1639,7 @@ export class PhaseExecutor {
         const issueAnalysis: IssueAnalysis = {
           summary: `${analysisData.issueType} issue analysis`,
           complexity: analysisData.estimatedComplexity === 'simple' ? 'low' :
-                     analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
+            analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
           estimatedTime: 60,
           potentialFixes: [analysisData.suggestedApproach || ''],
           recommendedApproach: analysisData.suggestedApproach || '',
@@ -1685,13 +1685,13 @@ export class PhaseExecutor {
         logger.info(`[MITIGATE DEBUG] skipValidation calculated as: ${skipValidation}`);
 
         if (skipValidation) {
-          logger.info(`[MITIGATE] 📋 Skipping fix validation (DISABLE_FIX_VALIDATION=true)`);
-          logger.info(`[MITIGATE] Fix will be applied without validation - proceeding to PR creation`);
+          logger.info('[MITIGATE] 📋 Skipping fix validation (DISABLE_FIX_VALIDATION=true)');
+          logger.info('[MITIGATE] Fix will be applied without validation - proceeding to PR creation');
           break; // Exit the iteration loop and proceed to PR creation
         } else if ((this.config.testGeneration?.validateFixes === true || this.config.fixValidation?.enabled === true) &&
             generatedTests?.success && generatedTests.testSuite) {
 
-          logger.info(`[MITIGATE] Validating fix with tests...`);
+          logger.info('[MITIGATE] Validating fix with tests...');
 
           const validator = this.gitBasedValidator || new GitBasedTestValidator();
           const validation = await validator.validateFixWithTests(
@@ -1745,7 +1745,7 @@ export class PhaseExecutor {
           continue;
         } else {
           // No validation needed
-          logger.info(`[MITIGATE] No validation configured, proceeding to PR creation`);
+          logger.info('[MITIGATE] No validation configured, proceeding to PR creation');
           break;
         }
       }
@@ -2295,8 +2295,8 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           message: validation.canBeFixed === false ? 
             'Issue cannot be automatically fixed' :
             validation.testGenerationFailed ?
-            'Test generation failed' :
-            `Validation completed for issue #${options.issues[0].number}`,
+              'Test generation failed' :
+              `Validation completed for issue #${options.issues[0].number}`,
           data: {
             validation,
             report
@@ -2409,7 +2409,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
       success: false,
       redTest: `// RED Test: Should fail when ${issue.title} exists`,
       greenTest: `// GREEN Test: Should pass when ${issue.title} is fixed`,  
-      refactorTest: `// REFACTOR Test: Should maintain functionality after fix`
+      refactorTest: '// REFACTOR Test: Should maintain functionality after fix'
     };
   }
 
@@ -2432,8 +2432,8 @@ ${validation.testExecutionFailed ? '### ⚠️ Test Execution Failed\nTests were
 
 ### Next Steps
 ${validation.falsePositive ? 
-  '1. Review the generated tests\n2. Close issue if false positive confirmed' :
-  '1. Review the generated tests\n2. Run mitigation mode to apply fix\n3. Tests will validate the fix automatically'}
+    '1. Review the generated tests\n2. Close issue if false positive confirmed' :
+    '1. Review the generated tests\n2. Run mitigation mode to apply fix\n3. Tests will validate the fix automatically'}
 `;
   }
 
@@ -2442,14 +2442,14 @@ ${validation.falsePositive ?
    */
   private generateValidationReport(validations: ValidationItem[], format: string): string {
     switch (format) {
-      case 'markdown':
-        return this.generateMarkdownReport(validations);
-      case 'json':
-        return JSON.stringify({ issues: validations }, null, 2);
-      case 'github-actions':
-        return this.generateGitHubActionsReport(validations);
-      default:
-        return JSON.stringify(validations);
+    case 'markdown':
+      return this.generateMarkdownReport(validations);
+    case 'json':
+      return JSON.stringify({ issues: validations }, null, 2);
+    case 'github-actions':
+      return this.generateGitHubActionsReport(validations);
+    default:
+      return JSON.stringify(validations);
     }
   }
 

@@ -105,7 +105,7 @@ public class UserDAO {
       const fixAttempts = [
         {
           attempt: 1,
-          code: `String query = "SELECT * FROM users WHERE id = '" + userId.replace("'", "''") + "'";`,
+          code: 'String query = "SELECT * FROM users WHERE id = \'" + userId.replace("\'", "\'\'") + "\'";',
           testResult: 'FAIL: String escaping is insufficient',
           shouldContinue: true
         },
@@ -146,8 +146,8 @@ class UserModel {
 
       const repoStructure = {
         'composer.json': JSON.stringify({
-          "require-dev": {
-            "phpunit/phpunit": "^9.5"
+          'require-dev': {
+            'phpunit/phpunit': '^9.5'
           }
         }),
         'src/UserModel.php': vulnerablePHPCode

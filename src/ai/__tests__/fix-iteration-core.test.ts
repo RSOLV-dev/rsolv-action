@@ -227,7 +227,7 @@ describe('Fix Iteration Core Functionality', () => {
       expect(securePHP).toContain('mysqli_prepare');
       expect(securePHP).toContain('?');
       expect(securePHP).toContain('bind_param');
-      expect(securePHP).not.toContain("'$id'");
+      expect(securePHP).not.toContain('\'$id\'');
     });
 
     test('PDO fix patterns for PHP', () => {
@@ -247,7 +247,7 @@ describe('Fix Iteration Core Functionality', () => {
       expect(securePDO).toContain(':email');
       expect(securePDO).toContain('prepare');
       expect(securePDO).toContain('execute');
-      expect(securePDO).not.toContain("'$email'");
+      expect(securePDO).not.toContain('\'$email\'');
     });
   });
 });

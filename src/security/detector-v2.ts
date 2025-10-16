@@ -93,7 +93,7 @@ export class SecurityDetectorV2 {
               // Skip if this looks like a safe usage
               if (this.isSafeUsage(line, pattern.type)) {
                 if (pattern.id === 'ruby-sql-injection' && language === 'ruby') {
-                  logger.info(`  Skipped as safe usage`);
+                  logger.info('  Skipped as safe usage');
                 }
                 continue;
               }
@@ -118,7 +118,7 @@ export class SecurityDetectorV2 {
               };
               
               if (pattern.id === 'ruby-sql-injection' && language === 'ruby') {
-                logger.info(`  Adding vulnerability:`, vuln);
+                logger.info('  Adding vulnerability:', vuln);
               }
               
               vulnerabilities.push(vuln);

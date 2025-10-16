@@ -268,7 +268,7 @@ export class BehavioralContractExtractor {
           } else if (part.includes('arg') || part.includes('environment')) {
             if (!envSources.includes('arg parameter')) envSources.push('arg parameter');
             if (!precedenceOrder.includes('arg')) precedenceOrder.push('arg');
-          } else if (part.includes('"') || part.includes("'")) {
+          } else if (part.includes('"') || part.includes('\'')) {
             defaultEnv = part.replace(/["']/g, '');
             if (!precedenceOrder.includes(defaultEnv)) precedenceOrder.push(defaultEnv);
           }

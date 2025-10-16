@@ -108,7 +108,7 @@ To run these tests:
           severity: 'critical',
           line: 2,
           column: 1,
-          snippet: "warning = 'Never use exec()'",
+          snippet: 'warning = \'Never use exec()\'',
           filePath: 'app.py'
         }
       ];
@@ -177,7 +177,7 @@ end`]
           severity: 'critical',
           line: 8,
           column: 1,
-          snippet: "const msg = 'eval is dangerous'",
+          snippet: 'const msg = \'eval is dangerous\'',
           filePath: 'mixed.js'
         }
       ];

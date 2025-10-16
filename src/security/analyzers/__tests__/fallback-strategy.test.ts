@@ -85,7 +85,7 @@ describe.skip('AST Analyzer Fallback Strategy (Needs RFC-048 Test Mode)', () => 
       };
 
       const files = new Map<string, string>();
-      files.set('test.js', `eval(userInput);`);
+      files.set('test.js', 'eval(userInput);');
 
       const result = await analyzer.analyze(files);
       

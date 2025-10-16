@@ -34,16 +34,16 @@ describe('ElixirASTAnalyzer - Pattern Detection', () => {
           ok: true,
           json: async () => ({
             requestId: body.requestId,  // Return the actual request ID
-          session: { sessionId: 'test-session' },
-          results: [{
-            file: 'test.js',
-            vulnerabilities: [{
-              type: 'eval-injection',
-              severity: 'critical',
-              line: 3,
-              message: 'Direct eval with user input'
+            session: { sessionId: 'test-session' },
+            results: [{
+              file: 'test.js',
+              vulnerabilities: [{
+                type: 'eval-injection',
+                severity: 'critical',
+                line: 3,
+                message: 'Direct eval with user input'
+              }]
             }]
-          }]
           })
         } as Response;
       });
@@ -67,16 +67,16 @@ describe('ElixirASTAnalyzer - Pattern Detection', () => {
           ok: true,
           json: async () => ({
             requestId: body.requestId,  // Return the actual request ID
-          session: { sessionId: 'test-session' },
-          results: [{
-            file: 'test.js',
-            vulnerabilities: [{
-              type: 'sql-injection',
-              severity: 'high',
-              line: 2,
-              message: 'SQL string concatenation'
+            session: { sessionId: 'test-session' },
+            results: [{
+              file: 'test.js',
+              vulnerabilities: [{
+                type: 'sql-injection',
+                severity: 'high',
+                line: 2,
+                message: 'SQL string concatenation'
+              }]
             }]
-          }]
           })
         } as Response;
       });
@@ -98,16 +98,16 @@ describe('ElixirASTAnalyzer - Pattern Detection', () => {
           ok: true,
           json: async () => ({
             requestId: body.requestId,  // Return the actual request ID
-          session: { sessionId: 'test-session' },
-          results: [{
-            file: 'test.js',
-            vulnerabilities: [{
-              type: 'xss',
-              severity: 'high',
-              line: 2,
-              message: 'Direct innerHTML assignment with user input'
+            session: { sessionId: 'test-session' },
+            results: [{
+              file: 'test.js',
+              vulnerabilities: [{
+                type: 'xss',
+                severity: 'high',
+                line: 2,
+                message: 'Direct innerHTML assignment with user input'
+              }]
             }]
-          }]
           })
         } as Response;
       });
@@ -133,16 +133,16 @@ def process_input(user_input):
           ok: true,
           json: async () => ({
             requestId: body.requestId,  // Return the actual request ID
-          session: { sessionId: 'test-session' },
-          results: [{
-            file: 'test.py',
-            vulnerabilities: [{
-              type: 'eval-injection',
-              severity: 'critical',
-              line: 3,
-              message: 'Python eval with user input'
+            session: { sessionId: 'test-session' },
+            results: [{
+              file: 'test.py',
+              vulnerabilities: [{
+                type: 'eval-injection',
+                severity: 'critical',
+                line: 3,
+                message: 'Python eval with user input'
+              }]
             }]
-          }]
           })
         } as Response;
       });
@@ -165,16 +165,16 @@ os.system(f"ls {user_provided_path}")
           ok: true,
           json: async () => ({
             requestId: body.requestId,  // Return the actual request ID
-          session: { sessionId: 'test-session' },
-          results: [{
-            file: 'test.py',
-            vulnerabilities: [{
-              type: 'command-injection',
-              severity: 'critical',
-              line: 3,
-              message: 'OS command with user input'
+            session: { sessionId: 'test-session' },
+            results: [{
+              file: 'test.py',
+              vulnerabilities: [{
+                type: 'command-injection',
+                severity: 'critical',
+                line: 3,
+                message: 'OS command with user input'
+              }]
             }]
-          }]
           })
         } as Response;
       });
@@ -200,33 +200,33 @@ os.system(f"ls {user_provided_path}")
           ok: true,
           json: async () => ({
             requestId: body.requestId,  // Return the actual request ID
-          session: { sessionId: 'test-session' },
-          results: [
-            {
-              file: 'app.js',
-              vulnerabilities: [{
-                type: 'eval-injection',
-                severity: 'critical',
-                line: 1
-              }]
-            },
-            {
-              file: 'script.py',
-              vulnerabilities: [{
-                type: 'exec-injection',
-                severity: 'critical',
-                line: 1
-              }]
-            },
-            {
-              file: 'query.rb',
-              vulnerabilities: [{
-                type: 'eval-injection',
-                severity: 'critical',
-                line: 1
-              }]
-            }
-          ]
+            session: { sessionId: 'test-session' },
+            results: [
+              {
+                file: 'app.js',
+                vulnerabilities: [{
+                  type: 'eval-injection',
+                  severity: 'critical',
+                  line: 1
+                }]
+              },
+              {
+                file: 'script.py',
+                vulnerabilities: [{
+                  type: 'exec-injection',
+                  severity: 'critical',
+                  line: 1
+                }]
+              },
+              {
+                file: 'query.rb',
+                vulnerabilities: [{
+                  type: 'eval-injection',
+                  severity: 'critical',
+                  line: 1
+                }]
+              }
+            ]
           })
         } as Response;
       });
@@ -253,11 +253,11 @@ os.system(f"ls {user_provided_path}")
           ok: true,
           json: async () => ({
             requestId: body.requestId,  // Return the actual request ID
-          session: { sessionId: 'test-session' },
-          results: [{
-            file: 'test.js',
-            vulnerabilities: [] // API filters out false positives
-          }]
+            session: { sessionId: 'test-session' },
+            results: [{
+              file: 'test.js',
+              vulnerabilities: [] // API filters out false positives
+            }]
           })
         } as Response;
       });
@@ -276,17 +276,17 @@ os.system(f"ls {user_provided_path}")
           ok: true,
           json: async () => ({
             requestId: body.requestId,  // Return the actual request ID
-          session: { sessionId: 'test-session' },
-          results: [{
-            file: 'test.js',
-            vulnerabilities: [{
-              type: 'eval-injection',
-              severity: 'critical',
-              line: 1,
-              confidence: 0.95,
-              message: 'High confidence eval injection'
+            session: { sessionId: 'test-session' },
+            results: [{
+              file: 'test.js',
+              vulnerabilities: [{
+                type: 'eval-injection',
+                severity: 'critical',
+                line: 1,
+                confidence: 0.95,
+                message: 'High confidence eval injection'
+              }]
             }]
-          }]
           })
         } as Response;
       });

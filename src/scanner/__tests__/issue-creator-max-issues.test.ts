@@ -217,10 +217,10 @@ describe.skip('IssueCreator - max_issues limit', () => {
       createMock.mockImplementationOnce(() => Promise.resolve({
         data: { number: 1, title: 'Issue 1', html_url: 'url1' }
       }))
-      .mockImplementationOnce(() => Promise.reject(new Error('API Error')))
-      .mockImplementationOnce(() => Promise.resolve({
-        data: { number: 3, title: 'Issue 3', html_url: 'url3' }
-      }));
+        .mockImplementationOnce(() => Promise.reject(new Error('API Error')))
+        .mockImplementationOnce(() => Promise.resolve({
+          data: { number: 3, title: 'Issue 3', html_url: 'url3' }
+        }));
 
       mockConfig.maxIssues = 3;
 

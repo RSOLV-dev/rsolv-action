@@ -160,7 +160,7 @@ console.log('safe code');`
           severity: 'critical',
           line: 8,
           column: 1,
-          snippet: "msg = 'exec is dangerous'",
+          snippet: 'msg = \'exec is dangerous\'',
           filePath: 'mixed.py'
         }
       ];

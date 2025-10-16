@@ -104,7 +104,7 @@ describe('UserController', () => {
 });
 expect(result.success).toBe(false);
 expect(result.error).toContain('invalid');`,
-            attackVector: "1' OR '1'='1",
+            attackVector: '1\' OR \'1\'=\'1',
             expectedBehavior: 'should_fail_on_vulnerable_code'
           }]
         },
@@ -164,7 +164,7 @@ end`;
   # RED test: Should reject malicious input
   expect(response.status).to eq(400)
 end`,
-            attackVector: "5') OR admin = 't' --",
+            attackVector: '5\') OR admin = \'t\' --',
             expectedBehavior: 'should_fail_on_vulnerable_code',
             vulnerablePattern: 'User.where("id = \'#{params[:id]}\'")'
           }]
@@ -285,7 +285,7 @@ end`,
             redTests: [{
               testName: `should block ${framework} attack`,
               testCode: getSecurityTestCode(framework, language),
-              attackVector: "1' OR '1'='1",
+              attackVector: '1\' OR \'1\'=\'1',
               expectedBehavior: 'should_fail_on_vulnerable_code'
             }]
           },
@@ -333,8 +333,8 @@ end`,
 
 function getMinimalTestFile(framework: string, language: string): string {
   switch (framework) {
-    case 'vitest':
-      return `import { describe, it, expect } from 'vitest';
+  case 'vitest':
+    return `import { describe, it, expect } from 'vitest';
 
 describe('Component', () => {
   it('should work', () => {
@@ -342,15 +342,15 @@ describe('Component', () => {
   });
 });`;
 
-    case 'jest':
-      return `describe('Component', () => {
+  case 'jest':
+    return `describe('Component', () => {
   it('should work', () => {
     expect(true).toBe(true);
   });
 });`;
 
-    case 'rspec':
-      return `require 'rails_helper'
+  case 'rspec':
+    return `require 'rails_helper'
 
 RSpec.describe User do
   it 'is valid' do
@@ -358,36 +358,36 @@ RSpec.describe User do
   end
 end`;
 
-    case 'pytest':
-      return `import pytest
+  case 'pytest':
+    return `import pytest
 
 def test_user():
     assert True`;
 
-    default:
-      return `test('should work', () => { expect(true).toBe(true); });`;
+  default:
+    return 'test(\'should work\', () => { expect(true).toBe(true); });';
   }
 }
 
 function getSecurityTestCode(framework: string, language: string): string {
   switch (framework) {
-    case 'vitest':
-    case 'jest':
-      return `const result = processInput("1' OR '1'='1");
+  case 'vitest':
+  case 'jest':
+    return `const result = processInput("1' OR '1'='1");
 expect(result.error).toBeDefined();
 expect(result.error).toContain('invalid');`;
 
-    case 'rspec':
-      return `result = process_input("1' OR '1'='1")
+  case 'rspec':
+    return `result = process_input("1' OR '1'='1")
 expect(result[:error]).to be_present
 expect(result[:error]).to include('invalid')`;
 
-    case 'pytest':
-      return `result = process_input("1' OR '1'='1")
+  case 'pytest':
+    return `result = process_input("1' OR '1'='1")
 assert "error" in result
 assert "invalid" in result["error"]`;
 
-    default:
-      return `expect(true).toBe(false);`;
+  default:
+    return 'expect(true).toBe(false);';
   }
 }

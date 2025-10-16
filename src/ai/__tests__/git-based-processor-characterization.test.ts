@@ -9,7 +9,7 @@
  * 4. Document side effects (git operations, PR creation)
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { processIssueWithGit, getMaxIterations } from '../git-based-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 import * as child_process from 'child_process';

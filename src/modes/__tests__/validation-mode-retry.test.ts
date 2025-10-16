@@ -197,7 +197,7 @@ describe('ValidationMode - Pure Retry Approach', () => {
         if (attempt < 3) {
           mockLogger.warn(`Attempt ${attempt} failed, retrying...`);
         } else {
-          mockLogger.error(`Backend integration failed after 3 attempts`);
+          mockLogger.error('Backend integration failed after 3 attempts');
         }
       }
 

@@ -101,7 +101,7 @@ describeOrSkip('PhaseDataClient - Live API Integration', () => {
           red: {
             testName: 'should be vulnerable to SQL injection',
             testCode: 'test("SQL injection", () => { /* test */ })',
-            attackVector: "'; DROP TABLE users; --",
+            attackVector: '\'; DROP TABLE users; --',
             expectedBehavior: 'should_fail_on_vulnerable_code'
           }
         },

@@ -17,7 +17,7 @@ describe('Ruby Vulnerability Detection', () => {
     const patterns = getMinimalPatternsByLanguage('ruby');
     const sqlPattern = patterns.find(p => p.id === 'ruby-sql-injection');
     
-    const vulnerableCode = `user = User.where("id = '#{params[:user][:id]}'")[0]`;
+    const vulnerableCode = 'user = User.where("id = \'#{params[:user][:id]}\'")[0]';
     
     let matched = false;
     if (sqlPattern?.patterns.regex) {
@@ -41,7 +41,7 @@ describe('Ruby Vulnerability Detection', () => {
     
     // Simple single line test first
     const vulnerabilities = await detector.detect(
-      `user = User.where("id = '#{params[:user][:id]}'")[0]`,
+      'user = User.where("id = \'#{params[:user][:id]}\'")[0]',
       'ruby',
       'test.rb'
     );

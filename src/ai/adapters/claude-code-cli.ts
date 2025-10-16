@@ -83,7 +83,7 @@ export class ClaudeCodeCLIAdapter {
           ...process.env,
           ANTHROPIC_API_KEY: apiKey
         }
-      })
+      });
 
       if (!result.success) {
         return {
@@ -107,7 +107,7 @@ export class ClaudeCodeCLIAdapter {
       logger.info(`Files modified by Claude Code CLI: ${modifiedFiles.join(', ')}`);
 
       // Extract any JSON from the output
-      let changes: Record<string, string> = {};
+      const changes: Record<string, string> = {};
       const jsonMatch = result.output?.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
       if (jsonMatch) {
         try {

@@ -64,7 +64,7 @@ export async function generateSolution(
       const issueAnalysis: IssueAnalysis = {
         summary: `${analysisData.issueType} issue requiring fixes`,
         complexity: analysisData.estimatedComplexity === 'simple' ? 'low' : 
-                   analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
+          analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
         estimatedTime: 60, // Default estimate
         potentialFixes: [analysisData.suggestedApproach],
         recommendedApproach: analysisData.suggestedApproach,

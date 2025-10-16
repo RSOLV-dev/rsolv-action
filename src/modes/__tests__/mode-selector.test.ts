@@ -102,7 +102,7 @@ describe('ModeSelector', () => {
       // No issue ID provided
       
       expect(() => ModeSelector.getModeConfig()).toThrow(
-        "Mode 'validate' requires RSOLV_ISSUE_ID or RSOLV_ISSUE_IDS to be set"
+        'Mode \'validate\' requires RSOLV_ISSUE_ID or RSOLV_ISSUE_IDS to be set'
       );
     });
     
@@ -111,7 +111,7 @@ describe('ModeSelector', () => {
       // No issue ID provided
       
       expect(() => ModeSelector.getModeConfig()).toThrow(
-        "Mode 'mitigate' requires RSOLV_ISSUE_ID or RSOLV_ISSUE_IDS to be set"
+        'Mode \'mitigate\' requires RSOLV_ISSUE_ID or RSOLV_ISSUE_IDS to be set'
       );
     });
     
@@ -130,7 +130,7 @@ describe('ModeSelector', () => {
       // No issue ID provided
       
       expect(() => ModeSelector.getModeConfig()).toThrow(
-        "Mode 'fix' requires RSOLV_ISSUE_ID or RSOLV_ISSUE_IDS to be set"
+        'Mode \'fix\' requires RSOLV_ISSUE_ID or RSOLV_ISSUE_IDS to be set'
       );
     });
   });
@@ -167,7 +167,7 @@ describe('ModeSelector', () => {
       process.env.RSOLV_MODE = 'unknown-mode';
       
       expect(() => ModeSelector.getModeConfig()).toThrow(
-        "Unknown mode 'unknown-mode'. Valid options: scan, validate, mitigate, fix, full"
+        'Unknown mode \'unknown-mode\'. Valid options: scan, validate, mitigate, fix, full'
       );
     });
   });

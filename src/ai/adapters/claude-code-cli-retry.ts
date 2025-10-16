@@ -116,7 +116,7 @@ export class RetryableClaudeCodeCLI extends ClaudeCodeCLIAdapter {
       // Build changes map
       const changes: Record<string, string> = {};
       for (const file of modifiedFiles) {
-        changes[file] = `Modified by Claude Code CLI`;
+        changes[file] = 'Modified by Claude Code CLI';
       }
       
       return {

@@ -56,10 +56,10 @@ export class ValidationEnricher {
     }
     
     if (this.rsolvApiKey) {
-      logger.info(`[VALIDATE] Initializing BatchValidator with API key`);
+      logger.info('[VALIDATE] Initializing BatchValidator with API key');
       this.batchValidator = new BatchValidator(this.rsolvApiKey, this.apiUrl);
     } else {
-      logger.info(`[VALIDATE] No RSOLV API key provided, batch validation disabled`);
+      logger.info('[VALIDATE] No RSOLV API key provided, batch validation disabled');
     }
   }
 
