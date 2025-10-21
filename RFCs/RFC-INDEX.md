@@ -95,7 +95,7 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 | 070 | [Customer Authentication](RFC-070-CUSTOMER-AUTHENTICATION.md) | Draft (Future Work after RFC-064) | 2025-10-16 | N/A |
 | 071 | [Customer Portal UI](RFC-071-CUSTOMER-PORTAL-UI.md) | Draft (Future Work after RFC-070) | 2025-10-16 | N/A |
 | 072 | [OAuth Integration (GitHub/GitLab)](RFC-072-OAUTH-INTEGRATION.md) | Draft (Future Work - post RFC-064) | 2025-10-20 | N/A |
-| 073 | [Multi-User Account Management](RFC-073-MULTI-USER-ACCOUNTS.md) | Draft (Future Work - post RFC-070/071) | 2025-10-20 | N/A |
+| 073 | ~~Multi-User Account Management~~ | Removed (premature - multi-user way down the line) | 2025-10-20 | N/A |
 | 074 | [CLI Provisioning Tool](RFC-074-CLI-PROVISIONING.md) | Draft (Future Work - post RFC-065) | 2025-10-20 | N/A |
 | 075 | [Signup Webhook Events](RFC-075-SIGNUP-WEBHOOKS.md) | Draft (Future Work - post RFC-065) | 2025-10-20 | N/A |
 | 076 | [GitHub App for Workflow Installation](RFC-076-GITHUB-APP-WORKFLOW-INSTALL.md) | Draft (Future Work - post RFC-065) | 2025-10-20 | N/A |

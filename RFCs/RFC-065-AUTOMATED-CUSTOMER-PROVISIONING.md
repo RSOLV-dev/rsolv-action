@@ -22,7 +22,6 @@
 
 **Enables future work:**
 - RFC-072 (OAuth Integration) - GitHub/GitLab SSO
-- RFC-073 (Team Management) - Team invitations
 - RFC-074 (CLI Provisioning) - Command-line customer setup
 - RFC-075 (Signup Webhooks) - Event-driven integrations
 
@@ -867,11 +866,6 @@ These enhancements are out of scope for RFC-065 but should be tracked as follow-
   - GitHub OAuth SSO for signup
   - Auto-fill name, email from GitHub profile
   - Verified email benefit
-
-- **RFC-073: Team Management**
-  - Team invitations
-  - Multi-user accounts
-  - Role-based permissions
 
 - **RFC-074: CLI Provisioning**
   - `npx rsolv init` command

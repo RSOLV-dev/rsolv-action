@@ -33,12 +33,39 @@ Critical week where four parallel workstreams (Provisioning, Billing, Marketplac
 
 ## Integration Data Flow
 
+### Customer Provisioning Flow
+
+```sequence
+Title: New Customer Signup Flow
+
+User->Provisioning: Signup (email, name)
+Provisioning->Database: Create customer record
+Provisioning->Billing: Create Stripe customer
+Billing->Stripe: API: Create customer
+Stripe-->Billing: Customer ID
+Billing-->Provisioning: Stripe customer ID
+Provisioning->APIKey: Generate API key
+APIKey->Database: Store hashed key
+APIKey-->Provisioning: API key
+Provisioning->Email: Send welcome email
+Email-->User: Email with API key & dashboard link
+Provisioning-->User: Redirect to dashboard
 ```
-Signup → Provisioning → Stripe Customer → API Key → Dashboard
-            ↓               ↓                ↓
-        Database     Stripe Service    Email Service
-            ↓               ↓                ↓
-        Webhooks ← Usage Tracking ← GitHub Action
+
+### Usage Tracking Flow
+
+```sequence
+Title: Fix Deployment & Billing Flow
+
+GitHub Action->PhaseData: Phase completion event
+PhaseData->Database: Store phase result
+PhaseData->Billing: track_fix_deployed()
+Billing->Database: Check customer plan
+Billing->Stripe: Record usage (if PAYG/Teams)
+Stripe->Webhooks: Usage recorded event
+Webhooks->Database: Update usage stats
+Database-->Dashboard: Usage data
+Dashboard-->User: Display updated stats
 ```
 
 ## Data Contracts
@@ -135,6 +162,29 @@ test "memory usage stable"
 ## Critical Integration Points
 
 ### 1. Signup → Billing
+
+#### Flow Diagram
+
+```sequence
+Title: Signup to Stripe Customer Creation
+
+Provisioning->Customers: create_customer(params)
+Customers->Database: INSERT customer
+Database-->Customers: Customer record
+Customers-->Provisioning: {:ok, customer}
+Provisioning->Billing: create_stripe_customer(customer)
+Billing->Stripe: API: Create customer
+Stripe-->Billing: Stripe customer ID
+Billing-->Provisioning: {:ok, stripe_id}
+Provisioning->Customers: update_customer(stripe_id)
+Customers->Database: UPDATE stripe_customer_id
+Database-->Customers: Updated
+Customers-->Provisioning: {:ok, customer}
+Provisioning-->User: Customer provisioned
+```
+
+#### Implementation
+
 ```elixir
 def provision_customer(params) do
   with {:ok, customer} <- create_customer(params),
@@ -146,6 +196,26 @@ end
 ```
 
 ### 2. Payment → Status Update
+
+#### Flow Diagram
+
+```sequence
+Title: Payment Method Addition
+
+Dashboard->Billing: add_payment_method(customer, token)
+Billing->Stripe: API: Attach payment method
+Stripe-->Billing: Payment method attached
+Billing->Customers: update_customer_status("active")
+Customers->Database: UPDATE status, can_use_service
+Database-->Customers: Updated
+Customers-->Billing: {:ok, customer}
+Billing-->Dashboard: {:ok, :payment_added}
+Dashboard->Dashboard: Show success message
+Dashboard->Dashboard: Enable "Run First Scan" button
+```
+
+#### Implementation
+
 ```elixir
 def add_payment_method(customer, token) do
   with {:ok, _} <- Stripe.attach_payment(customer, token),
@@ -156,6 +226,34 @@ end
 ```
 
 ### 3. Usage → Billing
+
+#### Flow Diagram
+
+```sequence
+Title: Fix Deployment Usage Tracking
+
+Action->Billing: track_fix(customer, fix)
+Billing->Database: check_limits(customer)
+Database-->Billing: Limits OK
+Billing->Database: record_usage(customer, 1)
+Database-->Billing: Usage recorded
+Billing->Billing: maybe_charge(customer)
+alt PAYG Customer
+    Billing->Stripe: Charge $15
+    Stripe-->Billing: Payment success
+else Teams Customer
+    Billing->Database: Check if > 60 fixes
+    alt Over limit
+        Billing->Stripe: Charge overage ($8)
+    else Within limit
+        Billing->Billing: No charge
+    end
+end
+Billing-->Action: {:ok, :tracked}
+```
+
+#### Implementation
+
 ```elixir
 def track_fix(customer, fix) do
   with :ok <- check_limits(customer),
@@ -167,6 +265,37 @@ end
 ```
 
 ### 4. Phase Completion → Usage Tracking (RFC-060-AMENDMENT-001 Integration)
+
+#### Event-Driven Billing Integration
+
+```sequence
+Title: Phase Completion to Billing Flow
+
+GitHub Action->PhaseData: POST /api/v1/phase-data
+Note right of PhaseData: Stores result,\nemits event
+PhaseData->EventBus: Publish phase_completed
+EventBus->BillingService: phase_completed event
+BillingService->Database: Get customer
+BillingService->BillingService: Check if billable_event?
+alt Mitigate Success
+    BillingService->Billing: track_fix_deployed()
+    Billing->Database: Check subscription plan
+    alt PAYG Plan
+        Billing->Stripe: Record usage + charge
+    else Teams Plan
+        Billing->Database: Increment usage counter
+        Billing->Stripe: Record overage (if > 60)
+    else Trial Plan
+        Billing->Database: Increment trial usage
+    end
+    Stripe-->Billing: Success
+    Billing->Database: Update billing record
+else Not Billable
+    BillingService->BillingService: Ignore event
+end
+```
+
+#### Implementation Pattern
 
 ```elixir
 # PhaseDataClient receives completion signal from GitHub Action
@@ -190,31 +319,26 @@ defp billable_event?(%{phase: :mitigate, status: :success}), do: true
 defp billable_event?(_), do: false
 ```
 
-**Integration Notes:**
+#### Integration Notes
 
-1. **Test Integration API is used EARLIER in VALIDATE phase:**
+**1. Test Integration API (VALIDATE Phase) Happens Earlier:**
    - POST /api/v1/test-integration/analyze (scores test files)
    - POST /api/v1/test-integration/generate (integrates tests)
    - By the time `track_fix_deployed()` is called, tests have already been created and run
 
-2. **Billing only cares about FINAL deployment success:**
+**2. Billing Only Cares About Final Deployment Success:**
    - Billing doesn't care HOW tests were generated (AST vs string matching)
    - Billing doesn't care WHERE tests are located (spec/ vs .rsolv/tests/)
    - Billing only cares: "Did a fix get successfully deployed?"
 
-3. **PhaseDataClient acts as the integration hub:**
+**3. PhaseDataClient Acts as Integration Hub:**
    - Receives completion signals from GitHub Action
    - Stores phase results in database
    - Emits events that trigger billing
    - Provides loose coupling between phases and billing
 
-4. **Event Flow:**
-   ```
-   GitHub Action → PhaseDataClient → Phase Completion Event → Billing.track_fix_deployed()
-   ```
-
-**Why This Matters:**
-This clarifies that billing happens in response to phase completion EVENTS (received via PhaseDataClient), not directly from the GitHub Action. The test integration API (RFC-060-AMENDMENT-001) and billing (RFC-066) are loosely coupled through the event-driven phase completion mechanism. Changes to validation (like test location or integration method) don't affect the billing interface.
+**4. Loose Coupling Benefit:**
+This event-driven architecture means billing happens in response to phase completion EVENTS (received via PhaseDataClient), not directly from the GitHub Action. The test integration API (RFC-060-AMENDMENT-001) and billing (RFC-066) are loosely coupled through the event-driven phase completion mechanism. Changes to validation (like test location or integration method) don't affect the billing interface.
 
 ## Rollback Strategy
 
