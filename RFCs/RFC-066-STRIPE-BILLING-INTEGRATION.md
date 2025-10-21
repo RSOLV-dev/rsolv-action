@@ -5,6 +5,20 @@
 **Timeline**: 3 weeks
 **Dependencies**: Stripe account (have credentials)
 
+## Related RFCs
+
+**Coordinated by:**
+- RFC-064 (Billing & Provisioning Master Plan) - Coordinates this implementation
+
+**Provides billing backend for:**
+- RFC-070 (Customer Authentication) - Customer login/registration (future work)
+- RFC-071 (Customer Portal UI) - Customer-facing billing UI (future work)
+
+**Works with:**
+- RFC-065 (Automated Customer Provisioning) - Customer creation
+- RFC-068 (Billing Testing Infrastructure) - Testing patterns
+- RFC-069 (Integration Week) - Integration coordination
+
 ## Quick Start
 
 **Stripe Test Keys** (ready to use):
@@ -15,6 +29,11 @@
 - PAYG: $15/fix
 - Teams: $499/month (60 fixes included)
 - Overage: $8/fix after 60
+
+**Trial Limit Model** (see RFC-065):
+- 5 free fixes on signup (trial, no billing)
+- +5 additional fixes (total 10) when customer adds payment method
+- After 10 fixes → PAYG at $15/fix (requires explicit opt-in)
 
 **Files to Create/Modify**:
 - `lib/rsolv/billing/stripe.ex` - New Stripe service
@@ -186,17 +205,20 @@ CREATE TABLE billing_events (
 - [ ] Process webhook events (payment, cancellation)
 - [ ] Create billing_events and subscriptions tables
 
-### Week 3: Usage & Dashboard (TDD)
+### Week 3: Usage & Backend Integration (TDD)
 - [ ] Write test: "tracks usage for PAYG customers"
 - [ ] Implement usage tracking for PAYG
 - [ ] Write test: "calculates Teams overage correctly"
 - [ ] Add Teams plan overage calculation
-- [ ] Write test: "dashboard displays current subscription"
-- [ ] Create customer billing dashboard at `/billing`
-- [ ] Write test: "shows invoice history"
-- [ ] Display invoices and payment history
-- [ ] Add payment method update UI
+- [ ] Write test: "retrieves subscription data for display"
+- [ ] Create Billing context functions for customer portal
+- [ ] Write test: "lists invoice history"
+- [ ] Add invoice retrieval from Stripe
+- [ ] Write test: "manages payment methods"
+- [ ] Implement payment method CRUD operations
 - [ ] Test with Stripe test cards
+
+**Note:** Customer-facing billing UI is specified in **RFC-071 (Customer Portal UI)** (future work after RFC-064). Customer authentication is specified in **RFC-070 (Customer Authentication)** (prerequisite for RFC-071). This RFC provides the Stripe integration backend that the portal consumes.
 
 ## Testing Requirements
 

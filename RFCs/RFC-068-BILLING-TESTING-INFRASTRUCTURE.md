@@ -17,7 +17,9 @@
 
 ## Summary
 
-Build comprehensive testing for billing system. Must achieve 95% coverage for billing code, 100% for webhooks.
+Provide testing infrastructure, standards, and patterns to support billing system development. Enables TDD practices in RFCs 065, 066, and 067 by providing test databases, mock services, staging environments, and testing patterns.
+
+**Scope:** This RFC provides the infrastructure and standards. Actual test implementation occurs during TDD cycles within feature RFCs (065-Provisioning, 066-Billing, 067-Marketplace).
 
 ## Testing Architecture
 
@@ -27,13 +29,20 @@ Unit Tests → Integration Tests → Staging → Production
   Mocks         Test DB         Stripe Test   Monitoring
 ```
 
-## Monitoring & Telemetry Testing
+**Infrastructure Layer:** Docker Compose, test databases, Stripe CLI, mock services
+**Standards Layer:** Coverage requirements, telemetry patterns, test factories
+**Implementation Layer:** *(Tests written during TDD in RFCs 065/066/067)*
+
+## Monitoring & Telemetry Testing Patterns
 
 Following patterns established in RFC-060-MONITORING-COMPLETION-REPORT:
 
-### Required Test Cases
+### Test Pattern Examples
+
+These patterns should be followed when writing telemetry tests in feature RFCs:
 
 ```elixir
+# Examples of telemetry tests to implement during TDD in RFCs 065/066
 test "emits telemetry on subscription creation"
 test "emits telemetry on payment success"
 test "emits telemetry on payment failure"
@@ -41,6 +50,8 @@ test "tracks usage in Prometheus metrics"
 test "Grafana dashboard displays billing metrics"
 test "billing event metrics have correct tags"
 ```
+
+**Note:** These are pattern examples. Actual tests are written during TDD cycles in feature RFCs.
 
 ### Implementation Pattern
 
@@ -138,32 +149,38 @@ services:
     ports: ["1080:1080", "1025:1025"]
 ```
 
-## 2. Test Suites Required
+## 2. Testing Standards & Patterns
 
-### Unit Tests
-- Creates Stripe customer on signup
-- Attaches payment method
-- Creates subscription with trial
-- Records usage for PAYG
-- Calculates Teams overage correctly
-- Handles payment failures gracefully
+### Test Categories and Coverage Standards
 
-### Integration Tests
-- Trial to paid conversion journey
-- Webhook processing and idempotency
-- Usage billing for PAYG/Teams
+**Unit Tests** (implemented in feature RFCs during TDD):
+- Coverage: 95% for billing modules, 100% for webhook handlers
+- Focus: Single function/module behavior
+- Pattern: Arrange-Act-Assert with mocks
 
-### Load Tests
-- 100 concurrent provisioning requests
-- 1000 webhooks per minute
-- 10000 active subscriptions
+**Integration Tests** (implemented in feature RFCs during TDD):
+- Coverage: All critical user journeys
+- Focus: Multi-component interactions
+- Pattern: Full stack with test database
 
-### Security Tests
-- Never logs payment card numbers
-- Prevents SQL injection
-- Enforces rate limiting
-- Validates webhook signatures
-- Encrypts sensitive data
+**Load Tests** (infrastructure provided here):
+- Targets: 100 concurrent requests, 1000 webhooks/minute
+- Tools: k6 or Artillery scripts
+- Environment: Staging with monitoring
+
+**Security Tests** (infrastructure and patterns provided here):
+- PCI compliance validation (no card data in logs)
+- SQL injection prevention (parameterized queries)
+- Webhook signature verification
+- Rate limiting enforcement
+- Data encryption validation
+
+### Testing Principles
+
+1. **TDD Compliance**: Tests written BEFORE implementation (RED-GREEN-REFACTOR)
+2. **Isolation**: Unit tests use mocks, integration tests use test database
+3. **Idempotency**: Webhook tests verify duplicate handling
+4. **Observability**: All tests emit telemetry for validation
 
 ## 3. Stripe Mock Service
 
@@ -180,12 +197,15 @@ end
 ## 4. Staging Environment
 
 Test customers in various states:
-- Trial customer (3/10 fixes used)
-- Trial expired (10/10 fixes)
+- Trial customer, no billing (3/5 fixes used)
+- Trial customer, billing added (7/10 fixes used)
+- Trial expired (10/10 fixes, needs conversion to PAYG)
 - PAYG active
 - Teams with usage
 - Past due subscription
 - Cancelled subscription
+
+**Note:** Trial limits are 5 fixes on signup, +5 additional (total 10) when customer adds payment method. See RFC-065 for details.
 
 ## 5. Coverage Requirements
 
@@ -198,29 +218,31 @@ Test customers in various states:
 
 ## Implementation Tasks
 
-### Week 1: Foundation
-- [ ] Set up docker-compose.test.yml
-- [ ] Create test factories and fixtures
-- [ ] Implement StripeMock service
-- [ ] Configure test environment variables
-- [ ] Write first unit tests
-- [ ] Set up coverage reporting
+### Week 1: Infrastructure Foundation
+- [ ] Set up docker-compose.test.yml (Postgres, Stripe CLI, Mailcatcher)
+- [ ] Create test factories and fixtures (customer_fixture, subscription_fixture)
+- [ ] Implement StripeMock service for unit testing
+- [ ] Configure test environment variables (.env.test)
+- [ ] Set up coverage reporting (ExCoveralls configuration)
+- [ ] Create test helper modules (TestHelpers, StripeTestHelpers)
 
-### Week 2: Test Development
-- [ ] Complete unit test suite (50+ tests)
-- [ ] Write integration test scenarios
-- [ ] Implement webhook testing
-- [ ] Add security test suite
-- [ ] Create load testing scripts
-- [ ] Set up CI pipeline
+### Week 2: CI/CD & Tooling
+- [ ] Configure CI pipeline for parallel test execution
+- [ ] Set up test database management (create/migrate/seed)
+- [ ] Implement load testing scripts (k6 or Artillery)
+- [ ] Create security testing checklist and tools
+- [ ] Add Stripe webhook simulation scripts
+- [ ] Configure test monitoring dashboards
 
-### Week 3: Staging & Monitoring
-- [ ] Deploy staging environment
-- [ ] Configure Stripe test mode
-- [ ] Create staging test data
-- [ ] Implement test monitoring
-- [ ] Add alerting for failures
-- [ ] Document test procedures
+### Week 3: Staging & Patterns
+- [ ] Deploy staging environment with Stripe test mode
+- [ ] Create staging test data fixtures (various customer states)
+- [ ] Implement telemetry testing patterns (PromEx plugins)
+- [ ] Add alerting for test failures in CI
+- [ ] Document testing patterns and standards
+- [ ] Create example TDD workflow guide
+
+**Note:** Actual test writing happens in RFCs 065/066/067 during feature development using this infrastructure.
 
 ## Success Metrics
 
@@ -229,19 +251,24 @@ Test customers in various states:
 - **Test Reliability**: < 1% flakiness
 - **Staging Uptime**: 99.9%
 
-## Testing Checklist
+## Infrastructure Readiness Checklist
 
-Before any billing deployment:
-- [ ] All unit tests passing
-- [ ] Integration tests passing
-- [ ] Staging tests complete
-- [ ] Coverage targets met
-- [ ] Security scan clean
-- [ ] Load test passed
+Before enabling billing features in production:
+- [ ] Test infrastructure operational (Docker Compose, test DB, Stripe CLI)
+- [ ] Mock services available for unit testing
+- [ ] Staging environment deployed with Stripe test mode
+- [ ] CI/CD pipeline configured and running
+- [ ] Coverage reporting enabled
+- [ ] Test monitoring dashboards active
+- [ ] Security testing patterns documented
+- [ ] Load testing scripts ready
+
+**Feature-specific test completion** is tracked in individual RFCs (065, 066, 067).
 
 ## Next Steps
 
-1. Create docker-compose.test.yml
-2. Implement StripeMock
-3. Write first test suite
-4. Deploy staging environment
+1. Create docker-compose.test.yml with required services
+2. Implement StripeMock service module
+3. Set up staging environment with Stripe test mode
+4. Document testing patterns for TDD workflows
+5. Deploy test monitoring infrastructure
