@@ -92,6 +92,13 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 | 067 | [GitHub Marketplace Publishing](RFC-067-GITHUB-MARKETPLACE-PUBLISHING.md) | Draft | 2025-10-12 | N/A |
 | 068 | [Billing Testing Infrastructure](RFC-068-BILLING-TESTING-INFRASTRUCTURE.md) | Draft | 2025-10-12 | N/A |
 | 069 | [Integration Week Plan](RFC-069-INTEGRATION-WEEK.md) | Draft | 2025-10-12 | N/A |
+| 070 | [Customer Authentication](RFC-070-CUSTOMER-AUTHENTICATION.md) | Draft (Future Work after RFC-064) | 2025-10-16 | N/A |
+| 071 | [Customer Portal UI](RFC-071-CUSTOMER-PORTAL-UI.md) | Draft (Future Work after RFC-070) | 2025-10-16 | N/A |
+| 072 | [OAuth Integration (GitHub/GitLab)](RFC-072-OAUTH-INTEGRATION.md) | Draft (Future Work - post RFC-064) | 2025-10-20 | N/A |
+| 073 | [Multi-User Account Management](RFC-073-MULTI-USER-ACCOUNTS.md) | Draft (Future Work - post RFC-070/071) | 2025-10-20 | N/A |
+| 074 | [CLI Provisioning Tool](RFC-074-CLI-PROVISIONING.md) | Draft (Future Work - post RFC-065) | 2025-10-20 | N/A |
+| 075 | [Signup Webhook Events](RFC-075-SIGNUP-WEBHOOKS.md) | Draft (Future Work - post RFC-065) | 2025-10-20 | N/A |
+| 076 | [GitHub App for Workflow Installation](RFC-076-GITHUB-APP-WORKFLOW-INSTALL.md) | Draft (Future Work - post RFC-065) | 2025-10-20 | N/A |
 
 ## RFC Implementation Tracking
 
