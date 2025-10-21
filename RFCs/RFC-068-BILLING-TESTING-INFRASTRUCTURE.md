@@ -197,15 +197,15 @@ end
 ## 4. Staging Environment
 
 Test customers in various states:
-- Trial customer, no billing (3/5 fixes used)
-- Trial customer, billing added (7/10 fixes used)
-- Trial expired (10/10 fixes, needs conversion to PAYG)
-- PAYG active
-- Teams with usage
+- Trial customer, no billing (3 credits remaining)
+- Trial customer, billing added (7 credits remaining)
+- Trial expired (0 credits, no billing info)
+- PAYG active (0 credits, charges per fix)
+- Pro with usage (45 credits remaining)
 - Past due subscription
 - Cancelled subscription
 
-**Note:** Trial limits are 5 fixes on signup, +5 additional (total 10) when customer adds payment method. See RFC-065 for details.
+**Note:** Credit system: 5 credits on signup, +5 when billing added (total 10), +60 for Pro subscription. See RFC-066 for credit system details.
 
 ## 5. Coverage Requirements
 

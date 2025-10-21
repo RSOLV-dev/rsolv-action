@@ -41,10 +41,10 @@
 - `lib/rsolv/customers/api_key.ex` - Add SHA256 hashing
 - `lib/rsolv_web/router.ex` - Add provisioning API route
 
-**Trial Limits**:
-- **5 free fixes** on signup
-- **+5 additional fixes** (total 10) when customer adds payment method
-- After 10 fixes → PAYG at $15/fix (with transparent credit tracking)
+**Credit System** (see RFC-066):
+- **5 credits** on signup
+- **+5 credits** (total 10) when customer adds payment method
+- After 10 fixes → PAYG at $29/fix (with transparent credit tracking)
 
 ## Summary
 
@@ -140,8 +140,7 @@ defmodule Rsolv.Provisioning do
       email: params.email,
       name: params.name,
       subscription_plan: "trial",
-      trial_fixes_limit: 5,  # 5 on signup, +5 when billing added
-      trial_fixes_used: 0,
+      credit_balance: 5,  # 5 credits on signup, +5 when billing added (RFC-066)
       auto_provisioned: true,
       wizard_preference: "auto"  # auto/hidden/shown
     }
@@ -295,18 +294,18 @@ sequenceDiagram
 **Dashboard shows:**
 - View/regenerate API keys
 - **Dynamic usage stats** based on subscription plan:
-  - Trial: "**3/5** free fixes remaining" (before billing)
-  - Trial + Billing: "**7/10** free fixes remaining" (after billing added)
-  - PAYG: "Used **12** fixes this month ($180)"
-  - Teams: "**45/60** included fixes used ($0 overage)"
+  - Trial: "**3 credits** remaining" (before billing)
+  - Trial + Billing: "**7 credits** remaining" (after billing added)
+  - PAYG: "Used **12** fixes this month ($348)"
+  - Pro: "**45 credits** remaining (included in subscription)"
 - Download GitHub workflow file (manual copy/paste required)
 - Setup instructions with step-by-step guide
 - Recent fix attempts table
 
 **Transparent Credit Tracking (Critical for User Trust):**
-- Prominent display: "**8/10 free fixes remaining**"
-- Warning at fix #9: "⚠️ 1 free fix remaining. After that, $15/fix on PAYG."
-- **Explicit opt-in** before fix #11: "You've used all 10 free fixes. Continue with PAYG at $15/fix? [Yes] [Pause Scanning]"
+- Prominent display: "**8 credits** remaining"
+- Warning at 1 credit: "⚠️ 1 credit remaining. After that, $29/fix on PAYG."
+- **Explicit consent** required when adding billing (checkbox)
 - Easy "Pause scanning" button to stop before charges
 
 **Setup Wizard:**

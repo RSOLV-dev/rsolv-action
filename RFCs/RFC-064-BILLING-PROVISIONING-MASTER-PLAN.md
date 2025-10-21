@@ -262,7 +262,7 @@ defmodule Rsolv.Analytics.Conversion do
       select: count(c.id))
 
     converted = Repo.one(from c in Customer,
-      where: c.subscription_plan in ["pay_as_you_go", "teams"] and
+      where: c.subscription_plan in ["pay_as_you_go", "pro"] and
              c.inserted_at > ago(^period, "day"),
       select: count(c.id))
 

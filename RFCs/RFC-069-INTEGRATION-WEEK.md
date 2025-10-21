@@ -61,7 +61,7 @@ GitHub Action->PhaseData: Phase completion event
 PhaseData->Database: Store phase result
 PhaseData->Billing: track_fix_deployed()
 Billing->Database: Check customer plan
-Billing->Stripe: Record usage (if PAYG/Teams)
+Billing->Stripe: Record usage (if PAYG/Pro)
 Stripe->Webhooks: Usage recorded event
 Webhooks->Database: Update usage stats
 Database-->Dashboard: Usage data
@@ -76,7 +76,7 @@ Dashboard-->User: Display updated stats
   customer_id: integer,
   email: string,
   name: string,
-  plan: :trial | :payg | :teams
+  plan: :trial | :payg | :pro
 }
 ```
 
@@ -235,21 +235,25 @@ Title: Fix Deployment Usage Tracking
 Action->Billing: track_fix(customer, fix)
 Billing->Database: check_limits(customer)
 Database-->Billing: Limits OK
-Billing->Database: record_usage(customer, 1)
-Database-->Billing: Usage recorded
-Billing->Billing: maybe_charge(customer)
-alt PAYG Customer
-    Billing->Stripe: Charge $15
-    Stripe-->Billing: Payment success
-else Teams Customer
-    Billing->Database: Check if > 60 fixes
-    alt Over limit
-        Billing->Stripe: Charge overage ($8)
-    else Within limit
-        Billing->Billing: No charge
+Billing->Database: Check credit balance
+Database-->Billing: Balance returned
+alt Has credits
+    Billing->Database: Consume 1 credit
+    Billing-->Action: {:ok, :consumed_credit}
+else No credits, has billing
+    alt PAYG Customer
+        Billing->Stripe: Charge $29
+        Stripe-->Billing: Payment success
+        Billing->Database: Credit 1, consume 1
+    else Pro Customer
+        Billing->Stripe: Charge $15 (discounted)
+        Stripe-->Billing: Payment success
+        Billing->Database: Credit 1, consume 1
     end
+    Billing-->Action: {:ok, :charged}
+else No credits, no billing
+    Billing-->Action: {:error, :no_billing_info}
 end
-Billing-->Action: {:ok, :tracked}
 ```
 
 #### Implementation
@@ -279,14 +283,15 @@ BillingService->Database: Get customer
 BillingService->BillingService: Check if billable_event?
 alt Mitigate Success
     BillingService->Billing: track_fix_deployed()
-    Billing->Database: Check subscription plan
-    alt PAYG Plan
-        Billing->Stripe: Record usage + charge
-    else Teams Plan
-        Billing->Database: Increment usage counter
-        Billing->Stripe: Record overage (if > 60)
-    else Trial Plan
-        Billing->Database: Increment trial usage
+    Billing->Database: Check credit balance
+    alt Has credits
+        Billing->Database: Consume 1 credit
+    else No credits, has billing (PAYG)
+        Billing->Stripe: Charge $29 + credit 1 + consume 1
+    else No credits, has billing (Pro)
+        Billing->Stripe: Charge $15 + credit 1 + consume 1
+    else No credits, no billing
+        Billing->Billing: Block and return error
     end
     Stripe-->Billing: Success
     Billing->Database: Update billing record
