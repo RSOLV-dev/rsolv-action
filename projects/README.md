@@ -4,7 +4,7 @@ This directory contains working documents for in-flight projects. Each project g
 
 ## Active Projects
 
-- `billing-integration-2025-10/` - Integration of RFCs 065-068 (Customer Onboarding, Billing, Action Polish, Testing Standards)
+- `go-to-market-2025-10/` - 6-week go-to-market launch (RFCs 064-069): Self-service provisioning, Stripe billing, GitHub Marketplace publishing, testing infrastructure. **Week 0 complete ✅**
 
 ## Archive Policy
 
