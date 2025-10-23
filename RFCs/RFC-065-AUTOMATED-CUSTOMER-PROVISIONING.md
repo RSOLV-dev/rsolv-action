@@ -31,15 +31,15 @@
 **Target State**: Automated API-first provisioning with web form as client
 
 **Files to Create:**
-- `lib/rsolv/provisioning.ex` - Core provisioning service (API-ready module)
-- `lib/rsolv_web/controllers/api/v1/customer_provisioning_controller.ex` - REST API endpoint
+- `lib/rsolv/customer_onboarding.ex` - Core onboarding service (API-ready module)
+- `lib/rsolv_web/controllers/api/v1/customer_onboarding_controller.ex` - REST API endpoint
 - `lib/rsolv/admin/customer_admin.ex` - Admin override functions (RPC-compatible)
-- `priv/repo/migrations/*_add_provisioning_fields.exs` - Ecto migration
+- `priv/repo/migrations/*_add_customer_onboarding_fields.exs` - Ecto migration
 
 **Files to Modify:**
-- `lib/rsolv_web/live/early_access_live.ex` - Call provisioning API/module
+- `lib/rsolv_web/live/early_access_live.ex` - Call onboarding API/module
 - `lib/rsolv/customers/api_key.ex` - Add SHA256 hashing
-- `lib/rsolv_web/router.ex` - Add provisioning API route
+- `lib/rsolv_web/router.ex` - Add onboarding API route
 
 **Credit System** (see RFC-066):
 - **5 credits** on signup
@@ -81,65 +81,91 @@ Transform manual customer provisioning into fully automated, API-first self-serv
 
 ### API-First Architecture
 
-**Design Principle**: Provisioning is a self-contained service with clear input/output contracts, callable from anywhere (API endpoint, web form, admin tools, future integrations).
+**Design Principle**: Customer onboarding is a self-contained service with clear input/output contracts, callable from anywhere (API endpoint, web form, admin tools, future integrations).
 
 ```elixir
-# lib/rsolv/provisioning.ex
-defmodule Rsolv.Provisioning do
+# lib/rsolv/customer_onboarding.ex
+defmodule Rsolv.CustomerOnboarding do
   @moduledoc """
-  Customer provisioning service. API-ready design with no web dependencies.
+  Customer onboarding service. API-ready design with no web dependencies.
+
+  Handles the complete customer onboarding flow: account creation, API key
+  generation, and welcome email sequence initiation.
 
   Can be called from:
   - REST API endpoint
-  - LiveView forms
+  - LiveView forms (early access, registration)
+  - GitHub Marketplace signups (RFC-067)
   - Admin RPC commands
-  - Future integrations (webhooks, CLI, etc.)
+  - Future integrations (webhooks, CLI, OAuth, etc.)
   """
+
+  alias Rsolv.Customers
+  alias Rsolv.Customers.Customer
+  alias Rsolv.ApiKeys
+  alias Rsolv.EmailSequence
+
+  @type onboarding_attrs :: %{email: String.t(), name: String.t()}
+  @type onboarding_result :: %{
+    customer: Customer.t(),
+    api_key: String.t(),
+    api_key_record: ApiKey.t()
+  }
 
   @doc """
   Provisions a new customer from signup data.
 
-  ## Parameters
-  - attrs: %{email: string, name: string, ...}
+  Returns the raw API key (only time it's available unencrypted) for display
+  in both the API response and welcome email.
 
-  ## Returns
-  - {:ok, %{customer: Customer.t(), api_key: string}} - Success with raw API key
-  - {:error, reason} - Validation or processing failure
+  ## Examples
 
-  ## Example
-      iex> Provisioning.provision_customer(%{
+      iex> CustomerOnboarding.provision_customer(%{
       ...>   email: "user@example.com",
       ...>   name: "Jane Developer"
       ...> })
       {:ok, %{
         customer: %Customer{id: 123, ...},
-        api_key: "rsolv_abc123..." # Returned once, hashed in DB
+        api_key: "rsolv_abc123...",
+        api_key_record: %ApiKey{...}
       }}
+
+      iex> CustomerOnboarding.provision_customer(%{email: "invalid"})
+      {:error, {:validation_failed, %Ecto.Changeset{}}}
   """
+  @spec provision_customer(onboarding_attrs()) ::
+    {:ok, onboarding_result()} | {:error, term()}
   def provision_customer(attrs) do
     with {:ok, validated} <- validate_signup(attrs),
          {:ok, customer} <- create_customer(validated),
          {:ok, api_key_data} <- create_api_key(customer),
          {:ok, _} <- start_email_sequence(customer, api_key_data.raw_key) do
-      {:ok, %{
-        customer: customer,
-        api_key: api_key_data.raw_key,
-        api_key_record: api_key_data.record
-      }}
-    else
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:error, {:validation_failed, changeset}}
-
-      {:error, reason} ->
-        {:error, reason}
+      provision_success(customer, api_key_data)
     end
   end
 
-  defp create_customer(params) do
+  defp provision_success(customer, api_key_data) do
+    {:ok, %{
+      customer: customer,
+      api_key: api_key_data.raw_key,
+      api_key_record: api_key_data.record
+    }}
+  end
+
+  # Pattern match on validation errors
+  defp provision_customer({:error, %Ecto.Changeset{} = changeset}) do
+    {:error, {:validation_failed, changeset}}
+  end
+
+  # Pattern match on other errors
+  defp provision_customer({:error, reason}), do: {:error, reason}
+
+  defp create_customer(%{email: email, name: name}) do
     %{
-      email: params.email,
-      name: params.name,
-      subscription_plan: "trial",
+      email: email,
+      name: name,
+      subscription_type: "trial",
+      subscription_state: nil,
       credit_balance: 5,  # 5 credits on signup, +5 when billing added (RFC-066)
       auto_provisioned: true,
       wizard_preference: "auto"  # auto/hidden/shown
@@ -154,12 +180,14 @@ defmodule Rsolv.Provisioning do
   end
 
   defp start_email_sequence(customer, raw_api_key) do
-    # Async via Oban, doesn't block provisioning
+    # Async via Oban, doesn't block onboarding
+    # API key included in welcome email AND returned in API response
     EmailSequence.start_early_access_onboarding_sequence(
       customer.email,
-      customer.name
+      customer.name,
+      raw_api_key  # Passed to email template
     )
-    # Note: API key included in welcome email
+
     {:ok, :scheduled}
   end
 end
@@ -168,15 +196,16 @@ end
 ### REST API Endpoint
 
 ```elixir
-# lib/rsolv_web/controllers/api/v1/customer_provisioning_controller.ex
-defmodule RsolvWeb.API.V1.CustomerProvisioningController do
+# lib/rsolv_web/controllers/api/v1/customer_onboarding_controller.ex
+defmodule RsolvWeb.API.V1.CustomerOnboardingController do
   use RsolvWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
-  alias Rsolv.Provisioning
+  alias Rsolv.CustomerOnboarding
+  alias Plug.Conn
 
   plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
-  tags ["Provisioning"]
+  tags ["Customer Onboarding"]
 
   operation(:provision,
     summary: "Provision new customer account",
@@ -185,46 +214,59 @@ defmodule RsolvWeb.API.V1.CustomerProvisioningController do
 
     **Rate Limiting:** 10 requests per IP per hour (via existing Mnesia rate limiter)
 
-    Returns customer record and raw API key (only time key is available unencrypted).
+    Returns customer record and raw API key. **This is the only time the raw key
+    is returned** - it will also be sent via email. Customer should save immediately.
     """,
-    request_body: {"Customer signup data", "application/json", ProvisioningRequest},
+    request_body: {"Customer signup data", "application/json", OnboardingRequest},
     responses: [
-      created: {"Customer provisioned", "application/json", ProvisioningResponse},
+      created: {"Customer provisioned", "application/json", OnboardingResponse},
       bad_request: {"Invalid request", "application/json", ErrorResponse},
       too_many_requests: {"Rate limit exceeded", "application/json", RateLimitError},
       unprocessable_entity: {"Validation failed", "application/json", ValidationErrorResponse}
     ]
   )
 
+  @spec provision(Conn.t(), map()) :: Conn.t()
   def provision(conn, params) do
-    # Rate limit check (reuses existing Mnesia-based limiter)
-    case check_provisioning_rate_limit(conn) do
-      :ok ->
-        case Provisioning.provision_customer(params) do
-          {:ok, result} ->
-            conn
-            |> put_status(:created)
-            |> json(%{
-              customer: serialize_customer(result.customer),
-              api_key: result.api_key  # Only time this is returned!
-            })
-
-          {:error, {:validation_failed, changeset}} ->
-            conn
-            |> put_status(:unprocessable_entity)
-            |> json(%{errors: translate_errors(changeset)})
-
-          {:error, reason} ->
-            conn
-            |> put_status(:bad_request)
-            |> json(%{error: inspect(reason)})
-        end
-
-      {:error, :rate_limited} ->
-        conn
-        |> put_status(:too_many_requests)
-        |> json(%{error: "Rate limit exceeded. Try again later."})
+    case check_onboarding_rate_limit(conn) do
+      :ok -> handle_onboarding(conn, params)
+      {:error, :rate_limited} -> rate_limit_response(conn)
     end
+  end
+
+  defp handle_onboarding(conn, params) do
+    case CustomerOnboarding.provision_customer(params) do
+      {:ok, result} -> onboarding_success(conn, result)
+      {:error, {:validation_failed, changeset}} -> validation_error(conn, changeset)
+      {:error, reason} -> generic_error(conn, reason)
+    end
+  end
+
+  defp onboarding_success(conn, result) do
+    conn
+    |> put_status(:created)
+    |> json(%{
+      customer: serialize_customer(result.customer),
+      api_key: result.api_key  # Returned here AND sent via email
+    })
+  end
+
+  defp validation_error(conn, changeset) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: translate_errors(changeset)})
+  end
+
+  defp generic_error(conn, reason) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: inspect(reason)})
+  end
+
+  defp rate_limit_response(conn) do
+    conn
+    |> put_status(:too_many_requests)
+    |> json(%{error: "Rate limit exceeded. Try again later."})
   end
 end
 ```
@@ -242,7 +284,7 @@ Signup → Validate → Create Customer → Generate Key → Send Email → Dash
 ```mermaid
 sequenceDiagram
     participant User
-    participant API as Provisioning API
+    participant API as Customer Onboarding API
     participant Validator as Email Validator
     participant RateLimit as Rate Limiter (Mnesia)
     participant DB as Database (Ecto)
@@ -250,7 +292,7 @@ sequenceDiagram
     participant Email as Email Service
     participant Oban as Oban Worker
 
-    User->>API: POST /api/v1/customers/provision
+    User->>API: POST /api/v1/customers/onboard
     API->>RateLimit: Check rate limit (IP)
     alt Rate limit exceeded
         RateLimit-->>API: Error: rate_limited
@@ -267,15 +309,21 @@ sequenceDiagram
             DB-->>API: Customer created
             API->>DB: Create API key (hashed)
             DB-->>API: API key record + raw key
-            API->>Email: Schedule welcome email
+
+            Note over API,User: DELIVERY PATH 1: API Response
+            API-->>User: 201 Created {customer, api_key}
+            Note over User: Raw API key shown in response<br/>(save immediately!)
+
+            Note over API,Oban: DELIVERY PATH 2: Email
+            API->>Email: Schedule welcome email with API key
             Email->>Oban: Enqueue email job (async)
             Oban-->>Email: Job queued
             Email-->>API: OK (async)
-            API-->>User: 201 Created {customer, api_key}
 
-            Note over Oban,Email: Async email delivery
+            Note over Oban,User: Async email delivery
             Oban->>Email: Execute EmailWorker
-            Email->>User: Welcome email (via Postmark)
+            Email->>User: Welcome email with API key (via Postmark)
+            Note over User: Raw API key in email<br/>(second chance to save)
 
             Note over Oban: Follow-up emails scheduled
             Oban->>Email: Day 1: early_access_guide
@@ -293,11 +341,14 @@ sequenceDiagram
 
 **Dashboard shows:**
 - View/regenerate API keys
-- **Dynamic usage stats** based on subscription plan:
-  - Trial: "**3 credits** remaining" (before billing)
-  - Trial + Billing: "**7 credits** remaining" (after billing added)
-  - PAYG: "Used **12** fixes this month ($348)"
-  - Pro: "**45 credits** remaining (included in subscription)"
+- **Dynamic usage stats with upsell messaging** based on subscription plan:
+  - **Trial (high credits)**: "**8 credits** remaining. After credits run out, add billing for $29/fix or upgrade to Pro (60 fixes/month) for $599."
+  - **Trial (low credits)**: "**1 credit** remaining. ⚠️ **Upgrade to Pro for 60 fixes/month ($599)** and save on per-fix charges, or add billing for PAYG at $29/fix."
+  - **Trial + Billing**: "**7 credits** remaining. **Upgrade to Pro ($599/month, 60 fixes)** to save at scale vs PAYG pricing."
+  - **PAYG (low usage)**: "Used **3** fixes this month ($87). Great start! Pro plan ($599/month, 60 fixes) becomes cost-effective at 21+ fixes."
+  - **PAYG (breakeven)**: "Used **21** fixes this month ($609). **You're at the Pro breakeven point!** Upgrade to Pro ($599/month, 60 fixes) to save money."
+  - **PAYG (high usage)**: "Used **24** fixes this month ($696). **Upgrade to Pro ($599/month, 60 fixes) and save $97 this month!** Additional fixes only $15 each."
+  - **Pro**: "**45 credits** remaining (included in subscription). Need more? Additional fixes are just $15 each (vs $29 PAYG)."
 - Download GitHub workflow file (manual copy/paste required)
 - Setup instructions with step-by-step guide
 - Recent fix attempts table
@@ -344,8 +395,8 @@ See RFC-070 (authentication) and RFC-071 (portal) for complete customer-facing s
 **IMPORTANT:** All database changes MUST use Ecto migrations. No manual SQL execution.
 
 ```elixir
-# priv/repo/migrations/20251020_add_provisioning_fields.exs
-defmodule Rsolv.Repo.Migrations.AddProvisioningFields do
+# priv/repo/migrations/20251020_add_customer_onboarding_fields.exs
+defmodule Rsolv.Repo.Migrations.AddCustomerOnboardingFields do
   use Ecto.Migration
 
   def up do
@@ -382,8 +433,8 @@ defmodule Rsolv.Repo.Migrations.AddProvisioningFields do
       remove :key
     end
 
-    # Create provisioning events table for audit trail
-    create table(:provisioning_events, primary_key: false) do
+    # Create customer onboarding events table for audit trail
+    create table(:customer_onboarding_events, primary_key: false) do
       add :id, :binary_id, primary_key: true
       add :customer_id, references(:customers, on_delete: :delete_all)
       add :event_type, :string, null: false  # "customer_created", "api_key_generated", etc.
@@ -393,9 +444,9 @@ defmodule Rsolv.Repo.Migrations.AddProvisioningFields do
       timestamps(type: :utc_datetime)
     end
 
-    create index(:provisioning_events, [:customer_id])
-    create index(:provisioning_events, [:event_type])
-    create index(:provisioning_events, [:inserted_at])
+    create index(:customer_onboarding_events, [:customer_id])
+    create index(:customer_onboarding_events, [:event_type])
+    create index(:customer_onboarding_events, [:inserted_at])
   end
 
   def down do
@@ -409,7 +460,7 @@ end
 **Migration Safety Checklist** (per CLAUDE.md):
 ```bash
 # Before committing
-mix credo priv/repo/migrations/20251020_add_provisioning_fields.exs
+mix credo priv/repo/migrations/20251020_add_customer_onboarding_fields.exs
 
 # Check for:
 # ✅ No adding columns with defaults on large tables
@@ -420,14 +471,14 @@ mix credo priv/repo/migrations/20251020_add_provisioning_fields.exs
 
 ## TDD Implementation Tasks
 
-### Week 1: Core Provisioning & API (RED-GREEN-REFACTOR)
+### Week 1: Core Customer Onboarding & API (RED-GREEN-REFACTOR)
 
 #### API-First Foundation
-- [ ] **RED**: Write test: "POST /api/v1/customers/provision with valid data creates customer"
-- [ ] **GREEN**: Create `Rsolv.Provisioning` module with `provision_customer/1`
-- [ ] **GREEN**: Create `CustomerProvisioningController` with OpenAPI spec
+- [ ] **RED**: Write test: "POST /api/v1/customers/onboard with valid data creates customer"
+- [ ] **GREEN**: Create `Rsolv.CustomerOnboarding` module with `provision_customer/1`
+- [ ] **GREEN**: Create `CustomerOnboardingController` with OpenAPI spec
 - [ ] **GREEN**: Add route to `router.ex`
-- [ ] **REFACTOR**: Extract validation logic to separate function
+- [ ] **REFACTOR**: Extract validation logic to separate function with pattern matching
 
 #### Email Validation
 - [ ] **RED**: Write test: "rejects disposable email domains (e.g., mailinator.com)"
@@ -460,11 +511,11 @@ mix credo priv/repo/migrations/20251020_add_provisioning_fields.exs
 - [ ] **GREEN**: Verify with `mix credo priv/repo/migrations/*.exs`
 - [ ] **REFACTOR**: Ensure `down/0` function exists or raises appropriately
 
-#### Provisioning Events (Audit Trail)
-- [ ] **RED**: Write test: "logs provisioning events to audit table"
-- [ ] **GREEN**: Create `provisioning_events` table via Ecto migration
+#### Customer Onboarding Events (Audit Trail)
+- [ ] **RED**: Write test: "logs onboarding events to audit table"
+- [ ] **GREEN**: Create `customer_onboarding_events` table via Ecto migration
 - [ ] **GREEN**: Log events: "customer_created", "api_key_generated", "email_sent"
-- [ ] **REFACTOR**: Extract event logging to `ProvisioningEvents` context
+- [ ] **REFACTOR**: Extract event logging to `CustomerOnboarding.Events` context
 
 ### Week 2: Email Sequence & Error Handling (TDD)
 
@@ -494,32 +545,41 @@ mix credo priv/repo/migrations/20251020_add_provisioning_fields.exs
 - [ ] **GREEN**: Use Ecto.Multi for atomic customer + API key creation
 - [ ] **REFACTOR**: Extract retry logic to shared worker pattern
 
-**Error Handling Strategy:**
+**Error Handling Strategy (Pattern Matching):**
 ```elixir
 def provision_customer(attrs) do
-  Ecto.Multi.new()
-  |> Ecto.Multi.insert(:customer, customer_changeset)
-  |> Ecto.Multi.insert(:api_key, api_key_changeset)
+  attrs
+  |> build_multi_transaction()
   |> Repo.transaction()
-  |> case do
-    {:ok, %{customer: customer, api_key: api_key}} ->
-      # Core succeeded, now try non-critical async operations
-      schedule_stripe_customer_creation(customer)  # Retry via Oban if fails
-      schedule_welcome_email(customer, api_key.raw_key)  # Retry via Oban if fails
-      {:ok, %{customer: customer, api_key: api_key.raw_key}}
+  |> handle_transaction_result()
+end
 
-    {:error, _failed_operation, changeset, _changes} ->
-      {:error, {:validation_failed, changeset}}
-  end
+defp build_multi_transaction(attrs) do
+  Ecto.Multi.new()
+  |> Ecto.Multi.insert(:customer, customer_changeset(attrs))
+  |> Ecto.Multi.insert(:api_key, &api_key_changeset(&1.customer))
+end
+
+# Pattern match on successful transaction
+defp handle_transaction_result({:ok, %{customer: customer, api_key: api_key}}) do
+  # Core succeeded, now try non-critical async operations
+  schedule_stripe_customer_creation(customer)  # Retry via Oban if fails
+  schedule_welcome_email(customer, api_key.raw_key)  # Retry via Oban if fails
+  {:ok, %{customer: customer, api_key: api_key.raw_key}}
+end
+
+# Pattern match on failed transaction
+defp handle_transaction_result({:error, _failed_operation, changeset, _changes}) do
+  {:error, {:validation_failed, changeset}}
 end
 ```
 
 #### Admin Override Capabilities (RPC-Compatible)
-- [ ] **RED**: Write test: "admin can reset trial limits via RPC"
+- [ ] **RED**: Write test: "admin can reset credit balance via RPC"
 - [ ] **RED**: Write test: "admin can resend welcome email via RPC"
 - [ ] **RED**: Write test: "admin can manually mark onboarding complete via RPC"
 - [ ] **GREEN**: Create `lib/rsolv/admin/customer_admin.ex` module
-- [ ] **GREEN**: Implement functions: `reset_trial/2`, `resend_welcome/1`, `complete_onboarding/1`
+- [ ] **GREEN**: Implement functions: `reset_credits/2`, `resend_welcome/1`, `complete_onboarding/1`
 - [ ] **REFACTOR**: Document RPC usage in module docs
 
 **Admin Module (Production-Safe):**
@@ -531,12 +591,13 @@ defmodule Rsolv.Admin.CustomerAdmin do
 
   ## Usage (Production via RPC)
 
-      bin/rsolv rpc "Rsolv.Admin.CustomerAdmin.reset_trial('user@example.com', 20)"
+      bin/rsolv rpc "Rsolv.Admin.CustomerAdmin.reset_credits('user@example.com', 20)"
       bin/rsolv rpc "Rsolv.Admin.CustomerAdmin.resend_welcome('user@example.com')"
   """
 
-  def reset_trial(email, new_limit) do
+  def reset_credits(email, new_balance) do
     # Implementation with audit logging
+    # Updates credit_balance and creates credit_transaction record
   end
 
   def resend_welcome(email) do
@@ -578,23 +639,23 @@ config :rsolv, Rsolv.Repo,
 - [ ] **REFACTOR**: Extract to `DashboardHelpers` module
 
 #### Monitoring and Alerting
-- [ ] **RED**: Write test: "emits telemetry on provisioning success"
-- [ ] **RED**: Write test: "emits telemetry on provisioning failure"
+- [ ] **RED**: Write test: "emits telemetry on customer onboarding success"
+- [ ] **RED**: Write test: "emits telemetry on customer onboarding failure"
 - [ ] **GREEN**: Add telemetry events (follow RFC-060 patterns)
-- [ ] **GREEN**: Create `lib/rsolv/prom_ex/provisioning_plugin.ex`
-- [ ] **GREEN**: Set up Grafana dashboard for provisioning metrics
+- [ ] **GREEN**: Create `lib/rsolv/prom_ex/customer_onboarding_plugin.ex`
+- [ ] **GREEN**: Set up Grafana dashboard for onboarding metrics
 - [ ] **REFACTOR**: Ensure consistent tag structure
 
 **Telemetry Events:**
 ```elixir
 :telemetry.execute(
-  [:rsolv, :provisioning, :complete],
+  [:rsolv, :customer_onboarding, :complete],
   %{duration: duration, count: 1},
   %{status: "success", customer_id: customer.id, source: "api"}
 )
 
 :telemetry.execute(
-  [:rsolv, :provisioning, :failed],
+  [:rsolv, :customer_onboarding, :failed],
   %{count: 1},
   %{reason: reason, source: "api"}
 )
@@ -611,34 +672,42 @@ config :rsolv, Rsolv.Repo,
 
 ### Unit Tests (Written During TDD)
 ```elixir
-# Provisioning Module
+# CustomerOnboarding Module
 test "provisions customer from valid signup"
 test "rejects disposable emails (mailinator.com, temp-mail.org, etc.)"
 test "enforces rate limits (10 per IP per hour)"
 test "handles duplicate signups gracefully (email uniqueness constraint)"
 test "generates unique secure API keys (rsolv_<base64>)"
 test "stores hashed API key (SHA256) in database"
-test "returns raw API key only once on creation"
+test "returns raw API key in response AND schedules email with key"
 
 # API Key Authentication
 test "authenticates valid API key (hash comparison)"
 test "rejects invalid API key"
 test "rejects inactive API key"
 
-# Error Handling
+# Error Handling (Pattern Matching)
 test "rolls back customer creation on API key generation failure"
 test "queues Stripe retry job on Stripe API failure"
 test "queues email retry job on Postmark failure (max 3 attempts)"
+test "pattern matches on Ecto.Changeset errors"
+test "pattern matches on generic errors"
 
 # Admin Overrides
-test "admin can reset trial limits via RPC"
-test "admin can resend welcome email"
+test "admin can reset credit balance via RPC"
+test "admin can resend welcome email with API key"
 test "admin can manually complete onboarding"
 
 # Setup Wizard
 test "shows wizard when no scans completed"
 test "hides wizard after first scan"
 test "respects manual dismiss/show preferences"
+
+# Dashboard Upsell Messaging
+test "shows trial upsell for low credits"
+test "shows PAYG breakeven message at 21 fixes"
+test "shows PAYG savings message for high usage"
+test "shows Pro retention message with additional fix pricing"
 ```
 
 ### Integration Tests
@@ -677,7 +746,7 @@ export let options = {
 };
 
 export default function() {
-  let res = http.post('http://staging.rsolv.dev/api/v1/customers/provision',
+  let res = http.post('http://staging.rsolv.dev/api/v1/customers/onboard',
     JSON.stringify({
       email: `test-${__VU}-${__ITER}@example.com`,
       name: 'Load Test User'
@@ -687,7 +756,8 @@ export default function() {
 
   check(res, {
     'status 201': (r) => r.status === 201,
-    'has api_key': (r) => JSON.parse(r.body).api_key !== undefined
+    'has api_key in response': (r) => JSON.parse(r.body).api_key !== undefined,
+    'api_key will be emailed': (r) => true  // Verified separately in async test
   });
 }
 ```
@@ -699,10 +769,10 @@ test "database connection pool configuration adequate" do
   assert pool_size >= 20, "Pool size should be at least 20 for production"
 end
 
-test "100 concurrent provisioning requests succeed" do
+test "100 concurrent customer onboarding requests succeed" do
   tasks = for i <- 1..100 do
     Task.async(fn ->
-      Provisioning.provision_customer(%{
+      CustomerOnboarding.provision_customer(%{
         email: "test-#{i}-#{:rand.uniform(9999)}@example.com",
         name: "Test User #{i}"
       })
@@ -758,7 +828,7 @@ end
 - **Prepared statements**: Ecto prevents SQL injection by default
 
 ### 6. Audit Logging
-- **Provisioning events**: Logged to `provisioning_events` table
+- **Customer onboarding events**: Logged to `customer_onboarding_events` table
 - **Failed attempts**: Tracked with reason and metadata
 - **Admin actions**: All RPC commands logged
 
@@ -767,7 +837,7 @@ end
 **Note**: These are target metrics. Actual measurement begins post-launch with active customers.
 
 ### Technical Metrics
-- **Provisioning Time**: < 5 seconds (p95)
+- **Customer Onboarding Time**: < 5 seconds (p95)
 - **Success Rate**: > 99% (excluding rate-limited requests)
 - **API Response Time**: < 200ms (p95)
 - **Email Delivery**: > 98% within 1 minute
@@ -776,13 +846,13 @@ end
 ```elixir
 # Telemetry timing
 :telemetry.execute(
-  [:rsolv, :provisioning, :complete],
+  [:rsolv, :customer_onboarding, :complete],
   %{duration: duration},
   %{customer_id: customer.id}
 )
 
-# Grafana dashboard: "Provisioning Performance"
-# Query: histogram_quantile(0.95, rsolv_provisioning_complete_duration)
+# Grafana dashboard: "Customer Onboarding Performance"
+# Query: histogram_quantile(0.95, rsolv_customer_onboarding_complete_duration)
 ```
 
 ### User Engagement Metrics
@@ -810,26 +880,27 @@ Repo.one(from c in Customer,
 | Risk | Impact | Mitigation | Implementation |
 |------|--------|------------|----------------|
 | Spam signups | High | Rate limiting (Mnesia), CAPTCHA if needed | `RateLimiter.check_rate_limit/2` with 10/IP/hour limit |
-| Email delivery failures | Medium | Oban retry (3 attempts), admin can resend via RPC | `EmailWorker` with `max_attempts: 3`, `CustomerAdmin.resend_welcome/1` |
-| Provisioning failures | High | Ecto.Multi for atomicity, Oban retry for Stripe/email, admin RPC overrides, monitoring alerts | `Ecto.Multi` transaction, `StripeRetryWorker`, `CustomerAdmin` module, Grafana alerts on failure rate >1% |
+| Email delivery failures | Medium | Oban retry (3 attempts), admin can resend via RPC, API key also shown in response | `EmailWorker` with `max_attempts: 3`, `CustomerAdmin.resend_welcome/1`, two delivery paths |
+| Customer onboarding failures | High | Ecto.Multi for atomicity, Oban retry for Stripe/email, admin RPC overrides, monitoring alerts | `Ecto.Multi` transaction with pattern matching, `StripeRetryWorker`, `CustomerAdmin` module, Grafana alerts on failure rate >1% |
 | Database connection exhaustion | Medium | Adequate pool size (20+), load testing, connection pool monitoring | `pool_size: 20` in runtime.exs, k6 load tests, Grafana pool usage dashboard |
 | API key collision | Low | Cryptographically secure random, uniqueness constraint | 32 bytes entropy (~10^77 combinations), DB unique constraint on `key_hash` |
+| API key lost by customer | Medium | Two delivery paths (response + email), admin can regenerate | Return in API response AND email, `CustomerAdmin.regenerate_api_key/1` |
 | Rate limiter false positives | Low | Generous limits, clear error messages, admin can whitelist IP | 10/IP/hour (permits legitimate retries), `CustomerAdmin.whitelist_ip/1` (future) |
 
-**Admin Alert Strategy (Provisioning Failures):**
+**Admin Alert Strategy (Customer Onboarding Failures):**
 ```elixir
 # In PromEx plugin
 counter(
-  [:rsolv, :provisioning, :failed, :total],
-  event_name: [:rsolv, :provisioning, :failed],
-  description: "Total provisioning failures",
+  [:rsolv, :customer_onboarding, :failed, :total],
+  event_name: [:rsolv, :customer_onboarding, :failed],
+  description: "Total customer onboarding failures",
   tags: [:reason]
 )
 
 # Alert configuration (Grafana)
-# Alert when: rate(rsolv_provisioning_failed_total[5m]) > 0.01
+# Alert when: rate(rsolv_customer_onboarding_failed_total[5m]) > 0.01
 # Notification: Slack #engineering-alerts
-# Runbook: "Check provisioning_events table, run CustomerAdmin RPC if needed"
+# Runbook: "Check customer_onboarding_events table, run CustomerAdmin RPC if needed"
 ```
 
 ## Rollout Plan
@@ -853,7 +924,7 @@ counter(
 - Weekly review (first month)
 
 **Rollback Strategy:**
-- Feature flag: `FunWithFlags.enabled?(:automated_provisioning)`
+- Feature flag: `FunWithFlags.enabled?(:automated_customer_onboarding)`
 - If disabled, fall back to manual provisioning queue
 - Database migration irreversible (API key hashing) - no rollback
 
@@ -886,24 +957,25 @@ These enhancements are out of scope for RFC-065 but should be tracked as follow-
 
 ### Immediate (Week 0)
 1. Review and approve this RFC
-2. Create feature branch: `feature/rfc-065-provisioning`
+2. Create feature branch: `feature/rfc-065-customer-onboarding`
 3. Set up staging environment variables
 4. Add `burnex` dependency to `mix.exs`
 
 ### Week 1 Kickoff
-1. Create `lib/rsolv/provisioning.ex` module (TDD)
-2. Create provisioning API endpoint (OpenAPI spec)
+1. Create `lib/rsolv/customer_onboarding.ex` module (TDD with pattern matching)
+2. Create onboarding API endpoint (OpenAPI spec with @spec annotations)
 3. Write Ecto migrations for database changes
-4. Implement API key hashing (SHA256)
+4. Implement API key hashing (SHA256) with dual delivery (response + email)
 
 ### Week 2-3
-1. Integrate email sequence (reuse existing Oban workers)
-2. Implement error handling with retry logic
+1. Integrate email sequence with API key parameter (reuse existing Oban workers)
+2. Implement error handling with pattern-matched retry logic
 3. Build admin override module (RPC-compatible)
-4. Load testing and connection pool tuning
+4. Add dashboard upsell messaging for all subscription states
+5. Load testing and connection pool tuning
 
 ### Deployment
 1. Deploy to staging (end of Week 3)
 2. Internal testing (2 days)
 3. Beta testing (3 days)
-4. Production deployment (Week 4)
+4. Production deployment with feature flag (Week 4)

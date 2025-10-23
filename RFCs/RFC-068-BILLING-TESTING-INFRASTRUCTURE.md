@@ -263,7 +263,8 @@ defmodule Rsolv.CustomerFactory do
       email: sequence(:email, &"customer-#{&1}@test.com"),
       name: "Test Customer",
       credit_balance: 0,
-      subscription_plan: "trial"
+      subscription_type: "trial",
+      subscription_state: nil
     }
   end
 
@@ -282,7 +283,8 @@ defmodule Rsolv.CustomerFactory do
   def with_pro_plan(customer) do
     %{customer |
       credit_balance: 45,
-      subscription_plan: "pro",
+      subscription_type: "pro",
+      subscription_state: "active",
       stripe_customer_id: "cus_test_#{System.unique_integer()}",
       billing_consent_given: true
     }

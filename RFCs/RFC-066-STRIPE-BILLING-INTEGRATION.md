@@ -44,6 +44,12 @@
 - Out of credits + no billing → Block, prompt for billing
 - Out of credits + has billing → Charge → Credit → Consume
 
+**Subscription Data Model**:
+- `subscription_type`: Pricing tier - "trial", "pay_as_you_go", "pro"
+- `subscription_state`: Stripe subscription lifecycle state - null for trial/PAYG, Stripe states for Pro
+  - Stripe states: "active", "past_due", "canceled", "unpaid", "incomplete", "trialing", "paused"
+- `subscription_cancel_at_period_end`: Boolean flag for scheduled cancellation
+
 **Libraries**:
 - `stripity_stripe` ~> 3.2 - Stripe API client (community standard)
 - `ex_money` ~> 5.23 - Safe currency handling (Martin Fowler Money pattern)
@@ -81,7 +87,7 @@ Implement credit-based billing system with Stripe integration for payment proces
 **Provisioning → Billing Flow:**
 
 1. **Signup** (RFC-065):
-   - Customer created: `subscription_plan: "trial"`
+   - Customer created: `subscription_type: "trial"`, `subscription_state: null`
    - `Billing.credit_customer(customer, 5, source: "trial_signup")`
    - No Stripe customer created yet
 
@@ -230,7 +236,7 @@ sequenceDiagram
         S->>W: invoice.payment_failed
         W->>O: Queue processing
         O->>C: Send notification email
-        O->>B: Update subscription_status: "past_due"
+        O->>B: Update subscription_state: "past_due"
         Note over S: Smart Retries attempt recovery
     end
 ```
@@ -258,7 +264,7 @@ sequenceDiagram
     R->>S: Cancel subscription (immediately)
     S->>S: Delete subscription
     S->>W: customer.subscription.deleted
-    W->>B: Update subscription_plan: "pay_as_you_go"
+    W->>B: Update subscription_type: "pay_as_you_go", subscription_state: null
     Note over C: Existing credits remain<br/>New charges at $29/fix
 ```
 
@@ -281,7 +287,7 @@ sequenceDiagram
     Note over S: Period End Reached
     S->>S: Delete subscription
     S->>W: customer.subscription.deleted
-    W->>B: Update subscription_plan: "pay_as_you_go"
+    W->>B: Update subscription_type: "pay_as_you_go", subscription_state: null
     Note over C: Existing credits remain<br/>New charges at $29/fix
 ```
 
@@ -333,11 +339,11 @@ defmodule Rsolv.Billing.Pricing do
   end
 
   @doc """
-  Calculate charge amount based on customer's plan.
+  Calculate charge amount based on customer's subscription type.
   Returns cents as integer for Stripe.
   """
-  def calculate_charge_amount(%{subscription_plan: "pay_as_you_go"}), do: payg_per_fix_cents()
-  def calculate_charge_amount(%{subscription_plan: "pro"}), do: pro_additional_per_fix_cents()
+  def calculate_charge_amount(%{subscription_type: "pay_as_you_go"}), do: payg_per_fix_cents()
+  def calculate_charge_amount(%{subscription_type: "pro"}), do: pro_additional_per_fix_cents()
   def calculate_charge_amount(_), do: 0
 end
 ```
@@ -653,7 +659,7 @@ defmodule Rsolv.Billing do
       {:error, :no_billing_info}
 
       # No credits, has billing - charge then consume
-      iex> customer = %Customer{id: 1, credit_balance: 0, stripe_customer_id: "cus_123", subscription_plan: "pay_as_you_go"}
+      iex> customer = %Customer{id: 1, credit_balance: 0, stripe_customer_id: "cus_123", subscription_type: "pay_as_you_go"}
       iex> fix = %Fix{id: 42}
       iex> {:ok, :charged_and_consumed} = Billing.track_fix_deployed(customer, fix)
   """
@@ -814,10 +820,11 @@ defmodule Rsolv.Billing do
       trial_period_days: 0  # No Stripe trial, we have our own credit system
     }) do
       {:ok, subscription} ->
-        # Update customer record with subscription ID
+        # Update customer record with subscription ID and type
         Customers.update_customer(customer, %{
           stripe_subscription_id: subscription.id,
-          subscription_plan: "pro"
+          subscription_type: "pro",
+          subscription_state: subscription.status
         })
         {:ok, subscription}
 
@@ -888,21 +895,21 @@ defmodule Rsolv.Billing do
   ## Examples
 
       # Customer with credits
-      iex> customer = %Customer{id: 1, credit_balance: 10, subscription_plan: "pay_as_you_go"}
+      iex> customer = %Customer{id: 1, credit_balance: 10, subscription_type: "pay_as_you_go"}
       iex> summary = Billing.get_usage_summary(customer)
       iex> summary.credit_balance
       10
-      iex> summary.subscription_plan
+      iex> summary.subscription_type
       "pay_as_you_go"
 
       # Customer with low credits
-      iex> customer = %Customer{id: 1, credit_balance: 1, subscription_plan: "trial", stripe_customer_id: nil}
+      iex> customer = %Customer{id: 1, credit_balance: 1, subscription_type: "trial", stripe_customer_id: nil}
       iex> summary = Billing.get_usage_summary(customer)
       iex> summary.warning
       "⚠️ 1 credit remaining. After that, $29.00/fix on PAYG."
 
       # Customer out of credits, no billing
-      iex> customer = %Customer{id: 1, credit_balance: 0, subscription_plan: "trial", stripe_customer_id: nil}
+      iex> customer = %Customer{id: 1, credit_balance: 0, subscription_type: "trial", stripe_customer_id: nil}
       iex> summary = Billing.get_usage_summary(customer)
       iex> summary.warning
       "⚠️ Out of credits. Add billing info to continue."
@@ -910,7 +917,8 @@ defmodule Rsolv.Billing do
   def get_usage_summary(customer) do
     %{
       credit_balance: customer.credit_balance,
-      subscription_plan: customer.subscription_plan,
+      subscription_type: customer.subscription_type,
+      subscription_state: customer.subscription_state,
       has_billing: has_billing_info?(customer),
       recent_transactions: CreditLedger.list_transactions(customer, limit: 10),
       warning: calculate_warning(customer)
@@ -923,7 +931,7 @@ defmodule Rsolv.Billing do
         "⚠️ Out of credits. Add billing info to continue."
 
       customer.credit_balance == 1 ->
-        case customer.subscription_plan do
+        case customer.subscription_type do
           "trial" -> "⚠️ 1 credit remaining. After that, #{format_price(Pricing.payg_per_fix())}/fix on PAYG."
           "pay_as_you_go" -> "⚠️ 1 credit remaining. Next fix will charge #{format_price(Pricing.payg_per_fix())}."
           "pro" -> "⚠️ 1 credit remaining. Additional fixes charged at #{format_price(Pricing.pro_additional_per_fix())}/fix."
@@ -1215,8 +1223,8 @@ defmodule Rsolv.Billing.WebhookProcessor do
 
     # Downgrade to PAYG, preserve existing credits
     Customers.update_customer(customer, %{
-      subscription_plan: "pay_as_you_go",
-      subscription_status: nil,
+      subscription_type: "pay_as_you_go",
+      subscription_state: null,
       stripe_subscription_id: nil
     })
 
@@ -1232,8 +1240,8 @@ defmodule Rsolv.Billing.WebhookProcessor do
   defp handle_event("customer.subscription.updated", %{"object" => subscription}) do
     customer = find_customer_by_stripe_id(subscription["customer"])
 
-    # Handle cancel_at_period_end scheduling
-    attrs = %{subscription_status: subscription["status"]}
+    # Update subscription state from Stripe
+    attrs = %{subscription_state: subscription["status"]}
 
     attrs = if subscription["cancel_at_period_end"] do
       Logger.info("Subscription scheduled for cancellation at period end",
@@ -1303,9 +1311,14 @@ defmodule Rsolv.Repo.Migrations.CreateBillingTables do
       add :stripe_subscription_id, :string
       add :billing_consent_given, :boolean, default: false, null: false
       add :billing_consent_at, :utc_datetime
-      add :subscription_status, :string  # active, past_due, canceled, unpaid
       add :subscription_cancel_at_period_end, :boolean, default: false, null: false
     end
+
+    # Rename existing subscription fields for clarity
+    # subscription_plan → subscription_type (pricing tier: trial, pay_as_you_go, pro)
+    # subscription_status → subscription_state (Stripe lifecycle: active, past_due, canceled, etc.)
+    rename table(:customers), :subscription_plan, to: :subscription_type
+    rename table(:customers), :subscription_status, to: :subscription_state
 
     create unique_index(:customers, [:stripe_customer_id])
 
@@ -1363,6 +1376,10 @@ defmodule Rsolv.Repo.Migrations.CreateBillingTables do
     drop table(:subscriptions)
     drop table(:credit_transactions)
 
+    # Reverse the renames
+    rename table(:customers), :subscription_state, to: :subscription_status
+    rename table(:customers), :subscription_type, to: :subscription_plan
+
     alter table(:customers) do
       remove :credit_balance
       remove :stripe_customer_id
@@ -1370,7 +1387,6 @@ defmodule Rsolv.Repo.Migrations.CreateBillingTables do
       remove :stripe_subscription_id
       remove :billing_consent_given
       remove :billing_consent_at
-      remove :subscription_status
       remove :subscription_cancel_at_period_end
     end
   end
@@ -1466,8 +1482,13 @@ end
 - [ ] **GREEN**: Configure pricing in config/config.exs
 
 **Database:**
+- [ ] **RED**: Write test: "migration renames subscription_plan to subscription_type"
+- [ ] **RED**: Write test: "migration renames subscription_status to subscription_state"
 - [ ] **RED**: Write test: "migration creates credit_transactions table"
 - [ ] **RED**: Write test: "migration creates billing_events table"
+- [ ] **RED**: Write test: "subscription_type stores trial, pay_as_you_go, pro"
+- [ ] **RED**: Write test: "subscription_state is null for trial and PAYG customers"
+- [ ] **RED**: Write test: "subscription_state stores Stripe states for Pro customers"
 - [ ] **GREEN**: Create migration `20251021_create_billing_tables.exs`
 - [ ] **GREEN**: Run `mix ecto.migrate`
 - [ ] **GREEN**: Verify with `mix credo priv/repo/migrations/*.exs`
@@ -1532,8 +1553,8 @@ end
 - [ ] **RED**: Write test: "maintains pro_additional pricing during active subscription"
 - [ ] **RED**: Write test: "handles invoice.payment_failed"
 - [ ] **RED**: Write test: "sends notification email on payment failure"
-- [ ] **RED**: Write test: "updates subscription_status to past_due on failure"
-- [ ] **RED**: Write test: "downgrades to PAYG on subscription.deleted (immediate)"
+- [ ] **RED**: Write test: "updates subscription_state to past_due on failure"
+- [ ] **RED**: Write test: "downgrades to PAYG (subscription_type) and clears state on subscription.deleted"
 - [ ] **RED**: Write test: "preserves existing credits on cancellation"
 - [ ] **RED**: Write test: "handles cancel_at_period_end subscription.updated"
 - [ ] **RED**: Write test: "maintains Pro pricing until period end when cancel_at_period_end"
@@ -1618,8 +1639,8 @@ test "credits Pro subscription renewal (month 2, 3, etc.)"
 test "maintains Pro pricing during active subscription"
 test "handles payment failures"
 test "sends notification on payment failure"
-test "updates subscription_status to past_due"
-test "downgrades to PAYG on immediate cancellation"
+test "updates subscription_state to past_due"
+test "sets subscription_type to PAYG and state to null on immediate cancellation"
 test "preserves credits on cancellation"
 test "handles cancel_at_period_end"
 test "maintains Pro pricing until period end"

@@ -305,12 +305,12 @@ Repo.one(from e in BillingEvent,
 defmodule Rsolv.Analytics.Conversion do
   def trial_to_paid_rate(period \\ 30) do
     started_trial = Repo.one(from c in Customer,
-      where: c.subscription_plan == "trial" and
+      where: c.subscription_type == "trial" and
              c.inserted_at > ago(^period, "day"),
       select: count(c.id))
 
     converted = Repo.one(from c in Customer,
-      where: c.subscription_plan in ["pay_as_you_go", "pro"] and
+      where: c.subscription_type in ["pay_as_you_go", "pro"] and
              c.inserted_at > ago(^period, "day"),
       select: count(c.id))
 
@@ -368,11 +368,11 @@ end
 
 # In subscription cancellation
 :telemetry.execute([:rsolv, :subscription, :cancelled], %{credits_remaining: credits},
-  %{cancel_type: "immediate", subscription_plan: "pro"})
+  %{cancel_type: "immediate", subscription_type: "pro"})
 
 # In subscription renewal
 :telemetry.execute([:rsolv, :subscription, :renewed], %{amount: 59900},
-  %{subscription_plan: "pro", credits_granted: 60})
+  %{subscription_type: "pro", credits_granted: 60})
 ```
 
 **Automated Alerts:**

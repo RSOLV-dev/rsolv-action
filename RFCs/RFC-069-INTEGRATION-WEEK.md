@@ -147,8 +147,10 @@ sequenceDiagram
   customer_id: integer,
   email: string,
   name: string,
-  subscription_plan: :trial | :pay_as_you_go | :pro
-  # Note: subscription_plan tracks billing tier. "trial" is the initial state (5-10 free credits).
+  subscription_type: :trial | :pay_as_you_go | :pro,
+  subscription_state: string | nil
+  # Note: subscription_type tracks pricing tier. "trial" is the initial state (5-10 free credits).
+  # subscription_state is null for trial/PAYG, Stripe states ("active", "past_due", etc.) for Pro.
   # Customers upgrade to :pay_as_you_go or :pro when they add billing and choose a plan.
 }
 ```
@@ -160,19 +162,21 @@ components:
   schemas:
     CustomerOnboardingData:
       type: object
-      required: [customer_id, email, name, subscription_plan]
+      required: [customer_id, email, name, subscription_type]
       properties:
         customer_id: {type: integer}
         email: {type: string, format: email}
         name: {type: string}
-        subscription_plan: {type: string, enum: [trial, pay_as_you_go, pro]}
+        subscription_type: {type: string, enum: [trial, pay_as_you_go, pro]}
+        subscription_state: {type: string, nullable: true, enum: [null, active, past_due, canceled, unpaid, incomplete, trialing, paused]}
 ```
 
 ### Billing → Customer Onboarding
 ```elixir
 %{
   stripe_customer_id: string,
-  subscription_status: string,  # active, past_due, canceled, unpaid
+  subscription_type: string,    # trial, pay_as_you_go, pro
+  subscription_state: string | nil,  # null for trial/PAYG, Stripe states for Pro
   credit_balance: integer,      # Current credit balance
   can_use_service: boolean      # true if credits > 0 OR billing info present
 }
