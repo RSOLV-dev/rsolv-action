@@ -446,6 +446,7 @@ test "billing updates reflect in dashboard"
 - [ ] Beta testing with 5-10 customers
 - [ ] Gather feedback and iterate
 - [ ] Prepare for production launch
+- [ ] **Update GitHub Marketplace copy (RFC-067)** to reference customer dashboard for existing users
 
 ## UI/UX Design
 
@@ -706,6 +707,9 @@ test "usage tracking displays correctly"
 3. Create feature branch: `feature/customer-portal-ui`
 4. Begin Week 1 TDD implementation
 5. Daily standups with RFC-070 team for coordination
+6. **Update marketplace copy (RFC-067)** - Once customer dashboard is live, update GitHub Marketplace README to include:
+   - Link to dashboard for existing customers: `rsolv.dev/dashboard/api-keys`
+   - Better onboarding experience showcasing self-service portal
 
 ## References
 

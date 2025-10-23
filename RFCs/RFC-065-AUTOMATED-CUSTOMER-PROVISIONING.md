@@ -37,9 +37,9 @@
 - `priv/repo/migrations/*_add_customer_onboarding_fields.exs` - Ecto migration
 
 **Files to Modify:**
-- `lib/rsolv_web/live/early_access_live.ex` - Call onboarding API/module
+- `lib/rsolv_web/live/early_access_live.ex` - **Convert to full customer onboarding** (replace early access waitlist with provisioning flow)
 - `lib/rsolv/customers/api_key.ex` - Add SHA256 hashing
-- `lib/rsolv_web/router.ex` - Add onboarding API route
+- `lib/rsolv_web/router.ex` - Add onboarding API route (keep `/signup` web route, add `/api/v1/customers/onboard` API endpoint)
 
 **Credit System** (see RFC-066):
 - **5 credits** on signup
