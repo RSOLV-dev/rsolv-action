@@ -14,7 +14,7 @@ Critical week where four parallel workstreams (Provisioning, Billing, Marketplac
 ### Must Complete by End of Week 3
 
 **Provisioning (RFC-065)**:
-- [ ] Automated provisioning working from multiple sources (direct, marketplace, early access)
+- [ ] Automated provisioning working from multiple sources (direct, gh_marketplace, early access)
 - [ ] Customer credit system functional (5 signup, +5 billing added)
 - [ ] API key generation functional
 
@@ -40,7 +40,7 @@ Critical week where four parallel workstreams (Provisioning, Billing, Marketplac
 ### Customer Onboarding Flow
 
 **Multiple Acquisition Sources** (RFC-067):
-- Direct signup at rsolv.dev/register (RFC-070)
+- Direct signup at rsolv.dev/signup (RFC-070)
 - GitHub Marketplace installation → signup redirect
 - Early access form (legacy, to be replaced)
 
@@ -50,7 +50,7 @@ Critical week where four parallel workstreams (Provisioning, Billing, Marketplac
 Title: New Customer Onboarding Flow (All Sources)
 
 User->CustomerOnboarding: Signup (email, name, source)
-Note right of CustomerOnboarding: source: "marketplace" | "direct" | "early_access"
+Note right of CustomerOnboarding: source: "gh_marketplace" | "direct" | "early_access"
 CustomerOnboarding->Database: Create customer record
 CustomerOnboarding->Billing: Create Stripe customer
 Billing->Stripe: API: Create customer
@@ -137,9 +137,23 @@ sequenceDiagram
     Dash-->>U: Display updated stats
 ```
 
+**Important Notes:**
+
+1. **Future: Enhanced track_fix_deployed Intelligence** - Current implementation is easy for customers to work around (manually trigger without actual fix deployment), leading to potential underbilling. Future enhancements should consider:
+   - Webhook verification from git forges (GitHub, GitLab) confirming PR merge
+   - Rate limiting per customer to detect suspicious patterns
+   - Anomaly detection (e.g., 100 fixes deployed in 1 minute)
+   - For MVP, we accept this risk with monitoring and customer trust
+
+2. **Trial Customer Flow** - "Record usage (if PAYG/Pro)" implies no action for trial customers. Actual flow for trial:
+   - Billing checks credit balance
+   - If credits available: Consume 1 credit, no Stripe interaction
+   - If no credits: Deployment fails with error message to add payment method
+   - Only PAYG/Pro customers trigger Stripe usage recording for metering
+
 ## Data Contracts
 
-**Note**: These contracts should ideally be expressed programmatically using OpenAPI specifications or similar, allowing test generation from the schema. Consider adding OpenAPI docs for these internal APIs (see CLAUDE.md for OpenAPI guidelines).
+**Note**: We already have `open_api_spex` infrastructure in place for external APIs (see CLAUDE.md for usage guidelines and `lib/rsolv_web/schemas/` for existing specs). These internal integration contracts should also be documented as OpenAPI specs where appropriate, allowing test generation from schemas and maintaining consistency across the codebase.
 
 ### Customer Onboarding → Billing
 ```elixir
@@ -188,7 +202,6 @@ components:
 
 ### Monday: Connect Systems
 **Morning**:
-- 9:00 AM - Kickoff meeting
 - Write integration tests FIRST (RED)
 - Deploy all branches to staging
 - Fix interface contracts until tests pass (GREEN)
@@ -197,7 +210,6 @@ components:
 - Refactor interfaces (REFACTOR)
 - Verify data flow with tests
 - Update integration tests
-- 4:00 PM - Day review
 
 **Tests to Write First** (following BetterSpecs guidelines):
 ```elixir
@@ -282,6 +294,8 @@ Then add error handling until tests pass.
 - **Artillery** (Node.js-based): `npm install -g artillery`
 - **Locust** (Python-based): For more complex scenarios
 
+**Note on Elixir Options**: While Elixir has load testing libraries (Chaperon, Blitzy), they're less mature and documented than k6/Artillery/Locust. Since LLMs excel at JS/Python generation and these tools are industry-standard, we prioritize pragmatism over language consistency for load testing.
+
 **Example k6 Script**:
 ```javascript
 // load_tests/signup_test.js
@@ -338,7 +352,7 @@ k6 run --vus 200 --duration 10s load_tests/api_rate_limit_test.js
 - Verify monitoring and alerting
 - Support documentation ready
 
-**No Beta**: We launch directly to production. We don't have sufficient customer base for a meaningful beta program.
+**No Beta**: We deploy to staging and test there first, then launch to production once validated. We don't have sufficient customer base for a meaningful beta program.
 
 ## Critical Integration Points
 
@@ -529,8 +543,11 @@ This event-driven architecture means billing happens in response to phase comple
 
 ## Rollback Strategy
 
-### Feature Flags
+### Feature Flags vs Kill Switches
+
+**Feature Flags** (FunWithFlags) - Use for gradual rollouts and per-customer toggles:
 ```elixir
+# Toggle without redeployment, enable per-customer or percentage rollout
 if FunWithFlags.enabled?(:automated_customer_onboarding) do
   auto_provision(customer)
 else
@@ -578,19 +595,21 @@ kubectl get backups -n rsolv-production
 # See rsolv-infrastructure/DEPLOYMENT.md
 ```
 
-### Kill Switches
-```yaml
+**Kill Switches** (Environment Variables) - Use for emergency stop, works even if database degraded:
+```elixir
 # runtime.exs
+# Critical safety switches that work regardless of FunWithFlags availability
+# Require redeployment to toggle, but guaranteed to work in all scenarios
 config :rsolv,
-  billing_enabled: env("BILLING_ENABLED") != "false",
-  auto_provision: env("AUTO_PROVISION") != "false"
+  billing_enabled: env("BILLING_ENABLED") != "false",  # Emergency billing disable
+  auto_provision: env("AUTO_PROVISION") != "false"     # Emergency provisioning disable
 ```
 
 ## Risk Areas & Mitigation
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| **Customers don't show up** | **Highest** | **Multi-channel GTM (RFC-067): Marketplace, Mastodon/Bluesky, content marketing, email list building. Success metrics: 15-30 marketplace installs in 30 days. Pivot criteria: If <10 signups in first 30 days, reassess customer acquisition strategy.** |
+| **Customers don't show up** | **Highest** | **Multi-channel GTM (RFC-067): Marketplace, Mastodon/Bluesky, content marketing, email list building. Success metrics: 15-30 marketplace installs in 30 days. Pivot criteria: If <10 signups in first 30 days, reassess customer acquisition strategy. Track progress in `CUSTOMER-TRACTION-TRACKING.md` with daily weekday reviews during RFC implementation and until traction is established.** |
 | Webhook race conditions | High | Queue and process async via Oban with idempotency (unique stripe_event_id) |
 | Payment during provisioning | Medium | Database row locks (FOR UPDATE) during provisioning |
 | API validation performance | High | Cache with 60s TTL |
@@ -607,11 +626,14 @@ config :rsolv,
 - Status updates tracked in RFC documents and git commits
 - Issues documented in GitHub issues or RFC amendments
 - Decision log maintained in ADRs when implementation deviates from RFCs
+- **Task management via Vibe Kanban MCP** for tracking implementation work
+- **Customer traction tracked in `CUSTOMER-TRACTION-TRACKING.md`** (root level) with daily weekday reviews
+- **ADR(s) created upon each RFC completion** to document all architecture decisions
 
 ## Success Criteria
 
 ### Must Have (Production Blockers)
-- [ ] Automated signup → API key flow working for all sources (direct, marketplace, early access)
+- [ ] Automated signup → API key flow working for all sources (direct, gh_marketplace, early access)
 - [ ] Payment method addition works with explicit consent
 - [ ] Pro plan creation successful ($599/month, 60 credits)
 - [ ] Credit system tracking accurate (ledger balance matches customer balance)
