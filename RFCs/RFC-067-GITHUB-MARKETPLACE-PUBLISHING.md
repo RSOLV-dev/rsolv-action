@@ -224,9 +224,9 @@ This is how all marketplace actions work—not a limitation, but the native patt
 
 ### Week 1: Preparation
 - [ ] **Verify support infrastructure** exists and is functional:
-  - [ ] Test `support@rsolv.dev` receives and can send email
-  - [ ] Verify `docs.rsolv.dev` exists with minimum viable content (installation, troubleshooting)
-  - [ ] Create/configure if missing (critical blocker for marketplace approval)
+  - [x] `support@rsolv.dev` - ✅ Already configured (forwards to dylan@arborealstudios.com)
+  - [ ] Verify `docs.rsolv.dev` exists with minimum viable content (installation, troubleshooting, API reference)
+  - [ ] Create docs site if missing (critical blocker for marketplace approval)
 - [ ] Update action.yml with branding (icon: shield, color: blue)
 - [ ] Create 500x500px logo.png for marketplace
 - [ ] Rewrite README for marketplace format
@@ -683,10 +683,10 @@ inputs:
 
 ### Support Channels Status
 **Current state** (as of 2025-10-23):
-- ⚠️ `support@rsolv.dev` - Email address referenced in codebase, **needs verification that it's configured and monitored**
+- ✅ `support@rsolv.dev` - **Configured and working** (forwards to dylan@arborealstudios.com)
 - ⚠️ `docs.rsolv.dev` - Documentation URL referenced in codebase, **needs verification that it exists and has content**
-- **Critical**: Both must be fully functional before marketplace launch. Marketplace reviewers may check these links.
-- **Week 1 task**: Verify existence, create/configure if missing, populate with minimum viable documentation
+- **Critical**: Documentation site must be fully functional before marketplace launch. Marketplace reviewers may check these links.
+- **Week 1 task**: Verify docs.rsolv.dev exists with minimum viable content (installation, troubleshooting, API reference), create if missing
 
 ## Next Steps
 
