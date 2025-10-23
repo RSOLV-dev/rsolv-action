@@ -161,11 +161,11 @@ sequenceDiagram
   customer_id: integer,
   email: string,
   name: string,
-  subscription_type: :trial | :pay_as_you_go | :pro,
+  subscription_type: "trial" | "pay_as_you_go" | "pro",  # String values (matches RFC-066)
   subscription_state: string | nil
   # Note: subscription_type tracks pricing tier. "trial" is the initial state (5-10 free credits).
   # subscription_state is null for trial/PAYG, Stripe states ("active", "past_due", etc.) for Pro.
-  # Customers upgrade to :pay_as_you_go or :pro when they add billing and choose a plan.
+  # Customers upgrade to "pay_as_you_go" or "pro" when they add billing and choose a plan.
 }
 ```
 
