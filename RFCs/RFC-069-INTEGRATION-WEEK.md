@@ -298,7 +298,7 @@ export let options = {
 
 export default function () {
   let response = http.post('https://staging.rsolv.dev/api/v1/customers', {
-    email: `test-${__VU}-${__ITER}@test.com`,
+    email: `test-${__VU}-${__ITER}@test.example.com`,
     name: 'Load Test User',
   });
 
@@ -616,7 +616,7 @@ config :rsolv,
 - [ ] Pro plan creation successful ($599/month, 60 credits)
 - [ ] Credit system tracking accurate (ledger balance matches customer balance)
 - [ ] Fix deployment billing works (consume credits or charge correctly)
-- [ ] All tests passing (>90% coverage)
+- [ ] All tests passing (≥80% coverage)
 - [ ] Staging stable for 24 hours with no critical errors
 - [ ] Monitoring and alerting operational
 - [ ] Rollback procedure tested

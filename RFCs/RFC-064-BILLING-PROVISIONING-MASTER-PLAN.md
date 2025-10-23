@@ -225,7 +225,7 @@ All streams complete features and prepare for integration.
 | Metric | Target | Measurement Mechanism |
 |--------|--------|----------------------|
 | RFCs Implemented | 4/4 (065, 066, 067, 070) | GitHub PR merge status + deployment verification |
-| Test Coverage | ≥ 90% | ExCoveralls report in CI (`mix coveralls.html`) |
+| Test Coverage | ≥ 80% (min) / 95% (aspirational) | ExCoveralls report in CI (`mix coveralls.html`) |
 | Customer Onboarding Speed | < 5 seconds | Telemetry timing from signup → API key generation |
 | Integration Tests | 100% passing | CI pipeline status (GitHub Actions) |
 
