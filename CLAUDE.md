@@ -18,6 +18,13 @@ This project uses RFCs and ADRs for architectural decisions:
    - Created when RFCs are implemented in production
    - Document what was built, why, and consequences
 
+3. **Active Projects** - Working documents for in-flight work
+   - Location: `/projects/`
+   - See [projects/README.md](projects/README.md) for active projects
+   - Each project gets its own subdirectory with tracking documents
+   - Upon completion, archive to `archived_docs/` and transfer knowledge to ADRs
+   - Example: `projects/billing-integration-2025-10/` contains integration checklists for RFCs 065-068
+
 ### Creating New RFCs
 
 When proposing significant changes:
