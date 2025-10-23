@@ -7,6 +7,12 @@
 
 ## Quick Start
 
+**⚠️ CRITICAL: Production Credentials**
+- NEVER commit production credentials to git
+- Test credentials below are safe to commit
+- Store production keys in `.env` (gitignored)
+- Rotate immediately if accidentally exposed
+
 **Stripe Test Credentials**:
 - API Key: `sk_test_7upzEpVpOJlEJr4HwfSHObSe`
 - Publishable: `pk_Prw2ZQauqnSEnJNq7BR7ZsbychP2t`
@@ -14,6 +20,9 @@
 **Test Cards**:
 - Success: `4242 4242 4242 4242`
 - Decline: `4000 0000 0000 0002`
+- 3D Secure: `4000 0025 0000 3155`
+
+**Additional test card codes**: See [Stripe Testing Documentation](https://stripe.com/docs/testing)
 
 ## Summary
 
@@ -23,10 +32,31 @@ Provide testing infrastructure, standards, and patterns to support billing syste
 
 ## Testing Architecture
 
+### ASCII Diagram
+
 ```
 Unit Tests → Integration Tests → Staging → Production
      ↓              ↓                ↓          ↓
   Mocks         Test DB         Stripe Test   Monitoring
+```
+
+### Flow Diagram
+
+```mermaid
+graph LR
+    A[Unit Tests] --> B[Integration Tests]
+    B --> C[Staging]
+    C --> D[Production]
+
+    A --> E[Mocks]
+    B --> F[Test DB]
+    C --> G[Stripe Test Mode]
+    D --> H[Monitoring]
+
+    style A fill:#e1f5ff
+    style B fill:#b3e0ff
+    style C fill:#80ccff
+    style D fill:#4db8ff
 ```
 
 **Infrastructure Layer:** Docker Compose, test databases, Stripe CLI, mock services
@@ -44,6 +74,8 @@ These patterns should be followed when writing telemetry tests in feature RFCs:
 ```elixir
 # Examples of telemetry tests to implement during TDD in RFCs 065/066
 test "emits telemetry on subscription creation"
+test "emits telemetry on subscription renewal"
+test "emits telemetry on subscription cancellation"
 test "emits telemetry on payment success"
 test "emits telemetry on payment failure"
 test "tracks usage in Prometheus metrics"
@@ -133,21 +165,26 @@ See `/tmp/rfc060-test-integration-dashboard.json` for Grafana dashboard JSON str
 version: '3.8'
 services:
   postgres_test:
-    image: postgres:14
+    image: postgres:16-alpine  # Matches production postgres version
     environment:
       POSTGRES_DB: rsolv_test
-    ports: ["5433:5432"]
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["5434:5432"]  # Avoid conflicts with dev (5433) and landing (5432)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   stripe_cli:
     image: stripe/stripe-cli
-    command: listen --forward-to localhost:4000/webhook/stripe
+    command: listen --forward-to host.docker.internal:4000/webhooks/stripe
     environment:
       STRIPE_API_KEY: sk_test_7upzEpVpOJlEJr4HwfSHObSe
-
-  mailcatcher:
-    image: sj26/mailcatcher
-    ports: ["1080:1080", "1025:1025"]
 ```
+
+**Email Testing**: We use `bamboo_postmark` with test mode. No need for mailcatcher - Bamboo provides test adapters that capture emails in-memory during testing.
 
 ## 2. Testing Standards & Patterns
 
@@ -196,16 +233,78 @@ end
 
 ## 4. Staging Environment
 
-Test customers in various states:
+### Test Customer States
+
+Test customers in various states using factory traits or seed data:
 - Trial customer, no billing (3 credits remaining)
 - Trial customer, billing added (7 credits remaining)
 - Trial expired (0 credits, no billing info)
 - PAYG active (0 credits, charges per fix)
-- Pro with usage (45 credits remaining)
-- Past due subscription
-- Cancelled subscription
+- Pro active (45 credits remaining)
+- Pro past due (payment failure)
+- Pro cancelled (immediate, credits preserved)
+- Pro cancel scheduled (cancel_at_period_end, Pro benefits until period end)
+- Pro renewed (month 2+ of subscription)
 
-**Note:** Credit system: 5 credits on signup, +5 when billing added (total 10), +60 for Pro subscription. See RFC-066 for credit system details.
+**Note:** Credit system: 5 credits on signup, +5 when billing added (total 10), +60 for Pro plan payment. See RFC-066 for credit system details.
+
+### Factory Traits / Seed Data Strategy
+
+**Goal**: Easy setup and teardown for dev, test, CI, and staging environments.
+
+**Implementation**:
+```elixir
+# test/support/factories/customer_factory.ex
+defmodule Rsolv.CustomerFactory do
+  use ExMachina.Ecto, repo: Rsolv.Repo
+
+  def customer_factory do
+    %Rsolv.Customers.Customer{
+      email: sequence(:email, &"customer-#{&1}@test.com"),
+      name: "Test Customer",
+      credit_balance: 0,
+      subscription_plan: "trial"
+    }
+  end
+
+  def with_trial_credits(customer) do
+    %{customer | credit_balance: 3}
+  end
+
+  def with_billing_added(customer) do
+    %{customer |
+      credit_balance: 7,
+      stripe_customer_id: "cus_test_#{System.unique_integer()}",
+      billing_consent_given: true
+    }
+  end
+
+  def with_pro_plan(customer) do
+    %{customer |
+      credit_balance: 45,
+      subscription_plan: "pro",
+      stripe_customer_id: "cus_test_#{System.unique_integer()}",
+      billing_consent_given: true
+    }
+  end
+end
+
+# Usage in tests:
+insert(:customer) |> with_trial_credits()
+insert(:customer) |> with_billing_added()
+insert(:customer) |> with_pro_plan()
+```
+
+**Staging Environment Reset**:
+```bash
+# Reset staging data (safe for shared environments)
+mix run priv/repo/seeds_staging.exs
+
+# Or via mix task
+mix staging.reset_data
+```
+
+**Data Pollution Prevention**: All test customers should use `test.com` email domain and be easily identifiable/deletable.
 
 ## 5. Coverage Requirements
 

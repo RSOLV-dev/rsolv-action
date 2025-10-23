@@ -7,52 +7,97 @@
 
 ## Summary
 
-Critical week where four parallel workstreams (Provisioning, Billing, Marketplace, Testing) converge into unified billing system. Highest-risk phase requiring careful daily coordination.
+Critical week where four parallel workstreams (Provisioning, Billing, Marketplace, Testing) converge into unified billing system. Highest-risk phase requiring continuous coordination and communication.
 
 ## Pre-Integration Checklist
 
 ### Must Complete by End of Week 3
 
 **Provisioning (RFC-065)**:
-- [ ] Automated provisioning working
-- [ ] Customer dashboard live
+- [ ] Automated provisioning working from multiple sources (direct, marketplace, early access)
+- [ ] Customer credit system functional (5 signup, +5 billing added)
 - [ ] API key generation functional
 
 **Billing (RFC-066)**:
-- [ ] Stripe integration complete
-- [ ] Webhook endpoint responding
-- [ ] Subscription creation working
+- [ ] Stripe integration complete (test mode)
+- [ ] Webhook endpoint responding and processing events
+- [ ] Pro plan creation working ($599/month, 60 credits on payment)
+- [ ] Credit ledger tracking all transactions
+- [ ] Payment method addition with consent
 
 **Marketplace (RFC-067)**:
-- [ ] Submission complete
-- [ ] Documentation ready
+- [ ] Submission complete or in review
+- [ ] Documentation ready (README, action.yml updated)
+- [ ] E2E testing with NodeGoat/RailsGoat/real OSS complete
 
 **Testing (RFC-068)**:
-- [ ] Test infrastructure running
-- [ ] Staging environment deployed
+- [ ] Test infrastructure running (Docker Compose, Stripe CLI)
+- [ ] Staging environment deployed with test Stripe keys
+- [ ] Factory traits for various customer states
 
 ## Integration Data Flow
 
-### Customer Provisioning Flow
+### Customer Onboarding Flow
+
+**Multiple Acquisition Sources** (RFC-067):
+- Direct signup at rsolv.dev/register (RFC-070)
+- GitHub Marketplace installation → signup redirect
+- Early access form (legacy, to be replaced)
+
+#### ASCII Sequence Diagram
 
 ```sequence
-Title: New Customer Signup Flow
+Title: New Customer Onboarding Flow (All Sources)
 
-User->Provisioning: Signup (email, name)
-Provisioning->Database: Create customer record
-Provisioning->Billing: Create Stripe customer
+User->CustomerOnboarding: Signup (email, name, source)
+Note right of CustomerOnboarding: source: "marketplace" | "direct" | "early_access"
+CustomerOnboarding->Database: Create customer record
+CustomerOnboarding->Billing: Create Stripe customer
 Billing->Stripe: API: Create customer
 Stripe-->Billing: Customer ID
-Billing-->Provisioning: Stripe customer ID
-Provisioning->APIKey: Generate API key
+Billing-->CustomerOnboarding: Stripe customer ID
+CustomerOnboarding->APIKey: Generate API key
 APIKey->Database: Store hashed key
-APIKey-->Provisioning: API key
-Provisioning->Email: Send welcome email
+APIKey-->CustomerOnboarding: Raw API key
+CustomerOnboarding->Email: Send welcome email with API key
 Email-->User: Email with API key & dashboard link
-Provisioning-->User: Redirect to dashboard
+CustomerOnboarding-->User: Response with API key + redirect to dashboard
+Note right of User: RFC-071: Customer Portal
+```
+
+#### Mermaid Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant P as CustomerOnboarding
+    participant D as Database
+    participant B as Billing
+    participant S as Stripe
+    participant A as APIKey
+    participant E as Email
+
+    Note over U,P: Source: marketplace | direct | early_access
+
+    U->>P: Signup (email, name, source)
+    P->>D: Create customer record
+    P->>B: Create Stripe customer
+    B->>S: API: Create customer
+    S-->>B: Customer ID
+    B-->>P: Stripe customer ID
+    P->>A: Generate API key
+    A->>D: Store hashed key
+    A-->>P: Raw API key
+    P->>E: Send welcome email with API key
+    E-->>U: Email with API key & dashboard link
+    P-->>U: Response with API key + redirect to dashboard
+
+    Note over U: RFC-071: Customer Portal
 ```
 
 ### Usage Tracking Flow
+
+#### ASCII Sequence Diagram
 
 ```sequence
 Title: Fix Deployment & Billing Flow
@@ -68,29 +113,74 @@ Database-->Dashboard: Usage data
 Dashboard-->User: Display updated stats
 ```
 
+#### Mermaid Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant GA as GitHub Action
+    participant PD as PhaseData
+    participant D as Database
+    participant B as Billing
+    participant S as Stripe
+    participant W as Webhooks
+    participant Dash as Dashboard
+    participant U as User
+
+    GA->>PD: Phase completion event
+    PD->>D: Store phase result
+    PD->>B: track_fix_deployed()
+    B->>D: Check customer plan
+    B->>S: Record usage (if PAYG/Pro)
+    S->>W: Usage recorded event
+    W->>D: Update usage stats
+    D-->>Dash: Usage data
+    Dash-->>U: Display updated stats
+```
+
 ## Data Contracts
 
-### Provisioning → Billing
+**Note**: These contracts should ideally be expressed programmatically using OpenAPI specifications or similar, allowing test generation from the schema. Consider adding OpenAPI docs for these internal APIs (see CLAUDE.md for OpenAPI guidelines).
+
+### Customer Onboarding → Billing
 ```elixir
 %{
   customer_id: integer,
   email: string,
   name: string,
-  plan: :trial | :payg | :pro
+  subscription_plan: :trial | :pay_as_you_go | :pro
+  # Note: subscription_plan tracks billing tier. "trial" is the initial state (5-10 free credits).
+  # Customers upgrade to :pay_as_you_go or :pro when they add billing and choose a plan.
 }
 ```
 
-### Billing → Provisioning
+**Future**: Consider OpenAPI spec:
+```yaml
+# openapi/internal/customer_onboarding_to_billing.yaml
+components:
+  schemas:
+    CustomerOnboardingData:
+      type: object
+      required: [customer_id, email, name, subscription_plan]
+      properties:
+        customer_id: {type: integer}
+        email: {type: string, format: email}
+        name: {type: string}
+        subscription_plan: {type: string, enum: [trial, pay_as_you_go, pro]}
+```
+
+### Billing → Customer Onboarding
 ```elixir
 %{
   stripe_customer_id: string,
-  subscription_status: string,
-  can_use_service: boolean,
-  current_usage: integer
+  subscription_status: string,  # active, past_due, canceled, unpaid
+  credit_balance: integer,      # Current credit balance
+  can_use_service: boolean      # true if credits > 0 OR billing info present
 }
 ```
 
-## Daily Integration Plan (TDD Focus)
+## Continuous Integration Plan (TDD Focus)
+
+**Note**: While organized by day for clarity, integration work is continuous. Work proceeds iteratively through test-driven development cycles.
 
 ### Monday: Connect Systems
 **Morning**:
@@ -105,12 +195,46 @@ Dashboard-->User: Display updated stats
 - Update integration tests
 - 4:00 PM - Day review
 
-**Tests to Write First**:
+**Tests to Write First** (following BetterSpecs guidelines):
 ```elixir
-test "provisioning creates billing customer"
-test "billing returns correct status"
-test "usage events accepted"
-test "dashboard queries work"
+# Specific, descriptive test names with context
+describe "CustomerOnboarding.provision_customer/1" do
+  test "creates Stripe customer and credits 5 trial credits" do
+    # Arrange: Customer params
+    # Act: Call provision_customer
+    # Assert: Stripe customer created, credit_balance = 5, transaction recorded
+  end
+end
+
+describe "Billing.check_status/1" do
+  test "returns can_use_service: true when customer has credits" do
+    # Arrange: Customer with credit_balance = 3
+    # Act: Call check_status
+    # Assert: can_use_service == true
+  end
+
+  test "returns can_use_service: false when no credits and no billing" do
+    # Arrange: Customer with credit_balance = 0, stripe_customer_id = nil
+    # Act: Call check_status
+    # Assert: can_use_service == false
+  end
+end
+
+describe "Billing.track_fix_deployed/2" do
+  test "creates credit_transaction with source='consumed' when fix deployed" do
+    # Arrange: Customer with credit_balance = 5, fix record
+    # Act: Call track_fix_deployed
+    # Assert: CreditTransaction created with amount = -1, source = "consumed"
+  end
+end
+
+describe "CustomerDashboard.usage_stats/1" do
+  test "returns credit balance and last 10 transactions" do
+    # Arrange: Customer with 15 transactions
+    # Act: Query usage_stats
+    # Assert: Returns credit_balance and most recent 10 transactions ordered by inserted_at DESC
+  end
+end
 ```
 
 ### Tuesday: Happy Path (TDD)
@@ -120,8 +244,14 @@ test "dashboard queries work"
 ```elixir
 test "trial signup to first fix"
 test "trial to paid conversion"
-test "marketplace installation"
+test "marketplace installation flow" do
+  # RFC-067: Marketplace user → signup redirect → provisioning → first scan
+  # Verifies: GitHub Actions workflow install, API key delivery, dashboard access
+end
 test "payment method addition"
+test "Pro subscription creation and first renewal"
+test "subscription cancellation (immediate)"
+test "subscription cancellation (end-of-period)"
 ```
 Then implement until all pass.
 
@@ -134,30 +264,77 @@ test "recovers from stripe API failures"
 test "retries payment failures"
 test "handles duplicate webhooks"
 test "prevents race conditions"
+test "handles subscription renewal payment failure"
+test "preserves credits on subscription cancellation"
+test "maintains Pro pricing until period end when cancel_at_period_end"
 ```
 Then add error handling until tests pass.
 
 ### Thursday: Load Testing
 **Goal**: System performs under load
 
-**Tests**:
-```elixir
-test "100 concurrent signups"
-test "1000 webhooks/minute"
-test "API rate limits hold"
-test "memory usage stable"
+**Tools**: Use existing load testing libraries instead of writing custom tests:
+- **k6** (JavaScript-based, recommended): `brew install k6`
+- **Artillery** (Node.js-based): `npm install -g artillery`
+- **Locust** (Python-based): For more complex scenarios
+
+**Example k6 Script**:
+```javascript
+// load_tests/signup_test.js
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export let options = {
+  stages: [
+    { duration: '2m', target: 100 }, // Ramp up to 100 users
+    { duration: '5m', target: 100 }, // Stay at 100 users
+    { duration: '2m', target: 0 },   // Ramp down
+  ],
+};
+
+export default function () {
+  let response = http.post('https://staging.rsolv.dev/api/v1/customers', {
+    email: `test-${__VU}-${__ITER}@test.com`,
+    name: 'Load Test User',
+  });
+
+  check(response, {
+    'status is 200': (r) => r.status === 200,
+    'response time < 500ms': (r) => r.timings.duration < 500,
+  });
+
+  sleep(1);
+}
 ```
 
-### Friday: Beta Preparation
+**Run**: `k6 run load_tests/signup_test.js`
+
+**Tests**:
+```bash
+# Using k6
+k6 run --vus 100 --duration 30s load_tests/signup_test.js
+k6 run --vus 1000 --duration 1m load_tests/webhook_test.js
+
+# Verify rate limits hold
+k6 run --vus 200 --duration 10s load_tests/api_rate_limit_test.js
+
+# Memory/CPU monitoring during load (using existing monitoring stack)
+# Check Grafana dashboards during load test execution
+```
+
+### Friday: Production Preparation
 **Morning**:
-- Final test run
-- Deploy to production (feature-flagged)
-- Verify monitoring
+- Final test run in staging
+- Verify all success criteria met
+- Review deployment checklist
 
 **Afternoon**:
-- Beta customer prep
-- Support documentation
-- Launch review
+- Deploy to production (feature-flagged if needed)
+- Smoke test in production
+- Verify monitoring and alerting
+- Support documentation ready
+
+**No Beta**: We launch directly to production. We don't have sufficient customer base for a meaningful beta program.
 
 ## Critical Integration Points
 
@@ -168,24 +345,25 @@ test "memory usage stable"
 ```sequence
 Title: Signup to Stripe Customer Creation
 
-Provisioning->Customers: create_customer(params)
+CustomerOnboarding->Customers: create_customer(params)
 Customers->Database: INSERT customer
 Database-->Customers: Customer record
-Customers-->Provisioning: {:ok, customer}
-Provisioning->Billing: create_stripe_customer(customer)
+Customers-->CustomerOnboarding: {:ok, customer}
+CustomerOnboarding->Billing: create_stripe_customer(customer)
 Billing->Stripe: API: Create customer
 Stripe-->Billing: Stripe customer ID
-Billing-->Provisioning: {:ok, stripe_id}
-Provisioning->Customers: update_customer(stripe_id)
+Billing-->CustomerOnboarding: {:ok, stripe_id}
+CustomerOnboarding->Customers: update_customer(stripe_id)
 Customers->Database: UPDATE stripe_customer_id
 Database-->Customers: Updated
-Customers-->Provisioning: {:ok, customer}
-Provisioning-->User: Customer provisioned
+Customers-->CustomerOnboarding: {:ok, customer}
+CustomerOnboarding-->User: Customer onboarded
 ```
 
 #### Implementation
 
 ```elixir
+# In CustomerOnboarding module
 def provision_customer(params) do
   with {:ok, customer} <- create_customer(params),
        {:ok, stripe_id} <- Billing.create_stripe_customer(customer),
@@ -349,20 +527,51 @@ This event-driven architecture means billing happens in response to phase comple
 
 ### Feature Flags
 ```elixir
-if FunWithFlags.enabled?(:auto_provisioning) do
+if FunWithFlags.enabled?(:automated_customer_onboarding) do
   auto_provision(customer)
 else
   manual_queue(customer)
 end
 ```
 
-### Database Backups
-```bash
-# Before integration
-pg_dump production > backup_pre_integration.sql
+### Database Backups (Use Ecto!)
 
-# Daily backups
-pg_dump production > backup_day_${DAY}.sql
+**IMPORTANT**: Always use Ecto for database operations, including backups and migrations.
+
+```elixir
+# Use Ecto migration rollback instead of raw SQL
+mix ecto.rollback --step 1
+mix ecto.rollback --to 20251021
+
+# For data snapshots, use Ecto queries to export/import
+defmodule Rsolv.Backup do
+  def export_customers_snapshot do
+    customers = Repo.all(Customer)
+    File.write!("backup_customers_#{Date.utc_today()}.json", Jason.encode!(customers))
+  end
+
+  def restore_customers_snapshot(file) do
+    {:ok, data} = File.read(file)
+    {:ok, customers} = Jason.decode(data)
+
+    Repo.transaction(fn ->
+      Enum.each(customers, fn customer_data ->
+        %Customer{}
+        |> Customer.changeset(customer_data)
+        |> Repo.insert!()
+      end)
+    end)
+  end
+end
+```
+
+**Database Backups** (via Kubernetes/infrastructure, not manual):
+```bash
+# Automated backups via CloudNativePG (already configured)
+kubectl get backups -n rsolv-production
+
+# Restore from backup (if catastrophic failure)
+# See rsolv-infrastructure/DEPLOYMENT.md
 ```
 
 ### Kill Switches
@@ -377,44 +586,45 @@ config :rsolv,
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Webhook race conditions | High | Queue and process async |
-| Payment during provisioning | Medium | Lock during provisioning |
+| **Customers don't show up** | **Highest** | **Multi-channel GTM (RFC-067): Marketplace, Mastodon/Bluesky, content marketing, email list building. Success metrics: 15-30 marketplace installs in 30 days. Pivot criteria: If <10 signups in first 30 days, reassess customer acquisition strategy.** |
+| Webhook race conditions | High | Queue and process async via Oban with idempotency (unique stripe_event_id) |
+| Payment during provisioning | Medium | Database row locks (FOR UPDATE) during provisioning |
 | API validation performance | High | Cache with 60s TTL |
-| Interface mismatches | High | Day 1 validation tests |
+| Interface mismatches | High | Day 1 validation tests with comprehensive data contracts |
+| Stripe API failures | Medium | Oban retry with exponential backoff (max 3 attempts) |
+| Data inconsistency (credit balance) | High | Ecto.Multi transactions, credit ledger audit trail |
 
 ## Communication Plan
 
-### Daily Standups
-- 9:00 AM - Morning sync (15 min)
-- 1:00 PM - Quick check (5 min)
-- 4:00 PM - Day review (15 min)
+**Note**: This is a two-person operation (Dylan and Claude). Formal communication plan not needed.
 
-### Escalation Path
-```
-Issue → Team Lead (5m) → Integration Lead (15m) → CTO (30m)
-```
-
-### Channels
-- Slack: #billing-integration
-- Status: integration.rsolv.dev
-- Email: Daily summary at 5 PM
+**Working Agreement**:
+- Continuous async communication via Claude Code sessions
+- Status updates tracked in RFC documents and git commits
+- Issues documented in GitHub issues or RFC amendments
+- Decision log maintained in ADRs when implementation deviates from RFCs
 
 ## Success Criteria
 
-### Must Have (Beta Blockers)
-- [ ] Automated signup → API key flow
-- [ ] Payment method addition works
-- [ ] Subscription creation successful
-- [ ] Usage tracking accurate
-- [ ] All tests passing (>90%)
-- [ ] Staging stable for 24 hours
+### Must Have (Production Blockers)
+- [ ] Automated signup → API key flow working for all sources (direct, marketplace, early access)
+- [ ] Payment method addition works with explicit consent
+- [ ] Pro plan creation successful ($599/month, 60 credits)
+- [ ] Credit system tracking accurate (ledger balance matches customer balance)
+- [ ] Fix deployment billing works (consume credits or charge correctly)
+- [ ] All tests passing (>90% coverage)
+- [ ] Staging stable for 24 hours with no critical errors
+- [ ] Monitoring and alerting operational
+- [ ] Rollback procedure tested
 
 ### Should Have
 - [ ] Load tests pass
 - [ ] Monitoring complete
 - [ ] Rollback tested
 
-## Week 4 Checklist
+## Integration Week Checklist
+
+**Note**: "Week 4" refers to the 4th week of the 6-week RFC-064 timeline. This is the integration phase when all parallel workstreams converge.
 
 ### Monday
 - [ ] All systems connected
@@ -434,18 +644,19 @@ Issue → Team Lead (5m) → Integration Lead (15m) → CTO (30m)
 - [ ] Performance acceptable
 
 ### Friday
-- [ ] Beta ready
-- [ ] Monitoring active
-- [ ] Documentation complete
+- [ ] Production deployment ready
+- [ ] Monitoring and alerting active
+- [ ] Documentation complete (support docs, API docs, runbooks)
 
 ## Next Steps
 
-### Week 3 (This Week)
-1. Review RFC with all teams
-2. Ensure prerequisites met
-3. Set up integration environment
+### Week 3 (Preparation)
+1. Complete prerequisites from checklist (80% completion on RFCs 065-068)
+2. Set up staging environment with test Stripe keys
+3. Verify all factory traits and seed data working
+4. Review this RFC and adjust timeline if needed
 
-### Monday Morning
-1. 9 AM all-hands kickoff
-2. Deploy all branches
-3. Begin interface validation
+### Monday Morning (Integration Week Start)
+1. Deploy all feature branches to staging
+2. Begin interface validation tests
+3. Start continuous integration process
