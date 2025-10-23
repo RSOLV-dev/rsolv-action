@@ -109,6 +109,7 @@ All RFCs must meet readiness criteria before Week 4 integration (see `INTEGRATIO
 
 - `README.md` - This file (project overview and status)
 - `INTEGRATION-CHECKLIST.md` - Integration readiness tracking for RFCs 065-068
+  - **Appendix**: Interface contracts and specifications (data types, function signatures, migration coordination)
 - `CUSTOMER-TRACTION-TRACKING.md` - Beta tester outreach and conversion tracking
 - `WEEK-0-COMPLETION.md` - Week 0 detailed completion summary
 

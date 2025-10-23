@@ -326,35 +326,366 @@
 
 ---
 
-## Appendix: Integration Notes
+## Appendix: Integration Contracts & Specifications
 
-### RFC-065 + RFC-066 Interface
-_To be filled during integration:_
-- Contract details for `Billing.create_stripe_customer/1`
-- Contract details for `Billing.credit_customer/3`
-- Error handling between services
-- Edge cases discovered
+**Status**: Defined Week 0
+**Purpose**: Interface contracts between RFCs 065, 066, 067, 068
 
-### RFC-067 + Platform API
-_To be filled during integration:_
-- Credit consumption API changes
-- Authentication flow changes
-- Rate limiting considerations
-- GitHub Action version compatibility
+---
 
-### Performance & Load Testing Results
-_To be filled during integration:_
+### A.1 Data Type Conventions
+
+**CRITICAL**: All implementers MUST follow these exact conventions:
+
+#### Subscription Type (Pricing Tier)
+- **Field**: `subscription_type`
+- **Type**: STRING (not atom)
+- **Values**: `"trial"` | `"pay_as_you_go"` | `"pro"`
+- **Default**: `"trial"`
+- **Migration**: Rename `subscription_plan` → `subscription_type`
+
+#### Subscription State (Stripe Lifecycle)
+- **Field**: `subscription_state`
+- **Type**: STRING or `nil`
+- **Values**: `nil` (trial/PAYG), `"active"`, `"past_due"`, `"canceled"`, `"unpaid"`, `"incomplete"`, `"paused"`
+- **Default**: `nil`
+- **Migration**: Rename `subscription_status` → `subscription_state`
+
+#### Date/Time Format
+- **Type**: `:utc_datetime` (Ecto)
+- **Convention**: All timestamps in UTC
+
+#### Credit Balance
+- **Field**: `credit_balance`
+- **Type**: INTEGER
+- **Unit**: Number of fixes (1 credit = 1 fix)
+- **Default**: `0`
+
+---
+
+### A.2 RFC-065 ↔ RFC-066 Interface Contract
+
+#### Function Signatures (RFC-066 MUST implement)
+
+**Credit Customer**:
+```elixir
+@spec credit_customer(Customer.t(), pos_integer(), keyword()) ::
+  {:ok, CreditTransaction.t()} | {:error, term()}
+
+# Usage:
+Billing.credit_customer(customer, 5, source: "trial_signup")
+```
+
+**Parameters**:
+- `customer`: Customer struct
+- `amount`: Positive integer credits
+- `opts`:
+  - `:source` (required) - `"trial_signup"` | `"trial_billing_added"` | `"pro_subscription_payment"` | `"purchased"` | `"admin_adjustment"`
+  - `:metadata` (optional) - Additional context map
+
+**Add Payment Method**:
+```elixir
+@spec add_payment_method(Customer.t(), String.t(), keyword()) ::
+  {:ok, Customer.t()} | {:error, term()}
+
+# Usage:
+Billing.add_payment_method(customer, "pm_1234...", consent_given: true)
+```
+
+**Track Fix Deployed**:
+```elixir
+@spec track_fix_deployed(Customer.t(), Fix.t()) ::
+  {:ok, CreditTransaction.t()} | {:ok, :charged_and_consumed} | {:error, term()}
+
+# Behavior:
+# - Has credits → Consume 1 credit
+# - No credits, no billing → {:error, :no_billing_info}
+# - No credits, has billing (PAYG) → Charge $29, credit 1, consume 1
+# - No credits, has billing (Pro) → Charge $15, credit 1, consume 1
+```
+
+#### Customer Fields Required by RFC-066
+
+RFC-065 migration MUST ensure these fields exist:
+```elixir
+%Customer{
+  credit_balance: integer(),           # REQUIRED
+  subscription_type: string(),         # REQUIRED - "trial" | "pay_as_you_go" | "pro"
+  subscription_state: string() | nil,  # REQUIRED - Stripe state or nil
+  stripe_customer_id: string() | nil,  # REQUIRED - When billing added
+  billing_consent_given: boolean(),    # REQUIRED - User consent checkbox
+  billing_consent_at: DateTime.t() | nil,
+  subscription_cancel_at_period_end: boolean()  # REQUIRED
+}
+```
+
+---
+
+### A.3 Provisioning Flow with Credits
+
+#### Complete Signup Flow
+```elixir
+# 1. Create customer (RFC-065)
+{:ok, customer} = Customers.create_customer(%{
+  email: "user@example.com",
+  name: "Jane Developer",
+  subscription_type: "trial",  # ✅ STRING
+  subscription_state: nil,
+  credit_balance: 0
+})
+
+# 2. Credit signup bonus (RFC-066)
+{:ok, _txn} = Billing.credit_customer(customer, 5, source: "trial_signup")
+# customer.credit_balance == 5
+
+# 3. Generate API key (RFC-065)
+{:ok, api_key_data} = ApiKeys.create_for_customer(customer)
+
+# 4. Send welcome email (RFC-065, async via Oban)
+EmailSequence.start_early_access_onboarding_sequence(
+  customer.email,
+  customer.name,
+  api_key_data.raw_key
+)
+```
+
+#### Add Billing Info Flow
+```elixir
+# User adds payment method (RFC-066)
+{:ok, updated_customer} = Billing.add_payment_method(
+  customer,
+  "pm_1234...",
+  consent_given: true
+)
+# updated_customer.credit_balance == 10  (5 signup + 5 billing)
+# updated_customer.stripe_customer_id == "cus_..."
+```
+
+#### Subscribe to Pro Flow
+```elixir
+# User subscribes (RFC-066)
+{:ok, subscription} = Billing.subscribe_to_pro(customer)
+# Creates Stripe subscription ($599/month)
+# Charges immediately
+# Webhook processes invoice.paid → credits +60
+# customer.subscription_type == "pro"
+# customer.subscription_state == "active"
+# customer.credit_balance == 70  (10 from trial + 60 from Pro)
+```
+
+---
+
+### A.4 Worker Signatures
+
+#### StripeRetryWorker (RFC-066 creates)
+```elixir
+# File: lib/rsolv/workers/stripe_retry_worker.ex
+defmodule Rsolv.Workers.StripeRetryWorker do
+  use Oban.Worker,
+    queue: :stripe_retries,
+    max_attempts: 3
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: args}) do
+    # args = %{
+    #   "operation" => "create_customer" | "attach_payment_method" | "create_subscription",
+    #   "customer_id" => binary_id(),
+    #   "params" => map()
+    # }
+  end
+end
+```
+
+#### EmailRetryWorker (Decision: Reuse Existing)
+**DO NOT create** - Reuse existing `EmailWorker` which already has `max_attempts: 3`
+
+---
+
+### A.5 Admin Module Structure
+
+**Single file with namespaced functions:**
+
+```elixir
+# File: lib/rsolv/admin.ex
+defmodule Rsolv.Admin do
+  # RFC-065 functions
+  defdelegate reset_credits(email, amount), to: Rsolv.Admin.CustomerAdmin
+  defdelegate resend_welcome(email), to: Rsolv.Admin.CustomerAdmin
+
+  # RFC-066 functions
+  defdelegate cancel_subscription(email, opts \\ []), to: Rsolv.Admin.BillingAdmin
+  defdelegate adjust_credit_balance(email, amount, reason), to: Rsolv.Admin.BillingAdmin
+end
+```
+
+**Implementation modules:**
+- `lib/rsolv/admin/customer_admin.ex` - RFC-065 creates
+- `lib/rsolv/admin/billing_admin.ex` - RFC-066 creates
+
+---
+
+### A.6 Migration Coordination
+
+**CRITICAL**: Migrations MUST run in this order:
+
+1. **RFC-065 migration** - Add provisioning fields
+2. **RFC-066 migration** - Rename subscription fields + add billing tables
+
+#### RFC-065 Responsibilities
+```elixir
+# Add provisioning fields only
+alter table(:customers) do
+  add :auto_provisioned, :boolean, default: false
+  add :wizard_preference, :string, default: "auto"
+  add :first_scan_at, :utc_datetime
+end
+
+# DO NOT rename subscription_plan/subscription_status
+# RFC-066 will handle this
+```
+
+#### RFC-066 Responsibilities
+```elixir
+# CRITICAL: Rename subscription fields first
+rename table(:customers), :subscription_plan, to: :subscription_type
+rename table(:customers), :subscription_status, to: :subscription_state
+
+# Then add billing fields
+alter table(:customers) do
+  add :credit_balance, :integer, default: 0, null: false
+  add :stripe_customer_id, :string
+  add :billing_consent_given, :boolean, default: false, null: false
+  # ... other billing fields
+end
+
+# Create credit_transactions table
+create table(:credit_transactions, primary_key: false) do
+  add :id, :binary_id, primary_key: true
+  add :customer_id, references(:customers, on_delete: :delete_all), null: false
+  add :amount, :integer, null: false
+  add :balance_after, :integer, null: false
+  add :source, :string, null: false
+  add :metadata, :map, default: %{}
+  timestamps(type: :utc_datetime)
+end
+
+# Create billing_events table (webhook idempotency)
+create table(:billing_events, primary_key: false) do
+  add :id, :binary_id, primary_key: true
+  add :stripe_event_id, :string, null: false
+  add :event_type, :string, null: false
+  add :customer_id, references(:customers, on_delete: :nilify_all)
+  add :amount_cents, :integer
+  add :metadata, :map, default: %{}
+  timestamps(type: :utc_datetime)
+end
+
+create unique_index(:billing_events, [:stripe_event_id])
+```
+
+---
+
+### A.7 Integration Testing Contract
+
+**Required integration tests (RFC-069 Week 4):**
+
+```elixir
+# Complete signup flow
+test "signup credits customer correctly" do
+  # Verify subscription_type: "trial", credit_balance: 5
+end
+
+# Add billing flow
+test "adding billing info credits +5" do
+  customer = create_trial_customer()  # credit_balance: 5
+  # After: credit_balance: 10, stripe_customer_id present
+end
+
+# Pro subscription flow
+test "Pro subscription credits +60 on invoice.paid" do
+  customer = create_customer_with_billing()  # credit_balance: 10
+  # After: credit_balance: 70, subscription_type: "pro"
+end
+
+# Fix deployment flows
+test "fix deployment consumes credit when available" do
+  # credit_balance: 5 → 4
+end
+
+test "fix deployment charges PAYG when no credits" do
+  # Charges $29, credits 1, consumes 1, balance stays 0
+end
+
+test "subscription cancellation preserves credits" do
+  # Pro → PAYG, credits preserved, pricing reverted
+end
+```
+
+---
+
+### A.8 API Response Format
+
+**Standardized customer object:**
+```json
+{
+  "customer": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "name": "Jane Developer",
+    "credit_balance": 10,
+    "subscription_type": "trial",
+    "subscription_state": null,
+    "stripe_customer_id": "cus_abc123",
+    "billing_consent_given": true,
+    "inserted_at": "2025-10-23T12:00:00Z",
+    "updated_at": "2025-10-24T08:30:00Z"
+  }
+}
+```
+
+---
+
+### A.9 Error Handling Contract
+
+**Standard error responses:**
+
+**Business Logic Errors (400)**:
+```json
+{
+  "error": "insufficient_credits",
+  "message": "No credits available. Please add billing information.",
+  "credit_balance": 0,
+  "has_billing_info": false
+}
+```
+
+**Validation Errors (422)**:
+```json
+{
+  "errors": {
+    "email": ["has already been taken"],
+    "password": ["must contain at least one uppercase letter"]
+  }
+}
+```
+
+---
+
+### A.10 Performance & Load Testing Results
+_To be filled during Week 4 integration:_
 - Baseline metrics from RFC-068
 - Bottlenecks discovered
 - Optimizations applied
 - Final performance numbers
 
-### Security Considerations
-_To be filled during integration:_
-- Authentication/authorization changes
-- Data encryption requirements
-- Webhook signature verification
+---
+
+### A.11 Security Considerations
+_To be filled during Week 4 integration:_
+- Webhook signature verification implementation
 - API key rotation procedures
+- Rate limiting enforcement results
+- PCI compliance validation
 
 ---
 
