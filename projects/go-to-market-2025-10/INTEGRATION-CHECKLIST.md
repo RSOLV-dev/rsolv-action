@@ -331,6 +331,33 @@
 **Status**: Defined Week 0
 **Purpose**: Interface contracts between RFCs 065, 066, 067, 068
 
+### A.0 Telemetry Event Registry
+
+**Purpose:** Prevent namespace collisions across RFC implementations. All events use `[:rsolv, ...]` prefix.
+
+#### Customer Onboarding (RFC-065)
+- `[:rsolv, :customer_onboarding, :started]` - metadata: source, email_domain
+- `[:rsolv, :customer_onboarding, :complete]` - measurements: duration
+- `[:rsolv, :customer_onboarding, :failed]` - metadata: reason, step_failed
+
+#### Billing (RFC-066)
+- `[:rsolv, :billing, :stripe_customer, :created]` - metadata: customer_id, stripe_customer_id
+- `[:rsolv, :billing, :subscription, :created]` - metadata: plan, customer_id, stripe_subscription_id
+- `[:rsolv, :billing, :subscription, :renewed]` - measurements: amount_cents
+- `[:rsolv, :billing, :subscription, :cancelled]` - metadata: cancel_type
+- `[:rsolv, :billing, :payment, :succeeded]` - measurements: amount_cents
+- `[:rsolv, :billing, :payment, :failed]` - metadata: reason
+- `[:rsolv, :billing, :credit, :added]` - measurements: amount, metadata: source
+- `[:rsolv, :billing, :credit, :consumed]` - measurements: amount, metadata: reason, deployment_id
+- `[:rsolv, :billing, :usage, :tracked]` - metadata: subscription_type, event_type
+
+#### Fix Deployment (RFC-066 + RFC-060)
+- `[:rsolv, :fix, :deployed]` - metadata: customer_id, subscription_type, deployment_id, repository, vulnerability_type
+
+**Integration Points:**
+- RFC-065 → RFC-066: `onboarding:complete` → `billing:stripe_customer:created` → `billing:subscription:created`
+- RFC-066 → RFC-060: `fix:deployed` → `billing:credit:consumed` → `billing:usage:tracked`
+
 ---
 
 ### A.1 Data Type Conventions

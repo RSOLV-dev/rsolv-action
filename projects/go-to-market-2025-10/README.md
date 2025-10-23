@@ -31,10 +31,51 @@ This directory contains working documents for the 6-week go-to-market launch pro
   - Created quality-focused beta tester outreach plan (5 contacts → 3-5 testers)
   - See `CUSTOMER-TRACTION-TRACKING.md` for tracking
 
+- ✅ **Telemetry Event Registry**
+  - Created namespace registry to prevent RFC collisions
+  - See `INTEGRATION-CHECKLIST.md` Appendix for event definitions
+
+- ✅ **Branching Strategy Established**
+  - Integration branch approach (Option A) chosen
+  - Branch `feature/billing-provisioning-integration` created
+  - All RFC work branches from/merges to integration branch (NOT main)
+
 ### Week 0 Documents
 - `WEEK-0-COMPLETION.md` - Detailed Week 0 completion summary
 - `CUSTOMER-TRACTION-TRACKING.md` - Beta tester outreach tracking
-- `INTEGRATION-CHECKLIST.md` - RFC-065-068 integration readiness criteria
+- `INTEGRATION-CHECKLIST.md` - RFC-065-068 integration readiness criteria + telemetry registry
+
+## Branching Strategy
+
+**Integration Branch Approach:** All RFC implementations use `feature/billing-provisioning-integration` as base.
+
+**Workflow for RFC Implementers:**
+```bash
+# Start new RFC work
+git checkout feature/billing-provisioning-integration
+git pull
+git checkout -b feature/rfc-065-customer-onboarding  # or rfc-066, rfc-068
+
+# ... do work ...
+git commit -m "RFC-065: Add email verification"
+git push -u origin feature/rfc-065-customer-onboarding
+
+# Open PR targeting feature/billing-provisioning-integration (NOT main)
+# After review, merge to integration branch
+```
+
+**Week 4 Integration:**
+- Integration branch continuously integrates all RFCs (Weeks 1-3)
+- Week 4: Full E2E testing on integration branch
+- After stable: Merge `feature/billing-provisioning-integration` → `main`
+
+**Expected File Conflicts** (resolve during integration):
+- `mix.exs` - Both RFC-065 and RFC-066 add dependencies
+- `lib/rsolv_web/router.ex` - Both add routes
+- `config/config.exs` - Both add configuration
+- `priv/repo/migrations/` - Sequential timestamps (no conflict)
+
+See `INTEGRATION-CHECKLIST.md` for conflict resolution protocol.
 
 ## Critical Blocker
 
