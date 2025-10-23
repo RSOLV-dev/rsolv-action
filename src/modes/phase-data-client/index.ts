@@ -152,17 +152,34 @@ export class PhaseDataClient {
 
     // Try to store on platform, fall back to local on platform errors only
     try {
+      const requestPayload = {
+        phase: platformPhase,
+        data: phaseSpecificData,
+        ...metadata
+      };
+
+      console.log('[PhaseDataClient] Storing phase data:', {
+        phase: platformPhase,
+        hasData: !!phaseSpecificData,
+        dataType: typeof phaseSpecificData,
+        repo: metadata.repo,
+        issueNumber: metadata.issueNumber,
+        commitSha: metadata.commitSha?.substring(0, 8)
+      });
+
       const response = await fetch(`${this.baseUrl}/api/v1/phases/store`, {
         method: 'POST',
         headers: this.headers,
-        body: JSON.stringify({
-          phase: platformPhase,
-          data: phaseSpecificData,
-          ...metadata
-        })
+        body: JSON.stringify(requestPayload)
       });
 
       if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unable to read error response');
+        console.error('[PhaseDataClient] Platform storage failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorBody: errorText
+        });
         throw new Error(`Platform storage failed: ${response.statusText}`);
       }
 
