@@ -58,6 +58,11 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   - branch: Optional, for scan phase
   """
   def store(conn, params) do
+    # Debug logging to see what params are actually received
+    require Logger
+    Logger.info("[PhaseController] Received params: #{inspect(params, pretty: true)}")
+    Logger.info("[PhaseController] Params keys: #{inspect(Map.keys(params))}")
+
     customer = conn.assigns.customer
     # Use the actual API key that was used for authentication
     api_key = conn.assigns.api_key || get_customer_api_key(customer)
