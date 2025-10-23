@@ -30,38 +30,23 @@ Provide testing infrastructure, standards, and patterns to support billing syste
 
 **Scope:** This RFC provides the infrastructure and standards. Actual test implementation occurs during TDD cycles within feature RFCs (065-Provisioning, 066-Billing, 067-Marketplace).
 
+**Infrastructure Access:**
+- **Tailscale**: Already installed and configured on most devices for remote access to test and staging environments
+- **Docker**: Local development and testing via Docker Compose
+- **Kubernetes**: Staging environment runs in k8s with option to spin up additional namespaces for testing (see `RSOLV-infrastructure/` for kubectl access and configuration)
+
 ## Testing Architecture
 
-### ASCII Diagram
+**Three-Layer Approach:**
+- **Infrastructure Layer:** Docker Compose, test databases, Stripe CLI, mock services (provided by this RFC)
+- **Standards Layer:** Coverage requirements, telemetry patterns, test factories (defined by this RFC)
+- **Implementation Layer:** Actual tests written during TDD in feature RFCs (065-Provisioning, 066-Billing, 067-Marketplace)
 
-```
-Unit Tests → Integration Tests → Staging → Production
-     ↓              ↓                ↓          ↓
-  Mocks         Test DB         Stripe Test   Monitoring
-```
-
-### Flow Diagram
-
-```mermaid
-graph LR
-    A[Unit Tests] --> B[Integration Tests]
-    B --> C[Staging]
-    C --> D[Production]
-
-    A --> E[Mocks]
-    B --> F[Test DB]
-    C --> G[Stripe Test Mode]
-    D --> H[Monitoring]
-
-    style A fill:#e1f5ff
-    style B fill:#b3e0ff
-    style C fill:#80ccff
-    style D fill:#4db8ff
-```
-
-**Infrastructure Layer:** Docker Compose, test databases, Stripe CLI, mock services
-**Standards Layer:** Coverage requirements, telemetry patterns, test factories
-**Implementation Layer:** *(Tests written during TDD in RFCs 065/066/067)*
+**Environments:**
+- **Local Development:** Unit tests with mocks, fast feedback
+- **CI/CD:** Integration tests with test database
+- **Staging:** E2E tests with Stripe test mode, production-like environment
+- **Production:** Monitoring and observability
 
 ## Monitoring & Telemetry Testing Patterns
 
@@ -86,6 +71,8 @@ test "billing event metrics have correct tags"
 **Note:** These are pattern examples. Actual tests are written during TDD cycles in feature RFCs.
 
 ### Implementation Pattern
+
+**Note:** This uses Erlang's `:telemetry` library (not OpenTelemetry). While OpenTelemetry does have Erlang/Elixir support (see https://opentelemetry.io/docs/languages/erlang/), we use the standard `:telemetry` library that's built into Phoenix and the Elixir ecosystem. This provides event-based metrics collection and integrates with PromEx for Prometheus/Grafana monitoring.
 
 Use the same `:telemetry.execute/3` pattern established for test integration:
 
@@ -148,10 +135,30 @@ See `/tmp/rfc060-test-integration-dashboard.json` for Grafana dashboard JSON str
 - Usage tracking metrics
 - Customer conversion funnel
 
+### Dashboard Validation
+
+After dashboard creation, verify functionality through:
+- **API Verification**: Use Grafana HTTP API to validate dashboard exists, panels are configured correctly, queries are syntactically valid
+- **Puppeteer Testing**: Use the Puppeteer MCP to:
+  - Navigate to dashboard URL
+  - Screenshot panels for visual verification
+  - Verify data visualization renders without errors
+- **Event Emission**: Programmatically emit test telemetry events via `:telemetry.execute/3`
+- **Data Verification**: Confirm emitted events appear in dashboard with correct values and timestamps
+- **Query Testing**: Validate PromQL queries return expected results for known test data
+
+**Validation Checklist:**
+- [ ] Dashboard loads without errors
+- [ ] All panels render with valid queries
+- [ ] Test events emit successfully
+- [ ] Events appear in dashboard within expected latency (< 30s)
+- [ ] Metric values match emitted test data
+- [ ] Dashboard responsive and accessible
+
 ### Test Coverage Requirements
 
 **Billing telemetry tests must achieve:**
-- 100% coverage of telemetry emission points
+- 80% minimum coverage of telemetry emission points, 95% aspirational (don't contort implementation to hit targets)
 - Verification that all billing events emit telemetry
 - Validation of tag completeness and correctness
 - Prometheus metric collection verification
@@ -184,21 +191,54 @@ services:
       STRIPE_API_KEY: sk_test_7upzEpVpOJlEJr4HwfSHObSe
 ```
 
-**Email Testing**: We use `bamboo_postmark` with test mode. No need for mailcatcher - Bamboo provides test adapters that capture emails in-memory during testing.
+**Email Testing with Bamboo**: We use `bamboo_postmark` with test mode. No need for mailcatcher - Bamboo provides `Bamboo.TestAdapter` that captures emails in-memory during testing.
+
+**Test Pattern:**
+```elixir
+defmodule YourTest do
+  use ExUnit.Case
+  use Bamboo.Test  # Required for email assertions
+
+  test "sends billing notification email" do
+    # Your code that sends email
+    result = BillingService.send_invoice(customer)
+
+    # Assert email was delivered
+    assert_delivered_email Rsolv.Mailer.invoice_email(customer)
+
+    # Or inspect all sent emails
+    emails = Bamboo.SentEmail.all()
+    assert length(emails) == 1
+    assert hd(emails).subject =~ "Invoice"
+  end
+end
+```
+
+**Available Assertions:**
+- `assert_delivered_email(email)` - Verify specific email was sent
+- `assert_no_emails_delivered()` - Verify no emails sent
+- `Bamboo.SentEmail.all()` - Get all sent emails for inspection
+- `Bamboo.SentEmail.reset()` - Clear sent emails (useful in `setup`)
+
+**Configuration:** Test environment automatically uses in-memory adapter. Dev/prod require `POSTMARK_API_KEY` in `.env` (see `.env.example`).
 
 ## 2. Testing Standards & Patterns
 
 ### Test Categories and Coverage Standards
 
 **Unit Tests** (implemented in feature RFCs during TDD):
-- Coverage: 95% for billing modules, 100% for webhook handlers
+- Coverage: 80% minimum, 95% aspirational (don't contort implementation to hit targets)
 - Focus: Single function/module behavior
 - Pattern: Arrange-Act-Assert with mocks
+
+**Webhook Handlers**: Aim for 95-100% due to critical nature, but 80% acceptable if achieving higher coverage requires artificial test scenarios
 
 **Integration Tests** (implemented in feature RFCs during TDD):
 - Coverage: All critical user journeys
 - Focus: Multi-component interactions
 - Pattern: Full stack with test database
+
+**Coverage Philosophy**: Prove code works without contorting implementation. Higher coverage is desirable only if it comes naturally from testing real scenarios. Doctests count toward coverage and are encouraged (ensure ExCoveralls includes them).
 
 **Load Tests** (infrastructure provided here):
 - Targets: 100 concurrent requests, 1000 webhooks/minute
@@ -218,12 +258,13 @@ services:
 2. **Isolation**: Unit tests use mocks, integration tests use test database
 3. **Idempotency**: Webhook tests verify duplicate handling
 4. **Observability**: All tests emit telemetry for validation
+5. **E2E/System Tests Required**: Before shipping to production, end-to-end system tests must validate complete workflows (signup → billing → usage → renewal/cancellation) in staging environment
 
 ## 3. Stripe Mock Service
 
 ```elixir
 defmodule Rsolv.StripeMock do
-  def create_customer(%{email: "fail@test.com"}), do: {:error, "Card declined"}
+  def create_customer(%{email: "fail@test.example.com"}), do: {:error, "Card declined"}
   def create_customer(_), do: {:ok, customer_fixture()}
 
   def create_subscription(%{customer: "cus_no_payment"}), do: {:error, "No payment method"}
@@ -260,7 +301,7 @@ defmodule Rsolv.CustomerFactory do
 
   def customer_factory do
     %Rsolv.Customers.Customer{
-      email: sequence(:email, &"customer-#{&1}@test.com"),
+      email: sequence(:email, &"customer-#{&1}@test.example.com"),
       name: "Test Customer",
       credit_balance: 0,
       subscription_type: "trial",
@@ -298,24 +339,34 @@ insert(:customer) |> with_pro_plan()
 ```
 
 **Staging Environment Reset**:
-```bash
-# Reset staging data (safe for shared environments)
-mix run priv/repo/seeds_staging.exs
 
-# Or via mix task
-mix staging.reset_data
+Since staging runs as an Erlang release (no `mix` available), use RPC from local machine:
+
+```bash
+# Connect to staging pod and run Elixir code remotely (requires kubectl access)
+kubectl exec -it <rsolv-pod> -- bin/rsolv rpc "Rsolv.Release.Tasks.reset_staging_data()"
+
+# Or use remote console for interactive debugging
+kubectl exec -it <rsolv-pod> -- bin/rsolv remote_console
+# Then: Rsolv.Release.Tasks.reset_staging_data()
 ```
 
-**Data Pollution Prevention**: All test customers should use `test.com` email domain and be easily identifiable/deletable.
+**Implementation Note**: Create `lib/rsolv/release/tasks.ex` module with `reset_staging_data/0` function that:
+- Only runs if `config_env() == :staging` (safety check)
+- Deletes test data (email pattern `*@example.com` or `*@test.example.com`)
+- Re-seeds with factory fixtures
+- Returns summary of changes
+
+**Data Pollution Prevention**: All test customers should use reserved domains (`example.com` or `test.example.com`) and be easily identifiable/deletable. Never use `test.com` (publicly available domain).
 
 ## 5. Coverage Requirements
 
-| Module | Required | Priority |
-|--------|----------|----------|
-| Billing.Stripe | 95% | Critical |
-| Webhook Handlers | 100% | Critical |
-| Usage Tracking | 95% | Critical |
-| Provisioning | 95% | Critical |
+| Module | Minimum | Aspirational | Priority |
+|--------|---------|--------------|----------|
+| Billing.Stripe | 80% | 95% | Critical |
+| Webhook Handlers | 80% | 95% | Critical |
+| Usage Tracking | 80% | 95% | Critical |
+| Provisioning | 80% | 95% | Critical |
 
 ## Implementation Tasks
 
@@ -347,9 +398,10 @@ mix staging.reset_data
 
 ## Success Metrics
 
-- **Coverage**: 95% for billing, 100% for webhooks
+- **Coverage**: 80% minimum across billing modules, 95% aspirational
+- **Doctests**: Enabled and counted in coverage (ExCoveralls configured)
 - **CI Speed**: < 5 minutes
-- **Test Reliability**: < 1% flakiness
+- **Test Reliability**: 0% flakiness (zero tolerance for flaky tests)
 - **Staging Uptime**: 99.9%
 
 ## Infrastructure Readiness Checklist
