@@ -18,6 +18,7 @@ defmodule RsolvWeb.SitemapController do
       #{url_entry("https://rsolv.dev/privacy", "0.3", "monthly")}
       #{url_entry("https://rsolv.dev/terms", "0.3", "monthly")}
       #{url_entry("https://rsolv.dev/dashboard", "0.5", "weekly")}
+      #{docs_entries()}
       #{blog_post_entries()}
     </urlset>
     """
@@ -32,6 +33,22 @@ defmodule RsolvWeb.SitemapController do
         <priority>#{priority}</priority>
       </url>
     """
+  end
+
+  defp docs_entries do
+    # Documentation pages (high priority for GitHub Marketplace)
+    [
+      {"https://docs.rsolv.dev/", "0.9", "weekly"},
+      {"https://docs.rsolv.dev/installation", "1.0", "weekly"},
+      {"https://docs.rsolv.dev/getting-started", "0.9", "weekly"},
+      {"https://docs.rsolv.dev/troubleshooting", "0.9", "weekly"},
+      {"https://docs.rsolv.dev/api-reference", "0.8", "weekly"},
+      {"https://docs.rsolv.dev/workflows", "0.8", "weekly"},
+      {"https://docs.rsolv.dev/configuration", "0.8", "weekly"},
+      {"https://docs.rsolv.dev/faq", "0.7", "monthly"}
+    ]
+    |> Enum.map(fn {url, priority, freq} -> url_entry(url, priority, freq) end)
+    |> Enum.join("\n")
   end
 
   defp blog_post_entries do
