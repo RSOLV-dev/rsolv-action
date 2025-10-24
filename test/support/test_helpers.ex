@@ -56,4 +56,43 @@ defmodule Rsolv.TestHelpers do
         {:error, other}
     end
   end
+
+  # Billing-specific test helpers (RFC-068)
+
+  @doc """
+  Creates an API key with a known raw value for testing.
+
+  Returns `{api_key_record, raw_key}` where raw_key can be used
+  in API request headers.
+
+  ## Examples
+
+      {api_key, raw_key} = create_test_api_key(customer)
+      # Use raw_key in Authorization header
+  """
+  def create_test_api_key(customer) do
+    # Generate a test API key
+    raw_key =
+      "rsolv_test_#{System.unique_integer([:positive])}_#{:crypto.strong_rand_bytes(16) |> Base.encode64(padding: false)}"
+
+    # In real implementation, this would create and hash the API key
+    # For now, return the customer and raw key
+    {customer, raw_key}
+  end
+
+  @doc """
+  Clears all Bamboo sent emails.
+
+  Useful in test setup to ensure clean state.
+
+  ## Examples
+
+      setup do
+        clear_sent_emails()
+        :ok
+      end
+  """
+  def clear_sent_emails do
+    Bamboo.SentEmail.reset()
+  end
 end

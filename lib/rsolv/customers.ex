@@ -190,7 +190,9 @@ defmodule Rsolv.Customers do
 
   """
   def create_api_key(%Customer{} = customer, attrs \\ %{}) do
-    Logger.info("🔑 [API Key Creation] Starting for customer_id: #{customer.id}, attrs: #{inspect(attrs)}")
+    Logger.info(
+      "🔑 [API Key Creation] Starting for customer_id: #{customer.id}, attrs: #{inspect(attrs)}"
+    )
 
     # Ensure customer_id is set
     attrs = Map.put(attrs, :customer_id, customer.id)
@@ -198,26 +200,41 @@ defmodule Rsolv.Customers do
     # Create changeset
     changeset = ApiKey.changeset(%ApiKey{}, attrs)
 
-    Logger.debug("🔑 [API Key Creation] Changeset valid?: #{changeset.valid?}, errors: #{inspect(changeset.errors)}")
+    Logger.debug(
+      "🔑 [API Key Creation] Changeset valid?: #{changeset.valid?}, errors: #{inspect(changeset.errors)}"
+    )
+
     Logger.debug("🔑 [API Key Creation] Changes: #{inspect(changeset.changes)}")
 
     # Use explicit transaction to ensure atomicity
     Repo.transaction(fn ->
       case Repo.insert(changeset) do
         {:ok, api_key} ->
-          Logger.info("✅ [API Key Creation] SUCCESS - ID: #{api_key.id}, Key prefix: #{String.slice(api_key.key, 0..15)}")
+          Logger.info(
+            "✅ [API Key Creation] SUCCESS - ID: #{api_key.id}, Key prefix: #{String.slice(api_key.key, 0..15)}"
+          )
+
           Logger.info("🔑 [API Key Creation] Full key for display: #{api_key.key}")
 
           # Verify it actually persisted by re-querying
           case Repo.get(ApiKey, api_key.id) do
             nil ->
-              Logger.error("❌ [API Key Creation] CRITICAL: Key inserted but not found in database! ID: #{api_key.id}")
-              Logger.error("❌ [API Key Creation] This should never happen - rolling back transaction")
+              Logger.error(
+                "❌ [API Key Creation] CRITICAL: Key inserted but not found in database! ID: #{api_key.id}"
+              )
+
+              Logger.error(
+                "❌ [API Key Creation] This should never happen - rolling back transaction"
+              )
+
               Repo.rollback({:error, :key_not_persisted})
 
             found ->
               Logger.info("✅ [API Key Creation] Verified key persisted to database")
-              Logger.info("✅ [API Key Creation] Verification - ID: #{found.id}, active: #{found.active}, customer_id: #{found.customer_id}")
+
+              Logger.info(
+                "✅ [API Key Creation] Verification - ID: #{found.id}, active: #{found.active}, customer_id: #{found.customer_id}"
+              )
 
               # Preload customer association for API
               Repo.preload(api_key, :customer)

@@ -2,9 +2,17 @@
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <!-- Header -->
     <div class="mb-8">
-      <a href="/docs" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
+      <a
+        href="/docs"
+        class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4"
+      >
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
         </svg>
         Back to Documentation
       </a>
@@ -13,22 +21,54 @@
         Ready-to-use GitHub Actions workflows for different security automation scenarios.
       </p>
     </div>
-
-    <!-- Quick Navigation -->
+    
+<!-- Quick Navigation -->
     <div class="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Available Templates</h2>
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        Available Templates
+      </h2>
       <ul class="space-y-2 text-slate-700 dark:text-slate-300">
-        <li><a href="#simple-scan" class="text-blue-600 dark:text-blue-400 hover:underline">Simple Scan Only</a> - Weekly scheduled vulnerability detection</li>
-        <li><a href="#full-pipeline" class="text-blue-600 dark:text-blue-400 hover:underline">Full Pipeline</a> - Complete scan → validate → fix workflow</li>
-        <li><a href="#manual-trigger" class="text-blue-600 dark:text-blue-400 hover:underline">Manual Trigger</a> - On-demand security scans</li>
-        <li><a href="#scheduled-scan" class="text-blue-600 dark:text-blue-400 hover:underline">Scheduled Weekly Scan</a> - Automated weekly security checks</li>
-        <li><a href="#pr-only" class="text-blue-600 dark:text-blue-400 hover:underline">Pull Request Only</a> - Scan PRs before merge</li>
+        <li>
+          <a href="#simple-scan" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Simple Scan Only
+          </a>
+          - Weekly scheduled vulnerability detection
+        </li>
+        <li>
+          <a href="#full-pipeline" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Full Pipeline
+          </a>
+          - Complete scan → validate → fix workflow
+        </li>
+        <li>
+          <a href="#manual-trigger" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Manual Trigger
+          </a>
+          - On-demand security scans
+        </li>
+        <li>
+          <a href="#scheduled-scan" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Scheduled Weekly Scan
+          </a>
+          - Automated weekly security checks
+        </li>
+        <li>
+          <a href="#pr-only" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Pull Request Only
+          </a>
+          - Scan PRs before merge
+        </li>
       </ul>
     </div>
-
-    <!-- Template 1: Simple Scan -->
-    <div id="simple-scan" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Simple Scan Only</h2>
+    
+<!-- Template 1: Simple Scan -->
+    <div
+      id="simple-scan"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8"
+    >
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+        Simple Scan Only
+      </h2>
       <p class="text-slate-700 dark:text-slate-300 mb-4">
         Perfect for getting started. Runs weekly to detect vulnerabilities without applying fixes. Creates GitHub issues for manual review.
       </p>
@@ -70,10 +110,15 @@ jobs:
           rsolvApiKey: \${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'") %></code></pre>
     </div>
-
-    <!-- Template 2: Full Pipeline -->
-    <div id="full-pipeline" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Full Pipeline (Scan → Validate → Mitigate)</h2>
+    
+<!-- Template 2: Full Pipeline -->
+    <div
+      id="full-pipeline"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8"
+    >
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+        Full Pipeline (Scan → Validate → Mitigate)
+      </h2>
       <p class="text-slate-700 dark:text-slate-300 mb-4">
         Complete automation from detection to fix. Scans for vulnerabilities, generates validation tests, and creates pull requests with fixes.
       </p>
@@ -163,10 +208,15 @@ jobs:
           mode: 'mitigate'
           max_issues: '3'") %></code></pre>
     </div>
-
-    <!-- Template 3: Manual Trigger -->
-    <div id="manual-trigger" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Manual Trigger with Options</h2>
+    
+<!-- Template 3: Manual Trigger -->
+    <div
+      id="manual-trigger"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8"
+    >
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+        Manual Trigger with Options
+      </h2>
       <p class="text-slate-700 dark:text-slate-300 mb-4">
         Run security scans on-demand with customizable parameters. Choose mode and number of issues to process from the Actions UI.
       </p>
@@ -221,10 +271,15 @@ jobs:
           mode: \${{ github.event.inputs.mode }}
           max_issues: \${{ github.event.inputs.max_issues }}") %></code></pre>
     </div>
-
-    <!-- Template 4: Scheduled Weekly -->
-    <div id="scheduled-scan" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Scheduled Weekly Security Scan</h2>
+    
+<!-- Template 4: Scheduled Weekly -->
+    <div
+      id="scheduled-scan"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8"
+    >
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+        Scheduled Weekly Security Scan
+      </h2>
       <p class="text-slate-700 dark:text-slate-300 mb-4">
         Automated weekly security checks with full pipeline. Runs every Monday morning to catch new vulnerabilities.
       </p>
@@ -305,10 +360,15 @@ jobs:
           mode: 'mitigate'
           max_issues: '5'") %></code></pre>
     </div>
-
-    <!-- Template 5: PR Only -->
-    <div id="pr-only" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Pull Request Security Check</h2>
+    
+<!-- Template 5: PR Only -->
+    <div
+      id="pr-only"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8"
+    >
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+        Pull Request Security Check
+      </h2>
       <p class="text-slate-700 dark:text-slate-300 mb-4">
         Scan pull requests for new vulnerabilities before merging. Prevents insecure code from reaching your main branch.
       </p>
@@ -370,24 +430,34 @@ jobs:
               body: comment
             });") %></code></pre>
     </div>
-
-    <!-- Configuration Tips -->
+    
+<!-- Configuration Tips -->
     <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Configuration Tips</h2>
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+        Configuration Tips
+      </h2>
 
       <div class="space-y-4">
         <div>
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Cron Schedule Examples</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Cron Schedule Examples
+          </h3>
           <table class="min-w-full border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden text-sm">
             <thead class="bg-slate-100 dark:bg-slate-700">
               <tr>
-                <th class="px-4 py-2 text-left font-semibold text-slate-900 dark:text-white">Schedule</th>
-                <th class="px-4 py-2 text-left font-semibold text-slate-900 dark:text-white">Cron Syntax</th>
+                <th class="px-4 py-2 text-left font-semibold text-slate-900 dark:text-white">
+                  Schedule
+                </th>
+                <th class="px-4 py-2 text-left font-semibold text-slate-900 dark:text-white">
+                  Cron Syntax
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
               <tr>
-                <td class="px-4 py-2 text-slate-700 dark:text-slate-300">Every day at midnight</td>
+                <td class="px-4 py-2 text-slate-700 dark:text-slate-300">
+                  Every day at midnight
+                </td>
                 <td class="px-4 py-2 font-mono text-slate-700 dark:text-slate-300">0 0 * * *</td>
               </tr>
               <tr>
@@ -400,14 +470,18 @@ jobs:
               </tr>
               <tr>
                 <td class="px-4 py-2 text-slate-700 dark:text-slate-300">Every 6 hours</td>
-                <td class="px-4 py-2 font-mono text-slate-700 dark:text-slate-300">0 */6 * * *</td>
+                <td class="px-4 py-2 font-mono text-slate-700 dark:text-slate-300">
+                  0 */6 * * *
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <div>
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Recommended Timeouts</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Recommended Timeouts
+          </h3>
           <ul class="text-sm text-slate-700 dark:text-slate-300 space-y-1">
             <li>• <strong>Scan:</strong> 15-20 minutes (depends on repository size)</li>
             <li>• <strong>Validate:</strong> 20-25 minutes (AI test generation time)</li>
@@ -416,7 +490,9 @@ jobs:
         </div>
 
         <div>
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Max Issues Recommendations</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Max Issues Recommendations
+          </h3>
           <ul class="text-sm text-slate-700 dark:text-slate-300 space-y-1 mb-0">
             <li>• <strong>Testing:</strong> Start with 1-2 to verify workflow</li>
             <li>• <strong>Production:</strong> 3-5 issues per run balances cost and coverage</li>
@@ -426,70 +502,154 @@ jobs:
         </div>
       </div>
     </div>
-
-    <!-- Best Practices -->
+    
+<!-- Best Practices -->
     <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Best Practices</h2>
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+        Best Practices
+      </h2>
 
       <div class="space-y-3 text-slate-700 dark:text-slate-300">
         <div class="flex items-start">
-          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          <svg
+            class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
           </svg>
-          <span><strong>Start simple:</strong> Begin with scan-only workflow, upgrade to full pipeline once comfortable</span>
+          <span>
+            <strong>Start simple:</strong>
+            Begin with scan-only workflow, upgrade to full pipeline once comfortable
+          </span>
         </div>
         <div class="flex items-start">
-          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          <svg
+            class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
           </svg>
-          <span><strong>Use concurrency control:</strong> Prevent overlapping runs with concurrency groups</span>
+          <span>
+            <strong>Use concurrency control:</strong>
+            Prevent overlapping runs with concurrency groups
+          </span>
         </div>
         <div class="flex items-start">
-          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          <svg
+            class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
           </svg>
-          <span><strong>Set appropriate timeouts:</strong> Prevent workflows from running indefinitely</span>
+          <span>
+            <strong>Set appropriate timeouts:</strong> Prevent workflows from running indefinitely
+          </span>
         </div>
         <div class="flex items-start">
-          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          <svg
+            class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
           </svg>
-          <span><strong>Monitor credit usage:</strong> Check dashboard regularly to track consumption</span>
+          <span>
+            <strong>Monitor credit usage:</strong> Check dashboard regularly to track consumption
+          </span>
         </div>
         <div class="flex items-start">
-          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          <svg
+            class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
           </svg>
-          <span><strong>Review PRs carefully:</strong> Always review AI-generated fixes before merging</span>
+          <span>
+            <strong>Review PRs carefully:</strong> Always review AI-generated fixes before merging
+          </span>
         </div>
         <div class="flex items-start">
-          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          <svg
+            class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
           </svg>
-          <span><strong>Combine workflows:</strong> Use scan on PRs and full pipeline on main branch</span>
+          <span>
+            <strong>Combine workflows:</strong> Use scan on PRs and full pipeline on main branch
+          </span>
         </div>
       </div>
     </div>
-
-    <!-- Next Steps -->
+    
+<!-- Next Steps -->
     <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
       <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Next Steps</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-0">
-        <a href="/docs/configuration" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+        <a
+          href="/docs/configuration"
+          class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow"
+        >
           <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Configuration Guide</h3>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Deep dive into all configuration options</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
+            Deep dive into all configuration options
+          </p>
         </a>
-        <a href="/docs/getting-started" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+        <a
+          href="/docs/getting-started"
+          class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow"
+        >
           <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Getting Started</h3>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Learn how to use these workflows effectively</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
+            Learn how to use these workflows effectively
+          </p>
         </a>
-        <a href="/docs/troubleshooting" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+        <a
+          href="/docs/troubleshooting"
+          class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow"
+        >
           <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Troubleshooting</h3>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Common workflow issues and solutions</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
+            Common workflow issues and solutions
+          </p>
         </a>
-        <a href="/docs/api-reference" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+        <a
+          href="/docs/api-reference"
+          class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow"
+        >
           <h3 class="font-semibold text-slate-900 dark:text-white mb-1">API Reference</h3>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Integrate RSOLV programmatically</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
+            Integrate RSOLV programmatically
+          </p>
         </a>
       </div>
     </div>

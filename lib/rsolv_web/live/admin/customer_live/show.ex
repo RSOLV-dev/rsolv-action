@@ -79,7 +79,10 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
   def handle_event("generate-api-key", _, socket) do
     require Logger
     customer = socket.assigns.customer
-    Logger.info("🔑 [LiveView] Generate API key request for customer_id: #{customer.id}, customer email: #{customer.email}")
+
+    Logger.info(
+      "🔑 [LiveView] Generate API key request for customer_id: #{customer.id}, customer email: #{customer.email}"
+    )
 
     case Customers.create_api_key(customer, %{name: "API Key"}) do
       {:ok, api_key} ->
@@ -104,7 +107,10 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
             Logger.info("🔑 [LiveView] ✅ Verified key is retrievable")
 
             api_keys = Customers.list_api_keys(customer)
-            Logger.info("🔑 [LiveView] Found #{length(api_keys)} total API keys for customer after creation")
+
+            Logger.info(
+              "🔑 [LiveView] Found #{length(api_keys)} total API keys for customer after creation"
+            )
 
             # Log the IDs of all keys to help debugging
             key_ids = Enum.map(api_keys, & &1.id)
@@ -129,15 +135,15 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
     end
   end
 
+  @impl true
+  def handle_event("close-api-key-modal", _, socket) do
+    {:noreply, assign(socket, :new_api_key, nil)}
+  end
+
   defp format_changeset_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
     |> Enum.map(fn {field, errors} -> "#{field}: #{Enum.join(errors, ", ")}" end)
     |> Enum.join("; ")
-  end
-
-  @impl true
-  def handle_event("close-api-key-modal", _, socket) do
-    {:noreply, assign(socket, :new_api_key, nil)}
   end
 
   defp calculate_usage_percentage(customer) do

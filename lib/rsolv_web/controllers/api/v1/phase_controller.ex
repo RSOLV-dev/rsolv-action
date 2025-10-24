@@ -7,6 +7,7 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   alias RsolvWeb.Schemas.Error.ErrorResponse
 
   plug RsolvWeb.Plugs.ApiAuthentication
+
   # Disabled: OpenAPI validation rejects valid requests (issue with schema vs actual payload format)
   # TODO: Fix OpenAPI schema to match actual request format, then re-enable
   # plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
@@ -68,7 +69,6 @@ defmodule RsolvWeb.Api.V1.PhaseController do
 
     with {:ok, normalized_params} <- normalize_params(params),
          {:ok, result} <- store_phase_data(normalized_params, api_key) do
-
       # Emit telemetry event for metrics (RFC-060 Phase 6)
       duration = System.monotonic_time() - start_time
       emit_phase_telemetry(normalized_params, duration, "success")
@@ -395,10 +395,12 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   defp extract_language_from_data(data) when is_map(data) do
     Map.get(data, "language") || Map.get(data, :language) || "unknown"
   end
+
   defp extract_language_from_data(_), do: "unknown"
 
   defp extract_framework_from_data(data) when is_map(data) do
     Map.get(data, "framework") || Map.get(data, :framework) || "none"
   end
+
   defp extract_framework_from_data(_), do: "none"
 end

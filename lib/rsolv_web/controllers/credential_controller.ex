@@ -64,7 +64,11 @@ defmodule RsolvWeb.CredentialController do
   def exchange(conn, _params) do
     # OpenApiSpex.Plug.CastAndValidate puts request body in conn.body_params, not params
     body_params = conn.body_params
-    Logger.info("[CredentialController] Starting exchange with body_params: #{inspect(body_params)}")
+
+    Logger.info(
+      "[CredentialController] Starting exchange with body_params: #{inspect(body_params)}"
+    )
+
     customer = conn.assigns.customer
 
     with :ok <- check_rate_limit(customer),

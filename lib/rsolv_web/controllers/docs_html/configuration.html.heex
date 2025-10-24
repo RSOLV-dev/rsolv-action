@@ -2,9 +2,17 @@
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <!-- Header -->
     <div class="mb-8">
-      <a href="/docs" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
+      <a
+        href="/docs"
+        class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4"
+      >
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
         </svg>
         Back to Documentation
       </a>
@@ -13,13 +21,17 @@
         Customize RSOLV GitHub Action to meet your security needs.
       </p>
     </div>
-
-    <!-- Quick Reference -->
+    
+<!-- Quick Reference -->
     <div class="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Configuration Options</h2>
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+        Configuration Options
+      </h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h3 class="font-semibold text-slate-900 dark:text-white text-sm mb-2">Input Parameters</h3>
+          <h3 class="font-semibold text-slate-900 dark:text-white text-sm mb-2">
+            Input Parameters
+          </h3>
           <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
             <li>• rsolvApiKey (required)</li>
             <li>• mode (scan/validate/mitigate)</li>
@@ -28,7 +40,9 @@
           </ul>
         </div>
         <div>
-          <h3 class="font-semibold text-slate-900 dark:text-white text-sm mb-2">Workflow Settings</h3>
+          <h3 class="font-semibold text-slate-900 dark:text-white text-sm mb-2">
+            Workflow Settings
+          </h3>
           <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
             <li>• Triggers (push, PR, schedule)</li>
             <li>• Permissions (contents, issues, PRs)</li>
@@ -41,66 +55,114 @@
     <div class="prose dark:prose-invert max-w-none">
       <!-- Complete Example -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Complete Workflow Example</h2>
-        <p class="mb-4">For detailed parameter explanations and advanced options, see the <a href="/docs/workflows" class="text-blue-600 dark:text-blue-400 hover:underline">Workflow Templates</a> page.</p>
-        <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">Note: The examples below show workflow syntax. When copying, replace SECRETS placeholders with your actual GitHub Secrets.</p>
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+          Complete Workflow Example
+        </h2>
+        <p class="mb-4">
+          For detailed parameter explanations and advanced options, see the
+          <a href="/docs/workflows" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Workflow Templates
+          </a>
+          page.
+        </p>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">
+          Note: The examples below show workflow syntax. When copying, replace SECRETS placeholders with your actual GitHub Secrets.
+        </p>
       </div>
-
-      <!-- Mode Parameter -->
+      
+<!-- Mode Parameter -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Operation Modes</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+          Operation Modes
+        </h2>
         <table class="min-w-full border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden mb-0">
           <thead class="bg-slate-100 dark:bg-slate-700">
             <tr>
-              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">Mode</th>
-              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">Description</th>
-              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">Cost</th>
+              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                Mode
+              </th>
+              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                Description
+              </th>
+              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                Cost
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
             <tr>
               <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">scan</td>
-              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">Detect vulnerabilities, create GitHub issues</td>
+              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">
+                Detect vulnerabilities, create GitHub issues
+              </td>
               <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">Free</td>
             </tr>
             <tr>
-              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">validate</td>
-              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">Generate RED/GREEN tests proving vulnerabilities</td>
+              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">
+                validate
+              </td>
+              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">
+                Generate RED/GREEN tests proving vulnerabilities
+              </td>
               <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">1 credit/issue</td>
             </tr>
             <tr>
-              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">mitigate</td>
-              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">Apply fixes, create pull requests</td>
-              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">2 credits/issue</td>
+              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">
+                mitigate
+              </td>
+              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">
+                Apply fixes, create pull requests
+              </td>
+              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">
+                2 credits/issue
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <!-- Permissions -->
+      
+<!-- Permissions -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Required Permissions</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+          Required Permissions
+        </h2>
         <table class="min-w-full border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden mb-4">
           <thead class="bg-slate-100 dark:bg-slate-700">
             <tr>
-              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">Permission</th>
-              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">Required For</th>
-              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">Purpose</th>
+              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                Permission
+              </th>
+              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                Required For
+              </th>
+              <th class="px-4 py-2 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                Purpose
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
             <tr>
-              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">contents: write</td>
+              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">
+                contents: write
+              </td>
               <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">All modes</td>
-              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">Read code, create branches</td>
+              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">
+                Read code, create branches
+              </td>
             </tr>
             <tr>
-              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">issues: write</td>
+              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">
+                issues: write
+              </td>
               <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">scan, validate</td>
-              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">Create/update issues</td>
+              <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">
+                Create/update issues
+              </td>
             </tr>
             <tr>
-              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">pull-requests: write</td>
+              <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100">
+                pull-requests: write
+              </td>
               <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">mitigate</td>
               <td class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">Create fix PRs</td>
             </tr>
@@ -108,14 +170,17 @@
         </table>
         <div class="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm mb-0">
           <p class="text-yellow-800 dark:text-yellow-200 mb-0">
-            <strong>Organization Settings:</strong> Ensure GitHub Actions can create PRs in Settings → Actions → General.
+            <strong>Organization Settings:</strong>
+            Ensure GitHub Actions can create PRs in Settings → Actions → General.
           </p>
         </div>
       </div>
-
-      <!-- Advanced Options -->
+      
+<!-- Advanced Options -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
-        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Advanced Configuration</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+          Advanced Configuration
+        </h2>
 
         <div class="space-y-6">
           <div>
@@ -129,7 +194,9 @@
           </div>
 
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow Triggers</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              Workflow Triggers
+            </h3>
             <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
               <li>• <strong>push:</strong> Run on code pushes to specified branches</li>
               <li>• <strong>pull_request:</strong> Scan PRs before merging</li>
@@ -146,33 +213,57 @@
           </div>
 
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Concurrency Control</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              Concurrency Control
+            </h3>
             <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
               Prevent multiple simultaneous workflow runs. Use cancel-in-progress: true to stop older runs when new commits arrive.
             </p>
           </div>
         </div>
       </div>
-
-      <!-- Next Steps -->
+      
+<!-- Next Steps -->
       <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Next Steps</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">
+          Next Steps
+        </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-0">
-          <a href="/docs/workflows" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/docs/workflows"
+            class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Workflow Templates</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Ready-to-use workflow examples with full syntax</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
+              Ready-to-use workflow examples with full syntax
+            </p>
           </a>
-          <a href="/docs/getting-started" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/docs/getting-started"
+            class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Getting Started</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Learn how to use RSOLV effectively</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
+              Learn how to use RSOLV effectively
+            </p>
           </a>
-          <a href="/docs/troubleshooting" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/docs/troubleshooting"
+            class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Troubleshooting</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Common configuration issues</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
+              Common configuration issues
+            </p>
           </a>
-          <a href="/docs/api-reference" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/docs/api-reference"
+            class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-1">API Reference</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Complete API documentation</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
+              Complete API documentation
+            </p>
           </a>
         </div>
       </div>
