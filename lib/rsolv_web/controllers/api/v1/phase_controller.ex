@@ -104,6 +104,9 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   end
 
   defp normalize_params(params) do
+    require Logger
+    Logger.info("[PhaseController] normalize_params called with: #{inspect(Map.keys(params))}")
+
     phase = params["phase"] || params[:phase]
     repo = params["repo"] || params[:repo]
 
@@ -118,9 +121,12 @@ defmodule RsolvWeb.Api.V1.PhaseController do
 
     branch = params["branch"] || params[:branch]
 
+    Logger.info("[PhaseController] Extracted values: phase=#{inspect(phase)}, repo=#{inspect(repo)}, commitSha=#{inspect(commit_sha)}")
+
     # Validate required fields
     cond do
       is_nil(phase) ->
+        Logger.error("[PhaseController] Phase is nil! params keys: #{inspect(Map.keys(params))}")
         {:error, :phase_required}
 
       is_nil(repo) ->
