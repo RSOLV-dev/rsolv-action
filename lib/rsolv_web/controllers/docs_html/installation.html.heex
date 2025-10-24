@@ -1,0 +1,230 @@
+<div class="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Header -->
+    <div class="mb-8">
+      <a href="/docs" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back to Documentation
+      </a>
+      <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-4">Installation Guide</h1>
+      <p class="text-xl text-slate-600 dark:text-slate-300">
+        Get RSOLV GitHub Action up and running in your repository in under 5 minutes.
+      </p>
+    </div>
+
+    <!-- Prerequisites -->
+    <div class="prose dark:prose-invert max-w-none mb-8">
+      <div class="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Prerequisites</h2>
+        <ul class="space-y-2 mb-0">
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>A GitHub repository with admin access</span>
+          </li>
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>GitHub Actions enabled (included with all GitHub plans)</span>
+          </li>
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>A RSOLV API key (get one at <a href="https://rsolv.dev/signup" class="text-blue-600 dark:text-blue-400 hover:underline">rsolv.dev/signup</a>)</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Step 1: Get API Key -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4 flex items-center">
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold mr-3">1</span>
+          Get Your RSOLV API Key
+        </h2>
+        <ol class="space-y-3 mb-0">
+          <li>Visit <a href="https://rsolv.dev/signup" class="text-blue-600 dark:text-blue-400 hover:underline">rsolv.dev/signup</a></li>
+          <li>Create an account (free trial includes 10 credits)</li>
+          <li>Your API key will be displayed on the dashboard</li>
+          <li>Copy the API key - it starts with <code class="text-sm bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">rsolv_</code></li>
+        </ol>
+        <div class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+          <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-0">
+            <strong>Important:</strong> Keep your API key secure. Never commit it directly to your repository.
+          </p>
+        </div>
+      </div>
+
+      <!-- Step 2: Add API Key to GitHub Secrets -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4 flex items-center">
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold mr-3">2</span>
+          Add API Key to GitHub Secrets
+        </h2>
+        <ol class="space-y-3 mb-0">
+          <li>Go to your GitHub repository</li>
+          <li>Click <strong>Settings</strong> → <strong>Secrets and variables</strong> → <strong>Actions</strong></li>
+          <li>Click <strong>New repository secret</strong></li>
+          <li>Set the name to: <code class="text-sm bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">RSOLV_API_KEY</code></li>
+          <li>Paste your API key from step 1</li>
+          <li>Click <strong>Add secret</strong></li>
+        </ol>
+        <div class="mt-4">
+          <img src="/images/docs/github-secrets-example.png" alt="GitHub Secrets Configuration" class="rounded-lg border border-slate-300 dark:border-slate-600 w-full" onerror="this.style.display='none'"/>
+        </div>
+      </div>
+
+      <!-- Step 3: Create Workflow File -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4 flex items-center">
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold mr-3">3</span>
+          Create Workflow File
+        </h2>
+        <p class="mb-4">Create a new file in your repository at <code class="text-sm bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">.github/workflows/rsolv-security.yml</code></p>
+
+        <!-- Simple Scan Template -->
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Option A: Simple Scan (Recommended)</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">Perfect for getting started. Runs a scan and creates GitHub issues for detected vulnerabilities.</p>
+          <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto">
+            <pre class="text-sm text-slate-100"><code>name: RSOLV Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly scan on Sundays
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: RSOLV Security Scan
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'scan'</code></pre>
+          </div>
+        </div>
+
+        <!-- Full Pipeline Template -->
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Option B: Full Pipeline (Advanced)</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">Separate jobs for scan, validate, and mitigate phases. Better control and visibility.</p>
+          <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto">
+            <pre class="text-sm text-slate-100"><code>name: RSOLV Security Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan for vulnerabilities
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'scan'
+
+  validate:
+    runs-on: ubuntu-latest
+    needs: scan
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate validation tests
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'validate'
+          max_issues: '3'
+
+  mitigate:
+    runs-on: ubuntu-latest
+    needs: validate
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply fixes
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'mitigate'
+          max_issues: '1'</code></pre>
+          </div>
+        </div>
+
+        <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+          <p class="text-sm text-blue-800 dark:text-blue-200 mb-0">
+            <strong>Tip:</strong> See <a href="/docs/workflows" class="underline">Workflow Templates</a> for more examples and advanced configurations.
+          </p>
+        </div>
+      </div>
+
+      <!-- Step 4: Verify Installation -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4 flex items-center">
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold mr-3">4</span>
+          Verify Installation
+        </h2>
+        <ol class="space-y-3 mb-0">
+          <li>Commit the workflow file to your repository</li>
+          <li>Push to your main branch or create a pull request</li>
+          <li>Go to the <strong>Actions</strong> tab in your GitHub repository</li>
+          <li>You should see the RSOLV workflow running</li>
+          <li>Check the <strong>Issues</strong> tab for any detected vulnerabilities</li>
+        </ol>
+      </div>
+
+      <!-- Next Steps -->
+      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Next Steps</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-0">
+          <a href="/docs/getting-started" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+            <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Getting Started Tutorial</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Learn how to use RSOLV effectively</p>
+          </a>
+          <a href="/docs/configuration" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+            <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Configuration Options</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Customize RSOLV for your needs</p>
+          </a>
+          <a href="/docs/troubleshooting" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+            <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Troubleshooting Guide</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Solve common installation issues</p>
+          </a>
+          <a href="/docs/workflows" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+            <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Workflow Templates</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Ready-to-use workflow examples</p>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

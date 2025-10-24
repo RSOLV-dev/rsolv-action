@@ -1,0 +1,585 @@
+<div class="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Header -->
+    <div class="mb-8">
+      <a href="/docs" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back to Documentation
+      </a>
+      <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-4">Workflow Templates</h1>
+      <p class="text-xl text-slate-600 dark:text-slate-300">
+        Ready-to-use GitHub Actions workflow configurations for different security scanning scenarios.
+      </p>
+    </div>
+
+    <!-- Template Index -->
+    <div class="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Available Templates</h2>
+      <ul class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+        <li><a href="#simple-scan" class="text-blue-600 dark:text-blue-400 hover:underline">Simple Scan Only</a></li>
+        <li><a href="#full-pipeline" class="text-blue-600 dark:text-blue-400 hover:underline">Full Pipeline (Separate Jobs)</a></li>
+        <li><a href="#manual-trigger" class="text-blue-600 dark:text-blue-400 hover:underline">Manual Trigger Workflow</a></li>
+        <li><a href="#scheduled-scan" class="text-blue-600 dark:text-blue-400 hover:underline">Scheduled Weekly Scan</a></li>
+        <li><a href="#matrix-strategy" class="text-blue-600 dark:text-blue-400 hover:underline">Matrix Strategy (Multiple Repos)</a></li>
+        <li><a href="#pr-only" class="text-blue-600 dark:text-blue-400 hover:underline">Pull Request Only</a></li>
+        <li><a href="#integration" class="text-blue-600 dark:text-blue-400 hover:underline">Integration with Existing CI/CD</a></li>
+        <li><a href="#monorepo" class="text-blue-600 dark:text-blue-400 hover:underline">Monorepo Scanning</a></li>
+      </ul>
+    </div>
+
+    <!-- Simple Scan Only -->
+    <div id="simple-scan" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Simple Scan Only</h2>
+      <p class="text-slate-700 dark:text-slate-300 mb-4">
+        Perfect for getting started. Runs a security scan and creates GitHub issues for detected vulnerabilities. No automated fixes.
+      </p>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Use Case</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-4">
+        <li>Continuous monitoring of security vulnerabilities</li>
+        <li>Free tier usage (scan phase is free)</li>
+        <li>Manual review and fixing of issues</li>
+      </ul>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow File</h3>
+      <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto">
+        <pre class="text-sm text-slate-100"><code>name: RSOLV Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sundays at midnight
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run RSOLV security scan
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'scan'</code></pre>
+      </div>
+    </div>
+
+    <!-- Full Pipeline -->
+    <div id="full-pipeline" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Full Pipeline (Separate Jobs)</h2>
+      <p class="text-slate-700 dark:text-slate-300 mb-4">
+        Advanced setup with separate jobs for scan, validate, and mitigate phases. Provides better control and visibility.
+      </p>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Use Case</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-4">
+        <li>Production environments requiring full automation</li>
+        <li>Clear separation of scan, test generation, and fix phases</li>
+        <li>Ability to review and approve between phases</li>
+      </ul>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow File</h3>
+      <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto">
+        <pre class="text-sm text-slate-100"><code>name: RSOLV Security Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Scan for vulnerabilities
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: RSOLV Scan
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'scan'
+
+  validate:
+    name: Generate validation tests
+    runs-on: ubuntu-latest
+    needs: scan
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: RSOLV Validate
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'validate'
+          max_issues: '3'  # Process 3 issues at a time
+
+  mitigate:
+    name: Apply security fixes
+    runs-on: ubuntu-latest
+    needs: validate
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: RSOLV Mitigate
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'mitigate'
+          max_issues: '1'  # Create one PR at a time</code></pre>
+      </div>
+    </div>
+
+    <!-- Manual Trigger -->
+    <div id="manual-trigger" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Manual Trigger Workflow</h2>
+      <p class="text-slate-700 dark:text-slate-300 mb-4">
+        Run security scans on-demand through the GitHub Actions interface with configurable parameters.
+      </p>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Use Case</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-4">
+        <li>Ad-hoc security audits</li>
+        <li>Testing RSOLV configuration changes</li>
+        <li>Controlled credit usage</li>
+      </ul>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow File</h3>
+      <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto mb-4">
+        <pre class="text-sm text-slate-100"><code>name: RSOLV Manual Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Scan mode'
+        required: true
+        type: choice
+        options:
+          - scan
+          - validate
+          - mitigate
+        default: 'scan'
+      max_issues:
+        description: 'Maximum issues to process'
+        required: false
+        default: '5'
+
+jobs:
+  rsolv-manual:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run RSOLV
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: &#36;{{#36;&#36;{{#123;&#36;{{#123; github.event.inputs.mode }}#125;}}#125;
+          max_issues: &#36;{{#36;&#36;{{#123;&#36;{{#123; github.event.inputs.max_issues }}#125;}}#125;</code></pre>
+      </div>
+
+      <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
+        <p class="text-sm text-blue-800 dark:text-blue-200 mb-0">
+          <strong>Tip:</strong> Access via Actions tab → Select workflow → Run workflow button
+        </p>
+      </div>
+    </div>
+
+    <!-- Scheduled Scan -->
+    <div id="scheduled-scan" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Scheduled Weekly Scan</h2>
+      <p class="text-slate-700 dark:text-slate-300 mb-4">
+        Automatically scan your codebase on a schedule to catch new vulnerabilities early.
+      </p>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Use Case</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-4">
+        <li>Regular security audits without manual intervention</li>
+        <li>Catch new vulnerabilities from dependency updates</li>
+        <li>Compliance requirements for periodic security reviews</li>
+      </ul>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow File</h3>
+      <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto mb-4">
+        <pre class="text-sm text-slate-100"><code>name: Weekly Security Scan
+
+on:
+  schedule:
+    # Runs at 2 AM UTC every Monday
+    - cron: '0 2 * * 1'
+  workflow_dispatch:  # Allow manual triggers too
+
+jobs:
+  weekly-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better context
+
+      - name: RSOLV Weekly Scan
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'scan'
+
+      - name: Notify team on Slack
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.SLACK_WEBHOOK }}#125;}}#125;
+          payload: |
+            {
+              "text": "Weekly RSOLV security scan failed. Check GitHub Actions for details."
+            }</code></pre>
+      </div>
+
+      <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-4">
+        <h4 class="text-md font-semibold text-slate-900 dark:text-white mb-2">Common Cron Schedules</h4>
+        <ul class="text-sm space-y-1 text-slate-700 dark:text-slate-300">
+          <li><code class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded">0 0 * * 0</code> - Weekly on Sunday at midnight UTC</li>
+          <li><code class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded">0 2 * * 1</code> - Weekly on Monday at 2 AM UTC</li>
+          <li><code class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded">0 0 1 * *</code> - Monthly on the 1st at midnight UTC</li>
+          <li><code class="bg-white dark:bg-slate-950 px-2 py-0.5 rounded">0 */6 * * *</code> - Every 6 hours</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Matrix Strategy -->
+    <div id="matrix-strategy" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Matrix Strategy (Multiple Repos)</h2>
+      <p class="text-slate-700 dark:text-slate-300 mb-4">
+        Scan multiple repositories or branches in parallel using GitHub Actions matrix strategy.
+      </p>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Use Case</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-4">
+        <li>Organizations with multiple microservices</li>
+        <li>Scanning feature branches before merge</li>
+        <li>Testing across different language versions</li>
+      </ul>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow File</h3>
+      <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto">
+        <pre class="text-sm text-slate-100"><code>name: Multi-Branch Security Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  scan-matrix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    strategy:
+      matrix:
+        branch: [main, develop, staging]
+      fail-fast: false  # Continue even if one branch fails
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: &#36;{{#36;&#36;{{#123;&#36;{{#123; matrix.branch }}#125;}}#125;
+
+      - name: RSOLV Scan &#36;{{#36;&#36;{{#123;&#36;{{#123; matrix.branch }}#125;}}#125;
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'scan'</code></pre>
+      </div>
+    </div>
+
+    <!-- PR Only -->
+    <div id="pr-only" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Pull Request Only</h2>
+      <p class="text-slate-700 dark:text-slate-300 mb-4">
+        Scan only on pull requests to catch vulnerabilities before they reach main branch.
+      </p>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Use Case</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-4">
+        <li>Pre-merge security validation</li>
+        <li>Preventing vulnerable code from being merged</li>
+        <li>Developer feedback during code review</li>
+      </ul>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow File</h3>
+      <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto mb-4">
+        <pre class="text-sm text-slate-100"><code>name: PR Security Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: &#36;{{#36;&#36;{{#123;&#36;{{#123; github.event.pull_request.head.sha }}#125;}}#125;
+
+      - name: RSOLV Security Check
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'scan'
+
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Security scan completed. Check the Issues tab for any detected vulnerabilities.'
+            })</code></pre>
+      </div>
+
+      <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-4">
+        <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-0">
+          <strong>Note:</strong> Consider using <code class="bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">pull_request_target</code> for fork-based PRs, but be aware of security implications.
+        </p>
+      </div>
+    </div>
+
+    <!-- Integration with Existing CI/CD -->
+    <div id="integration" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Integration with Existing CI/CD</h2>
+      <p class="text-slate-700 dark:text-slate-300 mb-4">
+        Add RSOLV to your existing CI/CD pipeline alongside tests, linting, and deployment.
+      </p>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Use Case</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-4">
+        <li>Adding security to established workflows</li>
+        <li>Running security scans alongside unit tests</li>
+        <li>Conditional deployment based on security results</li>
+      </ul>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow File</h3>
+      <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto">
+        <pre class="text-sm text-slate-100"><code>name: CI Pipeline with Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: npm test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run linter
+        run: npm run lint
+
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: RSOLV Security Scan
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'scan'
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test, lint, security-scan]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to production
+        run: npm run deploy</code></pre>
+      </div>
+    </div>
+
+    <!-- Monorepo Scanning -->
+    <div id="monorepo" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Monorepo Scanning</h2>
+      <p class="text-slate-700 dark:text-slate-300 mb-4">
+        Efficiently scan large monorepos with multiple services or packages.
+      </p>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Use Case</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-4">
+        <li>Large codebases with multiple projects</li>
+        <li>Scanning only changed packages</li>
+        <li>Parallel scanning for faster results</li>
+      </ul>
+
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow File</h3>
+      <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 overflow-x-auto mb-4">
+        <pre class="text-sm text-slate-100"><code>name: Monorepo Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: &#36;{{#36;&#36;{{#123;&#36;{{#123; steps.filter.outputs.changes }}#125;}}#125;
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'packages/frontend/**'
+            backend:
+              - 'packages/backend/**'
+            api:
+              - 'packages/api/**'
+
+  scan-packages:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.packages != '[]'
+    permissions:
+      contents: read
+      issues: write
+
+    strategy:
+      matrix:
+        package: &#36;{{#36;&#36;{{#123;&#36;{{#123; fromJSON(needs.detect-changes.outputs.packages) }}#125;}}#125;
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan &#36;{{#36;&#36;{{#123;&#36;{{#123; matrix.package }}#125;}}#125;
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: &#36;{{#36;&#36;{{#123;&#36;{{#123; secrets.RSOLV_API_KEY }}#125;}}#125;
+          mode: 'scan'
+        env:
+          RSOLV_SCAN_PATH: packages/&#36;{{#36;&#36;{{#123;&#36;{{#123; matrix.package }}#125;}}#125;</code></pre>
+      </div>
+
+      <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
+        <p class="text-sm text-blue-800 dark:text-blue-200 mb-0">
+          <strong>Performance Tip:</strong> Use path filters to only scan changed packages, reducing scan time and credit usage.
+        </p>
+      </div>
+    </div>
+
+    <!-- Best Practices -->
+    <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Workflow Best Practices</h2>
+      <div class="space-y-3 text-slate-700 dark:text-slate-300">
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span><strong>Use specific permissions:</strong> Grant only the permissions each job needs (principle of least privilege)</span>
+        </div>
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span><strong>Control credit usage:</strong> Use <code class="bg-white dark:bg-slate-950 px-1 py-0.5 rounded">max_issues</code> parameter to limit processing in validate/mitigate phases</span>
+        </div>
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span><strong>Pin action versions:</strong> Use <code class="bg-white dark:bg-slate-950 px-1 py-0.5 rounded">@v3</code> or specific SHA for reproducible builds</span>
+        </div>
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span><strong>Add notifications:</strong> Integrate with Slack, email, or other tools for alerts</span>
+        </div>
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span><strong>Test workflows:</strong> Use <code class="bg-white dark:bg-slate-950 px-1 py-0.5 rounded">workflow_dispatch</code> for manual testing before automating</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Steps -->
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mt-0 mb-4">Next Steps</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-0">
+        <a href="/docs/configuration" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Configuration Options</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Learn about all available parameters</p>
+        </a>
+        <a href="/docs/getting-started" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Getting Started</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Step-by-step tutorial</p>
+        </a>
+        <a href="/docs/troubleshooting" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Troubleshooting</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Common workflow issues</p>
+        </a>
+        <a href="/docs/api-reference" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-1">API Reference</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Advanced integrations</p>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
