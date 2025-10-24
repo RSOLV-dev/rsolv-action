@@ -158,7 +158,10 @@ export class PhaseDataClient {
         ...metadata
       };
 
+      const url = `${this.baseUrl}/api/v1/phases/store`;
+
       console.log('[PhaseDataClient] Storing phase data:', {
+        url,
         phase: platformPhase,
         hasData: !!phaseSpecificData,
         dataType: typeof phaseSpecificData,
@@ -169,7 +172,7 @@ export class PhaseDataClient {
 
       console.log('[PhaseDataClient] Full request payload:', JSON.stringify(requestPayload, null, 2));
 
-      const response = await fetch(`${this.baseUrl}/api/v1/phases/store`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify(requestPayload)
@@ -177,9 +180,15 @@ export class PhaseDataClient {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unable to read error response');
+        const headers: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
         console.error('[PhaseDataClient] Platform storage failed:', {
+          url,
           status: response.status,
           statusText: response.statusText,
+          headers,
           errorBody: errorText
         });
         throw new Error(`Platform storage failed: ${response.statusText}`);
