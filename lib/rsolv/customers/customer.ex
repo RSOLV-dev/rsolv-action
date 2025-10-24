@@ -29,6 +29,11 @@ defmodule Rsolv.Customers.Customer do
     field :fixes_quota_this_month, :integer, default: 0
     field :has_payment_method, :boolean, default: false
 
+    # Onboarding fields (RFC-065)
+    field :auto_provisioned, :boolean, default: false
+    field :wizard_preference, :string, default: "auto"  # auto/hidden/shown
+    field :first_scan_at, :utc_datetime
+
     has_many :api_keys, Rsolv.Customers.ApiKey
     has_many :fix_attempts, Rsolv.Billing.FixAttempt
     has_many :forge_accounts, Rsolv.Customers.ForgeAccount
@@ -60,7 +65,10 @@ defmodule Rsolv.Customers.Customer do
       :fixes_quota_this_month,
       :has_payment_method,
       :is_staff,
-      :admin_level
+      :admin_level,
+      :auto_provisioned,
+      :wizard_preference,
+      :first_scan_at
     ])
     |> validate_required([:name, :email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")

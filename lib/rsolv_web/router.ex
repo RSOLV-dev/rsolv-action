@@ -194,6 +194,9 @@ defmodule RsolvWeb.Router do
   scope "/api/v1", RsolvWeb.Api.V1 do
     pipe_through :api
 
+    # Customer onboarding endpoint
+    post "/customers/onboard", CustomerOnboardingController, :onboard
+
     # Vulnerability validation endpoint (routed based on feature flag)
     post "/vulnerabilities/validate", VulnerabilityValidationRouter, :validate
 
