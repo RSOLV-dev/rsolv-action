@@ -167,6 +167,8 @@ export class PhaseDataClient {
         commitSha: metadata.commitSha?.substring(0, 8)
       });
 
+      console.log('[PhaseDataClient] Full request payload:', JSON.stringify(requestPayload, null, 2));
+
       const response = await fetch(`${this.baseUrl}/api/v1/phases/store`, {
         method: 'POST',
         headers: this.headers,
