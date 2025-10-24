@@ -67,8 +67,15 @@ defmodule RsolvWeb.Api.V1.PhaseController do
     # Use the actual API key that was used for authentication
     api_key = conn.assigns.api_key || get_customer_api_key(customer)
 
+    start_time = System.monotonic_time()
+
     with {:ok, normalized_params} <- normalize_params(params),
          {:ok, result} <- store_phase_data(normalized_params, api_key) do
+
+      # Emit telemetry event for metrics (RFC-060 Phase 6)
+      duration = System.monotonic_time() - start_time
+      emit_phase_telemetry(normalized_params, duration, "success")
+
       json(conn, %{
         success: true,
         id: result.id,
@@ -326,4 +333,75 @@ defmodule RsolvWeb.Api.V1.PhaseController do
         end
     end
   end
+
+  # Emit telemetry events for Prometheus metrics (RFC-060 Phase 6)
+  defp emit_phase_telemetry(params, duration, status) do
+    case params.phase do
+      "validation" ->
+        # Emit validation completion event
+        :telemetry.execute(
+          [:rsolv, :validation, :complete],
+          %{duration: duration},
+          %{
+            repo: params.repo,
+            status: status,
+            language: extract_language_from_data(params.data),
+            framework: extract_framework_from_data(params.data)
+          }
+        )
+
+        # If test was generated, emit test generation event
+        if params.data && Map.get(params.data, "redTests") do
+          :telemetry.execute(
+            [:rsolv, :validation, :test_generated],
+            %{},
+            %{
+              repo: params.repo,
+              language: extract_language_from_data(params.data),
+              framework: extract_framework_from_data(params.data)
+            }
+          )
+        end
+
+      "mitigation" ->
+        # Emit mitigation completion event
+        :telemetry.execute(
+          [:rsolv, :mitigation, :complete],
+          %{duration: duration},
+          %{
+            repo: params.repo,
+            status: status,
+            language: extract_language_from_data(params.data),
+            framework: extract_framework_from_data(params.data)
+          }
+        )
+
+        # If trust score is available, emit trust score event
+        if params.data && Map.get(params.data, "trustScore") do
+          :telemetry.execute(
+            [:rsolv, :mitigation, :trust_score],
+            %{trust_score: Map.get(params.data, "trustScore")},
+            %{
+              repo: params.repo,
+              language: extract_language_from_data(params.data),
+              framework: extract_framework_from_data(params.data)
+            }
+          )
+        end
+
+      _ ->
+        # No metrics for scan phase yet
+        :ok
+    end
+  end
+
+  defp extract_language_from_data(data) when is_map(data) do
+    Map.get(data, "language") || Map.get(data, :language) || "unknown"
+  end
+  defp extract_language_from_data(_), do: "unknown"
+
+  defp extract_framework_from_data(data) when is_map(data) do
+    Map.get(data, "framework") || Map.get(data, :framework) || "none"
+  end
+  defp extract_framework_from_data(_), do: "none"
 end
