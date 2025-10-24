@@ -7,7 +7,8 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   alias RsolvWeb.Schemas.Error.ErrorResponse
 
   plug RsolvWeb.Plugs.ApiAuthentication
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  # TODO: Re-enable after debugging - temporarily disabled to test if this is causing "Phase is required" errors
+  # plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
 
   action_fallback RsolvWeb.FallbackController
 
