@@ -60,11 +60,11 @@ Interested? I'll send early access in ~3 weeks when staging is ready.
 
 | # | Contact Name | Company/Context | Status | Sent Date | Response | Notes |
 |---|--------------|-----------------|--------|-----------|----------|-------|
-| 1 | [TBD] | | Not Sent | - | - | Why this person? What's their context? |
-| 2 | [TBD] | | Not Sent | - | - | |
-| 3 | [TBD] | | Not Sent | - | - | |
-| 4 | [TBD] | | Not Sent | - | - | |
-| 5 | [TBD] | | Not Sent | - | - | |
+| 1 | David Vasandani | | Not Sent | - | - | Warm professional contact - likely works with secure systems and GitHub Actions |
+| 2 | Scott Crespo | | Not Sent | - | - | Warm professional contact - technical background suggests DevSecOps familiarity |
+| 3 | David Van der Voort | | Not Sent | - | - | Warm professional contact - international perspective could provide valuable feedback |
+| 4 | Todd Nichols | | Not Sent | - | - | Warm professional contact - likely has security-conscious development practices |
+| 5 | John Driftmier | | Not Sent | - | - | Warm professional contact - technical expertise and likely uses GitHub Actions |
 
 **Legend:**
 - Status: Not Sent | Sent | Responded | Interested | Confirmed | Declined | No Response
