@@ -34,5 +34,5 @@ skip_files: [
 
 # Terminal output format
 terminal_options: [
-  file_column_width: 60
+  file_column_width: 72
 ]
