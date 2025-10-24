@@ -63,6 +63,9 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   def store(conn, params) do
     # Debug logging to see what params are actually received
     require Logger
+    IO.puts("[PhaseController] Received params:")
+    IO.inspect(params, label: "[PhaseController] Full params", pretty: true, limit: :infinity)
+    IO.inspect(Map.keys(params), label: "[PhaseController] Params keys")
     Logger.info("[PhaseController] Received params: #{inspect(params, pretty: true)}")
     Logger.info("[PhaseController] Params keys: #{inspect(Map.keys(params))}")
 
