@@ -65,6 +65,18 @@ jobs:
         # Issues: OpenAPI spec initialization, Ruby parser dependencies, TestIntegrator method signatures
         run: mix test --trace || echo "⚠️  Tests had failures (non-fatal for now)"
 
+      - name: Generate coverage report
+        run: mix coveralls.json
+        continue-on-error: true
+
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./cover/excoveralls.json
+          format: lcov
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
