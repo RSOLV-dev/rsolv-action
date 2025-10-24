@@ -11,7 +11,7 @@ end
 if config_env() == :prod do
   # Generate a unique node name based on pod name (injected by Kubernetes)
   node_basename = System.get_env("RELEASE_NODE") || "rsolv"
-  pod_name = System.get_env("POD_NAME") || "#{node_basename}-#{:rand.uniform(999_999)}"
+  _pod_name = System.get_env("POD_NAME") || "#{node_basename}-#{:rand.uniform(999_999)}"
   pod_namespace = System.get_env("POD_NAMESPACE") || "default"
 
   # Service name should match the headless service in Kubernetes
