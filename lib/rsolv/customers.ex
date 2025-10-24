@@ -10,18 +10,25 @@ defmodule Rsolv.Customers do
   alias Rsolv.Customers.{Customer, ApiKey}
 
   @doc """
-  Gets an API key by its key value.
+  Gets an API key by verifying a raw key against stored hashes.
+
+  This function hashes the provided raw key and searches for a matching
+  hash in the database.
 
   ## Examples
 
-      iex> get_api_key_by_key("test_abc123")
+      iex> get_api_key_by_key("rsolv_abc123...")
       %ApiKey{}
 
       iex> get_api_key_by_key("invalid")
       nil
   """
-  def get_api_key_by_key(key) when is_binary(key) do
-    Repo.get_by(ApiKey, key: key, active: true)
+  def get_api_key_by_key(raw_key) when is_binary(raw_key) do
+    # Hash the provided raw key
+    key_hash = ApiKey.hash_key(raw_key)
+
+    # Look up the API key by hash
+    Repo.get_by(ApiKey, key_hash: key_hash, active: true)
     |> Repo.preload(:customer)
   end
 
@@ -58,14 +65,20 @@ defmodule Rsolv.Customers do
 
   @doc """
   Gets a customer by API key.
+
+  This function verifies the raw API key by hashing it and comparing
+  against stored hashes in the database.
   """
   def get_customer_by_api_key(nil), do: nil
 
-  def get_customer_by_api_key(api_key) when is_binary(api_key) do
-    Logger.info("🔍 [API Auth Debug] Looking up API key: #{String.slice(api_key, 0..15)}...")
+  def get_customer_by_api_key(raw_api_key) when is_binary(raw_api_key) do
+    Logger.info("🔍 [API Auth Debug] Looking up API key: #{String.slice(raw_api_key, 0..15)}...")
 
-    # First check if it's an api_keys table key
-    case Repo.get_by(ApiKey, key: api_key, active: true) do
+    # Hash the provided raw key
+    key_hash = ApiKey.hash_key(raw_api_key)
+
+    # Look up the API key by hash
+    case Repo.get_by(ApiKey, key_hash: key_hash, active: true) do
       %ApiKey{customer_id: customer_id} ->
         Logger.info("✅ [API Auth Debug] Found API key record for customer_id: #{customer_id}")
         customer = get_customer!(customer_id)
@@ -80,7 +93,7 @@ defmodule Rsolv.Customers do
 
       nil ->
         # Check if key exists but is inactive
-        case Repo.get_by(ApiKey, key: api_key) do
+        case Repo.get_by(ApiKey, key_hash: key_hash) do
           %ApiKey{active: false} ->
             Logger.warning("⚠️ [API Auth Debug] API key exists but is inactive")
 
@@ -206,15 +219,15 @@ defmodule Rsolv.Customers do
 
     Logger.debug("🔑 [API Key Creation] Changes: #{inspect(changeset.changes)}")
 
+    # Extract raw key from changeset metadata before insert
+    raw_key = Map.get(changeset, :__meta_custom__, %{}) |> Map.get(:raw_key)
+
     # Use explicit transaction to ensure atomicity
     Repo.transaction(fn ->
       case Repo.insert(changeset) do
         {:ok, api_key} ->
-          Logger.info(
-            "✅ [API Key Creation] SUCCESS - ID: #{api_key.id}, Key prefix: #{String.slice(api_key.key, 0..15)}"
-          )
-
-          Logger.info("🔑 [API Key Creation] Full key for display: #{api_key.key}")
+          Logger.info("✅ [API Key Creation] SUCCESS - ID: #{api_key.id}, Key hash: #{String.slice(api_key.key_hash, 0..15)}...")
+          Logger.info("🔑 [API Key Creation] Raw key for one-time display: #{raw_key}")
 
           # Verify it actually persisted by re-querying
           case Repo.get(ApiKey, api_key.id) do
@@ -236,8 +249,9 @@ defmodule Rsolv.Customers do
                 "✅ [API Key Creation] Verification - ID: #{found.id}, active: #{found.active}, customer_id: #{found.customer_id}"
               )
 
-              # Preload customer association for API
-              Repo.preload(api_key, :customer)
+              # Preload customer association and return both record and raw key
+              api_key_with_customer = Repo.preload(api_key, :customer)
+              %{record: api_key_with_customer, raw_key: raw_key}
           end
 
         {:error, changeset} ->
@@ -246,9 +260,9 @@ defmodule Rsolv.Customers do
       end
     end)
     |> case do
-      {:ok, api_key} ->
+      {:ok, result} ->
         Logger.info("✅ [API Key Creation] Transaction committed successfully")
-        {:ok, api_key}
+        {:ok, result}
 
       {:error, reason} ->
         Logger.error("❌ [API Key Creation] Transaction rolled back: #{inspect(reason)}")
@@ -315,7 +329,6 @@ defmodule Rsolv.Customers do
 
     ApiKey
     |> where([k], ilike(k.name, ^search_term))
-    |> or_where([k], fragment("? ILIKE ?", k.key, ^search_term))
     |> preload(:customer)
     |> order_by([k], desc: k.inserted_at)
     |> Repo.all()

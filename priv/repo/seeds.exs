@@ -25,15 +25,17 @@ IO.puts("Creating seed customers with authentication...")
   })
 
 # Create API key for admin
-{:ok, admin_key} =
+{:ok, admin_result} =
   Customers.create_api_key(admin, %{
     name: "Admin API Key",
-    key: "rsolv_admin_key_" <> Base.encode16(:crypto.strong_rand_bytes(16)),
+    raw_key: "rsolv_admin_key_" <> Base.encode16(:crypto.strong_rand_bytes(16)),
     active: true
   })
 
+admin_raw_key = admin_result.raw_key
+
 IO.puts("  ✓ Admin customer created: admin@rsolv.dev (password: AdminP@ssw0rd2025!)")
-IO.puts("    API Key: #{admin_key.key}")
+IO.puts("    API Key: #{admin_raw_key}")
 
 # Create staff member with limited admin
 {:ok, staff} =
@@ -49,15 +51,17 @@ IO.puts("    API Key: #{admin_key.key}")
     }
   })
 
-{:ok, staff_key} =
+{:ok, staff_result} =
   Customers.create_api_key(staff, %{
     name: "Staff API Key",
-    key: "rsolv_staff_key_" <> Base.encode16(:crypto.strong_rand_bytes(16)),
+    raw_key: "rsolv_staff_key_" <> Base.encode16(:crypto.strong_rand_bytes(16)),
     active: true
   })
 
+staff_raw_key = staff_result.raw_key
+
 IO.puts("  ✓ Staff customer created: staff@rsolv.dev (password: StaffP@ssw0rd2025!)")
-IO.puts("    API Key: #{staff_key.key}")
+IO.puts("    API Key: #{staff_raw_key}")
 
 # Create regular customer for testing
 {:ok, test_customer} =
@@ -73,15 +77,17 @@ IO.puts("    API Key: #{staff_key.key}")
     }
   })
 
-{:ok, test_key} =
+{:ok, test_result} =
   Customers.create_api_key(test_customer, %{
     name: "Test API Key",
-    key: "rsolv_test_key_123",
+    raw_key: "rsolv_test_key_123",
     active: true
   })
 
+test_raw_key = test_result.raw_key
+
 IO.puts("  ✓ Test customer created: test@example.com (password: TestP@ssw0rd2025!)")
-IO.puts("    API Key: #{test_key.key}")
+IO.puts("    API Key: #{test_raw_key}")
 
 # Create demo customer
 {:ok, demo_customer} =
@@ -97,15 +103,17 @@ IO.puts("    API Key: #{test_key.key}")
     }
   })
 
-{:ok, demo_key} =
+{:ok, demo_result} =
   Customers.create_api_key(demo_customer, %{
     name: "Demo API Key",
-    key: "rsolv_demo_key_456",
+    raw_key: "rsolv_demo_key_456",
     active: true
   })
 
+demo_raw_key = demo_result.raw_key
+
 IO.puts("  ✓ Demo customer created: demo@example.com (password: DemoP@ssw0rd2025!)")
-IO.puts("    API Key: #{demo_key.key}")
+IO.puts("    API Key: #{demo_raw_key}")
 
 # Create enterprise customer with no limits
 {:ok, enterprise} =
@@ -124,18 +132,20 @@ IO.puts("    API Key: #{demo_key.key}")
     }
   })
 
-{:ok, enterprise_key} =
+{:ok, enterprise_result} =
   Customers.create_api_key(enterprise, %{
     name: "Enterprise API Key",
-    key: "rsolv_enterprise_key_" <> Base.encode16(:crypto.strong_rand_bytes(16)),
+    raw_key: "rsolv_enterprise_key_" <> Base.encode16(:crypto.strong_rand_bytes(16)),
     active: true
   })
+
+enterprise_raw_key = enterprise_result.raw_key
 
 IO.puts(
   "  ✓ Enterprise customer created: enterprise@bigcorp.com (password: EnterpriseP@ssw0rd2025!)"
 )
 
-IO.puts("    API Key: #{enterprise_key.key}")
+IO.puts("    API Key: #{enterprise_raw_key}")
 
 # Create a customer with expired trial
 {:ok, expired} =
@@ -154,18 +164,20 @@ IO.puts("    API Key: #{enterprise_key.key}")
     }
   })
 
-{:ok, expired_key} =
+{:ok, expired_result} =
   Customers.create_api_key(expired, %{
     name: "Expired Trial API Key",
-    key: "rsolv_expired_key_789",
+    raw_key: "rsolv_expired_key_789",
     active: true
   })
+
+expired_raw_key = expired_result.raw_key
 
 IO.puts(
   "  ✓ Expired trial customer created: expired@example.com (password: ExpiredP@ssw0rd2025!)"
 )
 
-IO.puts("    API Key: #{expired_key.key}")
+IO.puts("    API Key: #{expired_raw_key}")
 
 # Create inactive customer for testing
 {:ok, inactive} =
@@ -180,16 +192,18 @@ IO.puts("    API Key: #{expired_key.key}")
     }
   })
 
-{:ok, inactive_key} =
+{:ok, inactive_result} =
   Customers.create_api_key(inactive, %{
     name: "Inactive API Key",
-    key: "rsolv_inactive_key_000",
+    raw_key: "rsolv_inactive_key_000",
     # Also inactive
     active: false
   })
 
+inactive_raw_key = inactive_result.raw_key
+
 IO.puts("  ✓ Inactive customer created: inactive@example.com (password: InactiveP@ssw0rd2025!)")
-IO.puts("    API Key (inactive): #{inactive_key.key}")
+IO.puts("    API Key (inactive): #{inactive_raw_key}")
 
 IO.puts("\n✅ Seeds complete!")
 IO.puts("\nQuick reference:")
