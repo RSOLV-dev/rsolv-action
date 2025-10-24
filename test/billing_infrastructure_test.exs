@@ -137,10 +137,11 @@ defmodule Rsolv.BillingInfrastructureTest do
     end
 
     test "credit_transaction_fixture accepts custom attributes" do
-      transaction = credit_transaction_fixture(%{
-        amount: 60,
-        transaction_type: "subscription_payment"
-      })
+      transaction =
+        credit_transaction_fixture(%{
+          amount: 60,
+          transaction_type: "subscription_payment"
+        })
 
       assert transaction.amount == 60
       assert transaction.transaction_type == "subscription_payment"
@@ -177,7 +178,8 @@ defmodule Rsolv.BillingInfrastructureTest do
     end
 
     test "update_subscription merges parameters" do
-      {:ok, subscription} = StripeMock.update_subscription("sub_123", %{cancel_at_period_end: true})
+      {:ok, subscription} =
+        StripeMock.update_subscription("sub_123", %{cancel_at_period_end: true})
 
       assert subscription.id == "sub_123"
       assert subscription.cancel_at_period_end == true
@@ -275,22 +277,28 @@ defmodule Rsolv.BillingInfrastructureTest do
       assert is_binary(customer.stripe_customer_id)
 
       # 3. Create Stripe customer
-      {:ok, stripe_customer} = StripeMock.create_customer(%{
-        email: customer.email,
-        name: customer.name
-      })
+      {:ok, stripe_customer} =
+        StripeMock.create_customer(%{
+          email: customer.email,
+          name: customer.name
+        })
+
       assert stripe_customer.email == customer.email
 
       # 4. Customer subscribes to Pro (60 credits)
-      {:ok, subscription} = StripeMock.create_subscription(%{
-        customer: stripe_customer.id
-      })
+      {:ok, subscription} =
+        StripeMock.create_subscription(%{
+          customer: stripe_customer.id
+        })
+
       assert subscription.status == "active"
 
       # 5. Webhook event for subscription created
-      event = billing_event_fixture("customer.subscription.created", %{
-        customer: stripe_customer.id
-      })
+      event =
+        billing_event_fixture("customer.subscription.created", %{
+          customer: stripe_customer.id
+        })
+
       assert event.data.object.status == "active"
 
       # 6. Customer uses 15 credits

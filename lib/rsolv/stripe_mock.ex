@@ -68,7 +68,11 @@ defmodule Rsolv.StripeMock do
       {:error, "No payment method attached"}
   """
   def create_subscription(%{customer: "cus_no_payment"}) do
-    {:error, stripe_error("invalid_request_error", "This customer has no attached payment source or default payment method.")}
+    {:error,
+     stripe_error(
+       "invalid_request_error",
+       "This customer has no attached payment source or default payment method."
+     )}
   end
 
   def create_subscription(%{customer: customer_id}) when is_binary(customer_id) do
@@ -247,20 +251,26 @@ defmodule Rsolv.StripeMock do
       api_version: "2023-10-16"
     }
 
-    data = case type do
-      "customer.subscription.created" ->
-        %{object: build_subscription_fixture(attrs)}
-      "customer.subscription.updated" ->
-        %{object: build_subscription_fixture(attrs)}
-      "customer.subscription.deleted" ->
-        %{object: build_subscription_fixture(Map.put(attrs, :status, "canceled"))}
-      "invoice.payment_succeeded" ->
-        %{object: build_invoice_fixture(attrs)}
-      "invoice.payment_failed" ->
-        %{object: build_invoice_fixture(Map.put(attrs, :status, "open"))}
-      _ ->
-        %{object: attrs}
-    end
+    data =
+      case type do
+        "customer.subscription.created" ->
+          %{object: build_subscription_fixture(attrs)}
+
+        "customer.subscription.updated" ->
+          %{object: build_subscription_fixture(attrs)}
+
+        "customer.subscription.deleted" ->
+          %{object: build_subscription_fixture(Map.put(attrs, :status, "canceled"))}
+
+        "invoice.payment_succeeded" ->
+          %{object: build_invoice_fixture(attrs)}
+
+        "invoice.payment_failed" ->
+          %{object: build_invoice_fixture(Map.put(attrs, :status, "open"))}
+
+        _ ->
+          %{object: attrs}
+      end
 
     Map.put(base_event, :data, data)
   end
