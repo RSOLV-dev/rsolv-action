@@ -11,7 +11,7 @@ end
 if config_env() == :prod do
   # Generate a unique node name based on pod name (injected by Kubernetes)
   node_basename = System.get_env("RELEASE_NODE") || "rsolv"
-  pod_name = System.get_env("POD_NAME") || "#{node_basename}-#{:rand.uniform(999_999)}"
+  _pod_name = System.get_env("POD_NAME") || "#{node_basename}-#{:rand.uniform(999_999)}"
   pod_namespace = System.get_env("POD_NAMESPACE") || "default"
 
   # Service name should match the headless service in Kubernetes
@@ -129,7 +129,10 @@ config :rsolv, :rate_limits,
   # 100 reports per minute
   usage_report: {100, :minute},
   # 10 login attempts per minute (per RFC-056)
-  auth_attempt: {10, :minute}
+  auth_attempt: {10, :minute},
+  # 10 customer onboarding requests per minute per IP (per RFC-065)
+  # Note: Currently using 60s window. Future: extend to hourly window
+  customer_onboarding: {10, :minute}
 
 # Configure credential TTL
 config :rsolv, :credentials,
