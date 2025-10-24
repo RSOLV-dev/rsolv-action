@@ -1,0 +1,502 @@
+<div class="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Header -->
+    <div class="mb-8">
+      <a href="/docs" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back to Documentation
+      </a>
+      <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-4">API Reference</h1>
+      <p class="text-xl text-slate-600 dark:text-slate-300">
+        Complete reference for the RSOLV Platform API for vulnerability detection and AST validation.
+      </p>
+    </div>
+
+    <!-- Interactive Swagger UI -->
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-8">
+      <div class="flex items-start">
+        <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Interactive API Documentation</h2>
+          <p class="text-slate-700 dark:text-slate-300 mb-3">
+            Try the API interactively with our Swagger UI at <a href="https://api.rsolv.dev/docs" class="text-blue-600 dark:text-blue-400 hover:underline font-mono text-sm">api.rsolv.dev/docs</a>
+          </p>
+          <p class="text-sm text-slate-600 dark:text-slate-400">
+            Test endpoints, view complete request/response schemas, and get code examples in multiple languages.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Base URL and Authentication -->
+    <div class="space-y-8">
+      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4">Base URL</h2>
+        <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4">
+          <code class="text-blue-400">https://api.rsolv.dev/api/v1</code>
+        </div>
+      </div>
+
+      <!-- Authentication -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+          <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+          Authentication
+        </h2>
+
+        <p class="text-slate-700 dark:text-slate-300 mb-4">
+          All API requests require authentication using an API key. Include your API key in the <code class="text-sm bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">X-API-Key</code> header.
+        </p>
+
+        <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 mb-4">
+          <pre class="text-sm text-slate-100"><code>GET /api/v1/patterns HTTP/1.1
+Host: api.rsolv.dev
+X-API-Key: rsolv_your_api_key_here
+Accept: application/json</code></pre>
+        </div>
+
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
+          <p class="text-sm text-blue-800 dark:text-blue-200 mb-0">
+            <strong>Get Your API Key:</strong> Sign up at <a href="https://rsolv.dev/signup" class="underline">rsolv.dev/signup</a>. Your key starts with <code class="bg-blue-100 dark:bg-blue-950 px-1 rounded">rsolv_</code>
+          </p>
+        </div>
+      </div>
+
+      <!-- Rate Limiting -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+          <svg class="w-6 h-6 text-orange-600 dark:text-orange-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Rate Limiting
+        </h2>
+
+        <p class="text-slate-700 dark:text-slate-300 mb-4">
+          API requests are rate limited to ensure fair usage and system stability.
+        </p>
+
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead class="bg-slate-50 dark:bg-slate-900">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Limit</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Window</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Scope</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            <tr>
+              <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">500 requests</td>
+              <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">1 hour</td>
+              <td class="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">Per API key</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-4">
+          <h3 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Rate Limit Headers</h3>
+          <p class="text-sm text-yellow-700 dark:text-yellow-300 mb-2">Every response includes rate limit information:</p>
+          <ul class="text-sm text-yellow-700 dark:text-yellow-300 space-y-1 list-disc list-inside mb-0">
+            <li><code class="bg-yellow-100 dark:bg-yellow-950 px-1 rounded">X-RateLimit-Limit</code> - Maximum requests per window</li>
+            <li><code class="bg-yellow-100 dark:bg-yellow-950 px-1 rounded">X-RateLimit-Remaining</code> - Requests remaining in current window</li>
+            <li><code class="bg-yellow-100 dark:bg-yellow-950 px-1 rounded">X-RateLimit-Reset</code> - Unix timestamp when the window resets</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Endpoint: List Vulnerability Patterns -->
+      <div id="list-patterns" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4">List Vulnerability Patterns</h2>
+
+        <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 mb-4">
+          <code class="text-green-400">GET</code> <code class="text-blue-400">/api/v1/patterns</code>
+        </div>
+
+        <p class="text-slate-700 dark:text-slate-300 mb-4">
+          Retrieves all available vulnerability detection patterns. These patterns are used by RSOLV to scan code for security issues.
+        </p>
+
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Request</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">No request parameters required. Include authentication header only.</p>
+
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Response</h3>
+        <p class="text-slate-700 dark:text-slate-300 mb-3">Returns an array of pattern objects. Each pattern includes:</p>
+
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 mb-4">
+          <thead class="bg-slate-50 dark:bg-slate-900">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Field</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Description</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">id</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string (UUID)</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Unique identifier for the pattern</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">name</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Human-readable pattern name</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">description</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Detailed explanation of the vulnerability</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">severity</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">One of: critical, high, medium, low</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">pattern</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string (regex)</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Regular expression for initial detection</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">language</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Target language (e.g., javascript, python, ruby)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">cwe_id</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Common Weakness Enumeration identifier</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">remediation</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Recommended fix for the vulnerability</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-4">
+          <h4 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">Example Response Structure</h4>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">The response is an array containing pattern objects with the fields described above.</p>
+          <p class="text-sm text-slate-600 dark:text-slate-400">Visit <a href="https://api.rsolv.dev/docs" class="text-blue-600 dark:text-blue-400 hover:underline">api.rsolv.dev/docs</a> for interactive examples.</p>
+        </div>
+      </div>
+
+      <!-- Endpoint: Validate Vulnerability -->
+      <div id="validate-vulnerability" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4">Validate Vulnerability</h2>
+
+        <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 mb-4">
+          <code class="text-yellow-400">POST</code> <code class="text-blue-400">/api/v1/vulnerabilities/validate</code>
+        </div>
+
+        <p class="text-slate-700 dark:text-slate-300 mb-4">
+          Validates a potential vulnerability using AST (Abstract Syntax Tree) analysis. This reduces false positives by analyzing code structure rather than just pattern matching.
+        </p>
+
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Request Headers</h3>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 mb-4">
+          <thead class="bg-slate-50 dark:bg-slate-900">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Header</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Value</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">X-API-Key</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Your RSOLV API key</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">Content-Type</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">application/json</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Request Body</h3>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 mb-4">
+          <thead class="bg-slate-50 dark:bg-slate-900">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Field</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Required</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Description</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">code</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-green-600 dark:text-green-400 font-semibold">Yes</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Source code snippet to validate (encrypted client-side before transmission)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">language</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-green-600 dark:text-green-400 font-semibold">Yes</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Programming language (javascript, typescript, python, ruby, php, java)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">pattern_id</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string (UUID)</td>
+              <td class="px-4 py-3 text-sm text-green-600 dark:text-green-400 font-semibold">Yes</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">ID of the pattern to validate against (from /patterns endpoint)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">file_path</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">No</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Path to the file being validated (for context)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">line_number</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">integer</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">No</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Line number where potential vulnerability was detected</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Response</h3>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 mb-4">
+          <thead class="bg-slate-50 dark:bg-slate-900">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Field</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Description</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">is_valid</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">boolean</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">True if vulnerability is confirmed, false if false positive</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">confidence</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">number (0-1)</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Confidence score for the validation result</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">reason</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Explanation of why the code is or isn't vulnerable</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">ast_nodes</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">array</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Relevant AST nodes that informed the validation decision</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">metadata</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">object</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Additional context about the validation (parser version, etc.)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
+          <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">Security Note</h4>
+          <p class="text-sm text-blue-700 dark:text-blue-300 mb-0">
+            Code is encrypted client-side using AES-256-GCM before transmission. The platform decrypts it only in memory for analysis and never stores source code permanently. Only vulnerability metadata is retained.
+          </p>
+        </div>
+      </div>
+
+      <!-- Error Responses -->
+      <div id="error-responses" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+          <svg class="w-6 h-6 text-red-600 dark:text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Error Responses
+        </h2>
+
+        <p class="text-slate-700 dark:text-slate-300 mb-4">
+          All errors follow a consistent structure to help you handle them programmatically.
+        </p>
+
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 mb-6">
+          <thead class="bg-slate-50 dark:bg-slate-900">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Status Code</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Error Type</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Description</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">400</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Bad Request</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Invalid request parameters or malformed JSON</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">401</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Unauthorized</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Missing or invalid API key</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">403</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Forbidden</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">API key lacks permission for this resource</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">404</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Not Found</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Requested resource does not exist</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">422</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Unprocessable Entity</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Request valid but cannot be processed (e.g., unsupported language)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">429</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Too Many Requests</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Rate limit exceeded (500 requests/hour)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">500</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Internal Server Error</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Unexpected server error (contact support if persistent)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">503</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Service Unavailable</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Service temporarily unavailable (maintenance or overload)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Error Response Structure</h3>
+        <p class="text-slate-700 dark:text-slate-300 mb-3">All error responses include these fields:</p>
+
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead class="bg-slate-50 dark:bg-slate-900">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Field</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">Description</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">error</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Human-readable error message</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">error_code</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">string</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Machine-readable error identifier (e.g., INVALID_API_KEY)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">details</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">object (optional)</td>
+              <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">Additional context about the error (validation errors, etc.)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Supported Languages -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+        <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+          <svg class="w-6 h-6 text-green-600 dark:text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+          </svg>
+          Supported Languages
+        </h2>
+
+        <p class="text-slate-700 dark:text-slate-300 mb-4">
+          The RSOLV platform currently supports AST validation for the following languages:
+        </p>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-3">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-slate-900 dark:text-white font-medium">JavaScript</span>
+            </div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-3">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-slate-900 dark:text-white font-medium">TypeScript</span>
+            </div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-3">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-slate-900 dark:text-white font-medium">Python</span>
+            </div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-3">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-slate-900 dark:text-white font-medium">Ruby</span>
+            </div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-3">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-slate-900 dark:text-white font-medium">PHP</span>
+            </div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-3">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-slate-900 dark:text-white font-medium">Java</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
+          <p class="text-sm text-blue-800 dark:text-blue-200 mb-0">
+            <strong>Need another language?</strong> Contact us at <a href="mailto:support@rsolv.dev" class="underline">support@rsolv.dev</a> to request support for additional languages.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Resources -->
+    <div class="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+      <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4">Additional Resources</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <a href="https://api.rsolv.dev/docs" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Interactive API Docs</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Try the API with Swagger UI</p>
+        </a>
+        <a href="/docs/getting-started" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Getting Started</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Learn how to use RSOLV</p>
+        </a>
+        <a href="/docs/troubleshooting" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Troubleshooting</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Common issues and solutions</p>
+        </a>
+        <a href="mailto:support@rsolv.dev" class="block p-4 bg-white dark:bg-slate-800 rounded-lg hover:shadow-md transition-shadow">
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Contact Support</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Get help from our team</p>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

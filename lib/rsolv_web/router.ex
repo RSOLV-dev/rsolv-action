@@ -81,9 +81,19 @@ defmodule RsolvWeb.Router do
 
     # Analytics tracking endpoint (moved to API section for CSRF-free access)
 
-    # Documentation pages
+    # Documentation pages (legal)
     get "/docs/terms", PageController, :terms
     get "/docs/privacy", PageController, :privacy
+
+    # Documentation site (technical docs for GitHub Marketplace)
+    get "/docs", DocsController, :index
+    get "/docs/installation", DocsController, :installation
+    get "/docs/getting-started", DocsController, :getting_started
+    get "/docs/troubleshooting", DocsController, :troubleshooting
+    get "/docs/api-reference", DocsController, :api_reference
+    get "/docs/faq", DocsController, :faq
+    get "/docs/workflows", DocsController, :workflows
+    get "/docs/configuration", DocsController, :configuration
 
     # Blog routes (protected by feature flag in controller)
     get "/blog", BlogController, :index
