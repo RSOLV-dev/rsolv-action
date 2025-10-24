@@ -10,6 +10,13 @@ defmodule Rsolv.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ],
       releases: [
         rsolv: [
           include_executables_for: [:unix],
@@ -72,7 +79,8 @@ defmodule Rsolv.MixProject do
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
       {:open_api_spex, "~> 3.22"},
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 
