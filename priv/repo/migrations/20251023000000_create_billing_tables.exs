@@ -18,6 +18,8 @@ defmodule Rsolv.Repo.Migrations.CreateBillingTables do
     rename table(:customers), :subscription_plan, to: :subscription_type
     rename table(:customers), :subscription_status, to: :subscription_state
 
+    # Drop the existing regular index on stripe_customer_id before creating unique index
+    drop_if_exists index(:customers, [:stripe_customer_id])
     create unique_index(:customers, [:stripe_customer_id])
 
     # Credit transactions ledger
@@ -78,8 +80,9 @@ defmodule Rsolv.Repo.Migrations.CreateBillingTables do
     rename table(:customers), :subscription_state, to: :subscription_status
     rename table(:customers), :subscription_type, to: :subscription_plan
 
-    # Drop the unique index on stripe_customer_id
+    # Drop the unique index and restore the regular index on stripe_customer_id
     drop_if_exists unique_index(:customers, [:stripe_customer_id])
+    create index(:customers, [:stripe_customer_id])
 
     alter table(:customers) do
       remove :credit_balance
