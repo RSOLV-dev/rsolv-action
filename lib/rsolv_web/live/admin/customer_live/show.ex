@@ -135,15 +135,15 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
     end
   end
 
+  @impl true
+  def handle_event("close-api-key-modal", _, socket) do
+    {:noreply, assign(socket, :new_api_key, nil)}
+  end
+
   defp format_changeset_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
     |> Enum.map(fn {field, errors} -> "#{field}: #{Enum.join(errors, ", ")}" end)
     |> Enum.join("; ")
-  end
-
-  @impl true
-  def handle_event("close-api-key-modal", _, socket) do
-    {:noreply, assign(socket, :new_api_key, nil)}
   end
 
   defp calculate_usage_percentage(customer) do
