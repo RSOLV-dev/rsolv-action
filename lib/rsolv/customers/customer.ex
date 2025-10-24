@@ -31,7 +31,8 @@ defmodule Rsolv.Customers.Customer do
 
     # Onboarding fields (RFC-065)
     field :auto_provisioned, :boolean, default: false
-    field :wizard_preference, :string, default: "auto"  # auto/hidden/shown
+    # auto/hidden/shown
+    field :wizard_preference, :string, default: "auto"
     field :first_scan_at, :utc_datetime
 
     has_many :api_keys, Rsolv.Customers.ApiKey

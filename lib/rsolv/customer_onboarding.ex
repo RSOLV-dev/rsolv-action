@@ -34,7 +34,9 @@ defmodule Rsolv.CustomerOnboarding do
       {:error, {:validation_failed, %Ecto.Changeset{}}}
   """
   def provision_customer(attrs) when is_map(attrs) do
-    Logger.info("🎯 [CustomerOnboarding] Starting provisioning for #{inspect(attrs["email"] || attrs[:email])}")
+    Logger.info(
+      "🎯 [CustomerOnboarding] Starting provisioning for #{inspect(attrs["email"] || attrs[:email])}"
+    )
 
     with :ok <- validate_email(attrs["email"] || attrs[:email]) do
       attrs
@@ -52,14 +54,20 @@ defmodule Rsolv.CustomerOnboarding do
     case Burnex.is_burner?(email) do
       true ->
         Logger.warning("🚫 [CustomerOnboarding] Rejected disposable email: #{email}")
-        {:error, {:validation_failed, "email address from temporary/disposable email providers are not allowed"}}
+
+        {:error,
+         {:validation_failed,
+          "email address from temporary/disposable email providers are not allowed"}}
 
       false ->
         :ok
 
       {:error, _} ->
         # If burnex fails, allow the email through (fail open)
-        Logger.warning("⚠️ [CustomerOnboarding] Burnex check failed for #{email}, allowing through")
+        Logger.warning(
+          "⚠️ [CustomerOnboarding] Burnex check failed for #{email}, allowing through"
+        )
+
         :ok
     end
   end
@@ -88,7 +96,9 @@ defmodule Rsolv.CustomerOnboarding do
           rescue
             ArgumentError -> key
           end
+
         Map.put(acc, atom_key, value)
+
       {key, value}, acc ->
         Map.put(acc, key, value)
     end)

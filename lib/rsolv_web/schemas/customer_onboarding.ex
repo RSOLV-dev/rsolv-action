@@ -13,8 +13,17 @@ defmodule RsolvWeb.Schemas.CustomerOnboarding do
       title: "OnboardingRequest",
       type: :object,
       properties: %{
-        name: %Schema{type: :string, description: "Customer name or company name", example: "Acme Corp"},
-        email: %Schema{type: :string, format: :email, description: "Customer email address", example: "admin@acme.com"}
+        name: %Schema{
+          type: :string,
+          description: "Customer name or company name",
+          example: "Acme Corp"
+        },
+        email: %Schema{
+          type: :string,
+          format: :email,
+          description: "Customer email address",
+          example: "admin@acme.com"
+        }
       },
       required: [:name, :email],
       example: %{

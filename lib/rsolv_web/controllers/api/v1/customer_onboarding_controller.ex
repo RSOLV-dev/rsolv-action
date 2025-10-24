@@ -6,7 +6,7 @@ defmodule RsolvWeb.Api.V1.CustomerOnboardingController do
   alias RsolvWeb.Schemas.CustomerOnboarding.{OnboardingRequest, OnboardingResponse}
   alias RsolvWeb.Schemas.Error.ErrorResponse
 
-  tags ["Customer Onboarding"]
+  tags(["Customer Onboarding"])
 
   operation(:onboard,
     summary: "Provision a new customer account",
@@ -49,7 +49,8 @@ defmodule RsolvWeb.Api.V1.CustomerOnboardingController do
         |> put_status(:too_many_requests)
         |> json(%{
           error: %{
-            message: "Rate limit exceeded. Maximum 10 onboarding requests per minute per IP address.",
+            message:
+              "Rate limit exceeded. Maximum 10 onboarding requests per minute per IP address.",
             code: "RATE_LIMITED"
           }
         })
@@ -124,6 +125,7 @@ defmodule RsolvWeb.Api.V1.CustomerOnboardingController do
       [ip | _] ->
         # Take first IP if multiple are present (client IP)
         ip |> String.split(",") |> List.first() |> String.trim()
+
       [] ->
         # Fallback to remote_ip
         case conn.remote_ip do
