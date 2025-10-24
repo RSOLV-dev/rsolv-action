@@ -2,6 +2,7 @@ defmodule Rsolv.Billing.CreditLedgerTest do
   use Rsolv.DataCase, async: true
 
   alias Rsolv.Billing.CreditLedger
+  alias Rsolv.Customers.Customer
   alias Rsolv.Repo
 
   describe "credit/3" do

@@ -47,21 +47,7 @@ defmodule Rsolv.Billing.CreditLedger do
   def credit(customer, amount, source, metadata \\ %{})
       when is_integer(amount) and amount >= 0 do
     new_balance = customer.credit_balance + amount
-
-    Multi.new()
-    |> Multi.update(:customer, fn _ ->
-      Customer.changeset(customer, %{credit_balance: new_balance})
-    end)
-    |> Multi.insert(:transaction, fn _ ->
-      CreditTransaction.changeset(%CreditTransaction{}, %{
-        customer_id: customer.id,
-        amount: amount,
-        balance_after: new_balance,
-        source: source,
-        metadata: metadata
-      })
-    end)
-    |> Repo.transaction()
+    execute_transaction(customer, amount, new_balance, source, metadata)
   end
 
   @doc """
@@ -91,20 +77,7 @@ defmodule Rsolv.Billing.CreditLedger do
     if new_balance < 0 do
       {:error, :insufficient_credits}
     else
-      Multi.new()
-      |> Multi.update(:customer, fn _ ->
-        Customer.changeset(customer, %{credit_balance: new_balance})
-      end)
-      |> Multi.insert(:transaction, fn _ ->
-        CreditTransaction.changeset(%CreditTransaction{}, %{
-          customer_id: customer.id,
-          amount: -amount,
-          balance_after: new_balance,
-          source: source,
-          metadata: metadata
-        })
-      end)
-      |> Repo.transaction()
+      execute_transaction(customer, -amount, new_balance, source, metadata)
     end
   end
 
@@ -121,5 +94,23 @@ defmodule Rsolv.Billing.CreditLedger do
     |> where([t], t.customer_id == ^customer_id)
     |> order_by([t], desc: t.inserted_at)
     |> Repo.all()
+  end
+
+  # Private helper to execute credit/debit transaction atomically
+  defp execute_transaction(customer, transaction_amount, new_balance, source, metadata) do
+    Multi.new()
+    |> Multi.update(:customer, fn _ ->
+      Customer.changeset(customer, %{credit_balance: new_balance})
+    end)
+    |> Multi.insert(:transaction, fn _ ->
+      CreditTransaction.changeset(%CreditTransaction{}, %{
+        customer_id: customer.id,
+        amount: transaction_amount,
+        balance_after: new_balance,
+        source: source,
+        metadata: metadata
+      })
+    end)
+    |> Repo.transaction()
   end
 end

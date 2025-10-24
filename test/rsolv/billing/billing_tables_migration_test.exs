@@ -1,8 +1,28 @@
 defmodule Rsolv.BillingTablesMigrationTest do
   use Rsolv.DataCase, async: false
   alias Rsolv.Repo
+  alias Rsolv.Customers.Customer
 
   @moduletag :migration_test
+
+  # Helper function to check if a column exists in a table
+  defp assert_column_exists(table_name, column_name) do
+    assert {:ok, result} =
+             Repo.query(
+               "SELECT column_name FROM information_schema.columns
+                WHERE table_name = '#{table_name}'
+                AND column_name = '#{column_name}'"
+             )
+
+    assert length(result.rows) == 1, "Column #{column_name} should exist in #{table_name}"
+  end
+
+  # Helper function to check multiple columns exist in a table
+  defp assert_columns_exist(table_name, column_names) do
+    for column <- column_names do
+      assert_column_exists(table_name, column)
+    end
+  end
 
   describe "billing tables schema" do
     test "subscription_plan renamed to subscription_type" do
@@ -58,16 +78,7 @@ defmodule Rsolv.BillingTablesMigrationTest do
         "subscription_cancel_at_period_end"
       ]
 
-      for column <- required_columns do
-        assert {:ok, result} =
-                 Repo.query(
-                   "SELECT column_name FROM information_schema.columns
-                    WHERE table_name = 'customers'
-                    AND column_name = '#{column}'"
-                 )
-
-        assert length(result.rows) == 1, "Column #{column} should exist"
-      end
+      assert_columns_exist("customers", required_columns)
     end
 
     test "credit_transactions table exists with correct structure" do
@@ -84,16 +95,7 @@ defmodule Rsolv.BillingTablesMigrationTest do
         "updated_at"
       ]
 
-      for column <- required_columns do
-        assert {:ok, result} =
-                 Repo.query(
-                   "SELECT column_name FROM information_schema.columns
-                    WHERE table_name = 'credit_transactions'
-                    AND column_name = '#{column}'"
-                 )
-
-        assert length(result.rows) == 1, "Column #{column} should exist"
-      end
+      assert_columns_exist("credit_transactions", required_columns)
     end
 
     test "subscriptions table exists with correct structure" do
@@ -112,16 +114,7 @@ defmodule Rsolv.BillingTablesMigrationTest do
         "updated_at"
       ]
 
-      for column <- required_columns do
-        assert {:ok, result} =
-                 Repo.query(
-                   "SELECT column_name FROM information_schema.columns
-                    WHERE table_name = 'subscriptions'
-                    AND column_name = '#{column}'"
-                 )
-
-        assert length(result.rows) == 1, "Column #{column} should exist"
-      end
+      assert_columns_exist("subscriptions", required_columns)
     end
 
     test "billing_events table exists with correct structure" do
@@ -138,16 +131,7 @@ defmodule Rsolv.BillingTablesMigrationTest do
         "updated_at"
       ]
 
-      for column <- required_columns do
-        assert {:ok, result} =
-                 Repo.query(
-                   "SELECT column_name FROM information_schema.columns
-                    WHERE table_name = 'billing_events'
-                    AND column_name = '#{column}'"
-                 )
-
-        assert length(result.rows) == 1, "Column #{column} should exist"
-      end
+      assert_columns_exist("billing_events", required_columns)
     end
 
     test "stripe_customer_id has unique index" do
@@ -215,6 +199,24 @@ defmodule Rsolv.BillingTablesMigrationTest do
       assert length(result.rows) == 1
       # subscription_state should be nullable (NULL for trial/PAYG customers)
       assert [["YES"]] = result.rows
+    end
+
+    test "subscription_state stores Stripe states for Pro customers" do
+      # Create a test customer with subscription_state set to Stripe states
+      customer = insert(:customer, subscription_type: "pro", subscription_state: "active")
+      assert customer.subscription_state == "active"
+
+      # Verify we can update to other Stripe states
+      {:ok, updated} = Repo.update(Customer.changeset(customer, %{subscription_state: "past_due"}))
+      assert updated.subscription_state == "past_due"
+
+      # Verify the column can store typical Stripe subscription states
+      stripe_states = ["active", "past_due", "canceled", "unpaid", "trialing", "incomplete"]
+
+      for state <- stripe_states do
+        {:ok, c} = Repo.update(Customer.changeset(customer, %{subscription_state: state}))
+        assert c.subscription_state == state
+      end
     end
   end
 end
