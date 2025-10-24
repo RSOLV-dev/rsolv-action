@@ -13,7 +13,6 @@ defmodule Rsolv.CustomerOnboarding do
   - Future integrations (webhooks, CLI, OAuth, etc.)
   """
 
-  import Ecto.Query
   require Logger
 
   alias Rsolv.Repo
@@ -37,9 +36,32 @@ defmodule Rsolv.CustomerOnboarding do
   def provision_customer(attrs) when is_map(attrs) do
     Logger.info("🎯 [CustomerOnboarding] Starting provisioning for #{inspect(attrs["email"] || attrs[:email])}")
 
-    attrs
-    |> add_provisioning_defaults()
-    |> validate_and_create()
+    with :ok <- validate_email(attrs["email"] || attrs[:email]) do
+      attrs
+      |> add_provisioning_defaults()
+      |> validate_and_create()
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # Validate email against disposable domains
+  defp validate_email(nil), do: {:error, {:validation_failed, "email is required"}}
+
+  defp validate_email(email) when is_binary(email) do
+    case Burnex.is_burner?(email) do
+      true ->
+        Logger.warning("🚫 [CustomerOnboarding] Rejected disposable email: #{email}")
+        {:error, {:validation_failed, "email address from temporary/disposable email providers are not allowed"}}
+
+      false ->
+        :ok
+
+      {:error, _} ->
+        # If burnex fails, allow the email through (fail open)
+        Logger.warning("⚠️ [CustomerOnboarding] Burnex check failed for #{email}, allowing through")
+        :ok
+    end
   end
 
   # Add default values for auto-provisioned customers

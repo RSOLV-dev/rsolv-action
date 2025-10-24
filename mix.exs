@@ -80,7 +80,8 @@ defmodule Rsolv.MixProject do
       {:open_api_spex, "~> 3.22"},
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.18", only: :test}
+      {:excoveralls, "~> 0.18", only: :test},
+      {:burnex, "~> 3.1"}
     ]
   end
 

@@ -129,7 +129,10 @@ config :rsolv, :rate_limits,
   # 100 reports per minute
   usage_report: {100, :minute},
   # 10 login attempts per minute (per RFC-056)
-  auth_attempt: {10, :minute}
+  auth_attempt: {10, :minute},
+  # 10 customer onboarding requests per minute per IP (per RFC-065)
+  # Note: Currently using 60s window. Future: extend to hourly window
+  customer_onboarding: {10, :minute}
 
 # Configure credential TTL
 config :rsolv, :credentials,
