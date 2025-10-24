@@ -44,7 +44,7 @@ defmodule Rsolv.BillingTablesMigrationTest do
                   AND column_name = 'subscription_plan'"
                )
 
-      assert length(result.rows) == 0
+      assert result.rows == []
     end
 
     test "subscription_status renamed to subscription_state" do
@@ -64,7 +64,7 @@ defmodule Rsolv.BillingTablesMigrationTest do
                   AND column_name = 'subscription_status'"
                )
 
-      assert length(result.rows) == 0
+      assert result.rows == []
     end
 
     test "customers table has billing fields" do
