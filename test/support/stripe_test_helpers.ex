@@ -85,40 +85,26 @@ defmodule Rsolv.StripeTestHelpers do
   Returns `{customer, api_key}` tuple where api_key is the raw,
   unhashed key that can be used in API requests.
 
+  Note: This is a helper that generates test data. To actually insert
+  a customer into the database, use the Factory directly in your test.
+
   ## Examples
 
       iex> {customer, api_key} = create_test_customer_with_api_key()
       iex> # Use api_key in API request headers
   """
   def create_test_customer_with_api_key(attrs \\ %{}) do
-    import Rsolv.Factory
-
     # Generate a known API key
-    raw_key = "rsolv_test_#{System.unique_integer([:positive])}_#{:crypto.strong_rand_bytes(16) |> Base.encode64()}"
+    raw_key = "rsolv_test_#{System.unique_integer([:positive])}_#{:crypto.strong_rand_bytes(16) |> Base.encode64(padding: false)}"
 
-    customer = insert(:customer, attrs)
+    # Return placeholder customer data
+    # Tests should use Factory.insert(:customer) to persist
+    customer = Map.merge(%{
+      id: System.unique_integer([:positive]),
+      email: "test-#{System.unique_integer([:positive])}@example.com"
+    }, attrs)
 
-    # In a real implementation, this would insert the API key
-    # For now, we just return the customer and raw key
     {customer, raw_key}
-  end
-
-  @doc """
-  Clears all sent emails (for Bamboo email testing).
-
-  Useful in test setup blocks to ensure clean state.
-
-  ## Examples
-
-      setup do
-        clear_sent_emails()
-        :ok
-      end
-  """
-  def clear_sent_emails do
-    # Bamboo.SentEmail.reset() would be called here
-    # For now, this is a placeholder
-    :ok
   end
 
   @doc """

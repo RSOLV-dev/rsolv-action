@@ -12,8 +12,8 @@ config :rsolv, Rsolv.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  port: 5432,
-  database: "rsolv_api_test#{System.get_env("MIX_TEST_PARTITION")}",
+  port: 5434,
+  database: "rsolv_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 10
 
