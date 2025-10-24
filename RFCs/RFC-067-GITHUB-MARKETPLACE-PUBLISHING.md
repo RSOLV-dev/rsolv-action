@@ -225,8 +225,14 @@ This is how all marketplace actions work—not a limitation, but the native patt
 ### Week 1: Preparation
 - [ ] **Verify support infrastructure** exists and is functional:
   - [x] `support@rsolv.dev` - ✅ Already configured (forwards to dylan@arborealstudios.com)
-  - [ ] Verify `docs.rsolv.dev` exists with minimum viable content (installation, troubleshooting, API reference)
-  - [ ] Create docs site if missing (critical blocker for marketplace approval)
+  - [x] `docs.rsolv.dev` - ✅ Deployed to production with 8 comprehensive pages (installation, troubleshooting, API reference, FAQ, workflows, configuration, getting started)
+  - [ ] **BLOCKING**: Human review of docs site content before marketplace submission
+    - Review all 8 pages at https://docs.rsolv.dev for accuracy, completeness, and professionalism
+    - Verify workflow examples are correct and up-to-date
+    - Check troubleshooting section covers most common user issues
+    - Ensure API reference matches actual platform API
+    - Validate FAQ answers align with current product capabilities and pricing
+    - Sign-off required before proceeding with marketplace submission
 - [ ] Update action.yml with branding (icon: shield, color: blue)
 - [ ] Create 500x500px logo.png for marketplace
 - [ ] Rewrite README for marketplace format
@@ -684,9 +690,16 @@ inputs:
 ### Support Channels Status
 **Current state** (as of 2025-10-23):
 - ✅ `support@rsolv.dev` - **Configured and working** (forwards to dylan@arborealstudios.com)
-- ⚠️ `docs.rsolv.dev` - Documentation URL referenced in codebase, **needs verification that it exists and has content**
-- **Critical**: Documentation site must be fully functional before marketplace launch. Marketplace reviewers may check these links.
-- **Week 1 task**: Verify docs.rsolv.dev exists with minimum viable content (installation, troubleshooting, API reference), create if missing
+- ✅ `docs.rsolv.dev` - **Live in production** with 8 comprehensive pages
+  - Installation guide with workflow examples
+  - Troubleshooting (8 common issues)
+  - API reference (pattern/validation endpoints)
+  - FAQ (15+ questions)
+  - Workflow templates (5 ready-to-use)
+  - Configuration options
+  - Getting started tutorial
+  - Documentation landing page
+- **REQUIRED NEXT STEP**: Human review of all documentation content before marketplace submission (see Week 1 blocking task)
 
 ## Next Steps
 
@@ -706,8 +719,8 @@ inputs:
    - Support links
 4. [ ] **Validate support infrastructure**
    - Test support@rsolv.dev inbox
-   - Review docs.rsolv.dev content
-   - Prepare FAQ and troubleshooting guides
+   - **BLOCKING**: Human review of docs.rsolv.dev content (all 8 pages)
+   - Verify FAQ and troubleshooting guides match current product state
 5. [ ] **Run comprehensive testing**
    - NodeGoat, RailsGoat, real OSS project
    - All 5 operation modes
