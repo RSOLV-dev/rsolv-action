@@ -81,7 +81,9 @@ defmodule Rsolv.MixProject do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      {:burnex, "~> 3.1"}
+      {:burnex, "~> 3.1"},
+      {:ex_money, "~> 5.23"},
+      {:stripity_stripe, "~> 3.2"}
     ]
   end
 

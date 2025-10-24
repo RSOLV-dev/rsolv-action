@@ -20,8 +20,8 @@ defmodule Rsolv.Customers.Customer do
     field :trial_fixes_used, :integer, default: 0
     field :trial_fixes_limit, :integer, default: 5
     field :stripe_customer_id, :string
-    field :subscription_plan, :string, default: "trial"
-    field :subscription_status, :string, default: "active"
+    field :subscription_type, :string, default: "trial"
+    field :subscription_state, :string
     field :rollover_fixes, :integer, default: 0
     field :payment_method_added_at, :utc_datetime
     field :trial_expired_at, :utc_datetime
@@ -35,9 +35,20 @@ defmodule Rsolv.Customers.Customer do
     field :wizard_preference, :string, default: "auto"
     field :first_scan_at, :utc_datetime
 
+    # RFC-066 billing fields
+    field :credit_balance, :integer, default: 0
+    field :stripe_payment_method_id, :string
+    field :stripe_subscription_id, :string
+    field :billing_consent_given, :boolean, default: false
+    field :billing_consent_at, :utc_datetime
+    field :subscription_cancel_at_period_end, :boolean, default: false
+
     has_many :api_keys, Rsolv.Customers.ApiKey
     has_many :fix_attempts, Rsolv.Billing.FixAttempt
     has_many :forge_accounts, Rsolv.Customers.ForgeAccount
+    has_many :credit_transactions, Rsolv.Billing.CreditTransaction
+    has_many :subscriptions, Rsolv.Billing.Subscription
+    has_many :billing_events, Rsolv.Billing.BillingEvent
 
     timestamps()
   end
@@ -57,8 +68,8 @@ defmodule Rsolv.Customers.Customer do
       :trial_fixes_used,
       :trial_fixes_limit,
       :stripe_customer_id,
-      :subscription_plan,
-      :subscription_status,
+      :subscription_type,
+      :subscription_state,
       :rollover_fixes,
       :payment_method_added_at,
       :trial_expired_at,
@@ -69,12 +80,19 @@ defmodule Rsolv.Customers.Customer do
       :admin_level,
       :auto_provisioned,
       :wizard_preference,
-      :first_scan_at
+      :first_scan_at,
+      :credit_balance,
+      :stripe_payment_method_id,
+      :stripe_subscription_id,
+      :billing_consent_given,
+      :billing_consent_at,
+      :subscription_cancel_at_period_end
     ])
     |> validate_required([:name, :email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
     |> unique_constraint(:email)
     |> validate_number(:monthly_limit, greater_than_or_equal_to: 0)
+    |> validate_number(:credit_balance, greater_than_or_equal_to: 0)
     |> validate_admin_level()
   end
 

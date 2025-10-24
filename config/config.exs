@@ -88,6 +88,24 @@ config :fun_with_flags, :cache_bust_notifications,
   adapter: FunWithFlags.Notifications.PhoenixPubSub,
   client: Rsolv.PubSub
 
+# Configure billing pricing (RFC-066)
+config :rsolv, :billing,
+  pricing: %{
+    trial: %{
+      initial_credits: 10,
+      billing_addition_bonus: 5
+    },
+    pay_as_you_go: %{
+      credit_price_cents: 1000,  # $10 per credit
+      minimum_purchase: 1
+    },
+    pro: %{
+      monthly_price_cents: 50000,  # $500/month
+      included_credits: 100,
+      overage_price_cents: 500  # $5 per credit over quota
+    }
+  }
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
