@@ -211,7 +211,7 @@ defmodule Rsolv.StripeMock do
     }
   end
 
-  defp build_subscription_fixture(attrs \\ %{}) do
+  defp build_subscription_fixture(attrs) when is_map(attrs) do
     Enum.into(attrs, %{
       id: "sub_test_#{System.unique_integer([:positive])}",
       object: "subscription",
