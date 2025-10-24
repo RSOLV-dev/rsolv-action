@@ -72,7 +72,8 @@ defmodule Rsolv.TestHelpers do
   """
   def create_test_api_key(customer) do
     # Generate a test API key
-    raw_key = "rsolv_test_#{System.unique_integer([:positive])}_#{:crypto.strong_rand_bytes(16) |> Base.encode64(padding: false)}"
+    raw_key =
+      "rsolv_test_#{System.unique_integer([:positive])}_#{:crypto.strong_rand_bytes(16) |> Base.encode64(padding: false)}"
 
     # In real implementation, this would create and hash the API key
     # For now, return the customer and raw key

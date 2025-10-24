@@ -103,20 +103,26 @@ defmodule Rsolv.CustomersFixtures do
       api_version: "2023-10-16"
     }
 
-    data = case type do
-      "customer.subscription.created" ->
-        %{object: subscription_fixture(attrs)}
-      "customer.subscription.updated" ->
-        %{object: subscription_fixture(attrs)}
-      "customer.subscription.deleted" ->
-        %{object: subscription_fixture(Map.put(attrs, :status, "canceled"))}
-      "invoice.payment_succeeded" ->
-        %{object: invoice_fixture(attrs)}
-      "invoice.payment_failed" ->
-        %{object: invoice_fixture(Map.put(attrs, :status, "open"))}
-      _ ->
-        %{object: attrs}
-    end
+    data =
+      case type do
+        "customer.subscription.created" ->
+          %{object: subscription_fixture(attrs)}
+
+        "customer.subscription.updated" ->
+          %{object: subscription_fixture(attrs)}
+
+        "customer.subscription.deleted" ->
+          %{object: subscription_fixture(Map.put(attrs, :status, "canceled"))}
+
+        "invoice.payment_succeeded" ->
+          %{object: invoice_fixture(attrs)}
+
+        "invoice.payment_failed" ->
+          %{object: invoice_fixture(Map.put(attrs, :status, "open"))}
+
+        _ ->
+          %{object: attrs}
+      end
 
     Map.put(base_event, :data, data)
   end

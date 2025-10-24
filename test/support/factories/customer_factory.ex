@@ -80,12 +80,13 @@ defmodule Rsolv.CustomerFactory do
   and received the bonus 5 credits.
   """
   def with_billing_added(customer) do
-    %{customer |
-      trial_fixes_limit: 10,
-      trial_fixes_used: 0,
-      stripe_customer_id: "cus_test_#{System.unique_integer([:positive])}",
-      has_payment_method: true,
-      payment_method_added_at: DateTime.utc_now()
+    %{
+      customer
+      | trial_fixes_limit: 10,
+        trial_fixes_used: 0,
+        stripe_customer_id: "cus_test_#{System.unique_integer([:positive])}",
+        has_payment_method: true,
+        payment_method_added_at: DateTime.utc_now()
     }
   end
 
@@ -95,17 +96,18 @@ defmodule Rsolv.CustomerFactory do
   This represents a customer with an active Pro subscription.
   """
   def with_pro_plan(customer) do
-    %{customer |
-      trial_fixes_limit: 0,
-      trial_fixes_used: 0,
-      fixes_quota_this_month: 60,
-      fixes_used_this_month: 0,
-      rollover_fixes: 0,
-      subscription_plan: "pro",
-      subscription_status: "active",
-      stripe_customer_id: "cus_test_#{System.unique_integer([:positive])}",
-      has_payment_method: true,
-      payment_method_added_at: DateTime.add(DateTime.utc_now(), -30, :day)
+    %{
+      customer
+      | trial_fixes_limit: 0,
+        trial_fixes_used: 0,
+        fixes_quota_this_month: 60,
+        fixes_used_this_month: 0,
+        rollover_fixes: 0,
+        subscription_plan: "pro",
+        subscription_status: "active",
+        stripe_customer_id: "cus_test_#{System.unique_integer([:positive])}",
+        has_payment_method: true,
+        payment_method_added_at: DateTime.add(DateTime.utc_now(), -30, :day)
     }
   end
 
@@ -146,14 +148,15 @@ defmodule Rsolv.CustomerFactory do
   remaining credits are preserved.
   """
   def with_cancelled_pro(customer) do
-    %{customer |
-      subscription_status: "canceled",
-      subscription_plan: "trial",
-      # Preserve remaining credits as trial credits
-      trial_fixes_limit: customer.fixes_quota_this_month - customer.fixes_used_this_month,
-      trial_fixes_used: 0,
-      fixes_quota_this_month: 0,
-      fixes_used_this_month: 0
+    %{
+      customer
+      | subscription_status: "canceled",
+        subscription_plan: "trial",
+        # Preserve remaining credits as trial credits
+        trial_fixes_limit: customer.fixes_quota_this_month - customer.fixes_used_this_month,
+        trial_fixes_used: 0,
+        fixes_quota_this_month: 0,
+        fixes_used_this_month: 0
     }
   end
 
@@ -164,10 +167,11 @@ defmodule Rsolv.CustomerFactory do
   without adding payment information.
   """
   def with_expired_trial(customer) do
-    %{customer |
-      trial_fixes_used: 5,
-      trial_fixes_limit: 5,
-      trial_expired_at: DateTime.add(DateTime.utc_now(), -1, :day)
+    %{
+      customer
+      | trial_fixes_used: 5,
+        trial_fixes_limit: 5,
+        trial_expired_at: DateTime.add(DateTime.utc_now(), -1, :day)
     }
   end
 
@@ -178,14 +182,15 @@ defmodule Rsolv.CustomerFactory do
   instead of subscribing to Pro.
   """
   def with_payg(customer) do
-    %{customer |
-      trial_fixes_limit: 0,
-      trial_fixes_used: 0,
-      subscription_plan: "payg",
-      subscription_status: "active",
-      stripe_customer_id: "cus_test_#{System.unique_integer([:positive])}",
-      has_payment_method: true,
-      payment_method_added_at: DateTime.utc_now()
+    %{
+      customer
+      | trial_fixes_limit: 0,
+        trial_fixes_used: 0,
+        subscription_plan: "payg",
+        subscription_status: "active",
+        stripe_customer_id: "cus_test_#{System.unique_integer([:positive])}",
+        has_payment_method: true,
+        payment_method_added_at: DateTime.utc_now()
     }
   end
 
@@ -205,9 +210,6 @@ defmodule Rsolv.CustomerFactory do
   Staff customer for internal testing.
   """
   def with_staff_access(customer) do
-    %{customer |
-      is_staff: true,
-      email: sequence(:staff_email, &"staff-#{&1}@rsolv.dev")
-    }
+    %{customer | is_staff: true, email: sequence(:staff_email, &"staff-#{&1}@rsolv.dev")}
   end
 end

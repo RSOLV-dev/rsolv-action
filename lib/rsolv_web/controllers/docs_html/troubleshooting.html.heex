@@ -2,9 +2,17 @@
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <!-- Header -->
     <div class="mb-8">
-      <a href="/docs" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
+      <a
+        href="/docs"
+        class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4"
+      >
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
         </svg>
         Back to Documentation
       </a>
@@ -14,65 +22,150 @@
       </p>
     </div>
 
-    <!-- Quick Links -->
+<!-- Quick Links -->
     <div class="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-lg p-6 mb-8">
       <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Quick Links</h2>
       <ul class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-        <li><a href="#authentication-errors" class="text-blue-600 dark:text-blue-400 hover:underline">Authentication Errors</a></li>
-        <li><a href="#workflow-not-running" class="text-blue-600 dark:text-blue-400 hover:underline">Workflow Not Running</a></li>
-        <li><a href="#no-issues-created" class="text-blue-600 dark:text-blue-400 hover:underline">No Issues Created</a></li>
-        <li><a href="#rate-limit-errors" class="text-blue-600 dark:text-blue-400 hover:underline">Rate Limit Errors</a></li>
-        <li><a href="#permission-errors" class="text-blue-600 dark:text-blue-400 hover:underline">Permission Errors</a></li>
-        <li><a href="#timeout-errors" class="text-blue-600 dark:text-blue-400 hover:underline">Timeout Errors</a></li>
-        <li><a href="#test-generation-failures" class="text-blue-600 dark:text-blue-400 hover:underline">Test Generation Failures</a></li>
-        <li><a href="#pr-creation-failures" class="text-blue-600 dark:text-blue-400 hover:underline">PR Creation Failures</a></li>
+        <li>
+          <a
+            href="#authentication-errors"
+            class="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Authentication Errors
+          </a>
+        </li>
+        <li>
+          <a href="#workflow-not-running" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Workflow Not Running
+          </a>
+        </li>
+        <li>
+          <a href="#no-issues-created" class="text-blue-600 dark:text-blue-400 hover:underline">
+            No Issues Created
+          </a>
+        </li>
+        <li>
+          <a href="#rate-limit-errors" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Rate Limit Errors
+          </a>
+        </li>
+        <li>
+          <a href="#permission-errors" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Permission Errors
+          </a>
+        </li>
+        <li>
+          <a href="#timeout-errors" class="text-blue-600 dark:text-blue-400 hover:underline">
+            Timeout Errors
+          </a>
+        </li>
+        <li>
+          <a
+            href="#test-generation-failures"
+            class="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Test Generation Failures
+          </a>
+        </li>
+        <li>
+          <a href="#pr-creation-failures" class="text-blue-600 dark:text-blue-400 hover:underline">
+            PR Creation Failures
+          </a>
+        </li>
       </ul>
     </div>
 
-    <!-- Issues -->
+<!-- Issues -->
     <div class="space-y-8">
       <!-- Authentication Errors -->
-      <div id="authentication-errors" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+      <div
+        id="authentication-errors"
+        class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6"
+      >
         <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
-          <svg class="w-6 h-6 text-red-600 dark:text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          <svg
+            class="w-6 h-6 text-red-600 dark:text-red-400 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            />
           </svg>
           Authentication Errors
         </h2>
 
         <div class="mb-4">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Error: "Invalid API key" or "Unauthorized"</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Error: "Invalid API key" or "Unauthorized"
+          </h3>
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 mb-3">
-            <code class="text-sm text-red-800 dark:text-red-200">Error: Authentication failed - Invalid API key</code>
+            <code class="text-sm text-red-800 dark:text-red-200">
+              Error: Authentication failed - Invalid API key
+            </code>
           </div>
           <p class="text-slate-700 dark:text-slate-300 mb-3"><strong>Causes:</strong></p>
           <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-3">
             <li>API key not set in GitHub Secrets</li>
-            <li>Incorrect secret name (must be exactly <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">RSOLV_API_KEY</code>)</li>
+            <li>
+              Incorrect secret name (must be exactly <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">RSOLV_API_KEY</code>)
+            </li>
             <li>API key was revoked or expired</li>
             <li>Typo in API key value</li>
           </ul>
           <p class="text-slate-700 dark:text-slate-300 mb-2"><strong>Solutions:</strong></p>
           <ol class="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300">
-            <li>Verify secret name in Settings → Secrets → Actions is exactly <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">RSOLV_API_KEY</code></li>
-            <li>Check your API key at <a href="https://rsolv.dev/dashboard" class="text-blue-600 dark:text-blue-400 hover:underline">rsolv.dev/dashboard</a></li>
+            <li>
+              Verify secret name in Settings → Secrets → Actions is exactly
+              <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">
+                RSOLV_API_KEY
+              </code>
+            </li>
+            <li>
+              Check your API key at
+              <a
+                href="https://rsolv.dev/dashboard"
+                class="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                rsolv.dev/dashboard
+              </a>
+            </li>
             <li>Generate a new API key if needed and update the secret</li>
             <li>Ensure no extra spaces or characters in the secret value</li>
           </ol>
         </div>
       </div>
 
-      <!-- Workflow Not Running -->
-      <div id="workflow-not-running" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+<!-- Workflow Not Running -->
+      <div
+        id="workflow-not-running"
+        class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6"
+      >
         <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
-          <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          <svg
+            class="w-6 h-6 text-yellow-600 dark:text-yellow-400 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           Workflow Not Running
         </h2>
 
         <div class="mb-4">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow doesn't appear in Actions tab</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Workflow doesn't appear in Actions tab
+          </h3>
           <p class="text-slate-700 dark:text-slate-300 mb-3"><strong>Causes:</strong></p>
           <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-3">
             <li>Workflow file not in correct location</li>
@@ -82,27 +175,61 @@
           </ul>
           <p class="text-slate-700 dark:text-slate-300 mb-2"><strong>Solutions:</strong></p>
           <ol class="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300">
-            <li>Verify file is at <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">.github/workflows/rsolv-security.yml</code></li>
-            <li>Use a YAML validator to check syntax: <a href="https://www.yamllint.com/" class="text-blue-600 dark:text-blue-400 hover:underline">yamllint.com</a></li>
+            <li>
+              Verify file is at
+              <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">
+                .github/workflows/rsolv-security.yml
+              </code>
+            </li>
+            <li>
+              Use a YAML validator to check syntax:
+              <a
+                href="https://www.yamllint.com/"
+                class="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                yamllint.com
+              </a>
+            </li>
             <li>Ensure file is committed and pushed to GitHub</li>
             <li>Check Settings → Actions → General to enable GitHub Actions</li>
-            <li>Verify the <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">on:</code> trigger matches your use case (push, pull_request, etc.)</li>
+            <li>
+              Verify the
+              <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">on:</code>
+              trigger matches your use case (push, pull_request, etc.)
+            </li>
           </ol>
         </div>
       </div>
 
-      <!-- No Issues Created -->
-      <div id="no-issues-created" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+<!-- No Issues Created -->
+      <div
+        id="no-issues-created"
+        class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6"
+      >
         <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
-          <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          <svg
+            class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            />
           </svg>
           No Issues Created
         </h2>
 
         <div class="mb-4">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Scan completes but no issues appear</h3>
-          <p class="text-slate-700 dark:text-slate-300 mb-3"><strong>This might be good news!</strong> It could mean:</p>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Scan completes but no issues appear
+          </h3>
+          <p class="text-slate-700 dark:text-slate-300 mb-3">
+            <strong>This might be good news!</strong> It could mean:
+          </p>
           <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-3">
             <li>No vulnerabilities detected (secure code!)</li>
             <li>False positives were filtered out by AST validation</li>
@@ -111,52 +238,105 @@
           <p class="text-slate-700 dark:text-slate-300 mb-2"><strong>To verify:</strong></p>
           <ol class="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300">
             <li>Check workflow logs in Actions tab for scan results summary</li>
-            <li>Verify your repository contains supported languages (JavaScript, TypeScript, Python, Ruby, PHP, Java)</li>
+            <li>
+              Verify your repository contains supported languages (JavaScript, TypeScript, Python, Ruby, PHP, Java)
+            </li>
             <li>Test with a known vulnerable repository to confirm RSOLV is working</li>
             <li>Check if issues permission is granted in workflow file</li>
           </ol>
         </div>
       </div>
 
-      <!-- Rate Limit Errors -->
-      <div id="rate-limit-errors" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+<!-- Rate Limit Errors -->
+      <div
+        id="rate-limit-errors"
+        class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6"
+      >
         <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
-          <svg class="w-6 h-6 text-orange-600 dark:text-orange-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          <svg
+            class="w-6 h-6 text-orange-600 dark:text-orange-400 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           Rate Limit Errors
         </h2>
 
         <div class="mb-4">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Error: "Rate limit exceeded"</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Error: "Rate limit exceeded"
+          </h3>
           <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3 mb-3">
-            <code class="text-sm text-orange-800 dark:text-orange-200">Error: Rate limit exceeded - 500 requests per hour</code>
+            <code class="text-sm text-orange-800 dark:text-orange-200">
+              Error: Rate limit exceeded - 500 requests per hour
+            </code>
           </div>
           <p class="text-slate-700 dark:text-slate-300 mb-3"><strong>What it means:</strong></p>
-          <p class="text-slate-700 dark:text-slate-300 mb-3">RSOLV has rate limits to ensure fair usage and system stability. The AST validation API allows 500 requests per hour per API key.</p>
+          <p class="text-slate-700 dark:text-slate-300 mb-3">
+            RSOLV has rate limits to ensure fair usage and system stability. The AST validation API allows 500 requests per hour per API key.
+          </p>
           <p class="text-slate-700 dark:text-slate-300 mb-2"><strong>Solutions:</strong></p>
           <ol class="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300">
             <li>Wait for the rate limit window to reset (shown in error message)</li>
             <li>Reduce scan frequency (e.g., weekly instead of on every push)</li>
-            <li>Use <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">max_issues</code> parameter to limit processing</li>
-            <li>Contact <a href="mailto:support@rsolv.dev" class="text-blue-600 dark:text-blue-400 hover:underline">support@rsolv.dev</a> for enterprise rate limits</li>
+            <li>
+              Use
+              <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">
+                max_issues
+              </code>
+              parameter to limit processing
+            </li>
+            <li>
+              Contact
+              <a
+                href="mailto:support@rsolv.dev"
+                class="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                support@rsolv.dev
+              </a>
+              for enterprise rate limits
+            </li>
           </ol>
         </div>
       </div>
 
-      <!-- Permission Errors -->
-      <div id="permission-errors" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+<!-- Permission Errors -->
+      <div
+        id="permission-errors"
+        class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6"
+      >
         <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
-          <svg class="w-6 h-6 text-purple-600 dark:text-purple-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          <svg
+            class="w-6 h-6 text-purple-600 dark:text-purple-400 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+            />
           </svg>
           Permission Errors
         </h2>
 
         <div class="mb-4">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Error: "Resource not accessible by integration"</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Error: "Resource not accessible by integration"
+          </h3>
           <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded p-3 mb-3">
-            <code class="text-sm text-purple-800 dark:text-purple-200">Error: Resource not accessible by integration</code>
+            <code class="text-sm text-purple-800 dark:text-purple-200">
+              Error: Resource not accessible by integration
+            </code>
           </div>
           <p class="text-slate-700 dark:text-slate-300 mb-3"><strong>Causes:</strong></p>
           <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-3">
@@ -173,24 +353,42 @@
   issues: write        # For creating issues
   pull-requests: write # For creating PRs</code></pre>
           </div>
-          <ol start="2" class="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300">
+          <ol
+            start="2"
+            class="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300"
+          >
             <li>Check organization settings: Settings → Actions → General</li>
             <li>Ensure "Allow GitHub Actions to create and approve pull requests" is enabled</li>
           </ol>
         </div>
       </div>
 
-      <!-- Timeout Errors -->
-      <div id="timeout-errors" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+<!-- Timeout Errors -->
+      <div
+        id="timeout-errors"
+        class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6"
+      >
         <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
-          <svg class="w-6 h-6 text-red-600 dark:text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          <svg
+            class="w-6 h-6 text-red-600 dark:text-red-400 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           Timeout Errors
         </h2>
 
         <div class="mb-4">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Workflow times out or takes too long</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Workflow times out or takes too long
+          </h3>
           <p class="text-slate-700 dark:text-slate-300 mb-3"><strong>Causes:</strong></p>
           <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-3">
             <li>Large repository with many files to scan</li>
@@ -199,25 +397,57 @@
           </ul>
           <p class="text-slate-700 dark:text-slate-300 mb-2"><strong>Solutions:</strong></p>
           <ol class="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300">
-            <li>Use separate jobs for each phase (see <a href="/docs/workflows" class="text-blue-600 dark:text-blue-400 hover:underline">workflow templates</a>)</li>
-            <li>Limit processing with <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">max_issues: '3'</code> parameter</li>
-            <li>Use <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">mode: 'scan'</code> first to identify issues, then process incrementally</li>
+            <li>
+              Use separate jobs for each phase (see <a
+                href="/docs/workflows"
+                class="text-blue-600 dark:text-blue-400 hover:underline"
+              >workflow templates</a>)
+            </li>
+            <li>
+              Limit processing with
+              <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">
+                max_issues: '3'
+              </code>
+              parameter
+            </li>
+            <li>
+              Use
+              <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">
+                mode: 'scan'
+              </code>
+              first to identify issues, then process incrementally
+            </li>
             <li>Increase GitHub Actions timeout (default is 6 hours, rarely needed)</li>
           </ol>
         </div>
       </div>
 
-      <!-- Test Generation Failures -->
-      <div id="test-generation-failures" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+<!-- Test Generation Failures -->
+      <div
+        id="test-generation-failures"
+        class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6"
+      >
         <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
-          <svg class="w-6 h-6 text-green-600 dark:text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          <svg
+            class="w-6 h-6 text-green-600 dark:text-green-400 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           Test Generation Failures
         </h2>
 
         <div class="mb-4">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Validate phase fails to generate tests</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Validate phase fails to generate tests
+          </h3>
           <p class="text-slate-700 dark:text-slate-300 mb-3"><strong>Causes:</strong></p>
           <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-3">
             <li>Test framework not detected or unsupported</li>
@@ -226,34 +456,72 @@
           </ul>
           <p class="text-slate-700 dark:text-slate-300 mb-2"><strong>Solutions:</strong></p>
           <ol class="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300">
-            <li>Ensure your project has a supported test framework (Jest, RSpec, pytest, PHPUnit, JUnit)</li>
+            <li>
+              Ensure your project has a supported test framework (Jest, RSpec, pytest, PHPUnit, JUnit)
+            </li>
             <li>Check workflow logs for specific error messages</li>
             <li>Verify test dependencies are installed in your repository</li>
-            <li>Contact <a href="mailto:support@rsolv.dev" class="text-blue-600 dark:text-blue-400 hover:underline">support@rsolv.dev</a> with repository details for assistance</li>
+            <li>
+              Contact
+              <a
+                href="mailto:support@rsolv.dev"
+                class="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                support@rsolv.dev
+              </a>
+              with repository details for assistance
+            </li>
           </ol>
         </div>
       </div>
 
-      <!-- PR Creation Failures -->
-      <div id="pr-creation-failures" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+<!-- PR Creation Failures -->
+      <div
+        id="pr-creation-failures"
+        class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6"
+      >
         <h2 class="text-2xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
-          <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+          <svg
+            class="w-6 h-6 text-indigo-600 dark:text-indigo-400 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+            />
           </svg>
           PR Creation Failures
         </h2>
 
         <div class="mb-4">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Mitigate phase fails to create pull request</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Mitigate phase fails to create pull request
+          </h3>
           <p class="text-slate-700 dark:text-slate-300 mb-3"><strong>Causes:</strong></p>
           <ul class="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300 mb-3">
-            <li>Missing <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">pull-requests: write</code> permission</li>
+            <li>
+              Missing
+              <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">
+                pull-requests: write
+              </code>
+              permission
+            </li>
             <li>Branch protection rules preventing automatic PRs</li>
             <li>PR already exists for the fix</li>
           </ul>
           <p class="text-slate-700 dark:text-slate-300 mb-2"><strong>Solutions:</strong></p>
           <ol class="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300">
-            <li>Add <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">pull-requests: write</code> to permissions section</li>
+            <li>
+              Add
+              <code class="text-sm bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">
+                pull-requests: write
+              </code>
+              to permissions section
+            </li>
             <li>Check Settings → Branches for protection rules that may block PRs</li>
             <li>Review existing PRs - RSOLV won't create duplicates</li>
             <li>Check workflow logs for specific error messages</li>
@@ -262,22 +530,33 @@
       </div>
     </div>
 
-    <!-- Still Need Help? -->
+<!-- Still Need Help? -->
     <div class="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-8 text-center">
       <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4">Still Need Help?</h2>
       <p class="text-slate-700 dark:text-slate-300 mb-6 max-w-2xl mx-auto">
         Our support team responds within 24 hours (usually much faster). We're here to help!
       </p>
       <div class="flex flex-wrap justify-center gap-4">
-        <a href="mailto:support@rsolv.dev" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <a
+          href="mailto:support@rsolv.dev"
+          class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            />
           </svg>
           Email Support
         </a>
-        <a href="https://github.com/RSOLV-dev/rsolv-action/issues" class="inline-flex items-center px-6 py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-900 dark:hover:bg-slate-600 transition-colors">
+        <a
+          href="https://github.com/RSOLV-dev/rsolv-action/issues"
+          class="inline-flex items-center px-6 py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-900 dark:hover:bg-slate-600 transition-colors"
+        >
           <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
           </svg>
           Report Issue
         </a>

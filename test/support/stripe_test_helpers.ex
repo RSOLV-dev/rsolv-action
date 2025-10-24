@@ -95,14 +95,19 @@ defmodule Rsolv.StripeTestHelpers do
   """
   def create_test_customer_with_api_key(attrs \\ %{}) do
     # Generate a known API key
-    raw_key = "rsolv_test_#{System.unique_integer([:positive])}_#{:crypto.strong_rand_bytes(16) |> Base.encode64(padding: false)}"
+    raw_key =
+      "rsolv_test_#{System.unique_integer([:positive])}_#{:crypto.strong_rand_bytes(16) |> Base.encode64(padding: false)}"
 
     # Return placeholder customer data
     # Tests should use Factory.insert(:customer) to persist
-    customer = Map.merge(%{
-      id: System.unique_integer([:positive]),
-      email: "test-#{System.unique_integer([:positive])}@example.com"
-    }, attrs)
+    customer =
+      Map.merge(
+        %{
+          id: System.unique_integer([:positive]),
+          email: "test-#{System.unique_integer([:positive])}@example.com"
+        },
+        attrs
+      )
 
     {customer, raw_key}
   end
@@ -172,7 +177,7 @@ defmodule Rsolv.StripeTestHelpers do
     days = Keyword.get(opts, :days, 30)
     current_end = subscription.current_period_end
     new_start = current_end
-    new_end = current_end + (days * 24 * 60 * 60)
+    new_end = current_end + days * 24 * 60 * 60
 
     subscription
     |> Map.put(:current_period_start, new_start)
@@ -195,8 +200,10 @@ defmodule Rsolv.StripeTestHelpers do
     case event_type do
       "customer.subscription.created" ->
         verify_subscription_created(expected_changes)
+
       "invoice.payment_succeeded" ->
         verify_payment_recorded(expected_changes)
+
       _ ->
         :ok
     end
