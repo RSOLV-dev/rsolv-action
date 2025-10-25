@@ -202,6 +202,46 @@ defmodule Rsolv.StripeMock do
     {:error, stripe_error("resource_missing", "No such subscription")}
   end
 
+  @doc """
+  Mock attaching a payment method to a customer.
+
+  ## Examples
+
+      iex> attach_payment_method("pm_test_123", %{customer: "cus_test_123"})
+      {:ok, %{id: "pm_test_123", customer: "cus_test_123"}}
+  """
+  def attach_payment_method(payment_method_id, %{customer: customer_id})
+      when is_binary(payment_method_id) and is_binary(customer_id) do
+    {:ok, %{id: payment_method_id, customer: customer_id, object: "payment_method"}}
+  end
+
+  def attach_payment_method(_id, _params) do
+    {:error, stripe_error("invalid_request_error", "Invalid payment method or customer.")}
+  end
+
+  @doc """
+  Mock updating a Stripe customer.
+
+  ## Examples
+
+      iex> update_customer("cus_test_123", %{invoice_settings: %{default_payment_method: "pm_123"}})
+      {:ok, %{id: "cus_test_123", ...}}
+  """
+  def update_customer(customer_id, params) when is_binary(customer_id) do
+    customer = %{
+      id: customer_id,
+      object: "customer",
+      invoice_settings: params[:invoice_settings] || %{},
+      metadata: params[:metadata] || %{}
+    }
+
+    {:ok, customer}
+  end
+
+  def update_customer(_id, _params) do
+    {:error, stripe_error("invalid_request_error", "Invalid customer ID.")}
+  end
+
   # Private helpers
 
   defp stripe_error(type, message) do
