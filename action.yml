@@ -1,16 +1,16 @@
-name: 'RSOLV Issue Automation'
-description: 'Automates fixing issues in your repository using AI'
-author: 'RSOLV Team'
+name: 'RSOLV: Test-First AI Security Fixes'
+description: 'Ship secure code faster. Test-first AI security that validates vulnerabilities with executable RED tests before fixing them. No guesswork—every fix is proven with tests that fail before and pass after. From detection to deployment in one workflow.'
+author: 'RSOLV'
 branding:
-  icon: 'zap'
-  color: 'purple'
+  icon: 'shield'
+  color: 'blue'
 inputs:
   api_key:
     description: 'RSOLV API key for authentication (deprecated, use rsolvApiKey)'
     required: false
   rsolvApiKey:
-    description: 'RSOLV API key for platform authentication and phase data persistence'
-    required: false
+    description: 'RSOLV API key for authentication (get yours at rsolv.dev/signup)'
+    required: true
   config_path:
     description: 'Path to RSOLV configuration file'
     required: false
@@ -46,10 +46,23 @@ inputs:
   jira_jql:
     description: 'Custom JQL query to find issues (overrides label-based search)'
     required: false
-  mode:
-    description: 'Operation mode: scan, validate, mitigate, or full (all phases)'
+  github-token:
+    description: |
+      GitHub token for PR/issue operations. Automatically provided by GitHub Actions.
+      Only override if you need custom permissions.
     required: false
-    default: 'full'
+    default: ${{ github.token }}
+  mode:
+    description: |
+      Operation mode - choose based on your workflow:
+      - 'scan': Full repository scan, creates GitHub issues (recommended starting point)
+      - 'validate': Generate RED tests for labeled issues (use in separate job after scan)
+      - 'mitigate': Apply fixes to validated issues (use in separate job after validate)
+      - 'full': Run all three phases in single job (⚠️ can consume many credits at once)
+
+      For production use, see workflow templates in RSOLV-action repo for multi-job patterns.
+    required: false
+    default: 'scan'
   scan_mode:
     description: 'Scan mode operation: fix (default) or scan'
     required: false
