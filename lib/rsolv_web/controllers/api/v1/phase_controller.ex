@@ -61,6 +61,7 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   - branch: Optional, for scan phase
   """
   def store(conn, params) do
+    require Logger
     customer = conn.assigns.customer
     # Use the actual API key that was used for authentication
     api_key = conn.assigns.api_key || get_customer_api_key(customer)
@@ -96,6 +97,8 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   end
 
   defp normalize_params(params) do
+    require Logger
+
     phase = params["phase"] || params[:phase]
     repo = params["repo"] || params[:repo]
 

@@ -88,6 +88,30 @@ config :fun_with_flags, :cache_bust_notifications,
   adapter: FunWithFlags.Notifications.PhoenixPubSub,
   client: Rsolv.PubSub
 
+# Configure CLDR backend for ex_money (RFC-066)
+config :ex_money, default_cldr_backend: Rsolv.Cldr
+
+# Configure billing pricing (RFC-066)
+config :rsolv, :billing,
+  pricing: %{
+    trial: %{
+      initial_credits: 10,
+      billing_addition_bonus: 5
+    },
+    pay_as_you_go: %{
+      # $10 per credit
+      credit_price_cents: 1000,
+      minimum_purchase: 1
+    },
+    pro: %{
+      # $500/month
+      monthly_price_cents: 50000,
+      included_credits: 100,
+      # $5 per credit over quota
+      overage_price_cents: 500
+    }
+  }
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

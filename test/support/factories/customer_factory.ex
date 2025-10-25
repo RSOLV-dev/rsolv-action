@@ -46,8 +46,8 @@ defmodule Rsolv.CustomerFactory do
       name: "Test Customer",
       trial_fixes_used: 0,
       trial_fixes_limit: 5,
-      subscription_plan: "trial",
-      subscription_status: "active",
+      subscription_type: "trial",
+      subscription_state: "active",
       rollover_fixes: 0,
       fixes_used_this_month: 0,
       fixes_quota_this_month: 0,
@@ -103,8 +103,8 @@ defmodule Rsolv.CustomerFactory do
         fixes_quota_this_month: 60,
         fixes_used_this_month: 0,
         rollover_fixes: 0,
-        subscription_plan: "pro",
-        subscription_status: "active",
+        subscription_type: "pro",
+        subscription_state: "active",
         stripe_customer_id: "cus_test_#{System.unique_integer([:positive])}",
         has_payment_method: true,
         payment_method_added_at: DateTime.add(DateTime.utc_now(), -30, :day)
@@ -128,7 +128,7 @@ defmodule Rsolv.CustomerFactory do
   This represents a customer whose payment failed.
   """
   def with_past_due(customer) do
-    %{customer | subscription_status: "past_due"}
+    %{customer | subscription_state: "past_due"}
   end
 
   @doc """
@@ -138,7 +138,7 @@ defmodule Rsolv.CustomerFactory do
   until the end of the billing period (cancel_at_period_end).
   """
   def with_cancel_scheduled(customer) do
-    %{customer | subscription_status: "active", metadata: %{"cancel_at_period_end" => true}}
+    %{customer | subscription_state: "active", metadata: %{"cancel_at_period_end" => true}}
   end
 
   @doc """
@@ -150,8 +150,8 @@ defmodule Rsolv.CustomerFactory do
   def with_cancelled_pro(customer) do
     %{
       customer
-      | subscription_status: "canceled",
-        subscription_plan: "trial",
+      | subscription_state: "canceled",
+        subscription_type: "trial",
         # Preserve remaining credits as trial credits
         trial_fixes_limit: customer.fixes_quota_this_month - customer.fixes_used_this_month,
         trial_fixes_used: 0,
@@ -186,8 +186,8 @@ defmodule Rsolv.CustomerFactory do
       customer
       | trial_fixes_limit: 0,
         trial_fixes_used: 0,
-        subscription_plan: "payg",
-        subscription_status: "active",
+        subscription_type: "payg",
+        subscription_state: "active",
         stripe_customer_id: "cus_test_#{System.unique_integer([:positive])}",
         has_payment_method: true,
         payment_method_added_at: DateTime.utc_now()

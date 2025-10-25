@@ -185,3 +185,8 @@ end
 # Configure Prometheus/PromEx monitoring (RFC-060 Phase 5.2)
 # Enable metrics collection for observability
 config :rsolv, :monitoring, enabled: System.get_env("ENABLE_PROMETHEUS_METRICS", "true") == "true"
+
+# Configure Stripe integration (RFC-066)
+config :stripity_stripe,
+  api_key: System.get_env("STRIPE_API_KEY"),
+  signing_secret: System.get_env("STRIPE_WEBHOOK_SECRET")
