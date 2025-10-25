@@ -7,6 +7,9 @@ defmodule RsolvWeb.Mocks do
   Mox.defmock(RsolvWeb.HTTPoisonMock, for: HTTPoison.Base)
   Mox.defmock(Rsolv.HTTPClientMock, for: HTTPoison.Base)
 
+  # Define Stripe mock behavior
+  Mox.defmock(Rsolv.Billing.StripeMock, for: Rsolv.Billing.StripeClientBehaviour)
+
   # Define test data
   def convertkit_fixtures do
     %{

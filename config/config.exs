@@ -110,7 +110,11 @@ config :rsolv, :billing,
       # $5 per credit over quota
       overage_price_cents: 500
     }
-  }
+  },
+  # Stripe Price ID for Pro plan (to be created in Stripe Dashboard)
+  # Test mode: price_test_pro_monthly_50000
+  # Live mode: TBD
+  stripe_pro_price_id: "price_test_pro_monthly_50000"
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

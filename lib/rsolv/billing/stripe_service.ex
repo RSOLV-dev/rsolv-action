@@ -25,6 +25,8 @@ defmodule Rsolv.Billing.StripeService do
   require Logger
 
   @stripe_client Application.compile_env(:rsolv, :stripe_client, Stripe.Customer)
+  @stripe_payment_method Application.compile_env(:rsolv, :stripe_payment_method, Stripe.PaymentMethod)
+  @stripe_subscription Application.compile_env(:rsolv, :stripe_subscription, Stripe.Subscription)
 
   @doc """
   Creates a Stripe customer from an RSOLV customer.
@@ -141,6 +143,171 @@ defmodule Rsolv.Billing.StripeService do
         )
 
         {:error, error}
+    end
+  end
+
+  @doc """
+  Attaches a payment method to a Stripe customer and sets it as default.
+
+  ## Examples
+
+      iex> attach_payment_method("cus_123", "pm_abc")
+      {:ok, "pm_abc"}
+
+      iex> attach_payment_method("cus_invalid", "pm_abc")
+      {:error, %Stripe.Error{...}}
+
+  """
+  def attach_payment_method(stripe_customer_id, payment_method_id) do
+    with {:ok, _payment_method} <-
+           @stripe_payment_method.attach(%{
+             payment_method: payment_method_id,
+             customer: stripe_customer_id
+           }),
+         {:ok, _customer} <-
+           @stripe_client.update(stripe_customer_id, %{
+             invoice_settings: %{
+               default_payment_method: payment_method_id
+             }
+           }) do
+      {:ok, payment_method_id}
+    else
+      {:error, %Stripe.Error{} = error} ->
+        Logger.error("Error attaching payment method",
+          stripe_customer_id: stripe_customer_id,
+          payment_method_id: payment_method_id,
+          error_code: error.code,
+          error_message: error.message
+        )
+
+        {:error, error}
+
+      {:error, error} ->
+        Logger.error("Unknown error attaching payment method",
+          stripe_customer_id: stripe_customer_id,
+          payment_method_id: payment_method_id,
+          error: inspect(error)
+        )
+
+        {:error, :unknown_error}
+    end
+  end
+
+  @doc """
+  Creates a Stripe subscription for a customer.
+
+  ## Examples
+
+      iex> create_subscription("cus_123", "price_pro")
+      {:ok, %Stripe.Subscription{...}}
+
+  """
+  def create_subscription(stripe_customer_id, price_id) do
+    params = %{
+      customer: stripe_customer_id,
+      items: [%{price: price_id}],
+      # No trial - charge immediately
+      trial_period_days: 0,
+      expand: ["latest_invoice.payment_intent"]
+    }
+
+    case @stripe_subscription.create(params) do
+      {:ok, subscription} ->
+        Logger.info("Created Stripe subscription",
+          stripe_customer_id: stripe_customer_id,
+          subscription_id: subscription.id
+        )
+
+        {:ok, subscription}
+
+      {:error, %Stripe.Error{} = error} ->
+        Logger.error("Error creating Stripe subscription",
+          stripe_customer_id: stripe_customer_id,
+          error_code: error.code,
+          error_message: error.message
+        )
+
+        {:error, error}
+
+      {:error, error} ->
+        Logger.error("Unknown error creating Stripe subscription",
+          stripe_customer_id: stripe_customer_id,
+          error: inspect(error)
+        )
+
+        {:error, :unknown_error}
+    end
+  end
+
+  @doc """
+  Updates a Stripe subscription.
+
+  ## Examples
+
+      iex> update_subscription("sub_123", %{cancel_at_period_end: true})
+      {:ok, %Stripe.Subscription{...}}
+
+  """
+  def update_subscription(subscription_id, params) do
+    case @stripe_subscription.update(subscription_id, params) do
+      {:ok, subscription} ->
+        Logger.info("Updated Stripe subscription",
+          subscription_id: subscription_id,
+          params: inspect(params)
+        )
+
+        {:ok, subscription}
+
+      {:error, %Stripe.Error{} = error} ->
+        Logger.error("Error updating Stripe subscription",
+          subscription_id: subscription_id,
+          error_code: error.code,
+          error_message: error.message
+        )
+
+        {:error, error}
+
+      {:error, error} ->
+        Logger.error("Unknown error updating Stripe subscription",
+          subscription_id: subscription_id,
+          error: inspect(error)
+        )
+
+        {:error, :unknown_error}
+    end
+  end
+
+  @doc """
+  Cancels a Stripe subscription immediately.
+
+  ## Examples
+
+      iex> cancel_subscription("sub_123")
+      {:ok, %Stripe.Subscription{status: "canceled"}}
+
+  """
+  def cancel_subscription(subscription_id) do
+    case @stripe_subscription.delete(subscription_id) do
+      {:ok, subscription} ->
+        Logger.info("Canceled Stripe subscription", subscription_id: subscription_id)
+        {:ok, subscription}
+
+      {:error, %Stripe.Error{} = error} ->
+        Logger.error("Error canceling Stripe subscription",
+          subscription_id: subscription_id,
+          error_code: error.code,
+          error_message: error.message
+        )
+
+        {:error, error}
+
+      {:error, error} ->
+        Logger.error("Unknown error canceling Stripe subscription",
+          subscription_id: subscription_id,
+          error: inspect(error)
+        )
+
+        {:error, :unknown_error}
     end
   end
 end
