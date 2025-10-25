@@ -121,7 +121,9 @@ defmodule RsolvWeb.Api.V1.PhaseController do
 
     branch = params["branch"] || params[:branch]
 
-    Logger.info("[PhaseController] Extracted values: phase=#{inspect(phase)}, repo=#{inspect(repo)}, commitSha=#{inspect(commit_sha)}")
+    Logger.info(
+      "[PhaseController] Extracted values: phase=#{inspect(phase)}, repo=#{inspect(repo)}, commitSha=#{inspect(commit_sha)}"
+    )
 
     # Validate required fields
     cond do

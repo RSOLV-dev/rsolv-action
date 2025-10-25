@@ -96,13 +96,16 @@ config :rsolv, :billing,
       billing_addition_bonus: 5
     },
     pay_as_you_go: %{
-      credit_price_cents: 1000,  # $10 per credit
+      # $10 per credit
+      credit_price_cents: 1000,
       minimum_purchase: 1
     },
     pro: %{
-      monthly_price_cents: 50000,  # $500/month
+      # $500/month
+      monthly_price_cents: 50000,
       included_credits: 100,
-      overage_price_cents: 500  # $5 per credit over quota
+      # $5 per credit over quota
+      overage_price_cents: 500
     }
   }
 

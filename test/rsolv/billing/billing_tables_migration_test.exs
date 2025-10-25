@@ -8,11 +8,9 @@ defmodule Rsolv.BillingTablesMigrationTest do
   # Helper function to check if a column exists in a table
   defp assert_column_exists(table_name, column_name) do
     assert {:ok, result} =
-             Repo.query(
-               "SELECT column_name FROM information_schema.columns
+             Repo.query("SELECT column_name FROM information_schema.columns
                 WHERE table_name = '#{table_name}'
-                AND column_name = '#{column_name}'"
-             )
+                AND column_name = '#{column_name}'")
 
     assert length(result.rows) == 1, "Column #{column_name} should exist in #{table_name}"
   end
@@ -28,41 +26,33 @@ defmodule Rsolv.BillingTablesMigrationTest do
     test "subscription_plan renamed to subscription_type" do
       # Verify old column doesn't exist and new column does
       assert {:ok, result} =
-               Repo.query(
-                 "SELECT column_name FROM information_schema.columns
+               Repo.query("SELECT column_name FROM information_schema.columns
                   WHERE table_name = 'customers'
-                  AND column_name = 'subscription_type'"
-               )
+                  AND column_name = 'subscription_type'")
 
       assert length(result.rows) == 1
 
       # Verify old column name is gone
       assert {:ok, result} =
-               Repo.query(
-                 "SELECT column_name FROM information_schema.columns
+               Repo.query("SELECT column_name FROM information_schema.columns
                   WHERE table_name = 'customers'
-                  AND column_name = 'subscription_plan'"
-               )
+                  AND column_name = 'subscription_plan'")
 
       assert result.rows == []
     end
 
     test "subscription_status renamed to subscription_state" do
       assert {:ok, result} =
-               Repo.query(
-                 "SELECT column_name FROM information_schema.columns
+               Repo.query("SELECT column_name FROM information_schema.columns
                   WHERE table_name = 'customers'
-                  AND column_name = 'subscription_state'"
-               )
+                  AND column_name = 'subscription_state'")
 
       assert length(result.rows) == 1
 
       assert {:ok, result} =
-               Repo.query(
-                 "SELECT column_name FROM information_schema.columns
+               Repo.query("SELECT column_name FROM information_schema.columns
                   WHERE table_name = 'customers'
-                  AND column_name = 'subscription_status'"
-               )
+                  AND column_name = 'subscription_status'")
 
       assert result.rows == []
     end
@@ -136,35 +126,29 @@ defmodule Rsolv.BillingTablesMigrationTest do
 
     test "stripe_customer_id has unique index" do
       assert {:ok, result} =
-               Repo.query(
-                 "SELECT indexname FROM pg_indexes
+               Repo.query("SELECT indexname FROM pg_indexes
                   WHERE tablename = 'customers'
                   AND indexdef LIKE '%UNIQUE%'
-                  AND indexdef LIKE '%stripe_customer_id%'"
-               )
+                  AND indexdef LIKE '%stripe_customer_id%'")
 
       assert length(result.rows) >= 1
     end
 
     test "credit_transactions has customer_id index" do
       assert {:ok, result} =
-               Repo.query(
-                 "SELECT indexname FROM pg_indexes
+               Repo.query("SELECT indexname FROM pg_indexes
                   WHERE tablename = 'credit_transactions'
-                  AND indexdef LIKE '%customer_id%'"
-               )
+                  AND indexdef LIKE '%customer_id%'")
 
       assert length(result.rows) >= 1
     end
 
     test "billing_events has unique index on stripe_event_id for idempotency" do
       assert {:ok, result} =
-               Repo.query(
-                 "SELECT indexname FROM pg_indexes
+               Repo.query("SELECT indexname FROM pg_indexes
                   WHERE tablename = 'billing_events'
                   AND indexdef LIKE '%UNIQUE%'
-                  AND indexdef LIKE '%stripe_event_id%'"
-               )
+                  AND indexdef LIKE '%stripe_event_id%'")
 
       assert length(result.rows) >= 1
     end
@@ -175,11 +159,9 @@ defmodule Rsolv.BillingTablesMigrationTest do
       # This will be tested when we have the Customer schema and can insert records
       # For now, just verify the column exists
       assert {:ok, result} =
-               Repo.query(
-                 "SELECT data_type FROM information_schema.columns
+               Repo.query("SELECT data_type FROM information_schema.columns
                   WHERE table_name = 'customers'
-                  AND column_name = 'subscription_type'"
-               )
+                  AND column_name = 'subscription_type'")
 
       assert length(result.rows) == 1
       # Should be a string type that can store these values
@@ -190,11 +172,9 @@ defmodule Rsolv.BillingTablesMigrationTest do
   describe "subscription state behavior" do
     test "subscription_state column allows null values" do
       assert {:ok, result} =
-               Repo.query(
-                 "SELECT is_nullable FROM information_schema.columns
+               Repo.query("SELECT is_nullable FROM information_schema.columns
                   WHERE table_name = 'customers'
-                  AND column_name = 'subscription_state'"
-               )
+                  AND column_name = 'subscription_state'")
 
       assert length(result.rows) == 1
       # subscription_state should be nullable (NULL for trial/PAYG customers)
@@ -207,7 +187,9 @@ defmodule Rsolv.BillingTablesMigrationTest do
       assert customer.subscription_state == "active"
 
       # Verify we can update to other Stripe states
-      {:ok, updated} = Repo.update(Customer.changeset(customer, %{subscription_state: "past_due"}))
+      {:ok, updated} =
+        Repo.update(Customer.changeset(customer, %{subscription_state: "past_due"}))
+
       assert updated.subscription_state == "past_due"
 
       # Verify the column can store typical Stripe subscription states
