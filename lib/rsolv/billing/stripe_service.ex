@@ -25,31 +25,41 @@ defmodule Rsolv.Billing.StripeService do
   require Logger
 
   @stripe_client Application.compile_env(:rsolv, :stripe_client, Stripe.Customer)
-  @stripe_payment_method Application.compile_env(:rsolv, :stripe_payment_method, Stripe.PaymentMethod)
+  @stripe_payment_method Application.compile_env(
+                           :rsolv,
+                           :stripe_payment_method,
+                           Stripe.PaymentMethod
+                         )
   @stripe_subscription Application.compile_env(:rsolv, :stripe_subscription, Stripe.Subscription)
 
   # Private helper for consistent error handling
   defp handle_stripe_error(error, operation, context) do
     case error do
       %Stripe.Error{} = stripe_error ->
-        Logger.error("Stripe API error during #{operation}",
-          Keyword.merge(context, [
+        Logger.error(
+          "Stripe API error during #{operation}",
+          Keyword.merge(context,
             error_code: stripe_error.code,
             error_message: stripe_error.message
-          ])
+          )
         )
+
         {:error, stripe_error}
 
       %HTTPoison.Error{reason: reason} ->
-        Logger.error("Network error during #{operation}",
-          Keyword.merge(context, [reason: reason])
+        Logger.error(
+          "Network error during #{operation}",
+          Keyword.merge(context, reason: reason)
         )
+
         {:error, :network_error}
 
       other ->
-        Logger.error("Unknown error during #{operation}",
-          Keyword.merge(context, [error: inspect(other)])
+        Logger.error(
+          "Unknown error during #{operation}",
+          Keyword.merge(context, error: inspect(other))
         )
+
         {:error, :unknown_error}
     end
   end
@@ -104,6 +114,7 @@ defmodule Rsolv.Billing.StripeService do
             customer_id: customer.id,
             stripe_customer_id: stripe_customer.id
           )
+
           {:ok, stripe_customer}
 
         {:error, error} ->
@@ -155,8 +166,15 @@ defmodule Rsolv.Billing.StripeService do
     context = [stripe_customer_id: stripe_customer_id, payment_method_id: payment_method_id]
 
     with_telemetry(:attach_payment_method, Map.new(context), fn ->
-      with {:ok, _pm} <- @stripe_payment_method.attach(%{payment_method: payment_method_id, customer: stripe_customer_id}),
-           {:ok, _customer} <- @stripe_client.update(stripe_customer_id, %{invoice_settings: %{default_payment_method: payment_method_id}}) do
+      with {:ok, _pm} <-
+             @stripe_payment_method.attach(%{
+               payment_method: payment_method_id,
+               customer: stripe_customer_id
+             }),
+           {:ok, _customer} <-
+             @stripe_client.update(stripe_customer_id, %{
+               invoice_settings: %{default_payment_method: payment_method_id}
+             }) do
         Logger.info("Attached payment method", context)
         {:ok, payment_method_id}
       else
@@ -179,7 +197,8 @@ defmodule Rsolv.Billing.StripeService do
     params = %{
       customer: stripe_customer_id,
       items: [%{price: price_id}],
-      trial_period_days: 0,  # No trial - charge immediately
+      # No trial - charge immediately
+      trial_period_days: 0,
       expand: ["latest_invoice.payment_intent"]
     }
 
@@ -190,10 +209,13 @@ defmodule Rsolv.Billing.StripeService do
             stripe_customer_id: stripe_customer_id,
             subscription_id: subscription.id
           )
+
           {:ok, subscription}
 
         {:error, error} ->
-          handle_stripe_error(error, "create_subscription", stripe_customer_id: stripe_customer_id)
+          handle_stripe_error(error, "create_subscription",
+            stripe_customer_id: stripe_customer_id
+          )
       end
     end)
   end
@@ -215,6 +237,7 @@ defmodule Rsolv.Billing.StripeService do
             subscription_id: subscription_id,
             params: inspect(params)
           )
+
           {:ok, subscription}
 
         {:error, error} ->
