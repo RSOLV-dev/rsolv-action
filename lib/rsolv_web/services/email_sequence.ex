@@ -48,23 +48,9 @@ defmodule RsolvWeb.Services.EmailSequence do
   This should be triggered upon successful signup.
   """
   def start_onboarding_sequence(email, first_name \\ nil) do
-    Logger.info("Starting onboarding sequence",
-      metadata: %{
-        email: email,
-        first_name: first_name
-      }
-    )
-
-    # Send the welcome email immediately
-    EmailService.send_welcome_email(email, first_name)
-
-    # Add sequence tag in ConvertKit
-    tag_for_sequence(email, :onboarding)
-
-    # Schedule the remaining emails using Oban
-    EmailWorker.schedule_sequence(email, first_name, :onboarding)
-
-    {:ok, %{status: "started", sequence: :onboarding}}
+    start_sequence(email, first_name, :onboarding, fn ->
+      EmailService.send_welcome_email(email, first_name)
+    end)
   end
 
   @doc """
@@ -72,79 +58,52 @@ defmodule RsolvWeb.Services.EmailSequence do
   This should be triggered upon successful early access signup.
   """
   def start_early_access_onboarding_sequence(email, first_name \\ nil) do
-    timestamp = DateTime.utc_now() |> DateTime.to_string()
-
-    Logger.info("[EMAIL SEQUENCE] Starting early access onboarding sequence",
-      email: email,
-      first_name: first_name,
-      timestamp: timestamp
-    )
-
-    # Send the early access welcome email immediately
-    Logger.info("[EMAIL SEQUENCE] About to call EmailService.send_early_access_welcome_email",
-      email: email,
-      first_name: first_name,
-      timestamp: timestamp
-    )
-
-    result = EmailService.send_early_access_welcome_email(email, first_name)
-
-    Logger.info("[EMAIL SEQUENCE] EmailService.send_early_access_welcome_email returned",
-      result: inspect(result),
-      timestamp: timestamp
-    )
-
-    # Add sequence tag in ConvertKit
-    tag_for_sequence(email, :early_access_onboarding)
-
-    # Schedule the remaining emails using Oban
-    EmailWorker.schedule_sequence(email, first_name, :early_access_onboarding)
-
-    {:ok, %{status: "started", sequence: :early_access_onboarding}}
+    start_sequence(email, first_name, :early_access_onboarding, fn ->
+      EmailService.send_early_access_welcome_email(email, first_name)
+    end)
   end
 
   @doc """
   Start the re-engagement sequence for an inactive user.
   This should be triggered when a user hasn't used the service for a while.
+
+  Note: Re-engagement sequences typically don't have a Day 0 immediate email,
+  so we pass a no-op function.
   """
-  def start_re_engagement_sequence(email, first_name \\ nil, inactive_days \\ 30) do
-    Logger.info("Starting re-engagement sequence",
-      metadata: %{
-        email: email,
-        first_name: first_name,
-        inactive_days: inactive_days
-      }
-    )
-
-    # Add sequence tag in ConvertKit
-    tag_for_sequence(email, :re_engagement)
-
-    # Schedule the emails using Oban
-    EmailWorker.schedule_sequence(email, first_name, :re_engagement)
-
-    {:ok, %{status: "started", sequence: :re_engagement}}
+  def start_re_engagement_sequence(email, first_name \\ nil, _inactive_days \\ 30) do
+    start_sequence(email, first_name, :re_engagement, fn -> :ok end)
   end
 
   @doc """
   Start the expiring trial sequence for a user whose trial is about to end.
   This should be triggered a few days before the trial expiration.
+
+  Note: Trial expiration sequences typically don't have a Day 0 immediate email,
+  so we pass a no-op function.
   """
-  def start_expiring_trial_sequence(email, first_name \\ nil, days_remaining \\ 7) do
-    Logger.info("Starting expiring trial sequence",
-      metadata: %{
-        email: email,
-        first_name: first_name,
-        days_remaining: days_remaining
-      }
+  def start_expiring_trial_sequence(email, first_name \\ nil, _days_remaining \\ 7) do
+    start_sequence(email, first_name, :expiring_trial, fn -> :ok end)
+  end
+
+  # Common pattern for starting any sequence
+  # Extracts duplicate logic from all start_*_sequence functions
+  defp start_sequence(email, first_name, sequence_name, send_immediate_email_fn) do
+    Logger.info("Starting #{sequence_name} sequence",
+      email: email,
+      first_name: first_name,
+      sequence: sequence_name
     )
 
-    # Add sequence tag in ConvertKit
-    tag_for_sequence(email, :expiring_trial)
+    # Send immediate email (Day 0)
+    send_immediate_email_fn.()
 
-    # Schedule the emails using Oban
-    EmailWorker.schedule_sequence(email, first_name, :expiring_trial)
+    # Tag in ConvertKit for tracking
+    tag_for_sequence(email, sequence_name)
 
-    {:ok, %{status: "started", sequence: :expiring_trial}}
+    # Schedule remaining emails via Oban
+    EmailWorker.schedule_sequence(email, first_name, sequence_name)
+
+    {:ok, %{status: "started", sequence: sequence_name}}
   end
 
   # Add appropriate tags in ConvertKit based on the sequence

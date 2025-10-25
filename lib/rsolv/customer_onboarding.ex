@@ -88,9 +88,10 @@ defmodule Rsolv.CustomerOnboarding do
   end
 
   # Convert string keys to atoms for consistency
+  # Only converts to existing atoms to prevent atom table exhaustion
   defp maybe_atomize_keys(attrs) when is_map(attrs) do
-    Enum.reduce(attrs, %{}, fn
-      {key, value}, acc when is_binary(key) ->
+    Map.new(attrs, fn
+      {key, value} when is_binary(key) ->
         atom_key =
           try do
             String.to_existing_atom(key)
@@ -98,10 +99,10 @@ defmodule Rsolv.CustomerOnboarding do
             ArgumentError -> key
           end
 
-        Map.put(acc, atom_key, value)
+        {atom_key, value}
 
-      {key, value}, acc ->
-        Map.put(acc, key, value)
+      {key, value} ->
+        {key, value}
     end)
   end
 
@@ -137,7 +138,9 @@ defmodule Rsolv.CustomerOnboarding do
     raw_key = api_key_result.raw_key
 
     # Start early access email sequence (Day 0 sent immediately, rest scheduled)
-    # Note: We don't fail the provisioning if email sequence fails
+    # IMPORTANT: Email sequence failures are logged but don't block provisioning.
+    # Rationale: Customer account and API key are more critical than welcome emails.
+    # Failed emails can be retried via admin tools or Oban retry mechanism.
     case EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name) do
       {:ok, _result} ->
         Logger.info(

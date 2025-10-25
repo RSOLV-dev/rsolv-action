@@ -3,7 +3,6 @@ defmodule Rsolv.CustomerOnboardingTest do
   use Oban.Testing, repo: Rsolv.Repo
 
   alias Rsolv.CustomerOnboarding
-  alias Rsolv.Customers
   alias Rsolv.Repo
   alias Rsolv.Workers.EmailWorker
 
@@ -55,7 +54,7 @@ defmodule Rsolv.CustomerOnboardingTest do
 
       # With testing: :inline mode, jobs are executed immediately
       # Verify that the email sequence scheduling was triggered
-      assert log =~ "Starting early access onboarding sequence"
+      assert log =~ "Starting early_access_onboarding sequence"
 
       # Verify that emails were sent (Day 0 sent immediately, others processed inline)
       assert log =~ "send_early_access_welcome_email"
