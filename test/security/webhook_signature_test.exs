@@ -130,7 +130,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
         "t=123",
         "v1=abc",
         "t=,v1=",
-        "random_string",
+        "random_string"
       ]
 
       for sig <- malformed_signatures do

@@ -4,7 +4,8 @@ defmodule Rsolv.Security.RateLimitingTest do
 
   Validates that rate limits are properly enforced to prevent abuse.
   """
-  use RsolvWeb.ConnCase, async: false # Rate limits are global, can't run async
+  # Rate limits are global, can't run async
+  use RsolvWeb.ConnCase, async: false
 
   @api_key "rsolv_test_key_123"
 
@@ -122,7 +123,7 @@ defmodule Rsolv.Security.RateLimitingTest do
         String.upcase(@api_key),
         " #{@api_key}",
         "#{@api_key} ",
-        "Bearer #{@api_key}",
+        "Bearer #{@api_key}"
       ]
 
       for key <- malformed_keys do
