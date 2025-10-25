@@ -69,7 +69,7 @@ defmodule RsolvWeb.Api.V1.CustomerOnboardingController do
             email: customer.email,
             trial_fixes_limit: customer.trial_fixes_limit,
             trial_fixes_used: customer.trial_fixes_used,
-            subscription_plan: customer.subscription_plan
+            subscription_type: customer.subscription_type
           },
           api_key: api_key
         })

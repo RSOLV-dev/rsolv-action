@@ -18,6 +18,7 @@ defmodule Rsolv.CustomerOnboarding do
   alias Rsolv.Repo
   alias Rsolv.Customers
   alias Rsolv.Customers.Customer
+  alias RsolvWeb.Services.EmailSequence
 
   @doc """
   Provisions a new customer with all required setup.
@@ -77,8 +78,8 @@ defmodule Rsolv.CustomerOnboarding do
     attrs
     |> Map.put_new(:trial_fixes_limit, 5)
     |> Map.put_new(:trial_fixes_used, 0)
-    |> Map.put_new(:subscription_plan, "trial")
-    |> Map.put_new(:subscription_status, "active")
+    |> Map.put_new(:subscription_type, "trial")
+    |> Map.put_new(:subscription_state, nil)  # State managed by Stripe webhooks
     |> Map.put_new(:has_payment_method, false)
     |> Map.put_new(:auto_provisioned, true)
     |> Map.put_new(:wizard_preference, "auto")
@@ -129,11 +130,28 @@ defmodule Rsolv.CustomerOnboarding do
   end
 
   # Pattern match on successful transaction
-  defp handle_transaction_result({:ok, %{customer: customer, api_key: api_key}}) do
+  defp handle_transaction_result({:ok, %{customer: customer, api_key: api_key_result}}) do
     Logger.info("✅ [CustomerOnboarding] Successfully provisioned customer #{customer.id}")
 
+    # Extract raw key from the result
+    raw_key = api_key_result.raw_key
+
+    # Start early access email sequence (Day 0 sent immediately, rest scheduled)
+    # Note: We don't fail the provisioning if email sequence fails
+    case EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name) do
+      {:ok, _result} ->
+        Logger.info(
+          "✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}"
+        )
+
+      {:error, reason} ->
+        Logger.warning(
+          "⚠️ [CustomerOnboarding] Failed to start email sequence for customer #{customer.id}: #{inspect(reason)}"
+        )
+    end
+
     # Return customer and raw API key
-    {:ok, %{customer: customer, api_key: api_key.key}}
+    {:ok, %{customer: customer, api_key: raw_key}}
   end
 
   # Pattern match on failed transaction
