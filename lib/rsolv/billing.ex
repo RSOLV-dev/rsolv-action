@@ -182,7 +182,8 @@ defmodule Rsolv.Billing do
 
   """
   def add_payment_method(%Customer{} = customer, payment_method_id, true = _billing_consent) do
-    with {:ok, _} <- StripeService.attach_payment_method(customer.stripe_customer_id, payment_method_id) do
+    with {:ok, _} <-
+           StripeService.attach_payment_method(customer.stripe_customer_id, payment_method_id) do
       update_customer_with_payment_method_and_credit(customer, payment_method_id)
     end
   end
@@ -197,7 +198,8 @@ defmodule Rsolv.Billing do
     bonus_credits = Config.trial_billing_addition_bonus()
 
     Ecto.Multi.new()
-    |> Ecto.Multi.update(:customer,
+    |> Ecto.Multi.update(
+      :customer,
       Customer.changeset(customer, %{
         stripe_payment_method_id: payment_method_id,
         has_payment_method: true,
@@ -248,7 +250,8 @@ defmodule Rsolv.Billing do
   def subscribe_to_pro(%Customer{} = customer) do
     pro_price_id = Config.pro_price_id()
 
-    with {:ok, stripe_subscription} <- StripeService.create_subscription(customer.stripe_customer_id, pro_price_id) do
+    with {:ok, stripe_subscription} <-
+           StripeService.create_subscription(customer.stripe_customer_id, pro_price_id) do
       create_subscription_records(customer, stripe_subscription)
     end
   end
@@ -256,7 +259,8 @@ defmodule Rsolv.Billing do
   # Private helper to create customer and subscription records atomically
   defp create_subscription_records(customer, stripe_subscription) do
     Ecto.Multi.new()
-    |> Ecto.Multi.update(:customer,
+    |> Ecto.Multi.update(
+      :customer,
       Customer.changeset(customer, %{
         stripe_subscription_id: stripe_subscription.id,
         subscription_type: "pro",
@@ -305,7 +309,9 @@ defmodule Rsolv.Billing do
   def cancel_subscription(%Customer{} = customer, at_period_end) when is_boolean(at_period_end) do
     stripe_result =
       if at_period_end do
-        StripeService.update_subscription(customer.stripe_subscription_id, %{cancel_at_period_end: true})
+        StripeService.update_subscription(customer.stripe_subscription_id, %{
+          cancel_at_period_end: true
+        })
       else
         StripeService.cancel_subscription(customer.stripe_subscription_id)
       end
