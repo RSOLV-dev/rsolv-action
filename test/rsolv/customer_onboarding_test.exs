@@ -76,7 +76,8 @@ defmodule Rsolv.CustomerOnboardingTest do
 
       # Try to create with invalid data that will fail validation
       attrs = %{
-        "name" => "",  # Empty name should fail validation
+        # Empty name should fail validation
+        "name" => "",
         "email" => "test#{System.unique_integer([:positive])}@testcompany.com"
       }
 
@@ -114,12 +115,13 @@ defmodule Rsolv.CustomerOnboardingTest do
         sequence: "early_access_onboarding"
       }
 
-      {:ok, job} = EmailWorker.schedule_email(
-        attrs.email,
-        attrs.template,
-        attrs.first_name,
-        attrs.sequence
-      )
+      {:ok, job} =
+        EmailWorker.schedule_email(
+          attrs.email,
+          attrs.template,
+          attrs.first_name,
+          attrs.sequence
+        )
 
       # Verify the job was created correctly
       # Note: Oban uses 20 as the default max_attempts

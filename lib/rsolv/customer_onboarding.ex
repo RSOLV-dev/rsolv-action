@@ -79,7 +79,8 @@ defmodule Rsolv.CustomerOnboarding do
     |> Map.put_new(:trial_fixes_limit, 5)
     |> Map.put_new(:trial_fixes_used, 0)
     |> Map.put_new(:subscription_type, "trial")
-    |> Map.put_new(:subscription_state, nil)  # State managed by Stripe webhooks
+    # State managed by Stripe webhooks
+    |> Map.put_new(:subscription_state, nil)
     |> Map.put_new(:has_payment_method, false)
     |> Map.put_new(:auto_provisioned, true)
     |> Map.put_new(:wizard_preference, "auto")
@@ -143,9 +144,7 @@ defmodule Rsolv.CustomerOnboarding do
     # Failed emails can be retried via admin tools or Oban retry mechanism.
     case EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name) do
       {:ok, _result} ->
-        Logger.info(
-          "✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}"
-        )
+        Logger.info("✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}")
 
       {:error, reason} ->
         Logger.warning(
