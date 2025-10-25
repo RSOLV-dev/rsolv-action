@@ -257,7 +257,7 @@ defmodule Rsolv.Billing.StripeService do
   """
   def cancel_subscription(subscription_id) do
     with_telemetry(:cancel_subscription, %{subscription_id: subscription_id}, fn ->
-      case @stripe_subscription.delete(subscription_id) do
+      case @stripe_subscription.cancel(subscription_id) do
         {:ok, subscription} ->
           Logger.info("Canceled Stripe subscription", subscription_id: subscription_id)
           {:ok, subscription}
