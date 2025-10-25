@@ -32,8 +32,8 @@ defmodule Rsolv.ApiKeyHashingTest do
 
       # All keys should have the rsolv_ prefix and be sufficiently long
       assert Enum.all?(raw_keys, fn key ->
-        String.starts_with?(key, "rsolv_") and String.length(key) >= 40
-      end)
+               String.starts_with?(key, "rsolv_") and String.length(key) >= 40
+             end)
     end
 
     test "stores hashed API key in database (SHA256)", %{customer: customer} do

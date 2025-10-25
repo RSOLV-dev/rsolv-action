@@ -5,8 +5,6 @@ defmodule Rsolv.APITestHelpers do
   """
 
   alias Rsolv.Customers
-  alias Rsolv.Customers.ApiKey
-  alias Rsolv.Repo
 
   @doc """
   Creates an API key for testing with a known raw key value.

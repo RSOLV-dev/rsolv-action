@@ -53,7 +53,7 @@ defmodule Rsolv.Repo.Migrations.AddKeyHashToApiKeys do
       add :key, :string
     end
 
-    # Drop the unique index
+    # Drop the key_hash unique index
     drop unique_index(:api_keys, [:key_hash])
 
     # Remove key_hash column
@@ -64,6 +64,9 @@ defmodule Rsolv.Repo.Migrations.AddKeyHashToApiKeys do
     # Note: We cannot restore the original plaintext keys as they were hashed
     # This is intentional - the migration is partially irreversible for security
     execute("UPDATE api_keys SET key = 'ROLLBACK_' || id::text || '_REGENERATE_REQUIRED'")
+
+    # Recreate the original unique index on key column (from CreateApiKeys migration)
+    create unique_index(:api_keys, [:key])
 
     # Drop pgcrypto extension (only if safe to do so)
     execute("DROP EXTENSION IF EXISTS pgcrypto")

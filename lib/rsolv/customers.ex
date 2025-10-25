@@ -226,7 +226,10 @@ defmodule Rsolv.Customers do
     Repo.transaction(fn ->
       case Repo.insert(changeset) do
         {:ok, api_key} ->
-          Logger.info("✅ [API Key Creation] SUCCESS - ID: #{api_key.id}, Key hash: #{String.slice(api_key.key_hash, 0..15)}...")
+          Logger.info(
+            "✅ [API Key Creation] SUCCESS - ID: #{api_key.id}, Key hash: #{String.slice(api_key.key_hash, 0..15)}..."
+          )
+
           Logger.info("🔑 [API Key Creation] Raw key for one-time display: #{raw_key}")
 
           # Verify it actually persisted by re-querying
