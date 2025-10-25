@@ -1,12 +1,13 @@
 defmodule Rsolv.Billing do
   @moduledoc """
-  The Billing context for managing fix attempts and usage tracking.
+  The Billing context for managing fix attempts, credits, subscriptions, and payments.
   """
 
   import Ecto.Query, warn: false
-  alias Rsolv.Repo
 
-  alias Rsolv.Billing.FixAttempt
+  alias Rsolv.Repo
+  alias Rsolv.Billing.{FixAttempt, StripeService, CreditLedger, Subscription, Config}
+  alias Rsolv.Customers.Customer
 
   @doc """
   Returns the list of fix_attempts.
@@ -180,53 +181,46 @@ defmodule Rsolv.Billing do
       {:error, :billing_consent_required}
 
   """
-  def add_payment_method(customer, payment_method_id, billing_consent) do
-    alias Rsolv.Billing.{StripeService, CreditLedger}
-    alias Rsolv.Customers.Customer
-
-    # Require billing consent
-    unless billing_consent do
-      {:error, :billing_consent_required}
-    else
-
-    # Attach payment method to Stripe customer
-    case StripeService.attach_payment_method(customer.stripe_customer_id, payment_method_id) do
-      {:ok, _} ->
-        now = DateTime.utc_now()
-
-        # Use Ecto.Multi to atomically:
-        # 1. Update customer record
-        # 2. Credit +5 for billing addition bonus
-        Ecto.Multi.new()
-        |> Ecto.Multi.update(:customer, fn _ ->
-          Customer.changeset(customer, %{
-            stripe_payment_method_id: payment_method_id,
-            has_payment_method: true,
-            billing_consent_given: true,
-            billing_consent_at: now,
-            payment_method_added_at: now
-          })
-        end)
-        |> Ecto.Multi.run(:credit, fn _repo, %{customer: updated_customer} ->
-          CreditLedger.credit(
-            updated_customer,
-            5,
-            "trial_billing_added",
-            %{payment_method_id: payment_method_id}
-          )
-        end)
-        |> Repo.transaction()
-        |> case do
-          {:ok, %{credit: {customer_with_credits, _transaction}}} ->
-            {:ok, customer_with_credits}
-
-          {:error, _failed_operation, changeset, _changes} ->
-            {:error, changeset}
-        end
-
-      {:error, error} ->
-        {:error, error}
+  def add_payment_method(%Customer{} = customer, payment_method_id, true = _billing_consent) do
+    with {:ok, _} <- StripeService.attach_payment_method(customer.stripe_customer_id, payment_method_id) do
+      update_customer_with_payment_method_and_credit(customer, payment_method_id)
     end
+  end
+
+  def add_payment_method(%Customer{}, _payment_method_id, false = _billing_consent) do
+    {:error, :billing_consent_required}
+  end
+
+  # Private helper to update customer and add credits atomically
+  defp update_customer_with_payment_method_and_credit(customer, payment_method_id) do
+    now = DateTime.utc_now()
+    bonus_credits = Config.trial_billing_addition_bonus()
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:customer,
+      Customer.changeset(customer, %{
+        stripe_payment_method_id: payment_method_id,
+        has_payment_method: true,
+        billing_consent_given: true,
+        billing_consent_at: now,
+        payment_method_added_at: now
+      })
+    )
+    |> Ecto.Multi.run(:credit, fn _repo, %{customer: updated_customer} ->
+      CreditLedger.credit(
+        updated_customer,
+        bonus_credits,
+        "trial_billing_added",
+        %{payment_method_id: payment_method_id}
+      )
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{credit: {customer_with_credits, _transaction}}} ->
+        {:ok, customer_with_credits}
+
+      {:error, _failed_operation, changeset, _changes} ->
+        {:error, changeset}
     end
   end
 
@@ -249,53 +243,42 @@ defmodule Rsolv.Billing do
       {:error, :no_payment_method}
 
   """
-  def subscribe_to_pro(customer) do
-    alias Rsolv.Billing.{StripeService, Subscription}
-    alias Rsolv.Customers.Customer
+  def subscribe_to_pro(%Customer{has_payment_method: false}), do: {:error, :no_payment_method}
 
-    unless customer.has_payment_method do
-      {:error, :no_payment_method}
-    else
-      pro_price_id = Application.get_env(:rsolv, :billing)[:stripe_pro_price_id]
+  def subscribe_to_pro(%Customer{} = customer) do
+    pro_price_id = Config.pro_price_id()
 
-      # Create subscription in Stripe
-      case StripeService.create_subscription(customer.stripe_customer_id, pro_price_id) do
-        {:ok, stripe_subscription} ->
-          now = DateTime.utc_now()
+    with {:ok, stripe_subscription} <- StripeService.create_subscription(customer.stripe_customer_id, pro_price_id) do
+      create_subscription_records(customer, stripe_subscription)
+    end
+  end
 
-          # Atomically update customer and create subscription record
-          Ecto.Multi.new()
-          |> Ecto.Multi.update(:customer, fn _ ->
-            Customer.changeset(customer, %{
-              stripe_subscription_id: stripe_subscription.id,
-              subscription_type: "pro",
-              subscription_state: stripe_subscription.status,
-              subscription_cancel_at_period_end: false
-            })
-          end)
-          |> Ecto.Multi.insert(:subscription, fn %{customer: updated_customer} ->
-            Subscription.changeset(%Subscription{}, %{
-              customer_id: updated_customer.id,
-              stripe_subscription_id: stripe_subscription.id,
-              plan: "pro",
-              status: stripe_subscription.status,
-              current_period_start: DateTime.from_unix!(stripe_subscription.current_period_start),
-              current_period_end: DateTime.from_unix!(stripe_subscription.current_period_end),
-              cancel_at_period_end: false
-            })
-          end)
-          |> Repo.transaction()
-          |> case do
-            {:ok, %{customer: updated_customer}} ->
-              {:ok, updated_customer}
-
-            {:error, _failed_operation, changeset, _changes} ->
-              {:error, changeset}
-          end
-
-        {:error, error} ->
-          {:error, error}
-      end
+  # Private helper to create customer and subscription records atomically
+  defp create_subscription_records(customer, stripe_subscription) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:customer,
+      Customer.changeset(customer, %{
+        stripe_subscription_id: stripe_subscription.id,
+        subscription_type: "pro",
+        subscription_state: stripe_subscription.status,
+        subscription_cancel_at_period_end: false
+      })
+    )
+    |> Ecto.Multi.insert(:subscription, fn %{customer: updated_customer} ->
+      Subscription.changeset(%Subscription{}, %{
+        customer_id: updated_customer.id,
+        stripe_subscription_id: stripe_subscription.id,
+        plan: "pro",
+        status: stripe_subscription.status,
+        current_period_start: DateTime.from_unix!(stripe_subscription.current_period_start),
+        current_period_end: DateTime.from_unix!(stripe_subscription.current_period_end),
+        cancel_at_period_end: false
+      })
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{customer: updated_customer}} -> {:ok, updated_customer}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
     end
   end
 
@@ -315,45 +298,39 @@ defmodule Rsolv.Billing do
       {:ok, %Customer{subscription_type: "pay_as_you_go", ...}}
 
   """
-  def cancel_subscription(customer, at_period_end \\ true) do
-    alias Rsolv.Billing.StripeService
-    alias Rsolv.Customers.Customer
+  def cancel_subscription(%Customer{stripe_subscription_id: nil}, _at_period_end) do
+    {:error, :no_active_subscription}
+  end
 
-    unless customer.stripe_subscription_id do
-      {:error, :no_active_subscription}
-    else
-      # Cancel or schedule cancellation in Stripe
-      result =
-        if at_period_end do
-          StripeService.update_subscription(customer.stripe_subscription_id, %{
-            cancel_at_period_end: true
-          })
-        else
-          StripeService.cancel_subscription(customer.stripe_subscription_id)
-        end
-
-      case result do
-        {:ok, stripe_subscription} ->
-          # Update customer record
-          updates =
-            if at_period_end do
-              %{subscription_cancel_at_period_end: true}
-            else
-              %{
-                subscription_type: "pay_as_you_go",
-                subscription_state: nil,
-                stripe_subscription_id: nil,
-                subscription_cancel_at_period_end: false
-              }
-            end
-
-          customer
-          |> Customer.changeset(updates)
-          |> Repo.update()
-
-        {:error, error} ->
-          {:error, error}
+  def cancel_subscription(%Customer{} = customer, at_period_end) when is_boolean(at_period_end) do
+    stripe_result =
+      if at_period_end do
+        StripeService.update_subscription(customer.stripe_subscription_id, %{cancel_at_period_end: true})
+      else
+        StripeService.cancel_subscription(customer.stripe_subscription_id)
       end
+
+    with {:ok, _stripe_subscription} <- stripe_result do
+      update_customer_after_cancellation(customer, at_period_end)
     end
+  end
+
+  # Private helper to update customer record after cancellation
+  defp update_customer_after_cancellation(customer, at_period_end) do
+    updates =
+      if at_period_end do
+        %{subscription_cancel_at_period_end: true}
+      else
+        %{
+          subscription_type: "pay_as_you_go",
+          subscription_state: nil,
+          stripe_subscription_id: nil,
+          subscription_cancel_at_period_end: false
+        }
+      end
+
+    customer
+    |> Customer.changeset(updates)
+    |> Repo.update()
   end
 end
