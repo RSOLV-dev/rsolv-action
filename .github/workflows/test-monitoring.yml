@@ -1,0 +1,130 @@
+name: Test Monitoring Metrics
+
+on:
+  workflow_run:
+    workflows: ["Elixir/Phoenix CI"]
+    types: [completed]
+
+env:
+  PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL || 'http://pushgateway:9091' }}
+
+jobs:
+  export-metrics:
+    name: Export Test Metrics
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          merge-multiple: true
+          path: test-results/
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+          path: coverage/
+
+      - name: Parse test results
+        id: parse
+        run: |
+          # Count test results from artifacts
+          TOTAL_TESTS=$(grep -r "tests" test-results/ | wc -l || echo "0")
+          FAILED_TESTS=$(grep -r "failures" test-results/ | wc -l || echo "0")
+          PASSED_TESTS=$((TOTAL_TESTS - FAILED_TESTS))
+
+          echo "total=${TOTAL_TESTS}" >> $GITHUB_OUTPUT
+          echo "passed=${PASSED_TESTS}" >> $GITHUB_OUTPUT
+          echo "failed=${FAILED_TESTS}" >> $GITHUB_OUTPUT
+
+      - name: Parse coverage
+        id: coverage
+        run: |
+          if [ -f coverage/excoveralls.json ]; then
+            COVERAGE=$(jq '.coverage' coverage/excoveralls.json 2>/dev/null || echo "0")
+            echo "percentage=${COVERAGE}" >> $GITHUB_OUTPUT
+          else
+            echo "percentage=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Calculate workflow duration
+        id: duration
+        run: |
+          # Calculate duration from workflow run timestamps
+          DURATION=${{ github.event.workflow_run.updated_at }} - ${{ github.event.workflow_run.created_at }}
+          echo "seconds=${DURATION}" >> $GITHUB_OUTPUT
+
+      - name: Export metrics to Prometheus
+        if: env.PUSHGATEWAY_URL != ''
+        run: |
+          cat <<EOF | curl --data-binary @- ${PUSHGATEWAY_URL}/metrics/job/ci/workflow/${GITHUB_WORKFLOW}
+          # HELP github_actions_workflow_run_conclusion Workflow run conclusion (0=success, 1=failure)
+          # TYPE github_actions_workflow_run_conclusion gauge
+          github_actions_workflow_run_conclusion{workflow="${GITHUB_WORKFLOW}",branch="${GITHUB_REF_NAME}"} ${{ github.event.workflow_run.conclusion == 'success' && '0' || '1' }}
+
+          # HELP github_actions_workflow_run_duration_seconds Workflow run duration in seconds
+          # TYPE github_actions_workflow_run_duration_seconds gauge
+          github_actions_workflow_run_duration_seconds{workflow="${GITHUB_WORKFLOW}"} ${{ steps.duration.outputs.seconds }}
+
+          # HELP exunit_tests_total Total number of tests
+          # TYPE exunit_tests_total gauge
+          exunit_tests_total{workflow="${GITHUB_WORKFLOW}"} ${{ steps.parse.outputs.total }}
+
+          # HELP exunit_tests_passed Number of passing tests
+          # TYPE exunit_tests_passed gauge
+          exunit_tests_passed{workflow="${GITHUB_WORKFLOW}"} ${{ steps.parse.outputs.passed }}
+
+          # HELP exunit_tests_failed Number of failing tests
+          # TYPE exunit_tests_failed gauge
+          exunit_tests_failed{workflow="${GITHUB_WORKFLOW}"} ${{ steps.parse.outputs.failed }}
+
+          # HELP coveralls_coverage_percentage Test coverage percentage
+          # TYPE coveralls_coverage_percentage gauge
+          coveralls_coverage_percentage{workflow="${GITHUB_WORKFLOW}"} ${{ steps.coverage.outputs.percentage }}
+          EOF
+
+      - name: Create check run with metrics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const metrics = {
+              total_tests: ${{ steps.parse.outputs.total }},
+              passed_tests: ${{ steps.parse.outputs.passed }},
+              failed_tests: ${{ steps.parse.outputs.failed }},
+              coverage: ${{ steps.coverage.outputs.percentage }},
+              duration: ${{ steps.duration.outputs.seconds }}
+            };
+
+            const summary = `
+            ## Test Metrics Summary
+
+            | Metric | Value |
+            |--------|-------|
+            | Total Tests | ${metrics.total_tests} |
+            | Passed | ${metrics.passed_tests} |
+            | Failed | ${metrics.failed_tests} |
+            | Coverage | ${metrics.coverage}% |
+            | Duration | ${metrics.duration}s |
+
+            **Coverage Status:** ${metrics.coverage >= 80 ? '✅' : '⚠️'} (Target: 80%)
+            **Duration Status:** ${metrics.duration < 300 ? '✅' : '⚠️'} (Target: < 5 min)
+            `;
+
+            github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Test Metrics',
+              head_sha: context.sha,
+              status: 'completed',
+              conclusion: metrics.failed_tests === 0 ? 'success' : 'failure',
+              output: {
+                title: 'Test Execution Metrics',
+                summary: summary
+              }
+            });

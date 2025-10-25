@@ -1,0 +1,292 @@
+{
+  "dashboard": {
+    "title": "RSOLV CI/CD Test Monitoring",
+    "description": "Monitors test execution, coverage, and quality metrics across CI pipeline",
+    "version": "1.0.0",
+    "panels": [
+      {
+        "id": "test-results",
+        "title": "Test Results Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "metric": "github_actions_workflow_run_conclusion",
+            "labels": {
+              "workflow": "Elixir/Phoenix CI"
+            }
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0,
+            "color": "green",
+            "text": "Passing"
+          },
+          {
+            "value": 1,
+            "color": "red",
+            "text": "Failing"
+          }
+        ]
+      },
+      {
+        "id": "test-duration",
+        "title": "Test Suite Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "metric": "github_actions_workflow_run_duration_seconds",
+            "labels": {
+              "workflow": "Elixir/Phoenix CI"
+            }
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 300,
+            "color": "green"
+          },
+          {
+            "value": 600,
+            "color": "yellow"
+          },
+          {
+            "value": 900,
+            "color": "red"
+          }
+        ],
+        "target": "< 5 minutes"
+      },
+      {
+        "id": "coverage-percentage",
+        "title": "Test Coverage %",
+        "type": "gauge",
+        "targets": [
+          {
+            "metric": "coveralls_coverage_percentage",
+            "aggregation": "last"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0,
+            "color": "red"
+          },
+          {
+            "value": 80,
+            "color": "yellow"
+          },
+          {
+            "value": 95,
+            "color": "green"
+          }
+        ],
+        "min": 0,
+        "max": 100,
+        "target": "80% minimum, 95% aspirational"
+      },
+      {
+        "id": "test-count-trend",
+        "title": "Test Count Trend",
+        "type": "timeseries",
+        "targets": [
+          {
+            "metric": "exunit_tests_total",
+            "legend": "Total Tests"
+          },
+          {
+            "metric": "exunit_tests_passed",
+            "legend": "Passed"
+          },
+          {
+            "metric": "exunit_tests_failed",
+            "legend": "Failed"
+          },
+          {
+            "metric": "exunit_tests_skipped",
+            "legend": "Skipped"
+          }
+        ]
+      },
+      {
+        "id": "flaky-tests",
+        "title": "Flaky Test Detection",
+        "type": "table",
+        "description": "Tests that fail intermittently (zero tolerance policy)",
+        "targets": [
+          {
+            "metric": "exunit_test_flakiness_rate",
+            "filters": {
+              "rate": "> 0"
+            }
+          }
+        ],
+        "alert": {
+          "condition": "count > 0",
+          "severity": "critical",
+          "message": "Flaky tests detected - requires immediate attention"
+        }
+      },
+      {
+        "id": "parallel-execution",
+        "title": "Parallel Test Execution",
+        "type": "graph",
+        "targets": [
+          {
+            "metric": "github_actions_job_duration_seconds",
+            "labels": {
+              "job": "test",
+              "partition": "*"
+            },
+            "legend": "Partition {{partition}}"
+          }
+        ],
+        "description": "Duration of each test partition (should be roughly equal)"
+      },
+      {
+        "id": "migration-integrity",
+        "title": "Migration Integrity",
+        "type": "stat",
+        "targets": [
+          {
+            "metric": "github_actions_job_conclusion",
+            "labels": {
+              "job": "migrations"
+            }
+          }
+        ],
+        "thresholds": [
+          {
+            "value": "success",
+            "color": "green"
+          },
+          {
+            "value": "failure",
+            "color": "red"
+          }
+        ]
+      },
+      {
+        "id": "credo-warnings",
+        "title": "Code Quality (Credo)",
+        "type": "stat",
+        "targets": [
+          {
+            "metric": "credo_warnings_total",
+            "aggregation": "sum"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0,
+            "color": "green"
+          },
+          {
+            "value": 1,
+            "color": "yellow"
+          },
+          {
+            "value": 10,
+            "color": "red"
+          }
+        ]
+      },
+      {
+        "id": "security-tests",
+        "title": "Security Test Status",
+        "type": "table",
+        "targets": [
+          {
+            "metric": "exunit_tests_by_module",
+            "filters": {
+              "module": "Rsolv.Security.*"
+            }
+          }
+        ]
+      },
+      {
+        "id": "load-test-results",
+        "title": "Load Test Results (k6)",
+        "type": "graph",
+        "targets": [
+          {
+            "metric": "k6_http_req_duration",
+            "labels": {
+              "test": "signup_test"
+            },
+            "percentile": "p95"
+          },
+          {
+            "metric": "k6_http_req_duration",
+            "labels": {
+              "test": "webhook_test"
+            },
+            "percentile": "p99"
+          }
+        ]
+      }
+    ],
+    "alerts": [
+      {
+        "name": "CI Pipeline Failure",
+        "condition": "github_actions_workflow_run_conclusion{workflow='Elixir/Phoenix CI'} != 'success'",
+        "severity": "critical",
+        "notify": ["#alerts-ci", "engineering-team"]
+      },
+      {
+        "name": "Coverage Below Threshold",
+        "condition": "coveralls_coverage_percentage < 80",
+        "severity": "warning",
+        "notify": ["#alerts-quality"]
+      },
+      {
+        "name": "Flaky Tests Detected",
+        "condition": "exunit_test_flakiness_rate > 0",
+        "severity": "critical",
+        "notify": ["#alerts-tests"],
+        "description": "Zero tolerance for flaky tests"
+      },
+      {
+        "name": "Test Suite Too Slow",
+        "condition": "github_actions_workflow_run_duration_seconds > 600",
+        "severity": "warning",
+        "notify": ["#alerts-performance"],
+        "description": "Target is < 5 minutes"
+      },
+      {
+        "name": "Migration Failure",
+        "condition": "github_actions_job_conclusion{job='migrations'} == 'failure'",
+        "severity": "critical",
+        "notify": ["#alerts-database", "engineering-team"]
+      },
+      {
+        "name": "Security Test Failure",
+        "condition": "exunit_tests_failed{module=~'Rsolv.Security.*'} > 0",
+        "severity": "critical",
+        "notify": ["#alerts-security", "security-team"]
+      }
+    ],
+    "variables": [
+      {
+        "name": "workflow",
+        "type": "query",
+        "query": "label_values(github_actions_workflow_run_conclusion, workflow)"
+      },
+      {
+        "name": "branch",
+        "type": "query",
+        "query": "label_values(github_actions_workflow_run_conclusion, branch)"
+      },
+      {
+        "name": "partition",
+        "type": "constant",
+        "values": ["1", "2", "3", "4"]
+      }
+    ],
+    "refresh": "30s",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    }
+  }
+}

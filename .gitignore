@@ -79,3 +79,9 @@ rsolv-demo-vulnerable/
 
 # RSOLV phase data artifacts
 .rsolv/
+
+# Load test results
+/load_tests/results/
+
+# Test artifacts
+/test-results/
