@@ -61,14 +61,7 @@ defmodule RsolvWeb.Api.V1.PhaseController do
   - branch: Optional, for scan phase
   """
   def store(conn, params) do
-    # Debug logging to see what params are actually received
     require Logger
-    IO.puts("[PhaseController] Received params:")
-    IO.inspect(params, label: "[PhaseController] Full params", pretty: true, limit: :infinity)
-    IO.inspect(Map.keys(params), label: "[PhaseController] Params keys")
-    Logger.info("[PhaseController] Received params: #{inspect(params, pretty: true)}")
-    Logger.info("[PhaseController] Params keys: #{inspect(Map.keys(params))}")
-
     customer = conn.assigns.customer
     # Use the actual API key that was used for authentication
     api_key = conn.assigns.api_key || get_customer_api_key(customer)
@@ -105,7 +98,6 @@ defmodule RsolvWeb.Api.V1.PhaseController do
 
   defp normalize_params(params) do
     require Logger
-    Logger.info("[PhaseController] normalize_params called with: #{inspect(Map.keys(params))}")
 
     phase = params["phase"] || params[:phase]
     repo = params["repo"] || params[:repo]
@@ -121,14 +113,9 @@ defmodule RsolvWeb.Api.V1.PhaseController do
 
     branch = params["branch"] || params[:branch]
 
-    Logger.info(
-      "[PhaseController] Extracted values: phase=#{inspect(phase)}, repo=#{inspect(repo)}, commitSha=#{inspect(commit_sha)}"
-    )
-
     # Validate required fields
     cond do
       is_nil(phase) ->
-        Logger.error("[PhaseController] Phase is nil! params keys: #{inspect(Map.keys(params))}")
         {:error, :phase_required}
 
       is_nil(repo) ->
