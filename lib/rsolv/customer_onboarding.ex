@@ -18,6 +18,7 @@ defmodule Rsolv.CustomerOnboarding do
   alias Rsolv.Repo
   alias Rsolv.Customers
   alias Rsolv.Customers.Customer
+  alias RsolvWeb.Services.EmailSequence
 
   @doc """
   Provisions a new customer with all required setup.
@@ -77,8 +78,9 @@ defmodule Rsolv.CustomerOnboarding do
     attrs
     |> Map.put_new(:trial_fixes_limit, 5)
     |> Map.put_new(:trial_fixes_used, 0)
-    |> Map.put_new(:subscription_plan, "trial")
-    |> Map.put_new(:subscription_status, "active")
+    |> Map.put_new(:subscription_type, "trial")
+    # State managed by Stripe webhooks
+    |> Map.put_new(:subscription_state, nil)
     |> Map.put_new(:has_payment_method, false)
     |> Map.put_new(:auto_provisioned, true)
     |> Map.put_new(:wizard_preference, "auto")
@@ -87,9 +89,10 @@ defmodule Rsolv.CustomerOnboarding do
   end
 
   # Convert string keys to atoms for consistency
+  # Only converts to existing atoms to prevent atom table exhaustion
   defp maybe_atomize_keys(attrs) when is_map(attrs) do
-    Enum.reduce(attrs, %{}, fn
-      {key, value}, acc when is_binary(key) ->
+    Map.new(attrs, fn
+      {key, value} when is_binary(key) ->
         atom_key =
           try do
             String.to_existing_atom(key)
@@ -97,10 +100,10 @@ defmodule Rsolv.CustomerOnboarding do
             ArgumentError -> key
           end
 
-        Map.put(acc, atom_key, value)
+        {atom_key, value}
 
-      {key, value}, acc ->
-        Map.put(acc, key, value)
+      {key, value} ->
+        {key, value}
     end)
   end
 
@@ -129,11 +132,24 @@ defmodule Rsolv.CustomerOnboarding do
   end
 
   # Pattern match on successful transaction
-  defp handle_transaction_result({:ok, %{customer: customer, api_key: api_key}}) do
+  defp handle_transaction_result({:ok, %{customer: customer, api_key: api_key_result}}) do
     Logger.info("✅ [CustomerOnboarding] Successfully provisioned customer #{customer.id}")
 
+    # Extract raw key from the result
+    raw_key = api_key_result.raw_key
+
+    # Start early access email sequence (Day 0 sent immediately, rest scheduled)
+    # IMPORTANT: Email sequence failures are logged but don't block provisioning.
+    # Rationale: Customer account and API key are more critical than welcome emails.
+    # Failed emails can be retried via admin tools or Oban retry mechanism.
+    # NOTE: start_early_access_onboarding_sequence/2 always returns {:ok, _result}
+    {:ok, _result} =
+      EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name)
+
+    Logger.info("✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}")
+
     # Return customer and raw API key
-    {:ok, %{customer: customer, api_key: api_key.key}}
+    {:ok, %{customer: customer, api_key: raw_key}}
   end
 
   # Pattern match on failed transaction
