@@ -70,7 +70,7 @@ defmodule Rsolv.Billing.StripeService do
         {:error, %Stripe.Error{} = error} ->
           Logger.error("Stripe API error creating customer",
             customer_id: customer.id,
-            error_type: error.type,
+            error_code: error.code,
             error_message: error.message
           )
 
@@ -131,7 +131,7 @@ defmodule Rsolv.Billing.StripeService do
       {:ok, customer} ->
         {:ok, customer}
 
-      {:error, %Stripe.Error{type: "invalid_request_error"}} ->
+      {:error, %Stripe.Error{code: :invalid_request_error}} ->
         {:error, :not_found}
 
       {:error, error} ->
