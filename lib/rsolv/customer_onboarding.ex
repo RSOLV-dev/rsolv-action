@@ -143,7 +143,9 @@ defmodule Rsolv.CustomerOnboarding do
     # Rationale: Customer account and API key are more critical than welcome emails.
     # Failed emails can be retried via admin tools or Oban retry mechanism.
     # NOTE: start_early_access_onboarding_sequence/2 always returns {:ok, _result}
-    {:ok, _result} = EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name)
+    {:ok, _result} =
+      EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name)
+
     Logger.info("✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}")
 
     # Return customer and raw API key
