@@ -142,15 +142,9 @@ defmodule Rsolv.CustomerOnboarding do
     # IMPORTANT: Email sequence failures are logged but don't block provisioning.
     # Rationale: Customer account and API key are more critical than welcome emails.
     # Failed emails can be retried via admin tools or Oban retry mechanism.
-    case EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name) do
-      {:ok, _result} ->
-        Logger.info("✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}")
-
-      {:error, reason} ->
-        Logger.warning(
-          "⚠️ [CustomerOnboarding] Failed to start email sequence for customer #{customer.id}: #{inspect(reason)}"
-        )
-    end
+    # NOTE: start_early_access_onboarding_sequence/2 always returns {:ok, _result}
+    {:ok, _result} = EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name)
+    Logger.info("✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}")
 
     # Return customer and raw API key
     {:ok, %{customer: customer, api_key: raw_key}}
