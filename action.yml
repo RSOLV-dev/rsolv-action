@@ -1,5 +1,5 @@
 name: 'RSOLV: Test-First AI Security Fixes'
-description: 'Ship secure code faster. Test-first AI security that validates vulnerabilities with executable RED tests before fixing them. No guesswork—every fix is proven with tests that fail before and pass after. From detection to deployment in one workflow.'
+description: 'AI security that proves vulnerabilities with executable tests before fixing. Zero false positives.'
 author: 'RSOLV'
 branding:
   icon: 'shield'
