@@ -3,9 +3,9 @@ name: RSOLV Dogfood
 on:
   issues:
     types: [opened, labeled]
-  schedule:
-    # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
+  # schedule:
+  #   # Run daily at 2 AM UTC - DISABLED to prevent API token consumption
+  #   - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       issue_number:

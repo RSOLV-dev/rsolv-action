@@ -9,9 +9,9 @@ on:
       - 'test/regression/**'
   pull_request:
     branches: [main]
-  schedule:
-    # Run daily to catch any API degradation
-    - cron: '0 0 * * *'
+  # schedule:
+  #   # Run daily to catch any API degradation - DISABLED to prevent API token consumption
+  #   - cron: '0 0 * * *'
 
 jobs:
   pattern-check:
