@@ -56,8 +56,10 @@ jobs:
       - name: Calculate workflow duration
         id: duration
         run: |
-          # Calculate duration from workflow run timestamps
-          DURATION=${{ github.event.workflow_run.updated_at }} - ${{ github.event.workflow_run.created_at }}
+          # Convert ISO 8601 timestamps to epoch seconds
+          START_EPOCH=$(date -d "${{ github.event.workflow_run.created_at }}" +%s)
+          END_EPOCH=$(date -d "${{ github.event.workflow_run.updated_at }}" +%s)
+          DURATION=$((END_EPOCH - START_EPOCH))
           echo "seconds=${DURATION}" >> $GITHUB_OUTPUT
 
       - name: Export metrics to Prometheus
