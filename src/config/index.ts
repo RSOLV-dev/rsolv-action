@@ -70,7 +70,8 @@ const ActionConfigSchema = z.object({
   testGeneration: TestGenerationConfigSchema.optional(),
   fixValidation: FixValidationConfigSchema.optional(),
   executableTests: z.boolean().optional(), // RFC-060 Phase 5.1: Enable executable test flow
-  claudeMaxTurns: z.number().min(1).max(20).optional() // RFC-060 Phase 5.1: Maximum Claude iterations (1-20)
+  claudeMaxTurns: z.number().min(1).max(20).optional(), // RFC-060 Phase 5.1: Maximum Claude iterations (1-20)
+  createPR: z.boolean().optional() // Create Pull Request after successful mitigation (default: true)
 });
 
 /**
@@ -199,7 +200,8 @@ function getDefaultConfig(): Partial<ActionConfig> {
     },
     // RFC-060 Phase 5.1: Executable test generation (enabled by default)
     executableTests: process.env.RSOLV_EXECUTABLE_TESTS !== 'false', // Default true
-    claudeMaxTurns: 5 // Default to 5 turns for Claude iterations
+    claudeMaxTurns: 5, // Default to 5 turns for Claude iterations
+    createPR: true // Default to true - customers expect PRs after mitigation
   };
 }
 
@@ -288,6 +290,11 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
     } else {
       logger.warn(`Invalid RSOLV_CLAUDE_MAX_TURNS value: ${process.env.RSOLV_CLAUDE_MAX_TURNS}. Must be between 1 and 20. Using default: 5`);
     }
+  }
+
+  // Handle createPR configuration (default: true)
+  if (process.env.RSOLV_CREATE_PR !== undefined) {
+    envConfig.createPR = process.env.RSOLV_CREATE_PR === 'true';
   }
 
   // Parse environment variables JSON string if available

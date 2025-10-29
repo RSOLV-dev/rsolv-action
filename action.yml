@@ -107,6 +107,10 @@ inputs:
     description: 'RFC-060: Maximum Claude iterations for test generation (1-20)'
     required: false
     default: '5'
+  create_pr:
+    description: 'Create Pull Request after successful mitigation (default: true for production)'
+    required: false
+    default: 'true'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -135,6 +139,7 @@ runs:
     RSOLV_EDUCATIONAL_PR: ${{ inputs.enable_educational_pr }}
     RSOLV_EXECUTABLE_TESTS: ${{ inputs.executable_tests }}
     RSOLV_CLAUDE_MAX_TURNS: ${{ inputs.claude_max_turns }}
+    RSOLV_CREATE_PR: ${{ inputs.create_pr }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'

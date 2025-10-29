@@ -44,7 +44,8 @@ async function run(): Promise<ActionStatus> {
           name,
           defaultBranch: repoDetails.defaultBranch || 'main'
         },
-        issueNumber: process.env.RSOLV_ISSUE_NUMBER ? parseInt(process.env.RSOLV_ISSUE_NUMBER) : undefined
+        issueNumber: process.env.RSOLV_ISSUE_NUMBER ? parseInt(process.env.RSOLV_ISSUE_NUMBER) : undefined,
+        createPR: config.createPR
       });
       
       // Set outputs for GitHub Actions
