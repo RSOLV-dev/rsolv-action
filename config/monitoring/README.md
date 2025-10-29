@@ -42,15 +42,28 @@ Primary dashboard for CI/CD monitoring. Tracks:
 
 ## Metrics Sources
 
+### Prometheus Pushgateway
+
+CI/CD metrics are exported to Prometheus via Pushgateway. This allows GitHub Actions workflows to push metrics to Prometheus even though they run externally.
+
+**URLs:**
+- Production: `https://pushgateway.rsolv.dev`
+- Local/Docker Compose: `http://pushgateway:9091`
+
+**Configuration:**
+Set the `PUSHGATEWAY_URL` secret in your GitHub repository settings, or the workflow will use the production URL by default.
+
 ### GitHub Actions Metrics
 
-Exported via GitHub Actions workflow runs:
+Exported via GitHub Actions workflow runs to Pushgateway:
 
 ```yaml
 - name: Export metrics
   run: |
-    echo "github_actions_workflow_run_duration_seconds ${{ job.duration }}"
-    echo "github_actions_workflow_run_conclusion{workflow='${{ github.workflow }}'} ${{ job.conclusion }}"
+    cat <<EOF | curl --data-binary @- ${PUSHGATEWAY_URL}/metrics/job/ci/workflow/${GITHUB_WORKFLOW}
+    github_actions_workflow_run_duration_seconds{workflow="${GITHUB_WORKFLOW}"} ${{ job.duration }}
+    github_actions_workflow_run_conclusion{workflow="${GITHUB_WORKFLOW}"} ${{ job.conclusion == 'success' && '0' || '1' }}
+    EOF
 ```
 
 ### ExUnit Metrics
@@ -107,12 +120,37 @@ k6 run --out experimental-prometheus-rw load_tests/signup_test.js
 
 ### 1. Install Monitoring Stack
 
+#### Kubernetes (Production/Staging)
+
+The monitoring stack (Prometheus, Grafana, Pushgateway) is deployed to Kubernetes. See the main infrastructure documentation at `~/dev/rsolv/RSOLV-infrastructure/` for deployment details.
+
+To deploy Pushgateway:
+
+```bash
+# Deploy to staging
+kubectl apply -f config/monitoring/pushgateway.yaml --namespace monitoring --context staging
+
+# Deploy to production
+kubectl apply -f config/monitoring/pushgateway.yaml --namespace monitoring --context production
+
+# Verify deployment
+kubectl get pods -n monitoring -l app=pushgateway
+kubectl get service -n monitoring pushgateway
+```
+
+#### Local Development
+
+For local development with Docker Compose:
+
 ```bash
 # Prometheus
 docker run -p 9090:9090 -v ./config/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
 
 # Grafana
 docker run -p 3000:3000 grafana/grafana-oss
+
+# Pushgateway
+docker run -p 9091:9091 prom/pushgateway:v1.9.0
 ```
 
 ### 2. Configure Data Sources
@@ -182,16 +220,21 @@ Update notification channels in `ci_dashboard.json`:
 
 ### GitHub Actions
 
-Export metrics from workflow:
+Export metrics from workflow to Pushgateway:
 
 ```yaml
 - name: Report metrics
   if: always()
+  env:
+    PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL || 'https://pushgateway.rsolv.dev' }}
   run: |
     # Export to Prometheus pushgateway
-    curl -X POST http://pushgateway:9091/metrics/job/ci \
-      --data "test_duration_seconds $(date +%s)"
+    cat <<EOF | curl --data-binary @- ${PUSHGATEWAY_URL}/metrics/job/ci/workflow/${GITHUB_WORKFLOW}
+    test_duration_seconds{workflow="${GITHUB_WORKFLOW}"} $(date +%s)
+    EOF
 ```
+
+**Note:** The `test-monitoring.yml` workflow automatically exports metrics after the main CI workflow completes. See `.github/workflows/test-monitoring.yml` for the full implementation.
 
 ### Coveralls
 

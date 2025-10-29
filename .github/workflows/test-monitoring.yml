@@ -6,7 +6,10 @@ on:
     types: [completed]
 
 env:
-  PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL || 'http://pushgateway:9091' }}
+  # Pushgateway URL for metrics export
+  # Production: https://pushgateway.rsolv.dev
+  # Local/Docker Compose: http://pushgateway:9091
+  PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL || 'https://pushgateway.rsolv.dev' }}
 
 jobs:
   export-metrics:
