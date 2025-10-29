@@ -20,24 +20,24 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
 
     api_key = "test_api_key_#{:crypto.strong_rand_bytes(16) |> Base.encode64()}"
 
-    {:ok, api_key_record} =
+    {:ok, %{record: api_key_record, raw_key: returned_key}} =
       Customers.create_api_key(customer, %{
-        key: api_key,
+        raw_key: api_key,
         name: "Test API Key"
       })
 
-    {:ok, customer: customer, api_key: api_key, api_key_record: api_key_record}
+    {:ok, customer: customer, raw_api_key: returned_key, api_key_record: api_key_record}
   end
 
   describe "authentication with required auth (default)" do
     test "authenticates successfully with x-api-key header", %{
       conn: conn,
       customer: customer,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> ApiAuthentication.call(false)
 
       assert conn.assigns.customer.id == customer.id
@@ -47,12 +47,12 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
     test "stores both customer and api_key record on successful authentication", %{
       conn: conn,
       customer: customer,
-      api_key: api_key,
+      raw_api_key: raw_api_key,
       api_key_record: api_key_record
     } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> ApiAuthentication.call(false)
 
       # Verify customer is assigned
@@ -60,7 +60,7 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
 
       # Verify API key record is also assigned
       assert conn.assigns.api_key.id == api_key_record.id
-      assert conn.assigns.api_key.key == api_key
+      assert conn.assigns.raw_api_key == raw_api_key
       assert conn.assigns.api_key.customer_id == customer.id
 
       refute conn.halted
@@ -84,11 +84,11 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
     test "ignores Authorization header when x-api-key is present", %{
       conn: conn,
       customer: customer,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> put_req_header("authorization", "Bearer some_other_key")
         |> ApiAuthentication.call(false)
 
@@ -150,11 +150,11 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
     test "authenticates successfully with valid key when optional", %{
       conn: conn,
       customer: customer,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> ApiAuthentication.call(true)
 
       assert conn.assigns.customer.id == customer.id
@@ -194,7 +194,7 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
   end
 
   describe "integration with controllers" do
-    test "plug can be used in controller pipeline", %{conn: conn, api_key: api_key} do
+    test "plug can be used in controller pipeline", %{conn: conn, raw_api_key: raw_api_key} do
       # Simulate a controller using the plug
       defmodule TestController do
         use Phoenix.Controller
@@ -207,7 +207,7 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> ApiAuthentication.call(false)
 
       refute conn.halted

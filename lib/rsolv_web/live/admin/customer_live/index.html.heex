@@ -165,7 +165,7 @@
               <% end %>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-              {customer.subscription_plan}
+              {customer.subscription_type}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
               {customer.current_usage} / {customer.monthly_limit}
@@ -382,31 +382,31 @@
 
                 <div>
                   <label
-                    for="subscription_plan"
+                    for="subscription_type"
                     class="block text-sm font-medium text-gray-700 dark:text-gray-300"
                   >
                     Plan
                   </label>
                   <select
-                    name="customer[subscription_plan]"
-                    id="subscription_plan"
+                    name="customer[subscription_type]"
+                    id="subscription_type"
                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm"
                   >
-                    <option value="trial" selected={@customer.subscription_plan == "trial"}>
+                    <option value="trial" selected={@customer.subscription_type == "trial"}>
                       Trial
                     </option>
-                    <option value="pro" selected={@customer.subscription_plan == "pro"}>
+                    <option value="pro" selected={@customer.subscription_type == "pro"}>
                       Pro
                     </option>
                     <option
                       value="pay_as_you_go"
-                      selected={@customer.subscription_plan == "pay_as_you_go"}
+                      selected={@customer.subscription_type == "pay_as_you_go"}
                     >
                       Pay As You Go
                     </option>
                     <option
                       value="enterprise"
-                      selected={@customer.subscription_plan == "enterprise"}
+                      selected={@customer.subscription_type == "enterprise"}
                     >
                       Enterprise
                     </option>

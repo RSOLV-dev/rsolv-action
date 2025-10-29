@@ -32,10 +32,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert json_response(conn, 401)
     end
 
-    test "generates RSpec test name for Ruby file", %{conn: conn, api_key: api_key} do
+    test "generates RSpec test name for Ruby file", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/naming", %{
           vulnerableFile: "app/controllers/users_controller.rb",
           type: "sql_injection",
@@ -48,10 +48,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "generates Jest test name for TypeScript file", %{conn: conn, api_key: api_key} do
+    test "generates Jest test name for TypeScript file", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/naming", %{
           vulnerableFile: "src/api/AuthService.ts",
           type: "jwt_weak_secret",
@@ -64,10 +64,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "generates Vitest test name for JavaScript file", %{conn: conn, api_key: api_key} do
+    test "generates Vitest test name for JavaScript file", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/naming", %{
           vulnerableFile: "src/controllers/users_controller.js",
           type: "xss_reflected",
@@ -80,10 +80,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "generates pytest test name for Python file", %{conn: conn, api_key: api_key} do
+    test "generates pytest test name for Python file", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/naming", %{
           vulnerableFile: "app/services/payment.py",
           type: "command_injection",
@@ -96,8 +96,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "handles framework name case-insensitively", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "handles framework name case-insensitively", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -113,8 +113,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "returns error when vulnerableFile is missing", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "returns error when vulnerableFile is missing", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -125,8 +125,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert %{"error" => _} = json_response(conn, 422)
     end
 
-    test "returns error when type is missing", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "returns error when type is missing", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -137,8 +137,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert %{"error" => _} = json_response(conn, 422)
     end
 
-    test "returns error when framework is missing", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "returns error when framework is missing", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -149,8 +149,11 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert %{"error" => _} = json_response(conn, 422)
     end
 
-    test "returns error when vulnerableFile is empty string", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "returns error when vulnerableFile is empty string", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -162,8 +165,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert %{"error" => _} = json_response(conn, 422)
     end
 
-    test "handles complex file paths", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "handles complex file paths", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -178,8 +181,11 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "handles vulnerability types with special characters", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "handles vulnerability types with special characters", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -193,8 +199,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert response["testFileName"] =~ "jwtWeakSecret"
     end
 
-    test "works with mocha framework", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "works with mocha framework", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -209,8 +215,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "works with minitest framework", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "works with minitest framework", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -225,8 +231,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "works with unittest framework", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "works with unittest framework", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -243,8 +249,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
   end
 
   describe "real-world vulnerability scenarios" do
-    test "SQL injection in Rails API controller", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "SQL injection in Rails API controller", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -259,8 +265,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "XSS in React component", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "XSS in React component", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -275,8 +281,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "Command injection in Python utility", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "Command injection in Python utility", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -291,8 +297,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "Path traversal in Express route", %{conn: conn, api_key: api_key} do
-      conn = conn |> put_req_header("x-api-key", api_key.key)
+    test "Path traversal in Express route", %{conn: conn, raw_api_key: raw_api_key} do
+      conn = conn |> put_req_header("x-api-key", raw_api_key)
 
       conn =
         post(conn, "/api/v1/test-integration/naming", %{
@@ -322,13 +328,13 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
 
     test "recommends best test file for integration based on semantic similarity", %{
       conn: conn,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       # RFC-060-AMENDMENT-001: Backend scores test files to find best integration point
       # Scoring: 0.0-1.5 range (path similarity + module bonus +0.3 + directory bonus +0.2)
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/analyze", %{
           vulnerableFile: "app/controllers/users_controller.rb",
           vulnerabilityType: "sql_injection",
@@ -380,12 +386,12 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
 
     test "prioritizes unit tests over integration tests for JavaScript/TypeScript", %{
       conn: conn,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       # RFC-060-AMENDMENT-001: Path similarity scoring should prefer direct unit tests
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/analyze", %{
           vulnerableFile: "src/controllers/AuthController.ts",
           vulnerabilityType: "jwt_weak_secret",
@@ -412,10 +418,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert score_gap >= 0.2, "Score gap should reflect directory structure bonus (+0.2)"
     end
 
-    test "returns error when vulnerableFile is missing", %{conn: conn, api_key: api_key} do
+    test "returns error when vulnerableFile is missing", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/analyze", %{
           candidateTestFiles: ["spec/model_spec.rb"],
           framework: "rspec"
@@ -425,10 +431,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert %{"error" => %{"code" => "INVALID_REQUEST"}} = response
     end
 
-    test "returns error when candidateTestFiles is empty", %{conn: conn, api_key: api_key} do
+    test "returns error when candidateTestFiles is empty", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/analyze", %{
           vulnerableFile: "app/model.rb",
           candidateTestFiles: [],
@@ -439,10 +445,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert %{"error" => %{"code" => "INVALID_REQUEST"}} = response
     end
 
-    test "returns error when framework is unsupported", %{conn: conn, api_key: api_key} do
+    test "returns error when framework is unsupported", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/analyze", %{
           vulnerableFile: "app/model.rb",
           candidateTestFiles: ["spec/model_spec.rb"],
@@ -454,10 +460,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert response["error"]["message"] =~ "unsupported framework"
     end
 
-    test "handles pytest framework", %{conn: conn, api_key: api_key} do
+    test "handles pytest framework", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/analyze", %{
           vulnerableFile: "app/services/payment.py",
           candidateTestFiles: [
@@ -488,7 +494,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
 
     test "integrates security test into existing test file while preserving structure", %{
       conn: conn,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       # RFC-060-AMENDMENT-001: AST integration should insert test at appropriate point
       # without breaking existing tests (lines 236-243)
@@ -515,7 +521,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/generate", %{
           targetFileContent: target_content,
           testSuite: test_suite,
@@ -555,7 +561,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert it_count >= 2, "Should have at least 2 tests (original + new security test)"
     end
 
-    test "gracefully falls back to append when AST parsing fails", %{conn: conn, api_key: api_key} do
+    test "gracefully falls back to append when AST parsing fails", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
       # RFC-060-AMENDMENT-001 lines 266-272: Fallback to simple append if AST fails
       # This tests the desired behavior: system remains functional even with unparseable code
       unparseable_content = """
@@ -578,7 +587,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/generate", %{
           targetFileContent: unparseable_content,
           testSuite: test_suite,
@@ -607,10 +616,13 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert String.length(integrated) > original_size, "Content should be appended"
     end
 
-    test "returns error when targetFileContent is missing", %{conn: conn, api_key: api_key} do
+    test "returns error when targetFileContent is missing", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/generate", %{
           testSuite: %{redTests: []},
           framework: "vitest",
@@ -622,10 +634,13 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert response["error"]["message"] =~ "Missing required fields"
     end
 
-    test "returns error when testSuite is missing redTests", %{conn: conn, api_key: api_key} do
+    test "returns error when testSuite is missing redTests", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/generate", %{
           targetFileContent: "describe('test', () => {})",
           testSuite: %{},
@@ -637,10 +652,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert %{"error" => %{"code" => "INVALID_REQUEST"}} = response
     end
 
-    test "returns error when redTests array is empty", %{conn: conn, api_key: api_key} do
+    test "returns error when redTests array is empty", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/generate", %{
           targetFileContent: "describe('test', () => {})",
           testSuite: %{redTests: []},
@@ -653,7 +668,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert response["error"]["message"] =~ "must not be empty"
     end
 
-    test "returns error when framework is unsupported", %{conn: conn, api_key: api_key} do
+    test "returns error when framework is unsupported", %{conn: conn, raw_api_key: raw_api_key} do
       test_suite = %{
         redTests: [
           %{
@@ -666,7 +681,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/generate", %{
           targetFileContent: "describe('test', () => {})",
           testSuite: test_suite,
@@ -679,7 +694,10 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert response["error"]["message"] =~ "framework must be one of"
     end
 
-    test "returns error when test is missing required fields", %{conn: conn, api_key: api_key} do
+    test "returns error when test is missing required fields", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
       test_suite = %{
         redTests: [
           %{
@@ -691,7 +709,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/generate", %{
           targetFileContent: "describe('test', () => {})",
           testSuite: test_suite,
@@ -704,7 +722,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert response["error"]["message"] =~ "missing required fields"
     end
 
-    test "includes timing information in response", %{conn: conn, api_key: api_key} do
+    test "includes timing information in response", %{conn: conn, raw_api_key: raw_api_key} do
       test_suite = %{
         redTests: [
           %{
@@ -717,7 +735,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/generate", %{
           targetFileContent: "describe('test', () => {})",
           testSuite: test_suite,
@@ -731,7 +749,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
       assert time_ms >= 0
     end
 
-    test "accepts custom requestId", %{conn: conn, api_key: api_key} do
+    test "accepts custom requestId", %{conn: conn, raw_api_key: raw_api_key} do
       custom_id = "custom-request-123"
 
       test_suite = %{
@@ -746,7 +764,7 @@ defmodule RsolvWeb.Api.V1.TestIntegrationControllerTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/test-integration/generate", %{
           targetFileContent: "describe('test', () => {})",
           testSuite: test_suite,

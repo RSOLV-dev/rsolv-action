@@ -83,14 +83,18 @@ defmodule RsolvWeb.Api.V1.ASTController do
     security: [%{"ApiKeyAuth" => []}]
   )
 
-  def analyze(conn, params) do
+  def analyze(conn, _params) do
+    # OpenApiSpex CastAndValidate stores validated body in conn.body_params as a struct
+    # Convert to map with string keys for consistency with validation functions
+    body_params = conn.body_params |> Map.from_struct() |> stringify_keys()
+
     start_time = System.monotonic_time(:millisecond)
-    request_id = params["requestId"] || generate_request_id()
+    request_id = body_params["requestId"] || generate_request_id()
     customer = conn.assigns.customer
 
     with :ok <- check_rate_limit(customer),
          {:ok, encryption_key} <- get_encryption_key(conn),
-         {:ok, request} <- validate_request(params),
+         {:ok, request} <- validate_request(body_params),
          {:ok, session} <- get_or_create_session(request, customer, encryption_key),
          {:ok, decrypted_files, decryption_time} <-
            decrypt_files_with_timing(request["files"], encryption_key),
@@ -222,6 +226,7 @@ defmodule RsolvWeb.Api.V1.ASTController do
   end
 
   defp validate_request(params) do
+    # OpenApiSpex keeps string keys in our configuration
     with :ok <- validate_files(params["files"]),
          :ok <- validate_options(params["options"]) do
       {:ok, params}
@@ -462,4 +467,18 @@ defmodule RsolvWeb.Api.V1.ASTController do
   defp generate_request_id do
     "ast-#{System.system_time(:millisecond)}-#{:rand.uniform(999_999)}"
   end
+
+  # Convert atom keys to string keys recursively
+  defp stringify_keys(map) when is_map(map) do
+    Map.new(map, fn
+      {k, v} when is_atom(k) -> {Atom.to_string(k), stringify_keys(v)}
+      {k, v} -> {k, stringify_keys(v)}
+    end)
+  end
+
+  defp stringify_keys(list) when is_list(list) do
+    Enum.map(list, &stringify_keys/1)
+  end
+
+  defp stringify_keys(value), do: value
 end

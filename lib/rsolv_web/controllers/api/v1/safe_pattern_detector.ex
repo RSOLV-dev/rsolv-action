@@ -50,16 +50,51 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
   def is_safe_pattern?(:sql_injection, "", %{language: _language}), do: false
 
   def is_safe_pattern?(:sql_injection, code, %{language: language}) do
+    require Logger
+
     # First check for definitely unsafe patterns
     unsafe_patterns = get_sql_unsafe_patterns(language)
-    is_unsafe = Enum.any?(unsafe_patterns, fn pattern -> Regex.match?(pattern, code) end)
 
-    if is_unsafe do
+    # Log which unsafe pattern matches (if any)
+    matching_unsafe =
+      Enum.find(unsafe_patterns, fn pattern ->
+        matches = Regex.match?(pattern, code)
+
+        if matches do
+          Logger.debug(
+            "SafePatternDetector: Unsafe pattern #{inspect(pattern)} matched code: #{String.slice(code, 0, 100)}"
+          )
+        end
+
+        matches
+      end)
+
+    if matching_unsafe do
       false
     else
       # Then check for safe patterns
       patterns = get_sql_safe_patterns(language)
-      Enum.any?(patterns, fn pattern -> Regex.match?(pattern, code) end)
+
+      has_safe =
+        Enum.any?(patterns, fn pattern ->
+          matches = Regex.match?(pattern, code)
+
+          if matches do
+            Logger.debug("SafePatternDetector: Safe pattern #{inspect(pattern)} matched code")
+          end
+
+          matches
+        end)
+
+      if has_safe do
+        Logger.debug(
+          "SafePatternDetector: Code is SAFE (no unsafe patterns matched, safe pattern found)"
+        )
+      else
+        Logger.debug("SafePatternDetector: Code is UNSAFE (no safe patterns matched)")
+      end
+
+      has_safe
     end
   end
 
@@ -642,8 +677,9 @@ defmodule RsolvWeb.Api.V1.SafePatternDetector do
     do: [
       # PostgreSQL params ($1, $2)
       ~r/\$\d+/,
-      # MySQL params (?)
+      # MySQL params (?) - either followed by comma/paren or in string with params
       ~r/\?\s*[,\)]/,
+      ~r/\?['"].*,\s*\[/,
       # Named params (:id, :name)
       ~r/:\w+/,
       # Parameterized query with array

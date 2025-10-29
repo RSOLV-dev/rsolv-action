@@ -26,37 +26,61 @@ defmodule Rsolv.BillingInfrastructureTest do
 
       assert %Customer{} = customer
       assert customer.email =~ "@test.example.com"
-      assert customer.subscription_plan == "trial"
+      assert customer.subscription_type == "trial"
     end
 
     test "with_trial_credits trait sets 5 credits" do
       customer = Rsolv.CustomerFactory.build(:customer) |> with_trial_credits()
 
+      # RFC-068: Verify credit_balance is set (RFC-066 unified credit system)
+      assert customer.credit_balance == 5
+      # Legacy fields for backward compatibility
       assert customer.trial_fixes_limit == 5
       assert customer.trial_fixes_used == 0
+      # RFC-068: Verify no payment method
+      assert customer.has_payment_method == false
+      assert customer.stripe_customer_id == nil
     end
 
     test "with_billing_added trait sets 10 credits and Stripe ID" do
       customer = Rsolv.CustomerFactory.build(:customer) |> with_billing_added()
 
+      # RFC-068: Verify credit_balance is set (5 signup + 5 bonus)
+      assert customer.credit_balance == 10
+      # Legacy field for backward compatibility
       assert customer.trial_fixes_limit == 10
+      # RFC-068: Verify payment method attached
       assert customer.has_payment_method == true
       assert customer.stripe_customer_id =~ "cus_test_"
+      assert customer.stripe_payment_method_id =~ "pm_test_"
       assert customer.payment_method_added_at != nil
+      assert customer.billing_consent_given == true
     end
 
     test "with_pro_plan trait sets 60 credits and Pro status" do
       customer = Rsolv.CustomerFactory.build(:customer) |> with_pro_plan()
 
-      assert customer.subscription_plan == "pro"
-      assert customer.subscription_status == "active"
+      # RFC-068: Verify credit_balance is set (60 credits for Pro plan)
+      assert customer.credit_balance == 60
+      # RFC-068: Verify Pro subscription status
+      assert customer.subscription_type == "pro"
+      assert customer.subscription_state == "active"
+      # Legacy fields for backward compatibility
       assert customer.fixes_quota_this_month == 60
       assert customer.fixes_used_this_month == 0
+      # RFC-068: Verify payment method and subscription IDs
+      assert customer.has_payment_method == true
+      assert customer.stripe_customer_id =~ "cus_test_"
+      assert customer.stripe_payment_method_id =~ "pm_test_"
+      assert customer.stripe_subscription_id =~ "sub_test_"
     end
 
     test "with_pro_plan_partial_usage trait sets used credits" do
       customer = Rsolv.CustomerFactory.build(:customer) |> with_pro_plan_partial_usage()
 
+      # RFC-068: Verify remaining credit_balance (60 - 15 = 45)
+      assert customer.credit_balance == 45
+      # Legacy fields for backward compatibility
       assert customer.fixes_used_this_month == 15
       assert customer.fixes_quota_this_month == 60
     end
@@ -64,7 +88,10 @@ defmodule Rsolv.BillingInfrastructureTest do
     test "with_past_due trait sets past_due status" do
       customer = Rsolv.CustomerFactory.build(:customer) |> with_pro_plan() |> with_past_due()
 
-      assert customer.subscription_status == "past_due"
+      # RFC-068: Verify delinquent customer state (payment failed)
+      assert customer.subscription_state == "past_due"
+      # Credit balance preserved from Pro plan
+      assert customer.credit_balance == 60
     end
 
     test "with_expired_trial trait sets expired state" do
@@ -79,8 +106,15 @@ defmodule Rsolv.BillingInfrastructureTest do
     test "with_payg trait sets PAYG plan" do
       customer = Rsolv.CustomerFactory.build(:customer) |> with_payg()
 
-      assert customer.subscription_plan == "payg"
+      # RFC-068: Verify PAYG customer (0 credits, payment method attached)
+      assert customer.credit_balance == 0
+      assert customer.subscription_type == "payg"
+      assert customer.subscription_state == "active"
+      # RFC-068: Verify payment method attached
       assert customer.has_payment_method == true
+      assert customer.stripe_customer_id =~ "cus_test_"
+      assert customer.stripe_payment_method_id =~ "pm_test_"
+      assert customer.billing_consent_given == true
     end
   end
 

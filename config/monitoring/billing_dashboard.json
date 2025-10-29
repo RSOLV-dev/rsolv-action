@@ -1,0 +1,346 @@
+{
+  "dashboard": {
+    "title": "RSOLV Billing System Metrics",
+    "tags": ["billing", "stripe", "revenue", "rfc-068"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Subscription Creation Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(rsolv_billing_subscription_created_total[5m])",
+            "legendFormat": "{{plan}} - {{status}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "Subscriptions/sec", "format": "short"},
+          {"format": "short"}
+        ],
+        "tooltip": {"shared": true, "sort": 0, "value_type": "individual"},
+        "legend": {"show": true, "alignAsTable": true, "avg": true, "current": true}
+      },
+      {
+        "id": 2,
+        "title": "Payment Success Rate",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(rsolv_billing_payment_processed_total{status=\"success\"}[5m])) / sum(rate(rsolv_billing_payment_processed_total[5m])) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 90, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Revenue by Plan (Last 24h)",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum by (plan) (increase(rsolv_billing_invoice_paid_amount_cents[24h]))",
+            "legendFormat": "{{plan}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "custom": {
+              "hideFrom": {"tooltip": false, "viz": false, "legend": false}
+            }
+          }
+        },
+        "options": {
+          "pieType": "donut",
+          "displayLabels": ["name", "percent"],
+          "legend": {"displayMode": "table", "placement": "right", "values": ["value", "percent"]}
+        }
+      },
+      {
+        "id": 4,
+        "title": "Payment Processing Duration (p95)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(rsolv_billing_payment_processed_duration_milliseconds_bucket[5m]))",
+            "legendFormat": "{{payment_method}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "Duration (ms)", "format": "ms"},
+          {"format": "short"}
+        ],
+        "tooltip": {"shared": true, "sort": 0, "value_type": "individual"},
+        "legend": {"show": true, "alignAsTable": true, "avg": true, "current": true, "max": true}
+      },
+      {
+        "id": 5,
+        "title": "Usage Tracking (Fixes Consumed)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "sum by (plan) (rate(rsolv_billing_usage_tracked_total[5m]))",
+            "legendFormat": "{{plan}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "Fixes/sec", "format": "short"},
+          {"format": "short"}
+        ],
+        "tooltip": {"shared": true, "sort": 0, "value_type": "individual"},
+        "legend": {"show": true, "alignAsTable": true, "avg": true, "current": true},
+        "seriesOverrides": [
+          {"alias": "trial", "color": "#5794F2"},
+          {"alias": "pro", "color": "#73BF69"},
+          {"alias": "payg", "color": "#F2CC0C"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Customer Conversion Funnel",
+        "type": "bargauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "sum(increase(rsolv_billing_credits_added_total{reason=\"signup_bonus\"}[24h]))",
+            "legendFormat": "Signups",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(increase(rsolv_billing_credits_added_total{reason=\"billing_added\"}[24h]))",
+            "legendFormat": "Billing Added",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(increase(rsolv_billing_subscription_created_total{plan=\"pro\"}[24h]))",
+            "legendFormat": "Pro Subscriptions",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "displayName": "${__field.labels.__name__}",
+            "custom": {
+              "displayMode": "gradient"
+            }
+          }
+        },
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        }
+      },
+      {
+        "id": 7,
+        "title": "Failed Payments by Reason",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "topk(10, sum by (failure_code) (increase(rsolv_billing_invoice_failed_total[24h])))",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Value"},
+              "properties": [
+                {"id": "displayName", "value": "Count"},
+                {"id": "custom.displayMode", "value": "color-background"}
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Count", "desc": true}]
+        }
+      },
+      {
+        "id": 8,
+        "title": "Subscription Cancellation Rate",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "sum(rate(rsolv_billing_subscription_cancelled_total[24h])) / sum(rate(rsolv_billing_subscription_created_total[24h])) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            }
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        }
+      },
+      {
+        "id": 9,
+        "title": "Active Subscriptions by Plan",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "sum by (plan) (rsolv_billing_subscription_created_total - rsolv_billing_subscription_cancelled_total)",
+            "legendFormat": "{{plan}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "showPoints": "never"
+            }
+          }
+        },
+        "options": {
+          "legend": {"displayMode": "table", "placement": "right", "calcs": ["lastNotNull"]},
+          "tooltip": {"mode": "multi"}
+        }
+      },
+      {
+        "id": 10,
+        "title": "Credit System Overview",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "targets": [
+          {
+            "expr": "sum(increase(rsolv_billing_credits_added_quantity[24h]))",
+            "legendFormat": "Credits Added",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(increase(rsolv_billing_credits_consumed_total[24h]))",
+            "legendFormat": "Credits Consumed",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "blue"}
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Credits Added"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Credits Consumed"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]
+            }
+          ]
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "orientation": "horizontal"
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "enable": true,
+          "iconColor": "blue",
+          "expr": "changes(process_start_time_seconds[5m]) > 0",
+          "tagKeys": "version",
+          "textFormat": "Deployment",
+          "titleFormat": "Deployment"
+        }
+      ]
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "plan",
+          "type": "query",
+          "label": "Plan",
+          "query": "label_values(rsolv_billing_subscription_created_total, plan)",
+          "datasource": "Prometheus",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 1
+        },
+        {
+          "name": "customer_id",
+          "type": "query",
+          "label": "Customer ID",
+          "query": "label_values(rsolv_billing_subscription_created_total, customer_id)",
+          "datasource": "Prometheus",
+          "multi": false,
+          "includeAll": false,
+          "refresh": 2
+        }
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1
+  }
+}

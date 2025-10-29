@@ -18,16 +18,9 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
         })
         |> Repo.insert!()
 
-      # Create an API key
-      api_key =
-        %ApiKey{}
-        |> ApiKey.changeset(%{
-          customer_id: customer.id,
-          name: "Test Key",
-          key: "test_" <> Ecto.UUID.generate(),
-          active: true
-        })
-        |> Repo.insert!()
+      # Create an API key using the proper function that hashes the key
+      {:ok, %{record: api_key, raw_key: raw_api_key}} =
+        Rsolv.Customers.create_api_key(customer, %{name: "Test Key"})
 
       # Create a forge account for this customer
       forge_account =
@@ -40,10 +33,19 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
         })
         |> Repo.insert!()
 
-      %{api_key: api_key, customer: customer, forge_account: forge_account}
+      %{
+        raw_api_key: raw_api_key,
+        api_key: api_key,
+        customer: customer,
+        forge_account: forge_account
+      }
     end
 
-    test "retrieves all phase data for a repository", %{conn: conn, api_key: api_key} do
+    test "retrieves all phase data for a repository", %{
+      conn: conn,
+      raw_api_key: raw_api_key,
+      api_key: api_key
+    } do
       # Store scan data
       {:ok, _scan} =
         Phases.store_scan(
@@ -95,7 +97,7 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
       # Retrieve all phase data
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> get("/api/v1/phases/retrieve", %{
           repo: "RSOLV-dev/nodegoat-demo",
           issue: 123,
@@ -119,10 +121,10 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
       assert response["mitigation"]["issue-123"]["pr_url"]
     end
 
-    test "returns empty object when no data exists", %{conn: conn, api_key: api_key} do
+    test "returns empty object when no data exists", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> get("/api/v1/phases/retrieve", %{
           repo: "RSOLV-dev/new-repo",
           issue: 999,
@@ -134,7 +136,11 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
       assert response == %{}
     end
 
-    test "returns only available phases", %{conn: conn, api_key: api_key} do
+    test "returns only available phases", %{
+      conn: conn,
+      raw_api_key: raw_api_key,
+      api_key: api_key
+    } do
       # Store only scan data
       {:ok, _scan} =
         Phases.store_scan(
@@ -153,7 +159,7 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> get("/api/v1/phases/retrieve", %{
           repo: "RSOLV-dev/partial-repo",
           issue: 456,
@@ -185,10 +191,10 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
       assert resp["requestId"]
     end
 
-    test "rejects access to unauthorized namespace", %{conn: conn, api_key: api_key} do
+    test "rejects access to unauthorized namespace", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> get("/api/v1/phases/retrieve", %{
           repo: "OTHER-org/test",
           issue: 123,
@@ -198,10 +204,10 @@ defmodule RsolvWeb.Api.V1.PhaseRetrieveTest do
       assert %{"error" => "Unauthorized: no access to namespace"} = json_response(conn, 403)
     end
 
-    test "validates required parameters", %{conn: conn, api_key: api_key} do
+    test "validates required parameters", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> get("/api/v1/phases/retrieve", %{
           repo: "RSOLV-dev/test"
           # Missing issue and commit

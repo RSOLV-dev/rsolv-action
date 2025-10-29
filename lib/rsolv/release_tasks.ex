@@ -9,6 +9,7 @@ defmodule Rsolv.ReleaseTasks do
   @app :rsolv
 
   require Logger
+  import Ecto.Query
 
   @doc """
   Run migrations for all repos in the application.
@@ -211,7 +212,166 @@ defmodule Rsolv.ReleaseTasks do
     end
   end
 
+  @doc """
+  Reset staging environment with test customer fixtures.
+
+  This function:
+  - ONLY runs if config_env() == :staging (safety check)
+  - Deletes test data (emails matching *@example.com or *@test.example.com)
+  - Re-seeds with factory fixtures covering various customer states
+  - Returns summary of changes
+
+  ## Safety
+
+  This task will refuse to run in :prod environment to prevent accidental
+  data deletion in production.
+
+  ## Usage in Kubernetes
+
+      kubectl exec -it <rsolv-pod> -- bin/rsolv eval "Rsolv.ReleaseTasks.reset_staging_data()"
+
+  Or via remote console:
+
+      kubectl exec -it <rsolv-pod> -- bin/rsolv remote
+      > Rsolv.ReleaseTasks.reset_staging_data()
+
+  ## Test Data Created
+
+  The function creates customers in the following states:
+  - Trial customer with credits (5 credits)
+  - Trial customer with billing added (10 credits)
+  - Trial expired (0 credits)
+  - PAYG active (charges per fix)
+  - Pro active (60 credits)
+  - Pro past due (payment failure)
+  - Pro cancelled (immediate)
+  - Pro cancel scheduled (active until period end)
+  - Pro with rollover credits
+  """
+  def reset_staging_data do
+    env = config_env()
+
+    Logger.info("Environment detected: #{env}")
+
+    case env do
+      :staging ->
+        do_reset_staging_data()
+
+      :dev ->
+        Logger.warning("Running reset_staging_data in :dev environment")
+        do_reset_staging_data()
+
+      :test ->
+        Logger.warning("Running reset_staging_data in :test environment")
+        do_reset_staging_data()
+
+      :prod ->
+        Logger.error("REFUSED: reset_staging_data cannot run in :prod environment")
+        {:error, :production_environment}
+    end
+  end
+
   # Private functions
+
+  defp do_reset_staging_data do
+    Logger.info("Starting staging data reset")
+
+    load_app()
+    start_services()
+
+    # Ensure ExMachina is available
+    Application.ensure_all_started(:ex_machina)
+
+    alias Rsolv.CustomerFactory
+    alias Rsolv.Customers.Customer
+    alias Rsolv.Repo
+
+    # Delete test customers (safe domains only)
+    test_email_patterns = ["%@test.example.com", "%@example.com"]
+
+    deleted_count =
+      Enum.reduce(test_email_patterns, 0, fn pattern, acc ->
+        {count, _} = Repo.delete_all(from(c in Customer, where: like(c.email, ^pattern)))
+        Logger.info("Deleted #{count} customers matching #{pattern}")
+        acc + count
+      end)
+
+    Logger.info("Total deleted: #{deleted_count} test customers")
+
+    # Create test fixtures using factory
+    fixtures = [
+      # Trial customer with initial credits (5 credits)
+      CustomerFactory.insert(:customer) |> CustomerFactory.with_trial_credits(),
+      # Trial customer with billing added (10 credits)
+      CustomerFactory.insert(:customer) |> CustomerFactory.with_billing_added(),
+      # Trial expired (0 credits)
+      CustomerFactory.insert(:customer) |> CustomerFactory.with_expired_trial(),
+      # PAYG active (charges per fix)
+      CustomerFactory.insert(:customer) |> CustomerFactory.with_payg(),
+      # Pro active (60 credits)
+      CustomerFactory.insert(:customer) |> CustomerFactory.with_pro_plan(),
+      # Pro active with partial usage (45 credits remaining)
+      CustomerFactory.insert(:customer) |> CustomerFactory.with_pro_plan_partial_usage(),
+      # Pro past due (payment failure)
+      CustomerFactory.insert(:customer)
+      |> CustomerFactory.with_pro_plan()
+      |> CustomerFactory.with_past_due(),
+      # Pro cancelled (immediate)
+      CustomerFactory.insert(:customer)
+      |> CustomerFactory.with_pro_plan()
+      |> CustomerFactory.with_cancelled_pro(),
+      # Pro cancel scheduled (active until period end)
+      CustomerFactory.insert(:customer)
+      |> CustomerFactory.with_pro_plan()
+      |> CustomerFactory.with_cancel_scheduled(),
+      # Pro with rollover credits
+      CustomerFactory.insert(:customer) |> CustomerFactory.with_rollover_credits(10)
+    ]
+
+    Logger.info("Created #{length(fixtures)} test customer fixtures")
+
+    # Log summary
+    summary = %{
+      deleted: deleted_count,
+      created: length(fixtures),
+      fixture_types: [
+        "trial_credits",
+        "billing_added",
+        "trial_expired",
+        "payg_active",
+        "pro_active",
+        "pro_partial_usage",
+        "pro_past_due",
+        "pro_cancelled",
+        "pro_cancel_scheduled",
+        "pro_rollover"
+      ]
+    }
+
+    Logger.info("Staging data reset complete: #{inspect(summary, pretty: true)}")
+
+    stop_services()
+
+    {:ok, summary}
+  end
+
+  defp config_env do
+    # Try multiple methods to determine environment
+    cond do
+      env = System.get_env("MIX_ENV") ->
+        String.to_existing_atom(env)
+
+      env = System.get_env("RELEASE_ENV") ->
+        String.to_existing_atom(env)
+
+      function_exported?(Mix, :env, 0) ->
+        Mix.env()
+
+      true ->
+        # Default to checking application environment
+        Application.get_env(@app, :environment, :prod)
+    end
+  end
 
   defp repos do
     Application.fetch_env!(@app, :ecto_repos)

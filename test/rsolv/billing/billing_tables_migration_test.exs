@@ -24,7 +24,7 @@ defmodule Rsolv.BillingTablesMigrationTest do
 
   describe "billing tables schema" do
     test "subscription_plan renamed to subscription_type" do
-      # Verify old column doesn't exist and new column does
+      # Verify new column exists
       assert {:ok, result} =
                Repo.query("SELECT column_name FROM information_schema.columns
                   WHERE table_name = 'customers'

@@ -3,9 +3,13 @@ GEM
   specs:
     ast (2.4.3)
     json (2.12.2)
-    parser (3.3.8.0)
+    parser (3.3.9.0)
       ast (~> 2.4.1)
       racc
+    parser-prism (0.1.0)
+      parser
+      prism
+    prism (1.6.0)
     racc (1.8.1)
 
 PLATFORMS
@@ -13,7 +17,8 @@ PLATFORMS
 
 DEPENDENCIES
   json (~> 2.6)
-  parser (~> 3.2)
+  parser-prism (~> 0.1)
+  prism (~> 1.5)
 
 BUNDLED WITH
    2.4.10

@@ -98,6 +98,9 @@ Application.ensure_all_started(:mox)
 # Ensure FunWithFlags is started for tests
 Application.ensure_all_started(:fun_with_flags)
 
+# Setup ExMachina for factories
+{:ok, _} = Application.ensure_all_started(:ex_machina)
+
 # Replace HTTPoison with mock during testing
 Application.put_env(:rsolv, :http_client, Rsolv.HTTPClientMock)
 

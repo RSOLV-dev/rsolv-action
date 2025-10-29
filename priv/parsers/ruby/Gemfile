@@ -1,4 +1,7 @@
 source 'https://rubygems.org'
 
-gem 'parser', '~> 3.2'
+# Use Prism (Ruby 3.4+ official parser) for better unicode handling
+gem 'prism', '~> 1.5'
+# parser-prism provides Parser gem API compatibility with Prism backend
+gem 'parser-prism', '~> 0.1'
 gem 'json', '~> 2.6'

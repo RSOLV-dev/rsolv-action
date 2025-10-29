@@ -6,7 +6,7 @@ defmodule Rsolv.Security.SQLInjectionTest do
   """
   use Rsolv.DataCase, async: true
 
-  alias Rsolv.Accounts.User
+  alias Rsolv.Customers.Customer
   alias Rsolv.Repo
 
   @sql_injection_payloads [
@@ -27,7 +27,7 @@ defmodule Rsolv.Security.SQLInjectionTest do
       for payload <- @sql_injection_payloads do
         # This should safely return nil, not execute malicious SQL
         result =
-          from(u in User, where: u.email == ^payload)
+          from(c in Customer, where: c.email == ^payload)
           |> Repo.one()
 
         # Should return nil (no matching user), not raise or execute injection
@@ -38,14 +38,15 @@ defmodule Rsolv.Security.SQLInjectionTest do
     test "malicious input in changesets is rejected" do
       for payload <- @sql_injection_payloads do
         changeset =
-          User.changeset(%User{}, %{
+          Customer.changeset(%Customer{}, %{
             email: payload,
             password: "Test123!@#"
           })
 
         # Should fail validation, not execute SQL
         refute changeset.valid?
-        assert {:email, _} = changeset.errors[:email] || {:email, "invalid format"}
+        # Verify email validation caught the malicious input
+        assert changeset.errors[:email] != nil, "Expected email validation error for: #{payload}"
       end
     end
   end
@@ -67,7 +68,7 @@ defmodule Rsolv.Security.SQLInjectionTest do
       # Test dynamic query building is safe
       for payload <- @sql_injection_payloads do
         query =
-          from(u in User)
+          from(u in Customer)
           |> where(^dynamic([u], u.email == ^payload))
 
         result = Repo.one(query)
@@ -80,7 +81,7 @@ defmodule Rsolv.Security.SQLInjectionTest do
       safe_columns = [:email, :inserted_at, :updated_at]
 
       for column <- safe_columns do
-        query = from(u in User, order_by: ^column)
+        query = from(u in Customer, order_by: ^column)
         # Should not raise
         assert Repo.all(query)
       end
@@ -88,7 +89,7 @@ defmodule Rsolv.Security.SQLInjectionTest do
       # Malicious column names should be rejected
       assert_raise ArgumentError, fn ->
         column = "email; DROP TABLE users--"
-        from(u in User, order_by: ^column) |> Repo.all()
+        from(u in Customer, order_by: ^column) |> Repo.all()
       end
     end
   end
@@ -125,7 +126,7 @@ defmodule Rsolv.Security.SQLInjectionTest do
 
       # Should fail validation, not authenticate
       result =
-        from(u in User, where: u.email == ^attack_email)
+        from(u in Customer, where: u.email == ^attack_email)
         |> Repo.one()
 
       assert is_nil(result)
@@ -133,13 +134,21 @@ defmodule Rsolv.Security.SQLInjectionTest do
 
     test "password field not vulnerable to injection" do
       attack_password = "' OR '1'='1"
+      real_password = "RealPassword123!"
 
-      # Even if email is valid, password injection shouldn't work
-      # (This is protected by bcrypt comparison, not SQL)
-      user = insert(:user, email: "test@example.com")
+      # Create customer with hashed password using the proper registration flow
+      {:ok, customer} =
+        Rsolv.Customers.register_customer(%{
+          email: "test@example.com",
+          name: "Test User",
+          password: real_password
+        })
 
       # Password comparison happens in application code, not SQL
-      refute Bcrypt.verify_pass(attack_password, user.password_hash)
+      # The attack password should not match the real password
+      refute Bcrypt.verify_pass(attack_password, customer.password_hash)
+      # Verify the real password DOES work (sanity check)
+      assert Bcrypt.verify_pass(real_password, customer.password_hash)
     end
   end
 end

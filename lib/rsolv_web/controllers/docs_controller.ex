@@ -43,4 +43,8 @@ defmodule RsolvWeb.DocsController do
   def configuration(conn, _params) do
     render(conn, :configuration, page_title: "Configuration - RSOLV")
   end
+
+  def example_new_layout(conn, _params) do
+    render(conn, :example_new_layout, page_title: "Component Example - RSOLV Documentation")
+  end
 end

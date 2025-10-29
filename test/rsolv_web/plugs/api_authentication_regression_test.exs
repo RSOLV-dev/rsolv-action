@@ -35,15 +35,15 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationRegressionTest do
     api_key1 = "rsolv_test_#{:crypto.strong_rand_bytes(16) |> Base.encode64()}"
     api_key2 = "rsolv_prod_#{:crypto.strong_rand_bytes(16) |> Base.encode64()}"
 
-    {:ok, api_key_record1} =
+    {:ok, %{record: api_key_record1, raw_key: _}} =
       Customers.create_api_key(customer1, %{
-        key: api_key1,
+        raw_key: api_key1,
         name: "Test API Key 1"
       })
 
-    {:ok, api_key_record2} =
+    {:ok, %{record: api_key_record2, raw_key: _}} =
       Customers.create_api_key(customer2, %{
-        key: api_key2,
+        raw_key: api_key2,
         name: "Production API Key 2"
       })
 
@@ -251,9 +251,9 @@ defmodule RsolvWeb.Plugs.ApiAuthenticationRegressionTest do
       # Create an inactive API key
       inactive_key = "rsolv_inactive_#{:crypto.strong_rand_bytes(16) |> Base.encode64()}"
 
-      {:ok, inactive_api_key} =
+      {:ok, %{record: inactive_api_key, raw_key: _}} =
         Customers.create_api_key(customer1, %{
-          key: inactive_key,
+          raw_key: inactive_key,
           name: "Inactive Key"
         })
 

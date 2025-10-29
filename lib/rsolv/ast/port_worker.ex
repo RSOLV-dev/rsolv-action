@@ -132,6 +132,8 @@ defmodule Rsolv.AST.PortWorker do
 
   @impl true
   def handle_info({port, {:data, data}}, %{port: port} = state) when is_port(port) do
+    Logger.debug("PortWorker received data: #{String.slice(data, 0, 200)}...")
+
     # Accumulate data in buffer
     state = %{state | buffer: state.buffer <> data}
 
@@ -266,6 +268,7 @@ defmodule Rsolv.AST.PortWorker do
 
   defp send_to_port(port, request) do
     json = JSON.encode!(request)
+    Logger.debug("PortWorker sending to port: #{String.slice(json, 0, 200)}...")
     Port.command(port, json <> "\n")
   end
 

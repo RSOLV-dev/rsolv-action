@@ -3,5 +3,6 @@
 # Install asdf: https://asdf-vm.com/guide/getting-started.html
 elixir 1.18.4-otp-27
 erlang 27.2
+ruby 3.4.4
 nodejs 24.3.0
 bun 1.2.15

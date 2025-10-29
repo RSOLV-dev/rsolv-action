@@ -86,6 +86,7 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
         conn
         |> assign(:customer, customer)
         |> assign(:api_key, api_key_record)
+        |> assign(:raw_api_key, api_key)
     end
   end
 

@@ -1,6 +1,7 @@
 # credo:disable-for-this-file Credo.Check.Warning.IoInspect
 defmodule Rsolv.AST.ProductionRubyParserTest do
   use ExUnit.Case, async: true
+  use Rsolv.AST.TestCase
 
   @moduletag :integration
 
@@ -51,9 +52,11 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
       assert is_map(result.timing)
       assert result.timing.parse_time_ms > 0
 
-      # Check AST structure contains expected nodes
-      assert result.ast["type"] == "begin"
-      assert is_list(result.ast["children"])
+      # Check AST structure - Prism returns program root
+      assert result.ast["type"] == "program"
+      # Should be able to find class and def nodes in the tree
+      class_nodes = find_nodes(result.ast, "class")
+      assert length(class_nodes) >= 1
     end
 
     test "detects dangerous method patterns in Ruby code", %{
@@ -80,8 +83,10 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
       assert result.error == nil
       assert is_map(result.ast)
 
-      # Should contain dangerous patterns
-      assert result.ast["type"] == "class"
+      # Should contain dangerous patterns - find class node
+      assert result.ast["type"] == "program"
+      class_nodes = find_nodes(result.ast, "class")
+      assert length(class_nodes) >= 1
     end
 
     test "handles Ruby syntax errors gracefully", %{
@@ -152,17 +157,14 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
 
       assert result.error == nil
       assert is_map(result.ast)
-      assert result.ast["type"] == "module"
+      assert result.ast["type"] == "program"
 
-      # Verify complex constructs are parsed
-      children = result.ast["children"]
-      assert is_list(children)
-      # module name, class
-      assert length(children) >= 2
+      # Verify complex constructs are parsed - find module and class nodes
+      module_nodes = find_nodes(result.ast, "module")
+      assert length(module_nodes) >= 1
 
-      # Should contain class definition
-      [_module_name, class_node | _] = children
-      assert class_node["type"] == "class"
+      class_nodes = find_nodes(result.ast, "class")
+      assert length(class_nodes) >= 1
     end
 
     test "returns metadata about parser and language version", %{
@@ -176,8 +178,10 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
       assert result.error == nil
       assert is_map(result.ast)
 
-      # Should parse successfully
-      assert result.ast["type"] == "lvasgn"
+      # Should parse successfully - find lvasgn (local variable assignment) node
+      assert result.ast["type"] == "program"
+      lvasgn_nodes = find_nodes(result.ast, "lvasgn")
+      assert length(lvasgn_nodes) >= 1
     end
 
     test "handles timeout scenarios", %{customer_id: customer_id, session_id: session_id} do
@@ -216,11 +220,14 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
       assert result.error == nil
       assert is_map(result.ast)
 
-      # The AST should contain line/column information
-      assert result.ast["type"] == "class"
+      # The AST should contain line/column information - find class node
+      assert result.ast["type"] == "program"
+      class_nodes = find_nodes(result.ast, "class")
+      assert length(class_nodes) >= 1
 
       # Check that location information is preserved
-      assert result.ast["_loc"]["start"]["line"] == 1
+      class_node = hd(class_nodes)
+      assert class_node["_loc"]["start"]["line"] == 1
     end
 
     test "detects string interpolation patterns", %{
@@ -238,7 +245,11 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
 
       assert result.error == nil
       assert is_map(result.ast)
-      assert result.ast["type"] == "def"
+      assert result.ast["type"] == "program"
+
+      # Find the def node
+      def_nodes = find_nodes(result.ast, "def")
+      assert length(def_nodes) >= 1
     end
 
     test "detects command execution patterns", %{customer_id: customer_id, session_id: session_id} do
@@ -253,7 +264,11 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
 
       assert result.error == nil
       assert is_map(result.ast)
-      assert result.ast["type"] == "def"
+      assert result.ast["type"] == "program"
+
+      # Find the def node
+      def_nodes = find_nodes(result.ast, "def")
+      assert length(def_nodes) >= 1
     end
 
     test "reuses parser for same session", %{customer_id: customer_id, session_id: session_id} do

@@ -98,7 +98,20 @@ defmodule RsolvWeb.Services.EmailSequence do
     send_immediate_email_fn.()
 
     # Tag in ConvertKit for tracking
-    tag_for_sequence(email, sequence_name)
+    # Wrapped in try/catch to prevent tagging failures from blocking onboarding
+    try do
+      tag_for_sequence(email, sequence_name)
+    rescue
+      error ->
+        Logger.warning(
+          "Failed to tag email in ConvertKit (non-blocking): #{inspect(error)}",
+          email: email,
+          sequence: sequence_name
+        )
+
+        # Log for debugging but don't fail the onboarding flow
+        :ok
+    end
 
     # Schedule remaining emails via Oban
     EmailWorker.schedule_sequence(email, first_name, sequence_name)

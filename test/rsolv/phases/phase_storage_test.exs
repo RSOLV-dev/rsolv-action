@@ -20,12 +20,14 @@ defmodule Rsolv.Phases.PhaseStorageTest do
         |> Repo.insert!()
 
       # Create an API key
+      raw_api_key = "test_" <> Ecto.UUID.generate()
+
       api_key =
         %ApiKey{}
         |> ApiKey.changeset(%{
           customer_id: customer.id,
           name: "Test Key",
-          key: "test_" <> Ecto.UUID.generate(),
+          raw_raw_key: raw_api_key,
           active: true
         })
         |> Repo.insert!()
@@ -155,7 +157,7 @@ defmodule Rsolv.Phases.PhaseStorageTest do
         |> ApiKey.changeset(%{
           customer_id: other_customer.id,
           name: "Other Key",
-          key: "test_" <> Ecto.UUID.generate(),
+          raw_key: "test_" <> Ecto.UUID.generate(),
           active: true
         })
         |> Repo.insert!()

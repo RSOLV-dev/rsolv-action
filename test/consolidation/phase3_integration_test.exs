@@ -16,18 +16,18 @@ defmodule Rsolv.Phase3IntegrationTest do
         })
 
       # Create an API key for the customer
-      {:ok, api_key} =
+      {:ok, api_key_result} =
         Rsolv.Customers.create_api_key(customer, %{
           name: "Test Key"
         })
 
       # Test that customer can be found by API key
-      found_customer = Rsolv.Customers.get_customer_by_api_key(api_key.key)
+      found_customer = Rsolv.Customers.get_customer_by_api_key(api_key_result.raw_key)
       assert found_customer != nil
       assert found_customer.id == customer.id
 
       # Verify Accounts context compatibility layer works
-      compat_customer = Rsolv.Accounts.get_customer_by_api_key(api_key.key)
+      compat_customer = Rsolv.Accounts.get_customer_by_api_key(api_key_result.raw_key)
       assert compat_customer != nil
       assert compat_customer.id == customer.id
     end
@@ -41,12 +41,12 @@ defmodule Rsolv.Phase3IntegrationTest do
         })
 
       # Create multiple API keys
-      {:ok, key1} = Rsolv.Customers.create_api_key(customer, %{name: "Production"})
-      {:ok, key2} = Rsolv.Customers.create_api_key(customer, %{name: "Development"})
+      {:ok, key1_result} = Rsolv.Customers.create_api_key(customer, %{name: "Production"})
+      {:ok, key2_result} = Rsolv.Customers.create_api_key(customer, %{name: "Development"})
 
       # Both keys should resolve to the same customer
-      customer1 = Rsolv.Customers.get_customer_by_api_key(key1.key)
-      customer2 = Rsolv.Customers.get_customer_by_api_key(key2.key)
+      customer1 = Rsolv.Customers.get_customer_by_api_key(key1_result.raw_key)
+      customer2 = Rsolv.Customers.get_customer_by_api_key(key2_result.raw_key)
 
       assert customer1.id == customer.id
       assert customer2.id == customer.id
@@ -69,13 +69,13 @@ defmodule Rsolv.Phase3IntegrationTest do
           email: "legacy@example.com"
         })
 
-      {:ok, api_key} =
+      {:ok, api_key_result} =
         Rsolv.Customers.create_api_key(customer, %{
           name: "Legacy Key"
         })
 
       # Verify the new system works
-      found_customer = Rsolv.Customers.get_customer_by_api_key(api_key.key)
+      found_customer = Rsolv.Customers.get_customer_by_api_key(api_key_result.raw_key)
       assert found_customer != nil
       assert found_customer.email == "legacy@example.com"
     end

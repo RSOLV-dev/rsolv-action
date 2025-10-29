@@ -64,6 +64,23 @@ defmodule Rsolv.Customers do
   def get_customer!(id), do: Repo.get!(Customer, id)
 
   @doc """
+  Gets a customer by Stripe customer ID.
+
+  Raises `Ecto.NoResultsError` if the Customer does not exist.
+
+  ## Examples
+
+      iex> get_customer_by_stripe_id!("cus_123")
+      %Customer{}
+
+      iex> get_customer_by_stripe_id!("cus_nonexistent")
+      ** (Ecto.NoResultsError)
+  """
+  def get_customer_by_stripe_id!(stripe_customer_id) when is_binary(stripe_customer_id) do
+    Repo.get_by!(Customer, stripe_customer_id: stripe_customer_id)
+  end
+
+  @doc """
   Gets a customer by API key.
 
   This function verifies the raw API key by hashing it and comparing

@@ -12,7 +12,7 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
       customer_fixture(
         email: unique_email(),
         name: "Test Customer",
-        subscription_plan: "pro",
+        subscription_type: "pro",
         monthly_limit: 1000,
         current_usage: 250,
         active: true
@@ -53,9 +53,11 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
     end
 
     test "displays API keys", %{conn: conn, staff: staff, customer: customer} do
-      # Create API keys for the customer
-      {:ok, api_key1} = Rsolv.Customers.create_api_key(customer, %{name: "Production Key"})
-      {:ok, api_key2} = Rsolv.Customers.create_api_key(customer, %{name: "Test Key"})
+      # Create API keys for the customer - extract the record from return value
+      {:ok, %{record: api_key1}} =
+        Rsolv.Customers.create_api_key(customer, %{name: "Production Key"})
+
+      {:ok, %{record: api_key2}} = Rsolv.Customers.create_api_key(customer, %{name: "Test Key"})
 
       conn = log_in_customer(conn, staff)
       {:ok, _view, html} = live(conn, "/admin/customers/#{customer.id}")
@@ -63,8 +65,9 @@ defmodule RsolvWeb.Admin.CustomerLive.ShowTest do
       assert html =~ "API Keys"
       assert html =~ "Production Key"
       assert html =~ "Test Key"
-      assert html =~ String.slice(api_key1.key, 0, 8)
-      assert html =~ String.slice(api_key2.key, 0, 8)
+      # UI shows first 12 chars of key_hash, not raw key
+      assert html =~ String.slice(api_key1.key_hash, 0, 12)
+      assert html =~ String.slice(api_key2.key_hash, 0, 12)
     end
 
     test "generates new API key and displays full key in modal", %{

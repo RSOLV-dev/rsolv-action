@@ -39,11 +39,12 @@ defmodule Rsolv.ValidationCache.KeyGenerator do
       when (is_integer(forge_account_id) or is_binary(forge_account_id)) and
              is_binary(repository) and
              is_list(locations) and
-             is_binary(vulnerability_type) do
+             (is_binary(vulnerability_type) or is_nil(vulnerability_type)) do
     validate_locations!(locations)
 
     location_string = format_locations(locations)
-    "#{forge_account_id}/#{repository}/[#{location_string}]:#{vulnerability_type}"
+    type_suffix = if vulnerability_type, do: ":#{vulnerability_type}", else: ""
+    "#{forge_account_id}/#{repository}/[#{location_string}]#{type_suffix}"
   end
 
   defp validate_locations!([]), do: raise(ArgumentError, "Locations cannot be empty")

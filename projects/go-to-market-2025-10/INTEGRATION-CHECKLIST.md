@@ -66,13 +66,15 @@
 - [ ] Stripe webhook tests using `stripe-cli` fixtures
 
 ### Core Functionality
-- [ ] Stripe integration working in test mode (API keys in `.env`)
-- [ ] `Billing.create_stripe_customer/1` implemented and tested
-- [ ] `Billing.credit_customer/3` implemented and tested
+- [x] Stripe integration working in test mode (API keys in `.env`)
+- [x] `Billing.create_stripe_customer/1` implemented and tested
+- [x] `Billing.credit_customer/3` implemented and tested
+- [x] `Billing.add_payment_method/3` implemented and tested (✅ See: RFC-066-PAYMENT-METHOD-VERIFICATION.md)
+- [x] `Billing.subscribe_to_pro/1` implemented and tested (✅ See: RFC-066-PAYMENT-METHOD-VERIFICATION.md)
 - [ ] Webhook endpoint `POST /webhooks/stripe` receiving events
 - [ ] Webhook signature verification working
-- [ ] Credit ledger tracking transactions correctly
-- [ ] Database migrations applied cleanly
+- [x] Credit ledger tracking transactions correctly
+- [x] Database migrations applied cleanly
 
 ### Webhook Events Handled
 - [ ] `customer.subscription.created`

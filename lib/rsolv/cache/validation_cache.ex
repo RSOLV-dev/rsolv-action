@@ -110,11 +110,17 @@ defmodule Rsolv.Cache.ValidationCache do
   def generate_key(vulnerability, file_content) do
     # Create a unique key based on vulnerability details and file content
     # Don't include ID since the same vulnerability might be reported multiple times
+    # Uses standardized field names: type and file
+    pattern_id = vulnerability["type"] || vulnerability[:type]
+    file_path = vulnerability["file"] || vulnerability[:file]
+    line = vulnerability["line"] || vulnerability[:line]
+    code = vulnerability["code"] || vulnerability[:code]
+
     data = {
-      vulnerability["patternId"],
-      vulnerability["filePath"],
-      vulnerability["line"],
-      vulnerability["code"],
+      pattern_id,
+      file_path,
+      line,
+      code,
       # Include a hash of the file content to detect changes
       :crypto.hash(:sha256, file_content)
     }

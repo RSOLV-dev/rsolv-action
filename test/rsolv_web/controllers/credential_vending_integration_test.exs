@@ -23,23 +23,24 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
           monthly_limit: 100,
           current_usage: 15,
           trial: true,
-          subscription_plan: "standard"
+          subscription_type: "standard"
         })
 
       # Create API key
-      {:ok, api_key} =
+      {:ok, api_key_result} =
         Customers.create_api_key(customer, %{
           name: "Test Key",
           permissions: ["full_access"]
         })
 
-      {:ok, customer: customer, api_key: api_key.key}
+      # Extract raw key for use in headers
+      {:ok, customer: customer, raw_api_key: api_key_result.raw_key}
     end
 
     test "should return real API keys when environment variables are set", %{
       conn: conn,
       customer: _customer,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       # Test that environment variables are properly loaded
       anthropic_key = System.get_env("ANTHROPIC_API_KEY")
@@ -49,7 +50,8 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       # Test credential exchange endpoint
       conn =
         conn
-        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/credentials/exchange", %{
           "providers" => ["anthropic"],
           "ttl_minutes" => 60
@@ -72,7 +74,7 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
 
     test "credentials module should return real API keys", %{
       customer: customer,
-      api_key: _api_key
+      raw_api_key: _raw_api_key
     } do
       # Test direct credential creation
       {:ok, credential} =
@@ -93,7 +95,7 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
 
     test "format_credentials should properly extract API keys", %{
       customer: customer,
-      api_key: _api_key
+      raw_api_key: _raw_api_key
     } do
       # Create a credential
       {:ok, credential} =
@@ -111,14 +113,19 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       refute String.contains?(formatted["anthropic"]["api_key"], "mock")
     end
 
-    test "should handle multiple providers", %{conn: conn, customer: _customer, api_key: api_key} do
+    test "should handle multiple providers", %{
+      conn: conn,
+      customer: _customer,
+      raw_api_key: raw_api_key
+    } do
       # Set up environment variables for multiple providers
       System.put_env("OPENAI_API_KEY", "sk-test-openai-key")
       System.put_env("OPENROUTER_API_KEY", "sk-or-test-key")
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/credentials/exchange", %{
           "providers" => ["anthropic", "openai", "openrouter"],
           "ttl_minutes" => 60
@@ -142,11 +149,12 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
     test "should include GitHub metadata when headers are present", %{
       conn: conn,
       customer: customer,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key)
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("x-api-key", raw_api_key)
         |> put_req_header("x-github-job", "test-job-123")
         |> put_req_header("x-github-run", "test-run-456")
         |> post("/api/v1/credentials/exchange", %{

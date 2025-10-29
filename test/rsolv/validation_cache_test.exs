@@ -14,7 +14,7 @@ defmodule Rsolv.ValidationCacheTest do
       %Customer{
         name: "Test Customer #{unique_id}",
         email: "test#{unique_id}@example.com",
-        subscription_plan: "trial"
+        subscription_type: "trial"
       }
       |> Repo.insert!()
 

@@ -5,22 +5,22 @@ defmodule Rsolv.Billing.MoneyTest do
 
   describe "ex_money formatting" do
     test "formats currency correctly" do
-      # Test basic formatting
+      # Test basic formatting (Money amounts are in cents)
       money = Money.new(:USD, 1000)
-      assert Money.to_string(money) == "$10.00"
+      assert Money.to_string(money) == {:ok, "$1,000.00"}
 
       # Test with cents
       money = Money.new(:USD, 1050)
-      assert Money.to_string(money) == "$10.50"
+      assert Money.to_string(money) == {:ok, "$1,050.00"}
 
       # Test large amounts
       money = Money.new(:USD, 50000)
-      assert Money.to_string(money) == "$500.00"
+      assert Money.to_string(money) == {:ok, "$50,000.00"}
     end
 
     test "handles zero amounts" do
       money = Money.new(:USD, 0)
-      assert Money.to_string(money) == "$0.00"
+      assert Money.to_string(money) == {:ok, "$0.00"}
     end
 
     test "supports arithmetic operations" do
@@ -28,10 +28,10 @@ defmodule Rsolv.Billing.MoneyTest do
       m2 = Money.new(:USD, 500)
 
       {:ok, result} = Money.add(m1, m2)
-      assert Money.to_string(result) == "$15.00"
+      assert Money.to_string(result) == {:ok, "$1,500.00"}
 
       {:ok, result} = Money.sub(m1, m2)
-      assert Money.to_string(result) == "$5.00"
+      assert Money.to_string(result) == {:ok, "$500.00"}
     end
 
     test "prevents mixing currencies" do

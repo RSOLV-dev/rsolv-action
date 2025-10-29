@@ -256,7 +256,7 @@ defmodule RsolvWeb.Admin.CustomerLiveTest do
           email: "brand.new@example.com",
           password: "SecurePassword123!",
           active: "on",
-          subscription_plan: "pro",
+          subscription_type: "pro",
           monthly_limit: 5000
         }
       )

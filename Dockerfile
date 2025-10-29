@@ -23,6 +23,9 @@ COPY config config
 RUN mix deps.get --only prod && \
     mix deps.compile
 
+# Copy source code (needed by Tailwind to scan for classes)
+COPY lib lib
+
 # Copy assets and non-static priv files
 COPY assets assets
 COPY priv/repo priv/repo
@@ -31,11 +34,8 @@ COPY priv/benchmarks priv/benchmarks
 COPY priv/blog priv/blog
 COPY priv/grafana_dashboards priv/grafana_dashboards
 
-# Build assets
+# Build assets (now lib/ exists so Tailwind can scan components)
 RUN rm -rf priv/static && mix assets.deploy
-
-# Copy source code
-COPY lib lib
 
 # Copy the correct static files
 COPY priv/static priv/static

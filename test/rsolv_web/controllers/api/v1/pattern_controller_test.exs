@@ -7,11 +7,11 @@ defmodule RsolvWeb.Api.V1.PatternControllerTest do
       setup_api_auth()
     end
 
-    test "returns all 132 patterns with valid API key", %{conn: conn, api_key: api_key} do
+    test "returns all 132 patterns with valid API key", %{conn: conn, raw_api_key: raw_api_key} do
       # Simulate request with API key
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> get("/api/v1/patterns?language=javascript")
 
       assert %{
@@ -58,7 +58,7 @@ defmodule RsolvWeb.Api.V1.PatternControllerTest do
 
     test "returns correct total pattern count of 132 across all languages", %{
       conn: conn,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       languages = ["javascript", "python", "ruby", "java", "elixir", "php"]
 
@@ -66,7 +66,7 @@ defmodule RsolvWeb.Api.V1.PatternControllerTest do
         languages
         |> Enum.map(fn lang ->
           build_conn()
-          |> put_req_header("x-api-key", api_key.key)
+          |> put_req_header("x-api-key", raw_api_key)
           |> get("/api/v1/patterns?language=#{lang}")
           |> json_response(200)
           |> Map.get("patterns")
@@ -79,10 +79,10 @@ defmodule RsolvWeb.Api.V1.PatternControllerTest do
       assert total_patterns == 132
     end
 
-    test "patterns do not contain tier field", %{conn: conn, api_key: api_key} do
+    test "patterns do not contain tier field", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer #{api_key.key}")
+        |> put_req_header("authorization", "Bearer #{raw_api_key}")
         |> get("/api/v1/patterns?language=javascript")
 
       %{"patterns" => patterns} = json_response(conn, 200)
@@ -93,10 +93,13 @@ defmodule RsolvWeb.Api.V1.PatternControllerTest do
       end)
     end
 
-    test "response does not contain accessible_tiers field", %{conn: conn, api_key: api_key} do
+    test "response does not contain accessible_tiers field", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer #{api_key.key}")
+        |> put_req_header("authorization", "Bearer #{raw_api_key}")
         |> get("/api/v1/patterns?language=javascript")
 
       response = json_response(conn, 200)

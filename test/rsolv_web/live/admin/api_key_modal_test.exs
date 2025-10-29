@@ -8,9 +8,11 @@ defmodule RsolvWeb.Admin.ApiKeyModalTest do
   setup do
     staff = staff_customer_fixture()
     customer = customer_fixture(name: "Test Customer")
-    {:ok, api_key} = Rsolv.Customers.create_api_key(customer, %{name: "Test Key"})
 
-    %{staff: staff, customer: customer, api_key: api_key}
+    {:ok, %{record: api_key, raw_key: raw_key}} =
+      Rsolv.Customers.create_api_key(customer, %{name: "Test Key"})
+
+    %{staff: staff, customer: customer, api_key: api_key, raw_key: raw_key}
   end
 
   describe "Delete modal" do

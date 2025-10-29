@@ -102,15 +102,16 @@ defmodule RsolvWeb.Api.V1.PatternController do
     try do
       Logger.info("Pattern API called with params: #{inspect(params)}")
 
-      language = params["language"] || "javascript"
+      # Handle both atom and string keys from OpenApiSpex
+      language = params[:language] || params["language"] || "javascript"
 
       format =
-        case params["format"] do
+        case params[:format] || params["format"] do
           "enhanced" -> :enhanced
           _ -> :standard
         end
 
-      include_metadata = params["include_metadata"] == "true"
+      include_metadata = params[:include_metadata] == true || params["include_metadata"] == "true"
 
       Logger.info("Language: #{language}, Format: #{format}")
 
@@ -261,6 +262,12 @@ defmodule RsolvWeb.Api.V1.PatternController do
         in: :query,
         description: "Response format (standard or enhanced)",
         type: :string
+      ],
+      include_metadata: [
+        in: :query,
+        description: "Include detailed vulnerability metadata",
+        type: :boolean,
+        example: false
       ]
     ],
     responses: [
@@ -273,9 +280,9 @@ defmodule RsolvWeb.Api.V1.PatternController do
   @doc """
   Get security patterns for a specific language.
   """
-  def by_language(conn, %{"language" => language} = params) do
+  def by_language(conn, %{language: language} = params) do
     # Add language to params and delegate to index
-    enhanced_params = Map.put(params, "language", language)
+    enhanced_params = Map.put(params, :language, language)
     index(conn, enhanced_params)
   end
 
@@ -486,7 +493,10 @@ defmodule RsolvWeb.Api.V1.PatternController do
     security: [%{}, %{"ApiKeyAuth" => []}]
   )
 
-  def metadata(conn, %{"id" => pattern_id}) do
+  def metadata(conn, params) do
+    # Handle both atom and string keys from OpenApiSpex
+    pattern_id = params[:id] || params["id"]
+
     # Check if pattern exists and has metadata
     case get_pattern_metadata(pattern_id) do
       nil ->

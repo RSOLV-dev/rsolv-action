@@ -39,13 +39,21 @@ defmodule Rsolv.CustomerOnboarding do
       "🎯 [CustomerOnboarding] Starting provisioning for #{inspect(attrs["email"] || attrs[:email])}"
     )
 
-    with :ok <- validate_email(attrs["email"] || attrs[:email]) do
-      attrs
-      |> add_provisioning_defaults()
-      |> validate_and_create()
-    else
-      {:error, reason} -> {:error, reason}
-    end
+    start_time = System.monotonic_time(:millisecond)
+
+    result =
+      with :ok <- validate_email(attrs["email"] || attrs[:email]) do
+        attrs
+        |> add_provisioning_defaults()
+        |> validate_and_create()
+      else
+        {:error, reason} -> {:error, reason}
+      end
+
+    # Emit telemetry event
+    emit_telemetry(result, start_time)
+
+    result
   end
 
   # Validate email against disposable domains
@@ -162,4 +170,40 @@ defmodule Rsolv.CustomerOnboarding do
     Logger.error("❌ [CustomerOnboarding] Provisioning failed: #{inspect(reason)}")
     {:error, reason}
   end
+
+  # Emit telemetry events following RFC-060 patterns (RFC-065 Week 3)
+  defp emit_telemetry({:ok, %{customer: customer, api_key: _}}, start_time) do
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    :telemetry.execute(
+      [:rsolv, :customer_onboarding, :complete],
+      %{duration: duration, count: 1},
+      %{status: "success", customer_id: customer.id, source: "api"}
+    )
+
+    Logger.debug("📊 [CustomerOnboarding] Telemetry: success in #{duration}ms")
+  end
+
+  defp emit_telemetry({:error, error}, _start_time) do
+    reason = format_error_reason(error)
+
+    :telemetry.execute(
+      [:rsolv, :customer_onboarding, :failed],
+      %{count: 1},
+      %{reason: reason, source: "api"}
+    )
+
+    Logger.debug("📊 [CustomerOnboarding] Telemetry: failed (#{reason})")
+  end
+
+  # Format error reasons for telemetry metadata
+  defp format_error_reason({:validation_failed, message}) when is_binary(message), do: message
+
+  defp format_error_reason({:validation_failed, %Ecto.Changeset{errors: errors}}) do
+    errors
+    |> Enum.map(fn {field, {message, _}} -> "#{field}: #{message}" end)
+    |> Enum.join(", ")
+  end
+
+  defp format_error_reason(other), do: inspect(other)
 end

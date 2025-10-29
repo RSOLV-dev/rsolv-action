@@ -319,13 +319,17 @@ defmodule Rsolv.AST.TestScorer do
     # Calculate Jaccard similarity
     base_score = directory_base_score(norm1, norm2)
 
-    # Apply penalty if prefixes differ (except for strongly-paired prefixes)
-    penalty = prefix_mismatch_penalty(dirs1, dirs2, norm1, norm2)
-
     # Boost score if there's any directory overlap even after normalization
     overlap_bonus = if has_any_directory_overlap?(norm1, norm2), do: 0.2, else: 0.0
 
-    base_score - penalty + overlap_bonus
+    # Cap at 0.5 first to ensure total path_similarity_score stays at or below 1.0
+    # (file_score max 0.5 + dir_score max 0.5 = 1.0)
+    capped_score = min(base_score + overlap_bonus, 0.5)
+
+    # Apply penalty AFTER capping if prefixes differ (except for strongly-paired prefixes)
+    penalty = prefix_mismatch_penalty(dirs1, dirs2, norm1, norm2)
+
+    capped_score - penalty
   end
 
   defp directory_base_score([], []), do: 0.5

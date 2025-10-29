@@ -144,7 +144,8 @@ defmodule Rsolv.EmailService do
         end
 
       # Check if we're in test mode
-      current_env = Application.get_env(:rsolv, :env) || Mix.env()
+      # Mix.env() is not available in releases, default to :prod
+      current_env = Application.get_env(:rsolv, :env) || :prod
 
       Logger.info("[EMAIL DEBUG] Postmark configuration",
         adapter: postmark_config[:adapter],

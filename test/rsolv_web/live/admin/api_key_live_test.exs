@@ -9,10 +9,15 @@ defmodule RsolvWeb.Admin.ApiKeyLiveTest do
     customer1 = customer_fixture(email: "customer1@example.com", name: "Customer 1")
     customer2 = customer_fixture(email: "customer2@example.com", name: "Customer 2")
 
-    # Create API keys for testing
-    {:ok, key1} = Rsolv.Customers.create_api_key(customer1, %{name: "Production Key"})
-    {:ok, key2} = Rsolv.Customers.create_api_key(customer1, %{name: "Test Key"})
-    {:ok, key3} = Rsolv.Customers.create_api_key(customer2, %{name: "Development Key"})
+    # Create API keys for testing - extract the record from the return value
+    {:ok, %{record: key1, raw_key: raw_key1}} =
+      Rsolv.Customers.create_api_key(customer1, %{name: "Production Key"})
+
+    {:ok, %{record: key2, raw_key: raw_key2}} =
+      Rsolv.Customers.create_api_key(customer1, %{name: "Test Key"})
+
+    {:ok, %{record: key3, raw_key: raw_key3}} =
+      Rsolv.Customers.create_api_key(customer2, %{name: "Development Key"})
 
     %{
       staff: staff,
@@ -20,7 +25,10 @@ defmodule RsolvWeb.Admin.ApiKeyLiveTest do
       customer2: customer2,
       key1: key1,
       key2: key2,
-      key3: key3
+      key3: key3,
+      raw_key1: raw_key1,
+      raw_key2: raw_key2,
+      raw_key3: raw_key3
     }
   end
 
@@ -45,23 +53,24 @@ defmodule RsolvWeb.Admin.ApiKeyLiveTest do
       assert html =~ "Customer 1"
       assert html =~ "Customer 2"
 
-      # Check that key prefixes are shown
-      assert html =~ String.slice(key1.key, 0, 8)
-      assert html =~ String.slice(key2.key, 0, 8)
-      assert html =~ String.slice(key3.key, 0, 8)
+      # Check that key hash prefixes are shown (UI shows first 12 chars of key_hash)
+      assert html =~ String.slice(key1.key_hash, 0, 12)
+      assert html =~ String.slice(key2.key_hash, 0, 12)
+      assert html =~ String.slice(key3.key_hash, 0, 12)
     end
 
     test "shows status of API keys", %{conn: conn, staff: staff} do
       customer = customer_fixture()
 
-      {:ok, active_key} =
+      {:ok, %{record: _active_key}} =
         Rsolv.Customers.create_api_key(customer, %{name: "Active Key", active: true})
 
-      {:ok, inactive_key} =
-        Rsolv.Customers.update_api_key(
-          Rsolv.Customers.create_api_key(customer, %{name: "Inactive Key"}) |> elem(1),
-          %{active: false}
-        )
+      # Create inactive key - first create it, then extract the record and update it
+      {:ok, %{record: inactive_key_record}} =
+        Rsolv.Customers.create_api_key(customer, %{name: "Inactive Key"})
+
+      {:ok, _inactive_key} =
+        Rsolv.Customers.update_api_key(inactive_key_record, %{active: false})
 
       conn = log_in_customer(conn, staff)
       {:ok, _view, html} = live(conn, "/admin/api-keys")

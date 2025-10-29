@@ -46,7 +46,7 @@ defmodule RsolvWeb.Admin.CustomerLiveApiKeyTest do
       assert length(api_keys) == initial_count + 1
 
       # Verify the key exists in database with correct attributes
-      saved_key = Repo.get_by(Customers.ApiKey, key: generated_key)
+      saved_key = Customers.get_api_key_by_key(generated_key)
       assert saved_key != nil
       assert saved_key.customer_id == customer.id
       assert saved_key.active == true
@@ -93,7 +93,7 @@ defmodule RsolvWeb.Admin.CustomerLiveApiKeyTest do
       generated_key = extract_api_key_from_html(html)
 
       # Verify key is active
-      api_key = Repo.get_by(Customers.ApiKey, key: generated_key)
+      api_key = Customers.get_api_key_by_key(generated_key)
       assert api_key.active == true
     end
 
@@ -128,14 +128,18 @@ defmodule RsolvWeb.Admin.CustomerLiveApiKeyTest do
 
       # Verify both keys exist and are different
       assert key1 != key2
-      assert Repo.get_by(Customers.ApiKey, key: key1) != nil
-      assert Repo.get_by(Customers.ApiKey, key: key2) != nil
+      assert Customers.get_api_key_by_key(key1) != nil
+      assert Customers.get_api_key_by_key(key2) != nil
 
       # Verify both belong to same customer
       api_keys = Customers.list_api_keys(customer)
       assert length(api_keys) >= 2
-      assert Enum.any?(api_keys, &(&1.key == key1))
-      assert Enum.any?(api_keys, &(&1.key == key2))
+
+      # Verify both keys can be looked up successfully (they're hashed in DB)
+      api_key1 = Customers.get_api_key_by_key(key1)
+      api_key2 = Customers.get_api_key_by_key(key2)
+      assert Enum.any?(api_keys, &(&1.id == api_key1.id))
+      assert Enum.any?(api_keys, &(&1.id == api_key2.id))
     end
   end
 

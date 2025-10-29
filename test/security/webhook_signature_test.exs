@@ -19,6 +19,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
         conn
         |> put_req_header("stripe-signature", signature)
         |> put_req_header("content-type", "application/json")
+        |> put_private(:raw_body, @valid_payload)
         |> post("/api/webhooks/stripe", @valid_payload)
 
       # Should accept valid signature (200 or 202)
@@ -33,6 +34,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
         conn
         |> put_req_header("stripe-signature", invalid_signature)
         |> put_req_header("content-type", "application/json")
+        |> put_private(:raw_body, @valid_payload)
         |> post("/api/webhooks/stripe", @valid_payload)
 
       # Should reject with 400 or 401
@@ -44,6 +46,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
       conn =
         conn
         |> put_req_header("content-type", "application/json")
+        |> put_private(:raw_body, @valid_payload)
         |> post("/api/webhooks/stripe", @valid_payload)
 
       assert conn.status in [400, 401]
@@ -58,6 +61,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
         conn
         |> put_req_header("stripe-signature", signature)
         |> put_req_header("content-type", "application/json")
+        |> put_private(:raw_body, @valid_payload)
         |> post("/api/webhooks/stripe", @valid_payload)
 
       # Should reject old signatures (prevents replay attacks)
@@ -73,6 +77,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
         conn
         |> put_req_header("stripe-signature", signature)
         |> put_req_header("content-type", "application/json")
+        |> put_private(:raw_body, @valid_payload)
         |> post("/api/webhooks/stripe", @valid_payload)
 
       assert conn.status in [400, 401]
@@ -89,6 +94,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
         conn
         |> put_req_header("stripe-signature", signature)
         |> put_req_header("content-type", "application/json")
+        |> put_private(:raw_body, tampered_payload)
         |> post("/api/webhooks/stripe", tampered_payload)
 
       assert conn.status in [400, 401]
@@ -106,6 +112,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
         build_conn()
         |> put_req_header("stripe-signature", signature)
         |> put_req_header("content-type", "application/json")
+        |> put_private(:raw_body, payload)
         |> post("/api/webhooks/stripe", payload)
 
       assert conn1.status in [200, 202, 204]
@@ -115,6 +122,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
         build_conn()
         |> put_req_header("stripe-signature", signature)
         |> put_req_header("content-type", "application/json")
+        |> put_private(:raw_body, payload)
         |> post("/api/webhooks/stripe", payload)
 
       # Should detect duplicate (idempotency check)
@@ -138,6 +146,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
           build_conn()
           |> put_req_header("stripe-signature", sig)
           |> put_req_header("content-type", "application/json")
+          |> put_private(:raw_body, @valid_payload)
           |> post("/api/webhooks/stripe", @valid_payload)
 
         assert conn.status in [400, 401],
@@ -154,6 +163,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
         conn
         |> put_req_header("stripe-signature", invalid_version_sig)
         |> put_req_header("content-type", "application/json")
+        |> put_private(:raw_body, @valid_payload)
         |> post("/api/webhooks/stripe", @valid_payload)
 
       assert conn.status in [400, 401]

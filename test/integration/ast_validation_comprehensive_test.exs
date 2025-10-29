@@ -1,8 +1,12 @@
 defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
-  use RsolvWeb.ConnCase, async: true
+  use RsolvWeb.ConnCase, async: false
   import Rsolv.APITestHelpers
 
+  # Disable caching for each test in this module - these tests specifically test comment detection
   setup do
+    # Ensure flag is disabled at start of each test (in case it got re-enabled)
+    FunWithFlags.disable(:false_positive_caching)
+
     setup_api_auth()
   end
 
@@ -10,7 +14,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
     test "detects single-line JavaScript comments", %{
       conn: conn,
       customer: customer,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       test_cases = [
         # Basic single-line comment
@@ -39,7 +43,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       ]
 
       for test_case <- test_cases do
-        result = validate_vulnerability(conn, customer, api_key, test_case)
+        result = validate_vulnerability(conn, customer, raw_api_key, test_case)
 
         if test_case.should_reject do
           assert result["isValid"] == false
@@ -53,10 +57,11 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       end
     end
 
+    @tag :rfc_042
     test "detects multi-line JavaScript comments", %{
       conn: conn,
       customer: customer,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       test_cases = [
         # Basic multi-line comment
@@ -76,13 +81,13 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       ]
 
       for test_case <- test_cases do
-        result = validate_vulnerability(conn, customer, api_key, test_case)
+        result = validate_vulnerability(conn, customer, raw_api_key, test_case)
         assert result["isValid"] == false
         assert result["reason"] =~ "comment"
       end
     end
 
-    test "detects Python comments", %{conn: conn, customer: customer, api_key: api_key} do
+    test "detects Python comments", %{conn: conn, customer: customer, raw_api_key: raw_api_key} do
       test_cases = [
         # Single-line Python comment
         %{
@@ -101,13 +106,13 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       ]
 
       for test_case <- test_cases do
-        result = validate_vulnerability(conn, customer, api_key, test_case)
+        result = validate_vulnerability(conn, customer, raw_api_key, test_case)
         assert result["isValid"] == false
         assert result["reason"] =~ "comment"
       end
     end
 
-    test "detects Ruby comments", %{conn: conn, customer: customer, api_key: api_key} do
+    test "detects Ruby comments", %{conn: conn, customer: customer, raw_api_key: raw_api_key} do
       test_cases = [
         # Single-line Ruby comment
         %{
@@ -126,7 +131,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       ]
 
       for test_case <- test_cases do
-        result = validate_vulnerability(conn, customer, api_key, test_case)
+        result = validate_vulnerability(conn, customer, raw_api_key, test_case)
         assert result["isValid"] == false
         assert result["reason"] =~ "comment"
       end
@@ -134,7 +139,11 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
   end
 
   describe "String Literal Detection Tests" do
-    test "detects JavaScript string literals", %{conn: conn, customer: customer, api_key: api_key} do
+    test "detects JavaScript string literals", %{
+      conn: conn,
+      customer: customer,
+      raw_api_key: raw_api_key
+    } do
       test_cases = [
         # Single quotes
         %{
@@ -169,7 +178,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       ]
 
       for test_case <- test_cases do
-        result = validate_vulnerability(conn, customer, api_key, test_case)
+        result = validate_vulnerability(conn, customer, raw_api_key, test_case)
 
         if test_case.should_reject do
           assert result["isValid"] == false
@@ -183,7 +192,11 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       end
     end
 
-    test "detects Python string literals", %{conn: conn, customer: customer, api_key: api_key} do
+    test "detects Python string literals", %{
+      conn: conn,
+      customer: customer,
+      raw_api_key: raw_api_key
+    } do
       test_cases = [
         # Single quotes
         %{
@@ -202,7 +215,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       ]
 
       for test_case <- test_cases do
-        result = validate_vulnerability(conn, customer, api_key, test_case)
+        result = validate_vulnerability(conn, customer, raw_api_key, test_case)
         assert result["isValid"] == false
         assert result["reason"] =~ "string literal"
       end
@@ -210,7 +223,11 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
   end
 
   describe "User Input Flow Detection Tests" do
-    test "detects direct user input usage", %{conn: conn, customer: customer, api_key: api_key} do
+    test "detects direct user input usage", %{
+      conn: conn,
+      customer: customer,
+      raw_api_key: raw_api_key
+    } do
       test_cases = [
         # Direct request parameter
         %{
@@ -247,7 +264,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       ]
 
       for test_case <- test_cases do
-        result = validate_vulnerability(conn, customer, api_key, test_case)
+        result = validate_vulnerability(conn, customer, raw_api_key, test_case)
 
         assert result["isValid"] == true
 
@@ -265,7 +282,11 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
   end
 
   describe "Edge Cases and Error Handling" do
-    test "handles malformed code gracefully", %{conn: conn, customer: customer, api_key: api_key} do
+    test "handles malformed code gracefully", %{
+      conn: conn,
+      customer: customer,
+      raw_api_key: raw_api_key
+    } do
       test_cases = [
         # Incomplete code
         %{
@@ -291,7 +312,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       ]
 
       for test_case <- test_cases do
-        result = validate_vulnerability(conn, customer, api_key, test_case)
+        result = validate_vulnerability(conn, customer, raw_api_key, test_case)
 
         # Should not crash - should return a result
         assert Map.has_key?(result, "isValid")
@@ -302,7 +323,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
     test "handles very large files efficiently", %{
       conn: conn,
       customer: customer,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       # Generate a large file with vulnerability near the end
       large_content =
@@ -315,7 +336,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       large_content = large_content <> "\neval(userInput); // Line #{vulnerable_line}"
 
       result =
-        validate_vulnerability(conn, customer, api_key, %{
+        validate_vulnerability(conn, customer, raw_api_key, %{
           code: "eval(userInput)",
           line: vulnerable_line,
           content: large_content,
@@ -332,15 +353,15 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
     test "processes large batches efficiently", %{
       conn: conn,
       customer: customer,
-      api_key: api_key
+      raw_api_key: raw_api_key
     } do
       # Create 100 vulnerabilities
       vulnerabilities =
         Enum.map(1..100, fn i ->
           %{
             "id" => "vuln-#{i}",
-            "patternId" => "js-eval-injection",
-            "filePath" => "file#{i}.js",
+            "type" => "js-eval-injection",
+            "file" => "file#{i}.js",
             "line" => 1,
             "code" => if(rem(i, 2) == 0, do: "// eval(x)", else: "eval(x)"),
             "severity" => "critical"
@@ -362,7 +383,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/vulnerabilities/validate", request_data)
 
@@ -387,9 +408,13 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
   end
 
   describe "Different Language Support" do
-    test "validates PHP vulnerabilities", %{conn: conn, customer: customer, api_key: api_key} do
+    test "validates PHP vulnerabilities", %{
+      conn: conn,
+      customer: customer,
+      raw_api_key: raw_api_key
+    } do
       result =
-        validate_vulnerability(conn, customer, api_key, %{
+        validate_vulnerability(conn, customer, raw_api_key, %{
           code: "eval($_POST['code'])",
           line: 5,
           content: """
@@ -407,9 +432,13 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       assert result["confidence"] >= 0.9
     end
 
-    test "validates Ruby vulnerabilities", %{conn: conn, customer: customer, api_key: api_key} do
+    test "validates Ruby vulnerabilities", %{
+      conn: conn,
+      customer: customer,
+      raw_api_key: raw_api_key
+    } do
       result =
-        validate_vulnerability(conn, customer, api_key, %{
+        validate_vulnerability(conn, customer, raw_api_key, %{
           code: "eval(params[:code])",
           line: 3,
           content: """
@@ -425,9 +454,13 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       assert result["confidence"] >= 0.9
     end
 
-    test "validates Python vulnerabilities", %{conn: conn, customer: customer, api_key: api_key} do
+    test "validates Python vulnerabilities", %{
+      conn: conn,
+      customer: customer,
+      raw_api_key: raw_api_key
+    } do
       result =
-        validate_vulnerability(conn, customer, api_key, %{
+        validate_vulnerability(conn, customer, raw_api_key, %{
           code: "exec(request.form['code'])",
           line: 4,
           content: """
@@ -446,7 +479,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
   end
 
   # Helper function to validate a single vulnerability
-  defp validate_vulnerability(conn, _customer, api_key, test_case) do
+  defp validate_vulnerability(conn, _customer, raw_api_key, test_case) do
     # Use app.js instead of test.js to avoid test file confidence reduction
     file_path = Map.get(test_case, :file_path, "app.js")
 
@@ -454,8 +487,8 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
       "vulnerabilities" => [
         %{
           "id" => "test-vuln",
-          "patternId" => "eval-injection",
-          "filePath" => file_path,
+          "type" => "eval-injection",
+          "file" => file_path,
           "line" => test_case.line,
           "code" => test_case.code,
           "severity" => "critical"
@@ -468,7 +501,7 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
 
     conn =
       conn
-      |> put_req_header("x-api-key", api_key.key)
+      |> put_req_header("x-api-key", raw_api_key)
       |> put_req_header("content-type", "application/json")
       |> post("/api/v1/vulnerabilities/validate", request_data)
 

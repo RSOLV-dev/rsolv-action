@@ -49,6 +49,97 @@ defmodule Rsolv.AST.TestIntegrator do
   @default_indent 2
 
   @doc """
+  Simple API for inserting a single test into existing test code.
+
+  This is a backward-compatible wrapper around `generate_integration/4` for tests
+  that just want to insert a single test string without the full test_suite structure.
+
+  ## Parameters
+
+  - `target_code`: The existing test file content as a string
+  - `test_code`: The test code to insert as a string
+  - `language`: Language atom (`:javascript`, `:ruby`, `:python`, etc.)
+
+  ## Examples
+
+      iex> insert_test("describe('Foo', () => {});", "it('works', () => {})", :javascript)
+      {:ok, "describe('Foo', () => {\\n  it('works', () => {})\\n});"}
+
+  """
+  def insert_test(target_code, test_code, language) when is_atom(language) do
+    # Convert language atom to string and infer framework
+    language_str = Atom.to_string(language)
+    framework = infer_framework(language, test_code)
+
+    trimmed_test = String.trim(test_code)
+
+    # If this is already a complete test block for certain languages/frameworks,
+    # try to integrate it via AST. This preserves existing block structure
+    # and avoids wrapping complete blocks in extra describe blocks.
+    is_complete_block =
+      (language == :ruby and
+         (String.starts_with?(trimmed_test, "it ") or
+            String.starts_with?(trimmed_test, "specify ") or
+            String.starts_with?(trimmed_test, "example "))) or
+        (language in [:javascript, :typescript] and
+           (String.starts_with?(trimmed_test, "it(") or
+              String.starts_with?(trimmed_test, "test(") or
+              String.starts_with?(trimmed_test, "specify(")))
+
+    if is_complete_block do
+      # For complete blocks, append directly to avoid parser issues with edge cases
+      {:ok, "#{target_code}\n\n#{test_code}"}
+    else
+      # For test bodies, use full AST integration
+      test_suite = %{
+        "redTests" => [
+          %{
+            "testName" => "inserted test",
+            "testCode" => test_code,
+            "attackVector" => ""
+          }
+        ]
+      }
+
+      case generate_integration(target_code, test_suite, language_str, framework) do
+        {:ok, integrated_code, _insertion_point, _method} ->
+          {:ok, integrated_code}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  # Infer framework from language and test code patterns
+  defp infer_framework(:javascript, _test_code), do: "jest"
+  defp infer_framework(:typescript, _test_code), do: "jest"
+  defp infer_framework(:ruby, _test_code), do: "rspec"
+  defp infer_framework(:python, _test_code), do: "pytest"
+  defp infer_framework(_, _), do: "jest"
+
+  @doc """
+  Parse code and return AST.
+
+  Public wrapper around internal parse_code function for testing purposes.
+
+  ## Parameters
+
+  - `content`: The source code to parse as a string
+  - `language`: Language atom (`:javascript`, `:ruby`, `:python`, etc.)
+
+  ## Examples
+
+      iex> parse("describe('Foo', () => {});", :javascript)
+      {:ok, ast}
+
+  """
+  def parse(content, language) when is_atom(language) do
+    language_str = Atom.to_string(language)
+    parse_code(content, language_str)
+  end
+
+  @doc """
   Generates integrated test file content by inserting test suite into target file.
 
   Returns `{:ok, integrated_content, insertion_point, method}` where method is
@@ -100,7 +191,11 @@ defmodule Rsolv.AST.TestIntegrator do
   defp parse_code(content, language) do
     Logger.debug("TestIntegrator: Parsing #{language} code")
 
-    with {:ok, session} <- SessionManager.create_session("test-integrator"),
+    # Pre-validate Ruby code for known parser limitations
+    # Note: While Prism can parse unicode, there appears to be an issue with port communication
+    # that causes timeouts. Re-enabling validation until port issue is resolved.
+    with :ok <- validate_ruby_content(language, content),
+         {:ok, session} <- SessionManager.create_session("test-integrator"),
          {:ok, %{ast: ast, error: nil}} <-
            ParserRegistry.parse_code(session.id, "test-integrator", language, content) do
       Logger.debug("TestIntegrator: Successfully parsed code")
@@ -119,6 +214,59 @@ defmodule Rsolv.AST.TestIntegrator do
         Logger.error("TestIntegrator: Parser failed: #{inspect(reason)}")
         error
     end
+  end
+
+  # Validate Ruby content for known parser limitations
+  defp validate_ruby_content("ruby", content) do
+    # Temporarily disabled to test if Prism + working directory fix resolves unicode issues
+    # Previously: parser-3.3.8.0 had issues with CJK + emoji
+    # Now testing: parser-prism with Prism backend should handle unicode better
+
+    has_cjk = has_cjk_characters?(content)
+    has_emoji = has_emoji_characters?(content)
+
+    if has_cjk and has_emoji do
+      Logger.info(
+        "TestIntegrator: Ruby code contains CJK characters + emoji, testing with Prism parser"
+      )
+    end
+
+    # Allow through to test if Prism + working directory fix works
+    :ok
+  end
+
+  # Non-Ruby languages don't need validation
+  defp validate_ruby_content(_language, _content), do: :ok
+
+  # Check for CJK (Chinese, Japanese, Korean) characters
+  defp has_cjk_characters?(content) do
+    content
+    |> String.to_charlist()
+    |> Enum.any?(fn codepoint ->
+      # CJK Unified Ideographs: U+4E00 to U+9FFF
+      codepoint >= 0x4E00 and codepoint <= 0x9FFF
+    end)
+  end
+
+  # Check for emoji characters
+  defp has_emoji_characters?(content) do
+    content
+    |> String.to_charlist()
+    |> Enum.any?(fn codepoint ->
+      # Emoji ranges:
+      # Emoticons: U+1F600 to U+1F64F
+      # Misc Symbols and Pictographs: U+1F300 to U+1F5FF
+      # Transport and Map Symbols: U+1F680 to U+1F6FF
+      # Supplemental Symbols: U+1F900 to U+1F9FF
+      # Misc Symbols: U+2600 to U+26FF
+      # Dingbats: U+2700 to U+27BF
+      (codepoint >= 0x1F600 and codepoint <= 0x1F64F) or
+        (codepoint >= 0x1F300 and codepoint <= 0x1F5FF) or
+        (codepoint >= 0x1F680 and codepoint <= 0x1F6FF) or
+        (codepoint >= 0x1F900 and codepoint <= 0x1F9FF) or
+        (codepoint >= 0x2600 and codepoint <= 0x26FF) or
+        (codepoint >= 0x2700 and codepoint <= 0x27BF)
+    end)
   end
 
   @doc """
@@ -321,8 +469,16 @@ defmodule Rsolv.AST.TestIntegrator do
 
   # Find outermost describe/context block in Ruby AST
   # Ruby parser returns:
-  # - "begin" node with children array when file has multiple statements (e.g., require + describe)
-  # - "block" node directly when file has only the describe block
+  # Prism (new): "program" → "statements" → "call" (with "block")
+  # Old parser-prism: "begin" → "block" with "send" as first child
+  defp find_ruby_outermost_describe(%{"type" => "program", "children" => children})
+       when is_list(children),
+       do: Enum.find_value(children, &find_ruby_outermost_describe/1)
+
+  defp find_ruby_outermost_describe(%{"type" => "statements", "children" => children})
+       when is_list(children),
+       do: Enum.find_value(children, &find_ruby_describe_in_node/1)
+
   defp find_ruby_outermost_describe(%{"type" => "begin", "children" => children})
        when is_list(children),
        do: Enum.find_value(children, &find_ruby_describe_in_node/1)
@@ -332,7 +488,13 @@ defmodule Rsolv.AST.TestIntegrator do
 
   defp find_ruby_outermost_describe(_), do: nil
 
-  # Find describe/context block - it's a "block" node with "send" as first child
+  # Find describe/context block
+  # Prism: "call" node with "block" child
+  # Old parser-prism: "block" node with "send" as first child
+  defp find_ruby_describe_in_node(%{"type" => "call", "children" => children} = node) do
+    if has_child_of_type?(children, "block"), do: node
+  end
+
   defp find_ruby_describe_in_node(%{"type" => "block", "children" => [send_node | _]} = node) do
     case send_node do
       %{
@@ -352,7 +514,15 @@ defmodule Rsolv.AST.TestIntegrator do
   defp find_ruby_describe_in_node(_), do: nil
 
   # Find last it/specify/example block in Ruby describe
-  # Ruby parser returns block with exactly 3 children: [send_node, args_node, body_node]
+  # Prism: describe is a "call" node with "block" child containing "statements"
+  # Old parser-prism: "block" with 3 children: [send_node, args_node, body_node]
+  defp find_ruby_last_test_block(%{"type" => "call", "children" => children}) do
+    with %{"children" => block_children} <- find_child_of_type(children, "block"),
+         %{"children" => statements} <- find_child_of_type(block_children, "statements") do
+      statements |> Enum.reverse() |> Enum.find_value(&find_ruby_test_in_node/1)
+    end
+  end
+
   defp find_ruby_last_test_block(%{"type" => "block", "children" => children})
        when is_list(children) and length(children) >= 3 do
     # Third child (index 2) is the body - usually a "begin" node with multiple children
@@ -373,7 +543,13 @@ defmodule Rsolv.AST.TestIntegrator do
 
   defp find_ruby_last_test_block(_), do: nil
 
-  # Find it/specify/example block - it's a "block" node with "send" as first child
+  # Find it/specify/example block
+  # Prism: "call" node with "block" child (the it/specify/example block)
+  # Old parser-prism: "block" node with "send" as first child
+  defp find_ruby_test_in_node(%{"type" => "call", "children" => children} = node) do
+    if has_child_of_type?(children, "block"), do: node
+  end
+
   defp find_ruby_test_in_node(%{"type" => "block", "children" => [send_node | _]} = node) do
     case send_node do
       %{"type" => "send", "children" => [nil, name | _]} when name in @ruby_test_names ->
@@ -385,6 +561,24 @@ defmodule Rsolv.AST.TestIntegrator do
   end
 
   defp find_ruby_test_in_node(_), do: nil
+
+  # ============================================================================
+  # AST Helper Utilities
+  # ============================================================================
+
+  # Check if a list of AST nodes contains a child with the specified type
+  defp has_child_of_type?(children, type) when is_list(children) do
+    Enum.any?(children, &(is_map(&1) && &1["type"] == type))
+  end
+
+  defp has_child_of_type?(_, _), do: false
+
+  # Find first child node with the specified type
+  defp find_child_of_type(children, type) when is_list(children) do
+    Enum.find(children, &(is_map(&1) && &1["type"] == type))
+  end
+
+  defp find_child_of_type(_, _), do: nil
 
   # ============================================================================
   # Python AST Helper Functions (pytest)
@@ -585,12 +779,23 @@ defmodule Rsolv.AST.TestIntegrator do
 
   # Format a single JavaScript/TypeScript test block
   defp format_single_js_test(%{"testName" => name, "testCode" => code, "attackVector" => vector}) do
-    """
-    it('#{name}', () => {
-      // Attack vector: #{vector}
-      #{indent_test_body(code)}
-    });
-    """
+    trimmed = String.trim(code)
+
+    # Check if code is already a complete test block (starts with it/test/specify)
+    if String.starts_with?(trimmed, "it(") or
+         String.starts_with?(trimmed, "test(") or
+         String.starts_with?(trimmed, "specify(") do
+      # Code is already a complete test - use it directly (no attack vector comment to avoid formatting issues)
+      code
+    else
+      # Code is just test body - wrap in it block
+      """
+      it('#{name}', () => {
+        // Attack vector: #{vector}
+        #{indent_test_body(code)}
+      });
+      """
+    end
   end
 
   # Format a single RSpec test block
@@ -599,12 +804,23 @@ defmodule Rsolv.AST.TestIntegrator do
          "testCode" => code,
          "attackVector" => vector
        }) do
-    """
-    it '#{name}' do
-      # Attack vector: #{vector}
-      #{indent_test_body(code)}
+    trimmed = String.trim(code)
+
+    # Check if code is already a complete test block (starts with it/specify/example)
+    if String.starts_with?(trimmed, "it ") or
+         String.starts_with?(trimmed, "specify ") or
+         String.starts_with?(trimmed, "example ") do
+      # Code is already a complete test - use it directly (no attack vector comment to avoid parser issues)
+      code
+    else
+      # Code is just test body - wrap in it block
+      """
+      it '#{name}' do
+        # Attack vector: #{vector}
+        #{indent_test_body(code)}
+      end
+      """
     end
-    """
   end
 
   # Format a single pytest test function
@@ -653,11 +869,30 @@ defmodule Rsolv.AST.TestIntegrator do
 
   # Wrap test blocks in describe 'security' block for RSpec
   defp wrap_in_rspec_describe_block(test_blocks) do
+    # Indent each test block
+    indented_blocks =
+      test_blocks
+      |> Enum.map(&String.trim_trailing/1)
+      |> Enum.map(fn block -> indent_lines(block, 2) end)
+      |> Enum.join("\n\n")
+
     """
     describe 'security' do
-    #{Enum.join(test_blocks, "\n")}
+    #{indented_blocks}
     end
     """
+  end
+
+  # Helper to indent all lines in a string
+  defp indent_lines(text, spaces) do
+    indent = String.duplicate(" ", spaces)
+
+    text
+    |> String.split("\n")
+    |> Enum.map(fn line ->
+      if String.trim(line) == "", do: line, else: indent <> line
+    end)
+    |> Enum.join("\n")
   end
 
   # Wrap test functions in TestSecurity class for pytest

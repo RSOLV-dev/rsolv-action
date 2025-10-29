@@ -15,7 +15,11 @@ config :rsolv, Rsolv.Repo,
   port: 5434,
   database: "rsolv_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10
+  # Increased from 10 to support max_cases: 64 concurrent tests
+  pool_size: 100,
+  # Increase queue timeout to handle spikes
+  queue_target: 5000,
+  queue_interval: 1000
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
@@ -76,3 +80,10 @@ config :fun_with_flags, :cache_bust_notifications,
 # Configure admin emails for testing
 config :rsolv,
   admin_emails: ["admin@test.com"]
+
+# Configure Stripe mocks for testing
+config :rsolv,
+  stripe_client: Rsolv.Billing.StripeMock,
+  stripe_payment_method: Rsolv.Billing.StripeMock,
+  stripe_subscription: Rsolv.Billing.StripeMock,
+  stripe_charge: Rsolv.Billing.StripeMock

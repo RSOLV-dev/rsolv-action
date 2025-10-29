@@ -24,6 +24,7 @@ defmodule Rsolv.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Rsolv.DataCase
+      import Rsolv.CustomerFactory
     end
   end
 

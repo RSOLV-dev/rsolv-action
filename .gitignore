@@ -85,3 +85,6 @@ rsolv-demo-vulnerable/
 
 # Test artifacts
 /test-results/
+
+# Code quality tool output
+credo_output.txt

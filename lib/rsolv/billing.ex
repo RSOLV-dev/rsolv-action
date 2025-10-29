@@ -6,8 +6,9 @@ defmodule Rsolv.Billing do
   import Ecto.Query, warn: false
 
   alias Rsolv.Repo
-  alias Rsolv.Billing.{FixAttempt, StripeService, CreditLedger, Subscription, Config}
+  alias Rsolv.Billing.{FixAttempt, StripeService, CreditLedger, Subscription, Config, Pricing}
   alias Rsolv.Customers.Customer
+  alias Rsolv.Customers
 
   @doc """
   Returns the list of fix_attempts.
@@ -218,7 +219,7 @@ defmodule Rsolv.Billing do
     end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{credit: {customer_with_credits, _transaction}}} ->
+      {:ok, %{credit: %{customer: customer_with_credits}}} ->
         {:ok, customer_with_credits}
 
       {:error, _failed_operation, changeset, _changes} ->
@@ -338,5 +339,215 @@ defmodule Rsolv.Billing do
     customer
     |> Customer.changeset(updates)
     |> Repo.update()
+  end
+
+  # INTEGRATION POINT: RFC-060 Amendment 001
+  # This function is called after validation/mitigation phases complete.
+  @doc """
+  Track fix deployment and consume credit or charge customer.
+
+  Flow:
+  1. Has credits? → Consume 1 credit
+  2. No credits, no billing → Error (block)
+  3. No credits, has billing → Charge → Credit 1 → Consume 1
+
+  ## Examples
+
+      # Has credits - consume directly
+      iex> customer = %Customer{id: 1, credit_balance: 10}
+      iex> fix = %{id: 42}
+      iex> {:ok, %{customer: customer, transaction: txn}} = Billing.track_fix_deployed(customer, fix)
+      iex> txn.balance_after
+      9
+
+      # No credits, no billing - block
+      iex> customer = %Customer{id: 1, credit_balance: 0, stripe_customer_id: nil}
+      iex> fix = %{id: 42}
+      iex> Billing.track_fix_deployed(customer, fix)
+      {:error, :no_billing_info}
+
+      # No credits, has billing - charge then consume
+      iex> customer = %Customer{id: 1, credit_balance: 0, stripe_customer_id: "cus_123", subscription_type: "pay_as_you_go"}
+      iex> fix = %{id: 42}
+      iex> {:ok, :charged_and_consumed} = Billing.track_fix_deployed(customer, fix)
+  """
+  def track_fix_deployed(customer, fix) do
+    # Reload for current balance
+    customer = Customers.get_customer!(customer.id)
+
+    cond do
+      has_credits?(customer) ->
+        consume_fix_credit(customer, fix)
+
+      !has_billing_info?(customer) ->
+        {:error, :no_billing_info}
+
+      true ->
+        charge_and_consume(customer, fix)
+    end
+  end
+
+  # Pattern: Credits available
+  defp consume_fix_credit(customer, fix) do
+    case CreditLedger.consume(customer, 1, "fix_deployed", %{"fix_id" => fix.id}) do
+      {:ok, %{customer: customer, transaction: transaction}} ->
+        {:ok, %{customer: customer, transaction: transaction}}
+
+      error ->
+        error
+    end
+  end
+
+  # Pattern: No credits, must charge
+  defp charge_and_consume(customer, fix) do
+    amount_cents = Pricing.calculate_charge_amount(customer)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:charge, fn _repo, _ ->
+      StripeService.create_charge(customer, amount_cents, %{
+        description: "Fix deployment",
+        metadata: %{fix_id: fix.id}
+      })
+    end)
+    |> Ecto.Multi.run(:credit, fn _repo, %{charge: charge} ->
+      CreditLedger.credit(customer, 1, "purchased", %{
+        "stripe_charge_id" => charge.id,
+        "amount_cents" => amount_cents
+      })
+    end)
+    |> Ecto.Multi.run(:consume, fn _repo, %{credit: %{customer: customer_with_credit}} ->
+      CreditLedger.consume(customer_with_credit, 1, "fix_deployed", %{
+        "fix_id" => fix.id
+      })
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, _} -> {:ok, :charged_and_consumed}
+      {:error, _operation, reason, _changes} -> {:error, reason}
+    end
+  rescue
+    e in Stripe.Error ->
+      # Return Stripe error for handling by caller (e.g., Oban retry)
+      {:error, {:stripe_error, e.message}}
+  end
+
+  @doc """
+  Returns true if customer has available credits.
+
+  ## Examples
+
+      iex> has_credits?(%Customer{credit_balance: 5})
+      true
+
+      iex> has_credits?(%Customer{credit_balance: 0})
+      false
+
+  """
+  def has_credits?(%{credit_balance: balance}) when balance > 0, do: true
+  def has_credits?(_), do: false
+
+  @doc """
+  Returns true if customer has billing information configured.
+
+  ## Examples
+
+      iex> has_billing_info?(%Customer{stripe_customer_id: "cus_123"})
+      true
+
+      iex> has_billing_info?(%Customer{stripe_customer_id: nil})
+      false
+
+  """
+  def has_billing_info?(%{stripe_customer_id: id}) when not is_nil(id), do: true
+  def has_billing_info?(_), do: false
+
+  @doc """
+  Lists credit transactions for a customer.
+
+  ## Examples
+
+      iex> list_credit_transactions(customer_id)
+      [%CreditTransaction{}, ...]
+  """
+  def list_credit_transactions(customer_id) do
+    customer = Customers.get_customer!(customer_id)
+    CreditLedger.list_transactions(customer)
+  end
+
+  @doc """
+  Gets usage summary for customer portal (RFC-071).
+
+  Returns current credit balance, plan details, recent transactions,
+  and warning messages when credits are running low.
+
+  ## Examples
+
+      iex> get_usage_summary(customer_id)
+      {:ok, %{
+        credit_balance: 5,
+        subscription_type: "pro",
+        subscription_state: "active",
+        recent_transactions: [...],
+        warnings: ["Low credit balance: 5 credits remaining"]
+      }}
+  """
+  def get_usage_summary(customer_id) do
+    customer = Customers.get_customer!(customer_id)
+    recent_transactions = customer |> CreditLedger.list_transactions() |> Enum.take(10)
+
+    summary = %{
+      credit_balance: customer.credit_balance,
+      subscription_type: customer.subscription_type,
+      subscription_state: customer.subscription_state,
+      has_payment_method: customer.has_payment_method,
+      recent_transactions: format_transactions_for_display(recent_transactions),
+      warnings: calculate_warnings(customer),
+      pricing: Pricing.summary()
+    }
+
+    {:ok, summary}
+  end
+
+  # Private helper to format transactions for display
+  defp format_transactions_for_display(transactions) do
+    Enum.map(transactions, fn txn ->
+      %{
+        id: txn.id,
+        amount: txn.amount,
+        balance_after: txn.balance_after,
+        source: txn.source,
+        metadata: txn.metadata,
+        inserted_at: txn.inserted_at
+      }
+    end)
+  end
+
+  # Private helper to calculate warning messages
+  defp calculate_warnings(customer) do
+    warnings = []
+
+    warnings =
+      cond do
+        customer.credit_balance == 0 && !customer.has_payment_method ->
+          [
+            "No credits remaining and no payment method on file. Add a payment method to continue using RSOLV."
+            | warnings
+          ]
+
+        customer.credit_balance == 0 ->
+          ["No credits remaining. Your next fix will be charged." | warnings]
+
+        customer.credit_balance <= 5 ->
+          ["Low credit balance: #{customer.credit_balance} credits remaining" | warnings]
+
+        true ->
+          warnings
+      end
+
+    if customer.subscription_state == "past_due" do
+      ["Payment failed. Please update your payment method." | warnings]
+    else
+      warnings
+    end
   end
 end

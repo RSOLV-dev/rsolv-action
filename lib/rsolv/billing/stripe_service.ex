@@ -31,6 +31,7 @@ defmodule Rsolv.Billing.StripeService do
                            Stripe.PaymentMethod
                          )
   @stripe_subscription Application.compile_env(:rsolv, :stripe_subscription, Stripe.Subscription)
+  @stripe_charge Application.compile_env(:rsolv, :stripe_charge, Stripe.Charge)
 
   # Private helper for consistent error handling
   defp handle_stripe_error(error, operation, context) do
@@ -264,6 +265,46 @@ defmodule Rsolv.Billing.StripeService do
 
         {:error, error} ->
           handle_stripe_error(error, "cancel_subscription", subscription_id: subscription_id)
+      end
+    end)
+  end
+
+  @doc """
+  Creates a one-time charge for a customer.
+
+  ## Parameters
+    * `customer` - The RSOLV customer struct (must have stripe_customer_id)
+    * `amount_cents` - The charge amount in cents
+    * `opts` - Optional parameters (description, metadata, etc.)
+
+  ## Examples
+
+      iex> create_charge(customer, 2900, %{description: "Fix deployment"})
+      {:ok, %Stripe.Charge{id: "ch_123", amount: 2900, ...}}
+
+      iex> create_charge(customer_without_payment, 2900, %{})
+      {:error, %Stripe.Error{message: "No payment method attached"}}
+
+  """
+  def create_charge(customer, amount_cents, opts \\ %{}) do
+    params = %{
+      customer: customer.stripe_customer_id,
+      amount: amount_cents,
+      currency: "usd",
+      description: Map.get(opts, :description, "RSOLV charge"),
+      metadata: Map.get(opts, :metadata, %{})
+    }
+
+    context = [customer_id: customer.id, amount_cents: amount_cents]
+
+    with_telemetry(:create_charge, Map.new(context), fn ->
+      case @stripe_charge.create(params) do
+        {:ok, charge} ->
+          Logger.info("Created Stripe charge", context ++ [charge_id: charge.id])
+          {:ok, charge}
+
+        {:error, error} ->
+          handle_stripe_error(error, "create_charge", context)
       end
     end)
   end

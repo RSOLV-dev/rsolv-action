@@ -1,8 +1,26 @@
 # RSOLV API Test Scripts
 
-This directory contains test scripts for validating the RSOLV Educational Framework functionality.
+This directory contains test scripts for validating RSOLV functionality including Slack integration, webhooks, and billing.
 
 ## Available Scripts
+
+### Billing & Stripe Webhooks
+
+#### 💳 `setup_webhook_test_customer.exs`
+Creates a test customer for Stripe webhook testing using Ecto (proper schema validation and changesets).
+```bash
+mix run --no-start test/scripts/setup_webhook_test_customer.exs
+```
+
+#### ✅ `verify_webhooks.sh`
+Automated verification script for Stripe webhook processing. Checks customer state, billing events, Oban jobs, and idempotency.
+```bash
+./verify_webhooks.sh
+```
+
+See `docs/STRIPE-WEBHOOK-TESTING.md` for complete webhook testing guide.
+
+### Slack Integration
 
 ### 🔧 `test_webhook_env.sh`
 Tests that the Slack webhook URL is properly configured in the environment.

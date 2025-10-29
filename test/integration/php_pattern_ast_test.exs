@@ -15,13 +15,13 @@ defmodule Rsolv.Integration.PhpPatternAstTest do
     # PHP patterns now have AST enhancements
     test "PHP patterns return ast_rules in enhanced format", %{
       conn: conn,
-      customer: customer,
-      api_key: api_key
+      customer: _customer,
+      raw_api_key: raw_api_key
     } do
       # Test WITH API key to get enhanced patterns
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> get("/api/v1/patterns?language=php&format=enhanced")
 
       assert response = json_response(conn, 200)
@@ -60,8 +60,8 @@ defmodule Rsolv.Integration.PhpPatternAstTest do
 
     test "PHP demo patterns have expected IDs", %{
       conn: conn,
-      customer: customer,
-      api_key: api_key
+      customer: _customer,
+      raw_api_key: _raw_api_key
     } do
       conn = get(conn, "/api/v1/patterns?language=php&format=enhanced")
 
@@ -80,8 +80,8 @@ defmodule Rsolv.Integration.PhpPatternAstTest do
 
     test "PHP demo patterns do NOT have AST enhancement fields", %{
       conn: conn,
-      customer: customer,
-      api_key: api_key
+      customer: _customer,
+      raw_api_key: _raw_api_key
     } do
       # Test WITHOUT API key (demo patterns)
       conn = get(conn, "/api/v1/patterns?language=php&format=enhanced")

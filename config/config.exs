@@ -99,16 +99,16 @@ config :rsolv, :billing,
       billing_addition_bonus: 5
     },
     pay_as_you_go: %{
-      # $10 per credit
-      credit_price_cents: 1000,
+      # $29 per credit (RFC-066)
+      credit_price_cents: 2900,
       minimum_purchase: 1
     },
     pro: %{
-      # $500/month
-      monthly_price_cents: 50000,
+      # $599/month (RFC-066)
+      monthly_price_cents: 59900,
       included_credits: 100,
-      # $5 per credit over quota
-      overage_price_cents: 500
+      # $15 per credit over quota (RFC-066)
+      overage_price_cents: 1500
     }
   },
   # Stripe Price ID for Pro plan (to be created in Stripe Dashboard)

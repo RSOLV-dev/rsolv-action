@@ -49,7 +49,7 @@ defmodule RsolvWeb.Schemas.CustomerOnboarding do
             email: %Schema{type: :string, format: :email, description: "Customer email"},
             trial_fixes_limit: %Schema{type: :integer, description: "Trial fixes limit"},
             trial_fixes_used: %Schema{type: :integer, description: "Trial fixes used"},
-            subscription_plan: %Schema{type: :string, description: "Subscription plan"}
+            subscription_type: %Schema{type: :string, description: "Subscription plan"}
           }
         },
         api_key: %Schema{
@@ -66,7 +66,7 @@ defmodule RsolvWeb.Schemas.CustomerOnboarding do
           "email" => "admin@acme.com",
           "trial_fixes_limit" => 5,
           "trial_fixes_used" => 0,
-          "subscription_plan" => "trial"
+          "subscription_type" => "trial"
         },
         "api_key" => "rsolv_GD5KyzSXvKzaztds23HijV5HFnD7ZZs8cbF1UX5ks_8"
       }

@@ -145,4 +145,42 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
   end
 
   defp get_in_path(_, _, default), do: default
+
+  @doc """
+  Determines whether to show the setup wizard to a customer.
+
+  The wizard visibility is controlled by:
+  - `wizard_preference`: "auto" (default), "hidden" (manually dismissed), or "shown" (manually re-entered)
+  - `first_scan_at`: Whether the customer has completed their first scan
+
+  ## Logic
+  - "auto": Show wizard only if no scans completed (`first_scan_at` is nil)
+  - "hidden": Never show wizard (manually dismissed)
+  - "shown": Always show wizard (manually re-entered)
+  - nil customer or invalid preference: Don't show wizard
+
+  ## Examples
+
+      iex> show_wizard?(%Customer{wizard_preference: "auto", first_scan_at: nil})
+      true
+
+      iex> show_wizard?(%Customer{wizard_preference: "auto", first_scan_at: ~U[2025-10-20 12:00:00Z]})
+      false
+
+      iex> show_wizard?(%Customer{wizard_preference: "hidden", first_scan_at: nil})
+      false
+
+      iex> show_wizard?(%Customer{wizard_preference: "shown", first_scan_at: ~U[2025-10-20 12:00:00Z]})
+      true
+  """
+  def show_wizard?(nil), do: false
+
+  def show_wizard?(%{wizard_preference: "auto", first_scan_at: nil}), do: true
+  def show_wizard?(%{wizard_preference: "auto", first_scan_at: _}), do: false
+
+  def show_wizard?(%{wizard_preference: "hidden"}), do: false
+  def show_wizard?(%{wizard_preference: "shown"}), do: true
+
+  # Default case for invalid wizard_preference or missing fields
+  def show_wizard?(_), do: false
 end

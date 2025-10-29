@@ -7,10 +7,14 @@ defmodule RsolvWeb.CredentialVendingTest do
       setup_api_auth()
     end
 
-    test "exchanges valid API key for anthropic credentials", %{conn: conn, api_key: api_key} do
+    test "exchanges valid API key for anthropic credentials", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("x-api-key", raw_api_key)
         |> post("/api/v1/credentials/exchange", %{
           "providers" => ["anthropic"],
           "ttl_minutes" => 60
@@ -27,6 +31,7 @@ defmodule RsolvWeb.CredentialVendingTest do
     test "returns 401 for invalid API key", %{conn: conn} do
       conn =
         conn
+        |> put_req_header("content-type", "application/json")
         |> put_req_header("x-api-key", "invalid_key_12345")
         |> post("/api/v1/credentials/exchange", %{
           "providers" => ["anthropic"],
@@ -40,10 +45,11 @@ defmodule RsolvWeb.CredentialVendingTest do
       assert resp["requestId"]
     end
 
-    test "validates providers parameter is present", %{conn: conn, api_key: api_key} do
+    test "validates providers parameter is present", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("x-api-key", raw_api_key)
         |> post(
           "/api/v1/credentials/exchange",
           %{
@@ -51,7 +57,8 @@ defmodule RsolvWeb.CredentialVendingTest do
           }
         )
 
-      assert json_response(conn, 400)
+      # OpenApiSpex returns 422 for missing required fields
+      assert json_response(conn, 422)
     end
   end
 end

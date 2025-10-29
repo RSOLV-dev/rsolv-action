@@ -10,7 +10,8 @@ defmodule Rsolv.Billing.CreditTransaction do
   - trial_billing_added: Bonus credits when billing info is added
   - pro_subscription_payment: Credits from Pro subscription billing
   - purchased: Credits purchased via pay-as-you-go
-  - consumed: Credits used for fix attempts
+  - consumed: Credits used for fix attempts (legacy)
+  - fix_deployed: Credits consumed when a fix is deployed (RFC-066 Week 3)
   - adjustment: Manual adjustments (support, refunds, etc.)
   """
 
@@ -42,6 +43,7 @@ defmodule Rsolv.Billing.CreditTransaction do
       "pro_subscription_payment",
       "purchased",
       "consumed",
+      "fix_deployed",
       "adjustment"
     ])
     |> foreign_key_constraint(:customer_id)

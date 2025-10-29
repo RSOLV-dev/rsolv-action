@@ -7,12 +7,54 @@ defmodule Rsolv.CustomerOnboardingTest do
   alias Rsolv.Workers.EmailWorker
 
   import ExUnit.CaptureLog
+  import Mox
+
+  # Make sure mocks are verified when the test exits
+  setup :verify_on_exit!
 
   setup do
+    # Set ConvertKit test config
+    Application.put_env(:rsolv, :convertkit,
+      api_key: "test_api_key",
+      form_id: "test_form_id",
+      early_access_tag_id: "7700607",
+      api_base_url: "https://api.convertkit.com/v3"
+    )
+
+    # Configure the HTTP client to use the mock
+    Application.put_env(:rsolv, :http_client, Rsolv.HTTPClientMock)
+
+    fixtures = RsolvWeb.Mocks.convertkit_fixtures()
+
+    # Mock successful tagging response for ConvertKit
+    stub(Rsolv.HTTPClientMock, :post, fn _url, _body, _headers, _options ->
+      {:ok, fixtures.tag_success}
+    end)
+
     # Clear rate limiter for clean tests
     Rsolv.RateLimiter.reset()
 
-    :ok
+    # Attach test telemetry handler
+    :telemetry.attach_many(
+      "test-customer-onboarding-telemetry",
+      [
+        [:rsolv, :customer_onboarding, :complete],
+        [:rsolv, :customer_onboarding, :failed]
+      ],
+      &handle_telemetry_event/4,
+      %{pid: self()}
+    )
+
+    on_exit(fn ->
+      :telemetry.detach("test-customer-onboarding-telemetry")
+    end)
+
+    %{fixtures: fixtures}
+  end
+
+  # Telemetry event handler for tests
+  defp handle_telemetry_event(event_name, measurements, metadata, %{pid: pid}) do
+    send(pid, {:telemetry_event, event_name, measurements, metadata})
   end
 
   describe "provision_customer/1 - email sequence integration" do
@@ -127,6 +169,58 @@ defmodule Rsolv.CustomerOnboardingTest do
       # Note: Oban uses 20 as the default max_attempts
       assert job.max_attempts == 20
       assert job.worker == "Rsolv.Workers.EmailWorker"
+    end
+  end
+
+  describe "telemetry events - RFC-065 Week 3" do
+    test "emits telemetry on customer onboarding success" do
+      attrs = %{
+        "name" => "Telemetry Test Customer",
+        "email" => "telemetry#{System.unique_integer([:positive])}@testcompany.com"
+      }
+
+      start_time = System.monotonic_time(:millisecond)
+
+      assert {:ok, %{customer: customer, api_key: _api_key}} =
+               CustomerOnboarding.provision_customer(attrs)
+
+      # Wait for telemetry event
+      assert_receive {:telemetry_event, [:rsolv, :customer_onboarding, :complete], measurements,
+                      metadata},
+                     1000
+
+      # Verify measurements
+      assert is_integer(measurements.duration)
+      assert measurements.duration > 0
+      assert measurements.count == 1
+
+      # Verify metadata
+      assert metadata.status == "success"
+      assert metadata.customer_id == customer.id
+      assert metadata.source == "api"
+    end
+
+    test "emits telemetry on customer onboarding failure" do
+      # Use disposable email to trigger failure
+      attrs = %{
+        "name" => "Failed Customer",
+        "email" => "test@mailinator.com"
+      }
+
+      assert {:error, {:validation_failed, _message}} =
+               CustomerOnboarding.provision_customer(attrs)
+
+      # Wait for telemetry event
+      assert_receive {:telemetry_event, [:rsolv, :customer_onboarding, :failed], measurements,
+                      metadata},
+                     1000
+
+      # Verify measurements
+      assert measurements.count == 1
+
+      # Verify metadata
+      assert metadata.reason =~ "disposable"
+      assert metadata.source == "api"
     end
   end
 end

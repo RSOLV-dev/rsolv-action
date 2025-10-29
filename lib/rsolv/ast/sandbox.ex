@@ -113,12 +113,16 @@ defmodule Rsolv.AST.Sandbox do
 
       _ ->
         # Build restricted port options
+        # Set working directory to the directory containing the command for bundler/npm
+        command_dir = Path.dirname(command)
+
         port_opts = [
           :binary,
           :exit_status,
           :use_stdio,
           args: args,
-          env: config.port_env
+          env: config.port_env,
+          cd: command_dir
         ]
 
         try do

@@ -20,12 +20,14 @@ defmodule Rsolv.Phases.RepositoriesTest do
         |> Repo.insert!()
 
       # Create an API key
+      raw_api_key = "test_" <> Ecto.UUID.generate()
+
       api_key =
         %ApiKey{}
         |> ApiKey.changeset(%{
           customer_id: customer.id,
           name: "Test Key",
-          key: "test_" <> Ecto.UUID.generate(),
+          raw_raw_key: raw_api_key,
           active: true
         })
         |> Repo.insert!()
@@ -41,7 +43,7 @@ defmodule Rsolv.Phases.RepositoriesTest do
         })
         |> Repo.insert!()
 
-      %{customer: customer, api_key: api_key, forge_account: forge_account}
+      %{customer: customer, raw_api_raw_raw_key: raw_api_key, forge_account: forge_account}
     end
 
     test "creates new repository on first use", %{customer: customer} do

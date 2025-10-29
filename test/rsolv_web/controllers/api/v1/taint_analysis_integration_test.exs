@@ -15,7 +15,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
       id: "test_customer_1",
       name: "Test Customer",
       email: "test@example.com",
-      subscription_plan: "trial",
+      subscription_type: "trial",
       tier: "enterprise",
       flags: ["ai_access", "enterprise_access"],
       monthly_limit: 100,
@@ -36,7 +36,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             %{
               "id" => "taint-1",
               "type" => "code_injection",
-              "filePath" => "/app/routes.js",
+              "file" => "/app/routes.js",
               "line" => 3,
               "code" => "eval(req.body.code)"
             }
@@ -77,7 +77,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             %{
               "id" => "taint-2",
               "type" => "code_injection",
-              "filePath" => "/app/controller.js",
+              "file" => "/app/controller.js",
               "line" => 4,
               "code" => "eval(userCode)"
             }
@@ -123,7 +123,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             %{
               "id" => "taint-3",
               "type" => "code_injection",
-              "filePath" => "/app/processor.js",
+              "file" => "/app/processor.js",
               "line" => 4,
               "code" => "eval(final)"
             }
@@ -163,7 +163,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             %{
               "id" => "taint-4",
               "type" => "code_injection",
-              "filePath" => "/app/handler.js",
+              "file" => "/app/handler.js",
               "line" => 2,
               "code" => "eval(userExpression)"
             }
@@ -201,7 +201,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             %{
               "id" => "taint-5",
               "type" => "code_injection",
-              "filePath" => "/app/secure.js",
+              "file" => "/app/secure.js",
               "line" => 4,
               "code" => "eval(cleaned)"
             }
@@ -241,7 +241,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             %{
               "id" => "taint-6",
               "type" => "code_injection",
-              "filePath" => "/app/mystery.js",
+              "file" => "/app/mystery.js",
               "line" => 2,
               "code" => "eval(config)"
             }
@@ -280,7 +280,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             %{
               "id" => "taint-7",
               "type" => "code_injection",
-              "filePath" => "/vendor/lib/processor.js",
+              "file" => "/vendor/lib/processor.js",
               "line" => 2,
               "code" => "eval(req.body.code)"
             }
@@ -319,7 +319,7 @@ defmodule RsolvWeb.Api.V1.TaintAnalysisIntegrationTest do
             %{
               "id" => "nodegoat-eval",
               "type" => "code_injection",
-              "filePath" => "/app/routes/contributions.js",
+              "file" => "/app/routes/contributions.js",
               "line" => 8,
               "code" => "eval(preTax)"
             }

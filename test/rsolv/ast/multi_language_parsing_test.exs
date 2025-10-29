@@ -101,9 +101,15 @@ defmodule Rsolv.AST.MultiLanguageParsingTest do
       {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "ruby", code)
       ast = result.ast
 
-      # Ruby AST structure
-      assert ast["type"] == "def" or ast[:type] == "def"
-      assert is_list(ast["children"]) or is_list(ast[:children])
+      # Ruby AST structure - Prism returns program root with statements
+      assert ast["type"] == "program" or ast[:type] == "program"
+
+      # Find the def node within the AST
+      def_nodes = find_nodes(ast, "def")
+      assert length(def_nodes) == 1
+
+      def_node = hd(def_nodes)
+      assert is_list(def_node["children"]) or is_list(def_node[:children])
     end
 
     test "detects Ruby SQL injection", %{session: session, customer_id: customer_id} do
@@ -112,9 +118,9 @@ defmodule Rsolv.AST.MultiLanguageParsingTest do
       {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "ruby", vulnerable_code)
       ast = result.ast
 
-      # Look for string interpolation in where clause
-      dstr_nodes = find_nodes(ast, "dstr")
-      assert length(dstr_nodes) > 0
+      # Look for string interpolation in where clause - Prism uses "interpolated_string"
+      interpolated_str_nodes = find_nodes(ast, "interpolated_string")
+      assert length(interpolated_str_nodes) > 0
     end
   end
 

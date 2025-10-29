@@ -2,6 +2,7 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
   use RsolvWeb.ConnCase
   alias Rsolv.Phases.{Repository, ScanExecution, ValidationExecution}
   alias Rsolv.Customers.ForgeAccount
+  alias Rsolv.Customers
   alias Rsolv.Customers.{Customer, ApiKey}
   alias Rsolv.Repo
 
@@ -19,16 +20,9 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
         })
         |> Repo.insert!()
 
-      # Create an API key
-      api_key =
-        %ApiKey{}
-        |> ApiKey.changeset(%{
-          customer_id: customer.id,
-          name: "Test Key",
-          key: "test_" <> Ecto.UUID.generate(),
-          active: true
-        })
-        |> Repo.insert!()
+      # Create an API key using the proper function that hashes the key
+      {:ok, %{record: api_key, raw_key: raw_api_key}} =
+        Customers.create_api_key(customer, %{name: "Test Key"})
 
       # Create a forge account for this customer
       forge_account =
@@ -41,13 +35,13 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
         })
         |> Repo.insert!()
 
-      %{api_key: api_key, customer: customer, forge_account: forge_account}
+      %{raw_api_key: raw_api_key, customer: customer, forge_account: forge_account}
     end
 
-    test "stores scan phase data with unwrapped format", %{conn: conn, api_key: api_key} do
+    test "stores scan phase data with unwrapped format", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/phases/store", %{
           phase: "scan",
@@ -78,10 +72,13 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       assert scan.data["vulnerabilities"] |> hd() |> Map.get("type") == "xss"
     end
 
-    test "stores validation phase data with unwrapped format", %{conn: conn, api_key: api_key} do
+    test "stores validation phase data with unwrapped format", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/phases/store", %{
           phase: "validation",
@@ -119,10 +116,13 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
                "should detect vulnerability"
     end
 
-    test "stores mitigation phase data with unwrapped format", %{conn: conn, api_key: api_key} do
+    test "stores mitigation phase data with unwrapped format", %{
+      conn: conn,
+      raw_api_key: raw_api_key
+    } do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/phases/store", %{
           phase: "mitigation",
@@ -171,10 +171,10 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       assert resp["requestId"]
     end
 
-    test "rejects access to unauthorized namespace", %{conn: conn, api_key: api_key} do
+    test "rejects access to unauthorized namespace", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/phases/store", %{
           phase: "scan",
@@ -187,10 +187,10 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       assert %{"error" => "Unauthorized: no access to namespace"} = json_response(conn, 403)
     end
 
-    test "validates required fields", %{conn: conn, api_key: api_key} do
+    test "validates required fields", %{conn: conn, raw_api_key: raw_api_key} do
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/phases/store", %{
           phase: "scan",
@@ -202,7 +202,7 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       assert %{"error" => _} = json_response(conn, 400)
     end
 
-    test "auto-creates repository on first use", %{conn: conn, api_key: api_key} do
+    test "auto-creates repository on first use", %{conn: conn, raw_api_key: raw_api_key} do
       # Verify repo doesn't exist
       assert nil ==
                Repo.get_by(Repository,
@@ -213,7 +213,7 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
 
       conn =
         conn
-        |> put_req_header("x-api-key", api_key.key)
+        |> put_req_header("x-api-key", raw_api_key)
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/phases/store", %{
           phase: "scan",
@@ -241,32 +241,28 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       forge_account: _forge_account
     } do
       # Create multiple API keys for the same customer
-      api_key_1 =
-        %ApiKey{}
-        |> ApiKey.changeset(%{
-          customer_id: customer.id,
-          name: "First Key",
-          key: "first_key_" <> Ecto.UUID.generate(),
-          active: true
-        })
-        |> Repo.insert!()
+      raw_key_1 = "first_key_" <> Ecto.UUID.generate()
 
-      api_key_2 =
-        %ApiKey{}
-        |> ApiKey.changeset(%{
-          customer_id: customer.id,
-          name: "Second Key",
-          key: "second_key_" <> Ecto.UUID.generate(),
-          active: true
+      {:ok, %{record: api_key_1, raw_key: _}} =
+        Customers.create_api_key(customer, %{
+          raw_key: raw_key_1,
+          name: "First Key"
         })
-        |> Repo.insert!()
+
+      raw_key_2 = "second_key_" <> Ecto.UUID.generate()
+
+      {:ok, %{record: api_key_2, raw_key: _}} =
+        Customers.create_api_key(customer, %{
+          raw_key: raw_key_2,
+          name: "Second Key"
+        })
 
       # Both keys share the same customer, so they share the forge account
 
       # Test with first API key
       conn =
         build_conn()
-        |> put_req_header("x-api-key", api_key_1.key)
+        |> put_req_header("x-api-key", raw_key_1)
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/phases/store", %{
           phase: "scan",
@@ -284,7 +280,7 @@ defmodule RsolvWeb.Api.V1.PhaseControllerTest do
       # Test with second API key
       conn =
         build_conn()
-        |> put_req_header("x-api-key", api_key_2.key)
+        |> put_req_header("x-api-key", raw_key_2)
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/phases/store", %{
           phase: "scan",

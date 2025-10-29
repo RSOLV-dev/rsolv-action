@@ -56,7 +56,7 @@ defmodule Rsolv.ProductionVerificationTest do
       FROM information_schema.columns
       WHERE table_name = 'customers'
       AND column_name IN ('trial_fixes_used', 'trial_fixes_limit', 'trial_expired',
-                          'subscription_plan', 'rollover_fixes', 'stripe_customer_id');
+                          'subscription_type', 'rollover_fixes', 'stripe_customer_id');
       """
 
       result = Repo.query!(query)
@@ -65,7 +65,7 @@ defmodule Rsolv.ProductionVerificationTest do
       assert "trial_fixes_used" in column_names
       assert "trial_fixes_limit" in column_names
       assert "trial_expired" in column_names
-      assert "subscription_plan" in column_names
+      assert "subscription_type" in column_names
       assert "rollover_fixes" in column_names
       assert "stripe_customer_id" in column_names
     end
@@ -100,7 +100,7 @@ defmodule Rsolv.ProductionVerificationTest do
         Customer.changeset(%Customer{}, %{
           name: "Test Org",
           email: "test@example.com",
-          subscription_plan: "trial"
+          subscription_type: "trial"
         })
 
       {:ok, customer} = Repo.insert(changeset)
@@ -111,7 +111,7 @@ defmodule Rsolv.ProductionVerificationTest do
       assert customer.trial_fixes_used == 0
       assert Customer.trial_expired?(customer) == false
       # Default is "trial"
-      assert customer.subscription_plan == "trial"
+      assert customer.subscription_type == "trial"
     end
   end
 
@@ -122,7 +122,7 @@ defmodule Rsolv.ProductionVerificationTest do
         Customer.changeset(%Customer{}, %{
           name: "Test Customer",
           email: unique_email(),
-          subscription_plan: "trial"
+          subscription_type: "trial"
         })
 
       {:ok, customer} = Repo.insert(changeset)

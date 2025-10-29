@@ -12,6 +12,7 @@ defmodule Rsolv.AST.ParserErrorStandardizationTest do
   end
 
   describe "error standardization integration" do
+    @tag :rfc_042
     test "syntax errors are standardized across all languages", %{
       session_id: session_id,
       customer_id: customer_id

@@ -174,7 +174,10 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
       assert insertion_point != nil, "Should find insertion point"
       assert insertion_point.strategy == "after_last_test_function"
       assert String.contains?(integrated_code, "test_rejects_sql_injection_in_search")
-      assert String.contains?(integrated_code, "class TestSecurity")
+
+      assert String.contains?(integrated_code, "class TestUsers"),
+             "Should integrate into existing class"
+
       assert String.contains?(integrated_code, "admin'; DROP TABLE users;--")
 
       assert String.contains?(integrated_code, "test_create_user"),
@@ -262,8 +265,9 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
         TestIntegrator.generate_integration(target_content, test_suite, "python", "pytest")
 
       assert method == "ast"
-      # Should insert the security test class
-      assert String.contains?(integrated_code, "class TestSecurity")
+      # Should integrate into existing class
+      assert String.contains?(integrated_code, "class TestFileService")
+      assert String.contains?(integrated_code, "test_prevents_path_traversal")
     end
   end
 

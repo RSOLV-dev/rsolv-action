@@ -1,6 +1,15 @@
 #!/usr/bin/env ruby
+# encoding: UTF-8
+# frozen_string_literal: true
+
 # Ruby AST Parser for RSOLV RFC-031
 # Uses Ruby's built-in AST parser to parse Ruby code and returns AST in JSON format via stdin/stdout
+
+# Set encoding for STDIN/STDOUT to UTF-8
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
+STDIN.set_encoding(Encoding::UTF_8)
+STDOUT.set_encoding(Encoding::UTF_8)
 
 # Try to use bundler if available, otherwise just require gems directly
 begin
@@ -11,7 +20,8 @@ rescue LoadError
 end
 
 require 'json'
-require 'parser/current'
+# Use Prism directly for better error detection and unicode handling
+require 'prism'
 require 'timeout'
 
 # Set up signal handler for timeout
@@ -29,58 +39,59 @@ Signal.trap('ALRM') do
 end
 
 def node_to_dict(node)
-  # Convert Parser::AST::Node to hash format with circular reference handling
+  # Convert Prism::Node to hash format with circular reference handling
   return nil if node.nil?
-  return node unless node.is_a?(Parser::AST::Node)
-  
-  result = {
-    'type' => node.type.to_s
-  }
-  
-  # Add location info if available
-  if node.loc && node.loc.expression
-    result['_loc'] = {
-      'start' => {
-        'line' => node.loc.expression.line,
-        'column' => node.loc.expression.column
-      },
-      'end' => {
-        'line' => node.loc.expression.last_line,
-        'column' => node.loc.expression.last_column
-      }
+
+  # Handle Prism nodes
+  if node.respond_to?(:type)
+    # Strip _node suffix from Prism types for compatibility with old Parser gem format
+    type_str = node.type.to_s.sub(/_node$/, '')
+    result = {
+      'type' => type_str
     }
-    
-    result['_start'] = node.loc.expression.begin_pos
-    result['_end'] = node.loc.expression.end_pos
-  end
-  
-  # Process children
-  if node.children && !node.children.empty?
-    result['children'] = node.children.map do |child|
-      if child.is_a?(Parser::AST::Node)
-        node_to_dict(child)
-      elsif child.is_a?(Array)
-        child.map { |item| node_to_dict(item) }
-      else
-        child
-      end
+
+    # Add location info if available
+    if node.respond_to?(:location) && node.location
+      loc = node.location
+      result['_loc'] = {
+        'start' => {
+          'line' => loc.start_line,
+          'column' => loc.start_column
+        },
+        'end' => {
+          'line' => loc.end_line,
+          'column' => loc.end_column
+        }
+      }
+      result['_start'] = loc.start_offset
+      result['_end'] = loc.end_offset
     end
+
+    # Process child nodes
+    children = []
+    if node.respond_to?(:child_nodes)
+      children = node.child_nodes.compact.map { |child| node_to_dict(child) }
+    end
+
+    result['children'] = children unless children.empty?
+    result
+  else
+    # Return primitive values as-is
+    node
   end
-  
-  result
 end
 
 def find_security_patterns(ast)
-  # Extract security-relevant patterns from Ruby AST
+  # Extract security-relevant patterns from Ruby AST (Prism)
   patterns = []
-  
+
   def traverse_node(node, patterns)
-    return unless node.is_a?(Parser::AST::Node)
-    
+    return unless node && node.respond_to?(:type)
+
     case node.type
-    when :send
+    when :call_node
       # Method calls - check for dangerous methods
-      receiver, method_name, *args = node.children
+      method_name = node.respond_to?(:name) ? node.name : nil
       
       if method_name
         method_str = method_name.to_s
@@ -94,60 +105,68 @@ def find_security_patterns(ast)
           html_safe raw
         ]
         
+        loc = node.location if node.respond_to?(:location)
+        line = loc ? loc.start_line : 0
+        column = loc ? loc.start_column : 0
+
         if dangerous_methods.include?(method_str)
           patterns << {
             'type' => 'dangerous_method',
             'method' => method_str,
-            'line' => node.loc && node.loc.expression ? node.loc.expression.line : 0,
-            'column' => node.loc && node.loc.expression ? node.loc.expression.column : 0
+            'line' => line,
+            'column' => column
           }
         end
-        
+
         # SQL injection patterns
-        if method_str.match?(/^(find|where|execute|query)$/) && args.any?
+        if method_str.match?(/^(find|where|execute|query)$/)
           patterns << {
             'type' => 'potential_sql_injection',
             'method' => method_str,
-            'line' => node.loc && node.loc.expression ? node.loc.expression.line : 0,
-            'column' => node.loc && node.loc.expression ? node.loc.expression.column : 0
+            'line' => line,
+            'column' => column
           }
         end
-        
+
         # HTML output methods
         if method_str.match?(/^(html_safe|raw)$/)
           patterns << {
             'type' => 'html_output',
             'method' => method_str,
-            'line' => node.loc && node.loc.expression ? node.loc.expression.line : 0,
-            'column' => node.loc && node.loc.expression ? node.loc.expression.column : 0
+            'line' => line,
+            'column' => column
           }
         end
       end
-      
-    when :dstr, :xstr
+
+    when :interpolated_string_node, :interpolated_x_string_node
       # String interpolation and command execution
+      loc = node.location if node.respond_to?(:location)
       patterns << {
-        'type' => node.type == :dstr ? 'string_interpolation' : 'command_execution',
-        'line' => node.loc ? node.loc.line : 0,
-        'column' => node.loc ? node.loc.column : 0
+        'type' => node.type == :interpolated_string_node ? 'string_interpolation' : 'command_execution',
+        'line' => loc ? loc.start_line : 0,
+        'column' => loc ? loc.start_column : 0
       }
-      
-    when :const
+
+    when :constant_read_node
       # Constant access - check for dangerous constants
-      const_name = node.children.last
+      const_name = node.respond_to?(:name) ? node.name : nil
       if const_name && const_name.to_s.match?(/^(Kernel|Object|BasicObject)$/)
+        loc = node.location if node.respond_to?(:location)
         patterns << {
           'type' => 'dangerous_constant',
           'constant' => const_name.to_s,
-          'line' => node.loc ? node.loc.line : 0,
-          'column' => node.loc ? node.loc.column : 0
+          'line' => loc ? loc.start_line : 0,
+          'column' => loc ? loc.start_column : 0
         }
       end
     end
-    
+
     # Recursively traverse children
-    node.children.each do |child|
-      traverse_node(child, patterns) if child.is_a?(Parser::AST::Node)
+    if node.respond_to?(:child_nodes)
+      node.child_nodes.compact.each do |child|
+        traverse_node(child, patterns)
+      end
     end
   end
   
@@ -179,14 +198,30 @@ def main
           code = command # Treat command as code to parse
           options = request['options'] || {}
           filename = request['filename'] || '<string>'
-          
-          # Parse the Ruby code
-          parser = Parser::CurrentRuby.new
-          parser.diagnostics.consumer = nil # Suppress warnings to stderr
-          
-          buffer = Parser::Source::Buffer.new(filename)
-          buffer.source = code
-          ast = parser.parse(buffer)
+
+          # First, check for syntax errors using Prism directly
+          prism_result = Prism.parse(code, filepath: filename)
+          if !prism_result.success? && !prism_result.errors.empty?
+            # Syntax errors detected - return error response
+            first_error = prism_result.errors.first
+            raise_error = {
+              'id' => request_id,
+              'status' => 'error',
+              'success' => false,
+              'error' => {
+                'type' => 'SyntaxError',
+                'message' => first_error.message,
+                'line' => first_error.location.start_line,
+                'column' => first_error.location.start_column
+              }
+            }
+            puts JSON.generate(raise_error)
+            STDOUT.flush
+            next
+          end
+
+          # Parse the Ruby code using Prism AST
+          ast = prism_result.value
           
           # Convert AST to dictionary
           ast_dict = node_to_dict(ast)
@@ -202,11 +237,11 @@ def main
           # Count nodes by traversing AST
           node_count = 0
           count_nodes = lambda do |node|
-            if node.is_a?(Parser::AST::Node)
+            if node && node.respond_to?(:child_nodes)
               node_count += 1
-              node.children.each { |child| count_nodes.call(child) }
+              node.child_nodes.compact.each { |child| count_nodes.call(child) }
             elsif node.is_a?(Array)
-              node.each { |item| count_nodes.call(item) }
+              node.compact.each { |item| count_nodes.call(item) }
             end
           end
           count_nodes.call(ast)
@@ -230,14 +265,30 @@ def main
           code = request['code'] || ''
           options = request['options'] || {}
           filename = request['filename'] || '<string>'
-          
-          # Parse the Ruby code
-          parser = Parser::CurrentRuby.new
-          parser.diagnostics.consumer = nil # Suppress warnings to stderr
-          
-          buffer = Parser::Source::Buffer.new(filename)
-          buffer.source = code
-          ast = parser.parse(buffer)
+
+          # First, check for syntax errors using Prism directly
+          prism_result = Prism.parse(code, filepath: filename)
+          if !prism_result.success? && !prism_result.errors.empty?
+            # Syntax errors detected - return error response
+            first_error = prism_result.errors.first
+            raise_error = {
+              'id' => request_id,
+              'status' => 'error',
+              'success' => false,
+              'error' => {
+                'type' => 'SyntaxError',
+                'message' => first_error.message,
+                'line' => first_error.location.start_line,
+                'column' => first_error.location.start_column
+              }
+            }
+            puts JSON.generate(raise_error)
+            STDOUT.flush
+            next
+          end
+
+          # Parse the Ruby code using Prism AST
+          ast = prism_result.value
           
           # Convert AST to dictionary
           ast_dict = node_to_dict(ast)
@@ -253,11 +304,11 @@ def main
           # Count nodes
           node_count = 0
           count_nodes = lambda do |node|
-            if node.is_a?(Parser::AST::Node)
+            if node && node.respond_to?(:child_nodes)
               node_count += 1
-              node.children.each { |child| count_nodes.call(child) }
+              node.child_nodes.compact.each { |child| count_nodes.call(child) }
             elsif node.is_a?(Array)
-              node.each { |item| count_nodes.call(item) }
+              node.compact.each { |item| count_nodes.call(item) }
             end
           end
           count_nodes.call(ast)
@@ -298,29 +349,6 @@ def main
         'error' => {
           'type' => 'TimeoutError',
           'message' => 'Parser timeout after 30 seconds'
-        }
-      }
-      puts JSON.generate(response)
-      STDOUT.flush
-      
-    rescue Parser::SyntaxError => e
-      request_id = 'unknown'
-      begin
-        request = JSON.parse(line.strip) if line
-        request_id = request['id'] if request
-      rescue
-        # Ignore JSON parse errors for request ID extraction
-      end
-      
-      response = {
-        'id' => request_id,
-        'status' => 'error',
-        'success' => false,
-        'error' => {
-          'type' => 'SyntaxError',
-          'message' => e.message,
-          'line' => e.diagnostic && e.diagnostic.location ? e.diagnostic.location.line : nil,
-          'column' => e.diagnostic && e.diagnostic.location ? e.diagnostic.location.column : nil
         }
       }
       puts JSON.generate(response)

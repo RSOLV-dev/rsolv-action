@@ -243,6 +243,20 @@ This is how all marketplace actions work—not a limitation, but the native patt
 - [ ] Document rate limits in README and OpenAPI spec
 
 ### Week 2: Submission & Review
+
+**Status: Documentation Complete ✅ - Submission Strategically Deferred**
+
+Week 2 documentation work is complete (~25k words of launch materials). However, we've made the strategic decision to defer marketplace submission until the customer signup flow is ready (end of RFCs 064-069 implementation).
+
+**Rationale**: GitHub Actions publish immediately without review period. Since there's no review delay, we can submit instantly when the self-service customer flow is ready. This avoids launching a product that users can install but cannot immediately use.
+
+**Completed in Week 2**:
+- ✅ All launch materials created (README, blog posts, social content)
+- ✅ Technical documentation complete
+- ✅ Rate limiting implemented (Mnesia-based, 500/hour per API key)
+- ✅ CI/CD infrastructure ready (RFC-068)
+
+**Deferred to Post-RFCs 064-069**:
 - [ ] Submit at github.com/marketplace/actions/new
 - [ ] Select categories: Security, Code Quality, CI/CD
 - [ ] Add description and keywords for SEO

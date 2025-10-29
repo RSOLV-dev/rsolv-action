@@ -85,16 +85,16 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
     )
 
     case Customers.create_api_key(customer, %{name: "API Key"}) do
-      {:ok, api_key} ->
+      {:ok, %{record: api_key, raw_key: raw_key}} ->
         Logger.info("🔑 [LiveView] API key created successfully")
-        Logger.info("🔑 [LiveView] Displaying key to user: #{api_key.key}")
+        Logger.info("🔑 [LiveView] Displaying key to user: #{raw_key}")
         Logger.info("🔑 [LiveView] API key database ID: #{api_key.id}")
 
         # Double-check the key can be retrieved (defensive programming)
-        case Customers.get_api_key_by_key(api_key.key) do
+        case Customers.get_api_key_by_key(raw_key) do
           nil ->
             Logger.error("🔑 [LiveView] CRITICAL ERROR: Key created but not retrievable!")
-            Logger.error("🔑 [LiveView] Key that failed: #{api_key.key}")
+            Logger.error("🔑 [LiveView] Key that failed: #{raw_key}")
 
             {:noreply,
              socket
@@ -123,7 +123,7 @@ defmodule RsolvWeb.Admin.CustomerLive.Show do
                "API key generated successfully. Copy it now - it won't be shown again!"
              )
              |> assign(:api_keys, api_keys)
-             |> assign(:new_api_key, api_key.key)}
+             |> assign(:new_api_key, raw_key)}
         end
 
       {:error, changeset} ->

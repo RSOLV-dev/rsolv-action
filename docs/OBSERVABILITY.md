@@ -1,13 +1,12 @@
-# RFC-060 Observability Implementation
+# Observability: Metrics, Monitoring & Alerting
 
-**Status:** Implemented
-**Created:** 2025-10-11
-**Component:** Phase 5.2 - Backend Observability
-**Related:** RFC-060 Phase 5.2 (#10 of 11)
+**Status:** Production
+**Last Updated:** 2025-10-26
+**Components:** PromEx, Telemetry, Prometheus, Grafana
 
 ## Overview
 
-This document describes the observability implementation for RFC-060's validation and mitigation phases in the RSOLV platform backend (Elixir). This complements the frontend observability in RSOLV-action (Phase 5.1).
+This document describes RSOLV's observability infrastructure for monitoring platform health, performance, and business metrics. We use Elixir's Telemetry library for instrumentation, PromEx for Prometheus integration, and Grafana for visualization.
 
 ## Architecture
 
@@ -395,6 +394,177 @@ Both systems emit metrics that can be correlated for end-to-end observability.
 - [ ] Alerts firing correctly (test with simulated failures)
 - [ ] Documentation complete
 
+## PromEx Plugin Development Guide
+
+### Overview
+
+RSOLV uses [PromEx](https://hexdocs.pm/prom_ex/) for Prometheus metrics collection. Custom plugins allow us to instrument specific business logic with minimal boilerplate.
+
+### Plugin Architecture
+
+**Plugins**: `lib/rsolv/prom_ex/*.ex`
+**Registry**: `lib/rsolv/prom_ex.ex` (registers all plugins)
+**Helpers**: `lib/rsolv/prom_ex/helpers.ex` (shared utilities)
+**Endpoint**: `/metrics` (scraped by Prometheus)
+
+### Creating a New Plugin
+
+1. **Create plugin file** in `lib/rsolv/prom_ex/your_feature_plugin.ex`
+2. **Use `PromEx.Plugin` behavior** and import shared helpers
+3. **Implement `event_metrics/1`** to define metrics
+4. **Register plugin** in `lib/rsolv/prom_ex.ex`
+5. **Emit telemetry** from your business logic
+
+Example plugin structure:
+
+```elixir
+defmodule Rsolv.PromEx.YourFeaturePlugin do
+  use PromEx.Plugin
+  import Rsolv.PromEx.Helpers  # Use shared utilities
+
+  @impl true
+  def event_metrics(_opts) do
+    Event.build(
+      :your_feature_metrics,
+      [
+        counter(
+          [:rsolv, :your_feature, :action, :total],
+          event_name: [:rsolv, :your_feature, :action],
+          description: "Total feature actions",
+          tags: [:status, :source],
+          tag_values: &extract_tags/1
+        ),
+
+        distribution(
+          [:rsolv, :your_feature, :duration, :milliseconds],
+          event_name: [:rsolv, :your_feature, :action],
+          measurement: :duration,
+          description: "Feature action duration",
+          tags: [:source],
+          tag_values: &extract_duration_tags/1,
+          unit: {:native, :millisecond},
+          reporter_options: [buckets: [100, 500, 1000, 5000]]
+        )
+      ]
+    )
+  end
+
+  defp extract_tags(metadata) do
+    %{
+      status: extract_tag(metadata, :status),
+      source: extract_tag(metadata, :source)
+    }
+  end
+end
+```
+
+### Shared Helpers (`Rsolv.PromEx.Helpers`)
+
+Always use these helpers to ensure consistency:
+
+```elixir
+# Convert any value to string safely
+to_string_safe(value) :: String.t()
+
+# Extract and convert tag values (with default)
+extract_tag(metadata, key, default \\ "unknown") :: String.t()
+
+# Categorize errors for low cardinality
+categorize_error(reason) :: String.t()
+```
+
+### Metric Cardinality Best Practices
+
+**Problem**: High-cardinality tags (unique values) cause metric explosion and degrade Prometheus performance.
+
+**Rules**:
+1. **Never use unbounded values as tags**: repo names, commit SHAs, timestamps, IDs
+2. **Always categorize user input**: Use `categorize_error/1` for error messages
+3. **Limit tag values**: `status` (3-5 values), `language` (~10 values), `source` (2-3 values)
+4. **Use measurements for unbounded data**: Counters, gauges, histograms
+
+**Good** (low cardinality):
+```elixir
+tags: [:status, :language, :framework]
+# status: success/failure (2 values)
+# language: javascript/python/ruby/go (10 values)
+# framework: jest/pytest/rspec/testify (10 values)
+# Total combinations: 2 × 10 × 10 = 200 series
+```
+
+**Bad** (high cardinality):
+```elixir
+tags: [:repo, :commit_sha, :error_message]
+# repo: Unbounded (thousands of repos)
+# commit_sha: Unbounded (millions of commits)
+# error_message: Unbounded (infinite variations)
+# Total combinations: ∞ series → Prometheus explodes 💥
+```
+
+### Error Categorization
+
+Use `categorize_error/1` to bucket error messages:
+
+```elixir
+# Instead of raw error messages (unbounded):
+reason: "Email validation failed: can't be blank"
+reason: "Rate limit exceeded for IP 1.2.3.4"
+reason: "Disposable email domain detected: temp-mail.com"
+
+# Use categorized errors (bounded):
+reason: categorize_error(raw_reason)
+# Returns: "validation_error", "rate_limited", "disposable_email", "other"
+```
+
+Current categories in `categorize_error/1`:
+- `"disposable_email"` - Disposable email detection
+- `"rate_limited"` - Rate limit errors
+- `"email_validation"` - Email validation failures
+- `"validation_error"` - Generic validation errors (can't be blank)
+- `"duplicate_error"` - Uniqueness violations (already taken)
+- `"other"` - Uncategorized errors
+
+Add new categories as needed, but keep total count under 20.
+
+### Example: CustomerOnboardingPlugin
+
+See `lib/rsolv/prom_ex/customer_onboarding_plugin.ex` for a complete example:
+
+**Metrics collected**:
+- `rsolv.customer_onboarding.complete.total` - Success counter
+- `rsolv.customer_onboarding.failed.total` - Failure counter
+- `rsolv.customer_onboarding.duration.milliseconds` - Duration histogram
+
+**Telemetry emitted** from `lib/rsolv/customer_onboarding.ex`:
+```elixir
+:telemetry.execute(
+  [:rsolv, :customer_onboarding, :complete],
+  %{duration: 1234, count: 1},
+  %{status: "success", customer_id: id, source: "api"}
+)
+```
+
+**Key patterns**:
+- Uses `extract_tag/3` for safe tag extraction
+- Uses `categorize_error/1` for failure reasons
+- Proper bucket sizing for duration histograms
+- Tags limited to: `status`, `source`, `reason` (low cardinality)
+
+### Registering Plugins
+
+Add to `lib/rsolv/prom_ex.ex`:
+
+```elixir
+def plugins do
+  [
+    # ... existing plugins ...
+    Rsolv.PromEx.YourFeaturePlugin
+  ]
+end
+```
+
+Restart the application and verify metrics appear at `/metrics`.
+
 ## Next Steps
 
 1. Deploy to staging and verify metrics collection
@@ -405,8 +575,8 @@ Both systems emit metrics that can be correlated for end-to-end observability.
 
 ## References
 
-- [RFC-060: Executable Validation Test Integration](../RFCs/RFC-060-ENHANCED-VALIDATION-TEST-PERSISTENCE.md)
-- [PromEx Documentation](https://hexdocs.pm/prom_ex/)
-- [Telemetry Documentation](https://hexdocs.pm/telemetry/)
-- [Grafana Documentation](https://grafana.com/docs/)
-- [Prometheus Alerting](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
+- [PromEx Documentation](https://hexdocs.pm/prom_ex/) - Prometheus + Elixir integration
+- [Telemetry Documentation](https://hexdocs.pm/telemetry/) - Elixir metrics and instrumentation
+- [Grafana Documentation](https://grafana.com/docs/) - Visualization and dashboards
+- [Prometheus Alerting](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/) - Alert rule configuration
+- [RFC-060: Executable Validation Test Integration](../RFCs/RFC-060-ENHANCED-VALIDATION-TEST-PERSISTENCE.md) - Historical context for validation/mitigation metrics

@@ -206,12 +206,12 @@ defmodule Rsolv.ConsolidationSchemaTest do
           name: "Usage Test Customer",
           email: "usage-customer@example.com",
           monthly_limit: 100,
-          subscription_plan: "starter"
+          subscription_type: "starter"
         })
 
       assert customer.monthly_limit == 100
       assert customer.current_usage == 0
-      assert customer.subscription_plan == "starter"
+      assert customer.subscription_type == "starter"
 
       # Track usage
       {:ok, updated_customer} = Rsolv.Customers.increment_usage(customer, 1)
@@ -229,7 +229,7 @@ defmodule Rsolv.ConsolidationSchemaTest do
       assert Map.has_key?(customer, :trial_fixes_used)
       assert Map.has_key?(customer, :trial_fixes_limit)
       assert Map.has_key?(customer, :stripe_customer_id)
-      assert Map.has_key?(customer, :subscription_plan)
+      assert Map.has_key?(customer, :subscription_type)
       assert Map.has_key?(customer, :subscription_status)
       assert Map.has_key?(customer, :rollover_fixes)
       assert Map.has_key?(customer, :payment_method_added_at)
@@ -280,7 +280,7 @@ defmodule Rsolv.ConsolidationSchemaTest do
         # Required until RFC-049
         user_id: 1,
         stripe_customer_id: "cus_123",
-        subscription_plan: "pro",
+        subscription_type: "pro",
         trial_fixes_used: 5
       }
 
@@ -288,7 +288,7 @@ defmodule Rsolv.ConsolidationSchemaTest do
 
       # Will FAIL initially - changeset doesn't know these fields
       assert changeset.changes.stripe_customer_id == "cus_123"
-      assert changeset.changes.subscription_plan == "pro"
+      assert changeset.changes.subscription_type == "pro"
       assert changeset.changes.trial_fixes_used == 5
     end
 

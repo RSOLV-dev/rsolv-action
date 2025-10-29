@@ -18,7 +18,7 @@ defmodule Rsolv.AccountsTest do
         Customers.create_customer(%{
           name: "Test Customer",
           email: unique_email(),
-          subscription_plan: "enterprise",
+          subscription_type: "enterprise",
           metadata: %{"flags" => ["ai_access", "enterprise_access"]},
           monthly_limit: 100,
           active: true
@@ -31,13 +31,13 @@ defmodule Rsolv.AccountsTest do
         })
 
       # Should return the customer when using the valid key
-      found_customer = Accounts.get_customer_by_api_key(api_key.key)
+      found_customer = Accounts.get_customer_by_api_key(api_key.raw_key)
       assert found_customer != nil
       assert found_customer.id == customer.id
       assert found_customer.name == "Test Customer"
       # Use actual email from created customer
       assert found_customer.email == customer.email
-      assert found_customer.subscription_plan == "enterprise"
+      assert found_customer.subscription_type == "enterprise"
       assert found_customer.metadata["flags"] == ["ai_access", "enterprise_access"]
       assert found_customer.monthly_limit == 100
       assert found_customer.active == true
@@ -65,7 +65,7 @@ defmodule Rsolv.AccountsTest do
         })
 
       # Should return nil for inactive customer
-      assert Accounts.get_customer_by_api_key(api_key.key) == nil
+      assert Accounts.get_customer_by_api_key(api_key.raw_key) == nil
     end
   end
 end

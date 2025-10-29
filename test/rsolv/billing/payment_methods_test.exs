@@ -16,12 +16,13 @@ defmodule Rsolv.Billing.PaymentMethodsTest do
       payment_method_id = "pm_test_card"
       billing_consent = true
 
-      expect(Rsolv.Billing.StripeMock, :attach_payment_method, fn ^payment_method_id, params ->
+      expect(Rsolv.Billing.StripeMock, :attach, fn params ->
+        assert params.payment_method == payment_method_id
         assert params.customer == customer.stripe_customer_id
         {:ok, %{id: payment_method_id, customer: customer.stripe_customer_id}}
       end)
 
-      expect(Rsolv.Billing.StripeMock, :update_customer, fn stripe_customer_id, params ->
+      expect(Rsolv.Billing.StripeMock, :update, fn stripe_customer_id, params ->
         assert stripe_customer_id == customer.stripe_customer_id
         assert params.invoice_settings.default_payment_method == payment_method_id
         {:ok, %{id: stripe_customer_id}}
@@ -50,11 +51,11 @@ defmodule Rsolv.Billing.PaymentMethodsTest do
       billing_consent = true
       initial_balance = customer.credit_balance
 
-      expect(Rsolv.Billing.StripeMock, :attach_payment_method, fn _, _ ->
+      expect(Rsolv.Billing.StripeMock, :attach, fn _ ->
         {:ok, %{id: payment_method_id, customer: customer.stripe_customer_id}}
       end)
 
-      expect(Rsolv.Billing.StripeMock, :update_customer, fn _, _ ->
+      expect(Rsolv.Billing.StripeMock, :update, fn _, _ ->
         {:ok, %{id: customer.stripe_customer_id}}
       end)
 
@@ -65,7 +66,7 @@ defmodule Rsolv.Billing.PaymentMethodsTest do
       assert updated_customer.credit_balance == initial_balance + 5
 
       # Verify transaction was recorded
-      transactions = Rsolv.Billing.CreditLedger.list_transactions(customer.id)
+      transactions = Rsolv.Billing.CreditLedger.list_transactions(updated_customer)
       assert length(transactions) == 1
 
       [transaction] = transactions

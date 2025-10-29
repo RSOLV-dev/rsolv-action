@@ -94,6 +94,8 @@ defmodule RsolvWeb.Router do
     get "/docs/faq", DocsController, :faq
     get "/docs/workflows", DocsController, :workflows
     get "/docs/configuration", DocsController, :configuration
+    # Example page demonstrating new component system (Phase 2A)
+    get "/docs/example", DocsController, :example_new_layout
 
     # Blog routes (protected by feature flag in controller)
     get "/blog", BlogController, :index
@@ -245,6 +247,7 @@ defmodule RsolvWeb.Router do
 
     # Webhooks
     post "/webhooks/github", WebhookController, :github
+    post "/webhooks/stripe", WebhookController, :stripe
 
     # Education resources
     get "/education/resources", EducationController, :index

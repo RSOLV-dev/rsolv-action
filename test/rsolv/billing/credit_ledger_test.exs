@@ -38,7 +38,7 @@ defmodule Rsolv.Billing.CreditLedgerTest do
       assert {:ok, result} = CreditLedger.credit(customer, 50, "purchased")
 
       # Verify both updates happened
-      updated_customer = Repo.get!(Rsolv.Accounts.Customer, customer.id)
+      updated_customer = Repo.get!(Customer, customer.id)
       assert updated_customer.credit_balance == 150
 
       # Verify transaction was created
@@ -65,7 +65,7 @@ defmodule Rsolv.Billing.CreditLedgerTest do
       assert {:error, :insufficient_credits} = CreditLedger.consume(customer, 15, "consumed")
 
       # Verify balance unchanged
-      updated_customer = Repo.get!(Rsolv.Accounts.Customer, customer.id)
+      updated_customer = Repo.get!(Customer, customer.id)
       assert updated_customer.credit_balance == 10
     end
 
@@ -108,7 +108,7 @@ defmodule Rsolv.Billing.CreditLedgerTest do
       customer = insert(:customer, credit_balance: 100)
 
       assert {:ok, %{customer: updated_customer, transaction: transaction}} =
-               CreditLedger.consume(customer, 0, "test")
+               CreditLedger.consume(customer, 0, "adjustment")
 
       assert updated_customer.credit_balance == 100
       assert transaction.amount == 0
@@ -129,8 +129,8 @@ defmodule Rsolv.Billing.CreditLedgerTest do
       customer = insert(:customer, credit_balance: 0)
       other_customer = insert(:customer)
 
-      {:ok, _} = CreditLedger.credit(customer, 100, "trial_signup")
-      {:ok, _} = CreditLedger.consume(customer, 10, "consumed")
+      {:ok, %{customer: customer}} = CreditLedger.credit(customer, 100, "trial_signup")
+      {:ok, %{customer: customer}} = CreditLedger.consume(customer, 10, "consumed")
       {:ok, _} = CreditLedger.credit(other_customer, 50, "trial_signup")
 
       transactions = CreditLedger.list_transactions(customer)
@@ -140,18 +140,53 @@ defmodule Rsolv.Billing.CreditLedgerTest do
     end
 
     test "list_transactions/1 orders by inserted_at descending" do
-      customer = insert(:customer, credit_balance: 0)
+      customer = insert(:customer, credit_balance: 100)
 
-      {:ok, %{transaction: t1}} = CreditLedger.credit(customer, 100, "trial_signup")
-      Process.sleep(10)
-      {:ok, %{transaction: t2}} = CreditLedger.consume(customer, 10, "consumed")
-      Process.sleep(10)
-      {:ok, %{transaction: t3}} = CreditLedger.credit(customer, 50, "purchased")
+      # Use explicit timestamps to test ordering without sleep
+      base_time = ~U[2025-01-01 12:00:00Z]
+
+      # Insert transactions with explicit timestamps (oldest first)
+      t1 =
+        insert(:credit_transaction,
+          customer: customer,
+          amount: 100,
+          balance_after: 100,
+          source: "trial_signup",
+          inserted_at: DateTime.add(base_time, 0, :second),
+          updated_at: DateTime.add(base_time, 0, :second)
+        )
+
+      t2 =
+        insert(:credit_transaction,
+          customer: customer,
+          amount: -10,
+          balance_after: 90,
+          source: "consumed",
+          inserted_at: DateTime.add(base_time, 60, :second),
+          updated_at: DateTime.add(base_time, 60, :second)
+        )
+
+      t3 =
+        insert(:credit_transaction,
+          customer: customer,
+          amount: 50,
+          balance_after: 140,
+          source: "purchased",
+          inserted_at: DateTime.add(base_time, 120, :second),
+          updated_at: DateTime.add(base_time, 120, :second)
+        )
 
       transactions = CreditLedger.list_transactions(customer)
 
       assert length(transactions) == 3
-      assert Enum.map(transactions, & &1.id) == [t3.id, t2.id, t1.id]
+      # Verify newest first by checking timestamps are descending
+      [first, second, third] = transactions
+      assert DateTime.compare(first.inserted_at, second.inserted_at) == :gt
+      assert DateTime.compare(second.inserted_at, third.inserted_at) == :gt
+      # Should be newest first (t3, then t2, then t1)
+      assert first.id == t3.id
+      assert second.id == t2.id
+      assert third.id == t1.id
     end
   end
 end

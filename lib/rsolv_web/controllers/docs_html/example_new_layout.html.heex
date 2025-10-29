@@ -1,0 +1,145 @@
+<%!-- Example page demonstrating the new documentation layout components --%>
+
+<.docs_layout current_path="/docs/example">
+  <h1 id="getting-started">Getting Started with RSOLV</h1>
+
+  <p class="lead">
+    Learn how to integrate RSOLV into your GitHub workflow for automated security vulnerability detection and fixing.
+  </p>
+
+  <.callout variant="info" title="What you'll learn">
+    <ul>
+      <li>Installing RSOLV GitHub Action</li>
+      <li>Running your first security scan</li>
+      <li>Understanding the three-phase workflow</li>
+      <li>Reviewing and merging security fixes</li>
+    </ul>
+  </.callout>
+
+  <h2 id="installation">Installation</h2>
+
+  <p>
+    To get started with RSOLV, you'll need to add the GitHub Action to your repository's workflow file.
+  </p>
+
+  <h3 id="create-workflow">Create Workflow File</h3>
+
+  <p>
+    Create a new file at <code>.github/workflows/rsolv.yml</code>:
+  </p>
+
+  <.code_block language="yaml" filename=".github/workflows/rsolv.yml">
+    {"""
+    name: RSOLV Security Scan
+
+    on:
+      push:
+        branches: [main]
+      pull_request:
+        branches: [main]
+      workflow_dispatch:
+
+    jobs:
+      security-scan:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v4
+
+          - name: Run RSOLV Security Scan
+            uses: RSOLV-dev/rsolv-action@v1
+            with:
+              api-key: ${{ secrets.RSOLV_API_KEY }}
+              phase: scan
+    """}
+  </.code_block>
+
+  <h3 id="add-secrets">Add API Key Secret</h3>
+
+  <p>
+    Add your RSOLV API key to your repository secrets:
+  </p>
+
+  <ol>
+    <li>Go to your repository's Settings > Secrets and variables > Actions</li>
+    <li>Click "New repository secret"</li>
+    <li>Name: <code>RSOLV_API_KEY</code></li>
+    <li>
+      Value: Your API key from <a href="https://rsolv.dev/dashboard">rsolv.dev/dashboard</a>
+    </li>
+  </ol>
+
+  <.callout variant="success" title="Pro Tip">
+    You can also use organization-level secrets to share your API key across multiple repositories.
+  </.callout>
+
+  <h2 id="understanding-phases">Understanding the Three Phases</h2>
+
+  <p>
+    RSOLV uses a three-phase approach to ensure high-quality security fixes:
+  </p>
+
+  <h3 id="phase-scan">1. Scan Phase</h3>
+
+  <p>
+    Detects potential vulnerabilities using pattern matching and AST validation.
+  </p>
+
+  <.code_block language="bash">
+    {"""
+    # Scan output example
+    ✓ Scanned 247 files
+    ✓ Found 5 potential vulnerabilities
+    ✓ AST validation passed: 5/5
+    ✓ Created GitHub issues: 5
+    """}
+  </.code_block>
+
+  <h3 id="phase-validate">2. Validate Phase</h3>
+
+  <p>
+    Generates RED tests that prove the vulnerability exists.
+  </p>
+
+  <.callout variant="warning" title="Important">
+    The validate phase consumes 1 credit per test generation. Make sure you have sufficient credits before running this phase.
+  </.callout>
+
+  <h3 id="phase-mitigate">3. Mitigate Phase</h3>
+
+  <p>
+    Generates fixes that make tests pass (GREEN) and refactors for quality.
+  </p>
+
+  <.code_block language="elixir" filename="example_fix.exs">
+    {~S"""
+    # Before (vulnerable)
+    def search(query) do
+      Repo.query("SELECT * FROM users WHERE name = '#{query}'")
+    end
+
+    # After (secure)
+    def search(query) do
+      Repo.query("SELECT * FROM users WHERE name = $1", [query])
+    end
+    """}
+  </.code_block>
+
+  <h2 id="next-steps">Next Steps</h2>
+
+  <p>
+    Now that you have RSOLV installed, explore these resources:
+  </p>
+
+  <ul>
+    <li><a href="/docs/configuration">Configuration Options</a></li>
+    <li><a href="/docs/workflows">Workflow Templates</a></li>
+    <li><a href="/docs/api-reference">API Reference</a></li>
+    <li><a href="/docs/troubleshooting">Troubleshooting Guide</a></li>
+  </ul>
+
+  <.callout variant="note">
+    Need help? Join our
+    <a href="https://github.com/RSOLV-dev/rsolv-action/discussions">GitHub Discussions</a>
+    or email <a href="mailto:support@rsolv.dev">support@rsolv.dev</a>.
+  </.callout>
+</.docs_layout>

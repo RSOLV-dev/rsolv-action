@@ -13,10 +13,10 @@ defmodule Rsolv.Billing.StripeServiceTest do
       customer = insert(:customer, email: "test@example.com", name: "Test User")
 
       # Mock Stripe API response
-      expect(Rsolv.Billing.StripeMock, :create_customer, fn params ->
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
         assert params[:email] == "test@example.com"
         assert params[:name] == "Test User"
-        assert params[:metadata][:rsolv_customer_id] == to_string(customer.id)
+        assert params[:metadata]["rsolv_customer_id"] == customer.id
 
         {:ok,
          %Stripe.Customer{
@@ -33,9 +33,9 @@ defmodule Rsolv.Billing.StripeServiceTest do
     test "includes customer metadata in Stripe customer" do
       customer = insert(:customer, metadata: %{"source" => "github_action"})
 
-      expect(Rsolv.Billing.StripeMock, :create_customer, fn params ->
-        assert params[:metadata][:rsolv_customer_id] == to_string(customer.id)
-        assert params[:metadata][:source] == "github_action"
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        assert params[:metadata]["rsolv_customer_id"] == customer.id
+        assert params[:metadata]["source"] == "github_action"
 
         {:ok, %Stripe.Customer{id: "cus_test456"}}
       end)
@@ -46,11 +46,12 @@ defmodule Rsolv.Billing.StripeServiceTest do
     test "handles Stripe API errors gracefully" do
       customer = insert(:customer)
 
-      expect(Rsolv.Billing.StripeMock, :create_customer, fn _params ->
+      expect(Rsolv.Billing.StripeMock, :create, fn _params ->
         {:error,
          %Stripe.Error{
-           message: "Invalid API key",
-           type: "invalid_request_error"
+           source: :stripe,
+           code: "invalid_request_error",
+           message: "Invalid API key"
          }}
       end)
 
@@ -61,7 +62,7 @@ defmodule Rsolv.Billing.StripeServiceTest do
     test "handles network errors" do
       customer = insert(:customer)
 
-      expect(Rsolv.Billing.StripeMock, :create_customer, fn _params ->
+      expect(Rsolv.Billing.StripeMock, :create, fn _params ->
         {:error, %HTTPoison.Error{reason: :timeout}}
       end)
 
@@ -71,7 +72,7 @@ defmodule Rsolv.Billing.StripeServiceTest do
 
   describe "get_customer/1" do
     test "retrieves Stripe customer by ID" do
-      expect(Rsolv.Billing.StripeMock, :get_customer, fn "cus_test123" ->
+      expect(Rsolv.Billing.StripeMock, :retrieve, fn "cus_test123" ->
         {:ok,
          %Stripe.Customer{
            id: "cus_test123",
@@ -84,11 +85,12 @@ defmodule Rsolv.Billing.StripeServiceTest do
     end
 
     test "handles customer not found" do
-      expect(Rsolv.Billing.StripeMock, :get_customer, fn "cus_invalid" ->
+      expect(Rsolv.Billing.StripeMock, :retrieve, fn "cus_invalid" ->
         {:error,
          %Stripe.Error{
-           message: "No such customer",
-           type: "invalid_request_error"
+           source: :stripe,
+           code: :invalid_request_error,
+           message: "No such customer"
          }}
       end)
 
@@ -100,7 +102,7 @@ defmodule Rsolv.Billing.StripeServiceTest do
     test "emits telemetry event on successful customer creation" do
       customer = insert(:customer)
 
-      expect(Rsolv.Billing.StripeMock, :create_customer, fn _params ->
+      expect(Rsolv.Billing.StripeMock, :create, fn _params ->
         {:ok, %Stripe.Customer{id: "cus_test789"}}
       end)
 

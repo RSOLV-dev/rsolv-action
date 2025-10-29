@@ -24,7 +24,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       })
 
     # Create an API key for this customer
-    {:ok, api_key} =
+    {:ok, %{record: _api_key_record, raw_key: raw_api_key}} =
       Rsolv.Customers.create_api_key(customer_record, %{
         name: "Test Key",
         permissions: ["full_access"]
@@ -36,7 +36,8 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       id: customer_record.id,
       name: customer_record.name,
       email: customer_record.email,
-      api_key: api_key.key,
+      api_key: raw_api_key,
+      raw_api_key: raw_api_key,
       tier: "enterprise",
       flags: ["ai_access", "enterprise_access"],
       monthly_limit: customer_record.monthly_limit,
@@ -46,7 +47,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       created_at: customer_record.inserted_at
     }
 
-    {:ok, customer: customer, api_key: api_key.key}
+    {:ok, customer: customer, raw_api_key: raw_api_key}
   end
 
   describe "analyze/2" do
@@ -62,6 +63,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
     test "validates API key", %{conn: conn} do
       conn =
         conn
+        |> put_req_header("content-type", "application/json")
         |> put_req_header("x-api-key", "invalid-key")
         |> post("/api/v1/ast/analyze", %{})
 
@@ -77,14 +79,22 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
 
       conn =
         conn
+        |> put_req_header("content-type", "application/json")
         |> put_req_header("x-api-key", customer.api_key)
         |> put_req_header("x-encryption-key", Base.encode64(encryption_key))
         |> post("/api/v1/ast/analyze", %{})
 
-      response = json_response(conn, 400)
-      assert response["error"]["code"] == "INVALID_REQUEST"
-      assert response["error"]["message"] == "files required"
-      assert response["requestId"]
+      # OpenApiSpex schema validation returns 422 for missing required fields
+      response = json_response(conn, 422)
+      assert response["errors"]
+
+      # Verify error mentions missing files field
+      error_detail =
+        response["errors"]
+        |> List.first()
+        |> Map.get("detail")
+
+      assert error_detail =~ "Missing field: files"
     end
 
     test "analyzes encrypted files successfully", %{conn: conn, customer: customer} do
@@ -133,6 +143,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
 
       conn =
         conn
+        |> put_req_header("content-type", "application/json")
         |> put_req_header("x-api-key", customer.api_key)
         |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
         |> post("/api/v1/ast/analyze", request)
@@ -239,6 +250,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
 
       conn =
         conn
+        |> put_req_header("content-type", "application/json")
         |> put_req_header("x-api-key", customer.api_key)
         |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
         |> post("/api/v1/ast/analyze", request)
@@ -303,6 +315,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
 
       conn =
         conn
+        |> put_req_header("content-type", "application/json")
         |> put_req_header("x-api-key", customer.api_key)
         |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
         |> post("/api/v1/ast/analyze", request)
@@ -357,6 +370,7 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
 
       conn =
         conn
+        |> put_req_header("content-type", "application/json")
         |> put_req_header("x-api-key", customer.api_key)
         |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
         |> post("/api/v1/ast/analyze", request)
@@ -407,14 +421,24 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
 
       conn =
         conn
+        |> put_req_header("content-type", "application/json")
         |> put_req_header("x-api-key", customer.api_key)
         |> put_req_header("x-encryption-key", Base.encode64(session.encryption_key))
         |> post("/api/v1/ast/analyze", request)
 
-      response = json_response(conn, 400)
-      assert response["error"]["code"] == "INVALID_REQUEST"
-      assert response["error"]["message"] == "maximum 10 files allowed"
-      assert response["requestId"]
+      # OpenApiSpex schema validation catches this before controller logic
+      # Returns 422 for schema validation errors (maxItems: 10 in OpenAPI spec)
+      response = json_response(conn, 422)
+      assert response["errors"]
+
+      # Verify the error mentions array length
+      error_detail =
+        response["errors"]
+        |> List.first()
+        |> Map.get("detail")
+
+      assert error_detail =~ "Array length 11"
+      assert error_detail =~ "maxItems: 10"
     end
   end
 end

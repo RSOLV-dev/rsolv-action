@@ -14,7 +14,8 @@ defmodule Rsolv.PromEx do
       Plugins.PhoenixLiveView,
 
       # RSOLV custom plugins
-      Rsolv.PromEx.ValidationPlugin
+      Rsolv.PromEx.ValidationPlugin,
+      Rsolv.PromEx.CustomerOnboardingPlugin
       # TODO: Add custom plugin for rate limiter metrics after fixing metric name format
       # Rsolv.PromEx.RateLimiterPlugin
     ]

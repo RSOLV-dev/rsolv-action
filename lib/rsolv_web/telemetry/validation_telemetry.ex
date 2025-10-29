@@ -72,7 +72,7 @@ defmodule RsolvWeb.Telemetry.ValidationTelemetry do
         %{
           customer_id: customer_id,
           pattern_ids:
-            Enum.map(rejected_vulns, fn v -> Map.get(v, "patternId") end)
+            Enum.map(rejected_vulns, fn v -> Map.get(v, "type") end)
             |> Enum.uniq()
             |> Enum.reject(&is_nil/1)
         }
