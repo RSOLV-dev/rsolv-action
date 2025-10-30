@@ -1,10 +1,11 @@
 # RFC-067: GitHub Marketplace Publishing
 
-**Status**: Draft
+**Status**: Draft - Submission Strategically Deferred
 **Created**: 2025-10-12
-**Updated**: 2025-10-21
+**Updated**: 2025-10-30
 **Timeline**: 2-3 weeks
-**Dependencies**: RSOLV-action v3 stable
+**Dependencies**: RSOLV-action v3 stable, customer signup flow (RFCs 064-069)
+**Decision**: [Continue deferral until customer signup ready](../projects/go-to-market-2025-10/RFC-067-MARKETPLACE-SUBMISSION-DECISION.md) (2025-10-30)
 
 ## Quick Start
 
