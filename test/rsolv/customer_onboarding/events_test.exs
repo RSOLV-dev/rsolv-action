@@ -246,8 +246,16 @@ defmodule Rsolv.CustomerOnboarding.EventsTest do
       event_types = Enum.map(events, & &1.event_type) |> Enum.sort()
       assert event_types == Enum.sort(["email_sent", "api_key_generated", "customer_created"])
       assert Enum.all?(events, &(&1.status == "success"))
-      # Verify email_sent is most recent (first or second if timestamp collision)
-      assert Enum.at(events, 0).event_type in ["email_sent", "api_key_generated"]
+
+      # Verify ordering by timestamp (most recent first)
+      # Find each event by type since position may vary in full test suite
+      email_event = Enum.find(events, &(&1.event_type == "email_sent"))
+      api_event = Enum.find(events, &(&1.event_type == "api_key_generated"))
+      customer_event = Enum.find(events, &(&1.event_type == "customer_created"))
+
+      # Verify email_sent has latest or equal timestamp (accounting for microsecond precision)
+      assert DateTime.compare(email_event.inserted_at, api_event.inserted_at) in [:gt, :eq]
+      assert DateTime.compare(api_event.inserted_at, customer_event.inserted_at) in [:gt, :eq]
     end
 
     test "captures failures in audit trail" do

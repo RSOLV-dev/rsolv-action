@@ -8,7 +8,7 @@ defmodule Rsolv.Security.WebhookSignatureTest do
   use RsolvWeb.ConnCase, async: true
 
   @webhook_secret "whsec_test_secret_at_least_32_chars"
-  @valid_payload ~s({"type":"invoice.paid","data":{"object":{"id":"in_test"}}})
+  @valid_payload ~s({"id":"evt_test_123","type":"invoice.paid","data":{"object":{"id":"in_test"}}})
 
   describe "Stripe signature verification" do
     test "accepts valid signature", %{conn: conn} do

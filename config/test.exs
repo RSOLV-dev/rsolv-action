@@ -86,4 +86,4 @@ config :rsolv,
   stripe_client: Rsolv.Billing.StripeMock,
   stripe_payment_method: Rsolv.Billing.StripeMock,
   stripe_subscription: Rsolv.Billing.StripeMock,
-  stripe_charge: Rsolv.Billing.StripeMock
+  stripe_charge: Rsolv.Billing.StripeChargeMock

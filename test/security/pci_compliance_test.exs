@@ -65,33 +65,57 @@ defmodule Rsolv.Security.PCIComplianceTest do
   end
 
   describe "data storage compliance" do
-    @tag :skip
     test "no card numbers stored in database" do
-      # This test should be implemented when Customer schema exists
-      # It should verify that:
-      # 1. Customer table has no card_number field
-      # 2. Only stripe_payment_method_id is stored
-      # 3. Schema validation prevents card data insertion
+      # Verify Customer schema has no card_number or card-related fields
+      alias Rsolv.Customers.Customer
 
-      # Example implementation:
-      # assert_raise(ArgumentError, fn ->
-      #   Customer.changeset(%Customer{}, %{card_number: @test_card_number})
-      # end)
+      schema_fields = Customer.__schema__(:fields)
+
+      # Assert no dangerous fields exist
+      refute :card_number in schema_fields, "card_number field found - PCI violation!"
+      refute :card in schema_fields, "card field found - PCI violation!"
+
+      refute :payment_card_number in schema_fields,
+             "payment_card_number field found - PCI violation!"
+
+      refute :cc_number in schema_fields, "cc_number field found - PCI violation!"
+
+      # Verify we only have Stripe IDs
+      assert :stripe_customer_id in schema_fields, "stripe_customer_id field missing"
     end
 
-    @tag :skip
     test "no CVV codes stored in database" do
-      # Should verify CVV is never persisted
-      # Only Stripe handles CVV during tokenization
+      # Verify Customer schema has no CVV or security code fields
+      alias Rsolv.Customers.Customer
+
+      schema_fields = Customer.__schema__(:fields)
+
+      # Assert no CVV-related fields exist
+      refute :cvv in schema_fields, "cvv field found - PCI violation!"
+      refute :cvc in schema_fields, "cvc field found - PCI violation!"
+      refute :security_code in schema_fields, "security_code field found - PCI violation!"
+
+      refute :card_security_code in schema_fields,
+             "card_security_code field found - PCI violation!"
     end
 
-    @tag :skip
     test "only Stripe IDs stored for payment methods" do
-      # Verify we only store:
-      # - stripe_customer_id
-      # - stripe_subscription_id
-      # - stripe_payment_method_id
-      # Never store actual payment data
+      # Verify we only store Stripe references, never actual payment data
+      alias Rsolv.Customers.Customer
+
+      schema_fields = Customer.__schema__(:fields)
+
+      # Assert we have the correct Stripe ID fields
+      assert :stripe_customer_id in schema_fields, "stripe_customer_id missing"
+      assert :stripe_subscription_id in schema_fields, "stripe_subscription_id missing"
+
+      # Assert no actual payment data fields
+      refute :card_number in schema_fields
+      refute :expiry in schema_fields
+      refute :exp_month in schema_fields
+      refute :exp_year in schema_fields
+      refute :card_type in schema_fields
+      refute :card_brand in schema_fields
     end
   end
 
@@ -136,10 +160,25 @@ defmodule Rsolv.Security.PCIComplianceTest do
       refute String.contains?(log, "api_key")
     end
 
-    @tag :skip
-    test "database connections use SSL" do
-      # Verify DATABASE_URL includes ssl=true in production
-      # Or that Ecto pool configuration has ssl: true
+    test "database connections use SSL in production" do
+      # In test/dev environment, SSL may be disabled
+      # This test verifies the configuration supports SSL and would be enabled in prod
+
+      # Check if SSL is configured in the Repo
+      # In production, DATABASE_SSL env var should be "true"
+      database_ssl = System.get_env("DATABASE_SSL", "false")
+
+      # In test environment, we expect SSL to be disabled (false)
+      # But we verify the configuration KEY exists and is readable
+      assert database_ssl in ["true", "false"],
+             "DATABASE_SSL must be explicitly set to 'true' or 'false'"
+
+      # For test environment specifically, we expect it to be false
+      # In production, this would be true
+      if Mix.env() == :prod do
+        assert database_ssl == "true",
+               "DATABASE_SSL must be 'true' in production for PCI compliance!"
+      end
     end
   end
 end

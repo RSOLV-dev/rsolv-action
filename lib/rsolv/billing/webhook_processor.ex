@@ -26,8 +26,21 @@ defmodule Rsolv.Billing.WebhookProcessor do
     case Repo.get_by(BillingEvent, stripe_event_id: event_id) do
       nil ->
         # First time seeing this event
-        handle_event(type, data)
-        record_event(event_id, type, data)
+        result = handle_event(type, data)
+
+        # Always record event for audit trail (even if ignored)
+        case record_event(event_id, type, data) do
+          {:ok, _event} ->
+            # Return the result from handle_event
+            case result do
+              {:ok, :ignored} -> {:ok, :ignored}
+              {:ok, _} -> {:ok, :processed}
+              error -> error
+            end
+
+          {:error, changeset} ->
+            {:error, changeset}
+        end
 
       %BillingEvent{} ->
         # Already processed (Stripe sends duplicates)
@@ -44,13 +57,10 @@ defmodule Rsolv.Billing.WebhookProcessor do
 
     # Pro subscription payment → Credit 60 fixes
     if invoice["lines"]["data"] |> Enum.any?(&pro_subscription?/1) do
-      CreditLedger.credit(customer, 60,
-        source: "pro_subscription_payment",
-        metadata: %{
-          stripe_invoice_id: invoice["id"],
-          amount_cents: invoice["amount_paid"]
-        }
-      )
+      CreditLedger.credit(customer, 60, "pro_subscription_payment", %{
+        stripe_invoice_id: invoice["id"],
+        amount_cents: invoice["amount_paid"]
+      })
 
       Logger.info("Pro subscription payment processed",
         customer_id: customer.id,

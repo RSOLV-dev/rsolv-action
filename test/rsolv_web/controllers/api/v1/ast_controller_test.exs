@@ -326,8 +326,6 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
       assert response["requestId"]
     end
 
-    # Rate limiter implementation issue - not related to RFC-049
-    @tag :skip
     test "enforces rate limiting", %{conn: conn, customer: customer} do
       # Create a session to get encryption key
       {:ok, session} = SessionManager.create_session(customer.id)
@@ -362,11 +360,15 @@ defmodule RsolvWeb.Api.V1.ASTControllerTest do
         "options" => %{}
       }
 
-      # Simulate hitting rate limit by setting counter
-      :ets.insert(
-        :rsolv_rate_limiter,
-        {{customer.id, "ast_analysis"}, 100, System.system_time(:second)}
-      )
+      # Simulate hitting rate limit by setting counter in Mnesia
+      # Structure: {table_name, {customer_id, action}, count, window_start}
+      key = {customer.id, "ast_analysis"}
+      current_time = System.system_time(:second)
+
+      {:atomic, :ok} =
+        :mnesia.transaction(fn ->
+          :mnesia.write({:rsolv_rate_limiter, key, 100, current_time})
+        end)
 
       conn =
         conn

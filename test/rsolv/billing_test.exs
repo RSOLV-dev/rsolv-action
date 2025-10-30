@@ -80,11 +80,11 @@ defmodule Rsolv.BillingTest do
         })
 
       # Mock Stripe charge creation
-      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+      expect(Rsolv.Billing.StripeChargeMock, :create, fn params ->
         # $29 in cents
         assert params.amount == 2900
         assert params.customer == "cus_test_payg"
-        {:ok, %{id: "ch_test_123", amount: 2900}}
+        {:ok, %{id: "ch_test_123", amount: 2900, status: "succeeded", currency: "usd"}}
       end)
 
       # Act: Track fix deployment (should charge $29)
@@ -129,11 +129,11 @@ defmodule Rsolv.BillingTest do
         })
 
       # Mock Stripe charge creation
-      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+      expect(Rsolv.Billing.StripeChargeMock, :create, fn params ->
         # $15 in cents
         assert params.amount == 1500
         assert params.customer == "cus_test_pro"
-        {:ok, %{id: "ch_test_123", amount: 1500}}
+        {:ok, %{id: "ch_test_pro", amount: 1500, status: "succeeded", currency: "usd"}}
       end)
 
       # Act: Track fix deployment (should charge $15 Pro overage)
@@ -163,11 +163,11 @@ defmodule Rsolv.BillingTest do
         })
 
       # Mock Stripe charge creation
-      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+      expect(Rsolv.Billing.StripeChargeMock, :create, fn params ->
         # $29 PAYG rate
         assert params.amount == 2900
         assert params.customer == "cus_test_123"
-        {:ok, %{id: "ch_test_123", amount: 2900}}
+        {:ok, %{id: "ch_test_atomicity", amount: 2900, status: "succeeded", currency: "usd"}}
       end)
 
       # Act: Track fix deployment

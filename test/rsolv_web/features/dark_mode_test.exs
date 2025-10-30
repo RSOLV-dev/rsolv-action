@@ -64,23 +64,28 @@ defmodule RsolvWeb.Features.DarkModeTest do
   end
 
   describe "CSS compilation" do
-    @tag :skip
     test "dark mode CSS variables are defined in compiled CSS" do
-      # This test requires CSS to be compiled first
-      # Run: cd assets && npm run build
+      # Verify compiled CSS exists and contains dark mode styles
       css_path = Path.join([File.cwd!(), "priv", "static", "assets", "app.css"])
 
-      if File.exists?(css_path) do
-        css_content = File.read!(css_path)
+      assert File.exists?(css_path),
+             "Compiled CSS not found at #{css_path}. Run: mix assets.build"
 
-        # Check for CSS variables
-        assert css_content =~ "--color-bg-canvas"
-        assert css_content =~ ".dark"
-        # Note: The compiled CSS won't have "colors.slate.950" but the actual color values
-      else
-        # Skip test if CSS not compiled yet
-        IO.puts("Skipping CSS test - file not found at #{css_path}")
-      end
+      css_content = File.read!(css_path)
+
+      # Check for dark mode class selector
+      assert css_content =~ ".dark",
+             "Dark mode class selector not found in compiled CSS"
+
+      # Check for dark mode utility classes (Tailwind generates these)
+      # Example: dark:bg-slate-950, dark:text-white, etc.
+      assert css_content =~ "dark:",
+             "Dark mode utility classes not found in compiled CSS"
+
+      # Verify we have actual dark mode color values
+      # Tailwind compiles these to actual hex/rgb values
+      assert String.length(css_content) > 1000,
+             "Compiled CSS is too small, may not be properly built"
     end
   end
 end

@@ -15,3 +15,13 @@ defmodule Rsolv.Billing.StripeClientBehaviour do
   # Stripe.Subscription methods
   @callback cancel(String.t()) :: {:ok, map()} | {:error, term()}
 end
+
+defmodule Rsolv.Billing.StripeChargeBehaviour do
+  @moduledoc """
+  Behaviour for Stripe.Charge operations.
+  Separate from StripeClientBehaviour to match Stripe module structure.
+  """
+
+  # Stripe.Charge methods
+  @callback create(map()) :: {:ok, map()} | {:error, Stripe.Error.t()}
+end
