@@ -59,6 +59,16 @@ defmodule RsolvWeb.Api.V1.CustomerOnboardingControllerTest do
     end
 
     test "creates customer with valid data", %{conn: conn} do
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        {:ok,
+         %{
+           id: "cus_test_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
+
       attrs = %{
         "name" => "Test Customer",
         "email" => "test#{System.unique_integer([:positive])}@testcompany.com"
@@ -154,6 +164,16 @@ defmodule RsolvWeb.Api.V1.CustomerOnboardingControllerTest do
     end
 
     test "enforces rate limit (10 requests per minute per IP)", %{conn: conn} do
+      # Mock Stripe customer creation for all 10 requests
+      expect(Rsolv.Billing.StripeMock, :create, 10, fn params ->
+        {:ok,
+         %{
+           id: "cus_test_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
+
       # Make 10 successful requests
       for i <- 1..10 do
         attrs = %{
@@ -188,6 +208,16 @@ defmodule RsolvWeb.Api.V1.CustomerOnboardingControllerTest do
     end
 
     test "sets initial credit limits correctly", %{conn: conn} do
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        {:ok,
+         %{
+           id: "cus_test_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
+
       attrs = %{
         "name" => "Test Customer",
         "email" => "test#{System.unique_integer([:positive])}@testcompany.com"
