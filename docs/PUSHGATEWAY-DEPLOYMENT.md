@@ -163,23 +163,31 @@ gh run view --log
 
 ### 8. Deploy to Production
 
-After successful testing in staging:
+**Status:** ✅ COMPLETED (2025-10-30)
+
+Production deployment uses separate hostnames to avoid staging conflicts:
+- **Staging:** `https://pushgateway.rsolv-staging.com`
+- **Production:** `https://pushgateway.rsolv.dev` and `https://pushgateway.rsolv.ai`
+
+Deployment is managed via kustomize overlays:
 
 ```bash
-# Switch to production context
-kubectl config use-context production
-
-# Apply the same manifest
-kubectl apply -f config/monitoring/pushgateway.yaml
+# Deploy to production
+kubectl apply -k ~/dev/rsolv/RSOLV-infrastructure/shared/monitoring/overlays/production
 
 # Verify deployment
-kubectl get pods -n monitoring -l app=pushgateway
-kubectl get service -n monitoring pushgateway
-kubectl get ingress -n monitoring pushgateway-ingress
+kubectl get pods -n rsolv-monitoring -l app=pushgateway
+kubectl get service pushgateway -n rsolv-monitoring
+kubectl get ingress pushgateway-ingress -n rsolv-monitoring
 
-# Test external access
-curl https://pushgateway.rsolv.dev/metrics
+# Test external access (requires authentication)
+curl -I https://pushgateway.rsolv.dev/metrics  # Should return 401
+curl --user "github-actions:PASSWORD" https://pushgateway.rsolv.dev/metrics  # Returns metrics
 ```
+
+**Production Credentials:** Separate password from staging, stored in:
+- Kubernetes: `pushgateway-auth` secret in `rsolv-monitoring` namespace
+- GitHub: `PUSHGATEWAY_PASSWORD` repository secret (updated with production password)
 
 ## Monitoring and Maintenance
 

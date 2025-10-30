@@ -47,11 +47,25 @@ Primary dashboard for CI/CD monitoring. Tracks:
 CI/CD metrics are exported to Prometheus via Pushgateway. This allows GitHub Actions workflows to push metrics to Prometheus even though they run externally.
 
 **URLs:**
-- Production: `https://pushgateway.rsolv.dev`
-- Local/Docker Compose: `http://pushgateway:9091`
+- **Production:** `https://pushgateway.rsolv.dev` (also available at `https://pushgateway.rsolv.ai`)
+- **Staging:** `https://pushgateway.rsolv-staging.com`
+- **Local/Docker Compose:** `http://pushgateway:9091`
+
+**Authentication:** All endpoints require HTTP Basic Authentication. Credentials are stored in:
+- Kubernetes: `pushgateway-auth` secret in each namespace
+- GitHub: `PUSHGATEWAY_USERNAME` and `PUSHGATEWAY_PASSWORD` repository secrets
 
 **Configuration:**
-Set the `PUSHGATEWAY_URL` secret in your GitHub repository settings, or the workflow will use the production URL by default.
+The workflow defaults to the production URL (`https://pushgateway.rsolv.dev`). To override:
+```bash
+gh secret set PUSHGATEWAY_URL --body "https://pushgateway.rsolv-staging.com"
+```
+
+**Deployment Status:**
+- ✅ Production: Deployed to `rsolv-monitoring` namespace (2025-10-30)
+- ✅ Staging: Deployed to `rsolv-monitoring-staging` namespace (2025-10-29)
+
+See `docs/PUSHGATEWAY-DEPLOYMENT.md` for deployment instructions and `docs/PUSHGATEWAY-SECURITY.md` for security configuration.
 
 ### GitHub Actions Metrics
 
