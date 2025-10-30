@@ -116,7 +116,6 @@ jobs:
           path: cover/
 
       - name: Generate merged coverage report
-        continue-on-error: true  # Don't fail build if coverage threshold not met
         run: |
           # Check if we have coverage data files
           if ls cover/*.coverdata 2>/dev/null; then
@@ -144,17 +143,21 @@ jobs:
           path-to-lcov: cover/excoveralls.json
           format: lcov
 
-      - name: Check coverage threshold (70% minimum)
+      - name: Check coverage threshold (60% minimum)
         run: |
           if [ -f cover/excoveralls.json ]; then
             COVERAGE=$(jq '.["coverage"]' cover/excoveralls.json 2>/dev/null || echo "0")
             echo "Current coverage: ${COVERAGE}%"
 
-            if (( $(echo "$COVERAGE < 70" | bc -l) )); then
-              echo "⚠️  Coverage ${COVERAGE}% is below 70% threshold (aspirational: 85%)"
-              # Non-fatal for now during billing implementation
+            if (( $(echo "$COVERAGE < 60" | bc -l) )); then
+              echo "❌ Coverage ${COVERAGE}% is below 60% threshold"
+              echo "This check is now BLOCKING - please add tests to improve coverage"
+              exit 1
             else
-              echo "✅ Coverage ${COVERAGE}% meets threshold"
+              echo "✅ Coverage ${COVERAGE}% meets 60% threshold"
+              if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+                echo "📈 Target: 70% (aspirational: 85%)"
+              fi
             fi
           fi
 
