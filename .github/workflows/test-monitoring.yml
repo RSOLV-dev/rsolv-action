@@ -68,7 +68,9 @@ jobs:
       - name: Export metrics to Prometheus
         if: env.PUSHGATEWAY_URL != ''
         run: |
-          cat <<EOF | curl --data-binary @- ${PUSHGATEWAY_URL}/metrics/job/ci/workflow/${GITHUB_WORKFLOW}
+          # URL-encode workflow name (replace spaces with %20)
+          WORKFLOW_ENCODED=$(echo "${GITHUB_WORKFLOW}" | sed 's/ /%20/g')
+          cat <<EOF | curl --data-binary @- ${PUSHGATEWAY_URL}/metrics/job/ci/workflow/${WORKFLOW_ENCODED}
           # HELP github_actions_workflow_run_conclusion Workflow run conclusion (0=success, 1=failure)
           # TYPE github_actions_workflow_run_conclusion gauge
           github_actions_workflow_run_conclusion{workflow="${GITHUB_WORKFLOW}",branch="${GITHUB_REF_NAME}"} ${{ github.event.workflow_run.conclusion == 'success' && '0' || '1' }}
