@@ -11,9 +11,12 @@ defmodule RsolvWeb.ApiSpecController do
   def spec(conn, _params) do
     spec = RsolvWeb.ApiSpec.spec()
 
+    # Convert OpenApiSpex struct to JSON-encodable map
+    json_spec = OpenApiSpex.OpenApi.to_map(spec)
+
     conn
     |> put_resp_content_type("application/json")
-    |> json(spec)
+    |> json(json_spec)
   end
 
   @doc """
