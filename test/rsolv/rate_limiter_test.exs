@@ -40,7 +40,8 @@ defmodule Rsolv.RateLimiterTest do
       end
 
       # 101st request should be blocked
-      assert {:error, :rate_limited, _metadata} = RateLimiter.check_rate_limit(customer_id, action)
+      assert {:error, :rate_limited, _metadata} =
+               RateLimiter.check_rate_limit(customer_id, action)
     end
 
     test "uses separate counters per customer" do
@@ -49,14 +50,16 @@ defmodule Rsolv.RateLimiterTest do
         assert {:ok, _metadata} = RateLimiter.check_rate_limit("customer-1", "action")
       end
 
-      assert {:error, :rate_limited, _metadata} = RateLimiter.check_rate_limit("customer-1", "action")
+      assert {:error, :rate_limited, _metadata} =
+               RateLimiter.check_rate_limit("customer-1", "action")
 
       # Customer 2 should still have their full quota
       for _ <- 1..100 do
         assert {:ok, _metadata} = RateLimiter.check_rate_limit("customer-2", "action")
       end
 
-      assert {:error, :rate_limited, _metadata} = RateLimiter.check_rate_limit("customer-2", "action")
+      assert {:error, :rate_limited, _metadata} =
+               RateLimiter.check_rate_limit("customer-2", "action")
     end
 
     test "uses separate counters per action" do
@@ -67,14 +70,16 @@ defmodule Rsolv.RateLimiterTest do
         assert {:ok, _metadata} = RateLimiter.check_rate_limit(customer_id, "action-1")
       end
 
-      assert {:error, :rate_limited, _metadata} = RateLimiter.check_rate_limit(customer_id, "action-1")
+      assert {:error, :rate_limited, _metadata} =
+               RateLimiter.check_rate_limit(customer_id, "action-1")
 
       # Should still have full quota for action 2
       for _ <- 1..100 do
         assert {:ok, _metadata} = RateLimiter.check_rate_limit(customer_id, "action-2")
       end
 
-      assert {:error, :rate_limited, _metadata} = RateLimiter.check_rate_limit(customer_id, "action-2")
+      assert {:error, :rate_limited, _metadata} =
+               RateLimiter.check_rate_limit(customer_id, "action-2")
     end
 
     test "resets counter after 60 seconds" do
@@ -86,7 +91,8 @@ defmodule Rsolv.RateLimiterTest do
         assert {:ok, _metadata} = RateLimiter.check_rate_limit(customer_id, action)
       end
 
-      assert {:error, :rate_limited, _metadata} = RateLimiter.check_rate_limit(customer_id, action)
+      assert {:error, :rate_limited, _metadata} =
+               RateLimiter.check_rate_limit(customer_id, action)
 
       # Mock time passage by directly manipulating Mnesia
       # This is a bit hacky but avoids sleeping for 60 seconds
@@ -144,7 +150,8 @@ defmodule Rsolv.RateLimiterTest do
       end
 
       # Exceed the limit
-      assert {:error, :rate_limited, _metadata} = RateLimiter.check_rate_limit(customer_id, action)
+      assert {:error, :rate_limited, _metadata} =
+               RateLimiter.check_rate_limit(customer_id, action)
 
       assert_receive {:telemetry_exceeded, measurements, metadata}
       assert measurements.count == 1
@@ -201,7 +208,8 @@ defmodule Rsolv.RateLimiterTest do
       end
 
       # The 101st request should be rate limited
-      assert {:error, :rate_limited, _metadata} = RateLimiter.check_rate_limit(customer_id, action)
+      assert {:error, :rate_limited, _metadata} =
+               RateLimiter.check_rate_limit(customer_id, action)
 
       # Verify the count is correct
       assert RateLimiter.get_current_count(customer_id, action) == 100

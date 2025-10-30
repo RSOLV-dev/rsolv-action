@@ -180,7 +180,8 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
       # Mock Stripe charge
       expect(Rsolv.Billing.StripeChargeMock, :create, fn params ->
         assert params.customer == "cus_payg_test"
-        assert params.amount == 2900  # $29.00 PAYG rate
+        # $29.00 PAYG rate
+        assert params.amount == 2900
         assert params.currency == "usd"
 
         {:ok,
@@ -198,7 +199,8 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
 
       # Verify charge-credit-consume flow
       reloaded = Customers.get_customer!(customer.id)
-      assert reloaded.credit_balance == 0  # 1 added, 1 consumed
+      # 1 added, 1 consumed
+      assert reloaded.credit_balance == 0
 
       transactions = Billing.list_credit_transactions(customer.id)
       assert length(transactions) == 2
@@ -231,7 +233,8 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
 
       # Mock Stripe charge at Pro rate
       expect(Rsolv.Billing.StripeChargeMock, :create, fn params ->
-        assert params.amount == 1500  # $15.00 Pro additional rate
+        # $15.00 Pro additional rate
+        assert params.amount == 1500
         {:ok, %{id: "ch_pro_test", amount: 1500, status: "succeeded", currency: "usd"}}
       end)
 
@@ -280,7 +283,8 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
           "object" => %{
             "id" => "in_test_123",
             "customer" => "cus_webhook_pro",
-            "amount_paid" => 59900,  # $599.00
+            # $599.00
+            "amount_paid" => 59900,
             "lines" => %{
               "data" => [
                 %{
@@ -378,7 +382,8 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
     end
 
     test "customer.subscription.created webhook records subscription info" do
-      customer = insert(:customer, stripe_customer_id: "cus_new_sub", subscription_type: "pay_as_you_go")
+      customer =
+        insert(:customer, stripe_customer_id: "cus_new_sub", subscription_type: "pay_as_you_go")
 
       event_data = %{
         "stripe_event_id" => "evt_sub_created_#{System.unique_integer([:positive])}",
@@ -468,12 +473,14 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
       assert {:ok, customer} =
                Billing.add_payment_method(customer, "pm_e2e_card", true)
 
-      assert customer.credit_balance == 5  # 5 billing (no initial credits yet)
+      # 5 billing (no initial credits yet)
+      assert customer.credit_balance == 5
 
       # Step 3: Customer deploys a fix (consumes credit)
       fix = %{id: "fix_e2e_1"}
       assert {:ok, %{customer: customer}} = Billing.track_fix_deployed(customer, fix)
-      assert customer.credit_balance == 4  # 5 - 1
+      # 5 - 1
+      assert customer.credit_balance == 4
 
       # Step 4: Customer subscribes to Pro
       customer =
@@ -502,11 +509,13 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
 
       # Final verification
       final_customer = Customers.get_customer!(customer.id)
-      assert final_customer.credit_balance == 64  # 4 + 60
+      # 4 + 60
+      assert final_customer.credit_balance == 64
 
       # Verify complete transaction history
       transactions = CreditLedger.list_transactions(final_customer)
-      assert length(transactions) == 3  # billing, consume, pro payment (no signup yet)
+      # billing, consume, pro payment (no signup yet)
+      assert length(transactions) == 3
 
       sources = Enum.map(transactions, & &1.source)
       # TODO: When integrated, should have "trial_signup" source
@@ -552,7 +561,9 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
     test "customer can use service with credits or billing info" do
       # Customer with credits can use service
       customer_with_credits = insert(:customer, credit_balance: 10)
-      assert Billing.has_credits?(customer_with_credits) || Billing.has_billing_info?(customer_with_credits)
+
+      assert Billing.has_credits?(customer_with_credits) ||
+               Billing.has_billing_info?(customer_with_credits)
 
       # Customer with billing info can use service
       customer_with_billing =
@@ -562,7 +573,8 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
           has_payment_method: true
         )
 
-      assert Billing.has_credits?(customer_with_billing) || Billing.has_billing_info?(customer_with_billing)
+      assert Billing.has_credits?(customer_with_billing) ||
+               Billing.has_billing_info?(customer_with_billing)
 
       # Customer with neither cannot use service
       customer_blocked =
@@ -584,8 +596,11 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
         )
 
       # Create some transactions (reload customer to avoid stale struct)
-      {:ok, %{customer: customer}} = CreditLedger.credit(customer, 60, "pro_subscription_payment", %{})
-      {:ok, %{customer: customer}} = CreditLedger.consume(customer, 1, "fix_deployed", %{fix_id: "fix_123"})
+      {:ok, %{customer: customer}} =
+        CreditLedger.credit(customer, 60, "pro_subscription_payment", %{})
+
+      {:ok, %{customer: customer}} =
+        CreditLedger.consume(customer, 1, "fix_deployed", %{fix_id: "fix_123"})
 
       # get_usage_summary takes customer_id, not customer
       assert {:ok, summary} = Billing.get_usage_summary(customer.id)
