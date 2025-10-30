@@ -67,8 +67,12 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       vended_key = response["credentials"]["anthropic"]["api_key"]
       assert vended_key != nil, "Vended API key should not be nil"
 
-      expected_key = System.get_env("ANTHROPIC_API_KEY") || System.get_env("anthropic-api-key") || "sk-ant-mock-key"
-      assert vended_key == expected_key, "Vended key should match environment variable or fallback"
+      expected_key =
+        System.get_env("ANTHROPIC_API_KEY") || System.get_env("anthropic-api-key") ||
+          "sk-ant-mock-key"
+
+      assert vended_key == expected_key,
+             "Vended key should match environment variable or fallback"
     end
 
     test "credentials module should return API keys from environment or fallback", %{
@@ -87,8 +91,12 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       assert credential.api_key != nil, "API key should not be nil"
 
       # Verify it matches the environment variable or fallback
-      expected_key = System.get_env("ANTHROPIC_API_KEY") || System.get_env("anthropic-api-key") || "sk-ant-mock-key"
-      assert credential.api_key == expected_key, "API key should match environment variable or fallback"
+      expected_key =
+        System.get_env("ANTHROPIC_API_KEY") || System.get_env("anthropic-api-key") ||
+          "sk-ant-mock-key"
+
+      assert credential.api_key == expected_key,
+             "API key should match environment variable or fallback"
     end
 
     test "format_credentials should properly extract API keys", %{
@@ -111,9 +119,12 @@ defmodule RsolvWeb.CredentialVendingIntegrationTest do
       assert formatted["anthropic"]["api_key"] != nil
 
       # Verify it matches what we expect from the environment or fallback
-      expected_key = System.get_env("ANTHROPIC_API_KEY") || System.get_env("anthropic-api-key") || "sk-ant-mock-key"
+      expected_key =
+        System.get_env("ANTHROPIC_API_KEY") || System.get_env("anthropic-api-key") ||
+          "sk-ant-mock-key"
+
       assert formatted["anthropic"]["api_key"] == expected_key,
-        "Formatted API key should match environment variable or fallback"
+             "Formatted API key should match environment variable or fallback"
     end
 
     test "should handle multiple providers", %{
