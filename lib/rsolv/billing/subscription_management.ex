@@ -24,14 +24,10 @@ defmodule Rsolv.Billing.SubscriptionManagement do
 
   The initial credit is added via webhook when invoice.paid is received.
 
-  ## Examples
+  Returns `{:ok, customer}` on success, `{:error, :no_payment_method}` if no payment method,
+  or `{:error, reason}` on other failures.
 
-      iex> subscribe_to_pro(customer)
-      {:ok, %Customer{subscription_type: "pro", ...}}
-
-      iex> subscribe_to_pro(customer_without_payment_method)
-      {:error, :no_payment_method}
-
+  Tested via integration tests in `test/rsolv/billing/pro_subscription_test.exs`.
   """
   def subscribe_to_pro(%Customer{has_payment_method: false}), do: {:error, :no_payment_method}
 
@@ -51,14 +47,10 @@ defmodule Rsolv.Billing.SubscriptionManagement do
   - customer: The customer whose subscription to cancel
   - at_period_end: If true, schedule cancellation at period end. If false, cancel immediately.
 
-  ## Examples
+  Returns `{:ok, customer}` on success, `{:error, :no_active_subscription}` if no subscription,
+  or `{:error, reason}` on other failures.
 
-      iex> cancel_subscription(customer, true)
-      {:ok, %Customer{subscription_cancel_at_period_end: true, ...}}
-
-      iex> cancel_subscription(customer, false)
-      {:ok, %Customer{subscription_type: "pay_as_you_go", ...}}
-
+  Tested via integration tests in `test/rsolv/billing/pro_subscription_test.exs`.
   """
   def cancel_subscription(%Customer{stripe_subscription_id: nil}, _at_period_end) do
     {:error, :no_active_subscription}

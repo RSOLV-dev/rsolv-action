@@ -21,30 +21,10 @@ defmodule Rsolv.Billing.CustomerSetup do
   1. Creates a Stripe customer via StripeService
   2. Returns the stripe_customer_id for storage
 
-  ## Examples
+  Returns `{:ok, stripe_customer_id}` on success or `{:error, reason}` on failure.
 
-      iex> alias Rsolv.Customers.Customer
-      iex> customer = %Customer{id: 1, email: "test@example.com", name: "Test Customer"}
-      iex> # Mock successful Stripe customer creation
-      iex> expect(Rsolv.Billing.StripeMock, :create, fn _params ->
-      ...>   {:ok, %{id: "cus_test123", email: "test@example.com", name: "Test Customer"}}
-      ...> end)
-      iex> {:ok, customer_id} = Rsolv.Billing.CustomerSetup.create_stripe_customer(customer)
-      iex> customer_id
-      "cus_test123"
-
-  ## Error handling
-
-      iex> alias Rsolv.Customers.Customer
-      iex> customer = %Customer{id: 2, email: "error@example.com", name: "Error Customer"}
-      iex> # Mock Stripe API error
-      iex> expect(Rsolv.Billing.StripeMock, :create, fn _params ->
-      ...>   {:error, %Stripe.Error{message: "Invalid email", source: :stripe, code: :invalid_request_error}}
-      ...> end)
-      iex> {:error, %Stripe.Error{message: msg}} = Rsolv.Billing.CustomerSetup.create_stripe_customer(customer)
-      iex> msg
-      "Invalid email"
-
+  Tested via integration tests in `test/rsolv/billing/` and
+  `test/integration/billing_onboarding_integration_test.exs`.
   """
   def create_stripe_customer(%Customer{} = customer) do
     case StripeService.create_customer(customer) do
@@ -60,19 +40,15 @@ defmodule Rsolv.Billing.CustomerSetup do
   Adds a payment method to a customer and grants billing addition bonus.
 
   This function:
-  1. Validates billing consent was given
+  1. Validates billing consent was given (returns `{:error, :billing_consent_required}` if false)
   2. Attaches payment method to Stripe customer
   3. Updates customer record with payment method details
   4. Credits +5 credits as billing addition bonus (trial_billing_added)
 
-  ## Examples
+  Returns `{:ok, customer}` on success or `{:error, reason}` on failure.
 
-      iex> add_payment_method(customer, "pm_abc", true)
-      {:ok, %Customer{credit_balance: 15, ...}}
-
-      iex> add_payment_method(customer, "pm_abc", false)
-      {:error, :billing_consent_required}
-
+  Tested via integration tests in `test/rsolv/billing/payment_methods_test.exs` and
+  `test/integration/billing_onboarding_integration_test.exs`.
   """
   def add_payment_method(%Customer{} = customer, payment_method_id, true = _billing_consent) do
     with {:ok, _} <-

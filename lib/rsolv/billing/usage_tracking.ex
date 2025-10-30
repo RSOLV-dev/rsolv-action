@@ -22,25 +22,13 @@ defmodule Rsolv.Billing.UsageTracking do
   2. No credits, no billing → Error (block)
   3. No credits, has billing → Charge → Credit 1 → Consume 1
 
-  ## Examples
+  Returns:
+  - `{:ok, %{customer: customer, transaction: transaction}}` - when consuming existing credits
+  - `{:ok, :charged_and_consumed}` - when charging and consuming
+  - `{:error, :no_billing_info}` - when customer has no credits and no billing setup
+  - `{:error, reason}` - on other failures
 
-      # Has credits - consume directly
-      iex> customer = %Customer{id: 1, credit_balance: 10}
-      iex> fix = %{id: 42}
-      iex> {:ok, %{customer: customer, transaction: txn}} = Rsolv.Billing.UsageTracking.track_fix_deployed(customer, fix)
-      iex> txn.balance_after
-      9
-
-      # No credits, no billing - block
-      iex> customer = %Customer{id: 1, credit_balance: 0, stripe_customer_id: nil}
-      iex> fix = %{id: 42}
-      iex> Rsolv.Billing.UsageTracking.track_fix_deployed(customer, fix)
-      {:error, :no_billing_info}
-
-      # No credits, has billing - charge then consume
-      iex> customer = %Customer{id: 1, credit_balance: 0, stripe_customer_id: "cus_123", subscription_type: "pay_as_you_go"}
-      iex> fix = %{id: 42}
-      iex> {:ok, :charged_and_consumed} = Rsolv.Billing.UsageTracking.track_fix_deployed(customer, fix)
+  Tested via integration tests in `test/rsolv/billing/fix_deployment_test.exs`.
   """
   def track_fix_deployed(customer, fix) do
     # Reload for current balance
@@ -63,10 +51,10 @@ defmodule Rsolv.Billing.UsageTracking do
 
   ## Examples
 
-      iex> has_credits?(%Customer{credit_balance: 5})
+      iex> Rsolv.Billing.UsageTracking.has_credits?(%{credit_balance: 5})
       true
 
-      iex> has_credits?(%Customer{credit_balance: 0})
+      iex> Rsolv.Billing.UsageTracking.has_credits?(%{credit_balance: 0})
       false
 
   """
@@ -78,10 +66,10 @@ defmodule Rsolv.Billing.UsageTracking do
 
   ## Examples
 
-      iex> has_billing_info?(%Customer{stripe_customer_id: "cus_123"})
+      iex> Rsolv.Billing.UsageTracking.has_billing_info?(%{stripe_customer_id: "cus_123"})
       true
 
-      iex> has_billing_info?(%Customer{stripe_customer_id: nil})
+      iex> Rsolv.Billing.UsageTracking.has_billing_info?(%{stripe_customer_id: nil})
       false
 
   """
