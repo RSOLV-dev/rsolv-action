@@ -21,8 +21,8 @@ defmodule Rsolv.Security.Patterns.JavaScript.LogInjection do
       id: meta.id,
       name: meta.name,
       description: meta.description,
-      type: String.to_existing_atom(meta.type),
-      severity: String.to_existing_atom(meta.severity),
+      type: String.to_atom(meta.type),
+      severity: String.to_atom(meta.severity),
       languages: meta.languages,
       # Use first pattern as primary
       regex: hd(regex_patterns()),
