@@ -146,13 +146,13 @@ defmodule Rsolv.CustomerOnboarding do
     # Extract raw key from the result
     raw_key = api_key_result.raw_key
 
-    # Start early access email sequence (Day 0 sent immediately, rest scheduled)
+    # Start onboarding email sequence (Day 0 sent immediately, rest scheduled)
     # IMPORTANT: Email sequence failures are logged but don't block provisioning.
     # Rationale: Customer account and API key are more critical than welcome emails.
     # Failed emails can be retried via admin tools or Oban retry mechanism.
-    # NOTE: start_early_access_onboarding_sequence/2 always returns {:ok, _result}
+    # NOTE: start_onboarding_sequence/2 always returns {:ok, _result}
     {:ok, _result} =
-      EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name)
+      EmailSequence.start_onboarding_sequence(customer.email, customer.name)
 
     Logger.info("✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}")
 

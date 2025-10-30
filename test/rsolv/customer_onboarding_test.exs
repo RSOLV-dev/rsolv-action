@@ -74,8 +74,8 @@ defmodule Rsolv.CustomerOnboardingTest do
           assert customer.email == attrs["email"]
         end)
 
-      # Verify that early access welcome email was sent immediately
-      assert log =~ "send_early_access_welcome_email"
+      # Verify that welcome email was sent immediately
+      assert log =~ "send_welcome_email"
       assert log =~ attrs["email"]
     end
 
@@ -96,10 +96,10 @@ defmodule Rsolv.CustomerOnboardingTest do
 
       # With testing: :inline mode, jobs are executed immediately
       # Verify that the email sequence scheduling was triggered
-      assert log =~ "Starting early_access_onboarding sequence"
+      assert log =~ "Starting onboarding sequence"
 
       # Verify that emails were sent (Day 0 sent immediately, others processed inline)
-      assert log =~ "send_early_access_welcome_email"
+      assert log =~ "send_welcome_email"
       assert log =~ attrs["email"]
     end
 
@@ -152,9 +152,9 @@ defmodule Rsolv.CustomerOnboardingTest do
       # Create a job that will fail
       attrs = %{
         email: "test@testcompany.com",
-        template: "early_access_welcome",
+        template: "welcome",
         first_name: "Test",
-        sequence: "early_access_onboarding"
+        sequence: "onboarding"
       }
 
       {:ok, job} =
