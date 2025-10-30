@@ -165,6 +165,32 @@ defmodule Rsolv.Billing do
   end
 
   @doc """
+  Creates a Stripe customer for a newly provisioned customer.
+
+  This function:
+  1. Creates a Stripe customer via StripeService
+  2. Returns the stripe_customer_id for storage
+
+  ## Examples
+
+      iex> create_stripe_customer(customer)
+      {:ok, "cus_abc123..."}
+
+      iex> create_stripe_customer(customer)
+      {:error, %Stripe.Error{...}}
+
+  """
+  def create_stripe_customer(%Customer{} = customer) do
+    case StripeService.create_customer(customer) do
+      {:ok, stripe_customer} ->
+        {:ok, stripe_customer.id}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
   Adds a payment method to a customer and grants billing addition bonus.
 
   This function:

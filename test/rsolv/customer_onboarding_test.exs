@@ -59,6 +59,16 @@ defmodule Rsolv.CustomerOnboardingTest do
 
   describe "provision_customer/1 - email sequence integration" do
     test "sends welcome email immediately on provisioning" do
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        {:ok,
+         %{
+           id: "cus_test_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
+
       attrs = %{
         "name" => "Test Customer",
         "email" => "test#{System.unique_integer([:positive])}@testcompany.com"
@@ -80,6 +90,16 @@ defmodule Rsolv.CustomerOnboardingTest do
     end
 
     test "schedules follow-up emails via Oban" do
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        {:ok,
+         %{
+           id: "cus_test_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
+
       attrs = %{
         "name" => "Test Customer",
         "email" => "test#{System.unique_integer([:positive])}@testcompany.com"
@@ -197,6 +217,16 @@ defmodule Rsolv.CustomerOnboardingTest do
 
   describe "telemetry events - RFC-065 Week 3" do
     test "emits telemetry on customer onboarding success" do
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        {:ok,
+         %{
+           id: "cus_test_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
+
       attrs = %{
         "name" => "Telemetry Test Customer",
         "email" => "telemetry#{System.unique_integer([:positive])}@testcompany.com"
