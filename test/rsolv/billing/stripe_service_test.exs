@@ -10,18 +10,18 @@ defmodule Rsolv.Billing.StripeServiceTest do
 
   describe "create_customer/2" do
     test "creates Stripe customer with metadata" do
-      customer = insert(:customer, email: "test@example.com", name: "Test User")
+      customer = insert(:customer, name: "Test User")
 
       # Mock Stripe API response
       expect(Rsolv.Billing.StripeMock, :create, fn params ->
-        assert params[:email] == "test@example.com"
+        assert params[:email] == customer.email
         assert params[:name] == "Test User"
         assert params[:metadata]["rsolv_customer_id"] == customer.id
 
         {:ok,
          %Stripe.Customer{
            id: "cus_test123",
-           email: "test@example.com",
+           email: customer.email,
            metadata: %{"rsolv_customer_id" => to_string(customer.id)}
          }}
       end)
@@ -76,7 +76,7 @@ defmodule Rsolv.Billing.StripeServiceTest do
         {:ok,
          %Stripe.Customer{
            id: "cus_test123",
-           email: "test@example.com"
+           email: "retrieved@example.com"
          }}
       end)
 

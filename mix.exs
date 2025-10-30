@@ -50,6 +50,7 @@ defmodule Rsolv.MixProject do
       {:bamboo, "~> 2.0"},
       {:bamboo_postmark, "~> 1.0"},
       {:ex_machina, "~> 2.7", only: :test},
+      {:faker, "~> 0.18", only: [:test, :dev]},
       {:mock, "~> 0.3", only: :test},
       {:timex, "~> 3.7"},
       {:quantum, "~> 3.5"},
