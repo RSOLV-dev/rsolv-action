@@ -68,6 +68,11 @@ jobs:
           mix ecto.migrate
           mix run priv/repo/seeds.exs
 
+      - name: Build assets
+        run: |
+          mix assets.setup
+          mix assets.build
+
       - name: Run tests (partition ${{ matrix.partition }}/4)
         # TODO: Make test failures fatal after fixing 134 failing tests
         # Currently: 529 doctests, 4276 tests, 134 failures, 83 excluded, 79 skipped
