@@ -15,9 +15,9 @@ defmodule Rsolv.CustomerOnboarding do
 
   require Logger
 
-  alias Rsolv.Repo
   alias Rsolv.Customers
   alias Rsolv.Customers.Customer
+  alias Rsolv.Repo
   alias RsolvWeb.Services.EmailSequence
 
   @doc """
@@ -42,12 +42,14 @@ defmodule Rsolv.CustomerOnboarding do
     start_time = System.monotonic_time(:millisecond)
 
     result =
-      with :ok <- validate_email(attrs["email"] || attrs[:email]) do
-        attrs
-        |> add_provisioning_defaults()
-        |> validate_and_create()
-      else
-        {:error, reason} -> {:error, reason}
+      case validate_email(attrs["email"] || attrs[:email]) do
+        :ok ->
+          attrs
+          |> add_provisioning_defaults()
+          |> validate_and_create()
+
+        {:error, reason} ->
+          {:error, reason}
       end
 
     # Emit telemetry event
@@ -146,13 +148,13 @@ defmodule Rsolv.CustomerOnboarding do
     # Extract raw key from the result
     raw_key = api_key_result.raw_key
 
-    # Start early access email sequence (Day 0 sent immediately, rest scheduled)
+    # Start onboarding email sequence (Day 0 sent immediately, rest scheduled)
     # IMPORTANT: Email sequence failures are logged but don't block provisioning.
     # Rationale: Customer account and API key are more critical than welcome emails.
     # Failed emails can be retried via admin tools or Oban retry mechanism.
-    # NOTE: start_early_access_onboarding_sequence/2 always returns {:ok, _result}
+    # NOTE: start_onboarding_sequence/2 always returns {:ok, _result}
     {:ok, _result} =
-      EmailSequence.start_early_access_onboarding_sequence(customer.email, customer.name)
+      EmailSequence.start_onboarding_sequence(customer.email, customer.name)
 
     Logger.info("✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}")
 
@@ -200,9 +202,7 @@ defmodule Rsolv.CustomerOnboarding do
   defp format_error_reason({:validation_failed, message}) when is_binary(message), do: message
 
   defp format_error_reason({:validation_failed, %Ecto.Changeset{errors: errors}}) do
-    errors
-    |> Enum.map(fn {field, {message, _}} -> "#{field}: #{message}" end)
-    |> Enum.join(", ")
+    Enum.map_join(errors, ", ", fn {field, {message, _}} -> "#{field}: #{message}" end)
   end
 
   defp format_error_reason(other), do: inspect(other)
