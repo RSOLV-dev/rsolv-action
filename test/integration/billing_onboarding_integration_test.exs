@@ -20,10 +20,19 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
   setup :verify_on_exit!
 
   describe "RFC-069: Onboarding → Stripe → Initial Credits Flow" do
-    test "signup creates customer and API key (Stripe integration TODO)" do
-      # TODO (RFC-069 Integration): CustomerOnboarding should create Stripe customer
-      # and allocate 5 initial signup credits via CreditLedger.credit/4
-      # Currently provision_customer only creates local customer + API key
+    test "signup creates customer and API key with Stripe customer and initial credits" do
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        assert params.email =~ "@testcompany.com"
+        assert params.name == "Integration Test Customer"
+
+        {:ok,
+         %{
+           id: "cus_test_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
 
       # Provision customer (simulates signup flow)
       attrs = %{
@@ -39,27 +48,38 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
       assert customer.name == "Integration Test Customer"
       assert customer.email == attrs["email"]
 
-      # TODO: When integrated, should have stripe_customer_id
-      # assert customer.stripe_customer_id =~ "cus_test_"
+      # Verify Stripe customer ID set
+      assert customer.stripe_customer_id =~ "cus_test_"
 
-      # TODO: When integrated, should have 5 initial credits
-      # assert customer.credit_balance == 5
+      # Verify 5 initial credits allocated
+      assert customer.credit_balance == 5
 
-      # TODO: When integrated, should have credit transaction
-      # transactions = CreditLedger.list_transactions(customer)
-      # assert length(transactions) == 1
-      # signup_credit = hd(transactions)
-      # assert signup_credit.amount == 5
-      # assert signup_credit.source == "trial_signup"
+      # Verify credit transaction
+      transactions = CreditLedger.list_transactions(customer)
+      assert length(transactions) == 1
+      signup_credit = hd(transactions)
+      assert signup_credit.amount == 5
+      assert signup_credit.source == "trial_signup"
+      assert signup_credit.metadata["source"] == "direct"
 
-      # Verify API key generated (this works now)
+      # Verify API key generated
       assert is_binary(api_key)
       assert String.starts_with?(api_key, "rsolv_")
     end
 
-    test "marketplace signup creates customer (TODO: integrate with Stripe)" do
-      # TODO (RFC-069 Integration): Same as above - provision_customer should
-      # create Stripe customer and allocate credits, but currently doesn't
+    test "marketplace signup creates customer with Stripe and initial credits" do
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        assert params.email =~ "@testcompany.com"
+        assert params.name == "Marketplace Customer"
+
+        {:ok,
+         %{
+           id: "cus_marketplace_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
 
       attrs = %{
         "name" => "Marketplace Customer",
@@ -72,13 +92,13 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
       # Verify basic customer creation works
       assert customer.name == "Marketplace Customer"
 
-      # TODO: When integrated, should have 5 initial credits
-      # assert customer.credit_balance == 5
+      # Verify 5 initial credits allocated
+      assert customer.credit_balance == 5
 
-      # TODO: When integrated, should record source in transaction metadata
-      # transactions = CreditLedger.list_transactions(customer)
-      # signup_credit = hd(transactions)
-      # assert signup_credit.metadata["source"] == "gh_marketplace"
+      # Verify source recorded in transaction metadata
+      transactions = CreditLedger.list_transactions(customer)
+      signup_credit = hd(transactions)
+      assert signup_credit.metadata["source"] == "gh_marketplace"
     end
   end
 
@@ -444,8 +464,16 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
   describe "RFC-069: End-to-End Integration Flow" do
     test "complete customer journey: signup → add payment → deploy fix → webhook credit" do
       # Step 1: Customer signs up
-      # TODO (RFC-069 Integration): provision_customer should create Stripe customer
-      # Currently it only creates local customer + API key
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        {:ok,
+         %{
+           id: "cus_e2e_test",
+           email: params.email,
+           name: params.name
+         }}
+      end)
+
       attrs = %{
         "name" => "E2E Test Customer",
         "email" => "e2e_#{System.unique_integer([:positive])}@testcompany.com",
@@ -454,12 +482,9 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
 
       assert {:ok, %{customer: customer}} = CustomerOnboarding.provision_customer(attrs)
 
-      # TODO: When integrated, should have 5 initial credits
-      # For now, manually set up Stripe customer for rest of test
-      customer =
-        customer
-        |> Ecto.Changeset.change(%{stripe_customer_id: "cus_e2e_test"})
-        |> Repo.update!()
+      # Verify initial credits allocated
+      assert customer.credit_balance == 5
+      assert customer.stripe_customer_id == "cus_e2e_test"
 
       # Step 2: Customer adds payment method
       expect(Rsolv.Billing.StripeMock, :attach, fn _params ->
@@ -473,14 +498,14 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
       assert {:ok, customer} =
                Billing.add_payment_method(customer, "pm_e2e_card", true)
 
-      # 5 billing (no initial credits yet)
-      assert customer.credit_balance == 5
+      # 5 initial + 5 billing
+      assert customer.credit_balance == 10
 
       # Step 3: Customer deploys a fix (consumes credit)
       fix = %{id: "fix_e2e_1"}
       assert {:ok, %{customer: customer}} = Billing.track_fix_deployed(customer, fix)
-      # 5 - 1
-      assert customer.credit_balance == 4
+      # 10 - 1
+      assert customer.credit_balance == 9
 
       # Step 4: Customer subscribes to Pro
       customer =
@@ -509,16 +534,16 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
 
       # Final verification
       final_customer = Customers.get_customer!(customer.id)
-      # 4 + 60
-      assert final_customer.credit_balance == 64
+      # 9 + 60
+      assert final_customer.credit_balance == 69
 
       # Verify complete transaction history
       transactions = CreditLedger.list_transactions(final_customer)
-      # billing, consume, pro payment (no signup yet)
-      assert length(transactions) == 3
+      # trial_signup, billing, consume, pro payment
+      assert length(transactions) == 4
 
       sources = Enum.map(transactions, & &1.source)
-      # TODO: When integrated, should have "trial_signup" source
+      assert "trial_signup" in sources
       assert "trial_billing_added" in sources
       assert "fix_deployed" in sources
       assert "pro_subscription_payment" in sources

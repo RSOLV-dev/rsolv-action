@@ -92,7 +92,7 @@ defmodule RsolvWeb.Api.V1.ASTController do
     request_id = body_params["requestId"] || generate_request_id()
     customer = conn.assigns.customer
 
-    with :ok <- check_rate_limit(customer),
+    with {:ok, _rate_limit_metadata} <- check_rate_limit(customer),
          {:ok, encryption_key} <- get_encryption_key(conn),
          {:ok, request} <- validate_request(body_params),
          {:ok, session} <- get_or_create_session(request, customer, encryption_key),
@@ -172,7 +172,7 @@ defmodule RsolvWeb.Api.V1.ASTController do
           requestId: request_id
         })
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _metadata} ->
         conn
         |> put_resp_header("retry-after", "60")
         |> put_status(429)

@@ -18,6 +18,8 @@ defmodule Rsolv.CustomerOnboarding do
   alias Rsolv.Customers
   alias Rsolv.Customers.Customer
   alias Rsolv.Repo
+  alias Rsolv.Billing
+  alias Rsolv.Billing.CreditLedger
   alias RsolvWeb.Services.EmailSequence
 
   @doc """
@@ -117,12 +119,24 @@ defmodule Rsolv.CustomerOnboarding do
     end)
   end
 
-  # Validate and create customer with API key in a transaction
+  # Validate and create customer with API key, Stripe customer, and initial credits in a transaction
   defp validate_and_create(attrs) do
     Ecto.Multi.new()
     |> Ecto.Multi.insert(:customer, build_customer_changeset(attrs))
-    |> Ecto.Multi.run(:api_key, fn _repo, %{customer: customer} ->
+    |> Ecto.Multi.run(:stripe_customer, fn _repo, %{customer: customer} ->
+      create_stripe_customer_for_customer(customer)
+    end)
+    |> Ecto.Multi.update(:customer_with_stripe, fn %{
+                                                     customer: customer,
+                                                     stripe_customer: stripe_customer_id
+                                                   } ->
+      Customer.changeset(customer, %{stripe_customer_id: stripe_customer_id})
+    end)
+    |> Ecto.Multi.run(:api_key, fn _repo, %{customer_with_stripe: customer} ->
       create_api_key_for_customer(customer)
+    end)
+    |> Ecto.Multi.run(:initial_credit, fn _repo, %{customer_with_stripe: customer} ->
+      allocate_initial_credits(customer, attrs)
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
@@ -133,6 +147,27 @@ defmodule Rsolv.CustomerOnboarding do
     Customer.changeset(%Customer{}, attrs)
   end
 
+  # Create Stripe customer
+  defp create_stripe_customer_for_customer(customer) do
+    Logger.info("🎫 [CustomerOnboarding] Creating Stripe customer for customer #{customer.id}")
+
+    case Billing.create_stripe_customer(customer) do
+      {:ok, stripe_customer_id} ->
+        Logger.info(
+          "✅ [CustomerOnboarding] Stripe customer created: #{stripe_customer_id} for customer #{customer.id}"
+        )
+
+        {:ok, stripe_customer_id}
+
+      {:error, reason} ->
+        Logger.error(
+          "❌ [CustomerOnboarding] Failed to create Stripe customer for customer #{customer.id}: #{inspect(reason)}"
+        )
+
+        {:error, reason}
+    end
+  end
+
   # Create API key for customer
   defp create_api_key_for_customer(customer) do
     Customers.create_api_key(customer, %{
@@ -141,9 +176,43 @@ defmodule Rsolv.CustomerOnboarding do
     })
   end
 
-  # Pattern match on successful transaction
-  defp handle_transaction_result({:ok, %{customer: customer, api_key: api_key_result}}) do
-    Logger.info("✅ [CustomerOnboarding] Successfully provisioned customer #{customer.id}")
+  # Allocate initial signup credits
+  defp allocate_initial_credits(customer, attrs) do
+    source = Map.get(attrs, :source) || Map.get(attrs, "source") || "direct"
+
+    Logger.info(
+      "💰 [CustomerOnboarding] Allocating 5 initial credits for customer #{customer.id} (source: #{source})"
+    )
+
+    case CreditLedger.credit(customer, 5, "trial_signup", %{"source" => source}) do
+      {:ok, %{customer: customer_with_credits, transaction: _transaction}} ->
+        Logger.info(
+          "✅ [CustomerOnboarding] Initial credits allocated for customer #{customer.id}"
+        )
+
+        {:ok, customer_with_credits}
+
+      {:error, reason} ->
+        Logger.error(
+          "❌ [CustomerOnboarding] Failed to allocate initial credits for customer #{customer.id}: #{inspect(reason)}"
+        )
+
+        {:error, reason}
+    end
+  end
+
+  # Pattern match on successful transaction (new structure with Stripe and credits)
+  defp handle_transaction_result(
+         {:ok,
+          %{
+            customer_with_stripe: _customer_with_stripe,
+            api_key: api_key_result,
+            initial_credit: customer_with_credits
+          }}
+       ) do
+    Logger.info(
+      "✅ [CustomerOnboarding] Successfully provisioned customer #{customer_with_credits.id}"
+    )
 
     # Extract raw key from the result
     raw_key = api_key_result.raw_key
@@ -154,18 +223,31 @@ defmodule Rsolv.CustomerOnboarding do
     # Failed emails can be retried via admin tools or Oban retry mechanism.
     # NOTE: start_onboarding_sequence/2 always returns {:ok, _result}
     {:ok, _result} =
-      EmailSequence.start_onboarding_sequence(customer.email, customer.name)
+      EmailSequence.start_early_access_onboarding_sequence(
+        customer_with_credits.email,
+        customer_with_credits.name
+      )
 
-    Logger.info("✅ [CustomerOnboarding] Email sequence started for customer #{customer.id}")
+    Logger.info(
+      "✅ [CustomerOnboarding] Email sequence started for customer #{customer_with_credits.id}"
+    )
 
-    # Return customer and raw API key
-    {:ok, %{customer: customer, api_key: raw_key}}
+    # Return customer (with credits) and raw API key
+    {:ok, %{customer: customer_with_credits, api_key: raw_key}}
   end
 
-  # Pattern match on failed transaction
-  defp handle_transaction_result({:error, _failed_operation, changeset, _changes}) do
+  # Pattern match on failed transaction with changeset error
+  defp handle_transaction_result(
+         {:error, _failed_operation, %Ecto.Changeset{} = changeset, _changes}
+       ) do
     Logger.warning("❌ [CustomerOnboarding] Provisioning failed: #{inspect(changeset.errors)}")
     {:error, {:validation_failed, changeset}}
+  end
+
+  # Pattern match on failed transaction with other error types (e.g., Stripe.Error)
+  defp handle_transaction_result({:error, _failed_operation, reason, _changes}) do
+    Logger.error("❌ [CustomerOnboarding] Provisioning failed: #{inspect(reason)}")
+    {:error, reason}
   end
 
   defp handle_transaction_result({:error, reason}) do
