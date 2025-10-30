@@ -15,9 +15,9 @@ defmodule Rsolv.CustomerOnboarding do
 
   require Logger
 
-  alias Rsolv.Repo
   alias Rsolv.Customers
   alias Rsolv.Customers.Customer
+  alias Rsolv.Repo
   alias RsolvWeb.Services.EmailSequence
 
   @doc """
@@ -42,12 +42,14 @@ defmodule Rsolv.CustomerOnboarding do
     start_time = System.monotonic_time(:millisecond)
 
     result =
-      with :ok <- validate_email(attrs["email"] || attrs[:email]) do
-        attrs
-        |> add_provisioning_defaults()
-        |> validate_and_create()
-      else
-        {:error, reason} -> {:error, reason}
+      case validate_email(attrs["email"] || attrs[:email]) do
+        :ok ->
+          attrs
+          |> add_provisioning_defaults()
+          |> validate_and_create()
+
+        {:error, reason} ->
+          {:error, reason}
       end
 
     # Emit telemetry event
@@ -200,9 +202,7 @@ defmodule Rsolv.CustomerOnboarding do
   defp format_error_reason({:validation_failed, message}) when is_binary(message), do: message
 
   defp format_error_reason({:validation_failed, %Ecto.Changeset{errors: errors}}) do
-    errors
-    |> Enum.map(fn {field, {message, _}} -> "#{field}: #{message}" end)
-    |> Enum.join(", ")
+    Enum.map_join(errors, ", ", fn {field, {message, _}} -> "#{field}: #{message}" end)
   end
 
   defp format_error_reason(other), do: inspect(other)
