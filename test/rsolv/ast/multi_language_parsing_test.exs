@@ -1,4 +1,5 @@
 defmodule Rsolv.AST.MultiLanguageParsingTest do
+  use ExUnit.Case, async: true
   use Rsolv.AST.TestCase
 
   alias Rsolv.AST.{PortSupervisor, ParserRegistry, SessionManager}
