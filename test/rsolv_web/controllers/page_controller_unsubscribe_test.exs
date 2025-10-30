@@ -10,6 +10,13 @@ defmodule RsolvWeb.PageControllerUnsubscribeTest do
     # Set up HTTP client mock for tests
     Application.put_env(:rsolv, :http_client, RsolvWeb.HTTPoisonMock)
 
+    # Set up ConvertKit config with API key so unsubscribe calls are made
+    Application.put_env(:rsolv, :convertkit,
+      api_key: "test_api_key",
+      form_id: "test_form_id",
+      api_base_url: "https://api.convertkit.com/v3"
+    )
+
     # Get fixtures
     fixtures = RsolvWeb.Mocks.convertkit_fixtures()
 
@@ -33,26 +40,28 @@ defmodule RsolvWeb.PageControllerUnsubscribeTest do
       email = "test@example.com"
 
       # Mock the HTTP calls for ConvertKit API
-      # First mock the subscriber lookup
-      expect(RsolvWeb.HTTPoisonMock, :get, fn _url, _headers, _options ->
+      # First mock the subscriber lookup (GET request)
+      RsolvWeb.HTTPoisonMock
+      |> expect(:get, fn _url, _headers, _options ->
         {:ok, fixtures.subscriber_lookup_success}
       end)
 
-      # Then mock the unsubscribe request
-      expect(RsolvWeb.HTTPoisonMock, :post, fn _url, _body, _headers, _options ->
+      # Then mock the unsubscribe request (POST request)
+      RsolvWeb.HTTPoisonMock
+      |> expect(:post, fn _url, _body, _headers, _options ->
         {:ok, fixtures.unsubscribe_success}
       end)
 
       conn = post(conn, ~p"/unsubscribe", %{"email" => email})
 
-      assert html_response(conn, 200) =~ "successfully unsubscribed"
+      assert html_response(conn, 200) =~ "Unsubscribed Successfully"
       assert html_response(conn, 200) =~ email
     end
 
     test "POST /unsubscribe with invalid email shows an error", %{conn: conn} do
       conn = post(conn, ~p"/unsubscribe", %{"email" => ""})
 
-      assert html_response(conn, 200) =~ "valid email address"
+      assert html_response(conn, 200) =~ "provide a valid email address"
     end
   end
 end
