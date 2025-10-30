@@ -141,6 +141,29 @@ defmodule Rsolv.CustomerOnboardingTest do
 
       assert message =~ "disposable"
     end
+
+    test "handles nil email" do
+      attrs = %{
+        "name" => "Test Customer",
+        "email" => nil
+      }
+
+      assert {:error, {:validation_failed, message}} =
+               CustomerOnboarding.provision_customer(attrs)
+
+      assert message == "email is required"
+    end
+
+    test "handles missing email" do
+      attrs = %{
+        "name" => "Test Customer"
+      }
+
+      assert {:error, {:validation_failed, message}} =
+               CustomerOnboarding.provision_customer(attrs)
+
+      assert message == "email is required"
+    end
   end
 
   describe "provision_customer/1 - email delivery retry" do
