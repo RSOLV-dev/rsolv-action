@@ -261,8 +261,8 @@ defmodule RsolvWeb.CredentialController do
 
   defp check_rate_limit(customer) do
     case RateLimiter.check_rate_limit(customer.id, :credential_exchange) do
-      :ok -> :ok
-      {:error, :rate_limited} -> {:error, :rate_limited}
+      {:ok, _metadata} -> :ok
+      {:error, :rate_limited, _metadata} -> {:error, :rate_limited}
     end
   end
 

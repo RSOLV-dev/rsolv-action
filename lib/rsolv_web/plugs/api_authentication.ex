@@ -80,14 +80,47 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
           "[ApiAuthentication] ✅ Authenticated customer: #{customer.name} (ID: #{customer.id})"
         )
 
+        # Check rate limit and get metadata
+        # Use :api_request action for general API endpoints (500/hour as per test)
+        rate_limit_result = Rsolv.RateLimiter.check_rate_limit(customer.id, :api_request)
+
         # Also get the full API key record for phase storage access control
         api_key_record = Rsolv.Customers.get_api_key_by_key(api_key)
 
-        conn
-        |> assign(:customer, customer)
-        |> assign(:api_key, api_key_record)
-        |> assign(:raw_api_key, api_key)
+        case rate_limit_result do
+          {:ok, metadata} ->
+            conn
+            |> assign(:customer, customer)
+            |> assign(:api_key, api_key_record)
+            |> assign(:raw_api_key, api_key)
+            |> assign(:rate_limit_metadata, metadata)
+
+          {:error, :rate_limited, metadata} ->
+            # Store metadata even when rate limited so headers can be added
+            conn
+            |> assign(:rate_limit_metadata, metadata)
+            |> handle_rate_limited(customer)
+        end
     end
+  end
+
+  # Handle rate limit exceeded
+  defp handle_rate_limited(conn, customer) do
+    request_id = conn.assigns[:request_id] || Logger.metadata()[:request_id] || "unknown"
+
+    Logger.warning(
+      "[ApiAuthentication] Rate limit exceeded for customer #{customer.id} (#{customer.name})"
+    )
+
+    conn
+    |> put_status(429)
+    |> Phoenix.Controller.put_view(json: RsolvWeb.ErrorJSON)
+    |> Phoenix.Controller.render("429.json", %{
+      error_code: ApiErrorCodes.rate_limit_exceeded(),
+      message: "Rate limit exceeded. Please retry after the reset time.",
+      request_id: request_id
+    })
+    |> halt()
   end
 
   # Handle missing API key

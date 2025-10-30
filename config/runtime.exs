@@ -132,7 +132,9 @@ config :rsolv, :rate_limits,
   auth_attempt: {10, :minute},
   # 10 customer onboarding requests per minute per IP (per RFC-065)
   # Note: Currently using 60s window. Future: extend to hourly window
-  customer_onboarding: {10, :minute}
+  customer_onboarding: {10, :minute},
+  # 500 general API requests per minute (for authenticated endpoints)
+  api_request: {500, :minute}
 
 # Configure credential TTL
 config :rsolv, :credentials,

@@ -200,6 +200,15 @@ defmodule Rsolv.RateLimiter do
   @doc """
   Checks if a customer has exceeded their rate limit.
   Uses Mnesia transactions for distributed consistency.
+
+  Returns:
+  - `{:ok, metadata}` - Request allowed with rate limit metadata
+  - `{:error, :rate_limited, metadata}` - Request denied with rate limit metadata
+
+  Metadata includes:
+  - `:limit` - Maximum requests per window
+  - `:remaining` - Remaining requests in current window
+  - `:reset` - Unix timestamp when window resets
   """
   def check_rate_limit(customer_id, action \\ :credential_exchange) do
     # Normalize action for both key and config lookup
@@ -217,10 +226,19 @@ defmodule Rsolv.RateLimiter do
           [{@table_name, ^key, count, window_start}] ->
             # If more than 60 seconds have passed, reset the counter
             if current_time - window_start > @window_seconds do
+              reset_time = current_time + @window_seconds
               :mnesia.write({@table_name, key, 1, current_time})
               emit_allowed_telemetry(customer_id, action, 1, limit)
-              :ok
+
+              {:ok,
+               %{
+                 limit: limit,
+                 remaining: limit - 1,
+                 reset: reset_time
+               }}
             else
+              reset_time = window_start + @window_seconds
+
               # Check against rate limit
               if count >= limit do
                 emit_exceeded_telemetry(customer_id, action, count, limit)
@@ -229,34 +247,58 @@ defmodule Rsolv.RateLimiter do
                   "Rate limit exceeded for customer #{customer_id}, action: #{action}, count: #{count}, limit: #{limit}"
                 )
 
-                {:error, :rate_limited}
+                {:error, :rate_limited,
+                 %{
+                   limit: limit,
+                   remaining: 0,
+                   reset: reset_time
+                 }}
               else
                 # Increment counter
                 :mnesia.write({@table_name, key, count + 1, window_start})
                 emit_allowed_telemetry(customer_id, action, count + 1, limit)
-                :ok
+
+                {:ok,
+                 %{
+                   limit: limit,
+                   remaining: limit - (count + 1),
+                   reset: reset_time
+                 }}
               end
             end
 
           [] ->
             # First request, initialize counter
+            reset_time = current_time + @window_seconds
             :mnesia.write({@table_name, key, 1, current_time})
             emit_allowed_telemetry(customer_id, action, 1, limit)
-            :ok
+
+            {:ok,
+             %{
+               limit: limit,
+               remaining: limit - 1,
+               reset: reset_time
+             }}
         end
       end)
 
     case result do
-      {:atomic, :ok} ->
-        :ok
+      {:atomic, {:ok, metadata}} ->
+        {:ok, metadata}
 
-      {:atomic, {:error, :rate_limited}} ->
-        {:error, :rate_limited}
+      {:atomic, {:error, :rate_limited, metadata}} ->
+        {:error, :rate_limited, metadata}
 
       _ ->
         Logger.error("Mnesia transaction failed: #{inspect(result)}")
         # On transaction failure, allow the request (fail open)
-        :ok
+        # Return safe defaults for metadata
+        {:ok,
+         %{
+           limit: limit,
+           remaining: limit,
+           reset: current_time + @window_seconds
+         }}
     end
   end
 

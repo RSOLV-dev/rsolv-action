@@ -24,6 +24,7 @@ defmodule RsolvWeb.Router do
   pipeline :api do
     plug :accepts, ["json"]
     plug OpenApiSpex.Plug.PutApiSpec, module: RsolvWeb.ApiSpec
+    plug RsolvWeb.Plugs.RateLimitHeaders
   end
 
   pipeline :metrics do

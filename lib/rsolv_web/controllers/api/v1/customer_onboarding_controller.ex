@@ -41,10 +41,10 @@ defmodule RsolvWeb.Api.V1.CustomerOnboardingController do
 
     # Check rate limit
     case Rsolv.RateLimiter.check_rate_limit(ip_address, :customer_onboarding) do
-      :ok ->
+      {:ok, _metadata} ->
         provision_customer_internal(conn, params)
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _metadata} ->
         conn
         |> put_status(:too_many_requests)
         |> json(%{

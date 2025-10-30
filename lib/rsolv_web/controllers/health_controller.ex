@@ -4,6 +4,10 @@ defmodule RsolvWeb.HealthController do
 
   alias RsolvWeb.Schemas.Health.HealthResponse
 
+  # Optional authentication - allows both authenticated and unauthenticated requests
+  # If authenticated, rate limiting and headers will be applied
+  plug RsolvWeb.Plugs.ApiAuthentication, [optional: true] when action in [:index]
+
   tags(["Health"])
 
   operation(:index,

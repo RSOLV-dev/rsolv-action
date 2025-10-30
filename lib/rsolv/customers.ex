@@ -433,7 +433,7 @@ defmodule Rsolv.Customers do
     pseudo_id = :crypto.hash(:sha256, email) |> Base.encode16()
 
     case Rsolv.RateLimiter.check_rate_limit(pseudo_id, :auth_attempt) do
-      :ok ->
+      {:ok, _metadata} ->
         # Proceed with authentication
         customer = get_customer_by_email(email)
 
@@ -445,7 +445,7 @@ defmodule Rsolv.Customers do
           {:error, :invalid_credentials}
         end
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _metadata} ->
         {:error, :too_many_attempts}
     end
   end

@@ -784,8 +784,8 @@ defmodule RsolvWeb.Api.V1.TestIntegrationController do
 
   defp check_rate_limit(customer) do
     case RateLimiter.check_rate_limit(customer.id, "test_integration") do
-      :ok -> :ok
-      {:error, _} -> {:error, :rate_limited}
+      {:ok, _metadata} -> :ok
+      {:error, :rate_limited, _metadata} -> {:error, :rate_limited}
     end
   end
 
