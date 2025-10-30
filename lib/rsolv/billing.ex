@@ -1,12 +1,28 @@
 defmodule Rsolv.Billing do
   @moduledoc """
   The Billing context for managing fix attempts, credits, subscriptions, and payments.
+
+  This module provides a thin facade over specialized billing modules:
+  - `Billing.CustomerSetup` - Customer onboarding and payment method setup
+  - `Billing.SubscriptionManagement` - Subscription lifecycle management
+  - `Billing.UsageTracking` - Fix deployment tracking and credit consumption
+  - `Billing.CreditLedger` - Credit transaction management
+  - `Billing.WebhookProcessor` - Stripe webhook handling
   """
 
   import Ecto.Query, warn: false
 
   alias Rsolv.Repo
-  alias Rsolv.Billing.{FixAttempt, StripeService, CreditLedger, Subscription, Config, Pricing}
+
+  alias Rsolv.Billing.{
+    FixAttempt,
+    CreditLedger,
+    Pricing,
+    CustomerSetup,
+    SubscriptionManagement,
+    UsageTracking
+  }
+
   alias Rsolv.Customers.Customer
   alias Rsolv.Customers
 
@@ -167,117 +183,33 @@ defmodule Rsolv.Billing do
   @doc """
   Creates a Stripe customer for a newly provisioned customer.
 
-  This function:
-  1. Creates a Stripe customer via StripeService
-  2. Returns the stripe_customer_id for storage
+  Delegates to `Billing.CustomerSetup.create_stripe_customer/1`.
 
   ## Examples
 
-      iex> alias Rsolv.Customers.Customer
-      iex> customer = %Customer{id: 1, email: "test@example.com", name: "Test Customer"}
-      iex> # Mock successful Stripe customer creation
-      iex> expect(Rsolv.Billing.StripeMock, :create, fn _params ->
-      ...>   {:ok, %{id: "cus_test123", email: "test@example.com", name: "Test Customer"}}
-      ...> end)
-      iex> {:ok, customer_id} = Rsolv.Billing.create_stripe_customer(customer)
-      iex> customer_id
-      "cus_test123"
-
-  ## Error handling
-
-      iex> alias Rsolv.Customers.Customer
-      iex> customer = %Customer{id: 2, email: "error@example.com", name: "Error Customer"}
-      iex> # Mock Stripe API error
-      iex> expect(Rsolv.Billing.StripeMock, :create, fn _params ->
-      ...>   {:error, %Stripe.Error{message: "Invalid email", source: :stripe, code: :invalid_request_error}}
-      ...> end)
-      iex> {:error, %Stripe.Error{message: msg}} = Rsolv.Billing.create_stripe_customer(customer)
-      iex> msg
-      "Invalid email"
+      iex> create_stripe_customer(customer)
+      {:ok, "cus_test123"}
 
   """
-  def create_stripe_customer(%Customer{} = customer) do
-    case StripeService.create_customer(customer) do
-      {:ok, stripe_customer} ->
-        {:ok, stripe_customer.id}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
+  defdelegate create_stripe_customer(customer), to: CustomerSetup
 
   @doc """
   Adds a payment method to a customer and grants billing addition bonus.
 
-  This function:
-  1. Validates billing consent was given
-  2. Attaches payment method to Stripe customer
-  3. Updates customer record with payment method details
-  4. Credits +5 credits as billing addition bonus (trial_billing_added)
+  Delegates to `Billing.CustomerSetup.add_payment_method/3`.
 
   ## Examples
 
       iex> add_payment_method(customer, "pm_abc", true)
       {:ok, %Customer{credit_balance: 15, ...}}
 
-      iex> add_payment_method(customer, "pm_abc", false)
-      {:error, :billing_consent_required}
-
   """
-  def add_payment_method(%Customer{} = customer, payment_method_id, true = _billing_consent) do
-    with {:ok, _} <-
-           StripeService.attach_payment_method(customer.stripe_customer_id, payment_method_id) do
-      update_customer_with_payment_method_and_credit(customer, payment_method_id)
-    end
-  end
-
-  def add_payment_method(%Customer{}, _payment_method_id, false = _billing_consent) do
-    {:error, :billing_consent_required}
-  end
-
-  # Private helper to update customer and add credits atomically
-  defp update_customer_with_payment_method_and_credit(customer, payment_method_id) do
-    now = DateTime.utc_now()
-    bonus_credits = Config.trial_billing_addition_bonus()
-
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(
-      :customer,
-      Customer.changeset(customer, %{
-        stripe_payment_method_id: payment_method_id,
-        has_payment_method: true,
-        billing_consent_given: true,
-        billing_consent_at: now,
-        payment_method_added_at: now
-      })
-    )
-    |> Ecto.Multi.run(:credit, fn _repo, %{customer: updated_customer} ->
-      CreditLedger.credit(
-        updated_customer,
-        bonus_credits,
-        "trial_billing_added",
-        %{payment_method_id: payment_method_id}
-      )
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{credit: %{customer: customer_with_credits}}} ->
-        {:ok, customer_with_credits}
-
-      {:error, _failed_operation, changeset, _changes} ->
-        {:error, changeset}
-    end
-  end
+  defdelegate add_payment_method(customer, payment_method_id, billing_consent), to: CustomerSetup
 
   @doc """
   Subscribes a customer to the Pro plan.
 
-  This function:
-  1. Creates a Stripe subscription with the Pro price
-  2. Updates customer record with subscription details
-  3. Records the subscription in the subscriptions table
-
-  The initial credit is added via webhook when invoice.paid is received.
+  Delegates to `Billing.SubscriptionManagement.subscribe_to_pro/1`.
 
   ## Examples
 
@@ -288,49 +220,12 @@ defmodule Rsolv.Billing do
       {:error, :no_payment_method}
 
   """
-  def subscribe_to_pro(%Customer{has_payment_method: false}), do: {:error, :no_payment_method}
-
-  def subscribe_to_pro(%Customer{} = customer) do
-    pro_price_id = Config.pro_price_id()
-
-    with {:ok, stripe_subscription} <-
-           StripeService.create_subscription(customer.stripe_customer_id, pro_price_id) do
-      create_subscription_records(customer, stripe_subscription)
-    end
-  end
-
-  # Private helper to create customer and subscription records atomically
-  defp create_subscription_records(customer, stripe_subscription) do
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(
-      :customer,
-      Customer.changeset(customer, %{
-        stripe_subscription_id: stripe_subscription.id,
-        subscription_type: "pro",
-        subscription_state: stripe_subscription.status,
-        subscription_cancel_at_period_end: false
-      })
-    )
-    |> Ecto.Multi.insert(:subscription, fn %{customer: updated_customer} ->
-      Subscription.changeset(%Subscription{}, %{
-        customer_id: updated_customer.id,
-        stripe_subscription_id: stripe_subscription.id,
-        plan: "pro",
-        status: stripe_subscription.status,
-        current_period_start: DateTime.from_unix!(stripe_subscription.current_period_start),
-        current_period_end: DateTime.from_unix!(stripe_subscription.current_period_end),
-        cancel_at_period_end: false
-      })
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{customer: updated_customer}} -> {:ok, updated_customer}
-      {:error, _op, changeset, _changes} -> {:error, changeset}
-    end
-  end
+  defdelegate subscribe_to_pro(customer), to: SubscriptionManagement
 
   @doc """
   Cancels a customer's subscription.
+
+  Delegates to `Billing.SubscriptionManagement.cancel_subscription/2`.
 
   ## Parameters
   - customer: The customer whose subscription to cancel
@@ -345,48 +240,14 @@ defmodule Rsolv.Billing do
       {:ok, %Customer{subscription_type: "pay_as_you_go", ...}}
 
   """
-  def cancel_subscription(%Customer{stripe_subscription_id: nil}, _at_period_end) do
-    {:error, :no_active_subscription}
-  end
-
-  def cancel_subscription(%Customer{} = customer, at_period_end) when is_boolean(at_period_end) do
-    stripe_result =
-      if at_period_end do
-        StripeService.update_subscription(customer.stripe_subscription_id, %{
-          cancel_at_period_end: true
-        })
-      else
-        StripeService.cancel_subscription(customer.stripe_subscription_id)
-      end
-
-    with {:ok, _stripe_subscription} <- stripe_result do
-      update_customer_after_cancellation(customer, at_period_end)
-    end
-  end
-
-  # Private helper to update customer record after cancellation
-  defp update_customer_after_cancellation(customer, at_period_end) do
-    updates =
-      if at_period_end do
-        %{subscription_cancel_at_period_end: true}
-      else
-        %{
-          subscription_type: "pay_as_you_go",
-          subscription_state: nil,
-          stripe_subscription_id: nil,
-          subscription_cancel_at_period_end: false
-        }
-      end
-
-    customer
-    |> Customer.changeset(updates)
-    |> Repo.update()
-  end
+  defdelegate cancel_subscription(customer, at_period_end), to: SubscriptionManagement
 
   # INTEGRATION POINT: RFC-060 Amendment 001
   # This function is called after validation/mitigation phases complete.
   @doc """
   Track fix deployment and consume credit or charge customer.
+
+  Delegates to `Billing.UsageTracking.track_fix_deployed/2`.
 
   Flow:
   1. Has credits? → Consume 1 credit
@@ -413,68 +274,12 @@ defmodule Rsolv.Billing do
       iex> fix = %{id: 42}
       iex> {:ok, :charged_and_consumed} = Billing.track_fix_deployed(customer, fix)
   """
-  def track_fix_deployed(customer, fix) do
-    # Reload for current balance
-    customer = Customers.get_customer!(customer.id)
-
-    cond do
-      has_credits?(customer) ->
-        consume_fix_credit(customer, fix)
-
-      !has_billing_info?(customer) ->
-        {:error, :no_billing_info}
-
-      true ->
-        charge_and_consume(customer, fix)
-    end
-  end
-
-  # Pattern: Credits available
-  defp consume_fix_credit(customer, fix) do
-    case CreditLedger.consume(customer, 1, "fix_deployed", %{"fix_id" => fix.id}) do
-      {:ok, %{customer: customer, transaction: transaction}} ->
-        {:ok, %{customer: customer, transaction: transaction}}
-
-      error ->
-        error
-    end
-  end
-
-  # Pattern: No credits, must charge
-  defp charge_and_consume(customer, fix) do
-    amount_cents = Pricing.calculate_charge_amount(customer)
-
-    Ecto.Multi.new()
-    |> Ecto.Multi.run(:charge, fn _repo, _ ->
-      StripeService.create_charge(customer, amount_cents, %{
-        description: "Fix deployment",
-        metadata: %{fix_id: fix.id}
-      })
-    end)
-    |> Ecto.Multi.run(:credit, fn _repo, %{charge: charge} ->
-      CreditLedger.credit(customer, 1, "purchased", %{
-        "stripe_charge_id" => charge.id,
-        "amount_cents" => amount_cents
-      })
-    end)
-    |> Ecto.Multi.run(:consume, fn _repo, %{credit: %{customer: customer_with_credit}} ->
-      CreditLedger.consume(customer_with_credit, 1, "fix_deployed", %{
-        "fix_id" => fix.id
-      })
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, _} -> {:ok, :charged_and_consumed}
-      {:error, _operation, reason, _changes} -> {:error, reason}
-    end
-  rescue
-    e in Stripe.Error ->
-      # Return Stripe error for handling by caller (e.g., Oban retry)
-      {:error, {:stripe_error, e.message}}
-  end
+  defdelegate track_fix_deployed(customer, fix), to: UsageTracking
 
   @doc """
   Returns true if customer has available credits.
+
+  Delegates to `Billing.UsageTracking.has_credits?/1`.
 
   ## Examples
 
@@ -485,11 +290,12 @@ defmodule Rsolv.Billing do
       false
 
   """
-  def has_credits?(%{credit_balance: balance}) when balance > 0, do: true
-  def has_credits?(_), do: false
+  defdelegate has_credits?(customer), to: UsageTracking
 
   @doc """
   Returns true if customer has billing information configured.
+
+  Delegates to `Billing.UsageTracking.has_billing_info?/1`.
 
   ## Examples
 
@@ -500,8 +306,7 @@ defmodule Rsolv.Billing do
       false
 
   """
-  def has_billing_info?(%{stripe_customer_id: id}) when not is_nil(id), do: true
-  def has_billing_info?(_), do: false
+  defdelegate has_billing_info?(customer), to: UsageTracking
 
   @doc """
   Lists credit transactions for a customer.
