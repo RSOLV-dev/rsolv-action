@@ -111,18 +111,21 @@ defmodule Rsolv.AST.MultiLanguageParsingTest do
 
           # Ruby AST structure - Prism returns program root with statements
           ast_type = ast["type"] || ast[:type]
+
           assert ast_type == "program",
-            "Expected type 'program', got: #{inspect(ast_type)}. Full AST: #{inspect(ast)}"
+                 "Expected type 'program', got: #{inspect(ast_type)}. Full AST: #{inspect(ast)}"
 
           # Find the def node within the AST
           def_nodes = find_nodes(ast, "def")
+
           assert length(def_nodes) == 1,
-            "Expected 1 def node, found #{length(def_nodes)}. AST: #{inspect(ast)}"
+                 "Expected 1 def node, found #{length(def_nodes)}. AST: #{inspect(ast)}"
 
           def_node = hd(def_nodes)
           has_children = is_list(def_node["children"]) or is_list(def_node[:children])
+
           assert has_children,
-            "def node should have children list. Node: #{inspect(def_node)}"
+                 "def node should have children list. Node: #{inspect(def_node)}"
 
         {:error, error} ->
           flunk("Parser failed with error: #{inspect(error)}")
