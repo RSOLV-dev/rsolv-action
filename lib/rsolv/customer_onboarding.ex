@@ -126,7 +126,10 @@ defmodule Rsolv.CustomerOnboarding do
     |> Ecto.Multi.run(:stripe_customer, fn _repo, %{customer: customer} ->
       create_stripe_customer_for_customer(customer)
     end)
-    |> Ecto.Multi.update(:customer_with_stripe, fn %{customer: customer, stripe_customer: stripe_customer_id} ->
+    |> Ecto.Multi.update(:customer_with_stripe, fn %{
+                                                     customer: customer,
+                                                     stripe_customer: stripe_customer_id
+                                                   } ->
       Customer.changeset(customer, %{stripe_customer_id: stripe_customer_id})
     end)
     |> Ecto.Multi.run(:api_key, fn _repo, %{customer_with_stripe: customer} ->
@@ -207,7 +210,9 @@ defmodule Rsolv.CustomerOnboarding do
             initial_credit: customer_with_credits
           }}
        ) do
-    Logger.info("✅ [CustomerOnboarding] Successfully provisioned customer #{customer_with_credits.id}")
+    Logger.info(
+      "✅ [CustomerOnboarding] Successfully provisioned customer #{customer_with_credits.id}"
+    )
 
     # Extract raw key from the result
     raw_key = api_key_result.raw_key
@@ -223,7 +228,9 @@ defmodule Rsolv.CustomerOnboarding do
         customer_with_credits.name
       )
 
-    Logger.info("✅ [CustomerOnboarding] Email sequence started for customer #{customer_with_credits.id}")
+    Logger.info(
+      "✅ [CustomerOnboarding] Email sequence started for customer #{customer_with_credits.id}"
+    )
 
     # Return customer (with credits) and raw API key
     {:ok, %{customer: customer_with_credits, api_key: raw_key}}

@@ -498,12 +498,14 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
       assert {:ok, customer} =
                Billing.add_payment_method(customer, "pm_e2e_card", true)
 
-      assert customer.credit_balance == 10  # 5 initial + 5 billing
+      # 5 initial + 5 billing
+      assert customer.credit_balance == 10
 
       # Step 3: Customer deploys a fix (consumes credit)
       fix = %{id: "fix_e2e_1"}
       assert {:ok, %{customer: customer}} = Billing.track_fix_deployed(customer, fix)
-      assert customer.credit_balance == 9  # 10 - 1
+      # 10 - 1
+      assert customer.credit_balance == 9
 
       # Step 4: Customer subscribes to Pro
       customer =
@@ -532,11 +534,13 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
 
       # Final verification
       final_customer = Customers.get_customer!(customer.id)
-      assert final_customer.credit_balance == 69  # 9 + 60
+      # 9 + 60
+      assert final_customer.credit_balance == 69
 
       # Verify complete transaction history
       transactions = CreditLedger.list_transactions(final_customer)
-      assert length(transactions) == 4  # trial_signup, billing, consume, pro payment
+      # trial_signup, billing, consume, pro payment
+      assert length(transactions) == 4
 
       sources = Enum.map(transactions, & &1.source)
       assert "trial_signup" in sources

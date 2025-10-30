@@ -151,7 +151,8 @@ defmodule RsolvWeb.CredentialControllerTest do
 
       # Verify rate limiting logic is called (it's just set very high at 100/min)
       # In production, this would actually limit after 100 requests
-      assert {:ok, _metadata} = Rsolv.RateLimiter.check_rate_limit(customer.id, :credential_exchange)
+      assert {:ok, _metadata} =
+               Rsolv.RateLimiter.check_rate_limit(customer.id, :credential_exchange)
     end
 
     test "enforces rate limit after exceeding threshold", %{
@@ -164,11 +165,13 @@ defmodule RsolvWeb.CredentialControllerTest do
 
       # Make 10 requests to hit the default limit (10 requests per minute)
       for _i <- 1..10 do
-        assert {:ok, _metadata} = Rsolv.RateLimiter.check_rate_limit(customer.id, :credential_exchange)
+        assert {:ok, _metadata} =
+                 Rsolv.RateLimiter.check_rate_limit(customer.id, :credential_exchange)
       end
 
       # 11th request should be rate limited
-      assert {:error, :rate_limited, _metadata} = Rsolv.RateLimiter.check_rate_limit(customer.id, :credential_exchange)
+      assert {:error, :rate_limited, _metadata} =
+               Rsolv.RateLimiter.check_rate_limit(customer.id, :credential_exchange)
     end
 
     test "validates required parameters", %{conn: conn, raw_api_key: raw_api_key} do
