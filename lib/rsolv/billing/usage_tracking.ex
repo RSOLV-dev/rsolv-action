@@ -11,7 +11,6 @@ defmodule Rsolv.Billing.UsageTracking do
   alias Rsolv.Repo
   alias Rsolv.Billing.{StripeService, CreditLedger, Pricing}
   alias Rsolv.Customers
-  alias Rsolv.Customers.Customer
 
   import Ecto.Query, warn: false
 

@@ -23,7 +23,6 @@ defmodule Rsolv.Billing do
     UsageTracking
   }
 
-  alias Rsolv.Customers.Customer
   alias Rsolv.Customers
 
   @doc """
