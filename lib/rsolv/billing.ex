@@ -173,11 +173,27 @@ defmodule Rsolv.Billing do
 
   ## Examples
 
-      iex> create_stripe_customer(customer)
-      {:ok, "cus_abc123..."}
+      iex> alias Rsolv.Customers.Customer
+      iex> customer = %Customer{id: 1, email: "test@example.com", name: "Test Customer"}
+      iex> # Mock successful Stripe customer creation
+      iex> expect(Rsolv.Billing.StripeMock, :create, fn _params ->
+      ...>   {:ok, %{id: "cus_test123", email: "test@example.com", name: "Test Customer"}}
+      ...> end)
+      iex> {:ok, customer_id} = Rsolv.Billing.create_stripe_customer(customer)
+      iex> customer_id
+      "cus_test123"
 
-      iex> create_stripe_customer(customer)
-      {:error, %Stripe.Error{...}}
+  ## Error handling
+
+      iex> alias Rsolv.Customers.Customer
+      iex> customer = %Customer{id: 2, email: "error@example.com", name: "Error Customer"}
+      iex> # Mock Stripe API error
+      iex> expect(Rsolv.Billing.StripeMock, :create, fn _params ->
+      ...>   {:error, %Stripe.Error{message: "Invalid email", source: :stripe, code: :invalid_request_error}}
+      ...> end)
+      iex> {:error, %Stripe.Error{message: msg}} = Rsolv.Billing.create_stripe_customer(customer)
+      iex> msg
+      "Invalid email"
 
   """
   def create_stripe_customer(%Customer{} = customer) do

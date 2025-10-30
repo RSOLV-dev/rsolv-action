@@ -236,10 +236,16 @@ defmodule Rsolv.CustomerOnboarding do
     {:ok, %{customer: customer_with_credits, api_key: raw_key}}
   end
 
-  # Pattern match on failed transaction
-  defp handle_transaction_result({:error, _failed_operation, changeset, _changes}) do
+  # Pattern match on failed transaction with changeset error
+  defp handle_transaction_result({:error, _failed_operation, %Ecto.Changeset{} = changeset, _changes}) do
     Logger.warning("❌ [CustomerOnboarding] Provisioning failed: #{inspect(changeset.errors)}")
     {:error, {:validation_failed, changeset}}
+  end
+
+  # Pattern match on failed transaction with other error types (e.g., Stripe.Error)
+  defp handle_transaction_result({:error, _failed_operation, reason, _changes}) do
+    Logger.error("❌ [CustomerOnboarding] Provisioning failed: #{inspect(reason)}")
+    {:error, reason}
   end
 
   defp handle_transaction_result({:error, reason}) do

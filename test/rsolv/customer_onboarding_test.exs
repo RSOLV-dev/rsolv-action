@@ -215,6 +215,101 @@ defmodule Rsolv.CustomerOnboardingTest do
     end
   end
 
+  describe "provision_customer/1 - Stripe and initial credits (RFC-069)" do
+    test "creates Stripe customer and allocates 5 initial credits" do
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        assert params.email =~ "@testcompany.com"
+        assert params.name == "Stripe Credits Test"
+
+        {:ok,
+         %{
+           id: "cus_stripe_test_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
+
+      attrs = %{
+        "name" => "Stripe Credits Test",
+        "email" => "stripe_test_#{System.unique_integer([:positive])}@testcompany.com",
+        "source" => "direct"
+      }
+
+      assert {:ok, %{customer: customer, api_key: _api_key}} =
+               CustomerOnboarding.provision_customer(attrs)
+
+      # Verify Stripe customer ID was stored
+      assert customer.stripe_customer_id =~ "cus_stripe_test_"
+
+      # Verify initial credits allocated
+      assert customer.credit_balance == 5
+
+      # Verify credit transaction exists
+      alias Rsolv.Billing.CreditLedger
+
+      transactions = CreditLedger.list_transactions(customer)
+      assert length(transactions) == 1
+
+      signup_credit = hd(transactions)
+      assert signup_credit.amount == 5
+      assert signup_credit.source == "trial_signup"
+      assert signup_credit.metadata["source"] == "direct"
+    end
+
+    test "records correct source in credit metadata" do
+      # Mock Stripe customer creation
+      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+        {:ok,
+         %{
+           id: "cus_marketplace_#{System.unique_integer([:positive])}",
+           email: params.email,
+           name: params.name
+         }}
+      end)
+
+      attrs = %{
+        "name" => "Marketplace Customer",
+        "email" => "marketplace_#{System.unique_integer([:positive])}@testcompany.com",
+        "source" => "gh_marketplace"
+      }
+
+      assert {:ok, %{customer: customer, api_key: _api_key}} =
+               CustomerOnboarding.provision_customer(attrs)
+
+      alias Rsolv.Billing.CreditLedger
+
+      transactions = CreditLedger.list_transactions(customer)
+      signup_credit = hd(transactions)
+      assert signup_credit.metadata["source"] == "gh_marketplace"
+    end
+
+    test "rolls back everything if Stripe customer creation fails" do
+      # Mock Stripe API failure
+      expect(Rsolv.Billing.StripeMock, :create, fn _params ->
+        {:error,
+         %Stripe.Error{
+           message: "API key invalid",
+           source: :stripe,
+           code: :invalid_request_error
+         }}
+      end)
+
+      attrs = %{
+        "name" => "Failed Stripe Test",
+        "email" => "stripe_fail_#{System.unique_integer([:positive])}@testcompany.com"
+      }
+
+      initial_customer_count = Repo.aggregate(Rsolv.Customers.Customer, :count)
+
+      assert {:error, _reason} = CustomerOnboarding.provision_customer(attrs)
+
+      # Verify nothing was created
+      final_customer_count = Repo.aggregate(Rsolv.Customers.Customer, :count)
+      assert final_customer_count == initial_customer_count
+    end
+  end
+
   describe "telemetry events - RFC-065 Week 3" do
     test "emits telemetry on customer onboarding success" do
       # Mock Stripe customer creation
