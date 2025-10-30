@@ -139,7 +139,7 @@ defmodule Rsolv.Security.SQLInjectionTest do
       # Create customer with hashed password using the proper registration flow
       {:ok, customer} =
         Rsolv.Customers.register_customer(%{
-          email: "test@example.com",
+          email: "test-sql-#{System.unique_integer([:positive])}@example.com",
           name: "Test User",
           password: real_password
         })

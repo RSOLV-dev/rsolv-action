@@ -21,7 +21,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
       {:ok, customer} =
         Customers.create_customer(%{
           name: "Test Customer",
-          email: "test@example.com",
+          email: "test-payment-#{System.unique_integer([:positive])}@example.com",
           stripe_customer_id: "cus_test123",
           subscription_type: "pro",
           subscription_state: "active",
@@ -134,7 +134,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
       {:ok, customer} =
         Customers.create_customer(%{
           name: "Test Customer",
-          email: "test@example.com",
+          email: "test-failed-#{System.unique_integer([:positive])}@example.com",
           stripe_customer_id: "cus_failed123",
           subscription_type: "pro",
           subscription_state: "active"
@@ -169,7 +169,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
       {:ok, customer} =
         Customers.create_customer(%{
           name: "Test Customer",
-          email: "test@example.com",
+          email: "test-created-#{System.unique_integer([:positive])}@example.com",
           stripe_customer_id: "cus_new_sub123"
         })
 
@@ -204,7 +204,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
       {:ok, customer} =
         Customers.create_customer(%{
           name: "Test Customer",
-          email: "test@example.com",
+          email: "test-deleted-#{System.unique_integer([:positive])}@example.com",
           stripe_customer_id: "cus_cancel123",
           stripe_subscription_id: "sub_cancel123",
           subscription_type: "pro",
@@ -246,7 +246,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
       {:ok, customer} =
         Customers.create_customer(%{
           name: "Test Customer",
-          email: "test@example.com",
+          email: "test-updated-#{System.unique_integer([:positive])}@example.com",
           stripe_customer_id: "cus_update123",
           stripe_subscription_id: "sub_update123",
           subscription_type: "pro",
