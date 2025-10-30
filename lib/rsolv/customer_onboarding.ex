@@ -237,7 +237,9 @@ defmodule Rsolv.CustomerOnboarding do
   end
 
   # Pattern match on failed transaction with changeset error
-  defp handle_transaction_result({:error, _failed_operation, %Ecto.Changeset{} = changeset, _changes}) do
+  defp handle_transaction_result(
+         {:error, _failed_operation, %Ecto.Changeset{} = changeset, _changes}
+       ) do
     Logger.warning("❌ [CustomerOnboarding] Provisioning failed: #{inspect(changeset.errors)}")
     {:error, {:validation_failed, changeset}}
   end
