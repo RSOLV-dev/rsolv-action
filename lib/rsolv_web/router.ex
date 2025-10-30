@@ -176,7 +176,7 @@ defmodule RsolvWeb.Router do
 
     # Feedback endpoints
     get "/feedback/stats", FeedbackController, :stats
-    resources "/feedback", FeedbackController, except: [:delete, :new, :edit]
+    resources "/feedback", FeedbackController, only: [:index, :show, :create]
   end
 
   # API v1 Routes (from consolidated RSOLV-api)
@@ -191,7 +191,7 @@ defmodule RsolvWeb.Router do
     # Pattern metadata endpoint moved to Api.V1.PatternController
 
     # Fix attempts
-    resources "/fix-attempts", FixAttemptController, except: [:new, :edit]
+    resources "/fix-attempts", FixAttemptController, only: [:create]
   end
 
   scope "/api/v1", RsolvWeb.Api.V1 do
@@ -218,7 +218,7 @@ defmodule RsolvWeb.Router do
     post "/ast/validate", VulnerabilityValidationRouter, :validate
 
     # Audit log endpoint
-    resources "/audit-logs", AuditLogController, only: [:index, :show]
+    resources "/audit-logs", AuditLogController, only: [:index]
 
     # Phase data endpoints
     post "/phases/store", PhaseController, :store
