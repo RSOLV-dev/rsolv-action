@@ -61,7 +61,10 @@ defmodule Rsolv.Security.RateLimitingTest do
   end
 
   describe "authentication rate limiting (10 attempts/hour)" do
+    @tag :skip
     test "allows failed login attempts up to limit" do
+      # TODO: Implement /api/auth/login route first
+      # See: RFC-066 week 3 - API auth endpoints
       email = "test@example.com"
 
       # Make 5 failed login attempts - should all return 401

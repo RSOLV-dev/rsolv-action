@@ -7,6 +7,9 @@ defmodule Rsolv.Integration.ASTValidationComprehensiveTest do
     # Ensure flag is disabled at start of each test (in case it got re-enabled)
     FunWithFlags.disable(:false_positive_caching)
 
+    # Clear the cache to ensure tests don't interfere with each other
+    Rsolv.Cache.ValidationCache.clear_all()
+
     setup_api_auth()
   end
 
