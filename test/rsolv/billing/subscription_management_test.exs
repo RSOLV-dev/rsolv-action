@@ -13,7 +13,7 @@ defmodule Rsolv.Billing.SubscriptionManagementTest do
       }
 
       assert {:error, :no_payment_method} =
-        SubscriptionManagement.subscribe_to_pro(customer)
+               SubscriptionManagement.subscribe_to_pro(customer)
     end
   end
 
@@ -26,10 +26,10 @@ defmodule Rsolv.Billing.SubscriptionManagementTest do
       }
 
       assert {:error, :no_active_subscription} =
-        SubscriptionManagement.cancel_subscription(customer, true)
+               SubscriptionManagement.cancel_subscription(customer, true)
 
       assert {:error, :no_active_subscription} =
-        SubscriptionManagement.cancel_subscription(customer, false)
+               SubscriptionManagement.cancel_subscription(customer, false)
     end
   end
 end

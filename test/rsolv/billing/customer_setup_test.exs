@@ -9,7 +9,7 @@ defmodule Rsolv.Billing.CustomerSetupTest do
       customer = %Customer{id: 1, email: "test@example.com"}
 
       assert {:error, :billing_consent_required} =
-        CustomerSetup.add_payment_method(customer, "pm_test123", false)
+               CustomerSetup.add_payment_method(customer, "pm_test123", false)
     end
   end
 end
