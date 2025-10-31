@@ -10,7 +10,10 @@ defmodule Rsolv.AST.TestIntegratorAdditionalTest do
   - Special characters in test names
   - Framework-specific edge cases (before/after hooks, fixtures, etc.)
   """
-  use ExUnit.Case, async: true
+  # Must run sequentially because TestIntegrator creates parser sessions
+  # with shared SessionManager state. Parallel execution in CI causes
+  # parser port exhaustion and state pollution.
+  use ExUnit.Case, async: false
 
   alias Rsolv.AST.TestIntegrator
 
