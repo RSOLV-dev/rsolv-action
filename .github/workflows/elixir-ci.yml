@@ -144,10 +144,12 @@ jobs:
             echo "Found coverage data files:"
             ls -lh cover/*.coverdata
 
-            # Use ExCoveralls' official --import-cover flag to merge partitioned coverage
-            # This imports all .coverdata files and generates JSON report without running tests
-            echo "Merging coverage data and generating report..."
-            mix coveralls.json --import-cover cover --no-start
+            # Use ExCoveralls to merge partitioned coverage WITHOUT running tests
+            # --no-start: Don't start the application
+            # --exclude test: Don't run any tests (critical - prevents re-running all 4612 tests)
+            # --import-cover: Import .coverdata files from partitioned runs
+            echo "Merging coverage data and generating report (no test execution)..."
+            mix coveralls.json --no-start --exclude test --import-cover cover
           else
             echo "⚠️  No coverage data files found"
           fi
