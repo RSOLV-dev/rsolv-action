@@ -41,16 +41,27 @@ defmodule Rsolv.Billing.CustomerSetup do
 
   This function:
   1. Validates billing consent was given (returns `{:error, :billing_consent_required}` if false)
-  2. Attaches payment method to Stripe customer
-  3. Updates customer record with payment method details
-  4. Credits +5 credits as billing addition bonus (trial_billing_added)
+  2. Creates Stripe customer if needed (trial customers don't have one yet)
+  3. Attaches payment method to Stripe customer
+  4. Updates customer record with payment method details
+  5. Credits +5 credits as billing addition bonus (trial_billing_added)
 
   Returns `{:ok, customer}` on success or `{:error, reason}` on failure.
 
   Tested via integration tests in `test/rsolv/billing/payment_methods_test.exs` and
   `test/integration/billing_onboarding_integration_test.exs`.
   """
+  def add_payment_method(%Customer{stripe_customer_id: nil} = customer, payment_method_id, true) do
+    # Trial customers don't have Stripe customer yet - create one first
+    with {:ok, stripe_customer} <- StripeService.create_customer(customer),
+         {:ok, customer} <- update_stripe_customer_id(customer, stripe_customer.id),
+         {:ok, _} <- StripeService.attach_payment_method(stripe_customer.id, payment_method_id) do
+      update_customer_with_payment_method_and_credit(customer, payment_method_id)
+    end
+  end
+
   def add_payment_method(%Customer{} = customer, payment_method_id, true = _billing_consent) do
+    # Customer already has Stripe customer ID - just attach payment method
     with {:ok, _} <-
            StripeService.attach_payment_method(customer.stripe_customer_id, payment_method_id) do
       update_customer_with_payment_method_and_credit(customer, payment_method_id)
@@ -59,6 +70,13 @@ defmodule Rsolv.Billing.CustomerSetup do
 
   def add_payment_method(%Customer{}, _payment_method_id, false = _billing_consent) do
     {:error, :billing_consent_required}
+  end
+
+  # Private helper to update customer's stripe_customer_id
+  defp update_stripe_customer_id(customer, stripe_customer_id) do
+    customer
+    |> Customer.changeset(%{stripe_customer_id: stripe_customer_id})
+    |> Repo.update()
   end
 
   # Private helper to update customer and add credits atomically
@@ -74,7 +92,9 @@ defmodule Rsolv.Billing.CustomerSetup do
         has_payment_method: true,
         billing_consent_given: true,
         billing_consent_at: now,
-        payment_method_added_at: now
+        payment_method_added_at: now,
+        # Upgrade to PAYG when payment method added
+        subscription_type: "pay_as_you_go"
       })
     )
     |> Ecto.Multi.run(:credit, fn _repo, %{customer: updated_customer} ->
