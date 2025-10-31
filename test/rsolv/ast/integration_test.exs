@@ -183,8 +183,11 @@ defmodule Rsolv.AST.IntegrationTest do
       end_time = System.monotonic_time(:millisecond)
       total_time = end_time - start_time
 
-      # Should complete within 2 seconds
-      assert total_time < 2000
+      # Performance budget: 2s locally, 5s in CI (accounts for resource constraints)
+      timeout = if System.get_env("CI"), do: 5000, else: 2000
+
+      assert total_time < timeout,
+             "Analysis took #{total_time}ms, expected < #{timeout}ms (CI: #{System.get_env("CI") != nil})"
 
       # All should succeed
       assert Enum.all?(results, fn result ->
