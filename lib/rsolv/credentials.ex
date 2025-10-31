@@ -30,7 +30,19 @@ defmodule Rsolv.Credentials do
   require Logger
 
   # Storage for credential tracking
+  # In test environment, use process dictionary for isolation
+  # In production, use persistent_term for shared state
   @credentials_table {__MODULE__, :credentials}
+
+  # Get the appropriate storage key based on environment
+  defp get_storage_key do
+    if Mix.env() == :test do
+      # Use process dictionary in tests for isolation
+      {__MODULE__, :credentials, self()}
+    else
+      @credentials_table
+    end
+  end
 
   # Get provider keys at runtime with graceful fallback to mock keys for testing/partial deployments
   defp get_provider_key(provider) do
@@ -129,7 +141,8 @@ defmodule Rsolv.Credentials do
     updated_credential = Map.merge(credential, metadata)
 
     # Update the credential in storage
-    credentials = :persistent_term.get(@credentials_table, [])
+    storage_key = get_storage_key()
+    credentials = :persistent_term.get(storage_key, [])
     Logger.info("Found #{length(credentials)} stored credentials, looking for #{credential.id}")
 
     {updated_credentials, found} =
@@ -143,7 +156,7 @@ defmodule Rsolv.Credentials do
       end)
 
     if found do
-      :persistent_term.put(@credentials_table, updated_credentials)
+      :persistent_term.put(storage_key, updated_credentials)
       Logger.info("Successfully updated credential #{credential.id} in storage")
     else
       Logger.warning("Credential #{credential.id} not found in storage!")
@@ -184,7 +197,8 @@ defmodule Rsolv.Credentials do
   """
   def get_credential(credential_id) do
     # Look for credential in storage
-    credentials = :persistent_term.get(@credentials_table, [])
+    storage_key = get_storage_key()
+    credentials = :persistent_term.get(storage_key, [])
 
     case Enum.find(credentials, fn cred -> cred.id == credential_id end) do
       # Return nil if not found (will trigger 404)
@@ -212,7 +226,8 @@ defmodule Rsolv.Credentials do
   """
   def count_active_credentials(customer_id) do
     # Count credentials for this customer
-    credentials = :persistent_term.get(@credentials_table, [])
+    storage_key = get_storage_key()
+    credentials = :persistent_term.get(storage_key, [])
 
     count =
       Enum.count(credentials, fn cred ->
@@ -228,7 +243,8 @@ defmodule Rsolv.Credentials do
   """
   def get_latest_credential(customer_id) do
     # Get the most recent credential for this customer
-    credentials = :persistent_term.get(@credentials_table, [])
+    storage_key = get_storage_key()
+    credentials = :persistent_term.get(storage_key, [])
     Logger.info("get_latest_credential: Found #{length(credentials)} total credentials")
 
     customer_credentials =
@@ -274,16 +290,18 @@ defmodule Rsolv.Credentials do
 
   # Helper function to track credentials
   defp track_credential(credential) do
-    credentials = :persistent_term.get(@credentials_table, [])
+    storage_key = get_storage_key()
+    credentials = :persistent_term.get(storage_key, [])
     new_credentials = [credential | credentials]
-    :persistent_term.put(@credentials_table, new_credentials)
+    :persistent_term.put(storage_key, new_credentials)
   end
 
   @doc """
   Reset credential storage (for testing).
   """
   def reset_credentials() do
-    :persistent_term.put(@credentials_table, [])
+    storage_key = get_storage_key()
+    :persistent_term.put(storage_key, [])
     :ok
   end
 end

@@ -13,18 +13,8 @@ defmodule Rsolv.AST.TestCase do
     end
   end
 
-  setup do
-    # Ensure the application is started for tests
-    # Create a test session
-    {:ok, session} = Rsolv.AST.SessionManager.create_session("test-customer")
-
-    on_exit(fn ->
-      # Clean up session after test
-      Rsolv.AST.SessionManager.delete_session(session.id, "test-customer")
-    end)
-
-    {:ok, session_id: session.id, session: session}
-  end
+  # NOTE: No default setup block - individual tests create their own sessions
+  # to avoid conflicts when running in parallel or in CI shards
 
   # Test fixtures for different languages
 
