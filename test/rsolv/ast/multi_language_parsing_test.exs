@@ -99,18 +99,38 @@ defmodule Rsolv.AST.MultiLanguageParsingTest do
     test "parses simple Ruby code", %{session: session, customer_id: customer_id} do
       code = test_code("ruby", :simple)
 
-      {:ok, result} = ParserRegistry.parse_code(session.id, customer_id, "ruby", code)
-      ast = result.ast
+      result = ParserRegistry.parse_code(session.id, customer_id, "ruby", code)
 
-      # Ruby AST structure - Prism returns program root with statements
-      assert ast["type"] == "program" or ast[:type] == "program"
+      # Debug output to diagnose issues
+      case result do
+        {:ok, parse_result} ->
+          ast = parse_result.ast
 
-      # Find the def node within the AST
-      def_nodes = find_nodes(ast, "def")
-      assert length(def_nodes) == 1
+          # Verify AST structure
+          assert ast != nil, "AST should not be nil"
+          assert is_map(ast), "AST should be a map, got: #{inspect(ast)}"
 
-      def_node = hd(def_nodes)
-      assert is_list(def_node["children"]) or is_list(def_node[:children])
+          # Ruby AST structure - Prism returns program root with statements
+          ast_type = ast["type"] || ast[:type]
+
+          assert ast_type == "program",
+                 "Expected type 'program', got: #{inspect(ast_type)}. Full AST: #{inspect(ast)}"
+
+          # Find the def node within the AST
+          def_nodes = find_nodes(ast, "def")
+
+          assert length(def_nodes) == 1,
+                 "Expected 1 def node, found #{length(def_nodes)}. AST: #{inspect(ast)}"
+
+          def_node = hd(def_nodes)
+          has_children = is_list(def_node["children"]) or is_list(def_node[:children])
+
+          assert has_children,
+                 "def node should have children list. Node: #{inspect(def_node)}"
+
+        {:error, error} ->
+          flunk("Parser failed with error: #{inspect(error)}")
+      end
     end
 
     test "detects Ruby SQL injection", %{session: session, customer_id: customer_id} do
