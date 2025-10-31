@@ -28,12 +28,12 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
       pattern = UnsafeGlobbing.pattern()
 
       vulnerable_code = [
-        ~S"get \"files/*path\", to: \"files#show\"",
+        ~S'get "files/*path", to: "files#show"',
         ~S"get 'downloads/*file', to: 'downloads#serve'",
-        ~S"match \"assets/*filename\", to: \"assets#serve\"",
-        ~S"get \"public/*resource\", to: \"static#serve\"",
+        ~S'match "assets/*filename", to: "assets#serve"',
+        ~S'get "public/*resource", to: "static#serve"',
         ~S"match '*path' => 'files#show'",
-        ~S"get \"*splat\", to: \"catch_all#index\""
+        ~S'get "*splat", to: "catch_all#index"'
       ]
 
       for code <- vulnerable_code do
@@ -46,11 +46,11 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
       pattern = UnsafeGlobbing.pattern()
 
       vulnerable_code = [
-        ~S"get \"download/*filename\", to: \"files#download\"",
-        ~S"get \"serve/*path\", to: \"static#serve\"",
-        ~S"match \"files/*glob\" => \"files#show\"",
-        ~S"get \"assets/*asset_path\", to: \"assets#serve\"",
-        ~S"get \"media/*file_path\", to: \"media#show\""
+        ~S'get "download/*filename", to: "files#download"',
+        ~S'get "serve/*path", to: "static#serve"',
+        ~S'match "files/*glob" => "files#show"',
+        ~S'get "assets/*asset_path", to: "assets#serve"',
+        ~S'get "media/*file_path", to: "media#show"'
       ]
 
       for code <- vulnerable_code do
@@ -63,10 +63,10 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
       pattern = UnsafeGlobbing.pattern()
 
       vulnerable_code = [
-        ~S"get \"files/*path\", to: \"files#show\" # renders file: params[:path]",
-        ~S"get \"templates/*template\", to: \"render#show\"",
-        ~S"match \"view/*file\" => \"view#render\"",
-        ~S"get \"download/*resource\", to: \"download#file\""
+        ~S'get "files/*path", to: "files#show" # renders file: params[:path]',
+        ~S'get "templates/*template", to: "render#show"',
+        ~S'match "view/*file" => "view#render"',
+        ~S'get "download/*resource", to: "download#file"'
       ]
 
       for code <- vulnerable_code do
@@ -79,10 +79,10 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
       pattern = UnsafeGlobbing.pattern()
 
       vulnerable_code = [
-        ~S"get \"*all\", to: \"application#catch_all\"",
+        ~S'get "*all", to: "application#catch_all"',
         ~S"match '*path' => 'catch_all#index'",
-        ~S"get \"*splat\", to: \"errors#not_found\"",
-        ~S"match \"*anything\" => \"default#handler\"",
+        ~S'get "*splat", to: "errors#not_found"',
+        ~S'match "*anything" => "default#handler"',
         ~S"get '*glob' => 'fallback#handle'"
       ]
 
@@ -96,11 +96,11 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
       pattern = UnsafeGlobbing.pattern()
 
       vulnerable_code = [
-        ~S"get \"documents/*doc_path\", to: \"docs#show\"",
-        ~S"get \"uploads/*upload_path\", to: \"uploads#serve\"",
-        ~S"match \"content/*content_path\" => \"content#display\"",
-        ~S"get \"storage/*file_path\", to: \"storage#retrieve\"",
-        ~S"get \"backup/*backup_file\", to: \"backup#download\""
+        ~S'get "documents/*doc_path", to: "docs#show"',
+        ~S'get "uploads/*upload_path", to: "uploads#serve"',
+        ~S'match "content/*content_path" => "content#display"',
+        ~S'get "storage/*file_path", to: "storage#retrieve"',
+        ~S'get "backup/*backup_file", to: "backup#download"'
       ]
 
       for code <- vulnerable_code do
@@ -113,10 +113,10 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
       pattern = UnsafeGlobbing.pattern()
 
       vulnerable_code = [
-        ~S"get \"api/v1/files/*path\", to: \"api/files#show\"",
-        ~S"get \"admin/files/*filename\", to: \"admin/files#serve\"",
-        ~S"match \"public/assets/*resource\" => \"public#serve\"",
-        ~S"get \"user/:id/files/*filepath\", to: \"user_files#show\""
+        ~S'get "api/v1/files/*path", to: "api/files#show"',
+        ~S'get "admin/files/*filename", to: "admin/files#serve"',
+        ~S'match "public/assets/*resource" => "public#serve"',
+        ~S'get "user/:id/files/*filepath", to: "user_files#show"'
       ]
 
       for code <- vulnerable_code do
@@ -129,9 +129,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
       pattern = UnsafeGlobbing.pattern()
 
       vulnerable_code = [
-        ~S"namespace :api do\n  get \"files/*path\", to: \"files#show\"\nend",
-        ~S"scope :admin do\n  match \"*resource\" => \"admin#serve\"\nend",
-        ~S"resources :users do\n  get \"files/*filename\", to: \"user_files#show\"\nend"
+        ~S'namespace :api do\n  get "files/*path", to: "files#show"\nend',
+        ~S'scope :admin do\n  match "*resource" => "admin#serve"\nend',
+        ~S'resources :users do\n  get "files/*filename", to: "user_files#show"\nend'
       ]
 
       for code <- vulnerable_code do
@@ -144,9 +144,9 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
       pattern = UnsafeGlobbing.pattern()
 
       vulnerable_code = [
-        ~S"get \"files/*path\", to: \"files#show\", format: false",
-        ~S"get \"download/*file\", to: \"download#serve\", defaults: { format: nil }",
-        ~S"match \"*path\" => \"files#show\", format: false"
+        ~S'get "files/*path", to: "files#show", format: false',
+        ~S'get "download/*file", to: "download#serve", defaults: { format: nil }',
+        ~S'match "*path" => "files#show", format: false'
       ]
 
       for code <- vulnerable_code do
@@ -165,8 +165,8 @@ defmodule Rsolv.Security.Patterns.Rails.UnsafeGlobbingTest do
         # ~S"match \"*path\" => \"files#show\", constraints: { path: /[a-z0-9\\/\\-_]+/ }",
         # ~S"get \"assets/*filename\", to: \"assets#serve\", constraints: { filename: /\\A[\\w\\.\\-\\/]+\\z/ }",
         # ~S"# get \"files/*path\", to: \"files#show\" - commented out",  # Comment detection handled by AST
-        ~S"get \"files/:id\", to: \"files#show\" # specific param, not glob",
-        ~S"get \"files\", to: \"files#index\" # no glob parameter"
+        ~S'get "files/:id", to: "files#show" # specific param, not glob',
+        ~S'get "files", to: "files#index" # no glob parameter'
       ]
 
       for code <- safe_code do

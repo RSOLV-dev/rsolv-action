@@ -11,8 +11,13 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
   6. Finds last test_* functions within classes
 
   RFC-060-AMENDMENT-001: Phase 1 - Ruby and Python parser integration
+
+  NOTE: async: false is required because these tests share parser pool state
+  via the "test-integrator" session in SessionManager. Running tests in parallel
+  causes race conditions where one test's parser state affects another,
+  leading to CI failures in Shard 1 even though tests pass locally.
   """
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Rsolv.AST.TestIntegrator
 

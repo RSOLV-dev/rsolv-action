@@ -121,7 +121,7 @@ defmodule Rsolv.Security.Patterns.Elixir.XssRawHtmlTest do
       vulnerable_code = ~S"user_content |> html_safe()"
       assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code))
 
-      vulnerable_code2 = ~S"params[\"html\"].html_safe()"
+      vulnerable_code2 = ~S'params["html"].html_safe()'
       assert Enum.any?(pattern.regex, &Regex.match?(&1, vulnerable_code2))
     end
 

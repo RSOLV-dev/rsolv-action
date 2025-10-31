@@ -13,23 +13,28 @@ defmodule Rsolv.AST.FallbackStrategy do
   @cache_table :fallback_analysis_cache
   @cache_ttl :timer.minutes(15)
 
-  # Initialize cache on module load
-  def __after_compile__(_env, _bytecode) do
-    init_cache()
-  end
-
+  # Initialize cache - safe for concurrent calls
   defp init_cache do
-    if :ets.whereis(@cache_table) == :undefined do
-      :ets.new(@cache_table, [:set, :public, :named_table, {:read_concurrency, true}])
+    case :ets.whereis(@cache_table) do
+      :undefined ->
+        # Try to create the table, but catch if another process created it first
+        try do
+          :ets.new(@cache_table, [:set, :public, :named_table, {:read_concurrency, true}])
+          :ok
+        rescue
+          ArgumentError ->
+            # Table already exists, which is fine
+            :ok
+        end
+
+      _tid ->
+        :ok
     end
   end
 
-  # Ensure cache is initialized before use
+  # Ensure cache is initialized before use - always returns :ok
   defp ensure_cache do
-    case :ets.whereis(@cache_table) do
-      :undefined -> init_cache()
-      _ -> :ok
-    end
+    init_cache()
   end
 
   # Result struct for fallback analysis
