@@ -144,14 +144,20 @@ jobs:
             echo "Found coverage data files:"
             ls -lh cover/*.coverdata
 
-            # Use ExCoveralls to merge partitioned coverage WITHOUT running tests
+            # Use ExCoveralls to merge partitioned coverage
             # --no-start: Don't start the application
-            # --exclude test: Don't run any tests (critical - prevents re-running all 4612 tests)
-            # --import-cover: Import .coverdata files from partitioned runs
-            echo "Merging coverage data and generating report (no test execution)..."
-            mix coveralls.json --no-start --exclude test --import-cover cover
+            # --exclude test: Exclude tests tagged with :test (most tests, so minimal re-execution)
+            # --import-cover: Import .coverdata files from partitioned runs (this brings in the real coverage)
+            echo "Merging coverage data and generating report..."
+            mix coveralls.json --no-start --exclude test --import-cover cover | tee coverage_output.txt
+
+            # Extract coverage percentage from the [TOTAL] line in the text output
+            COVERAGE=$(grep '^\[TOTAL\]' coverage_output.txt | awk '{print $2}' | sed 's/%//')
+            echo "Extracted coverage: ${COVERAGE}%"
+            echo "COVERAGE_PERCENT=${COVERAGE}" >> $GITHUB_ENV
           else
             echo "⚠️  No coverage data files found"
+            echo "COVERAGE_PERCENT=0" >> $GITHUB_ENV
           fi
 
       - name: Upload coverage to Coveralls
@@ -164,19 +170,17 @@ jobs:
 
       - name: Check coverage threshold (60% minimum)
         run: |
-          if [ -f cover/excoveralls.json ]; then
-            COVERAGE=$(jq '.["coverage"]' cover/excoveralls.json 2>/dev/null || echo "0")
-            echo "Current coverage: ${COVERAGE}%"
+          COVERAGE="${COVERAGE_PERCENT:-0}"
+          echo "Current coverage: ${COVERAGE}%"
 
-            if (( $(echo "$COVERAGE < 60" | bc -l) )); then
-              echo "❌ Coverage ${COVERAGE}% is below 60% threshold"
-              echo "This check is now BLOCKING - please add tests to improve coverage"
-              exit 1
-            else
-              echo "✅ Coverage ${COVERAGE}% meets 60% threshold"
-              if (( $(echo "$COVERAGE < 70" | bc -l) )); then
-                echo "📈 Target: 70% (aspirational: 85%)"
-              fi
+          if (( $(echo "$COVERAGE < 60" | bc -l) )); then
+            echo "❌ Coverage ${COVERAGE}% is below 60% threshold"
+            echo "This check is now BLOCKING - please add tests to improve coverage"
+            exit 1
+          else
+            echo "✅ Coverage ${COVERAGE}% meets 60% threshold"
+            if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+              echo "📈 Target: 70% (aspirational: 85%)"
             fi
           fi
 
