@@ -118,6 +118,13 @@ defmodule Rsolv.AST.AuditLogger do
   end
 
   @doc """
+  Get a single event by ID.
+  """
+  def get_event(event_id) do
+    GenServer.call(__MODULE__, {:get_event, event_id})
+  end
+
+  @doc """
   Query events by criteria.
   """
   def query_events(criteria) do
@@ -218,6 +225,12 @@ defmodule Rsolv.AST.AuditLogger do
   def handle_call(:clear_buffer, _from, state) do
     # Clear the in-memory buffer
     {:reply, :ok, %{state | buffer: []}}
+  end
+
+  @impl true
+  def handle_call({:get_event, event_id}, _from, state) do
+    event = get_event_from_buffer(event_id)
+    {:reply, event, state}
   end
 
   @impl true
@@ -334,6 +347,13 @@ defmodule Rsolv.AST.AuditLogger do
         # Future: PostgreSQL or other backend
         Logger.warning("Unknown storage backend: #{inspect(backend)}")
         {{:error, :unknown_backend}, state}
+    end
+  end
+
+  defp get_event_from_buffer(event_id) do
+    case :ets.lookup(:audit_log_buffer, event_id) do
+      [{^event_id, event}] -> {:ok, event}
+      [] -> {:error, :not_found}
     end
   end
 

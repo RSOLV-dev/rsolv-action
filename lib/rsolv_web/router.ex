@@ -218,7 +218,7 @@ defmodule RsolvWeb.Router do
     post "/ast/validate", VulnerabilityValidationRouter, :validate
 
     # Audit log endpoint
-    resources "/audit-logs", AuditLogController, only: [:index]
+    resources "/audit-logs", AuditLogController, only: [:index, :show]
 
     # Phase data endpoints
     post "/phases/store", PhaseController, :store

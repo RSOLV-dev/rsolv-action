@@ -94,6 +94,60 @@ defmodule RsolvWeb.Api.V1.AuditLogController do
     })
   end
 
+  operation(:show,
+    summary: "Get a specific audit event",
+    description: """
+    Retrieve a single audit event by its unique ID.
+
+    **Authentication Required** - Enterprise tier only.
+
+    **Use Cases:**
+    - Investigate specific security incidents
+    - Review detailed event context
+    - Track event relationships via correlation ID
+    - Export individual events for compliance documentation
+
+    **Response Format:**
+    Returns complete audit event details including:
+    - Event type and severity
+    - Timestamp and correlation ID
+    - Associated customer/API key information
+    - Full event metadata and context
+    """,
+    parameters: [
+      id: [
+        in: :path,
+        description: "Unique audit event ID",
+        type: :string,
+        required: true,
+        example: "evt_1234567890"
+      ]
+    ],
+    responses: [
+      ok: {"Audit event retrieved successfully", "application/json", AuditLogResponse},
+      not_found: {"Audit event not found", "application/json", ErrorResponse},
+      unauthorized: {"Invalid or missing API key", "application/json", ErrorResponse},
+      forbidden: {
+        "Insufficient permissions (Enterprise tier required)",
+        "application/json",
+        ErrorResponse
+      }
+    ],
+    security: [%{"ApiKeyAuth" => []}]
+  )
+
+  def show(conn, %{"id" => id}) do
+    case AuditLogger.get_event(id) do
+      {:ok, event} ->
+        json(conn, %{event: event})
+
+      {:error, :not_found} ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Audit event not found"})
+    end
+  end
+
   @doc """
   Get aggregated security metrics.
   """

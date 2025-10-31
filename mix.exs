@@ -10,7 +10,7 @@ defmodule Rsolv.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      test_coverage: [tool: ExCoveralls],
+      test_coverage: [tool: ExCoveralls, summary: [threshold: 60]],
       preferred_cli_env: [
         coveralls: :test,
         "coveralls.detail": :test,
