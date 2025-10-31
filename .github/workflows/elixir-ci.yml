@@ -144,20 +144,10 @@ jobs:
             echo "Found coverage data files:"
             ls -lh cover/*.coverdata
 
-            # Import coverage data files into Erlang cover database without running tests
-            # This merges coverage from all partitions
-            echo "Importing coverage data from partitions..."
-            elixir -e '
-              for file <- Path.wildcard("cover/*.coverdata") do
-                IO.puts("Importing: #{file}")
-                :cover.import(String.to_charlist(file))
-              end
-              IO.puts("Coverage data imported successfully")
-            '
-
-            # Generate JSON report from the merged coverage
-            echo "Generating coverage report..."
-            mix coveralls.json --no-start
+            # Use ExCoveralls' official --import-cover flag to merge partitioned coverage
+            # This imports all .coverdata files and generates JSON report without running tests
+            echo "Merging coverage data and generating report..."
+            mix coveralls.json --import-cover cover --no-start
           else
             echo "⚠️  No coverage data files found"
           fi
