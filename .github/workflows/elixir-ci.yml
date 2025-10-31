@@ -144,14 +144,19 @@ jobs:
             echo "Found coverage data files:"
             ls -lh cover/*.coverdata
 
-            # Step 1: Use built-in Mix task to aggregate partitioned coverage data
-            # This merges all .coverdata files and generates unified coverage
-            echo "Merging coverage data from partitions..."
-            mix test.coverage
+            # Import coverage data files into Erlang cover database without running tests
+            # This merges coverage from all partitions
+            echo "Importing coverage data from partitions..."
+            elixir -e '
+              for file <- Path.wildcard("cover/*.coverdata") do
+                IO.puts("Importing: #{file}")
+                :cover.import(String.to_charlist(file))
+              end
+              IO.puts("Coverage data imported successfully")
+            '
 
-            # Step 2: Generate JSON report from the merged coverage
-            # The aggregated coverage is now in Erlang's cover database
-            echo "Generating JSON report for Coveralls..."
+            # Generate JSON report from the merged coverage
+            echo "Generating coverage report..."
             mix coveralls.json --no-start
           else
             echo "⚠️  No coverage data files found"
