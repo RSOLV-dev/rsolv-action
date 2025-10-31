@@ -109,7 +109,7 @@ defmodule Rsolv.Billing.SubscriptionManagement do
       else
         %{
           subscription_type: "pay_as_you_go",
-          subscription_state: nil,
+          subscription_state: "canceled",
           stripe_subscription_id: nil,
           subscription_cancel_at_period_end: false
         }
