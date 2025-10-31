@@ -101,10 +101,24 @@ jobs:
     needs: test
     if: always()
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rsolv_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     env:
       MIX_ENV: test
-      # Dummy DATABASE_URL - not needed for coverage report generation from .coverdata files
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/dummy
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_test
 
     steps:
       - uses: actions/checkout@v4
@@ -119,6 +133,9 @@ jobs:
           pattern: coverage-*
           merge-multiple: true
           path: cover/
+
+      - name: Create test database
+        run: mix ecto.create
 
       - name: Generate merged coverage report
         run: |
@@ -135,7 +152,7 @@ jobs:
             # Step 2: Generate JSON report from the merged coverage
             # The aggregated coverage is now in Erlang's cover database
             echo "Generating JSON report for Coveralls..."
-            mix coveralls.json --no-start || echo "⚠️  Coveralls threshold check failed (non-fatal, expected until coverage improves)"
+            mix coveralls.json --no-start
           else
             echo "⚠️  No coverage data files found"
           fi

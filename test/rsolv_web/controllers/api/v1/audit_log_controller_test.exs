@@ -12,10 +12,11 @@ defmodule RsolvWeb.Api.V1.AuditLogControllerTest do
   describe "GET /api/v1/audit-logs/:id" do
     test "returns audit event when found", %{conn: conn} do
       # Create a test event
-      event = AuditLogger.log_event(:session_created, %{
-        session_id: "test_session_123",
-        customer_id: "customer_456"
-      })
+      event =
+        AuditLogger.log_event(:session_created, %{
+          session_id: "test_session_123",
+          customer_id: "customer_456"
+        })
 
       conn = get(conn, ~p"/api/v1/audit-logs/#{event.id}")
 
