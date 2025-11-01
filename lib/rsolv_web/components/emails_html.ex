@@ -103,10 +103,15 @@ defmodule RsolvWeb.EmailsHTML do
         {:safe, ...}
     """
     def unquote(template)(assigns) do
-      template_content = TemplateLoader.load_template!(unquote(template_name))
+      assigns =
+        assign(
+          assigns,
+          :__template_content__,
+          TemplateLoader.load_template!(unquote(template_name))
+        )
 
       ~H"""
-      {Phoenix.HTML.raw(template_content)}
+      {Phoenix.HTML.raw(@__template_content__)}
       """
     end
 
