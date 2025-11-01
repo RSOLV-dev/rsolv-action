@@ -6,7 +6,7 @@ defmodule RsolvWeb.ApiSpec do
   for the API documentation using OpenAPI 3.0 specification via open_api_spex.
   """
 
-  alias OpenApiSpex.{Info, OpenApi, Paths, Server, Components, SecurityScheme}
+  alias OpenApiSpex.{Components, Info, OpenApi, Paths, SecurityScheme, Server}
   alias RsolvWeb.{Endpoint, Router}
 
   @behaviour OpenApi
