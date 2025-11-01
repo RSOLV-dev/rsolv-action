@@ -10,40 +10,71 @@ Implemented automatic email notifications when subscription payments fail, ensur
 
 ## Implementation Summary
 
-### Files Modified (4)
+### Files Modified (5)
 
-1. **`lib/rsolv/billing/webhook_processor.ex:76-103`**
+1. **`lib/rsolv/billing/webhook_processor.ex:76-103`** (+13 lines)
    - Queues Oban email job when `invoice.payment_failed` webhook received
    - Updates customer subscription_state to "past_due"
    - Passes all invoice details to worker
 
-2. **`lib/rsolv/emails.ex:116-1291`**
-   - Added `payment_failed_email/5` function
+2. **`lib/rsolv/emails.ex:116-176`** (+42, -208 = **-166 lines net**)
+   - Added `payment_failed_email/5` function with assigns-based approach
    - Helper functions: `format_currency/1`, `format_timestamp_from_unix/1`
-   - HTML and text email body templates (inline strings, consistent with existing pattern)
+   - Simplified text body using assigns map
+   - **Removed inline HTML** in favor of HEEx template
 
-3. **`lib/rsolv/email_service.ex:101-119`**
+3. **`lib/rsolv/email_service.ex:101-119`** (+20 lines)
    - Added `send_payment_failed_email/5` service function
    - Fetches customer and delegates to Emails module
 
-4. **`lib/rsolv/workers/email_worker.ex:16-63`**
+4. **`lib/rsolv/workers/email_worker.ex:16-63`** (+49 lines)
    - Pattern-matched `perform/1` clause for "payment_failed" type
    - Comprehensive error handling and logging
 
-### Files Created (1)
+5. **`lib/rsolv_web/components/emails_html.ex:141-152`** (+12 lines)
+   - Added `payment_failed/1` and `render_payment_failed/1` functions
+   - Renders HEEx template with assigns
 
-1. **`test/rsolv/billing/dunning_email_test.exs`** (307 lines, 18 tests)
-   - Webhook processing tests
-   - Email job processing tests
-   - Email content validation tests
-   - Edge case tests
-   - Integration tests
+### Files Created (2)
+
+1. **`lib/rsolv_web/components/templates/email/payment_failed.html`** (+139 lines)
+   - Professional HEEx template with styling
+   - Uses `{@variable}` syntax for dynamic content
+   - Separation of concerns: presentation vs logic
+
+2. **`test/rsolv/billing/dunning_email_test.exs`** (+306 lines, 18 tests)
+   - Uses ExMachina factories for concise, idiomatic setup
+   - Webhook processing tests (3 tests)
+   - Email job processing tests (5 tests)
+   - Worker integration tests (2 tests)
+   - Email content validation tests (5 tests)
+   - Edge case tests (3 tests)
 
 ### Net Lines of Code
 
-- **Production code:** +255 lines
-- **Test code:** +307 lines
-- **Total:** +562 lines (net additive, but comprehensive)
+**Production code changes:**
+- webhook_processor.ex: +13
+- emails.ex: -166 (removed inline HTML)
+- email_service.ex: +20
+- email_worker.ex: +49
+- emails_html.ex: +12
+- payment_failed.html template: +139
+- **Net production: +67 lines**
+
+**Test code:** +306 lines
+
+**Documentation:** +253 lines
+
+**Total: +626 lines (+67 production, +306 tests, +253 docs)**
+
+### Why This is Better
+
+The template-based approach resulted in:
+- ✅ **Cleaner separation of concerns** (HTML in templates, logic in modules)
+- ✅ **More maintainable** (designers can edit templates directly)
+- ✅ **Net negative in emails.ex** (-166 lines by removing inline HTML)
+- ✅ **Phoenix best practices** (HEEx templates are the recommended approach)
+- ✅ **Same functionality** with better code organization
 
 ## Key Features
 
@@ -201,9 +232,16 @@ After webhook processing, verify:
 
 ## Design Decisions
 
-### Why Inline HTML Instead of .heex Templates?
+### Why HEEx Templates?
 
-**Consistency with existing code.** All other emails in `lib/rsolv/emails.ex` use inline HTML strings in private functions (`welcome_html_body`, `getting_started_html_body`, etc.). While Phoenix 1.7 HEEx templates would be more idiomatic, maintaining consistency with the existing pattern was prioritized.
+**Better separation of concerns and maintainability.** While some existing emails use inline HTML strings, the newer approach uses HEEx templates in `lib/rsolv_web/components/templates/email/`. This provides:
+- **Separation of logic and presentation** - HTML lives in template files
+- **Easier to edit** - Designers can modify templates without touching Elixir code
+- **Syntax highlighting** - Editors provide better support for `.html` files
+- **Phoenix 1.7 best practices** - Follows modern Phoenix conventions
+- **Net negative LOC** - Removed 166 lines from emails.ex by extracting to template
+
+The refactor resulted in cleaner, more maintainable code with the same functionality.
 
 ### Why ExMachina Factories in Tests?
 

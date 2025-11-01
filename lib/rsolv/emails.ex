@@ -131,7 +131,7 @@ defmodule Rsolv.Emails do
     # Format amount in dollars
     amount_in_dollars = format_currency(amount_due)
 
-    # Format next payment attempt timestamp
+    # Format next payment attempt timestamp and HTML
     next_attempt_formatted =
       if next_payment_attempt do
         format_timestamp_from_unix(next_payment_attempt)
@@ -139,33 +139,36 @@ defmodule Rsolv.Emails do
         nil
       end
 
+    next_attempt_html =
+      if next_attempt_formatted do
+        "<p><strong>Next Retry:</strong> #{next_attempt_formatted}</p>"
+      else
+        ""
+      end
+
+    # Build template assigns
+    assigns = %{
+      customer_name: customer.name || "there",
+      email: customer.email,
+      amount_due: amount_in_dollars,
+      invoice_id: invoice_id,
+      attempt_count: attempt_count,
+      next_payment_attempt_html: next_attempt_html,
+      credit_balance: customer.credit_balance,
+      billing_url: "https://rsolv.dev/dashboard/billing",
+      unsubscribe_url: "https://rsolv.dev/unsubscribe?email=#{customer.email}"
+    }
+
     # Build email using template
+    html_body = EmailsHTML.render_payment_failed(assigns)
+    text_body = payment_failed_text_body(assigns)
+
     new_email()
     |> to(customer.email)
     |> from({sender_name, sender_email})
     |> subject("Payment Failed - Action Required")
-    |> html_body(
-      payment_failed_html_body(
-        customer.name,
-        customer.email,
-        amount_in_dollars,
-        invoice_id,
-        attempt_count,
-        next_attempt_formatted,
-        customer.credit_balance
-      )
-    )
-    |> text_body(
-      payment_failed_text_body(
-        customer.name,
-        customer.email,
-        amount_in_dollars,
-        invoice_id,
-        attempt_count,
-        next_attempt_formatted,
-        customer.credit_balance
-      )
-    )
+    |> html_body(html_body)
+    |> text_body(text_body)
     |> put_header("X-Postmark-Tag", "payment-failed")
     |> put_header("X-Priority", "1")
     |> put_header("Message-ID", generate_message_id())
@@ -1070,184 +1073,15 @@ defmodule Rsolv.Emails do
 
   defp format_timestamp_from_unix(_), do: "Unknown"
 
-  # Payment failed email templates
-  defp payment_failed_html_body(customer_name, email, amount_due, invoice_id, attempt_count, next_payment_attempt, credit_balance) do
-    billing_url = "https://rsolv.dev/dashboard/billing"
-
-    next_attempt_html =
-      if next_payment_attempt do
-        """
-        <p><strong>Next Retry:</strong> #{next_payment_attempt}</p>
-        """
-      else
-        ""
-      end
-
-    """
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Payment Failed - Action Required</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f9fafb;
-          }
-          .container {
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          }
-          .header {
-            background-color: #dc2626;
-            color: white;
-            padding: 30px 20px;
-            border-radius: 8px 8px 0 0;
-            text-align: center;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 24px;
-          }
-          .content {
-            padding: 30px 20px;
-          }
-          .alert-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-          }
-          .invoice-details {
-            background-color: #f3f4f6;
-            padding: 20px;
-            border-radius: 5px;
-            margin: 20px 0;
-            border-left: 4px solid #dc2626;
-          }
-          .invoice-details p {
-            margin: 10px 0;
-            font-size: 14px;
-          }
-          .invoice-details strong {
-            color: #111827;
-            display: inline-block;
-            width: 180px;
-          }
-          .button {
-            display: inline-block;
-            background-color: #2563EB;
-            color: white !important;
-            padding: 14px 28px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 600;
-            text-align: center;
-            margin: 20px 0;
-          }
-          .button:hover {
-            background-color: #1d4ed8;
-          }
-          .info-box {
-            background-color: #dbeafe;
-            border-left: 4px solid #2563EB;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-          }
-          .info-box p {
-            margin: 5px 0;
-            color: #1e40af;
-          }
-          .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            font-size: 14px;
-            color: #6b7280;
-            text-align: center;
-          }
-          .support-link {
-            color: #2563EB;
-            text-decoration: none;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="alert-icon">⚠️</div>
-            <h1>Payment Failed - Action Required</h1>
-          </div>
-
-          <div class="content">
-            <p>Hi #{customer_name},</p>
-
-            <p>
-              We attempted to process your payment for your RSOLV Pro subscription, but unfortunately the payment failed.
-            </p>
-
-            <div class="invoice-details">
-              <h3 style="margin-top: 0; color: #111827;">Invoice Details</h3>
-              <p><strong>Amount Due:</strong> #{amount_due}</p>
-              <p><strong>Invoice ID:</strong> #{invoice_id}</p>
-              <p><strong>Attempt Count:</strong> #{attempt_count}</p>
-              #{next_attempt_html}
-            </div>
-
-            <p>
-              <strong>To avoid service interruption, please update your payment method as soon as possible.</strong>
-            </p>
-
-            <div style="text-align: center;">
-              <a href="#{billing_url}" class="button">Update Payment Method</a>
-            </div>
-
-            <div class="info-box">
-              <p><strong>Good news:</strong> Your credits (#{credit_balance} remaining) are preserved and will be available once payment is successful.</p>
-            </div>
-
-            <p>
-              Common reasons for payment failure:
-            </p>
-            <ul>
-              <li>Insufficient funds</li>
-              <li>Expired card</li>
-              <li>Incorrect billing information</li>
-              <li>Card issuer declined the transaction</li>
-            </ul>
-
-            <p>
-              If you have any questions or need assistance, please don't hesitate to reply to this email or contact our support team at <a href="mailto:support@rsolv.dev" class="support-link">support@rsolv.dev</a>.
-            </p>
-
-            <p>Best regards,<br />The RSOLV Team</p>
-          </div>
-
-          <div class="footer">
-            <p>
-              This email was sent to #{email} regarding your RSOLV Pro subscription.
-            </p>
-            <p>© 2025 RSOLV - Automated Security Scanning & Vulnerability Remediation</p>
-            <p>
-              <a href="https://rsolv.dev/unsubscribe?email=#{email}" style="color: #6b7280;">Unsubscribe</a>
-            </p>
-          </div>
-        </div>
-      </body>
-    </html>
-    """
-  end
-
-  defp payment_failed_text_body(customer_name, email, amount_due, invoice_id, attempt_count, next_payment_attempt, credit_balance) do
+  # Payment failed email text body
+  defp payment_failed_text_body(assigns) do
     next_attempt_text =
-      if next_payment_attempt do
-        "Next Retry: #{next_payment_attempt}\n"
+      if assigns[:next_payment_attempt_html] && assigns[:next_payment_attempt_html] != "" do
+        # Extract the formatted date from the HTML string
+        case Regex.run(~r/<strong>Next Retry:<\/strong> (.+?)<\/p>/, assigns[:next_payment_attempt_html]) do
+          [_, date] -> "Next Retry: #{date}\n"
+          _ -> ""
+        end
       else
         ""
       end
@@ -1255,21 +1089,21 @@ defmodule Rsolv.Emails do
     """
     ⚠️ Payment Failed - Action Required
 
-    Hi #{customer_name},
+    Hi #{assigns[:customer_name]},
 
     We attempted to process your payment for your RSOLV Pro subscription, but unfortunately the payment failed.
 
     INVOICE DETAILS:
-    - Amount Due: #{amount_due}
-    - Invoice ID: #{invoice_id}
-    - Attempt Count: #{attempt_count}
+    - Amount Due: #{assigns[:amount_due]}
+    - Invoice ID: #{assigns[:invoice_id]}
+    - Attempt Count: #{assigns[:attempt_count]}
     #{next_attempt_text}
 
     To avoid service interruption, please update your payment method as soon as possible.
 
-    Update Payment Method: https://rsolv.dev/dashboard/billing
+    Update Payment Method: #{assigns[:billing_url]}
 
-    GOOD NEWS: Your credits (#{credit_balance} remaining) are preserved and will be available once payment is successful.
+    GOOD NEWS: Your credits (#{assigns[:credit_balance]} remaining) are preserved and will be available once payment is successful.
 
     Common reasons for payment failure:
     - Insufficient funds
@@ -1283,10 +1117,10 @@ defmodule Rsolv.Emails do
     The RSOLV Team
 
     ---
-    This email was sent to #{email} regarding your RSOLV Pro subscription.
+    This email was sent to #{assigns[:email]} regarding your RSOLV Pro subscription.
     © 2025 RSOLV - Automated Security Scanning & Vulnerability Remediation
 
-    To unsubscribe, visit: https://rsolv.dev/unsubscribe?email=#{email}
+    To unsubscribe, visit: #{assigns[:unsubscribe_url]}
     """
   end
 
