@@ -29,12 +29,14 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
 
   describe "concurrent payment method additions" do
     setup do
-      customer = insert(:customer,
-        stripe_customer_id: "cus_test123",
-        credit_balance: 10,
-        has_payment_method: false,
-        subscription_type: "trial"
-      )
+      customer =
+        insert(:customer,
+          stripe_customer_id: "cus_test123",
+          credit_balance: 10,
+          has_payment_method: false,
+          subscription_type: "trial"
+        )
+
       %{customer: customer}
     end
 
@@ -43,11 +45,13 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
       initial_balance = customer.credit_balance
 
       # Run two concurrent requests
-      [result1, result2] = Task.async_stream(
-        [1, 2],
-        fn _ -> Billing.add_payment_method(customer, "pm_test_card", true) end,
-        timeout: 10_000
-      ) |> Enum.to_list()
+      [result1, result2] =
+        Task.async_stream(
+          [1, 2],
+          fn _ -> Billing.add_payment_method(customer, "pm_test_card", true) end,
+          timeout: 10_000
+        )
+        |> Enum.to_list()
 
       assert {:ok, {:ok, _}} = result1
       assert {:ok, {:ok, _}} = result2
@@ -78,11 +82,13 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
       initial = customer.credit_balance
 
       # Simulate 3 rapid clicks
-      results = Task.async_stream(
-        [1, 2, 3],
-        fn _ -> Billing.add_payment_method(customer, "pm_test", true) end,
-        timeout: 10_000
-      ) |> Enum.to_list()
+      results =
+        Task.async_stream(
+          [1, 2, 3],
+          fn _ -> Billing.add_payment_method(customer, "pm_test", true) end,
+          timeout: 10_000
+        )
+        |> Enum.to_list()
 
       assert Enum.all?(results, &match?({:ok, {:ok, _}}, &1))
 
@@ -94,20 +100,25 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
 
   describe "trial customer without Stripe customer" do
     test "concurrent requests with Stripe creation only credit once" do
-      customer = insert(:customer, stripe_customer_id: nil, credit_balance: 5, has_payment_method: false)
+      customer =
+        insert(:customer, stripe_customer_id: nil, credit_balance: 5, has_payment_method: false)
+
       new_id = "cus_newly_created"
       initial = customer.credit_balance
 
       expect(Rsolv.Billing.StripeMock, :create, 2, fn _ ->
         {:ok, %{id: new_id, email: customer.email}}
       end)
+
       mock_stripe_attach(2)
 
-      results = Task.async_stream(
-        [1, 2],
-        fn _ -> Billing.add_payment_method(customer, "pm_test", true) end,
-        timeout: 10_000
-      ) |> Enum.to_list()
+      results =
+        Task.async_stream(
+          [1, 2],
+          fn _ -> Billing.add_payment_method(customer, "pm_test", true) end,
+          timeout: 10_000
+        )
+        |> Enum.to_list()
 
       assert Enum.all?(results, &match?({:ok, {:ok, _}}, &1))
 
