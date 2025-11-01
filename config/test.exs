@@ -31,7 +31,9 @@ config :rsolv, RsolvWeb.Endpoint,
   live_view: [signing_salt: "test-liveview-salt"]
 
 # Print only warnings and errors during test
-config :logger, level: :debug
+# Note: :info is used instead of :warning to capture important test context
+# while avoiding the verbose :debug SQL queries that significantly slow CI
+config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime

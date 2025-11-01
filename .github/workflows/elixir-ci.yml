@@ -101,23 +101,12 @@ jobs:
     needs: test
     if: always()
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: rsolv_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+    # No database service needed - we're just merging .coverdata files
+    # The --no-start flag prevents application startup, so DB is unused
 
     env:
       MIX_ENV: test
+      # Dummy DATABASE_URL to satisfy config loading (not actually used)
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_test
 
     steps:
@@ -145,8 +134,14 @@ jobs:
             # Use ExCoveralls to merge partitioned coverage
             # --import-cover: Import .coverdata files from partitioned runs
             # --no-start: Don't start the application (no DB needed for merging!)
+            # --verbose: Show only summary, not per-file details (reduces output)
             echo "Merging coverage data and generating report..."
-            mix coveralls.json --no-start --import-cover cover | tee coverage_output.txt
+
+            # Run with reduced verbosity - only capture summary output
+            # Filter out verbose module-level details, keep only summary and total
+            mix coveralls.json --no-start --import-cover cover 2>&1 | \
+              grep -E '(Merging|Coverage|TOTAL|\[TOTAL\]|Finished|excoveralls)' | \
+              tee coverage_output.txt
 
             # Extract coverage percentage from the [TOTAL] line in the text output
             COVERAGE=$(grep '^\[TOTAL\]' coverage_output.txt | awk '{print $2}' | sed 's/%//')
