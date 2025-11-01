@@ -28,49 +28,36 @@ defmodule Rsolv.Billing.WebhookProcessor do
   """
   def process_event(%{"stripe_event_id" => event_id, "event_type" => type, "event_data" => data}) do
     # Wrap in transaction to ensure atomicity between duplicate check and event recording
-    Repo.transaction(fn ->
-      case Repo.get_by(BillingEvent, stripe_event_id: event_id) do
-        nil ->
-          # First time seeing this event - process it
-          result = handle_event(type, data)
+    result =
+      Repo.transaction(fn ->
+        with nil <- Repo.get_by(BillingEvent, stripe_event_id: event_id),
+             {:ok, status} <- handle_event(type, data),
+             {:ok, _event} <- record_event(event_id, type, data) do
+          status
+        else
+          %BillingEvent{} ->
+            # Already processed (Stripe sends duplicates)
+            Logger.info("Duplicate webhook received", stripe_event_id: event_id)
+            :duplicate
 
-          # Always record event for audit trail (even if ignored)
-          # This insert happens in the same transaction as the duplicate check,
-          # so the unique constraint on stripe_event_id prevents race conditions
-          case record_event(event_id, type, data) do
-            {:ok, _event} ->
-              # Return the result from handle_event
-              # Note: handle_event always returns {:ok, _} tuples
-              case result do
-                {:ok, :ignored} -> :ignored
-                {:ok, _} -> :processed
-              end
+          {:error, %Ecto.Changeset{errors: errors} = changeset} ->
+            # Check if this is a unique constraint violation (concurrent duplicate)
+            if Keyword.has_key?(errors, :stripe_event_id) do
+              Logger.info("Concurrent duplicate webhook detected, rolling back",
+                stripe_event_id: event_id
+              )
 
-            {:error, %Ecto.Changeset{} = changeset} ->
-              # Check if this is a unique constraint violation (concurrent duplicate)
-              if unique_constraint_error?(changeset, :stripe_event_id) do
-                # Another webhook beat us to it - rollback any credits/changes
-                Logger.info("Concurrent duplicate webhook detected, rolling back",
-                  stripe_event_id: event_id
-                )
+              Repo.rollback(:duplicate)
+            else
+              # Other database error
+              Repo.rollback(changeset)
+            end
+        end
+      end)
 
-                Repo.rollback(:duplicate)
-              else
-                # Other database error
-                Repo.rollback(changeset)
-              end
-          end
-
-        %BillingEvent{} ->
-          # Already processed (Stripe sends duplicates)
-          Logger.info("Duplicate webhook received", stripe_event_id: event_id)
-          :duplicate
-      end
-    end)
-    |> case do
-      {:ok, :processed} -> {:ok, :processed}
-      {:ok, :ignored} -> {:ok, :ignored}
-      {:ok, :duplicate} -> {:ok, :duplicate}
+    # Unwrap transaction result
+    case result do
+      {:ok, status} when status in [:processed, :ignored, :duplicate] -> {:ok, status}
       {:error, :duplicate} -> {:ok, :duplicate}
       {:error, reason} -> {:error, reason}
     end
@@ -227,12 +214,4 @@ defmodule Rsolv.Billing.WebhookProcessor do
   defp extract_amount(%{"object" => %{"amount_paid" => amount}}), do: amount
   defp extract_amount(%{"object" => %{"amount_due" => amount}}), do: amount
   defp extract_amount(_), do: nil
-
-  # Check if changeset error is a unique constraint violation on given field
-  defp unique_constraint_error?(%Ecto.Changeset{} = changeset, field) do
-    Enum.any?(changeset.errors, fn
-      {^field, {_message, [constraint: :unique, constraint_name: _name]}} -> true
-      _ -> false
-    end)
-  end
 end

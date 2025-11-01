@@ -105,49 +105,32 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
             "id" => "in_concurrent_123",
             "customer" => customer.stripe_customer_id,
             "amount_paid" => 59900,
-            "lines" => %{
-              "data" => [
-                %{
-                  "price" => %{
-                    "metadata" => %{"plan" => "pro"}
-                  }
-                }
-              ]
-            }
+            "lines" => %{"data" => [%{"price" => %{"metadata" => %{"plan" => "pro"}}}]}
           }
         }
       }
 
-      # Simulate concurrent webhooks by processing in parallel tasks
-      # Both tasks start at the same time, simulating network-level duplication
-      task1 = Task.async(fn -> WebhookProcessor.process_event(event_data) end)
-      task2 = Task.async(fn -> WebhookProcessor.process_event(event_data) end)
-
-      # Wait for both to complete
-      result1 = Task.await(task1)
-      result2 = Task.await(task2)
+      # Simulate concurrent webhooks - both tasks start simultaneously
+      results =
+        [event_data, event_data]
+        |> Enum.map(&Task.async(fn -> WebhookProcessor.process_event(&1) end))
+        |> Enum.map(&Task.await/1)
+        |> Enum.sort()
 
       # Exactly one should process, one should see duplicate
-      results = Enum.sort([result1, result2])
-      assert results == [{:ok, :duplicate}, {:ok, :processed}]
+      assert [{:ok, :duplicate}, {:ok, :processed}] = results
 
       # CRITICAL: Customer should have exactly 60 credits, not 120
-      updated_customer = Customers.get_customer!(customer.id)
-      assert updated_customer.credit_balance == 60
+      assert %{credit_balance: 60} = Customers.get_customer!(customer.id)
 
-      # Verify only one billing event was recorded
-      events = Repo.all(from e in BillingEvent, where: e.stripe_event_id == "evt_concurrent_race_123")
-      assert length(events) == 1
+      # Verify exactly one billing event and one credit transaction
+      assert [_event] = Repo.all(from e in BillingEvent, where: e.stripe_event_id == "evt_concurrent_race_123")
 
-      # Verify only one credit transaction was recorded
-      credit_txns =
-        Repo.all(
-          from t in Rsolv.Billing.CreditTransaction,
-            where: t.customer_id == ^customer.id and t.source == "pro_subscription_payment"
-        )
-
-      assert length(credit_txns) == 1
-      assert hd(credit_txns).amount == 60
+      assert [%{amount: 60}] =
+               Repo.all(
+                 from t in Rsolv.Billing.CreditTransaction,
+                   where: t.customer_id == ^customer.id and t.source == "pro_subscription_payment"
+               )
     end
 
     test "records billing event for audit trail", %{customer: customer} do
