@@ -5,25 +5,31 @@ defmodule Rsolv.Billing.StripeServiceRetryTest do
 
   alias Rsolv.Billing.StripeService
 
-  # Setup mocks
+  # Setup mocks - use global mode for retry tests since they cross process boundaries
   setup :verify_on_exit!
+  setup :set_mox_global
+
+  # Helper to stub a mock with a sequence of responses
+  defp stub_with_sequence(mock, function, responses) do
+    {:ok, agent} = Agent.start_link(fn -> 0 end)
+
+    stub(mock, function, fn params ->
+      count = Agent.get_and_update(agent, fn c -> {c, c + 1} end)
+      response = Enum.at(responses, count, List.last(responses))
+      if is_function(response), do: response.(params), else: response
+    end)
+
+    agent
+  end
 
   describe "retry behavior" do
     test "retries on network timeout and succeeds on second attempt" do
       customer = insert(:customer)
 
-      # Use agent to track call count (works across process boundaries)
-      {:ok, agent} = Agent.start_link(fn -> 0 end)
-
-      # First attempt fails with timeout, second succeeds
-      stub(Rsolv.Billing.StripeMock, :create, fn _params ->
-        count = Agent.get_and_update(agent, fn c -> {c, c + 1} end)
-
-        case count do
-          0 -> {:error, %HTTPoison.Error{reason: :timeout}}
-          _ -> {:ok, %Stripe.Customer{id: "cus_retry_success"}}
-        end
-      end)
+      agent = stub_with_sequence(Rsolv.Billing.StripeMock, :create, [
+        {:error, %HTTPoison.Error{reason: :timeout}},
+        {:ok, %Stripe.Customer{id: "cus_retry_success"}}
+      ])
 
       assert {:ok, stripe_customer} = StripeService.create_customer(customer)
       assert stripe_customer.id == "cus_retry_success"
@@ -141,16 +147,10 @@ defmodule Rsolv.Billing.StripeServiceRetryTest do
     test "retries on econnrefused network error" do
       customer = insert(:customer)
 
-      {:ok, agent} = Agent.start_link(fn -> 0 end)
-
-      stub(Rsolv.Billing.StripeMock, :create, fn _params ->
-        count = Agent.get_and_update(agent, fn c -> {c, c + 1} end)
-
-        case count do
-          0 -> {:error, %HTTPoison.Error{reason: :econnrefused}}
-          _ -> {:ok, %Stripe.Customer{id: "cus_econnrefused_ok"}}
-        end
-      end)
+      agent = stub_with_sequence(Rsolv.Billing.StripeMock, :create, [
+        {:error, %HTTPoison.Error{reason: :econnrefused}},
+        {:ok, %Stripe.Customer{id: "cus_econnrefused_ok"}}
+      ])
 
       assert {:ok, stripe_customer} = StripeService.create_customer(customer)
       assert stripe_customer.id == "cus_econnrefused_ok"
@@ -200,16 +200,10 @@ defmodule Rsolv.Billing.StripeServiceRetryTest do
 
   describe "retry behavior for other operations" do
     test "retries attach_payment_method on timeout" do
-      {:ok, agent} = Agent.start_link(fn -> 0 end)
-
-      stub(Rsolv.Billing.StripePaymentMethodMock, :attach, fn _params ->
-        count = Agent.get_and_update(agent, fn c -> {c, c + 1} end)
-
-        case count do
-          0 -> {:error, %HTTPoison.Error{reason: :timeout}}
-          _ -> {:ok, %Stripe.PaymentMethod{id: "pm_test123"}}
-        end
-      end)
+      agent = stub_with_sequence(Rsolv.Billing.StripePaymentMethodMock, :attach, [
+        {:error, %HTTPoison.Error{reason: :timeout}},
+        {:ok, %Stripe.PaymentMethod{id: "pm_test123"}}
+      ])
 
       stub(Rsolv.Billing.StripeMock, :update, fn _id, _params ->
         {:ok, %Stripe.Customer{id: "cus_test123"}}
@@ -262,16 +256,10 @@ defmodule Rsolv.Billing.StripeServiceRetryTest do
     test "retries create_charge on network timeout" do
       customer = insert(:customer, stripe_customer_id: "cus_test123")
 
-      {:ok, agent} = Agent.start_link(fn -> 0 end)
-
-      stub(Rsolv.Billing.StripeChargeMock, :create, fn _params ->
-        count = Agent.get_and_update(agent, fn c -> {c, c + 1} end)
-
-        case count do
-          0 -> {:error, %HTTPoison.Error{reason: :timeout}}
-          _ -> {:ok, %Stripe.Charge{id: "ch_test123", amount: 2900, status: "succeeded"}}
-        end
-      end)
+      agent = stub_with_sequence(Rsolv.Billing.StripeChargeMock, :create, [
+        {:error, %HTTPoison.Error{reason: :timeout}},
+        {:ok, %Stripe.Charge{id: "ch_test123", amount: 2900, status: "succeeded"}}
+      ])
 
       assert {:ok, charge} = StripeService.create_charge(customer, 2900, %{})
       assert charge.id == "ch_test123"
@@ -284,7 +272,6 @@ defmodule Rsolv.Billing.StripeServiceRetryTest do
     test "emits retry telemetry event on each retry attempt" do
       customer = insert(:customer)
 
-      # Capture telemetry events
       test_pid = self()
 
       :telemetry.attach_many(
@@ -299,27 +286,18 @@ defmodule Rsolv.Billing.StripeServiceRetryTest do
         nil
       )
 
-      # First attempt fails, second succeeds
-      {:ok, agent} = Agent.start_link(fn -> 0 end)
-
-      stub(Rsolv.Billing.StripeMock, :create, fn _params ->
-        count = Agent.get_and_update(agent, fn c -> {c, c + 1} end)
-
-        case count do
-          0 -> {:error, %HTTPoison.Error{reason: :timeout}}
-          _ -> {:ok, %Stripe.Customer{id: "cus_telemetry"}}
-        end
-      end)
+      agent = stub_with_sequence(Rsolv.Billing.StripeMock, :create, [
+        {:error, %HTTPoison.Error{reason: :timeout}},
+        {:ok, %Stripe.Customer{id: "cus_telemetry"}}
+      ])
 
       assert {:ok, _} = StripeService.create_customer(customer)
 
-      # Should receive retry event
       assert_receive {:telemetry_event, [:rsolv, :billing, :stripe, :create_customer, :retry],
                       %{attempt: 1, backoff_ms: backoff}, _metadata}
 
       assert backoff >= 1000
 
-      # Should receive stop event after success
       assert_receive {:telemetry_event, [:rsolv, :billing, :stripe, :create_customer, :stop],
                       %{duration: _}, _metadata}
 

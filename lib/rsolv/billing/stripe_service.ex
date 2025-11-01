@@ -51,6 +51,8 @@ defmodule Rsolv.Billing.StripeService do
   @max_attempts 3
   @base_backoff_ms 1000
   @max_backoff_ms 8000
+  @retryable_stripe_errors [:rate_limit_error, :api_connection_error, :api_error]
+  @retryable_network_errors [:timeout, :econnrefused, :closed]
 
   # Private helper for consistent error handling
   defp handle_stripe_error(error, operation, context) do
@@ -85,52 +87,43 @@ defmodule Rsolv.Billing.StripeService do
   end
 
   # Determines if an error should trigger a retry
-  defp should_retry?(%{__struct__: Stripe.Error, code: code}) do
-    code in [:rate_limit_error, :api_connection_error, :api_error]
-  end
+  defp should_retry?(%{__struct__: Stripe.Error, code: code}),
+    do: code in @retryable_stripe_errors
 
-  defp should_retry?(%{__struct__: HTTPoison.Error, reason: reason}) do
-    reason in [:timeout, :econnrefused, :closed]
-  end
+  defp should_retry?(%{__struct__: HTTPoison.Error, reason: reason}),
+    do: reason in @retryable_network_errors
 
   defp should_retry?(_), do: false
 
-  # Calculates exponential backoff with jitter
-  defp calculate_backoff(attempt) do
-    backoff = min(@base_backoff_ms * :math.pow(2, attempt - 1), @max_backoff_ms)
-    jitter = :rand.uniform(trunc(backoff * 0.1))
-    trunc(backoff + jitter)
-  end
+  # Calculates backoff with Retry-After header support and exponential backoff with jitter
+  defp calculate_backoff(error, attempt) do
+    case get_retry_after_seconds(error) do
+      seconds when is_integer(seconds) ->
+        min(seconds * 1000, @max_backoff_ms)
 
-  # Handles Retry-After header for rate limits
-  defp handle_retry_after(%{__struct__: Stripe.Error, code: :rate_limit_error, extra: extra})
-       when is_map(extra) do
-    case Map.get(extra, :http_headers) do
-      headers when is_list(headers) ->
-        retry_after = Enum.find_value(headers, fn
-          {"retry-after", value} -> value
-          _ -> nil
-        end)
-
-        if retry_after do
-          sleep_ms =
-            case Integer.parse(retry_after) do
-              {seconds, _} -> min(seconds * 1000, @max_backoff_ms)
-              :error -> @base_backoff_ms
-            end
-
-          Process.sleep(sleep_ms)
-          sleep_ms
-        else
-          nil
-        end
-
-      _ ->
-        nil
+      nil ->
+        backoff = min(@base_backoff_ms * :math.pow(2, attempt - 1), @max_backoff_ms)
+        jitter = :rand.uniform(trunc(backoff * 0.1))
+        trunc(backoff + jitter)
     end
   end
 
-  defp handle_retry_after(_error), do: nil
+  # Extracts Retry-After header value from Stripe rate limit errors
+  defp get_retry_after_seconds(%{__struct__: Stripe.Error, code: :rate_limit_error, extra: extra})
+       when is_map(extra) do
+    extra
+    |> Map.get(:http_headers, [])
+    |> Enum.find_value(fn
+      {"retry-after", value} ->
+        case Integer.parse(value) do
+          {seconds, _} -> seconds
+          :error -> nil
+        end
+      _ -> nil
+    end)
+  end
+
+  defp get_retry_after_seconds(_), do: nil
 
   # Retries an operation with exponential backoff
   defp with_retry(operation, metadata, fun, attempt \\ 1) do
@@ -140,8 +133,7 @@ defmodule Rsolv.Billing.StripeService do
 
       {:error, error} when attempt < @max_attempts ->
         if should_retry?(error) do
-          # Try to respect Retry-After header first
-          backoff = handle_retry_after(error) || calculate_backoff(attempt)
+          backoff = calculate_backoff(error, attempt)
 
           Logger.warning("Stripe API error, retrying in #{backoff}ms",
             operation: operation,
@@ -150,14 +142,13 @@ defmodule Rsolv.Billing.StripeService do
             error_code: extract_error_code(error)
           )
 
-          # Emit retry telemetry event
           :telemetry.execute(
             [:rsolv, :billing, :stripe, operation, :retry],
             %{attempt: attempt, backoff_ms: backoff},
             metadata
           )
 
-          unless backoff == 0, do: Process.sleep(backoff)
+          Process.sleep(backoff)
           with_retry(operation, metadata, fun, attempt + 1)
         else
           {:error, error}
