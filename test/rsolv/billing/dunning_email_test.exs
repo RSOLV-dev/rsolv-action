@@ -1,6 +1,7 @@
 defmodule Rsolv.Billing.DunningEmailTest do
   use Rsolv.DataCase
   use Bamboo.Test
+  use Oban.Testing, repo: Rsolv.Repo
 
   import Rsolv.Factory
 
