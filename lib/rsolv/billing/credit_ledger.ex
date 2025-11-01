@@ -74,11 +74,37 @@ defmodule Rsolv.Billing.CreditLedger do
       when is_integer(amount) and amount >= 0 do
     new_balance = customer.credit_balance - amount
 
+    # Pre-check for quick rejection (not security-critical, database constraint is authoritative)
     if new_balance < 0 do
       {:error, :insufficient_credits}
     else
-      execute_transaction(customer, -amount, new_balance, source, metadata)
+      # Execute transaction - database check constraint prevents negative balance
+      case execute_transaction(customer, -amount, new_balance, source, metadata) do
+        {:ok, result} ->
+          {:ok, result}
+
+        # Handle database constraint violation (race condition caught!)
+        # This happens when concurrent requests cause balance to go negative
+        {:error, :customer, %Ecto.Changeset{} = changeset, _changes} ->
+          # Check if error is due to credit_balance_non_negative constraint
+          if has_constraint_error?(changeset, :credit_balance) do
+            {:error, :insufficient_credits}
+          else
+            {:error, :transaction_failed}
+          end
+
+        {:error, _operation, reason, _changes} ->
+          {:error, reason}
+      end
     end
+  end
+
+  # Check if changeset has a constraint error on the given field
+  defp has_constraint_error?(%Ecto.Changeset{errors: errors}, field) do
+    Enum.any?(errors, fn
+      {^field, {_message, [constraint: :check, constraint_name: _]}} -> true
+      _ -> false
+    end)
   end
 
   @doc """
