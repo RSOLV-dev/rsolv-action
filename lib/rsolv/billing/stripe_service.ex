@@ -3,7 +3,8 @@ defmodule Rsolv.Billing.StripeService do
   Service for interacting with Stripe API.
 
   Handles customer creation, payment methods, subscriptions, and error handling.
-  All operations emit telemetry events for observability.
+  All operations emit telemetry events for observability and include automatic
+  retry logic with exponential backoff for transient failures.
 
   ## Configuration
 
@@ -13,10 +14,23 @@ defmodule Rsolv.Billing.StripeService do
         api_key: System.get_env("STRIPE_API_KEY"),
         signing_secret: System.get_env("STRIPE_WEBHOOK_SECRET")
 
+  ## Retry Behavior
+
+  All Stripe API operations automatically retry on transient failures:
+
+  - **Retryable errors**: Rate limits, network timeouts, API connection errors
+  - **Max attempts**: 3 (configurable via @max_attempts)
+  - **Backoff strategy**: Exponential with jitter (1s, 2s, 4s)
+  - **Max backoff**: 8 seconds
+  - **Retry-After**: Respects Stripe's rate limit header when present
+
+  Non-retryable errors (authentication, invalid requests) fail immediately.
+
   ## Telemetry
 
   All Stripe operations emit telemetry events:
   - `[:rsolv, :billing, :stripe, <operation>, :start]`
+  - `[:rsolv, :billing, :stripe, <operation>, :retry]` - Emitted on each retry attempt
   - `[:rsolv, :billing, :stripe, <operation>, :stop]`
   - `[:rsolv, :billing, :stripe, <operation>, :exception]`
 
@@ -33,10 +47,17 @@ defmodule Rsolv.Billing.StripeService do
   @stripe_subscription Application.compile_env(:rsolv, :stripe_subscription, Stripe.Subscription)
   @stripe_charge Application.compile_env(:rsolv, :stripe_charge, Stripe.Charge)
 
+  # Retry configuration
+  @max_attempts 3
+  @base_backoff_ms 1000
+  @max_backoff_ms 8000
+  @retryable_stripe_errors [:rate_limit_error, :api_connection_error, :api_error]
+  @retryable_network_errors [:timeout, :econnrefused, :closed]
+
   # Private helper for consistent error handling
   defp handle_stripe_error(error, operation, context) do
     case error do
-      %Stripe.Error{} = stripe_error ->
+      %{__struct__: Stripe.Error} = stripe_error ->
         Logger.error(
           "Stripe API error during #{operation}",
           Keyword.merge(context,
@@ -47,7 +68,7 @@ defmodule Rsolv.Billing.StripeService do
 
         {:error, stripe_error}
 
-      %HTTPoison.Error{reason: reason} ->
+      %{__struct__: HTTPoison.Error, reason: reason} ->
         Logger.error(
           "Network error during #{operation}",
           Keyword.merge(context, reason: reason)
@@ -65,6 +86,86 @@ defmodule Rsolv.Billing.StripeService do
     end
   end
 
+  # Determines if an error should trigger a retry
+  defp should_retry?(%{__struct__: Stripe.Error, code: code}),
+    do: code in @retryable_stripe_errors
+
+  defp should_retry?(%{__struct__: HTTPoison.Error, reason: reason}),
+    do: reason in @retryable_network_errors
+
+  defp should_retry?(_), do: false
+
+  # Calculates backoff with Retry-After header support and exponential backoff with jitter
+  defp calculate_backoff(error, attempt) do
+    case get_retry_after_seconds(error) do
+      seconds when is_integer(seconds) ->
+        min(seconds * 1000, @max_backoff_ms)
+
+      nil ->
+        backoff = min(@base_backoff_ms * :math.pow(2, attempt - 1), @max_backoff_ms)
+        jitter = :rand.uniform(trunc(backoff * 0.1))
+        trunc(backoff + jitter)
+    end
+  end
+
+  # Extracts Retry-After header value from Stripe rate limit errors
+  defp get_retry_after_seconds(%{__struct__: Stripe.Error, code: :rate_limit_error, extra: extra})
+       when is_map(extra) do
+    extra
+    |> Map.get(:http_headers, [])
+    |> Enum.find_value(fn
+      {"retry-after", value} ->
+        case Integer.parse(value) do
+          {seconds, _} -> seconds
+          :error -> nil
+        end
+
+      _ ->
+        nil
+    end)
+  end
+
+  defp get_retry_after_seconds(_), do: nil
+
+  # Retries an operation with exponential backoff
+  defp with_retry(operation, metadata, fun, attempt \\ 1) do
+    case fun.() do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, error} when attempt < @max_attempts ->
+        if should_retry?(error) do
+          backoff = calculate_backoff(error, attempt)
+
+          Logger.warning("Stripe API error, retrying in #{backoff}ms",
+            operation: operation,
+            attempt: attempt,
+            max_attempts: @max_attempts,
+            error_code: extract_error_code(error)
+          )
+
+          :telemetry.execute(
+            [:rsolv, :billing, :stripe, operation, :retry],
+            %{attempt: attempt, backoff_ms: backoff},
+            metadata
+          )
+
+          Process.sleep(backoff)
+          with_retry(operation, metadata, fun, attempt + 1)
+        else
+          {:error, error}
+        end
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  # Extracts error code for logging
+  defp extract_error_code(%{__struct__: Stripe.Error, code: code}), do: code
+  defp extract_error_code(%{__struct__: HTTPoison.Error, reason: reason}), do: reason
+  defp extract_error_code(_), do: :unknown
+
   # Private helper for telemetry-wrapped Stripe operations
   defp with_telemetry(operation, metadata, fun) do
     start_time = System.monotonic_time()
@@ -75,7 +176,7 @@ defmodule Rsolv.Billing.StripeService do
       metadata
     )
 
-    result = fun.()
+    result = with_retry(operation, metadata, fun)
     duration = System.monotonic_time() - start_time
 
     event_type = if match?({:ok, _}, result), do: :stop, else: :exception
@@ -142,7 +243,7 @@ defmodule Rsolv.Billing.StripeService do
         {:ok, customer} ->
           {:ok, customer}
 
-        {:error, %Stripe.Error{code: :invalid_request_error}} ->
+        {:error, %{__struct__: Stripe.Error, code: :invalid_request_error}} ->
           {:error, :not_found}
 
         {:error, error} ->

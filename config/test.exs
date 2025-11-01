@@ -84,6 +84,6 @@ config :rsolv,
 # Configure Stripe mocks for testing
 config :rsolv,
   stripe_client: Rsolv.Billing.StripeMock,
-  stripe_payment_method: Rsolv.Billing.StripeMock,
-  stripe_subscription: Rsolv.Billing.StripeMock,
+  stripe_payment_method: Rsolv.Billing.StripePaymentMethodMock,
+  stripe_subscription: Rsolv.Billing.StripeSubscriptionMock,
   stripe_charge: Rsolv.Billing.StripeChargeMock
