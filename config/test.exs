@@ -31,9 +31,10 @@ config :rsolv, RsolvWeb.Endpoint,
   live_view: [signing_salt: "test-liveview-salt"]
 
 # Print only warnings and errors during test
-# Note: :info is used instead of :warning to capture important test context
-# while avoiding the verbose :debug SQL queries that significantly slow CI
-config :logger, level: :warning
+# Note: Using :info to maintain coverage of Logger.debug calls in production code
+# Ecto SQL queries are logged at :debug level, so :info prevents those
+# while allowing Logger.debug() calls to be covered by tests
+config :logger, level: :info
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
