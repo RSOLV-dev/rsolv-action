@@ -81,7 +81,18 @@ defmodule Rsolv.Billing.WebhookProcessor do
       subscription_state: "past_due"
     })
 
-    # TODO: Send email notification, trigger dunning process
+    # Queue dunning email notification
+    %{
+      type: "payment_failed",
+      customer_id: customer.id,
+      invoice_id: invoice["id"],
+      amount_due: invoice["amount_due"],
+      attempt_count: invoice["attempt_count"],
+      next_payment_attempt: invoice["next_payment_attempt"]
+    }
+    |> Rsolv.Workers.EmailWorker.new()
+    |> Oban.insert()
+
     Logger.warning("Payment failed for customer",
       customer_id: customer.id,
       stripe_invoice_id: invoice["id"],

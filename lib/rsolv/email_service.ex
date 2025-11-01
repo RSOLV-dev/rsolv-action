@@ -98,6 +98,26 @@ defmodule Rsolv.EmailService do
     |> send_email()
   end
 
+  @doc """
+  Send a payment failed notification email to a customer.
+  This is triggered when a subscription payment fails.
+  """
+  def send_payment_failed_email(
+        customer_id,
+        invoice_id,
+        amount_due,
+        next_payment_attempt \\ nil,
+        attempt_count \\ 1
+      ) do
+    # Get the customer from the database
+    customer = Rsolv.Customers.get_customer!(customer_id)
+
+    # Build and send the email
+    customer
+    |> Emails.payment_failed_email(invoice_id, amount_due, next_payment_attempt, attempt_count)
+    |> send_email()
+  end
+
   # Private helper to send email via Bamboo and log activity
   defp send_email(email) do
     # Get timestamp for tracking
