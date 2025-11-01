@@ -74,9 +74,9 @@ jobs:
           mix assets.build
 
       - name: Run tests (partition ${{ matrix.partition }}/4)
-        # TODO: Make test failures fatal after fixing 134 failing tests
-        # Currently: 529 doctests, 4276 tests, 134 failures, 83 excluded, 79 skipped
-        # Issues: OpenAPI spec initialization, Ruby parser dependencies, TestIntegrator method signatures
+        # TODO: Make test failures fatal after fixing remaining failing tests
+        # Issues: OpenAPI spec initialization, TestIntegrator method signatures
+        # Fixed: Ruby parser node type names (lvasgn -> local_variable_write for Prism)
         run: mix test --trace --partitions 4 --cover || echo "⚠️  Tests had failures (non-fatal for now)"
 
       - name: Upload coverage data
