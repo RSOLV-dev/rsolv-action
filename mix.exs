@@ -17,7 +17,8 @@ defmodule Rsolv.MixProject do
         tool: ExCoveralls,
         summary: [threshold: 60.8],
         ignore_modules: [
-          ~r/^Mix\.Tasks\./  # All Mix tasks (lib/mix/tasks/**)
+          # All Mix tasks (lib/mix/tasks/**)
+          ~r/^Mix\.Tasks\./
         ]
       ],
       preferred_cli_env: [
