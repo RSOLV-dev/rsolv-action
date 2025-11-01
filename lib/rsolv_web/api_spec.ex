@@ -6,17 +6,38 @@ defmodule RsolvWeb.ApiSpec do
   for the API documentation using OpenAPI 3.0 specification via open_api_spex.
   """
 
-  alias OpenApiSpex.{Info, OpenApi, Paths, Server, Components, SecurityScheme}
+  alias OpenApiSpex.{Components, Info, OpenApi, Paths, SecurityScheme, Server}
   alias RsolvWeb.{Endpoint, Router}
 
   @behaviour OpenApi
 
   @impl OpenApi
   def spec do
+    # Try to get server from endpoint, but fall back to static config if endpoint not started
+    servers =
+      try do
+        [Server.from_endpoint(Endpoint)]
+      rescue
+        RuntimeError ->
+          # Endpoint not started (e.g., during compilation), use static config
+          [
+            %Server{
+              url: "https://api.rsolv.dev",
+              description: "Production API server"
+            },
+            %Server{
+              url: "https://staging-api.rsolv.dev",
+              description: "Staging API server"
+            },
+            %Server{
+              url: "http://localhost:4000",
+              description: "Local development server"
+            }
+          ]
+      end
+
     %OpenApi{
-      servers: [
-        Server.from_endpoint(Endpoint)
-      ],
+      servers: servers,
       info: %Info{
         title: "RSOLV API",
         version: "1.0.0",
