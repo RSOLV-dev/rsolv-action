@@ -14,7 +14,7 @@ defmodule RsolvWeb.Email.TemplateLoader do
       "<html>...</html>"
 
       iex> RsolvWeb.Email.TemplateLoader.template_path("welcome")
-      "/path/to/rsolv/priv/templates/email/welcome.html"
+      "/path/to/rsolv/priv/templates/email/welcome.html.heex"
   """
 
   @app_name :rsolv
@@ -32,7 +32,7 @@ defmodule RsolvWeb.Email.TemplateLoader do
   ## Examples
 
       iex> RsolvWeb.Email.TemplateLoader.template_path("welcome")
-      "/path/to/rsolv/lib/rsolv_web/components/templates/email/welcome.html"
+      "/path/to/rsolv/priv/templates/email/welcome.html.heex"
   """
   @spec template_path(String.t() | atom()) :: String.t()
   def template_path(template_name) when is_atom(template_name) do
@@ -40,7 +40,7 @@ defmodule RsolvWeb.Email.TemplateLoader do
   end
 
   def template_path(template_name) when is_binary(template_name) do
-    filename = "#{template_name}.html"
+    filename = "#{template_name}.html.heex"
     Application.app_dir(@app_name, Path.join(@template_dir, filename))
   end
 
@@ -118,7 +118,7 @@ defmodule RsolvWeb.Email.TemplateLoader do
   @doc """
   Lists all available email templates.
 
-  Returns a list of template names (atoms) without the .html extension.
+  Returns a list of template names (atoms) without the .html.heex extension.
 
   ## Examples
 
@@ -132,8 +132,8 @@ defmodule RsolvWeb.Email.TemplateLoader do
     case File.ls(template_dir_path) do
       {:ok, files} ->
         files
-        |> Enum.filter(&String.ends_with?(&1, ".html"))
-        |> Enum.map(&String.replace_suffix(&1, ".html", ""))
+        |> Enum.filter(&String.ends_with?(&1, ".html.heex"))
+        |> Enum.map(&String.replace_suffix(&1, ".html.heex", ""))
         |> Enum.map(&String.to_atom/1)
         |> Enum.sort()
 
