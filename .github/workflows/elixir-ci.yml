@@ -105,27 +105,15 @@ jobs:
 
     env:
       MIX_ENV: test
-      ELIXIR_VERSION: "1.18.1"
-      OTP_VERSION: "27.2"
 
     steps:
       - uses: actions/checkout@v4
 
-      # Lightweight setup - only need Beam + ExCoveralls
-      - uses: erlef/setup-beam@v1
+      # Use cached setup - faster than installing from scratch
+      # But skip database since we're only merging coverage
+      - uses: ./.github/actions/setup-elixir
         with:
-          elixir-version: ${{ env.ELIXIR_VERSION }}
-          otp-version: ${{ env.OTP_VERSION }}
-          install-hex: true
-          install-rebar: true
-
-      - name: Install ExCoveralls only
-        run: |
-          mix local.hex --force
-          mix local.rebar --force
-          # Only install excoveralls - no need for full deps
-          mix deps.get excoveralls
-          mix deps.compile excoveralls
+          cache-key-prefix: coverage
 
       - name: Download coverage artifacts
         uses: actions/download-artifact@v4
