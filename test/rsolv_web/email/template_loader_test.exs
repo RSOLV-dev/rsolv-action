@@ -7,7 +7,7 @@ defmodule RsolvWeb.Email.TemplateLoaderTest do
     test "returns correct path for atom template name" do
       path = TemplateLoader.template_path(:welcome)
 
-      assert String.ends_with?(path, "priv/templates/email/welcome.html")
+      assert String.ends_with?(path, "priv/templates/email/welcome.html.heex")
       assert path =~ "rsolv"
     end
 
@@ -16,7 +16,7 @@ defmodule RsolvWeb.Email.TemplateLoaderTest do
 
       assert String.ends_with?(
                path,
-               "priv/templates/email/payment_failed.html"
+               "priv/templates/email/payment_failed.html.heex"
              )
 
       assert path =~ "rsolv"
@@ -27,7 +27,7 @@ defmodule RsolvWeb.Email.TemplateLoaderTest do
 
       assert String.ends_with?(
                path,
-               "priv/templates/email/early_access_guide.html"
+               "priv/templates/email/early_access_guide.html.heex"
              )
     end
 
@@ -195,6 +195,7 @@ defmodule RsolvWeb.Email.TemplateLoaderTest do
       for template <- templates do
         template_str = Atom.to_string(template)
         refute String.ends_with?(template_str, ".html")
+        refute String.ends_with?(template_str, ".heex")
       end
     end
 
