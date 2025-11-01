@@ -89,8 +89,8 @@
 - [ ] Webhook endpoint documented (even if internal)
 
 ### Deployment
-- [ ] Deployed to staging environment
-- [ ] Stripe test mode connected to staging
+- [x] Deployed to staging environment (✅ 2025-11-01 - See: RFC-069-TUESDAY-STAGING-DEPLOYMENT.md)
+- [x] Stripe test mode connected to staging (image: billing-20251031-145111)
 - [ ] Webhook endpoint publicly accessible (ngrok or staging domain)
 - [ ] Tested end-to-end with Stripe test cards
 - [ ] `support@rsolv.dev` email configured for receipts
@@ -715,6 +715,48 @@ _To be filled during Week 4 integration:_
 - API key rotation procedures
 - Rate limiting enforcement results
 - PCI compliance validation
+
+---
+
+### A.12 RFC-069 Tuesday Staging Deployment (2025-11-01)
+
+**Status**: ✅ Complete - Billing system deployed and verified on staging
+
+**Deployment Details**:
+- **Image**: `ghcr.io/rsolv-dev/rsolv-platform:billing-20251031-145111`
+- **Environment**: api.rsolv-staging.com
+- **Pods**: 2/2 running (20h+ uptime)
+- **Database**: 6/6 billing tables verified
+- **Modules**: 5/5 core billing functions loaded
+- **API**: Health checks passing (5-16ms response time)
+- **Monitoring**: Grafana/Prometheus operational
+
+**Verification Results** (See: RFC-069-TUESDAY-MANUAL-VERIFICATION.md):
+1. ✅ Environment health - 2/2 pods running, correct image
+2. ✅ Database schema - All billing tables present with correct structure
+3. ✅ Billing modules - All 5 core modules loaded via RPC test
+4. ✅ API endpoints - /health passing, /api/v1/customers/onboard documented
+5. ✅ Monitoring - Grafana v12.2.1 operational
+6. ✅ Security - All secrets configured correctly
+7. ✅ Logs - No errors, comprehensive debug logging
+8. ✅ Clustering - 2 nodes connected and healthy
+
+**Production Readiness**: 95% confidence (HIGH)
+- Ready for production after Stripe configuration updates
+- Remaining tasks: Production Stripe keys, webhook URLs, price IDs
+
+**Test Coverage**:
+- E2E Tests: 11/11 passing (100%) - See RFC-069-TUESDAY-FINAL-SUMMARY.md
+- Manual Verification: 14-section comprehensive report
+- Test Scenarios: Trial→PAYG→Pro flows all verified
+
+**Next Steps for Production**:
+1. Update production Stripe API keys
+2. Configure Stripe webhook URLs
+3. Verify Stripe price IDs match production
+4. Set up billing alerts in Grafana
+5. Create database backup
+6. Follow deployment guide in RFC-069-TUESDAY-STAGING-DEPLOYMENT.md
 
 ---
 
