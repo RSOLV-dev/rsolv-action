@@ -33,6 +33,7 @@ COPY priv/parsers priv/parsers
 COPY priv/benchmarks priv/benchmarks
 COPY priv/blog priv/blog
 COPY priv/grafana_dashboards priv/grafana_dashboards
+COPY priv/templates priv/templates
 
 # Build assets (now lib/ exists so Tailwind can scan components)
 RUN rm -rf priv/static && mix assets.deploy
