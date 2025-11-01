@@ -96,6 +96,60 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
       assert updated_customer.credit_balance == 60
     end
 
+    test "handles concurrent duplicate webhooks atomically (RFC-069 Bug #2)", %{customer: customer} do
+      event_data = %{
+        "stripe_event_id" => "evt_concurrent_race_123",
+        "event_type" => "invoice.payment_succeeded",
+        "event_data" => %{
+          "object" => %{
+            "id" => "in_concurrent_123",
+            "customer" => customer.stripe_customer_id,
+            "amount_paid" => 59900,
+            "lines" => %{
+              "data" => [
+                %{
+                  "price" => %{
+                    "metadata" => %{"plan" => "pro"}
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+
+      # Simulate concurrent webhooks by processing in parallel tasks
+      # Both tasks start at the same time, simulating network-level duplication
+      task1 = Task.async(fn -> WebhookProcessor.process_event(event_data) end)
+      task2 = Task.async(fn -> WebhookProcessor.process_event(event_data) end)
+
+      # Wait for both to complete
+      result1 = Task.await(task1)
+      result2 = Task.await(task2)
+
+      # Exactly one should process, one should see duplicate
+      results = Enum.sort([result1, result2])
+      assert results == [{:ok, :duplicate}, {:ok, :processed}]
+
+      # CRITICAL: Customer should have exactly 60 credits, not 120
+      updated_customer = Customers.get_customer!(customer.id)
+      assert updated_customer.credit_balance == 60
+
+      # Verify only one billing event was recorded
+      events = Repo.all(from e in BillingEvent, where: e.stripe_event_id == "evt_concurrent_race_123")
+      assert length(events) == 1
+
+      # Verify only one credit transaction was recorded
+      credit_txns =
+        Repo.all(
+          from t in Rsolv.Billing.CreditTransaction,
+            where: t.customer_id == ^customer.id and t.source == "pro_subscription_payment"
+        )
+
+      assert length(credit_txns) == 1
+      assert hd(credit_txns).amount == 60
+    end
+
     test "records billing event for audit trail", %{customer: customer} do
       event_data = %{
         "stripe_event_id" => "evt_audit_123",
