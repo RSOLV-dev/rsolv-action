@@ -10,7 +10,16 @@ defmodule Rsolv.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      test_coverage: [tool: ExCoveralls, summary: [threshold: 60]],
+      # Exclude Mix tasks from coverage - these are dev/ops tooling, not production code
+      # This gives a more accurate view of actual application code coverage
+      # Baseline after exclusion: 60.8% (2025-11-01)
+      test_coverage: [
+        tool: ExCoveralls,
+        summary: [threshold: 60.8],
+        ignore_modules: [
+          ~r/^Mix\.Tasks\./  # All Mix tasks (lib/mix/tasks/**)
+        ]
+      ],
       preferred_cli_env: [
         coveralls: :test,
         "coveralls.detail": :test,
