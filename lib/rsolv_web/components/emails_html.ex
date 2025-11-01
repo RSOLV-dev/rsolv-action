@@ -29,57 +29,57 @@ defmodule RsolvWeb.EmailsHTML do
   # Define template functions manually for now
   def early_access_guide(assigns) do
     ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/early_access_guide.html"))}
+    {Phoenix.HTML.raw(File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/early_access_guide.html")))}
     """
   end
 
   def early_access_welcome(assigns) do
     ~H"""
     {Phoenix.HTML.raw(
-      File.read!("lib/rsolv_web/components/templates/email/early_access_welcome.html")
+      File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/early_access_welcome.html"))
     )}
     """
   end
 
   def feature_deep_dive(assigns) do
     ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/feature_deep_dive.html"))}
+    {Phoenix.HTML.raw(File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/feature_deep_dive.html")))}
     """
   end
 
   def feedback_request(assigns) do
     ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/feedback_request.html"))}
+    {Phoenix.HTML.raw(File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/feedback_request.html")))}
     """
   end
 
   def first_issue(assigns) do
     ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/first_issue.html"))}
+    {Phoenix.HTML.raw(File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/first_issue.html")))}
     """
   end
 
   def getting_started(assigns) do
     ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/getting_started.html"))}
+    {Phoenix.HTML.raw(File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/getting_started.html")))}
     """
   end
 
   def setup_verification(assigns) do
     ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/setup_verification.html"))}
+    {Phoenix.HTML.raw(File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/setup_verification.html")))}
     """
   end
 
   def success_checkin(assigns) do
     ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/success_checkin.html"))}
+    {Phoenix.HTML.raw(File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/success_checkin.html")))}
     """
   end
 
   def welcome(assigns) do
     ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/welcome.html"))}
+    {Phoenix.HTML.raw(File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/welcome.html")))}
     """
   end
 
@@ -140,7 +140,7 @@ defmodule RsolvWeb.EmailsHTML do
 
   def payment_failed(assigns) do
     ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/payment_failed.html"))}
+    {Phoenix.HTML.raw(File.read!(Application.app_dir(:rsolv, "lib/rsolv_web/components/templates/email/payment_failed.html")))}
     """
   end
 
