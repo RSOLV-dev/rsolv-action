@@ -137,7 +137,7 @@ defmodule Rsolv.Emails do
     # Format amount in dollars
     amount_in_dollars = format_currency(amount_due)
 
-    # Format next payment attempt timestamp and HTML
+    # Format next payment attempt timestamp (for both HTML and text)
     next_attempt_formatted =
       if next_payment_attempt do
         format_timestamp_from_unix(next_payment_attempt)
@@ -159,6 +159,7 @@ defmodule Rsolv.Emails do
       amount_due: amount_in_dollars,
       invoice_id: invoice_id,
       attempt_count: attempt_count,
+      next_payment_attempt_text: next_attempt_formatted,
       next_payment_attempt_html: next_attempt_html,
       credit_balance: customer.credit_balance,
       billing_url: "https://rsolv.dev/dashboard/billing",
@@ -1082,15 +1083,8 @@ defmodule Rsolv.Emails do
   # Payment failed email text body
   defp payment_failed_text_body(assigns) do
     next_attempt_text =
-      if assigns[:next_payment_attempt_html] && assigns[:next_payment_attempt_html] != "" do
-        # Extract the formatted date from the HTML string
-        case Regex.run(
-               ~r/<strong>Next Retry:<\/strong> (.+?)<\/p>/,
-               assigns[:next_payment_attempt_html]
-             ) do
-          [_, date] -> "Next Retry: #{date}\n"
-          _ -> ""
-        end
+      if assigns[:next_payment_attempt_text] do
+        "Next Retry: #{assigns[:next_payment_attempt_text]}\n"
       else
         ""
       end
