@@ -478,16 +478,9 @@ defmodule RsolvWeb.EarlyAccessLive do
           referrer: nil
         }
 
-        case Rsolv.Emails.admin_signup_notification(signup_data) |> Rsolv.Mailer.deliver_now() do
+        case Rsolv.EmailService.send_admin_signup_notification(signup_data) do
           {:ok, result} ->
             Logger.info("[EARLY ACCESS LIVE] Successfully sent admin notification email",
-              email: email,
-              result: inspect(result),
-              timestamp: DateTime.utc_now() |> DateTime.to_string()
-            )
-
-          result when is_map(result) ->
-            Logger.info("[EARLY ACCESS LIVE] Admin notification email sent (Bamboo format)",
               email: email,
               result: inspect(result),
               timestamp: DateTime.utc_now() |> DateTime.to_string()

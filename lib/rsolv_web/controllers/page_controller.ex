@@ -1018,15 +1018,18 @@ defmodule RsolvWeb.PageController do
   # Send admin notification for new signups
   defp send_admin_notification(email, utm_params, conn) do
     signup_data = build_signup_data(email, utm_params, conn)
-    email_struct = Rsolv.Emails.admin_signup_notification(signup_data)
 
-    try do
-      delivered_email = deliver_and_normalize(email_struct)
-      Logger.info("Admin notification sent for new signup", email: email)
-      delivered_email
-    rescue
-      e ->
-        Logger.error("Failed to send admin notification", email: email, error: inspect(e))
+    case Rsolv.EmailService.send_admin_signup_notification(signup_data) do
+      {:ok, result} ->
+        Logger.info("Admin notification sent for new signup", email: email)
+        result
+
+      {:error, error_details} ->
+        Logger.error("Failed to send admin notification",
+          email: email,
+          error: inspect(error_details)
+        )
+
         nil
     end
   end
@@ -1042,23 +1045,6 @@ defmodule RsolvWeb.PageController do
       utm_campaign: Map.get(utm_params, :utm_campaign),
       referrer: get_req_header(conn, "referer") |> List.first()
     }
-  end
-
-  defp deliver_and_normalize(email_struct) do
-    result = Rsolv.Mailer.deliver_now(email_struct)
-
-    delivered_email =
-      case result do
-        {:ok, email} -> email
-        email = %Bamboo.Email{} -> email
-      end
-
-    # Handle test adapter email tracking
-    if Application.get_env(:rsolv, Rsolv.Mailer)[:adapter] == Bamboo.TestAdapter do
-      Bamboo.SentEmail.push(delivered_email)
-    end
-
-    delivered_email
   end
 
   @doc """

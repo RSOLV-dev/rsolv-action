@@ -3,8 +3,7 @@ defmodule RsolvWeb.ContactLive do
   require Logger
   alias RsolvWeb.Services.Analytics
   alias RsolvWeb.Validators.EmailValidator
-  alias Rsolv.Emails
-  alias Rsolv.Mailer
+  alias Rsolv.EmailService
 
   @impl true
   def mount(_params, _session, socket) do
@@ -282,20 +281,21 @@ defmodule RsolvWeb.ContactLive do
           Map.put(extract_tracking_data(socket), :email, params["email"])
         )
 
-        # Send admin notification
-        try do
-          email = Emails.contact_form_notification(contact_data)
-          Mailer.deliver_now(email)
+        # Send admin notification via EmailService
+        case EmailService.send_contact_form_notification(contact_data) do
+          {:ok, _result} ->
+            Logger.info("Contact form submission sent", metadata: contact_data)
 
-          Logger.info("Contact form submission sent", metadata: contact_data)
+            # Track success
+            Analytics.track_form_submission("contact", "success", contact_data)
 
-          # Track success
-          Analytics.track_form_submission("contact", "success", contact_data)
+            {:noreply, assign(socket, submitted: true, error: nil)}
 
-          {:noreply, assign(socket, submitted: true, error: nil)}
-        rescue
-          e ->
-            Logger.error("Failed to send contact form email", error: inspect(e))
+          {:error, error_details} ->
+            Logger.error("Failed to send contact form email",
+              error: inspect(error_details),
+              contact_data: contact_data
+            )
 
             {:noreply,
              assign(socket,
