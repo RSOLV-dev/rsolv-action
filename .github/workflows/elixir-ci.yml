@@ -131,9 +131,9 @@ jobs:
 
             # Use ExCoveralls to merge partitioned coverage
             # --import-cover: Import .coverdata files from partitioned runs
-            # Note: No --exclude or --no-start needed - we're just merging data!
+            # --no-start: Don't start the application (no DB needed for merging!)
             echo "Merging coverage data and generating report..."
-            mix coveralls.json --import-cover cover | tee coverage_output.txt
+            mix coveralls.json --no-start --import-cover cover | tee coverage_output.txt
 
             # Extract coverage percentage from the [TOTAL] line in the text output
             COVERAGE=$(grep '^\[TOTAL\]' coverage_output.txt | awk '{print $2}' | sed 's/%//')
