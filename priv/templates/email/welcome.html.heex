@@ -74,11 +74,11 @@
   <div class="logo">
     <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo">
   </div>
-  
-  <h1>Welcome to RSOLV, {@first_name}!</h1>
-  
+
+  <h1>Welcome to RSOLV, <%= @first_name %>!</h1>
+
   <p>Thanks for trying RSOLV! You're just a few minutes away from automated security scanning and vulnerability remediation for your repositories.</p>
-  
+
   <div class="steps">
     <h2>Here's how to get started:</h2>
     <ol>
@@ -118,19 +118,19 @@
       </li>
     </ol>
   </div>
-  
+
   <p>Need help? Just reply to this email and I'll personally assist you.</p>
-  
+
   <p>Your free trial includes 10 automated security fixes - no credit card required. RSOLV will begin scanning your repositories immediately after setup.</p>
-  
+
   <a href="https://rsolv.dev/docs/getting-started" class="cta">View Full Documentation</a>
-  
+
   <p>Best,<br>The RSOLV Team</p>
-  
+
   <p><strong>P.S.</strong> Here's a <a href="https://rsolv.dev/docs/video-tutorial">2-minute video walkthrough</a> if you prefer visual instructions.</p>
-  
+
   <div class="footer">
-    <p>This email was sent to {@email}. If you did not sign up for RSOLV, please disregard this email.</p>
+    <p>This email was sent to <%= @email %>. If you did not sign up for RSOLV, please disregard this email.</p>
     <p>© 2025 RSOLV - Proactive Security Scanning & Automated Remediation</p>
   </div>
 </body>

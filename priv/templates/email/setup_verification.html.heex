@@ -6,7 +6,7 @@
   <title>Verify Your RSOLV Setup</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
-    
+
     body {
       font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.6;
@@ -94,13 +94,13 @@
     <div class="logo">
       <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo">
     </div>
-    
+
     <h1>Let's Verify Your RSOLV Setup</h1>
-    
-    <p>Hi {@first_name},</p>
-    
+
+    <p>Hi <%= @first_name %>,</p>
+
     <p>It's been a few days since you signed up for RSOLV. We want to make sure you're all set up and ready to benefit from automated security scanning and remediation!</p>
-    
+
     <div class="checklist">
       <h3>Quick Setup Checklist:</h3>
       <div class="checklist-item">
@@ -119,11 +119,11 @@
         <input type="checkbox" disabled> Generated and merged your first security fix PR
       </div>
     </div>
-    
+
     <h2>Need Help with Setup?</h2>
-    
+
     <p>If you haven't completed setup yet, here's a quick reminder of the steps:</p>
-    
+
     <div class="code">
 # In .github/workflows/rsolv.yml:
 name: RSOLV Security Fixes
@@ -142,34 +142,34 @@ jobs:
           github-token: ${"{{ secrets.GITHUB_TOKEN }}"}
           rsolv-api-key: ${"{{ secrets.RSOLV_API_KEY }}"}
     </div>
-    
+
     <div class="status-box">
       <strong>🎁 Remember:</strong> Your first 10 fixes are completely free! No credit card required. After that, you only pay $15 per fix that gets deployed.
     </div>
-    
+
     <h2>Common Questions We Get:</h2>
-    
+
     <ul>
       <li><strong>Where do I get my API key?</strong> Check your welcome email or visit <a href="https://rsolv.dev/dashboard">your dashboard</a></li>
       <li><strong>Can I use RSOLV on private repos?</strong> Yes! RSOLV works with both public and private repositories</li>
       <li><strong>What vulnerabilities does RSOLV detect?</strong> SQL injection, XSS, authentication flaws, hardcoded secrets, and 170+ other patterns</li>
       <li><strong>How secure is it?</strong> Every fix is analyzed for security impact and includes tests to verify the vulnerability is resolved</li>
     </ul>
-    
+
     <div class="success-box">
       <strong>💡 Pro Tip:</strong> After RSOLV scans your repository and creates security issues, start with a HIGH severity vulnerability. Tag it with "rsolv:automate" to see how RSOLV generates secure, well-tested fixes.
     </div>
-    
+
     <p>Ready to secure your code? Review the security issues RSOLV found, then tag any issue with "rsolv:automate" to generate a fix!</p>
-    
+
     <a href="https://rsolv.dev/docs/getting-started" class="cta">View Setup Guide</a>
-    
+
     <p>If you're stuck or have questions, just reply to this email. We're here to help you succeed!</p>
-    
+
     <p>Best regards,<br>The RSOLV Team</p>
-    
+
     <div class="footer">
-      <p>This email was sent to {@email}. If you no longer wish to receive these emails, you can <a href="{@unsubscribe_url}">unsubscribe</a>.</p>
+      <p>This email was sent to <%= @email %>. If you no longer wish to receive these emails, you can <a href={@unsubscribe_url}>unsubscribe</a>.</p>
       <p>&copy; 2025 RSOLV - Proactive Security Scanning & Automated Remediation. Pay Only for Fixes You Deploy.</p>
     </div>
   </div>

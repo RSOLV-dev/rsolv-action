@@ -6,7 +6,7 @@
   <title>Your RSOLV Success Report</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
-    
+
     body {
       font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.6;
@@ -134,13 +134,13 @@
     <div class="logo">
       <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo">
     </div>
-    
+
     <h1>Your 2-Week RSOLV Success Report 🎉</h1>
-    
-    <p>Hi {@first_name},</p>
-    
+
+    <p>Hi <%= @first_name %>,</p>
+
     <p>Congratulations! You've been using RSOLV for two weeks. Here's a snapshot of what we've accomplished together:</p>
-    
+
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Issues Fixed</div>
@@ -159,16 +159,16 @@
         <div class="stat-number">{Map.get(@usage_stats || %{}, :security_fixes, 0)}</div>
       </div>
     </div>
-    
+
     :if={Map.get(@usage_stats || %{}, :issues_fixed, 0) >= 5}
     <div class="achievement-banner">
       <h2 style="color: white; margin: 0;">🏆 Power User Achievement Unlocked!</h2>
       <p style="margin: 10px 0 0 0;">You've automated 5+ fixes. You're officially an RSOLV pro!</p>
     </div>
-    
-    
+
+
     <h2>Your RSOLV Journey So Far</h2>
-    
+
     <div class="timeline">
       <div class="timeline-item">
         <div class="timeline-marker">✓</div>
@@ -177,7 +177,7 @@
           You set up RSOLV and started automating your first issues
         </div>
       </div>
-      
+
       <div class="timeline-item">
         <div class="timeline-marker">✓</div>
         <div class="timeline-content">
@@ -185,7 +185,7 @@
           You've seen how RSOLV handles security, performance, and bug fixes
         </div>
       </div>
-      
+
       <div class="timeline-item">
         <div class="timeline-marker">→</div>
         <div class="timeline-content">
@@ -194,7 +194,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="pricing-highlight">
       <h3 style="margin-top: 0;">🎁 Your Trial Status</h3>
       <p style="font-size: 18px; margin: 10px 0;">
@@ -202,42 +202,42 @@
       </p>
       <p>After that, it's just $15 per deployed fix. No subscriptions, no seat licenses!</p>
     </div>
-    
+
     <h2>What's Next?</h2>
-    
+
     <ul>
       <li><strong>Expand to more repositories:</strong> RSOLV works across your entire organization</li>
       <li><strong>Automate security audits:</strong> Tag all security issues for immediate fixes</li>
       <li><strong>Clean up tech debt:</strong> Let RSOLV modernize your codebase</li>
       <li><strong>Train your team:</strong> Share RSOLV with colleagues to multiply impact</li>
     </ul>
-    
+
     <div style="text-align: center;">
       <a href="https://rsolv.dev/dashboard" class="cta">View Your Dashboard</a>
       <br>
       <a href="https://rsolv.dev/pricing" class="cta-secondary">Explore Team Plans</a>
     </div>
-    
+
     <h2>Need Help Scaling Up?</h2>
-    
+
     <p>I'd love to help you get even more value from RSOLV. Here are a few ways we can help:</p>
-    
+
     <ul>
       <li>Schedule a 15-minute optimization call</li>
       <li>Get best practices for your specific tech stack</li>
       <li>Learn about volume discounts for teams</li>
     </ul>
-    
+
     <p>Just reply to this email and let me know how I can help!</p>
-    
+
     <p>Thanks for being part of the RSOLV community. Here's to many more automated fixes!</p>
-    
+
     <p>Best regards,<br>Dylan Fitzgerald<br>Founder, RSOLV</p>
-    
+
     <p style="font-style: italic; color: #6b7280;">P.S. If RSOLV has been valuable to your team, I'd be grateful if you could share a quick testimonial. It helps other teams discover how automated fixes can transform their workflow!</p>
-    
+
     <div class="footer">
-      <p>This email was sent to {@email}. If you no longer wish to receive these emails, you can <a href="{@unsubscribe_url}">unsubscribe</a>.</p>
+      <p>This email was sent to <%= @email %>. If you no longer wish to receive these emails, you can <a href={@unsubscribe_url}>unsubscribe</a>.</p>
       <p>&copy; 2025 RSOLV - Fix Security Issues Automatically. Pay Only for Fixes You Deploy.</p>
     </div>
   </div>

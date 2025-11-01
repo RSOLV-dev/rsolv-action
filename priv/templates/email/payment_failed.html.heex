@@ -102,7 +102,7 @@
       </div>
 
       <div class="content">
-        <p>Hi {@customer_name},</p>
+        <p>Hi <%= @customer_name %>,</p>
 
         <p>
           We attempted to process your payment for your RSOLV Pro subscription, but unfortunately the payment failed.
@@ -110,10 +110,10 @@
 
         <div class="invoice-details">
           <h3 style="margin-top: 0; color: #111827;">Invoice Details</h3>
-          <p><strong>Amount Due:</strong> {@amount_due}</p>
-          <p><strong>Invoice ID:</strong> {@invoice_id}</p>
-          <p><strong>Attempt Count:</strong> {@attempt_count}</p>
-          {@next_payment_attempt_html}
+          <p><strong>Amount Due:</strong> <%= @amount_due %></p>
+          <p><strong>Invoice ID:</strong> <%= @invoice_id %></p>
+          <p><strong>Attempt Count:</strong> <%= @attempt_count %></p>
+          <%= @next_payment_attempt_html %>
         </div>
 
         <p>
@@ -121,11 +121,11 @@
         </p>
 
         <div style="text-align: center;">
-          <a href="{@billing_url}" class="button">Update Payment Method</a>
+          <a href={@billing_url} class="button">Update Payment Method</a>
         </div>
 
         <div class="info-box">
-          <p><strong>Good news:</strong> Your credits ({@credit_balance} remaining) are preserved and will be available once payment is successful.</p>
+          <p><strong>Good news:</strong> Your credits (<%= @credit_balance %> remaining) are preserved and will be available once payment is successful.</p>
         </div>
 
         <p>
@@ -147,11 +147,11 @@
 
       <div class="footer">
         <p>
-          This email was sent to {@email} regarding your RSOLV Pro subscription.
+          This email was sent to <%= @email %> regarding your RSOLV Pro subscription.
         </p>
         <p>&copy; 2025 RSOLV - Automated Security Scanning & Vulnerability Remediation</p>
         <p>
-          <a href="{@unsubscribe_url}" style="color: #6b7280;">Unsubscribe</a>
+          <a href={@unsubscribe_url} style="color: #6b7280;">Unsubscribe</a>
         </p>
       </div>
     </div>

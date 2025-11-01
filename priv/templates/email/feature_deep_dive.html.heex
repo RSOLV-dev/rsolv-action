@@ -6,7 +6,7 @@
   <title>Advanced RSOLV Features</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
-    
+
     body {
       font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.6;
@@ -91,13 +91,13 @@
     <div class="logo">
       <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo">
     </div>
-    
+
     <h1>Unlock the Full Power of RSOLV</h1>
-    
-    <p>Hi {@first_name},</p>
-    
+
+    <p>Hi <%= @first_name %>,</p>
+
     <p>You've been using RSOLV for a few days now. Here are some advanced features and techniques that can help you get even more value from automated security scanning and vulnerability remediation:</p>
-    
+
     <div class="feature-card">
       <h3>🎯 Understanding RSOLV's Proactive Scanning</h3>
       <p>RSOLV continuously scans your repositories for security vulnerabilities and automatically creates issues with detailed remediation plans:</p>
@@ -108,7 +108,7 @@
         <li><strong>Fix generation:</strong> Creates secure PRs that address root causes</li>
       </ul>
     </div>
-    
+
     <div class="feature-card">
       <h3>🔒 Comprehensive Security Coverage</h3>
       <p>RSOLV proactively detects and fixes these vulnerability types across your codebase:</p>
@@ -123,11 +123,11 @@
       </ul>
       <p>Each PR includes a detailed security impact assessment and verification tests.</p>
     </div>
-    
+
     <div class="security-highlight">
       <strong>🛡️ Security Example:</strong> When RSOLV detects unsafe user input handling, it automatically generates fixes with proper sanitization, parameterized queries, and input validation to prevent injection attacks.
     </div>
-    
+
     <div class="feature-card">
       <h3>🚀 Efficient Issue Management</h3>
       <p>RSOLV's proactive scanning creates organized, actionable issues:</p>
@@ -139,7 +139,7 @@
       </ul>
       <p>You maintain full control - review each PR before merging.</p>
     </div>
-    
+
     <div class="feature-card">
       <h3>📊 Understanding RSOLV's PR Structure</h3>
       <p>Every RSOLV PR includes:</p>
@@ -151,11 +151,11 @@
         <li><strong>Educational Notes:</strong> Learn about the fix</li>
       </ul>
     </div>
-    
+
     <div class="pro-tip">
       <strong>💡 Pro Tip:</strong> Use descriptive branch protection rules! RSOLV respects your branch protection settings, so PRs will go through your normal review process.
     </div>
-    
+
     <div class="feature-card">
       <h3>🎨 Supported Languages & Frameworks</h3>
       <p>RSOLV provides comprehensive security coverage for:</p>
@@ -169,7 +169,7 @@
       </ul>
       <p>Each language has specialized patterns for framework-specific vulnerabilities.</p>
     </div>
-    
+
     <h2>Coming Soon</h2>
     <p>We're constantly improving RSOLV. Here's what's on our roadmap:</p>
     <ul>
@@ -178,17 +178,17 @@
       <li>Team collaboration features</li>
       <li>Integration with more platforms</li>
     </ul>
-    
+
     <p>Have a feature request? Just reply to this email - we love hearing from our users!</p>
-    
+
     <a href="https://rsolv.dev/docs/advanced" class="cta">View Advanced Documentation</a>
-    
+
     <p>Keep automating those fixes!</p>
-    
+
     <p>Best regards,<br>The RSOLV Team</p>
-    
+
     <div class="footer">
-      <p>This email was sent to {@email}. If you no longer wish to receive these emails, you can <a href="{@unsubscribe_url}">unsubscribe</a>.</p>
+      <p>This email was sent to <%= @email %>. If you no longer wish to receive these emails, you can <a href={@unsubscribe_url}>unsubscribe</a>.</p>
       <p>&copy; 2025 RSOLV - Proactive Security Scanning & Automated Remediation. Pay Only for Fixes You Deploy.</p>
     </div>
   </div>

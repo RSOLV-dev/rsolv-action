@@ -66,30 +66,30 @@
   <div class="logo">
     <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo">
   </div>
-  
+
   <h1>Getting Started with RSOLV</h1>
-  
-  <p>Hi {@first_name},</p>
-  
+
+  <p>Hi <%= @first_name %>,</p>
+
   <p>We hope you're enjoying RSOLV so far. Here's a quick overview of what you can do with our platform:</p>
-  
+
   <div class="feature">
     <h3>🛡️ Proactive Security Scanning</h3>
     <p>RSOLV continuously scans your repositories for vulnerabilities and automatically creates detailed security issues. We detect 180+ security patterns (and growing) across JavaScript, TypeScript, Python, Ruby, Java, and Go.</p>
   </div>
-  
+
   <div class="feature">
     <h3>🚀 Automated Vulnerability Detection & Fixes</h3>
     <p>RSOLV finds vulnerabilities before they become problems. When you're ready to fix them, just tag the issue with "rsolv:automate" and we'll generate a secure, well-documented pull request.</p>
   </div>
-  
+
   <div class="feature">
     <h3>💰 Success-Based Billing</h3>
     <p>You only pay when security fixes are merged into your codebase. No seat licenses, no commitments - just $15 per successful fix after your 10 free fixes.</p>
   </div>
-  
+
   <h2>Quick Tips for Better Results</h2>
-  
+
   <ul>
     <li>Review security issues created by RSOLV's proactive scans</li>
     <li>Prioritize HIGH severity vulnerabilities first</li>
@@ -97,17 +97,17 @@
     <li>Each PR includes security impact analysis and tests</li>
     <li>Remember: You only need one API key (RSOLV_API_KEY)</li>
   </ul>
-  
+
   <p>For detailed instructions, check out our documentation:</p>
-  
-  <a href="{@docs_url}" class="cta">View Documentation</a>
-  
+
+  <a href={@docs_url} class="cta">View Documentation</a>
+
   <p>If you have any questions or need assistance, just reply to this email. We're here to help!</p>
-  
+
   <p>Best,<br>The RSOLV Team</p>
-  
+
   <div class="footer">
-    <p>This email was sent to {@email}. If you no longer wish to receive these emails, you can <a href="https://rsolv.dev/unsubscribe?email={@email}">unsubscribe</a>.</p>
+    <p>This email was sent to <%= @email %>. If you no longer wish to receive these emails, you can <a href={"https://rsolv.dev/unsubscribe?email=#{@email}"}>unsubscribe</a>.</p>
     <p>© 2025 RSOLV - Proactive Security Scanning & Automated Remediation. Pay Only for Fixes You Deploy.</p>
   </div>
 </body>
