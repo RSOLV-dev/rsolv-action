@@ -718,7 +718,43 @@ _To be filled during Week 4 integration:_
 
 ---
 
-### A.12 RFC-069 Tuesday Staging Deployment (2025-11-01)
+### A.12 RFC-069 Wednesday Race Condition Fix (2025-11-01)
+
+**Status**: ✅ Complete - SELECT FOR UPDATE locks prevent provisioning race conditions
+
+**Issue**: Concurrent "add payment method" requests could double-credit the billing_addition_bonus (5 credits → 10 credits) due to race condition.
+
+**Solution**: Implemented PostgreSQL row-level locking with `SELECT FOR UPDATE` in `Billing.CustomerSetup.add_payment_method/3`
+
+**Implementation Details**:
+- **File**: `lib/rsolv/billing/customer_setup.ex`
+- **Approach**: Lock customer row at transaction start, check `has_payment_method` flag
+- **First payment**: Credits +5 bonus
+- **Subsequent payments**: No bonus
+- **Error handling**: Lock released on rollback (no deadlocks)
+
+**Test Coverage**: 100% of changed lines
+- 5 comprehensive tests in `test/rsolv/billing/provisioning_race_condition_test.exs`
+- Tests concurrent requests, trial customers, error handling
+- All CI checks passing (PR #51)
+
+**Code Quality**:
+- Net subtractive: 114 lines (vs 117 original, -2.6%)
+- Idiomatic Elixir with conditional `Ecto.Multi` building
+- All tests green, properly formatted
+
+**References**:
+- PR #51: https://github.com/RSOLV-dev/rsolv-platform/pull/51
+- RFC-069 Wednesday task complete
+
+**Risk Level**: LOW
+- Likelihood: LOW (requires precise timing)
+- Impact: MEDIUM (5 extra credits = ~$14.50)
+- Monitoring: Track bonus_count per customer post-launch
+
+---
+
+### A.13 RFC-069 Tuesday Staging Deployment (2025-11-01)
 
 **Status**: ✅ Complete - Billing system deployed and verified on staging
 

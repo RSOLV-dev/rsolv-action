@@ -39,79 +39,92 @@ defmodule Rsolv.Billing.CustomerSetup do
   @doc """
   Adds a payment method to a customer and grants billing addition bonus.
 
-  This function:
-  1. Validates billing consent was given (returns `{:error, :billing_consent_required}` if false)
-  2. Creates Stripe customer if needed (trial customers don't have one yet)
-  3. Attaches payment method to Stripe customer
-  4. Updates customer record with payment method details
-  5. Credits +5 credits as billing addition bonus (trial_billing_added)
+  Uses SELECT FOR UPDATE to prevent race conditions where concurrent requests
+  could double-credit the billing bonus. The lock ensures only the first payment
+  method addition receives the bonus.
 
   Returns `{:ok, customer}` on success or `{:error, reason}` on failure.
-
-  Tested via integration tests in `test/rsolv/billing/payment_methods_test.exs` and
-  `test/integration/billing_onboarding_integration_test.exs`.
   """
-  def add_payment_method(%Customer{stripe_customer_id: nil} = customer, payment_method_id, true) do
-    # Trial customers don't have Stripe customer yet - create one first
-    with {:ok, stripe_customer} <- StripeService.create_customer(customer),
-         {:ok, customer} <- update_stripe_customer_id(customer, stripe_customer.id),
-         {:ok, _} <- StripeService.attach_payment_method(stripe_customer.id, payment_method_id) do
-      update_customer_with_payment_method_and_credit(customer, payment_method_id)
-    end
-  end
-
-  def add_payment_method(%Customer{} = customer, payment_method_id, true = _billing_consent) do
-    # Customer already has Stripe customer ID - just attach payment method
-    with {:ok, _} <-
-           StripeService.attach_payment_method(customer.stripe_customer_id, payment_method_id) do
-      update_customer_with_payment_method_and_credit(customer, payment_method_id)
-    end
-  end
-
   def add_payment_method(%Customer{}, _payment_method_id, false = _billing_consent) do
     {:error, :billing_consent_required}
   end
 
-  # Private helper to update customer's stripe_customer_id
-  defp update_stripe_customer_id(customer, stripe_customer_id) do
-    customer
-    |> Customer.changeset(%{stripe_customer_id: stripe_customer_id})
-    |> Repo.update()
+  def add_payment_method(%Customer{id: customer_id}, payment_method_id, true) do
+    Repo.transaction(fn ->
+      # Lock row to prevent concurrent bonus credits
+      locked_customer =
+        Repo.one!(from c in Customer, where: c.id == ^customer_id, lock: "FOR UPDATE")
+
+      # Credit bonus only if this is the first payment method
+      should_credit_bonus = not locked_customer.has_payment_method
+
+      with {:ok, stripe_customer_id} <- ensure_stripe_customer(locked_customer),
+           {:ok, _} <- StripeService.attach_payment_method(stripe_customer_id, payment_method_id),
+           {:ok, customer} <-
+             update_customer_with_payment_method(
+               locked_customer,
+               stripe_customer_id,
+               payment_method_id,
+               should_credit_bonus
+             ) do
+        customer
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
-  # Private helper to update customer and add credits atomically
-  defp update_customer_with_payment_method_and_credit(customer, payment_method_id) do
+  # Update customer and optionally credit bonus in a single Multi transaction
+  defp update_customer_with_payment_method(
+         customer,
+         stripe_customer_id,
+         payment_method_id,
+         credit_bonus?
+       ) do
     now = DateTime.utc_now()
-    bonus_credits = Config.trial_billing_addition_bonus()
 
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(
-      :customer,
-      Customer.changeset(customer, %{
-        stripe_payment_method_id: payment_method_id,
-        has_payment_method: true,
-        billing_consent_given: true,
-        billing_consent_at: now,
-        payment_method_added_at: now,
-        # Upgrade to PAYG when payment method added
-        subscription_type: "pay_as_you_go"
-      })
-    )
-    |> Ecto.Multi.run(:credit, fn _repo, %{customer: updated_customer} ->
-      CreditLedger.credit(
-        updated_customer,
-        bonus_credits,
-        "trial_billing_added",
-        %{payment_method_id: payment_method_id}
+    multi =
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(
+        :customer,
+        Customer.changeset(customer, %{
+          stripe_customer_id: stripe_customer_id,
+          stripe_payment_method_id: payment_method_id,
+          has_payment_method: true,
+          billing_consent_given: true,
+          billing_consent_at: now,
+          payment_method_added_at: now,
+          subscription_type: "pay_as_you_go"
+        })
       )
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{credit: %{customer: customer_with_credits}}} ->
-        {:ok, customer_with_credits}
 
-      {:error, _failed_operation, changeset, _changes} ->
-        {:error, changeset}
+    multi =
+      if credit_bonus? do
+        Ecto.Multi.run(multi, :credit, fn _repo, %{customer: updated_customer} ->
+          CreditLedger.credit(
+            updated_customer,
+            Config.trial_billing_addition_bonus(),
+            "trial_billing_added",
+            %{payment_method_id: payment_method_id}
+          )
+        end)
+      else
+        multi
+      end
+
+    case Repo.transaction(multi) do
+      {:ok, %{customer: customer}} -> {:ok, customer}
+      {:ok, %{credit: %{customer: customer}}} -> {:ok, customer}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
     end
   end
+
+  # Ensure customer has Stripe customer ID, creating if needed
+  defp ensure_stripe_customer(%Customer{stripe_customer_id: nil} = customer) do
+    with {:ok, stripe_customer} <- StripeService.create_customer(customer) do
+      {:ok, stripe_customer.id}
+    end
+  end
+
+  defp ensure_stripe_customer(%Customer{stripe_customer_id: id}), do: {:ok, id}
 end
