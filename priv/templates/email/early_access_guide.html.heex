@@ -1,275 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RSOLV Early Access Guide</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RSOLV Early Access Guide</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
 
-    body {
-      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f8f9fa;
-    }
-    .container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 30px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-    .logo {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .logo img {
-      max-width: 200px;
-    }
-    h1, h2, h3 {
-      color: #10b981;
-    }
-    p {
-      margin-bottom: 20px;
-    }
-    .section {
-      margin-bottom: 30px;
-    }
-    .feature {
-      background-color: #f3f4f6;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      border-left: 4px solid #10b981;
-    }
-    .feature h3 {
-      margin-top: 0;
-    }
-    .example {
-      background-color: #f3f4f6;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-      overflow-x: auto;
-    }
-    @font-face {
-      font-family: 'Iosevka';
-      src: url('https://rsolv.dev/fonts/iosevka-regular.woff2') format('woff2');
-      font-weight: 400;
-      font-style: normal;
-      font-display: swap;
-    }
-
-    .code {
-      background-color: #2d3748;
-      color: #e2e8f0;
-      padding: 15px;
-      border-radius: 5px;
-      font-family: 'Iosevka', "Courier New", monospace;
-      overflow-x: auto;
-      margin: 15px 0;
-    }
-    .tips {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin: 20px 0;
-    }
-    .tip {
-      background-color: #eefcf6;
-      padding: 15px;
-      border-radius: 8px;
-      border: 1px solid #10b981;
-    }
-    .tip h4 {
-      margin-top: 0;
-      color: #10b981;
-    }
-    .cta {
-      background-color: #10b981;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 5px;
-      display: inline-block;
-      text-decoration: none;
-      font-weight: bold;
-      margin: 20px 0;
-    }
-    .note {
-      background-color: #ffedd5;
-      border-left: 4px solid #f97316;
-      padding: 15px;
-      margin: 20px 0;
-      border-radius: 5px;
-    }
-    .footer {
-      margin-top: 40px;
-      font-size: 14px;
-      color: #6b7280;
-      border-top: 1px solid #e5e7eb;
-      padding-top: 20px;
-      text-align: center;
-    }
-    @media (max-width: 600px) {
-      .tips {
-        grid-template-columns: 1fr;
+      body {
+        font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8f9fa;
       }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="logo">
-      <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo">
-    </div>
+      .container {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+      .logo {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo img {
+        max-width: 200px;
+      }
+      h1, h2, h3 {
+        color: #10b981;
+      }
+      p {
+        margin-bottom: 20px;
+      }
+      .section {
+        margin-bottom: 30px;
+      }
+      .feature {
+        background-color: #f3f4f6;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #10b981;
+      }
+      .feature h3 {
+        margin-top: 0;
+      }
+      .example {
+        background-color: #f3f4f6;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        overflow-x: auto;
+      }
+      @font-face {
+        font-family: 'Iosevka';
+        src: url('https://rsolv.dev/fonts/iosevka-regular.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
 
-    <div class="section">
-      <h1>Your RSOLV Early Access Guide</h1>
-      <p>Hi <%= @first_name %>,</p>
-      <p>Thank you for joining our early access program! This guide will help you get the most out of RSOLV's security-first approach to automated issue resolution.</p>
-    </div>
-
-    <div class="section">
-      <h2>How RSOLV Works</h2>
-      <p>RSOLV combines security analysis with AI to automatically fix issues in your codebase. Here's the process:</p>
-
-      <div class="feature">
-        <h3>1. Security Analysis</h3>
-        <p>RSOLV scans for over 80 security patterns across JavaScript, TypeScript, Python, Ruby, and Java to identify vulnerabilities.</p>
+      .code {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: 'Iosevka', "Courier New", monospace;
+        overflow-x: auto;
+        margin: 15px 0;
+      }
+      .tips {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 20px 0;
+      }
+      .tip {
+        background-color: #eefcf6;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #10b981;
+      }
+      .tip h4 {
+        margin-top: 0;
+        color: #10b981;
+      }
+      .cta {
+        background-color: #10b981;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 5px;
+        display: inline-block;
+        text-decoration: none;
+        font-weight: bold;
+        margin: 20px 0;
+      }
+      .note {
+        background-color: #ffedd5;
+        border-left: 4px solid #f97316;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .footer {
+        margin-top: 40px;
+        font-size: 14px;
+        color: #6b7280;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 20px;
+        text-align: center;
+      }
+      @media (max-width: 600px) {
+        .tips {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">
+        <img src="https://rsolv.dev/images/rsolv_logo_transparent.png" alt="RSOLV Logo" />
       </div>
 
-      <div class="feature">
-        <h3>2. AI-Powered Solution</h3>
-        <p>Our AI generates secure fixes with comprehensive documentation explaining the vulnerability and solution.</p>
+      <div class="section">
+        <h1>Your RSOLV Early Access Guide</h1>
+        <p>Hi {@first_name},</p>
+        <p>
+          Thank you for joining our early access program! This guide will help you get the most out of RSOLV's security-first approach to automated issue resolution.
+        </p>
       </div>
 
-      <div class="feature">
-        <h3>3. Pull Request Creation</h3>
-        <p>A well-documented PR is created with the fix, security impact assessment, and educational content.</p>
+      <div class="section">
+        <h2>How RSOLV Works</h2>
+        <p>
+          RSOLV combines security analysis with AI to automatically fix issues in your codebase. Here's the process:
+        </p>
+
+        <div class="feature">
+          <h3>1. Security Analysis</h3>
+          <p>
+            RSOLV scans for over 80 security patterns across JavaScript, TypeScript, Python, Ruby, and Java to identify vulnerabilities.
+          </p>
+        </div>
+
+        <div class="feature">
+          <h3>2. AI-Powered Solution</h3>
+          <p>
+            Our AI generates secure fixes with comprehensive documentation explaining the vulnerability and solution.
+          </p>
+        </div>
+
+        <div class="feature">
+          <h3>3. Pull Request Creation</h3>
+          <p>
+            A well-documented PR is created with the fix, security impact assessment, and educational content.
+          </p>
+        </div>
+
+        <div class="feature">
+          <h3>4. You Deploy, You Pay</h3>
+          <p>
+            Review and merge the PR when ready. You're only charged $15 when the fix is deployed (after 10 free fixes).
+          </p>
+        </div>
       </div>
 
-      <div class="feature">
-        <h3>4. You Deploy, You Pay</h3>
-        <p>Review and merge the PR when ready. You're only charged $15 when the fix is deployed (after 10 free fixes).</p>
+      <div class="section">
+        <h2>How to Write Effective Issues</h2>
+        <p>
+          The quality of RSOLV's solutions depends on the clarity of your issues. Here are some best practices:
+        </p>
+
+        <div class="example">
+          <h3>A Great Issue Example:</h3>
+          <div class="code">
+            <strong>Title:</strong>
+            Fix pagination error in user list<br />
+            <strong>Label:</strong>
+            rsolv:automate<br /><br />
+            <strong>Description:</strong>
+            <br />
+            When navigating to page 2 of the user list, the app shows the same users from page 1.<br /><br />
+            <strong>Steps to reproduce:</strong>
+            <br /> 1. Go to /users<br /> 2. Click the "Next Page" button<br />
+            3. Observe that the same 10 users are displayed<br /><br />
+            <strong>Expected behavior:</strong>
+            <br /> Page 2 should show the next 10 users<br /><br />
+            <strong>Related files:</strong>
+            <br /> - src/components/UserList.js<br /> - src/api/users.js
+          </div>
+        </div>
+
+        <div class="tips">
+          <div class="tip">
+            <h4>Be Specific</h4>
+            <p>Clearly describe what's broken and how it should work instead.</p>
+          </div>
+
+          <div class="tip">
+            <h4>Include Context</h4>
+            <p>Mention which components, files, or functions are involved.</p>
+          </div>
+
+          <div class="tip">
+            <h4>Show Steps</h4>
+            <p>List step-by-step instructions to reproduce the issue.</p>
+          </div>
+
+          <div class="tip">
+            <h4>Use the Right Label</h4>
+            <p>Always use the "rsolv:automate" label to trigger RSOLV.</p>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="section">
-      <h2>How to Write Effective Issues</h2>
-      <p>The quality of RSOLV's solutions depends on the clarity of your issues. Here are some best practices:</p>
+      <div class="section">
+        <h2>Early Access Features</h2>
 
-      <div class="example">
-        <h3>A Great Issue Example:</h3>
+        <div class="feature">
+          <h3>🛡️ Security-First Approach</h3>
+          <p>
+            Every fix is analyzed for security vulnerabilities using our 80+ pattern database.
+          </p>
+        </div>
+
+        <div class="feature">
+          <h3>🔍 Code Context Understanding</h3>
+          <p>
+            Our AI analyzes your entire repository to understand dependencies and code patterns.
+          </p>
+        </div>
+
+        <div class="feature">
+          <h3>💰 Success-Based Billing</h3>
+          <p>You only pay when fixes are merged. No seats, no commitments, just results.</p>
+        </div>
+
+        <div class="feature">
+          <h3>📊 Educational Insights</h3>
+          <p>
+            Each PR includes security explanations, helping your team learn while fixing issues.
+          </p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Setup Instructions</h2>
+        <p>
+          Getting started with RSOLV is simple. Add this GitHub Action workflow to your repository:
+        </p>
+
         <div class="code">
-          <strong>Title:</strong> Fix pagination error in user list<br>
-          <strong>Label:</strong> rsolv:automate<br><br>
-          <strong>Description:</strong><br>
-          When navigating to page 2 of the user list, the app shows the same users from page 1.<br><br>
-          <strong>Steps to reproduce:</strong><br>
-          1. Go to /users<br>
-          2. Click the "Next Page" button<br>
-          3. Observe that the same 10 users are displayed<br><br>
-          <strong>Expected behavior:</strong><br>
-          Page 2 should show the next 10 users<br><br>
-          <strong>Related files:</strong><br>
-          - src/components/UserList.js<br>
-          - src/api/users.js
-        </div>
-      </div>
-
-      <div class="tips">
-        <div class="tip">
-          <h4>Be Specific</h4>
-          <p>Clearly describe what's broken and how it should work instead.</p>
+          name: RSOLV Automation<br />
+          <br /> on:<br /> &nbsp;&nbsp;issues:<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;types: [labeled]<br />
+          <br /> jobs:<br /> &nbsp;&nbsp;resolve:<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;if: contains(github.event.issue.labels.*.name, 'rsolv:automate')<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;runs-on: ubuntu-latest<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;steps:<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- uses: rsolv-dev/rsolv-action@v1<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with:<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;github-token: ${"{{ secrets.GITHUB_TOKEN }}"}<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rsolv-api-key: ${"{{ secrets.RSOLV_API_KEY }}"}
         </div>
 
-        <div class="tip">
-          <h4>Include Context</h4>
-          <p>Mention which components, files, or functions are involved.</p>
-        </div>
-
-        <div class="tip">
-          <h4>Show Steps</h4>
-          <p>List step-by-step instructions to reproduce the issue.</p>
-        </div>
-
-        <div class="tip">
-          <h4>Use the Right Label</h4>
-          <p>Always use the "rsolv:automate" label to trigger RSOLV.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Early Access Features</h2>
-
-      <div class="feature">
-        <h3>🛡️ Security-First Approach</h3>
-        <p>Every fix is analyzed for security vulnerabilities using our 80+ pattern database.</p>
+        <p>
+          For detailed setup instructions, visit our <a href="https://rsolv.dev/docs/getting-started">getting started guide</a>.
+        </p>
       </div>
 
-      <div class="feature">
-        <h3>🔍 Code Context Understanding</h3>
-        <p>Our AI analyzes your entire repository to understand dependencies and code patterns.</p>
+      <div class="note">
+        <strong>Early Access Note:</strong>
+        As an early access user, you may occasionally encounter limitations or areas for improvement. Your feedback is invaluable—please share any issues or suggestions by replying to this email or using the feedback form in the app.
       </div>
 
-      <div class="feature">
-        <h3>💰 Success-Based Billing</h3>
-        <p>You only pay when fixes are merged. No seats, no commitments, just results.</p>
+      <div class="section">
+        <a href={@app_url} class="cta">Start Using RSOLV Now</a>
+
+        <p>
+          Need any help getting started? Have questions about the early access program? Just reply to this email and our team will assist you right away.
+        </p>
+
+        <p>We can't wait to see how RSOLV helps improve your development workflow!</p>
+
+        <p>Best regards,<br />The RSOLV Team</p>
       </div>
 
-      <div class="feature">
-        <h3>📊 Educational Insights</h3>
-        <p>Each PR includes security explanations, helping your team learn while fixing issues.</p>
+      <div class="footer">
+        <p>
+          This email was sent to {@email}. If you no longer wish to receive these emails, you can <a href={
+            @unsubscribe_url
+          }>unsubscribe</a>.
+        </p>
+        <p>
+          &copy; 2025 RSOLV - Fix Security Issues Automatically. Pay Only for Fixes You Deploy.
+        </p>
       </div>
     </div>
-
-    <div class="section">
-      <h2>Setup Instructions</h2>
-      <p>Getting started with RSOLV is simple. Add this GitHub Action workflow to your repository:</p>
-
-      <div class="code">
-        name: RSOLV Automation<br>
-        <br>
-        on:<br>
-        &nbsp;&nbsp;issues:<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;types: [labeled]<br>
-        <br>
-        jobs:<br>
-        &nbsp;&nbsp;resolve:<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;if: contains(github.event.issue.labels.*.name, 'rsolv:automate')<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;runs-on: ubuntu-latest<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;steps:<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- uses: rsolv-dev/rsolv-action@v1<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with:<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;github-token: ${"{{ secrets.GITHUB_TOKEN }}"}<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rsolv-api-key: ${"{{ secrets.RSOLV_API_KEY }}"}
-      </div>
-
-      <p>For detailed setup instructions, visit our <a href="https://rsolv.dev/docs/getting-started">getting started guide</a>.</p>
-    </div>
-
-    <div class="note">
-      <strong>Early Access Note:</strong> As an early access user, you may occasionally encounter limitations or areas for improvement. Your feedback is invaluable—please share any issues or suggestions by replying to this email or using the feedback form in the app.
-    </div>
-
-    <div class="section">
-      <a href={@app_url} class="cta">Start Using RSOLV Now</a>
-
-      <p>Need any help getting started? Have questions about the early access program? Just reply to this email and our team will assist you right away.</p>
-
-      <p>We can't wait to see how RSOLV helps improve your development workflow!</p>
-
-      <p>Best regards,<br>The RSOLV Team</p>
-    </div>
-
-    <div class="footer">
-      <p>This email was sent to <%= @email %>. If you no longer wish to receive these emails, you can <a href={@unsubscribe_url}>unsubscribe</a>.</p>
-      <p>&copy; 2025 RSOLV - Fix Security Issues Automatically. Pay Only for Fixes You Deploy.</p>
-    </div>
-  </div>
-</body>
+  </body>
 </html>
