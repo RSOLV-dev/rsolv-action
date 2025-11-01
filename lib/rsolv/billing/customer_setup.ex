@@ -52,14 +52,21 @@ defmodule Rsolv.Billing.CustomerSetup do
   def add_payment_method(%Customer{id: customer_id}, payment_method_id, true) do
     Repo.transaction(fn ->
       # Lock row to prevent concurrent bonus credits
-      locked_customer = Repo.one!(from c in Customer, where: c.id == ^customer_id, lock: "FOR UPDATE")
+      locked_customer =
+        Repo.one!(from c in Customer, where: c.id == ^customer_id, lock: "FOR UPDATE")
 
       # Credit bonus only if this is the first payment method
       should_credit_bonus = not locked_customer.has_payment_method
 
       with {:ok, stripe_customer_id} <- ensure_stripe_customer(locked_customer),
            {:ok, _} <- StripeService.attach_payment_method(stripe_customer_id, payment_method_id),
-           {:ok, customer} <- update_customer_with_payment_method(locked_customer, stripe_customer_id, payment_method_id, should_credit_bonus) do
+           {:ok, customer} <-
+             update_customer_with_payment_method(
+               locked_customer,
+               stripe_customer_id,
+               payment_method_id,
+               should_credit_bonus
+             ) do
         customer
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -68,33 +75,42 @@ defmodule Rsolv.Billing.CustomerSetup do
   end
 
   # Update customer and optionally credit bonus in a single Multi transaction
-  defp update_customer_with_payment_method(customer, stripe_customer_id, payment_method_id, credit_bonus?) do
+  defp update_customer_with_payment_method(
+         customer,
+         stripe_customer_id,
+         payment_method_id,
+         credit_bonus?
+       ) do
     now = DateTime.utc_now()
 
     multi =
       Ecto.Multi.new()
-      |> Ecto.Multi.update(:customer, Customer.changeset(customer, %{
-        stripe_customer_id: stripe_customer_id,
-        stripe_payment_method_id: payment_method_id,
-        has_payment_method: true,
-        billing_consent_given: true,
-        billing_consent_at: now,
-        payment_method_added_at: now,
-        subscription_type: "pay_as_you_go"
-      }))
+      |> Ecto.Multi.update(
+        :customer,
+        Customer.changeset(customer, %{
+          stripe_customer_id: stripe_customer_id,
+          stripe_payment_method_id: payment_method_id,
+          has_payment_method: true,
+          billing_consent_given: true,
+          billing_consent_at: now,
+          payment_method_added_at: now,
+          subscription_type: "pay_as_you_go"
+        })
+      )
 
-    multi = if credit_bonus? do
-      Ecto.Multi.run(multi, :credit, fn _repo, %{customer: updated_customer} ->
-        CreditLedger.credit(
-          updated_customer,
-          Config.trial_billing_addition_bonus(),
-          "trial_billing_added",
-          %{payment_method_id: payment_method_id}
-        )
-      end)
-    else
-      multi
-    end
+    multi =
+      if credit_bonus? do
+        Ecto.Multi.run(multi, :credit, fn _repo, %{customer: updated_customer} ->
+          CreditLedger.credit(
+            updated_customer,
+            Config.trial_billing_addition_bonus(),
+            "trial_billing_added",
+            %{payment_method_id: payment_method_id}
+          )
+        end)
+      else
+        multi
+      end
 
     case Repo.transaction(multi) do
       {:ok, %{customer: customer}} -> {:ok, customer}
