@@ -101,12 +101,23 @@ jobs:
     needs: test
     if: always()
 
-    # No database service needed - we're just merging .coverdata files
-    # The --no-start flag prevents application startup, so DB is unused
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rsolv_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
 
     env:
       MIX_ENV: test
-      # Dummy DATABASE_URL to satisfy config loading (not actually used)
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_test
 
     steps:
