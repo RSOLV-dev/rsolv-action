@@ -12,10 +12,10 @@
 # - 2025-10-30: 60% (all code, ratcheted from 59%)
 # - 2025-11-01: 60.1% CI / 60.8% local (excluding Mix tasks - dev/ops tooling)
 #
-# Note on CI vs Local Coverage:
-# - Local runs with ignore_modules show 60.8%
-# - CI merge with --import-cover shows 60.1% (coverdata includes Mix tasks)
-# - Using 60.1% as threshold to match CI behavior
+# Note on Mix Task Exclusion (dual approach):
+# - mix.exs ignore_modules: Excludes Mix tasks during test execution (local runs)
+# - .coveralls.exs skip_files: Excludes Mix tasks during report generation (CI merge)
+# - This ensures consistent coverage calculation both locally and in CI
 #
 # Rationale for Mix Task Exclusion:
 # - Mix tasks are CLI/dev tools that don't affect production users
@@ -51,5 +51,7 @@ config :excoveralls,
     ~r|lib/rsolv_web/telemetry.ex|,
     # Skip application startup files (hard to test)
     ~r|lib/rsolv/application.ex|,
-    ~r|lib/rsolv/repo.ex|
+    ~r|lib/rsolv/repo.ex|,
+    # Skip Mix tasks - dev/ops tooling, not production code
+    ~r|lib/mix/tasks/|
   ]

@@ -101,31 +101,31 @@ jobs:
     needs: test
     if: always()
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: rsolv_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+    # No PostgreSQL service needed - we're just merging coverage data!
 
     env:
       MIX_ENV: test
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_test
+      ELIXIR_VERSION: "1.18.1"
+      OTP_VERSION: "27.2"
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/setup-elixir
+      # Lightweight setup - only need Beam + ExCoveralls
+      - uses: erlef/setup-beam@v1
         with:
-          cache-key-prefix: coverage
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+          install-hex: true
+          install-rebar: true
+
+      - name: Install ExCoveralls only
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          # Only install excoveralls - no need for full deps
+          mix deps.get excoveralls
+          mix deps.compile excoveralls
 
       - name: Download coverage artifacts
         uses: actions/download-artifact@v4
@@ -133,9 +133,6 @@ jobs:
           pattern: coverage-*
           merge-multiple: true
           path: cover/
-
-      - name: Create test database
-        run: mix ecto.create
 
       - name: Generate merged coverage report
         run: |
@@ -145,11 +142,10 @@ jobs:
             ls -lh cover/*.coverdata
 
             # Use ExCoveralls to merge partitioned coverage
-            # --no-start: Don't start the application
-            # --exclude test: Exclude tests tagged with :test (most tests, so minimal re-execution)
-            # --import-cover: Import .coverdata files from partitioned runs (this brings in the real coverage)
+            # --import-cover: Import .coverdata files from partitioned runs
+            # Note: No --exclude or --no-start needed - we're just merging data!
             echo "Merging coverage data and generating report..."
-            mix coveralls.json --no-start --exclude test --import-cover cover | tee coverage_output.txt
+            mix coveralls.json --import-cover cover | tee coverage_output.txt
 
             # Extract coverage percentage from the [TOTAL] line in the text output
             COVERAGE=$(grep '^\[TOTAL\]' coverage_output.txt | awk '{print $2}' | sed 's/%//')
