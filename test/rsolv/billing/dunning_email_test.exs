@@ -2,23 +2,15 @@ defmodule Rsolv.Billing.DunningEmailTest do
   use Rsolv.DataCase
   use Bamboo.Test
 
-  alias Rsolv.{Customers, Emails, EmailService}
+  import Rsolv.Factory
+
+  alias Rsolv.{Emails, EmailService}
   alias Rsolv.Billing.WebhookProcessor
   alias Rsolv.Workers.EmailWorker
 
   describe "payment_failed webhook" do
     setup do
-      # Create a test customer with Stripe info
-      {:ok, customer} =
-        Customers.create_customer(%{
-          name: "Test Customer",
-          email: "test@example.com",
-          stripe_customer_id: "cus_test123",
-          subscription_type: "pro",
-          subscription_state: "active",
-          credit_balance: 60
-        })
-
+      customer = insert(:customer) |> with_pro_plan()
       {:ok, customer: customer}
     end
 
@@ -42,8 +34,7 @@ defmodule Rsolv.Billing.DunningEmailTest do
       assert {:ok, :processed} = WebhookProcessor.process_event(webhook_event)
 
       # Verify customer state was updated
-      updated_customer = Customers.get_customer!(customer.id)
-      assert updated_customer.subscription_state == "past_due"
+      assert Repo.reload!(customer).subscription_state == "past_due"
 
       # Verify Oban job was created
       assert_enqueued(
@@ -81,8 +72,7 @@ defmodule Rsolv.Billing.DunningEmailTest do
       WebhookProcessor.process_event(webhook_event)
 
       # Verify state changed to past_due
-      updated_customer = Customers.get_customer!(customer.id)
-      assert updated_customer.subscription_state == "past_due"
+      assert Repo.reload!(customer).subscription_state == "past_due"
     end
 
     test "does not process duplicate webhook events", %{customer: customer} do
@@ -110,14 +100,7 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
   describe "email job processing" do
     setup do
-      {:ok, customer} =
-        Customers.create_customer(%{
-          name: "Jane Doe",
-          email: "jane@example.com",
-          stripe_customer_id: "cus_jane123",
-          credit_balance: 45
-        })
-
+      customer = insert(:customer, name: "Jane Doe", credit_balance: 45) |> with_pro_plan()
       {:ok, customer: customer}
     end
 
@@ -205,14 +188,7 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
   describe "email worker integration" do
     setup do
-      {:ok, customer} =
-        Customers.create_customer(%{
-          name: "Worker Test",
-          email: "worker@example.com",
-          stripe_customer_id: "cus_worker123",
-          credit_balance: 30
-        })
-
+      customer = insert(:customer, name: "Worker Test", credit_balance: 30) |> with_pro_plan()
       {:ok, customer: customer}
     end
 
@@ -253,13 +229,7 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
   describe "email content validation" do
     setup do
-      {:ok, customer} =
-        Customers.create_customer(%{
-          name: "Content Test Customer",
-          email: "content@example.com",
-          credit_balance: 75
-        })
-
+      customer = insert(:customer, name: "Content Test Customer", credit_balance: 75)
       {:ok, customer: customer}
     end
 
@@ -302,6 +272,35 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
       assert email.headers["X-Priority"] == "1"
       assert email.headers["X-Postmark-Tag"] == "payment-failed"
+    end
+  end
+
+  describe "edge cases" do
+    test "handles customer with nil name gracefully" do
+      customer = insert(:customer, name: nil, credit_balance: 10) |> with_pro_plan()
+
+      email = Emails.payment_failed_email(customer, "in_test", 1999, nil, 1)
+
+      # Should not crash, uses customer email or fallback
+      assert email.html_body
+      assert email.text_body
+    end
+
+    test "handles zero credit balance" do
+      customer = insert(:customer, credit_balance: 0) |> with_past_due()
+
+      {:ok, result} = EmailService.send_payment_failed_email(customer.id, "in_test", 1999, nil, 1)
+
+      email = result.email
+      assert email.html_body =~ "0 remaining"
+    end
+
+    test "handles large attempt count" do
+      customer = insert(:customer) |> with_past_due()
+
+      email = Emails.payment_failed_email(customer, "in_test", 1999, nil, 15)
+
+      assert email.html_body =~ "Attempt Count:</strong> 15"
     end
   end
 end
