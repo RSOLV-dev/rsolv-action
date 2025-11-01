@@ -116,7 +116,13 @@ defmodule Rsolv.Emails do
   @doc """
   Creates a payment failed notification email for customers with billing issues.
   """
-  def payment_failed_email(customer, invoice_id, amount_due, next_payment_attempt \\ nil, attempt_count \\ 1) do
+  def payment_failed_email(
+        customer,
+        invoice_id,
+        amount_due,
+        next_payment_attempt \\ nil,
+        attempt_count \\ 1
+      ) do
     # Get email configuration
     config =
       Application.get_env(:rsolv, :email_config, %{
@@ -1078,7 +1084,10 @@ defmodule Rsolv.Emails do
     next_attempt_text =
       if assigns[:next_payment_attempt_html] && assigns[:next_payment_attempt_html] != "" do
         # Extract the formatted date from the HTML string
-        case Regex.run(~r/<strong>Next Retry:<\/strong> (.+?)<\/p>/, assigns[:next_payment_attempt_html]) do
+        case Regex.run(
+               ~r/<strong>Next Retry:<\/strong> (.+?)<\/p>/,
+               assigns[:next_payment_attempt_html]
+             ) do
           [_, date] -> "Next Retry: #{date}\n"
           _ -> ""
         end
