@@ -1,9 +1,47 @@
 defmodule RsolvWeb.EmailsHTML do
   @moduledoc """
   Module for rendering email templates using Phoenix 1.7's approach.
-  This replaces the old Phoenix.View based rendering.
+
+  This module provides two types of functions for each email template:
+
+  1. Template functions (e.g., `welcome/1`, `payment_failed/1`) - Return Phoenix LiveView
+     compatible HTML content for direct use in HEEx templates.
+
+  2. Render functions (e.g., `render_welcome/1`, `render_payment_failed/1`) - Apply default
+     assigns and return safe HTML strings suitable for email delivery.
+
+  All templates are loaded from the filesystem using `RsolvWeb.Email.TemplateLoader`,
+  which provides production-safe path resolution.
+
+  ## Available Templates
+
+  #{Enum.map_join(~w(early_access_guide early_access_welcome feature_deep_dive feedback_request first_issue getting_started payment_failed setup_verification success_checkin welcome), "\n", &"  * #{&1}")}
+
+  ## Examples
+
+      # Use in HEEx templates
+      <%= early_access_guide(assigns) %>
+
+      # Use for email delivery
+      html_body = render_early_access_guide(%{first_name: "Jane", email: "jane@example.com"})
   """
   use RsolvWeb, :html
+
+  alias RsolvWeb.Email.TemplateLoader
+
+  # List of all email templates that follow the standard pattern
+  @templates ~w(
+    early_access_guide
+    early_access_welcome
+    feature_deep_dive
+    feedback_request
+    first_issue
+    getting_started
+    payment_failed
+    setup_verification
+    success_checkin
+    welcome
+  )a
 
   # Helper function to make assigns available
   defp assign_new_lazy(assigns, key, fun) do
@@ -14,7 +52,27 @@ defmodule RsolvWeb.EmailsHTML do
     end
   end
 
-  # Helper to ensure default assigns are present
+  @doc """
+  Adds default assigns to the provided assigns map.
+
+  Default assigns include:
+  - `:app_url` - "https://rsolv.dev"
+  - `:docs_url` - "https://rsolv.dev/docs"
+  - `:unsubscribe_url` - Personalized unsubscribe URL
+  - `:first_name` - "there" (fallback greeting)
+  - `:email` - "" (empty string fallback)
+
+  ## Examples
+
+      iex> RsolvWeb.EmailsHTML.with_defaults(%{email: "user@example.com"})
+      %{
+        email: "user@example.com",
+        app_url: "https://rsolv.dev",
+        docs_url: "https://rsolv.dev/docs",
+        unsubscribe_url: "https://rsolv.dev/unsubscribe?email=user@example.com",
+        first_name: "there"
+      }
+  """
   def with_defaults(assigns) do
     assigns
     |> assign_new_lazy(:app_url, fn -> "https://rsolv.dev" end)
@@ -26,127 +84,55 @@ defmodule RsolvWeb.EmailsHTML do
     |> assign_new_lazy(:email, fn -> "" end)
   end
 
-  # Define template functions manually for now
-  def early_access_guide(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/early_access_guide.html"))}
+  # Generate template and render functions for each template using metaprogramming
+  for template <- @templates do
+    template_name = Atom.to_string(template)
+
+    @doc """
+    Renders the #{template_name} email template.
+
+    Returns Phoenix LiveView compatible HTML content.
+
+    ## Parameters
+
+      * `assigns` - Map of template variables (unused in static templates)
+
+    ## Examples
+
+        iex> #{template}(assigns)
+        {:safe, ...}
     """
-  end
+    def unquote(template)(assigns) do
+      assigns =
+        assign(
+          assigns,
+          :__template_content__,
+          TemplateLoader.load_template!(unquote(template_name))
+        )
 
-  def early_access_welcome(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(
-      File.read!("lib/rsolv_web/components/templates/email/early_access_welcome.html")
-    )}
+      ~H"""
+      {Phoenix.HTML.raw(@__template_content__)}
+      """
+    end
+
+    @doc """
+    Renders the #{template_name} email template with default assigns applied.
+
+    Returns a safe HTML string suitable for email delivery.
+
+    ## Parameters
+
+      * `assigns` - Map of template variables (e.g., `%{first_name: "Jane", email: "jane@example.com"}`)
+
+    ## Examples
+
+        iex> render_#{template}(%{first_name: "Jane", email: "jane@example.com"})
+        "<html>...</html>"
     """
-  end
-
-  def feature_deep_dive(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/feature_deep_dive.html"))}
-    """
-  end
-
-  def feedback_request(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/feedback_request.html"))}
-    """
-  end
-
-  def first_issue(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/first_issue.html"))}
-    """
-  end
-
-  def getting_started(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/getting_started.html"))}
-    """
-  end
-
-  def setup_verification(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/setup_verification.html"))}
-    """
-  end
-
-  def success_checkin(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/success_checkin.html"))}
-    """
-  end
-
-  def welcome(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/welcome.html"))}
-    """
-  end
-
-  # Render functions that add default assigns and return safe HTML strings
-  def render_setup_verification(assigns) do
-    assigns = with_defaults(assigns)
-    html = setup_verification(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
-  end
-
-  def render_feature_deep_dive(assigns) do
-    assigns = with_defaults(assigns)
-    html = feature_deep_dive(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
-  end
-
-  def render_feedback_request(assigns) do
-    assigns = with_defaults(assigns)
-    html = feedback_request(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
-  end
-
-  def render_success_checkin(assigns) do
-    assigns = with_defaults(assigns)
-    html = success_checkin(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
-  end
-
-  def render_early_access_guide(assigns) do
-    assigns = with_defaults(assigns)
-    html = early_access_guide(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
-  end
-
-  def render_early_access_welcome(assigns) do
-    assigns = with_defaults(assigns)
-    html = early_access_welcome(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
-  end
-
-  def render_getting_started(assigns) do
-    assigns = with_defaults(assigns)
-    html = getting_started(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
-  end
-
-  def render_welcome(assigns) do
-    assigns = with_defaults(assigns)
-    html = welcome(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
-  end
-
-  def render_first_issue(assigns) do
-    assigns = with_defaults(assigns)
-    html = first_issue(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
-  end
-
-  def payment_failed(assigns) do
-    ~H"""
-    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/payment_failed.html"))}
-    """
-  end
-
-  def render_payment_failed(assigns) do
-    assigns = with_defaults(assigns)
-    html = payment_failed(assigns)
-    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
+    def unquote(:"render_#{template}")(assigns) do
+      assigns = with_defaults(assigns)
+      html = unquote(template)(assigns)
+      Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
+    end
   end
 end
