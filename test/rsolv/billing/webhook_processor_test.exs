@@ -96,7 +96,9 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
       assert updated_customer.credit_balance == 60
     end
 
-    test "handles concurrent duplicate webhooks atomically (RFC-069 Bug #2)", %{customer: customer} do
+    test "handles concurrent duplicate webhooks atomically (RFC-069 Bug #2)", %{
+      customer: customer
+    } do
       event_data = %{
         "stripe_event_id" => "evt_concurrent_race_123",
         "event_type" => "invoice.payment_succeeded",
@@ -124,7 +126,10 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
       assert %{credit_balance: 60} = Customers.get_customer!(customer.id)
 
       # Verify exactly one billing event and one credit transaction
-      assert [_event] = Repo.all(from e in BillingEvent, where: e.stripe_event_id == "evt_concurrent_race_123")
+      assert [_event] =
+               Repo.all(
+                 from e in BillingEvent, where: e.stripe_event_id == "evt_concurrent_race_123"
+               )
 
       assert [%{amount: 60}] =
                Repo.all(
