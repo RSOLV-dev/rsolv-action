@@ -39,7 +39,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
           "object" => %{
             "id" => "in_test_123",
             "customer" => customer.stripe_customer_id,
-            "amount_paid" => 59900,
+            "amount_paid" => 59_900,
             "lines" => %{
               "data" => [
                 %{
@@ -69,7 +69,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
           "object" => %{
             "id" => "in_test_idempotent",
             "customer" => customer.stripe_customer_id,
-            "amount_paid" => 59900,
+            "amount_paid" => 59_900,
             "lines" => %{
               "data" => [
                 %{
@@ -104,7 +104,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
           "object" => %{
             "id" => "in_concurrent_123",
             "customer" => customer.stripe_customer_id,
-            "amount_paid" => 59900,
+            "amount_paid" => 59_900,
             "lines" => %{"data" => [%{"price" => %{"metadata" => %{"plan" => "pro"}}}]}
           }
         }
@@ -141,7 +141,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
           "object" => %{
             "id" => "in_test_audit",
             "customer" => customer.stripe_customer_id,
-            "amount_paid" => 59900,
+            "amount_paid" => 59_900,
             "lines" => %{
               "data" => [
                 %{
@@ -188,7 +188,7 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
           "object" => %{
             "id" => "in_failed_123",
             "customer" => customer.stripe_customer_id,
-            "amount_due" => 59900
+            "amount_due" => 59_900
           }
         }
       }
