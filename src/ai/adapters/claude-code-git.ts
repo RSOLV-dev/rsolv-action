@@ -357,27 +357,85 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
     const title = issueContext.title.toLowerCase();
     const body = issueContext.body.toLowerCase();
     let guidance = '';
-    
-    if (title.includes('insecure_deserialization') || title.includes('eval') || 
+
+    if (title.includes('insecure_deserialization') || title.includes('eval') || title.includes('ssjs') || title.includes('injection') ||
         body.includes('eval(') || body.includes('deserializing')) {
-      guidance += '\n## EVAL/DESERIALIZATION FIX GUIDANCE\n';
+      guidance += '\n## 🚨 EVAL/DESERIALIZATION FIX GUIDANCE 🚨\n';
       guidance += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-      guidance += 'This vulnerability uses eval() which executes arbitrary code.\n\n';
-      guidance += '✅ CORRECT FIX:\n';
-      guidance += '- For numbers: Use parseInt(value, 10) or parseFloat(value)\n';
-      guidance += '- For JSON: Use JSON.parse(value)\n';
-      guidance += '- For math: Use a safe expression evaluator\n';
-      guidance += '- Check if there\'s a commented fix in the code!\n\n';
-      guidance += '❌ INCORRECT:\n';
-      guidance += '- Trying to sanitize input for eval (still unsafe)\n';
-      guidance += '- Using new Function() (also unsafe)\n\n';
-      guidance += 'Example:\n';
+      guidance += '**CRITICAL**: This vulnerability uses `eval()` which executes arbitrary code.\n';
+      guidance += 'The eval() function MUST be completely removed and replaced.\n\n';
+
+      guidance += '### STEP-BY-STEP FIX INSTRUCTIONS:\n\n';
+      guidance += '1. **LOCATE the eval() calls**:\n';
+      guidance += '   - Use Grep to find all instances of `eval(`\n';
+      guidance += '   - Common locations: data parsing, calculation functions, user input handling\n\n';
+
+      guidance += '2. **IDENTIFY what data type is expected**:\n';
+      guidance += '   - Number (integer or decimal)? → Use parseInt() or parseFloat()\n';
+      guidance += '   - JSON object? → Use JSON.parse()\n';
+      guidance += '   - Mathematical expression? → Use a safe math library\n';
+      guidance += '   - **Check for commented-out fixes in the code!**\n\n';
+
+      guidance += '3. **REPLACE eval() using Edit tool**:\n\n';
+      guidance += '✅ **FOR NUMBERS (most common)**:\n';
       guidance += '```javascript\n';
-      guidance += '// VULNERABLE: const value = eval(userInput);\n';
-      guidance += '// FIXED: const value = parseInt(userInput, 10);\n';
+      guidance += '// BEFORE (VULNERABLE):\n';
+      guidance += 'const preTax = eval(req.body.preTax);\n';
+      guidance += 'const afterTax = eval(req.body.afterTax);\n';
+      guidance += 'const roth = eval(req.body.roth);\n\n';
+
+      guidance += '// AFTER (FIXED):\n';
+      guidance += 'const preTax = parseInt(req.body.preTax, 10);\n';
+      guidance += 'const afterTax = parseInt(req.body.afterTax, 10);\n';
+      guidance += 'const roth = parseInt(req.body.roth, 10);\n';
       guidance += '```\n\n';
+
+      guidance += '✅ **FOR DECIMAL NUMBERS**:\n';
+      guidance += '```javascript\n';
+      guidance += '// BEFORE: const price = eval(userInput);\n';
+      guidance += '// AFTER:  const price = parseFloat(userInput);\n';
+      guidance += '```\n\n';
+
+      guidance += '✅ **FOR JSON DATA**:\n';
+      guidance += '```javascript\n';
+      guidance += '// BEFORE: const data = eval("(" + userInput + ")");\n';
+      guidance += '// AFTER:  const data = JSON.parse(userInput);\n';
+      guidance += '```\n\n';
+
+      guidance += '❌ **THESE DO NOT FIX THE VULNERABILITY**:\n';
+      guidance += '- Input validation before eval() (still executes code)\n';
+      guidance += '- Sanitizing or escaping input (can be bypassed)\n';
+      guidance += '- Using new Function() (also executes arbitrary code)\n';
+      guidance += '- Wrapping eval() in try-catch (still allows code execution)\n\n';
+
+      guidance += '4. **VERIFY the fix**:\n';
+      guidance += '   - Use Read tool to confirm eval() is completely removed\n';
+      guidance += '   - Ensure ALL instances are replaced\n';
+      guidance += '   - Run the RED tests - they should PASS after fix\n\n';
+
+      guidance += '### EXAMPLE COMPLETE FIX:\n\n';
+      guidance += 'If you see code like this:\n';
+      guidance += '```javascript\n';
+      guidance += 'const preTax = eval(req.body.preTax);    // Line 32\n';
+      guidance += 'const afterTax = eval(req.body.afterTax);  // Line 33\n';
+      guidance += 'const roth = eval(req.body.roth);      // Line 34\n';
+      guidance += '```\n\n';
+
+      guidance += 'Use the Edit tool to replace it with:\n';
+      guidance += '```javascript\n';
+      guidance += 'const preTax = parseInt(req.body.preTax, 10);    // Line 32\n';
+      guidance += 'const afterTax = parseInt(req.body.afterTax, 10);  // Line 33\n';
+      guidance += 'const roth = parseInt(req.body.roth, 10);      // Line 34\n';
+      guidance += '```\n\n';
+
+      guidance += '**IMPORTANT NOTES**:\n';
+      guidance += '- parseInt() safely converts strings to integers\n';
+      guidance += '- The second parameter (10) specifies base-10 numbers\n';
+      guidance += '- This completely prevents code execution\n';
+      guidance += '- Maintains the same API - no breaking changes\n';
+      guidance += '- Invalid input returns NaN (handled by existing validation)\n\n';
     }
-    
+
     return guidance;
   }
 
