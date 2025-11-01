@@ -69,32 +69,33 @@ defmodule Rsolv.E2E.CustomerJourneyTest do
     customer = insert(factory_name)
     trait_customer = trait_fun.(customer)
 
-    changes = Map.take(trait_customer, [
-      :credit_balance,
-      :trial_fixes_limit,
-      :trial_fixes_used,
-      :subscription_type,
-      :subscription_state,
-      :has_payment_method,
-      :stripe_customer_id,
-      :stripe_payment_method_id,
-      :stripe_subscription_id,
-      :fixes_quota_this_month,
-      :fixes_used_this_month,
-      :rollover_fixes,
-      :payment_method_added_at,
-      :billing_consent_given,
-      :billing_consent_at
-    ])
-    # Truncate DateTime fields to :second precision for database compatibility
-    |> Map.update(:payment_method_added_at, nil, fn
-      nil -> nil
-      dt -> DateTime.truncate(dt, :second)
-    end)
-    |> Map.update(:billing_consent_at, nil, fn
-      nil -> nil
-      dt -> DateTime.truncate(dt, :second)
-    end)
+    changes =
+      Map.take(trait_customer, [
+        :credit_balance,
+        :trial_fixes_limit,
+        :trial_fixes_used,
+        :subscription_type,
+        :subscription_state,
+        :has_payment_method,
+        :stripe_customer_id,
+        :stripe_payment_method_id,
+        :stripe_subscription_id,
+        :fixes_quota_this_month,
+        :fixes_used_this_month,
+        :rollover_fixes,
+        :payment_method_added_at,
+        :billing_consent_given,
+        :billing_consent_at
+      ])
+      # Truncate DateTime fields to :second precision for database compatibility
+      |> Map.update(:payment_method_added_at, nil, fn
+        nil -> nil
+        dt -> DateTime.truncate(dt, :second)
+      end)
+      |> Map.update(:billing_consent_at, nil, fn
+        nil -> nil
+        dt -> DateTime.truncate(dt, :second)
+      end)
 
     Repo.update!(Ecto.Changeset.change(customer, changes))
   end
@@ -151,7 +152,12 @@ defmodule Rsolv.E2E.CustomerJourneyTest do
 
     test "trial customer blocked when no credits and no billing" do
       # ARRANGE: Trial customer with 0 credits and no payment method
-      customer = insert(:customer, subscription_type: "trial", credit_balance: 0, has_payment_method: false)
+      customer =
+        insert(:customer,
+          subscription_type: "trial",
+          credit_balance: 0,
+          has_payment_method: false
+        )
 
       # ACT: Attempt to deploy fix with no credits and no billing
       fix = %{id: 2, vulnerability_id: "VULN-002", status: "merged"}
@@ -189,6 +195,7 @@ defmodule Rsolv.E2E.CustomerJourneyTest do
       assert customer_with_billing.has_payment_method == true
       assert customer_with_billing.credit_balance == 7, "Should have 2 + 5 bonus credits"
       assert customer_with_billing.subscription_type == "pay_as_you_go"
+
       assert String.starts_with?(customer_with_billing.stripe_customer_id, "cus_test_"),
              "Should have created Stripe customer"
 
@@ -226,7 +233,9 @@ defmodule Rsolv.E2E.CustomerJourneyTest do
       assert charge_txn.amount == 1, "Should credit 1 fix"
       assert charge_txn.metadata["amount_cents"] == 2900, "Should charge $29 at PAYG rate"
 
-      consume_txn = Enum.find(all_transactions, &(&1.source == "fix_deployed" and &1.amount == -1))
+      consume_txn =
+        Enum.find(all_transactions, &(&1.source == "fix_deployed" and &1.amount == -1))
+
       assert consume_txn != nil, "Should consume the credited fix"
     end
   end

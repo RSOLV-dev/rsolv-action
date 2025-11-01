@@ -1,6 +1,6 @@
 # Week 3 Documentation Index
 
-**Last Updated**: 2025-10-29
+**Last Updated**: 2025-11-01
 
 This index organizes all Week 3 documentation for RFCs 064-069 (Billing Implementation).
 
@@ -15,6 +15,47 @@ This index organizes all Week 3 documentation for RFCs 064-069 (Billing Implemen
 - **Content**: Comprehensive completion report with implementation details, test status, and integration points
 - **Test Status**: 4,518/4,522 passing (99.91%), 4 failures, 60 skipped
 - **Use This For**: Understanding what was implemented, test coverage, and remaining work
+
+### RFC-069 Tuesday (Happy Path E2E Testing)
+**[RFC-069-TUESDAY-MANUAL-VERIFICATION.md](RFC-069-TUESDAY-MANUAL-VERIFICATION.md)** (579 lines, updated 2025-11-01)
+- **Status**: ✅ COMPLETE - Staging Verified
+- **Coverage**: Complete manual verification of billing system on staging
+- **Content**: 14-section comprehensive verification report
+  - Environment health (2/2 pods healthy)
+  - Database schema (6/6 billing tables verified)
+  - Billing modules (5/5 core functions loaded)
+  - API endpoints (health checks passing)
+  - Monitoring (Grafana/Prometheus operational)
+  - Production readiness assessment
+- **Confidence**: 95% (HIGH) - Ready for production after Stripe config
+- **Use This For**: Production deployment checklist, verification procedures
+
+**[RFC-069-TUESDAY-STAGING-DEPLOYMENT.md](RFC-069-TUESDAY-STAGING-DEPLOYMENT.md)** (316 lines, updated 2025-11-01)
+- **Status**: ✅ DEPLOYED to staging
+- **Image**: `ghcr.io/rsolv-dev/rsolv-platform:billing-20251031-145111`
+- **Content**: Complete deployment guide
+  - Deployment steps and verification
+  - Manual testing strategies (IEx, database, RSOLV-action)
+  - Production readiness checklist
+  - Rollback procedures
+- **Use This For**: Deployment process, testing strategies, rollback plans
+
+**[RFC-069-TUESDAY-FINAL-SUMMARY.md](RFC-069-TUESDAY-FINAL-SUMMARY.md)** (242 lines, updated 2025-10-31)
+- **Status**: ✅ COMPLETE - GREEN phase (11/11 tests passing)
+- **Coverage**: Implementation summary of 5 core billing functions
+- **Test Results**: 100% pass rate (trial→PAYG→Pro flows)
+- **Use This For**: Understanding billing implementation, test coverage
+
+**[RFC-069-TUESDAY-GREEN-COMPLETE.md](RFC-069-TUESDAY-GREEN-COMPLETE.md)** (290 lines, updated 2025-10-31)
+- **Status**: ✅ COMPLETE - TDD GREEN phase
+- **Coverage**: Mox testing patterns, factory traits, state threading
+- **Learnings**: Best practices for Elixir testing
+- **Use This For**: Testing patterns, Mox usage, factory setup
+
+**[RFC-069-TUESDAY-GREEN-PROGRESS.md](RFC-069-TUESDAY-GREEN-PROGRESS.md)** (198 lines, updated 2025-10-31)
+- **Status**: Historical progress tracking
+- **Content**: Work-in-progress notes during GREEN phase
+- **Use This For**: Historical context on implementation decisions
 
 ---
 
@@ -94,15 +135,21 @@ This index organizes all Week 3 documentation for RFCs 064-069 (Billing Implemen
 
 ## Summary
 
-**Total Documents**: 11 files, 4,380 lines
-**Active Document**: RFC-064-069-WEEK-3-COMPLETION.md
-**Historical/Reference**: 10 files
+**Total Documents**: 16 files, 6,604 lines
+**Active Documents**:
+- RFC-064-069-WEEK-3-COMPLETION.md (main completion report)
+- RFC-069-TUESDAY-MANUAL-VERIFICATION.md (staging verification)
+- RFC-069-TUESDAY-STAGING-DEPLOYMENT.md (deployment guide)
+**Historical/Reference**: 13 files
 
 ### Quick Reference
 
 | Purpose | Document | Status |
 |---------|----------|--------|
 | What was implemented? | RFC-064-069-WEEK-3-COMPLETION.md | ✅ Current |
+| Production deployment? | RFC-069-TUESDAY-MANUAL-VERIFICATION.md | ✅ Current |
+| Staging deployment guide? | RFC-069-TUESDAY-STAGING-DEPLOYMENT.md | ✅ Current |
+| E2E test implementation? | RFC-069-TUESDAY-FINAL-SUMMARY.md | ✅ Current |
 | Test status and issues? | RFC-064-069-WEEK-3-COMPLETION.md + SKIPPED-TESTS-ANALYSIS.md | ✅ Current |
 | Credit ledger behavior? | WEEK-3-CREDIT-LEDGER-VERIFICATION.md | 📚 Reference |
 | Webhook integration? | WEEK-3-WEBHOOK-VERIFICATION.md | 📚 Reference |

@@ -178,9 +178,10 @@ defmodule Rsolv.AST.ProductionRubyParserTest do
       assert result.error == nil
       assert is_map(result.ast)
 
-      # Should parse successfully - find lvasgn (local variable assignment) node
+      # Should parse successfully - find local_variable_write (local variable assignment) node
+      # Prism uses "local_variable_write" not "lvasgn" (old Parser gem format)
       assert result.ast["type"] == "program"
-      lvasgn_nodes = find_nodes(result.ast, "lvasgn")
+      lvasgn_nodes = find_nodes(result.ast, "local_variable_write")
       assert length(lvasgn_nodes) >= 1
     end
 

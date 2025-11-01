@@ -26,7 +26,8 @@ defmodule Rsolv.Billing.StripeTestStub do
   """
 
   @behaviour Rsolv.Billing.StripeClientBehaviour
-  @behaviour Rsolv.Billing.StripeChargeBehaviour
+  # Note: StripeClientBehaviour already includes all charge operations via create_charge/1
+  # No need for separate StripeChargeBehaviour to avoid callback conflicts
 
   # Implement actual Stripe.Customer API interface
   # This handles both Stripe.Customer.create and Stripe.Subscription.create
