@@ -101,24 +101,10 @@ jobs:
     needs: test
     if: always()
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: rsolv_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+    # No services needed - we're just merging .coverdata files, not running tests!
 
     env:
       MIX_ENV: test
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_test
 
     steps:
       - uses: actions/checkout@v4
@@ -142,14 +128,13 @@ jobs:
             echo "Found coverage data files:"
             ls -lh cover/*.coverdata
 
-            # Use ExCoveralls to merge partitioned coverage
-            # --import-cover: Import .coverdata files from partitioned runs
-            # --no-start: Don't start the application (no DB needed for merging!)
-            echo "Merging coverage data and generating report..."
-            mix coveralls.json --no-start --import-cover cover | tee coverage_output.txt
+            # Use custom script to merge .coverdata files WITHOUT re-running tests
+            # This is MUCH faster than `mix coveralls.json --import-cover` which re-runs all tests
+            echo "Merging coverage data..."
+            elixir scripts/merge_coverage.exs
 
-            # Extract coverage percentage from the [TOTAL] line in the text output
-            COVERAGE=$(grep '^\[TOTAL\]' coverage_output.txt | awk '{print $2}' | sed 's/%//')
+            # Extract coverage percentage from the script output
+            COVERAGE=$(cat coverage_percent.txt)
             echo "Extracted coverage: ${COVERAGE}%"
             echo "COVERAGE_PERCENT=${COVERAGE}" >> $GITHUB_ENV
           else
@@ -157,13 +142,15 @@ jobs:
             echo "COVERAGE_PERCENT=0" >> $GITHUB_ENV
           fi
 
-      - name: Upload coverage to Coveralls
-        uses: coverallsapp/github-action@v2
-        continue-on-error: true
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: cover/excoveralls.json
-          format: lcov
+      # Coveralls upload disabled - we're just merging .coverdata files now
+      # Re-enable this if needed by generating excoveralls.json from merged coverage
+      # - name: Upload coverage to Coveralls
+      #   uses: coverallsapp/github-action@v2
+      #   continue-on-error: true
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     path-to-lcov: cover/excoveralls.json
+      #     format: lcov
 
       - name: Check coverage threshold (60.1% minimum, excluding Mix tasks)
         run: |
