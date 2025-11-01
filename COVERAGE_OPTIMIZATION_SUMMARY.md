@@ -9,38 +9,36 @@ Extremely long runtimes in code coverage report generation on CI, with massive S
 ## Root Cause
 `config/test.exs:34` had logger level set to `:debug`, causing all SQL queries to be logged during tests despite comment saying "Print only warnings and errors during test".
 
-## Fixes Applied
+## Solution Applied
 
-### 1. Fixed Logger Level (PRIMARY FIX)
+### Fixed Logger Level
 **File**: `config/test.exs:34-36`
+
+Changed from `:debug` to `:warning` to eliminate SQL query logging while keeping error/warning visibility.
+
 ```elixir
 # Before:
-config :logger, level :debug
+config :logger, level: :debug
 
 # After:
 config :logger, level: :warning
 ```
 
-**Impact**: Eliminates SQL query logging, dramatically reduces test log volume.
-
-### 2. Removed Unnecessary Database Service
-**File**: `.github/workflows/elixir-ci.yml:104-110`
-- Removed PostgreSQL service from coverage job
-- Coverage merging only needs .coverdata files, not database
-- Saves ~10-15 seconds on job startup
+**Impact**: Dramatically reduces test log volume by eliminating verbose SQL query output.
 
 ## Results
 
-**Coverage Job Runtime**: ~61 seconds total
-- Setup: ~19 seconds
-- Coverage merging: ~39 seconds
-- Threshold check: <1 second
+The logger level change is the primary optimization. Coverage job now runs efficiently with normal logging levels.
 
-**Comparison**: Need to compare with previous runs, but based on issue description this is significantly faster.
+**What Didn't Work:**
+- Attempted to remove PostgreSQL service from coverage job, but `--no-start` flag doesn't prevent compilation which still needs DB
+- Attempted to filter coverage output with grep, but broke percentage extraction
+- Reverted both of these changes
 
-**Status**: Working correctly - coverage merging is fast and efficient.
+**Final State:**
+- Logger level: `:warning` (KEY FIX)
+- PostgreSQL service: Restored (needed for compilation)
+- Output: Unfiltered (simple and working)
 
 ## Notes for Merge
-- Main win was fixing the debug logging
-- Database removal was minor optimization
-- No need to keep this doc after merge - info captured in commit messages
+Main win was fixing the contradictory debug logging. This doc can be removed before merge - the commit messages capture the journey.
