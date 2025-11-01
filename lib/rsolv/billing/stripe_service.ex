@@ -119,7 +119,9 @@ defmodule Rsolv.Billing.StripeService do
           {seconds, _} -> seconds
           :error -> nil
         end
-      _ -> nil
+
+      _ ->
+        nil
     end)
   end
 
