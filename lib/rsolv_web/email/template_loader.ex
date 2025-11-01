@@ -14,11 +14,11 @@ defmodule RsolvWeb.Email.TemplateLoader do
       "<html>...</html>"
 
       iex> RsolvWeb.Email.TemplateLoader.template_path("welcome")
-      "/path/to/app/lib/rsolv_web/components/templates/email/welcome.html"
+      "/path/to/rsolv/priv/templates/email/welcome.html"
   """
 
   @app_name :rsolv
-  @template_dir "lib/rsolv_web/components/templates/email"
+  @template_dir "priv/templates/email"
 
   @doc """
   Returns the full path to an email template file.
