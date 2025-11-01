@@ -34,8 +34,9 @@ defmodule Mix.Tasks.Rsolv.Openapi do
         [] -> "priv/static/openapi.json"
       end
 
-    # Start the application to load all modules
-    Mix.Task.run("app.start")
+    # Compile the application but don't start the web server
+    # This loads all modules without binding to ports
+    Mix.Task.run("compile")
 
     # Ensure the directory exists
     output_file
