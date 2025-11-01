@@ -21,31 +21,45 @@ defmodule Rsolv.Billing.WebhookProcessor do
   - {:ok, :duplicate} - Event already processed (idempotency)
   - {:ok, :ignored} - Event type not relevant
   - {:error, reason} - Processing failed
+
+  ## Concurrency Safety
+  Uses database transaction to prevent race conditions where duplicate webhooks
+  arriving simultaneously could both pass the duplicate check and double-credit customers.
   """
   def process_event(%{"stripe_event_id" => event_id, "event_type" => type, "event_data" => data}) do
-    case Repo.get_by(BillingEvent, stripe_event_id: event_id) do
-      nil ->
-        # First time seeing this event
-        result = handle_event(type, data)
+    # Wrap in transaction to ensure atomicity between duplicate check and event recording
+    result =
+      Repo.transaction(fn ->
+        with nil <- Repo.get_by(BillingEvent, stripe_event_id: event_id),
+             {:ok, status} <- handle_event(type, data),
+             {:ok, _event} <- record_event(event_id, type, data) do
+          status
+        else
+          %BillingEvent{} ->
+            # Already processed (Stripe sends duplicates)
+            Logger.info("Duplicate webhook received", stripe_event_id: event_id)
+            :duplicate
 
-        # Always record event for audit trail (even if ignored)
-        case record_event(event_id, type, data) do
-          {:ok, _event} ->
-            # Return the result from handle_event
-            case result do
-              {:ok, :ignored} -> {:ok, :ignored}
-              {:ok, _} -> {:ok, :processed}
-              error -> error
+          {:error, %Ecto.Changeset{errors: errors} = changeset} ->
+            # Check if this is a unique constraint violation (concurrent duplicate)
+            if Keyword.has_key?(errors, :stripe_event_id) do
+              Logger.info("Concurrent duplicate webhook detected, rolling back",
+                stripe_event_id: event_id
+              )
+
+              Repo.rollback(:duplicate)
+            else
+              # Other database error
+              Repo.rollback(changeset)
             end
-
-          {:error, changeset} ->
-            {:error, changeset}
         end
+      end)
 
-      %BillingEvent{} ->
-        # Already processed (Stripe sends duplicates)
-        Logger.info("Duplicate webhook received", stripe_event_id: event_id)
-        {:ok, :duplicate}
+    # Unwrap transaction result
+    case result do
+      {:ok, status} when status in [:processed, :ignored, :duplicate] -> {:ok, status}
+      {:error, :duplicate} -> {:ok, :duplicate}
+      {:error, reason} -> {:error, reason}
     end
   end
 
