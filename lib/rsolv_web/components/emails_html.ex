@@ -137,4 +137,16 @@ defmodule RsolvWeb.EmailsHTML do
     html = first_issue(assigns)
     Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
   end
+
+  def payment_failed(assigns) do
+    ~H"""
+    {Phoenix.HTML.raw(File.read!("lib/rsolv_web/components/templates/email/payment_failed.html"))}
+    """
+  end
+
+  def render_payment_failed(assigns) do
+    assigns = with_defaults(assigns)
+    html = payment_failed(assigns)
+    Phoenix.HTML.Safe.to_iodata(html) |> IO.iodata_to_binary()
+  end
 end

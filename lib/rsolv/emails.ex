@@ -114,6 +114,75 @@ defmodule Rsolv.Emails do
   end
 
   @doc """
+  Creates a payment failed notification email for customers with billing issues.
+  """
+  def payment_failed_email(
+        customer,
+        invoice_id,
+        amount_due,
+        next_payment_attempt \\ nil,
+        attempt_count \\ 1
+      ) do
+    # Get email configuration
+    config =
+      Application.get_env(:rsolv, :email_config, %{
+        sender_email: "billing@rsolv.dev",
+        sender_name: "RSOLV Billing",
+        reply_to: "billing@rsolv.dev"
+      })
+
+    sender_email = Map.get(config, :sender_email, "billing@rsolv.dev")
+    sender_name = Map.get(config, :sender_name, "RSOLV Billing")
+
+    # Format amount in dollars
+    amount_in_dollars = format_currency(amount_due)
+
+    # Format next payment attempt timestamp (for both HTML and text)
+    next_attempt_formatted =
+      if next_payment_attempt do
+        format_timestamp_from_unix(next_payment_attempt)
+      else
+        nil
+      end
+
+    next_attempt_html =
+      if next_attempt_formatted do
+        "<p><strong>Next Retry:</strong> #{next_attempt_formatted}</p>"
+      else
+        ""
+      end
+
+    # Build template assigns
+    assigns = %{
+      customer_name: customer.name || "there",
+      email: customer.email,
+      amount_due: amount_in_dollars,
+      invoice_id: invoice_id,
+      attempt_count: attempt_count,
+      next_payment_attempt_text: next_attempt_formatted,
+      next_payment_attempt_html: next_attempt_html,
+      credit_balance: customer.credit_balance,
+      billing_url: "https://rsolv.dev/dashboard/billing",
+      unsubscribe_url: "https://rsolv.dev/unsubscribe?email=#{customer.email}"
+    }
+
+    # Build email using template
+    html_body = EmailsHTML.render_payment_failed(assigns)
+    text_body = payment_failed_text_body(assigns)
+
+    new_email()
+    |> to(customer.email)
+    |> from({sender_name, sender_email})
+    |> subject("Payment Failed - Action Required")
+    |> html_body(html_body)
+    |> text_body(text_body)
+    |> put_header("X-Postmark-Tag", "payment-failed")
+    |> put_header("X-Priority", "1")
+    |> put_header("Message-ID", generate_message_id())
+    |> put_private(:tag, "payment-failed")
+  end
+
+  @doc """
   Creates a contact form notification email for admins.
   """
   def contact_form_notification(contact_data) do
@@ -989,6 +1058,74 @@ defmodule Rsolv.Emails do
   end
 
   defp truncate_url(_), do: ""
+
+  # Format currency from cents to dollars
+  defp format_currency(amount_cents) when is_integer(amount_cents) do
+    dollars = amount_cents / 100
+    "$#{:erlang.float_to_binary(dollars, decimals: 2)}"
+  end
+
+  defp format_currency(_), do: "$0.00"
+
+  # Format Unix timestamp to readable datetime
+  defp format_timestamp_from_unix(unix_timestamp) when is_integer(unix_timestamp) do
+    case DateTime.from_unix(unix_timestamp) do
+      {:ok, datetime} ->
+        Calendar.strftime(datetime, "%B %d, %Y at %I:%M %p UTC")
+
+      _ ->
+        "Unknown"
+    end
+  end
+
+  defp format_timestamp_from_unix(_), do: "Unknown"
+
+  # Payment failed email text body
+  defp payment_failed_text_body(assigns) do
+    next_attempt_text =
+      if assigns[:next_payment_attempt_text] do
+        "Next Retry: #{assigns[:next_payment_attempt_text]}\n"
+      else
+        ""
+      end
+
+    """
+    ⚠️ Payment Failed - Action Required
+
+    Hi #{assigns[:customer_name]},
+
+    We attempted to process your payment for your RSOLV Pro subscription, but unfortunately the payment failed.
+
+    INVOICE DETAILS:
+    - Amount Due: #{assigns[:amount_due]}
+    - Invoice ID: #{assigns[:invoice_id]}
+    - Attempt Count: #{assigns[:attempt_count]}
+    #{next_attempt_text}
+
+    To avoid service interruption, please update your payment method as soon as possible.
+
+    Update Payment Method: #{assigns[:billing_url]}
+
+    GOOD NEWS: Your credits (#{assigns[:credit_balance]} remaining) are preserved and will be available once payment is successful.
+
+    Common reasons for payment failure:
+    - Insufficient funds
+    - Expired card
+    - Incorrect billing information
+    - Card issuer declined the transaction
+
+    If you have any questions or need assistance, please reply to this email or contact support@rsolv.dev.
+
+    Best regards,
+    The RSOLV Team
+
+    ---
+    This email was sent to #{assigns[:email]} regarding your RSOLV Pro subscription.
+    © 2025 RSOLV - Automated Security Scanning & Vulnerability Remediation
+
+    To unsubscribe, visit: #{assigns[:unsubscribe_url]}
+    """
+  end
 
   # Contact form notification HTML template
   defp contact_form_notification_html(contact_data) do
