@@ -101,10 +101,25 @@ jobs:
     needs: test
     if: always()
 
-    # No services needed - we're just merging .coverdata files, not running tests!
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rsolv_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
 
     env:
       MIX_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rsolv_test
+      SECRET_KEY_BASE: test-secret-key-base-at-least-64-chars-long-abcdefghijklmnopqrstuvwxyz0123456789
 
     steps:
       - uses: actions/checkout@v4
@@ -114,7 +129,7 @@ jobs:
         with:
           cache-key-prefix: coverage
 
-      - name: Compile application (needed for coverage analysis)
+      - name: Compile application
         run: |
           mix deps.get
           mix compile
@@ -133,13 +148,14 @@ jobs:
             echo "Found coverage data files:"
             ls -lh cover/*.coverdata
 
-            # Use custom script to merge .coverdata files WITHOUT re-running tests
-            # This is MUCH faster than `mix coveralls.json --import-cover` which re-runs all tests
-            echo "Merging coverage data..."
-            elixir scripts/merge_coverage.exs
+            # Use ExCoveralls to merge coverage data from partitioned runs
+            # Note: This re-runs ExUnit but with logger at :info level (not :debug)
+            # so SQL queries are not logged, making it much faster than before
+            echo "Merging coverage data and generating report..."
+            mix coveralls.json --no-start --import-cover cover | tee coverage_output.txt
 
-            # Extract coverage percentage from the script output
-            COVERAGE=$(cat coverage_percent.txt)
+            # Extract coverage percentage from the [TOTAL] line
+            COVERAGE=$(grep '^\[TOTAL\]' coverage_output.txt | awk '{print $2}' | sed 's/%//')
             echo "Extracted coverage: ${COVERAGE}%"
             echo "COVERAGE_PERCENT=${COVERAGE}" >> $GITHUB_ENV
           else
