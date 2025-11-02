@@ -186,6 +186,44 @@ defmodule RsolvWeb.EmailsHTMLTest do
       assert content =~ ~r/html/i
     end
 
+    test "payment_failed template renders next payment attempt when provided" do
+      content =
+        EmailsHTML.render_payment_failed(%{
+          customer_name: "Test User",
+          amount_due: "$10.00",
+          invoice_id: "inv_123",
+          attempt_count: 1,
+          next_payment_attempt_text: "January 15, 2025",
+          credit_balance: 5,
+          billing_url: "https://test.com/billing",
+          unsubscribe_url: "https://test.com/unsub",
+          email: "test@example.com"
+        })
+
+      # Should contain the next retry date as properly rendered HTML
+      assert content =~ "<p><strong>Next Retry:</strong> January 15, 2025</p>"
+      # Should NOT contain escaped HTML tags
+      refute content =~ "&lt;p&gt;&lt;strong&gt;Next Retry:&lt;/strong&gt;"
+    end
+
+    test "payment_failed template omits next payment attempt when nil" do
+      content =
+        EmailsHTML.render_payment_failed(%{
+          customer_name: "Test User",
+          amount_due: "$10.00",
+          invoice_id: "inv_123",
+          attempt_count: 1,
+          next_payment_attempt_text: nil,
+          credit_balance: 5,
+          billing_url: "https://test.com/billing",
+          unsubscribe_url: "https://test.com/unsub",
+          email: "test@example.com"
+        })
+
+      # Should not contain next retry section at all
+      refute content =~ "Next Retry:"
+    end
+
     test "all templates produce non-empty output" do
       templates = [
         :early_access_guide,
