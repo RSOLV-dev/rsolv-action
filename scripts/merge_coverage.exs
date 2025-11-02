@@ -34,22 +34,27 @@ IO.puts("\n📦 Compiling application modules for coverage analysis...")
 beam_files = Path.wildcard("_build/test/lib/rsolv/ebin/*.beam")
 IO.puts("Found #{length(beam_files)} beam files")
 
-# Compile each beam file with cover
-# This loads the modules so :cover.analyze can work
+# Load each beam file into the VM first, then compile with cover
+# This is necessary because :cover.compile_beam needs the module loaded
 compiled_modules = Enum.reduce(beam_files, [], fn beam_file, acc ->
   module = beam_file
   |> Path.basename(".beam")
   |> String.to_atom()
 
-  # Only compile modules that have imported coverage data
-  case :cover.compile_beam(module) do
-    {:ok, ^module} ->
-      [module | acc]
-    {:error, :non_existing} ->
-      # Module doesn't have coverage data, skip
-      acc
+  # Load the module into the VM
+  case Code.ensure_loaded(module) do
+    {:module, ^module} ->
+      # Now compile with cover
+      case :cover.compile_beam(module) do
+        {:ok, ^module} ->
+          [module | acc]
+        {:error, reason} ->
+          IO.puts("   ⚠️  Failed to compile #{module} with cover: #{inspect(reason)}")
+          acc
+      end
+
     {:error, reason} ->
-      IO.puts("   ⚠️  Failed to compile #{module}: #{inspect(reason)}")
+      IO.puts("   ⚠️  Failed to load #{module}: #{inspect(reason)}")
       acc
   end
 end)
