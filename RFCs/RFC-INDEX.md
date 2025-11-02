@@ -100,6 +100,8 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 | 075 | [Signup Webhook Events](RFC-075-SIGNUP-WEBHOOKS.md) | Draft (Future Work - post RFC-065) | 2025-10-20 | N/A |
 | 076 | [GitHub App for Workflow Installation](RFC-076-GITHUB-APP-WORKFLOW-INSTALL.md) | Draft (Future Work - post RFC-065) | 2025-10-20 | N/A |
 | 077 | [Tailwind Syntax Template Adoption](RFC-077-TAILWIND-SYNTAX-TEMPLATE-ADOPTION.md) | Draft (Phase 2 - post Task #5697) | 2025-10-24 | Task #5697 |
+| 078 | [Public Site Self-Service](RFC-078-PUBLIC-SITE-SELF-SERVICE.md) | Draft | 2025-11-01 | N/A |
+| 079 | [Alert Configuration Review and Optimization](RFC-079-ALERT-CONFIGURATION-REVIEW.md) | Draft (Post RFC-077) | 2025-11-01 | N/A |
 
 ## RFC Implementation Tracking
 
