@@ -113,7 +113,9 @@
           <p><strong>Amount Due:</strong> {@amount_due}</p>
           <p><strong>Invoice ID:</strong> {@invoice_id}</p>
           <p><strong>Attempt Count:</strong> {@attempt_count}</p>
-          {@next_payment_attempt_html}
+          <%= if @next_payment_attempt_text do %>
+            <p><strong>Next Retry:</strong> <%= @next_payment_attempt_text %></p>
+          <% end %>
         </div>
 
         <p>
