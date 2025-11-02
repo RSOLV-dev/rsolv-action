@@ -148,13 +148,15 @@ jobs:
             echo "Found coverage data files:"
             ls -lh cover/*.coverdata
 
-            # Use custom merge script that imports .coverdata and analyzes
-            # WITHOUT re-running tests (just compiles beam files with cover)
+            # Use ExCoveralls to merge coverage WITHOUT re-running tests
+            # --no-start: Don't start the application
+            # --exclude test: Don't run any tests (excludes all test modules)
+            # --import-cover: Import .coverdata files from partitioned runs
             echo "Merging coverage data..."
-            elixir scripts/merge_coverage.exs
+            mix coveralls.json --no-start --exclude test --import-cover cover | tee coverage_output.txt
 
-            # Extract coverage percentage from script output
-            COVERAGE=$(cat coverage_percent.txt)
+            # Extract coverage percentage from the [TOTAL] line
+            COVERAGE=$(grep '^\[TOTAL\]' coverage_output.txt | awk '{print $2}' | sed 's/%//')
             echo "Extracted coverage: ${COVERAGE}%"
             echo "COVERAGE_PERCENT=${COVERAGE}" >> $GITHUB_ENV
           else
