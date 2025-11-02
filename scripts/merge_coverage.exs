@@ -28,8 +28,10 @@ end)
 
 IO.puts("\n📈 Analyzing coverage...")
 
-# Get all analyzed modules
-modules = :cover.modules()
+# Get all imported modules (use imported/0 not modules/0)
+# :cover.modules() only returns modules compiled with cover enabled
+# :cover.imported() returns all modules that have coverage data from imports
+modules = :cover.imported()
 IO.puts("Analyzing #{length(modules)} modules...")
 
 # Calculate coverage

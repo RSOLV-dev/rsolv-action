@@ -114,6 +114,11 @@ jobs:
         with:
           cache-key-prefix: coverage
 
+      - name: Compile application (needed for coverage analysis)
+        run: |
+          mix deps.get
+          mix compile
+
       - name: Download coverage artifacts
         uses: actions/download-artifact@v4
         with:
