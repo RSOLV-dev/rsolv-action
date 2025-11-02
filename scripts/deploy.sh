@@ -64,13 +64,15 @@ spec:
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
-              name: rsolv-platform-db-secret
+              name: rsolv-secrets
               key: database-url
+        - name: DATABASE_SSL
+          value: "false"
         - name: SECRET_KEY_BASE
           valueFrom:
             secretKeyRef:
-              name: phoenix-secrets
-              key: SECRET_KEY_BASE
+              name: rsolv-secrets
+              key: secret-key-base
         - name: MIX_ENV
           value: "prod"
       imagePullSecrets:

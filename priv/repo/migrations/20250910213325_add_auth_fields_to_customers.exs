@@ -4,11 +4,12 @@ defmodule Rsolv.Repo.Migrations.AddAuthFieldsToCustomers do
   def up do
     alter table(:customers) do
       # Password hash for authentication (using Argon2)
-      add :password_hash, :string
+      # Use add_if_not_exists because these columns may already exist in production
+      add_if_not_exists :password_hash, :string
 
       # Staff/admin fields
-      add :is_staff, :boolean, default: false, null: false
-      add :admin_level, :string  # Can be: nil, "read_only", "limited", "full"
+      add_if_not_exists :is_staff, :boolean, default: false, null: false
+      add_if_not_exists :admin_level, :string  # Can be: nil, "read_only", "limited", "full"
 
       # Email should be unique for authentication
       # (This might already exist, but adding if not)
@@ -19,7 +20,7 @@ defmodule Rsolv.Repo.Migrations.AddAuthFieldsToCustomers do
     create_if_not_exists unique_index(:customers, [:email])
 
     # Index for finding staff members
-    create index(:customers, [:is_staff])
+    create_if_not_exists index(:customers, [:is_staff])
   end
 
   def down do
