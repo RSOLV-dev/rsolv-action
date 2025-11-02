@@ -145,13 +145,6 @@ defmodule Rsolv.Emails do
         nil
       end
 
-    next_attempt_html =
-      if next_attempt_formatted do
-        "<p><strong>Next Retry:</strong> #{next_attempt_formatted}</p>"
-      else
-        ""
-      end
-
     # Build template assigns
     assigns = %{
       customer_name: customer.name || "there",
@@ -160,7 +153,6 @@ defmodule Rsolv.Emails do
       invoice_id: invoice_id,
       attempt_count: attempt_count,
       next_payment_attempt_text: next_attempt_formatted,
-      next_payment_attempt_html: next_attempt_html,
       credit_balance: customer.credit_balance,
       billing_url: "https://rsolv.dev/dashboard/billing",
       unsubscribe_url: "https://rsolv.dev/unsubscribe?email=#{customer.email}"
