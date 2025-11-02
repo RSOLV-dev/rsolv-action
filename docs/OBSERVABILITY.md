@@ -298,7 +298,7 @@ The dashboard includes 10 visualization panels:
 
 2. **Verify metrics are collecting**:
    ```bash
-   curl https://api-rsolv-staging.com/metrics | grep rsolv_validation
+   curl https://api.rsolv-staging.com/metrics | grep rsolv_validation
    ```
 
 3. **Check Grafana dashboard**:

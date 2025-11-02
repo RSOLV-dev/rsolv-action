@@ -189,7 +189,7 @@ rsolv_validation_success_rate_percent{repo="owner/repo",language="javascript",fr
 
 2. **Verify metrics**:
    ```bash
-   curl https://api-rsolv-staging.com/metrics | grep rsolv_validation
+   curl https://api.rsolv-staging.com/metrics | grep rsolv_validation
    ```
 
 3. **Access Grafana dashboard**:

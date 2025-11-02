@@ -70,7 +70,7 @@ echo ""
 echo "🎉 Service deployed successfully!"
 echo "Environment: $ENVIRONMENT"
 if [ "$ENVIRONMENT" = "staging" ]; then
-    echo "Endpoints: https://rsolv-staging.com and https://api-rsolv-staging.com"
+    echo "Endpoints: https://rsolv-staging.com and https://api.rsolv-staging.com"
 else
     echo "Endpoints: https://rsolv.dev and https://api.rsolv.dev"
 fi

@@ -130,7 +130,7 @@ Normal telemetry with `test_mode: true` flag for filtering:
     "telemetry": "enabled with test_mode flag"
   },
   "examples": {
-    "curl": "curl -H 'X-API-Key: test_123' https://api-rsolv-staging.com/api/v1/validate"
+    "curl": "curl -H 'X-API-Key: test_123' https://api.rsolv-staging.com/api/v1/validate"
   }
 }
 ```

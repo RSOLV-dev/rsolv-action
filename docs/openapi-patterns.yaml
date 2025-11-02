@@ -23,7 +23,7 @@ info:
 servers:
   - url: https://api.rsolv.dev/api/v1
     description: Production server
-  - url: https://api-rsolv-staging.com/api/v1
+  - url: https://api.rsolv-staging.com/api/v1
     description: Staging server
 
 security:
