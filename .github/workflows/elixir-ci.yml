@@ -148,14 +148,13 @@ jobs:
             echo "Found coverage data files:"
             ls -lh cover/*.coverdata
 
-            # Use ExCoveralls to merge coverage data from partitioned runs
-            # Note: This re-runs ExUnit but with logger at :info level (not :debug)
-            # so SQL queries are not logged, making it much faster than before
-            echo "Merging coverage data and generating report..."
-            mix coveralls.json --no-start --import-cover cover | tee coverage_output.txt
+            # Use custom merge script that imports .coverdata and analyzes
+            # WITHOUT re-running tests (just compiles beam files with cover)
+            echo "Merging coverage data..."
+            elixir scripts/merge_coverage.exs
 
-            # Extract coverage percentage from the [TOTAL] line
-            COVERAGE=$(grep '^\[TOTAL\]' coverage_output.txt | awk '{print $2}' | sed 's/%//')
+            # Extract coverage percentage from script output
+            COVERAGE=$(cat coverage_percent.txt)
             echo "Extracted coverage: ${COVERAGE}%"
             echo "COVERAGE_PERCENT=${COVERAGE}" >> $GITHUB_ENV
           else
