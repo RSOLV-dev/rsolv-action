@@ -37,8 +37,11 @@ IO.puts("Analyzing #{length(modules)} modules...")
 # Calculate coverage
 {covered, total} =
   Enum.reduce(modules, {0, 0}, fn mod, {cov_acc, tot_acc} ->
-    case :cover.analyze(mod, :coverage, :line) do
+    result = :cover.analyze(mod, :coverage, :line)
+
+    case result do
       {:ok, lines} ->
+        IO.puts("   ✓ Module #{mod}: :ok format with #{length(lines)} lines")
         {cov, tot} =
           Enum.reduce(lines, {0, 0}, fn
             {_line, 0}, {c, t} -> {c, t + 1}  # Not covered
@@ -48,6 +51,7 @@ IO.puts("Analyzing #{length(modules)} modules...")
 
       # Handle imported modules that aren't recompiled with cover
       {:result, lines, _warnings} when is_list(lines) ->
+        IO.puts("   ✓ Module #{mod}: :result format with #{length(lines)} lines")
         {cov, tot} =
           Enum.reduce(lines, {0, 0}, fn
             {{_mod, _line}, 0}, {c, t} -> {c, t + 1}  # Not covered
@@ -55,12 +59,14 @@ IO.puts("Analyzing #{length(modules)} modules...")
           end)
         {cov_acc + cov, tot_acc + tot}
 
-      {:error, _reason} ->
+      {:error, reason} ->
+        IO.puts("   ✗ Module #{mod}: error - #{inspect(reason)}")
         {cov_acc, tot_acc}
 
       # Catch any other format
       other ->
-        IO.puts("   ⚠️  Unexpected format for module #{mod}: #{inspect(other)}")
+        IO.puts("   ⚠️  Module #{mod}: unexpected format")
+        IO.puts("      First 3 items: #{inspect(Enum.take(other, 3))}")
         {cov_acc, tot_acc}
     end
   end)
