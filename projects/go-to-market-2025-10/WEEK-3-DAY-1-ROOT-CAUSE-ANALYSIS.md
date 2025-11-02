@@ -212,7 +212,7 @@ kubectl rollout status deployment/staging-rsolv-platform -n rsolv-staging --time
 kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
   curl -s -X POST 'http://localhost:4000/api/v1/customers/onboard' \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Post-Fix Test","email":"post-fix-test@staging.rsolv.dev"}'
+  -d '{"name":"Post-Fix Test","email":"post-fix-test@rsolv-staging.com"}'
 ```
 
 **Expected Result**:
@@ -220,7 +220,7 @@ kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
 {
   "customer": {
     "id": <number>,
-    "email": "post-fix-test@staging.rsolv.dev",
+    "email": "post-fix-test@rsolv-staging.com",
     "credit_balance": 0,
     "trial_fixes_limit": 5
   },

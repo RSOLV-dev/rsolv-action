@@ -9,7 +9,7 @@ ENVIRONMENT="${2:-staging}"
 if [ "$ENVIRONMENT" = "production" ]; then
     API_URL="https://api.rsolv.ai"
 else
-    API_URL="https://api.staging.rsolv.dev"
+    API_URL="https://api.rsolv-staging.com"
 fi
 
 echo "Testing credential exchange on $ENVIRONMENT"

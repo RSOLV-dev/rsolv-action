@@ -414,7 +414,7 @@ Week 2 billing features have been successfully deployed to staging and all core 
 **Report Generated**: 2025-10-28 21:45 MDT
 **Author**: Claude Code
 **Test Engineer**: Automated smoke testing
-**Environment**: staging.rsolv.dev (rsolv-staging namespace)
+**Environment**: rsolv-staging.com (rsolv-staging namespace)
 
 ## References
 

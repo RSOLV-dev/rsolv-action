@@ -71,7 +71,7 @@ Successfully implemented and tested admin login functionality following RFC-056 
 - **Password**: AdminP@ssw0rd2025!
 - **Access Level**: Full admin privileges (is_staff: true, admin_level: "full")
 - **Local URL**: http://localhost:4001/admin/login
-- **Staging URL**: https://api.staging.rsolv.dev/admin/login (pending deployment)
+- **Staging URL**: https://api.rsolv-staging.com/admin/login (pending deployment)
 
 ### Replication Instructions
 
@@ -124,7 +124,7 @@ docker-compose up postgres  # Start PostgreSQL
 - Cannot proceed to admin dashboard
 - Known issue documented in CLAUDE.md
 
-**Staging URL**: https://api.rsolv-staging.com/admin/login (correct URL, not api.staging.rsolv.dev)
+**Staging URL**: https://api.rsolv-staging.com/admin/login (correct URL, not api.rsolv-staging.com)
 **Staging Admin Credentials**: admin@rsolv.dev / AdminP@ssw0rd2025!
 
 ### Next Steps

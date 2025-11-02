@@ -311,7 +311,7 @@ export let options = {
 };
 
 export default function () {
-  let response = http.post('https://staging.rsolv.dev/api/v1/customers', {
+  let response = http.post('https://rsolv-staging.com/api/v1/customers', {
     email: `test-${__VU}-${__ITER}@test.example.com`,
     name: 'Load Test User',
   });

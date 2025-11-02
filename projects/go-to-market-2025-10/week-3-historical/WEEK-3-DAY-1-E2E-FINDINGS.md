@@ -254,7 +254,7 @@ Attempted to create customer with existing email (e2e-test@rsolv.dev):
 kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
   curl -s -X POST 'http://localhost:4000/api/v1/customers/onboard' \
   -H 'Content-Type: application/json' \
-  -d '{"name":"E2E Test Company Monday","email":"e2e-test-monday@staging.rsolv.dev"}'
+  -d '{"name":"E2E Test Company Monday","email":"e2e-test-monday@rsolv-staging.com"}'
 ```
 
 **Response**:
@@ -270,7 +270,7 @@ kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
 
 **Verification Attempted**:
 - ✓ Email unique (not in database)
-- ✓ Email domain valid (staging.rsolv.dev)
+- ✓ Email domain valid (rsolv-staging.com)
 - ✓ Request payload valid (matches OpenApiSpex schema)
 - ✗ API returns 500 error
 
@@ -299,7 +299,7 @@ Checked pod logs but no error details were logged. This suggests either:
 kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
   curl -s -X POST 'http://localhost:4000/api/v1/customers/onboard' \
   -H 'Content-Type: application/json' \
-  -d '{"name":"E2E Test Company Monday","email":"e2e-test-monday@staging.rsolv.dev"}'
+  -d '{"name":"E2E Test Company Monday","email":"e2e-test-monday@rsolv-staging.com"}'
 
 # Result (before fix)
 {"errors":{"detail":"Internal Server Error"}}
@@ -335,7 +335,7 @@ kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
 kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
   curl -s -X POST 'http://localhost:4000/api/v1/customers/onboard' \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Final Attempt Test","email":"finalattempt-$(date +%s)@staging.rsolv.dev"}'
+  -d '{"name":"Final Attempt Test","email":"finalattempt-$(date +%s)@rsolv-staging.com"}'
 ```
 
 **Result** (after fix):
@@ -345,7 +345,7 @@ kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
   "customer": {
     "id": 43,
     "name": "Final Attempt Test",
-    "email": "finalattempt-1761690560@staging.rsolv.dev",
+    "email": "finalattempt-1761690560@rsolv-staging.com",
     "subscription_type": "trial",
     "trial_fixes_limit": 5,
     "trial_fixes_used": 0,
@@ -444,7 +444,7 @@ kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
 ### Verified in Staging
 - Customer ID 43 created successfully
 - API key: `rsolv_fRTtWEJLBGRj3CroHO_G84826V9tp66j08KaB3clLr4`
-- Email: `finalattempt-1761690560@staging.rsolv.dev`
+- Email: `finalattempt-1761690560@rsolv-staging.com`
 - Subscription type: trial
 - Trial fixes limit: 5
 - Trial fixes used: 0
@@ -635,7 +635,7 @@ Based on findings, these tasks should be created in Vibe Kanban:
 **Report Generated**: 2025-10-28 (Initial: 22:00 MDT, Updated: 23:30 MDT)
 **Author**: Claude Code
 **Test Engineer**: Automated E2E testing
-**Environment**: staging.rsolv.dev (rsolv-staging namespace)
+**Environment**: rsolv-staging.com (rsolv-staging namespace)
 **Status**: ✅ **RESOLVED** - Critical issues fixed, customer onboarding functional
 
 **Resolution Summary**:
@@ -681,7 +681,7 @@ kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
 kubectl exec deployment/staging-rsolv-platform -n rsolv-staging -- \
   curl -s -X POST 'http://localhost:4000/api/v1/customers/onboard' \
   -H 'Content-Type: application/json' \
-  -d '{"name":"E2E Test Company Monday","email":"e2e-test-monday@staging.rsolv.dev"}'
+  -d '{"name":"E2E Test Company Monday","email":"e2e-test-monday@rsolv-staging.com"}'
 ```
 
 ### Log Investigation

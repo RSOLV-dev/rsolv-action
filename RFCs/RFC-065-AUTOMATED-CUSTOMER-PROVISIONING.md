@@ -746,7 +746,7 @@ export let options = {
 };
 
 export default function() {
-  let res = http.post('http://staging.rsolv.dev/api/v1/customers/onboard',
+  let res = http.post('http://rsolv-staging.com/api/v1/customers/onboard',
     JSON.stringify({
       email: `test-${__VU}-${__ITER}@example.com`,
       name: 'Load Test User'

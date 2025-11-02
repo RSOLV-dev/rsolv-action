@@ -51,7 +51,7 @@ DATABASE_SSL=true
 
 # Application
 SECRET_KEY_BASE=<generate with: mix phx.gen.secret>
-PHX_HOST=staging.rsolv.dev
+PHX_HOST=rsolv-staging.com
 PORT=4000
 MIX_ENV=staging
 RELEASE_ENV=staging
@@ -79,7 +79,7 @@ metadata:
   name: rsolv-staging-config
   namespace: staging
 data:
-  PHX_HOST: "staging.rsolv.dev"
+  PHX_HOST: "rsolv-staging.com"
   PORT: "4000"
   MIX_ENV: "staging"
   ENABLE_BILLING_FEATURES: "true"
@@ -139,7 +139,7 @@ kubectl exec -it deployment/rsolv --namespace=staging -- \
 ### 4. Configure Stripe Webhooks
 
 1. Go to [Stripe Dashboard (Test Mode)](https://dashboard.stripe.com/test/webhooks)
-2. Create endpoint: `https://staging.rsolv.dev/webhooks/stripe`
+2. Create endpoint: `https://rsolv-staging.com/webhooks/stripe`
 3. Select events:
    - `customer.subscription.created`
    - `customer.subscription.updated`
@@ -254,7 +254,7 @@ mix run scripts/validate_billing_dashboard.exs --grafana
 
 ```bash
 # Create new customer
-curl -X POST https://staging.rsolv.dev/api/v1/customers \
+curl -X POST https://rsolv-staging.com/api/v1/customers \
   -H "Content-Type: application/json" \
   -d '{
     "email": "newuser@test.example.com",
@@ -268,7 +268,7 @@ curl -X POST https://staging.rsolv.dev/api/v1/customers \
 
 ```bash
 # Add payment method (using Stripe test card)
-curl -X POST https://staging.rsolv.dev/api/v1/customers/{id}/billing \
+curl -X POST https://rsolv-staging.com/api/v1/customers/{id}/billing \
   -H "Content-Type: application/json" \
   -d '{
     "payment_method": "pm_card_visa"
@@ -281,7 +281,7 @@ curl -X POST https://staging.rsolv.dev/api/v1/customers/{id}/billing \
 
 ```bash
 # Create Pro subscription
-curl -X POST https://staging.rsolv.dev/api/v1/subscriptions \
+curl -X POST https://rsolv-staging.com/api/v1/subscriptions \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "{id}",
@@ -321,7 +321,7 @@ kubectl get secret rsolv-staging-secrets --namespace=staging -o jsonpath='{.data
 
 ```bash
 # Check webhook endpoint health
-curl https://staging.rsolv.dev/webhooks/stripe/health
+curl https://rsolv-staging.com/webhooks/stripe/health
 
 # View webhook logs
 kubectl logs -f deployment/rsolv --namespace=staging | grep webhook

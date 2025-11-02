@@ -178,7 +178,7 @@ Based on WEEK-3-EXECUTION-PLAN.md and current VK ticket status:
 1. **Verify Staging Environment**
    ```bash
    # Test staging responds
-   curl -I https://staging.rsolv.dev/api/health
+   curl -I https://rsolv-staging.com/api/health
 
    # Check Stripe keys configured
    kubectl get secrets -n rsolv-staging -o jsonpath='{.items[*].metadata.name}' | grep stripe

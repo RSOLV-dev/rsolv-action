@@ -184,7 +184,7 @@ lib/rsolv_web/
 ## Deployment Plan
 
 ### Staging Deployment (Thursday EOD)
-1. Deploy to staging.rsolv.dev
+1. Deploy to rsolv-staging.com
 2. Smoke test all pages
 3. Verify signup flow end-to-end
 4. Check analytics tracking

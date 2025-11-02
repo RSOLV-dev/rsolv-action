@@ -188,7 +188,7 @@ CREATE INDEX idx_billing_events_event_type ON billing_events(event_type);
 
 ```bash
 # 1. Forward webhooks to local/staging environment
-stripe listen --forward-to https://staging.rsolv.dev/api/webhooks/stripe
+stripe listen --forward-to https://rsolv-staging.com/api/webhooks/stripe
 
 # 2. Trigger specific events
 stripe trigger invoice.payment_succeeded

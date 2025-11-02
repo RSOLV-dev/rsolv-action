@@ -566,7 +566,7 @@ end
 - **Thursday-Friday**: Integration testing & polish
 
 ### Deployment Strategy
-- **Staging First**: Full E2E testing on staging.rsolv.dev
+- **Staging First**: Full E2E testing on rsolv-staging.com
 - **Smoke Tests**: Verify signup flow with test accounts
 - **Production Rollout**: Deploy with feature flag (optional)
 - **Monitoring**: Watch error rates, conversion metrics

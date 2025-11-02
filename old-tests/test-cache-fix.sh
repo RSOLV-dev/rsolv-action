@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Test script to validate cache controller fix for string forge IDs
 API_KEY="${RSOLV_API_KEY:-rsolv_xud6j-kCuMwsQ371QNBkQvTi5gmfZQ98FPXbmNmhMio}"
-API_BASE="${API_BASE:-https://staging.rsolv.dev}"
+API_BASE="${API_BASE:-https://rsolv-staging.com}"
 
 echo "Testing validation endpoint with cache controller fix..."
 echo "API Base: $API_BASE"

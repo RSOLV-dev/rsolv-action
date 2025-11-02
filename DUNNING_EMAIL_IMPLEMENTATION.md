@@ -112,7 +112,7 @@ Since staging/production run as releases without IEx, use remote shell:
 kubectl exec -it deployment/rsolv-staging -n rsolv -- bin/rsolv remote
 
 # Or using SSH (if configured)
-ssh deploy@staging.rsolv.dev
+ssh deploy@rsolv-staging.com
 /opt/rsolv/bin/rsolv remote
 ```
 

@@ -169,7 +169,7 @@ Create staging environment checklist:
 
 ```bash
 # 1. Trial Signup
-curl -X POST https://staging.rsolv.dev/api/customers \
+curl -X POST https://rsolv-staging.com/api/customers \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","name":"Test User"}'
 
