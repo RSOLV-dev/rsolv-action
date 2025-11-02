@@ -45,7 +45,22 @@ IO.puts("Analyzing #{length(modules)} modules...")
             {_line, _n}, {c, t} -> {c + 1, t + 1}  # Covered
           end)
         {cov_acc + cov, tot_acc + tot}
+
+      # Handle imported modules that aren't recompiled with cover
+      {:result, lines, _warnings} when is_list(lines) ->
+        {cov, tot} =
+          Enum.reduce(lines, {0, 0}, fn
+            {{_mod, _line}, 0}, {c, t} -> {c, t + 1}  # Not covered
+            {{_mod, _line}, _n}, {c, t} -> {c + 1, t + 1}  # Covered
+          end)
+        {cov_acc + cov, tot_acc + tot}
+
       {:error, _reason} ->
+        {cov_acc, tot_acc}
+
+      # Catch any other format
+      other ->
+        IO.puts("   ⚠️  Unexpected format for module #{mod}: #{inspect(other)}")
         {cov_acc, tot_acc}
     end
   end)
