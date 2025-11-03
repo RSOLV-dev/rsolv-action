@@ -49,19 +49,19 @@ defmodule RsolvWeb.EmailsHTMLTest do
     test "welcome/1 returns safe HTML" do
       result = EmailsHTML.welcome(%{})
 
-      assert {:safe, _} = result
+      assert %Phoenix.LiveView.Rendered{} = result
     end
 
     test "payment_failed/1 returns safe HTML" do
       result = EmailsHTML.payment_failed(%{})
 
-      assert {:safe, _} = result
+      assert %Phoenix.LiveView.Rendered{} = result
     end
 
     test "early_access_guide/1 returns safe HTML" do
       result = EmailsHTML.early_access_guide(%{})
 
-      assert {:safe, _} = result
+      assert %Phoenix.LiveView.Rendered{} = result
     end
 
     test "all template functions are defined" do
@@ -84,13 +84,15 @@ defmodule RsolvWeb.EmailsHTMLTest do
                "Template function #{template}/1 not defined"
 
         result = apply(EmailsHTML, template, [%{}])
-        assert {:safe, _} = result, "Template #{template} didn't return safe HTML"
+
+        assert %Phoenix.LiveView.Rendered{} = result,
+               "Template #{template} didn't return Phoenix.LiveView.Rendered struct"
       end
     end
 
     test "template functions load actual file content" do
-      {:safe, iodata} = EmailsHTML.welcome(%{})
-      content = IO.iodata_to_binary(iodata)
+      # Use render function which applies defaults before calling template
+      content = EmailsHTML.render_welcome(%{})
 
       # Should contain actual HTML, not empty
       assert String.length(content) > 0
