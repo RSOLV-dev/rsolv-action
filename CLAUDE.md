@@ -164,6 +164,22 @@ See [DEV_SETUP.md](DEV_SETUP.md) for comprehensive troubleshooting.
 
 ## Development Best Practices
 
+### Git Worktree Workflow
+
+**IMPORTANT**: This project frequently uses git worktrees, especially when working with Vibe Kanban task management.
+
+**Critical Setup Step for Worktrees:**
+```bash
+# ALWAYS run this when entering a new worktree
+mix deps.get
+```
+
+**Why This Matters:**
+- Worktrees share the git repository but have independent working directories
+- Dependencies in `_build/` and `deps/` are **NOT shared** between worktrees
+- Tests will fail with confusing "dependencies not available" errors if you skip this step
+- Vibe Kanban creates worktrees automatically for task isolation
+
 ### Migration Safety
 
 **IMPORTANT**: Run migration safety checks before committing migrations to catch dangerous operations early.
