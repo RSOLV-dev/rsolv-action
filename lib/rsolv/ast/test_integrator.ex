@@ -237,7 +237,6 @@ defmodule Rsolv.AST.TestIntegrator do
     {:error, {:unsupported_framework, framework}}
   end
 
-
   @doc """
   Inserts test suite into the target file at the specified insertion point.
 
