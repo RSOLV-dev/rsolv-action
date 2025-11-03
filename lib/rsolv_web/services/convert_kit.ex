@@ -54,7 +54,7 @@ defmodule RsolvWeb.Services.ConvertKit do
 
     # Now we're only focusing on adding the subscriber, not tagging
     body =
-      Jason.encode!(%{
+      JSON.encode!(%{
         api_key: api_key,
         email: email,
         first_name: "RSOLV Subscriber",
@@ -96,7 +96,7 @@ defmodule RsolvWeb.Services.ConvertKit do
 
     # Simple request focused on just adding the subscriber
     body =
-      Jason.encode!(%{
+      JSON.encode!(%{
         api_key: api_key,
         email: email,
         first_name: "RSOLV Subscriber",
@@ -158,7 +158,7 @@ defmodule RsolvWeb.Services.ConvertKit do
 
         # Try to extract subscription ID for analytics
         subscription_id =
-          case Jason.decode(response.body) do
+          case JSON.decode(response.body) do
             {:ok, decoded} ->
               get_in(decoded, ["subscription", "id"])
 
@@ -236,7 +236,7 @@ defmodule RsolvWeb.Services.ConvertKit do
       ]
 
       body =
-        Jason.encode!(%{
+        JSON.encode!(%{
           api_key: api_key,
           email: email
         })
@@ -335,7 +335,7 @@ defmodule RsolvWeb.Services.ConvertKit do
       {:ok, %HTTPoison.Response{status_code: status_code, body: body}}
       when status_code in 200..299 ->
         # Try to extract subscriber ID from response
-        case Jason.decode(body) do
+        case JSON.decode(body) do
           {:ok, decoded} ->
             # Extract the first subscriber from the list (should be only one)
             subscribers = get_in(decoded, ["subscribers"])
@@ -383,7 +383,7 @@ defmodule RsolvWeb.Services.ConvertKit do
     ]
 
     body =
-      Jason.encode!(%{
+      JSON.encode!(%{
         api_key: api_key
       })
 

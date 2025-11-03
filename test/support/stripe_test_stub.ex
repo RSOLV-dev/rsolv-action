@@ -26,8 +26,8 @@ defmodule Rsolv.Billing.StripeTestStub do
   """
 
   @behaviour Rsolv.Billing.StripeClientBehaviour
-  # Note: StripeClientBehaviour already includes all charge operations via create_charge/1
-  # No need for separate StripeChargeBehaviour to avoid callback conflicts
+  # Note: We don't implement StripeChargeBehaviour to avoid "conflicting behaviours" warning.
+  # Instead, tests manually stub StripeChargeMock.create/1 to call create_charge/1.
 
   # Implement actual Stripe.Customer API interface
   # This handles both Stripe.Customer.create and Stripe.Subscription.create

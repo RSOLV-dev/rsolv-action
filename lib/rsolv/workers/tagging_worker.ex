@@ -70,7 +70,7 @@ defmodule Rsolv.Workers.TaggingWorker do
     ]
 
     body =
-      Jason.encode!(%{
+      JSON.encode!(%{
         api_key: api_key,
         email: email
       })
@@ -87,7 +87,7 @@ defmodule Rsolv.Workers.TaggingWorker do
       when status_code in 200..299 ->
         # Extract subscription ID from response
         subscription_id =
-          case Jason.decode(response_body) do
+          case JSON.decode(response_body) do
             {:ok, decoded} ->
               get_in(decoded, ["subscription", "id"]) || "unknown"
 

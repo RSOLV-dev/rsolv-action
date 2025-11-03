@@ -27,7 +27,7 @@ defmodule RsolvWeb.TrackController do
   defp parse_event_data(data) when is_map(data), do: data
 
   defp parse_event_data(data) when is_binary(data) do
-    case Jason.decode(data) do
+    case JSON.decode(data) do
       {:ok, parsed} -> parsed
       {:error, _} -> %{"raw_data" => data}
     end

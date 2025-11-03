@@ -35,7 +35,7 @@ defmodule Mix.Tasks.Rsolv.OpenapiTest do
       assert File.exists?("priv/static/openapi.json")
 
       # Verify it's valid JSON
-      {:ok, spec} = File.read!("priv/static/openapi.json") |> Jason.decode()
+      {:ok, spec} = File.read!("priv/static/openapi.json") |> JSON.decode()
 
       assert spec["info"]["title"] == "RSOLV API"
       assert spec["info"]["version"] == "1.0.0"
@@ -55,7 +55,7 @@ defmodule Mix.Tasks.Rsolv.OpenapiTest do
       assert File.exists?(@test_output_file)
 
       # Verify it's valid JSON
-      {:ok, spec} = File.read!(@test_output_file) |> Jason.decode()
+      {:ok, spec} = File.read!(@test_output_file) |> JSON.decode()
 
       assert spec["info"]["title"] == "RSOLV API"
     end
@@ -78,7 +78,7 @@ defmodule Mix.Tasks.Rsolv.OpenapiTest do
         Mix.Tasks.Rsolv.Openapi.run([@test_output_file])
       end)
 
-      {:ok, spec} = File.read!(@test_output_file) |> Jason.decode()
+      {:ok, spec} = File.read!(@test_output_file) |> JSON.decode()
 
       # Should have at least one server configured
       assert is_list(spec["servers"])
@@ -95,7 +95,7 @@ defmodule Mix.Tasks.Rsolv.OpenapiTest do
         Mix.Tasks.Rsolv.Openapi.run([@test_output_file])
       end)
 
-      {:ok, spec} = File.read!(@test_output_file) |> Jason.decode()
+      {:ok, spec} = File.read!(@test_output_file) |> JSON.decode()
 
       assert spec["components"]["securitySchemes"]
       assert spec["components"]["securitySchemes"]["ApiKeyAuth"]
@@ -106,7 +106,7 @@ defmodule Mix.Tasks.Rsolv.OpenapiTest do
         Mix.Tasks.Rsolv.Openapi.run([@test_output_file])
       end)
 
-      {:ok, spec} = File.read!(@test_output_file) |> Jason.decode()
+      {:ok, spec} = File.read!(@test_output_file) |> JSON.decode()
 
       # Should have paths defined
       assert is_map(spec["paths"])

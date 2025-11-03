@@ -118,7 +118,7 @@ defmodule RsolvWeb.ConvertKitIntegrationTest do
         cond do
           String.contains?(url, "/subscribers") ->
             # Parse the request body to extract fields
-            case Jason.decode(body) do
+            case JSON.decode(body) do
               {:ok, decoded} ->
                 fields = decoded["fields"]
 

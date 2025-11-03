@@ -253,7 +253,7 @@ defmodule Rsolv.BillingInfrastructureTest do
       {payload, signature} = create_signed_webhook("customer.subscription.created")
 
       assert is_binary(payload)
-      {:ok, decoded} = Jason.decode(payload)
+      {:ok, decoded} = JSON.decode(payload)
       assert decoded["type"] == "customer.subscription.created"
 
       assert signature =~ ~r/^t=\d+,v1=/

@@ -522,7 +522,7 @@ defmodule RsolvWeb.EarlyAccessLive do
       ]
 
       body =
-        Jason.encode!(%{
+        JSON.encode!(%{
           email: email,
           source: "rsolv_landing_page",
           custom_fields: %{

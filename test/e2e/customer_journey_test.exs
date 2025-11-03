@@ -57,7 +57,12 @@ defmodule Rsolv.E2E.CustomerJourneyTest do
   setup do
     # Setup Stripe mocks for all Stripe API operations
     Mox.stub_with(Rsolv.Billing.StripeMock, Rsolv.Billing.StripeTestStub)
-    Mox.stub_with(Rsolv.Billing.StripeChargeMock, Rsolv.Billing.StripeTestStub)
+
+    # Manual stub for StripeChargeMock (delegate to StripeTestStub.create_charge/1)
+    # Can't use stub_with because both behaviours define create/1, causing compiler warning
+    Mox.stub(Rsolv.Billing.StripeChargeMock, :create, fn params ->
+      Rsolv.Billing.StripeTestStub.create_charge(params)
+    end)
 
     :ok
   end

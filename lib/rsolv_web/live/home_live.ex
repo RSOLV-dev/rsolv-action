@@ -113,7 +113,7 @@ defmodule RsolvWeb.HomeLive do
             socket =
               socket
               |> put_flash(:success, "Thank you for signing up!")
-              |> put_flash(:celebration_data, Jason.encode!(event_data))
+              |> put_flash(:celebration_data, JSON.encode!(event_data))
               |> push_navigate(to: "/thank-you")
 
             {:noreply, socket}

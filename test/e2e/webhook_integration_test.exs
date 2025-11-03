@@ -167,7 +167,7 @@ defmodule RsolvWeb.WebhookIntegrationTest do
   end
 
   defp send_webhook(conn, payload) do
-    raw_body = Jason.encode!(payload)
+    raw_body = JSON.encode!(payload)
     signature = compute_signature(raw_body)
 
     # Send raw JSON string instead of map to avoid Phoenix body parsing issues

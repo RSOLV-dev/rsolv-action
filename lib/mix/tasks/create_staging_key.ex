@@ -69,7 +69,7 @@ defmodule Mix.Tasks.CreateStagingKey do
           "github",
           "RSOLV-dev",
           DateTime.utc_now(),
-          Jason.encode!(metadata),
+          JSON.encode!(metadata),
           DateTime.utc_now(),
           DateTime.utc_now()
         ]
@@ -87,7 +87,7 @@ defmodule Mix.Tasks.CreateStagingKey do
           "github",
           "test-org",
           DateTime.utc_now(),
-          Jason.encode!(metadata),
+          JSON.encode!(metadata),
           DateTime.utc_now(),
           DateTime.utc_now()
         ]

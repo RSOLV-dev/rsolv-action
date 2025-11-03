@@ -137,7 +137,7 @@ defmodule Rsolv.Security.PCIComplianceTest do
       }
 
       # Verify response only has last4, not full number
-      response_json = Jason.encode!(response)
+      response_json = JSON.encode!(response)
 
       refute String.contains?(response_json, @test_card_number)
       assert String.contains?(response_json, "last4")

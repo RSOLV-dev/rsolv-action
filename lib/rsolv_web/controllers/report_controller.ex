@@ -37,8 +37,8 @@ defmodule RsolvWeb.ReportController do
     content =
       case format do
         "csv" -> generate_csv(data)
-        "json" -> Jason.encode!(data)
-        _ -> Jason.encode!(data)
+        "json" -> JSON.encode!(data)
+        _ -> JSON.encode!(data)
       end
 
     # Set content type based on format
