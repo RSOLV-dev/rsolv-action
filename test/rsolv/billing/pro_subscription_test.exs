@@ -41,7 +41,7 @@ defmodule Rsolv.Billing.ProSubscriptionTest do
       billing_consent = true
 
       # Mock Stripe payment method attachment
-      expect(Rsolv.Billing.StripeMock, :attach, fn params ->
+      expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn params ->
         assert params.payment_method == payment_method_id
         assert params.customer == customer.stripe_customer_id
         {:ok, %{id: payment_method_id, customer: customer.stripe_customer_id}}
