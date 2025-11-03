@@ -6,6 +6,7 @@ defmodule Rsolv.AST.TestIntegratorHelpers do
   to reduce duplication across test files.
   """
 
+  import ExUnit.Assertions
   alias Rsolv.AST.TestIntegrator
 
   # ============================================================================
@@ -20,9 +21,7 @@ defmodule Rsolv.AST.TestIntegratorHelpers do
       iex> build_test_suite([red_test("validates input", "expect(true).toBe(true)", "test")])
       %{"redTests" => [%{"testName" => "validates input", ...}]}
   """
-  def build_test_suite(red_tests) when is_list(red_tests) do
-    %{"redTests" => red_tests}
-  end
+  def build_test_suite(red_tests) when is_list(red_tests), do: %{"redTests" => red_tests}
 
   @doc "Builds an empty test suite"
   def empty_test_suite, do: %{"redTests" => []}
@@ -36,123 +35,96 @@ defmodule Rsolv.AST.TestIntegratorHelpers do
       %{"testName" => "validates input", "testCode" => "expect(true).toBe(true)", "attackVector" => "test"}
   """
   def red_test(name, code, attack_vector) do
-    %{
-      "testName" => name,
-      "testCode" => code,
-      "attackVector" => attack_vector
+    %{"testName" => name, "testCode" => code, "attackVector" => attack_vector}
+  end
+
+  # ============================================================================
+  # Common Vulnerability Tests (Generated via Metaprogramming)
+  # ============================================================================
+
+  @vulnerability_tests %{
+    sql_injection: %{
+      attack_vector: "' OR '1'='1",
+      test_name: "prevents SQL injection",
+      code: %{
+        javascript: ~s|const result = query("' OR '1'='1");\nexpect(result).toBeNull();|,
+        ruby: ~s|result = query("' OR '1'='1")\nexpect(result).to be_nil|,
+        python: ~s|result = query("' OR '1'='1")\nassert result is None|
+      }
+    },
+    path_traversal: %{
+      attack_vector: "../../../etc/passwd",
+      test_name: "prevents path traversal",
+      code: %{
+        javascript: ~s|const result = readFile('../../../etc/passwd');\nexpect(result).toBeNull();|,
+        ruby: ~s|result = read_file('../../../etc/passwd')\nexpect(result).to be_nil|,
+        python: ~s|result = read_file('../../../etc/passwd')\nassert result is None|
+      }
+    },
+    xss: %{
+      attack_vector: ~s|<script>alert("XSS")</script>|,
+      test_name: "prevents XSS attack",
+      code: %{
+        javascript: ~s|const result = render('<script>alert("XSS")</script>');\nexpect(result).not.toContain('<script>');|,
+        ruby: ~s|result = render('<script>alert("XSS")</script>')\nexpect(result).not_to include('<script>')|,
+        python: ~s|result = render('<script>alert("XSS")</script>')\nassert '<script>' not in result|
+      }
     }
-  end
+  }
 
-  # ============================================================================
-  # Common Test Examples
-  # ============================================================================
+  # Generate functions for each vulnerability type and language
+  for {vuln_type, config} <- @vulnerability_tests,
+      {lang, code} <- config.code do
+    function_name = :"#{vuln_type}_#{lang}"
 
-  @doc "SQL injection test for JavaScript"
-  def sql_injection_js do
-    red_test(
-      "prevents SQL injection",
-      "const result = query(\"' OR '1'='1\");\nexpect(result).toBeNull();",
-      "' OR '1'='1"
-    )
-  end
+    @doc """
+    #{String.capitalize(to_string(vuln_type))} test for #{String.capitalize(to_string(lang))}.
 
-  @doc "SQL injection test for Ruby"
-  def sql_injection_ruby do
-    red_test(
-      "prevents SQL injection",
-      "result = query(\"' OR '1'='1\")\nexpect(result).to be_nil",
-      "' OR '1'='1"
-    )
-  end
-
-  @doc "SQL injection test for Python"
-  def sql_injection_python do
-    red_test(
-      "prevents SQL injection",
-      "result = query(\"' OR '1'='1\")\nassert result is None",
-      "' OR '1'='1"
-    )
-  end
-
-  @doc "Path traversal test for JavaScript"
-  def path_traversal_js do
-    red_test(
-      "prevents path traversal",
-      "const result = readFile('../../../etc/passwd');\nexpect(result).toBeNull();",
-      "../../../etc/passwd"
-    )
-  end
-
-  @doc "Path traversal test for Ruby"
-  def path_traversal_ruby do
-    red_test(
-      "prevents path traversal",
-      "result = read_file('../../../etc/passwd')\nexpect(result).to be_nil",
-      "../../../etc/passwd"
-    )
-  end
-
-  @doc "Path traversal test for Python"
-  def path_traversal_python do
-    red_test(
-      "prevents path traversal",
-      "result = read_file('../../../etc/passwd')\nassert result is None",
-      "../../../etc/passwd"
-    )
-  end
-
-  @doc "XSS test for JavaScript"
-  def xss_js do
-    red_test(
-      "prevents XSS attack",
-      "const result = render('<script>alert(\"XSS\")</script>');\nexpect(result).not.toContain('<script>');",
-      "<script>alert(\"XSS\")</script>"
-    )
-  end
-
-  @doc "XSS test for Ruby"
-  def xss_ruby do
-    red_test(
-      "prevents XSS attack",
-      "result = render('<script>alert(\"XSS\")</script>')\nexpect(result).not_to include('<script>')",
-      "<script>alert(\"XSS\")</script>"
-    )
-  end
-
-  @doc "XSS test for Python"
-  def xss_python do
-    red_test(
-      "prevents XSS attack",
-      "result = render('<script>alert(\"XSS\")</script>')\nassert '<script>' not in result",
-      "<script>alert(\"XSS\")</script>"
-    )
+    Returns a red test with attack vector: #{config.attack_vector}
+    """
+    def unquote(function_name)() do
+      red_test(
+        unquote(config.test_name),
+        unquote(code),
+        unquote(config.attack_vector)
+      )
+    end
   end
 
   # ============================================================================
   # Malformed Code Examples
   # ============================================================================
 
-  @doc "Unclosed JavaScript describe block"
-  def malformed_js do
-    """
-    describe('Test', () => { // unclosed describe block
-    """
+  @malformed_code %{
+    javascript: "describe('Test', () => { // unclosed describe block\n",
+    ruby: "RSpec.describe 'Test' do # unclosed block\n",
+    python: "class TestFoo:  # unclosed class\n    def test_bar(self\n"
+  }
+
+  for {lang, code} <- @malformed_code do
+    function_name = :"malformed_#{lang}"
+
+    @doc "Unclosed #{String.capitalize(to_string(lang))} code for testing parser error handling"
+    def unquote(function_name)(), do: unquote(code)
   end
 
-  @doc "Unclosed Ruby RSpec block"
-  def malformed_ruby do
-    """
-    RSpec.describe 'Test' do # unclosed block
-    """
-  end
+  # Convenience aliases for common abbreviations
+  def malformed_js, do: malformed_javascript()
+  def malformed_rb, do: malformed_ruby()
+  def malformed_py, do: malformed_python()
 
-  @doc "Unclosed Python class"
-  def malformed_python do
-    """
-    class TestFoo:  # unclosed class
-        def test_bar(self
-    """
-  end
+  # Language aliases for vulnerability tests
+  def sql_injection_js, do: sql_injection_javascript()
+  def path_traversal_js, do: path_traversal_javascript()
+  def xss_js, do: xss_javascript()
+
+  def sql_injection_rb, do: sql_injection_ruby()
+  def path_traversal_rb, do: path_traversal_ruby()
+  def xss_rb, do: xss_ruby()
+
+  def sql_injection_py, do: sql_injection_python()
+  def path_traversal_py, do: path_traversal_python()
+  def xss_py, do: xss_python()
 
   # ============================================================================
   # Assertion Helpers
@@ -165,26 +137,19 @@ defmodule Rsolv.AST.TestIntegratorHelpers do
   - Method is "ast"
   - Insertion point exists with expected strategy
   - All expected strings are in the integrated code
+
+  Returns the integrated code for further assertions.
   """
-  def assert_ast_integration(
-        result,
-        expected_strategy,
-        expected_strings \\ []
-      ) do
-    import ExUnit.Assertions
+  def assert_ast_integration(result, expected_strategy, expected_strings \\ []) do
+    with {:ok, integrated_code, insertion_point, method} <- result do
+      assert method == "ast", "Expected AST integration method"
+      assert insertion_point != nil, "Expected insertion point"
+      assert insertion_point.strategy == expected_strategy
 
-    {:ok, integrated_code, insertion_point, method} = result
+      assert_contains_all(integrated_code, expected_strings)
 
-    assert method == "ast", "Expected AST integration method"
-    assert insertion_point != nil, "Expected insertion point"
-    assert insertion_point.strategy == expected_strategy
-
-    for string <- expected_strings do
-      assert String.contains?(integrated_code, string),
-             "Expected integrated code to contain: #{string}"
+      {:ok, integrated_code}
     end
-
-    {:ok, integrated_code}
   end
 
   @doc """
@@ -194,56 +159,65 @@ defmodule Rsolv.AST.TestIntegratorHelpers do
   - Method is "append"
   - Insertion point is nil
   - Expected strings are in the integrated code
+
+  Returns the integrated code for further assertions.
   """
   def assert_fallback_append(result, expected_strings \\ []) do
-    import ExUnit.Assertions
+    with {:ok, integrated_code, insertion_point, method} <- result do
+      assert method == "append", "Expected append fallback method"
+      assert insertion_point == nil, "Expected nil insertion point for append"
 
-    {:ok, integrated_code, insertion_point, method} = result
+      assert_contains_all(integrated_code, expected_strings)
 
-    assert method == "append", "Expected append fallback method"
-    assert insertion_point == nil, "Expected nil insertion point for append"
-
-    for string <- expected_strings do
-      assert String.contains?(integrated_code, string),
-             "Expected integrated code to contain: #{string}"
+      {:ok, integrated_code}
     end
-
-    {:ok, integrated_code}
   end
 
   @doc """
   Asserts code contains all given strings.
+
+  Returns the code for chaining.
   """
   def assert_contains_all(code, strings) when is_list(strings) do
-    import ExUnit.Assertions
-
-    for string <- strings do
-      assert String.contains?(code, string),
-             "Expected code to contain: #{string}"
-    end
+    Enum.each(strings, fn string ->
+      assert String.contains?(code, string), "Expected code to contain: #{string}"
+    end)
 
     code
   end
 
   @doc """
   Runs integration and asserts AST method with specific assertions.
+
+  ## Options
+
+    * `:strategy` - Expected insertion strategy (default: "after_last_it_block")
+    * `:contains` - List of strings that must be in the integrated code (default: [])
+
+  ## Examples
+
+      integrate_and_assert_ast(content, suite, "javascript", "vitest",
+        strategy: "after_last_it_block",
+        contains: ["test security", "creates user"]
+      )
   """
-  def integrate_and_assert_ast(
-        target_content,
-        test_suite,
-        language,
-        framework,
-        opts \\ []
-      ) do
+  def integrate_and_assert_ast(target_content, test_suite, language, framework, opts \\ []) do
     strategy = Keyword.get(opts, :strategy, "after_last_it_block")
     contains = Keyword.get(opts, :contains, [])
 
-    result = TestIntegrator.generate_integration(target_content, test_suite, language, framework)
-    assert_ast_integration(result, strategy, contains)
+    target_content
+    |> TestIntegrator.generate_integration(test_suite, language, framework)
+    |> assert_ast_integration(strategy, contains)
   end
 
   @doc """
   Runs integration and asserts fallback to append.
+
+  ## Examples
+
+      integrate_and_assert_fallback(content, suite, "javascript", "vitest", [
+        "test security"
+      ])
   """
   def integrate_and_assert_fallback(
         target_content,
@@ -252,7 +226,8 @@ defmodule Rsolv.AST.TestIntegratorHelpers do
         framework,
         expected_strings \\ []
       ) do
-    result = TestIntegrator.generate_integration(target_content, test_suite, language, framework)
-    assert_fallback_append(result, expected_strings)
+    target_content
+    |> TestIntegrator.generate_integration(test_suite, language, framework)
+    |> assert_fallback_append(expected_strings)
   end
 end
