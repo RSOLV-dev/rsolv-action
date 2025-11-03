@@ -225,4 +225,111 @@ defmodule Rsolv.StripeTestHelpers do
     # Placeholder for payment verification
     :ok
   end
+
+  # Mox Helpers for Stripe API Mocking
+
+  import Mox
+  import ExUnit.Assertions
+
+  @doc """
+  Sets up a mock for attaching a payment method to a customer.
+
+  This helper mocks both the payment method attachment and the customer update
+  to set the default payment method.
+
+  ## Options
+  - `:times` - Number of times the mock should be called (default: 1)
+
+  ## Examples
+
+      # Mock single payment method attachment
+      mock_payment_method_attach("pm_test_visa", "cus_test_123")
+
+      # Mock multiple concurrent attachments
+      mock_payment_method_attach("pm_test_visa", "cus_test_123", times: 2)
+  """
+  def mock_payment_method_attach(_payment_method_id, _customer_id, opts \\ []) do
+    times = Keyword.get(opts, :times, 1)
+
+    expect(Rsolv.Billing.StripePaymentMethodMock, :attach, times, fn params ->
+      {:ok, %{id: params.payment_method, customer: params.customer}}
+    end)
+
+    expect(Rsolv.Billing.StripeMock, :update, times, fn id, _params ->
+      {:ok, %{id: id}}
+    end)
+  end
+
+  @doc """
+  Sets up a mock for creating a Stripe customer.
+
+  Returns a mock Stripe customer with the provided ID and email.
+
+  ## Examples
+
+      mock_stripe_customer_create("cus_test_123", "test@example.com")
+  """
+  def mock_stripe_customer_create(stripe_customer_id, email) do
+    expect(Rsolv.Billing.StripeMock, :create, fn _params ->
+      {:ok, %{id: stripe_customer_id, email: email}}
+    end)
+  end
+
+  @doc """
+  Sets up a mock for creating a Stripe subscription.
+
+  Returns a mock active subscription with proper structure including period dates.
+
+  ## Options
+  - `:subscription_id` - Custom subscription ID (default: generated)
+  - `:price_id` - Price ID to verify (optional)
+  - `:status` - Subscription status (default: "active")
+
+  ## Examples
+
+      # Basic subscription mock
+      mock_stripe_subscription_create("cus_test_123")
+
+      # Verify specific price and custom ID
+      mock_stripe_subscription_create(
+        "cus_test_123",
+        subscription_id: "sub_custom",
+        price_id: "price_pro_monthly"
+      )
+  """
+  def mock_stripe_subscription_create(customer_id, opts \\ []) do
+    subscription_id =
+      Keyword.get(opts, :subscription_id, "sub_test_#{System.unique_integer([:positive])}")
+
+    price_id = Keyword.get(opts, :price_id)
+    status = Keyword.get(opts, :status, "active")
+
+    expect(Rsolv.Billing.StripeSubscriptionMock, :create, fn params ->
+      # Optionally verify price_id if provided
+      if price_id do
+        assert params.items == [%{price: price_id}]
+      end
+
+      {:ok,
+       %{
+         id: subscription_id,
+         status: status,
+         customer: customer_id,
+         current_period_start: DateTime.utc_now() |> DateTime.to_unix(),
+         current_period_end: DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.to_unix(),
+         items: %{
+           data: [
+             %{
+               price: %{
+                 id: price_id || "price_test_default",
+                 metadata: %{plan: "pro"}
+               }
+             }
+           ]
+         }
+       }}
+    end)
+
+    subscription_id
+  end
 end

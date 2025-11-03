@@ -4,6 +4,7 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
   """
   use Rsolv.DataCase, async: false
   import Mox
+  import Rsolv.StripeTestHelpers
 
   alias Rsolv.{Billing, Repo}
   alias Rsolv.Billing.CreditLedger
@@ -15,16 +16,6 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
     customer
     |> CreditLedger.list_transactions()
     |> Enum.count(&(&1.source == "trial_billing_added"))
-  end
-
-  defp mock_stripe_attach(times \\ 1) do
-    expect(Rsolv.Billing.StripePaymentMethodMock, :attach, times, fn params ->
-      {:ok, %{id: params.payment_method, customer: params.customer}}
-    end)
-
-    expect(Rsolv.Billing.StripeMock, :update, times, fn id, _ ->
-      {:ok, %{id: id}}
-    end)
   end
 
   describe "concurrent payment method additions" do
@@ -41,11 +32,10 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
     end
 
     test "concurrent requests only credit bonus once", %{customer: customer} do
-      mock_stripe_attach(2)
+      mock_payment_method_attach("pm_test_card", customer.stripe_customer_id, times: 2)
       initial_balance = customer.credit_balance
 
-      # Run two concurrent requests
-      [result1, result2] =
+      results =
         Task.async_stream(
           [1, 2],
           fn _ -> Billing.add_payment_method(customer, "pm_test_card", true) end,
@@ -53,17 +43,16 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
         )
         |> Enum.to_list()
 
-      assert {:ok, {:ok, _}} = result1
-      assert {:ok, {:ok, _}} = result2
+      assert Enum.all?(results, &match?({:ok, {:ok, _}}, &1))
 
-      # Verify: only +5 credits and one bonus transaction
       final = Repo.get!(Customer, customer.id)
       assert final.credit_balance == initial_balance + 5
       assert bonus_count(final) == 1
     end
 
     test "second request sees has_payment_method and skips bonus", %{customer: customer} do
-      mock_stripe_attach(2)
+      mock_payment_method_attach("pm_1", customer.stripe_customer_id)
+      mock_payment_method_attach("pm_2", customer.stripe_customer_id)
       initial = customer.credit_balance
 
       # First request gets bonus
@@ -78,10 +67,9 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
     end
 
     test "triple concurrent requests (double-click simulation)", %{customer: customer} do
-      mock_stripe_attach(3)
+      mock_payment_method_attach("pm_test", customer.stripe_customer_id, times: 3)
       initial = customer.credit_balance
 
-      # Simulate 3 rapid clicks
       results =
         Task.async_stream(
           [1, 2, 3],
@@ -100,17 +88,11 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
 
   describe "trial customer without Stripe customer" do
     test "concurrent requests with Stripe creation only credit once" do
-      customer =
-        insert(:customer, stripe_customer_id: nil, credit_balance: 5, has_payment_method: false)
+      customer = insert(:customer, stripe_customer_id: nil, credit_balance: 5)
 
-      new_id = "cus_newly_created"
-      initial = customer.credit_balance
-
-      expect(Rsolv.Billing.StripeMock, :create, 2, fn _ ->
-        {:ok, %{id: new_id, email: customer.email}}
-      end)
-
-      mock_stripe_attach(2)
+      # Only one Stripe customer will be created due to SELECT FOR UPDATE lock
+      mock_stripe_customer_create("cus_newly_created", customer.email)
+      mock_payment_method_attach("pm_test", "cus_newly_created", times: 2)
 
       results =
         Task.async_stream(
@@ -123,25 +105,32 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
       assert Enum.all?(results, &match?({:ok, {:ok, _}}, &1))
 
       final = Repo.get!(Customer, customer.id)
-      assert final.stripe_customer_id == new_id
-      assert final.credit_balance == initial + 5
+      assert final.stripe_customer_id == "cus_newly_created"
+      assert final.credit_balance == 10
       assert bonus_count(final) == 1
     end
   end
 
   describe "error handling" do
     test "lock released on Stripe error" do
-      customer = insert(:customer, credit_balance: 10, has_payment_method: false)
+      customer = insert(:customer, credit_balance: 10)
 
-      # First attempt fails
+      # First attempt: customer creation succeeds, payment method attachment fails
+      # Transaction rolls back, so we need to create customer again on retry
+      mock_stripe_customer_create("cus_error_test_1", customer.email)
+
+      import Mox
+
       expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn _ ->
         {:error, %{message: "card_declined"}}
       end)
 
       assert {:error, _} = Billing.add_payment_method(customer, "pm_bad", true)
 
-      # Second attempt succeeds (proves lock was released)
-      mock_stripe_attach()
+      # Second attempt: customer created again (first rolled back), now succeeds
+      mock_stripe_customer_create("cus_error_test_2", customer.email)
+      mock_payment_method_attach("pm_good", "cus_error_test_2")
+
       assert {:ok, updated} = Billing.add_payment_method(customer, "pm_good", true)
       assert updated.has_payment_method
       assert updated.credit_balance == 15
