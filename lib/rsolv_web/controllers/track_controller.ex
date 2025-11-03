@@ -50,6 +50,7 @@ defmodule RsolvWeb.TrackController do
 
     # Log the tracking event
     user_agent = Map.get(tracking_data, "user_agent", "unknown")
+
     Logger.info("Tracking event received: #{event_type} from #{user_agent}",
       metadata: %{
         tracking_data: inspect(tracking_data)
