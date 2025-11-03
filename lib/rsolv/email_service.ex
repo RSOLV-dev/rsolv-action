@@ -190,6 +190,7 @@ defmodule Rsolv.EmailService do
   # This is used for emails sent TO admins (not FROM users), which should not be affected by user unsubscribes
   defp send_email_without_unsubscribe_check(email) do
     timestamp = utc_timestamp()
+
     Logger.info("[EMAIL DEBUG] Full email struct before sending (no unsubscribe check)",
       email_struct: inspect(email),
       timestamp: timestamp
