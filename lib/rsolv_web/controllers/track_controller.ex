@@ -8,111 +8,93 @@ defmodule RsolvWeb.TrackController do
   Using a standard REST controller (non-LiveView) for maximum compatibility
   """
   def track(conn, params) do
-    # Extract tracking data from request
     event_type = params["type"] || "unknown"
-    event_data = params["data"] || %{}
+    event_data = parse_event_data(params["data"])
+    request_metadata = extract_request_metadata(conn)
+    tracking_data = Map.merge(request_metadata, event_data)
 
-    # Attempt to parse JSON string data if needed
-    event_data =
-      case event_data do
-        data when is_binary(data) ->
-          case Jason.decode(data) do
-            {:ok, parsed} -> parsed
-            _ -> %{"raw_data" => data}
-          end
+    log_tracking_event(event_type, tracking_data)
+    dispatch_tracking_event(event_type, tracking_data)
 
-        data when is_map(data) ->
-          data
+    conn
+    |> put_status(:created)
+    |> json(%{success: true})
+  end
 
-        _ ->
-          %{}
-      end
+  # Private Helpers
 
-    # Get IP address (will be anonymized)
-    ip_address = to_string(:inet_parse.ntoa(conn.remote_ip))
+  defp parse_event_data(nil), do: %{}
+  defp parse_event_data(data) when is_map(data), do: data
 
-    # Add request metadata
-    tracking_data =
-      Map.merge(
-        %{
-          "ip_address" => ip_address,
-          "user_agent" => List.first(get_req_header(conn, "user-agent") || []),
-          "request_path" => conn.request_path
-        },
-        event_data
-      )
+  defp parse_event_data(data) when is_binary(data) do
+    case Jason.decode(data) do
+      {:ok, parsed} -> parsed
+      {:error, _} -> %{"raw_data" => data}
+    end
+  end
 
-    # Convert string keys to atoms for our internal tracking system
-    tracking_data_atoms =
-      for {key, val} <- tracking_data, into: %{} do
-        {String.to_atom(key), val}
-      end
+  defp parse_event_data(_), do: %{}
 
-    # Log the tracking event
+  defp extract_request_metadata(conn) do
+    %{
+      "ip_address" => format_ip_address(conn.remote_ip),
+      "user_agent" => get_user_agent(conn),
+      "request_path" => conn.request_path
+    }
+  end
+
+  defp format_ip_address(remote_ip) do
+    remote_ip |> :inet_parse.ntoa() |> to_string()
+  end
+
+  defp get_user_agent(conn) do
+    case get_req_header(conn, "user-agent") do
+      [user_agent | _] -> user_agent
+      [] -> nil
+    end
+  end
+
+  defp log_tracking_event(event_type, tracking_data) do
     user_agent = Map.get(tracking_data, "user_agent", "unknown")
 
     Logger.info("Tracking event received: #{event_type} from #{user_agent}",
-      metadata: %{
-        tracking_data: inspect(tracking_data)
-      }
+      metadata: %{tracking_data: inspect(tracking_data)}
     )
+  end
 
-    # Route to the appropriate tracking function based on event type
+  defp dispatch_tracking_event(event_type, tracking_data) do
+    # Keep string keys - Analytics service will handle conversion
     case event_type do
       "page_view" ->
         Analytics.track_page_view(
           Map.get(tracking_data, "page", "/"),
           Map.get(tracking_data, "referrer"),
-          tracking_data_atoms
+          tracking_data
         )
 
       "form_submit" ->
         Analytics.track_form_submission(
           Map.get(tracking_data, "form_id", "unknown"),
           Map.get(tracking_data, "status", "submit"),
-          tracking_data_atoms
+          tracking_data
         )
 
       "conversion" ->
         Analytics.track_conversion(
           Map.get(tracking_data, "conversion_type", "unknown"),
-          tracking_data_atoms
+          tracking_data
         )
-
-      "session_start" ->
-        Analytics.track("session_start", tracking_data_atoms)
-
-      "session_end" ->
-        Analytics.track("session_end", tracking_data_atoms)
-
-      "heartbeat" ->
-        Analytics.track("heartbeat", tracking_data_atoms)
-
-      "click" ->
-        Analytics.track("click", tracking_data_atoms)
-
-      "scroll_depth" ->
-        Analytics.track("scroll_depth", tracking_data_atoms)
 
       "section_view" ->
         Analytics.track_section_view(
           Map.get(tracking_data, "section_id", "unknown"),
           Map.get(tracking_data, "duration"),
-          tracking_data_atoms
+          tracking_data
         )
 
-      "exit_intent" ->
-        Analytics.track("exit_intent", tracking_data_atoms)
-
-      # Default for custom events
+      # All other events use the generic track function
       _ ->
-        Analytics.track(event_type, tracking_data_atoms)
+        Analytics.track(event_type, tracking_data)
     end
-
-    # Return a simple JSON response
-    # Using 201 Created since we're creating a tracking record
-    conn
-    |> put_resp_content_type("application/json")
-    |> send_resp(201, Jason.encode!(%{success: true}))
   end
 end
