@@ -129,7 +129,9 @@ defmodule Rsolv.Billing.StripeServiceRetryTest do
 
       start_time = System.monotonic_time()
       assert {:error, :network_error} = StripeService.create_customer(customer)
-      duration = System.convert_time_unit(System.monotonic_time() - start_time, :native, :millisecond)
+
+      duration =
+        System.convert_time_unit(System.monotonic_time() - start_time, :native, :millisecond)
 
       # Should have tried 3 times with backoff: 1s + 2s = 3s total
       assert duration >= 2500
