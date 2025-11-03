@@ -52,7 +52,7 @@ defmodule Rsolv.Security.Patterns.JSONSerializerTest do
                  "source" => "SELECT.*FROM",
                  "flags" => ["i"]
                },
-               severity: :high
+               severity: "high"
              }
     end
 
@@ -97,16 +97,57 @@ defmodule Rsolv.Security.Patterns.JSONSerializerTest do
              }
     end
 
-    test "leaves non-regex values unchanged" do
+    test "converts atoms to strings (except nil and booleans)" do
       data = %{
         string: "test",
         number: 42,
         atom: :test,
-        nil: nil,
-        bool: true
+        nil_value: nil,
+        bool: true,
+        another_bool: false
       }
 
-      assert JSONSerializer.prepare_for_json(data) == data
+      result = JSONSerializer.prepare_for_json(data)
+
+      assert result == %{
+               string: "test",
+               number: 42,
+               atom: "test",
+               # nil stays as-is
+               nil_value: nil,
+               # booleans stay as-is
+               bool: true,
+               another_bool: false
+             }
+    end
+
+    test "converts tuples to lists" do
+      # Tuples cannot be encoded by JSON, so they should be converted to lists
+      tuple = {:ok, "value", 123}
+      result = JSONSerializer.prepare_for_json(tuple)
+
+      assert result == ["ok", "value", 123]
+    end
+
+    test "handles nested tuples in maps" do
+      data = %{
+        result: {:ok, "success"},
+        metadata: %{coords: {1.0, 2.0, 3.0}}
+      }
+
+      result = JSONSerializer.prepare_for_json(data)
+
+      assert result == %{
+               result: ["ok", "success"],
+               metadata: %{coords: [1.0, 2.0, 3.0]}
+             }
+    end
+
+    test "handles tuples in lists" do
+      data = [{:ok, "first"}, {:error, "second"}]
+      result = JSONSerializer.prepare_for_json(data)
+
+      assert result == [["ok", "first"], ["error", "second"]]
     end
   end
 
@@ -158,6 +199,22 @@ defmodule Rsolv.Security.Patterns.JSONSerializerTest do
 
       assert decoded["context_rules"]["safe_patterns"] |> List.first() |> Map.get("__type__") ==
                "regex"
+    end
+
+    test "successfully encodes data with tuples" do
+      # This test verifies that tuples are properly converted before encoding
+      data = %{
+        result: {:ok, "success"},
+        coordinates: {1.0, 2.0, 3.0}
+      }
+
+      json = JSONSerializer.encode!(data)
+      assert is_binary(json)
+
+      # Verify tuples were converted to lists in JSON
+      {:ok, decoded} = JSON.decode(json)
+      assert decoded["result"] == ["ok", "success"]
+      assert decoded["coordinates"] == [1.0, 2.0, 3.0]
     end
   end
 
