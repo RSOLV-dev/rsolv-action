@@ -48,8 +48,9 @@ defmodule RsolvWeb.TrackController do
         {String.to_atom(key), val}
       end
 
-    # Log the tracking event in debug mode
-    Logger.debug("Tracking event received: #{event_type}",
+    # Log the tracking event
+    user_agent = Map.get(tracking_data, "user_agent", "unknown")
+    Logger.info("Tracking event received: #{event_type} from #{user_agent}",
       metadata: %{
         tracking_data: inspect(tracking_data)
       }

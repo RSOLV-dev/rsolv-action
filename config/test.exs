@@ -90,3 +90,6 @@ config :rsolv,
   stripe_payment_method: Rsolv.Billing.StripePaymentMethodMock,
   stripe_subscription: Rsolv.Billing.StripeSubscriptionMock,
   stripe_charge: Rsolv.Billing.StripeChargeMock
+
+# Disable PromEx in test environment to avoid port conflicts
+config :rsolv, Rsolv.PromEx, disabled: true
