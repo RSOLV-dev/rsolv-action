@@ -62,7 +62,7 @@ defmodule RsolvWeb.TrackControllerTest do
           conn =
             post(conn, "/api/track", %{
               "type" => "custom",
-              "data" => Jason.encode!(%{"custom_field" => "value"})
+              "data" => JSON.encode!(%{"custom_field" => "value"})
             })
 
           assert json_response(conn, 201) == %{"success" => true}

@@ -65,7 +65,7 @@ defmodule RsolvWeb.Helpers.DashboardHelpers do
   Parse additional data JSON string.
   """
   def try_parse_additional_data(json_string) when is_binary(json_string) do
-    case Jason.decode(json_string) do
+    case JSON.decode(json_string) do
       {:ok, data} -> data
       _ -> %{}
     end

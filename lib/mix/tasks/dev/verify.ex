@@ -140,7 +140,7 @@ defmodule Mix.Tasks.Dev.Verify do
         # Parse and validate the spec
         case File.read(spec_path) do
           {:ok, content} ->
-            case Jason.decode(content) do
+            case JSON.decode(content) do
               {:ok, spec} ->
                 paths = map_size(Map.get(spec, "paths", %{}))
 

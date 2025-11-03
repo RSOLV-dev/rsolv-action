@@ -54,6 +54,8 @@ defmodule Mix.Tasks.Rsolv.Openapi do
     spec = spec_mod.spec()
 
     # Encode to JSON
+    # Note: Using Jason here because OpenApiSpex implements Jason.Encoder,
+    # not the Elixir core JSON.Encoder protocol
     json =
       spec
       |> Jason.encode!(pretty: true)

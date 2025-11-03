@@ -10,7 +10,7 @@ if webhook_url do
 
   # Test direct HTTP request
   body =
-    Jason.encode!(%{
+    JSON.encode!(%{
       text: "Test message from RSOLV API - Direct test",
       blocks: [
         %{

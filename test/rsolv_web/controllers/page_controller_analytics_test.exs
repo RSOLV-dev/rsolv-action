@@ -41,7 +41,7 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
          %HTTPoison.Response{
            status_code: 200,
            body:
-             Jason.encode!(%{
+             JSON.encode!(%{
                "subscription" => %{
                  "id" => 12345,
                  "state" => "active"
@@ -68,7 +68,7 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
       assert celebration_data_json != nil
 
       # Parse and verify the celebration data
-      celebration_data = Jason.decode!(celebration_data_json)
+      celebration_data = JSON.decode!(celebration_data_json)
       assert celebration_data["email_domain"] == "example.com"
       assert celebration_data["source"] == "twitter"
       assert celebration_data["medium"] == "social"
@@ -82,7 +82,7 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
          %HTTPoison.Response{
            status_code: 200,
            body:
-             Jason.encode!(%{
+             JSON.encode!(%{
                "subscription" => %{
                  "id" => 12345,
                  "state" => "active"
@@ -98,7 +98,7 @@ defmodule RsolvWeb.PageControllerAnalyticsTest do
 
       # Get the celebration data from flash
       celebration_data_json = Phoenix.Flash.get(conn.assigns.flash, :celebration_data)
-      celebration_data = Jason.decode!(celebration_data_json)
+      celebration_data = JSON.decode!(celebration_data_json)
 
       # Should have default values
       assert celebration_data["email_domain"] == "example.com"

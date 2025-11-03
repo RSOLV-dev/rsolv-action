@@ -36,7 +36,7 @@ defmodule RsolvWeb.TrackControllerRouteTest do
       conn =
         conn
         |> put_req_header("content-type", "application/json")
-        |> post("/api/track", Jason.encode!(%{"type" => "test"}))
+        |> post("/api/track", JSON.encode!(%{"type" => "test"}))
 
       assert conn.status == 201
       refute get_resp_header(conn, "x-csrf-token") |> Enum.any?()

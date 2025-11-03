@@ -4,7 +4,7 @@ defmodule Rsolv.Security.JsonRegexTest do
   test "Jason fails to encode regex" do
     # This test demonstrates the current failure - Red phase of TDD
     assert_raise Protocol.UndefinedError, fn ->
-      Jason.encode!(~r/test/)
+      JSON.encode!(~r/test/)
     end
   end
 
@@ -12,7 +12,7 @@ defmodule Rsolv.Security.JsonRegexTest do
     pattern = %{pattern: ~r/SELECT.*FROM/}
 
     assert_raise Protocol.UndefinedError, fn ->
-      Jason.encode!(pattern)
+      JSON.encode!(pattern)
     end
   end
 end

@@ -14,7 +14,7 @@ defmodule Rsolv.APIIntegrationTest do
 
       assert response.status_code == 200
 
-      body = Jason.decode!(response.body)
+      body = JSON.decode!(response.body)
       assert body["status"] in ["ok", "warning", "degraded", "healthy"]
       assert Map.has_key?(body, "timestamp")
       assert Map.has_key?(body, "clustering")
@@ -36,7 +36,7 @@ defmodule Rsolv.APIIntegrationTest do
       response =
         HTTPoison.post(
           "#{@api_base_url}/api/v1/credentials/exchange",
-          Jason.encode!(%{providers: ["anthropic"]}),
+          JSON.encode!(%{providers: ["anthropic"]}),
           [{"Content-Type", "application/json"}]
         )
 
@@ -49,7 +49,7 @@ defmodule Rsolv.APIIntegrationTest do
         HTTPoison.post(
           "#{@api_base_url}/api/v1/credentials/exchange",
           # Missing providers
-          Jason.encode!(%{}),
+          JSON.encode!(%{}),
           [
             {"Content-Type", "application/json"},
             {"X-API-Key", "invalid_key"}

@@ -103,7 +103,7 @@ defmodule RsolvWeb.Services.ConvertKitTest do
       # Mock to inspect the request body
       expect(HTTPClientMock, :post, fn _url, body, _headers, _options ->
         # Decode the request body
-        {:ok, decoded} = Jason.decode(body)
+        {:ok, decoded} = JSON.decode(body)
 
         # Check that UTM params are included in fields
         fields = decoded["fields"]
@@ -117,7 +117,7 @@ defmodule RsolvWeb.Services.ConvertKitTest do
         {:ok,
          %HTTPoison.Response{
            status_code: 200,
-           body: Jason.encode!(%{"subscription" => %{"id" => 123_456_789}})
+           body: JSON.encode!(%{"subscription" => %{"id" => 123_456_789}})
          }}
       end)
 

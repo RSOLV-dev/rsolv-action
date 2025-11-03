@@ -29,7 +29,7 @@ defmodule RsolvWeb.WebhookControllerTest do
         }
       }
 
-      raw_body = Jason.encode!(payload)
+      raw_body = JSON.encode!(payload)
       signature = compute_github_signature(raw_body)
 
       conn =
@@ -81,7 +81,7 @@ defmodule RsolvWeb.WebhookControllerTest do
         }
       }
 
-      raw_body = Jason.encode!(payload)
+      raw_body = JSON.encode!(payload)
       signature = compute_github_signature(raw_body)
 
       conn =
@@ -105,7 +105,7 @@ defmodule RsolvWeb.WebhookControllerTest do
 
     test "rejects request with invalid signature", %{conn: conn} do
       payload = %{"action" => "opened"}
-      raw_body = Jason.encode!(payload)
+      raw_body = JSON.encode!(payload)
 
       conn =
         conn

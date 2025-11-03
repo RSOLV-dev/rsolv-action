@@ -7,7 +7,7 @@ defmodule Rsolv.Security.PatternJsonSerializationTest do
       regex = ~r/test_pattern/
 
       assert_raise Protocol.UndefinedError, ~r/Jason.Encoder not implemented for/, fn ->
-        Jason.encode!(regex)
+        JSON.encode!(regex)
       end
     end
 
@@ -19,7 +19,7 @@ defmodule Rsolv.Security.PatternJsonSerializationTest do
       }
 
       assert_raise Protocol.UndefinedError, fn ->
-        Jason.encode!(pattern)
+        JSON.encode!(pattern)
       end
     end
 
@@ -34,7 +34,7 @@ defmodule Rsolv.Security.PatternJsonSerializationTest do
       }
 
       assert_raise Protocol.UndefinedError, fn ->
-        Jason.encode!(pattern)
+        JSON.encode!(pattern)
       end
     end
   end
