@@ -55,6 +55,11 @@ defmodule Rsolv.EmailOptOutService do
   end
 
   @doc """
+  Alias for record_unsubscribe/1 for convenience.
+  """
+  def unsubscribe(email), do: record_unsubscribe(email)
+
+  @doc """
   No longer needed - database handles persistence.
   Kept for backwards compatibility but does nothing.
   """

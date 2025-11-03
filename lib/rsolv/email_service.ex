@@ -173,17 +173,109 @@ defmodule Rsolv.EmailService do
 
   # Private helper to send email via Bamboo and log activity
   defp send_email(email) do
-    # Get timestamp for tracking
-    timestamp = DateTime.utc_now() |> DateTime.to_string()
+    timestamp = utc_timestamp()
+    recipient_email = extract_recipient_email(email)
 
-    # Log the full email struct for debugging
-    Logger.info("[EMAIL DEBUG] Full email struct before sending",
+    log_email_debug(email, recipient_email, timestamp)
+
+    if recipient_email && EmailOptOutService.is_unsubscribed?(recipient_email) do
+      log_unsubscribed_skip(recipient_email, email.subject, timestamp)
+      {:skipped, %{status: "unsubscribed", message: "Recipient has unsubscribed"}}
+    else
+      deliver_email(email, timestamp)
+    end
+  end
+
+  # Private helper to send email without unsubscribe checking (for admin notifications)
+  # This is used for emails sent TO admins (not FROM users), which should not be affected by user unsubscribes
+  defp send_email_without_unsubscribe_check(email) do
+    timestamp = utc_timestamp()
+
+    Logger.info("[EMAIL DEBUG] Full email struct before sending (no unsubscribe check)",
       email_struct: inspect(email),
       timestamp: timestamp
     )
 
-    # Extract recipient email for unsubscribe check
-    recipient_email = extract_recipient_email(email)
+    deliver_email(email, timestamp)
+  end
+
+  ## Core delivery logic
+
+  # Delivers the email through Mailer with configuration validation and error handling
+  defp deliver_email(email, timestamp) do
+    config = get_mailer_config()
+    current_env = Application.get_env(:rsolv, :env) || :prod
+
+    log_mailer_config(config, current_env, timestamp)
+
+    try do
+      log_sending_attempt(email, timestamp)
+
+      with :ok <- validate_adapter_for_environment(config, current_env, timestamp),
+           {:ok, email_result} <- send_via_mailer(email) do
+        log_sending_success(email, email_result, timestamp)
+        {:ok, %{status: "sent", email: email_result}}
+      end
+    rescue
+      error ->
+        log_sending_error(email, error, __STACKTRACE__, timestamp)
+        log_failed_email(email)
+        {:error, %{status: "send_failed", message: "Failed to send email", error: error}}
+    end
+  end
+
+  # Sends email via Mailer and unwraps the result
+  defp send_via_mailer(email) do
+    Application.ensure_all_started(:hackney)
+
+    email
+    |> Mailer.deliver_now()
+    |> unwrap_mailer_result()
+    |> then(&{:ok, &1})
+  end
+
+  # Unwraps result from Mailer - some adapters return {:ok, email}, others return email directly
+  defp unwrap_mailer_result({:ok, email}), do: email
+  defp unwrap_mailer_result(email), do: email
+
+  # Validates that test adapter is not used in production
+  defp validate_adapter_for_environment(config, env, timestamp) do
+    if config[:adapter] == Bamboo.TestAdapter && env != :test do
+      Logger.error("[EMAIL ERROR] Test adapter detected in non-test environment!",
+        adapter: inspect(config[:adapter]),
+        environment: env,
+        timestamp: timestamp
+      )
+
+      {:error, %{status: "configuration_error", message: "Test adapter configured in production"}}
+    else
+      :ok
+    end
+  end
+
+  ## Configuration helpers
+
+  defp get_mailer_config, do: Application.get_env(:rsolv, Rsolv.Mailer)
+
+  defp get_email_config, do: Application.get_env(:rsolv, :email_config, %{})
+
+  defp mask_api_key(nil), do: "NOT_CONFIGURED"
+
+  defp mask_api_key(api_key) do
+    first_four = String.slice(api_key, 0..3)
+    last_four = String.slice(api_key, -4..-1)
+    "#{first_four}...#{last_four}"
+  end
+
+  ## Logging helpers
+
+  defp utc_timestamp, do: DateTime.utc_now() |> DateTime.to_string()
+
+  defp log_email_debug(email, recipient_email, timestamp) do
+    Logger.info("[EMAIL DEBUG] Full email struct before sending",
+      email_struct: inspect(email),
+      timestamp: timestamp
+    )
 
     Logger.info("[EMAIL DEBUG] Extracted recipient email",
       recipient_email: recipient_email,
@@ -191,218 +283,83 @@ defmodule Rsolv.EmailService do
       timestamp: timestamp
     )
 
-    # Check if recipient has unsubscribed
-    if recipient_email && EmailOptOutService.is_unsubscribed?(recipient_email) do
-      # Recipient has unsubscribed, don't send the email
-      Logger.info("[EMAIL] Skipping email to unsubscribed recipient",
-        to: recipient_email,
-        subject: email.subject,
-        timestamp: timestamp
-      )
+    email_config = get_email_config()
 
-      {:skipped, %{status: "unsubscribed", message: "Recipient has unsubscribed"}}
-    else
-      # Recipient has not unsubscribed, proceed with sending
-      # Log Postmark configuration
-      postmark_config = Application.get_env(:rsolv, Rsolv.Mailer)
-      api_key = postmark_config[:api_key]
-
-      masked_api_key =
-        if api_key do
-          first_four = String.slice(api_key, 0..3)
-          last_four = String.slice(api_key, -4..-1)
-          "#{first_four}...#{last_four}"
-        else
-          "NOT_CONFIGURED"
-        end
-
-      # Check if we're in test mode
-      # Mix.env() is not available in releases, default to :prod
-      current_env = Application.get_env(:rsolv, :env) || :prod
-
-      Logger.info("[EMAIL DEBUG] Postmark configuration",
-        adapter: postmark_config[:adapter],
-        adapter_module: inspect(postmark_config[:adapter]),
-        is_test_adapter: postmark_config[:adapter] == Bamboo.TestAdapter,
-        api_key_configured: api_key != nil,
-        api_key_masked: masked_api_key,
-        postmark_base_uri: Application.get_env(:bamboo, :postmark_base_uri),
-        environment: current_env,
-        timestamp: timestamp
-      )
-
-      # Log email configuration
-      email_config = Application.get_env(:rsolv, :email_config, %{})
-
-      Logger.info("[EMAIL DEBUG] Email configuration",
-        sender_email: Map.get(email_config, :sender_email),
-        sender_name: Map.get(email_config, :sender_name),
-        reply_to: Map.get(email_config, :reply_to),
-        from_field: inspect(email.from),
-        timestamp: timestamp
-      )
-
-      try do
-        Logger.info("[EMAIL] Attempting to send email via Postmark",
-          to: email.to,
-          subject: email.subject,
-          message_id: email.headers["Message-ID"],
-          tag: email.headers["X-Postmark-Tag"],
-          timestamp: timestamp
-        )
-
-        # Check if we're using the test adapter (which is fine in test environment)
-        if postmark_config[:adapter] == Bamboo.TestAdapter && current_env != :test do
-          Logger.error("[EMAIL ERROR] Test adapter detected in non-test environment!",
-            adapter: inspect(postmark_config[:adapter]),
-            environment: current_env,
-            timestamp: timestamp
-          )
-
-          # Return an error instead of trying to send
-          {:error,
-           %{status: "configuration_error", message: "Test adapter configured in production"}}
-        else
-          # Ensure Hackney is started (required for HTTP requests)
-          Application.ensure_all_started(:hackney)
-
-          # Actually send the email
-          result = Mailer.deliver_now(email)
-
-          # Log the raw result from Postmark
-          result_type =
-            case result do
-              %{__struct__: struct} -> inspect(struct)
-              _ -> "not a struct"
-            end
-
-          Logger.info("[EMAIL DEBUG] Raw Postmark response",
-            result: inspect(result),
-            result_type: result_type,
-            timestamp: timestamp
-          )
-
-          Logger.info("[EMAIL] Email sent successfully via Postmark",
-            to: email.to,
-            subject: email.subject,
-            timestamp: timestamp
-          )
-
-          {:ok, %{status: "sent", email: result}}
-        end
-      rescue
-        error ->
-          # Log detailed error information
-          Logger.error("[EMAIL ERROR] Failed to send email via Postmark",
-            to: email.to,
-            subject: email.subject,
-            error_message: Exception.message(error),
-            error_type: error.__struct__,
-            error_details: inspect(error),
-            stacktrace: Exception.format_stacktrace(__STACKTRACE__),
-            timestamp: timestamp
-          )
-
-          # Log the failed email for potential retry
-          log_failed_email(email)
-
-          {:error, %{status: "send_failed", message: "Failed to send email", error: error}}
-      end
-    end
-  end
-
-  # Private helper to send email without unsubscribe checking (for admin notifications)
-  # This is used for emails sent TO admins (not FROM users), which should not be affected by user unsubscribes
-  defp send_email_without_unsubscribe_check(email) do
-    # Get timestamp for tracking
-    timestamp = DateTime.utc_now() |> DateTime.to_string()
-
-    # Log the full email struct for debugging
-    Logger.info("[EMAIL DEBUG] Full email struct before sending (no unsubscribe check)",
-      email_struct: inspect(email),
+    Logger.info("[EMAIL DEBUG] Email configuration",
+      sender_email: Map.get(email_config, :sender_email),
+      sender_name: Map.get(email_config, :sender_name),
+      reply_to: Map.get(email_config, :reply_to),
+      from_field: inspect(email.from),
       timestamp: timestamp
     )
+  end
 
-    # Log Postmark configuration
-    postmark_config = Application.get_env(:rsolv, Rsolv.Mailer)
-    api_key = postmark_config[:api_key]
+  defp log_unsubscribed_skip(recipient_email, subject, timestamp) do
+    Logger.info("[EMAIL] Skipping email to unsubscribed recipient",
+      to: recipient_email,
+      subject: subject,
+      timestamp: timestamp
+    )
+  end
 
-    masked_api_key =
-      if api_key do
-        first_four = String.slice(api_key, 0..3)
-        last_four = String.slice(api_key, -4..-1)
-        "#{first_four}...#{last_four}"
-      else
-        "NOT_CONFIGURED"
-      end
-
-    # Check if we're in test mode
-    current_env = Application.get_env(:rsolv, :env) || :prod
+  defp log_mailer_config(config, env, timestamp) do
+    api_key = config[:api_key]
 
     Logger.info("[EMAIL DEBUG] Postmark configuration",
-      adapter: postmark_config[:adapter],
-      adapter_module: inspect(postmark_config[:adapter]),
-      is_test_adapter: postmark_config[:adapter] == Bamboo.TestAdapter,
+      adapter: config[:adapter],
+      adapter_module: inspect(config[:adapter]),
+      is_test_adapter: config[:adapter] == Bamboo.TestAdapter,
       api_key_configured: api_key != nil,
-      api_key_masked: masked_api_key,
+      api_key_masked: mask_api_key(api_key),
       postmark_base_uri: Application.get_env(:bamboo, :postmark_base_uri),
-      environment: current_env,
+      environment: env,
+      timestamp: timestamp
+    )
+  end
+
+  defp log_sending_attempt(email, timestamp) do
+    Logger.info("[EMAIL] Attempting to send email via Postmark",
+      to: email.to,
+      subject: email.subject,
+      message_id: email.headers["Message-ID"],
+      tag: email.headers["X-Postmark-Tag"],
+      timestamp: timestamp
+    )
+  end
+
+  defp log_sending_success(email, email_result, timestamp) do
+    result_type =
+      case email_result do
+        %{__struct__: struct} -> inspect(struct)
+        _ -> "not a struct"
+      end
+
+    Logger.info("[EMAIL DEBUG] Raw Postmark response",
+      result: inspect(email_result),
+      result_type: result_type,
       timestamp: timestamp
     )
 
-    try do
-      Logger.info("[EMAIL] Attempting to send email via Postmark (admin notification)",
-        to: email.to,
-        subject: email.subject,
-        message_id: email.headers["Message-ID"],
-        tag: email.headers["X-Postmark-Tag"],
-        timestamp: timestamp
-      )
-
-      # Check if we're using the test adapter (which is fine in test environment)
-      if postmark_config[:adapter] == Bamboo.TestAdapter && current_env != :test do
-        Logger.error("[EMAIL ERROR] Test adapter detected in non-test environment!",
-          adapter: inspect(postmark_config[:adapter]),
-          environment: current_env,
-          timestamp: timestamp
-        )
-
-        {:error,
-         %{status: "configuration_error", message: "Test adapter configured in production"}}
-      else
-        # Ensure Hackney is started (required for HTTP requests)
-        Application.ensure_all_started(:hackney)
-
-        # Actually send the email
-        result = Mailer.deliver_now(email)
-
-        Logger.info("[EMAIL] Email sent successfully via Postmark",
-          to: email.to,
-          subject: email.subject,
-          timestamp: timestamp
-        )
-
-        {:ok, %{status: "sent", email: result}}
-      end
-    rescue
-      error ->
-        # Log detailed error information
-        Logger.error("[EMAIL ERROR] Failed to send email via Postmark",
-          to: email.to,
-          subject: email.subject,
-          error_message: Exception.message(error),
-          error_type: error.__struct__,
-          error_details: inspect(error),
-          stacktrace: Exception.format_stacktrace(__STACKTRACE__),
-          timestamp: timestamp
-        )
-
-        # Log the failed email for potential retry
-        log_failed_email(email)
-
-        {:error, %{status: "send_failed", message: "Failed to send email", error: error}}
-    end
+    Logger.info("[EMAIL] Email sent successfully via Postmark",
+      to: email.to,
+      subject: email.subject,
+      timestamp: timestamp
+    )
   end
+
+  defp log_sending_error(email, error, stacktrace, timestamp) do
+    Logger.error("[EMAIL ERROR] Failed to send email via Postmark",
+      to: email.to,
+      subject: email.subject,
+      error_message: Exception.message(error),
+      error_type: error.__struct__,
+      error_details: inspect(error),
+      stacktrace: Exception.format_stacktrace(stacktrace),
+      timestamp: timestamp
+    )
+  end
+
+  ## Email extraction and persistence helpers
 
   # Helper to extract recipient email from a Bamboo.Email struct
   defp extract_recipient_email(email) do
@@ -416,16 +373,8 @@ defmodule Rsolv.EmailService do
 
   # Log a failed email attempt for potential retry
   defp log_failed_email(email) do
-    # Extract recipient email
-    to_email =
-      case email.to do
-        [{_, email_address}] -> email_address
-        [email_address] when is_binary(email_address) -> email_address
-        email_address when is_binary(email_address) -> email_address
-        _ -> "unknown"
-      end
+    to_email = extract_recipient_email(email) || "unknown"
 
-    # Store the failed email in the database
     attrs = %{
       to_email: to_email,
       subject: email.subject || "No subject",
@@ -435,17 +384,14 @@ defmodule Rsolv.EmailService do
         from: format_from_field(email.from),
         to: email.to,
         subject: email.subject,
-        timestamp: DateTime.utc_now() |> DateTime.to_string()
+        timestamp: utc_timestamp()
       }
     }
 
     case EmailManagement.create_failed_email(attrs) do
       {:ok, failed_email} ->
         Logger.info("Failed email logged for potential retry",
-          metadata: %{
-            id: failed_email.id,
-            email: to_email
-          }
+          metadata: %{id: failed_email.id, email: to_email}
         )
 
       {:error, changeset} ->
