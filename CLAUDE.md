@@ -171,7 +171,7 @@ See [DEV_SETUP.md](DEV_SETUP.md) for comprehensive troubleshooting.
 **Critical Setup Step for Worktrees:**
 ```bash
 # ALWAYS run this when entering a new worktree
-mix deps.get
+mix setup  # or at minimum: mix deps.get
 ```
 
 **Why This Matters:**
