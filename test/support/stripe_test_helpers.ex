@@ -298,7 +298,9 @@ defmodule Rsolv.StripeTestHelpers do
       )
   """
   def mock_stripe_subscription_create(customer_id, opts \\ []) do
-    subscription_id = Keyword.get(opts, :subscription_id, "sub_test_#{System.unique_integer([:positive])}")
+    subscription_id =
+      Keyword.get(opts, :subscription_id, "sub_test_#{System.unique_integer([:positive])}")
+
     price_id = Keyword.get(opts, :price_id)
     status = Keyword.get(opts, :status, "active")
 

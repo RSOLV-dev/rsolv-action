@@ -61,6 +61,7 @@ defmodule Rsolv.Billing.ProSubscriptionTest do
 
       # ACT 2: Subscribe to Pro plan
       pro_price_id = "price_test_pro_monthly_50000"
+
       stripe_subscription_id =
         mock_stripe_subscription_create(
           customer_with_payment.stripe_customer_id,
