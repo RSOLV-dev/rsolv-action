@@ -176,14 +176,16 @@ defmodule Rsolv.AST.EnhancedSandbox do
 
       pattern ->
         Logger.warning("Suspicious pattern detected: #{inspect(pattern)}")
+        # Convert regex to string for JSON serialization
+        pattern_str = inspect(pattern)
         # Log to AuditLogger for audit trail
         AuditLogger.log_event(:input_validation_failed, %{
           language: language,
-          reason: {:suspicious_pattern, pattern},
+          reason: "suspicious_pattern: #{pattern_str}",
           input_preview: String.slice(input, 0, 100)
         })
 
-        {:error, {:suspicious_pattern, pattern}}
+        {:error, {:suspicious_pattern, pattern_str}}
     end
   end
 
