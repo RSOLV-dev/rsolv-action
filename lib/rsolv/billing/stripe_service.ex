@@ -180,10 +180,14 @@ defmodule Rsolv.Billing.StripeService do
     duration = System.monotonic_time() - start_time
 
     # Normalize error after all retries exhausted
-    # Only normalize if error is a raw Stripe/HTTP error struct (not already normalized to atom)
+    # Skip normalization for already-handled errors (atoms like :not_found)
+    # Only normalize raw Stripe.Error and HTTPoison.Error structs
     normalized_result =
       case result do
-        {:error, error} when is_struct(error) ->
+        {:error, %Stripe.Error{} = error} ->
+          handle_stripe_error(error, operation, Map.to_list(metadata))
+
+        {:error, %HTTPoison.Error{} = error} ->
           handle_stripe_error(error, operation, Map.to_list(metadata))
 
         other ->

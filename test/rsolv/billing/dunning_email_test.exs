@@ -92,17 +92,9 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
   describe "email job processing" do
     setup do
-      customer =
-        insert(:customer, name: "Jane Doe")
-        |> apply_trait!(&with_pro_plan/1)
-        |> then(fn c ->
-          # with_pro_plan sets credit_balance to 60, update it to 45 for this test
-          Rsolv.Customers.update_customer(c, %{credit_balance: 45})
-          |> case do
-            {:ok, updated} -> updated
-            _ -> c
-          end
-        end)
+      # with_pro_plan sets credit_balance to 60, override to 45 for this test
+      customer = insert(:customer, name: "Jane Doe") |> apply_trait!(&with_pro_plan/1)
+      {:ok, customer} = Rsolv.Customers.update_customer(customer, %{credit_balance: 45})
 
       {:ok, customer: customer}
     end
