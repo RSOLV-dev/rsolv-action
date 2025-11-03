@@ -16,8 +16,10 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
   alias Rsolv.Customers
 
   import Mox
+  import Rsolv.ConvertKitTestHelpers
 
   setup :verify_on_exit!
+  setup :stub_convertkit_success
 
   describe "RFC-069: Onboarding → Stripe → Initial Credits Flow" do
     test "signup creates customer and API key with Stripe customer and initial credits" do

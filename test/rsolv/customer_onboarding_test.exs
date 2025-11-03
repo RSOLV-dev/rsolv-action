@@ -7,29 +7,18 @@ defmodule Rsolv.CustomerOnboardingTest do
   alias Rsolv.Workers.EmailWorker
 
   import ExUnit.CaptureLog
+  import Rsolv.ConvertKitTestHelpers
   import Mox
 
   # Make sure mocks are verified when the test exits
   setup :verify_on_exit!
 
   setup do
-    # Set ConvertKit test config
-    Application.put_env(:rsolv, :convertkit,
-      api_key: "test_api_key",
-      form_id: "test_form_id",
-      early_access_tag_id: "7700607",
-      api_base_url: "https://api.convertkit.com/v3"
-    )
+    # Setup ConvertKit mocks
+    stub_convertkit_success()
 
     # Configure the HTTP client to use the mock
     Application.put_env(:rsolv, :http_client, Rsolv.HTTPClientMock)
-
-    fixtures = RsolvWeb.Mocks.convertkit_fixtures()
-
-    # Mock successful tagging response for ConvertKit
-    stub(Rsolv.HTTPClientMock, :post, fn _url, _body, _headers, _options ->
-      {:ok, fixtures.tag_success}
-    end)
 
     # Clear rate limiter for clean tests
     Rsolv.RateLimiter.reset()
@@ -49,7 +38,7 @@ defmodule Rsolv.CustomerOnboardingTest do
       :telemetry.detach("test-customer-onboarding-telemetry")
     end)
 
-    %{fixtures: fixtures}
+    :ok
   end
 
   # Telemetry event handler for tests
