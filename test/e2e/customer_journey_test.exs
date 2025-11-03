@@ -44,6 +44,7 @@ defmodule Rsolv.E2E.CustomerJourneyTest do
 
   use Rsolv.DataCase, async: false
   import Rsolv.CustomerFactory
+  import Rsolv.ConvertKitTestHelpers
   import Mox
 
   alias Rsolv.CustomerOnboarding
@@ -56,32 +57,16 @@ defmodule Rsolv.E2E.CustomerJourneyTest do
 
   setup do
     # Setup Stripe mocks for all Stripe API operations
-    Mox.stub_with(Rsolv.Billing.StripeMock, Rsolv.Billing.StripeTestStub)
+    stub_with(Rsolv.Billing.StripeMock, Rsolv.Billing.StripeTestStub)
 
     # Manual stub for StripeChargeMock (delegate to StripeTestStub.create_charge/1)
     # Can't use stub_with because both behaviours define create/1, causing compiler warning
-    Mox.stub(Rsolv.Billing.StripeChargeMock, :create, fn params ->
+    stub(Rsolv.Billing.StripeChargeMock, :create, fn params ->
       Rsolv.Billing.StripeTestStub.create_charge(params)
     end)
 
-    # Set up ConvertKit config for tests
-    Application.put_env(:rsolv, :convertkit,
-      api_key: "test_api_key",
-      form_id: "test_form_id",
-      early_access_tag_id: "7700607",
-      tag_onboarding: "7700607",
-      api_base_url: "https://api.convertkit.com/v3"
-    )
-
-    # Stub ConvertKit HTTP calls to prevent UnexpectedCallError
-    # This allows any ConvertKit API calls to succeed without specific expectations
-    Mox.stub(Rsolv.HTTPClientMock, :post, fn _url, _body, _headers, _options ->
-      {:ok,
-       %HTTPoison.Response{
-         status_code: 200,
-         body: Jason.encode!(%{"subscription" => %{"id" => 123_456}})
-       }}
-    end)
+    # Setup ConvertKit mocks
+    stub_convertkit_success()
 
     :ok
   end
