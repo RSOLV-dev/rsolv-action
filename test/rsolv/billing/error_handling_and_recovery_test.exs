@@ -128,11 +128,12 @@ defmodule Rsolv.Billing.ErrorHandlingAndRecoveryTest do
       # Note: We can't easily test actual retry behavior in inline mode
       # Real retry testing happens in production via Oban's built-in retry mechanism
 
-      job = StripeWebhookWorker.new(%{"test" => "data"})
+      changeset = StripeWebhookWorker.new(%{"test" => "data"})
 
-      # Verify job metadata has correct retry settings from worker config
-      assert job.max_attempts == 3
-      assert job.queue == "webhooks"
+      # Verify job changeset has correct retry settings from worker config
+      # Worker.new/1 returns an Ecto.Changeset with changes, not a persisted struct
+      assert changeset.changes.max_attempts == 3
+      assert changeset.changes.queue == "webhooks"
     end
   end
 
