@@ -38,16 +38,14 @@ defmodule RsolvWeb.Services.Analytics do
       track("form_submit", %{form_id: "early-access", email_domain: "company.com"})
   """
   def track(event_name, attributes \\ %{}) do
-    # Ensure event exists in our defined list (for consistency)
-    # If not found, use the provided name but log a warning
-    event = Map.get(@events, String.to_atom(event_name), event_name)
+    # Normalize attributes to use atom keys for internal processing
+    normalized_attrs = normalize_attributes(attributes)
 
-    unless Map.has_key?(@events, String.to_atom(event_name)) do
-      Logger.warning("Tracking undefined event: #{event_name}. Consider adding to @events list.")
-    end
+    # Validate and get event name
+    event = validate_event_name(event_name)
 
     # Merge with default attributes
-    event_data = build_event_data(event, attributes)
+    event_data = build_event_data(event, normalized_attrs)
 
     # Log the event for debug/dev purposes
     log_event(event_data)
@@ -192,6 +190,49 @@ defmodule RsolvWeb.Services.Analytics do
   end
 
   # Private Helpers
+
+  # Safely convert string keys to atoms for internal use
+  # Only converts known safe keys to avoid atom table exhaustion
+  defp normalize_attributes(attributes) when is_map(attributes) do
+    for {key, val} <- attributes, into: %{} do
+      atom_key =
+        cond do
+          is_atom(key) -> key
+          is_binary(key) -> safe_to_atom(key)
+          true -> key
+        end
+
+      {atom_key, val}
+    end
+  end
+
+  # Convert string to atom only if it's a known safe key
+  defp safe_to_atom(string) do
+    try do
+      String.to_existing_atom(string)
+    rescue
+      ArgumentError -> String.to_atom(string)
+    end
+  end
+
+  # Validate event name and log warning if undefined
+  defp validate_event_name(event_name) when is_binary(event_name) do
+    atom_event = safe_to_atom(event_name)
+
+    case Map.fetch(@events, atom_event) do
+      {:ok, event} ->
+        event
+
+      :error ->
+        Logger.warning(
+          "Tracking undefined event: #{event_name}. Consider adding to @events list."
+        )
+
+        event_name
+    end
+  end
+
+  defp validate_event_name(event_name), do: event_name
 
   # Build complete event data structure with defaults
   defp build_event_data(event_name, attributes) do
