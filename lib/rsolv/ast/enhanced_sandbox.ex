@@ -12,6 +12,7 @@ defmodule Rsolv.AST.EnhancedSandbox do
 
   require Logger
   alias Rsolv.AST.{Sandbox, AuditLogger}
+  alias Rsolv.Security.Patterns.JSONSerializer
 
   # Suspicious patterns that might indicate malicious input - using function instead of module attribute
   defp suspicious_patterns do
@@ -157,36 +158,39 @@ defmodule Rsolv.AST.EnhancedSandbox do
   end
 
   defp check_suspicious_patterns(input, language) do
-    # Get base patterns
-    base_patterns = get_base_suspicious_patterns()
+    patterns = get_base_suspicious_patterns() ++ language_specific_patterns(language)
 
-    # Add language-specific patterns
-    patterns =
-      case language do
-        "javascript" -> base_patterns ++ [~r/new\s+Function\s*\(/]
-        "python" -> base_patterns ++ [~r/__import__/, ~r/compile\s*\(/]
-        "ruby" -> base_patterns ++ [~r/\bsend\s*\(/, ~r/instance_eval/]
-        "php" -> base_patterns ++ [~r/\bshell_exec/, ~r/\bpassthru/]
-        _ -> base_patterns
-      end
-
-    case Enum.find(patterns, fn pattern -> Regex.match?(pattern, input) end) do
-      nil ->
-        :ok
-
-      pattern ->
-        Logger.warning("Suspicious pattern detected: #{inspect(pattern)}")
-        # Convert regex to string for JSON serialization
-        pattern_str = inspect(pattern)
-        # Log to AuditLogger for audit trail
-        AuditLogger.log_event(:input_validation_failed, %{
-          language: language,
-          reason: "suspicious_pattern: #{pattern_str}",
-          input_preview: String.slice(input, 0, 100)
-        })
-
-        {:error, {:suspicious_pattern, pattern_str}}
+    patterns
+    |> Enum.find(&Regex.match?(&1, input))
+    |> case do
+      nil -> :ok
+      pattern -> handle_suspicious_pattern(pattern, language, input)
     end
+  end
+
+  defp language_specific_patterns(language) do
+    case language do
+      "javascript" -> [~r/new\s+Function\s*\(/]
+      "python" -> [~r/__import__/, ~r/compile\s*\(/]
+      "ruby" -> [~r/\bsend\s*\(/, ~r/instance_eval/]
+      "php" -> [~r/\bshell_exec/, ~r/\bpassthru/]
+      _ -> []
+    end
+  end
+
+  defp handle_suspicious_pattern(pattern, language, input) do
+    Logger.warning("Suspicious pattern detected: #{inspect(pattern)}")
+
+    # Use JSONSerializer to convert regex for safe JSON encoding
+    reason = JSONSerializer.prepare_for_json({:suspicious_pattern, pattern})
+
+    AuditLogger.log_event(:input_validation_failed, %{
+      language: language,
+      reason: reason,
+      input_preview: String.slice(input, 0, 100)
+    })
+
+    {:error, reason}
   end
 
   defp get_base_suspicious_patterns do

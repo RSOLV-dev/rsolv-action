@@ -38,8 +38,13 @@ defmodule Rsolv.AST.AuditIntegrationTest do
       """
 
       # This should trigger validation failure and logging
-      {:error, {:suspicious_pattern, _}} =
+      {:error, ["suspicious_pattern", pattern_data]} =
         EnhancedSandbox.validate_input(malicious_code, "python")
+
+      # Verify the pattern was converted to JSON-safe format
+      assert is_map(pattern_data)
+      assert pattern_data["__type__"] == "regex"
+      assert pattern_data["source"] == "__import__"
 
       # Query audit logs
       events =
@@ -54,7 +59,12 @@ defmodule Rsolv.AST.AuditIntegrationTest do
       # Currently mapped as info
       assert event.severity == :info
       assert event.metadata.language == "python"
-      assert event.metadata.reason == {:suspicious_pattern, ~r/__import__/}
+
+      # Verify reason is JSON-serializable (list instead of tuple)
+      assert ["suspicious_pattern", reason_pattern] = event.metadata.reason
+      assert is_map(reason_pattern)
+      assert reason_pattern["source"] == "__import__"
+
       assert String.contains?(event.metadata.input_preview, "__import__")
     end
 
