@@ -9,7 +9,7 @@ defmodule RsolvWeb.Plugs.DashboardAuthTest do
 
     # Set test config
     Application.put_env(:rsolv, :admin_password, "test123")
-    Application.put_env(:rsolv, :admin_emails, ["admin@test.com"])
+    Application.put_env(:rsolv, :admin_emails, ["admin@example.com"])
 
     on_exit(fn ->
       # Restore original config
@@ -29,7 +29,7 @@ defmodule RsolvWeb.Plugs.DashboardAuthTest do
         |> put_req_header("authorization", "Basic #{auth}")
         |> DashboardAuth.call([])
 
-      assert conn.assigns[:current_user_email] == "admin@test.com"
+      assert conn.assigns[:current_user_email] == "admin@example.com"
       refute conn.halted
     end
 
@@ -60,7 +60,7 @@ defmodule RsolvWeb.Plugs.DashboardAuthTest do
 
       # Enable a feature that admins have access to
       # FunWithFlags requires an actor struct
-      actor = %FunWithFlags.UI.SimpleActor{id: "admin@test.com"}
+      actor = %FunWithFlags.UI.SimpleActor{id: "admin@example.com"}
       FunWithFlags.enable(:admin_dashboard, for_actor: actor)
 
       conn =
@@ -90,7 +90,7 @@ defmodule RsolvWeb.Plugs.DashboardAuthTest do
 
       # Auth should succeed even with feature disabled
       refute conn.halted
-      assert conn.assigns.current_user_email == "admin@test.com"
+      assert conn.assigns.current_user_email == "admin@example.com"
     end
 
     test "denies access with invalid credentials", %{conn: conn} do

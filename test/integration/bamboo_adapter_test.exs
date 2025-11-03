@@ -13,7 +13,7 @@ defmodule Rsolv.Integration.BambooAdapterTest do
 
   test "Bamboo TestAdapter captures emails directly" do
     # Create an email
-    email = Emails.welcome_email("direct@test.com", "DirectUser")
+    email = Emails.welcome_email("direct@example.com", "DirectUser")
 
     # Send it directly through Mailer
     result = Mailer.deliver_now(email)
@@ -39,7 +39,7 @@ defmodule Rsolv.Integration.BambooAdapterTest do
     # In dev, we use LocalAdapter which shows emails in browser
     # In test, we use TestAdapter which captures for assertions
 
-    email = Emails.early_access_welcome_email("adapter@test.com")
+    email = Emails.early_access_welcome_email("adapter@example.com")
 
     # This is what happens in our EmailService
     try do

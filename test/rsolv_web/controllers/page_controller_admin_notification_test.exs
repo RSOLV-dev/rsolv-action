@@ -1,9 +1,61 @@
 defmodule RsolvWeb.PageControllerAdminNotificationTest do
-  use RsolvWeb.ConnCase
+  use RsolvWeb.ConnCase, async: false
   use Bamboo.Test
   import Mox
 
   setup :verify_on_exit!
+
+  # Helper function to collect all delivered emails from the mailbox
+  defp collect_delivered_emails(emails \\ []) do
+    receive do
+      {:delivered_email, email} -> collect_delivered_emails([email | emails])
+    after
+      50 -> Enum.reverse(emails)
+    end
+  end
+
+  # Helper to find admin notification email from delivered emails
+  defp find_admin_notification(delivered_emails) do
+    Enum.find(delivered_emails, fn email ->
+      String.contains?(email.subject || "", "New RSOLV Signup")
+    end)
+  end
+
+  # Helper to extract email address from recipient (handles tuple or string format)
+  defp extract_email_address(recipient) do
+    case recipient do
+      {_name, email_address} -> email_address
+      email_address when is_binary(email_address) -> email_address
+      _ -> ""
+    end
+  end
+
+  # Helper to verify admin notification was sent
+  defp assert_admin_notification_sent(delivered_emails) do
+    admin_notification = find_admin_notification(delivered_emails)
+
+    assert admin_notification != nil,
+           "Expected to find admin notification email. Found #{length(delivered_emails)} emails."
+
+    admin_notification
+  end
+
+  # Helper to set up ConvertKit mock expectations
+  defp expect_convertkit_success do
+    expect(Rsolv.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      {:ok,
+       %HTTPoison.Response{
+         status_code: 200,
+         body:
+           JSON.encode!(%{
+             "subscription" => %{
+               "id" => 12345,
+               "state" => "active"
+             }
+           })
+       }}
+    end)
+  end
 
   setup do
     # Store original configs
@@ -36,20 +88,7 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
 
   describe "submit_early_access with admin notifications" do
     test "sends admin notification email on successful signup", %{conn: conn} do
-      # Mock ConvertKit API calls (subscribe + tag)
-      expect(Rsolv.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
-        {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
-           body:
-             Jason.encode!(%{
-               "subscription" => %{
-                 "id" => 12345,
-                 "state" => "active"
-               }
-             })
-         }}
-      end)
+      expect_convertkit_success()
 
       # Submit signup form
       params = %{
@@ -64,65 +103,34 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
       }
 
       conn = post(conn, ~p"/early-access", params)
-
-      # Should redirect to thank you page
       assert redirected_to(conn) =~ "/thank-you"
 
-      # Check that admin notification was sent
-      delivered_emails = Bamboo.SentEmail.all()
+      # Verify admin notification was sent
+      admin_notification = assert_admin_notification_sent(collect_delivered_emails())
 
-      # Find admin notification email
-      admin_notification =
-        Enum.find(delivered_emails, fn email ->
-          String.contains?(email.subject || "", "New RSOLV Signup")
-        end)
+      # Verify content
+      assert admin_notification.subject == "🎉 New RSOLV Signup: newuser@example.com"
+      assert admin_notification.html_body =~ "newuser@example.com"
+      assert admin_notification.html_body =~ "Test Corp"
+      assert admin_notification.html_body =~ "twitter"
 
-      # This assertion will fail initially
-      assert admin_notification != nil, "Expected admin notification to be sent"
+      # Verify sent to admin emails
+      admin_recipients =
+        case admin_notification.to do
+          list when is_list(list) -> list
+          single -> [single]
+        end
 
-      # When we implement it, these assertions should pass
-      if admin_notification do
-        assert admin_notification.subject =~ "🎉 New RSOLV Signup: newuser@example.com"
-        assert admin_notification.html_body =~ "newuser@example.com"
-        assert admin_notification.html_body =~ "Test Corp"
-        assert admin_notification.html_body =~ "twitter"
-
-        # Check it's sent to admin emails
-        assert Enum.any?(admin_notification.to, fn recipient ->
-                 case recipient do
-                   {_name, email_address} ->
-                     String.ends_with?(email_address, "@rsolv.dev")
-
-                   email_address when is_binary(email_address) ->
-                     String.ends_with?(email_address, "@rsolv.dev")
-
-                   _ ->
-                     false
-                 end
-               end)
-      end
+      assert Enum.any?(admin_recipients, fn recipient ->
+               String.ends_with?(extract_email_address(recipient), "@rsolv.dev")
+             end)
     end
 
     test "includes UTM parameters in admin notification", %{conn: conn} do
-      # Mock ConvertKit API calls (subscribe + tag)
-      expect(Rsolv.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
-        {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
-           body:
-             Jason.encode!(%{
-               "subscription" => %{
-                 "id" => 12345,
-                 "state" => "active"
-               }
-             })
-         }}
-      end)
+      expect_convertkit_success()
 
-      # Submit signup with UTM parameters in query string
-      conn =
-        conn
-        |> put_req_header("referer", "https://twitter.com/some_post")
+      # Submit signup with UTM parameters
+      conn = put_req_header(conn, "referer", "https://twitter.com/some_post")
 
       params = %{
         "email" => "utm@example.com",
@@ -131,65 +139,34 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
         "utm_campaign" => "beta_launch"
       }
 
-      # Send all params in the body (UTM params will be extracted from body_params)
       conn = post(conn, ~p"/early-access", params)
-
       assert redirected_to(conn) =~ "/thank-you"
 
-      # Check admin notification includes UTM data
-      delivered_emails = Bamboo.SentEmail.all()
+      # Verify admin notification was sent
+      admin_notification = assert_admin_notification_sent(collect_delivered_emails())
 
-      admin_notification =
-        Enum.find(delivered_emails, fn email ->
-          String.contains?(email.subject || "", "New RSOLV Signup")
-        end)
-
-      assert admin_notification != nil, "Expected admin notification to be sent"
+      # Verify UTM parameters and referrer are included
       assert admin_notification.subject =~ "utm@example.com"
       assert admin_notification.html_body =~ "hackernews"
       assert admin_notification.html_body =~ "forum"
       assert admin_notification.html_body =~ "beta_launch"
-      # referrer
       assert admin_notification.html_body =~ "twitter.com"
     end
 
     test "handles minimal signup data gracefully", %{conn: conn} do
-      # Mock ConvertKit API calls (subscribe + tag)
-      expect(Rsolv.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
-        {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
-           body:
-             Jason.encode!(%{
-               "subscription" => %{
-                 "id" => 12345,
-                 "state" => "active"
-               }
-             })
-         }}
-      end)
+      expect_convertkit_success()
 
       params = %{"email" => "minimal@example.com"}
-
       conn = post(conn, ~p"/early-access", params)
-
       assert redirected_to(conn) =~ "/thank-you"
 
-      # Admin notification should still be sent with minimal data
-      delivered_emails = Bamboo.SentEmail.all()
+      # Verify admin notification was sent
+      admin_notification = assert_admin_notification_sent(collect_delivered_emails())
 
-      admin_notification =
-        Enum.find(delivered_emails, fn email ->
-          String.contains?(email.subject || "", "New RSOLV Signup")
-        end)
-
-      assert admin_notification != nil, "Expected admin notification to be sent"
+      # Verify minimal data handling
       assert admin_notification.subject =~ "minimal@example.com"
       assert admin_notification.html_body =~ "minimal@example.com"
-      # default source
       assert admin_notification.html_body =~ "landing_page"
-
-      # Should not have company section
       refute admin_notification.html_body =~ "<div class=\"metric-label\">Company</div>"
     end
   end

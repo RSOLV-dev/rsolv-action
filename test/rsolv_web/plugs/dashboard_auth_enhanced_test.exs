@@ -9,7 +9,7 @@ defmodule RsolvWeb.Plugs.DashboardAuthEnhancedTest do
 
     # Set test config
     Application.put_env(:rsolv, :admin_password, "test123")
-    Application.put_env(:rsolv, :admin_emails, ["admin@test.com"])
+    Application.put_env(:rsolv, :admin_emails, ["admin@example.com"])
 
     on_exit(fn ->
       # Restore original config
@@ -29,7 +29,7 @@ defmodule RsolvWeb.Plugs.DashboardAuthEnhancedTest do
         |> put_req_header("authorization", "Basic #{auth}")
         |> DashboardAuthEnhanced.call([])
 
-      assert conn.assigns[:current_user_email] == "admin@test.com"
+      assert conn.assigns[:current_user_email] == "admin@example.com"
       refute conn.halted
     end
 

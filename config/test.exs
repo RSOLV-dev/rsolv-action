@@ -82,7 +82,7 @@ config :fun_with_flags, :cache_bust_notifications,
 
 # Configure admin emails for testing
 config :rsolv,
-  admin_emails: ["admin@test.com"]
+  admin_emails: ["admin@rsolv.dev"]
 
 # Configure Stripe mocks for testing
 config :rsolv,
