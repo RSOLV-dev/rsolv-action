@@ -106,7 +106,8 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
       new_id = "cus_newly_created"
       initial = customer.credit_balance
 
-      expect(Rsolv.Billing.StripeMock, :create, 2, fn _ ->
+      # Only one Stripe customer will be created due to SELECT FOR UPDATE lock
+      expect(Rsolv.Billing.StripeMock, :create, fn _ ->
         {:ok, %{id: new_id, email: customer.email}}
       end)
 
@@ -133,12 +134,22 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
     test "lock released on Stripe error" do
       customer = insert(:customer, credit_balance: 10, has_payment_method: false)
 
-      # First attempt fails
+      # First attempt creates Stripe customer but fails to attach payment method
+      # The transaction is rolled back, so stripe_customer_id is not saved
+      expect(Rsolv.Billing.StripeMock, :create, fn _ ->
+        {:ok, %{id: "cus_error_test_1", email: customer.email}}
+      end)
+
       expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn _ ->
         {:error, %{message: "card_declined"}}
       end)
 
       assert {:error, _} = Billing.add_payment_method(customer, "pm_bad", true)
+
+      # Second attempt needs to create Stripe customer again (first was rolled back)
+      expect(Rsolv.Billing.StripeMock, :create, fn _ ->
+        {:ok, %{id: "cus_error_test_2", email: customer.email}}
+      end)
 
       # Second attempt succeeds (proves lock was released)
       mock_stripe_attach()

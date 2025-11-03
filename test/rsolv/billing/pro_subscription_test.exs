@@ -79,7 +79,7 @@ defmodule Rsolv.Billing.ProSubscriptionTest do
       stripe_subscription_id = "sub_test_pro_123"
 
       # Mock Stripe subscription creation
-      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+      expect(Rsolv.Billing.StripeSubscriptionMock, :create, fn params ->
         # StripeService passes these params to Stripe.Subscription.create
         assert params.customer == customer_with_payment.stripe_customer_id
         assert params.items == [%{price: pro_price_id}]
@@ -183,7 +183,7 @@ defmodule Rsolv.Billing.ProSubscriptionTest do
       pro_price_id = "price_test_pro_monthly_50000"
 
       # Mock Stripe and verify price is correct
-      expect(Rsolv.Billing.StripeMock, :create, fn params ->
+      expect(Rsolv.Billing.StripeSubscriptionMock, :create, fn params ->
         # The price_id itself is configured in the system, but we can verify
         # it's being passed to Stripe correctly
         assert params.items == [%{price: pro_price_id}]
