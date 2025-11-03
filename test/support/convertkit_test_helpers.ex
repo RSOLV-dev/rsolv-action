@@ -56,9 +56,11 @@ defmodule Rsolv.ConvertKitTestHelpers do
   """
   def stub_convertkit_success(_context \\ %{}) do
     configure_convertkit()
+
     stub(Rsolv.HTTPClientMock, :post, fn _url, _body, _headers, _options ->
       {:ok, fixtures().tag_success}
     end)
+
     :ok
   end
 
