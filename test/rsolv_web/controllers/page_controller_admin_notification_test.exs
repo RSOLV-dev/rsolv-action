@@ -1,9 +1,18 @@
 defmodule RsolvWeb.PageControllerAdminNotificationTest do
-  use RsolvWeb.ConnCase
+  use RsolvWeb.ConnCase, async: false
   use Bamboo.Test
   import Mox
 
   setup :verify_on_exit!
+
+  # Helper function to collect all delivered emails from the mailbox
+  defp collect_delivered_emails(emails \\ []) do
+    receive do
+      {:delivered_email, email} -> collect_delivered_emails([email | emails])
+    after
+      50 -> Enum.reverse(emails)
+    end
+  end
 
   setup do
     # Store original configs
@@ -68,39 +77,44 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
       # Should redirect to thank you page
       assert redirected_to(conn) =~ "/thank-you"
 
-      # Check that admin notification was sent
-      delivered_emails = Bamboo.SentEmail.all()
+      # Small delay to ensure all emails are processed
+      Process.sleep(100)
 
-      # Find admin notification email
+      # Collect all delivered emails from the mailbox
+      delivered_emails = collect_delivered_emails()
+
+      # Find the admin notification email (not the welcome email to the user)
       admin_notification =
         Enum.find(delivered_emails, fn email ->
           String.contains?(email.subject || "", "New RSOLV Signup")
         end)
 
-      # This assertion will fail initially
-      assert admin_notification != nil, "Expected admin notification to be sent"
+      assert admin_notification != nil,
+             "Expected to find admin notification email. Found #{length(delivered_emails)} emails."
 
-      # When we implement it, these assertions should pass
-      if admin_notification do
-        assert admin_notification.subject =~ "🎉 New RSOLV Signup: newuser@example.com"
-        assert admin_notification.html_body =~ "newuser@example.com"
-        assert admin_notification.html_body =~ "Test Corp"
-        assert admin_notification.html_body =~ "twitter"
+      # Verify it's the admin notification with correct content
+      assert admin_notification.subject == "🎉 New RSOLV Signup: newuser@example.com"
+      assert admin_notification.html_body =~ "newuser@example.com"
+      assert admin_notification.html_body =~ "Test Corp"
+      assert admin_notification.html_body =~ "twitter"
 
-        # Check it's sent to admin emails
-        assert Enum.any?(admin_notification.to, fn recipient ->
+      # Check it's sent to admin emails
+      admin_recipients =
+        case admin_notification.to do
+          list when is_list(list) -> list
+          single -> [single]
+        end
+
+      assert Enum.any?(admin_recipients, fn recipient ->
+               recipient_email =
                  case recipient do
-                   {_name, email_address} ->
-                     String.ends_with?(email_address, "@rsolv.dev")
-
-                   email_address when is_binary(email_address) ->
-                     String.ends_with?(email_address, "@rsolv.dev")
-
-                   _ ->
-                     false
+                   {_name, email_address} -> email_address
+                   email_address when is_binary(email_address) -> email_address
+                   _ -> ""
                  end
-               end)
-      end
+
+               String.ends_with?(recipient_email, "@rsolv.dev")
+             end)
     end
 
     test "includes UTM parameters in admin notification", %{conn: conn} do
@@ -136,15 +150,21 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
 
       assert redirected_to(conn) =~ "/thank-you"
 
-      # Check admin notification includes UTM data
-      delivered_emails = Bamboo.SentEmail.all()
+      # Small delay to ensure all emails are processed
+      Process.sleep(100)
 
+      # Collect all delivered emails from the mailbox
+      delivered_emails = collect_delivered_emails()
+
+      # Find admin notification
       admin_notification =
         Enum.find(delivered_emails, fn email ->
           String.contains?(email.subject || "", "New RSOLV Signup")
         end)
 
-      assert admin_notification != nil, "Expected admin notification to be sent"
+      assert admin_notification != nil,
+             "Expected admin notification to be sent. Found #{length(delivered_emails)} emails."
+
       assert admin_notification.subject =~ "utm@example.com"
       assert admin_notification.html_body =~ "hackernews"
       assert admin_notification.html_body =~ "forum"
@@ -175,15 +195,21 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
 
       assert redirected_to(conn) =~ "/thank-you"
 
-      # Admin notification should still be sent with minimal data
-      delivered_emails = Bamboo.SentEmail.all()
+      # Small delay to ensure all emails are processed
+      Process.sleep(100)
 
+      # Collect all delivered emails from the mailbox
+      delivered_emails = collect_delivered_emails()
+
+      # Find admin notification
       admin_notification =
         Enum.find(delivered_emails, fn email ->
           String.contains?(email.subject || "", "New RSOLV Signup")
         end)
 
-      assert admin_notification != nil, "Expected admin notification to be sent"
+      assert admin_notification != nil,
+             "Expected admin notification to be sent. Found #{length(delivered_emails)} emails."
+
       assert admin_notification.subject =~ "minimal@example.com"
       assert admin_notification.html_body =~ "minimal@example.com"
       # default source
