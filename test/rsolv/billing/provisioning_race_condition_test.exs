@@ -134,7 +134,10 @@ defmodule Rsolv.Billing.ProvisioningRaceConditionTest do
       customer = insert(:customer, credit_balance: 10, has_payment_method: false)
 
       # First attempt fails
-      expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn _ -> {:error, %{message: "card_declined"}} end)
+      expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn _ ->
+        {:error, %{message: "card_declined"}}
+      end)
+
       assert {:error, _} = Billing.add_payment_method(customer, "pm_bad", true)
 
       # Second attempt succeeds (proves lock was released)
