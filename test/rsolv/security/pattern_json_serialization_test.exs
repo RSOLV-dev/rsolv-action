@@ -2,16 +2,16 @@ defmodule Rsolv.Security.PatternJsonSerializationTest do
   use ExUnit.Case
 
   describe "JSON encoding with regex - TDD Red Phase" do
-    test "Jason fails to encode regex objects" do
+    test "JSON fails to encode regex objects" do
       # This test demonstrates the current failure
       regex = ~r/test_pattern/
 
-      assert_raise Protocol.UndefinedError, ~r/Jason.Encoder not implemented for/, fn ->
+      assert_raise Protocol.UndefinedError, ~r/JSON.Encoder not implemented for/, fn ->
         JSON.encode!(regex)
       end
     end
 
-    test "Jason fails to encode pattern maps with regex" do
+    test "JSON fails to encode pattern maps with regex" do
       pattern = %{
         id: "sql_injection",
         pattern: ~r/SELECT.*FROM.*WHERE/i,

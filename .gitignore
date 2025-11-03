@@ -85,6 +85,7 @@ rsolv-demo-vulnerable/
 
 # Test artifacts
 /test-results/
+*.log
 
 # Code quality tool output
 credo_output.txt
