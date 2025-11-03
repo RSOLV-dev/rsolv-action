@@ -47,7 +47,7 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
        %HTTPoison.Response{
          status_code: 200,
          body:
-           Jason.encode!(%{
+           JSON.encode!(%{
              "subscription" => %{
                "id" => 12345,
                "state" => "active"
