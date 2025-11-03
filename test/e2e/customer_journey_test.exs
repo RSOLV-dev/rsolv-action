@@ -64,6 +64,25 @@ defmodule Rsolv.E2E.CustomerJourneyTest do
       Rsolv.Billing.StripeTestStub.create_charge(params)
     end)
 
+    # Set up ConvertKit config for tests
+    Application.put_env(:rsolv, :convertkit,
+      api_key: "test_api_key",
+      form_id: "test_form_id",
+      early_access_tag_id: "7700607",
+      tag_onboarding: "7700607",
+      api_base_url: "https://api.convertkit.com/v3"
+    )
+
+    # Stub ConvertKit HTTP calls to prevent UnexpectedCallError
+    # This allows any ConvertKit API calls to succeed without specific expectations
+    Mox.stub(Rsolv.HTTPClientMock, :post, fn _url, _body, _headers, _options ->
+      {:ok,
+       %HTTPoison.Response{
+         status_code: 200,
+         body: Jason.encode!(%{"subscription" => %{"id" => 123_456}})
+       }}
+    end)
+
     :ok
   end
 
