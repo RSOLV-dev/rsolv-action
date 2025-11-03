@@ -52,9 +52,17 @@ defmodule RsolvWeb.EmailsHTML do
 
   - `:app_url` - "https://rsolv.dev"
   - `:docs_url` - "https://rsolv.dev/docs"
+  - `:billing_url` - "https://rsolv.dev/billing"
   - `:unsubscribe_url` - "https://rsolv.dev/unsubscribe?email={email}"
   - `:first_name` - "there" (friendly fallback)
+  - `:customer_name` - "there" (friendly fallback, same as first_name)
   - `:email` - "" (empty string fallback)
+  - `:amount_due` - "$0.00"
+  - `:invoice_id` - ""
+  - `:attempt_count` - 0
+  - `:credit_balance` - 0
+  - `:next_payment_attempt_text` - nil
+  - `:usage_stats` - %{}
 
   Existing assigns are not overwritten.
   """
@@ -63,11 +71,19 @@ defmodule RsolvWeb.EmailsHTML do
     |> Map.new()
     |> Map.put_new(:app_url, "https://rsolv.dev")
     |> Map.put_new(:docs_url, "https://rsolv.dev/docs")
+    |> Map.put_new(:billing_url, "https://rsolv.dev/billing")
     |> Map.put_new_lazy(:unsubscribe_url, fn ->
       "https://rsolv.dev/unsubscribe?email=#{assigns[:email]}"
     end)
     |> Map.put_new(:first_name, "there")
+    |> Map.put_new(:customer_name, "there")
     |> Map.put_new(:email, "")
+    |> Map.put_new(:amount_due, "$0.00")
+    |> Map.put_new(:invoice_id, "")
+    |> Map.put_new(:attempt_count, 0)
+    |> Map.put_new(:credit_balance, 0)
+    |> Map.put_new(:next_payment_attempt_text, nil)
+    |> Map.put_new(:usage_stats, %{})
   end
 
   # Generate render_* functions for all email templates using a macro
