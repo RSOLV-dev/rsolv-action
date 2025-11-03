@@ -14,6 +14,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
   """
   use ExUnit.Case, async: true
 
+  import Rsolv.AST.TestIntegratorHelpers
+
   alias Rsolv.AST.TestIntegrator
 
   describe "JavaScript/TypeScript test integration with Vitest" do
@@ -26,28 +28,24 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "rejects SQL injection in search endpoint",
-            "testCode" =>
-              "post('/search', { q: \"admin'; DROP TABLE users;--\" });\nexpect(response.status).toBe(400);",
-            "attackVector" => "admin'; DROP TABLE users;--"
-          }
+      test_suite =
+        build_test_suite([
+          red_test(
+            "rejects SQL injection in search endpoint",
+            "post('/search', { q: \"admin'; DROP TABLE users;--\" });\nexpect(response.status).toBe(400);",
+            "admin'; DROP TABLE users;--"
+          )
+        ])
+
+      integrate_and_assert_ast(target_content, test_suite, "javascript", "vitest",
+        strategy: "after_last_it_block",
+        contains: [
+          "rejects SQL injection in search endpoint",
+          "describe('security'",
+          "admin'; DROP TABLE users;--",
+          "creates user"
         ]
-      }
-
-      {:ok, integrated_code, insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "javascript", "vitest")
-
-      assert method == "ast"
-      assert insertion_point != nil
-      assert insertion_point.strategy == "after_last_it_block"
-      assert String.contains?(integrated_code, "rejects SQL injection in search endpoint")
-      assert String.contains?(integrated_code, "describe('security'")
-      assert String.contains?(integrated_code, "admin'; DROP TABLE users;--")
-      # Original test preserved
-      assert String.contains?(integrated_code, "creates user")
+      )
     end
 
     test "integrates test with multiple RED tests" do
@@ -59,28 +57,23 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "prevents SQL injection in login",
-            "testCode" =>
-              "const result = login(\"' OR '1'='1\", 'pass');\nexpect(result).toBeNull();",
-            "attackVector" => "' OR '1'='1"
-          },
-          %{
-            "testName" => "prevents command injection",
-            "testCode" => "const result = exec('ls; rm -rf /');\nexpect(result).toThrow();",
-            "attackVector" => "ls; rm -rf /"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test(
+            "prevents SQL injection in login",
+            "const result = login(\"' OR '1'='1\", 'pass');\nexpect(result).toBeNull();",
+            "' OR '1'='1"
+          ),
+          red_test(
+            "prevents command injection",
+            "const result = exec('ls; rm -rf /');\nexpect(result).toThrow();",
+            "ls; rm -rf /"
+          )
+        ])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "javascript", "vitest")
-
-      assert method == "ast"
-      assert String.contains?(integrated_code, "prevents SQL injection in login")
-      assert String.contains?(integrated_code, "prevents command injection")
+      integrate_and_assert_ast(target_content, test_suite, "javascript", "vitest",
+        contains: ["prevents SQL injection in login", "prevents command injection"]
+      )
     end
 
     test "handles TypeScript test file" do
@@ -93,22 +86,18 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "validates payment amount",
-            "testCode" =>
-              "const invalidAmount: number = -50;\nexpect(() => processPayment(invalidAmount)).toThrow();",
-            "attackVector" => "negative amount"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test(
+            "validates payment amount",
+            "const invalidAmount: number = -50;\nexpect(() => processPayment(invalidAmount)).toThrow();",
+            "negative amount"
+          )
+        ])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "typescript", "vitest")
-
-      assert method == "ast"
-      assert String.contains?(integrated_code, "validates payment amount")
+      integrate_and_assert_ast(target_content, test_suite, "typescript", "vitest",
+        contains: ["validates payment amount"]
+      )
     end
 
     test "preserves indentation in integrated code" do
@@ -121,21 +110,11 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "prevents path traversal",
-            "testCode" =>
-              "const result = readFile('../../../etc/passwd');\nexpect(result).toBeNull();",
-            "attackVector" => "../../../etc/passwd"
-          }
-        ]
-      }
+      test_suite = build_test_suite([path_traversal_js()])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "javascript", "vitest")
+      {:ok, integrated_code} =
+        integrate_and_assert_ast(target_content, test_suite, "javascript", "vitest")
 
-      assert method == "ast"
       # Should maintain indentation
       assert String.contains?(integrated_code, "    describe('security'") ||
                String.contains?(integrated_code, "describe('security'")
@@ -152,22 +131,18 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "should prevent SQL injection",
-            "testCode" =>
-              "const result = vulnerableQuery(\"'; DROP TABLE users;--\");\nexpect(result).toBeNull();",
-            "attackVector" => "'; DROP TABLE users;--"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test(
+            "should prevent SQL injection",
+            "const result = vulnerableQuery(\"'; DROP TABLE users;--\");\nexpect(result).toBeNull();",
+            "'; DROP TABLE users;--"
+          )
+        ])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "javascript", "jest")
-
-      assert method == "ast"
-      assert String.contains?(integrated_code, "should prevent SQL injection")
+      integrate_and_assert_ast(target_content, test_suite, "javascript", "jest",
+        contains: ["should prevent SQL injection"]
+      )
     end
   end
 
@@ -181,22 +156,18 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "rejects malicious input",
-            "testCode" =>
-              "const result = authenticate(\"admin' --\");\nexpect(result).to.be.null;",
-            "attackVector" => "admin' --"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test(
+            "rejects malicious input",
+            "const result = authenticate(\"admin' --\");\nexpect(result).to.be.null;",
+            "admin' --"
+          )
+        ])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "javascript", "mocha")
-
-      assert method == "ast"
-      assert String.contains?(integrated_code, "rejects malicious input")
+      integrate_and_assert_ast(target_content, test_suite, "javascript", "mocha",
+        contains: ["rejects malicious input"]
+      )
     end
   end
 
@@ -207,45 +178,28 @@ defmodule Rsolv.AST.TestIntegratorTest do
       const helper = () => {};
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "validates input",
-            "testCode" => "expect(true).toBe(true);",
-            "attackVector" => "test"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test("validates input", "expect(true).toBe(true);", "test")
+        ])
 
-      {:ok, integrated_code, insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "javascript", "vitest")
-
-      assert method == "append"
-      assert insertion_point == nil
-      assert String.contains?(integrated_code, "validates input")
-      assert String.contains?(integrated_code, "describe('security'")
+      integrate_and_assert_fallback(target_content, test_suite, "javascript", "vitest", [
+        "validates input",
+        "describe('security'"
+      ])
     end
 
     test "falls back to append on parse error" do
-      target_content = """
-      describe('Test', () => { // unclosed describe block
-      """
+      target_content = malformed_js()
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "test security",
-            "testCode" => "expect(true).toBe(true);",
-            "attackVector" => "test"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test("test security", "expect(true).toBe(true);", "test")
+        ])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "javascript", "vitest")
-
-      assert method == "append"
-      assert String.contains?(integrated_code, "test security")
+      integrate_and_assert_fallback(target_content, test_suite, "javascript", "vitest", [
+        "test security"
+      ])
     end
   end
 
@@ -259,7 +213,7 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{"redTests" => []}
+      test_suite = empty_test_suite()
 
       {:ok, _integrated_code, _insertion_point, method} =
         TestIntegrator.generate_integration(target_content, test_suite, "javascript", "vitest")
@@ -277,23 +231,11 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "prevents XSS attack",
-            "testCode" =>
-              "const result = render('<script>alert(\"XSS\")</script>');\nexpect(result).not.toContain('<script>');",
-            "attackVector" => "<script>alert(\"XSS\")</script>"
-          }
-        ]
-      }
+      test_suite = build_test_suite([xss_js()])
 
-      {:ok, integrated_code, _insertion_point, _method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "javascript", "vitest")
-
-      assert String.contains?(integrated_code, "prevents XSS attack")
-      # Attack vector should be in comment
-      assert String.contains?(integrated_code, "Attack vector:")
+      integrate_and_assert_ast(target_content, test_suite, "javascript", "vitest",
+        contains: ["prevents XSS attack", "Attack vector:"]
+      )
     end
 
     test "handles multiple existing tests" do
@@ -313,24 +255,15 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "security test",
-            "testCode" => "expect(true).toBe(true);",
-            "attackVector" => "test"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test("security test", "expect(true).toBe(true);", "test")
+        ])
 
-      {:ok, integrated_code, insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "javascript", "vitest")
-
-      assert method == "ast"
-      assert insertion_point.strategy == "after_last_it_block"
-      # Should insert after the last test
-      assert String.contains?(integrated_code, "test three")
-      assert String.contains?(integrated_code, "security test")
+      integrate_and_assert_ast(target_content, test_suite, "javascript", "vitest",
+        strategy: "after_last_it_block",
+        contains: ["test three", "security test"]
+      )
     end
   end
 
@@ -342,15 +275,10 @@ defmodule Rsolv.AST.TestIntegratorTest do
       });
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "test",
-            "testCode" => "expect(true).toBe(true);",
-            "attackVector" => "test"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test("test", "expect(true).toBe(true);", "test")
+        ])
 
       {:ok, _integrated_code, _insertion_point, method} =
         TestIntegrator.generate_integration(target_content, test_suite, "javascript", "jasmine")
