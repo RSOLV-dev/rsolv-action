@@ -180,10 +180,14 @@ defmodule Rsolv.Billing.StripeService do
     duration = System.monotonic_time() - start_time
 
     # Normalize error after all retries exhausted
+    # Only normalize if error is a raw Stripe/HTTP error struct (not already normalized to atom)
     normalized_result =
       case result do
-        {:error, error} -> handle_stripe_error(error, operation, Map.to_list(metadata))
-        other -> other
+        {:error, error} when is_struct(error) ->
+          handle_stripe_error(error, operation, Map.to_list(metadata))
+
+        other ->
+          other
       end
 
     event_type = if match?({:ok, _}, normalized_result), do: :stop, else: :exception
@@ -250,7 +254,9 @@ defmodule Rsolv.Billing.StripeService do
         {:ok, customer} ->
           {:ok, customer}
 
-        {:error, %{__struct__: Stripe.Error, code: :invalid_request_error}} ->
+        # Handle both atom and string codes (Stripe returns atoms, tests may use strings)
+        {:error, %{__struct__: Stripe.Error, code: code}}
+        when code in [:invalid_request_error, "invalid_request_error"] ->
           {:error, :not_found}
 
         {:error, error} ->

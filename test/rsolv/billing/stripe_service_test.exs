@@ -62,7 +62,8 @@ defmodule Rsolv.Billing.StripeServiceTest do
     test "handles network errors" do
       customer = insert(:customer)
 
-      expect(Rsolv.Billing.StripeMock, :create, fn _params ->
+      # Network errors trigger retry logic with max_attempts=3, so expect 3 calls (initial + 2 retries)
+      expect(Rsolv.Billing.StripeMock, :create, 3, fn _params ->
         {:error, %HTTPoison.Error{reason: :timeout}}
       end)
 
