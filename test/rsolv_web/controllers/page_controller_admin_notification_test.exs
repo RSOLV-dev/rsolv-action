@@ -77,10 +77,9 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
       # Should redirect to thank you page
       assert redirected_to(conn) =~ "/thank-you"
 
-      # Small delay to ensure all emails are processed
-      Process.sleep(100)
-
       # Collect all delivered emails from the mailbox
+      # Since we're using Bamboo.TestAdapter with Oban testing: :inline,
+      # all emails should be delivered synchronously before the request completes
       delivered_emails = collect_delivered_emails()
 
       # Find the admin notification email (not the welcome email to the user)
@@ -150,9 +149,6 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
 
       assert redirected_to(conn) =~ "/thank-you"
 
-      # Small delay to ensure all emails are processed
-      Process.sleep(100)
-
       # Collect all delivered emails from the mailbox
       delivered_emails = collect_delivered_emails()
 
@@ -194,9 +190,6 @@ defmodule RsolvWeb.PageControllerAdminNotificationTest do
       conn = post(conn, ~p"/early-access", params)
 
       assert redirected_to(conn) =~ "/thank-you"
-
-      # Small delay to ensure all emails are processed
-      Process.sleep(100)
 
       # Collect all delivered emails from the mailbox
       delivered_emails = collect_delivered_emails()
