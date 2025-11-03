@@ -248,7 +248,7 @@ defmodule Rsolv.StripeTestHelpers do
       # Mock multiple concurrent attachments
       mock_payment_method_attach("pm_test_visa", "cus_test_123", times: 2)
   """
-  def mock_payment_method_attach(payment_method_id, customer_id, opts \\ []) do
+  def mock_payment_method_attach(_payment_method_id, _customer_id, opts \\ []) do
     times = Keyword.get(opts, :times, 1)
 
     expect(Rsolv.Billing.StripePaymentMethodMock, :attach, times, fn params ->
