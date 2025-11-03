@@ -21,27 +21,33 @@ docker pull grafana/k6:latest
 
 ## Running Tests
 
-### Signup Load Test (100 concurrent users)
+### Quick Start (All Tests)
 ```bash
-k6 run load_tests/signup_test.js
+# Run all tests against staging
+./load_tests/run_load_tests.sh staging
+
+# Run all tests against production
+./load_tests/run_load_tests.sh production
+
+# Run all tests against local
+./load_tests/run_load_tests.sh local
 ```
 
-### Webhook Load Test (1000 webhooks/minute)
+### Individual Tests
+
+#### Signup Load Test (100 concurrent users)
 ```bash
-k6 run load_tests/webhook_test.js
+API_BASE_URL=https://api.rsolv-staging.com k6 run load_tests/signup_test.js
 ```
 
-### API Rate Limit Test (verify 500/hour limit)
+#### Webhook Load Test (1000 webhooks/minute)
 ```bash
-k6 run load_tests/api_rate_limit_test.js
+API_BASE_URL=https://api.rsolv-staging.com k6 run load_tests/webhook_test.js
 ```
 
-### Run All Tests
+#### API Rate Limit Test (verify 500/hour limit)
 ```bash
-for test in load_tests/*.js; do
-  echo "Running $test..."
-  k6 run "$test"
-done
+API_BASE_URL=https://api.rsolv-staging.com k6 run load_tests/api_rate_limit_test.js
 ```
 
 ## Environment Variables

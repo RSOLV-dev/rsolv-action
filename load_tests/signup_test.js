@@ -36,13 +36,11 @@ const BASE_URL = __ENV.API_BASE_URL || 'http://localhost:4000';
 
 export default function () {
   const uniqueEmail = `loadtest-${Date.now()}-${__VU}-${__ITER}@example.com`;
+  const uniqueName = `LoadTest User ${__VU}-${__ITER}`;
 
   const payload = JSON.stringify({
+    name: uniqueName,
     email: uniqueEmail,
-    password: 'LoadTest123!@#',
-    password_confirmation: 'LoadTest123!@#',
-    plan: 'growth',
-    payment_method: 'pm_card_visa', // Stripe test token
   });
 
   const params = {
@@ -53,7 +51,7 @@ export default function () {
   };
 
   const startTime = new Date();
-  const response = http.post(`${BASE_URL}/api/auth/signup`, payload, params);
+  const response = http.post(`${BASE_URL}/api/v1/customers/onboard`, payload, params);
   const duration = new Date() - startTime;
 
   // Record metrics
@@ -62,18 +60,18 @@ export default function () {
   // Check response
   const success = check(response, {
     'status is 201': (r) => r.status === 201,
-    'has customer_id': (r) => {
+    'has customer object': (r) => {
       try {
         const body = JSON.parse(r.body);
-        return body.customer_id !== undefined;
+        return body.customer !== undefined && body.customer.id !== undefined;
       } catch {
         return false;
       }
     },
-    'has subscription': (r) => {
+    'has api_key': (r) => {
       try {
         const body = JSON.parse(r.body);
-        return body.subscription !== undefined;
+        return body.api_key !== undefined && body.api_key.startsWith('rsolv_');
       } catch {
         return false;
       }
