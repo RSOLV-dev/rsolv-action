@@ -19,6 +19,8 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
   """
   use ExUnit.Case, async: false
 
+  import Rsolv.AST.TestIntegratorHelpers
+
   alias Rsolv.AST.TestIntegrator
 
   describe "Ruby RSpec test integration" do
@@ -33,27 +35,24 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
       end
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "rejects SQL injection in search endpoint",
-            "testCode" =>
-              "post '/search', params: { q: \"admin'; DROP TABLE users;--\" }\nexpect(response.status).to eq(400)",
-            "attackVector" => "admin'; DROP TABLE users;--"
-          }
+      test_suite =
+        build_test_suite([
+          red_test(
+            "rejects SQL injection in search endpoint",
+            "post '/search', params: { q: \"admin'; DROP TABLE users;--\" }\nexpect(response.status).to eq(400)",
+            "admin'; DROP TABLE users;--"
+          )
+        ])
+
+      integrate_and_assert_ast(target_content, test_suite, "ruby", "rspec",
+        strategy: "after_last_it_block",
+        contains: [
+          "rejects SQL injection in search endpoint",
+          "describe 'security'",
+          "admin'; DROP TABLE users;--",
+          "creates user"
         ]
-      }
-
-      {:ok, integrated_code, insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "ruby", "rspec")
-
-      assert method == "ast", "Should use AST method for Ruby RSpec integration"
-      assert insertion_point != nil, "Should find insertion point"
-      assert insertion_point.strategy == "after_last_it_block"
-      assert String.contains?(integrated_code, "rejects SQL injection in search endpoint")
-      assert String.contains?(integrated_code, "describe 'security'")
-      assert String.contains?(integrated_code, "admin'; DROP TABLE users;--")
-      assert String.contains?(integrated_code, "creates user"), "Should preserve original test"
+      )
     end
 
     test "integrates test with multiple RED tests in RSpec" do
@@ -67,27 +66,23 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
       end
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "prevents SQL injection in login",
-            "testCode" => "result = login(\"' OR '1'='1\", 'pass')\nexpect(result).to be_nil",
-            "attackVector" => "' OR '1'='1"
-          },
-          %{
-            "testName" => "prevents command injection",
-            "testCode" => "expect { exec_command('ls; rm -rf /') }.to raise_error",
-            "attackVector" => "ls; rm -rf /"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test(
+            "prevents SQL injection in login",
+            "result = login(\"' OR '1'='1\", 'pass')\nexpect(result).to be_nil",
+            "' OR '1'='1"
+          ),
+          red_test(
+            "prevents command injection",
+            "expect { exec_command('ls; rm -rf /') }.to raise_error",
+            "ls; rm -rf /"
+          )
+        ])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "ruby", "rspec")
-
-      assert method == "ast"
-      assert String.contains?(integrated_code, "prevents SQL injection in login")
-      assert String.contains?(integrated_code, "prevents command injection")
+      integrate_and_assert_ast(target_content, test_suite, "ruby", "rspec",
+        contains: ["prevents SQL injection in login", "prevents command injection"]
+      )
     end
 
     test "handles RSpec context blocks" do
@@ -103,21 +98,18 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
       end
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "validates payment amount",
-            "testCode" => "expect { process_payment(-50) }.to raise_error",
-            "attackVector" => "negative amount"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test(
+            "validates payment amount",
+            "expect { process_payment(-50) }.to raise_error",
+            "negative amount"
+          )
+        ])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "ruby", "rspec")
-
-      assert method == "ast"
-      assert String.contains?(integrated_code, "validates payment amount")
+      integrate_and_assert_ast(target_content, test_suite, "ruby", "rspec",
+        contains: ["validates payment amount"]
+      )
     end
 
     test "preserves indentation in Ruby code" do
@@ -132,22 +124,11 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
       end
       """
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "prevents path traversal",
-            "testCode" => "result = read_file('../../../etc/passwd')\nexpect(result).to be_nil",
-            "attackVector" => "../../../etc/passwd"
-          }
-        ]
-      }
+      test_suite = build_test_suite([path_traversal_ruby()])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "ruby", "rspec")
-
-      assert method == "ast"
-      # Should insert the security describe block
-      assert String.contains?(integrated_code, "describe 'security'")
+      integrate_and_assert_ast(target_content, test_suite, "ruby", "rspec",
+        contains: ["describe 'security'"]
+      )
     end
   end
 
@@ -328,48 +309,29 @@ defmodule Rsolv.AST.TestIntegratorRubyPythonTest do
     end
 
     test "falls back to append on Ruby parse error" do
-      target_content = """
-      RSpec.describe 'Test' do # unclosed block
-      """
+      target_content = malformed_ruby()
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "test security",
-            "testCode" => "expect(true).to be true",
-            "attackVector" => "test"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test("test security", "expect(true).to be true", "test")
+        ])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "ruby", "rspec")
-
-      assert method == "append"
-      assert String.contains?(integrated_code, "test security")
+      integrate_and_assert_fallback(target_content, test_suite, "ruby", "rspec", [
+        "test security"
+      ])
     end
 
     test "falls back to append on Python parse error" do
-      target_content = """
-      class TestFoo:  # unclosed class
-          def test_bar(self
-      """
+      target_content = malformed_python()
 
-      test_suite = %{
-        "redTests" => [
-          %{
-            "testName" => "test security",
-            "testCode" => "assert True",
-            "attackVector" => "test"
-          }
-        ]
-      }
+      test_suite =
+        build_test_suite([
+          red_test("test security", "assert True", "test")
+        ])
 
-      {:ok, integrated_code, _insertion_point, method} =
-        TestIntegrator.generate_integration(target_content, test_suite, "python", "pytest")
-
-      assert method == "append"
-      assert String.contains?(integrated_code, "test_security")
+      integrate_and_assert_fallback(target_content, test_suite, "python", "pytest", [
+        "test_security"
+      ])
     end
   end
 
