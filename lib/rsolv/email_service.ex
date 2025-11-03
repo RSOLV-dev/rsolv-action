@@ -269,15 +269,23 @@ defmodule Rsolv.EmailService do
           # Actually send the email
           result = Mailer.deliver_now(email)
 
+          # Unwrap result if it's already wrapped in {:ok, email}
+          # Some adapters return {:ok, email}, others return email directly
+          email_result =
+            case result do
+              {:ok, email_struct} -> email_struct
+              email_struct -> email_struct
+            end
+
           # Log the raw result from Postmark
           result_type =
-            case result do
+            case email_result do
               %{__struct__: struct} -> inspect(struct)
               _ -> "not a struct"
             end
 
           Logger.info("[EMAIL DEBUG] Raw Postmark response",
-            result: inspect(result),
+            result: inspect(email_result),
             result_type: result_type,
             timestamp: timestamp
           )
@@ -288,7 +296,7 @@ defmodule Rsolv.EmailService do
             timestamp: timestamp
           )
 
-          {:ok, %{status: "sent", email: result}}
+          {:ok, %{status: "sent", email: email_result}}
         end
       rescue
         error ->
@@ -376,13 +384,21 @@ defmodule Rsolv.EmailService do
         # Actually send the email
         result = Mailer.deliver_now(email)
 
+        # Unwrap result if it's already wrapped in {:ok, email}
+        # Some adapters return {:ok, email}, others return email directly
+        email_result =
+          case result do
+            {:ok, email_struct} -> email_struct
+            email_struct -> email_struct
+          end
+
         Logger.info("[EMAIL] Email sent successfully via Postmark",
           to: email.to,
           subject: email.subject,
           timestamp: timestamp
         )
 
-        {:ok, %{status: "sent", email: result}}
+        {:ok, %{status: "sent", email: email_result}}
       end
     rescue
       error ->
