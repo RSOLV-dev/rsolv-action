@@ -59,7 +59,7 @@ Reduce false positives by 70-90% through intelligent AST validation that detects
 1. **Staging Deployment** ✅
    - Built and deployed to Kubernetes staging
    - Fixed Docker volume mount issue preventing deployment
-   - Endpoint now live at: https://api.staging.rsolv.dev/api/v1/vulnerabilities/validate
+   - Endpoint now live at: https://api.rsolv-staging.com/api/v1/vulnerabilities/validate
 
 2. **End-to-End Testing** ✅
    - Verified endpoint responds correctly
