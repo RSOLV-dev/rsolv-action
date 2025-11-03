@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# RFC-069 Thursday - Load Testing Script
+# RSOLV Load Testing Script
 #
 # This script runs the three load tests specified in RFC-069:
 # 1. Signup test (100 concurrent users)
 # 2. Webhook test (1000 webhooks/minute)
 # 3. API rate limit test (verify 500/hour limit)
 #
-# Usage: ./load_tests/run_thursday_load_tests.sh [staging|local]
+# Usage: ./load_tests/run_load_tests.sh [staging|production|local]
 #
 # Environment variables (optional):
 #   API_BASE_URL - Override base URL (default: https://api.rsolv-staging.com for staging)

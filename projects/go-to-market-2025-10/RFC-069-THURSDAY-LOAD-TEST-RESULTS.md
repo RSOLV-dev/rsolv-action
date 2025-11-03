@@ -355,7 +355,7 @@ The aggressive security controls (rate limiting, email validation, signature ver
 **Test Artifacts**:
 - Raw k6 results: `load_tests/results/*.json`
 - Test scripts: `load_tests/*.js`
-- Runner script: `load_tests/run_thursday_load_tests.sh`
+- Runner script: `load_tests/run_load_tests.sh`
 
 **Environments**:
 - Staging API: https://api.rsolv-staging.com
