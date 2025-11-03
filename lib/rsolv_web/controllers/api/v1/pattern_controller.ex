@@ -225,7 +225,7 @@ defmodule RsolvWeb.Api.V1.PatternController do
         }
       }
 
-      json_data = JSON.encode!(response_data)
+      json_data = JSONSerializer.encode!(response_data)
 
       conn
       |> put_resp_header("content-type", "application/json")
