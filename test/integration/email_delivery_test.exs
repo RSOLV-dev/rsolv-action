@@ -29,10 +29,13 @@ defmodule Rsolv.Integration.EmailDeliveryTest do
       # Check what was returned
       email =
         case result do
-          {:ok, %{status: "sent", email: {:ok, email}}} ->
+          {:ok, %{status: "sent", email: email}} when is_struct(email) ->
             # Email was sent and we have it in the result
-            # Bamboo.TestAdapter doesn't store emails in Bamboo.SentEmail,
-            # but we can use the returned email
+            # email is a Bamboo.Email struct
+            email
+
+          {:ok, %{status: "sent", email: {:ok, email}}} ->
+            # Handle the nested {:ok, email} pattern (legacy)
             email
 
           {:ok, %{status: "sent"}} ->
@@ -62,7 +65,7 @@ defmodule Rsolv.Integration.EmailDeliveryTest do
 
       result = EmailService.send_early_access_welcome_email("earlybird@example.com", "EarlyBird")
 
-      assert {:ok, %{status: "sent", email: {:ok, email}}} = result
+      assert {:ok, %{status: "sent", email: email}} = result
 
       # Verify email content
       assert email.subject =~ "Early Access Program"
@@ -90,7 +93,7 @@ defmodule Rsolv.Integration.EmailDeliveryTest do
       Bamboo.SentEmail.reset()
 
       result = EmailService.send_early_access_welcome_email("structure@example.com")
-      assert {:ok, %{status: "sent", email: {:ok, email}}} = result
+      assert {:ok, %{status: "sent", email: email}} = result
 
       # Check headers
       assert email.headers["X-Postmark-Tag"] == "early-access"
@@ -114,7 +117,7 @@ defmodule Rsolv.Integration.EmailDeliveryTest do
       result = EmailService.send_welcome_email("local@example.com")
 
       # Check that email was sent successfully
-      assert {:ok, %{status: "sent", email: {:ok, email}}} = result
+      assert {:ok, %{status: "sent", email: email}} = result
 
       # Verify the email
       assert email.to == [nil: "local@example.com"]
