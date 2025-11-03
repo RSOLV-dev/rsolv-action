@@ -179,7 +179,14 @@ defmodule Rsolv.Billing.StripeService do
     result = with_retry(operation, metadata, fun)
     duration = System.monotonic_time() - start_time
 
-    event_type = if match?({:ok, _}, result), do: :stop, else: :exception
+    # Normalize error after all retries exhausted
+    normalized_result =
+      case result do
+        {:error, error} -> handle_stripe_error(error, operation, Map.to_list(metadata))
+        other -> other
+      end
+
+    event_type = if match?({:ok, _}, normalized_result), do: :stop, else: :exception
 
     :telemetry.execute(
       [:rsolv, :billing, :stripe, operation, event_type],
@@ -187,7 +194,7 @@ defmodule Rsolv.Billing.StripeService do
       metadata
     )
 
-    result
+    normalized_result
   end
 
   @doc """
@@ -220,7 +227,7 @@ defmodule Rsolv.Billing.StripeService do
           {:ok, stripe_customer}
 
         {:error, error} ->
-          handle_stripe_error(error, "create_customer", customer_id: customer.id)
+          {:error, error}
       end
     end)
   end
@@ -247,7 +254,7 @@ defmodule Rsolv.Billing.StripeService do
           {:error, :not_found}
 
         {:error, error} ->
-          handle_stripe_error(error, "get_customer", stripe_customer_id: stripe_customer_id)
+          {:error, error}
       end
     end)
   end
@@ -281,7 +288,7 @@ defmodule Rsolv.Billing.StripeService do
         {:ok, payment_method_id}
       else
         {:error, error} ->
-          handle_stripe_error(error, "attach_payment_method", context)
+          {:error, error}
       end
     end)
   end
@@ -315,9 +322,7 @@ defmodule Rsolv.Billing.StripeService do
           {:ok, subscription}
 
         {:error, error} ->
-          handle_stripe_error(error, "create_subscription",
-            stripe_customer_id: stripe_customer_id
-          )
+          {:error, error}
       end
     end)
   end
@@ -343,7 +348,7 @@ defmodule Rsolv.Billing.StripeService do
           {:ok, subscription}
 
         {:error, error} ->
-          handle_stripe_error(error, "update_subscription", subscription_id: subscription_id)
+          {:error, error}
       end
     end)
   end
@@ -365,7 +370,7 @@ defmodule Rsolv.Billing.StripeService do
           {:ok, subscription}
 
         {:error, error} ->
-          handle_stripe_error(error, "cancel_subscription", subscription_id: subscription_id)
+          {:error, error}
       end
     end)
   end
@@ -405,7 +410,7 @@ defmodule Rsolv.Billing.StripeService do
           {:ok, charge}
 
         {:error, error} ->
-          handle_stripe_error(error, "create_charge", context)
+          {:error, error}
       end
     end)
   end
