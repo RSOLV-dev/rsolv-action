@@ -56,7 +56,8 @@ defmodule Rsolv.AST.TestIntegratorHelpers do
       attack_vector: "../../../etc/passwd",
       test_name: "prevents path traversal",
       code: %{
-        javascript: ~s|const result = readFile('../../../etc/passwd');\nexpect(result).toBeNull();|,
+        javascript:
+          ~s|const result = readFile('../../../etc/passwd');\nexpect(result).toBeNull();|,
         ruby: ~s|result = read_file('../../../etc/passwd')\nexpect(result).to be_nil|,
         python: ~s|result = read_file('../../../etc/passwd')\nassert result is None|
       }
@@ -65,9 +66,12 @@ defmodule Rsolv.AST.TestIntegratorHelpers do
       attack_vector: ~s|<script>alert("XSS")</script>|,
       test_name: "prevents XSS attack",
       code: %{
-        javascript: ~s|const result = render('<script>alert("XSS")</script>');\nexpect(result).not.toContain('<script>');|,
-        ruby: ~s|result = render('<script>alert("XSS")</script>')\nexpect(result).not_to include('<script>')|,
-        python: ~s|result = render('<script>alert("XSS")</script>')\nassert '<script>' not in result|
+        javascript:
+          ~s|const result = render('<script>alert("XSS")</script>');\nexpect(result).not.toContain('<script>');|,
+        ruby:
+          ~s|result = render('<script>alert("XSS")</script>')\nexpect(result).not_to include('<script>')|,
+        python:
+          ~s|result = render('<script>alert("XSS")</script>')\nassert '<script>' not in result|
       }
     }
   }
