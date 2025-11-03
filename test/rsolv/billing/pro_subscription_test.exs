@@ -13,10 +13,10 @@ defmodule Rsolv.Billing.ProSubscriptionTest do
   """
   use Rsolv.DataCase, async: false
   import Mox
+  import Rsolv.StripeTestHelpers
 
   alias Rsolv.Billing
   alias Rsolv.Billing.{CreditLedger, Subscription}
-  alias Rsolv.Customers.Customer
   alias Rsolv.Repo
 
   setup :verify_on_exit!
@@ -38,24 +38,10 @@ defmodule Rsolv.Billing.ProSubscriptionTest do
 
       # ACT 1: Add payment method with billing consent
       payment_method_id = "pm_test_visa"
-      billing_consent = true
+      mock_payment_method_attach(payment_method_id, customer.stripe_customer_id)
 
-      # Mock Stripe payment method attachment
-      expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn params ->
-        assert params.payment_method == payment_method_id
-        assert params.customer == customer.stripe_customer_id
-        {:ok, %{id: payment_method_id, customer: customer.stripe_customer_id}}
-      end)
-
-      expect(Rsolv.Billing.StripeMock, :update, fn stripe_customer_id, params ->
-        assert stripe_customer_id == customer.stripe_customer_id
-        assert params.invoice_settings.default_payment_method == payment_method_id
-        {:ok, %{id: stripe_customer_id}}
-      end)
-
-      # Add payment method
       assert {:ok, customer_with_payment} =
-               Billing.add_payment_method(customer, payment_method_id, billing_consent)
+               Billing.add_payment_method(customer, payment_method_id, true)
 
       # ASSERT 1: Payment method added, consent given, credits increased to 10
       assert customer_with_payment.stripe_payment_method_id == payment_method_id
@@ -74,37 +60,14 @@ defmodule Rsolv.Billing.ProSubscriptionTest do
       assert billing_txn.balance_after == 10
 
       # ACT 2: Subscribe to Pro plan
-      # Price ID from config/config.exs: price_test_pro_monthly_50000 (represents $599/month)
       pro_price_id = "price_test_pro_monthly_50000"
-      stripe_subscription_id = "sub_test_pro_123"
+      stripe_subscription_id =
+        mock_stripe_subscription_create(
+          customer_with_payment.stripe_customer_id,
+          subscription_id: "sub_test_pro_123",
+          price_id: pro_price_id
+        )
 
-      # Mock Stripe subscription creation
-      expect(Rsolv.Billing.StripeSubscriptionMock, :create, fn params ->
-        # StripeService passes these params to Stripe.Subscription.create
-        assert params.customer == customer_with_payment.stripe_customer_id
-        assert params.items == [%{price: pro_price_id}]
-        assert params.trial_period_days == 0
-
-        {:ok,
-         %{
-           id: stripe_subscription_id,
-           status: "active",
-           current_period_start: DateTime.utc_now() |> DateTime.to_unix(),
-           current_period_end: DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.to_unix(),
-           items: %{
-             data: [
-               %{
-                 price: %{
-                   id: pro_price_id,
-                   metadata: %{plan: "pro"}
-                 }
-               }
-             ]
-           }
-         }}
-      end)
-
-      # Subscribe to Pro
       assert {:ok, pro_customer} = Billing.subscribe_to_pro(customer_with_payment)
 
       # ASSERT 2: Subscription created, customer upgraded to Pro
@@ -169,40 +132,17 @@ defmodule Rsolv.Billing.ProSubscriptionTest do
     end
 
     test "verify $599 charge amount for Pro subscription" do
-      # ARRANGE: Customer with payment method
       customer =
         insert(:customer,
-          email: "checkprice@example.com",
           stripe_customer_id: "cus_test_price_check",
-          stripe_payment_method_id: "pm_test_visa",
           has_payment_method: true
         )
 
-      # Get the configured Pro price ID (should represent $599/month)
-      # From config/config.exs: price_test_pro_monthly_50000
+      # Mock verifies correct price_id is passed to Stripe
       pro_price_id = "price_test_pro_monthly_50000"
+      mock_stripe_subscription_create(customer.stripe_customer_id, price_id: pro_price_id)
 
-      # Mock Stripe and verify price is correct
-      expect(Rsolv.Billing.StripeSubscriptionMock, :create, fn params ->
-        # The price_id itself is configured in the system, but we can verify
-        # it's being passed to Stripe correctly
-        assert params.items == [%{price: pro_price_id}]
-        assert params.customer == customer.stripe_customer_id
-
-        {:ok,
-         %{
-           id: "sub_test_123",
-           status: "active",
-           current_period_start: DateTime.utc_now() |> DateTime.to_unix(),
-           current_period_end: DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.to_unix()
-         }}
-      end)
-
-      # ACT: Subscribe
       assert {:ok, _} = Billing.subscribe_to_pro(customer)
-
-      # ASSERT: Mock expectations verified (price_id passed correctly)
-      # In real flow, Stripe charges $599 based on price_id configuration
     end
 
     test "60 credits allocated when invoice.paid webhook received" do
