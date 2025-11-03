@@ -83,7 +83,7 @@ echo "Making 15 rapid login attempts to test rate limiting..."
 for i in {1..15}; do
     RATE_TEST=$(curl -s -X POST "$STAGING_URL/admin/login" \
         -H "Content-Type: application/json" \
-        -d "{\"email\":\"test@test.com\",\"password\":\"wrong$i\"}" \
+        -d "{\"email\":\"test@example.com\",\"password\":\"wrong$i\"}" \
         -w "%{http_code}" -o /dev/null 2>/dev/null)
     
     if [ "$RATE_TEST" == "429" ]; then

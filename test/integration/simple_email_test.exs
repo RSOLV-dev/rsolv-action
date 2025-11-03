@@ -46,7 +46,7 @@ defmodule Rsolv.Integration.SimpleEmailTest do
     Bamboo.SentEmail.reset()
 
     # Send early access email
-    result = EmailService.send_early_access_welcome_email("early@test.com", "EarlyBird")
+    result = EmailService.send_early_access_welcome_email("early@example.com", "EarlyBird")
 
     IO.inspect(result, label: "Early access result")
 
