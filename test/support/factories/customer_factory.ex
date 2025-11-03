@@ -22,20 +22,23 @@ defmodule Rsolv.CustomerFactory do
       insert(:customer)
 
       # RFC-068 Trait: Trial customer (5 credits, no payment method)
-      insert(:customer) |> with_trial_credits()
+      insert(:customer, with_trial_credits())
 
       # RFC-068 Trait: PAYG customer (0 credits, payment method attached)
-      insert(:customer) |> with_payg()
+      insert(:customer, with_payg())
 
       # RFC-068 Trait: Pro customer (60 credits, active subscription)
-      insert(:customer) |> with_pro_plan()
+      insert(:customer, with_pro_plan())
 
       # RFC-068 Trait: Delinquent customer (payment failed)
-      insert(:customer) |> with_pro_plan() |> with_past_due()
+      insert(:customer, with_past_due())
 
-      # Additional helpers
-      insert(:customer) |> with_billing_added()  # 10 credits (5 + 5 bonus)
-      insert(:customer) |> with_pro_plan_partial_usage()  # 45 credits remaining
+      # For existing customers, use apply_trait!/2
+      customer = insert(:customer)
+      customer = apply_trait!(customer, with_pro_plan())
+
+      # Or pipe multiple traits
+      customer = insert(:customer) |> apply_trait!(with_pro_plan()) |> apply_trait!(with_past_due())
 
   ## Credit System (RFC-066)
 
@@ -53,6 +56,46 @@ defmodule Rsolv.CustomerFactory do
 
   alias Rsolv.Customers.Customer
   alias Rsolv.Billing.CreditTransaction
+  alias Rsolv.Repo
+
+  @doc """
+  Applies a factory trait to an existing customer and persists the changes.
+
+  This helper eliminates the boilerplate of converting trait maps to changesets
+  and updating them in the database.
+
+  ## Examples
+
+      customer = insert(:customer)
+      customer = apply_trait!(customer, with_pro_plan())
+
+      # Or chain multiple traits
+      customer = insert(:customer)
+        |> apply_trait!(with_pro_plan())
+        |> apply_trait!(with_past_due())
+  """
+  def apply_trait!(%Customer{} = customer, trait_fn) when is_function(trait_fn, 1) do
+    # Call trait function with the customer to get the modified struct
+    trait_attrs = trait_fn.(customer)
+    apply_trait!(customer, trait_attrs)
+  end
+
+  def apply_trait!(%Customer{} = customer, %Customer{} = trait_attrs) do
+    # Convert struct to map and filter out unchanged fields
+    # This ensures we only update fields that actually changed
+    changes =
+      trait_attrs
+      |> Map.from_struct()
+      |> Enum.filter(fn {key, value} ->
+        # Only include fields that differ from the original customer
+        value != Map.get(customer, key)
+      end)
+      |> Enum.into(%{})
+
+    customer
+    |> Customer.changeset(changes)
+    |> Repo.update!()
+  end
 
   @doc """
   Base customer factory.

@@ -29,36 +29,58 @@ defmodule Rsolv.Workers.EmailWorker do
       }
     )
 
-    result =
-      EmailService.send_payment_failed_email(
-        customer_id,
-        invoice_id,
-        amount_due,
-        next_payment_attempt,
-        attempt_count
-      )
+    try do
+      result =
+        EmailService.send_payment_failed_email(
+          customer_id,
+          invoice_id,
+          amount_due,
+          next_payment_attempt,
+          attempt_count
+        )
 
-    case result do
-      {:ok, _} ->
-        Logger.info("Successfully sent payment failed email",
+      case result do
+        {:ok, _} ->
+          Logger.info("Successfully sent payment failed email",
+            metadata: %{
+              customer_id: customer_id,
+              invoice_id: invoice_id
+            }
+          )
+
+          :ok
+
+        {:error, reason} ->
+          Logger.error("Failed to send payment failed email",
+            metadata: %{
+              customer_id: customer_id,
+              invoice_id: invoice_id,
+              error: inspect(reason)
+            }
+          )
+
+          {:error, reason}
+      end
+    rescue
+      e in Ecto.NoResultsError ->
+        Logger.error("Customer not found for payment failed email",
           metadata: %{
             customer_id: customer_id,
-            invoice_id: invoice_id
+            error: Exception.message(e)
           }
         )
 
-        :ok
+        {:error, :customer_not_found}
 
-      {:error, reason} ->
-        Logger.error("Failed to send payment failed email",
+      e ->
+        Logger.error("Unexpected error sending payment failed email",
           metadata: %{
             customer_id: customer_id,
-            invoice_id: invoice_id,
-            error: inspect(reason)
+            error: Exception.message(e)
           }
         )
 
-        {:error, reason}
+        {:error, :unexpected_error}
     end
   end
 

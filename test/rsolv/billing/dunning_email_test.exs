@@ -3,7 +3,7 @@ defmodule Rsolv.Billing.DunningEmailTest do
   use Bamboo.Test
   use Oban.Testing, repo: Rsolv.Repo
 
-  import Rsolv.Factory
+  import Rsolv.CustomerFactory
 
   alias Rsolv.{Emails, EmailService}
   alias Rsolv.Billing.WebhookProcessor
@@ -11,7 +11,7 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
   describe "payment_failed webhook" do
     setup do
-      customer = insert(:customer) |> with_pro_plan()
+      customer = insert(:customer) |> apply_trait!(&with_pro_plan/1)
       {:ok, customer: customer}
     end
 
@@ -101,7 +101,10 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
   describe "email job processing" do
     setup do
-      customer = insert(:customer, name: "Jane Doe", credit_balance: 45) |> with_pro_plan()
+      customer =
+        insert(:customer, name: "Jane Doe", credit_balance: 45)
+        |> apply_trait!(&with_pro_plan/1)
+
       {:ok, customer: customer}
     end
 
@@ -189,7 +192,10 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
   describe "email worker integration" do
     setup do
-      customer = insert(:customer, name: "Worker Test", credit_balance: 30) |> with_pro_plan()
+      customer =
+        insert(:customer, name: "Worker Test", credit_balance: 30)
+        |> apply_trait!(&with_pro_plan/1)
+
       {:ok, customer: customer}
     end
 
@@ -223,7 +229,7 @@ defmodule Rsolv.Billing.DunningEmailTest do
         "next_payment_attempt" => nil
       }
 
-      # Should return error but not crash
+      # EmailWorker should catch the exception and return error tuple
       assert {:error, _reason} = perform_job(EmailWorker, args)
     end
   end
@@ -277,18 +283,25 @@ defmodule Rsolv.Billing.DunningEmailTest do
   end
 
   describe "edge cases" do
-    test "handles customer with nil name gracefully" do
-      customer = insert(:customer, name: nil, credit_balance: 10) |> with_pro_plan()
+    test "handles customer with minimal name gracefully" do
+      # Test with very short name (single character)
+      customer =
+        insert(:customer, name: "X", credit_balance: 10)
+        |> apply_trait!(&with_pro_plan/1)
 
       email = Emails.payment_failed_email(customer, "in_test", 1999, nil, 1)
 
-      # Should not crash, uses customer email or fallback
+      # Should not crash, email body should still render
       assert email.html_body
       assert email.text_body
+      # Very short name should still appear in email
+      assert email.html_body =~ "X"
     end
 
     test "handles zero credit balance" do
-      customer = insert(:customer, credit_balance: 0) |> with_past_due()
+      customer =
+        insert(:customer, credit_balance: 0)
+        |> apply_trait!(&with_past_due/1)
 
       {:ok, result} = EmailService.send_payment_failed_email(customer.id, "in_test", 1999, nil, 1)
 
@@ -297,7 +310,9 @@ defmodule Rsolv.Billing.DunningEmailTest do
     end
 
     test "handles large attempt count" do
-      customer = insert(:customer) |> with_past_due()
+      customer =
+        insert(:customer)
+        |> apply_trait!(&with_past_due/1)
 
       email = Emails.payment_failed_email(customer, "in_test", 1999, nil, 15)
 
