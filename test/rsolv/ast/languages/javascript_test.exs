@@ -95,7 +95,8 @@ defmodule Rsolv.AST.Languages.JavaScriptTest do
       }
 
       for framework <- ["vitest", "jest", "mocha"] do
-        assert {:error, :no_describe_block} = JavaScript.find_insertion_point(simple_ast, framework)
+        assert {:error, :no_describe_block} =
+                 JavaScript.find_insertion_point(simple_ast, framework)
       end
     end
   end
