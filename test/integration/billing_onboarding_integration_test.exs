@@ -108,7 +108,7 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
       customer = insert(:customer, credit_balance: 5, stripe_customer_id: "cus_test_123")
 
       # Mock Stripe payment method attachment
-      expect(Rsolv.Billing.StripeMock, :attach, fn params ->
+      expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn params ->
         assert params.payment_method == "pm_test_card"
         assert params.customer == "cus_test_123"
 
@@ -487,7 +487,7 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
       assert customer.stripe_customer_id == "cus_e2e_test"
 
       # Step 2: Customer adds payment method
-      expect(Rsolv.Billing.StripeMock, :attach, fn _params ->
+      expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn _params ->
         {:ok, %{id: "pm_e2e_card", customer: "cus_e2e_test"}}
       end)
 

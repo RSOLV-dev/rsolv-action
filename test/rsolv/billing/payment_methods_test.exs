@@ -16,7 +16,7 @@ defmodule Rsolv.Billing.PaymentMethodsTest do
       payment_method_id = "pm_test_card"
       billing_consent = true
 
-      expect(Rsolv.Billing.StripeMock, :attach, fn params ->
+      expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn params ->
         assert params.payment_method == payment_method_id
         assert params.customer == customer.stripe_customer_id
         {:ok, %{id: payment_method_id, customer: customer.stripe_customer_id}}
@@ -51,7 +51,7 @@ defmodule Rsolv.Billing.PaymentMethodsTest do
       billing_consent = true
       initial_balance = customer.credit_balance
 
-      expect(Rsolv.Billing.StripeMock, :attach, fn _ ->
+      expect(Rsolv.Billing.StripePaymentMethodMock, :attach, fn _ ->
         {:ok, %{id: payment_method_id, customer: customer.stripe_customer_id}}
       end)
 
