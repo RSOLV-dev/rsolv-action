@@ -73,7 +73,9 @@ defmodule Rsolv.Security.Patterns.JSONSerializer do
 
   # Tuples → lists (then recursively processed)
   def prepare_for_json(data) when is_tuple(data) do
-    data |> Tuple.to_list() |> prepare_for_json()
+    data
+    |> Tuple.to_list()
+    |> prepare_for_json()
   end
 
   # JSON-safe atoms (nil, true, false) → unchanged
