@@ -32,6 +32,19 @@ runs:
         restore-keys: |
           ${{ runner.os }}-mix-${{ inputs.cache-key-prefix }}-${{ inputs.elixir-version }}-${{ inputs.otp-version }}-
 
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+        bundler-cache: true
+        working-directory: priv/parsers/ruby
+
+    - name: Install Ruby parser gems
+      shell: bash
+      run: |
+        cd priv/parsers/ruby
+        bundle install --jobs 4 --retry 3
+
     - name: Install dependencies
       shell: bash
       run: mix deps.get
