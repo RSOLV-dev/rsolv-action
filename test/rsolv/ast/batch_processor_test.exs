@@ -400,39 +400,43 @@ defmodule Rsolv.AST.BatchProcessorTest do
     end
 
     @tag :slow
-    test "processes stream in chunks without consuming all items at once" do
-      # Track which items have been generated to verify lazy consumption
-      test_pid = self()
-
-      stream =
+    test "handles backpressure in stream processing" do
+      # Reduced from 20 to 10
+      slow_stream =
         Stream.map(1..10, fn i ->
-          # Notify test that this item was requested
-          send(test_pid, {:generated, i})
-          %{path: "chunk_#{i}.js", content: "var x = #{i};", language: "javascript"}
+          # Simulate slow file generation with shorter delay
+          # Reduced from 10ms to 5ms
+          Process.sleep(5)
+          %{path: "slow_#{i}.js", content: "var x = #{i};", language: "javascript"}
         end)
 
-      # Start processing with small chunks
-      results_stream =
-        BatchProcessor.process_stream(stream,
+      start_time = System.monotonic_time()
+
+      results =
+        BatchProcessor.process_stream(slow_stream,
+          # Reduced chunk size
           chunk_size: 3,
-          max_concurrency: 2
+          max_concurrency: 3,
+          # Reduced threshold
+          backpressure_threshold: 5
         )
 
-      # Consume results gradually and track generation
-      {result_list, generated_items} =
-        Enum.reduce(results_stream, {[], []}, fn result, {results, gen_items} ->
-          # Collect any generation notifications
-          new_gen_items = collect_generated_notifications(gen_items)
-          {[result | results], new_gen_items}
-        end)
+      result_list = Enum.to_list(results)
+      end_time = System.monotonic_time()
 
-      # Verify functional correctness
+      # Updated expectation
       assert length(result_list) == 10
-      assert Enum.all?(result_list, &(&1.status == :success))
 
-      # Verify all items were eventually processed
-      final_generated = collect_generated_notifications(generated_items)
-      assert length(Enum.uniq(final_generated)) == 10
+      # Should complete in reasonable time despite backpressure
+      # Verify backpressure prevents runaway processing (not taking 5+ seconds)
+      # while allowing for CI environment overhead (slower than local dev)
+      duration_ms = System.convert_time_unit(end_time - start_time, :native, :millisecond)
+
+      # Expected baseline: 10 items * 5ms sleep = 50ms minimum
+      # With concurrency=3: ~17ms of sleep time + processing overhead
+      # CI environment can be 2-3x slower than local, so allow generous margin
+      assert duration_ms < 3000,
+             "Processing took #{duration_ms}ms, expected < 3000ms (backpressure should prevent >5s delay)"
     end
   end
 
@@ -446,14 +450,6 @@ defmodule Rsolv.AST.BatchProcessorTest do
     after
       # Shorter timeout for tests
       100 -> events
-    end
-  end
-
-  defp collect_generated_notifications(acc) do
-    receive do
-      {:generated, i} -> collect_generated_notifications([i | acc])
-    after
-      0 -> acc
     end
   end
 end

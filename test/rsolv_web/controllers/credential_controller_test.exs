@@ -324,10 +324,7 @@ defmodule RsolvWeb.CredentialControllerTest do
 
           # Verify we got a valid new key (works with both real and mock keys)
           assert is_binary(new_key)
-
-          assert String.length(new_key) >= 32,
-                 "Refreshed API key should be at least 32 characters"
-
+          assert String.length(new_key) >= 32, "Refreshed API key should be at least 32 characters"
           refute new_key == "", "Refreshed API key should not be empty"
 
           # Verify new expiration is extended
