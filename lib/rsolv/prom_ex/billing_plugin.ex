@@ -20,6 +20,9 @@ defmodule Rsolv.PromEx.BillingPlugin do
   - `[:rsolv, :billing, :invoice_paid]` - Invoice paid successfully
   - `[:rsolv, :billing, :invoice_failed]` - Invoice payment failed
 
+  ### Webhook Events
+  - `[:rsolv, :billing, :stripe_webhook_received]` - Stripe webhook received (success/failed)
+
   ### Usage Events
   - `[:rsolv, :billing, :usage_tracked]` - Fix usage tracked
   - `[:rsolv, :billing, :credits_added]` - Credits added to customer
@@ -101,6 +104,22 @@ defmodule Rsolv.PromEx.BillingPlugin do
           description: "Total invoice payment failures",
           tags: [:customer_id, :failure_code],
           tag_values: &extract_failure_tags/1
+        ),
+
+        # Webhook counters
+        counter(
+          [:rsolv, :billing, :stripe_webhook_received, :total],
+          event_name: [:rsolv, :billing, :stripe_webhook_received],
+          description: "Total Stripe webhooks received",
+          tags: [:event_type, :status],
+          tag_values: &extract_webhook_tags/1
+        ),
+        counter(
+          [:rsolv, :billing, :stripe_webhook_failed, :total],
+          event_name: [:rsolv, :billing, :stripe_webhook_received],
+          description: "Total Stripe webhook failures",
+          tags: [:event_type, :failure_reason],
+          tag_values: &extract_webhook_failure_tags/1
         ),
 
         # Usage tracking counters
@@ -186,6 +205,18 @@ defmodule Rsolv.PromEx.BillingPlugin do
           tags: [:customer_id, :reason],
           tag_values: &extract_credit_tags/1,
           reporter_options: [buckets: [5, 10, 60, 120]]
+        ),
+
+        # Webhook duration distributions
+        distribution(
+          [:rsolv, :billing, :stripe_webhook_received, :duration, :milliseconds],
+          event_name: [:rsolv, :billing, :stripe_webhook_received],
+          measurement: :duration,
+          description: "Stripe webhook processing duration",
+          tags: [:event_type, :status],
+          tag_values: &extract_webhook_tags/1,
+          unit: {:native, :millisecond},
+          reporter_options: [buckets: [10, 50, 100, 250, 500, 1000, 5000]]
         )
       ]
     )
@@ -276,6 +307,24 @@ defmodule Rsolv.PromEx.BillingPlugin do
       %{
         customer_id: to_string_safe(Map.get(metadata, :customer_id, "unknown")),
         plan: to_string_safe(Map.get(metadata, :plan, "unknown"))
+      }
+    else
+      :skip
+    end
+  end
+
+  defp extract_webhook_tags(metadata) do
+    %{
+      event_type: to_string_safe(Map.get(metadata, :event_type, "unknown")),
+      status: to_string_safe(Map.get(metadata, :status, "unknown"))
+    }
+  end
+
+  defp extract_webhook_failure_tags(metadata) do
+    if Map.get(metadata, :status) == "failed" do
+      %{
+        event_type: to_string_safe(Map.get(metadata, :event_type, "unknown")),
+        failure_reason: to_string_safe(Map.get(metadata, :failure_reason, "unknown"))
       }
     else
       :skip

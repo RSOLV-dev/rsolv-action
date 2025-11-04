@@ -21,16 +21,43 @@ data:
       repeat_interval: 4h
       receiver: 'default-notifications'
       routes:
+      # Billing critical alerts - highest priority
+      - match:
+          component: billing
+          severity: critical
+        receiver: 'billing-critical'
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 2h
+      # Billing warnings
+      - match:
+          component: billing
+          severity: warning
+        receiver: 'billing-warnings'
+        group_wait: 30s
+        group_interval: 10m
+        repeat_interval: 4h
+      # Billing info
+      - match:
+          component: billing
+          severity: info
+        receiver: 'billing-info'
+        group_wait: 5m
+        group_interval: 30m
+        repeat_interval: 12h
+      # Site down alerts
       - match:
           alertname: RSOLVMainSiteDown
         receiver: 'critical-site-down-webhook'
         group_wait: 10s
         repeat_interval: 24h  # Max 1 email/day if still down
+      # Other critical alerts
       - match:
           severity: critical
         receiver: 'critical-notifications'
         repeat_interval: 4h
         continue: true
+      # Other warnings
       - match:
           severity: warning
         receiver: 'warning-notifications'
@@ -64,7 +91,36 @@ data:
       - to: 'admin@rsolv.dev'
         headers:
           Subject: 'Warning: {{ .GroupLabels.alertname }}'
-        
+
+    # Billing-specific receivers
+    - name: 'billing-critical'
+      email_configs:
+      - to: 'admin@rsolv.dev, billing-oncall@rsolv.dev'
+        headers:
+          Subject: '🚨 CRITICAL BILLING ALERT: {{ .GroupLabels.alertname }}'
+      # TODO: Add PagerDuty when configured
+      # pagerduty_configs:
+      # - service_key: '<PAGERDUTY_BILLING_SERVICE_KEY>'
+      #   description: '{{ .GroupLabels.alertname }}: {{ .Annotations.summary }}'
+
+    - name: 'billing-warnings'
+      email_configs:
+      - to: 'admin@rsolv.dev, alerts@rsolv.dev'
+        headers:
+          Subject: '⚠️  BILLING WARNING: {{ .GroupLabels.alertname }}'
+      # TODO: Add Slack when configured
+      # slack_configs:
+      # - api_url: '<SLACK_WEBHOOK_URL>'
+      #   channel: '#billing-alerts'
+      #   title: '{{ .GroupLabels.alertname }}'
+      #   text: '{{ .Annotations.description }}'
+
+    - name: 'billing-info'
+      email_configs:
+      - to: 'alerts@rsolv.dev'
+        headers:
+          Subject: 'ℹ️  Billing Info: {{ .GroupLabels.alertname }}'
+
     inhibit_rules:
       - source_match:
           severity: 'critical'

@@ -16,42 +16,71 @@ defmodule RsolvWeb.WebhookController do
   end
 
   def stripe(conn, _params) do
+    start_time = System.monotonic_time()
+
     with {:ok, signature} <- get_stripe_signature(conn),
          {:ok, raw_body} <- get_raw_body(conn),
          :ok <- verify_stripe_signature(signature, raw_body, get_stripe_webhook_secret()),
          parsed_body <- get_parsed_body(conn, raw_body) do
-      Logger.info("Stripe webhook received: #{inspect(parsed_body["type"])}")
+      event_type = parsed_body["type"]
+      Logger.info("Stripe webhook received: #{inspect(event_type)}")
 
       # Queue webhook for async processing via Oban
       queue_webhook_processing(parsed_body)
+
+      # Emit telemetry for successful webhook receipt
+      duration = System.monotonic_time() - start_time
+
+      :telemetry.execute(
+        [:rsolv, :billing, :stripe_webhook_received],
+        %{duration: duration},
+        %{event_type: event_type, status: "success"}
+      )
 
       # Return 200 immediately (Stripe requires response within ~30s)
       conn
       |> put_status(:ok)
       |> json(%{status: "success"})
     else
-      {:error, :missing_signature} ->
+      {:error, :missing_signature} = error ->
+        emit_webhook_failure(start_time, "missing_signature")
+
         conn
         |> put_status(:unauthorized)
         |> json(%{error: "Missing signature"})
 
-      {:error, :invalid_signature} ->
+      {:error, :invalid_signature} = error ->
+        emit_webhook_failure(start_time, "invalid_signature")
+
         conn
         |> put_status(:unauthorized)
         |> json(%{error: "Invalid signature"})
 
-      {:error, :signature_expired} ->
+      {:error, :signature_expired} = error ->
+        emit_webhook_failure(start_time, "signature_expired")
+
         conn
         |> put_status(:bad_request)
         |> json(%{error: "Signature expired"})
 
       {:error, reason} ->
         Logger.error("Stripe webhook processing failed: #{inspect(reason)}")
+        emit_webhook_failure(start_time, to_string(reason))
 
         conn
         |> put_status(:bad_request)
         |> json(%{error: "Processing failed", reason: reason})
     end
+  end
+
+  defp emit_webhook_failure(start_time, failure_reason) do
+    duration = System.monotonic_time() - start_time
+
+    :telemetry.execute(
+      [:rsolv, :billing, :stripe_webhook_received],
+      %{duration: duration},
+      %{event_type: "unknown", status: "failed", failure_reason: failure_reason}
+    )
   end
 
   def github(conn, _params) do
