@@ -5,7 +5,8 @@ defmodule Rsolv.AST.TestScorerTest do
 
   RFC-060-AMENDMENT-001: Phase 0 - RED tests written before implementation.
   """
-  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
+  # Changed: parser pool is singleton, must run sequentially
+  use ExUnit.Case, async: false
 
   alias Rsolv.AST.TestScorer
 

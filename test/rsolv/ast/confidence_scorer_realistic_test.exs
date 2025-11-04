@@ -5,7 +5,8 @@ defmodule Rsolv.AST.ConfidenceScorerRealisticTest do
   while still catching real vulnerabilities.
   """
 
-  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
+  # Changed: parser pool is singleton, must run sequentially
+  use ExUnit.Case, async: false
   alias Rsolv.AST.ConfidenceScorer
 
   describe "critical vulnerabilities without detected user input" do

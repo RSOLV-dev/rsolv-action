@@ -12,7 +12,8 @@ defmodule Rsolv.AST.TestIntegratorTest do
 
   Currently supports: JavaScript/TypeScript with Jest, Vitest, and Mocha
   """
-  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
+  # Changed: parser pool is singleton, must run sequentially
+  use ExUnit.Case, async: false
 
   import Rsolv.AST.TestIntegratorHelpers
 

@@ -1,5 +1,6 @@
 defmodule Rsolv.AST.Formatters.JavaScriptTest do
-  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
+  # Changed: parser pool is singleton, must run sequentially
+  use ExUnit.Case, async: false
   alias Rsolv.AST.Formatters.JavaScript
 
   describe "format_tests/2" do

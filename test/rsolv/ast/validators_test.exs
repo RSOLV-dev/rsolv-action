@@ -1,5 +1,6 @@
 defmodule Rsolv.AST.ValidatorsTest do
-  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
+  # Changed: parser pool is singleton, must run sequentially
+  use ExUnit.Case, async: false
   alias Rsolv.AST.Validators
 
   describe "validate_content/2" do

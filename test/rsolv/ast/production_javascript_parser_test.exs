@@ -1,5 +1,6 @@
 defmodule Rsolv.AST.ProductionJavaScriptParserTest do
-  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
+  # Changed: parser pool is singleton, must run sequentially
+  use ExUnit.Case, async: false
 
   @moduletag :integration
 
