@@ -78,7 +78,7 @@ Comprehensive monitoring and alerting infrastructure has been implemented for th
 
 **File**: `config/prometheus/billing-alerts.yml`
 
-**Alerts Configured** (10 alerts):
+**Alerts Configured** (7 alerts):
 
 #### Payment Alerts (2)
 1. ✅ `BillingPaymentFailureRateHigh` - >10% failures for 15min (warning)
@@ -92,13 +92,10 @@ Comprehensive monitoring and alerting infrastructure has been implemented for th
 #### Subscription Alerts (1)
 6. ✅ `SubscriptionCancellationRateHigh` - >10% cancellation rate for 1h (warning)
 
-#### Infrastructure Alerts (3)
-7. ✅ `BillingDatabaseConnectionPoolHigh` - >80% pool usage for 10min (warning)
-8. ✅ `BillingAppMemoryUsageHigh` - >80% memory for 15min (warning)
-9. ✅ `BillingRateLimitHitRateHigh` - >10 hits/min for 10min (warning)
-
 #### Business Alerts (1)
-10. ✅ `BillingCreditGrantAnomalyDetected` - p99 >1000 credits (info)
+7. ✅ `BillingCreditGrantAnomalyDetected` - p99 >1000 credits (info)
+
+**Note**: Infrastructure alerts (connection pool, memory, rate limits) removed as they are app-wide concerns, not billing-specific.
 
 **Alert Details**:
 - ✅ Comprehensive descriptions
@@ -125,21 +122,16 @@ Comprehensive monitoring and alerting infrastructure has been implemented for th
 - ✅ Warning: "⚠️  BILLING WARNING: {alertname}"
 - ✅ Info: "ℹ️  Billing Info: {alertname}"
 
-### 5. Sentry Error Tracking ✅
+### 5. Error Tracking
 
-**Configuration**: `config/runtime.exs:175-185`
+**Status**: Using Prometheus metrics for error tracking
 
-**Status**: ✅ Already configured
-- ✅ Enabled when `SENTRY_DSN` environment variable is set
-- ✅ Source code context enabled
-- ✅ Environment tagging configured
-- ✅ Automatic error capture
+- ✅ Payment failure counters and rates
+- ✅ Webhook failure counters and rates
+- ✅ Invoice failure counters and rates
+- ✅ Application logging via Logger
 
-**Environment Variables**:
-```bash
-SENTRY_DSN=https://<key>@sentry.io/<project>
-SENTRY_ENV=production
-```
+**Note**: Sentry configuration exists in code (`config/runtime.exs:175-185`) but is not active (no SENTRY_DSN set). It will activate if SENTRY_DSN environment variable is provided in the future.
 
 ### 6. Documentation ✅
 
@@ -252,9 +244,9 @@ curl http://prometheus:9090/api/v1/query?query='rsolv_billing_subscription_creat
 - [x] API response times (billing endpoints) tracked via PromEx Phoenix plugin
 
 ### Alerts to Configure ✅
-- [x] Connection pool usage >80% (`BillingDatabaseConnectionPoolHigh`)
-- [x] Memory usage >80% (`BillingAppMemoryUsageHigh`)
-- [x] Rate limit hit rate spikes (`BillingRateLimitHitRateHigh`)
+- [N/A] Connection pool usage >80% - Removed (app-wide, not billing-specific)
+- [N/A] Memory usage >80% - Removed (app-wide, not billing-specific)
+- [N/A] Rate limit hit rate spikes - Removed (app-wide, not billing-specific)
 - [x] Stripe webhook failures (`StripeWebhookFailureRateHigh`)
 - [x] Failed payment method charges (`BillingPaymentFailureRateHigh`)
 
@@ -264,9 +256,10 @@ curl http://prometheus:9090/api/v1/query?query='rsolv_billing_subscription_creat
 - [🔜] Test Slack notifications (documented for future)
 
 ### Error Tracking ✅
-- [x] Verify Sentry configured for production (already configured)
-- [x] Test error capture (documented in deployment guide)
+- [x] Prometheus error metrics configured (payment/webhook/invoice failures)
+- [x] Application logging via Logger
 - [x] Document on-call rotation (in runbooks)
+- [N/A] Sentry - Not configured (optional, code supports it if SENTRY_DSN is set)
 
 ### Validation ✅
 - [x] Trigger test alerts and verify delivery (documented)

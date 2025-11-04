@@ -78,10 +78,6 @@ This document describes the complete monitoring and alerting setup for the RSOLV
 #### Subscription Alerts
 - `SubscriptionCancellationRateHigh` - >10% cancellation rate (warning)
 
-#### Infrastructure Alerts
-- `BillingDatabaseConnectionPoolHigh` - >80% pool usage (warning)
-- `BillingAppMemoryUsageHigh` - >80% memory (warning)
-- `BillingRateLimitHitRateHigh` - >10 hits/min (warning)
 
 #### Business Alerts
 - `BillingCreditGrantAnomalyDetected` - p99 > 1000 credits (info)
@@ -102,18 +98,11 @@ This document describes the complete monitoring and alerting setup for the RSOLV
 - 🔜 PagerDuty (TODO)
 - 🔜 Slack (TODO)
 
-### 5. Sentry Error Tracking
+### 5. Error Tracking
 
-**Configuration**: `config/runtime.exs:175-185`
+**Prometheus Metrics**: Payment, webhook, and invoice failure tracking
 
-**Environment Variables**:
-- `SENTRY_DSN` - Sentry project DSN
-- `SENTRY_ENV` - Environment name (production, staging)
-
-**Features**:
-- Source code context enabled
-- Environment tagging
-- Automatic error capture
+**Application Logging**: Standard Logger with structured metadata
 
 ## Deployment Steps
 
@@ -199,26 +188,6 @@ curl -X POST https://grafana.rsolv.dev/api/dashboards/db \
 4. Select "Prometheus" as datasource
 5. Click "Import"
 
-### Step 5: Configure Sentry (if not already done)
-
-**Production Environment Variables**:
-```bash
-kubectl create secret generic rsolv-sentry \
-  --from-literal=SENTRY_DSN="https://<key>@sentry.io/<project>" \
-  --from-literal=SENTRY_ENV="production" \
-  -n rsolv-production
-
-# Update deployment to use secret
-kubectl set env deployment/rsolv-platform \
-  --from=secret/rsolv-sentry \
-  -n rsolv-production
-```
-
-**Test Sentry**:
-```elixir
-# In production console
-Sentry.capture_message("Billing monitoring test", level: :info)
-```
 
 ## Verification Steps
 
@@ -283,20 +252,6 @@ kubectl exec -n monitoring deployment/alertmanager -- \
   component=billing severity=info
 ```
 
-### 4. Verify Sentry
-
-**Production Console Test**:
-```bash
-# Connect to production pod
-kubectl exec -it -n rsolv-production deployment/rsolv-platform -- /app/bin/rsolv remote
-
-# In IEx console
-Sentry.capture_exception(%RuntimeError{message: "Billing monitoring test"},
-  extra: %{test: true, component: "billing"}
-)
-
-# Check Sentry dashboard for test error
-```
 
 ## Monitoring Checklist
 
@@ -304,10 +259,9 @@ After deployment, verify:
 
 - [ ] Prometheus is scraping billing metrics
 - [ ] Grafana dashboard is accessible and showing data
-- [ ] All 10 alert rules are loaded in Prometheus
+- [ ] All 7 alert rules are loaded in Prometheus
 - [ ] AlertManager routing is configured for billing alerts
 - [ ] Test email alert delivered successfully
-- [ ] Sentry is configured and capturing errors
 - [ ] Metrics are being emitted from webhook controller
 - [ ] BillingPlugin is registered in PromEx configuration
 - [ ] Dashboard panels are not showing "No data" errors
