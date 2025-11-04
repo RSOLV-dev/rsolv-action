@@ -45,6 +45,7 @@ Each ADR follows this structure:
 | [ADR-029](ADR-029-TESTING-MODE-FOR-KNOWN-VULNERABLE-REPOS.md) | Testing Mode for Known Vulnerable Repositories | Implemented | 2025-09-19 | Medium - Enables testing with deliberately vulnerable apps |
 | [ADR-030](ADR-030-WORKER-THREAD-PATTERN-ISOLATION.md) | Worker Thread Isolation for Untrusted Regex Patterns | Implemented | 2025-10-11 | High - Prevents infinite hangs from pattern API regex |
 | [ADR-031](ADR-031-AST-TEST-INTEGRATION.md) | AST-Based Test Integration Architecture | Implemented | 2025-10-15 | Critical - Framework-native test integration via AST |
+| [ADR-032](ADR-032-BILLING-INTEGRATION-COMPLETION.md) | Billing Integration Week Completion | Implemented | 2025-11-04 | Critical - Automated provisioning, Stripe billing, production-ready |
 
 ## Related Documentation
 
@@ -99,3 +100,9 @@ Superseded ADRs are moved to the `archived/` subdirectory but preserved for hist
 - AST-based validation and false positive reduction (ADR-012, ADR-016, ADR-021)
 - Structured phased prompting (ADR-019)
 - Worker thread pattern execution safety (ADR-030)
+
+### Billing & Customer Management
+- Automated customer provisioning (ADR-032)
+- Stripe billing integration with credit system (ADR-032)
+- Customer management consolidation (ADR-026)
+- Distributed rate limiting for signup abuse prevention (ADR-025)
