@@ -1707,6 +1707,110 @@ test "Stripe API integration with test mode"
 3. **Production Deploy**: Switch to production keys, enable for all (Week 3)
 4. **Monitor**: Track success metrics, payment failures, webhook processing
 
+## Webhook Configuration (Production Requirement)
+
+### Critical Production Setup
+
+**⚠️ DEPLOYMENT BLOCKER**: Pro subscriptions ($599/month) will NOT credit customers without properly configured webhooks.
+
+### Step 1: Create Webhook in Stripe Dashboard
+
+1. **Login to Stripe Dashboard**: https://dashboard.stripe.com/webhooks
+2. **Add endpoint**:
+   - URL: `https://api.rsolv.dev/api/webhooks/stripe` (production)
+   - URL: `https://api.rsolv-staging.com/api/webhooks/stripe` (staging)
+3. **Select events to listen for**:
+   - `invoice.payment_succeeded` - Pro subscription payments & renewals
+   - `invoice.payment_failed` - Payment failure handling
+   - `customer.subscription.created` - New Pro subscription
+   - `customer.subscription.updated` - Subscription changes (e.g., cancel_at_period_end)
+   - `customer.subscription.deleted` - Cancellations
+4. **Save and copy signing secret**: Format `whsec_...` (cannot view again after creation)
+
+### Step 2: Add Secret to Production
+
+**Kubernetes (Production)**:
+```bash
+# Get current secrets
+kubectl get secret rsolv-secrets -n rsolv-production -o yaml > /tmp/rsolv-secrets.yaml
+
+# Base64 encode the secret
+echo -n "whsec_YOUR_ACTUAL_SECRET" | base64
+
+# Edit YAML and add under data section:
+#   STRIPE_WEBHOOK_SECRET: <base64_value>
+
+# Apply and restart
+kubectl apply -f /tmp/rsolv-secrets.yaml -n rsolv-production
+kubectl rollout restart deployment/rsolv-platform -n rsolv-production
+rm /tmp/rsolv-secrets.yaml
+```
+
+**Development (.env file)**:
+```bash
+# .env (gitignored)
+STRIPE_WEBHOOK_SECRET=whsec_test_secret_from_stripe_dashboard
+```
+
+### Step 3: Test with Stripe CLI
+
+```bash
+# Install Stripe CLI
+brew install stripe/stripe-cli/stripe
+
+# Login
+stripe login
+
+# Test webhook delivery
+stripe listen --forward-to https://api.rsolv.dev/api/webhooks/stripe
+stripe trigger invoice.payment_succeeded
+
+# Expected: 200 OK (not 401 Unauthorized)
+# Check logs: "Stripe webhook received: invoice.payment_succeeded"
+```
+
+### Verification
+
+```bash
+# Check Stripe Dashboard shows webhook as Active
+open https://dashboard.stripe.com/webhooks
+
+# Verify secret in production
+kubectl exec -n rsolv-production deployment/rsolv-platform -- env | grep STRIPE_WEBHOOK_SECRET
+# Should show: STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Monitor production logs
+kubectl logs -n rsolv-production deployment/rsolv-platform --tail=100 | grep "Stripe webhook"
+```
+
+### What Breaks Without Webhooks
+
+| Feature | Works? | Impact |
+|---------|--------|--------|
+| Trial signup | ✅ Yes | Uses direct API |
+| Add payment method | ✅ Yes | Uses direct API |
+| **Pro subscription signup** | ❌ **NO** | Customer pays $599 but receives 0 credits (should get 60) |
+| **Monthly Pro renewal** | ❌ **NO** | Month 2+ renewals don't credit account |
+| **Payment failure handling** | ❌ **NO** | Silent failures, no customer notification |
+| **Subscription cancellation** | ❌ **NO** | Pricing doesn't downgrade to PAYG |
+| Fix deployment billing (PAYG) | ✅ Yes | Direct charge via API |
+
+**Bottom Line**: System works for trial/PAYG customers but Pro subscriptions are completely broken without webhook configuration.
+
+### Security Notes
+
+- ⚠️ **NEVER commit webhook secrets to git**
+- ⚠️ **Use separate secrets for staging/production**
+- ✅ Signature verification is mandatory (HMAC-SHA256)
+- ✅ Constant-time comparison prevents timing attacks
+- ✅ 5-minute timestamp tolerance prevents replay attacks
+
+### Related Tasks
+
+- **Configuration Task**: Vibe Kanban `ed10776b-524f-4a62-9c3a-413433adfb9d` (20 min)
+- **Testing Task**: Vibe Kanban `1376b937-1f28-4d27-b026-f12ec7f9a782` (45 min)
+- **Production Checklist**: See RFC-069-FRIDAY-PRODUCTION-READINESS.md
+
 ## Next Steps
 
 1. Add stripity_stripe and ex_money to dependencies
@@ -1715,7 +1819,9 @@ test "Stripe API integration with test mode"
 4. Implement credit ledger with TDD
 5. Implement Stripe service wrapper
 6. Deploy webhook endpoint to staging
-7. Test end-to-end with Stripe test cards
+7. **Configure Stripe webhook in Dashboard (see Webhook Configuration above)**
+8. **Add STRIPE_WEBHOOK_SECRET to environment/K8s secrets (see Webhook Configuration above)**
+9. Test end-to-end with Stripe test cards and Stripe CLI
 
 ## References
 

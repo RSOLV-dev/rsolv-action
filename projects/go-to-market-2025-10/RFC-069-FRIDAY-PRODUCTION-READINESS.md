@@ -85,7 +85,9 @@ Based on comprehensive testing and validation throughout the week, the RSOLV bil
 1. **Stripe Keys**:
    - [ ] Verify production Stripe keys available (NEVER commit to git)
    - [ ] Update `.env` in production with production keys
-   - [ ] Test webhook endpoint with Stripe CLI in production mode
+   - [ ] **CRITICAL**: Configure Stripe webhook in Dashboard (see VK task `ed10776b-524f-4a62-9c3a-413433adfb9d`)
+   - [ ] **CRITICAL**: Add STRIPE_WEBHOOK_SECRET to Kubernetes secrets (see VK task `ed10776b-524f-4a62-9c3a-413433adfb9d`)
+   - [ ] Test webhook endpoint with Stripe CLI in production mode (see VK task `1376b937-1f28-4d27-b026-f12ec7f9a782`)
    - [ ] Verify webhook signing secret matches production
 
 2. **Database**:
@@ -186,10 +188,15 @@ Run these tests immediately after deployment:
 
 3. **Webhook Endpoint**:
    ```bash
+   # PREREQUISITE: Webhook must be configured first (VK task ed10776b-524f-4a62-9c3a-413433adfb9d)
+
    # Use Stripe CLI to send test webhook
    stripe listen --forward-to https://api.rsolv.dev/api/webhooks/stripe
    stripe trigger invoice.payment_succeeded
    # Expected: 200 OK (after signature verification)
+
+   # If you get 401 Unauthorized, webhook secret is not configured
+   # See VK task ed10776b-524f-4a62-9c3a-413433adfb9d for setup instructions
    ```
 
 4. **Payment Method Addition** (requires real Stripe customer):
@@ -281,7 +288,16 @@ Rollback immediately if:
    - **Mitigation**: Create separate bulk API if needed, monitor for false positives
 
 ### High Risk (Actively Managed)
-1. **Customers Don't Show Up**: (RFC-069 line 612)
+1. **Stripe Webhook Not Configured**: ⚠️ **DEPLOYMENT BLOCKER**
+   - **Impact**: Pro subscriptions ($599/month) won't credit customers without webhook
+   - **Status**: NOT configured in production (STRIPE_WEBHOOK_SECRET missing)
+   - **Mitigation**: VK tasks created for configuration and testing
+   - **Tasks**:
+     - Configuration: `ed10776b-524f-4a62-9c3a-413433adfb9d` (20 min)
+     - Testing: `1376b937-1f28-4d27-b026-f12ec7f9a782` (45 min)
+   - **Must Complete**: Before allowing first Pro subscription signup
+
+2. **Customers Don't Show Up**: (RFC-069 line 612)
    - **Target**: 15-30 marketplace installs in 30 days
    - **Pivot Criteria**: If <10 signups in first 30 days, reassess strategy
    - **Tracking**: `CUSTOMER-TRACTION-TRACKING.md` (daily weekday reviews)
@@ -293,8 +309,10 @@ Rollback immediately if:
 - [x] Tests passing (4786/4786)
 - [x] Load tests passed (exceeded all targets)
 - [x] Staging stable 24+ hours
+- [ ] **CRITICAL**: Stripe webhook configured (VK `ed10776b-524f-4a62-9c3a-413433adfb9d`)
 - [ ] Production deployment successful
 - [ ] All smoke tests passing
+- [ ] **CRITICAL**: Webhook tests passing (VK `1376b937-1f28-4d27-b026-f12ec7f9a782`)
 - [ ] Monitoring and alerting active
 
 ### Production Success (24 Hours)
