@@ -13,7 +13,7 @@ defmodule Rsolv.Integration.EmailFlowTest do
       result = EmailService.send_welcome_email("test@example.com", "TestUser")
 
       case result do
-        {:ok, %{status: "sent", email: {:ok, email}}} ->
+        {:ok, %{status: "sent", email: email}} ->
           # Email was sent successfully
           assert email.to == [nil: "test@example.com"]
 
@@ -32,7 +32,7 @@ defmodule Rsolv.Integration.EmailFlowTest do
       result = EmailService.send_early_access_welcome_email("early@example.com", "EarlyUser")
 
       # Verify the result
-      assert {:ok, %{status: "sent", email: {:ok, email}}} = result
+      assert {:ok, %{status: "sent", email: email}} = result
       assert email.to == [nil: "early@example.com"]
       assert email.subject =~ "Early Access"
     end
@@ -42,7 +42,7 @@ defmodule Rsolv.Integration.EmailFlowTest do
       Bamboo.SentEmail.reset()
 
       result = EmailService.send_early_access_welcome_email("content@example.com", "ContentUser")
-      assert {:ok, %{status: "sent", email: {:ok, email}}} = result
+      assert {:ok, %{status: "sent", email: email}} = result
 
       # Check email structure
       assert email.from == {"RSOLV Team", "support@rsolv.dev"}
@@ -82,7 +82,7 @@ defmodule Rsolv.Integration.EmailFlowTest do
       result = EmailService.send_welcome_email("dev@example.com")
 
       # The email should be delivered
-      assert {:ok, %{status: "sent", email: {:ok, email}}} = result
+      assert {:ok, %{status: "sent", email: email}} = result
       assert email.to == [nil: "dev@example.com"]
     end
   end
