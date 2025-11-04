@@ -65,6 +65,24 @@ defmodule Rsolv.E2E.CustomerJourneyTest do
       Rsolv.Billing.StripeTestStub.create_charge(params)
     end)
 
+    # Stub StripePaymentMethodMock (delegate to StripeTestStub)
+    stub(Rsolv.Billing.StripePaymentMethodMock, :attach, fn params ->
+      Rsolv.Billing.StripeTestStub.attach(params)
+    end)
+
+    # Stub StripeSubscriptionMock (delegate to StripeTestStub)
+    stub(Rsolv.Billing.StripeSubscriptionMock, :create, fn params ->
+      Rsolv.Billing.StripeTestStub.create_subscription(params)
+    end)
+
+    stub(Rsolv.Billing.StripeSubscriptionMock, :update, fn subscription_id, params ->
+      Rsolv.Billing.StripeTestStub.update_subscription(subscription_id, params)
+    end)
+
+    stub(Rsolv.Billing.StripeSubscriptionMock, :cancel, fn subscription_id ->
+      Rsolv.Billing.StripeTestStub.cancel_subscription(subscription_id)
+    end)
+
     # Setup ConvertKit mocks
     stub_convertkit_success()
 

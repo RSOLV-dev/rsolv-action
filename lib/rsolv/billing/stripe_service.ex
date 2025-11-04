@@ -57,6 +57,10 @@ defmodule Rsolv.Billing.StripeService do
   # Private helper for consistent error handling
   defp handle_stripe_error(error, operation, context) do
     case error do
+      :not_found ->
+        # Already normalized by get_customer/1
+        {:error, :not_found}
+
       %{__struct__: Stripe.Error} = stripe_error ->
         Logger.error(
           "Stripe API error during #{operation}",
