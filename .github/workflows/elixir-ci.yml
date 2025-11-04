@@ -74,10 +74,10 @@ jobs:
           mix assets.build
 
       - name: Run tests (partition ${{ matrix.partition }}/4)
-        # TODO: Make test failures fatal after fixing remaining failing tests
-        # Issues: OpenAPI spec initialization, TestIntegrator method signatures
-        # Fixed: Ruby parser node type names (lvasgn -> local_variable_write for Prism)
-        run: mix test --trace --partitions 4 --cover || echo "⚠️  Tests had failures (non-fatal for now)"
+        # Test failures are now BLOCKING - suite must be 100% green to merge
+        # All previous issues resolved as of 2025-11-03
+        # Fixed: OpenAPI spec, TestIntegrator, Ruby parser, Stripe mocks, JSON encoding, email patterns
+        run: mix test --trace --partitions 4 --cover
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
