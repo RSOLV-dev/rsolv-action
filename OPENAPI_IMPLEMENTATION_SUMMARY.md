@@ -6,6 +6,7 @@
 **Enhancement:** ✅ **COMPLETE** - Comprehensive examples added for complex endpoints (2025-10-14)
 **Maintenance:** ✅ **COMPLETE** - Feedback CRUD endpoints documented (2025-10-14)
 **Verification:** ✅ **COMPLETE** - OpenAPI spec generated and validated (2025-11-04)
+**CI/CD:** ✅ **COMPLETE** - GitHub Actions integration with automated validation (2025-11-04)
 
 ## Important: Generated File Not Checked In
 
@@ -601,13 +602,53 @@ mix phx.server
 # All endpoints have "Try it out" functionality
 ```
 
+## Phase 8: CI/CD Integration ✅
+
+**Completed:** 2025-11-04
+
+19. **GitHub Actions CI Integration** (`.github/workflows/elixir-ci.yml`) ✅
+    - Added dedicated `openapi-validation` job (lines 194-258)
+    - Runs on all branches: main, develop, PRs, and manual workflow dispatch
+    - PostgreSQL service configured for database-dependent spec generation
+    - Complete validation pipeline:
+      - ✅ Spec generation: `mix rsolv.openapi priv/static/openapi.json`
+      - ✅ File existence check
+      - ✅ File size validation (≥100KB)
+      - ✅ JSON syntax validation using `jq`
+      - ✅ Path count validation (≥25 endpoints)
+      - ✅ Clear error messages on failure
+    - Artifact publishing: Generated spec uploaded as build artifact
+    - Build failure integration: Part of required `ci-success` job
+    - Runs in parallel with other CI jobs (test, code-quality, migrations, assets)
+
+### CI Pipeline Benefits
+
+**Automated Quality Checks:**
+- Ensures OpenAPI spec generation never breaks
+- Validates spec completeness on every commit
+- Catches schema reference errors early
+- Prevents deployment of incomplete API documentation
+
+**Developer Workflow:**
+- CI fails if spec generation fails
+- No manual verification needed
+- Spec artifact downloadable from GitHub Actions UI
+- Can be used for automated SDK generation in future
+
+**Current Status:**
+- ✅ Fully integrated and tested
+- ✅ Running on all branches
+- ✅ Part of required CI checks
+- ✅ Validated with local spec generation (139KB, 25 paths, 45 schemas)
+
 ## Next Steps (Optional Future Work)
 
-1. **CI Integration** (2-4 hours) - HIGH PRIORITY
-   - Add `mix rsolv.openapi` to CI pipeline
-   - Add validation checks for OpenAPI spec
-   - Ensure spec generation doesn't fail builds
-   - Consider artifact publishing for each release
+1. **Client SDK Generation** (4-8 hours) - MEDIUM PRIORITY
+   - Use generated OpenAPI spec to create client SDKs
+   - TypeScript/JavaScript SDK via openapi-generator
+   - Python SDK via openapi-generator
+   - Ruby SDK for RSOLV-action integration
+   - Publish SDKs to npm/PyPI/RubyGems
 
 2. **Interactive Documentation Enhancements** (2-4 hours)
    - Add pre-filled example data in Swagger UI
