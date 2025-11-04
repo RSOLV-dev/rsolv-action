@@ -7,21 +7,36 @@ defmodule Rsolv.Security.RateLimitingTest do
   # Rate limits are global, can't run async
   use RsolvWeb.ConnCase, async: false
 
-  @api_key "rsolv_test_key_123"
+  alias Rsolv.{Repo, Customers}
 
   describe "API rate limiting (500/hour)" do
     setup do
+      # Create test customer and API key for this test
+      # This ensures test isolation and works correctly with test partitioning
+      {:ok, customer} =
+        Customers.create_customer(%{
+          name: "Rate Limit Test Customer",
+          email: "ratelimit_test_#{System.unique_integer([:positive])}@example.com",
+          source: "test"
+        })
+
+      {:ok, api_key_result} =
+        Customers.create_api_key(customer, %{
+          name: "Test Rate Limit Key",
+          permissions: ["full_access"]
+        })
+
       # Clear rate limit state before each test
       # This assumes ExRated or similar is used for rate limiting
-      :ok
+      {:ok, api_key: api_key_result.raw_key, customer: customer}
     end
 
-    test "allows requests under limit", %{conn: conn} do
+    test "allows requests under limit", %{conn: conn, api_key: api_key} do
       # Make 10 requests - should all succeed
       results =
         for _i <- 1..10 do
           conn
-          |> put_req_header("x-api-key", @api_key)
+          |> put_req_header("x-api-key", api_key)
           |> get("/api/health")
           |> Map.get(:status)
         end
@@ -39,10 +54,10 @@ defmodule Rsolv.Security.RateLimitingTest do
       :skip
     end
 
-    test "includes rate limit headers" do
+    test "includes rate limit headers", %{api_key: api_key} do
       conn =
         build_conn()
-        |> put_req_header("x-api-key", @api_key)
+        |> put_req_header("x-api-key", api_key)
         |> get("/api/health")
 
       assert conn.status == 200
@@ -117,16 +132,34 @@ defmodule Rsolv.Security.RateLimitingTest do
   end
 
   describe "rate limit bypass prevention" do
+    setup do
+      # Create test customer and API key for bypass prevention tests
+      {:ok, customer} =
+        Customers.create_customer(%{
+          name: "Bypass Test Customer",
+          email: "bypass_test_#{System.unique_integer([:positive])}@example.com",
+          source: "test"
+        })
+
+      {:ok, api_key_result} =
+        Customers.create_api_key(customer, %{
+          name: "Bypass Test Key",
+          permissions: ["full_access"]
+        })
+
+      {:ok, api_key: api_key_result.raw_key, customer: customer}
+    end
+
     test "cannot bypass by changing user agent" do
       :skip
     end
 
-    test "cannot bypass by changing API key format" do
+    test "cannot bypass by changing API key format", %{api_key: api_key} do
       malformed_keys = [
-        String.upcase(@api_key),
-        " #{@api_key}",
-        "#{@api_key} ",
-        "Bearer #{@api_key}"
+        String.upcase(api_key),
+        " #{api_key}",
+        "#{api_key} ",
+        "Bearer #{api_key}"
       ]
 
       for key <- malformed_keys do
