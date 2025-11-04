@@ -5,6 +5,7 @@ defmodule RsolvWeb.PageController do
   alias RsolvWeb.Services.Metrics
   alias RsolvWeb.Services.ConvertKit
   alias Rsolv.FeatureFlags
+  alias Rsolv.Security.Patterns.JSONSerializer
 
   # Adding a health check endpoint for Docker
   def health(conn, _params) do
@@ -98,7 +99,7 @@ defmodule RsolvWeb.PageController do
     # Return health check response
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(status_code, JSON.encode!(health_data))
+    |> send_resp(status_code, JSONSerializer.encode!(health_data))
   end
 
   # Check database connectivity
@@ -655,7 +656,7 @@ defmodule RsolvWeb.PageController do
               medium: Map.get(utm_params, :utm_medium, "organic"),
               campaign: Map.get(utm_params, :utm_campaign, "none")
             }
-            |> JSON.encode!()
+            |> JSONSerializer.encode!()
 
           # Store email in session for thank you page personalization
           conn =

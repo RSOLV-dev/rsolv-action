@@ -2,6 +2,7 @@ defmodule RsolvWeb.ReportController do
   use RsolvWeb, :controller
   require Logger
   alias Rsolv.Analytics
+  alias Rsolv.Security.Patterns.JSONSerializer
 
   @doc """
   Generate and download analytics report in CSV or JSON format
@@ -37,8 +38,8 @@ defmodule RsolvWeb.ReportController do
     content =
       case format do
         "csv" -> generate_csv(data)
-        "json" -> JSON.encode!(data)
-        _ -> JSON.encode!(data)
+        "json" -> JSONSerializer.encode!(data)
+        _ -> JSONSerializer.encode!(data)
       end
 
     # Set content type based on format
