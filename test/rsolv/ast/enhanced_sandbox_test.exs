@@ -29,7 +29,7 @@ defmodule Rsolv.AST.EnhancedSandboxTest do
       exec(cmd);
       """
 
-      assert {:error, {:suspicious_pattern, _}} =
+      assert {:error, ["suspicious_pattern", _pattern_data]} =
                EnhancedSandbox.validate_input(malicious_code, "javascript")
     end
 
@@ -39,7 +39,7 @@ defmodule Rsolv.AST.EnhancedSandboxTest do
       eval(userInput);
       """
 
-      assert {:error, {:suspicious_pattern, _}} =
+      assert {:error, ["suspicious_pattern", _pattern_data]} =
                EnhancedSandbox.validate_input(code_with_eval, "javascript")
     end
 
@@ -48,7 +48,7 @@ defmodule Rsolv.AST.EnhancedSandboxTest do
       const file = fs.readFile('../../etc/passwd');
       """
 
-      assert {:error, {:suspicious_pattern, _}} =
+      assert {:error, ["suspicious_pattern", _pattern_data]} =
                EnhancedSandbox.validate_input(malicious_code, "javascript")
     end
 
@@ -56,7 +56,7 @@ defmodule Rsolv.AST.EnhancedSandboxTest do
       # Generate deeply nested brackets
       nested = String.duplicate("{", 60) <> String.duplicate("}", 60)
 
-      assert {:error, {:suspicious_pattern, _}} =
+      assert {:error, ["suspicious_pattern", _pattern_data]} =
                EnhancedSandbox.validate_input(nested, "javascript")
     end
 
@@ -66,7 +66,7 @@ defmodule Rsolv.AST.EnhancedSandboxTest do
       __import__('subprocess').call(['rm', '-rf', '/'])
       """
 
-      assert {:error, {:suspicious_pattern, _}} =
+      assert {:error, ["suspicious_pattern", _pattern_data]} =
                EnhancedSandbox.validate_input(python_code, "python")
     end
 
@@ -76,7 +76,7 @@ defmodule Rsolv.AST.EnhancedSandboxTest do
       instance_eval(user_input)
       """
 
-      assert {:error, {:suspicious_pattern, _}} =
+      assert {:error, ["suspicious_pattern", _pattern_data]} =
                EnhancedSandbox.validate_input(ruby_code, "ruby")
     end
 
@@ -88,7 +88,8 @@ defmodule Rsolv.AST.EnhancedSandboxTest do
       ?>
       """
 
-      assert {:error, {:suspicious_pattern, _}} = EnhancedSandbox.validate_input(php_code, "php")
+      assert {:error, ["suspicious_pattern", _pattern_data]} =
+               EnhancedSandbox.validate_input(php_code, "php")
     end
 
     test "sanitizes null bytes" do
