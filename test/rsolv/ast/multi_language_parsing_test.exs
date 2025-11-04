@@ -1,5 +1,8 @@
 defmodule Rsolv.AST.MultiLanguageParsingTest do
-  use ExUnit.Case, async: true
+  # Changed from async: true to async: false to prevent parser pool exhaustion
+  # When running in parallel across 4 CI partitions, async tests overwhelm the parser pool
+  # causing port/process resource contention and sporadic failures
+  use ExUnit.Case, async: false
   use Rsolv.AST.TestCase
 
   alias Rsolv.AST.{PortSupervisor, ParserRegistry, SessionManager}

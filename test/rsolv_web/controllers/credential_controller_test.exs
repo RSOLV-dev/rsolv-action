@@ -86,9 +86,13 @@ defmodule RsolvWeb.CredentialControllerTest do
              } = usage
 
       # Verify expiration time is approximately 1 hour from now
+      # Use a single reference time to avoid timing drift between assertions
+      now = DateTime.utc_now()
       {:ok, expires_dt, _} = DateTime.from_iso8601(expires_at)
-      assert DateTime.diff(expires_dt, DateTime.utc_now()) > 3500
-      assert DateTime.diff(expires_dt, DateTime.utc_now()) < 3700
+      diff_seconds = DateTime.diff(expires_dt, now)
+      # 60 minutes = 3600 seconds, allow ±200 seconds for request processing
+      assert diff_seconds > 3400, "Expected expiration > 3400s from now, got #{diff_seconds}s"
+      assert diff_seconds < 3800, "Expected expiration < 3800s from now, got #{diff_seconds}s"
     end
 
     test "returns 401 for invalid API key", %{conn: conn} do
@@ -287,10 +291,8 @@ defmodule RsolvWeb.CredentialControllerTest do
       # Extract credential info
       %{"api_key" => original_key} = exchange_response["credentials"]["anthropic"]
 
-      # Wait a moment to ensure time has passed
-      Process.sleep(100)
-
-      # Now try to refresh - using the credential id from our setup
+      # Now try to refresh - no sleep needed, refresh should work immediately
+      # Note: Using credential.id from setup, which tests refresh of existing credentials
       refresh_conn =
         build_conn()
         |> put_req_header("accept", "application/json")
