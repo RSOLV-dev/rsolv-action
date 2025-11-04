@@ -1,5 +1,4 @@
 defmodule Rsolv.AST.ConfidenceScorerTest do
-  # Changed: parser pool is singleton, must run sequentially
   use ExUnit.Case, async: false
 
   alias Rsolv.AST.ConfidenceScorer

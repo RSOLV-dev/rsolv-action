@@ -5,7 +5,6 @@ defmodule Rsolv.AST.ConfidenceScorerRealisticTest do
   while still catching real vulnerabilities.
   """
 
-  # Changed: parser pool is singleton, must run sequentially
   use ExUnit.Case, async: false
   alias Rsolv.AST.ConfidenceScorer
 

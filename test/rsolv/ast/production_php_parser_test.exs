@@ -1,5 +1,4 @@
 defmodule Rsolv.AST.ProductionPhpParserTest do
-  # Changed: parser pool is singleton, must run sequentially
   use ExUnit.Case, async: false
 
   @moduletag :integration
