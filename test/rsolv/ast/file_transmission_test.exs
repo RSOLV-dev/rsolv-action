@@ -1,5 +1,5 @@
 defmodule Rsolv.AST.FileTransmissionTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
 
   alias Rsolv.AST.FileTransmission
   alias Rsolv.AST.SessionManager

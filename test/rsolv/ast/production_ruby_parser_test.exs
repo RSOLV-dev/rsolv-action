@@ -1,6 +1,6 @@
 # credo:disable-for-this-file Credo.Check.Warning.IoInspect
 defmodule Rsolv.AST.ProductionRubyParserTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
   use Rsolv.AST.TestCase
 
   @moduletag :integration

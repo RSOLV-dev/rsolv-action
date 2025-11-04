@@ -1,5 +1,5 @@
 defmodule Rsolv.AST.ProductionGoParserTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
 
   @moduletag :integration
   @moduletag :skip

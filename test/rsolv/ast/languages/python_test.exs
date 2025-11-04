@@ -1,5 +1,5 @@
 defmodule Rsolv.AST.Languages.PythonTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
   alias Rsolv.AST.Languages.Python
 
   describe "find_insertion_point/1" do

@@ -1,5 +1,5 @@
 defmodule Rsolv.AST.ASTCacheTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
 
   alias Rsolv.AST.ASTCache
 

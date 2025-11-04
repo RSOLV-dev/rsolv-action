@@ -1,5 +1,5 @@
 defmodule Rsolv.AST.Languages.JavaScriptTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false  # Changed: parser pool is singleton, must run sequentially
   alias Rsolv.AST.Languages.JavaScript
 
   describe "find_insertion_point/2" do
