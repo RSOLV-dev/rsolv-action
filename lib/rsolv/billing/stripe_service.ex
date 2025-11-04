@@ -38,14 +38,13 @@ defmodule Rsolv.Billing.StripeService do
 
   require Logger
 
-  @stripe_client Application.compile_env(:rsolv, :stripe_client, Stripe.Customer)
-  @stripe_payment_method Application.compile_env(
-                           :rsolv,
-                           :stripe_payment_method,
-                           Stripe.PaymentMethod
-                         )
-  @stripe_subscription Application.compile_env(:rsolv, :stripe_subscription, Stripe.Subscription)
-  @stripe_charge Application.compile_env(:rsolv, :stripe_charge, Stripe.Charge)
+  # Runtime configuration lookup for testability
+  defp stripe_client, do: Application.get_env(:rsolv, :stripe_client, Stripe.Customer)
+  defp stripe_payment_method,
+    do: Application.get_env(:rsolv, :stripe_payment_method, Stripe.PaymentMethod)
+  defp stripe_subscription,
+    do: Application.get_env(:rsolv, :stripe_subscription, Stripe.Subscription)
+  defp stripe_charge, do: Application.get_env(:rsolv, :stripe_charge, Stripe.Charge)
 
   # Retry configuration
   @max_attempts 3
@@ -229,7 +228,7 @@ defmodule Rsolv.Billing.StripeService do
     }
 
     with_telemetry(:create_customer, %{customer_id: customer.id}, fn ->
-      case @stripe_client.create(params) do
+      case stripe_client().create(params) do
         {:ok, stripe_customer} ->
           Logger.info("Created Stripe customer",
             customer_id: customer.id,
@@ -258,7 +257,7 @@ defmodule Rsolv.Billing.StripeService do
   """
   def get_customer(stripe_customer_id) do
     with_telemetry(:get_customer, %{stripe_customer_id: stripe_customer_id}, fn ->
-      case @stripe_client.retrieve(stripe_customer_id) do
+      case stripe_client().retrieve(stripe_customer_id) do
         {:ok, customer} ->
           {:ok, customer}
 
@@ -290,12 +289,12 @@ defmodule Rsolv.Billing.StripeService do
 
     with_telemetry(:attach_payment_method, Map.new(context), fn ->
       with {:ok, _pm} <-
-             @stripe_payment_method.attach(%{
+             stripe_payment_method().attach(%{
                payment_method: payment_method_id,
                customer: stripe_customer_id
              }),
            {:ok, _customer} <-
-             @stripe_client.update(stripe_customer_id, %{
+             stripe_client().update(stripe_customer_id, %{
                invoice_settings: %{default_payment_method: payment_method_id}
              }) do
         Logger.info("Attached payment method", context)
@@ -326,7 +325,7 @@ defmodule Rsolv.Billing.StripeService do
     }
 
     with_telemetry(:create_subscription, %{stripe_customer_id: stripe_customer_id}, fn ->
-      case @stripe_subscription.create(params) do
+      case stripe_subscription().create(params) do
         {:ok, subscription} ->
           Logger.info("Created Stripe subscription",
             stripe_customer_id: stripe_customer_id,
@@ -352,7 +351,7 @@ defmodule Rsolv.Billing.StripeService do
   """
   def update_subscription(subscription_id, params) do
     with_telemetry(:update_subscription, %{subscription_id: subscription_id}, fn ->
-      case @stripe_subscription.update(subscription_id, params) do
+      case stripe_subscription().update(subscription_id, params) do
         {:ok, subscription} ->
           Logger.info("Updated Stripe subscription",
             subscription_id: subscription_id,
@@ -378,7 +377,7 @@ defmodule Rsolv.Billing.StripeService do
   """
   def cancel_subscription(subscription_id) do
     with_telemetry(:cancel_subscription, %{subscription_id: subscription_id}, fn ->
-      case @stripe_subscription.cancel(subscription_id) do
+      case stripe_subscription().cancel(subscription_id) do
         {:ok, subscription} ->
           Logger.info("Canceled Stripe subscription", subscription_id: subscription_id)
           {:ok, subscription}
@@ -418,7 +417,7 @@ defmodule Rsolv.Billing.StripeService do
     context = [customer_id: customer.id, amount_cents: amount_cents]
 
     with_telemetry(:create_charge, Map.new(context), fn ->
-      case @stripe_charge.create(params) do
+      case stripe_charge().create(params) do
         {:ok, charge} ->
           Logger.info("Created Stripe charge", context ++ [charge_id: charge.id])
           {:ok, charge}
