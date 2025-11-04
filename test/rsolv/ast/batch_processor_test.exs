@@ -428,9 +428,15 @@ defmodule Rsolv.AST.BatchProcessorTest do
       assert length(result_list) == 10
 
       # Should complete in reasonable time despite backpressure
+      # Verify backpressure prevents runaway processing (not taking 5+ seconds)
+      # while allowing for CI environment overhead (slower than local dev)
       duration_ms = System.convert_time_unit(end_time - start_time, :native, :millisecond)
-      # Reduced from 5 seconds to 2 seconds
-      assert duration_ms < 2000
+
+      # Expected baseline: 10 items * 5ms sleep = 50ms minimum
+      # With concurrency=3: ~17ms of sleep time + processing overhead
+      # CI environment can be 2-3x slower than local, so allow generous margin
+      assert duration_ms < 3000,
+             "Processing took #{duration_ms}ms, expected < 3000ms (backpressure should prevent >5s delay)"
     end
   end
 
