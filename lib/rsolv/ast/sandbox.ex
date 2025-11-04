@@ -233,8 +233,24 @@ defmodule Rsolv.AST.Sandbox do
   defp get_allowed_modules(_), do: [:file, :binary, :string]
 
   defp build_restricted_port_env(parser_type, security_config) do
+    # Build PATH that includes OTP bin directory for Elixir parser
+    # In CI: INSTALL_DIR_FOR_OTP is set by erlef/setup-beam
+    # In local dev: Erlang is usually in system PATH already
+    path =
+      case System.get_env("INSTALL_DIR_FOR_OTP") do
+        nil ->
+          # Local development: use current PATH or fall back to standard paths
+          System.get_env("PATH", "/usr/local/bin:/usr/bin:/bin")
+
+        otp_dir ->
+          # CI environment: prepend OTP bin directory to PATH
+          otp_bin = Path.join(otp_dir, "bin")
+          current_path = System.get_env("PATH", "/usr/bin:/bin")
+          "#{otp_bin}:#{current_path}"
+      end
+
     base_env = [
-      {~c"PATH", ~c"/usr/bin:/bin"},
+      {~c"PATH", String.to_charlist(path)},
       {~c"HOME", ~c"/tmp"},
       {~c"TMPDIR", ~c"/tmp"},
       {~c"RSOLV_SANDBOX", ~c"beam"},
