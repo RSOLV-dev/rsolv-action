@@ -80,7 +80,8 @@ defmodule Rsolv.AnalyticsTest do
 
     test "tracks events with metadata" do
       # Track events with various metadata
-      WebAnalytics.track_page_view("/test", "https://example.com", %{"user_id" => "12345"})
+      # Note: Use custom_user_id instead of user_id to avoid collision with standard field
+      WebAnalytics.track_page_view("/test", "https://example.com", %{"custom_user_id" => "12345"})
       WebAnalytics.track_page_view("/test", nil, %{})
       WebAnalytics.track_page_view("/test", "", %{"campaign" => "test"})
 
@@ -92,7 +93,7 @@ defmodule Rsolv.AnalyticsTest do
       assert length(events) >= 3
 
       # Check metadata was preserved
-      event_with_user = Enum.find(events, fn e -> e.metadata["user_id"] == "12345" end)
+      event_with_user = Enum.find(events, fn e -> e.metadata["custom_user_id"] == "12345" end)
       assert event_with_user != nil
     end
 

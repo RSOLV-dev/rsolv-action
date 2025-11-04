@@ -68,8 +68,8 @@ defmodule RsolvWeb.Api.V1.PatternJsonEncodingTest do
                  # The regex itself doesn't have unicode flag
                  "flags" => []
                },
-               # This is a separate field
-               flags: [:unicode]
+               # This is a separate field (JSON converts atoms to strings)
+               flags: ["unicode"]
              }
     end
 
